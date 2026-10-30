@@ -2290,3 +2290,24 @@ localized log/Summary fallback and the scoped native-token route in commit
 workflows. Unknown provider failures remain unknown; unconfirmed writes are not
 claimed absent or retried automatically. Existing stable check name/head identity
 and source-eligibility policy remain unchanged.
+
+## Branch-sync catalog compatibility recovery — #779
+
+The primary contract and 48-case minimum budget belong to
+[branch synchronization](./branch-synchronization-and-conflict-recovery.md).
+Its shared semantic failure uses `branch-sync-catalog-incompatible` with exact
+closed phase/profile/field/capability-position facts and `abort` equal to
+`completed` or `unverified`. Unsupported legacy/native/ambiguous formats use
+`configuration.unsupported`; malformed SDK/unknown formats use
+`configuration.invalid`. Both are nonretryable without corrective work.
+
+English and Spanish definitions provide the complete impact, action and retained
+state. The ordinary whole-catalog translation validation and atomic fallback
+apply. The renderer inserts the fixed recovery URL and sync command after
+localization; neither repository values nor translated destinations become
+operands. Existing correlated command replies carry this result, with no new
+status card, notification, publication identity or raw validator output.
+`completed` establishes only that the abort call returned; it does not certify
+application readiness or successful test execution. An unverified abort requires
+operator inspection before retrying. The primary budget includes presentation
+and strict operand cases, so this companion adds no independent duplicate budget.

@@ -314,6 +314,11 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     action: 'Inspect the failed stage in the linked workflow logs. For dependencies, provision the source Node/pnpm toolchain and repair the frozen candidate workspace graph; for setup/runtime, repair the same-job prerequisites; for command failures, correct the configured verifier. Then retry {syncCommand}. Blind retries do not repair a graph mismatch.',
     retainedState: 'No synchronization commit or push was attempted. Original head: {childSha}. Local rollback: {restoration}; restored means the original head was verified, unverified requires operator inspection before retrying.',
   }),
+  'branch-sync-catalog-incompatible': Object.freeze({
+    impact: 'Branch synchronization stopped for catalog review: profile {profile}, phase {phase}, capability position {capabilityNumber}, field {field}. Position 0 identifies the document.',
+    action: 'Review the catalog profile and preserve all evidence in a reviewed migration or supported adapter before retrying {syncCommand}. Do not invent verification dates or readiness. Recovery guide: {catalogGuide}.',
+    retainedState: 'No synchronization commit or push was attempted; remote branches were preserved. Local abort: {abort}. completed means the abort call finished; unverified requires operator inspection. This result does not certify application readiness.',
+  }),
   'branch-sync-resolution-invalid': Object.freeze({
     impact: 'Branch synchronization stopped because workspace validation rejected the resolution ({validationCode}).',
     action: 'Inspect this validation code in the workflow logs and correct the resolution before retrying {command}.',
@@ -468,6 +473,11 @@ const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     impact: 'La sincronización se detuvo en el comando de verificación {commandIndex} ({command}): fase {stage}, motivo {reason}.',
     action: 'Revisa la fase fallida en los logs del workflow enlazado. Para dependencias, prepara Node/pnpm del repositorio fuente y corrige el grafo congelado del candidato; para setup/runtime, corrige los requisitos del mismo job; para fallos del comando, corrige el verificador configurado. Después reintenta {syncCommand}. Repetir sin cambios no corrige un grafo incompatible.',
     retainedState: 'No se intentó crear ni subir un commit de sincronización. Head original: {childSha}. Rollback local: {restoration}; restored confirma el head original, unverified requiere inspección del operador antes de reintentar.',
+  }),
+  'branch-sync-catalog-incompatible': Object.freeze({
+    impact: 'La sincronización se detuvo para revisar el catálogo: perfil {profile}, fase {phase}, posición de capacidad {capabilityNumber}, campo {field}. La posición 0 identifica el documento.',
+    action: 'Revisa el perfil y conserva todas las evidencias mediante una migración revisada o un adaptador compatible antes de reintentar {syncCommand}. No inventes fechas de verificación ni estados de preparación. Guía: {catalogGuide}.',
+    retainedState: 'No se intentó crear ni subir un commit de sincronización; se conservaron las ramas remotas. Aborto local: {abort}. completed indica que terminó la llamada de aborto; unverified exige inspección del operador. Este resultado no certifica que la aplicación esté preparada.',
   }),
   'branch-sync-resolution-invalid': Object.freeze({
     impact: 'La sincronización se detuvo porque la validación del repositorio rechazó la resolución ({validationCode}).',

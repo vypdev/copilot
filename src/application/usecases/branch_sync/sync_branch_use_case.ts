@@ -26,6 +26,7 @@ import {
 } from "./branch_sync_execution_policy";
 import type { ApplicationErrorRecovery } from '../../errors/application_error';
 import type { VerificationFailure } from '../../../domain/verification_failure';
+import { BranchSyncCatalogFailure, isBranchSyncCatalogDiagnostic } from '../../../domain/branch_sync_catalog_diagnostic';
 
 export interface SyncBranchRequest {
   readonly context: BranchSyncContext;
@@ -56,8 +57,15 @@ export class SyncBranchUseCase implements ParamUseCase<SyncBranchRequest, Result
       }
       return await this.synchronize(context, options, target, parentBranch);
     } catch (cause) {
-      await this.safeAbort();
+      const catalogFailure = cause instanceof BranchSyncCatalogFailure && isBranchSyncCatalogDiagnostic(cause.diagnostic)
+        ? cause.diagnostic : undefined;
+      const aborted = await this.safeAbort();
       logError("Branch synchronization failed.");
+      if (catalogFailure) {
+        return [failedBranchSyncResult('Branch synchronization stopped for catalog review; no commit or push was attempted.', undefined, {
+          id: 'branch-sync-catalog-incompatible', variables: { ...catalogFailure, abort: aborted ? 'completed' : 'unverified' },
+        })];
+      }
       return [failedBranchSyncResult("Branch synchronization failed safely; no push was completed.", cause)];
     }
   }
@@ -139,6 +147,7 @@ export class SyncBranchUseCase implements ParamUseCase<SyncBranchRequest, Result
       return { agentUsed: false, failure: { reason: "The conflict-resolution agent returned no usable response." } };
     }
     const validation = await this.workspace.validatePreparedMerge(preparation.conflictPaths);
+    if (!validation.valid && isBranchSyncCatalogDiagnostic(validation.catalogDiagnostic)) throw new BranchSyncCatalogFailure(validation.catalogDiagnostic);
     return validation.valid
       ? { agentUsed: true }
       : { agentUsed: false, failure: {
@@ -167,6 +176,7 @@ export class SyncBranchUseCase implements ParamUseCase<SyncBranchRequest, Result
     }
     const conflictPaths = preparation.kind === "conflicted" ? preparation.conflictPaths : [];
     const validation = await this.workspace.validatePreparedMerge(conflictPaths);
+    if (!validation.valid && isBranchSyncCatalogDiagnostic(validation.catalogDiagnostic)) throw new BranchSyncCatalogFailure(validation.catalogDiagnostic);
     return validation.valid
       ? { commandCount: commands.length }
       : { commandCount: commands.length, failure: validation.reason ?? "Verification commands changed the prepared merge unexpectedly.", recovery: validationRecovery(validation.code) };

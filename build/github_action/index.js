@@ -41386,6 +41386,11 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
         action: 'Inspect the failed stage in the linked workflow logs. For dependencies, provision the source Node/pnpm toolchain and repair the frozen candidate workspace graph; for setup/runtime, repair the same-job prerequisites; for command failures, correct the configured verifier. Then retry {syncCommand}. Blind retries do not repair a graph mismatch.',
         retainedState: 'No synchronization commit or push was attempted. Original head: {childSha}. Local rollback: {restoration}; restored means the original head was verified, unverified requires operator inspection before retrying.',
     }),
+    'branch-sync-catalog-incompatible': Object.freeze({
+        impact: 'Branch synchronization stopped for catalog review: profile {profile}, phase {phase}, capability position {capabilityNumber}, field {field}. Position 0 identifies the document.',
+        action: 'Review the catalog profile and preserve all evidence in a reviewed migration or supported adapter before retrying {syncCommand}. Do not invent verification dates or readiness. Recovery guide: {catalogGuide}.',
+        retainedState: 'No synchronization commit or push was attempted; remote branches were preserved. Local abort: {abort}. completed means the abort call finished; unverified requires operator inspection. This result does not certify application readiness.',
+    }),
     'branch-sync-resolution-invalid': Object.freeze({
         impact: 'Branch synchronization stopped because workspace validation rejected the resolution ({validationCode}).',
         action: 'Inspect this validation code in the workflow logs and correct the resolution before retrying {command}.',
@@ -41539,6 +41544,11 @@ const SPANISH_RECOVERY_CONTENT = Object.freeze({
         action: 'Revisa la fase fallida en los logs del workflow enlazado. Para dependencias, prepara Node/pnpm del repositorio fuente y corrige el grafo congelado del candidato; para setup/runtime, corrige los requisitos del mismo job; para fallos del comando, corrige el verificador configurado. Después reintenta {syncCommand}. Repetir sin cambios no corrige un grafo incompatible.',
         retainedState: 'No se intentó crear ni subir un commit de sincronización. Head original: {childSha}. Rollback local: {restoration}; restored confirma el head original, unverified requiere inspección del operador antes de reintentar.',
     }),
+    'branch-sync-catalog-incompatible': Object.freeze({
+        impact: 'La sincronización se detuvo para revisar el catálogo: perfil {profile}, fase {phase}, posición de capacidad {capabilityNumber}, campo {field}. La posición 0 identifica el documento.',
+        action: 'Revisa el perfil y conserva todas las evidencias mediante una migración revisada o un adaptador compatible antes de reintentar {syncCommand}. No inventes fechas de verificación ni estados de preparación. Guía: {catalogGuide}.',
+        retainedState: 'No se intentó crear ni subir un commit de sincronización; se conservaron las ramas remotas. Aborto local: {abort}. completed indica que terminó la llamada de aborto; unverified exige inspección del operador. Este resultado no certifica que la aplicación esté preparada.',
+    }),
     'branch-sync-resolution-invalid': Object.freeze({
         impact: 'La sincronización se detuvo porque la validación del repositorio rechazó la resolución ({validationCode}).',
         action: 'Revisa este código de validación en los logs del workflow y corrige la resolución antes de reintentar {command}.',
@@ -41649,6 +41659,7 @@ const comment_command_validation_presentation_policy_1 = __nccwpck_require__(642
 const application_error_message_catalog_1 = __nccwpck_require__(64809);
 // This trusted destination is inserted after localization, never supplied by a body or translation.
 const STORED_CONFIGURATION_RECOVERY_URL = 'https://docs.page/vypdev/copilot/security-operations/operations/troubleshooting#unsupported-stored-configuration';
+const BRANCH_SYNC_CATALOG_RECOVERY_URL = 'https://docs.page/vypdev/copilot/security-operations/operations/troubleshooting#branch-sync-catalog-compatibility';
 /** Shared semantic view model for terminal, GitHub, and API presentation. */
 function buildApplicationErrorPresentation(error, message = application_error_message_catalog_1.readEnglishApplicationErrorMessage) {
     const descriptor = error.recovery
@@ -41662,9 +41673,11 @@ function buildApplicationErrorPresentation(error, message = application_error_me
                 ? (0, comment_command_validation_presentation_policy_1.commandValidationPresentationVariables)(error.recovery.id, error.recovery.variables.command)
                 : error.recovery?.id === 'branch-sync-verification-failed'
                     ? { ...error.recovery.variables, syncCommand: '/copilot sync-branch' }
-                    : error.recovery?.id.startsWith('stored-configuration-')
-                        ? { ...error.recovery.variables, recoveryGuide: STORED_CONFIGURATION_RECOVERY_URL }
-                        : error.recovery?.variables;
+                    : error.recovery?.id === 'branch-sync-catalog-incompatible'
+                        ? { ...error.recovery.variables, syncCommand: '/copilot sync-branch', catalogGuide: BRANCH_SYNC_CATALOG_RECOVERY_URL }
+                        : error.recovery?.id.startsWith('stored-configuration-')
+                            ? { ...error.recovery.variables, recoveryGuide: STORED_CONFIGURATION_RECOVERY_URL }
+                            : error.recovery?.variables;
     return {
         impact: message(`${descriptor}.impact`, variables),
         code: error.code,
@@ -57991,13 +58004,17 @@ function unavailableBranchSyncResult(reason) {
     return new result_1.Result({ id: exports.BRANCH_SYNC_TASK_ID, success: false, executed: false, errors: [new application_error_1.ApplicationError('agent.policy-rejected', reason)] });
 }
 function failedBranchSyncResult(reason, cause, recovery) {
+    const catalogCode = recovery?.id === 'branch-sync-catalog-incompatible'
+        ? (['legacy-evidence', 'native', 'ambiguous'].includes(recovery.variables.profile) ? 'configuration.unsupported' : 'configuration.invalid')
+        : undefined;
     return new result_1.Result({
         id: exports.BRANCH_SYNC_TASK_ID,
         success: false,
         executed: true,
         steps: [reason],
         errors: [cause === undefined
-                ? new application_error_1.ApplicationError('workflow.failed', reason, { recovery, ...(recovery?.id === 'branch-sync-verification-failed' ? { retryable: false } : {}) })
+                ? new application_error_1.ApplicationError(catalogCode ?? 'workflow.failed', reason, { recovery,
+                    ...(catalogCode || recovery?.id === 'branch-sync-verification-failed' ? { retryable: false } : {}) })
                 : (0, application_error_1.toApplicationError)(cause, 'workflow.failed', reason, { recovery })],
     });
 }
@@ -58018,6 +58035,7 @@ const logging_ports_1 = __nccwpck_require__(6152);
 const verify_command_policy_1 = __nccwpck_require__(96031);
 const verify_command_runner_1 = __nccwpck_require__(57742);
 const branch_sync_execution_policy_1 = __nccwpck_require__(82113);
+const branch_sync_catalog_diagnostic_1 = __nccwpck_require__(15677);
 /** Performs a race-safe parent-to-child merge and invokes the fixer only for eligible conflicts. */
 class SyncBranchUseCase {
     constructor(dependencies, workspace, fixer, authenticatedUser, git) {
@@ -58041,8 +58059,15 @@ class SyncBranchUseCase {
             return await this.synchronize(context, options, target, parentBranch);
         }
         catch (cause) {
-            await this.safeAbort();
+            const catalogFailure = cause instanceof branch_sync_catalog_diagnostic_1.BranchSyncCatalogFailure && (0, branch_sync_catalog_diagnostic_1.isBranchSyncCatalogDiagnostic)(cause.diagnostic)
+                ? cause.diagnostic : undefined;
+            const aborted = await this.safeAbort();
             (0, logging_ports_1.logError)("Branch synchronization failed.");
+            if (catalogFailure) {
+                return [(0, branch_sync_execution_policy_1.failedBranchSyncResult)('Branch synchronization stopped for catalog review; no commit or push was attempted.', undefined, {
+                        id: 'branch-sync-catalog-incompatible', variables: { ...catalogFailure, abort: aborted ? 'completed' : 'unverified' },
+                    })];
+            }
             return [(0, branch_sync_execution_policy_1.failedBranchSyncResult)("Branch synchronization failed safely; no push was completed.", cause)];
         }
     }
@@ -58100,6 +58125,8 @@ class SyncBranchUseCase {
             return { agentUsed: false, failure: { reason: "The conflict-resolution agent returned no usable response." } };
         }
         const validation = await this.workspace.validatePreparedMerge(preparation.conflictPaths);
+        if (!validation.valid && (0, branch_sync_catalog_diagnostic_1.isBranchSyncCatalogDiagnostic)(validation.catalogDiagnostic))
+            throw new branch_sync_catalog_diagnostic_1.BranchSyncCatalogFailure(validation.catalogDiagnostic);
         return validation.valid
             ? { agentUsed: true }
             : { agentUsed: false, failure: {
@@ -58122,6 +58149,8 @@ class SyncBranchUseCase {
         }
         const conflictPaths = preparation.kind === "conflicted" ? preparation.conflictPaths : [];
         const validation = await this.workspace.validatePreparedMerge(conflictPaths);
+        if (!validation.valid && (0, branch_sync_catalog_diagnostic_1.isBranchSyncCatalogDiagnostic)(validation.catalogDiagnostic))
+            throw new branch_sync_catalog_diagnostic_1.BranchSyncCatalogFailure(validation.catalogDiagnostic);
         return validation.valid
             ? { commandCount: commands.length }
             : { commandCount: commands.length, failure: validation.reason ?? "Verification commands changed the prepared merge unexpectedly.", recovery: validationRecovery(validation.code) };
@@ -71845,6 +71874,7 @@ const closed_issue_reconciliation_1 = __nccwpck_require__(21565);
 const approval_evidence_diagnostic_1 = __nccwpck_require__(98205);
 const branch_sync_validation_1 = __nccwpck_require__(90981);
 const verification_failure_1 = __nccwpck_require__(60177);
+const branch_sync_catalog_diagnostic_1 = __nccwpck_require__(15677);
 exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     ...copilot_command_validation_1.COPILOT_COMMAND_VALIDATION_REASONS,
     'pull-request-link-restored',
@@ -71858,6 +71888,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'branch-sync-fixer-unavailable',
     'branch-sync-resolution-invalid',
     'branch-sync-verification-failed',
+    'branch-sync-catalog-incompatible',
     'sdd-draft-size-exceeded',
     'sdd-catalog-unsupported-profile',
     'sdd-catalog-format-invalid',
@@ -72103,6 +72134,7 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'branch-sync-fixer-unavailable': Object.freeze(['command']),
     'branch-sync-resolution-invalid': Object.freeze(['validationCode', 'command']),
     'branch-sync-verification-failed': Object.freeze(['stage', 'reason', 'command', 'commandIndex', 'childSha', 'restoration']),
+    'branch-sync-catalog-incompatible': Object.freeze(['phase', 'profile', 'field', 'capabilityNumber', 'abort']),
     'sdd-draft-size-exceeded': Object.freeze([]),
     'sdd-catalog-unsupported-profile': Object.freeze([]),
     'sdd-catalog-format-invalid': Object.freeze([]),
@@ -72167,6 +72199,12 @@ function normalizeApplicationErrorRecovery(recovery) {
     }
     if (recovery.id === 'branch-sync-verification-failed' && !(0, verification_failure_1.isBranchSyncVerificationFailure)(variables)) {
         throw new TypeError('Branch synchronization verification diagnostic is invalid.');
+    }
+    if (recovery.id === 'branch-sync-catalog-incompatible') {
+        const { abort, ...diagnostic } = variables;
+        if (!(0, branch_sync_catalog_diagnostic_1.isBranchSyncCatalogDiagnostic)(diagnostic) || !['completed', 'unverified'].includes(String(abort))) {
+            throw new TypeError('Branch synchronization catalog diagnostic is invalid.');
+        }
     }
     if (recovery.id === 'closed-issue-reconciliation-failed'
         && (!closed_issue_reconciliation_1.CLOSED_ISSUE_RESULTS.some(value => value === variables.resultId)
@@ -83995,6 +84033,120 @@ exports.APPROVAL_EVIDENCE_REASONS = Object.freeze([
 
 /***/ }),
 
+/***/ 15677:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BranchSyncCatalogFailure = exports.BRANCH_SYNC_CATALOG_FIELDS = exports.SDK_CATALOG_PATH_FIELDS = exports.BRANCH_SYNC_CATALOG_PHASES = exports.BRANCH_SYNC_CATALOG_PROFILES = exports.BRANCH_SYNC_CATALOG_MAX_BYTES = void 0;
+exports.isBranchSyncCatalogDiagnostic = isBranchSyncCatalogDiagnostic;
+exports.catalogDiagnostic = catalogDiagnostic;
+exports.classifyBranchSyncCatalog = classifyBranchSyncCatalog;
+/** Closed compatibility facts; catalog values never become public operands. */
+exports.BRANCH_SYNC_CATALOG_MAX_BYTES = 10 * 1024 * 1024;
+exports.BRANCH_SYNC_CATALOG_PROFILES = ['sdk-v1', 'legacy-evidence', 'native', 'ambiguous', 'unknown'];
+exports.BRANCH_SYNC_CATALOG_PHASES = ['workspace-boundary', 'catalog-file-boundary', 'metadata-json',
+    'metadata-conflict-markers', 'metadata-shape', 'profile-compatibility', 'evidence-shape',
+    'evidence-path-boundary', 'catalog-contract', 'index-output'];
+exports.SDK_CATALOG_PATH_FIELDS = ['specs', 'workflows', 'entrypoints', 'code', 'tests', 'documentation'];
+const OWNER_FIELDS = [...exports.SDK_CATALOG_PATH_FIELDS, 'id', 'title', 'status', 'scope', 'owner', 'lastVerified', 'evidence', 'specification'];
+exports.BRANCH_SYNC_CATALOG_FIELDS = ['catalog', 'version', 'capabilities', '$schema', ...OWNER_FIELDS];
+function record(value) {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+const own = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
+function isBranchSyncCatalogDiagnostic(value) {
+    if (!record(value) || Object.keys(value).sort().join(',') !== 'capabilityNumber,field,phase,profile')
+        return false;
+    const { phase, profile, field, capabilityNumber } = value;
+    return exports.BRANCH_SYNC_CATALOG_PHASES.some(item => item === phase)
+        && exports.BRANCH_SYNC_CATALOG_PROFILES.some(item => item === profile)
+        && exports.BRANCH_SYNC_CATALOG_FIELDS.some(item => item === field)
+        && typeof capabilityNumber === 'number' && Number.isSafeInteger(capabilityNumber)
+        && capabilityNumber >= 0 && capabilityNumber <= exports.BRANCH_SYNC_CATALOG_MAX_BYTES
+        && (capabilityNumber !== 0 || !OWNER_FIELDS.some(item => item === field))
+        && (capabilityNumber === 0 || !['catalog', 'version', '$schema'].includes(String(field)));
+}
+function catalogDiagnostic(phase, profile = 'unknown', field = 'catalog', capabilityNumber = 0) {
+    const value = { phase, profile, field, capabilityNumber };
+    if (!isBranchSyncCatalogDiagnostic(value))
+        throw new TypeError('Invalid closed catalog compatibility diagnostic.');
+    return Object.freeze(value);
+}
+class BranchSyncCatalogFailure extends Error {
+    constructor(diagnostic) {
+        super('Branch synchronization catalog compatibility requires review.');
+        if (!isBranchSyncCatalogDiagnostic(diagnostic))
+            throw new TypeError('Invalid closed catalog compatibility diagnostic.');
+        this.name = 'BranchSyncCatalogFailure';
+        this.diagnostic = catalogDiagnostic(diagnostic.phase, diagnostic.profile, diagnostic.field, diagnostic.capabilityNumber);
+        Object.freeze(this);
+    }
+}
+exports.BranchSyncCatalogFailure = BranchSyncCatalogFailure;
+function entryProfile(value, position) {
+    if (own(value, 'specification')) {
+        return catalogDiagnostic('profile-compatibility', own(value, 'specs') ? 'ambiguous' : 'native', 'specification', position);
+    }
+    if (!own(value, 'specs'))
+        return catalogDiagnostic('metadata-shape', 'unknown', 'capabilities', position);
+    if (own(value, 'evidence')) {
+        const sdkFields = exports.SDK_CATALOG_PATH_FIELDS.filter(field => own(value, field)).length;
+        if (sdkFields > 1 && sdkFields < exports.SDK_CATALOG_PATH_FIELDS.length) {
+            return catalogDiagnostic('profile-compatibility', 'ambiguous', 'capabilities', position);
+        }
+        if (sdkFields === 1) {
+            if (!Array.isArray(value.specs))
+                return catalogDiagnostic('evidence-shape', 'unknown', 'specs', position);
+            if (!Array.isArray(value.evidence))
+                return catalogDiagnostic('evidence-shape', 'unknown', 'evidence', position);
+            return catalogDiagnostic('profile-compatibility', 'legacy-evidence', 'workflows', position);
+        }
+    }
+    return catalogDiagnostic('profile-compatibility', 'sdk-v1');
+}
+/** Classifies dialect/array shape only; the bundled validator still owns full SDK conformance. */
+function classifyBranchSyncCatalog(value) {
+    if (!record(value))
+        return catalogDiagnostic('metadata-shape');
+    const nativeSchema = own(value, '$schema');
+    const nativeRoot = () => catalogDiagnostic('profile-compatibility', 'native', '$schema');
+    const capabilities = value.capabilities;
+    if (!Array.isArray(capabilities) || capabilities.length === 0 || capabilities.length > exports.BRANCH_SYNC_CATALOG_MAX_BYTES) {
+        return nativeSchema ? nativeRoot() : catalogDiagnostic('metadata-shape', 'unknown', 'capabilities');
+    }
+    let first;
+    for (const [index, capability] of capabilities.entries()) {
+        if (!record(capability))
+            return nativeSchema ? nativeRoot() : catalogDiagnostic('metadata-shape', 'unknown', 'capabilities', index + 1);
+        const next = entryProfile(capability, index + 1);
+        if (next.profile === 'unknown')
+            return nativeSchema ? nativeRoot() : next;
+        if (next.profile === 'ambiguous')
+            return next;
+        if (first && first.profile !== next.profile)
+            return catalogDiagnostic('profile-compatibility', 'ambiguous', 'capabilities', index + 1);
+        first ?? (first = next);
+    }
+    if (nativeSchema)
+        return nativeRoot();
+    if (first.profile !== 'sdk-v1')
+        return first;
+    if (value.version !== 1)
+        return catalogDiagnostic('profile-compatibility', 'unknown', 'version');
+    for (const [index, capability] of capabilities.entries()) {
+        for (const field of exports.SDK_CATALOG_PATH_FIELDS) {
+            if (!Array.isArray(capability[field]))
+                return catalogDiagnostic('evidence-shape', 'sdk-v1', field, index + 1);
+        }
+    }
+    return catalogDiagnostic('profile-compatibility', 'sdk-v1');
+}
+
+
+/***/ }),
+
 /***/ 51114:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -90493,77 +90645,167 @@ function reject(phase) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SDD_CATALOG_INDEX_PATH = exports.SDD_CATALOG_PATH = void 0;
+exports.inspectBranchSyncCatalogSource = inspectBranchSyncCatalogSource;
+exports.inspectBranchSyncSddCatalogProfile = inspectBranchSyncSddCatalogProfile;
 exports.refreshBranchSyncSddCatalog = refreshBranchSyncSddCatalog;
+exports.refreshBranchSyncSddCatalogDetailed = refreshBranchSyncSddCatalogDetailed;
+exports.validateBranchSyncSddCatalogDetailed = validateBranchSyncSddCatalogDetailed;
 const node_fs_1 = __nccwpck_require__(87561);
 const node_path_1 = __nccwpck_require__(49411);
 const logging_ports_1 = __nccwpck_require__(6152);
+const sdd_catalog_compatibility_1 = __nccwpck_require__(95312);
+const branch_sync_catalog_diagnostic_1 = __nccwpck_require__(15677);
 exports.SDD_CATALOG_PATH = 'specs/catalog.json';
 exports.SDD_CATALOG_INDEX_PATH = 'specs/CATALOG.md';
-const MAX_BYTES = 10 * 1024 * 1024;
-// Use the Action's bundled validator, never code loaded from the merged branch.
+// Only this Action's bundled validator/publisher can certify and write SDK output.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const validator = __nccwpck_require__(29617);
-/** Refreshes one already-authorized generated file; it neither stages nor executes repository code. */
-function refreshBranchSyncSddCatalog(repositoryRoot) {
-    let phase = 'workspace-boundary';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const publisher = __nccwpck_require__(143);
+/** Stable, bounded descriptor read; never follow a metadata/index replacement link. */
+function readCatalogFile(path) {
+    const before = (0, node_fs_1.lstatSync)(path, { bigint: true });
+    if (!before.isFile() || before.size > BigInt(branch_sync_catalog_diagnostic_1.BRANCH_SYNC_CATALOG_MAX_BYTES))
+        throw new Error('Catalog file boundary.');
+    const descriptor = (0, node_fs_1.openSync)(path, node_fs_1.constants.O_RDONLY | (node_fs_1.constants.O_NOFOLLOW ?? 0));
     try {
-        const root = (0, node_fs_1.realpathSync)(repositoryRoot);
-        const specs = (0, node_path_1.join)(root, 'specs');
-        if (!(0, node_fs_1.lstatSync)(specs).isDirectory() || (0, node_fs_1.lstatSync)(specs).isSymbolicLink())
-            return rejectCatalog(phase);
-        phase = 'catalog-file-boundary';
-        const metadataPath = (0, node_path_1.join)(root, exports.SDD_CATALOG_PATH);
-        const indexPath = (0, node_path_1.join)(root, exports.SDD_CATALOG_INDEX_PATH);
-        for (const path of [metadataPath, indexPath]) {
-            const stat = (0, node_fs_1.lstatSync)(path);
-            if (!stat.isFile() || stat.isSymbolicLink() || stat.size > MAX_BYTES)
-                return rejectCatalog(phase);
-        }
-        phase = 'metadata-json';
-        const metadata = (0, node_fs_1.readFileSync)(metadataPath, 'utf8');
-        if (/^(?:<{7}|={7}|>{7})(?: |$)/m.test(metadata))
-            phase = 'metadata-conflict-markers';
+        const opened = (0, node_fs_1.fstatSync)(descriptor, { bigint: true });
+        if (!opened.isFile() || opened.dev !== before.dev || opened.ino !== before.ino
+            || opened.size !== before.size || opened.mtimeNs !== before.mtimeNs)
+            throw new Error('Catalog identity changed.');
+        const bytes = Buffer.alloc(Number(opened.size) + 1);
+        const size = (0, node_fs_1.readSync)(descriptor, bytes, 0, bytes.length, 0);
+        const after = (0, node_fs_1.fstatSync)(descriptor, { bigint: true });
+        if (size !== Number(opened.size) || after.size !== opened.size || after.mtimeNs !== opened.mtimeNs
+            || after.nlink !== opened.nlink)
+            throw new Error('Catalog changed during read.');
+        return bytes.subarray(0, size).toString('utf8');
+    }
+    finally {
+        (0, node_fs_1.closeSync)(descriptor);
+    }
+}
+function catalogRoot(repositoryRoot) {
+    const root = (0, node_fs_1.realpathSync)(repositoryRoot);
+    const specs = (0, node_fs_1.lstatSync)((0, node_path_1.join)(root, 'specs'));
+    if (!specs.isDirectory() || specs.isSymbolicLink())
+        throw new Error('Catalog workspace boundary.');
+    return root;
+}
+/** Classifies only; it cannot validate, render, write, stage or execute a repository. */
+function inspectBranchSyncCatalogSource(source) {
+    if (Buffer.byteLength(source, 'utf8') > branch_sync_catalog_diagnostic_1.BRANCH_SYNC_CATALOG_MAX_BYTES)
+        return (0, branch_sync_catalog_diagnostic_1.catalogDiagnostic)('catalog-file-boundary');
+    if (/^(?:<{7}|={7}|>{7})(?: |$)/mu.test(source))
+        return (0, branch_sync_catalog_diagnostic_1.catalogDiagnostic)('metadata-conflict-markers');
+    try {
+        return (0, branch_sync_catalog_diagnostic_1.classifyBranchSyncCatalog)(JSON.parse(source));
+    }
+    catch {
+        return (0, branch_sync_catalog_diagnostic_1.catalogDiagnostic)('metadata-json');
+    }
+}
+function inspectBranchSyncSddCatalogProfile(repositoryRoot) {
+    let diagnostic = (0, branch_sync_catalog_diagnostic_1.catalogDiagnostic)('workspace-boundary');
+    try {
+        const root = catalogRoot(repositoryRoot);
+        diagnostic = (0, branch_sync_catalog_diagnostic_1.catalogDiagnostic)('catalog-file-boundary');
+        return inspectBranchSyncCatalogSource(readCatalogFile((0, node_path_1.join)(root, exports.SDD_CATALOG_PATH)));
+    }
+    catch {
+        return diagnostic;
+    }
+}
+/** Boolean compatibility wrapper retained for existing internal callers. */
+function refreshBranchSyncSddCatalog(repositoryRoot) {
+    return refreshBranchSyncSddCatalogDetailed(repositoryRoot).valid;
+}
+/** Refreshes only the already-authorized generated index; metadata is never rewritten. */
+function refreshBranchSyncSddCatalogDetailed(repositoryRoot) {
+    return checkBranchSyncSddCatalog(repositoryRoot, true);
+}
+/** Certifies JSON-only resolutions without acquiring another path's write authority. */
+function validateBranchSyncSddCatalogDetailed(repositoryRoot) {
+    return checkBranchSyncSddCatalog(repositoryRoot, false);
+}
+function checkBranchSyncSddCatalog(repositoryRoot, mayRefreshIndex) {
+    let diagnostic = (0, branch_sync_catalog_diagnostic_1.catalogDiagnostic)('workspace-boundary');
+    try {
+        const root = catalogRoot(repositoryRoot);
+        diagnostic = (0, branch_sync_catalog_diagnostic_1.catalogDiagnostic)('catalog-file-boundary');
+        const metadata = readCatalogFile((0, node_path_1.join)(root, exports.SDD_CATALOG_PATH));
+        diagnostic = inspectBranchSyncCatalogSource(metadata);
+        if (diagnostic.profile !== 'sdk-v1' || diagnostic.phase !== 'profile-compatibility')
+            return rejectCatalog(diagnostic);
+        diagnostic = (0, branch_sync_catalog_diagnostic_1.catalogDiagnostic)('catalog-file-boundary', 'sdk-v1');
+        const index = readCatalogFile((0, node_path_1.join)(root, exports.SDD_CATALOG_INDEX_PATH));
         const catalog = JSON.parse(metadata);
-        // Reject links before the shared validator follows any evidence paths.
-        const capabilities = catalog?.capabilities;
-        phase = 'metadata-shape';
-        if (!Array.isArray(capabilities))
-            return rejectCatalog(phase);
-        for (const capability of capabilities) {
-            for (const field of ['specs', 'workflows', 'entrypoints', 'code', 'tests', 'documentation']) {
-                phase = 'evidence-shape';
-                if (!Array.isArray(capability?.[field]))
-                    return rejectCatalog(phase);
-                for (const entry of capability[field]) {
-                    phase = 'evidence-shape';
+        const ids = new Set(), titles = new Set(), owners = new Set();
+        for (const [position, capability] of catalog.capabilities.entries()) {
+            for (const field of ['id', 'title', 'status', 'scope', 'owner', 'lastVerified']) {
+                diagnostic = (0, branch_sync_catalog_diagnostic_1.catalogDiagnostic)('catalog-contract', 'sdk-v1', field, position + 1);
+                if (typeof capability[field] !== 'string' || !capability[field].trim())
+                    return rejectCatalog(diagnostic);
+            }
+            diagnostic = (0, branch_sync_catalog_diagnostic_1.catalogDiagnostic)('catalog-contract', 'sdk-v1', 'status', position + 1);
+            if (!['as-built-baseline', 'implemented', 'proposed', 'deprecated'].includes(String(capability.status)))
+                return rejectCatalog(diagnostic);
+            diagnostic = (0, branch_sync_catalog_diagnostic_1.catalogDiagnostic)('catalog-contract', 'sdk-v1', 'lastVerified', position + 1);
+            if (!validator.isIsoDate(capability.lastVerified))
+                return rejectCatalog(diagnostic);
+            diagnostic = (0, branch_sync_catalog_diagnostic_1.catalogDiagnostic)('catalog-contract', 'sdk-v1', 'id', position + 1);
+            if (ids.has(String(capability.id)))
+                return rejectCatalog(diagnostic);
+            diagnostic = (0, branch_sync_catalog_diagnostic_1.catalogDiagnostic)('catalog-contract', 'sdk-v1', 'title', position + 1);
+            if (titles.has(String(capability.title)))
+                return rejectCatalog(diagnostic);
+            ids.add(String(capability.id));
+            titles.add(String(capability.title));
+            for (const field of branch_sync_catalog_diagnostic_1.SDK_CATALOG_PATH_FIELDS) {
+                const entries = capability[field];
+                diagnostic = (0, branch_sync_catalog_diagnostic_1.catalogDiagnostic)('catalog-contract', 'sdk-v1', field, position + 1);
+                if ((!(0, sdd_catalog_compatibility_1.allowsEmptySddCatalogPathField)(String(capability.status), field) && entries.length === 0)
+                    || new Set(entries).size !== entries.length)
+                    return rejectCatalog(diagnostic);
+                for (const entry of entries) {
+                    diagnostic = (0, branch_sync_catalog_diagnostic_1.catalogDiagnostic)('evidence-shape', 'sdk-v1', field, position + 1);
                     if (typeof entry !== 'string')
-                        return rejectCatalog(phase);
-                    phase = 'evidence-path-boundary';
-                    const file = (0, node_path_1.join)(root, entry);
-                    const target = (0, node_path_1.relative)(root, (0, node_fs_1.realpathSync)(file));
-                    if ((0, node_path_1.isAbsolute)(entry) || !(0, node_fs_1.lstatSync)(file).isFile() || target === '..' || target.startsWith(`..${node_path_1.sep}`) || (0, node_path_1.isAbsolute)(target))
-                        return rejectCatalog(phase);
+                        return rejectCatalog(diagnostic);
+                    diagnostic = (0, branch_sync_catalog_diagnostic_1.catalogDiagnostic)('evidence-path-boundary', 'sdk-v1', field, position + 1);
+                    if (!validator.isSafeRelativePath(entry) || !validator.matchesFieldBoundary(field, entry)
+                        || !validator.isRegularRepositoryFile(root, entry))
+                        return rejectCatalog(diagnostic);
+                    diagnostic = (0, branch_sync_catalog_diagnostic_1.catalogDiagnostic)('catalog-contract', 'sdk-v1', field, position + 1);
+                    if (field === 'specs') {
+                        if (owners.has(entry))
+                            return rejectCatalog(diagnostic);
+                        owners.add(entry);
+                    }
                 }
             }
         }
-        phase = 'catalog-contract';
+        diagnostic = (0, branch_sync_catalog_diagnostic_1.catalogDiagnostic)('catalog-contract', 'sdk-v1');
         if (validator.validateCatalog(root, catalog).length)
-            return rejectCatalog(phase);
-        phase = 'index-output';
+            return rejectCatalog(diagnostic);
+        diagnostic = (0, branch_sync_catalog_diagnostic_1.catalogDiagnostic)('index-output', 'sdk-v1');
         const expected = validator.renderCatalog(catalog);
-        if (Buffer.byteLength(expected, 'utf8') > MAX_BYTES)
-            return rejectCatalog(phase);
-        if (validator.normalizeCheckoutLineEndings((0, node_fs_1.readFileSync)(indexPath, 'utf8')) !== expected)
-            (0, node_fs_1.writeFileSync)(indexPath, expected, 'utf8');
-        return true;
+        if (Buffer.byteLength(expected, 'utf8') > branch_sync_catalog_diagnostic_1.BRANCH_SYNC_CATALOG_MAX_BYTES)
+            return rejectCatalog(diagnostic);
+        if (validator.normalizeCheckoutLineEndings(index) !== expected) {
+            if (!mayRefreshIndex)
+                return rejectCatalog(diagnostic);
+            publisher.publishCatalogMarkdown(root, expected);
+        }
+        return { valid: true };
     }
     catch {
-        return rejectCatalog(phase);
+        return rejectCatalog(diagnostic);
     }
 }
-function rejectCatalog(phase) {
-    (0, logging_ports_1.logInfo)(`Branch synchronization SDD catalog rejected (${phase}).`);
-    return false;
+function rejectCatalog(diagnostic) {
+    (0, logging_ports_1.logInfo)('Branch synchronization SDD catalog rejected (' + diagnostic.phase
+        + '; profile=' + diagnostic.profile + '; capability=' + diagnostic.capabilityNumber + '; field=' + diagnostic.field + ').');
+    return { valid: false, diagnostic };
 }
 
 
@@ -90580,6 +90822,7 @@ const branch_sync_communication_budget_1 = __nccwpck_require__(99786);
 const logging_ports_1 = __nccwpck_require__(6152);
 const workspace_changes_1 = __nccwpck_require__(93370);
 const branch_sync_sdd_catalog_1 = __nccwpck_require__(88632);
+const branch_sync_catalog_diagnostic_1 = __nccwpck_require__(15677);
 // ncc output includes vendor/webpack whitespace. Keep conflict-marker checks
 // on these exact artifacts; source and every other path retain strict checks.
 const GENERATED_BUNDLES = ['build/cli/index.js', 'build/api/index.js', 'build/github_action/index.js'];
@@ -90623,11 +90866,30 @@ class BranchSyncWorkspaceAdapter {
             throw new Error("Git could not prepare the parent branch merge.");
         }
         let workspacePaths = await this.listWorkspacePaths();
-        if (conflictPaths.length === 0 && workspacePaths.includes(branch_sync_sdd_catalog_1.SDD_CATALOG_PATH) && workspacePaths.includes(branch_sync_sdd_catalog_1.SDD_CATALOG_INDEX_PATH)) {
-            if (!(0, branch_sync_sdd_catalog_1.refreshBranchSyncSddCatalog)(this.repositoryRoot))
-                throw new Error('The merged SDD catalog is invalid.');
-            await this.git.stagePaths([branch_sync_sdd_catalog_1.SDD_CATALOG_INDEX_PATH]);
-            workspacePaths = await this.listWorkspacePaths();
+        if (conflictPaths.includes(branch_sync_sdd_catalog_1.SDD_CATALOG_PATH) || conflictPaths.includes(branch_sync_sdd_catalog_1.SDD_CATALOG_INDEX_PATH)
+            || workspacePaths.includes(branch_sync_sdd_catalog_1.SDD_CATALOG_PATH)) {
+            const diagnostic = (0, branch_sync_sdd_catalog_1.inspectBranchSyncSddCatalogProfile)(this.repositoryRoot);
+            if (conflictPaths.includes(branch_sync_sdd_catalog_1.SDD_CATALOG_PATH)) {
+                // Immutable original objects establish compatibility before a fixer sees
+                // conflicted JSON. A clean, reviewed SDK migration uses merged bytes instead.
+                await this.assertOriginalCatalogProfile(childSha);
+                await this.assertOriginalCatalogProfile(parentSha);
+                if (diagnostic.phase !== 'metadata-conflict-markers')
+                    this.assertSdkCatalogProfile(diagnostic);
+            }
+            else
+                this.assertSdkCatalogProfile(diagnostic);
+        }
+        if (conflictPaths.length === 0 && workspacePaths.includes(branch_sync_sdd_catalog_1.SDD_CATALOG_PATH)) {
+            const mayRefreshIndex = workspacePaths.includes(branch_sync_sdd_catalog_1.SDD_CATALOG_INDEX_PATH);
+            const refreshed = mayRefreshIndex ? (0, branch_sync_sdd_catalog_1.refreshBranchSyncSddCatalogDetailed)(this.repositoryRoot)
+                : (0, branch_sync_sdd_catalog_1.validateBranchSyncSddCatalogDetailed)(this.repositoryRoot);
+            if (!refreshed.valid)
+                throw new branch_sync_catalog_diagnostic_1.BranchSyncCatalogFailure(refreshed.diagnostic);
+            if (mayRefreshIndex) {
+                await this.git.stagePaths([branch_sync_sdd_catalog_1.SDD_CATALOG_INDEX_PATH]);
+                workspacePaths = await this.listWorkspacePaths();
+            }
         }
         const indexEntries = await this.readIndexEntries();
         const conflicts = new Set(conflictPaths);
@@ -90672,9 +90934,14 @@ class BranchSyncWorkspaceAdapter {
             if (!this.resolutionValidated && conflictPaths.includes(branch_sync_communication_budget_1.COMMUNICATION_BUDGET_PATH)
                 && !(0, branch_sync_communication_budget_1.refreshBranchSyncCommunicationBudget)(this.repositoryRoot))
                 return invalid('The resolved communication budget is invalid.', 'communication-budget-invalid');
-            if (!this.resolutionValidated && conflictPaths.includes(branch_sync_sdd_catalog_1.SDD_CATALOG_INDEX_PATH)
-                && !(0, branch_sync_sdd_catalog_1.refreshBranchSyncSddCatalog)(this.repositoryRoot))
-                return invalid('The resolved SDD catalog is invalid.', 'sdd-catalog-invalid');
+            if (!this.resolutionValidated && (conflictPaths.includes(branch_sync_sdd_catalog_1.SDD_CATALOG_INDEX_PATH)
+                || conflictPaths.includes(branch_sync_sdd_catalog_1.SDD_CATALOG_PATH) || snapshot.workspacePaths.includes(branch_sync_sdd_catalog_1.SDD_CATALOG_PATH))) {
+                const refreshed = conflictPaths.includes(branch_sync_sdd_catalog_1.SDD_CATALOG_INDEX_PATH)
+                    ? (0, branch_sync_sdd_catalog_1.refreshBranchSyncSddCatalogDetailed)(this.repositoryRoot) : (0, branch_sync_sdd_catalog_1.validateBranchSyncSddCatalogDetailed)(this.repositoryRoot);
+                if (!refreshed.valid)
+                    return { ...invalid('The resolved SDD catalog is invalid.', 'sdd-catalog-invalid'),
+                        catalogDiagnostic: refreshed.diagnostic };
+            }
             await this.checkResolvedDiff(false);
             // The agent edits files without Git write authority. Only this trusted
             // adapter stages the verified original conflict set, once before checks.
@@ -90771,6 +91038,37 @@ class BranchSyncWorkspaceAdapter {
         if (!branch.trim() || branch.startsWith("-"))
             throw new Error("Invalid branch name.");
         await this.git.execute("git", ["check-ref-format", "--branch", branch]);
+    }
+    assertSdkCatalogProfile(diagnostic) {
+        if (diagnostic.profile !== 'sdk-v1' || diagnostic.phase !== 'profile-compatibility')
+            this.rejectCatalogProfile(diagnostic);
+    }
+    rejectCatalogProfile(diagnostic) {
+        const closed = (0, branch_sync_catalog_diagnostic_1.catalogDiagnostic)(diagnostic.phase, diagnostic.profile, diagnostic.field, diagnostic.capabilityNumber);
+        (0, logging_ports_1.logInfo)('Branch synchronization catalog compatibility rejected: ' + JSON.stringify(closed));
+        throw new branch_sync_catalog_diagnostic_1.BranchSyncCatalogFailure(closed);
+    }
+    async assertOriginalCatalogProfile(revision) {
+        const boundary = (0, branch_sync_catalog_diagnostic_1.catalogDiagnostic)('catalog-file-boundary');
+        if (!/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/u.test(revision))
+            this.rejectCatalogProfile(boundary);
+        let source;
+        try {
+            const entry = await this.readRaw('git', ['ls-tree', '-z', revision, '--', branch_sync_sdd_catalog_1.SDD_CATALOG_PATH]);
+            const match = /^(?:100644|100755) blob ([0-9a-f]{40}|[0-9a-f]{64})\tspecs\/catalog\.json\0$/u.exec(entry);
+            if (!match)
+                throw new Error('Catalog object boundary.');
+            const size = await this.read('git', ['cat-file', '-s', match[1]]);
+            if (!/^(?:0|[1-9][0-9]*)$/u.test(size) || Number(size) > branch_sync_catalog_diagnostic_1.BRANCH_SYNC_CATALOG_MAX_BYTES)
+                throw new Error('Catalog object size.');
+            source = await this.readRaw('git', ['cat-file', 'blob', match[1]]);
+            if (Buffer.byteLength(source, 'utf8') !== Number(size))
+                throw new Error('Catalog object size changed.');
+        }
+        catch {
+            this.rejectCatalogProfile(boundary);
+        }
+        this.assertSdkCatalogProfile((0, branch_sync_sdd_catalog_1.inspectBranchSyncCatalogSource)(source));
     }
     async isAncestor(ancestor, descendant) {
         try {

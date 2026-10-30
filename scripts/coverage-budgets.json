@@ -1210,6 +1210,32 @@
         }
       ],
       "successMessage": "proposed SDK catalog coverage: PASS (path/compatibility100%; validator/gate/doctor95/90)"
+    },
+    {
+      "name": "Branch sync catalog compatibility",
+      "missingEntryLabel": "branch sync catalog compatibility",
+      "rules": [
+        {
+          "files": [
+            "src/domain/branch_sync_catalog_diagnostic.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/infrastructure/branch_sync_sdd_catalog.ts",
+            "src/infrastructure/branch_sync_workspace_adapter.ts",
+            "src/application/usecases/branch_sync/sync_branch_use_case.ts",
+            "src/application/usecases/branch_sync/branch_sync_execution_policy.ts",
+            "src/data/model/application_error.ts",
+            "src/application/policies/application_error_presentation_policy.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "branch sync catalog coverage: PASS (closed classification100%; adapters/recovery95/90)"
     }
   ]
 }
