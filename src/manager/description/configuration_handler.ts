@@ -23,15 +23,17 @@ export class ConfigurationHandler extends IssueContentInterface {
         return block.kind === 'present' ? block.content : undefined;
     };
 
-    override updateContent = (description: string | undefined, content: string | undefined): string | undefined => {
+    override updateContent = (description: string | undefined, content: string | undefined, targetKind?: 'issue' | 'pull-request'): string | undefined => {
         if (description === undefined || content === undefined) return undefined;
-        const pending = readPendingPullRequestLink(description);
-        if (pending.kind === 'blocked') throw new PendingPullRequestLinkError(pending.reason);
-        if (pending.kind === 'pending') {
-            const payload: unknown = JSON.parse(content);
-            if (!payload || typeof payload !== 'object' || !('parentBranch' in payload)
-                || payload.parentBranch !== pending.record.originalBaseBranch) {
-                throw new PendingPullRequestLinkError('ownership');
+        if (targetKind !== 'issue') {
+            const pending = readPendingPullRequestLink(description);
+            if (pending.kind === 'blocked') throw new PendingPullRequestLinkError(pending.reason);
+            if (pending.kind === 'pending') {
+                const payload: unknown = JSON.parse(content);
+                if (!payload || typeof payload !== 'object' || !('parentBranch' in payload)
+                    || payload.parentBranch !== pending.record.originalBaseBranch) {
+                    throw new PendingPullRequestLinkError('ownership');
+                }
             }
         }
         const updated = writeConfigurationBlock(description, content);
@@ -41,7 +43,8 @@ export class ConfigurationHandler extends IssueContentInterface {
 
     update = async (query: ExecutionConfigurationQuery, context: ConfigurationPersistenceContext) => {
         const storedRaw = await this.internalGetter(query);
-        return this.internalUpdate(query, buildConfigurationPayload(context, storedRaw));
+        return this.internalUpdate(query, buildConfigurationPayload(context, storedRaw),
+            (description, content) => this.updateContent(description, content, context.targetKind));
     }
 
     get = async (query: ExecutionConfigurationQuery): Promise<Config | undefined> => {

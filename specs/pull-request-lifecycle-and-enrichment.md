@@ -812,16 +812,16 @@ runtime, finish or explicitly reconcile pending V2 operations with the newer
 runtime; do not discard their recovery state. No public configuration/schema
 migration, consumer override or deployment is part of this change.
 
-Reserve **67 distinct new cases before implementation**, including the seven review/acceptance extensions recorded below:
+Reserve **73 distinct new cases before implementation**, including the thirteen review/acceptance extensions recorded below:
 
 | Area | Cases | Acceptance |
 |---|---:|---|
 | Pure record/preservation policy | 24 | V1/V2 round trips, encoded bases, identity/nonce, malformed/unknown/duplicate/bounded records and exact owned-state removal |
 | Setup/original-parent projection | 9 | absent/poisoned PR config, admitted parent, valid pending authority, conflicts, unchanged ordinary/unlinked/issue routes |
 | Link/recovery/compensation | 19 | interrupted writes, verified/unverified restore, new head, foreign owner/ref, lookup failure, changed body/lease and one real worker-kill recovery |
-| Description/configuration writers | 9 | replace/append/preserve/disabled or explicit commands, fresh metadata, model-time head drift and retained state on failure |
+| Description/configuration writers | 15 | replace/append/preserve/disabled or explicit commands, fresh metadata, model-time head drift and retained state on failure |
 | Routing/bindings/completion | 6 | newer synchronize first, original-event retry, review-only preparation, stale persistence fence and native identity binding |
-| **Total** | **67** | no double counting with existing compensation or #610 cases |
+| **Total** | **73** | no double counting with existing compensation or #610 cases |
 
 The owned process-kill case has a **15-second** budget reserved here; it uses
 only a disposable fake-provider state file and a child Node process, never a
@@ -847,8 +847,8 @@ GraphQL error policy. A dedicated regression first reproduces the incorrect
 retryable outage and then verifies terminal, sanitized credential guidance.
 
 Local correction evidence for #785: the two regressions failed on the original
-implementation (2 failed, 63 passed). The reserved 67 new test cases and existing
-boundary suites now pass together: 577 tests across 19 suites. The concurrent
+implementation (2 failed, 63 passed). The reserved 73 new test cases and existing
+boundary suites now pass together: 631 tests across 23 suites. The concurrent
 missing-marker negative case first failed while its verified positive control
 passed. The five review
 extensions first failed on the initial correction (5 failed, 100 passed). The child-process
@@ -886,3 +886,26 @@ independently completed cleanup with a verified relationship remains successful.
 An absent record is not proof of completed linkage. Lost ownership retains the
 current body and reports actionable stale state rather than recreating authority
 or overwriting concurrent text.
+
+Writer-boundary acceptance extension reserved before its implementation: two
+complementary role cases distinguish a normal issue quoting a pending marker
+(such as this report) from a PR with ambiguous pending metadata. The shared
+configuration writer must not interpret issue prose as PR linkage state. Carry
+an ephemeral issue/PR target kind from the existing execution classification,
+keep it outside stored configuration, and apply the PR guard to the freshly read
+body through an invocation-local renderer. Unknown legacy contexts remain
+conservative; explicit issue contexts preserve quoted text. No body can choose
+its own target kind, and no new input, scope or shared mutable handler state is
+introduced.
+
+The direct credential-bound deployment state writer also identifies its already
+known issue target when invoking the shared renderer. Its existing monotonic
+successor/preserved-prose case first reproduces the quoted-marker regression,
+then verifies the same fence and body preservation with the explicit role.
+
+Four additional issue-adapter failure cases are reserved before adding them:
+null, array and primitive stored configuration, plus an incomplete configuration
+marker during a first save. They verify that explicit issue classification does
+not bypass stored-state validation and that failed rendering performs no write.
+These cover the existing error boundaries of the adapter touched by the role
+correction, retaining its 95/90 module floors instead of excluding it.

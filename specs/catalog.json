@@ -2429,7 +2429,10 @@
         "src/infrastructure/github/ports/github_pull_request_provider_ports.ts",
         "src/domain/pull_request_issue_link_state.ts",
         "src/application/policies/configuration_persistence_policy.ts",
-        "src/manager/description/configuration_handler.ts"
+        "src/manager/description/configuration_handler.ts",
+        "src/application/ports/configuration_store_ports.ts",
+        "src/application/usecases/steps/common/store_configuration_use_case.ts",
+        "src/manager/description/base/issue_content_interface.ts"
       ],
       "tests": [
         "src/application/usecases/execution/__tests__/execution_issue_number_policy.test.ts",
@@ -2461,7 +2464,10 @@
         "src/application/usecases/steps/pull_request/__tests__/killed_link_recovery.test.ts",
         "src/application/usecases/execution/__tests__/setup_execution_workflow.test.ts",
         "src/application/policies/__tests__/configuration_persistence_policy.test.ts",
-        "src/manager/description/__tests__/configuration_handler.test.ts"
+        "src/manager/description/__tests__/configuration_handler.test.ts",
+        "src/application/usecases/steps/common/__tests__/store_configuration_use_case.test.ts",
+        "src/application/usecases/steps/common/__tests__/shared_capability_context_projection.test.ts",
+        "src/manager/description/base/__tests__/issue_content_interface.test.ts"
       ],
       "documentation": [
         "docs/pull-requests/capabilities.mdx",

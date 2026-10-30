@@ -111,3 +111,9 @@ If another writer has already removed the pending record, an original base alone
 does not prove linkage completed. An unverified relationship fails with stale
 state, keeps the current body and requires inspection before a new owned
 operation; Copilot does not recreate lost authority or report successful linkage.
+
+The configuration writer receives the issue/PR target classification from the
+execution, independently of body text. Ordinary issue reports may quote recovery
+markers without being treated as pending PR operations. PR writes and legacy
+unclassified callers keep the conservative pending-state guard. This target kind
+is transient and is not a stored configuration field or user input.

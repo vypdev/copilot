@@ -68765,6 +68765,7 @@ function projectConfigurationPersistenceContext(source) {
     const configuration = source.currentConfiguration;
     return Object.freeze({
         issueNumber,
+        targetKind: !source.isIssue && source.isPullRequest ? 'pull-request' : 'issue',
         currentConfiguration: Object.freeze({
             branchType: configuration.branchType,
             releaseBranch: configuration.releaseBranch,
@@ -76180,7 +76181,7 @@ class CredentialBoundDeploymentStateRepository {
             return decision;
         const stored = this.block.getContent(description);
         const payload = (0, configuration_payload_policy_1.buildConfigurationPayload)({ currentConfiguration: command.state }, stored);
-        const updated = this.block.updateContent(description, payload);
+        const updated = this.block.updateContent(description, payload, "issue");
         if (updated === undefined) {
             return { kind: "invalid", reason: "Issue configuration markers are missing or inconsistent." };
         }
@@ -96821,10 +96822,10 @@ class IssueContentInterface extends content_interface_1.ContentInterface {
                 throw error;
             }
         };
-        this.internalUpdate = async (query, content) => {
+        this.internalUpdate = async (query, content, renderer) => {
             try {
                 const description = await this.issueDescriptionPort.getDescription(query.owner, query.repository, query.issueNumber, query.token);
-                const updated = this.updateContent(description, content);
+                const updated = renderer ? renderer(description, content) : this.updateContent(description, content);
                 if (updated === undefined) {
                     throw new Error('Issue content markers are missing or inconsistent.');
                 }
@@ -96867,17 +96868,19 @@ class ConfigurationHandler extends issue_content_interface_1.IssueContentInterfa
             const block = (0, configuration_markers_1.readConfigurationBlock)(description);
             return block.kind === 'present' ? block.content : undefined;
         };
-        this.updateContent = (description, content) => {
+        this.updateContent = (description, content, targetKind) => {
             if (description === undefined || content === undefined)
                 return undefined;
-            const pending = (0, pull_request_issue_link_state_1.readPendingPullRequestLink)(description);
-            if (pending.kind === 'blocked')
-                throw new pull_request_issue_link_state_1.PendingPullRequestLinkError(pending.reason);
-            if (pending.kind === 'pending') {
-                const payload = JSON.parse(content);
-                if (!payload || typeof payload !== 'object' || !('parentBranch' in payload)
-                    || payload.parentBranch !== pending.record.originalBaseBranch) {
-                    throw new pull_request_issue_link_state_1.PendingPullRequestLinkError('ownership');
+            if (targetKind !== 'issue') {
+                const pending = (0, pull_request_issue_link_state_1.readPendingPullRequestLink)(description);
+                if (pending.kind === 'blocked')
+                    throw new pull_request_issue_link_state_1.PendingPullRequestLinkError(pending.reason);
+                if (pending.kind === 'pending') {
+                    const payload = JSON.parse(content);
+                    if (!payload || typeof payload !== 'object' || !('parentBranch' in payload)
+                        || payload.parentBranch !== pending.record.originalBaseBranch) {
+                        throw new pull_request_issue_link_state_1.PendingPullRequestLinkError('ownership');
+                    }
                 }
             }
             const updated = (0, configuration_markers_1.writeConfigurationBlock)(description, content);
@@ -96887,7 +96890,7 @@ class ConfigurationHandler extends issue_content_interface_1.IssueContentInterfa
         };
         this.update = async (query, context) => {
             const storedRaw = await this.internalGetter(query);
-            return this.internalUpdate(query, (0, configuration_payload_policy_1.buildConfigurationPayload)(context, storedRaw));
+            return this.internalUpdate(query, (0, configuration_payload_policy_1.buildConfigurationPayload)(context, storedRaw), (description, content) => this.updateContent(description, content, context.targetKind));
         };
         this.get = async (query) => {
             let description;

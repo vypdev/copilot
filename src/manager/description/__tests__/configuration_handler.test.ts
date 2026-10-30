@@ -300,3 +300,24 @@ describe('pending PR link configuration preservation', () => {
     expect(mockUpdateDescription).not.toHaveBeenCalled();
   });
 });
+
+
+describe('configuration target classification', () => {
+  it.each(['issue', 'pull-request'] as const)('treats a quoted report marker according to the native %s target', async targetKind => {
+    const literal = '<!-- copilot:pr-issue-link:v1;pr=183;issue=177;base=develop;state=pending -->';
+    const report = `Bug reproduction\n\n\`\`\`text\n${literal}\n\`\`\``;
+    mockGetDescription.mockReset().mockResolvedValue(report);
+    mockUpdateDescription.mockReset().mockResolvedValue(undefined);
+    const handler = new ConfigurationHandler({ getDescription: mockGetDescription, updateDescription: mockUpdateDescription });
+    const operation = handler.update(configurationQuery(), persistenceContext({ targetKind }));
+    if (targetKind === 'issue') {
+      await operation;
+      expect(mockUpdateDescription.mock.calls[0][3]).toContain(report);
+      expect(mockUpdateDescription.mock.calls[0][3]).toContain(literal);
+      expect(mockUpdateDescription.mock.calls[0][3]).not.toContain('"targetKind"');
+    } else {
+      await expect(operation).rejects.toThrow();
+      expect(mockUpdateDescription).not.toHaveBeenCalled();
+    }
+  });
+});
