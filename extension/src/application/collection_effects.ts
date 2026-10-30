@@ -1,27 +1,24 @@
-import type { CollectionAction, CollectionPolicyFact, CollectionSettled } from '../domain/collection_review.ts';
-import type { CollectionPolicyResult } from '../domain/collection_policy.ts';
-import type { JournalKind } from '../domain/journal_facts.ts';
-import type { Settings } from '../domain/settings.ts';
+import type { CollectionPolicyFact, CollectionSettled } from '../domain/collection_review.ts';
 import { sameSettingsContent } from '../domain/settings_operation.ts';
 import type { CollectionCoordinator } from './collection_coordinator.ts';
-import type { CollectionCapture, CollectionPreparation } from './collection_transition_ports.ts';
+import type { CollectionEffectPlan, CollectionPreparation } from './collection_transition_ports.ts';
 import type { CollectionPolicyStore } from './collection_policy_ports.ts';
 import { collectionCurrent, pauseCollectionPolicy, readCollectionPolicy, type CollectionRestrictionResult } from './collection_restrictions.ts';
 import type { SettingsRepository } from './settings_repository.ts';
+import { collectionPolicyTrace, completeCollection, type CollectionOperationTrace } from './collection_observation_ports.ts';
+import { attemptCollectionPolicy } from './collection_policy_attempt.ts';
+import { reportPolicyObservation } from './collection_policy_observation_ports.ts';
+import { commitCollectionPreference } from './collection_preference_commit.ts';
 
-export interface CollectionEffectPlan {
-    readonly id: string; readonly action: CollectionAction; readonly kind: JournalKind; readonly before: Settings;
-    readonly capture: CollectionCapture; readonly policyId: string;
-}
+export type { CollectionEffectPlan } from './collection_transition_ports.ts';
 const NO_POLICY: CollectionPolicyFact = Object.freeze({ acknowledgement: 'not-attempted', observation: 'unavailable', revision: null, attributed: false });
 function initialFacts(plan: CollectionEffectPlan): CollectionSettled {
     return { state: 'settled', action: plan.action, kind: plan.kind, reason: 'unavailable', preference: { state: 'not-attempted', revision: plan.before.revision },
         observedPreference: null, preferenceVerifiedAtObservation: false, policy: NO_POLICY, admittedAtObservation: false, sourceCurrentAtObservation: false };
 }
 function restrictionFact(result: CollectionRestrictionResult): CollectionPolicyFact {
-    const observed = result.observed;
     return { acknowledgement: result.fact.acknowledgement, observation: result.fact.observation, revision: result.fact.policyRevision,
-        attributed: result.operationId !== null && observed.state === 'ready' && observed.policy.mode === 'paused' && observed.policy.receipt?.id === result.operationId };
+        attributed: result.attributed };
 }
 function continuation(plan: CollectionEffectPlan, prepared: CollectionPreparation | undefined): { stamp: object; revision: number } | null {
     if (!prepared || prepared.beforeStamp !== plan.capture.stamp || prepared.result.observed.state !== 'ready') return null;
@@ -36,14 +33,16 @@ function release(held: { release(): void } | null): void { try { held?.release()
 
 /** Stop attempts its durable restriction even when preferences cannot advance or be read. */
 async function executeStop(plan: CollectionEffectPlan, repository: SettingsRepository, coordinator: CollectionCoordinator,
-    store: CollectionPolicyStore, source: () => boolean, stamp: object | null): Promise<CollectionSettled> {
+    store: CollectionPolicyStore, source: () => boolean, stamp: object | null, trace?: CollectionOperationTrace | null): Promise<CollectionSettled> {
     let facts = initialFacts(plan); let staged = false; let held: ReturnType<SettingsRepository['reserveMutations']> = null;
-    const finish = (reason: CollectionSettled['reason']): CollectionSettled => ({ ...facts, reason, sourceCurrentAtObservation: collectionCurrent(source) });
+    const finish = (reason: CollectionSettled['reason']): CollectionSettled => {
+        const result = { ...facts, reason, sourceCurrentAtObservation: collectionCurrent(source) }; completeCollection(trace, result); return result;
+    };
     try {
         held = repository.reserveMutations(); if (!held) return finish('busy');
         const current = () => held!.current() && collectionCurrent(source) && coordinator.owns(plan.kind, stamp!);
         if (!collectionCurrent(current)) return finish('stale');
-        const result = await pauseCollectionPolicy(store, plan.kind, plan.before.revision, () => plan.policyId, current);
+        const result = await pauseCollectionPolicy(store, plan.kind, plan.before.revision, () => plan.policyId, current, collectionPolicyTrace(trace, 'pause'));
         facts = { ...facts, policy: restrictionFact(result) };
         coordinator.observeStop(plan.kind, stamp!, result);
         if (!collectionCurrent(current)) return finish('stale');
@@ -53,9 +52,7 @@ async function executeStop(plan: CollectionEffectPlan, repository: SettingsRepos
             const releasing = held; release(releasing);
             if (releasing.current()) return finish('unavailable');
             held = null;
-            try { facts = { ...facts, preference: await repository.commit({ ...plan.before, center: { ...plan.before.center, [plan.kind]: false } },
-                plan.before.revision, plan.id, source) }; }
-            catch { facts = { ...facts, preference: { state: 'unknown', acknowledgement: 'unknown', observation: 'unavailable', observedRevision: null } }; }
+            facts = { ...facts, preference: await commitCollectionPreference(plan, repository, source, trace) };
             coordinator.takePreparation(plan.id);
         } else facts = { ...facts, preference: { state: 'already', revision: plan.before.revision } };
         const inspected = await repository.inspect();
@@ -72,17 +69,17 @@ async function executeStop(plan: CollectionEffectPlan, repository: SettingsRepos
 
 /** One retained plan, ordered independent effects. Never retries an unknown native submission. */
 export async function executeCollectionPlan(plan: CollectionEffectPlan, repository: SettingsRepository, coordinator: CollectionCoordinator,
-    store: CollectionPolicyStore, source: () => boolean, prePaused: object | null): Promise<CollectionSettled> {
-    if (plan.action === 'stop') return executeStop(plan, repository, coordinator, store, source, prePaused);
+    store: CollectionPolicyStore, source: () => boolean, prePaused: object | null, trace?: CollectionOperationTrace | null): Promise<CollectionSettled> {
+    if (plan.action === 'stop') return executeStop(plan, repository, coordinator, store, source, prePaused, trace);
     let facts = initialFacts(plan);
-    const finish = (reason: CollectionSettled['reason']): CollectionSettled => ({ ...facts, reason, sourceCurrentAtObservation: collectionCurrent(source) });
+    const finish = (reason: CollectionSettled['reason']): CollectionSettled => {
+        const result = { ...facts, reason, sourceCurrentAtObservation: collectionCurrent(source) }; completeCollection(trace, result); return result;
+    };
     if (!plan.capture.policy) return finish('policy-unconfirmed');
     let stamp = plan.capture.stamp; let policyRevision = plan.capture.policy.revision;
     const changed = !plan.before.center[plan.kind];
     if (changed) {
-        try { facts = { ...facts, preference: await repository.commit({ ...plan.before, center: { ...plan.before.center, [plan.kind]: true } },
-            plan.before.revision, plan.id, source) }; }
-        catch { facts = { ...facts, preference: { state: 'unknown', acknowledgement: 'unknown', observation: 'unavailable', observedRevision: null } }; }
+        facts = { ...facts, preference: await commitCollectionPreference(plan, repository, source, trace) };
         const prepared = coordinator.takePreparation(plan.id)?.[plan.kind];
         if (prepared) facts = { ...facts, policy: restrictionFact(prepared.result) };
         const next = continuation(plan, prepared);
@@ -106,19 +103,19 @@ export async function executeCollectionPlan(plan: CollectionEffectPlan, reposito
         const activation = coordinator.reserveActivation(plan.kind, stamp, revision, policyRevision, plan.policyId);
         if (!activation) return finish('changed');
         try {
-            const guard = () => current() && activation.current(); let result: CollectionPolicyResult;
-            try { result = await store.execute(plan.kind, { type: 'set', expectedRevision: policyRevision, mode: 'active',
-                operationId: plan.policyId, settingsRevision: revision }, guard); }
-            catch { result = { state: 'unavailable', effect: 'unknown' }; }
+            const guard = () => current() && activation.current(); const policyTrace = collectionPolicyTrace(trace, 'activation');
+            const result = await attemptCollectionPolicy(store, plan.kind, { type: 'set', expectedRevision: policyRevision, mode: 'active',
+                operationId: plan.policyId, settingsRevision: revision }, guard, policyTrace);
             const acknowledgement = result.state === 'written' || result.state === 'replayed' ? 'accepted'
                 : result.state === 'unavailable' && result.effect === 'unknown' ? 'unknown' : 'not-applied';
             facts = { ...facts, policy: { acknowledgement, observation: 'unavailable', revision: null, attributed: false } };
             const read = await readCollectionPolicy(store, plan.kind);
-            if (read.state !== 'ready') return finish('policy-unconfirmed');
+            if (read.state !== 'ready') { reportPolicyObservation(policyTrace, facts.policy); return finish('policy-unconfirmed'); }
             const attributed = read.policy.mode === 'active' && read.policy.revision === policyRevision + 1
                 && read.policy.receipt?.id === plan.policyId && read.policy.receipt.beforeRevision === policyRevision
                 && read.policy.receipt.settingsRevision === revision;
             facts = { ...facts, policy: { acknowledgement, observation: read.policy.mode, revision: read.policy.revision, attributed } };
+            reportPolicyObservation(policyTrace, facts.policy);
             const admitted = (acknowledgement === 'accepted' || acknowledgement === 'unknown') && attributed && activation.accept(read.policy, guard);
             facts = { ...facts, admittedAtObservation: admitted };
             return finish(admitted ? 'done' : 'policy-unconfirmed');

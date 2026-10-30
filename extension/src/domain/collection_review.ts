@@ -1,8 +1,9 @@
 import type { CollectionMode } from './collection_policy.ts';
 import type { JournalKind } from './journal_facts.ts';
 import type { SettingsCommit } from './settings_result.ts';
+import type { CollectionAction, CollectionPolicyFact, CollectionReason } from './collection_operation.ts';
+export type { CollectionAction, CollectionPolicyFact } from './collection_operation.ts';
 
-export type CollectionAction = 'start' | 'stop';
 export type CollectionReviewIssue = 'invalid' | 'denied' | 'stale' | 'expired' | 'unavailable' | 'busy'
     | 'future' | 'corrupt' | 'migration-required' | 'conflict' | 'globally-paused' | 'pause-unconfirmed' | 'exhausted';
 export type CollectionPreview = { readonly state: 'preview'; readonly operationId: string; readonly kind: JournalKind;
@@ -10,14 +11,9 @@ export type CollectionPreview = { readonly state: 'preview'; readonly operationI
     readonly preferenceBefore: boolean; readonly preferenceAfter: boolean; readonly policyBefore: CollectionMode | 'unknown';
     readonly policyAfter: CollectionMode; readonly expiresAt: number }
     | { readonly state: CollectionReviewIssue | 'unchanged' };
-export interface CollectionPolicyFact {
-    readonly acknowledgement: 'not-attempted' | 'not-applied' | 'accepted' | 'unknown';
-    readonly observation: 'active' | 'paused' | 'unavailable'; readonly revision: number | null;
-    readonly attributed: boolean;
-}
 export interface CollectionSettled {
     readonly state: 'settled'; readonly action: CollectionAction; readonly kind: JournalKind;
-    readonly reason: 'done' | 'busy' | 'stale' | 'preference-unconfirmed' | 'policy-unconfirmed' | 'changed' | 'unavailable';
+    readonly reason: CollectionReason;
     readonly preference: SettingsCommit | { readonly state: 'not-attempted' | 'already'; readonly revision: number };
     readonly observedPreference: { readonly enabled: boolean; readonly revision: number } | null;
     readonly preferenceVerifiedAtObservation: boolean;

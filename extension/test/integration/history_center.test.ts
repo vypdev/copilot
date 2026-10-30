@@ -27,7 +27,10 @@ it('reviews and confirms start, keeps each phase fact, refreshes canonical prefe
     historyButton('diagnostics', f.copy.text.stop).click(); await historyReview(); button(f.copy.text.confirm).click();
     await ready(() => document.querySelector('.history-review')?.textContent?.includes(f.copy.reasons.done) === true); button(f.copy.text.close).click();
     await ready(() => !historyButton('diagnostics', f.copy.text.clear).disabled); historyButton('diagnostics', f.copy.text.clear).click(); await historyReview();
-    expect(document.querySelector('.history-review')?.textContent).toContain(f.copy.text.clearControls); expect(f.documents.get('diagnostics')).toMatchObject({ entries: [{ sequence: 1 }] });
+    expect(document.querySelector('.history-review')?.textContent).toContain(f.copy.text.clearControls);
+    // The admitted stop now contributes its own independent facts before both generated rows are cleared.
+    expect(f.documents.get('diagnostics')).toMatchObject({ entries: [{ sequence: 1 }, { sequence: 2,
+        fact: { kind: 'collection-operation', action: 'stop', state: 'settled', preference: { observation: 'committed' }, pause: { observation: 'paused', attributed: true } } }] });
     button(f.copy.text.confirm).click(); await ready(() => document.querySelectorAll('[data-history-entry]').length === 0 && document.querySelector('.history-review')?.textContent?.includes(f.copy.text.verified) === true);
     expect(f.documents.get('diagnostics')).toMatchObject({ epoch: 1, entries: [] }); expect(f.values.get(SETTINGS_KEY)).toMatchObject({ current: { center: { diagnostics: false } } });
 });

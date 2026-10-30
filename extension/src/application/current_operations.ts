@@ -15,6 +15,11 @@ import { SessionObservations } from './session_observations.ts';
 import { SessionObservationSource } from './session_observation_source.ts';
 import type { SettingsOwnerFence } from './settings_transaction_ports.ts';
 import type { SessionOperationTrace } from './session_observation_ports.ts';
+import type { CollectionAction } from '../domain/collection_review.ts';
+import type { CollectionFact } from '../domain/collection_fact.ts';
+import { journalKind } from '../domain/journal_facts.ts';
+import { CollectionObservations } from './collection_observations.ts';
+import type { CollectionOperationTrace } from './collection_observation_ports.ts';
 
 export interface CurrentOperationPorts {
     now(): number; changed(): void;
@@ -27,7 +32,8 @@ interface EntryBase {
 }
 interface SettingsEntry extends EntryBase { readonly family: 'settings'; fact: OperationFact; stage: OperationStage; submitted: boolean }
 interface SessionEntry extends EntryBase { readonly family: 'sessions'; fact: SessionFact; stage: SessionFact['state'] }
-type Entry = SettingsEntry | SessionEntry;
+interface CollectionEntry extends EntryBase { readonly family: 'collection'; fact: CollectionFact; stage: CollectionFact['state'] }
+type Entry = SettingsEntry | SessionEntry | CollectionEntry;
 const LIFETIME = 300_000;
 /** Current private targets and optional redacted retention have separate ownership and failure paths. */
 export class CurrentOperations {
@@ -99,6 +105,18 @@ export class CurrentOperations {
         const entry: SessionEntry = { ...base, family: 'sessions', fact: observer.fact, stage: 'running' };
         this.install(entry); return observer;
     }
+    reviewCollection(owner: string, kind: CollectionFact['collection'], action: CollectionAction, preferenceRequired: boolean, live: () => boolean): CollectionOperationTrace | null {
+        if (!journalKind(kind) || !['start', 'stop'].includes(action) || typeof preferenceRequired !== 'boolean') return null;
+        let sourceCurrent = true;
+        const current = () => { sourceCurrent = sourceCurrent && collectionCurrent(live); return sourceCurrent; };
+        const base = this.prepare(owner, { location: { route: 'privacy' }, label: null }, current); if (!base) return null;
+        const observer = new CollectionObservations(kind, action, preferenceRequired, fact => {
+            if (this.stopped) return;
+            entry.fact = fact; entry.stage = fact.state; this.update(entry, fact);
+        });
+        const entry: CollectionEntry = { ...base, family: 'collection', fact: observer.fact, stage: 'reviewed' };
+        this.install(entry); return observer;
+    }
     read(owner: string): CurrentOperationReply | { readonly state: 'unavailable' } {
         const now = this.time(); this.prune(now); if (this.stopped || now === null) return { state: 'unavailable' };
         const entry = this.entries.get(owner); if (!entry) return { state: 'empty' };
@@ -114,7 +132,8 @@ export class CurrentOperations {
         if (this.stopped || this.entries.get(owner) !== entry) return { state: 'empty' };
         const common = { target: entry.target, sourceCurrent: current && live, firstObserved: entry.at, retention };
         const operation = entry.family === 'settings' ? { ...common, family: entry.family, stage: entry.stage, fact: entry.fact }
-            : { ...common, family: entry.family, stage: entry.stage, fact: entry.fact };
+            : entry.family === 'sessions' ? { ...common, family: entry.family, stage: entry.stage, fact: entry.fact }
+                : { ...common, family: entry.family, stage: entry.stage, fact: entry.fact };
         return deepFreeze({ state: 'current', operation });
     }
     invalidate(): void { this.generation = {}; for (const entry of this.entries.values()) entry.target = null; this.entries.clear(); }

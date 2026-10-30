@@ -6,6 +6,7 @@ import type { SettingsCommit, SettingsInspection, SettingsReceipt } from './sett
 import { SettingsMutationQueue, type SettingsMutationReservation } from './settings_mutation_queue.ts';
 import { settingsWriteScope, type SettingsWriteEffects } from './settings_write_effects.ts';
 import { protectedMutation, type ProtectedMutationTrace } from './protected_mutation.ts';
+import type { ObserveCollectionPolicy } from './collection_policy_observation_ports.ts';
 
 export const SETTINGS_KEY = 'copilot.settings.v1';
 interface Envelope { readonly current: unknown; readonly previous?: unknown; readonly operation?: SettingsReceipt }
@@ -38,7 +39,7 @@ export class SettingsRepository {
         return { loaded, operation, rollback: envelope?.previous !== undefined && previous.state === 'ready' ? previous.settings : null };
     }
     /** One operation receipt and the complete current/rollback pair share one atomic storage set. */
-    commit(value: unknown, expectedRevision: number, id: string, current: () => boolean, submitted?: () => void): Promise<SettingsCommit> {
+    commit(value: unknown, expectedRevision: number, id: string, current: () => boolean, submitted?: () => void, observePolicy?: ObserveCollectionPolicy): Promise<SettingsCommit> {
         const admitted = settingsSnapshot(value);
         if (!settingsOperationId(id) || !natural(expectedRevision) || !admitted) return Promise.resolve({ state: 'invalid' });
         return this.mutations.run(async (): Promise<SettingsCommit> => {
@@ -57,7 +58,7 @@ export class SettingsRepository {
             if (before.revision !== expectedRevision) return { state: 'conflict' };
             const envelope: Envelope = { current: deepFreeze(JSON.parse(JSON.stringify(next)) as Settings), previous: before,
                 operation: { id, beforeRevision: expectedRevision } };
-            const scope = await settingsWriteScope(this.effects, before, envelope.current as Settings, eligible, id);
+            const scope = await settingsWriteScope(this.effects, before, envelope.current as Settings, eligible, id, observePolicy);
             try {
                 if (!eligible()) return { state: 'stale' };
                 if (!scope.allowed) return { state: 'unavailable' };

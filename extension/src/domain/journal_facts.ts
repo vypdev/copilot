@@ -4,6 +4,7 @@ import { RUNTIME_FAULT_CODES, type RuntimeFaultCode } from './runtime_health.ts'
 import type { SettingsAction } from './settings_change.ts';
 import { keys, record } from './value.ts';
 import { validSessionFact, sessionFactTransition, type SessionFact } from './session_fact.ts';
+import { validCollectionFact, collectionFactTransition, type CollectionFact } from './collection_fact.ts';
 
 const SETTINGS_ACTIONS: Readonly<Record<SettingsAction, true>> = Object.freeze({
     'profile-create': true, 'profile-edit': true, 'profile-select': true, 'profile-deselect': true, 'profile-remove': true,
@@ -24,8 +25,8 @@ export interface HelperFact {
     readonly scope: 'active-at-observation' | 'retired-at-observation';
 }
 export interface DestinationFact { readonly kind: 'destination'; readonly route: CenterRoute; readonly featureId?: string }
-export type ProgressiveFact = OperationFact | SessionFact;
-export const progressiveFact = (value: JournalFact | null | undefined): value is ProgressiveFact => value?.kind === 'operation' || value?.kind === 'session-operation';
+export type ProgressiveFact = OperationFact | SessionFact | CollectionFact;
+export const progressiveFact = (value: JournalFact | null | undefined): value is ProgressiveFact => value?.kind === 'operation' || value?.kind === 'session-operation' || value?.kind === 'collection-operation';
 export type DiagnosticFact = ProgressiveFact | HelperFact;
 export type JournalFact = DiagnosticFact | DestinationFact;
 export type JournalKind = 'diagnostics' | 'recents';
@@ -43,6 +44,7 @@ export function journalFact(kind: JournalKind, value: unknown): value is Journal
         && RUNTIME_FAULT_CODES.includes(value.code as RuntimeFaultCode)
         && ['active-at-observation', 'retired-at-observation'].includes(value.scope as string);
     if (value.kind === 'session-operation') return validSessionFact(value);
+    if (value.kind === 'collection-operation') return validCollectionFact(value);
     if (value.kind !== 'operation' || !keys(value, ['kind', 'action', 'phase', 'acknowledgement', 'observation'])
         || Object.keys(value).length !== 5 || typeof value.action !== 'string'
         || !(Object.hasOwn(SETTINGS_ACTIONS, value.action) || ['connect-read', 'disconnect-read', 'rename-session'].includes(value.action))) return false;
@@ -64,9 +66,10 @@ export function operationTransition(before: OperationFact, after: OperationFact)
 }
 export function progressiveTransition(before: ProgressiveFact, after: ProgressiveFact): boolean {
     return before.kind === 'operation' && after.kind === 'operation' ? operationTransition(before, after)
-        : before.kind === 'session-operation' && after.kind === 'session-operation' && sessionFactTransition(before, after);
+        : before.kind === 'session-operation' && after.kind === 'session-operation' ? sessionFactTransition(before, after)
+            : before.kind === 'collection-operation' && after.kind === 'collection-operation' && collectionFactTransition(before, after);
 }
 export function progressiveTerminal(value: ProgressiveFact): boolean {
-    return value.kind === 'session-operation' ? value.state === 'settled'
-        : ['cancelled', 'blocked'].includes(value.phase) || value.phase === 'settled' && value.observation === 'committed';
+    return value.kind === 'operation' ? ['cancelled', 'blocked'].includes(value.phase) || value.phase === 'settled' && value.observation === 'committed'
+        : value.kind === 'session-operation' ? value.state === 'settled' : ['cancelled', 'blocked', 'settled'].includes(value.state);
 }

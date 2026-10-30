@@ -6,6 +6,7 @@ import { settingsOperationId } from '../domain/settings_operation.ts';
 import type { CollectionPolicyStore } from './collection_policy_ports.ts';
 import { collectionCurrent, pauseCollectionPolicy, readCollectionPolicy, type CollectionObservation, type CollectionRestrictionFact, type CollectionRestrictionResult } from './collection_restrictions.ts';
 import type { SettingsWriteEffects, SettingsWritePreparation } from './settings_write_effects.ts';
+import { observePolicy, type ObserveCollectionPolicy } from './collection_policy_observation_ports.ts';
 import type { CollectionCapture, CollectionPreparation, CollectionPreparations, CollectionActivationLease } from './collection_transition_ports.ts';
 import type { CollectionState } from '../domain/history_state.ts';
 export type { CollectionState } from '../domain/history_state.ts';
@@ -150,7 +151,7 @@ export class CollectionCoordinator implements SettingsWriteEffects {
             slot.held = null; this.publish();
         } });
     }
-    async prepare(before: Settings, after: Settings, current: () => boolean, operationId?: string): Promise<SettingsWritePreparation> {
+    async prepare(before: Settings, after: Settings, current: () => boolean, operationId?: string, observe?: ObserveCollectionPolicy): Promise<SettingsWritePreparation> {
         const increases = KINDS.some(kind => !before.center[kind] && after.center[kind]);
         if (this.disposed) return Object.freeze({ allowed: !increases, release() {} });
         const write = {}; this.writes.add(write); this.readGeneration = {};
@@ -169,7 +170,7 @@ export class CollectionCoordinator implements SettingsWriteEffects {
             const guard = () => !this.disposed && this.writes.has(write) && this.slots[kind].held === null && collectionCurrent(current);
             const staged = operationId === undefined ? undefined : this.stagedStops.get(operationId);
             const reuse = staged?.kind === kind && staged.revision === before.revision && before.center[kind] && !after.center[kind];
-            const result = reuse ? staged.result : await pauseCollectionPolicy(this.policies, kind, before.revision, () => this.ports.identifier(), guard);
+            const result = reuse ? staged.result : await pauseCollectionPolicy(this.policies, kind, before.revision, () => this.ports.identifier(), guard, observePolicy(observe, kind));
             if (reuse) this.stagedStops.delete(operationId!);
             this.slots[kind].observed = result.observed; this.slots[kind].restriction = result.fact;
             preparations[kind] = Object.freeze({ beforeStamp: stamps[kind], afterStamp: afterStamps[kind], result });

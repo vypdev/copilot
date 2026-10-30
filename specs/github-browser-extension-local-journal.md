@@ -53,7 +53,7 @@ history/review gateway. The mounted four-locale controls now use a source-valida
 typed reader/review/export client and retain independent phase facts. Accepted
 local destinations and actual preference-service observations are now composed.
 Preference operations also have a separate bounded current-window view even
-when history is off or unavailable. Native session producers now preserve independent ordered active-credential, repository-preference and vault observations. Compound collection-operation and helper producers and native/human acceptance remain required; this source increment does not complete CENTER09/10.
+when history is off or unavailable. Native session producers now preserve independent ordered active-credential, repository-preference and vault observations. Compound start/stop observations now preserve prerequisite pause, preference and activation separately. The explicit clear-operation and helper projections and native/human acceptance remain required; this source increment does not complete CENTER09/10.
 
 ### 2.3 Evidence
 

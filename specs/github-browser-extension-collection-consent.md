@@ -42,7 +42,7 @@ The background now shares its preference repository with that collection owner
 and exposes closed, native-client-bound history/review use cases. The actual
 center now produces accepted recent destinations under private native consent
 and generation fences. Preference services now produce current-operation facts
-and optional redacted history. Native session services now produce separate active-credential, repository-preference and vault effects through the closed session family in section6.10. Compound collection-operation and helper producers, and native/human acceptance remain incomplete. The mounted center now
+and optional redacted history. Native session services now produce separate active-credential, repository-preference and vault effects through the closed session family in section6.10. The actual compound start/stop producer now preserves independent native phase observations. The explicit clear-operation and helper projections and native/human acceptance remain incomplete. The mounted center now
 has a source-validated typed client and four-locale read/start/stop/clear/export
 controls, independent of preference-read availability. Saved collection flags
 still default false; opening a screen does not opt into collection.
@@ -361,7 +361,7 @@ data separately; unknown settings never become invented off/on preferences.
 History changes notify only native centers and never reset content quarantine.
 Current compound collection results preserve their independent preference and
 policy facts. A collector MUST NOT flatten partial results into completed history;
-compound collection-operation and helper producers remain required delivery work. Session producers use their own bounded projection below.
+compound start/stop producers now use the bounded projection in section6.11. Explicit clear-operation and helper projections and native/human evidence remain required delivery work.
 Localized controls, the narrow destination producer and native preference
 observations are composed in development source.
 
@@ -494,7 +494,7 @@ shutdown or a reentrant source change cannot publish a late private response.
 Clearing generated history MUST NOT claim to clear this independent temporary
 current-operation memory.
 
-This first family covers preference operations. Session active-credential, repository-preference and vault effects now use the separate closed projection in section6.10. Compound collection preference/policy phases still require their own projection; neither family may be guessed from a top-level result or flattened into preference saving. Complete H3 still requires compound/helper producers and the full native/human journeys.
+This first family covers preference operations. Session active-credential, repository-preference and vault effects now use the separate closed projection in section6.10. Compound collection preference/policy phases now use section6.11; neither family may be guessed from a top-level result or flattened into preference saving. Complete H3 still requires explicit clear/helper projections and the full native/human journeys.
 
 ### 6.10 Native session observations
 
@@ -575,9 +575,84 @@ such receipt; no automatic resubmission or draft-clearing guess is allowed.
 
 Full session delivery requires the actual native producer, current metadata,
 four-locale effect list, optional same-row history progress and clear/retention
-races. The active-key foundation alone does not satisfy this contract. Compound
-collection preference/policy operations still require their own family.
+races. The active-key foundation alone does not satisfy this contract. Compound collection preference/policy operations use their own family below; explicit clear/helper projections and complete native/human evidence remain separate H3 work.
 
+
+### 6.11 Compound collection observations
+
+An admitted start/stop preview MUST own its own closed collection-operation
+projection. Preference saving, prerequisite policy pause and final activation
+remain separate observations. No renderer recording method or global mutable
+observer registry is introduced. A per-call observer follows the retained native
+plan; its failure cannot change primary admission, storage, cancellation or replay.
+
+```text
+Reviewed start → confirmation → prerequisite pause → preference save/readback
+ → exact-snapshot verification → activation/readback → service result
+Reviewed stop → confirmation → policy pause/readback → staged reuse
+ → preference save/readback → exact-snapshot verification → service result
+```
+
+Text equivalent: starting first establishes a paused policy, saves the opt-in and
+verifies the full preference snapshot before activation. Stopping first attempts
+a durable pause; preference preflight reuses that already observed restriction.
+That reuse MUST NOT appear as another native attempt. Each phase distinguishes
+no observation, an actual submitted command and the canonical observation. An
+already-paused inspection is different from submitting a pause. A top-level done
+result does not establish that every storage effect completed or remained active.
+
+The immutable fact contains only collection kind, start/stop, reviewed/running/
+cancelled/blocked/settled state, a closed service reason, whether preference
+publication was required, the preference acknowledgement/observation, separate
+pause and activation observations, and explicitly historical verification,
+admission/source booleans. Policy facts may retain nonsecret local revision and
+exact-receipt attribution, never the receipt selector itself. Fixed three phase
+slots and an irreversible incomplete flag bound retention. Pending effects at
+service completion MUST remain visibly incomplete. Settled phase observations
+cannot be rewritten by weaker later availability or another operation.
+
+Actual submission is reported only after invoking the mutation port, including
+synchronous failure. Secondary callbacks are contained and the native source is
+rechecked before later effects. Canonical attribution requires this operation's
+exact receipt and expected policy/settings revisions; a matching mode or selector
+alone is insufficient. No read or observer retries a mutation. Cancellation before
+confirmation reports no attempted effect; cancellation after confirmation remains
+pending. Replay/retained-result inspection creates neither a new current entry
+nor another history row. Expired/replaced pending previews become blocked without
+inventing cancellation of effects that already started.
+
+Current collection operations share the existing eight-client/five-minute bound.
+Their closed local target is Privacy for collection controls. Existing source,
+controller, credential, shutdown and replacement fences apply; reads do not renew
+retention. One optional diagnostics ticket is admitted at preview time only.
+Enabling diagnostics cannot backfill its own earlier off/unknown preview. A known
+row may progress while collection is off until clear/eviction retires its ticket.
+History or metadata failure cannot weaken the primary privacy operation.
+
+The four locales MUST show a service result separately from preference, pause,
+activation and retained history. Example: “The service returned a result.
+Preference: verified. Durable pause: unavailable. Inspect current collection state
+before continuing.” No read button may confirm, request permission or resubmit.
+A current-policy read describes the present; immutable history describes its
+original observation. Generated-history clear remains a separate retained native
+operation: its own current projection MUST NOT recreate the rows just cleared.
+Complete H3 also requires that clear projection and helper observations.
+
+| State | Representative content | Safe next action |
+|---|---|---|
+| Reviewed | “Collection change reviewed; no write attempt observed.” | Confirm or cancel the exact retained review |
+| Running | “A preference write was attempted; its result is pending.” | Inspect metadata; confirmation joins the existing request |
+| Partial | “Preference: verified. Durable pause: active; acknowledgement unknown.” | Read current collection state; no automatic repeat |
+| Blocked/cancelled | “The unsubmitted review is no longer available.” | Create a new review if still wanted |
+| Returned | “The collection service returned a result. Inspect its independent effects.” | Inspect current state separately |
+| Metadata unavailable | “Earlier proved facts remain separate from current availability.” | Reread metadata; do not reconstruct the target |
+
+These are text equivalents of the phase flow above. Historical verification,
+admission and source booleans MUST NOT be shown as negative observations before
+a service result exists. Current and retained history use correctly nested static
+headings under the existing no-dynamic-markup constraint. Journal/review vocabulary
+is a neutral domain dependency; effect-plan declarations are independent from
+executors. Type and runtime imports MUST remain acyclic with no gate exceptions.
 
 ## 7. User-facing configuration
 
@@ -670,7 +745,13 @@ on opt-in. An explicit old-ring sample is an observation at capture time.
 
 ## 13. Compatibility, migration, rollout, and rollback
 
-The unpublished H3 version1 journal admits the closed session fact alongside existing operation/helper facts. Existing supported rows keep their meaning. An older draft reader that does not recognize this fact MUST preserve the record as unavailable rather than downgrade or delete it. No native database upgrade or H2 rollback claim follows from this addition.
+The unpublished H3 version1 journal admits closed session and compound collection
+facts alongside existing operation/helper facts. Existing supported rows keep
+their meaning. An older draft reader that does not recognize a fact MUST preserve
+the record as unavailable rather than downgrade or delete it. The existing exact
+source-tree client/background fence rejects mixed installed builds independently
+from fact decoding. No native database upgrade or H2 rollback claim follows from
+this addition.
 
 Database0 creates three fixed stores. Known database1 with exactly the two owned
 stores adds policy without changing records; missing policy is paused. Unexpected
@@ -706,7 +787,11 @@ upgrade or publication is implied.
 | Reader/review/export ownership | 35 | Read-after-clear/revision races, retained result inspection, known-fact preservation, explicit exact-byte download, retirement/single flight |
 | Mounted UI/locales/export/recovery | 40 | Independent phase facts, editor/observer, guarded navigation,4locales, accessible JSON, separate privacy inspectors |
 | Real targets and human | 9 | Three native journeys per target plus owning human gate |
-| **Total** | **721** | No substitution for semantic H3/catalog coverage |
+| Compound projection and progression | 32 | Closed phases, no invented attempt, immutable exact facts, bounded/monotonic terminal states |
+| Actual compound effect ownership | 36 | Native preference/policy callbacks, staged reuse, exact receipt, partial outcomes, secondary faults and source/replay races |
+| Compound current/history integration | 28 | Shared lifetime/replacement, no backfill, off/clear/unknown retention, readonly metadata and sender isolation |
+| Mounted compound operation view | 16 | Four complete locales plus twelve pending/partial/recovery/retirement/independent-read journeys |
+| **Total** | **833** | No substitution for semantic H3/catalog coverage |
 
 Count each case once. Pure branches and modified executable lines/branches100%,
 no exclusions/threshold weakening; keep root budgets. Request fixtures are not
@@ -744,6 +829,14 @@ Session evidence adds `session_fact.test.ts`, `session_operation_view.test.ts`,
 `session_operation_center.test.ts`. These cover actual service/gateway ownership,
 independent state, generated byte bounds and the mounted form's own-notification
 race. Contract and DOM cases remain distinct from required native/human evidence.
+Compound evidence adds `collection_fact.test.ts`, `collection_operation_view.test.ts`,
+`collection_journal_progress.test.ts`, `collection_observations.test.ts`,
+`collection_policy_observation.test.ts`, `collection_policy_trace.test.ts`,
+`collection_observation_service.test.ts`, `current_collection_operations.test.ts`,
+`collection_operation_gateway.test.ts` and `collection_operation_center.test.ts`.
+The exact-revision attribution cases fail against the prior native service and
+pass after the fix. Existing architecture and actual clear journeys remain gates;
+updated history expectations explicitly include the admitted stop row before clear.
 
 ## 15. Documentation and discoverability
 
@@ -809,6 +902,16 @@ docs/specs/catalog and concrete examples together.
 26. The actual connection form clears its submitted draft after a directly
     observed successful response even if its own notifications retire the private
     summary. A missing response grants no revision receipt or automatic retry.
+27. A compound start/stop preserves prerequisite pause, preference and activation
+    independently; staged reuse creates no duplicate attempt or history row.
+28. A lost/accepted acknowledgement cannot establish canonical policy state or
+    attribute a matching selector whose expected policy/settings revisions differ.
+29. Confirmation, cancellation, replay, source loss and inspection preserve one
+    native primary promise and one optional preview-time ticket; no diagnostics
+    activation backfills its own earlier off/unknown intent.
+30. Missing detailed phases are disclosed as incomplete, never rebuilt from a
+    service summary. Four-locale current/history views show historical verification
+    and admission only after an actual result, separately from live metadata.
 
 ## 17. Requirements traceability
 
@@ -819,12 +922,13 @@ docs/specs/catalog and concrete examples together.
 | Truthful ordered phases | Application | Partial/ack/replay/queue | Activity/privacy |
 | Restriction-only save and owner lifetime | Settings/coordinator | Five application contract suites; native/UI evidence still required | Configuration/contributor |
 | Reviewed phase continuation and priority of a later stop | CollectionReviews/effects/private leases | Eight retained-plan/phase/ownership/staging suites; full native/UI evidence pending | Configuration/privacy/contributor |
-| Bounded secondary retention and unknown identity | JournalWriter/queue/IO/progress | Writer/domain/race suites plus session gateway/capacity journeys; compound/helper producers and native evidence pending | Privacy/recovery/contributor |
+| Bounded secondary retention and unknown identity | JournalWriter/queue/IO/progress | Writer/domain/race suites plus session/compound gateway and capacity journeys; explicit clear/helper projections and native evidence pending | Privacy/recovery/contributor |
 | One production owner and closed native control | CollectionHistory/HistoryControls/HistoryGateway/native composition | Protocol/application/gateway/bootstrap and mounted UI suites; native/human acceptance pending | Contributor/privacy/recovery |
 | Accepted destinations and consent/source retirement | RecentsCapture/RecentsClient/VisitDelivery/centerDestination/center_app | Native source, delivery, gateway and 12 mounted navigation/localization cases; real-browser/human gates outstanding | Local history/privacy/contributor |
 | Actual preference observations and independent current view | SettingsOperations/SettingsRepository/CurrentOperations/CurrentOperationReader/CenterClient/center_app | Eight projection/native/reader/client/mounted suites plus direct store observer isolation; native/human gates outstanding | Local history/configuration/privacy/contributor |
 | Independent session effects and causal source | NamedSessions/ProtectedSessionService/SettingsRepository/SessionObservations/SessionObservationSource | Session contract/source/service/current/gateway/repository/mounted suites; native/human gates outstanding | Local history/configuration/privacy/contributor |
 | Generated byte capacity and irreversible row retirement | local_journal/JournalWriter | Session capacity/progress/gateway suites, exact reviewed export envelope | Local history/privacy/contributor |
+| Compound effects, exact attribution and staged reuse | CollectionReviews/effects/CollectionObservations/coordinator/native policy attempt | Compound domain/port/service/current/gateway/mounted suites plus two failing-before native regressions; full native/human gate outstanding | Local history/configuration/privacy/contributor |
 | Minimal discoverable facts | Presentation | Locales/a11y/export | User navigation |
 
 ## 18. Implementation sequence

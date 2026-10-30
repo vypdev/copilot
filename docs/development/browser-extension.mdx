@@ -544,8 +544,7 @@ cleanup failure cannot change an established settings result. Existing startup
 migrations are preserved. `CollectionHistory` now wires this preflight into the
 production background's same preference repository. Mounted center controls and
 the admitted-destination and preference-observation producers are now composed;
-compound collection-operation and helper producers and complete native/human
-acceptance remain delivery work.
+the separate clear-operation projection, helper producers and complete native/human acceptance remain delivery work.
 
 Both kinds pause admission before a consent-change I/O wait. Off attempts a
 policy pause and independently permits the off preference to save. Every
@@ -631,8 +630,7 @@ release cannot resurrect them. Failed clear releases deferred admitted work
 without claiming deletion. Wire `JournalReviews.idle` to the actual writer's idle
 state, not coordinator eligibility, which is false while the reservation is held.
 The writer and review cores now share production ownership and a closed gateway;
-compound collection-operation and helper producers and independent real-browser
-acceptance remain. Actual preference observations are described below.
+separate clear-operation and helper producers and independent real-browser acceptance remain. Actual preference, session and start/stop observations are described below.
 
 `CollectionHistory` constructs the actual coordinator, preference repository,
 writer and observed store without I/O. Native bootstrap follows synchronous
@@ -655,7 +653,7 @@ The closed protocol supports one collection's read, start/stop or clear preview,
 confirmation/cancellation and read-only inspection of a retained public review ID. It accepts no raw
 facts, policy nonce, callback, store name or provider request. Current compound
 results preserve separate preference/policy facts; do not flatten partial success
-into a completed history record. Compound collection-operation and helper projections remain unfinished H3 deliverables. Session observations use their own closed family below. The localized typed client/UI is now composed in the options
+into a completed history record. The explicit clear-operation and helper projections remain unfinished H3 deliverables. Session and compound start/stop observations use their own closed families below. The localized typed client/UI is now composed in the options
 page; native-browser and human acceptance remain outstanding.
 
 `HistoryClient` owns one mutation review and one bounded read stream with at
@@ -749,7 +747,7 @@ and complete expected after-state. The existing32-result/five-minute primary
 cache retains this private expectation only while unknown, releasing it on
 invalidation, expiry, eviction or verified completion. It never enters metadata,
 history or export. Generated-history clear leaves the separate temporary current
-view intact. Session effects use their own closed family below; compound preference/policy outcomes still need their own projection. This settings family cannot stand in for either.
+view intact. Session effects and compound preference/policy outcomes use their own closed families below. This settings family cannot stand in for either.
 
 ### Active-session persistence foundation
 
@@ -761,7 +759,7 @@ including optional organization identity, independently of key order. A matching
 save or absent removed key can establish completion after lost acknowledgement;
 accepted-but-unapplied effects and failed inspections remain unconfirmed.
 Existing epoch, permission and source gates still control publication. These
-internal persistence facts now feed the per-call session projection below. Compound collection-operation and helper projections remain unfinished H3 work.
+internal persistence facts now feed the per-call session projection below. The explicit clear-operation and helper projections remain unfinished H3 work.
 
 
 ### Native session-operation observations
@@ -797,3 +795,38 @@ and never trims authored data. Current metadata reads perform no store/provider
 I/O and cannot reconcile an old session write solely from a matching payload.
 See the session fact/source/service/gateway/capacity/mounted-view suites for
 executable contracts. These do not replace native-browser or human acceptance.
+
+### Compound collection-operation observations
+
+`CollectionReviews` captures one per-call observer after admitting the exact plan.
+It reports confirmation, cancellation and expiry without minting another plan or
+ticket on replay/inspection. `CollectionObservations` retains three fixed phase
+slots; service completion cannot reconstruct a missing native phase or rewrite
+an established observation. Missing or pending observations remain incomplete.
+
+`attemptCollectionPolicy` reports submission after the actual port invocation,
+including synchronous failure. Restriction and activation inspect once and pass
+only detached closed facts. Attribution checks the exact mode, policy revision,
+before revision, preference revision and private nonce. The private nonce and
+native client/plan selectors never enter the observation or journal; a closed
+nonsecret policy revision may be retained. A missing acknowledgement remains unknown even
+when canonical readback proves the desired state.
+
+`SettingsRepository.commit` forwards a per-call policy observer through its
+mandatory `SettingsWriteEffects` preflight. The coordinator consumes an exact
+staged stop without creating a second pause trace. `commitCollectionPreference`
+uses the same canonical primary path with or without an observer. Secondary
+failures cannot change replay, policy admission, current-source guards or cleanup.
+
+The shared closed vocabulary lives below journals/reviews in
+`collection_operation.ts`; retained effect plans live in application transition
+ports, independently from executors. Both type and runtime imports remain acyclic.
+Static `h3`/`h4` headings preserve current-view/history nesting under the existing
+markup-authority gate. All four locales distinguish not observed, submitted and
+inspected phases. Historical admission/verification flags are shown only after
+the service result, separately from live current-source metadata.
+
+Collection current entries share the existing eight-client/five-minute limit and
+the same diagnostic tickets. No new recording IPC, permission, configuration key
+or global callback registry is added. The explicit clear-operation projection,
+helper observations and complete native/human H3 acceptance remain separate work.

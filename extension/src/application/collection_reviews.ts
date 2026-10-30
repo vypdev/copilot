@@ -7,12 +7,14 @@ import type { CollectionCoordinator } from './collection_coordinator.ts';
 import type { CollectionPolicyStore } from './collection_policy_ports.ts';
 import { executeCollectionPlan, type CollectionEffectPlan } from './collection_effects.ts';
 import type { SettingsRepository } from './settings_repository.ts';
+import { reportCollection, type ObserveCollectionOperation, type CollectionOperationTrace } from './collection_observation_ports.ts';
 
-export interface CollectionReviewPorts { now(): number; identifier(): string; fence(owner: string): SettingsOwnerFence | null }
+export interface CollectionReviewPorts { now(): number; identifier(): string; fence(owner: string): SettingsOwnerFence | null; observe?: ObserveCollectionOperation }
 interface Pending extends CollectionEffectPlan {
     readonly owner: string; readonly fence: SettingsOwnerFence; readonly createdAt: number; readonly expiresAt: number; readonly generation: number;
+    trace: CollectionOperationTrace | null;
 }
-interface Completed extends Omit<Pending, 'before' | 'capture'> { readonly result: CollectionOutcome }
+interface Completed extends Omit<Pending, 'before' | 'capture' | 'trace'> { readonly result: CollectionOutcome }
 interface Running { readonly record: Pending; readonly promise: Promise<CollectionOutcome> }
 const TTL = 300_000;
 
@@ -24,7 +26,10 @@ export class CollectionReviews {
     private generation = 0;
     constructor(private readonly repository: SettingsRepository, private readonly coordinator: CollectionCoordinator,
         private readonly policies: CollectionPolicyStore, private readonly ports: CollectionReviewPorts) {}
-    invalidate(): void { this.generation++; this.pending.clear(); this.completed.clear(); }
+    invalidate(): void {
+        this.generation++; const old = [...this.pending.values()]; this.pending.clear(); this.completed.clear();
+        for (const value of old) reportCollection(value.trace, 'blocked');
+    }
     inspect(id: string, owner: string): CollectionInspection {
         const record = this.admit(id, owner); if ('state' in record) return record;
         return 'result' in record ? record.result : { state: 'promise' in record ? 'pending' : 'not-submitted' };
@@ -43,7 +48,8 @@ export class CollectionReviews {
             && fence.controllerEpoch === record.fence.controllerEpoch && fence.credentialEpoch === record.fence.credentialEpoch;
     }
     private prune(now: number): void {
-        for (const map of [this.pending, this.completed]) for (const [id, value] of map) if (now < value.createdAt || now >= value.expiresAt) map.delete(id);
+        for (const [id, value] of this.pending) if (now < value.createdAt || now >= value.expiresAt) { this.pending.delete(id); reportCollection(value.trace, 'blocked'); }
+        for (const [id, value] of this.completed) if (now < value.createdAt || now >= value.expiresAt) this.completed.delete(id);
     }
     private used(id: string): boolean {
         return [...this.pending.values(), ...this.completed.values(), ...Array.from(this.running.values(), value => value.record)]
@@ -78,7 +84,11 @@ export class CollectionReviews {
                 || inspected.operation?.id === id || capture.policy?.receipt?.id === policyId) return { state: 'unavailable' };
             if (this.pending.size + this.running.size >= 16) return { state: 'busy' };
             if (!this.current(bound)) return { state: 'stale' };
-            this.pending.set(id, { ...bound, id, policyId, kind, action, before, capture });
+            const retained: Pending = { ...bound, id, policyId, kind, action, before, capture, trace: null };
+            this.pending.set(id, retained);
+            try { retained.trace = this.ports.observe?.(owner, kind, action, before.center[kind] !== (action === 'start'), () => this.current(bound)) ?? null; }
+            catch { /* A secondary observer cannot reject an otherwise valid preview. */ }
+            if (!this.current(bound)) { if (this.pending.get(id) === retained) this.pending.delete(id); reportCollection(retained.trace, 'blocked'); return { state: 'stale' }; }
             return deepFreeze({ state: 'preview', operationId: id, kind, action, settingsRevision: before.revision,
                 policyRevision: capture.policy?.revision ?? null, preferenceBefore: before.center[kind], preferenceAfter: action === 'start',
                 policyBefore: capture.policy?.mode ?? 'unknown', policyAfter: action === 'start' ? 'active' : 'paused', expiresAt: bound.expiresAt });
@@ -92,16 +102,17 @@ export class CollectionReviews {
         this.pending.delete(id);
         let prePaused: object | null = null;
         const promise = Promise.resolve().then(() => executeCollectionPlan(record, this.repository, this.coordinator, this.policies,
-            () => this.current(record), prePaused)).then(result => {
+            () => this.current(record), prePaused, record.trace)).then(result => {
             const now = this.time();
             if (now !== null && natural(now + TTL)) {
-                const { before: _before, capture: _capture, ...retained } = record;
+                const { before: _before, capture: _capture, trace: _trace, ...retained } = record;
                 this.completed.set(id, { ...retained, createdAt: now, expiresAt: now + TTL, result: deepFreeze(result) });
                 if (this.completed.size > 32) this.completed.delete(this.completed.keys().next().value!);
             }
             return result;
         }).finally(() => { this.running.delete(id); });
         this.running.set(id, { record, promise });
+        reportCollection(record.trace, 'confirming');
         if (record.action === 'stop') prePaused = this.coordinator.pause(record.kind);
         return promise;
     }
@@ -109,7 +120,7 @@ export class CollectionReviews {
         const record = this.admit(id, owner); if ('state' in record) return record;
         if ('promise' in record) return { state: 'pending' };
         if ('result' in record) return record.result;
-        this.pending.delete(id); return { state: 'cancelled' };
+        this.pending.delete(id); reportCollection(record.trace, 'cancelled'); return { state: 'cancelled' };
     }
     private admit(id: string, owner: string): Pending | Completed | Running | { readonly state: CollectionReviewIssue } {
         if (!settingsOperationId(id) || !settingsOperationId(owner)) return { state: 'invalid' };

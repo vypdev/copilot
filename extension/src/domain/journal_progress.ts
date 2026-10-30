@@ -1,6 +1,7 @@
 import { journalFact, operationTransition, type JournalFact, type JournalKind, type OperationFact, type ProgressiveFact } from './journal_facts.ts';
 import { deepFreeze } from './value.ts';
 import { sameSessionFact, mergeSessionFact } from './session_fact.ts';
+import { sameCollectionFact, mergeCollectionFact } from './collection_fact.ts';
 
 export function snapshotJournalFact(kind: JournalKind, value: unknown): JournalFact | null {
     try {
@@ -12,12 +13,14 @@ export function snapshotJournalFact(kind: JournalKind, value: unknown): JournalF
 export function sameJournalFact(before: JournalFact, after: JournalFact): boolean {
     if (before.kind !== after.kind) return false;
     if (before.kind === 'session-operation' && after.kind === 'session-operation') return sameSessionFact(before, after);
+    if (before.kind === 'collection-operation' && after.kind === 'collection-operation') return sameCollectionFact(before, after);
     return Object.keys(before).length === Object.keys(after).length
         && Object.entries(before).every(([key, value]) => after[key as keyof JournalFact] === value);
 }
 export function mergeProgressiveFact(before: ProgressiveFact, after: ProgressiveFact): ProgressiveFact | null {
     return before.kind === 'operation' && after.kind === 'operation' ? mergeOperationFact(before, after)
-        : before.kind === 'session-operation' && after.kind === 'session-operation' ? mergeSessionFact(before, after) : null;
+        : before.kind === 'session-operation' && after.kind === 'session-operation' ? mergeSessionFact(before, after)
+            : before.kind === 'collection-operation' && after.kind === 'collection-operation' ? mergeCollectionFact(before, after) : null;
 }
 export function nextStoredProgress(before: ProgressiveFact, desired: ProgressiveFact): ProgressiveFact {
     return before.kind === 'operation' && desired.kind === 'operation' ? nextStoredOperation(before, desired) : desired;

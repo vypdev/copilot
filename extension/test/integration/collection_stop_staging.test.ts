@@ -7,7 +7,7 @@ import { activeCollectionPolicy } from '../fixtures/collection_policy.ts';
 import { collectionReviewsFixture, collectionPreview, collectionConfirm, COLLECTION_OWNER } from '../fixtures/collection_reviews.ts';
 import { deferred } from '../fixtures/runtime.ts';
 
-const UNKNOWN: CollectionRestrictionResult = { observed: { state: 'unavailable' }, operationId: null,
+const UNKNOWN: CollectionRestrictionResult = { observed: { state: 'unavailable' }, operationId: null, attributed: false,
     fact: { acknowledgement: 'unknown', observation: 'unavailable', policyRevision: null, sourceCurrentAtObservation: true } };
 it('a contended primary queue yields an explicit session stop without submitting or deadlocking', async () => {
     const f = collectionReviewsFixture(collectionSettings(true)); f.values.set('diagnostics', activeCollectionPolicy()); const preview = await collectionPreview(f, 'stop');

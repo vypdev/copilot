@@ -3214,7 +3214,16 @@
         "extension/src/domain/history_export_format.ts",
         "extension/src/domain/session_copy.ts",
         "extension/src/domain/session_fact.ts",
-        "extension/src/presentation/SessionEffects.svelte"
+        "extension/src/presentation/SessionEffects.svelte",
+        "extension/src/application/collection_observation_ports.ts",
+        "extension/src/application/collection_observations.ts",
+        "extension/src/application/collection_policy_attempt.ts",
+        "extension/src/application/collection_policy_observation_ports.ts",
+        "extension/src/application/collection_preference_commit.ts",
+        "extension/src/domain/collection_copy.ts",
+        "extension/src/domain/collection_fact.ts",
+        "extension/src/presentation/CollectionEffects.svelte",
+        "extension/src/domain/collection_operation.ts"
       ],
       "tests": [
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
@@ -3439,7 +3448,21 @@
         "extension/test/integration/session_operation_center.test.ts",
         "extension/test/integration/session_operation_gateway.test.ts",
         "extension/test/integration/session_operation_service.test.ts",
-        "extension/test/integration/session_repository_observation.test.ts"
+        "extension/test/integration/session_repository_observation.test.ts",
+        "extension/test/contracts/collection_fact.test.ts",
+        "extension/test/contracts/collection_journal_progress.test.ts",
+        "extension/test/contracts/collection_operation_view.test.ts",
+        "extension/test/fixtures/compound_center.ts",
+        "extension/test/fixtures/compound_gateway.ts",
+        "extension/test/fixtures/compound_observer.ts",
+        "extension/test/integration/collection_observation_service.test.ts",
+        "extension/test/integration/collection_observations.test.ts",
+        "extension/test/integration/collection_operation_center.test.ts",
+        "extension/test/integration/collection_operation_gateway.test.ts",
+        "extension/test/integration/collection_policy_observation.test.ts",
+        "extension/test/integration/collection_policy_trace.test.ts",
+        "extension/test/integration/current_collection_operations.test.ts",
+        "extension/test/integration/collection_effects_presentation.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",

@@ -13,9 +13,7 @@ can inspect and export available generated history without taking control.
 
 H3 is still being implemented. These controls and their typed client are present
 in the development source, including consented recent destinations from the
-actual local navigation, preference operations and session operations. Compound
-collection-operation producers, helper diagnostics, complete native-browser
-acceptance and the owning human experience gate remain outstanding. Source-level
+actual local navigation, preference operations, session operations and compound collection start/stop operations. The separate clear-operation projection, helper diagnostics, complete native-browser acceptance and the owning human experience gate remain outstanding. Source-level
 and DOM tests do not certify those gates or a store-ready product.
 
 ## Inspect local state
@@ -132,6 +130,29 @@ data. Authored notes, preferences, credentials and malformed/future records are
 never trimmed to fit. An evicted row cannot be recreated by a late old ticket.
 
 ## Review enable or stop
+
+The **Last observed operation** panel also shows these compound changes. It keeps
+three steps separate: prerequisite durable pause, preference publication and
+activation. A stop cannot activate collection. If the preference was already off,
+the plan can pause policy without inventing another preference write. Reusing a
+pause during saving does not appear as a second storage attempt.
+
+For each observed phase, inspect acknowledgement and canonical state separately.
+An already-paused inspection is different from an attempted command. A returned
+service result does not establish that every effect completed. Historical
+verification, admission and source indicators appear only after that result;
+before then, unobserved phases remain unobserved. A missing phase stays explicitly
+incomplete and is never reconstructed from the overall result.
+
+Receipt attribution means the exact expected policy and preference revisions
+matched this operation. A matching mode or identifier alone does not establish
+that. **Read last operation** performs no storage or provider reads and never
+confirms or retries; **Read current state** separately describes collection now.
+
+History admission happens at review time. Enabling diagnostics does not backfill
+its own earlier off/unknown preview. A previously admitted stop may finish its
+one known row while collection is off, until clear, expiry or eviction retires
+tracking. Cancel, replay and result inspection create no extra row or write.
 
 1. In the current editor window, choose **Review enable** or **Review stop**.
 2. Inspect the before/after preference and durable policy for this collection
