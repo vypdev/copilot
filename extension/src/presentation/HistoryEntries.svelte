@@ -8,6 +8,8 @@
     import SessionEffects from './SessionEffects.svelte';
     import CollectionEffects from './CollectionEffects.svelte';
     import { collectionCopy } from '../domain/collection_copy.ts';
+    import { clearCopy } from '../domain/clear_copy.ts';
+    import ClearEffects from './ClearEffects.svelte';
     let { snapshot, copy, center }: { snapshot: JournalSnapshot; copy: HistoryCopy; center: CenterCopy } = $props();
 </script>
 {#if snapshot.entries.length === 0}<p>{copy.text.empty}</p>
@@ -25,6 +27,8 @@
                 <h3>{sessionCopy(center.locale).actions[entry.fact.action]}</h3><SessionEffects fact={entry.fact} locale={center.locale} />
             {:else if entry.fact.kind === 'collection-operation'}
                 <h3><span>{collectionCopy(center.locale).actions[entry.fact.action]}</span> · <span>{copy.text[entry.fact.collection]}</span></h3><CollectionEffects fact={entry.fact} {center} heading="h4"/>
+            {:else if entry.fact.kind === 'clear-operation'}
+                <h3><span>{clearCopy(center.locale).action}</span> · <span>{copy.text[entry.fact.collection]}</span></h3><ClearEffects fact={entry.fact} {center} heading="h4"/>
             {:else if entry.fact.kind === 'destination'}
                 <a href={centerLocationHash({ route: entry.fact.route, ...(entry.fact.featureId ? { detail: entry.fact.featureId } : {}) })}>
                     <span>{center.routes[entry.fact.route]}</span>{#if entry.fact.featureId} · <code>{entry.fact.featureId}</code>{/if}</a>

@@ -20,6 +20,9 @@ import type { CollectionFact } from '../domain/collection_fact.ts';
 import { journalKind } from '../domain/journal_facts.ts';
 import { CollectionObservations } from './collection_observations.ts';
 import type { CollectionOperationTrace } from './collection_observation_ports.ts';
+import type { ClearFact } from '../domain/clear_fact.ts';
+import { ClearObservations } from './clear_observations.ts';
+import type { ClearOperationTrace } from './clear_observation_ports.ts';
 
 export interface CurrentOperationPorts {
     now(): number; changed(): void;
@@ -33,7 +36,8 @@ interface EntryBase {
 interface SettingsEntry extends EntryBase { readonly family: 'settings'; fact: OperationFact; stage: OperationStage; submitted: boolean }
 interface SessionEntry extends EntryBase { readonly family: 'sessions'; fact: SessionFact; stage: SessionFact['state'] }
 interface CollectionEntry extends EntryBase { readonly family: 'collection'; fact: CollectionFact; stage: CollectionFact['state'] }
-type Entry = SettingsEntry | SessionEntry | CollectionEntry;
+interface ClearEntry extends EntryBase { readonly family: 'clear'; fact: ClearFact; stage: ClearFact['state'] }
+type Entry = SettingsEntry | SessionEntry | CollectionEntry | ClearEntry;
 const LIFETIME = 300_000;
 /** Current private targets and optional redacted retention have separate ownership and failure paths. */
 export class CurrentOperations {
@@ -63,9 +67,9 @@ export class CurrentOperations {
         if (this.entries.size >= 8) this.forget(this.entries.values().next().value!);
         return { owner, at: now, target: snapshot, current, ticket: null };
     }
-    private install(entry: Entry): void {
+    private install(entry: Entry, retain = true): void {
         this.entries.set(entry.owner, entry);
-        try { entry.ticket = this.ports.admit(entry.fact, entry.current); } catch { /* A missing ticket is not primary failure or permission to retry. */ }
+        if (retain) { try { entry.ticket = this.ports.admit(entry.fact, entry.current); } catch { /* A missing ticket is not primary failure or permission to retry. */ } }
         this.changed(entry);
     }
     private update(entry: Entry, fact: ProgressiveFact): void {
@@ -117,6 +121,15 @@ export class CurrentOperations {
         const entry: CollectionEntry = { ...base, family: 'collection', fact: observer.fact, stage: 'reviewed' };
         this.install(entry); return observer;
     }
+    reviewClear(owner: string, kind: ClearFact['collection'], live: () => boolean): ClearOperationTrace | null {
+        if (!journalKind(kind)) return null;
+        let sourceCurrent = true; const current = () => { sourceCurrent = sourceCurrent && collectionCurrent(live); return sourceCurrent; };
+        const base = this.prepare(owner, { location: { route: 'privacy' }, label: null }, current); if (!base) return null;
+        const observer = new ClearObservations(kind, fact => { if (!this.stopped) { entry.fact = fact; entry.stage = fact.state; this.update(entry, fact); } });
+        const entry: ClearEntry = { ...base, family: 'clear', fact: observer.fact, stage: 'reviewed' };
+        // Diagnostics deletion must not record itself, including under a stale secondary admission cache.
+        this.install(entry, kind !== 'diagnostics'); return observer;
+    }
     read(owner: string): CurrentOperationReply | { readonly state: 'unavailable' } {
         const now = this.time(); this.prune(now); if (this.stopped || now === null) return { state: 'unavailable' };
         const entry = this.entries.get(owner); if (!entry) return { state: 'empty' };
@@ -133,7 +146,8 @@ export class CurrentOperations {
         const common = { target: entry.target, sourceCurrent: current && live, firstObserved: entry.at, retention };
         const operation = entry.family === 'settings' ? { ...common, family: entry.family, stage: entry.stage, fact: entry.fact }
             : entry.family === 'sessions' ? { ...common, family: entry.family, stage: entry.stage, fact: entry.fact }
-                : { ...common, family: entry.family, stage: entry.stage, fact: entry.fact };
+                : entry.family === 'collection' ? { ...common, family: entry.family, stage: entry.stage, fact: entry.fact }
+                    : { ...common, family: entry.family, stage: entry.stage, fact: entry.fact };
         return deepFreeze({ state: 'current', operation });
     }
     invalidate(): void { this.generation = {}; for (const entry of this.entries.values()) entry.target = null; this.entries.clear(); }

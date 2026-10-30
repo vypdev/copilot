@@ -6,9 +6,11 @@ import type { SettingsOwnerFence } from '../domain/settings_result.ts';
 import { deepFreeze, natural } from '../domain/value.ts';
 import type { JournalStore } from './journal_ports.ts';
 import type { SettingsRepository } from './settings_repository.ts';
+import { reportClear, acknowledgeClear, completeClear, type ClearOperationTrace, type ObserveClearOperation } from './clear_observation_ports.ts';
 
 export interface JournalReviewPorts {
     now(): number; identifier(): string; fence(owner: string): SettingsOwnerFence | null;
+    observe?: ObserveClearOperation;
     idle(kind: JournalKind): boolean;
     /** Current verified paused policy revision; unknown/active policy cannot authorize a clear. */
     pausedPolicyRevision(kind: JournalKind): number | null;
@@ -19,8 +21,9 @@ interface Clear {
     readonly owner: string; readonly kind: JournalKind; readonly epoch: number; readonly revision: number;
     readonly settingsRevision: number; readonly policyRevision: number; readonly createdAt: number; readonly expiresAt: number;
     readonly generation: number; readonly fence: SettingsOwnerFence;
+    trace: ClearOperationTrace | null;
 }
-interface Completed extends Clear { readonly result: JournalClearOutcome }
+interface Completed extends Omit<Clear, 'trace'> { readonly result: JournalClearOutcome }
 interface Running { readonly record: Clear; readonly promise: Promise<JournalClearOutcome> }
 const TTL = 300_000;
 
@@ -32,7 +35,10 @@ export class JournalReviews {
     private generation = 0;
     constructor(private readonly store: JournalStore, private readonly settings: Pick<SettingsRepository, 'inspect' | 'reserveMutations'>,
         private readonly ports: JournalReviewPorts) {}
-    invalidate(): void { this.generation++; this.pending.clear(); this.completed.clear(); }
+    invalidate(): void {
+        this.generation++; const old = [...this.pending.values()]; this.pending.clear(); this.completed.clear();
+        for (const record of old) reportClear(record.trace, 'blocked');
+    }
     inspect(id: string, owner: string): JournalClearInspection {
         const record = this.admit(id, owner); if ('state' in record) return record;
         return 'result' in record ? record.result : { state: 'promise' in record ? 'pending' : 'not-submitted' };
@@ -52,9 +58,8 @@ export class JournalReviews {
             && fence !== null && fence.controllerEpoch === record.fence.controllerEpoch && fence.credentialEpoch === record.fence.credentialEpoch;
     }
     private prune(now: number): void {
-        for (const map of [this.pending, this.completed]) for (const [id, record] of map) {
-            if (now < record.createdAt || now >= record.expiresAt) map.delete(id);
-        }
+        for (const [id, record] of this.pending) if (now < record.createdAt || now >= record.expiresAt) { this.pending.delete(id); reportClear(record.trace, 'blocked'); }
+        for (const [id, record] of this.completed) if (now < record.createdAt || now >= record.expiresAt) this.completed.delete(id);
     }
     private async paused(kind: JournalKind): Promise<{ readonly revision: number; readonly policyRevision: number } | { readonly issue: JournalClearIssue }> {
         const { loaded } = await this.settings.inspect();
@@ -89,8 +94,11 @@ export class JournalReviews {
             const id = this.ports.identifier();
             if (!settingsOperationId(id) || this.pending.has(id) || this.running.has(id) || this.completed.has(id)) return { state: 'unavailable' };
             if (!this.current(bound)) return { state: 'stale' };
-            this.pending.set(id, { ...bound, kind, epoch: result.snapshot.epoch, revision: result.snapshot.revision,
-                settingsRevision: privacy.revision, policyRevision: privacy.policyRevision });
+            const retained: Clear = { ...bound, kind, epoch: result.snapshot.epoch, revision: result.snapshot.revision,
+                settingsRevision: privacy.revision, policyRevision: privacy.policyRevision, trace: null };
+            this.pending.set(id, retained);
+            try { retained.trace = this.ports.observe?.(owner, kind, () => this.current(bound)) ?? null; } catch { /* Observation cannot reject an admitted clear plan. */ }
+            if (!this.current(bound)) { if (this.pending.get(id) === retained) this.pending.delete(id); reportClear(retained.trace, 'blocked'); return { state: 'stale' }; }
             return deepFreeze({ state: 'preview', operationId: id, kind, epoch: result.snapshot.epoch,
                 revision: result.snapshot.revision, policyRevision: privacy.policyRevision, entries: result.snapshot.entries.length, expiresAt: bound.expiresAt });
         } catch { return { state: 'unavailable' }; }
@@ -101,22 +109,26 @@ export class JournalReviews {
         if ('promise' in admitted) return admitted.promise;
         if ('result' in admitted) return Promise.resolve(admitted.result);
         this.pending.delete(id);
-        const promise = this.apply(admitted).then(result => {
+        let run!: () => void;
+        const invocation = new Promise<JournalClearOutcome>((resolve, reject) => { run = () => { void this.apply(admitted).then(resolve, reject); }; });
+        const promise = invocation.then(result => {
+            completeClear(admitted.trace, result);
             const now = this.time();
             if (now !== null && natural(now + TTL)) {
-                this.completed.set(id, { ...admitted, createdAt: now, expiresAt: now + TTL, result: deepFreeze(result) });
+                const { trace: _trace, ...retained } = admitted;
+                this.completed.set(id, { ...retained, createdAt: now, expiresAt: now + TTL, result: deepFreeze(result) });
                 if (this.completed.size > 32) this.completed.delete(this.completed.keys().next().value!);
             }
             return result;
         }).finally(() => { this.running.delete(id); });
-        this.running.set(id, { record: admitted, promise }); return promise;
+        this.running.set(id, { record: admitted, promise }); reportClear(admitted.trace, 'confirming'); run(); return promise;
     }
     cancel(id: string, owner: string): JournalClearOutcome {
         const admitted = this.admit(id, owner);
         if ('state' in admitted) return admitted;
         if ('promise' in admitted) return { state: 'pending' };
         if ('result' in admitted) return admitted.result;
-        this.pending.delete(id); return { state: 'cancelled' };
+        this.pending.delete(id); reportClear(admitted.trace, 'cancelled'); return { state: 'cancelled' };
     }
     private admit(id: string, owner: string): Clear | Completed | Running | { readonly state: JournalClearIssue } {
         if (!settingsOperationId(id) || !settingsOperationId(owner)) return { state: 'invalid' };
@@ -149,15 +161,17 @@ export class JournalReviews {
         if (privacy.revision !== record.settingsRevision || privacy.policyRevision !== record.policyRevision) return { state: 'stale' };
         if (!this.idle(record.kind)) return { state: 'busy' };
         const now = this.time(); if (now === null) return { state: 'unavailable' };
-        let result: JournalResult;
-        try { result = await this.store.execute(record.kind, { type: 'clear', now, epoch: record.epoch, revision: record.revision }, current, record.policyRevision); }
-        catch { result = { state: 'unavailable', effect: 'unknown' }; }
-        if (result.state === 'unavailable' && result.effect !== 'unknown') return { state: 'not-applied', reason: result.effect };
+        let result: JournalResult = { state: 'unavailable', effect: 'unknown' }; let attempt: Promise<JournalResult> | null = null;
+        try { attempt = this.store.execute(record.kind, { type: 'clear', now, epoch: record.epoch, revision: record.revision }, current, record.policyRevision); } catch { /* Inspect an uncertain synchronous attempt. */ }
+        reportClear(record.trace, 'submitted');
+        if (attempt) { try { result = await attempt; } catch { /* Unknown acknowledgement; no automatic resubmission. */ } }
+        if (result.state === 'unavailable' && result.effect !== 'unknown') { acknowledgeClear(record.trace, 'not-applied'); return { state: 'not-applied', reason: result.effect }; }
         if (result.state !== 'written' && result.state !== 'unavailable') {
-            return { state: ['stale', 'invalid', 'future', 'corrupt', 'clock-invalid', 'exhausted', 'collection-active'].includes(result.state)
-                ? result.state as JournalClearIssue : 'unavailable' };
+            const rejected = ['stale', 'invalid', 'future', 'corrupt', 'clock-invalid', 'exhausted', 'collection-active'].includes(result.state);
+            acknowledgeClear(record.trace, rejected ? 'not-applied' : 'unknown'); return { state: rejected ? result.state as JournalClearIssue : 'unavailable' };
         }
         const acknowledgement = result.state === 'written' ? 'accepted' as const : 'unknown' as const;
+        acknowledgeClear(record.trace, acknowledgement);
         const observed = await this.observe(record);
         return { ...observed, acknowledgement, sourceCurrentAtObservation: current() };
     }

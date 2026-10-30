@@ -42,7 +42,7 @@ The background now shares its preference repository with that collection owner
 and exposes closed, native-client-bound history/review use cases. The actual
 center now produces accepted recent destinations under private native consent
 and generation fences. Preference services now produce current-operation facts
-and optional redacted history. Native session services now produce separate active-credential, repository-preference and vault effects through the closed session family in section6.10. The actual compound start/stop producer now preserves independent native phase observations. The explicit clear-operation and helper projections and native/human acceptance remain incomplete. The mounted center now
+and optional redacted history. Native session services now produce separate active-credential, repository-preference and vault effects through the closed session family in section6.10. The actual compound start/stop producer now preserves independent native phase observations. Explicit clear operations now preserve actual submission, acknowledgement and canonical readback independently. Helper projections and native/human acceptance remain incomplete. The mounted center now
 has a source-validated typed client and four-locale read/start/stop/clear/export
 controls, independent of preference-read availability. Saved collection flags
 still default false; opening a screen does not opt into collection.
@@ -654,6 +654,70 @@ headings under the existing no-dynamic-markup constraint. Journal/review vocabul
 is a neutral domain dependency; effect-plan declarations are independent from
 executors. Type and runtime imports MUST remain acyclic with no gate exceptions.
 
+### 6.12 Clear-operation observations
+
+A reviewed generated-history clear MUST own a closed current-operation projection,
+independent from the journal being erased. Capture only after the native plan has
+verified paused intent/policy, exact history generation/revision, source and idle
+writer. Invalid or unavailable previews create no current entry or ticket. The
+existing confirmation, permission and lease requirements remain mandatory.
+
+```text
+Verified preview → current intent (one optional diagnostics ticket for recents only)
+ → register running promise → reserve preferences and paused collection
+ → recheck exact plan → invoke clear once → observe submission
+ → inspect canonical generation/emptiness once → retain historical result
+```
+
+Text equivalent: the running promise exists before reservation, observer or native
+callbacks may reenter confirmation, cancellation or result inspection. Reentry
+joins the same promise or reports pending. Preserve synchronous reservation order;
+adding observation MUST NOT yield the preference queue to a later writer. No
+observer retries a mutation, releases an owned lease or authorizes an operation.
+
+The immutable fact contains fixed clear intent and collection kind, reviewed/
+running/cancelled/blocked/settled state, a sticky actual-command-observed boolean,
+closed service result, independent acknowledgement and desired-state observation,
+a closed not-started/aborted reason when provided, nullable historical source fact
+and an irreversible incomplete flag. No selector, private target, raw error,
+credential, authored data or reusable generation/revision enters this projection.
+A result summary cannot fabricate an unobserved submission; a missing detailed
+observation is disclosed. Terminal history cannot be rewritten from a later
+matching payload. Observed emptiness of the exact reviewed generation is a
+condition at inspection, not attribution of another writer's action.
+
+Clear diagnostics MUST NOT attempt diagnostics history admission, even if a
+secondary consent cache is stale. Its current result remains temporary memory.
+Clear recents MAY use the already-consented diagnostics journal, never recents.
+It uses at most one ticket admitted at preview time, with no retrospective capture.
+Canonical clear advances the journal generation and retires old tickets before
+reservations release deferred work. A late result, metadata read, history refresh,
+retry, replay or callback MUST NOT create a new row in a cleared generation.
+Generated-history clear preserves the separate current-operation memory.
+
+All four locales distinguish preview, actual command submission, returned service
+result, acknowledged versus observed clearing, not applied and unknown/unavailable
+inspection. Source indicators appear only when the native result sampled them;
+absence is not rendered as a negative claim. Static semantic headings and existing
+source/role/credential fences apply. Metadata inspection performs no store,
+provider, permission or mutation operation.
+
+| State | Representative content | Safe next action |
+|---|---|---|
+| Preview | “Clear reviewed; no native command observed.” | Confirm or cancel the exact review |
+| Running | “A clear command was attempted; its result is pending.” | Inspect current metadata; duplicate confirmation joins |
+| Observed cleared | “The reviewed history condition was observed cleared.” | Inspect current history separately |
+| Unknown | “Acknowledged; clearing could not be verified.” | Read current history; no automatic resubmission |
+| Not applied | “The native transaction did not start / was aborted.” | Resolve the cause and create a new review if wanted |
+| Retired | “These are earlier observations; the originating context is unavailable.” | Inspect from the current native editor |
+
+The application ports are per-call secondary capabilities, not recording IPC.
+A neutral closed issue vocabulary avoids journal/model dependency cycles. The
+owning clear service retains the plan, running promise and canonical readback;
+presentation receives no native selector or mutation callback from this fact.
+Complete H3 still requires helper producers, remaining CENTER semantics and full
+native-browser/human evidence.
+
 ## 7. User-facing configuration
 
 | Input | Default | Scope/limit |
@@ -745,7 +809,7 @@ on opt-in. An explicit old-ring sample is an observation at capture time.
 
 ## 13. Compatibility, migration, rollout, and rollback
 
-The unpublished H3 version1 journal admits closed session and compound collection
+The unpublished H3 version1 journal admits closed session, compound collection and explicit clear
 facts alongside existing operation/helper facts. Existing supported rows keep
 their meaning. An older draft reader that does not recognize a fact MUST preserve
 the record as unavailable rather than downgrade or delete it. The existing exact
@@ -791,7 +855,11 @@ upgrade or publication is implied.
 | Actual compound effect ownership | 36 | Native preference/policy callbacks, staged reuse, exact receipt, partial outcomes, secondary faults and source/replay races |
 | Compound current/history integration | 28 | Shared lifetime/replacement, no backfill, off/clear/unknown retention, readonly metadata and sender isolation |
 | Mounted compound operation view | 16 | Four complete locales plus twelve pending/partial/recovery/retirement/independent-read journeys |
-| **Total** | **833** | No substitution for semantic H3/catalog coverage |
+| Clear projection and progression | 32 | Closed primitive facts, sticky submission, immutable terminal semantics and missing-observation disclosure |
+| Actual clear lifecycle and effect owner | 32 | Synchronous reservation order, reentrant confirmation/inspection/cancel, canonical readback, primary/secondary failure isolation and source races |
+| Clear current/history boundaries | 16 | No diagnostics self-record, optional recents-clear diagnostics, exact ticket/epoch retirement, shared bounds and readonly metadata |
+| Mounted clear-operation view | 16 | Four complete locales plus twelve pending/partial/unknown/recovery/source/privacy/native-cancel journeys |
+| **Total** | **929** | No substitution for semantic H3/catalog coverage |
 
 Count each case once. Pure branches and modified executable lines/branches100%,
 no exclusions/threshold weakening; keep root budgets. Request fixtures are not
@@ -837,6 +905,14 @@ Compound evidence adds `collection_fact.test.ts`, `collection_operation_view.tes
 The exact-revision attribution cases fail against the prior native service and
 pass after the fix. Existing architecture and actual clear journeys remain gates;
 updated history expectations explicitly include the admitted stop row before clear.
+
+Clear evidence adds `clear_fact.test.ts`, `clear_observations.test.ts`,
+`journal_review_observation.test.ts`, `clear_observation_service.test.ts`,
+`current_clear_operations.test.ts`, `clear_operation_gateway.test.ts` and
+`clear_operation_center.test.ts` and `clear_effects_presentation.test.ts`. Two reservation-reentry cases fail before the
+running-promise fix and pass after it; a third verifies synchronous preference
+reservation. The fixtures execute actual application/gateway/rendered ownership
+without claiming loaded-browser or human evidence.
 
 ## 15. Documentation and discoverability
 
@@ -913,6 +989,18 @@ docs/specs/catalog and concrete examples together.
     service summary. Four-locale current/history views show historical verification
     and admission only after an actual result, separately from live metadata.
 
+31. Reentrant clear confirm joins the registered primary promise before reservation
+    callbacks execute; inspect/cancel report pending and later preference writes
+    cannot preempt the synchronous reservation.
+32. Clear distinguishes actual attempt, acknowledgement and canonical readback.
+    Lost acknowledgement remains unknown even when the exact next generation is
+    empty; missing callbacks disclose incompleteness rather than invented effects.
+33. Diagnostics clear never admits its own diagnostic. Recents clear can update
+    one already-consented diagnostic ticket; cleared generations retire old tickets
+    before deferred work resumes. No callback or opt-in later can recreate a row.
+34. Four-locale current/history clear views use static nested headings and show a
+    retrospective source indicator only when the primary service sampled it.
+
 ## 17. Requirements traceability
 
 | Concern | Owner | Evidence | Documentation |
@@ -922,13 +1010,14 @@ docs/specs/catalog and concrete examples together.
 | Truthful ordered phases | Application | Partial/ack/replay/queue | Activity/privacy |
 | Restriction-only save and owner lifetime | Settings/coordinator | Five application contract suites; native/UI evidence still required | Configuration/contributor |
 | Reviewed phase continuation and priority of a later stop | CollectionReviews/effects/private leases | Eight retained-plan/phase/ownership/staging suites; full native/UI evidence pending | Configuration/privacy/contributor |
-| Bounded secondary retention and unknown identity | JournalWriter/queue/IO/progress | Writer/domain/race suites plus session/compound gateway and capacity journeys; explicit clear/helper projections and native evidence pending | Privacy/recovery/contributor |
+| Bounded secondary retention and unknown identity | JournalWriter/queue/IO/progress | Writer/domain/race suites plus session/compound gateway and capacity journeys; helper projections and native evidence pending | Privacy/recovery/contributor |
 | One production owner and closed native control | CollectionHistory/HistoryControls/HistoryGateway/native composition | Protocol/application/gateway/bootstrap and mounted UI suites; native/human acceptance pending | Contributor/privacy/recovery |
 | Accepted destinations and consent/source retirement | RecentsCapture/RecentsClient/VisitDelivery/centerDestination/center_app | Native source, delivery, gateway and 12 mounted navigation/localization cases; real-browser/human gates outstanding | Local history/privacy/contributor |
 | Actual preference observations and independent current view | SettingsOperations/SettingsRepository/CurrentOperations/CurrentOperationReader/CenterClient/center_app | Eight projection/native/reader/client/mounted suites plus direct store observer isolation; native/human gates outstanding | Local history/configuration/privacy/contributor |
 | Independent session effects and causal source | NamedSessions/ProtectedSessionService/SettingsRepository/SessionObservations/SessionObservationSource | Session contract/source/service/current/gateway/repository/mounted suites; native/human gates outstanding | Local history/configuration/privacy/contributor |
 | Generated byte capacity and irreversible row retirement | local_journal/JournalWriter | Session capacity/progress/gateway suites, exact reviewed export envelope | Local history/privacy/contributor |
 | Compound effects, exact attribution and staged reuse | CollectionReviews/effects/CollectionObservations/coordinator/native policy attempt | Compound domain/port/service/current/gateway/mounted suites plus two failing-before native regressions; full native/human gate outstanding | Local history/configuration/privacy/contributor |
+| Clear facts, reentry order and no self-record | JournalReviews/ClearObservations/CurrentOperations/ObservedJournalStore | Clear domain/service/current/gateway/mounted suites plus failing-before reservation reentry; full native/human gate outstanding | Local history/configuration/privacy/contributor |
 | Minimal discoverable facts | Presentation | Locales/a11y/export | User navigation |
 
 ## 18. Implementation sequence

@@ -4,11 +4,11 @@ import { JOURNAL_LIMITS } from './local_journal.ts';
 import { settingsOperationId } from './settings_operation.ts';
 import { natural, record } from './value.ts';
 import { decodeHistoryValue, exactHistoryFields as exact } from './history_decode.ts';
+import { clearIssue } from './clear_operation.ts';
 
-const ISSUES = ['invalid', 'stale', 'expired', 'denied', 'busy', 'unavailable', 'future', 'corrupt', 'clock-invalid', 'exhausted', 'collection-active', 'migration-required'];
 function preview(value: unknown): value is JournalClearPreview {
     if (!record(value)) return false;
-    if (value.state !== 'preview') return exact(value, ['state']) && ISSUES.includes(value.state as string);
+    if (value.state !== 'preview') return exact(value, ['state']) && clearIssue(value.state);
     return exact(value, ['state', 'operationId', 'kind', 'epoch', 'revision', 'policyRevision', 'entries', 'expiresAt'])
         && settingsOperationId(value.operationId) && journalKind(value.kind) && natural(value.epoch) && natural(value.revision) && value.epoch <= value.revision
         && natural(value.policyRevision) && natural(value.entries) && value.entries <= JOURNAL_LIMITS[value.kind] && natural(value.expiresAt);
@@ -22,7 +22,7 @@ function outcome(value: unknown): value is JournalClearOutcome {
     if (value.state === 'unknown') return exact(value, ['state', 'acknowledgement', 'observation', 'sourceCurrentAtObservation'])
         && (value.acknowledgement === 'accepted' || value.acknowledgement === 'unknown') && (value.observation === 'changed' || value.observation === 'unavailable')
         && typeof value.sourceCurrentAtObservation === 'boolean';
-    return exact(value, ['state']) && [...ISSUES, 'cancelled', 'pending'].includes(value.state as string);
+    return exact(value, ['state']) && (clearIssue(value.state) || value.state === 'cancelled' || value.state === 'pending');
 }
 export const decodeJournalClearPreview = (value: unknown): JournalClearPreview | null => decodeHistoryValue(value, preview);
 export const decodeJournalClearOutcome = (value: unknown): JournalClearOutcome | null => decodeHistoryValue(value, outcome);

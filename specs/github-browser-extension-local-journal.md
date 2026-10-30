@@ -53,7 +53,7 @@ history/review gateway. The mounted four-locale controls now use a source-valida
 typed reader/review/export client and retain independent phase facts. Accepted
 local destinations and actual preference-service observations are now composed.
 Preference operations also have a separate bounded current-window view even
-when history is off or unavailable. Native session producers now preserve independent ordered active-credential, repository-preference and vault observations. Compound start/stop observations now preserve prerequisite pause, preference and activation separately. The explicit clear-operation and helper projections and native/human acceptance remain required; this source increment does not complete CENTER09/10.
+when history is off or unavailable. Native session producers now preserve independent ordered active-credential, repository-preference and vault observations. Compound start/stop observations now preserve prerequisite pause, preference and activation separately. Explicit clear operations also preserve actual submission, acknowledgement and canonical readback independently. Helper projections and native/human acceptance remain required; this source increment does not complete CENTER09/10.
 
 ### 2.3 Evidence
 
@@ -313,6 +313,17 @@ separate temporary current-window target is never copied into the journal or
 export. It has its own fixed five-minute lifetime and is outside generated-history
 clear. Later ordinary canonical settings reads can reconcile the exact retained
 unknown confirmation without retrying the write or rebuilding private targets.
+
+Explicit clear observations follow the
+[consent/current-operation contract](github-browser-extension-collection-consent.md#612-clear-operation-observations).
+The running promise is registered before reentrant callbacks without deferring
+preference reservation. Its closed fact separates actual native submission,
+acknowledgement and canonical readback; absent source sampling stays null.
+Diagnostics deletion never admits its own row. Recents deletion may update only
+one diagnostic ticket already admitted at review time. Current memory is outside
+generated clear; canonical generation observations retire old writer tickets
+before reservations release deferred work. Deterministic clear service, current,
+gateway and four-locale mounted regressions supplement the native/human gates.
 
 ## 12. Observability and operational UX
 

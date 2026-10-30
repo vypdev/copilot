@@ -3223,7 +3223,13 @@
         "extension/src/domain/collection_copy.ts",
         "extension/src/domain/collection_fact.ts",
         "extension/src/presentation/CollectionEffects.svelte",
-        "extension/src/domain/collection_operation.ts"
+        "extension/src/domain/collection_operation.ts",
+        "extension/src/application/clear_observation_ports.ts",
+        "extension/src/application/clear_observations.ts",
+        "extension/src/domain/clear_copy.ts",
+        "extension/src/domain/clear_fact.ts",
+        "extension/src/domain/clear_operation.ts",
+        "extension/src/presentation/ClearEffects.svelte"
       ],
       "tests": [
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
@@ -3462,7 +3468,19 @@
         "extension/test/integration/collection_policy_observation.test.ts",
         "extension/test/integration/collection_policy_trace.test.ts",
         "extension/test/integration/current_collection_operations.test.ts",
-        "extension/test/integration/collection_effects_presentation.test.ts"
+        "extension/test/integration/collection_effects_presentation.test.ts",
+        "extension/test/contracts/clear_fact.test.ts",
+        "extension/test/fixtures/clear_center.ts",
+        "extension/test/fixtures/clear_fact.ts",
+        "extension/test/fixtures/clear_gateway.ts",
+        "extension/test/fixtures/clear_observer.ts",
+        "extension/test/integration/clear_observation_service.test.ts",
+        "extension/test/integration/clear_observations.test.ts",
+        "extension/test/integration/clear_operation_center.test.ts",
+        "extension/test/integration/clear_operation_gateway.test.ts",
+        "extension/test/integration/current_clear_operations.test.ts",
+        "extension/test/integration/journal_review_observation.test.ts",
+        "extension/test/integration/clear_effects_presentation.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",

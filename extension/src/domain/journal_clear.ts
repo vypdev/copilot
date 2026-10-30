@@ -1,7 +1,7 @@
 import type { JournalKind } from './journal_facts.ts';
+import type { JournalClearIssue } from './clear_operation.ts';
+export type { JournalClearIssue } from './clear_operation.ts';
 
-export type JournalClearIssue = 'invalid' | 'stale' | 'expired' | 'denied' | 'busy' | 'unavailable'
-    | 'future' | 'corrupt' | 'clock-invalid' | 'exhausted' | 'collection-active' | 'migration-required';
 export type JournalClearPreview = { readonly state: 'preview'; readonly operationId: string; readonly kind: JournalKind;
     readonly epoch: number; readonly revision: number; readonly policyRevision: number; readonly entries: number; readonly expiresAt: number }
     | { readonly state: JournalClearIssue };

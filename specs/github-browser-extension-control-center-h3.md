@@ -22,7 +22,7 @@ it does not accept the complete CENTER09/10/14 journeys or H3.
 The [durable consent refinement](github-browser-extension-collection-consent.md)
 defines reviewed activation/stop, restart behavior, atomic policy admission and
 truthful partial outcomes. The source includes restriction-only preference
-preflight, an application consent coordinator, retained start/stop plans and composed collectors/gateway/four-locale activity/privacy UI. Current and optional retained observations distinguish preference, protected session and compound collection effects. The explicit clear-operation and helper projections, remaining CENTER behavior and full source-bound native/human evidence remain required for acceptance.
+preflight, an application consent coordinator, retained start/stop plans and composed collectors/gateway/four-locale activity/privacy UI. Current and optional retained observations distinguish preference, protected session and compound collection effects. Explicit clear observations now distinguish native attempt, acknowledgement and readback. Helper projections, remaining CENTER behavior and full source-bound native/human evidence remain required for acceptance.
 
 ## 1. Executive summary
 

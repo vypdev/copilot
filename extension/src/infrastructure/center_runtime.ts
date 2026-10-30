@@ -29,6 +29,6 @@ export function createCenter(api: BrowserApi, settings: SettingsRepository, sess
     const operations = new SettingsOperations(settings, { now: () => Date.now(), identifier: centerIdentifier,
         fence: id => controller.fence(id), notify, observe: (...args) => current.reviewSettings(...args) });
     const controls = history ? new HistoryControls(history.owner, history.policies, { now: () => Date.now(), identifier: centerIdentifier,
-        fence: id => controller.fence(id), observe: (...args) => current.reviewCollection(...args) }) : undefined;
+        fence: id => controller.fence(id), observe: (...args) => current.reviewCollection(...args), observeClear: (...args) => current.reviewClear(...args) }) : undefined;
     return new CenterGateway(controller, operations, settings, connections, history ? new HistoryGateway(controller, history.owner, controls!) : undefined, current);
 }

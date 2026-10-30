@@ -13,7 +13,7 @@ can inspect and export available generated history without taking control.
 
 H3 is still being implemented. These controls and their typed client are present
 in the development source, including consented recent destinations from the
-actual local navigation, preference operations, session operations and compound collection start/stop operations. The separate clear-operation projection, helper diagnostics, complete native-browser acceptance and the owning human experience gate remain outstanding. Source-level
+actual local navigation, preference operations, session operations and compound collection start/stop operations. Explicit clears now distinguish their native attempt, acknowledgement and canonical read. Helper diagnostics, complete native-browser acceptance and the owning human experience gate remain outstanding. Source-level
 and DOM tests do not certify those gates or a store-ready product.
 
 ## Inspect local state
@@ -178,6 +178,28 @@ result separately. **First observed** is the timestamp of the initial retained
 observation, not a fabricated completion time. A helper reason describes its
 recorded observation; it does not certify that the helper is blocked now.
 Incomplete history is disclosed and does not change the primary action's result.
+
+## Inspect a clear operation
+
+**Review clear** creates a separate **Last observed operation** entry after the
+native service verifies the paused collection and exact history revision. Confirm
+once. The panel distinguishes the actual native attempt, its acknowledgement and
+the subsequent read of the reviewed generation. An accepted response alone does
+not prove that an empty generation was observed. A lost response can still be
+followed by a verified empty generation; its acknowledgement remains unknown.
+
+An explicit **not started** or **aborted** response is shown as no applied write.
+An unavailable or changed read stays unverified. Read current history separately;
+metadata inspection never repeats deletion. An unsubmitted cancellation has no
+attempt, and missing observation is not evidence that no change occurred. The
+source-at-observation indicator appears only when the service sampled it.
+
+Deleting diagnostics never records its own deletion in diagnostics, including
+when a secondary admission observation is stale. Deleting recent destinations
+can retain one redacted diagnostic only if diagnostics was already consented at
+review time. It never records itself in recent destinations. Neither enabling
+collection later nor a late callback restores a cleared row. The separate current
+view retains its existing eight-window/five-minute limit and is outside the clear.
 
 ## Clear generated entries
 
