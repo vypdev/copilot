@@ -113,6 +113,253 @@
         "codeSnippet": "const stored = domain.normalize('NFKC');",
         "confidence": 0.98
       }
-    ]
+    ],
+    "kt-wasm-parameter-closure": [],
+    "kt-wasm-size-count-parameters": [],
+    "kt-wasm-object-parameter": [],
+    "kt-wasm-binding-evidence-unavailable": [],
+    "kt-wasm-missing-direct-identifier": [{"id": "kt-wasm-missing-direct-identifier-missing-binding", "title": "Missing JavaScript binding fails when the bridge runs", "file": "fixtures/WasmBindings.kt", "line": 2, "severity": "medium", "category": "correctness", "symbol": "installBudget", "codeSnippet": "\"\"\"Array.from({length: count}, () => new Uint8Array(size))\"\"\""}],
+    "kt-wasm-missing-callback-identifier": [{"id": "kt-wasm-missing-callback-identifier-missing-binding", "title": "Missing JavaScript binding fails when the bridge runs", "file": "fixtures/WasmBindings.kt", "line": 3, "severity": "medium", "category": "correctness", "symbol": "installDirectory", "codeSnippet": "globalThis.onSelection = () => empty ? new Uint8Array(0) : new Uint8Array([1]);"}],
+    "action-self-ref-bootstrap": [],
+    "action-self-ref-version-policy": [],
+    "action-workspace-ref-after-checkout": [],
+    "action-reference-contract-unavailable": [],
+    "action-self-ref-explicit-suffix": [{"id": "action-self-ref-explicit-suffix-invalid-reference", "title": "Action reference cannot resolve in this execution context", "file": ".github/workflows/build.yml", "line": 5, "severity": "medium", "category": "reliability", "codeSnippet": "- uses: $/.github/actions/bootstrap@v1"}],
+    "action-workspace-ref-before-checkout": [{"id": "action-workspace-ref-before-checkout-invalid-reference", "title": "Action reference cannot resolve in this execution context", "file": ".github/workflows/build.yml", "line": 5, "severity": "medium", "category": "reliability", "codeSnippet": "- uses: ./.github/actions/bootstrap"}],
+    "action-self-ref-unsupported-host": [{"id": "action-self-ref-unsupported-host-invalid-reference", "title": "Action reference cannot resolve in this execution context", "file": ".github/workflows/build.yml", "line": 5, "severity": "medium", "category": "reliability", "codeSnippet": "- uses: $/.github/actions/bootstrap"}],
+    "md-link-root-self": [],
+    "md-link-nested-self": [],
+    "md-link-companion": [],
+    "md-link-root-relative": [],
+    "md-link-evidence-unavailable": [],
+    "md-link-extra-specs-directory": [
+      {
+        "id": "md-link-extra-specs-directory-broken-navigation",
+        "title": "The rendered architecture link does not reach its target",
+        "file": "specs/payments.md",
+        "line": 41,
+        "severity": "low",
+        "category": "correctness",
+        "codeSnippet": "[Design](./specs/payments.md#architecture)"
+      }
+    ],
+    "md-link-missing-fragment": [
+      {
+        "id": "md-link-missing-fragment-broken-navigation",
+        "title": "The rendered architecture link does not reach its target",
+        "file": "specs/payments.md",
+        "line": 41,
+        "severity": "low",
+        "category": "correctness",
+        "codeSnippet": "[Design](../specs/payments.md#missing-architecture)"
+      }
+    ],
+    "md-link-renderer-drops-directory": [
+      {
+        "id": "md-link-renderer-drops-directory-broken-navigation",
+        "title": "The rendered architecture link does not reach its target",
+        "file": "scripts/catalog.ts",
+        "line": 41,
+        "severity": "low",
+        "category": "correctness",
+        "codeSnippet": "function renderSpecLink(spec: string): string { return './' + spec.slice(spec.lastIndexOf('/') + 1); }"
+      }
+    ],
+    "request-transform-coil": [],
+    "request-transform-middleware": [],
+    "request-transform-unknown": [],
+    "request-transform-write": [{"id":"request-transform-write","title":"Write-enabled policy does not provide the required no-store header","file":"media/request.ts","line":1,"severity":"medium","category":"correctness","codeSnippet":"const policy = { diskRead: false, diskWrite: true, networkRead: true };","confidence":0.95}],
+    "request-transform-bypass": [{"id":"request-transform-bypass","title":"Raw request bypasses the header-producing middleware","file":"media/request.ts","line":11,"severity":"medium","category":"correctness","codeSnippet":"const request = { headers: {} };","confidence":0.95}],
+    "request-transform-overwrite": [{"id":"request-transform-overwrite","title":"Downstream assignment removes the required no-store directive","file":"media/request.ts","line":12,"severity":"medium","category":"correctness","codeSnippet":"request.headers[\"Cache-Control\"] = \"no-cache\";","confidence":0.95}],
+    "request-transform-mock": [{"id":"request-transform-mock","title":"Header-injecting mock hides a missing production request header","file":"media/request.ts","line":11,"severity":"medium","category":"correctness","codeSnippet":"const request = { headers: {} };","confidence":0.95}],
+    "request-transform-utf8": [{"id":"request-transform-utf8","title":"Byte truncation splits a multibyte UTF-8 character","file":"media/request.ts","line":23,"severity":"medium","category":"correctness","codeSnippet":"const preview = encoded.slice(0, 1);","confidence":0.95}],
+    "generated-source-literal": [],
+    "generated-source-leading-newline": [],
+    "generated-source-escaped": [],
+    "generated-source-dedent": [],
+    "generated-source-wrong-literal": [
+      {
+        "id": "generated-source-wrong-literal",
+        "title": "Executed positive statement is asserted uncovered",
+        "file": "coverage/generated_fixture.py",
+        "line": 18,
+        "severity": "medium",
+        "category": "correctness",
+        "codeSnippet": "assert rows[6][\"ci\"] == 0",
+        "confidence": 1
+      }
+    ],
+    "generated-source-wrong-leading-newline": [
+      {
+        "id": "generated-source-wrong-leading-newline",
+        "title": "Executed positive statement is asserted uncovered",
+        "file": "coverage/generated_fixture.py",
+        "line": 19,
+        "severity": "medium",
+        "category": "correctness",
+        "codeSnippet": "assert rows[7][\"ci\"] == 0",
+        "confidence": 1
+      }
+    ],
+    "generated-literal-independent-shell": [
+      {
+        "id": "generated-literal-independent-shell",
+        "title": "Untrusted query parameter reaches the shell",
+        "file": "coverage/literal_handler.py",
+        "line": 5,
+        "category": "security",
+        "severity": "high",
+        "codeSnippet": "return subprocess.run(\"cat \" + user_path, shell=True, check=True)",
+        "confidence": 1
+      }
+    ],
+    "generated-literal-independent-contract": [
+      {
+        "id": "generated-literal-independent-contract",
+        "title": "Zero is accepted despite the strictly positive contract",
+        "file": "coverage/literal_validator.py",
+        "line": 6,
+        "category": "correctness",
+        "severity": "medium",
+        "codeSnippet": "return count >= 0",
+        "confidence": 1
+      }
+    ],
+    "session-source-signed-bootstrap": [],
+    "session-source-storage-alias": [],
+    "session-source-opaque-bootstrap": [
+      {
+        "id": "session-source-opaque-bootstrap",
+        "title": "The selected session supplies an opaque token to the compact-token assertion",
+        "file": "e2e/owned-session.spec.ts",
+        "line": 30,
+        "severity": "medium",
+        "category": "correctness",
+        "codeSnippet": "assert.match(authorization, /^Bearer [A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$/);",
+        "confidence": 1
+      }
+    ],
+    "session-source-expired-refresh": [
+      {
+        "id": "session-source-expired-refresh",
+        "title": "The selected session supplies an opaque token to the compact-token assertion",
+        "file": "e2e/owned-session.spec.ts",
+        "line": 30,
+        "severity": "medium",
+        "category": "correctness",
+        "codeSnippet": "assert.match(authorization, /^Bearer [A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$/);",
+        "confidence": 1
+      }
+    ],
+    "session-source-prefix-gap": [
+      {
+        "id": "session-source-prefix-gap",
+        "title": "The changed header omits the bearer separator",
+        "file": "e2e/owned-session.spec.ts",
+        "line": 29,
+        "severity": "medium",
+        "category": "correctness",
+        "codeSnippet": "const authorization = \"Bearer\" + accessToken;",
+        "confidence": 1
+      }
+    ],
+    "session-source-setup-unavailable": [],
+    "unittest-discovery-delegated-wildcard": [],
+    "unittest-discovery-nested-working-directory": [],
+    "unittest-discovery-literal-argv-pattern": [],
+    "unittest-discovery-excluded-by-pattern": [
+      {
+        "id": "unittest-discovery-excluded-by-pattern",
+        "title": "The changed discovery selector excludes the required export module",
+        "file": ".github/scripts/tests/run_manifest_tests.py",
+        "line": 12,
+        "severity": "medium",
+        "category": "correctness",
+        "codeSnippet": "    return [sys.executable, \"-m\", \"unittest\", \"discover\", \"-s\", \".github/scripts/tests\", \"-p\", \"test_manifest_core.py\", \"-v\"]",
+        "confidence": 1
+      }
+    ],
+    "unittest-discovery-wrong-start-directory": [
+      {
+        "id": "unittest-discovery-wrong-start-directory",
+        "title": "The changed discovery selector excludes the required export module",
+        "file": ".github/scripts/tests/run_manifest_tests.py",
+        "line": 12,
+        "severity": "medium",
+        "category": "correctness",
+        "codeSnippet": "    return [sys.executable, \"-m\", \"unittest\", \"discover\", \"-s\", \"backend/checks\", \"-p\", \"test_manifest_*.py\", \"-v\"]",
+        "confidence": 1
+      }
+    ],
+    "unittest-discovery-runner-unavailable": [],
+    "kotlin-json-implicit-nullable-omission": [],
+    "kotlin-json-explicit-nullable-omission": [
+      {
+        "id": "kotlin-json-explicit-nullable-omission",
+        "title": "The changed request decode rejects its documented accepted input",
+        "file": "backend/OwnedRequest.kt",
+        "line": 11,
+        "severity": "medium",
+        "category": "correctness",
+        "codeSnippet": "    val decoded = probeJson.decodeFromString<OwnedRequest>(raw)",
+        "confidence": 1
+      }
+    ],
+    "kotlin-json-implicit-missing-nonnullable": [
+      {
+        "id": "kotlin-json-implicit-missing-nonnullable",
+        "title": "The changed request decode rejects its documented accepted input",
+        "file": "backend/OwnedRequest.kt",
+        "line": 11,
+        "severity": "medium",
+        "category": "correctness",
+        "codeSnippet": "    val decoded = probeJson.decodeFromString<OwnedRequest>(raw)",
+        "confidence": 1
+      }
+    ],
+    "kotlin-json-implicit-nullable-default": [],
+    "kotlin-json-explicit-nullable-default": [],
+    "kotlin-json-inherited-implicit-policy": [],
+    "kotlin-json-different-instance-policy": [
+      {
+        "id": "kotlin-json-different-instance-policy",
+        "title": "The changed request decode rejects its documented accepted input",
+        "file": "backend/OwnedRequest.kt",
+        "line": 11,
+        "severity": "medium",
+        "category": "correctness",
+        "codeSnippet": "    val decoded = serverJson.decodeFromString<OwnedRequest>(raw)",
+        "confidence": 1
+      }
+    ],
+    "kotlin-json-unavailable-policy": [],
+    "ktor-routing-installed-root": [],
+    "ktor-routing-delegated-root": [],
+    "ktor-routing-configured-root": [],
+    "ktor-routing-child-subtree": [
+      {
+        "id": "ktor-routing-child-subtree",
+        "title": "The changed selection loses the installed application routing root",
+        "file": "backend/OwnedRoutingSelection.kt",
+        "line": 6,
+        "severity": "medium",
+        "category": "correctness",
+        "codeSnippet": "    val selected = installed.children.single()",
+        "confidence": 1
+      }
+    ],
+    "ktor-routing-different-application": [
+      {
+        "id": "ktor-routing-different-application",
+        "title": "The changed selection loses the installed application routing root",
+        "file": "backend/OwnedRoutingSelection.kt",
+        "line": 6,
+        "severity": "medium",
+        "category": "correctness",
+        "codeSnippet": "    val selected = otherApp.routing {}",
+        "confidence": 1
+      }
+    ],
+    "ktor-routing-unavailable-implementation": []
   }
 }

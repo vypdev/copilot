@@ -53,6 +53,33 @@ unsupported claim or replacement rather than inventing a lookup. This strengthen
 model guidance and does not guarantee future accuracy or automatically dismiss
 an existing finding.
 
+## Self-repository Action references
+
+Bugbot checks the applicable host and version before claiming a `uses` reference
+is invalid. On GitHub.com, [`$/path` resolves from the repository containing the
+workflow or action at its running commit](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#example-using-an-action-in-the-same-repository-as-the-workflow-at-the-running-commit-recommended).
+It needs neither a workspace checkout nor an `@ref` suffix. `./path` instead reads
+the checked-out workspace and requires those files to be present before the step.
+GitHub Enterprise Server has a different support contract; verify the actual host
+and applicable documentation rather than extrapolating GitHub.com behavior.
+
+Review reconciles the authored reference, checkout order and matching execution.
+A job log displaying an internally resolved `owner/repo/path@SHA` does not turn
+the authored `$/path` into a remote SHA pin. A valid bootstrap reference must
+remain valid while independent remote version-tag policies remain enforceable.
+A check for remote tags need not also validate local-reference grammar; alleging
+a bypass requires an actual malformed authored reference and a reachable failure.
+Malformed suffixes, missing workspace files and proved host incompatibility still
+need findings. Missing contract evidence cannot justify an invented syntax claim.
+Findings anchor the literal `uses` line, counting every displayed source line from
+its stated start. For Action reference fixes and step moves, review gives a prose
+suggestion and omits a code replacement to avoid altering YAML list structure or
+lines outside the finding.
+
+This shared review/benchmark guidance adds no blanket allowlist, lookup permission
+or automatic dismissal. Existing findings use normal current-source verification
+and re-review. See [quality evidence and limits](/bugbot/quality-observability).
+
 ## Framework lifecycle evidence
 
 Before reporting that a loader or stale DOM child remains, Bugbot must trace the
@@ -71,6 +98,45 @@ valid defect. An explicit startup error message is intentional error UI. If the
 lifecycle contract cannot be verified, the reviewer must omit a speculative
 permanent-loader claim. This instruction improves evidence gathering; it does
 not guarantee model accuracy or suppress findings through a text-matching rule.
+
+## Routing-root identity
+
+Before claiming that a framework call returns a detached subtree, Bugbot traces
+the actual receiver, delegated call and version-matched implementation. Ktor
+3.0.2 [`Application.routing`](https://github.com/ktorio/ktor/blob/3.0.2/ktor-server/ktor-server-core/common/src/io/ktor/server/routing/RoutingRoot.kt)
+reuses the installed root and applies configuration to it; it installs a root
+when none exists. A repeated call on the same application is not proof of a
+different root. Selecting an actual child or another application's root can
+still violate a caller's complete-root requirement and needs its own finding.
+
+Reconcile applicable test/export evidence with the exact reviewed source.
+Passing export consistency does not certify unrelated business behavior or
+approve a baseline for adoption. Public source or artifact inspection is not a
+claim about a private resolved jar. If the implementation or receiver cannot
+be established, omit an unsupported unconditional failure claim. Existing
+findings retain normal current-source verification. The six regression cases
+and their measured limitations are described in
+[quality evidence](/bugbot/quality-observability#routing-root-regression).
+
+## Dependency-generated request values
+
+Before claiming a required request value is missing, Bugbot follows policy and
+defaults through the resolved dependency's request builder and adapters to the
+transport observation. For example, Coil 3.6.3
+[builds `Cache-Control: no-cache, no-store`](https://github.com/coil-kt/coil/blob/3.6.3/coil-network-core/src/commonMain/kotlin/coil3/network/NetworkFetcher.kt)
+when network reads are enabled and disk reads/writes are disabled. Its matching
+[`Options` defaults](https://github.com/coil-kt/coil/blob/3.6.3/coil-core/src/commonMain/kotlin/coil3/request/Options.kt)
+and [`CachePolicy` flags](https://github.com/coil-kt/coil/blob/3.6.3/coil-core/src/commonMain/kotlin/coil3/request/CachePolicy.kt)
+explain the resulting request even when the application sets only the policy.
+
+Review reconciles source-bound pipeline assertions and emitted values, and
+distinguishes predicted failures from observed executions. A mock that inserts
+the disputed value can hide a production fault. Skipped, cached, unrelated or
+stale runs cannot establish the reviewed assertion's outcome. Bypassed producers,
+downstream overwrites, genuinely missing values and independent defects remain
+actionable. Missing dependency evidence requires withholding the unsupported
+claim. Existing findings still require normal current-source verification.
+See [quality evidence and limits](/bugbot/quality-observability).
 
 ## When Bugbot runs
 
@@ -394,6 +460,89 @@ permissions, resolver service, project exception or guarantee of accuracy. See
 [quality and observability](/bugbot/quality-observability) for the paired controls.
 
 
+## Generated fixture line numbers
+
+Before reporting that a numeric coverage assertion fails, Bugbot uses bounded
+numbered literal witnesses or read-only literal/AST tool output to reconstruct the
+bytes written by the fixture, including escaped newlines, a leading newline and
+explicit dedent or stripping. It numbers written lines from 1, including blanks,
+and quotes the statement selected by the counter key. A physical line containing
+inline `if` and `return` stays one line, regardless of statement count or display
+wrapping. Host-file line numbers, generated source lines and
+coverage counter keys are separate coordinates. It traces the actual test input
+and branch, and checks matching source-bound execution evidence when available.
+A positive return on generated line 6 does not make the negative return on line 7
+executed. A zero count can intentionally verify missed coverage; it does not imply that
+the test should assert the covered branch instead. Bugbot must prove an assertion
+contradiction or a stated coverage-contract defect and omit self-refuting reports.
+A real assertion that marks the executed statement as missed remains
+reportable and is anchored to its changed host assertion. Missing writer or
+execution evidence does not establish an observed test failure. Without verified
+counter-key source it omits the claim; it never executes fixture code to obtain
+this mapping. Canonical Python diff sections and the real-agent benchmark also receive bounded,
+numbered literal values when the syntax is supported. These are conditional data:
+verify the host binding and actual writer before treating them as generated-file
+coordinates. Unsupported prefixes, escapes or transforms stay unavailable. The
+projection never runs Python, interpolates an f-string or manufactures counters;
+unknown/omitted witnesses cannot establish a failing test. Canonical diff text and
+review ownership remain intact.
+
+When trusted context construction retains a witness and analysis produces
+candidates, a second read-only query independently checks those hypotheses against
+the same source. Only supported candidates continue to publication; genuine
+assertion contradictions and independent defects remain reportable. Every original
+ID needs exactly one retained or rejected decision. Corrections keep the same file
+and existing code anchor. Wrong locale, incomplete decisions or provider failures
+leave analysis failed/incomplete rather than declaring the review clean.
+
+The verifier uses the same configured provider, model and effort. Each query has
+up to 200 initial candidates, matching the review schema, in at most ten
+sequential batches of 20. Each batch retains fixed limits of 32,000 UTF-8 candidate
+bytes and 128,000 complete-prompt bytes. All batch identities and byte sizes are
+validated before the first query; exceeding a byte limit requires narrowing the
+scope and rechecking. Every batch must validate before results are published.
+Ordinary reviews add at most ten verification queries; partition review keeps its
+existing three attempts, with at most 33 total queries. Analysis telemetry counts
+all initial/retried and verification prompts/responses. Serialized initial and
+secondary JSON replies have a separate 4,000,000-byte UTF-8 wire envelope before
+parsing, so a valid batched reply can exceed the source-prompt limit. Oversized
+wire data requires compact JSON and a recheck; replies are never truncated. Empty candidates and
+contexts without retained witnesses use the existing path. Rejected hypotheses
+cannot resolve, dismiss or reopen historical findings. There is no new public
+configuration, provider permission or workflow step.
+
+## Kotlin Json instance and nullable input
+
+Before claiming a nullable input is required, Bugbot traces the `Json` instance
+actually used by the decoder, including inherited and overridden flags. For
+ordinary generated fields in the verified kotlinx.serialization versions,
+`explicitNulls=false` decodes an omitted nullable field without a default as
+`null`; `true` requires its presence. Defaults apply under either policy, and a
+non-nullable field without a default remains required. Annotations and custom
+serializers require their own evidence.
+
+A rejection observed with one instance does not prove that a differently
+configured instance rejects the same input. Missing policy or version evidence
+does not justify a speculative finding. Genuine missing required input remains
+reportable. This guidance uses existing review and verification surfaces and
+adds no setting, decoder change or consumer workaround.
+
+## Initial session credential ownership
+
+Before attributing a tested credential to a stub, Bugbot follows the configured
+bootstrap/globalSetup, persisted storageState/localStorage and the actual request
+path. A signed initial session and a separate opaque login/refresh response can
+coexist. The endpoint stub supplies the tested value only when the selected setup
+or an actually reached login/refresh transition uses it.
+
+For example, a non-expired session written by global setup can supply a compact
+signed token while a different token-response fixture stays unused. Its mere
+presence does not prove that a header assertion fails. An opaque initial stored
+session, a reached refresh that overwrites the token, or an independent malformed
+header remains actionable when it contradicts the actual assertion. Missing setup
+evidence does not establish failure. Existing findings require normal eligible
+verification; this adds no automatic dismissal, token whitelist or permission.
+
 ## Delegated test paths
 
 Before claiming a parameterized test always fails or its stub is unused, Bugbot
@@ -408,3 +557,51 @@ operation just to reach a mock without first establishing the intended contract.
 Unverifiable always-fails claims are omitted. This uses existing bounded read-only
 context and review policies, with no new permission or deterministic call-graph
 service. See [quality and observability](/bugbot/quality-observability).
+
+For a claim that a test never runs, apply the same grounding to the workflow,
+delegated runner, effective working directory, discovery directory, pattern and
+filters. Python unittest can select a module through a wildcard passed as a
+literal subprocess argument. Follow that selection before recommending another
+direct invocation. Keep actual discovery, module-qualified execution and a
+successful unrelated revision distinct; matching a filename alone does not
+certify execution. A narrower pattern or wrong discovery directory can still be
+a real wiring defect. Missing runner evidence does not establish an
+unconditional failure. Findings must identify the changed selector and an
+accurate source location.
+
+The #806 regression family exercises this existing grounding contract without
+changing runtime instructions. Its actual-model comparison retains a rejected
+prompt proposal and the current location-calibration limitation; see
+[quality and observability](/bugbot/quality-observability).
+
+
+## Kotlin/Wasm JavaScript parameter scope
+
+For package-level Kotlin/Wasm `= js(...)` functions, declared parameters become
+formal arguments in generated JavaScript, and nested callbacks can capture them.
+Before reporting an unbound identifier, Bugbot checks the target/version,
+signature and lexical scope against applicable official interop documentation or
+exact generated imports. It reconciles same-source compiler/test evidence; an
+unrelated green job cannot prove the bridge works. Genuinely missing identifiers
+and invalid bridges remain reportable. Unsupported binding claims and unproved
+global-state replacements are omitted. This shared model guidance is neither a
+static Kotlin analyzer nor a guarantee of accuracy. See the [official contract](https://kotlinlang.org/docs/wasm-js-interop.html#kotlin-functions-with-javascript-code)
+and [quality evidence limits](/bugbot/quality-observability).
+
+
+## Relative Markdown links
+
+Bugbot resolves a link from the document containing it and checks its target and
+section separately. From `specs/a.md`, `../specs/a.md#architecture` points back
+to `specs/a.md`; `./specs/a.md` points to a different directory. The applicable
+renderer determines repository-root links, decoding, case and heading/custom
+anchors. A broken-link finding should show the authored link and normalized
+missing target or anchor. Existing targets and fragments yield no finding,
+including informational reports. Navigation-only failures have low severity and the
+correctness category.
+
+A valid self-link does not prove that a catalog preserves nested primary or
+companion directories, or that its output writer handles symlinks safely. Those
+remain independent checks. Prior findings are rechecked against current source;
+missing evidence keeps their state unresolved instead of inventing a failure or
+resolution.

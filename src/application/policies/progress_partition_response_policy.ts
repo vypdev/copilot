@@ -1,6 +1,8 @@
 import { ApplicationError } from '../errors/application_error';
 import type { ProgressDiffPartition } from '../ports/progress_diff_query_ports';
-import { AGENT_OUTPUT_LOCALE_SCHEMA_PROPERTY, validateAgentOutputLocale } from './agent_output_locale_policy';
+import { progressResponseRejected, progressResponsePayload } from './progress_response_rejection_policy';
+import type { ProgressResponseReason } from '../../domain/progress_response_diagnostic';
+import { AGENT_OUTPUT_LOCALE_SCHEMA_PROPERTY } from './agent_output_locale_policy';
 import { progressEvidenceTooLarge } from './progress_diff_partition_policy';
 
 // Leaves space inside the unchanged 512 KiB runtime prompt ceiling. The caller
@@ -33,22 +35,35 @@ export function progressPartitionResponseSchema(partition: ProgressDiffPartition
 
 /** Complete exact-path facts only; model output cannot attest a build or a percentage. */
 export function parseProgressPartitionFacts(response: unknown, partition: ProgressDiffPartition, locale: string, factLimit = 600): readonly ProgressFileFacts[] {
-    const validation = validateAgentOutputLocale(response, locale);
-    if (validation.kind !== 'valid') throw invalid();
-    const payload = validation.payload;
-    if (Object.keys(payload).sort().join(',') !== 'files,outputLocale,partitionId' || payload.partitionId !== partition.id
-        || !Array.isArray(payload.files) || payload.files.length !== (partition.units?.length ?? partition.paths.length)) throw invalid();
+    const payload = progressResponsePayload(response, locale, 'partition', 'agent.failed');
+    const reject = (reason: ProgressResponseReason, field: string): never => {
+        throw progressResponseRejected({ phase: 'partition', reason, field, requirementId: 'none', sourceLineId: 'none' });
+    };
+    if (Object.keys(payload).sort().join(',') !== 'files,outputLocale,partitionId') reject('partition-shape-invalid', '$');
+    if (payload.partitionId !== partition.id) reject('partition-id-invalid', '$.partitionId');
+    if (!Array.isArray(payload.files) || payload.files.length !== (partition.units?.length ?? partition.paths.length)) reject('partition-files-incomplete', '$.files');
     const seen = new Set<string>();
-    const facts = payload.files.map((entry: unknown) => {
-        if (!entry || typeof entry !== 'object' || Array.isArray(entry)) throw invalid();
+    const facts = (payload.files as unknown[]).map((entry: unknown, index) => {
+        const field = `$.files[${index}]`;
+        if (!entry || typeof entry !== 'object' || Array.isArray(entry)) reject('partition-file-invalid', field);
         const file = entry as Record<string, unknown>;
         const identity = partition.units ? file.unitId : file.path;
-        if (Object.keys(file).sort().join(',') !== (partition.units ? 'implemented,path,remaining,unitId' : 'implemented,path,remaining')
-            || typeof file.path !== 'string' || typeof identity !== 'string' || seen.has(identity)
-            || (partition.units ? !partition.units.some(unit => unit.id === identity && unit.path === file.path) : !partition.paths.includes(file.path))) throw invalid();
-        seen.add(identity);
-        if (![file.implemented, file.remaining].every(value => typeof value === 'string' && value.trim().length > 0 && [...value].length <= factLimit)) throw invalid();
-        return Object.freeze({ path: file.path, ...(partition.units ? { unitId: identity } : {}), implemented: file.implemented as string, remaining: file.remaining as string });
+        const idField = `${field}.${partition.units ? 'unitId' : 'path'}`;
+        if (Object.keys(file).sort().join(',') !== (partition.units ? 'implemented,path,remaining,unitId' : 'implemented,path,remaining')) reject('partition-file-invalid', field);
+        if (typeof file.path !== 'string') reject('partition-unit-invalid', `${field}.path`);
+        if (typeof identity !== 'string' || seen.has(identity as string)) reject('partition-unit-invalid', idField);
+        const id = identity as string;
+        if (partition.units) {
+            const unit = partition.units.find(unit => unit.id === id);
+            if (!unit) reject('partition-unit-invalid', idField);
+            if (unit!.path !== file.path) reject('partition-unit-invalid', `${field}.path`);
+        } else if (!partition.paths.includes(file.path as string)) reject('partition-unit-invalid', `${field}.path`);
+        seen.add(id);
+        for (const key of ['implemented', 'remaining'] as const) {
+            const value = file[key];
+            if (typeof value !== 'string' || value.trim().length === 0 || [...value].length > factLimit) reject('partition-facts-invalid', `${field}.${key}`);
+        }
+        return Object.freeze({ path: file.path as string, ...(partition.units ? { unitId: id } : {}), implemented: file.implemented as string, remaining: file.remaining as string });
     });
     return Object.freeze(facts);
 }

@@ -199,10 +199,13 @@ irreversible partial success because preflight runs before commit/push.
 
 ## 11. Security, permissions, and privacy
 
-Preserve only JAVA_HOME as additional runtime metadata; PATH remains allowlisted.
-JAVA_TOOL_OPTIONS, JDK_JAVA_OPTIONS, NODE_OPTIONS, MAVEN_OPTS, GRADLE_USER_HOME,
-credentials and auth-store references remain stripped. HOME/temp/profile paths stay
-private. Build tools must not depend on inherited user-home credentials/settings.
+Preserve JAVA_HOME as additional runtime metadata; PATH remains allowlisted.
+Inherited JAVA_TOOL_OPTIONS, JDK_JAVA_OPTIONS, NODE_OPTIONS, MAVEN_OPTS,
+GRADLE_USER_HOME, credentials and auth-store references remain stripped.
+The issue #775 amendment below derives fresh JDK_JAVA_OPTIONS and
+GRADLE_USER_HOME from the private verification profile; it never admits the
+inherited values. HOME/temp/profile paths stay private. Build tools must not
+depend on inherited user-home credentials/settings.
 Manifest reads reject symbolic/hard links, unsafe parents, oversized and changed
 file identities with bounded reads. Device/inode identities MUST use exact 64-bit
 comparisons (BigInt), including values beyond JavaScript number precision. This is not a sandbox against a concurrently
@@ -326,3 +329,355 @@ The [repository-owned setup contract](./repository-verification-setup-hooks.md) 
 ### Source candidate dependency correction — #746
 
 The [source candidate readiness amendment](./branch-synchronization-and-conflict-recovery.md#candidate-dependency-readiness-and-failure-facts--746-2026-10-27) owns the incremental source-only frozen-pnpm preparation and closed sync failure facts. Source runtime bootstrap remains before the Action; source dependencies move to each actual candidate verifier boundary after optional native setup and runtime probes. Consumer setup opt-in, runtime-only declarations and generic no-installer behavior remain unchanged. The amendment owns its incremental test budget and separately authorized default-runtime rollout; do not double count it here.
+
+## 21. Private JVM and Gradle discovery — issue #775 (2026-10-29)
+
+### Decision, evidence and boundaries
+
+Status: implementation contract. Owner: Copilot maintainers. Review gates:
+runtime security, native workflow compatibility, architecture, testing and
+operator documentation. No material design decision remains open.
+
+[Issue #775](https://github.com/vypdev/copilot/issues/775) reports an actual
+macOS/JDK 17 observation: changing HOME alone leaves Java user.home at the OS
+account home. A successful Gradle run with up-to-date tasks and a global init
+message does not prove private discovery or freshly executed tests. No consumer
+native continuation was activated by that report.
+
+A separate Linux/aarch64 exploration with the official Gradle 9.8.2/JDK 17
+image, pinned to digest
+`sha256:2ec771e6a429a3aca72d38aca70a4ea05b41bf4098e4e22868b425a215fa4d0f`,
+reproduces the gap using only a disposable account's harmless init/properties
+sentinels. Explicit derived-variable controls isolate discovery and preserve
+the candidate bytes. Eight additional JDK launcher experiments preserve exact
+synthetic property values containing spaces, quotes and Windows-style
+backslashes. These are exploration controls, not a completed production/native
+acceptance claim.
+
+Primary contracts: [JDK 17 launcher/JDK_JAVA_OPTIONS](https://docs.oracle.com/en/java/javase/17/docs/specs/man/java.html),
+[Gradle user home](https://docs.gradle.org/current/userguide/directory_layout.html),
+[initialization scripts](https://docs.gradle.org/current/userguide/init_scripts.html)
+and [build environment](https://docs.gradle.org/current/userguide/build_environment.html).
+Their discovery rules motivate explicit private locations; they do not establish
+an OS sandbox. Gradle distribution-level initialization, deliberate candidate
+overrides, concurrent same-user access and project verification failures retain
+their existing trust boundaries. No wrapper rewrite, skipped command,
+credential grant, universal Java installer or new configuration input is added.
+
+### Required behavior and architecture
+
+```text
+Admitted verification -> fresh private profile -> derive JVM/Gradle locations
+ -> optional native setup -> fixed runtime probes -> configured command
+ -> existing workspace/head/publication guards -> owned post cleanup
+```
+
+Text equivalent: each command receives a fresh profile and derived locations;
+native setup and the verifier share that profile, and ordinary guards and
+cleanup still decide publication.
+
+1. The infrastructure environment builder MUST derive exactly one JDK launcher
+   property assigning user.home to its canonical private HOME and an absolute
+   GRADLE_USER_HOME inside that same profile. Both apply with setup enabled or
+   disabled, before prerequisite probes and the configured command.
+2. It MUST keep rejecting inherited tool-option injection, including arbitrary
+   JDK_JAVA_OPTIONS/GRADLE_USER_HOME. JAVA_TOOL_OPTIONS, _JAVA_OPTIONS,
+   GRADLE_OPTS, MAVEN_OPTS, NODE_OPTIONS, credentials and auth-store paths do not
+   become allowed inputs. Existing JAVA_HOME/PATH provisioning remains.
+3. JVM option encoding MUST preserve the entire path as one property argument,
+   including whitespace, either quote and literal backslashes. It uses the JDK
+   launcher's own grammar, not shell or JSON escaping. NUL/CR/LF input is rejected
+   with a fixed diagnostic before execution; failure to prepare a profile MUST
+   clean the newly owned directory and withhold verification/publication.
+4. Native pending outputs and canonical setup steps MUST forward only these two
+   host-derived values alongside existing runtime metadata. Setup-result parsing
+   remains closed to approved PATH/JAVA_HOME; consumer or ambient option values
+   MUST NOT replace the worker's derived values or be forwarded as Node
+   continuation controls.
+5. Every later verification command MUST get a different private profile and
+   Gradle state. Cleanup includes the derived Gradle/JVM state and retains native
+   profiles until deferred posts finish. No shared readiness/cache authority or
+   durable configuration is introduced.
+
+The OS/process-specific encoder and environment builder belong to infrastructure;
+they do not add filesystem/process dependencies to domain/application policies.
+Existing Git execution ports, setup/session binding, prerequisite checks,
+candidate/remote-head fences and localized result presenters remain owners.
+Canonical workflow generation and structural mutation checks enforce the closed
+native metadata boundary. Agent-provider environments are a separate contract.
+
+### Product journey, configuration and recovery
+
+| State | Existing primary surface and next action |
+|---|---|
+| Pending | Preparing repository verification; wait for native setup and probes |
+| Action required | Declared Java unavailable: provision it in this job or review the trusted setup; retry the original operation |
+| Blocked | Private profile/setup/probe failed: verification and publication withheld; inspect the linked run |
+| Partial | Candidate prepared but verification failed: existing sync recovery and retained-state report remain authoritative |
+| Complete | Configured checks passed in the private profile; existing publication guards decide the final result |
+| Canceled/retried | Existing cancellation cleanup; a fresh admitted retry creates new state |
+
+Representative existing result: “Repository setup completed; runtime preflight
+and verification may proceed.” Technical acceptance output MAY report only
+booleans such as “JVM home is private: true” and “candidate unchanged: true”. It
+MUST NOT copy account paths, real properties/init contents or credentials into
+issues, summaries or evidence. There are no new comments, labels or operator UI;
+existing localized text/fallback, plain-text status, descriptive run/docs links
+and narrow/light/dark rendering stay authoritative.
+
+Recommended setup remains explicit same-job Java 17 provisioning (or a reviewed
+native composite), with verification commands unchanged. The supported
+alternative is a non-JVM project with no Java declaration/installer. Derived
+private locations have no caller override and no persistence across commands.
+Upgrade the Action and its canonical coordinator/generated callbacks together
+so native setup receives the derived fields. Consumer-owned setup assets remain
+preserved. Older in-flight jobs retain their original snapshot; retry after the
+upgrade. Rollback restores the old discovery limitation and does not migrate or
+delete account caches. No automatic retry is added.
+
+### Risk-derived test budget and acceptance
+
+Allocate **32 additional distinct Jest cases** before source implementation:
+
+| Area | Minimum | Risks |
+|---|---:|---|
+| JVM argument grammar | 12 | spaces, both quotes, backslashes, Unicode, injection-like suffixes and forbidden controls |
+| Profile/environment security | 8 | inherited injection excluded, canonical containment, unique profiles, owned cleanup and preparation failures |
+| Native protocol/continuation | 6 | derived outputs, malformed fields, foreign values/replay and unchanged closed response |
+| Workflow/setup structure | 4 | missing/changed derived bindings and option leakage into continuation |
+| Git/prerequisite integration | 2 | same environment/order, failure withholding and legacy non-JVM behavior |
+| **Total** | **32** | no repeated-run or existing-case double counting |
+
+New pure encoding targets 100% statements/branches/functions/lines. Changed
+environment/native adapters retain at least 95% statements/lines and 90%
+branches/functions. All global, module, setup, extension and benchmark budgets,
+case selections and timeouts remain unchanged. Unit tests use deterministic
+fixtures; normal Node tests gain no Java/Gradle prerequisite or silent skip.
+
+Additional required native observations, separate from the Jest case count:
+
+- Actual source-wired Linux JDK 17/Gradle execution in a disposable OS account
+  demonstrates the legacy global-sentinel gap and the corrected private JVM,
+  Gradle properties/init/cache discovery, without real user configuration.
+- Actual Linux GitHub native setup provisions the tools, resumes the existing
+  operation, passes runtime preflight and executes offline Java compilation and
+  verification in the private profile. A Java home guard precedes Gradle startup
+  on hosted runners. A container is not claimed as native Actions emulation.
+- Candidate source/action bytes remain unchanged, inherited injection stays
+  excluded, fresh profiles do not share state, and deferred native posts clean
+  the owned profiles. Existing failure/no-publication fences stay covered.
+
+| Requirement | Executable evidence | Documentation |
+|---|---|---|
+| Exact private property and Gradle location | Grammar/environment suites; real JDK/Gradle fixture | Verification environment/reference |
+| Same native profile, closed continuation | Controller/generator mutation tests and native Linux job | Native setup and upgrade guidance |
+| Failure, freshness and cleanup | Environment/Git integration and native post acceptance | Existing recovery and isolation limits |
+| No account secrets or candidate mutation | Disposable sentinels, boolean-only reports and identity assertions | Security/operator trust boundary |
+
+Update this owner, native-setup companion, catalog evidence, verification and
+agent/contributor guidance together; regenerate canonical workflows and catalog.
+DoD requires the case floor, actual source/native observations, all unchanged
+coverage/architecture/docs/workflow/spec/build/package checks, Graphify update,
+normal hooks and exact-head CI/three-platform/Codecov/review without findings
+before the authorized normal merge to develop.
+
+### Executed observations and bounded workflow representation
+
+The source-wired disposable Linux runs use the same pinned JDK 17/Gradle image,
+candidate probe and actual GitCommitAdapter before and after the correction.
+Each version completes two fresh compilations and JavaExec verifications with
+unchanged source and excluded inherited injection. The baseline discovers the
+disposable account's global sentinels; the corrected version discovers only the
+private properties/init script and private JVM/Gradle homes. The corrected probe
+also checks the actual JDK 17 specification version. No real account data is
+mounted or inspected, and no consumer execution is claimed.
+
+All 42 additional distinct regression cases pass in the full current-source
+run: 16 grammar, eight profile, ten protocol, six workflow and two Git cases. Encoding
+and environment construction reach 100% on every metric. Native-controller
+coverage is 95.39% statements, 97.68% lines, 90% branches and 100% functions;
+the new per-module budgets enforce these floors without relying on an aggregate.
+
+Adding the native metadata exposed the existing 100,000-byte workflow review
+limit: the first full run rejected the 101,210-byte smoke workflow, producing 40
+setup/CLI failures from that one cause. The workflow now shares 43 identical
+native steps using GitHub-supported YAML anchors. Its 59,394-byte representation
+parses to the exact same jobs, steps, inputs, conditions and permissions; all 233
+focused setup/CLI/workflow cases pass. The per-file/aggregate review limits,
+runner routes, phase count and timeouts are unchanged. Required full and native
+remote verification remain separate acceptance gates.
+
+After the workflow representation correction, the full current-source run passes
+790 suites and 14,655 tests, with the same 35 existing skips, in 477.661 seconds.
+Global coverage is 97.29% statements, 95% branches, 97.95% functions and 98.06%
+lines. Every prior and new module budget passes. The setup ledger remains
+336/350 passing with 14 explicitly open cases; no open case is represented as
+implemented here. Extension verification passes all 267 cases with 100% on every
+metric. Native GitHub Linux acceptance and final PR checks still require their
+own successful exact-head evidence before merge.
+
+The first GitHub run passed all 790 suites and 14,655 cases, but the controller
+branch budget failed at 88% on Linux/macOS. Add six protocol cases before the
+next run: absent inherited runtime exports, missing request, malformed snapshot
+digest, delayed worker-session publication, continuation entry routing, and an
+exhausted boundary that blocks publication and cancels its pending worker.
+These supplement the 42 cases above; the new distinct-case count is 48. Keep
+the 90% branch floor. The native Linux job separately rejected setup metadata
+before preflight; fixture-only diagnostics classify tool/root ownership using
+closed enums and booleans, without printing runtime paths or accepting more roots.
+That rejection requires a resolved cause and successful native rerun before merge.
+
+The native diagnostic identified the rejected JDK: its lexical tool-cache entry
+resolved outside all approved roots, while Python and pnpm stayed within the
+current private profile. Keep rejecting that alias. A step-local RUNNER_TOOL_CACHE
+override was ineffective: GitHub reserves RUNNER_* variables. The controlled
+setup-java step instead uses its supported force-download input to replace the
+alias with a real installation inside the already approved tool cache. JVM and
+Gradle account configuration still use each fresh private profile; JDK binaries
+are tool-cache assets. This changes only native test provisioning; it does not
+widen result roots, change the selected JDK 17, or claim a successful rerun yet.
+The exact setup-java revision observed in CI, b843ebf9b913146b38da2eaa7aeddf76074ae1ad,
+declares this input and bypasses both installed and restored JDK cache entries
+before downloading/installing the distribution.
+
+## 22. Dynamically linked CPython verification (issue #776)
+
+### Problem, scope and flow
+
+The observed Linux setup-python installation succeeds, but its Python 3.11.17
+cannot start without its installation's lib directory in the loader search path.
+The documented update-environment:false example fails before creating its venv.
+Allowing arbitrary inherited LD_LIBRARY_PATH, or merely enabling broad Action
+environment exports, would not establish the closed verifier's readiness.
+
+Support the selected CPython tool-cache installation and its private venv without
+adding a runtime requirement, configuration flag or setup-result field. Keep the
+setup result restricted to PATH/JAVA_HOME. The trusted Python bootstrap derives a
+step-local loader directory from setup-python's python-path output on Linux;
+it never appends the caller's loader path or exports it through GITHUB_ENV.
+After native setup, derive the verifier's single loader directory from the
+selected interpreter and canonical runner tool cache before runtime preflight,
+source dependency preparation and the configured command. Never mutate the
+continuation process environment or add loader options to native control messages.
+
+```mermaid
+flowchart LR
+  S[Reviewed native setup] --> B[Step-local Python bootstrap and private venv]
+  B --> P[Approved PATH result]
+  P --> D[Bounded interpreter and base-library ownership checks]
+  D --> R[Existing runtime preflight]
+  R --> V[Complete configured verifier]
+  V --> C[Existing candidate/publication checks and deferred cleanup]
+```
+
+The runtime lookup must cover both symlinked venv interpreters and copied
+interpreters whose pyvenv.cfg identifies the base installation. Read that one
+regular, non-linked, single-link file with a 4,096-byte bound and stable descriptor
+identity; never evaluate its command or executable-looking values. Resolve both
+lexical and canonical paths against the active owned profile and the canonical
+runner tool cache, frozen before candidate execution (use the native snapshot's
+captured root when active). Admit only the CPython base library directory within
+that cache; reject colon/semicolon list separators, dynamic-loader dollar tokens,
+control characters and escaping aliases. Do not scan
+directories, install tools, execute Python to discover a library before it can
+start, or accept candidate/account library locations as an ambient search path.
+
+An absent or untrusted derivation must not copy loader state. Existing fixed
+runtime probes and configured-command failures remain authoritative; unavailable
+Python still blocks verification. Self-contained runtimes and non-Linux platforms
+retain their ordinary behavior. The documented Python version and complete
+verification command remain repository choices. This is filesystem/metadata
+filtering within the existing trust model, not an OS sandbox.
+
+### Numeric test budget and executable acceptance
+
+Before implementation, reserve at least **40 additional distinct Jest cases**:
+16 canonical-root/interpreter/library ownership cases, 12 copied/symlinked venv
+and bounded-metadata cases, eight adapter/preflight/failure/fresh-profile cases,
+and four documentation/native-contract cases. Strengthening an existing
+parameterized continuation test does not create a second logical-case count.
+Require 100% statements/lines/branches/functions for each new derivation module;
+keep every prior global/per-module budget and the changed adapter's 95/90 floor.
+
+Separately run real CPython 3.11.17 before/after controls in disposable Linux
+containers, including copied and symlinked venvs. The broken control must expose
+the actual dynamic-loader failure; the correction must run the real version
+probe and configured verifier after filtering, not report synthesized readiness.
+Use pinned official Python/Node image digests, no user-directory mounts, no
+provider credentials and boolean/closed-version receipts. Prove unchanged source,
+excluded inherited options, fresh profiles, failure propagation and cleanup.
+
+The real native Linux acceptance must execute setup-python, private venv creation,
+declared Python preflight and the existing pytest command, retaining its Node/pnpm
+and JDK/Gradle verifiers and all deferred post checks. Include a derived-loader
+receipt so a self-contained hosted binary cannot conceal missing propagation.
+Native continuation must still ignore foreign loader metadata and keep the parent
+Node environment unchanged. Preserve all platform selections and time limits.
+
+Run focused regressions and new-module coverage first, then the full root and
+extension coverage/acceptance suites, build/package smoke, types, lint, web checks,
+documentation/workflow/specification validators and normal commit hooks. Exact-head
+CI, all three platforms, Codecov patch verification and complete review without
+active findings gate the authorized develop merge.
+
+### Documentation, evidence and configuration boundaries
+
+Update the Python operator example and this owner, the native-setup companion and
+catalogued code/test evidence together. Document bootstrap versus verifier loader
+scope, copied-venv base metadata and recovery for an unavailable interpreter.
+Keep provider credentials, caller environments, existing setup-result keys,
+wrapper commands, installed Action-reference conventions and runtime versions
+outside this correction's ownership. Regenerate the catalog and run
+validate:specifications; run Graphify's AST update after source changes. Consumer
+repositories supply read-only observations; upstream acceptance owns its fixtures.
+
+### Initial real-runtime observations (before implementation)
+
+The official Python 3.11.17 image is a self-contained control: its relocated base
+and symlinked venv start without an extra loader path; its copied venv needs the
+base library. The actual setup-python artifact reproduces the reported failure
+for the base interpreter and both venv forms. With only that installation's lib
+directory, both real unittest verifiers pass, and copied venv metadata points to
+the base bin directory while the copied executable resolves inside the venv.
+These are runtime-layout observations, not a completed Copilot/native fix claim.
+
+The artifact is actions/python-versions release 3.11.17-36876195594,
+python-3.11.17-linux-22.04-arm64.tar.gz, asset 603458725. Its downloaded SHA-256
+d6d9d8fb8b94e9a3139bb0076a5c035b03e9c16f76ac4e63cd9d7061b328ad82 matches the
+published asset digest. Controls run on the pinned Node image used in section 21
+and Python image f06d01d4ba3f8ad5af45a3ec87df19c1d317d8e8961edc0fabda61811af6f7cf,
+without runtime network, user mounts or host-library edits. The owned tmpfs must
+permit executable venv copies; an earlier noexec harness failure was discarded.
+
+### Executed source and regression evidence
+
+The implementation adds 73 distinct Jest cases: 58 derivation/metadata cases,
+ten adapter/order/failure cases and five documentation/native-contract cases.
+The derivation module reaches 100% statements, branches, functions and lines;
+four existing continuation cases additionally reject foreign loader metadata.
+The initial complete root run passes 792 suites and 14,733 tests (35 existing platform
+skips). Its coverage is 97.30% statements, 95.05% branches, 97.95% functions and
+98.08% lines; the changed Git adapter has 100% statements/functions/lines and
+93.18% branches. Every prior and newly declared module budget passes.
+The native Windows run then exposed an LF-only fence extractor in two new
+documentation tests. The real native Python verifier passed. A separate CRLF
+regression reproduces that extraction failure locally before accepting both
+checkout line endings; it adds one case without changing production behavior,
+platform skips, timeouts or coverage floors. Fresh exact-head gates remain
+required after this test correction.
+
+The same candidate, Python artifact and probe run against the adapter archived
+from develop commit 229c576e5a0bc3eac9a8cd1067b072f4dd4c5ac2 and the corrected
+adapter. Both use the default runtime preflight and command executor. The old
+adapter blocks both venv forms before dependency preparation, and fails the
+positive acceptance expectation with the actual unavailable-Python diagnostic.
+The correction runs the full configured unittest command with copied and
+symlinked private venvs, two distinct profiles, excluded inherited options,
+unchanged candidate bytes and parent Node environment, and complete cleanup.
+This source-wired container proof does not substitute for the native Actions
+acceptance and exact-head CI/review gates described above.
+
+The bounded copied-venv lookup follows Python's documented
+[venv layout and base home](https://docs.python.org/3.11/library/venv.html).
+The path checks account for the Linux loader's
+[list separators and dynamic string tokens](https://man7.org/linux/man-pages/man8/ld.so.8.html).

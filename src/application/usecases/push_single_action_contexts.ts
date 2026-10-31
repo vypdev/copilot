@@ -229,6 +229,7 @@ export function projectDeploymentOrchestrationContext(
   return {
     owner: source.owner,
     repo: source.repo,
+    ...(source.tokenUser ? { tokenUser: source.tokenUser } : {}),
     branches: Object.freeze({ ...source.branches }),
     workflows: Object.freeze({ ...source.workflows }),
     locale: Object.freeze({ ...source.locale }),
@@ -243,6 +244,8 @@ export function projectDeploymentOrchestrationContext(
       deploy: source.labels.deploy,
       deployed: source.labels.deployed,
       lifecycle: Object.freeze({ ...source.labels.lifecycle }),
+      ...(source.labels.completionProtectedLabels
+        ? { completionProtectedLabels: Object.freeze([...source.labels.completionProtectedLabels]) } : {}),
     }),
     deployment: deepFreezeCopy(source.deployment) as DeploymentOrchestrationContext['deployment'],
     singleAction: Object.freeze({

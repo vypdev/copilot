@@ -46,7 +46,7 @@ Automatic title formatting keeps the boundaries between hyphenated words. A titl
 
 Progress assessments use an immutable GitHub comparison of the actual native PR target and the managed branch head. If no open PR owns that exact head branch, they use the configured development base. The agent receives the source patches directly and does not need shell commands. Generated build files contribute metadata only; a percentage does not certify CI or a build.
 
-Copilot first classifies every nonempty line of the full issue body by source identifier as required, excluded, context or uncertain, before it analyzes patches. The scope request, comparison parts and final assessment keep complete issue text, extracted scope and model facts inside explicit untrusted-data blocks. Embedded instructions cannot grant workflow authority. Inputs that exceed the fixed UTF-8 budgets are rejected with retained progress rather than shortened to fit. Small comparisons then use one assessment. Larger complete comparisons are reviewed in up to 16 parts, each containing complete patches or identified content slices within the unchanged 256,000-byte UTF-8 evidence limit. Every part must return bounded facts for every assigned file or content unit before one final assessment can update progress. These facts preserve uncertainty and do not certify CI. Their final combined summary has a maximum 384,000-byte budget. Copilot reserves every admitted path and the issue/prompt envelope inside the unchanged 512 KiB runtime ceiling, then requests concise facts using the same calculated limit in the schema and parser. No returned facts are silently shortened. Source parts and the manifest retain the 256,000-byte limit.
+Copilot first classifies every nonempty line of the full issue body by source identifier as required, excluded, context or uncertain, before it analyzes patches. The scope request, comparison parts and final assessment keep complete issue text, extracted scope and model facts inside explicit untrusted-data blocks. Embedded instructions cannot grant workflow authority. Inputs that exceed the fixed UTF-8 budgets are rejected with retained progress rather than shortened to fit. Small comparisons then use one assessment. Larger complete comparisons are reviewed in up to four rounds of 16 parts (64 parts total), each containing complete patches or identified content slices within the unchanged 256,000-byte UTF-8 evidence limit. Every part must return bounded facts for every assigned file or content unit before one final assessment can update progress. These facts preserve uncertainty and do not certify CI. Their final combined summary has a maximum 384,000-byte budget. Copilot reserves every admitted path and the complete security/schema/task envelope and configured effort suffix inside the unchanged 512 KiB runtime ceiling, then requests concise facts using the same calculated limit in the schema and parser. No returned facts are silently shortened. Source parts and the manifest retain the 256,000-byte limit.
 
 ### Which comparison is assessed
 
@@ -89,20 +89,36 @@ Unicode bytes are preserved. Binary/non-UTF8 files, symlinks and submodules rema
 unsupported recovery inputs. Lockfiles and specification registries receive
 complete content, rather than a metadata exemption.
 
-Recovery admits at most 64 files, 1,048,576 bytes per blob, 4,194,304 represented
-side bytes in total, 256 Git object requests and 50,000 visited directory entries.
-It divides recovered text into contiguous slices of at most 120,000 serialized
-JSON text bytes and admits at most 512 exact evidence units. All slices, sides,
-paths, offsets and immutable identities must be covered exactly once. These
-retrieval limits do not enlarge the existing 16-part, 256,000-byte evidence,
-384,000-byte facts or 512 KiB prompt budgets. Every source and prompt budget is
-checked before any model call; no content or facts are shortened to fit.
+Native recovery uses at most four accounting frames. Each frame admits 64 files,
+4,194,304 represented side bytes, 256 Git object requests and 50,000 directory
+entries. A new frame continues automatically when a frame is full; total credit
+never resets. Total limits are 256 recovered files, 16,777,216 side bytes,
+1,024 requests and 200,000 entries. Each verified blob is at most 2,097,152 bytes.
+The 299-path complete inventory, 512-unit, 120,000-byte JSON slice,
+256,000-byte source/manifest, 384,000-byte fact and 512 KiB full request limits
+remain fixed. Cached contents still consume represented side-byte credit.
+
+Every source part and the complete manifest bind the exact base/head/preimage,
+paths and units. A fresh host attempt ID and digests bind each model request to
+the full issue, extracted scope and locale. Missing, reordered, stale, duplicate
+or corrupt parts/responses are rejected before final assessment. All source and
+prompt capacity checks finish before the first model request. No source or facts
+are shortened to fit; progress is published only after every response and the
+existing native freshness checks pass.
+
+Run details show required path/part counts, recovery usage and the current round.
+Automatic continuation happens inside the same invocation. After interruption,
+rerun the current managed source through the existing progress/Commits workflow;
+it collects a fresh complete attempt without reusing partial facts. There is no
+durable partial-analysis checkpoint. Coherent specification packages do not need
+to split scope, omit registries or retarget a PR to fit the old per-frame limits.
 
 If full recovery is unavailable, the run reports `validation.evidence-unavailable`
-and names up to eight unreviewed paths plus their total count. An exhausted work
-or analysis budget reports `validation.evidence-too-large`. Both are terminal
-for that deterministic input and preserve progress. Inspect the pinned revision
-or split reviewed work; a genuine provider outage keeps its normal retryability.
+and names up to eight unreviewed paths plus their total count. Exhausted total
+or analysis capacity reports nonretryable `validation.evidence-too-large` with
+retained progress. Inspect the pinned comparison and reported limit; retrying an
+identical over-limit input cannot add capacity. A genuine provider outage keeps
+its normal retryability.
 For unsupported binary/non-text contents, the shared CLI/Job Summary reports
 exact unreviewed paths and distinguishes unavailable progress from project
 verification. It shows up to eight complete names within an 8,192-byte diagnostic
@@ -152,7 +168,30 @@ Fact lengths use Unicode code points consistently in the provider schema, local
 response validation and progress parser, so supplementary characters share the
 same boundary. The evidence and runtime ceilings still count UTF-8 bytes.
 
-If source evidence is missing or any part fails, the Action retains the current progress and reports that it could not assess the revision. A single file, the final aggregate or a comparison exceeding the fixed part budget reports `validation.evidence-too-large` with Retryable: No; reduce the comparison or split the work into smaller reviewed changes before another assessment. Retrying identical oversized evidence cannot resolve that limit. It also retains state if either head or the issue body changes while the assessment is running. Inspect the run before retrying; an unavailable assessment is not proof of 0% completion.
+If source evidence is missing or any part fails, the Action retains the current progress and reports that it could not assess the revision. A single file, the final aggregate or a comparison exceeding the fixed part budget reports `validation.evidence-too-large` with Retryable: No; inspect the pinned comparison and reported supported capacity. Native multipart recovery continues automatically within its fixed totals; after interruption, rerun the current source for a fresh complete attempt. Retrying identical over-limit evidence cannot add capacity. It also retains state if either head or the issue body changes while the assessment is running. Inspect the run before retrying; an unavailable assessment is not proof of 0% completion.
+
+
+### Invalid returned assessments
+
+A completed agent operation can return data that violates the progress contract.
+Copilot rejects that result and retains the previous progress. Its existing
+CLI, Check and Job Summary expose `progress-result-contract-invalid` with a
+bounded phase, reason, schema field and verified requirement/original-issue line.
+For example, `assessment / requirement-evidence-invalid`,
+`$.requirements[1].evidence`, requirement `R2`, original line `L7` identifies the
+record needing attention. Response order does not determine the requirement;
+repeated issue quotes do not determine the source line. `none` means that an
+identity was not verified, so no anchor is guessed.
+
+The line refers to the original issue body supplied to that attempt. Blank lines
+retain their physical numbering. These diagnostics contain no raw model output,
+unknown returned property names or values. Strict JSON, exact scope, evidence,
+locale, size and percentage rules still apply; an invalid response cannot update
+labels. Review the named requirement and response schema. A fresh run can help
+when the provider can satisfy the unchanged contract, as opposed to changing
+acceptance or dropping verification. Process/transport failures retain their
+own status and retry guidance. A later optional check-publication warning remains
+a separate outcome and cannot replace the primary rejection.
 
 ## Completion after a PR merge
 

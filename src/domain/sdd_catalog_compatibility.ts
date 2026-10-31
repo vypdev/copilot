@@ -46,7 +46,13 @@ const SDK_STATUSES = ['as-built-baseline', 'implemented', 'proposed', 'deprecate
 const pathPolicy = require('./specification_catalog_path_policy.cjs') as {
   isSafeRelativePath(path: unknown): boolean;
   matchesFieldBoundary(field: string, path: string): boolean;
+  allowsEmptyPathField(status: string, field: string): boolean;
 };
+
+/** Empty evidence is truthful only for the existing proposed implementation fields. */
+export function allowsEmptySddCatalogPathField(status: string, field: string): boolean {
+  return pathPolicy.allowsEmptyPathField(status, field);
+}
 
 /** Existing owner paths keep the shared SDK catalog boundary, independent of proposed-path grammar. */
 export function isSddCatalogOwnerPath(path: string): boolean {
@@ -82,7 +88,7 @@ export function readSupportedSddCatalog(source: string): SupportedSddCatalog {
     ids.add(String(entry.id)); titles.add(String(entry.title));
     for (const field of PATH_FIELDS) {
       const paths = entry[field];
-      if (!Array.isArray(paths) || (field !== 'workflows' && paths.length === 0)
+      if (!Array.isArray(paths) || (!allowsEmptySddCatalogPathField(String(entry.status), field) && paths.length === 0)
         || new Set(paths).size !== paths.length
         || paths.some(path => typeof path !== 'string' || !pathPolicy.isSafeRelativePath(path) || !pathPolicy.matchesFieldBoundary(field, path))) {
         throw new SddCatalogCompatibilityFailure('owner-paths-invalid');

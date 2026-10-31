@@ -1,10 +1,10 @@
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { PORTABLE_SDD_LAYOUTS, portableSddCapability, writePortableSddEvidence } from '../../testing/portable_sdd_catalog_fixture';
 import { canCreateFileSymlink } from '../../testing/file_symlink_capability';
 
-const { validateCatalog, readCatalog, isSafeRelativePath } = require('../../../scripts/validate-specification-catalog.cjs');
+const { validateCatalog, readCatalog, renderCatalog, isSafeRelativePath } = require('../../../scripts/validate-specification-catalog.cjs');
 const symlinkIt = canCreateFileSymlink() ? it : it.skip;
 
 describe('portable catalog evidence and filesystem containment', () => {
@@ -15,6 +15,45 @@ describe('portable catalog evidence and filesystem containment', () => {
     writeFileSync(join(root, 'specs/payments.md'), '# Proposed payments\n');
   });
   afterEach(() => rmSync(root, { recursive: true, force: true }));
+
+  it.each([
+    ['root specification', ['specs/payments.md']],
+    ['nested primary', ['specs/group/payments.md']],
+    ['nested primary and companion', ['specs/group/payments.md', 'specs/group/companion.md']],
+    ['same basename in separate directories', ['specs/group/payments.md', 'specs/other/payments.md']],
+    ['deeply nested primary', ['specs/group/deep/payments.md']],
+    ['root primary and same-name nested companion', ['specs/payments.md', 'specs/group/payments.md']],
+  ])('preserves catalog-relative links for %s', (_name, specs) => {
+    rmSync(join(root, 'specs/payments.md'));
+    const capability = { ...portableSddCapability(), specs: specs as string[] };
+    writePortableSddEvidence(root, capability);
+    for (const file of capability.specs) {
+      mkdirSync(dirname(join(root, file)), { recursive: true });
+      writeFileSync(join(root, file), '# Proposed specification\n');
+    }
+    const catalog = { version: 1, capabilities: [capability] };
+    writeFileSync(join(root, 'specs/catalog.json'), JSON.stringify(catalog));
+    expect(validateCatalog(root, catalog)).toEqual([]);
+    const rendered = renderCatalog(catalog);
+    const primary = capability.specs[0].slice('specs/'.length);
+    expect(rendered).toContain(`[Payments](./${primary})`);
+    if (capability.specs.length > 1) expect(rendered).toContain(' + 1 companion');
+    for (const file of capability.specs) {
+      expect(rendered).toContain(`[\`${file}\`](./${file.slice('specs/'.length)})`);
+    }
+    const links = [...rendered.matchAll(/\]\((\.[^)]+)\)/gu)].map(match => match[1]);
+    expect(links.length).toBeGreaterThan(capability.specs.length);
+    for (const target of links) expect(statSync(resolve(root, 'specs', target)).isFile()).toBe(true);
+  });
+
+  it('keeps non-specification evidence relative to the repository root', () => {
+    const capability = portableSddCapability();
+    writePortableSddEvidence(root, capability);
+    const rendered = renderCatalog({ version: 1, capabilities: [capability] });
+    for (const file of [...capability.entrypoints, ...capability.code, ...capability.tests, ...capability.documentation]) {
+      expect(rendered).toContain(`[\`${file}\`](../${file})`);
+    }
+  });
 
   it.each(PORTABLE_SDD_LAYOUTS)('accepts existing %s metadata without executing its toolchain', (_name, source, test, doc) => {
     const capability = { ...portableSddCapability(), entrypoints: [String(source)], code: [String(source)], tests: [String(test)], documentation: [String(doc)] };

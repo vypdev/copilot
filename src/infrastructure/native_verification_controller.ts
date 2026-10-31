@@ -5,7 +5,8 @@ import { removeNativeVerificationProfiles } from './native_verification_profiles
 import * as core from '@actions/core';
 import { spawn, spawnSync } from 'node:child_process';
 import { appendFileSync, closeSync, existsSync, openSync, readSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { isAbsolute, join } from 'node:path';
+import { privateJvmHomeOption } from './private_jvm_environment';
 import { createPrivateVerificationRuntimeRoot } from './agents/agent_private_install_root';
 import { trustedWindowsSystemTool } from './agents/agent_trusted_system_tools';
 import { getGithubActionInput } from './github_action_input';
@@ -74,12 +75,16 @@ export async function awaitNativeBoundary(root: string, timeoutMs = 7_200_000): 
         if (request) {
             if (!/^[a-f0-9-]{36}$/u.test(request.id) || !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u.test(request.sourceSha)
                 || !/^[a-f0-9]{64}$/u.test(request.digest) || !request.environment || typeof request.environment.HOME !== 'string') throw new VerificationSetupError('handoff-invalid');
+            const home = request.environment.HOME;
+            if (!isAbsolute(home) || /[\r\n\0]/u.test(home)
+                || request.environment.JDK_JAVA_OPTIONS !== privateJvmHomeOption(home)
+                || request.environment.GRADLE_USER_HOME !== join(home, '.gradle')) throw new VerificationSetupError('handoff-invalid');
             core.setOutput('verification-request', request.id);
             core.setOutput('verification-source', request.sourceSha);
             core.setOutput('verification-digest', request.digest);
             core.saveState('native-verification-digest', request.digest);
             core.saveState('native-verification-source', request.sourceSha);
-            for (const key of ['HOME', 'USERPROFILE', 'APPDATA', 'LOCALAPPDATA', 'PATH', 'JAVA_HOME', 'TMP', 'TEMP', 'TMPDIR']) {
+            for (const key of ['HOME', 'USERPROFILE', 'APPDATA', 'LOCALAPPDATA', 'PATH', 'JAVA_HOME', 'JDK_JAVA_OPTIONS', 'GRADLE_USER_HOME', 'TMP', 'TEMP', 'TMPDIR']) {
                 const value = request.environment[key] ?? '';
                 if (typeof value !== 'string' || /[\r\n\0]/u.test(value)) throw new VerificationSetupError('handoff-invalid');
                 core.setOutput(`verification-${key.toLowerCase()}`, value);

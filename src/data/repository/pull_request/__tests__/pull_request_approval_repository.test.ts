@@ -1,3 +1,9 @@
+import { runUpdatePullRequestDescriptionWorkflow } from '../../../../application/usecases/steps/pull_request/update_pull_request_description_workflow';
+import { PullRequestLifecycleRepository } from '../pull_request_lifecycle_repository';
+import { bindPullRequestDescription } from '../../../../infrastructure/composition/lifecycle_capability_port_binding';
+import { readConfigurationBlock, writeConfigurationBlock } from '../../../../manager/description/configuration_markers';
+import { decidePullRequestApproval } from '../../../../domain/pull_request_approval';
+import { parsePullRequestApprovalPolicy } from '../../../../domain/pull_request_approval_policy';
 import { logInfo } from '../../../../application/ports/logging_ports';
 import * as github from '@actions/github';
 import { PullRequestApprovalRepository } from '../pull_request_approval_repository';
@@ -7,7 +13,8 @@ import { approvalCoverageZip } from './fixtures/approval_coverage_zip_fixture';
 import { approvalStaleReviewCases } from '../../../../infrastructure/__tests__/fixtures/approval_stale_review_cases';
 
 jest.mock('@actions/github', () => ({ getOctokit: jest.fn() }));
-jest.mock('../../../../application/ports/logging_ports', () => ({ logInfo: jest.fn() }));
+jest.mock('../../../../application/ports/logging_ports', () => ({ logInfo: jest.fn(), logDebugInfo: jest.fn(), logError: jest.fn() }));
+jest.mock('../../../../utils/logger', () => ({ logInfo: jest.fn(), logDebugInfo: jest.fn(), logError: jest.fn() }));
 
 const target = { owner: 'owner', repository: 'repo', repositoryId: 17, pullNumber: 42 };
 const head = 'a'.repeat(40);
@@ -69,10 +76,10 @@ function evidenceOctokit(mergeParents = [base, head], attempt = 1, runConclusion
   const listJobsForWorkflowRunAttempt = jest.fn();
   pat.rest.pulls.get.mockResolvedValue({ data: {
     number: 42, state: 'open', draft: false, changed_files: 1,
-    head: { sha: head, ref: 'feature/42-improve', repo: { id: 17 } },
+    head: { sha: head, ref: 'feature/43-improve', repo: { id: 17 } },
     base: { sha: base, ref: 'develop', repo: { id: 17 } },
     mergeable: true, merge_commit_sha: testedMerge,
-    user: { id: 10, type: 'User' }, body: 'Fixes #42',
+    user: { id: 10, type: 'User' }, body: 'Fixes #43',
   } });
   const client = {
     ...pat,
@@ -715,4 +722,104 @@ describe('causal evidence collection diagnostics (#619)', () => {
     expect(await f.repository.loadEvidence(target)).toMatchObject({ baseSha: base, testedMergeSha: testedMerge,
       mergeCommitVerified: true, checks: [expect.objectContaining({ runId: 50, conclusion: 'success' })] });
   });
+});
+
+
+describe('description publication and actual approval evidence agree', () => {
+  beforeEach(() => jest.clearAllMocks());
+  it.each([
+    { name: 'closing intent with retained native relation', prose: 'Closes #43.', linked: true, native: [43] },
+    { name: 'closing intent before native relation exists with protected changes', prose: 'Fixes #43', linked: true, native: [], protected: true },
+    { name: 'staged reference despite retained native relation', prose: 'Refs #43', linked: false, native: [43] },
+    { name: 'quoted code despite retained native relation', prose: '```text\nCloses #43\n```', linked: false, native: [43] },
+    { name: 'wrong repository despite retained native relation', prose: 'Closes foreign/repo#43', linked: false, native: [43] },
+    { name: 'wrong issue despite retained native relation', prose: 'Closes #44', linked: false, native: [43] },
+    { name: 'self issue identity', prose: 'Closes #42', linked: false, native: [42], self: true },
+    { name: 'foreign native head identity', prose: 'Closes #43', linked: false, native: [43], foreign: true },
+  ])('keeps $name consistent through two real publications', async scenario => {
+    const client = evidenceOctokit();
+    const issueNumber = scenario.self ? 42 : 43;
+    const headRef = `feature/${issueNumber}-improve`;
+    const configuration = { schemaVersion: 3, branchType: 'feature', workingBranch: headRef, parentBranch: 'develop' };
+    let body = writeConfigurationBlock(scenario.prose, JSON.stringify(configuration))!;
+    const initial = (await client.rest.pulls.get()).data;
+    client.rest.pulls.get.mockImplementation(async () => ({ data: { ...initial, body,
+      head: { ...initial.head, ref: headRef, repo: { id: scenario.foreign ? 99 : 17, name: 'repo', owner: { login: scenario.foreign ? 'foreign' : 'owner' } } },
+      base: { ...initial.base, repo: { id: 17, name: 'repo', owner: { login: 'owner' } } } } }));
+    const update = jest.fn(async (input: { body: string }) => { body = input.body; return { data: {} }; });
+    const graphql = jest.fn().mockResolvedValue({ repository: { pullRequest: { closingIssuesReferences: {
+      nodes: scenario.native.map(number => ({ number, repository: { nameWithOwner: 'owner/repo' } })),
+    } } } });
+    const provider = Object.assign(client, { graphql });
+    Object.assign(client.rest.pulls, { update });
+    const originalPages = client.paginate.iterator.getMockImplementation()!;
+    client.paginate.iterator.mockImplementation(async function* (method, params) {
+      if (method === client.rest.pulls.listFiles) yield { data: [{ filename: scenario.protected ? '.github/workflows/ci.yml' : 'src/feature.ts' }] };
+      else yield* originalPages(method, params);
+    });
+    (github.getOctokit as jest.Mock).mockReturnValue(provider);
+    const repository = new PullRequestApprovalRepository('fixture-no-authority', settings);
+    const publisher = new PullRequestLifecycleRepository({ getClient: () => provider as never });
+    const port = bindPullRequestDescription(publisher,
+      { owner: 'owner', repository: 'repo', token: 'fixture-no-authority' },
+      { getBoundedBugbotReviewDiffSnapshot: jest.fn().mockResolvedValue({ snapshot: { changes: [
+        { filename: 'src/feature.ts', status: 'modified', additions: 1, deletions: 0, patch: '+return true;' },
+      ] }, coverage: { status: 'complete' } }) });
+    const query = jest.fn().mockResolvedValue({ outputLocale: 'en-US', overview: 'This corrects the owned operation.',
+      whatChangedHeading: 'What changed', changes: ['Correct the returned result.', 'Keep the existing interface.'],
+      validationHeading: null, validation: null, reviewNotesHeading: null, reviewNotes: null, closesLinkedIssue: false });
+    const request = { trigger: 'automatic' as const, context: { eventName: 'pull_request', issueNumber,
+      pullRequest: { number: 42, headBranch: headRef, baseBranch: 'develop', creator: 'owned-author', body,
+        headSha: head, headRepository: 'owner/repo' }, mode: 'replace' as const, membersOnly: false,
+      agentConfiguration: { provider: 'codex' as const, model: 'fixture' }, targetLocale: 'en-US' } };
+    const readNative = async () => (await provider.graphql()).repository.pullRequest.closingIssuesReferences.nodes;
+    const nativeBefore = await readNative();
+    expect((await repository.loadEvidence(target)).linkedIssue).toBe(scenario.linked);
+    let firstPublished = '';
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const result = await runUpdatePullRequestDescriptionWorkflow(request, 'update-description', {
+        pullRequestDescriptionCommandPort: port, issueDescriptionQueryPort: { getDescription: async () => 'Owned issue.' },
+        organizationMembersPort: { getAllMembers: async () => [] }, aiRepository: { query },
+      });
+      if (scenario.foreign) {
+        expect(result[0].errors[0].code).toBe('workflow.stale');
+      } else {
+        expect(result[0].success).toBe(true);
+        // The normal host configuration persistence follows description publication.
+        // Use its actual marker writer, then the real provider-bound publication path.
+        await publisher.updateDescription('owner', 'repo', 42, writeConfigurationBlock(body, JSON.stringify(configuration))!, 'fixture-no-authority');
+        expect(body.includes(`Closes #${issueNumber}`)).toBe(scenario.linked);
+      }
+      const block = readConfigurationBlock(body);
+      expect(block.kind === 'present' && JSON.parse(block.content)).toEqual(configuration);
+      const evidence = await repository.loadEvidence(target);
+      expect(evidence.linkedIssue).toBe(scenario.linked);
+      const policy = parsePullRequestApprovalPolicy(await repository.readPolicy(target));
+      const decision = decidePullRequestApproval(policy, evidence);
+      if (scenario.protected) expect(decision.code).toBe('protected-path');
+      else if (scenario.foreign) expect(decision.code).toBe('unsupported-pr');
+      else if (!scenario.linked) expect(decision.code).toBe('scope');
+      else expect(decision.code).not.toBe('scope');
+      expect(await readNative()).toEqual(nativeBefore);
+      if (attempt === 0) firstPublished = body;
+      else expect(body).toBe(firstPublished);
+    }
+    expect(update).toHaveBeenCalledTimes(scenario.foreign ? 0 : 4);
+    expect(query).toHaveBeenCalledTimes(scenario.foreign ? 0 : 2);
+    expect(JSON.stringify(query.mock.calls)).not.toContain('fixture-no-authority');
+    expect(provider.graphql).toHaveBeenCalledTimes(3);
+    expect(client.rest.pulls.createReview).not.toHaveBeenCalled();
+  });
+  it('keeps a missing provider body outside closing approval scope', async () => {
+    const client = evidenceOctokit();
+    const initial = (await client.rest.pulls.get()).data;
+    client.rest.pulls.get.mockResolvedValue({ data: { ...initial, body: null } });
+    (github.getOctokit as jest.Mock).mockReturnValue(client);
+    const repository = new PullRequestApprovalRepository('fixture-no-authority', settings);
+    const evidence = await repository.loadEvidence(target);
+    expect(evidence.linkedIssue).toBe(false);
+    expect(decidePullRequestApproval(parsePullRequestApprovalPolicy(await repository.readPolicy(target)), evidence).code).toBe('scope');
+    expect(client.rest.pulls.createReview).not.toHaveBeenCalled();
+  });
+
 });

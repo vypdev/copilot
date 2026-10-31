@@ -1,0 +1,560 @@
+{
+  "schemaVersion": 1,
+  "issue": "https://github.com/vypdev/copilot/issues/784",
+  "date": "2026-10-30",
+  "sourceBase": "518d97f6fc5051163d22672788bebe098536526b",
+  "runtime": {
+    "cli": "codex-cli 0.164.0-alpha.11.1",
+    "node": "v24.20.0",
+    "provider": "codex",
+    "modelProvider": "openai",
+    "model": "gpt-6-luna",
+    "effort": "medium"
+  },
+  "sources": [
+    {
+      "url": "https://github.com/coil-kt/coil/blob/3.6.3/coil-network-core/src/commonMain/kotlin/coil3/network/NetworkFetcher.kt",
+      "blob": "3cae4bf3a6203eddb949e0d7badefcf118a564b4",
+      "fact": "Enabled network reads plus disabled disk reads/writes generate no-cache, no-store before the transport."
+    },
+    {
+      "url": "https://github.com/coil-kt/coil/blob/3.6.3/coil-core/src/commonMain/kotlin/coil3/request/Options.kt",
+      "blob": "d88151282d4644ecff884307e818bc9276d2e270",
+      "fact": "Network policy defaults to ENABLED."
+    },
+    {
+      "url": "https://github.com/coil-kt/coil/blob/3.6.3/coil-core/src/commonMain/kotlin/coil3/request/CachePolicy.kt",
+      "blob": "020665d5a43581ee65394dabd41e1c81e34d3767",
+      "fact": "DISABLED=false/false; WRITE_ONLY=false/true."
+    }
+  ],
+  "consumerEvidence": {
+    "source": "https://github.com/vypdev/copilot/issues/784",
+    "method": "Read-only existing CI XML inspection; two actual loader tests pass with zero failures/errors/skips. CI used the PR merge checkout; relevant factory, test and version-catalog blobs match the reviewed head. The test task was rerun before a later up-to-date coverage invocation.",
+    "executionPerformedHere": false,
+    "privateSourceAndXml": "Kept outside this repository; committed fixtures and model inputs are synthetic."
+  },
+  "corpus": {
+    "schemaVersion": 1,
+    "cases": [
+      {
+        "id": "request-transform-coil",
+        "language": "kotlin",
+        "category": "negative",
+        "description": "Source-evidence fixture for Coil 3.6.3, not a new Coil execution. Valid unchanged desktop imports, context, imageUrl and PNG fixtures surround the diff. Official NetworkFetcher.newRequest maps enabled network reads plus disabled disk reads/writes to Cache-Control: no-cache, no-store before Ktor: https://github.com/coil-kt/coil/blob/3.6.3/coil-network-core/src/commonMain/kotlin/coil3/network/NetworkFetcher.kt . Matching Options defaults networkCachePolicy to ENABLED; CachePolicy.DISABLED has both flags false. MockEngine observes the outgoing request and supplies a response PNG, not request headers. Review the added factory configuration.",
+        "file": "media/PrivateLoader.kt",
+        "startLine": 1,
+        "diff": " val engine = MockEngine { request ->\n     assertTrue(request.headers[HttpHeaders.CacheControl]!!.contains(\"no-store\"))\n     respond(validPng, headers = headersOf(HttpHeaders.ContentType, \"image/png\"))\n }\n val client = HttpClient(engine)\n+val loader = ImageLoader.Builder(context)\n+    .components { add(KtorNetworkFetcherFactory(client)) }\n+    .diskCachePolicy(CachePolicy.DISABLED)\n+    .build()\n assertIs<SuccessResult>(loader.execute(ImageRequest.Builder(context).data(imageUrl).build()))",
+        "expected": []
+      },
+      {
+        "id": "request-transform-middleware",
+        "language": "typescript",
+        "category": "negative",
+        "description": "Controlled executable JavaScript-subset request pipeline. The unchanged library builder and middleware are supplied as context. The application contract requires no-store at the transport. The new test traverses those real authored functions; it does not inject request headers. This is a synthetic oracle, not execution of Coil or a consumer application.",
+        "file": "media/request.ts",
+        "startLine": 1,
+        "diff": " const policy = { diskRead: false, diskWrite: false, networkRead: true };\n function newRequest() {\n   const headers = {};\n   if (policy.networkRead && !policy.diskRead) {\n     headers[\"Cache-Control\"] = policy.diskWrite ? \"no-cache\" : \"no-cache, no-store\";\n   }\n   return { headers };\n }\n function middleware() { return newRequest(); }\n function applicationRequest() {\n   const request = middleware();\n   // Preserve the upstream request headers.\n   return request;\n }\n function transport(request) { return request.headers[\"Cache-Control\"]; }\n function testTransport(request) {\n   // The test observes the request without adding headers.\n   if (!String(transport(request)).includes(\"no-store\")) throw new Error(\"no-store required\");\n }\n const outgoing = applicationRequest();\n+testTransport(outgoing);",
+        "expected": []
+      },
+      {
+        "id": "request-transform-unknown",
+        "language": "typescript",
+        "category": "negative",
+        "description": "No version-matched dependency source, resolved artifact contract or source-bound execution observation is available. The application requires no-store at the transport. Inspect only the supplied change; do not invent library semantics or an execution result.",
+        "file": "media/request.ts",
+        "startLine": 1,
+        "diff": " import { createLoader } from \"unavailable-image-sdk\";\n+const loader = createLoader({ diskCache: \"disabled\" });\n // The resolved dependency request builder and execution evidence are unavailable.\n await loader.load(\"https://fixture.invalid/image.png\");",
+        "expected": []
+      },
+      {
+        "id": "request-transform-write",
+        "language": "typescript",
+        "category": "correctness",
+        "description": "Controlled executable request pipeline. Private image requests require no-store at the actual transport, not just no-cache. The unchanged versioned builder maps policy flags as shown. Review the changed policy; all shown functions are the actual authored fixture path.",
+        "file": "media/request.ts",
+        "startLine": 1,
+        "diff": "+const policy = { diskRead: false, diskWrite: true, networkRead: true };\n function newRequest() {\n   const headers = {};\n   if (policy.networkRead && !policy.diskRead) {\n     headers[\"Cache-Control\"] = policy.diskWrite ? \"no-cache\" : \"no-cache, no-store\";\n   }\n   return { headers };\n }\n function middleware() { return newRequest(); }\n function applicationRequest() {\n   const request = middleware();\n   // Preserve the upstream request headers.\n   return request;\n }\n function transport(request) { return request.headers[\"Cache-Control\"]; }\n function testTransport(request) {\n   // The test observes the request without adding headers.\n   if (!String(transport(request)).includes(\"no-store\")) throw new Error(\"no-store required\");\n }\n const outgoing = applicationRequest();\n testTransport(outgoing);",
+        "expected": [
+          {
+            "id": "request-transform-write",
+            "title": "Write-enabled policy does not provide the required no-store header",
+            "file": "media/request.ts",
+            "line": 1,
+            "severity": "medium",
+            "category": "correctness",
+            "codeSnippet": "const policy = { diskRead: false, diskWrite: true, networkRead: true };"
+          }
+        ]
+      },
+      {
+        "id": "request-transform-bypass",
+        "language": "typescript",
+        "category": "correctness",
+        "description": "Controlled executable request pipeline requiring no-store at the transport. The unchanged middleware invokes the header-producing builder. Review the changed application request construction and the downstream assertion.",
+        "file": "media/request.ts",
+        "startLine": 1,
+        "diff": " const policy = { diskRead: false, diskWrite: false, networkRead: true };\n function newRequest() {\n   const headers = {};\n   if (policy.networkRead && !policy.diskRead) {\n     headers[\"Cache-Control\"] = policy.diskWrite ? \"no-cache\" : \"no-cache, no-store\";\n   }\n   return { headers };\n }\n function middleware() { return newRequest(); }\n function applicationRequest() {\n+  const request = { headers: {} };\n   // Preserve the upstream request headers.\n   return request;\n }\n function transport(request) { return request.headers[\"Cache-Control\"]; }\n function testTransport(request) {\n   // The test observes the request without adding headers.\n   if (!String(transport(request)).includes(\"no-store\")) throw new Error(\"no-store required\");\n }\n const outgoing = applicationRequest();\n testTransport(outgoing);",
+        "expected": [
+          {
+            "id": "request-transform-bypass",
+            "title": "Raw request bypasses the header-producing middleware",
+            "file": "media/request.ts",
+            "line": 11,
+            "severity": "medium",
+            "category": "correctness",
+            "codeSnippet": "const request = { headers: {} };"
+          }
+        ]
+      },
+      {
+        "id": "request-transform-overwrite",
+        "language": "typescript",
+        "category": "correctness",
+        "description": "Controlled executable request pipeline requiring no-store at the transport. The unchanged upstream builder produces its policy-derived header. Review the added downstream assignment before the actual transport observes the request.",
+        "file": "media/request.ts",
+        "startLine": 1,
+        "diff": " const policy = { diskRead: false, diskWrite: false, networkRead: true };\n function newRequest() {\n   const headers = {};\n   if (policy.networkRead && !policy.diskRead) {\n     headers[\"Cache-Control\"] = policy.diskWrite ? \"no-cache\" : \"no-cache, no-store\";\n   }\n   return { headers };\n }\n function middleware() { return newRequest(); }\n function applicationRequest() {\n   const request = middleware();\n+  request.headers[\"Cache-Control\"] = \"no-cache\";\n   return request;\n }\n function transport(request) { return request.headers[\"Cache-Control\"]; }\n function testTransport(request) {\n   // The test observes the request without adding headers.\n   if (!String(transport(request)).includes(\"no-store\")) throw new Error(\"no-store required\");\n }\n const outgoing = applicationRequest();\n testTransport(outgoing);",
+        "expected": [
+          {
+            "id": "request-transform-overwrite",
+            "title": "Downstream assignment removes the required no-store directive",
+            "file": "media/request.ts",
+            "line": 12,
+            "severity": "medium",
+            "category": "correctness",
+            "codeSnippet": "request.headers[\"Cache-Control\"] = \"no-cache\";"
+          }
+        ]
+      },
+      {
+        "id": "request-transform-mock",
+        "language": "typescript",
+        "category": "correctness",
+        "description": "Controlled executable request pipeline requiring no-store in production. The shown test mock mutates its input request before asserting. Production invokes applicationRequest followed by transport without testTransport. Review the changed production construction; a passing injecting mock is not production execution evidence.",
+        "file": "media/request.ts",
+        "startLine": 1,
+        "diff": " const policy = { diskRead: false, diskWrite: false, networkRead: true };\n function newRequest() {\n   const headers = {};\n   if (policy.networkRead && !policy.diskRead) {\n     headers[\"Cache-Control\"] = policy.diskWrite ? \"no-cache\" : \"no-cache, no-store\";\n   }\n   return { headers };\n }\n function middleware() { return newRequest(); }\n function applicationRequest() {\n+  const request = { headers: {} };\n   // Preserve the upstream request headers.\n   return request;\n }\n function transport(request) { return request.headers[\"Cache-Control\"]; }\n function testTransport(request) {\n   request.headers[\"Cache-Control\"] = \"no-cache, no-store\";\n   if (!String(transport(request)).includes(\"no-store\")) throw new Error(\"no-store required\");\n }\n const outgoing = applicationRequest();\n testTransport(outgoing);",
+        "expected": [
+          {
+            "id": "request-transform-mock",
+            "title": "Header-injecting mock hides a missing production request header",
+            "file": "media/request.ts",
+            "line": 11,
+            "severity": "medium",
+            "category": "correctness",
+            "codeSnippet": "const request = { headers: {} };"
+          }
+        ]
+      },
+      {
+        "id": "request-transform-utf8",
+        "language": "typescript",
+        "category": "correctness",
+        "description": "Controlled executable request pipeline plus UTF-8 preview. The header builder and transport assertion are supplied. The preview contract requires valid UTF-8; its unchanged strict decoder rejects malformed bytes. Review the added byte truncation independently of request-header correctness.",
+        "file": "media/request.ts",
+        "startLine": 1,
+        "diff": " const policy = { diskRead: false, diskWrite: false, networkRead: true };\n function newRequest() {\n   const headers = {};\n   if (policy.networkRead && !policy.diskRead) {\n     headers[\"Cache-Control\"] = policy.diskWrite ? \"no-cache\" : \"no-cache, no-store\";\n   }\n   return { headers };\n }\n function middleware() { return newRequest(); }\n function applicationRequest() {\n   const request = middleware();\n   // Preserve the upstream request headers.\n   return request;\n }\n function transport(request) { return request.headers[\"Cache-Control\"]; }\n function testTransport(request) {\n   // The test observes the request without adding headers.\n   if (!String(transport(request)).includes(\"no-store\")) throw new Error(\"no-store required\");\n }\n const outgoing = applicationRequest();\n testTransport(outgoing);\n const encoded = new TextEncoder().encode(\"é\");\n+const preview = encoded.slice(0, 1);\n new TextDecoder(\"utf-8\", { fatal: true }).decode(preview);",
+        "expected": [
+          {
+            "id": "request-transform-utf8",
+            "title": "Byte truncation splits a multibyte UTF-8 character",
+            "file": "media/request.ts",
+            "line": 23,
+            "severity": "medium",
+            "category": "correctness",
+            "codeSnippet": "const preview = encoded.slice(0, 1);"
+          }
+        ]
+      }
+    ]
+  },
+  "corpusSha256": "33d311c4c649673368b5c3ceb8ca43ae40b18963514455e5eca22844a91b1417",
+  "promptIdentities": {
+    "derivation": "Actual unchanged benchmark builder/security renderer, with frozen baseline versus corrected shared instruction; derived identities, not a captured stdin transcript.",
+    "baselineInstructionSha256": "9444a4f061923cced20bf63d04f7172ebbb332bdc4788de1cb12c573328baf6c",
+    "correctedInstructionSha256": "ed8e1316b2c90a85e0b3053afcdbb79c452968179077aacd6b182d6fe5b2dd9c",
+    "baseline": {
+      "request-transform-coil": {
+        "sha256": "0d41e771c2aa1dd136068425917ef1000a5b741e7507daf21e11719ad78dc75b",
+        "bytes": 10909
+      },
+      "request-transform-middleware": {
+        "sha256": "ea160559858b8f037ca0160d0a08d1acdb75416ffef184aa8cb3159998cb73ae",
+        "bytes": 10932
+      },
+      "request-transform-unknown": {
+        "sha256": "771e793d452acef23833090813f892629773fc8c05e34be9b146d2e743b839cf",
+        "bytes": 10283
+      },
+      "request-transform-write": {
+        "sha256": "7d68323fb590682054c1a8ddd76290992566610579aae93188361d6b2fc8d799",
+        "bytes": 10839
+      },
+      "request-transform-bypass": {
+        "sha256": "eac2e2428c187190176d2e0c8c6421df7beaa83752ced1ab6b1e9a5886f25a11",
+        "bytes": 10796
+      },
+      "request-transform-overwrite": {
+        "sha256": "3bae2764a39c32a18253b504d8bc39c9ec35005b49799492b3be62e225fa7cdb",
+        "bytes": 10812
+      },
+      "request-transform-mock": {
+        "sha256": "4a151566512bb2c39477f673ff3b98c597abfcaea2b58986cfc8c1a3b980bbdb",
+        "bytes": 10900
+      },
+      "request-transform-utf8": {
+        "sha256": "55df51b8b7df724e7ac03c29ffa0c3f6fbfe5d540bb46c21dda833fb95ebf948",
+        "bytes": 11008
+      }
+    },
+    "corrected": {
+      "request-transform-coil": {
+        "sha256": "4f4e96bb9fbb7e3e47e36e834cace1cb16a42e3bae42e3f89bc0570c3c5bea9a",
+        "bytes": 11403
+      },
+      "request-transform-middleware": {
+        "sha256": "17ba9399b4662e309f466d2368944f8e38a28d62b1c0aa19007cec461271a391",
+        "bytes": 11426
+      },
+      "request-transform-unknown": {
+        "sha256": "512131cc1cdcb1042b4c90ac0d7d46ad42939585553e7c088f5f5720a641d902",
+        "bytes": 10777
+      },
+      "request-transform-write": {
+        "sha256": "394b87b7cc0efac42b7e5633dbedc5976072c7b32259e432fef1c6a847653c6a",
+        "bytes": 11333
+      },
+      "request-transform-bypass": {
+        "sha256": "a90b0bbf0088397a68f06a1f36dc6a1cfa0b54f892706a9edeb8a9005a9750e4",
+        "bytes": 11290
+      },
+      "request-transform-overwrite": {
+        "sha256": "87db87ca1ea5b9a943aa600a22ee44649579a66a64efcbff52347b620c5fdf18",
+        "bytes": 11306
+      },
+      "request-transform-mock": {
+        "sha256": "5451cc728fc2c6868f4c7f7366410a2b3e1165fa34ad63a59824424b1bb46d5a",
+        "bytes": 11394
+      },
+      "request-transform-utf8": {
+        "sha256": "c418e541e06c2c689ad61be48959256988b6e4a0d610456074e32ad8806ce60a",
+        "bytes": 11502
+      }
+    }
+  },
+  "conditions": [
+    "Identical eight inputs/verdicts, model/provider/effort and existing quality thresholds in both measurements.",
+    "Sequential actual product CLI benchmark executions with the native configured runtime; expected verdicts omitted from model prompts.",
+    "Same empty owned Git workspace; no source, fixture or expected-result files copied inside.",
+    "Predictions are actual normalized product benchmark responses, never checked-in reference predictions.",
+    "One initial baseline startup failed because the copied bundle lacked its package-relative metadata layout, before model execution; retained locally and corrected before measuring."
+  ],
+  "measurements": [
+    {
+      "variant": "baseline",
+      "identity": {
+        "base": "518d97f6fc5051163d22672788bebe098536526b",
+        "cliSha256": "001a27e8d27032366c41940369dce47e1be6f0f1dd3f94a2fa280ade6535148f",
+        "corpusSha256": "33d311c4c649673368b5c3ceb8ca43ae40b18963514455e5eca22844a91b1417",
+        "cases": 8,
+        "workspace": "empty owned Git repository; no source/fixtures/expected files copied inside",
+        "cliPath": "/tmp/copilot-784-runtime/baseline/build/cli/index.js",
+        "node": "v24.20.0 explicit executable",
+        "startupAttempt1": "copied bundle lacked its package.json relative layout; exit before benchmark, retained log; not a model measurement"
+      },
+      "predictions": {
+        "schemaVersion": 1,
+        "predictions": {
+          "request-transform-coil": [
+            {
+              "id": "media/PrivateLoader.kt:9:network-cache-policy-remains-enabled",
+              "title": "Network cache policy remains enabled",
+              "description": "This disables only the disk cache. The network cache policy keeps its default of ENABLED, so Coil does not add the `no-cache, no-store` request header described in the fixture. The assertion in the MockEngine therefore fails because the expected `no-store` value is absent.",
+              "file": "media/PrivateLoader.kt",
+              "line": 9,
+              "endLine": 9,
+              "severity": "medium",
+              "confidence": 0.98,
+              "category": "correctness",
+              "evidence": "The changed line sets `.diskCachePolicy(CachePolicy.DISABLED)` but does not configure the network cache policy; the fixture states its default is ENABLED and that the expected header requires disabled disk reads/writes plus enabled network reads.",
+              "suggestion": "Also disable the network cache policy so Coil emits the expected request header.",
+              "symbol": "ImageLoader.Builder",
+              "codeSnippet": ".diskCachePolicy(CachePolicy.DISABLED)",
+              "fingerprint": "fp-e519e95a",
+              "semanticFingerprint": "sf-6f6018b6"
+            }
+          ],
+          "request-transform-middleware": [],
+          "request-transform-unknown": [],
+          "request-transform-write": [
+            {
+              "id": "media/request.ts:4:private-image-cache-policy-mits-no-store",
+              "title": "Private image requests can reach transport without no-store",
+              "description": "The changed policy enables disk writes while disabling disk reads. In that configuration, `newRequest` sets `Cache-Control` to `no-cache`, which does not include `no-store`. The middleware and application request preserve those headers, and the transport receives the same value; the test therefore throws because its required directive is absent.",
+              "file": "media/request.ts",
+              "line": 4,
+              "endLine": 4,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "The exact policy is `{ diskRead: false, diskWrite: true, networkRead: true }`. The condition passes, the ternary selects `\"no-cache\"`, and `transport(request)` returns that header unchanged. `testTransport` checks for `no-store` and fails.",
+              "suggestion": "Ensure the private-request policy includes `no-store` in the Cache-Control header sent to transport, including when disk writes are enabled.",
+              "symbol": "newRequest",
+              "codeSnippet": "headers[\"Cache-Control\"] = policy.diskWrite ? \"no-cache\" : \"no-cache, no-store\";",
+              "suggestedCode": "headers[\"Cache-Control\"] = \"no-cache, no-store\";",
+              "fingerprint": "fp-8eb23667",
+              "semanticFingerprint": "sf-a2e391f4"
+            }
+          ],
+          "request-transform-bypass": [
+            {
+              "id": "media/request.ts:13:bypasses-no-store-middleware",
+              "title": "Application request bypasses the no-store header builder",
+              "description": "`applicationRequest` constructs and returns a fresh request instead of using the header-producing request builder. The outgoing request therefore has no `Cache-Control` header, so `testTransport` throws because the transport does not observe `no-store`.",
+              "file": "media/request.ts",
+              "line": 13,
+              "endLine": 13,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "The changed line initializes `request.headers` as `{}`; the downstream assertion checks `transport(request)` for `no-store` and fails when the header is absent.",
+              "suggestion": "Build the application request through the header-producing builder while preserving any required upstream headers.",
+              "symbol": "applicationRequest",
+              "codeSnippet": "const request = { headers: {} };",
+              "fingerprint": "fp-38e76393",
+              "semanticFingerprint": "sf-6a57ee42"
+            }
+          ],
+          "request-transform-overwrite": [
+            {
+              "id": "media/request.ts:12:overwrites-no-store-header",
+              "title": "Downstream assignment removes the required no-store directive",
+              "description": "The unchanged request builder sets `Cache-Control` to `no-cache, no-store` because `networkRead` is true and `diskRead` is false. `applicationRequest` then replaces that value with `no-cache` before the request reaches `transport`, so the transport receives a header without `no-store` and `testTransport` throws.",
+              "file": "media/request.ts",
+              "line": 12,
+              "endLine": 12,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "`request.headers[\"Cache-Control\"] = \"no-cache\"` replaces the builder's `\"no-cache, no-store\"` value; `transport` returns the replaced header and the test rejects it when it lacks `no-store`.",
+              "suggestion": "Preserve the policy-derived header value instead of overwriting it.",
+              "symbol": "applicationRequest",
+              "codeSnippet": "request.headers[\"Cache-Control\"] = \"no-cache\";",
+              "fingerprint": "fp-4df97bd4",
+              "semanticFingerprint": "sf-158a1b67"
+            }
+          ],
+          "request-transform-mock": [
+            {
+              "id": "media/request.ts:13:missing-no-store-header",
+              "title": "Production request omits the required no-store header",
+              "description": "`applicationRequest()` constructs a request with empty headers, and the production path passes it to `transport()` without `testTransport()`. Consequently, the outgoing request has no `Cache-Control: no-store` directive. The shown test does not verify production behavior because its mock mutates the request before asserting.",
+              "file": "media/request.ts",
+              "line": 13,
+              "endLine": 13,
+              "severity": "medium",
+              "confidence": 0.99,
+              "category": "correctness",
+              "evidence": "The changed construction is `const request = { headers: {} };`; `transport()` reads `request.headers[\"Cache-Control\"]`, while only `testTransport()` adds that header.",
+              "suggestion": "Set the required `Cache-Control` header when constructing the production request.",
+              "symbol": "applicationRequest",
+              "codeSnippet": "const request = { headers: {} };",
+              "suggestedCode": "const request = { headers: { \"Cache-Control\": \"no-cache, no-store\" } };",
+              "fingerprint": "fp-a9d3a94e",
+              "semanticFingerprint": "sf-6a57ee42"
+            }
+          ],
+          "request-transform-utf8": [
+            {
+              "id": "media/request.ts:19:truncates-utf8-sequence",
+              "title": "Byte truncation can produce invalid UTF-8",
+              "description": "The encoded text for `é` is the two-byte UTF-8 sequence `C3 A9`. Slicing to one byte retains only `C3`, so the strict decoder throws instead of producing a valid preview. Truncation must avoid splitting a multibyte character.",
+              "file": "media/request.ts",
+              "line": 19,
+              "endLine": 19,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "`new TextEncoder().encode(\"é\")` yields two UTF-8 bytes, and `slice(0, 1)` passes only the leading byte to `TextDecoder(\"utf-8\", { fatal: true })`, which rejects it as malformed input.",
+              "suggestion": "Truncate at a UTF-8 code point boundary, or decode non-fatally if replacement characters are acceptable under the preview contract.",
+              "codeSnippet": "const preview = encoded.slice(0, 1);",
+              "fingerprint": "fp-bd16f405",
+              "semanticFingerprint": "sf-445f6b6b"
+            }
+          ]
+        }
+      },
+      "score": {
+        "metrics": {
+          "expected": 5,
+          "actual": 6,
+          "matched": 4,
+          "precision": 0.6666666666666666,
+          "recall": 0.8,
+          "locationAccuracy": 0.25,
+          "severityAccuracy": 1,
+          "categoryAccuracy": 1,
+          "f1": 0.7272727272727272,
+          "falsePositives": 2,
+          "falseNegatives": 1,
+          "meanLineDistance": 2,
+          "confidenceBrierScore": 0.32675
+        },
+        "violations": [
+          "precision 0.667 is below 0.900",
+          "recall 0.800 is below 0.850",
+          "f1 0.727 is below 0.870",
+          "locationAccuracy 0.250 is below 0.800",
+          "confidenceBrierScore 0.327 exceeds 0.160"
+        ],
+        "missingCases": []
+      }
+    },
+    {
+      "variant": "corrected",
+      "identity": {
+        "base": "518d97f6fc5051163d22672788bebe098536526b",
+        "cliSha256": "7b64311a9350a468eb59066321009b230ef2bbd7e500efdceb765d17d3b5c114",
+        "packageSha256": "567f4af68f000525a46335452800468819e5e5d0f5cbee4a4efcb51d410d7097",
+        "corpusSha256": "33d311c4c649673368b5c3ceb8ca43ae40b18963514455e5eca22844a91b1417",
+        "node": "v24.20.0",
+        "cases": 8,
+        "workspace": "same empty owned Git workspace; no source/fixture/expected files copied inside"
+      },
+      "predictions": {
+        "schemaVersion": 1,
+        "predictions": {
+          "request-transform-coil": [],
+          "request-transform-middleware": [],
+          "request-transform-unknown": [],
+          "request-transform-write": [
+            {
+              "id": "media/request.ts:1:private-image-request-allows-disk-write",
+              "title": "Private image request omits no-store",
+              "description": "With `diskWrite: true`, `newRequest()` sets `Cache-Control` to `no-cache`, which does not include `no-store`. The request reaches `transport()` unchanged, so `testTransport()` throws instead of observing the required no-store directive.",
+              "file": "media/request.ts",
+              "line": 1,
+              "endLine": 1,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "The `policy.diskWrite ? \"no-cache\" : \"no-cache, no-store\"` branch selects `\"no-cache\"` for this policy; the unchanged middleware and application request preserve that header through transport.",
+              "suggestion": "Set the private image request policy so the builder emits `no-cache, no-store`.",
+              "symbol": "policy",
+              "codeSnippet": "const policy = { diskRead: false, diskWrite: true, networkRead: true };",
+              "suggestedCode": "const policy = { diskRead: false, diskWrite: false, networkRead: true };",
+              "fingerprint": "fp-22066f48",
+              "semanticFingerprint": "sf-2e63dfd5"
+            }
+          ],
+          "request-transform-bypass": [
+            {
+              "id": "media/request.ts:10:bypasses-no-store-middleware",
+              "title": "Application request bypasses the no-store header builder",
+              "description": "`applicationRequest` creates a fresh request instead of using `middleware()`, which calls `newRequest()` and supplies `Cache-Control: no-cache, no-store`. The outgoing request therefore has no `Cache-Control` header, and `testTransport` throws because the transport observation does not include `no-store`.",
+              "file": "media/request.ts",
+              "line": 10,
+              "endLine": 10,
+              "severity": "medium",
+              "confidence": 0.99,
+              "category": "correctness",
+              "evidence": "`outgoing` comes from `applicationRequest()`, which returns `{ headers: {} }`; `transport` reads that missing header and the assertion rejects it.",
+              "suggestion": "Build the application request through the middleware so it retains the policy-generated header.",
+              "symbol": "applicationRequest",
+              "codeSnippet": "const request = { headers: {} };",
+              "suggestedCode": "const request = middleware();",
+              "fingerprint": "fp-38e76393",
+              "semanticFingerprint": "sf-6a57ee42"
+            }
+          ],
+          "request-transform-overwrite": [
+            {
+              "id": "media/request.ts:11:cache-control-overwritten",
+              "title": "Downstream assignment removes the required no-store directive",
+              "description": "The upstream builder sets `Cache-Control` to `no-cache, no-store` for the shown policy, but `applicationRequest` overwrites it with `no-cache` before the transport observes the request. The transport assertion therefore fails because the outgoing header lacks `no-store`.",
+              "file": "media/request.ts",
+              "line": 11,
+              "endLine": 11,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "`newRequest` assigns `no-cache, no-store` when `networkRead` is true and `diskRead` is false; the changed assignment replaces that value, and `testTransport` requires the transport-observed header to include `no-store`.",
+              "suggestion": "Preserve the upstream policy-derived header instead of replacing it with `no-cache`.",
+              "symbol": "applicationRequest",
+              "codeSnippet": "request.headers[\"Cache-Control\"] = \"no-cache\";",
+              "fingerprint": "fp-4df97bd4",
+              "semanticFingerprint": "sf-158a1b67"
+            }
+          ],
+          "request-transform-mock": [
+            {
+              "id": "media/request.ts:13:production-request-skips-no-store-policy",
+              "title": "Production request omits the no-store header",
+              "description": "`applicationRequest` constructs a request with empty headers and returns it without applying `middleware` or adding the cache policy. The described production path passes this request to `transport`, so it can send without the required `no-store` directive. The test mock does not demonstrate production behavior because it adds the directive before calling `transport`.",
+              "file": "media/request.ts",
+              "line": 13,
+              "endLine": 13,
+              "severity": "medium",
+              "confidence": 0.99,
+              "category": "correctness",
+              "evidence": "The changed construction is `const request = { headers: {} };`; `transport` reads `request.headers[\"Cache-Control\"]`, while the shown `testTransport` mutates that header before asserting.",
+              "suggestion": "Apply the no-store policy when constructing the production request before it reaches `transport`.",
+              "symbol": "applicationRequest",
+              "codeSnippet": "const request = { headers: {} };",
+              "fingerprint": "fp-17a62731",
+              "semanticFingerprint": "sf-6a57ee42"
+            }
+          ],
+          "request-transform-utf8": [
+            {
+              "id": "media/request.ts:14:truncation-splits-utf8",
+              "title": "Byte truncation produces invalid UTF-8",
+              "description": "The encoded string `é` is two UTF-8 bytes (`C3 A9`), but slicing to one byte leaves the incomplete sequence `C3`. The following strict UTF-8 decoder rejects it, violating the preview contract and throwing instead of producing a valid preview.",
+              "file": "media/request.ts",
+              "line": 14,
+              "endLine": 14,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "`new TextEncoder().encode(\"é\")` produces two bytes; `.slice(0, 1)` retains only the first, and `TextDecoder(\"utf-8\", { fatal: true })` rejects that incomplete sequence.",
+              "suggestion": "Truncate at a valid UTF-8 code point boundary, or decode non-fatally if replacement characters are acceptable for the preview contract.",
+              "codeSnippet": "const preview = encoded.slice(0, 1);",
+              "fingerprint": "fp-931ccf1b",
+              "semanticFingerprint": "sf-445f6b6b"
+            }
+          ]
+        }
+      },
+      "score": {
+        "metrics": {
+          "expected": 5,
+          "actual": 5,
+          "matched": 5,
+          "precision": 1,
+          "recall": 1,
+          "locationAccuracy": 0.2,
+          "severityAccuracy": 1,
+          "categoryAccuracy": 1,
+          "f1": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "meanLineDistance": 2.6,
+          "confidenceBrierScore": 4.000000000000007e-05
+        },
+        "violations": [
+          "locationAccuracy 0.200 is below 0.800"
+        ],
+        "missingCases": []
+      }
+    }
+  ],
+  "limitations": [
+    "The baseline reproduces the false missing-header premise and proposes disabling the network reads required by the pinned producer.",
+    "Corrected sample: zero false positives/negatives, including all five genuine controls; exact location accuracy remains 1/5 and fails the unchanged 0.8 gate.",
+    "Both complete scores and all predictions are retained; the corrected sample does not pass every model-quality threshold.",
+    "The benchmark scores returned findings; it does not exercise provider publication/location remapping or historical task-2 resolution.",
+    "Seven compiled synthetic observations and one unavailable-evidence result do not certify consumer or Coil runtime execution.",
+    "Small samples do not establish statistical improvement, deterministic model behavior or consumer adoption."
+  ]
+}

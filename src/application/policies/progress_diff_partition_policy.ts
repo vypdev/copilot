@@ -4,6 +4,7 @@ import type { ProgressDiffEvidence, ProgressDiffPartition, ProgressDiffChange } 
 
 export const MAX_PROGRESS_EVIDENCE_BYTES = 256_000;
 export const MAX_PROGRESS_PARTITIONS = 16;
+export const MAX_FRAMED_PROGRESS_PARTITIONS = MAX_PROGRESS_PARTITIONS * 4;
 export type { ProgressDiffChange } from '../ports/progress_diff_query_ports';
 
 export function progressEvidenceTooLarge(): ApplicationError {
@@ -15,7 +16,7 @@ export function serializeProgressDiff(baseSha: string, headSha: string, changes:
 }
 
 /** Losslessly partitions complete, adapter-validated file facts. No source file is omitted. */
-export function partitionProgressDiff(baseSha: string, headSha: string, changes: readonly ProgressDiffChange[]): ProgressDiffEvidence {
+export function partitionProgressDiff(baseSha: string, headSha: string, changes: readonly ProgressDiffChange[], profile?: 'framed-v1'): ProgressDiffEvidence {
     const serialize = (files: readonly ProgressDiffChange[]) => serializeProgressDiff(baseSha, headSha, files);
     const unitMode = changes.some(change => change.unitId !== undefined);
     if (unitMode && (changes.length > MAX_PROGRESS_EVIDENCE_UNITS || changes.some(change => !change.unitId)
@@ -28,7 +29,7 @@ export function partitionProgressDiff(baseSha: string, headSha: string, changes:
         if (Buffer.byteLength(serialize([change]), 'utf8') > MAX_PROGRESS_EVIDENCE_BYTES) throw progressEvidenceTooLarge();
         if (Buffer.byteLength(serialize([...current, change]), 'utf8') > MAX_PROGRESS_EVIDENCE_BYTES) {
             groups.push(current);
-            if (groups.length >= MAX_PROGRESS_PARTITIONS) throw progressEvidenceTooLarge();
+            if (groups.length >= (profile === 'framed-v1' ? MAX_FRAMED_PROGRESS_PARTITIONS : MAX_PROGRESS_PARTITIONS)) throw progressEvidenceTooLarge();
             current = [];
         }
         current.push(change);

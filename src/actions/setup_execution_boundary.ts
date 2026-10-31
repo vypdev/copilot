@@ -89,6 +89,7 @@ export interface SetupExecutionTarget {
         liveTitle?: string;
     };
     currentIssueWorkflowAdmission?: IssueWorkflowAdmission;
+    pullRequestParentBranch?: string;
     release: {
         active: boolean;
         type?: string;
@@ -208,6 +209,7 @@ function applySetupState(target: SetupExecutionTarget, state: SetupExecutionStat
     target.issue.liveBody = state.liveIssueBody;
     target.issue.liveTitle = state.liveIssueTitle;
     target.currentIssueWorkflowAdmission = state.issueWorkflowAdmission;
+    target.pullRequestParentBranch = state.pullRequestParentBranch;
     target.release.active = state.release.active;
     target.release.type = state.release.type;
     target.release.version = state.release.version;

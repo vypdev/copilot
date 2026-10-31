@@ -115,4 +115,31 @@ describe('pull request description content policy', () => {
         expect(result.kind === 'valid' && result.markdown).toContain('@\u200bteam');
         expect(result.kind === 'valid' && result.markdown).toContain('- \u200b/deploy');
     });
+    it.each([false, true])('renders one closing reference with preserved intent and model flag=%s', closesLinkedIssue => {
+        const result = renderPullRequestDescriptionContent(content({ closesLinkedIssue }), 'en-US', 42, true);
+        expect(result.kind).toBe('valid');
+        expect(result.kind === 'valid' && result.markdown.match(/Closes #42/gu)).toHaveLength(1);
+    });
+    it('rejects preservation without a distinct issue', () => {
+        expect(renderPullRequestDescriptionContent(content(), 'en-US', undefined, true))
+            .toEqual({ kind: 'invalid', reason: 'shape' });
+    });
+    it('does not use preserved intent to repair a malformed model field', () => {
+        expect(renderPullRequestDescriptionContent(content({ closesLinkedIssue: 'false' }), 'en-US', 42, true))
+            .toEqual({ kind: 'invalid', reason: 'shape' });
+    });
+    it('counts the preserved closing reference within the hard output budget', () => {
+        const payload = content({ overview: 'b'.repeat(1500),
+            changes: Array.from({ length: 6 }, (_, index) => `${index}${'a'.repeat(999)}`),
+            validation: Array.from({ length: 5 }, (_, index) => `${index}${'c'.repeat(879)}`) });
+        const base = renderPullRequestDescriptionContent(payload, 'en-US');
+        expect(base.kind).toBe('valid');
+        const length = base.kind === 'valid' ? base.markdown.length : 0;
+        const validation = payload.validation as string[];
+        validation[4] += 'd'.repeat(MAX_PULL_REQUEST_DESCRIPTION_LENGTH - length);
+        expect(renderPullRequestDescriptionContent(payload, 'en-US').kind).toBe('valid');
+        expect(renderPullRequestDescriptionContent(payload, 'en-US', 42, true))
+            .toEqual({ kind: 'invalid', reason: 'body-too-long' });
+    });
+
 });

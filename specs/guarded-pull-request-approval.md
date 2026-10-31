@@ -551,3 +551,32 @@ client selection and then passed; the complete repository adapter suite passes
 skips; global lines/statements/functions/branches are 97.81/96.94/97.69/94.30%.
 The changed adapter reaches 98.90% lines, 97.42% statements, 100% functions and
 90.82% branches. These local facts do not claim native consumer recovery.
+
+
+### Explicit closing-reference evidence — #803 (2026-10-30)
+
+Approval linkage and description preservation share the bounded Markdown-aware
+policy specified in `pull-request-lifecycle-and-enrichment.md`. The current body
+must contain an explicit top-level single-line closing reference to the configured
+branch's distinct issue in this repository; source spelling, source Markdown
+context and target identity are checked together. Same-repository native IDs must
+match the credential-bound repository, and the branch issue cannot be the PR
+itself. Quoted/code/comment/contextual text, wrong repository/number, staged `Refs`,
+missing body and owned temporary linkage metadata do not authorize this fact.
+Native closing metadata alone is not a fallback that promotes staged work.
+
+A valid description replacement retains existing verified closing intent within
+its owned region even if the structured model flag is false. Replay therefore
+keeps publication and this evidence aligned. Protected paths, human/bot identity,
+producer attestation, CI/coverage, current-head Bugbot, rules and submission
+freshness remain mandatory and unchanged. No native approval is inferred from a
+successful publication or a recommendation-only consumer check.
+
+The 62 new cases are allocated once under the PR lifecycle owner SDD; do not add
+them again to this document's historical budget. Cross-layer cases use the actual
+workflow, credential binding, publication adapter, configuration marker writer and
+approval evidence adapter with controlled providers. They assert stable published
+body, configuration, retained/missing native relationships, negative scope and
+protected-path decisions, zero model credential exposure and zero native approval
+writes. An old provider fixture is corrected to use PR42 / branch issue43,
+matching the existing distinct-issue prerequisite rather than a self reference.

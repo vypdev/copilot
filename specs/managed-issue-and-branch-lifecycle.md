@@ -856,3 +856,22 @@ workflows/specifications/catalogs, generated bundles, Graphify and current-head
 CI/review. Review the English/Spanish summary examples for readable status and
 one next action. Production convergence is not claimed until a fresh promoted
 consumer sequence verifies its native issue and required cleanup.
+
+## Typed deployment completion exception (#792, 2026-10-30)
+
+The native-close contract above continues for ordinary issues. Fresh bounded
+issue facts additionally classify an owned valid deployment operation. Pending
+publication, reconciliation or cleanup defers generic closure, 100%/lifecycle
+cleanup and existing-card retirement, even if an earlier runtime already closed
+the native issue. Unavailable, ambiguous or unsupported owned durable state
+cannot certify ordinary completion. No close/reopen authority is added to the
+metadata or card ports. The existing per-write native fences also reject a
+concurrent pending operation. Deferred results have a distinct machine outcome
+and do not advertise closed cleanup convergence.
+
+The release owner's [section 24](./configurable-release-orchestration.md#24-deferred-native-issue-completion-792-2026-10-30)
+owns the additional numeric budget and native linked-branch/PR causal evidence;
+do not double count it against this SDD. Final orchestration reuses these same
+scoped reconciliation capabilities after its functional completion checkpoint.
+Ordinary completed/not-planned/duplicate handling, selective label preservation,
+card bounds, exact witnesses and cancellation behavior remain required.

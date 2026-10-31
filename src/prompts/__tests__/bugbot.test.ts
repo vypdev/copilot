@@ -1,5 +1,43 @@
 import { getBugbotPrompt } from '../bugbot';
 
+it.each([false, true])('grounds self-repository Action syntax in the host contract with partitioned=%s', partitioned => {
+    const prompt = getBugbotPrompt({
+        projectContextInstruction: '', owner: 'org', repo: 'repo', headBranch: 'bugfix/770',
+        baseBranch: 'develop', issueNumber: '770', changeScopeInstruction: 'Review workflow references.',
+        ignoreBlock: '', previousBlock: '', coverageBlock: '', targetLocale: 'en-US',
+        ...(partitioned ? { partitionBlock: 'Review partition 1/2.', outputContractBlock: 'Return partition attestation.' } : {}),
+    });
+    expect(prompt).toContain('GitHub.com supports $/path');
+    expect(prompt).toContain('containing workflow/action repository at its running commit');
+    expect(prompt).toContain('without checkout or an @ref suffix');
+    expect(prompt).toContain('./path needs the checked-out workspace');
+    expect(prompt).toContain('host/version contract');
+    expect(prompt).toContain('Preserve valid bootstrap refs');
+    expect(prompt).toContain('remote version-tag policy');
+    expect(prompt).toContain('malformed suffixes and missing checkout');
+    expect(prompt).toContain('compare literal strings character by character through startswith and returns');
+    expect(prompt).toContain('Anchor the literal uses line, not its steps key');
+    expect(prompt).toContain('A remote tag check need not validate local-reference grammar');
+    expect(prompt).toContain('Prove a malformed reference exists and reaches execution before alleging a bypass');
+    expect(prompt).toContain('Count every displayed line from its stated start');
+    expect(prompt).toContain('For Action reference fixes or step moves, use prose suggestion and omit suggestedCode');
+});
+
+it.each([false, true])('checks Kotlin/Wasm generated bindings with partitioned=%s', partitioned => {
+    const prompt = getBugbotPrompt({
+        projectContextInstruction: '', owner: 'org', repo: 'repo', headBranch: 'bugfix/764',
+        baseBranch: 'develop', issueNumber: '764', changeScopeInstruction: 'Review the interop fixture.',
+        ignoreBlock: '', previousBlock: '', coverageBlock: '', targetLocale: 'en-US',
+        ...(partitioned ? { partitionBlock: 'Review partition 1/2.', outputContractBlock: 'Return partition attestation.' } : {}),
+    });
+    expect(prompt).toContain('Kotlin/Wasm package-level = js(...)');
+    expect(prompt).toContain('declared parameters are generated JavaScript formals');
+    expect(prompt).toContain('nested callbacks can close over them');
+    expect(prompt).toContain('not all snippets are global-only');
+    expect(prompt).toContain('Preserve genuinely missing identifiers');
+    expect(prompt).toContain('Never invent compiler/test execution');
+});
+
 describe('getBugbotPrompt', () => {
     it('fills repo context, ignoreBlock and previousBlock', () => {
         const prompt = getBugbotPrompt({

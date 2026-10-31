@@ -32481,7 +32481,7 @@ const SPANISH_CONTENT = Object.freeze({
     }),
     'validation.evidence-too-large': Object.freeze({
         impact: 'No se pudo evaluar el progreso dentro de los límites fijos de evidencia.',
-        action: 'Reduce el tamaño de la comparación o divide el trabajo en cambios revisados más pequeños antes de iniciar otra evaluación.',
+        action: 'Inspecciona la comparación completa y la capacidad indicada. La recuperación por partes continúa automáticamente cuando es compatible. Si se interrumpe, vuelve a ejecutar la fuente gestionada actual; una comparación idéntica que excede el límite no obtiene más capacidad.',
         retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas.',
     }),
     'workflow.invalid-event': Object.freeze({
@@ -32546,6 +32546,11 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
         action: 'Inspect the closed-issue or merged-PR run and current native state. Retry cleanup only if the issue is still closed with the intended reason; leave reopened work open. Resolve the named failure before retrying.',
         retainedState: 'Native state was preserved. Confirmed changes: {changed}; remaining required changes in the last verified plan: {remaining}. Unavailable reads do not establish completion.',
     }),
+    'progress-result-contract-invalid': Object.freeze({
+        impact: 'The returned progress result violated its contract; progress was not published.',
+        action: 'Inspect the original requirement and response schema. Details: phase {phase}, reason {reason}, field {field}, requirement {requirementId}, original issue line {sourceLineId}. none means no verified identity is available. A fresh attempt may help when the provider can satisfy the unchanged contract; do not relax acceptance or verification.',
+        retainedState: 'Existing progress labels and published assessments were preserved. An optional check-publication warning is a separate result.',
+    }),
     'progress-binary-evidence-unavailable': Object.freeze({
         impact: 'Progress was not assessed because required binary or non-text contents cannot be reviewed. Unreviewed paths ({pathCount} total; {shownCount} shown; complete inventory in run details): {paths}.',
         action: 'Inspect the intended pull request base and the pinned paths. Changed binary contents need reviewable source and provenance; file metadata or a successful build does not establish binary correctness.',
@@ -32601,6 +32606,11 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
         action: 'Review catalog profile support in the SDD guide. Preserve the native schema, readiness, requirements, evidence and blockers; have a maintainer provide a reviewed compatible adapter, then retry this same issue.',
         retainedState: 'The repository catalog, answers and published SDDs remain unchanged; no specification or branch was published by this attempt.',
     }),
+    'sdd-catalog-missing-trusted-source': Object.freeze({
+        impact: 'SDD preparation stopped before model analysis because specs/catalog.json is missing from the trusted source revision.',
+        action: 'Review and merge the catalog prerequisite through the enabled documentation workflow. Update the displayed trusted source through the normal managed-branch workflow, then retry this same issue after the source changes. An unchanged revision remains blocked.',
+        retainedState: 'Existing answers, published specifications and any linked branch are retained; this attempt published no specification or branch.',
+    }),
     'sdd-catalog-format-invalid': Object.freeze({
         impact: 'SDD preparation stopped before ownership operations because the catalog cannot establish one valid supported profile and unique owner paths.',
         action: 'Validate the catalog JSON, supported profile, required metadata and normalized unique owner-path arrays. Preserve repository-owned readiness rules and retry the same issue after maintainer review.',
@@ -32621,6 +32631,11 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
         action: 'Inspect the failed stage in the linked workflow logs. For dependencies, provision the source Node/pnpm toolchain and repair the frozen candidate workspace graph; for setup/runtime, repair the same-job prerequisites; for command failures, correct the configured verifier. Then retry {syncCommand}. Blind retries do not repair a graph mismatch.',
         retainedState: 'No synchronization commit or push was attempted. Original head: {childSha}. Local rollback: {restoration}; restored means the original head was verified, unverified requires operator inspection before retrying.',
     }),
+    'branch-sync-catalog-incompatible': Object.freeze({
+        impact: 'Branch synchronization stopped for catalog review: profile {profile}, phase {phase}, capability position {capabilityNumber}, field {field}. Position 0 identifies the document.',
+        action: 'Review the catalog profile and preserve all evidence in a reviewed migration or supported adapter before retrying {syncCommand}. Do not invent verification dates or readiness. Recovery guide: {catalogGuide}.',
+        retainedState: 'No synchronization commit or push was attempted; remote branches were preserved. Local abort: {abort}. completed means the abort call finished; unverified requires operator inspection. This result does not certify application readiness.',
+    }),
     'branch-sync-resolution-invalid': Object.freeze({
         impact: 'Branch synchronization stopped because workspace validation rejected the resolution ({validationCode}).',
         action: 'Inspect this validation code in the workflow logs and correct the resolution before retrying {command}.',
@@ -32639,22 +32654,22 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
     'pull-request-link-restored': Object.freeze({
         impact: 'The pull request could not be linked to its issue.',
         action: 'Rerun the workflow; no temporary pull-request state needs manual recovery.',
-        retainedState: 'The original pull-request base and description were restored.',
+        retainedState: 'The original pull-request base and owned temporary-reference cleanup were verified.',
     }),
     'pull-request-link-base-retained': Object.freeze({
         impact: 'The pull request could not be linked to its issue.',
-        action: 'Restore the temporary default base branch, then rerun the workflow.',
+        action: 'Rerun the current PR workflow to recover pending state; inspect ownership if recovery remains blocked.',
         retainedState: 'The temporary default base branch remains; the original description was restored.',
     }),
     'pull-request-link-reference-retained': Object.freeze({
         impact: 'The pull request could not be linked to its issue.',
-        action: 'Remove the temporary issue reference from the description, then rerun the workflow.',
+        action: 'Rerun the current PR workflow to finish owned-reference cleanup; retain its recovery marker until the base and intended link are verified.',
         retainedState: 'The original base branch was restored; the temporary issue reference remains in the description.',
     }),
     'pull-request-link-base-and-reference-retained': Object.freeze({
         impact: 'The pull request could not be linked to its issue.',
-        action: 'Restore the temporary default base branch and remove the temporary issue reference, then rerun the workflow.',
-        retainedState: 'The temporary default base branch and issue reference remain.',
+        action: 'Rerun the current PR workflow to recover the original base and owned reference; inspect ownership if recovery remains blocked.',
+        retainedState: 'The original base and temporary-reference cleanup could not be verified; pending recovery evidence was retained when observable.',
     }),
     'managed-branch-enrichment-failed': Object.freeze({
         impact: 'The linked branch exists, but later issue metadata may be incomplete.',
@@ -32693,6 +32708,11 @@ const SPANISH_RECOVERY_CONTENT = Object.freeze({
         impact: 'La limpieza de la issue sigue sin verificarse: {resultId}, fase {phase}; estado nativo {state}, motivo {reason}.',
         action: 'Revisa la ejecución de cierre o de la PR fusionada y el estado nativo actual. Reintenta la limpieza solo si la issue sigue cerrada con el motivo previsto; conserva abierto el trabajo reabierto. Resuelve el fallo indicado antes de reintentar.',
         retainedState: 'Se conservó el estado nativo. Cambios confirmados: {changed}; cambios pendientes en el último plan verificado: {remaining}. Una lectura no disponible no demuestra que haya finalizado.',
+    }),
+    'progress-result-contract-invalid': Object.freeze({
+        impact: 'El resultado de progreso devuelto incumplió su contrato; no se publicó el progreso.',
+        action: 'Inspecciona el requisito original y el esquema de respuesta. Detalles: fase {phase}, motivo {reason}, campo {field}, requisito {requirementId}, línea original de la issue {sourceLineId}. none indica que no hay una identidad verificada. Un nuevo intento puede ayudar si el proveedor cumple el contrato sin cambiarlo; no relajes la aceptación ni la verificación.',
+        retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas. Un aviso de publicación del check opcional corresponde a otro resultado.',
     }),
     'progress-binary-evidence-unavailable': Object.freeze({
         impact: 'No se evaluó el progreso porque no se pueden revisar los contenidos binarios o no textuales necesarios. Rutas sin revisar ({pathCount} en total; {shownCount} mostradas; inventario completo en los detalles de ejecución): {paths}.',
@@ -32749,6 +32769,11 @@ const SPANISH_RECOVERY_CONTENT = Object.freeze({
         action: 'Revisa los perfiles admitidos en la guía de SDD. Conserva el esquema nativo, los estados, requisitos, evidencias y bloqueos; pide a un mantenedor un adaptador compatible revisado y reintenta esta misma incidencia.',
         retainedState: 'El catálogo, las respuestas y los SDD publicados permanecen intactos; este intento no publicó ninguna especificación ni rama.',
     }),
+    'sdd-catalog-missing-trusted-source': Object.freeze({
+        impact: 'La preparación del SDD se detuvo antes del análisis del modelo porque falta specs/catalog.json en la revisión de origen confiable.',
+        action: 'Revisa e integra el catálogo requerido mediante el workflow de documentación habilitado. Actualiza el origen confiable mostrado mediante el flujo normal de ramas gestionadas y reintenta esta misma incidencia cuando cambie esa revisión. La revisión sin cambios permanece bloqueada.',
+        retainedState: 'Se conservan las respuestas, las especificaciones publicadas y cualquier rama enlazada; este intento no publicó ninguna especificación ni rama.',
+    }),
     'sdd-catalog-format-invalid': Object.freeze({
         impact: 'La preparación del SDD se detuvo antes de las operaciones de propiedad porque el catálogo no permite establecer un único perfil admitido con rutas de propiedad válidas y únicas.',
         action: 'Valida el JSON del catálogo, el perfil admitido, los metadatos obligatorios y las listas de rutas de propiedad normalizadas y únicas. Conserva las reglas de preparación del repositorio y reintenta la misma incidencia tras la revisión de un mantenedor.',
@@ -32769,6 +32794,11 @@ const SPANISH_RECOVERY_CONTENT = Object.freeze({
         action: 'Revisa la fase fallida en los logs del workflow enlazado. Para dependencias, prepara Node/pnpm del repositorio fuente y corrige el grafo congelado del candidato; para setup/runtime, corrige los requisitos del mismo job; para fallos del comando, corrige el verificador configurado. Después reintenta {syncCommand}. Repetir sin cambios no corrige un grafo incompatible.',
         retainedState: 'No se intentó crear ni subir un commit de sincronización. Head original: {childSha}. Rollback local: {restoration}; restored confirma el head original, unverified requiere inspección del operador antes de reintentar.',
     }),
+    'branch-sync-catalog-incompatible': Object.freeze({
+        impact: 'La sincronización se detuvo para revisar el catálogo: perfil {profile}, fase {phase}, posición de capacidad {capabilityNumber}, campo {field}. La posición 0 identifica el documento.',
+        action: 'Revisa el perfil y conserva todas las evidencias mediante una migración revisada o un adaptador compatible antes de reintentar {syncCommand}. No inventes fechas de verificación ni estados de preparación. Guía: {catalogGuide}.',
+        retainedState: 'No se intentó crear ni subir un commit de sincronización; se conservaron las ramas remotas. Aborto local: {abort}. completed indica que terminó la llamada de aborto; unverified exige inspección del operador. Este resultado no certifica que la aplicación esté preparada.',
+    }),
     'branch-sync-resolution-invalid': Object.freeze({
         impact: 'La sincronización se detuvo porque la validación del repositorio rechazó la resolución ({validationCode}).',
         action: 'Revisa este código de validación en los logs del workflow y corrige la resolución antes de reintentar {command}.',
@@ -32787,22 +32817,22 @@ const SPANISH_RECOVERY_CONTENT = Object.freeze({
     'pull-request-link-restored': Object.freeze({
         impact: 'No se pudo vincular la pull request con su issue.',
         action: 'Vuelve a ejecutar el workflow; ningún estado temporal de la pull request requiere recuperación manual.',
-        retainedState: 'Se restauraron la rama base y la descripción originales de la pull request.',
+        retainedState: 'Se verificaron la rama base original y la limpieza de la referencia temporal propia.',
     }),
     'pull-request-link-base-retained': Object.freeze({
         impact: 'No se pudo vincular la pull request con su issue.',
-        action: 'Restaura la rama base predeterminada temporal y vuelve a ejecutar el workflow.',
+        action: 'Vuelve a ejecutar el workflow actual de la PR para recuperar el estado pendiente; revisa la propiedad si sigue bloqueado.',
         retainedState: 'La rama base predeterminada temporal permanece; se restauró la descripción original.',
     }),
     'pull-request-link-reference-retained': Object.freeze({
         impact: 'No se pudo vincular la pull request con su issue.',
-        action: 'Elimina la referencia temporal a la issue de la descripción y vuelve a ejecutar el workflow.',
+        action: 'Vuelve a ejecutar el workflow actual de la PR para limpiar la referencia propia; conserva el marcador hasta verificar la base y el enlace previsto.',
         retainedState: 'Se restauró la rama base original; la referencia temporal a la issue permanece en la descripción.',
     }),
     'pull-request-link-base-and-reference-retained': Object.freeze({
         impact: 'No se pudo vincular la pull request con su issue.',
-        action: 'Restaura la rama base predeterminada temporal, elimina la referencia temporal a la issue y vuelve a ejecutar el workflow.',
-        retainedState: 'La rama base predeterminada temporal y la referencia a la issue permanecen.',
+        action: 'Vuelve a ejecutar el workflow actual de la PR para recuperar la base original y la referencia propia; revisa la propiedad si sigue bloqueado.',
+        retainedState: 'No se pudo verificar la base original ni la limpieza de la referencia temporal; se conservó la evidencia pendiente cuando pudo observarse.',
     }),
     'managed-branch-enrichment-failed': Object.freeze({
         impact: 'La rama vinculada existe, pero los metadatos posteriores de la issue pueden estar incompletos.',
@@ -33656,6 +33686,7 @@ var _ApplicationError_cause;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = exports.APPLICATION_ERROR_RECOVERY_IDS = void 0;
 exports.isApplicationErrorCorrelationId = isApplicationErrorCorrelationId;
+const progress_response_diagnostic_1 = __nccwpck_require__(6289);
 const progress_binary_evidence_diagnostic_1 = __nccwpck_require__(364);
 const issue_workflow_diagnostic_1 = __nccwpck_require__(4347);
 const change_size_reconciliation_1 = __nccwpck_require__(5304);
@@ -33664,6 +33695,7 @@ const closed_issue_reconciliation_1 = __nccwpck_require__(1565);
 const approval_evidence_diagnostic_1 = __nccwpck_require__(8205);
 const branch_sync_validation_1 = __nccwpck_require__(981);
 const verification_failure_1 = __nccwpck_require__(177);
+const branch_sync_catalog_diagnostic_1 = __nccwpck_require__(5677);
 exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     ...copilot_command_validation_1.COPILOT_COMMAND_VALIDATION_REASONS,
     'pull-request-link-restored',
@@ -33677,9 +33709,11 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'branch-sync-fixer-unavailable',
     'branch-sync-resolution-invalid',
     'branch-sync-verification-failed',
+    'branch-sync-catalog-incompatible',
     'sdd-draft-size-exceeded',
     'sdd-catalog-unsupported-profile',
     'sdd-catalog-format-invalid',
+    'sdd-catalog-missing-trusted-source',
     'sdd-draft-format-invalid',
     'sdd-draft-case-identity-invalid',
     'sdd-draft-case-budget-invalid',
@@ -33692,6 +33726,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'change-size-reconciliation-failed',
     'issue-workflow-admission-blocked',
     'progress-binary-evidence-unavailable',
+    'progress-result-contract-invalid',
     'stored-configuration-schema-missing',
     'stored-configuration-schema-unsupported',
     'stored-configuration-invalid',
@@ -33792,7 +33827,7 @@ exports.APPLICATION_ERROR_METADATA = {
     'validation.evidence-too-large': {
         kind: 'validation', retryable: false,
         impact: 'Progress could not be assessed within the fixed evidence limits.',
-        action: 'Reduce the comparison size or split the work into smaller reviewed changes before running a new assessment.',
+        action: 'Inspect the complete comparison and reported capacity. Supported multipart recovery continues automatically. If interrupted, rerun the current managed source; an identical over-limit comparison cannot gain capacity.',
         retainedState: 'Existing progress labels and published assessments were preserved.',
     },
     'workflow.invalid-event': {
@@ -33921,15 +33956,18 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'branch-sync-fixer-unavailable': Object.freeze(['command']),
     'branch-sync-resolution-invalid': Object.freeze(['validationCode', 'command']),
     'branch-sync-verification-failed': Object.freeze(['stage', 'reason', 'command', 'commandIndex', 'childSha', 'restoration']),
+    'branch-sync-catalog-incompatible': Object.freeze(['phase', 'profile', 'field', 'capabilityNumber', 'abort']),
     'sdd-draft-size-exceeded': Object.freeze([]),
     'sdd-catalog-unsupported-profile': Object.freeze([]),
     'sdd-catalog-format-invalid': Object.freeze([]),
+    'sdd-catalog-missing-trusted-source': Object.freeze([]),
     'sdd-draft-format-invalid': Object.freeze([]),
     'sdd-draft-case-identity-invalid': Object.freeze([]),
     'sdd-draft-case-budget-invalid': Object.freeze([]),
     'sdd-draft-requirement-mapping-invalid': Object.freeze([]),
     'sdd-draft-repository-path-invalid': Object.freeze([]),
     'progress-binary-evidence-unavailable': Object.freeze(['paths', 'pathCount']),
+    'progress-result-contract-invalid': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
     'deployment-publication-context-missing': Object.freeze([]),
     'workspace-changes-rejected': Object.freeze([]),
 });
@@ -33985,6 +34023,12 @@ function normalizeApplicationErrorRecovery(recovery) {
     if (recovery.id === 'branch-sync-verification-failed' && !(0, verification_failure_1.isBranchSyncVerificationFailure)(variables)) {
         throw new TypeError('Branch synchronization verification diagnostic is invalid.');
     }
+    if (recovery.id === 'branch-sync-catalog-incompatible') {
+        const { abort, ...diagnostic } = variables;
+        if (!(0, branch_sync_catalog_diagnostic_1.isBranchSyncCatalogDiagnostic)(diagnostic) || !['completed', 'unverified'].includes(String(abort))) {
+            throw new TypeError('Branch synchronization catalog diagnostic is invalid.');
+        }
+    }
     if (recovery.id === 'closed-issue-reconciliation-failed'
         && (!closed_issue_reconciliation_1.CLOSED_ISSUE_RESULTS.some(value => value === variables.resultId)
             || !closed_issue_reconciliation_1.CLOSED_ISSUE_PHASES.some(value => value === variables.phase)
@@ -33999,6 +34043,8 @@ function normalizeApplicationErrorRecovery(recovery) {
             || approval_evidence_diagnostic_1.APPROVAL_EVIDENCE_PERMISSIONS[variables.operation] !== variables.permission)) {
         throw new TypeError('Approval evidence diagnostic is invalid.');
     }
+    if (recovery.id === 'progress-result-contract-invalid' && !(0, progress_response_diagnostic_1.isProgressResponseDiagnosticFacts)(variables))
+        throw new TypeError('Progress response diagnostic is invalid.');
     if (recovery.id === 'progress-binary-evidence-unavailable' && !(0, progress_binary_evidence_diagnostic_1.isProgressBinaryEvidenceFacts)(variables))
         throw new TypeError('Progress binary evidence diagnostic is invalid.');
     if (recovery.id === 'issue-workflow-admission-blocked' && !(0, issue_workflow_diagnostic_1.isIssueWorkflowDiagnostic)(variables))
@@ -34645,6 +34691,24 @@ function readHeader(headers, expected) {
 
 /***/ }),
 
+/***/ 2253:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AGENT_OUTPUT_MAX_BYTES = exports.AGENT_PROMPT_MAX_BYTES = exports.AGENT_EXECUTION_TIMEOUT_MAX_MS = void 0;
+exports.workspaceModeForCapability = workspaceModeForCapability;
+exports.AGENT_EXECUTION_TIMEOUT_MAX_MS = 15 * 60 * 1000;
+exports.AGENT_PROMPT_MAX_BYTES = 512 * 1024;
+exports.AGENT_OUTPUT_MAX_BYTES = 4 * 1024 * 1024;
+function workspaceModeForCapability(capability) {
+    return capability === 'fixer' ? 'workspace-write' : 'read-only';
+}
+
+
+/***/ }),
+
 /***/ 8205:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -34679,6 +34743,120 @@ exports.APPROVAL_EVIDENCE_REASONS = Object.freeze([
     'http-500', 'http-502', 'http-503', 'http-504', 'transport-unavailable',
     'invalid-response', 'invalid-page', 'page-limit', 'artifact-unavailable', 'artifact-invalid', 'artifact-mismatch',
 ]);
+
+
+/***/ }),
+
+/***/ 5677:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BranchSyncCatalogFailure = exports.BRANCH_SYNC_CATALOG_FIELDS = exports.SDK_CATALOG_PATH_FIELDS = exports.BRANCH_SYNC_CATALOG_PHASES = exports.BRANCH_SYNC_CATALOG_PROFILES = exports.BRANCH_SYNC_CATALOG_MAX_BYTES = void 0;
+exports.isBranchSyncCatalogDiagnostic = isBranchSyncCatalogDiagnostic;
+exports.catalogDiagnostic = catalogDiagnostic;
+exports.classifyBranchSyncCatalog = classifyBranchSyncCatalog;
+/** Closed compatibility facts; catalog values never become public operands. */
+exports.BRANCH_SYNC_CATALOG_MAX_BYTES = 10 * 1024 * 1024;
+exports.BRANCH_SYNC_CATALOG_PROFILES = ['sdk-v1', 'legacy-evidence', 'native', 'ambiguous', 'unknown'];
+exports.BRANCH_SYNC_CATALOG_PHASES = ['workspace-boundary', 'catalog-file-boundary', 'metadata-json',
+    'metadata-conflict-markers', 'metadata-shape', 'profile-compatibility', 'evidence-shape',
+    'evidence-path-boundary', 'catalog-contract', 'index-output'];
+exports.SDK_CATALOG_PATH_FIELDS = ['specs', 'workflows', 'entrypoints', 'code', 'tests', 'documentation'];
+const OWNER_FIELDS = [...exports.SDK_CATALOG_PATH_FIELDS, 'id', 'title', 'status', 'scope', 'owner', 'lastVerified', 'evidence', 'specification'];
+exports.BRANCH_SYNC_CATALOG_FIELDS = ['catalog', 'version', 'capabilities', '$schema', ...OWNER_FIELDS];
+function record(value) {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+const own = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
+function isBranchSyncCatalogDiagnostic(value) {
+    if (!record(value) || Object.keys(value).sort().join(',') !== 'capabilityNumber,field,phase,profile')
+        return false;
+    const { phase, profile, field, capabilityNumber } = value;
+    return exports.BRANCH_SYNC_CATALOG_PHASES.some(item => item === phase)
+        && exports.BRANCH_SYNC_CATALOG_PROFILES.some(item => item === profile)
+        && exports.BRANCH_SYNC_CATALOG_FIELDS.some(item => item === field)
+        && typeof capabilityNumber === 'number' && Number.isSafeInteger(capabilityNumber)
+        && capabilityNumber >= 0 && capabilityNumber <= exports.BRANCH_SYNC_CATALOG_MAX_BYTES
+        && (capabilityNumber !== 0 || !OWNER_FIELDS.some(item => item === field))
+        && (capabilityNumber === 0 || !['catalog', 'version', '$schema'].includes(String(field)));
+}
+function catalogDiagnostic(phase, profile = 'unknown', field = 'catalog', capabilityNumber = 0) {
+    const value = { phase, profile, field, capabilityNumber };
+    if (!isBranchSyncCatalogDiagnostic(value))
+        throw new TypeError('Invalid closed catalog compatibility diagnostic.');
+    return Object.freeze(value);
+}
+class BranchSyncCatalogFailure extends Error {
+    constructor(diagnostic) {
+        super('Branch synchronization catalog compatibility requires review.');
+        if (!isBranchSyncCatalogDiagnostic(diagnostic))
+            throw new TypeError('Invalid closed catalog compatibility diagnostic.');
+        this.name = 'BranchSyncCatalogFailure';
+        this.diagnostic = catalogDiagnostic(diagnostic.phase, diagnostic.profile, diagnostic.field, diagnostic.capabilityNumber);
+        Object.freeze(this);
+    }
+}
+exports.BranchSyncCatalogFailure = BranchSyncCatalogFailure;
+function entryProfile(value, position) {
+    if (own(value, 'specification')) {
+        return catalogDiagnostic('profile-compatibility', own(value, 'specs') ? 'ambiguous' : 'native', 'specification', position);
+    }
+    if (!own(value, 'specs'))
+        return catalogDiagnostic('metadata-shape', 'unknown', 'capabilities', position);
+    if (own(value, 'evidence')) {
+        const sdkFields = exports.SDK_CATALOG_PATH_FIELDS.filter(field => own(value, field)).length;
+        if (sdkFields > 1 && sdkFields < exports.SDK_CATALOG_PATH_FIELDS.length) {
+            return catalogDiagnostic('profile-compatibility', 'ambiguous', 'capabilities', position);
+        }
+        if (sdkFields === 1) {
+            if (!Array.isArray(value.specs))
+                return catalogDiagnostic('evidence-shape', 'unknown', 'specs', position);
+            if (!Array.isArray(value.evidence))
+                return catalogDiagnostic('evidence-shape', 'unknown', 'evidence', position);
+            return catalogDiagnostic('profile-compatibility', 'legacy-evidence', 'workflows', position);
+        }
+    }
+    return catalogDiagnostic('profile-compatibility', 'sdk-v1');
+}
+/** Classifies dialect/array shape only; the bundled validator still owns full SDK conformance. */
+function classifyBranchSyncCatalog(value) {
+    if (!record(value))
+        return catalogDiagnostic('metadata-shape');
+    const nativeSchema = own(value, '$schema');
+    const nativeRoot = () => catalogDiagnostic('profile-compatibility', 'native', '$schema');
+    const capabilities = value.capabilities;
+    if (!Array.isArray(capabilities) || capabilities.length === 0 || capabilities.length > exports.BRANCH_SYNC_CATALOG_MAX_BYTES) {
+        return nativeSchema ? nativeRoot() : catalogDiagnostic('metadata-shape', 'unknown', 'capabilities');
+    }
+    let first;
+    for (const [index, capability] of capabilities.entries()) {
+        if (!record(capability))
+            return nativeSchema ? nativeRoot() : catalogDiagnostic('metadata-shape', 'unknown', 'capabilities', index + 1);
+        const next = entryProfile(capability, index + 1);
+        if (next.profile === 'unknown')
+            return nativeSchema ? nativeRoot() : next;
+        if (next.profile === 'ambiguous')
+            return next;
+        if (first && first.profile !== next.profile)
+            return catalogDiagnostic('profile-compatibility', 'ambiguous', 'capabilities', index + 1);
+        first ?? (first = next);
+    }
+    if (nativeSchema)
+        return nativeRoot();
+    if (first.profile !== 'sdk-v1')
+        return first;
+    if (value.version !== 1)
+        return catalogDiagnostic('profile-compatibility', 'unknown', 'version');
+    for (const [index, capability] of capabilities.entries()) {
+        for (const field of exports.SDK_CATALOG_PATH_FIELDS) {
+            if (!Array.isArray(capability[field]))
+                return catalogDiagnostic('evidence-shape', 'sdk-v1', field, index + 1);
+        }
+    }
+    return catalogDiagnostic('profile-compatibility', 'sdk-v1');
+}
 
 
 /***/ }),
@@ -36440,6 +36618,89 @@ function renderProgressEvidencePath(path) {
         delimiter += '`';
     return `${delimiter}${visible}${delimiter}`;
 }
+
+
+/***/ }),
+
+/***/ 6289:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ProgressResponseContractFailure = exports.isProgressSourceLineId = exports.isProgressRequirementId = exports.PROGRESS_RESPONSE_REASONS = exports.PROGRESS_RESPONSE_PHASES = void 0;
+exports.isProgressResponseField = isProgressResponseField;
+exports.safeProgressResponseField = safeProgressResponseField;
+exports.isProgressResponseDiagnosticFacts = isProgressResponseDiagnosticFacts;
+const agent_execution_plan_1 = __nccwpck_require__(2253);
+exports.PROGRESS_RESPONSE_PHASES = Object.freeze(['scope', 'partition', 'assessment']);
+const schemaReasons = ['json-invalid', 'schema-type', 'schema-enum', 'schema-string-short', 'schema-string-long', 'schema-number-finite',
+    'schema-number-min', 'schema-number-max', 'schema-array-short', 'schema-array-long', 'schema-required', 'schema-additional',
+    'response-not-object', 'output-locale-missing', 'output-locale-invalid', 'output-locale-mismatch', 'response-shape-invalid'];
+exports.PROGRESS_RESPONSE_REASONS = Object.freeze({
+    scope: Object.freeze([...schemaReasons, 'scope-incomplete', 'scope-entry-invalid', 'scope-source-id-invalid', 'scope-source-id-duplicate',
+        'scope-classification-invalid', 'scope-clause-limit', 'scope-no-requirements', 'scope-budget']),
+    partition: Object.freeze([...schemaReasons, 'partition-shape-invalid', 'partition-id-invalid', 'partition-files-incomplete',
+        'partition-file-invalid', 'partition-unit-invalid', 'partition-facts-invalid']),
+    assessment: Object.freeze([...schemaReasons, 'requirements-incomplete', 'progress-invalid', 'requirement-shape-invalid', 'requirement-id-invalid',
+        'requirement-id-duplicate', 'scope-uncertain', 'requirement-status-invalid', 'requirement-evidence-invalid', 'requirement-summary-invalid',
+        'requirement-remaining-invalid', 'requirement-evidence-mismatch', 'progress-completion-mismatch', 'assessment-text-limit']),
+});
+const fieldPatterns = Object.freeze({
+    scope: /^\$(?:\.outputLocale|\.lines(?:\[(0|[1-9]\d{0,3})\](?:\.(?:id|kind))?)?)?$/u,
+    partition: /^\$(?:\.outputLocale|\.partitionId|\.files(?:\[(0|[1-9]\d{0,3})\](?:\.(?:path|unitId|implemented|remaining))?)?)?$/u,
+    assessment: /^\$(?:\.outputLocale|\.progress|\.requirements(?:\[(0|[1-9]\d{0,3})\](?:\.(?:id|status|evidence|summary|remaining))?)?)?$/u,
+});
+const maxIndex = Object.freeze({ scope: 1023, partition: 511, assessment: 31 });
+function knownId(value, prefix, maximum) {
+    if (typeof value !== 'string')
+        return false;
+    const match = value.match(/^([RL])([1-9]\d{0,5})$/u);
+    return match !== null && match[0] === value && match[1] === prefix && Number(match[2]) <= maximum;
+}
+const isProgressRequirementId = (value) => knownId(value, 'R', 32);
+exports.isProgressRequirementId = isProgressRequirementId;
+const isProgressSourceLineId = (value) => knownId(value, 'L', agent_execution_plan_1.AGENT_PROMPT_MAX_BYTES + 1);
+exports.isProgressSourceLineId = isProgressSourceLineId;
+function isProgressResponseField(phase, value) {
+    if (typeof value !== 'string')
+        return false;
+    const match = value.match(fieldPatterns[phase]);
+    return match !== null && match[0] === value && (match[1] === undefined || Number(match[1]) <= maxIndex[phase]);
+}
+/** Unknown model keys and oversized locations never become operator field names. */
+function safeProgressResponseField(phase, value) {
+    return isProgressResponseField(phase, value) ? value : '$';
+}
+function isProgressResponseDiagnosticFacts(value) {
+    if (value === null || typeof value !== 'object' || Array.isArray(value))
+        return false;
+    const facts = value;
+    if (Object.keys(facts).sort().join(',') !== 'field,phase,reason,requirementId,sourceLineId'
+        || !exports.PROGRESS_RESPONSE_PHASES.includes(facts.phase))
+        return false;
+    const phase = facts.phase;
+    if (!exports.PROGRESS_RESPONSE_REASONS[phase].includes(facts.reason) || !isProgressResponseField(phase, facts.field))
+        return false;
+    const { requirementId, sourceLineId, field } = facts;
+    if (phase === 'partition')
+        return requirementId === 'none' && sourceLineId === 'none';
+    if (phase === 'scope')
+        return requirementId === 'none' && (sourceLineId === 'none' || ((0, exports.isProgressSourceLineId)(sourceLineId) && field.startsWith('$.lines')));
+    return (requirementId === 'none' ? sourceLineId === 'none'
+        : (0, exports.isProgressRequirementId)(requirementId) && field.startsWith('$.requirements') && (sourceLineId === 'none' || (0, exports.isProgressSourceLineId)(sourceLineId)));
+}
+/** Carries bounded completed-output facts, never a raw output or exception cause. */
+class ProgressResponseContractFailure extends Error {
+    constructor(facts) {
+        super('A returned progress result violated its response contract.');
+        if (!isProgressResponseDiagnosticFacts(facts))
+            throw new TypeError('Progress response diagnostic is invalid.');
+        this.name = 'ProgressResponseContractFailure';
+        this.facts = Object.freeze({ ...facts });
+    }
+}
+exports.ProgressResponseContractFailure = ProgressResponseContractFailure;
 
 
 /***/ }),

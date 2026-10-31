@@ -74,7 +74,9 @@ describe('prepareUntrustedCommandEnvironment', () => {
             expect(JSON.stringify(runtime.environment)).not.toContain('secret');
             expect(runtime.environment).not.toHaveProperty('CODEX_HOME');
             expect(runtime.environment).not.toHaveProperty('OPENCODE_AUTH_FILE');
-            for (const key of ['JAVA_TOOL_OPTIONS', 'JDK_JAVA_OPTIONS', 'GRADLE_USER_HOME', 'MAVEN_OPTS', 'NODE_OPTIONS']) {
+            expect(runtime.environment.GRADLE_USER_HOME).toBe(join(runtime.environment.HOME, '.gradle'));
+            expect(runtime.environment.JDK_JAVA_OPTIONS).not.toContain('password');
+            for (const key of ['JAVA_TOOL_OPTIONS', 'MAVEN_OPTS', 'NODE_OPTIONS']) {
                 expect(runtime.environment).not.toHaveProperty(key);
             }
         } finally {

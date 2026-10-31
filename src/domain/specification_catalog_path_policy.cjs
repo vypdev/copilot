@@ -1,4 +1,4 @@
-// Pure, language-neutral policy shared by local validation and read-only doctor.
+// Pure, language-neutral path/cardinality policy shared by SDK readers and validation.
 const EVIDENCE_FIELDS = new Set(['entrypoints', 'code', 'tests', 'documentation']);
 
 function isSafeRelativePath(value) {
@@ -16,4 +16,9 @@ function matchesFieldBoundary(field, value) {
   return EVIDENCE_FIELDS.has(field);
 }
 
-module.exports = { isSafeRelativePath, matchesFieldBoundary };
+function allowsEmptyPathField(status, field) {
+  return field === 'workflows'
+    || status === 'proposed' && ['entrypoints', 'code', 'tests'].includes(field);
+}
+
+module.exports = { isSafeRelativePath, matchesFieldBoundary, allowsEmptyPathField };

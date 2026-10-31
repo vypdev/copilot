@@ -7,6 +7,19 @@ const facts = (overrides: Partial<NativeIssueCompletionFacts> = {}): NativeIssue
     number: 17, state: 'closed', reason: 'completed', labels: [], ...overrides,
 });
 describe('verified issue completion plan', () => {
+    it.each(['open', 'closed'] as const)('defers a pending native deployment on a %s issue', state => {
+        expect(planIssueCompletion(facts({ state, reason: state === 'open' ? 'unknown' : 'completed',
+            deploymentCompletion: 'pending', labels: ['state:working', '55%'] }), configuration))
+            .toEqual({ kind: 'deferred' });
+    });
+    it('retains ordinary completion after the durable deployment boundary is verified', () => {
+        expect(planIssueCompletion(facts({ deploymentCompletion: 'complete' }), configuration))
+            .toMatchObject({ kind: 'closed', add: ['100%'] });
+    });
+    it('refuses an unknown deployment completion fact instead of treating it as ordinary', () => {
+        expect(planIssueCompletion(facts({ deploymentCompletion: 'unknown' as never }), configuration))
+            .toMatchObject({ kind: 'invalid', code: 'invalid-metadata' });
+    });
     it('removes only managed activity and stale progress while preserving kind and artifacts', () => {
         const active = ['in-progress', ...Object.values(DEFAULT_COPILOT_LIFECYCLE_LABELS), '55%'];
         const plan = planIssueCompletion(facts({ labels: [...active, ...configuration.protectedLabels, 'external'] }), configuration);

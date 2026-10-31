@@ -50,6 +50,7 @@ export class DeploymentMergeEffects {
 
   private async apply(action: MergeAction, pullRequest: ManagedPullRequestRecord): Promise<void> {
     try {
+      await this.pullRequests.prepareIssueCompletion(pullRequest);
       if (action === "merge") {
         await this.pullRequests.mergePullRequest(pullRequest.number, pullRequest.headSha);
       } else if (action === "enable-auto-merge" && !pullRequest.autoMergeEnabled) {

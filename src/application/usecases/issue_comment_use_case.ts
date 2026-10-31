@@ -27,7 +27,8 @@ import type { CommentLanguageRequest } from './steps/common/comment_language_tra
 import type { ThinkContext } from './steps/common/think_workflow';
 import { projectIssueCommentLanguageRequest } from './steps/issue_comment/check_issue_comment_language_use_case';
 import { projectCommentAutomationContext } from './comment_automation_context';
-import { projectPullRequestDescriptionContext } from './pull_request_workflow_context';
+import { projectPullRequestDescriptionContext, projectLinkPullRequestIssueContext, type LinkPullRequestIssueContext } from './pull_request_workflow_context';
+import { runPreparedDescriptionCommand } from './steps/pull_request/description_command_preparation';
 import { isSddAnswerComment } from '../../domain/pre_branch_sdd';
 import { parseCopilotCommand } from '../../domain/copilot_command';
 
@@ -58,6 +59,7 @@ export class IssueCommentUseCase implements ParamUseCase<Execution, Result[]> {
     private readonly sddDiffQueryPort?: SddDiffQueryPort,
     private readonly nativeStatusReadPort?: BoundNativeStatusReadPort,
     private readonly doctorReadPorts?: GithubRuntimeDoctorPorts,
+    private readonly pendingLinkRecoveryUseCase: ParamUseCase<LinkPullRequestIssueContext, Result[]> | undefined = undefined,
   ) {}
 
   async invoke(param: Execution): Promise<Result[]> {
@@ -103,10 +105,12 @@ export class IssueCommentUseCase implements ParamUseCase<Execution, Result[]> {
         dismissBugbotFindingsUseCase: this.dismissBugbotFindingsUseCase,
         reviewPotentialProblemsUseCase: this.reviewPotentialProblemsUseCase,
         updatePullRequestDescriptionUseCase: this.updatePullRequestDescriptionUseCase
-          ? { invoke: () => this.updatePullRequestDescriptionUseCase!.invoke({
+          ? { invoke: () => runPreparedDescriptionCommand({
               context: projectPullRequestDescriptionContext(param),
               trigger: 'authorized-command',
-            }) }
+            }, this.updatePullRequestDescriptionUseCase!, this.pendingLinkRecoveryUseCase
+              ? () => this.pendingLinkRecoveryUseCase!.invoke({ ...projectLinkPullRequestIssueContext(param), recoveryOnly: true })
+              : undefined) }
           : undefined,
         rememberBugbotRuleUseCase: this.rememberBugbotRuleUseCase,
         rememberBranchPorts: this.rememberBranchPorts,

@@ -153,12 +153,12 @@ describe('atomic complete multipart progress', () => {
     });
     it('provides a concrete terminal action and retained progress in English', () => {
         const catalog = resolveStaticApplicationErrorCatalog('en-US');
-        expect(catalog.message('error.validation.evidence-too-large.action')).toContain('split the work');
+        expect(catalog.message('error.validation.evidence-too-large.action')).toContain('continues automatically');
         expect(catalog.message('error.validation.evidence-too-large.retainedState')).toContain('progress labels');
     });
     it('provides the corresponding retained-state and recovery content in Spanish', () => {
         const catalog = resolveStaticApplicationErrorCatalog('es-ES');
-        expect(catalog.message('error.validation.evidence-too-large.action')).toContain('divide el trabajo');
+        expect(catalog.message('error.validation.evidence-too-large.action')).toContain('continúa automáticamente');
         expect(catalog.message('error.validation.evidence-too-large.retainedState')).toContain('etiquetas de progreso');
     });
 });

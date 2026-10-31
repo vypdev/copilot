@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { createUntrustedContent, renderUntrustedContentVerbatim, renderUntrustedField, type UntrustedContent } from '../../domain/security/untrusted_content';
 import { canonicalGitObjectId } from '../../domain/git_object_id';
 import { fileMatchesIgnorePatterns } from './file_ignore_policy';
+import { renderPythonLiteralWitnesses, projectPythonLiteralWitnesses } from './bugbot_python_literal_witness_policy';
 
 export const MAX_REVIEW_DIFF_PARTITION_LENGTH = 64_000;
 export const MAX_REVIEW_DIFF_FRAGMENT_LENGTH = 12_000;
@@ -41,6 +42,7 @@ export interface BugbotReviewDiffPartition {
   readonly files: readonly string[];
   readonly fragmentCount: number;
   readonly ownsResolution: boolean;
+  readonly hasPythonLiteralWitnesses?: true;
 }
 
 export interface BuiltBugbotDiffReviewPlan {
@@ -103,7 +105,7 @@ export function buildReviewDiffPlan(
     preparedChanges.push({ change, sanitizedPatch });
   }
 
-  const sections: Array<{ readonly filename: string; readonly rendered: string }> = [];
+  const sections: Array<{ readonly filename: string; readonly rendered: string; readonly hasPythonLiteralWitnesses: boolean }> = [];
   const retainedFiles = new Set<string>();
   let fragmentIndex = 0;
   for (const { change, sanitizedPatch } of preparedChanges) {
@@ -131,18 +133,22 @@ export function buildReviewDiffPlan(
       };
       sections.push({
         filename: change.filename,
+        hasPythonLiteralWitnesses: index === 0 && /\.py$/iu.test(change.filename) && projectPythonLiteralWitnesses(change.patch ?? '').witnesses.length > 0,
         rendered: [
           `### Assigned file fragment ${index + 1}/${fragments.length}`,
           safeFilename,
           safeMetadata,
           renderUntrustedContentVerbatim(content),
+          ...(index === 0 && /\.py$/iu.test(change.filename)
+            ? [renderPythonLiteralWitnesses(change.patch ?? '', `github.diff.literal.${fragmentIndex}`)].filter(Boolean)
+            : []),
         ].join('\n\n'),
       });
     }
   }
 
-  const bodies: Array<Array<{ readonly filename: string; readonly rendered: string }>> = [];
-  let current: Array<{ readonly filename: string; readonly rendered: string }> = [];
+  const bodies: Array<Array<{ readonly filename: string; readonly rendered: string; readonly hasPythonLiteralWitnesses: boolean }>> = [];
+  let current: Array<{ readonly filename: string; readonly rendered: string; readonly hasPythonLiteralWitnesses: boolean }> = [];
   let used = 0;
   const bodyBudget = MAX_REVIEW_DIFF_PARTITION_LENGTH - DIFF_PARTITION_HEADER_RESERVE;
   for (const section of sections) {
@@ -183,6 +189,7 @@ export function buildReviewDiffPlan(
       files: [...new Set(body.map((section) => section.filename))],
       fragmentCount: body.length,
       ownsResolution: ordinal === 1,
+      ...(body.some(section => section.hasPythonLiteralWitnesses) ? { hasPythonLiteralWitnesses: true as const } : {}),
     };
   });
   return { partitions, ignored, retained: retainedFiles.size, fragments: sections.length };

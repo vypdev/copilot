@@ -10,6 +10,7 @@ import { parsePublicationMarker } from '../../policies/publication_identity_poli
 import { buildRetiredProgressComment } from '../../policies/retired_progress_presentation_policy';
 import { ApplicationError } from '../../errors/application_error';
 import type { ParamUseCase } from '../base/param_usecase';
+import { deferredDeploymentCompletionResult } from './deferred_deployment_completion';
 
 export interface RetireProgressContext {
   readonly issueNumber: number;
@@ -49,6 +50,7 @@ export class RetireProgressUseCase implements ParamUseCase<RetireProgressContext
       phase = 'read';
       const initial = await read();
       if (initial.number !== context.issueNumber || !['open', 'closed'].includes(initial.state) || initial.state === 'closed' && !['completed', 'not_planned', 'duplicate', 'unknown'].includes(initial.reason)) throw stale();
+      if (initial.deploymentCompletion === 'pending') return [deferredDeploymentCompletionResult(this.taskId, initial)];
       if (initial.state !== 'closed') return [this.result(retired, nativeClosed)];
       nativeClosed = true;
       phase = 'card-inventory';
@@ -65,7 +67,7 @@ export class RetireProgressUseCase implements ParamUseCase<RetireProgressContext
       const verifyClosed = async () => {
         phase = 'native-fence';
         const fresh = await read();
-        if (!nativeClosed || fresh.reason !== initial.reason) throw stale();
+        if (!nativeClosed || fresh.reason !== initial.reason || fresh.deploymentCompletion === 'pending') throw stale();
       };
       for (const card of cards) {
         const body = buildRetiredProgressComment(card.body ?? '', context.locale, initial.reason)!;

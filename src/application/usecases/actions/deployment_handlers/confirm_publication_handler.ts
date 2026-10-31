@@ -68,8 +68,7 @@ export class ConfirmPublicationHandler {
         ?? deploymentSuccess(`Publication for ${resumed.tag} was already verified; reconciliation state was recovered.`);
     }
     if (resumed.phase === "completed" && resumed.publicationVerified) {
-      await this.runtime.publishDashboard(context, resumed);
-      return deploymentSuccess(`Publication for ${resumed.tag} was already verified; duplicate notification ignored.`);
+      return this.reconciliation.complete(context, resumed);
     }
     assertPublicationPhase(resumed);
     const published: DeploymentOperationSnapshot = {

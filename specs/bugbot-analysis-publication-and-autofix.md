@@ -2,9 +2,9 @@
 
 - Status: As-built baseline
 - Date: 2026-09-11
-- Last updated: 2026-10-28
+- Last updated: 2026-10-30
 - Catalog capability ID: `bugbot-analysis-and-autofix`
-- Last verified: 2026-10-28; resolved-type grounding #736, delegated test-path evidence #738 versioned Action input contracts #739 and exact validation witnesses #749 alongside the dated package/framework evidence in #720, #721 and #722
+- Last verified: 2026-10-30; versioned Ktor routing-root regression #809, active Kotlin Json policy #807, indirect unittest discovery regression #806, generated-source coordinate evidence #796, dependency-generated request/assertion evidence #784, renderer-grounded Markdown links #772, host-aware self-repository Action references #770, Kotlin/Wasm binding guidance #764, resolved-type grounding #736, delegated test-path evidence #738, versioned Action input contracts #739 and exact validation witnesses #749 alongside the dated package/framework evidence in #720, #721 and #722
 - Owners: Copilot maintainers
 - Scope: bounded change analysis, finding identity/publication, authorized autofix, and independent verification
 - Related issues/PRs: Bugbot review-state reconciliation SDD; architecture
@@ -1257,3 +1257,1117 @@ remain unchanged. Fake-save callback counts are local observations, never
 consumer/database execution. The source/native drift regression rejects before
 calling the wrong function; all five static-function paths also assert source
 conformance. This correction must receive a fresh review on its published SHA.
+
+
+### Kotlin/Wasm generated JavaScript bindings — #764 (2026-10-29)
+
+**Observed problem and evidence.** The [reported review](https://github.com/vypdev/copilot/issues/764)
+claimed a package-level Kotlin/Wasm parameter was an unbound JavaScript global.
+The reviewed [source at a23287c](https://github.com/vypdev/vaultstadio/blob/a23287cfa84b8db5845023e736eb304cdd41b7f7/frontend/composeApp/src/wasmJsTest/kotlin/com/vaultstadio/app/platform/Browser121DirectoryRegressionTest.kt)
+(blob `e57b864d10e701b954795e2500dc9d53f9a1e869`) declares
+`installDirectoryFixture(empty: Boolean): Unit = js(...)`; its nested click
+handler captures `empty`. The official [Kotlin/Wasm interop contract](https://kotlinlang.org/docs/wasm-js-interop.html#kotlin-functions-with-javascript-code),
+checked 2026-10-29, documents parameterized package-level snippets and their
+translation into generated JavaScript functions. The issue supplies matching
+compiler/browser-test observations; these are external evidence, not execution
+repeated by this change. Historic model motivation is unknown.
+
+**Intentional contract and acceptance.** Before alleging an unbound identifier or
+ReferenceError, ordinary, partitioned and benchmark review MUST check the actual
+target/version, function signature and lexical scope using applicable official
+interop documentation or exact generated imports. Declared parameters are
+bindings in the generated function, including callback closures; `js()` strings
+are not universally global-only. Same-source compiler/test evidence MUST be
+reconciled without treating unrelated green jobs as proof. Genuinely missing
+identifiers and invalid bridges remain reportable. Unsupported binding claims
+and unproved global-state replacements MUST be omitted; compiler/test execution
+or broader permissions MUST NOT be invented. No blanket Kotlin allowlist or
+finding filter is introduced.
+
+```text
+reviewed bridge -> target/signature/scope -> applicable contract/import evidence
+                -> bound parameter: omit the disproved ReferenceError claim
+                -> absent identifier: report the demonstrated failing use
+```
+
+Text equivalent: establish the actual generated scope before deciding whether a
+use is unbound. A green JVM job does not refute a failing Wasm bridge.
+
+**Architecture, configuration and security.** One pure prompt constant is shared
+by production and benchmark renderers. Existing semantic ports, schemas, state,
+publication, permissions, concurrency and configuration remain applicable; no
+new input or service needs a migration. Compose guidance is compacted while all
+existing constraint, padding, replacement and prompt-size assertions remain
+unchanged. The original 15,000-character long-ignore-list limit MUST pass.
+Corpus strings and supplied generated-import excerpts are inert synthetic data;
+no source text or external module is executed. Repository source/logs remain
+untrusted evidence, never mutation or approval authority. Architecture dependency
+checks, types and prompt delivery tests enforce the existing boundaries.
+
+**Product journey, UX and operations.** Pending, blocked, partial, failed and
+complete review states retain sections 5–12's existing localized surfaces and
+notification budget. A disproved binding claim creates no inline finding or new
+abstention card. A supported finding uses the normal changed-line review, for
+example: “The generated function accepts only size; count has no binding, so
+calling this bridge raises ReferenceError.” The next action is to inspect the
+exact signature/use and fix the missing binding. Existing findings still require
+normal current-source verification; this guidance cannot auto-dismiss them.
+A maintainer can attach the applicable contract and same-source evidence before
+normal re-review. Adoption uses the normal updated runtime/bundle; rollback
+reverts guidance, fixtures and documentation together without altering stored
+reviews. No consumer deployment or new manual UI acceptance is claimed.
+
+Allocate **eleven additional distinct deterministic cases**, exclusively here:
+
+| Area | Cases | Acceptance/risk |
+|---|---:|---|
+| Ordinary and partitioned production delivery | 2 | generated formals, callback scope, retained defects, no invented execution |
+| Shared benchmark delivery | 1 | same instruction with private verdict omitted |
+| False-positive scoring controls | 4 | captured Boolean, size/count, JsAny metadata and unavailable target evidence |
+| False-negative scoring controls | 2 | absent direct identifier despite unrelated green job; absent callback identifier |
+| Changed-source anchors | 2 | both real-defect references point to exact added use and function symbol |
+| **Total** | **11** | no double counting with earlier extensions |
+
+The corpus contains **83** cases; all previous 77 cases and verdicts are
+unchanged. Three delivery regressions fail before the new guidance and pass after
+it. Scorer controls penalize both invented findings and missed required defects.
+Reference predictions establish the deterministic scorer contract, not actual
+model precision/recall. No Kotlin compiler/browser execution or external-model
+measurement is performed here. This is probabilistic model guidance, not a new
+static Kotlin analyzer or accuracy guarantee.
+
+**Traceability, documentation and DoD.** `bugbot.test.ts` and
+`bugbot_benchmark_runner.test.ts` cover delivery/no verdict leakage;
+`bugbot_benchmark.test.ts` owns the six scoring controls and two exact anchors.
+Detection documents the scope contract, quality/observability the synthetic
+measurement limits, and failure scenarios the evidence/re-review path. The
+catalog and generated catalog register the same capability. Acceptance requires
+all eleven cases, previous framework/context checks, unchanged global/module
+coverage, architecture, typecheck/lint, docs/workflows/specifications, setup
+acceptance, build/package smoke, and fresh exact-head CI plus review without
+unresolved findings before merge. No unresolved design decision blocks this fix.
+
+
+### Host-aware self-repository Action references — #770 (2026-10-29)
+
+**Observed evidence and intended contract.** The [reported false positive](https://github.com/vypdev/copilot/issues/770)
+rejects a documented checkout-free self-repository reference and proposes changing
+an independent remote version-tag check. GitHub.com's [workflow syntax contract](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#example-using-an-action-in-the-same-repository-as-the-workflow-at-the-running-commit-recommended)
+resolves `$/path` against the repository containing the workflow/action at its
+running commit, without checkout or an `@ref` suffix. `./path` reads the workspace
+and requires its files first. GitHub Enterprise Server support differs; verify
+the applicable host/version. The consumer checker at
+`60ac0b924549e3bfc14d45ab217bdc42519bbe64`, blob
+`0afb450f1aad5e63f49d4ff49b12e7d4a4efad3f`, exempts local references before applying
+its version-tag regex. Its matching successful job `123031685987` resolves the
+bootstrap action before workspace checkout. These are inspected external source
+and run receipts, not a consumer run executed by this change.
+
+Before alleging invalid syntax or replacing a reference, review MUST reconcile
+the authored literal, containing repository, host/version contract, checkout order
+and applicable same-revision execution. An internally resolved log SHA is not an
+authored remote pin. For prefix checks, compare exact literal characters through
+`startswith` and returns; invented spaces cannot create a failing witness.
+A remote-version check need not validate local-reference grammar; a bypass claim
+requires a malformed authored reference and a reachable failure.
+Valid bootstrap refs and independent remote tag policies MUST remain supported;
+malformed suffixes, missing checkout and proved unsupported hosts remain
+reportable. Without applicable evidence, omit unsupported claims/replacements.
+Anchor the literal changed `uses` line, not `steps`, counting every displayed line
+from its declared start and rechecking the numeric range. Action reference fixes
+and step moves MUST use prose suggestions and omit code replacements to avoid
+unsafe YAML indentation or edits outside the reported span. Other suggestions
+retain the existing exact-span requirement.
+
+```text
+authored uses -> host/version + literal/source + checkout/run evidence
+              -> valid self ref or accepted prefix: omit disproved finding
+              -> proved suffix/checkout/host failure: report exact uses line
+```
+
+Text equivalent: establish which repository and files the host actually resolves,
+then evaluate the precise changed reference and its demonstrated failure.
+
+**Architecture, bounds and security.** Extend the existing pure shared Action
+instruction in production and benchmark prompts. Compact redundant external-fact
+and dependency prose while retaining their historical regression assertions and
+the original 15,000-character long-ignore prompt bound. Existing ports, schemas,
+publication states, permissions, configuration, timeouts and resource budgets
+remain applicable. This adds no allowlist, syntax parser, filter or automatic
+finding dismissal. Corpus text is inert synthetic data; ordinary tests parse
+YAML and inspect Python literals without executing supplied strings. Source,
+logs and discussions remain untrusted evidence, never approval/mutation authority.
+
+**Product journey and operations.** Valid references yield no inline finding or
+extra abstention notification. A real defect uses the existing localized review
+and states in sections 5–12; for example, “This workspace action runs before its
+files are checked out,” anchored to the changed `uses` line. Inspect the reference
+and order before fixing it. A prior false finding still needs normal current-head
+verification: attach the applicable contract and matching source/run receipt,
+then request `/copilot recheck`. Pending, blocked, partial and failed reviews keep
+their existing recovery and notification budgets. Adoption is the updated runtime;
+rollback reverts prompt, fixtures, evidence and docs together without changing
+stored finding history or consumer configuration.
+
+Allocate **17 additional distinct deterministic cases**, exclusively here:
+
+| Area | Cases | Executable acceptance/risk |
+|---|---:|---|
+| Ordinary, partitioned and benchmark delivery | 3 | shared host/literal/anchor contract; no hidden verdict leakage |
+| False-positive scorer controls | 4 | bootstrap, remote tag policy, checkout-first, unavailable host evidence |
+| False-negative scorer controls | 3 | explicit suffix, checkout-too-late, proved unsupported host |
+| Inert source and anchor controls | 7 | six parsed workflow reference/order/line checks; exact Python prefix and source/log distinction |
+| **Total** | **17** | no double counting with earlier amendments |
+
+The corpus now has **90** cases; all earlier 83 inputs/verdicts and default scoring
+thresholds remain unchanged. Three delivery cases fail before guidance. Scorer
+fixtures establish the evaluator contract, not model accuracy. Native controls
+are synthetic evidence checks, not execution on GitHub.com or GHES. Actual
+product-runtime observations, source/bundle hashes, unchanged selected seven cases
+and default scores are retained separately in
+`quality/bugbot/evidence/issue-770.json`, including failed intermediate samples.
+The final V5 sample passes every unchanged default gate, with zero false
+positives/negatives, exact anchors and no code replacements. V1/V3 fail location;
+V2 invents a prefix space; V4 incorrectly widens the remote validator scope. The
+first four runs used the development repository; V5 uses an empty Git workspace
+with no corpus/source/verdict files copied into it. This setup difference prevents
+attributing score changes solely to prompt wording. No statistical improvement,
+historical false-positive reproduction or future accuracy guarantee is claimed.
+
+**Traceability and DoD.** `bugbot.test.ts`, `bugbot_benchmark_runner.test.ts` and
+`bugbot_benchmark.test.ts` own the budget. Detection documents host/literal rules,
+failure scenarios the evidence/re-review path, and quality/observability the
+actual sample limits. Catalog metadata and generated links register the evidence.
+Acceptance requires these cases, historical context/framework and prompt bounds,
+unchanged global/module coverage budgets, architecture, types/lint, specification,
+documentation/workflow validation, generated build/package smoke, and exact-head
+CI plus complete review without unresolved findings before merge. No unresolved
+configuration or design decision blocks this correction.
+
+
+### Renderer-grounded Markdown path claims — #772 (2026-10-29)
+
+**Observed problem and primary contract.** The [reported review](https://github.com/vypdev/copilot/issues/772)
+concatenated a valid `../specs/<self>.md` link into a nonexistent `specs/specs/`
+path. Read-only inspection of the three cited documents at
+`80bd64fb9d83f1cad9c4828e141dd4bf16c4dc8b` verifies their literal links, ordinary
+relative-path resolution, existing targets and architecture headings. This is
+source/path evidence, not an executed consumer render. Their historical review
+comments already became obsolete before this correction; this change does not
+claim that transition. GitHub's [relative-link and section-link contract](https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax#relative-links)
+uses the source file's directory, supports `.`/`..`, and treats initial `/` as
+repository-relative. Other renderers and heading/encoding conventions require
+applicable evidence rather than a universal guessed slug.
+
+**Intentional behavior.** Before publishing or repeating a broken-link claim,
+review MUST deterministically normalize the authored href from the source parent
+under the applicable renderer, inspect the exact-head target and verify its
+fragment separately. Query/percent-decoding, case, heading and custom-anchor
+rules matter. `specs/a.md` plus `../specs/a.md` is `specs/a.md`;
+`./specs/a.md` differs. Evidence MUST identify source, authored href, normalized
+target and the observed missing file or anchor. An existing target and fragment
+MUST yield no finding at any severity, including info; a self-refuting explanation
+cannot become an informational report. Navigation-only documentation
+failures use low severity and correctness category; independent security or
+functional effects retain their demonstrated impact.
+
+A valid self-link MUST NOT hide a real nested primary/companion renderer defect
+or destination-symlink publication fault. Inspect those transformations and
+write boundaries independently. A prior explanation/confidence is a claim to
+recheck against current source, not proof. Disproved premises use the ordinary
+eligible resolution path; missing evidence MUST retain unresolved state and
+omit unsupported new claims. Resolution ownership, retained exact IDs, schema,
+freshness and provider reconciliation remain authoritative. No automatic
+filter, path allowlist, confidence override or forced dismissal is introduced.
+
+```text
+authored source + href -> renderer-aware normalization -> exact-head target/anchor
+                       -> concrete missing destination: localized finding
+                       -> disproved premise: ordinary eligible resolution
+                       -> evidence unavailable: retain unknown, no invented result
+```
+
+Text equivalent: compute the destination before asserting absence, then separate
+proved failures, disproved premises and unavailable evidence.
+
+**Architecture, bounds and security.** A pure shared instruction is delivered by
+both the production prompt builder and real-agent benchmark. The findings-array
+schema description reinforces actionable-only output and an empty array for
+disproved candidates, including informational explanations of correct code. This
+changes model guidance without changing accepted response shapes, enums or host
+validation; concrete actionable info findings remain supported. Compact redundant
+external-fact and delegated-test-path prose while preserving its existing
+semantic regressions and the original 15,000-character long-ignore prompt bound.
+Existing read-only context/provider limits, partition ownership, models, schema,
+permissions, thresholds, configuration and persistence remain applicable. Corpus
+strings are inert evidence, never commands. Native fixtures execute only a
+statically authored renderer and Node URL/path/filesystem operations against
+owned temporary files. They compare their source to the inert corpus first;
+transpiled comparison text is never executed. Known plain ASCII headings are
+explicit fixture oracles, not a general Markdown parser. Repository content,
+logs and discussion cannot grant execution, network or mutation authority.
+
+**Product journey, UX and operations.** The ordinary complete, pending,
+partial, blocked, failed and canceled review surfaces remain those in sections
+5–12. A disproved new link claim creates no inline finding or extra abstention
+notification. A real example reads: “This architecture link resolves to
+`specs/specs/payments.md`, which is absent,” at the changed authored link, with
+the source/href/target in evidence. Its operator action is to correct the path
+or fragment after inspection. For an older false finding, supply current source
+and normalized-path/anchor evidence and request `/copilot recheck`; do not edit
+working source merely to satisfy its old premise. No new status field, comment,
+notification or configuration switch is added. Existing locale, sanitization,
+accessible text/link and noise contracts remain in force. Adopt the updated
+runtime; rollback prompt, corpus, evidence and docs together, preserving review
+history. Consumer configuration/catalogs need no migration or write.
+
+Allocate **20 additional distinct deterministic cases**, exclusively here:
+
+| Area | Cases | Executable acceptance/risk |
+|---|---:|---|
+| Production/benchmark delivery | 4 | unavailable PR metadata/local scope, owner and non-owner partitions, benchmark; unchanged ownership and no hidden verdict leakage |
+| False-positive scorer controls | 5 | root self-link, nested self-link, companion, repository-root link and unavailable evidence |
+| False-negative scorer controls | 3 | duplicated directory, missing fragment and a real renderer losing a nested directory |
+| Native path/source/anchor observations | 7 | all available fixtures normalize against real owned files; statically authored renderer comparison; reject modified corpus text |
+| Serialized schema guidance and compatibility | 1 | ordinary/partition/bound output instructions; accepted empty lists and concrete info results |
+| **Total** | **20** | no double counting with the existing #768 renderer or #771 publication suites |
+
+All four delivery regressions fail before guidance. The serialized-schema case
+also fails before its description is added. The corpus expands from
+90 to **98** cases, preserving all prior inputs/verdicts and every default
+quality threshold. Scorer/reference cases establish evaluator behavior, not
+model accuracy. Native oracles establish the supplied path/anchor facts, not
+execution of a consumer toolchain or an accuracy guarantee. Actual agent
+observations, conditions and source/bundle/corpus identities are recorded
+separately in `quality/bugbot/evidence/issue-772.json`, retaining failed samples.
+A benchmark that scores current findings alone cannot prove historical-finding
+resolution; any such live observation must exercise the production task-2 prompt
+and report that distinction explicitly. The retained V1 and V2 samples each
+produce one self-refuting informational finding (nested and companion links).
+V3 reinforces the findings-array description and passes every unchanged default
+gate on the same eight inputs/verdicts: zero false positives/negatives and exact
+locations/severity/category for all three real defects. Separate actual production
+builder/schema/port observations on one committed synthetic Git fixture return
+the exact obsolete ID and no resolutions from the non-owner partition in all
+three variants. These are returned model responses, not provider mutations or
+statistical improvement evidence. All sample conditions and limits remain in
+the evidence file.
+
+**Traceability and DoD.** `build_bugbot_prompt.test.ts` and
+`bugbot_benchmark_runner.test.ts` own delivery; `schema.test.ts` owns serialized
+array guidance/compatibility; `bugbot_benchmark.test.ts` owns
+scoring and `bugbot_markdown_link_oracles.ts` the native source/path observations.
+Detection, failure scenarios and quality/observability document the contract,
+recheck path and measurement limits. Catalog metadata and generated evidence
+links register this work. Acceptance requires these 20 cases, historical prompt
+and context regressions, #768/#771 compatibility, actual agent observations,
+unchanged global/module coverage/quality gates, architecture, types/lint,
+all specification/documentation/workflow contracts, generated build/package
+smoke and exact-head CI/platform checks plus complete review with no active
+findings before merge. No material configuration/design decision remains open.
+
+### Dependency-generated request values and assertion evidence — #784 (2026-10-30)
+
+The [reported finding](https://github.com/vypdev/copilot/issues/784) inferred a
+missing header from the absence of an application assignment, overlooking the
+resolved dependency's policy-to-request transformation. Coil 3.6.3
+[NetworkFetcher.newRequest](https://github.com/coil-kt/coil/blob/3.6.3/coil-network-core/src/commonMain/kotlin/coil3/network/NetworkFetcher.kt)
+sets `Cache-Control: no-cache, no-store` when network reads are enabled and disk
+reads/writes are disabled. Its matching
+[Options](https://github.com/coil-kt/coil/blob/3.6.3/coil-core/src/commonMain/kotlin/coil3/request/Options.kt)
+defaults network policy to enabled; its
+[CachePolicy](https://github.com/coil-kt/coil/blob/3.6.3/coil-core/src/commonMain/kotlin/coil3/request/CachePolicy.kt)
+defines the read/write flags. This precedes the Ktor transport observation.
+
+Read-only inspection also found both reported loader tests passing without
+failures/errors/skips in existing CI XML. That PR CI checked out its merge
+commit, not the standalone reviewed head; the factory, tests and version catalog
+have identical Git blobs at both revisions. The test task was rerun before a
+later up-to-date coverage invocation. This is inspection of existing execution
+evidence, not a new consumer execution. Private source/XML stays outside this
+repository. The separate UTF-8 finding is not disproved by the header evidence.
+
+request-value-R01: before claiming a missing generated request value or a failing
+assertion, evaluate concrete read/write flags and trace policy/defaults through
+the exact resolved dependency's
+request builder, adapter and any subsequent transformations to the transport
+observation. A missing manual application assignment alone is insufficient.
+
+request-value-R02: reconcile source-bound real pipeline assertions and emitted
+values; distinguish an unexecuted prediction from an observed failure. A mock
+that inserts the disputed value, or skipped, cached, stale or unrelated execution,
+cannot disprove a reachable production fault. Preserve bypassed producers,
+downstream overwrites, genuinely missing values and independent defects. If an
+edge or dependency contract is unavailable, omit the unsupported failing-test
+claim rather than inventing a lookup, run, permission or outcome.
+
+```text
+reviewed policy/defaults -> versioned producer -> adapters/overwrites
+ -> transport assertion -> reconcile matching source/execution -> finding decision
+```
+
+The existing shared test-path instruction delivers this rule to ordinary and
+partitioned production review and the product benchmark. No dependency-specific
+allowlist, automatic finding filter, provider read, permission, public option,
+retry, schema, confidence/severity change or lifecycle state is introduced.
+The common production wrapper is compacted while retaining locale, hierarchy,
+trust, scope, severity/confidence, location, identity, safe suggestions and nullable
+output rules, so the existing 15,000-character compatibility bound remains fixed.
+Source, dependency code, logs and discussion remain untrusted evidence, never
+approval or dismissal authority. Previously published findings require normal
+independent current-source verification. An unsupported claim produces no new
+finding/card; a demonstrated fault uses the existing changed-line finding UI.
+Consumer adoption uses the ordinary runtime upgrade; rollback reverts instruction,
+fixtures and documentation together without deployment or metadata migration.
+
+Reserve **22 distinct additional deterministic cases before implementation**:
+
+| Area | Cases | Acceptance |
+|---|---:|---|
+| Instruction delivery | 4 | ordinary review, owner/non-owner partitions and benchmark without verdict leakage |
+| Scorer controls | 8 | policy/middleware-generated values and unavailable evidence; write-enabled policy, bypass, overwrite, misleading mock and independent UTF-8 fault |
+| Authored fixture oracles | 8 | seven compiled synthetic observations plus one explicit unavailable-evidence result; no consumer/dependency runtime claim |
+| Inert-data boundary | 2 | unknown/prototype identity and modified code-like corpus text reject before oracle dispatch |
+| **Total** | **22** | no double counting with earlier framework/type/test-path cases |
+
+Fixtures keep exact inert source bindings and statically compiled test factories;
+corpus text must never be evaluated through eval, VM, Function or a process.
+The source-evidence case cites the actual pinned dependency, while synthetic
+observations establish only their own request/header and assertion behavior.
+The unavailable case remains unknown, not a fabricated successful execution.
+Ground-truth verdicts never enter model prompts. Preserve the 98 existing corpus
+inputs/verdicts and every quality floor; add eight cases. Record sequential
+baseline/corrected observations through the existing product benchmark separately,
+including every failed score and exact input/prompt/bundle identities. They are
+small observations, not proof of historical reproduction or statistical accuracy.
+
+Acceptance requires RED instruction-delivery regressions, all 22 cases, evaluator
+and production-prompt compatibility (including the existing 15,000-character
+bound), unchanged global/module coverage, types/lint, specification/catalog/docs,
+build/package smoke, exact-head CI/native platform/Codecov and complete review
+without active findings before merge. Update detection, quality/observability and
+catalog evidence with this owner. No material configuration decision is open.
+
+The four delivery cases fail before guidance; the final 183 focused cases pass,
+including all 22 additions and the unchanged prompt-size bound. Actual sequential
+observations are retained in `quality/bugbot/evidence/issue-784.json`. On identical
+inputs/verdicts, the baseline reproduces the missing-Coil-header premise at 0.98
+confidence and fails precision, recall, F1, location and confidence gates. The
+corrected sample reports no Coil finding and detects all five genuine controls
+with zero false positives/negatives; its exact-location accuracy remains 1/5,
+failing the unchanged 0.8 gate. Both complete scores/predictions are retained.
+This is a bounded model observation with a known raw-anchor limitation, not a
+claim that all model-quality gates passed, that publication/task-2 was exercised,
+or that future accuracy is guaranteed. Required deterministic repository and
+merge gates remain unchanged.
+
+Full local verification passes 800 suites and 14,970 tests with 35 pre-existing
+skips. Coverage is 98.10% lines, 97.33% statements, 97.97% functions and 95.10%
+branches; the prompt module reaches 100% all metrics. Every existing budget
+passes. The extension passes 267 tests with 100% all metrics; the setup ledger
+remains 336/350 passed with 14 explicitly open existing cases. Types/lint,
+specification/catalog/documentation, web, build and package validators pass.
+Fresh exact-head CI/native platform/diff-coverage and complete zero-active-finding
+review remain required before the authorized develop merge.
+
+### Generated-source coordinates and coverage assertions — #796 (2026-10-30)
+
+The [reported old-runtime finding](https://github.com/vypdev/copilot/issues/796)
+confused a Python fixture's embedded Kotlin line numbers. Read-only inspection
+of the exact consumer revision confirms that the string has no leading newline:
+the executed positive return is generated line 6, while the negative return is
+line 7. Its exact-source CI log independently records the unchanged named test
+as passing. The supplied JaCoCo counters are report evidence, not a new XML or
+consumer execution performed here. This does not establish an internal parser
+cause or deterministic model failure. The initial current-runtime synthetic
+sample classifies four cases correctly but fails the unchanged exact-location
+quality gate; retain that limitation with its predictions.
+
+generated-coordinate-R01: before alleging a numeric coverage assertion fails,
+use bounded numbered literal witnesses or read-only literal/AST tool output
+to reconstruct the actual
+written source bytes, including escapes, leading newlines,
+dedent and other writer transforms. Enumerate written lines from 1 including
+blanks and quote the counter-key statement. Count physical LF-delimited lines,
+not statements: an inline if/return shares one line. Distinguish host-file coordinates, generated
+source coordinates, counter keys and the changed review anchor. Trace the input
+and executed branch, and reconcile applicable source-bound counters/execution.
+Never execute fixture code to obtain this mapping. Without independently
+verified counter-key text, omit the failing-test claim. Unavailable writer or
+execution evidence cannot establish an observed failure.
+Preserve a genuine assertion that marks the executed statement as missed.
+
+```text
+host literal -> writer transforms -> generated bytes/line -> executed branch
+ -> coverage assertion -> changed host statement and normal finding publication
+```
+
+The shared test-path instruction MUST carry this rule through normal review,
+owner/non-owner partitions and the existing real-agent benchmark. Preserve the
+15,000-character production compatibility bound and all previous grounding rules;
+compact existing prose rather than raising it. There is no new input, schema,
+permission, automatic finding filter, severity/confidence policy or durable state.
+Existing application ports, provider adapters and publication remain unchanged;
+prompt and evaluator compatibility tests enforce this boundary. Source, logs and
+corpus text remain untrusted data, never instructions or execution authority.
+
+User-visible review remains pending until normal analysis completes. A disproved
+missing-line premise produces no finding. A demonstrated defect uses the existing
+localized finding UI, for example “Executed statement is asserted uncovered,”
+anchored to the changed assertion with literal/counter evidence. Missing evidence
+does not create a speculative failure card. Existing partial/blocked analysis,
+retry, cancellation and historical-finding reconciliation stay unchanged; no new
+notification, reopen, dismissal or consumer mutation is authorized. Rollback
+reverts guidance, synthetic fixtures and documentation together; existing runtime
+upgrade and review remain the adoption path.
+
+Reserve **18 distinct additional cases before implementation**:
+
+| Area | Minimum | Required observation |
+|---|---:|---|
+| Instruction delivery | 4 | ordinary review, owner/non-owner partitions and benchmark; expected verdict stays hidden |
+| Quality scorer controls | 6 | valid no-leading-newline, leading-newline, escaped and dedented literals; two genuinely wrong executed-line assertions |
+| Independent source mapping | 6 | exact inert fixture binding, written bytes, line identity and assertion outcome; no claimed Kotlin/JaCoCo execution |
+| Inert-data boundary | 2 | reject altered source and unknown/prototype-like identity without execution |
+| **Total** | **18** | preserve all 106 existing corpus cases/verdicts and every quality floor |
+
+The source-mapping oracle uses statically authored transformations and identifies
+statements in its own generated text; it MUST NOT evaluate corpus text through
+eval, VM, Function or a subprocess, or fabricate instrumentation counters. Its
+claims concern synthetic byte/coordinate mapping, separate from existing real CI
+and reported XML. Record actual-model inputs, runtime/prompt identities, every
+prediction and failed score without leaking expected findings into prompts.
+Small samples do not prove future accuracy or consumer adoption.
+
+Acceptance maps R01 to the six source/scorer cases and all four delivery routes,
+and the inert-data rule to the two rejection cases. Deliver RED guidance tests,
+the full existing corpus, 100% all-metric prompt coverage, unchanged repository
+and module budgets, type/lint/architecture checks, documentation/spec/catalog
+validators, generated build/package smoke, AST graph update, exact-head
+CI/native Linux/macOS/Windows and complete zero-active-findings review. Update
+the detection and quality/observability guides and catalogue evidence together.
+There are no unresolved material decisions; live consumer execution, releases
+and model-location publication changes are outside this increment.
+
+#### Evidence projection revision, before implementation
+
+The retained six-case experiments show that prose alone does not reliably keep
+physical source lines separate from statements. V1 leaves one false positive;
+V2 leaves four; V3 leaves two; V4 requests read-only literal/AST output but leaves
+one false positive and misses one real control. None passes the full default
+model score. Keep all inputs, variants, predictions and failures. No merge-ready
+claim follows from these instruction-delivery tests.
+
+generated-coordinate-R02: add a deterministic, pure application projection of a
+bounded subset of Python string literals to numbered textual line witnesses.
+Use the actual literal value, not host statement count. Follow the
+[Python literal and newline contract](https://docs.python.org/3/reference/lexical_analysis.html#string-and-bytes-literals)
+and the common ASCII-whitespace subset of
+[textwrap.dedent](https://docs.python.org/3/library/textwrap.html#textwrap.dedent).
+Version-dependent whitespace, unsupported prefixes/escapes, interpolation,
+unterminated literals and ambiguous transforms MUST remain unavailable. This is
+a conservative syntactic projection, not a Python interpreter or proof that an
+arbitrary writer/binding executes. Label its assumptions and require the reviewer
+to verify host syntax, bindings, writer transforms and execution before a claim.
+
+```text
+owned .py diff -> bounded literal decoder -> numbered conditional witnesses
+ -> existing untrusted-data frame -> ordinary/partitioned reviewer or benchmark
+```
+
+Preserve every existing canonical diff character, review ownership and all
+partition limits. Add witnesses inside the existing per-file section before
+packing, so their full size counts against the unchanged partition cap. The
+legacy nonpartition route may project eligible provider patches within one
+fixed aggregate witness budget. Benchmark uses the same projector and excludes
+expected verdicts. Other languages and unavailable/partial literals retain the
+normal read-only review path. No automatic finding filter, source execution,
+provider read, permission, public option or schema is introduced.
+
+Fixed non-configurable ceilings: scan at most 64,000 source characters per
+eligible patch (at most three eligible patches for legacy supplemental context);
+decode at most 4,096 characters per literal; at most 32 lines,
+three witnesses and 2,000 serialized witness characters per projection. Omit
+an unavailable or oversized witness without truncating a quoted statement or
+the canonical diff, and never label omitted witness data complete. Do not join
+literals across missing hunk/fragment boundaries. Comments and removed lines
+cannot produce a current-source witness. Preserve Unicode data and frame it as
+untrusted without normalizing it into different Python syntax. Known dedent and
+newline-stripping syntax produces explicitly conditional projections whose
+binding/writer assumptions remain visible. Ordinary literal rows distinguish
+host/display coordinates from decoded source coordinates.
+
+Before implementing R02, expand the minimum budget from 18 to **58 distinct new
+cases**. The existing 18 remain required, with these **40 additional cases**:
+
+| Area | Additional minimum | Required behavior |
+|---|---:|---|
+| Literal forms | 4 | single/double and triple quote boundaries; adjacent first line |
+| Escapes | 8 | supported escape values/continuations and conservative unavailable values |
+| Physical coordinates/trivia | 4 | leading blank, inline statements, native CRLF and comments/quotes |
+| Conditional transforms | 6 | common spaces/tabs, blank lines, dedent, explicit LF stripping, unknown binding/transform limits |
+| Unsupported/malformed data | 8 | prefixes, interpolation, named/unknown/bad escapes, unterminated input and ambiguity |
+| Resource/security bounds | 6 | input/literal/line/count/output ceilings and disjoint hunks |
+| Real delivery integration | 4 | actual owner/non-owner partition packing, legacy eligible patches and the actual benchmark builder |
+| **Additional total** | **40** | **58 overall**, without double counting the earlier 18 |
+
+New pure projection requires 100% all metrics. Keep every prior corpus input,
+verdict, quality threshold and architecture constraint. Re-run the six identical
+actual-model inputs through the changed real CLI, retain its complete score and
+all failures, and inspect causal text as well as aggregate matching. Update
+detection, observability, catalogue evidence and generated bundles together;
+all original validation and exact-head merge gates still apply. Human-facing
+review states and notification budget are unchanged; witnesses are model context
+data, not new completion claims or a UI action. Rollback removes the projection
+and its delivery together with guidance/docs, without consumer state migration.
+
+The first witness-enabled measurement (V5) maps the disputed lines correctly,
+but still returns four false findings: it reframes intentional missed-line
+assertions as an invented requirement to assert the executed branch, including
+a self-refuting finding whose own text says there is no defect. Before revising
+guidance, require generated-coordinate-R03: zero counters can intentionally test
+missed authored coverage. Prove an assertion contradiction or an actual stated
+coverage-contract defect; do not invent a covered-branch assertion requirement
+or publish self-refuting findings. Preserve genuine wrong-counter assertions.
+The existing four delivery cases and paired six-case corpus cover R03; no
+verdict, threshold, artifact or source assertion changes for this refinement.
+
+#### Candidate verification revision, before implementation
+
+V6 still produces three false findings, including descriptions that disprove
+their own assertions. Preserve this failed measurement. R02 supplies correct
+coordinates, but independent contradiction checking is also required.
+
+generated-coordinate-R04: when trusted context construction retained a Python
+literal witness and initial analysis returned candidates, independently verify
+those candidates through the existing read-only findings port before publication.
+Recompute the alleged defect from the assigned source and literal/counter facts;
+a candidate title, confidence or assertion is a hypothesis, not evidence. Omit a
+disproved/unsupported candidate; preserve genuine assertion contradictions and
+independent actionable defects. A correct zero counter may intentionally verify
+missed coverage. Do not invent a missing covered-branch assertion requirement.
+The verifier may correct reasoning/location for the same candidate and statement,
+but cannot add IDs, change its file or replace an existing exact code anchor.
+
+```text
+trusted literal witness -> initial hypotheses -> independent source verification
+ -> validate identity, complete decisions and same-statement corrections
+ -> existing normalization/reconciliation/publication
+```
+
+The trusted context builder carries activation explicitly; text or forged markers
+inside untrusted source cannot activate this phase. Zero candidates and contexts
+without a retained witness keep the existing path. Native ordinary/partitioned
+review and the real-agent benchmark MUST use the same verification use case.
+Keep the original partition/head attestation and locale. A digest binds each
+verification to its exact source prompt and normalized candidate set; this is a
+request correlation check, not provider authentication or mutation authority.
+
+The response must exhaustively partition original IDs into retained/corrected
+findings and rejected IDs, with no duplicate, unknown, missing or overlapping ID.
+Retained findings require concrete evidence and stay on the same file/anchor.
+Malformed output, wrong correlation/locale, changed identity or provider failure
+fails analysis closed, never certifies a clean review. This phase cannot resolve,
+dismiss or reopen historical records. Preserve unrelated original task-2 results;
+do not turn an original candidate/resolution contradiction into a historical
+resolution merely because verification omits that candidate.
+
+Fixed ceilings per verification: 20 candidates, 32,000 UTF-8 bytes of candidate
+data and 128,000 UTF-8 bytes for its complete prompt. Exceeding a limit is an
+actionable analysis failure; do not silently drop candidates or truncate proof.
+One verification query per initial query attempt. Existing three-attempt native
+partition retries remain the bound (at most six calls when this phase is needed);
+ordinary review/benchmark add no retry. Same configured provider/model/effort,
+read-only workspace and credential/network isolation; no new public input,
+permission, durable schema or native approval. Count verification prompt/response
+work in existing analysis telemetry and finish a partition only after validation.
+
+Visible analysis remains pending while candidates are checked. Successful zero
+findings uses the existing complete review surface. Failure uses the existing
+failed/incomplete review and supported recheck route; prior records remain
+retained, with no extra notification/comment. Rollback removes verifier and
+activation together without consumer migration. The lower-level extra query is
+explicitly introduced here, superseding earlier prose-only/no-filter design;
+there is no regex blacklist or automatic dismissal of existing findings.
+
+Before implementing R04, reserve **40 additional distinct cases**, bringing the
+overall minimum to **98** (earlier cases remain required):
+
+| Area | Additional minimum | Acceptance |
+|---|---:|---|
+| Pure identity/decision policy | 16 | correlation, exhaustive IDs, duplicate/unknown/missing/overlap, fixed caps, immutable file/anchor, concrete evidence |
+| Prompt/schema/trust | 8 | source/candidates framed as data, exact locale, no prior-finding authority, correction scope, no hidden verdicts or truncation |
+| Application integration/recovery | 12 | ordinary/partitioned routes, trusted activation, no-witness/zero bypass, provider/schema failure, bounded retries, stale attestation, telemetry, historical preservation |
+| Shared real benchmark | 4 | actual verifier use, preserved real controls/independent defects, invalid second output fails, existing unactivated behavior |
+| **Additional total** | **40** | **98 overall minimum**, no double counting |
+
+New pure policy requires 100% all metrics; changed/new delivery use cases retain
+95% lines/statements and 90% branches/functions, and added runtime lines 100%.
+Keep the identical six-case actual-model campaign and all failed scores. Add
+independent-defect controls without altering its original inputs/verdicts. Update
+documentation/catalogue, architecture, tests, generated artifacts and all original
+merge gates. No unresolved material design decision remains.
+
+
+The final R04 actual CLI campaign is recorded in
+`quality/bugbot/evidence/issue-796.json`, including the initial exploration,
+unchanged six-case baseline, all six intermediate failures and final verified
+pipeline. Classification changes from 3 false positives/1 false negative to 0/0.
+Exact location remains 0/2 against the unchanged 0.8 threshold and is explicitly
+a failed optional model gate. Two separately measured independent-defect controls
+pass all default gates. These bounded observations do not establish statistical
+accuracy, consumer execution/adoption or publication remapping. Unit/integration
+and mandatory CI/coverage/review gates remain independently required.
+
+### Candidate-count compatibility after #796 review — R05 (2026-10-30)
+
+The initial review schema accepts up to 200 findings. A 20-candidate verification
+ceiling must apply to each secondary query rather than reject every otherwise
+valid 21–200-candidate response. Before implementation reserve **24 further
+cases**, bringing the overall minimum to **122**: 10 pure batch-planning cases,
+10 verification/native recovery cases, two benchmark integration cases and two
+telemetry/completion cases. Existing cases remain required and are not counted
+twice.
+
+Plan all candidates in original order into at most **10 sequential batches of
+20**, validate global unique identities and every batch's existing **32,000-byte
+UTF-8 candidate ceiling before querying**, and verify each batch against the same
+immutable source. Keep the **128,000-byte complete prompt bound per query**.
+Oversized evidence remains an explicit resource failure, without truncation or
+publishing unverified excess candidates. Candidate counts 1–200 are supported
+within those byte bounds; 201+ is outside the initial schema and fails closed.
+Every batch must exhaustively retain/correct or reject its assigned IDs, with
+its own source/candidate correlation, locale, file/anchor and proof checks.
+Cross-batch IDs cannot be substituted. Publish/reconcile only after all batches
+succeed; failure of a later batch cannot certify partial completion or resolve
+historical findings. Preserve unrelated task-2 state and candidate/resolution
+conflict protection across the complete original set.
+
+Ordinary/benchmark review makes at most ten secondary queries, with no added
+retry. Existing three-attempt partition retry gives an upper bound of **33 total
+queries per partition** (three initial queries plus 30 secondary queries). Only
+two partitions run concurrently; batches within one partition remain sequential.
+Observe every initial/retried and verification prompt/response at the query
+boundary without counting the returned aggregate a second time; complete the
+partition only after the final validated batch. This supersedes R04's per-review 20-candidate/six-query bound.
+No new public setting, provider/model/effort, permission, durable record or
+historical mutation authority is introduced. One-batch wire prompts/schema and
+proof checks remain identical to the measured campaign, whose failures and
+limitations remain retained; batching does not claim new statistical accuracy.
+Validate full 200-candidate retention, cross-batch duplicates, byte failures
+before querying, last-batch failures, bounded retries, shared benchmark behavior
+and truthful telemetry. Pure batch policy requires 100% all metrics; all original
+coverage, native acceptance and zero-active-finding merge gates remain required.
+
+### Serialized response envelope after #796 review — R06 (2026-10-30)
+
+A JSON response string is not a source prompt. Applying the 128,000-byte prompt
+ceiling to it rejects a valid 200-candidate response whose separate 20-candidate
+batches each fit their 32,000-byte budget, while the equivalent object succeeds.
+Reserve **12 additional cases** before implementing this correction, bringing the
+overall minimum to **134**: four pure UTF-8 response-boundary cases, four
+initial/secondary serialized-object compatibility cases, two native/benchmark
+routing cases and two failure/telemetry cases. Preserve all earlier cases.
+
+Use a dedicated **4,000,000-byte UTF-8 serialized JSON response envelope** before
+parsing either initial or secondary strings. Object responses retain their normal
+schema/normalization and batch validation. This wire envelope is independent of
+the unchanged 128,000-byte complete prompt and 32,000-byte per-batch candidate
+bounds. Oversized strings fail with a response-specific actionable error before
+parsing or querying; malformed strings still fail closed. No truncation, missing
+IDs, partial publication or new historical authority is allowed. Compact JSON
+within this wire envelope is the supported serialization, not unbounded padding.
+
+Verify an initial serialized 200-candidate response larger than 128,000 bytes but
+within all batch bounds, and a schema-valid serialized secondary response larger
+than the prompt ceiling. Preserve exact locale/correlation/file/anchor/proof and
+all-or-nothing behavior, including late failure. Existing provider prompt/schema
+and single-batch reasoning remain unchanged; do not claim a new model sample.
+Update the public limits, dated evidence, generated artifacts and all original
+coverage/native/review gates. A transient GitHub publication failure must be
+recovered by the normal fresh review/recheck, with complete exact-head evidence
+and zero unknown/active state before merging.
+
+### Configuration-selected initial credential ownership — #798 (2026-10-30)
+
+The reported old-runtime review attributed an initial browser credential to an
+unused mocked token response. Read-only exact-source evidence instead binds
+Playwright globalSetup -> configured storageState -> localStorage session ->
+request header; the initial token is signed, and a separate login/refresh stub
+is not its producer. This establishes a false premise, not an internal parser or
+context-selection diagnosis. Existing matching consumer CI is separate evidence;
+no consumer execution, mutation, credential or signature is required here.
+
+Strengthen the shared test-path instruction used by ordinary, partitioned and
+benchmark review: trace configuration-selected bootstrap/globalSetup and persisted
+state to the assertion's active credential producer. Distinguish initial state
+from actual login/refresh transitions; cite which edge supplies the tested value.
+An unused endpoint response cannot establish the initial token. Preserve genuine
+opaque initial state, a reached refresh overwriting the token and independent
+header-format failures. If the selected producer is unavailable, omit unsupported
+always-fails claims. Keep normal eligible historical verification; no automatic
+dismissal, JWT whitelist, new provider call, permission, setting or filter.
+
+```text
+configuration -> selected setup -> persisted session -> initial header -> assertion
+                                      |
+                        actual expiry/login transition -> endpoint response
+```
+
+Reserve **20 distinct new cases before implementation**: six independent source
+observations (including one unavailable-source outcome), six scorer controls,
+four instruction-delivery routes (ordinary, owner/non-owner partition, benchmark),
+two inert-input ownership guards and two verdict/privacy independence cases.
+Owned fixtures use real Node HMAC/base64url and the storageState JSON shape in a
+controlled in-memory storage roundtrip. They do not execute Playwright, jose,
+private consumer code or external requests, and observations omit token values,
+signatures and keys. The actual consumer's jose source/CI provenance remains a
+separate read-only receipt. Never turn the harness observation into a claimed
+fresh browser or consumer run.
+
+Keep all 114 prior corpus inputs/verdicts, severity/confidence and quality floors,
+the 15,000-character legacy prompt compatibility bound and existing context/query
+budgets. No new dependency is needed. Preserve the four-case exploratory actual
+f7b4 CLI sample separately (0 false positives/negatives, all default gates pass);
+it is not a controlled comparison with the expanded six-case corpus. Freeze all
+six inputs/verdicts before measuring baseline and corrected shared instructions;
+retain complete scores, including failures, and make no statistical guarantee or
+consumer-adoption claim. Update public detection/quality documentation and catalog
+evidence with the regression. Prompt coverage stays 100% all metrics and added
+runtime lines 100%; mandatory full hook, fresh CI, three-platform cleanup and
+complete zero-active-finding exact-head review remain merge conditions.
+
+
+The controlled six-case baseline and first corrected instruction both produced
+zero false positives and one false negative; the first correction detected opaque
+initial state but omitted the reached expired-session refresh. Retain both failed
+scores. Refine the same credential-provenance rule to explicitly evaluate expiry
+predicates and login/refresh overwrites before the assertion. Inputs, verdicts,
+model/effort and quality thresholds remain frozen. This is an instruction change,
+not repetition or selection of an identical model sample; all limits and original
+20 regression cases remain required.
+
+The second correction still omitted the expired refresh; keep that failed score
+also. Clarify the complete value-flow sequence through the evaluated guard and
+last overwrite to the final asserted credential, explicitly forbidding stopping
+at bootstrap. This preserves initial-state and real refresh/header contradictions
+under the same unchanged six-case inputs, model/effort and thresholds.
+
+The final V3 actual six-case sample has **0 false positives and 0 false negatives**
+(precision/recall/F1 1.0), preserving all three genuine fault controls. Two of three
+anchors are exact: the bearer-separator finding incorrectly supplies context line
+24 instead of changed line 29, so location accuracy 0.667 **fails** the unchanged
+0.8 gate. Do not claim all actual-model gates pass. Complete baseline/V1/V2/V3
+predictions, scores, frozen CLI/source identities and derived core-prompt hashes
+are recorded in `quality/bugbot/evidence/issue-798.json`. The earlier four-case
+exploration remains explicitly separate. Deterministic source/scorer/delivery
+regressions and native exact-head review are independent merge evidence; this
+bounded campaign is not a statistical guarantee or fresh consumer execution.
+
+Exact-head CI at `5754dcb7` passes all 811 suites / 15,349 tests, but the
+processed diff report finds the compacted review-effort line partially covered
+(4/5 measured added runtime lines fully hit). Extend the original 20-case budget
+to **22** before adding two real delivery controls: explicitly configured high
+and low effort must retain their distinct review policy, the session-provenance
+rule, supplied assertion and eligible historical finding. Keep all existing
+source/scorer cases and actual-model samples unchanged. The final merge still
+requires 100% fully hit added runtime lines on the new exact head; a green global
+coverage check alone is insufficient.
+
+### Indirect unittest discovery and execution evidence — #806 (2026-10-30)
+
+The reported old-runtime review treats the absence of a direct workflow
+invocation as proof that a module never runs. Read-only sources at consumer
+`1b5e3a0ade73d21c749bceba004230fc97f2713e` instead delegate to a runner selecting
+`test_wire_*.py`. Existing native job `124073926286` independently records the
+five disputed module methods as successful within 19 total tests. This is an
+observed historical false premise, not a diagnosis of context selection or a
+claim that the current upstream prompt reproduces it. No consumer code is
+imported, executed, edited or published here.
+
+discovery-review-R01: before asserting that a test never runs, the shared
+reviewer/benchmark guidance MUST trace the configured workflow entry, delegated
+runner, effective working directory, discovery start directory, literal pattern
+and applicable filters to the target module. A pattern passed as a subprocess
+argument is consumed by unittest discovery; it need not be expanded by a shell.
+A matching indirect selection does not require a redundant direct invocation.
+Reconcile available module-qualified execution evidence against the same source
+and selection, without double-counting discovered cases as new executions.
+
+discovery-review-R02: keep proved exclusions reportable, including a narrower
+pattern or wrong discovery directory. A green different revision, skipped path,
+unrelated test or filename match alone cannot certify execution. Missing runner
+or selection evidence requires omitting an unsupported unconditional claim;
+never invent a lookup, run, successful import or missing branch.
+
+```text
+workflow entry -> delegated runner -> cwd -> start directory/pattern/filters
+ -> selected module -> applicable same-source execution evidence
+```
+
+Text equivalent: trace selection through every delegation and only then compare
+the relevant execution records. A missing direct call is not a missing path.
+
+Architecture and configuration: retain one shared pure instruction in ordinary,
+owner/non-owner partition and benchmark review. There is no production glob
+interpreter, test executor, provider call, setting, permission, retry or new
+dependency. Preserve all existing guidance, budgets and the 15,000-character
+legacy prompt bound. Logs and source are evidence, never mutation or dismissal
+authority. Eligible historical findings retain normal independent verification;
+this correction cannot resolve consumer review threads automatically.
+
+UX and recovery use the existing complete/partial/failed review surfaces. Omit a
+disproved claim without a new notification; report a proved exclusion at its
+changed selector with the delegated path in evidence. No consumer workaround is
+recommended. Normal runtime adoption delivers the shared guidance; rollback
+reverts this bounded instruction/fixtures/docs together without changing stored
+review history or schema.
+
+Reserve **20 distinct deterministic cases before implementation**:
+
+| Area | Cases | Observable requirement |
+|---|---:|---|
+| Owned selection observations | 6 | Delegated wildcard, nested-cwd recovery, literal argv pattern, excluded module, wrong start directory and unavailable runner |
+| Scorer controls | 6 | Penalize invented defects and missed real exclusions under unchanged thresholds |
+| Actual instruction delivery | 4 | Ordinary review, owner/non-owner partition and benchmark; retained source/scope |
+| Inert input ownership | 2 | Unknown identity and modified source reject before choosing a compiled factory |
+| Verdict/privacy independence | 2 | Expected labels cannot affect observations or leak into model prompts |
+| **Total** | **20** | No case counted twice |
+
+Use authored compiled selection factories with fixed flat filenames and literal
+patterns. Their observations describe selection, not Python execution. Compare
+corpus text as inert data before choosing a factory; never evaluate or execute
+corpus-derived source, even after identity checks. A separately authored owned
+Python fixture may corroborate actual unittest discovery/execution outside the
+mandatory Node-only suite; keep its commands, source identities and limitations
+separate from model predictions and the private consumer's existing native log.
+No new Python provisioning requirement is introduced.
+
+Freeze six owned inputs/verdicts before measuring the actual current baseline
+and any changed instruction with the same runtime/model/effort and existing
+quality floors. Preserve all outcomes, including failures; a passing baseline
+does not reproduce the historical finding or establish a statistical gain.
+Preserve the prior 120 corpus cases byte-for-byte as decoded data. Keep 100%
+shared-prompt coverage and fully hit added runtime lines, existing global/module
+budgets, full normal hooks, package/build/types/lint, specification/docs/workflow
+checks, Graphify, exact-head CI, three native cleanup footers and complete review
+without active findings before merge. Update detection, quality/observability,
+this owner, catalog evidence/index and the actual model evidence together.
+The primary discovery contract is [Python unittest discovery](https://docs.python.org/3/library/unittest.html#test-discovery).
+
+**Measured implementation decision.** The current baseline identifies both real
+exclusions and emits no finding for the four safe/unavailable cases. Its exact
+location accuracy is 1/2, failing the unchanged 0.8 floor. The proposed explicit
+discovery instruction preserves the two causal diagnoses but supplies incorrect
+context-line anchors: the unchanged scorer records precision/recall/F1 0.5,
+location accuracy 0 and one unmatched false-positive/false-negative pair. Reject
+that proposal; do not ship its instruction or native-framing compaction.
+
+This correction therefore adds regression coverage, provenance and documentation
+around the existing generic configuration/delegated-path/source-grounding
+contract. Production instructions, framing, runtime logic, settings and output
+schema remain byte-identical to the reviewed base. Delivery tests check that
+the real ordinary/partitioned/benchmark paths retain the supplied selector and
+existing grounding contract. Keep both actual samples and every failed gate;
+no claim of historical reproduction, model-score improvement or all-model-gates
+success is made. Reference predictions are separate deterministic scorer inputs.
+The known location-calibration limitation is not repaired by changing labels or
+shipping an inferior prompt. For this regression-only implementation, preserve
+all global/module coverage gates and explicitly prove that no executable
+production file changed instead of manufacturing a nonempty patch denominator.
+
+Executed local evidence: all 20 new cases and 196 related cases pass in six
+focused suites. The unchanged shared prompt reaches 100% statements, branches,
+functions and lines. All 120 previous corpus cases/reference predictions remain
+unchanged; six owned cases bring the corpus to 126. The optional published probe
+ran with Python 3.14.6 and corroborates selection with real owned executions.
+The actual consumer job checked out a merge containing the reviewed head; runner,
+workflow and disputed module blobs match that reviewed head exactly. Keep this
+source-equality proof distinct from claiming the head itself was the checkout.
+Fresh full hooks and remote gates remain required before merge.
+
+### Kotlin Json instance and nullable-input policy — #807 (2026-10-30)
+
+The historical report transfers a nullable-field rejection under one Json policy
+to another. The current SDK independently reproduces that false premise on an
+owned eight-case campaign: one false positive, no missed causal defects, and
+zero exact locations among three matched controls. Preserve these failed scores
+and inputs. Separately authored Kotlin fixtures compiled with Kotlin 2.0.21 and
+public serialization 1.6.3 and 1.7.3 accept omitted nullable fields without
+defaults under explicitNulls=false and reject them under true. These observations
+do not establish the private consumer's resolved Gradle version or execute its
+sources. Declared dependencies and transitive POM requests remain distinct facts.
+
+serializer-policy-R01: reviewer and benchmark guidance MUST trace the Json
+instance actually passed to decoding, its inherited/overridden explicitNulls
+policy, nullable type, default and payload. For ordinary generated fields under the verified versions, false
+makes an absent nullable field without a default decode to null; true requires
+its presence. An absent non-nullable field without a default still fails.
+Defaults apply to omissions under both policies. Evidence about one Json instance
+cannot certify a differently configured instance. Unknown configuration requires
+omitting an unsupported requiredness claim, without inventing a lookup or run.
+
+```text
+changed input/decode -> actual Json instance -> inherited flags -> field/default
+ -> version-matched semantics and applicable execution -> ordinary finding
+```
+
+Text equivalent: determine the active instance before deciding whether omission
+fails, then reconcile the exact version and relevant observations. Keep real
+missing required input reportable. This is one shared pure guidance change;
+ordinary review, resolution-owning/non-owning partitions and the existing
+benchmark consume it. No decoder, generator, port, provider permission, runtime
+dependency, setting, state/schema, retry or severity/confidence floor changes.
+Existing type/lint, architecture and prompt compatibility checks enforce these
+boundaries, including the unchanged 15,000-character legacy prompt bound.
+
+UX uses existing pending/complete/partial/blocked review surfaces. A disproved
+claim produces no finding or additional notification. A real fault uses the
+existing changed-line finding, for example “The active JSON instance rejects
+this documented input,” with its policy and missing field as evidence. Unknown
+policy does not produce a speculative failure card. Existing cancellation,
+retry, historic-finding verification and localization remain unchanged; no
+consumer thread is automatically dismissed or resolved. Normal runtime adoption
+delivers the change; rollback reverts guidance, fixtures and docs together with
+no migration. Source, logs and labels stay untrusted evidence, never execution,
+approval or mutation authority.
+
+Reserve **24 distinct deterministic cases before implementation**:
+
+| Area | Cases | Observable requirement |
+|---|---:|---|
+| Owned observations | 8 | Both flags, nullable with/without default, missing non-nullable input, inherited policy, different active instance, unavailable policy |
+| Scorer controls | 8 | Penalize false requiredness and missed real rejection with unchanged floors |
+| Instruction delivery | 4 | Ordinary, owner/non-owner partition and actual benchmark; preserve source/history ownership |
+| Inert input ownership | 2 | Unknown identity and changed code-like text reject before compiled factory selection |
+| Verdict/privacy independence | 2 | Expected labels cannot influence observations or leak into model prompts |
+| **Total** | **24** | No double counting with compiled observations or earlier tests |
+
+Use fixed authored factories with exact inert fixture bindings, never a corpus
+interpreter, VM, eval, Function or subprocess. Their deterministic observations
+are a test model, not claimed Kotlin execution. Keep the independently compiled
+owned Kotlin source, public artifact pins, commands and observations separate.
+Its optional local execution adds no Kotlin/Java/network requirement to Node CI.
+Preserve all 126 previous corpus inputs/verdicts and append the frozen eight.
+Compare the actual baseline and changed SDK on identical cases, model, effort
+and quality floors. Preserve every outcome, including failed location gates;
+never replace actual predictions with perfect reference scorer inputs.
+
+Acceptance requires the four RED delivery cases, all 24 deterministic cases,
+100% prompt-module coverage, fully hit added runtime lines and unchanged global
+and module floors, full hooks, package/build/types/lint, Graphify, specification,
+catalog and docs checks. Fresh exact-head CI/Codecov, all three native cleanup
+footers and complete review with zero active findings remain mandatory before
+merge. Update detection, quality/observability, this owner, catalog/index and
+public model evidence together. No material readiness decision is open.
+Versioned primary sources are Json.kt at kotlinx.serialization
+[v1.6.3](https://github.com/Kotlin/kotlinx.serialization/blob/v1.6.3/formats/json/commonMain/src/kotlinx/serialization/json/Json.kt)
+and [v1.7.3](https://github.com/Kotlin/kotlinx.serialization/blob/v1.7.3/formats/json/commonMain/src/kotlinx/serialization/json/Json.kt).
+
+**Executed decision and limits.** The final defaults-first guide retains the
+active-instance/inheritance check and explicitly returns no finding when input
+is accepted. Equivalent repository-context, locale and required-field framing
+keeps the original prompt-size limit. All 24 new deterministic cases pass
+alongside 214 related cases. Both changed modules have 100% lines, statements
+and functions; the shared prompt has 100% branches and the context builder
+96.47%. No added statement or branch is uncovered.
+
+Four actual SDK samples retain identical frozen inputs, model, effort and floors
+in `quality/bugbot/evidence/issue-807.json`. The baseline has one false positive.
+V1 corrects that premise but emits a self-refuting finding on an inherited
+policy; V2 emits two false positives, including a mistaken default-field claim.
+Reject both. V3 emits no false positives or false negatives and matches the
+three real defects. Its exact locations are 2/3, failing the unchanged 0.8 floor;
+do not claim all model-quality gates passed or rerun an identical prompt to fish
+for green. This bounded improvement does not guarantee future model accuracy.
+The complete 134-case reference evaluation passes separately; it is not actual
+model execution. The published optional Kotlin source independently passes eight
+observations under each verified serialization version. Fresh full hooks and
+remote merge gates remain required.
+
+### Versioned Ktor routing-root identity — #809 (2026-10-30)
+
+The historical review downloaded the old `v3` release at
+`f5e5a4cf9a80248994469cd88ad55eecab5b95ca` and asserted that
+`Application.routing {}` returns a detached subtree. The public Ktor 3.0.2
+[RoutingRoot source](https://github.com/ktorio/ktor/blob/3.0.2/ktor-server/ktor-server-core/common/src/io/ktor/server/routing/RoutingRoot.kt),
+Git blob `7519c959a6caba4c1b3fb3c7e429ded46e2f21e8`, instead reuses an installed
+root and applies configuration to that same object; only the absent-plugin
+branch installs one. Disassembly of the independently downloaded public Maven
+3.0.2 jar corroborates that return identity. It does not establish the private
+consumer's resolved jar. The existing consumer native run is a tested merge
+containing the reviewed head, with the disputed test blob equal at both
+revisions; it reports successful test/export consistency, 61 operations and 74
+components. It is not a new execution, baseline adoption, or proof about the
+separate malformed-body business defects. Local JUnit evidence remains an
+issue-author report.
+
+The current SDK's existing shared framework-version, delegated-call and
+same-source evidence guidance produces zero false positives and zero false
+negatives on six newly frozen owned examples. Both actual wrong-root controls
+are diagnosed. One anchor is off by one, so the unchanged 0.8 location floor
+fails at 1/2. Preserve the entire prediction/score sample; no statistical gain,
+historical reproduction or all-model-gates success is claimed. This change is
+regression coverage, provenance and documentation. It makes no executable
+production change and does not add Ktor-specific prompt text or suppression.
+
+```text
+changed root selection -> exact receiver/delegated call -> applicable API version
+ -> same-object or wrong-node evidence -> reconcile matching execution -> report/omit
+```
+
+Text equivalent: establish which object the actual version returns for the
+actual receiver, then reconcile applicable execution evidence before reporting
+an unconditional export failure.
+
+| Selection evidence | Review outcome |
+|---|---|
+| Same application's installed root, direct/delegated/configuring call | Omit a detached-root claim |
+| An actual child or another application's root violates the caller's identity requirement | Retain the demonstrated changed-selection defect |
+| Selected helper or applicable implementation unavailable | Omit an unsupported unconditional failure claim |
+| Export consistency passes but unrelated business behavior is defective | Keep those independent defects and the baseline-adoption state separate |
+
+Architecture/configuration: retain the existing pure shared instruction through
+ordinary review, resolution-owner/non-owner partitions and the real benchmark.
+There is no new provider lookup, parser, executor, permission, setting, schema,
+retry or dependency. Node tests select statically authored object-identity
+controls only after exact inert fixture identity/source checks; they do not
+evaluate Kotlin corpus text or simulate a compiled Ktor execution. Public source
+and bytecode evidence remain distinct from these controls. An optional owned
+compiled probe produced no runtime observations: an initial fixture hit an
+internal constructor and a public test-host bootstrap then stopped at a
+parent-managed dependency. Do not guess versions or bypass visibility to turn
+that preflight failure into claimed execution. Mandatory CI gains no JVM/Ktor
+provisioning requirement.
+
+UX/recovery use existing complete/partial/failed review surfaces. A complete
+same-root review has an empty findings array; a real wrong selection cites the
+changed selector and causal identity check. No exporter workaround or extra
+notification is needed. Historical findings retain independent current-source
+verification; source/logs are evidence, not authority to mutate or dismiss them.
+Normal runtime adoption and rollback are unchanged; reverting these fixtures,
+evidence and docs leaves production instructions and stored review state intact.
+
+Reserve **20 distinct deterministic cases before implementation**:
+
+| Area | Cases | Observable requirement |
+|---|---:|---|
+| Owned identity observations | 6 | Direct reuse, delegation, configuration reuse, actual child, different receiver and unavailable implementation |
+| Scorer controls | 6 | Penalize the opposite verdict with unchanged thresholds and exact reference anchors |
+| Actual delivery | 4 | Ordinary review, owner/non-owner partitions and benchmark retain source/API evidence and generic grounding |
+| Inert input guards | 2 | Unknown identity and altered source reject before selecting an authored control |
+| Verdict/privacy independence | 2 | Labels do not drive observations and do not enter provider prompts |
+| **Total** | **20** | No double counting; actual model calls are separate observations |
+
+Acceptance requires all 20 cases and related prompt/partition/scorer tests,
+100% unchanged shared-prompt coverage, all existing global/module budgets and
+the 15,000-character legacy prompt bound. Append the six cases to the prior
+134 frozen corpus cases/reference predictions without modifying them. Keep
+the actual baseline identity, all six predictions and failed location gate in
+`quality/bugbot/evidence/issue-809.json`; reference predictions are separate
+deterministic scorer inputs. Prove zero executable production delta rather
+than inventing 100% from an empty patch denominator. Update detection,
+quality/observability, this owner and catalog/index together. Full normal hooks,
+package/build/types/lint, docs/specification/workflow checks, Graphify, exact-head
+CI, all three native cleanup footers and complete review with zero active
+findings remain merge requirements.
