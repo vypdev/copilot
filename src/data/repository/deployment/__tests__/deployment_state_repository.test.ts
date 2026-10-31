@@ -74,6 +74,9 @@ function state(deploymentOrchestration: DeploymentOperationSnapshot) {
 describe("DeploymentStateRepository", () => {
   it("returns absent when the issue has no configuration block", async () => {
     await expect(harness().repository.load()).resolves.toEqual({ kind: "absent" });
+    const emptyNativeBody = harness();
+    emptyNativeBody.issues.getDescription.mockResolvedValueOnce(undefined as never);
+    await expect(emptyNativeBody.repository.load()).resolves.toEqual({ kind: "absent" });
   });
 
   it("loads only the current version-1 deployment state", async () => {
@@ -83,6 +86,9 @@ describe("DeploymentStateRepository", () => {
   });
 
   it.each([
+    ["null configuration", null, undefined, "invalid"],
+    ["array configuration", [], undefined, "invalid"],
+    ["primitive configuration", "invalid shape", undefined, "invalid"],
     ["invalid JSON", undefined, `Issue\n${start}\n{bad\n${end}`, "invalid"],
     ["unversioned deployment", { schemaVersion: 3, branchType: "release", deploymentOrchestration: { operationId: "operation-12345678" } }, undefined, "invalid"],
     ["future deployment", { schemaVersion: 3, branchType: "release", deploymentOrchestration: { ...operation(), stateVersion: 2 } }, undefined, "unsupported"],
@@ -102,13 +108,16 @@ describe("DeploymentStateRepository", () => {
 
   it("persists exactly one monotonic successor while preserving unrelated configuration", async () => {
     const current = operation();
-    const value = harness({ schemaVersion: 3, branchType: "release", parentBranch: "develop", deploymentOrchestration: current });
+    const payload = { schemaVersion: 3, branchType: "release", parentBranch: "develop", deploymentOrchestration: current };
+    const quoted = 'Reproduction: <!-- copilot:pr-issue-link:v1;pr=183;issue=177;base=develop;state=pending -->';
+    const value = harness(payload, `${quoted}\n${descriptionFor(payload)}`);
     const proposed = operation({ revision: 8, phase: "published", productionSha: "c".repeat(40), publicationVerified: true, publicationReceipt });
     await expect(value.repository.save({
       expected: { kind: "current", fence: deploymentStateFence(current) },
       state: state(proposed),
     })).resolves.toEqual({ kind: "saved", operation: proposed });
     expect(value.description()).toContain('"parentBranch": "develop"');
+    expect(value.description()).toContain(quoted);
   });
 
   it("returns already-applied without rewriting a completed save", async () => {
@@ -141,4 +150,14 @@ describe("DeploymentStateRepository", () => {
     })).resolves.toEqual({ kind: "missing" });
     expect(value.issues.updateDescription).not.toHaveBeenCalled();
   });
+  it('retains an incomplete configuration block when the first issue save cannot render safely', async () => {
+    const before = `Issue\n${start}\ntruncated`;
+    const value = harness(undefined, before);
+    const proposed = operation({ revision: 1, phase: 'preparing' });
+    await expect(value.repository.save({ expected: { kind: 'absent' }, state: state(proposed) }))
+      .resolves.toMatchObject({ kind: 'invalid' });
+    expect(value.issues.updateDescription).not.toHaveBeenCalled();
+    expect(value.description()).toBe(before);
+  });
+
 });

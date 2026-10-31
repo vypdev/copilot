@@ -1,3 +1,4 @@
+import { Result } from "../../../../data/model/result";
 import { DeploymentOrchestrationRuntime } from '../../../services/deployment_orchestration_runtime';
 import { DeploymentStateBoundary } from '../../../services/deployment_state_boundary';
 import { ApplicationError } from '../../../errors/application_error';
@@ -67,13 +68,14 @@ function harness(initial = oldCandidate()) {
         const pr = { number: 174, nodeId: 'PR174', body: command.body, headBranch: command.headBranch, headSha: candidateSha,
           baseBranch: command.baseBranch, state: 'open', merged: false, autoMergeEnabled: false, repositoryFullName: 'owner/project' };
         created.push(pr); return pr;
-      }), getPullRequest: jest.fn(), enableAutoMerge: jest.fn(), isPullRequestQueued: jest.fn().mockResolvedValue(false),
+      }), getPullRequest: jest.fn(), prepareIssueCompletion: jest.fn(),
+      enableAutoMerge: jest.fn(), isPullRequestQueued: jest.fn().mockResolvedValue(false),
       enqueuePullRequest: jest.fn(), mergePullRequest: jest.fn(),
     },
     targetRules: { getTargetCapabilities: jest.fn().mockResolvedValue({ autoMergeAllowed: false, mergeQueueRequired: false,
       immediatelyMergeable: false, requiresStrictStatusChecks: false, mergeQueueProducers: [], mergeQueueObservationProblems: [] }) },
     presentation: { findDashboard: jest.fn(), createDashboard: jest.fn(), updateDashboard: jest.fn(), publishMilestone: jest.fn() },
-    publication: { inspect: jest.fn() }, continuation: { dispatch: jest.fn() }, issues: { closeIssue: jest.fn(), addComment: jest.fn() },
+    publication: { inspect: jest.fn() }, continuation: { dispatch: jest.fn() }, issues: { reconcileCompletion: jest.fn().mockResolvedValue([new Result({ id: 'ReconcileClosedIssueMetadataUseCase', success: true, executed: false, payload: { issueCompletion: { nativeClosed: true, reconciled: true, outcome: 'already-converged' } } })]), closeIssue: jest.fn(), addComment: jest.fn() },
   };
   const useCase = new DeploymentOrchestrationUseCase(dependencies);
   return { dependencies, useCase, store, created, current: () => durable, setCurrent: (value: DeploymentOperationSnapshot) => { durable = value; } };

@@ -979,3 +979,18 @@ their prior semantics. No provider detail or input value is interpolated. The
 are owned by [CLI and single-action execution](./cli-and-single-action-execution.md#explicit-action-target-restoration--740-2026-10-28),
 not counted again here. Configuration and error-reference documentation are
 updated with the same change.
+
+## 21. Closed progress-result validation detail — #774
+
+The progress capability adds the closed `progress-result-contract-invalid`
+recovery descriptor governed by section 23 of
+[`immutable-progress-content-recovery.md`](./immutable-progress-content-recovery.md).
+It exposes only validated phase/reason/known-field and verified R/L identities,
+with `none` for unavailable identities. It cannot carry producer prose or raw
+model output. A returned-result rejection remains distinct from execution or
+transport failure; no primary code/retry rule is broadened and a later optional
+Check Run error cannot replace it. Existing correlation, cause privacy, typed
+Result and whole-catalog localization rules apply unchanged. Successful model
+scope/response JSON and SDD-size remediation remain unchanged. That owning
+section allocates the 84 additional cases; this reference does not count them a
+second time. There is no new mutable aggregate import, permission or configuration.

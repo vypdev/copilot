@@ -13,6 +13,7 @@ import {
 
 // This trusted destination is inserted after localization, never supplied by a body or translation.
 const STORED_CONFIGURATION_RECOVERY_URL = 'https://docs.page/vypdev/copilot/security-operations/operations/troubleshooting#unsupported-stored-configuration';
+const BRANCH_SYNC_CATALOG_RECOVERY_URL = 'https://docs.page/vypdev/copilot/security-operations/operations/troubleshooting#branch-sync-catalog-compatibility';
 
 export interface ApplicationErrorPresentation {
     readonly impact: string;
@@ -46,6 +47,8 @@ export function buildApplicationErrorPresentation(
         ? commandValidationPresentationVariables(error.recovery.id, (error.recovery.variables as Readonly<Record<string, unknown>>).command)
         : error.recovery?.id === 'branch-sync-verification-failed'
         ? { ...error.recovery.variables, syncCommand: '/copilot sync-branch' }
+        : error.recovery?.id === 'branch-sync-catalog-incompatible'
+        ? { ...error.recovery.variables, syncCommand: '/copilot sync-branch', catalogGuide: BRANCH_SYNC_CATALOG_RECOVERY_URL }
         : error.recovery?.id.startsWith('stored-configuration-')
         ? { ...error.recovery.variables, recoveryGuide: STORED_CONFIGURATION_RECOVERY_URL }
         : error.recovery?.variables;

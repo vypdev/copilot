@@ -1,4 +1,5 @@
 import type { BranchSyncValidationCode } from '../../domain/branch_sync_validation';
+import type { BranchSyncCatalogDiagnostic } from '../../domain/branch_sync_catalog_diagnostic';
 
 export interface BranchDependency {
   readonly issueNumber: number;
@@ -62,6 +63,7 @@ export interface BranchSyncResolutionValidation {
   readonly valid: boolean;
   readonly reason?: string;
   readonly code?: BranchSyncValidationCode;
+  readonly catalogDiagnostic?: BranchSyncCatalogDiagnostic;
 }
 
 export interface BranchSyncWorkspacePort {

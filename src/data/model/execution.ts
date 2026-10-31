@@ -63,6 +63,8 @@ export class Execution {
     readonly issueWorkflowProfile: IssueWorkflowProfile;
     readonly issueWorkflowProfileDigest?: string;
     currentIssueWorkflowAdmission?: IssueWorkflowAdmission;
+    /** Independently verified admitted parent; never serialized as PR configuration. */
+    pullRequestParentBranch?: string;
     issueWorkflowRuntimeMode: IssueWorkflowRuntimeMode = 'execute';
     readonly preBranchSdd: boolean;
     readonly verificationSetup: boolean;

@@ -1,7 +1,7 @@
 import type { GitCommitPort } from "../../application/ports/git_ports";
 import { BranchSyncWorkspaceAdapter } from "../branch_sync_workspace_adapter";
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -53,6 +53,46 @@ async function prepareCleanAdapter(overrides: Record<string, Reply[]> = {}) {
 }
 
 describe("BranchSyncWorkspaceAdapter", () => {
+  it.each(['invalid revision', 'tree read failure', 'symlink mode', 'wrong path', 'invalid object', 'negative size',
+    'nonnumeric size', 'oversized object', 'changed size', 'invalid JSON', 'unsupported parent', 'SDK originals'] as const)(
+    'bounds immutable catalog fallback before the fixer: %s', async scenario => {
+      const root = mkdtempSync(join(tmpdir(), 'catalog-object-boundary-'));
+      mkdirSync(join(root, 'specs'));
+      writeFileSync(join(root, 'specs/catalog.json'), '<<<<<<< HEAD\nchild\n=======\nparent\n>>>>>>> parent\n');
+      writeFileSync(join(root, 'specs/CATALOG.md'), '<<<<<<< HEAD\nchild\n=======\nparent\n>>>>>>> parent\n');
+      const child = scenario === 'invalid revision' ? 'PRIVATE' : 'a'.repeat(40), parent = 'b'.repeat(40), object = 'c'.repeat(40);
+      const source = JSON.stringify({ version: 1, capabilities: [{ specs: [], workflows: [], entrypoints: [], code: [], tests: [], documentation: [] }] });
+      const parentSource = JSON.stringify({ version: 1, capabilities: [{ specs: [], evidence: ['PRIVATE/'] }] });
+      const tree: Reply = scenario === 'tree read failure' ? new Error('PRIVATE provider')
+        : (scenario === 'symlink mode' ? '120000' : '100644') + ' blob ' + (scenario === 'invalid object' ? 'PRIVATE' : object)
+          + '\t' + (scenario === 'wrong path' ? 'PRIVATE' : 'specs/catalog.json') + '\0';
+      const bytes = scenario === 'invalid JSON' ? '{' : source;
+      const size = scenario === 'negative size' ? '-1' : scenario === 'nonnumeric size' ? 'PRIVATE'
+        : scenario === 'oversized object' ? String(10 * 1024 * 1024 + 1) : String(Buffer.byteLength(bytes));
+      const { git, execute } = createGit({
+        [STATUS]: ['', 'UU specs/CATALOG.md\nUU specs/catalog.json\n'],
+        'rev-parse HEAD': [child, child], 'rev-parse FETCH_HEAD': [parent],
+        ['merge-base --is-ancestor ' + parent + ' ' + child]: [new Error('not ancestor')],
+        ['-c user.name=Copilot -c user.email=copilot@users.noreply.github.com merge --no-ff --no-commit ' + parent]: [new Error('conflict')],
+        [UNRESOLVED]: ['specs/CATALOG.md\0specs/catalog.json\0'],
+        ['ls-tree -z ' + child + ' -- specs/catalog.json']: [tree],
+        ['ls-tree -z ' + parent + ' -- specs/catalog.json']: ['100755 blob ' + object + '\tspecs/catalog.json\0'],
+        ['cat-file -s ' + object]: [size, String(Buffer.byteLength(scenario === 'unsupported parent' ? parentSource : bytes))],
+        ['cat-file blob ' + object]: [scenario === 'changed size' ? bytes + 'x' : bytes, scenario === 'unsupported parent' ? parentSource : bytes],
+      });
+      const adapter = new BranchSyncWorkspaceAdapter(git, root);
+      try {
+        if (scenario === 'SDK originals') await expect(adapter.prepare('develop', 'feature/42', 'fixture')).resolves.toMatchObject({ kind: 'conflicted' });
+        else await expect(adapter.prepare('develop', 'feature/42', 'fixture')).rejects.toMatchObject({
+          name: 'BranchSyncCatalogFailure', diagnostic: { profile: scenario === 'unsupported parent' ? 'legacy-evidence' : 'unknown' },
+        });
+        if (['negative size', 'nonnumeric size', 'oversized object'].includes(scenario)) {
+          expect(execute.mock.calls.some(([, args]) => args[0] === 'cat-file' && args[1] === 'blob')).toBe(false);
+        }
+        expect(git.stagePaths).not.toHaveBeenCalled(); expect(git.push).not.toHaveBeenCalled();
+        await adapter.abort();
+      } finally { rmSync(root, { recursive: true, force: true }); }
+    });
   it('does not report restoration when merge abort leaves a moved original head', async () => {
     const context = await prepareCleanAdapter({'rev-parse HEAD':['child','moved']});
     await expect(context.adapter.abort()).rejects.toThrow('restoration could not be verified');

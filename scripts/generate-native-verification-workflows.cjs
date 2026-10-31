@@ -23,7 +23,7 @@ function phaseSteps(action, inputAlias = 'copilot-inputs', id = 'copilot') {
     const output = key => `\${{ steps.${previous}.outputs.verification-${key} }}`;
     steps.push({ name: `Prepare repository verification ${count}`, id: setup,
       if: `\${{ !cancelled() && steps.${previous}.outcome == 'success' && ${pending} }}`, uses: ACTION, 'timeout-minutes': 5,
-      env: Object.fromEntries(['HOME', 'USERPROFILE', 'APPDATA', 'LOCALAPPDATA', 'PATH', 'JAVA_HOME', 'TMP', 'TEMP', 'TMPDIR'].map(key => [key, output(key.toLowerCase())])) });
+      env: Object.fromEntries(['HOME', 'USERPROFILE', 'APPDATA', 'LOCALAPPDATA', 'PATH', 'JAVA_HOME', 'JDK_JAVA_OPTIONS', 'GRADLE_USER_HOME', 'TMP', 'TEMP', 'TMPDIR'].map(key => [key, output(key.toLowerCase())])) });
     steps.push({ name: `Continue repository verification ${count}`, id: continuation,
       if: `\${{ always() && ${pending} }}`, uses: action, with: { alias: inputAlias },
       env: { COPILOT_NATIVE_PHASE: 'continue', COPILOT_NATIVE_SOURCE: `\${{ steps.${id}.outputs.verification-source }}`, COPILOT_NATIVE_DIGEST: `\${{ steps.${id}.outputs.verification-digest }}`, COPILOT_NATIVE_GIT: `\${{ steps.${id}.outputs.verification-git }}`, COPILOT_NATIVE_TICKET: `\${{ steps.${id}.outputs.verification-ticket }}`,

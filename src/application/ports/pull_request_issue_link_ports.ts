@@ -1,3 +1,4 @@
+import type { PullRequestLinkIdentity } from '../../domain/pull_request_issue_link_state';
 export interface PullRequestIssueLinkPort {
     isLinked(owner: string, repository: string, pullRequestNumber: number, issueNumber: number, token: string): Promise<boolean>;
     getDetails(owner: string, repository: string, pullRequestNumber: number, token: string): Promise<PullRequestLinkDetails>;
@@ -8,6 +9,7 @@ export interface PullRequestIssueLinkPort {
 
 export interface PullRequestLinkDetails {
     readonly body: string;
+    readonly identity?: PullRequestLinkIdentity;
     readonly baseBranch: string;
 }
 

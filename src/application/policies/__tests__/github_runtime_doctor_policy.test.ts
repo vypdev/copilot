@@ -9,6 +9,34 @@ function changed(path: keyof ReturnType<typeof doctorRepositoryFixture>['files']
     return { ...snapshot, files: { ...snapshot.files, [path]: text === undefined ? { state: 'missing' as const } : { state: 'present' as const, text } } };
 }
 describe('runtime doctor pure prerequisite decisions', () => {
+    it('accepts structurally complete proposed prerequisites without claiming implementation evidence', () => {
+        const snapshot = doctorRepositoryFixture();
+        const file = snapshot.files['specs/catalog.json'];
+        if (file.state !== 'present') throw new Error('Fixture unavailable');
+        const catalog = JSON.parse(file.text);
+        Object.assign(catalog.capabilities[0], { status: 'proposed', entrypoints: [], code: [], tests: [],
+            readiness: { state: 'draft', changesAllowed: false } });
+        const source = JSON.stringify(catalog);
+        const proposed = changed('specs/catalog.json', source);
+        const trackedFiles = [...catalog.capabilities[0].specs, ...catalog.capabilities[0].documentation];
+        expect(doctorRepositoryPrerequisites({ ...proposed, trackedFiles })).toBe('pass');
+        expect(proposed.files['specs/catalog.json']).toEqual({ state: 'present', text: source });
+    });
+    it.each(['entrypoints', 'code', 'tests'])('keeps implemented %s mandatory in doctor', field => {
+        const snapshot = doctorRepositoryFixture(), file = snapshot.files['specs/catalog.json'];
+        if (file.state !== 'present') throw new Error('Fixture unavailable');
+        const catalog = JSON.parse(file.text);
+        Object.assign(catalog.capabilities[0], { status: 'implemented', [field]: [] });
+        expect(doctorRepositoryPrerequisites(changed('specs/catalog.json', JSON.stringify(catalog)))).toBe('blocked');
+    });
+    it.each(['entrypoints', 'code', 'tests'])('requires the proposed %s array in doctor', field => {
+        const snapshot = doctorRepositoryFixture(), file = snapshot.files['specs/catalog.json'];
+        if (file.state !== 'present') throw new Error('Fixture unavailable');
+        const catalog = JSON.parse(file.text);
+        Object.assign(catalog.capabilities[0], { status: 'proposed', entrypoints: [], code: [], tests: [] });
+        delete catalog.capabilities[0][field];
+        expect(doctorRepositoryPrerequisites(changed('specs/catalog.json', JSON.stringify(catalog)))).toBe('blocked');
+    });
     it.each(MALFORMED_SDD_PREREQUISITES)('blocks %s in the immutable doctor snapshot', scenario => {
         const { standard, template } = malformedSddPrerequisites(scenario);
         const snapshot = doctorRepositoryFixture();

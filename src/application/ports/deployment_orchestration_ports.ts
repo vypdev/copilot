@@ -10,6 +10,7 @@ import type { DeploymentConfigurationValues } from "../../domain/deployment_conf
 import type { CopilotLifecycleLabels } from "../../domain/copilot_lifecycle";
 import type { AgentConfiguration } from '../../domain/agent';
 import type { LocaleProfile } from '../../domain/locale';
+import type { IssueCompletionLabelConfiguration } from '../../domain/issue_completion';
 
 export interface ManagedPullRequestRecord {
   readonly number: number;
@@ -67,6 +68,7 @@ export interface BoundTargetMergePolicyInspectionPort {
 }
 
 export interface ManagedPullRequestPort {
+  prepareIssueCompletion(owner: string, repository: string, pullRequest: ManagedPullRequestRecord, token: string): Promise<void>;
   findManagedPullRequests(query: ManagedPullRequestQuery): Promise<readonly ManagedPullRequestRecord[]>;
   createManagedPullRequest(command: ManagedPullRequestCreate): Promise<ManagedPullRequestRecord>;
   getPullRequest(owner: string, repository: string, pullRequest: number, token: string): Promise<ManagedPullRequestRecord>;
@@ -84,6 +86,7 @@ export interface ManagedPullRequestPort {
 
 /** Repository-credential-bound managed pull-request authority. */
 export interface BoundManagedPullRequestPort {
+  prepareIssueCompletion(pullRequest: ManagedPullRequestRecord): Promise<void>;
   findManagedPullRequests(query: BoundManagedPullRequestQuery): Promise<readonly ManagedPullRequestRecord[]>;
   createManagedPullRequest(command: BoundManagedPullRequestCreate): Promise<ManagedPullRequestRecord>;
   getPullRequest(pullRequest: number): Promise<ManagedPullRequestRecord>;
@@ -214,6 +217,7 @@ export interface BoundDeploymentStateStoreFactoryPort {
 
 /** Narrow runtime view adapted structurally at the single-action boundary. */
 export interface DeploymentOrchestrationContext {
+  readonly tokenUser?: string;
   readonly owner: string;
   readonly repo: string;
   readonly branches: {
@@ -231,6 +235,7 @@ export interface DeploymentOrchestrationContext {
     readonly deploy: string;
     readonly deployed: string;
     readonly lifecycle: CopilotLifecycleLabels;
+    readonly completionProtectedLabels?: readonly string[];
   };
   readonly deployment: DeploymentConfigurationValues;
   readonly singleAction: {
@@ -253,4 +258,11 @@ export interface DeploymentOrchestrationContext {
   };
   readonly pullRequest: { readonly number: number };
   readonly currentConfiguration: DeploymentIssueState;
+}
+
+export interface DeploymentIssueCompletionRequest {
+  readonly issueNumber: number;
+  readonly locale: string;
+  readonly trustedBotLogin?: string;
+  readonly completionLabels: IssueCompletionLabelConfiguration;
 }

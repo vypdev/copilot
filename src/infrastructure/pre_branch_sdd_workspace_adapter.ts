@@ -1,4 +1,5 @@
 import { readSupportedSddCatalog, SddCatalogCompatibilityFailure } from '../domain/sdd_catalog_compatibility';
+import { SddTrustedCatalogMissingFailure } from '../domain/sdd_trusted_catalog_failure';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -50,6 +51,9 @@ export class PreBranchSddWorkspaceAdapter implements PreBranchSddWorkspacePort {
   }
 
   private async readSnapshotAtSha(baseSha: string): Promise<SddCatalogSnapshot> {
+    // A successful immutable lookup proves absence; object/read failures remain Git failures.
+    const catalogEntry = await this.git(['ls-tree', '-z', '--full-tree', `${baseSha}^{commit}`, '--', 'specs/catalog.json']);
+    if (catalogEntry === '') throw new SddTrustedCatalogMissingFailure(baseSha);
     const raw = await this.git(['show', `${baseSha}:specs/catalog.json`]);
     let catalog;
     try { catalog = readSupportedSddCatalog(raw); }

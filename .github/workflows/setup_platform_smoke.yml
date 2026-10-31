@@ -67,10 +67,12 @@ jobs:
         uses: ./.github/actions/copilot-native-cleanup-check
       - name: Build native verification acceptance fixture
         run: pnpm exec ncc build src/tooling/__tests__/fixtures/verification_native_fixture.ts -o .github/actions/copilot-native-fixture/dist
-      - name: Snapshot native fixture runtime
+      - &native_prepare_native_fixture_runtime
+        name: Snapshot native fixture runtime
         id: prepare_native_fixture_runtime
         run: node scripts/prepare-native-source-action.cjs --fixture
-      - name: Prepare native verification acceptance
+      - &native_copilot_native_fixture
+        name: Prepare native verification acceptance
         id: copilot_native_fixture
         uses: ./../.copilot-native-fixture-runtime
         with: &native-fixture-inputs
@@ -78,7 +80,8 @@ jobs:
         env:
           COPILOT_NATIVE_PHASE: prepare
           COPILOT_NATIVE_RUNTIME_CACHE: ${{ steps.prepare_native_fixture_runtime.outputs.path }}
-      - name: Prepare repository verification 1
+      - &native_verification_setup_1
+        name: Prepare repository verification 1
         id: verification_setup_1
         if: ${{ !cancelled() && steps.copilot_native_fixture.outcome == 'success' && steps.copilot_native_fixture.outputs.verification-setup-pending == 'true' }}
         uses: ./.git/copilot-verification-setup
@@ -90,10 +93,13 @@ jobs:
           LOCALAPPDATA: ${{ steps.copilot_native_fixture.outputs.verification-localappdata }}
           PATH: ${{ steps.copilot_native_fixture.outputs.verification-path }}
           JAVA_HOME: ${{ steps.copilot_native_fixture.outputs.verification-java_home }}
+          JDK_JAVA_OPTIONS: ${{ steps.copilot_native_fixture.outputs.verification-jdk_java_options }}
+          GRADLE_USER_HOME: ${{ steps.copilot_native_fixture.outputs.verification-gradle_user_home }}
           TMP: ${{ steps.copilot_native_fixture.outputs.verification-tmp }}
           TEMP: ${{ steps.copilot_native_fixture.outputs.verification-temp }}
           TMPDIR: ${{ steps.copilot_native_fixture.outputs.verification-tmpdir }}
-      - name: Continue repository verification 1
+      - &native_verification_continue_1
+        name: Continue repository verification 1
         id: verification_continue_1
         if: ${{ always() && steps.copilot_native_fixture.outputs.verification-setup-pending == 'true' }}
         uses: ./../.copilot-native-fixture-runtime
@@ -106,7 +112,8 @@ jobs:
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.copilot_native_fixture.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_1.outcome }}
-      - name: Prepare repository verification 2
+      - &native_verification_setup_2
+        name: Prepare repository verification 2
         id: verification_setup_2
         if: ${{ !cancelled() && steps.verification_continue_1.outcome == 'success' && steps.verification_continue_1.outputs.verification-setup-pending == 'true' }}
         uses: ./.git/copilot-verification-setup
@@ -118,10 +125,13 @@ jobs:
           LOCALAPPDATA: ${{ steps.verification_continue_1.outputs.verification-localappdata }}
           PATH: ${{ steps.verification_continue_1.outputs.verification-path }}
           JAVA_HOME: ${{ steps.verification_continue_1.outputs.verification-java_home }}
+          JDK_JAVA_OPTIONS: ${{ steps.verification_continue_1.outputs.verification-jdk_java_options }}
+          GRADLE_USER_HOME: ${{ steps.verification_continue_1.outputs.verification-gradle_user_home }}
           TMP: ${{ steps.verification_continue_1.outputs.verification-tmp }}
           TEMP: ${{ steps.verification_continue_1.outputs.verification-temp }}
           TMPDIR: ${{ steps.verification_continue_1.outputs.verification-tmpdir }}
-      - name: Continue repository verification 2
+      - &native_verification_continue_2
+        name: Continue repository verification 2
         id: verification_continue_2
         if: ${{ always() && steps.verification_continue_1.outputs.verification-setup-pending == 'true' }}
         uses: ./../.copilot-native-fixture-runtime
@@ -134,7 +144,8 @@ jobs:
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_1.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_2.outcome }}
-      - name: Prepare repository verification 3
+      - &native_verification_setup_3
+        name: Prepare repository verification 3
         id: verification_setup_3
         if: ${{ !cancelled() && steps.verification_continue_2.outcome == 'success' && steps.verification_continue_2.outputs.verification-setup-pending == 'true' }}
         uses: ./.git/copilot-verification-setup
@@ -146,10 +157,13 @@ jobs:
           LOCALAPPDATA: ${{ steps.verification_continue_2.outputs.verification-localappdata }}
           PATH: ${{ steps.verification_continue_2.outputs.verification-path }}
           JAVA_HOME: ${{ steps.verification_continue_2.outputs.verification-java_home }}
+          JDK_JAVA_OPTIONS: ${{ steps.verification_continue_2.outputs.verification-jdk_java_options }}
+          GRADLE_USER_HOME: ${{ steps.verification_continue_2.outputs.verification-gradle_user_home }}
           TMP: ${{ steps.verification_continue_2.outputs.verification-tmp }}
           TEMP: ${{ steps.verification_continue_2.outputs.verification-temp }}
           TMPDIR: ${{ steps.verification_continue_2.outputs.verification-tmpdir }}
-      - name: Continue repository verification 3
+      - &native_verification_continue_3
+        name: Continue repository verification 3
         id: verification_continue_3
         if: ${{ always() && steps.verification_continue_2.outputs.verification-setup-pending == 'true' }}
         uses: ./../.copilot-native-fixture-runtime
@@ -162,7 +176,8 @@ jobs:
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_2.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_3.outcome }}
-      - name: Prepare repository verification 4
+      - &native_verification_setup_4
+        name: Prepare repository verification 4
         id: verification_setup_4
         if: ${{ !cancelled() && steps.verification_continue_3.outcome == 'success' && steps.verification_continue_3.outputs.verification-setup-pending == 'true' }}
         uses: ./.git/copilot-verification-setup
@@ -174,10 +189,13 @@ jobs:
           LOCALAPPDATA: ${{ steps.verification_continue_3.outputs.verification-localappdata }}
           PATH: ${{ steps.verification_continue_3.outputs.verification-path }}
           JAVA_HOME: ${{ steps.verification_continue_3.outputs.verification-java_home }}
+          JDK_JAVA_OPTIONS: ${{ steps.verification_continue_3.outputs.verification-jdk_java_options }}
+          GRADLE_USER_HOME: ${{ steps.verification_continue_3.outputs.verification-gradle_user_home }}
           TMP: ${{ steps.verification_continue_3.outputs.verification-tmp }}
           TEMP: ${{ steps.verification_continue_3.outputs.verification-temp }}
           TMPDIR: ${{ steps.verification_continue_3.outputs.verification-tmpdir }}
-      - name: Continue repository verification 4
+      - &native_verification_continue_4
+        name: Continue repository verification 4
         id: verification_continue_4
         if: ${{ always() && steps.verification_continue_3.outputs.verification-setup-pending == 'true' }}
         uses: ./../.copilot-native-fixture-runtime
@@ -190,7 +208,8 @@ jobs:
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_3.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_4.outcome }}
-      - name: Prepare repository verification 5
+      - &native_verification_setup_5
+        name: Prepare repository verification 5
         id: verification_setup_5
         if: ${{ !cancelled() && steps.verification_continue_4.outcome == 'success' && steps.verification_continue_4.outputs.verification-setup-pending == 'true' }}
         uses: ./.git/copilot-verification-setup
@@ -202,10 +221,13 @@ jobs:
           LOCALAPPDATA: ${{ steps.verification_continue_4.outputs.verification-localappdata }}
           PATH: ${{ steps.verification_continue_4.outputs.verification-path }}
           JAVA_HOME: ${{ steps.verification_continue_4.outputs.verification-java_home }}
+          JDK_JAVA_OPTIONS: ${{ steps.verification_continue_4.outputs.verification-jdk_java_options }}
+          GRADLE_USER_HOME: ${{ steps.verification_continue_4.outputs.verification-gradle_user_home }}
           TMP: ${{ steps.verification_continue_4.outputs.verification-tmp }}
           TEMP: ${{ steps.verification_continue_4.outputs.verification-temp }}
           TMPDIR: ${{ steps.verification_continue_4.outputs.verification-tmpdir }}
-      - name: Continue repository verification 5
+      - &native_verification_continue_5
+        name: Continue repository verification 5
         id: verification_continue_5
         if: ${{ always() && steps.verification_continue_4.outputs.verification-setup-pending == 'true' }}
         uses: ./../.copilot-native-fixture-runtime
@@ -218,7 +240,8 @@ jobs:
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_4.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_5.outcome }}
-      - name: Prepare repository verification 6
+      - &native_verification_setup_6
+        name: Prepare repository verification 6
         id: verification_setup_6
         if: ${{ !cancelled() && steps.verification_continue_5.outcome == 'success' && steps.verification_continue_5.outputs.verification-setup-pending == 'true' }}
         uses: ./.git/copilot-verification-setup
@@ -230,10 +253,13 @@ jobs:
           LOCALAPPDATA: ${{ steps.verification_continue_5.outputs.verification-localappdata }}
           PATH: ${{ steps.verification_continue_5.outputs.verification-path }}
           JAVA_HOME: ${{ steps.verification_continue_5.outputs.verification-java_home }}
+          JDK_JAVA_OPTIONS: ${{ steps.verification_continue_5.outputs.verification-jdk_java_options }}
+          GRADLE_USER_HOME: ${{ steps.verification_continue_5.outputs.verification-gradle_user_home }}
           TMP: ${{ steps.verification_continue_5.outputs.verification-tmp }}
           TEMP: ${{ steps.verification_continue_5.outputs.verification-temp }}
           TMPDIR: ${{ steps.verification_continue_5.outputs.verification-tmpdir }}
-      - name: Continue repository verification 6
+      - &native_verification_continue_6
+        name: Continue repository verification 6
         id: verification_continue_6
         if: ${{ always() && steps.verification_continue_5.outputs.verification-setup-pending == 'true' }}
         uses: ./../.copilot-native-fixture-runtime
@@ -246,7 +272,8 @@ jobs:
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_5.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_6.outcome }}
-      - name: Prepare repository verification 7
+      - &native_verification_setup_7
+        name: Prepare repository verification 7
         id: verification_setup_7
         if: ${{ !cancelled() && steps.verification_continue_6.outcome == 'success' && steps.verification_continue_6.outputs.verification-setup-pending == 'true' }}
         uses: ./.git/copilot-verification-setup
@@ -258,10 +285,13 @@ jobs:
           LOCALAPPDATA: ${{ steps.verification_continue_6.outputs.verification-localappdata }}
           PATH: ${{ steps.verification_continue_6.outputs.verification-path }}
           JAVA_HOME: ${{ steps.verification_continue_6.outputs.verification-java_home }}
+          JDK_JAVA_OPTIONS: ${{ steps.verification_continue_6.outputs.verification-jdk_java_options }}
+          GRADLE_USER_HOME: ${{ steps.verification_continue_6.outputs.verification-gradle_user_home }}
           TMP: ${{ steps.verification_continue_6.outputs.verification-tmp }}
           TEMP: ${{ steps.verification_continue_6.outputs.verification-temp }}
           TMPDIR: ${{ steps.verification_continue_6.outputs.verification-tmpdir }}
-      - name: Continue repository verification 7
+      - &native_verification_continue_7
+        name: Continue repository verification 7
         id: verification_continue_7
         if: ${{ always() && steps.verification_continue_6.outputs.verification-setup-pending == 'true' }}
         uses: ./../.copilot-native-fixture-runtime
@@ -274,7 +304,8 @@ jobs:
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_6.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_7.outcome }}
-      - name: Prepare repository verification 8
+      - &native_verification_setup_8
+        name: Prepare repository verification 8
         id: verification_setup_8
         if: ${{ !cancelled() && steps.verification_continue_7.outcome == 'success' && steps.verification_continue_7.outputs.verification-setup-pending == 'true' }}
         uses: ./.git/copilot-verification-setup
@@ -286,10 +317,13 @@ jobs:
           LOCALAPPDATA: ${{ steps.verification_continue_7.outputs.verification-localappdata }}
           PATH: ${{ steps.verification_continue_7.outputs.verification-path }}
           JAVA_HOME: ${{ steps.verification_continue_7.outputs.verification-java_home }}
+          JDK_JAVA_OPTIONS: ${{ steps.verification_continue_7.outputs.verification-jdk_java_options }}
+          GRADLE_USER_HOME: ${{ steps.verification_continue_7.outputs.verification-gradle_user_home }}
           TMP: ${{ steps.verification_continue_7.outputs.verification-tmp }}
           TEMP: ${{ steps.verification_continue_7.outputs.verification-temp }}
           TMPDIR: ${{ steps.verification_continue_7.outputs.verification-tmpdir }}
-      - name: Continue repository verification 8
+      - &native_verification_continue_8
+        name: Continue repository verification 8
         id: verification_continue_8
         if: ${{ always() && steps.verification_continue_7.outputs.verification-setup-pending == 'true' }}
         uses: ./../.copilot-native-fixture-runtime
@@ -302,7 +336,8 @@ jobs:
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_7.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_8.outcome }}
-      - name: Prepare repository verification 9
+      - &native_verification_setup_9
+        name: Prepare repository verification 9
         id: verification_setup_9
         if: ${{ !cancelled() && steps.verification_continue_8.outcome == 'success' && steps.verification_continue_8.outputs.verification-setup-pending == 'true' }}
         uses: ./.git/copilot-verification-setup
@@ -314,10 +349,13 @@ jobs:
           LOCALAPPDATA: ${{ steps.verification_continue_8.outputs.verification-localappdata }}
           PATH: ${{ steps.verification_continue_8.outputs.verification-path }}
           JAVA_HOME: ${{ steps.verification_continue_8.outputs.verification-java_home }}
+          JDK_JAVA_OPTIONS: ${{ steps.verification_continue_8.outputs.verification-jdk_java_options }}
+          GRADLE_USER_HOME: ${{ steps.verification_continue_8.outputs.verification-gradle_user_home }}
           TMP: ${{ steps.verification_continue_8.outputs.verification-tmp }}
           TEMP: ${{ steps.verification_continue_8.outputs.verification-temp }}
           TMPDIR: ${{ steps.verification_continue_8.outputs.verification-tmpdir }}
-      - name: Continue repository verification 9
+      - &native_verification_continue_9
+        name: Continue repository verification 9
         id: verification_continue_9
         if: ${{ always() && steps.verification_continue_8.outputs.verification-setup-pending == 'true' }}
         uses: ./../.copilot-native-fixture-runtime
@@ -330,7 +368,8 @@ jobs:
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_8.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_9.outcome }}
-      - name: Prepare repository verification 10
+      - &native_verification_setup_10
+        name: Prepare repository verification 10
         id: verification_setup_10
         if: ${{ !cancelled() && steps.verification_continue_9.outcome == 'success' && steps.verification_continue_9.outputs.verification-setup-pending == 'true' }}
         uses: ./.git/copilot-verification-setup
@@ -342,10 +381,13 @@ jobs:
           LOCALAPPDATA: ${{ steps.verification_continue_9.outputs.verification-localappdata }}
           PATH: ${{ steps.verification_continue_9.outputs.verification-path }}
           JAVA_HOME: ${{ steps.verification_continue_9.outputs.verification-java_home }}
+          JDK_JAVA_OPTIONS: ${{ steps.verification_continue_9.outputs.verification-jdk_java_options }}
+          GRADLE_USER_HOME: ${{ steps.verification_continue_9.outputs.verification-gradle_user_home }}
           TMP: ${{ steps.verification_continue_9.outputs.verification-tmp }}
           TEMP: ${{ steps.verification_continue_9.outputs.verification-temp }}
           TMPDIR: ${{ steps.verification_continue_9.outputs.verification-tmpdir }}
-      - name: Continue repository verification 10
+      - &native_verification_continue_10
+        name: Continue repository verification 10
         id: verification_continue_10
         if: ${{ always() && steps.verification_continue_9.outputs.verification-setup-pending == 'true' }}
         uses: ./../.copilot-native-fixture-runtime
@@ -358,7 +400,8 @@ jobs:
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_9.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_10.outcome }}
-      - name: Prepare repository verification 11
+      - &native_verification_setup_11
+        name: Prepare repository verification 11
         id: verification_setup_11
         if: ${{ !cancelled() && steps.verification_continue_10.outcome == 'success' && steps.verification_continue_10.outputs.verification-setup-pending == 'true' }}
         uses: ./.git/copilot-verification-setup
@@ -370,10 +413,13 @@ jobs:
           LOCALAPPDATA: ${{ steps.verification_continue_10.outputs.verification-localappdata }}
           PATH: ${{ steps.verification_continue_10.outputs.verification-path }}
           JAVA_HOME: ${{ steps.verification_continue_10.outputs.verification-java_home }}
+          JDK_JAVA_OPTIONS: ${{ steps.verification_continue_10.outputs.verification-jdk_java_options }}
+          GRADLE_USER_HOME: ${{ steps.verification_continue_10.outputs.verification-gradle_user_home }}
           TMP: ${{ steps.verification_continue_10.outputs.verification-tmp }}
           TEMP: ${{ steps.verification_continue_10.outputs.verification-temp }}
           TMPDIR: ${{ steps.verification_continue_10.outputs.verification-tmpdir }}
-      - name: Continue repository verification 11
+      - &native_verification_continue_11
+        name: Continue repository verification 11
         id: verification_continue_11
         if: ${{ always() && steps.verification_continue_10.outputs.verification-setup-pending == 'true' }}
         uses: ./../.copilot-native-fixture-runtime
@@ -386,7 +432,8 @@ jobs:
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_10.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_11.outcome }}
-      - name: Prepare repository verification 12
+      - &native_verification_setup_12
+        name: Prepare repository verification 12
         id: verification_setup_12
         if: ${{ !cancelled() && steps.verification_continue_11.outcome == 'success' && steps.verification_continue_11.outputs.verification-setup-pending == 'true' }}
         uses: ./.git/copilot-verification-setup
@@ -398,10 +445,13 @@ jobs:
           LOCALAPPDATA: ${{ steps.verification_continue_11.outputs.verification-localappdata }}
           PATH: ${{ steps.verification_continue_11.outputs.verification-path }}
           JAVA_HOME: ${{ steps.verification_continue_11.outputs.verification-java_home }}
+          JDK_JAVA_OPTIONS: ${{ steps.verification_continue_11.outputs.verification-jdk_java_options }}
+          GRADLE_USER_HOME: ${{ steps.verification_continue_11.outputs.verification-gradle_user_home }}
           TMP: ${{ steps.verification_continue_11.outputs.verification-tmp }}
           TEMP: ${{ steps.verification_continue_11.outputs.verification-temp }}
           TMPDIR: ${{ steps.verification_continue_11.outputs.verification-tmpdir }}
-      - name: Continue repository verification 12
+      - &native_verification_continue_12
+        name: Continue repository verification 12
         id: verification_continue_12
         if: ${{ always() && steps.verification_continue_11.outputs.verification-setup-pending == 'true' }}
         uses: ./../.copilot-native-fixture-runtime
@@ -414,7 +464,8 @@ jobs:
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_11.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_12.outcome }}
-      - name: Prepare repository verification 13
+      - &native_verification_setup_13
+        name: Prepare repository verification 13
         id: verification_setup_13
         if: ${{ !cancelled() && steps.verification_continue_12.outcome == 'success' && steps.verification_continue_12.outputs.verification-setup-pending == 'true' }}
         uses: ./.git/copilot-verification-setup
@@ -426,10 +477,13 @@ jobs:
           LOCALAPPDATA: ${{ steps.verification_continue_12.outputs.verification-localappdata }}
           PATH: ${{ steps.verification_continue_12.outputs.verification-path }}
           JAVA_HOME: ${{ steps.verification_continue_12.outputs.verification-java_home }}
+          JDK_JAVA_OPTIONS: ${{ steps.verification_continue_12.outputs.verification-jdk_java_options }}
+          GRADLE_USER_HOME: ${{ steps.verification_continue_12.outputs.verification-gradle_user_home }}
           TMP: ${{ steps.verification_continue_12.outputs.verification-tmp }}
           TEMP: ${{ steps.verification_continue_12.outputs.verification-temp }}
           TMPDIR: ${{ steps.verification_continue_12.outputs.verification-tmpdir }}
-      - name: Continue repository verification 13
+      - &native_verification_continue_13
+        name: Continue repository verification 13
         id: verification_continue_13
         if: ${{ always() && steps.verification_continue_12.outputs.verification-setup-pending == 'true' }}
         uses: ./../.copilot-native-fixture-runtime
@@ -442,7 +496,8 @@ jobs:
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_12.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_13.outcome }}
-      - name: Prepare repository verification 14
+      - &native_verification_setup_14
+        name: Prepare repository verification 14
         id: verification_setup_14
         if: ${{ !cancelled() && steps.verification_continue_13.outcome == 'success' && steps.verification_continue_13.outputs.verification-setup-pending == 'true' }}
         uses: ./.git/copilot-verification-setup
@@ -454,10 +509,13 @@ jobs:
           LOCALAPPDATA: ${{ steps.verification_continue_13.outputs.verification-localappdata }}
           PATH: ${{ steps.verification_continue_13.outputs.verification-path }}
           JAVA_HOME: ${{ steps.verification_continue_13.outputs.verification-java_home }}
+          JDK_JAVA_OPTIONS: ${{ steps.verification_continue_13.outputs.verification-jdk_java_options }}
+          GRADLE_USER_HOME: ${{ steps.verification_continue_13.outputs.verification-gradle_user_home }}
           TMP: ${{ steps.verification_continue_13.outputs.verification-tmp }}
           TEMP: ${{ steps.verification_continue_13.outputs.verification-temp }}
           TMPDIR: ${{ steps.verification_continue_13.outputs.verification-tmpdir }}
-      - name: Continue repository verification 14
+      - &native_verification_continue_14
+        name: Continue repository verification 14
         id: verification_continue_14
         if: ${{ always() && steps.verification_continue_13.outputs.verification-setup-pending == 'true' }}
         uses: ./../.copilot-native-fixture-runtime
@@ -470,7 +528,8 @@ jobs:
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_13.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_14.outcome }}
-      - name: Prepare repository verification 15
+      - &native_verification_setup_15
+        name: Prepare repository verification 15
         id: verification_setup_15
         if: ${{ !cancelled() && steps.verification_continue_14.outcome == 'success' && steps.verification_continue_14.outputs.verification-setup-pending == 'true' }}
         uses: ./.git/copilot-verification-setup
@@ -482,10 +541,13 @@ jobs:
           LOCALAPPDATA: ${{ steps.verification_continue_14.outputs.verification-localappdata }}
           PATH: ${{ steps.verification_continue_14.outputs.verification-path }}
           JAVA_HOME: ${{ steps.verification_continue_14.outputs.verification-java_home }}
+          JDK_JAVA_OPTIONS: ${{ steps.verification_continue_14.outputs.verification-jdk_java_options }}
+          GRADLE_USER_HOME: ${{ steps.verification_continue_14.outputs.verification-gradle_user_home }}
           TMP: ${{ steps.verification_continue_14.outputs.verification-tmp }}
           TEMP: ${{ steps.verification_continue_14.outputs.verification-temp }}
           TMPDIR: ${{ steps.verification_continue_14.outputs.verification-tmpdir }}
-      - name: Continue repository verification 15
+      - &native_verification_continue_15
+        name: Continue repository verification 15
         id: verification_continue_15
         if: ${{ always() && steps.verification_continue_14.outputs.verification-setup-pending == 'true' }}
         uses: ./../.copilot-native-fixture-runtime
@@ -498,7 +560,8 @@ jobs:
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_14.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_15.outcome }}
-      - name: Prepare repository verification 16
+      - &native_verification_setup_16
+        name: Prepare repository verification 16
         id: verification_setup_16
         if: ${{ !cancelled() && steps.verification_continue_15.outcome == 'success' && steps.verification_continue_15.outputs.verification-setup-pending == 'true' }}
         uses: ./.git/copilot-verification-setup
@@ -510,10 +573,13 @@ jobs:
           LOCALAPPDATA: ${{ steps.verification_continue_15.outputs.verification-localappdata }}
           PATH: ${{ steps.verification_continue_15.outputs.verification-path }}
           JAVA_HOME: ${{ steps.verification_continue_15.outputs.verification-java_home }}
+          JDK_JAVA_OPTIONS: ${{ steps.verification_continue_15.outputs.verification-jdk_java_options }}
+          GRADLE_USER_HOME: ${{ steps.verification_continue_15.outputs.verification-gradle_user_home }}
           TMP: ${{ steps.verification_continue_15.outputs.verification-tmp }}
           TEMP: ${{ steps.verification_continue_15.outputs.verification-temp }}
           TMPDIR: ${{ steps.verification_continue_15.outputs.verification-tmpdir }}
-      - name: Continue repository verification 16
+      - &native_verification_continue_16
+        name: Continue repository verification 16
         id: verification_continue_16
         if: ${{ always() && steps.verification_continue_15.outputs.verification-setup-pending == 'true' }}
         uses: ./../.copilot-native-fixture-runtime
@@ -526,7 +592,8 @@ jobs:
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_15.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_16.outcome }}
-      - name: Prepare repository verification 17
+      - &native_verification_setup_17
+        name: Prepare repository verification 17
         id: verification_setup_17
         if: ${{ !cancelled() && steps.verification_continue_16.outcome == 'success' && steps.verification_continue_16.outputs.verification-setup-pending == 'true' }}
         uses: ./.git/copilot-verification-setup
@@ -538,10 +605,13 @@ jobs:
           LOCALAPPDATA: ${{ steps.verification_continue_16.outputs.verification-localappdata }}
           PATH: ${{ steps.verification_continue_16.outputs.verification-path }}
           JAVA_HOME: ${{ steps.verification_continue_16.outputs.verification-java_home }}
+          JDK_JAVA_OPTIONS: ${{ steps.verification_continue_16.outputs.verification-jdk_java_options }}
+          GRADLE_USER_HOME: ${{ steps.verification_continue_16.outputs.verification-gradle_user_home }}
           TMP: ${{ steps.verification_continue_16.outputs.verification-tmp }}
           TEMP: ${{ steps.verification_continue_16.outputs.verification-temp }}
           TMPDIR: ${{ steps.verification_continue_16.outputs.verification-tmpdir }}
-      - name: Continue repository verification 17
+      - &native_verification_continue_17
+        name: Continue repository verification 17
         id: verification_continue_17
         if: ${{ always() && steps.verification_continue_16.outputs.verification-setup-pending == 'true' }}
         uses: ./../.copilot-native-fixture-runtime
@@ -554,7 +624,8 @@ jobs:
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_16.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_17.outcome }}
-      - name: Prepare repository verification 18
+      - &native_verification_setup_18
+        name: Prepare repository verification 18
         id: verification_setup_18
         if: ${{ !cancelled() && steps.verification_continue_17.outcome == 'success' && steps.verification_continue_17.outputs.verification-setup-pending == 'true' }}
         uses: ./.git/copilot-verification-setup
@@ -566,10 +637,13 @@ jobs:
           LOCALAPPDATA: ${{ steps.verification_continue_17.outputs.verification-localappdata }}
           PATH: ${{ steps.verification_continue_17.outputs.verification-path }}
           JAVA_HOME: ${{ steps.verification_continue_17.outputs.verification-java_home }}
+          JDK_JAVA_OPTIONS: ${{ steps.verification_continue_17.outputs.verification-jdk_java_options }}
+          GRADLE_USER_HOME: ${{ steps.verification_continue_17.outputs.verification-gradle_user_home }}
           TMP: ${{ steps.verification_continue_17.outputs.verification-tmp }}
           TEMP: ${{ steps.verification_continue_17.outputs.verification-temp }}
           TMPDIR: ${{ steps.verification_continue_17.outputs.verification-tmpdir }}
-      - name: Continue repository verification 18
+      - &native_verification_continue_18
+        name: Continue repository verification 18
         id: verification_continue_18
         if: ${{ always() && steps.verification_continue_17.outputs.verification-setup-pending == 'true' }}
         uses: ./../.copilot-native-fixture-runtime
@@ -582,7 +656,8 @@ jobs:
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_17.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_18.outcome }}
-      - name: Prepare repository verification 19
+      - &native_verification_setup_19
+        name: Prepare repository verification 19
         id: verification_setup_19
         if: ${{ !cancelled() && steps.verification_continue_18.outcome == 'success' && steps.verification_continue_18.outputs.verification-setup-pending == 'true' }}
         uses: ./.git/copilot-verification-setup
@@ -594,10 +669,13 @@ jobs:
           LOCALAPPDATA: ${{ steps.verification_continue_18.outputs.verification-localappdata }}
           PATH: ${{ steps.verification_continue_18.outputs.verification-path }}
           JAVA_HOME: ${{ steps.verification_continue_18.outputs.verification-java_home }}
+          JDK_JAVA_OPTIONS: ${{ steps.verification_continue_18.outputs.verification-jdk_java_options }}
+          GRADLE_USER_HOME: ${{ steps.verification_continue_18.outputs.verification-gradle_user_home }}
           TMP: ${{ steps.verification_continue_18.outputs.verification-tmp }}
           TEMP: ${{ steps.verification_continue_18.outputs.verification-temp }}
           TMPDIR: ${{ steps.verification_continue_18.outputs.verification-tmpdir }}
-      - name: Continue repository verification 19
+      - &native_verification_continue_19
+        name: Continue repository verification 19
         id: verification_continue_19
         if: ${{ always() && steps.verification_continue_18.outputs.verification-setup-pending == 'true' }}
         uses: ./../.copilot-native-fixture-runtime
@@ -610,7 +688,8 @@ jobs:
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_18.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_19.outcome }}
-      - name: Prepare repository verification 20
+      - &native_verification_setup_20
+        name: Prepare repository verification 20
         id: verification_setup_20
         if: ${{ !cancelled() && steps.verification_continue_19.outcome == 'success' && steps.verification_continue_19.outputs.verification-setup-pending == 'true' }}
         uses: ./.git/copilot-verification-setup
@@ -622,10 +701,13 @@ jobs:
           LOCALAPPDATA: ${{ steps.verification_continue_19.outputs.verification-localappdata }}
           PATH: ${{ steps.verification_continue_19.outputs.verification-path }}
           JAVA_HOME: ${{ steps.verification_continue_19.outputs.verification-java_home }}
+          JDK_JAVA_OPTIONS: ${{ steps.verification_continue_19.outputs.verification-jdk_java_options }}
+          GRADLE_USER_HOME: ${{ steps.verification_continue_19.outputs.verification-gradle_user_home }}
           TMP: ${{ steps.verification_continue_19.outputs.verification-tmp }}
           TEMP: ${{ steps.verification_continue_19.outputs.verification-temp }}
           TMPDIR: ${{ steps.verification_continue_19.outputs.verification-tmpdir }}
-      - name: Continue repository verification 20
+      - &native_verification_continue_20
+        name: Continue repository verification 20
         id: verification_continue_20
         if: ${{ always() && steps.verification_continue_19.outputs.verification-setup-pending == 'true' }}
         uses: ./../.copilot-native-fixture-runtime
@@ -638,7 +720,8 @@ jobs:
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_19.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_20.outcome }}
-      - name: Complete repository verification
+      - &native_verification_complete
+        name: Complete repository verification
         id: verification_complete
         if: ${{ always() && steps.copilot_native_fixture.outputs.verification-ticket != '' }}
         uses: ./../.copilot-native-fixture-runtime
@@ -776,588 +859,49 @@ jobs:
         uses: ./.github/actions/copilot-native-cleanup-check
       - name: Build native verification acceptance fixture
         run: pnpm exec ncc build src/tooling/__tests__/fixtures/verification_native_fixture.ts -o .github/actions/copilot-native-fixture/dist
-      - name: Snapshot native fixture runtime
-        id: prepare_native_fixture_runtime
-        run: node scripts/prepare-native-source-action.cjs --fixture
-      - name: Prepare native verification acceptance
-        id: copilot_native_fixture
-        uses: ./../.copilot-native-fixture-runtime
-        with: &native-fixture-inputs
-          verification-setup: 'true'
-        env:
-          COPILOT_NATIVE_PHASE: prepare
-          COPILOT_NATIVE_RUNTIME_CACHE: ${{ steps.prepare_native_fixture_runtime.outputs.path }}
-      - name: Prepare repository verification 1
-        id: verification_setup_1
-        if: ${{ !cancelled() && steps.copilot_native_fixture.outcome == 'success' && steps.copilot_native_fixture.outputs.verification-setup-pending == 'true' }}
-        uses: ./.git/copilot-verification-setup
-        timeout-minutes: 5
-        env:
-          HOME: ${{ steps.copilot_native_fixture.outputs.verification-home }}
-          USERPROFILE: ${{ steps.copilot_native_fixture.outputs.verification-userprofile }}
-          APPDATA: ${{ steps.copilot_native_fixture.outputs.verification-appdata }}
-          LOCALAPPDATA: ${{ steps.copilot_native_fixture.outputs.verification-localappdata }}
-          PATH: ${{ steps.copilot_native_fixture.outputs.verification-path }}
-          JAVA_HOME: ${{ steps.copilot_native_fixture.outputs.verification-java_home }}
-          TMP: ${{ steps.copilot_native_fixture.outputs.verification-tmp }}
-          TEMP: ${{ steps.copilot_native_fixture.outputs.verification-temp }}
-          TMPDIR: ${{ steps.copilot_native_fixture.outputs.verification-tmpdir }}
-      - name: Continue repository verification 1
-        id: verification_continue_1
-        if: ${{ always() && steps.copilot_native_fixture.outputs.verification-setup-pending == 'true' }}
-        uses: ./../.copilot-native-fixture-runtime
-        with: *native-fixture-inputs
-        env:
-          COPILOT_NATIVE_PHASE: continue
-          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
-          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
-          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
-          COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
-          COPILOT_NATIVE_REQUEST: ${{ steps.copilot_native_fixture.outputs.verification-request }}
-          COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_1.outcome }}
-      - name: Prepare repository verification 2
-        id: verification_setup_2
-        if: ${{ !cancelled() && steps.verification_continue_1.outcome == 'success' && steps.verification_continue_1.outputs.verification-setup-pending == 'true' }}
-        uses: ./.git/copilot-verification-setup
-        timeout-minutes: 5
-        env:
-          HOME: ${{ steps.verification_continue_1.outputs.verification-home }}
-          USERPROFILE: ${{ steps.verification_continue_1.outputs.verification-userprofile }}
-          APPDATA: ${{ steps.verification_continue_1.outputs.verification-appdata }}
-          LOCALAPPDATA: ${{ steps.verification_continue_1.outputs.verification-localappdata }}
-          PATH: ${{ steps.verification_continue_1.outputs.verification-path }}
-          JAVA_HOME: ${{ steps.verification_continue_1.outputs.verification-java_home }}
-          TMP: ${{ steps.verification_continue_1.outputs.verification-tmp }}
-          TEMP: ${{ steps.verification_continue_1.outputs.verification-temp }}
-          TMPDIR: ${{ steps.verification_continue_1.outputs.verification-tmpdir }}
-      - name: Continue repository verification 2
-        id: verification_continue_2
-        if: ${{ always() && steps.verification_continue_1.outputs.verification-setup-pending == 'true' }}
-        uses: ./../.copilot-native-fixture-runtime
-        with: *native-fixture-inputs
-        env:
-          COPILOT_NATIVE_PHASE: continue
-          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
-          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
-          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
-          COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
-          COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_1.outputs.verification-request }}
-          COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_2.outcome }}
-      - name: Prepare repository verification 3
-        id: verification_setup_3
-        if: ${{ !cancelled() && steps.verification_continue_2.outcome == 'success' && steps.verification_continue_2.outputs.verification-setup-pending == 'true' }}
-        uses: ./.git/copilot-verification-setup
-        timeout-minutes: 5
-        env:
-          HOME: ${{ steps.verification_continue_2.outputs.verification-home }}
-          USERPROFILE: ${{ steps.verification_continue_2.outputs.verification-userprofile }}
-          APPDATA: ${{ steps.verification_continue_2.outputs.verification-appdata }}
-          LOCALAPPDATA: ${{ steps.verification_continue_2.outputs.verification-localappdata }}
-          PATH: ${{ steps.verification_continue_2.outputs.verification-path }}
-          JAVA_HOME: ${{ steps.verification_continue_2.outputs.verification-java_home }}
-          TMP: ${{ steps.verification_continue_2.outputs.verification-tmp }}
-          TEMP: ${{ steps.verification_continue_2.outputs.verification-temp }}
-          TMPDIR: ${{ steps.verification_continue_2.outputs.verification-tmpdir }}
-      - name: Continue repository verification 3
-        id: verification_continue_3
-        if: ${{ always() && steps.verification_continue_2.outputs.verification-setup-pending == 'true' }}
-        uses: ./../.copilot-native-fixture-runtime
-        with: *native-fixture-inputs
-        env:
-          COPILOT_NATIVE_PHASE: continue
-          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
-          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
-          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
-          COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
-          COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_2.outputs.verification-request }}
-          COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_3.outcome }}
-      - name: Prepare repository verification 4
-        id: verification_setup_4
-        if: ${{ !cancelled() && steps.verification_continue_3.outcome == 'success' && steps.verification_continue_3.outputs.verification-setup-pending == 'true' }}
-        uses: ./.git/copilot-verification-setup
-        timeout-minutes: 5
-        env:
-          HOME: ${{ steps.verification_continue_3.outputs.verification-home }}
-          USERPROFILE: ${{ steps.verification_continue_3.outputs.verification-userprofile }}
-          APPDATA: ${{ steps.verification_continue_3.outputs.verification-appdata }}
-          LOCALAPPDATA: ${{ steps.verification_continue_3.outputs.verification-localappdata }}
-          PATH: ${{ steps.verification_continue_3.outputs.verification-path }}
-          JAVA_HOME: ${{ steps.verification_continue_3.outputs.verification-java_home }}
-          TMP: ${{ steps.verification_continue_3.outputs.verification-tmp }}
-          TEMP: ${{ steps.verification_continue_3.outputs.verification-temp }}
-          TMPDIR: ${{ steps.verification_continue_3.outputs.verification-tmpdir }}
-      - name: Continue repository verification 4
-        id: verification_continue_4
-        if: ${{ always() && steps.verification_continue_3.outputs.verification-setup-pending == 'true' }}
-        uses: ./../.copilot-native-fixture-runtime
-        with: *native-fixture-inputs
-        env:
-          COPILOT_NATIVE_PHASE: continue
-          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
-          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
-          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
-          COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
-          COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_3.outputs.verification-request }}
-          COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_4.outcome }}
-      - name: Prepare repository verification 5
-        id: verification_setup_5
-        if: ${{ !cancelled() && steps.verification_continue_4.outcome == 'success' && steps.verification_continue_4.outputs.verification-setup-pending == 'true' }}
-        uses: ./.git/copilot-verification-setup
-        timeout-minutes: 5
-        env:
-          HOME: ${{ steps.verification_continue_4.outputs.verification-home }}
-          USERPROFILE: ${{ steps.verification_continue_4.outputs.verification-userprofile }}
-          APPDATA: ${{ steps.verification_continue_4.outputs.verification-appdata }}
-          LOCALAPPDATA: ${{ steps.verification_continue_4.outputs.verification-localappdata }}
-          PATH: ${{ steps.verification_continue_4.outputs.verification-path }}
-          JAVA_HOME: ${{ steps.verification_continue_4.outputs.verification-java_home }}
-          TMP: ${{ steps.verification_continue_4.outputs.verification-tmp }}
-          TEMP: ${{ steps.verification_continue_4.outputs.verification-temp }}
-          TMPDIR: ${{ steps.verification_continue_4.outputs.verification-tmpdir }}
-      - name: Continue repository verification 5
-        id: verification_continue_5
-        if: ${{ always() && steps.verification_continue_4.outputs.verification-setup-pending == 'true' }}
-        uses: ./../.copilot-native-fixture-runtime
-        with: *native-fixture-inputs
-        env:
-          COPILOT_NATIVE_PHASE: continue
-          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
-          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
-          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
-          COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
-          COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_4.outputs.verification-request }}
-          COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_5.outcome }}
-      - name: Prepare repository verification 6
-        id: verification_setup_6
-        if: ${{ !cancelled() && steps.verification_continue_5.outcome == 'success' && steps.verification_continue_5.outputs.verification-setup-pending == 'true' }}
-        uses: ./.git/copilot-verification-setup
-        timeout-minutes: 5
-        env:
-          HOME: ${{ steps.verification_continue_5.outputs.verification-home }}
-          USERPROFILE: ${{ steps.verification_continue_5.outputs.verification-userprofile }}
-          APPDATA: ${{ steps.verification_continue_5.outputs.verification-appdata }}
-          LOCALAPPDATA: ${{ steps.verification_continue_5.outputs.verification-localappdata }}
-          PATH: ${{ steps.verification_continue_5.outputs.verification-path }}
-          JAVA_HOME: ${{ steps.verification_continue_5.outputs.verification-java_home }}
-          TMP: ${{ steps.verification_continue_5.outputs.verification-tmp }}
-          TEMP: ${{ steps.verification_continue_5.outputs.verification-temp }}
-          TMPDIR: ${{ steps.verification_continue_5.outputs.verification-tmpdir }}
-      - name: Continue repository verification 6
-        id: verification_continue_6
-        if: ${{ always() && steps.verification_continue_5.outputs.verification-setup-pending == 'true' }}
-        uses: ./../.copilot-native-fixture-runtime
-        with: *native-fixture-inputs
-        env:
-          COPILOT_NATIVE_PHASE: continue
-          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
-          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
-          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
-          COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
-          COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_5.outputs.verification-request }}
-          COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_6.outcome }}
-      - name: Prepare repository verification 7
-        id: verification_setup_7
-        if: ${{ !cancelled() && steps.verification_continue_6.outcome == 'success' && steps.verification_continue_6.outputs.verification-setup-pending == 'true' }}
-        uses: ./.git/copilot-verification-setup
-        timeout-minutes: 5
-        env:
-          HOME: ${{ steps.verification_continue_6.outputs.verification-home }}
-          USERPROFILE: ${{ steps.verification_continue_6.outputs.verification-userprofile }}
-          APPDATA: ${{ steps.verification_continue_6.outputs.verification-appdata }}
-          LOCALAPPDATA: ${{ steps.verification_continue_6.outputs.verification-localappdata }}
-          PATH: ${{ steps.verification_continue_6.outputs.verification-path }}
-          JAVA_HOME: ${{ steps.verification_continue_6.outputs.verification-java_home }}
-          TMP: ${{ steps.verification_continue_6.outputs.verification-tmp }}
-          TEMP: ${{ steps.verification_continue_6.outputs.verification-temp }}
-          TMPDIR: ${{ steps.verification_continue_6.outputs.verification-tmpdir }}
-      - name: Continue repository verification 7
-        id: verification_continue_7
-        if: ${{ always() && steps.verification_continue_6.outputs.verification-setup-pending == 'true' }}
-        uses: ./../.copilot-native-fixture-runtime
-        with: *native-fixture-inputs
-        env:
-          COPILOT_NATIVE_PHASE: continue
-          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
-          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
-          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
-          COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
-          COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_6.outputs.verification-request }}
-          COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_7.outcome }}
-      - name: Prepare repository verification 8
-        id: verification_setup_8
-        if: ${{ !cancelled() && steps.verification_continue_7.outcome == 'success' && steps.verification_continue_7.outputs.verification-setup-pending == 'true' }}
-        uses: ./.git/copilot-verification-setup
-        timeout-minutes: 5
-        env:
-          HOME: ${{ steps.verification_continue_7.outputs.verification-home }}
-          USERPROFILE: ${{ steps.verification_continue_7.outputs.verification-userprofile }}
-          APPDATA: ${{ steps.verification_continue_7.outputs.verification-appdata }}
-          LOCALAPPDATA: ${{ steps.verification_continue_7.outputs.verification-localappdata }}
-          PATH: ${{ steps.verification_continue_7.outputs.verification-path }}
-          JAVA_HOME: ${{ steps.verification_continue_7.outputs.verification-java_home }}
-          TMP: ${{ steps.verification_continue_7.outputs.verification-tmp }}
-          TEMP: ${{ steps.verification_continue_7.outputs.verification-temp }}
-          TMPDIR: ${{ steps.verification_continue_7.outputs.verification-tmpdir }}
-      - name: Continue repository verification 8
-        id: verification_continue_8
-        if: ${{ always() && steps.verification_continue_7.outputs.verification-setup-pending == 'true' }}
-        uses: ./../.copilot-native-fixture-runtime
-        with: *native-fixture-inputs
-        env:
-          COPILOT_NATIVE_PHASE: continue
-          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
-          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
-          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
-          COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
-          COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_7.outputs.verification-request }}
-          COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_8.outcome }}
-      - name: Prepare repository verification 9
-        id: verification_setup_9
-        if: ${{ !cancelled() && steps.verification_continue_8.outcome == 'success' && steps.verification_continue_8.outputs.verification-setup-pending == 'true' }}
-        uses: ./.git/copilot-verification-setup
-        timeout-minutes: 5
-        env:
-          HOME: ${{ steps.verification_continue_8.outputs.verification-home }}
-          USERPROFILE: ${{ steps.verification_continue_8.outputs.verification-userprofile }}
-          APPDATA: ${{ steps.verification_continue_8.outputs.verification-appdata }}
-          LOCALAPPDATA: ${{ steps.verification_continue_8.outputs.verification-localappdata }}
-          PATH: ${{ steps.verification_continue_8.outputs.verification-path }}
-          JAVA_HOME: ${{ steps.verification_continue_8.outputs.verification-java_home }}
-          TMP: ${{ steps.verification_continue_8.outputs.verification-tmp }}
-          TEMP: ${{ steps.verification_continue_8.outputs.verification-temp }}
-          TMPDIR: ${{ steps.verification_continue_8.outputs.verification-tmpdir }}
-      - name: Continue repository verification 9
-        id: verification_continue_9
-        if: ${{ always() && steps.verification_continue_8.outputs.verification-setup-pending == 'true' }}
-        uses: ./../.copilot-native-fixture-runtime
-        with: *native-fixture-inputs
-        env:
-          COPILOT_NATIVE_PHASE: continue
-          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
-          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
-          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
-          COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
-          COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_8.outputs.verification-request }}
-          COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_9.outcome }}
-      - name: Prepare repository verification 10
-        id: verification_setup_10
-        if: ${{ !cancelled() && steps.verification_continue_9.outcome == 'success' && steps.verification_continue_9.outputs.verification-setup-pending == 'true' }}
-        uses: ./.git/copilot-verification-setup
-        timeout-minutes: 5
-        env:
-          HOME: ${{ steps.verification_continue_9.outputs.verification-home }}
-          USERPROFILE: ${{ steps.verification_continue_9.outputs.verification-userprofile }}
-          APPDATA: ${{ steps.verification_continue_9.outputs.verification-appdata }}
-          LOCALAPPDATA: ${{ steps.verification_continue_9.outputs.verification-localappdata }}
-          PATH: ${{ steps.verification_continue_9.outputs.verification-path }}
-          JAVA_HOME: ${{ steps.verification_continue_9.outputs.verification-java_home }}
-          TMP: ${{ steps.verification_continue_9.outputs.verification-tmp }}
-          TEMP: ${{ steps.verification_continue_9.outputs.verification-temp }}
-          TMPDIR: ${{ steps.verification_continue_9.outputs.verification-tmpdir }}
-      - name: Continue repository verification 10
-        id: verification_continue_10
-        if: ${{ always() && steps.verification_continue_9.outputs.verification-setup-pending == 'true' }}
-        uses: ./../.copilot-native-fixture-runtime
-        with: *native-fixture-inputs
-        env:
-          COPILOT_NATIVE_PHASE: continue
-          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
-          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
-          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
-          COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
-          COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_9.outputs.verification-request }}
-          COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_10.outcome }}
-      - name: Prepare repository verification 11
-        id: verification_setup_11
-        if: ${{ !cancelled() && steps.verification_continue_10.outcome == 'success' && steps.verification_continue_10.outputs.verification-setup-pending == 'true' }}
-        uses: ./.git/copilot-verification-setup
-        timeout-minutes: 5
-        env:
-          HOME: ${{ steps.verification_continue_10.outputs.verification-home }}
-          USERPROFILE: ${{ steps.verification_continue_10.outputs.verification-userprofile }}
-          APPDATA: ${{ steps.verification_continue_10.outputs.verification-appdata }}
-          LOCALAPPDATA: ${{ steps.verification_continue_10.outputs.verification-localappdata }}
-          PATH: ${{ steps.verification_continue_10.outputs.verification-path }}
-          JAVA_HOME: ${{ steps.verification_continue_10.outputs.verification-java_home }}
-          TMP: ${{ steps.verification_continue_10.outputs.verification-tmp }}
-          TEMP: ${{ steps.verification_continue_10.outputs.verification-temp }}
-          TMPDIR: ${{ steps.verification_continue_10.outputs.verification-tmpdir }}
-      - name: Continue repository verification 11
-        id: verification_continue_11
-        if: ${{ always() && steps.verification_continue_10.outputs.verification-setup-pending == 'true' }}
-        uses: ./../.copilot-native-fixture-runtime
-        with: *native-fixture-inputs
-        env:
-          COPILOT_NATIVE_PHASE: continue
-          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
-          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
-          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
-          COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
-          COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_10.outputs.verification-request }}
-          COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_11.outcome }}
-      - name: Prepare repository verification 12
-        id: verification_setup_12
-        if: ${{ !cancelled() && steps.verification_continue_11.outcome == 'success' && steps.verification_continue_11.outputs.verification-setup-pending == 'true' }}
-        uses: ./.git/copilot-verification-setup
-        timeout-minutes: 5
-        env:
-          HOME: ${{ steps.verification_continue_11.outputs.verification-home }}
-          USERPROFILE: ${{ steps.verification_continue_11.outputs.verification-userprofile }}
-          APPDATA: ${{ steps.verification_continue_11.outputs.verification-appdata }}
-          LOCALAPPDATA: ${{ steps.verification_continue_11.outputs.verification-localappdata }}
-          PATH: ${{ steps.verification_continue_11.outputs.verification-path }}
-          JAVA_HOME: ${{ steps.verification_continue_11.outputs.verification-java_home }}
-          TMP: ${{ steps.verification_continue_11.outputs.verification-tmp }}
-          TEMP: ${{ steps.verification_continue_11.outputs.verification-temp }}
-          TMPDIR: ${{ steps.verification_continue_11.outputs.verification-tmpdir }}
-      - name: Continue repository verification 12
-        id: verification_continue_12
-        if: ${{ always() && steps.verification_continue_11.outputs.verification-setup-pending == 'true' }}
-        uses: ./../.copilot-native-fixture-runtime
-        with: *native-fixture-inputs
-        env:
-          COPILOT_NATIVE_PHASE: continue
-          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
-          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
-          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
-          COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
-          COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_11.outputs.verification-request }}
-          COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_12.outcome }}
-      - name: Prepare repository verification 13
-        id: verification_setup_13
-        if: ${{ !cancelled() && steps.verification_continue_12.outcome == 'success' && steps.verification_continue_12.outputs.verification-setup-pending == 'true' }}
-        uses: ./.git/copilot-verification-setup
-        timeout-minutes: 5
-        env:
-          HOME: ${{ steps.verification_continue_12.outputs.verification-home }}
-          USERPROFILE: ${{ steps.verification_continue_12.outputs.verification-userprofile }}
-          APPDATA: ${{ steps.verification_continue_12.outputs.verification-appdata }}
-          LOCALAPPDATA: ${{ steps.verification_continue_12.outputs.verification-localappdata }}
-          PATH: ${{ steps.verification_continue_12.outputs.verification-path }}
-          JAVA_HOME: ${{ steps.verification_continue_12.outputs.verification-java_home }}
-          TMP: ${{ steps.verification_continue_12.outputs.verification-tmp }}
-          TEMP: ${{ steps.verification_continue_12.outputs.verification-temp }}
-          TMPDIR: ${{ steps.verification_continue_12.outputs.verification-tmpdir }}
-      - name: Continue repository verification 13
-        id: verification_continue_13
-        if: ${{ always() && steps.verification_continue_12.outputs.verification-setup-pending == 'true' }}
-        uses: ./../.copilot-native-fixture-runtime
-        with: *native-fixture-inputs
-        env:
-          COPILOT_NATIVE_PHASE: continue
-          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
-          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
-          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
-          COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
-          COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_12.outputs.verification-request }}
-          COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_13.outcome }}
-      - name: Prepare repository verification 14
-        id: verification_setup_14
-        if: ${{ !cancelled() && steps.verification_continue_13.outcome == 'success' && steps.verification_continue_13.outputs.verification-setup-pending == 'true' }}
-        uses: ./.git/copilot-verification-setup
-        timeout-minutes: 5
-        env:
-          HOME: ${{ steps.verification_continue_13.outputs.verification-home }}
-          USERPROFILE: ${{ steps.verification_continue_13.outputs.verification-userprofile }}
-          APPDATA: ${{ steps.verification_continue_13.outputs.verification-appdata }}
-          LOCALAPPDATA: ${{ steps.verification_continue_13.outputs.verification-localappdata }}
-          PATH: ${{ steps.verification_continue_13.outputs.verification-path }}
-          JAVA_HOME: ${{ steps.verification_continue_13.outputs.verification-java_home }}
-          TMP: ${{ steps.verification_continue_13.outputs.verification-tmp }}
-          TEMP: ${{ steps.verification_continue_13.outputs.verification-temp }}
-          TMPDIR: ${{ steps.verification_continue_13.outputs.verification-tmpdir }}
-      - name: Continue repository verification 14
-        id: verification_continue_14
-        if: ${{ always() && steps.verification_continue_13.outputs.verification-setup-pending == 'true' }}
-        uses: ./../.copilot-native-fixture-runtime
-        with: *native-fixture-inputs
-        env:
-          COPILOT_NATIVE_PHASE: continue
-          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
-          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
-          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
-          COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
-          COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_13.outputs.verification-request }}
-          COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_14.outcome }}
-      - name: Prepare repository verification 15
-        id: verification_setup_15
-        if: ${{ !cancelled() && steps.verification_continue_14.outcome == 'success' && steps.verification_continue_14.outputs.verification-setup-pending == 'true' }}
-        uses: ./.git/copilot-verification-setup
-        timeout-minutes: 5
-        env:
-          HOME: ${{ steps.verification_continue_14.outputs.verification-home }}
-          USERPROFILE: ${{ steps.verification_continue_14.outputs.verification-userprofile }}
-          APPDATA: ${{ steps.verification_continue_14.outputs.verification-appdata }}
-          LOCALAPPDATA: ${{ steps.verification_continue_14.outputs.verification-localappdata }}
-          PATH: ${{ steps.verification_continue_14.outputs.verification-path }}
-          JAVA_HOME: ${{ steps.verification_continue_14.outputs.verification-java_home }}
-          TMP: ${{ steps.verification_continue_14.outputs.verification-tmp }}
-          TEMP: ${{ steps.verification_continue_14.outputs.verification-temp }}
-          TMPDIR: ${{ steps.verification_continue_14.outputs.verification-tmpdir }}
-      - name: Continue repository verification 15
-        id: verification_continue_15
-        if: ${{ always() && steps.verification_continue_14.outputs.verification-setup-pending == 'true' }}
-        uses: ./../.copilot-native-fixture-runtime
-        with: *native-fixture-inputs
-        env:
-          COPILOT_NATIVE_PHASE: continue
-          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
-          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
-          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
-          COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
-          COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_14.outputs.verification-request }}
-          COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_15.outcome }}
-      - name: Prepare repository verification 16
-        id: verification_setup_16
-        if: ${{ !cancelled() && steps.verification_continue_15.outcome == 'success' && steps.verification_continue_15.outputs.verification-setup-pending == 'true' }}
-        uses: ./.git/copilot-verification-setup
-        timeout-minutes: 5
-        env:
-          HOME: ${{ steps.verification_continue_15.outputs.verification-home }}
-          USERPROFILE: ${{ steps.verification_continue_15.outputs.verification-userprofile }}
-          APPDATA: ${{ steps.verification_continue_15.outputs.verification-appdata }}
-          LOCALAPPDATA: ${{ steps.verification_continue_15.outputs.verification-localappdata }}
-          PATH: ${{ steps.verification_continue_15.outputs.verification-path }}
-          JAVA_HOME: ${{ steps.verification_continue_15.outputs.verification-java_home }}
-          TMP: ${{ steps.verification_continue_15.outputs.verification-tmp }}
-          TEMP: ${{ steps.verification_continue_15.outputs.verification-temp }}
-          TMPDIR: ${{ steps.verification_continue_15.outputs.verification-tmpdir }}
-      - name: Continue repository verification 16
-        id: verification_continue_16
-        if: ${{ always() && steps.verification_continue_15.outputs.verification-setup-pending == 'true' }}
-        uses: ./../.copilot-native-fixture-runtime
-        with: *native-fixture-inputs
-        env:
-          COPILOT_NATIVE_PHASE: continue
-          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
-          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
-          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
-          COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
-          COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_15.outputs.verification-request }}
-          COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_16.outcome }}
-      - name: Prepare repository verification 17
-        id: verification_setup_17
-        if: ${{ !cancelled() && steps.verification_continue_16.outcome == 'success' && steps.verification_continue_16.outputs.verification-setup-pending == 'true' }}
-        uses: ./.git/copilot-verification-setup
-        timeout-minutes: 5
-        env:
-          HOME: ${{ steps.verification_continue_16.outputs.verification-home }}
-          USERPROFILE: ${{ steps.verification_continue_16.outputs.verification-userprofile }}
-          APPDATA: ${{ steps.verification_continue_16.outputs.verification-appdata }}
-          LOCALAPPDATA: ${{ steps.verification_continue_16.outputs.verification-localappdata }}
-          PATH: ${{ steps.verification_continue_16.outputs.verification-path }}
-          JAVA_HOME: ${{ steps.verification_continue_16.outputs.verification-java_home }}
-          TMP: ${{ steps.verification_continue_16.outputs.verification-tmp }}
-          TEMP: ${{ steps.verification_continue_16.outputs.verification-temp }}
-          TMPDIR: ${{ steps.verification_continue_16.outputs.verification-tmpdir }}
-      - name: Continue repository verification 17
-        id: verification_continue_17
-        if: ${{ always() && steps.verification_continue_16.outputs.verification-setup-pending == 'true' }}
-        uses: ./../.copilot-native-fixture-runtime
-        with: *native-fixture-inputs
-        env:
-          COPILOT_NATIVE_PHASE: continue
-          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
-          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
-          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
-          COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
-          COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_16.outputs.verification-request }}
-          COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_17.outcome }}
-      - name: Prepare repository verification 18
-        id: verification_setup_18
-        if: ${{ !cancelled() && steps.verification_continue_17.outcome == 'success' && steps.verification_continue_17.outputs.verification-setup-pending == 'true' }}
-        uses: ./.git/copilot-verification-setup
-        timeout-minutes: 5
-        env:
-          HOME: ${{ steps.verification_continue_17.outputs.verification-home }}
-          USERPROFILE: ${{ steps.verification_continue_17.outputs.verification-userprofile }}
-          APPDATA: ${{ steps.verification_continue_17.outputs.verification-appdata }}
-          LOCALAPPDATA: ${{ steps.verification_continue_17.outputs.verification-localappdata }}
-          PATH: ${{ steps.verification_continue_17.outputs.verification-path }}
-          JAVA_HOME: ${{ steps.verification_continue_17.outputs.verification-java_home }}
-          TMP: ${{ steps.verification_continue_17.outputs.verification-tmp }}
-          TEMP: ${{ steps.verification_continue_17.outputs.verification-temp }}
-          TMPDIR: ${{ steps.verification_continue_17.outputs.verification-tmpdir }}
-      - name: Continue repository verification 18
-        id: verification_continue_18
-        if: ${{ always() && steps.verification_continue_17.outputs.verification-setup-pending == 'true' }}
-        uses: ./../.copilot-native-fixture-runtime
-        with: *native-fixture-inputs
-        env:
-          COPILOT_NATIVE_PHASE: continue
-          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
-          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
-          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
-          COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
-          COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_17.outputs.verification-request }}
-          COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_18.outcome }}
-      - name: Prepare repository verification 19
-        id: verification_setup_19
-        if: ${{ !cancelled() && steps.verification_continue_18.outcome == 'success' && steps.verification_continue_18.outputs.verification-setup-pending == 'true' }}
-        uses: ./.git/copilot-verification-setup
-        timeout-minutes: 5
-        env:
-          HOME: ${{ steps.verification_continue_18.outputs.verification-home }}
-          USERPROFILE: ${{ steps.verification_continue_18.outputs.verification-userprofile }}
-          APPDATA: ${{ steps.verification_continue_18.outputs.verification-appdata }}
-          LOCALAPPDATA: ${{ steps.verification_continue_18.outputs.verification-localappdata }}
-          PATH: ${{ steps.verification_continue_18.outputs.verification-path }}
-          JAVA_HOME: ${{ steps.verification_continue_18.outputs.verification-java_home }}
-          TMP: ${{ steps.verification_continue_18.outputs.verification-tmp }}
-          TEMP: ${{ steps.verification_continue_18.outputs.verification-temp }}
-          TMPDIR: ${{ steps.verification_continue_18.outputs.verification-tmpdir }}
-      - name: Continue repository verification 19
-        id: verification_continue_19
-        if: ${{ always() && steps.verification_continue_18.outputs.verification-setup-pending == 'true' }}
-        uses: ./../.copilot-native-fixture-runtime
-        with: *native-fixture-inputs
-        env:
-          COPILOT_NATIVE_PHASE: continue
-          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
-          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
-          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
-          COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
-          COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_18.outputs.verification-request }}
-          COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_19.outcome }}
-      - name: Prepare repository verification 20
-        id: verification_setup_20
-        if: ${{ !cancelled() && steps.verification_continue_19.outcome == 'success' && steps.verification_continue_19.outputs.verification-setup-pending == 'true' }}
-        uses: ./.git/copilot-verification-setup
-        timeout-minutes: 5
-        env:
-          HOME: ${{ steps.verification_continue_19.outputs.verification-home }}
-          USERPROFILE: ${{ steps.verification_continue_19.outputs.verification-userprofile }}
-          APPDATA: ${{ steps.verification_continue_19.outputs.verification-appdata }}
-          LOCALAPPDATA: ${{ steps.verification_continue_19.outputs.verification-localappdata }}
-          PATH: ${{ steps.verification_continue_19.outputs.verification-path }}
-          JAVA_HOME: ${{ steps.verification_continue_19.outputs.verification-java_home }}
-          TMP: ${{ steps.verification_continue_19.outputs.verification-tmp }}
-          TEMP: ${{ steps.verification_continue_19.outputs.verification-temp }}
-          TMPDIR: ${{ steps.verification_continue_19.outputs.verification-tmpdir }}
-      - name: Continue repository verification 20
-        id: verification_continue_20
-        if: ${{ always() && steps.verification_continue_19.outputs.verification-setup-pending == 'true' }}
-        uses: ./../.copilot-native-fixture-runtime
-        with: *native-fixture-inputs
-        env:
-          COPILOT_NATIVE_PHASE: continue
-          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
-          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
-          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
-          COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
-          COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_19.outputs.verification-request }}
-          COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_20.outcome }}
-      - name: Complete repository verification
-        id: verification_complete
-        if: ${{ always() && steps.copilot_native_fixture.outputs.verification-ticket != '' }}
-        uses: ./../.copilot-native-fixture-runtime
-        with: *native-fixture-inputs
-        env:
-          COPILOT_NATIVE_PHASE: finish
-          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
-          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
-          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
-          COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
+      - *native_prepare_native_fixture_runtime
+      - *native_copilot_native_fixture
+      - *native_verification_setup_1
+      - *native_verification_continue_1
+      - *native_verification_setup_2
+      - *native_verification_continue_2
+      - *native_verification_setup_3
+      - *native_verification_continue_3
+      - *native_verification_setup_4
+      - *native_verification_continue_4
+      - *native_verification_setup_5
+      - *native_verification_continue_5
+      - *native_verification_setup_6
+      - *native_verification_continue_6
+      - *native_verification_setup_7
+      - *native_verification_continue_7
+      - *native_verification_setup_8
+      - *native_verification_continue_8
+      - *native_verification_setup_9
+      - *native_verification_continue_9
+      - *native_verification_setup_10
+      - *native_verification_continue_10
+      - *native_verification_setup_11
+      - *native_verification_continue_11
+      - *native_verification_setup_12
+      - *native_verification_continue_12
+      - *native_verification_setup_13
+      - *native_verification_continue_13
+      - *native_verification_setup_14
+      - *native_verification_continue_14
+      - *native_verification_setup_15
+      - *native_verification_continue_15
+      - *native_verification_setup_16
+      - *native_verification_continue_16
+      - *native_verification_setup_17
+      - *native_verification_continue_17
+      - *native_verification_setup_18
+      - *native_verification_continue_18
+      - *native_verification_setup_19
+      - *native_verification_continue_19
+      - *native_verification_setup_20
+      - *native_verification_continue_20
+      - *native_verification_complete
       - run: pnpm run build
       - run: pnpm run validate:build
       - run: pnpm run typecheck

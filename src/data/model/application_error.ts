@@ -1,3 +1,4 @@
+import { isProgressResponseDiagnosticFacts, type ProgressResponseDiagnosticFacts } from '../../domain/progress_response_diagnostic';
 import { isProgressBinaryEvidenceFacts, type ProgressBinaryEvidenceFacts } from '../../domain/progress_binary_evidence_diagnostic';
 import { isIssueWorkflowDiagnostic, type IssueWorkflowDiagnosticFacts } from '../../domain/issue_workflow_diagnostic';
 import { isChangeSizeReconciliationFacts, type ChangeSizeReconciliationFacts } from '../../domain/change_size_reconciliation';
@@ -8,6 +9,7 @@ import { APPROVAL_EVIDENCE_PERMISSIONS, APPROVAL_EVIDENCE_REASONS, type Approval
 
 import { BRANCH_SYNC_VALIDATION_CODES, type BranchSyncValidationCode } from '../../domain/branch_sync_validation';
 import { isBranchSyncVerificationFailure, type BranchSyncVerificationFailure } from '../../domain/verification_failure';
+import { isBranchSyncCatalogDiagnostic, type BranchSyncCatalogDiagnostic } from '../../domain/branch_sync_catalog_diagnostic';
 
 export type ApplicationErrorKind =
     | 'configuration'
@@ -56,9 +58,11 @@ export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'branch-sync-fixer-unavailable',
     'branch-sync-resolution-invalid',
     'branch-sync-verification-failed',
+    'branch-sync-catalog-incompatible',
     'sdd-draft-size-exceeded',
     'sdd-catalog-unsupported-profile',
     'sdd-catalog-format-invalid',
+    'sdd-catalog-missing-trusted-source',
     'sdd-draft-format-invalid',
     'sdd-draft-case-identity-invalid',
     'sdd-draft-case-budget-invalid',
@@ -72,6 +76,7 @@ export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'change-size-reconciliation-failed',
     'issue-workflow-admission-blocked',
     'progress-binary-evidence-unavailable',
+    'progress-result-contract-invalid',
     'stored-configuration-schema-missing',
     'stored-configuration-schema-unsupported',
     'stored-configuration-invalid',
@@ -89,6 +94,7 @@ interface ApplicationErrorRecoveryVariables extends Readonly<Record<CopilotComma
     readonly 'change-size-reconciliation-failed': ChangeSizeReconciliationFacts;
     readonly 'issue-workflow-admission-blocked': IssueWorkflowDiagnosticFacts;
     readonly 'progress-binary-evidence-unavailable': ProgressBinaryEvidenceFacts;
+    readonly 'progress-result-contract-invalid': ProgressResponseDiagnosticFacts;
 
     readonly 'pull-request-link-restored': Readonly<Record<string, never>>;
     readonly 'pull-request-link-base-retained': Readonly<Record<string, never>>;
@@ -101,9 +107,11 @@ interface ApplicationErrorRecoveryVariables extends Readonly<Record<CopilotComma
     readonly 'branch-sync-fixer-unavailable': Readonly<{ command: '/copilot sync-branch' }>;
     readonly 'branch-sync-resolution-invalid': Readonly<{ validationCode: BranchSyncValidationCode; command: '/copilot sync-branch' }>;
     readonly 'branch-sync-verification-failed': BranchSyncVerificationFailure;
+    readonly 'branch-sync-catalog-incompatible': BranchSyncCatalogDiagnostic & Readonly<{ abort: 'completed' | 'unverified' }>;
     readonly 'sdd-draft-size-exceeded': Readonly<Record<string, never>>;
     readonly 'sdd-catalog-unsupported-profile': Readonly<Record<string, never>>;
     readonly 'sdd-catalog-format-invalid': Readonly<Record<string, never>>;
+    readonly 'sdd-catalog-missing-trusted-source': Readonly<Record<string, never>>;
     readonly 'sdd-draft-format-invalid': Readonly<Record<string, never>>;
     readonly 'sdd-draft-case-identity-invalid': Readonly<Record<string, never>>;
     readonly 'sdd-draft-case-budget-invalid': Readonly<Record<string, never>>;
@@ -226,7 +234,7 @@ export const APPLICATION_ERROR_METADATA: Readonly<Record<ApplicationErrorCode, A
     'validation.evidence-too-large': {
         kind: 'validation', retryable: false,
         impact: 'Progress could not be assessed within the fixed evidence limits.',
-        action: 'Reduce the comparison size or split the work into smaller reviewed changes before running a new assessment.',
+        action: 'Inspect the complete comparison and reported capacity. Supported multipart recovery continues automatically. If interrupted, rerun the current managed source; an identical over-limit comparison cannot gain capacity.',
         retainedState: 'Existing progress labels and published assessments were preserved.',
     },
     'workflow.invalid-event': {
@@ -389,9 +397,11 @@ const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readon
     'branch-sync-fixer-unavailable': Object.freeze(['command']),
     'branch-sync-resolution-invalid': Object.freeze(['validationCode', 'command']),
     'branch-sync-verification-failed': Object.freeze(['stage', 'reason', 'command', 'commandIndex', 'childSha', 'restoration']),
+    'branch-sync-catalog-incompatible': Object.freeze(['phase', 'profile', 'field', 'capabilityNumber', 'abort']),
     'sdd-draft-size-exceeded': Object.freeze([]),
     'sdd-catalog-unsupported-profile': Object.freeze([]),
     'sdd-catalog-format-invalid': Object.freeze([]),
+    'sdd-catalog-missing-trusted-source': Object.freeze([]),
     'sdd-draft-format-invalid': Object.freeze([]),
     'sdd-draft-case-identity-invalid': Object.freeze([]),
     'sdd-draft-case-budget-invalid': Object.freeze([]),
@@ -399,6 +409,7 @@ const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readon
     'sdd-draft-repository-path-invalid': Object.freeze([]),
 
     'progress-binary-evidence-unavailable': Object.freeze(['paths', 'pathCount']),
+    'progress-result-contract-invalid': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
     'deployment-publication-context-missing': Object.freeze([]),
     'workspace-changes-rejected': Object.freeze([]),
 });
@@ -457,6 +468,12 @@ function normalizeApplicationErrorRecovery(
     if (recovery.id === 'branch-sync-verification-failed' && !isBranchSyncVerificationFailure(variables)) {
         throw new TypeError('Branch synchronization verification diagnostic is invalid.');
     }
+    if (recovery.id === 'branch-sync-catalog-incompatible') {
+        const { abort, ...diagnostic } = variables;
+        if (!isBranchSyncCatalogDiagnostic(diagnostic) || !['completed', 'unverified'].includes(String(abort))) {
+            throw new TypeError('Branch synchronization catalog diagnostic is invalid.');
+        }
+    }
     if (recovery.id === 'closed-issue-reconciliation-failed'
         && (!CLOSED_ISSUE_RESULTS.some(value => value === variables.resultId)
             || !CLOSED_ISSUE_PHASES.some(value => value === variables.phase)
@@ -471,6 +488,7 @@ function normalizeApplicationErrorRecovery(
             || APPROVAL_EVIDENCE_PERMISSIONS[variables.operation as keyof typeof APPROVAL_EVIDENCE_PERMISSIONS] !== variables.permission)) {
         throw new TypeError('Approval evidence diagnostic is invalid.');
     }
+    if (recovery.id === 'progress-result-contract-invalid' && !isProgressResponseDiagnosticFacts(variables)) throw new TypeError('Progress response diagnostic is invalid.');
     if (recovery.id === 'progress-binary-evidence-unavailable' && !isProgressBinaryEvidenceFacts(variables)) throw new TypeError('Progress binary evidence diagnostic is invalid.');
     if (recovery.id === 'issue-workflow-admission-blocked' && !isIssueWorkflowDiagnostic(variables)) throw new TypeError('Issue admission diagnostic is invalid.');
     if (recovery.id === 'change-size-reconciliation-failed' && !isChangeSizeReconciliationFacts(variables)) {

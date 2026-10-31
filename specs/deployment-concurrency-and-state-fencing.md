@@ -556,3 +556,28 @@ replays recover only the durable validated successor; old callbacks are stale.
 Up to eight six-field predecessor records are optional on existing v1 state;
 malformed/duplicate histories and unknown versions still block. This adds no
 alternate writer, manual state reset or live deployment acceptance claim.
+
+
+### Configuration-writer compatibility — #785 (2026-10-30)
+
+The credential-bound deployment state adapter remains an issue-only writer and
+passes that existing classification to the shared configuration renderer. A
+launcher issue may quote PR-link recovery metadata as ordinary prose; those
+quotes must not become PR recovery authority or block an otherwise fenced save.
+The existing monotonic-successor regression now includes such quoted text and
+verifies its preservation. Operation/revision fences, workflow serialization,
+publication receipts and issue completion behavior are unchanged by this
+classification correction. No deployment is performed for this regression.
+
+## Functional completion before native issue projection (#792)
+
+After verified publication, all configured reconciliation and cleanup, persist
+the completed operation through the existing revision fence before final native
+issue closure. This prevents its close callback from observing an unfinished
+plan. Native issue projection failure retains that completed functional snapshot,
+operation ID and immutable receipts; it does not move completed state backwards
+or republish. A trusted publication-completion replay revalidates the external
+receipt, skips completed cleanup and retries only native closure/metadata/cards.
+The failed result and Job Summary identify pending projection independently of
+functional phase. No new stored field, version, lock or provider permission is
+introduced. The release SDD section24 owns the additional cases.

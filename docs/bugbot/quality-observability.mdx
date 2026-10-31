@@ -5,7 +5,7 @@ description: Measure Bugbot accuracy, latency, outcomes, feedback, and regressio
 
 # Bugbot quality and observability
 
-Bugbot separates deterministic evaluator checks from optional, cost-bearing model benchmarks. The versioned corpus at `quality/bugbot/corpus.v1.json` contains 71 positive and negative synthetic cases across TypeScript/TSX, Python, Go, SQL, Java, Rust, YAML workflows, shell, Terraform, C#, Kotlin, and Markdown. Ground truth is never included in the model prompt.
+Bugbot separates deterministic evaluator checks from optional, cost-bearing model benchmarks. The versioned corpus at `quality/bugbot/corpus.v1.json` contains 106 positive and negative synthetic cases across TypeScript/TSX, Python, Go, SQL, Java, Rust, YAML workflows, shell, Terraform, C#, Kotlin, and Markdown. Ground truth is never included in the model prompt.
 
 The #655 cases cover branch coverage enabled through repository configuration,
 inherited HTTP/1.0 connection behavior, correct arithmetic, short-circuit guards,
@@ -90,6 +90,35 @@ or threshold was changed to improve those scores. The historical false positive
 was not reproduced in this small sample, and no statistical or all-gates-passed
 model-quality claim is made.
 
+The six #806 unittest-discovery cases cover delegated selection, recovering the
+repository cwd from a nested workflow, literal wildcard argv, a narrower pattern,
+a wrong start directory and unavailable runner evidence. The compiled Node
+factories check fixed flat-file selection and delegation; they do not execute
+Python or interpret corpus text. Identity/source checks reject modified inputs
+before selecting a factory. A separately authored optional probe corroborates
+the five available scenarios with real owned unittest fixtures:
+
+```bash
+python3 src/tooling/__tests__/fixtures/bugbot_unittest_discovery_probe.py --output /tmp/unittest-discovery-receipt.json
+```
+
+This contributor probe is outside the mandatory Node suite and adds no Python
+requirement to the Action. It executes its fixed authored fixtures, never corpus
+or consumer source. Three scenarios run 19 methods including the five export
+methods; the excluded-pattern and wrong-directory controls run 14 and one
+unrelated method, respectively. These are separate observations, not additional
+unique tests or a fresh consumer execution.
+
+The actual current baseline identifies both exclusions and emits no findings on
+safe/unavailable cases, so this sample does not reproduce the historical false
+positive. One of two anchors is exact, failing the unchanged location floor. A
+proposed discovery instruction gives worse anchors and fails more score gates;
+it is rejected. Final runtime instructions remain byte-identical to the base.
+Both complete samples, identities and failed gates are retained in
+`quality/bugbot/evidence/issue-806.json`. Reference predictions remain separate
+scorer fixtures. This is regression coverage with an explicit location
+limitation, without a claimed statistical improvement or consumer adoption.
+
 The six #739 external Action cases pair declared inputs, version-specific renamed
 inputs and unavailable contracts with undeclared aliases, old-version keys and
 ignored disabling values. Native controls parse candidate YAML as inert data and
@@ -108,6 +137,69 @@ still fails: two anchors are off by one and a category differs from the referenc
 These limitations are retained rather than hidden by a reference prediction,
 threshold change or repeated identical sample. No statistical improvement or
 future accuracy guarantee is claimed.
+
+The eight #784 request-transform cases cover a pinned dependency's policy-derived
+header, a middleware producer and unavailable dependency evidence, paired with
+write-enabled policy, bypassed producer, downstream overwrite, header-injecting
+mock and independent UTF-8 truncation controls. Seven statically compiled
+synthetic observations check emitted headers, producer calls, assertion outcomes
+and UTF-8 validity; the unavailable case returns an explicit unknown result.
+Exact inert source bindings reject modified text and unknown identities before
+oracle dispatch. Existing consumer CI XML was inspected separately, with the
+relevant source blobs matched between its merge checkout and reviewed head.
+Reference predictions check scoring; actual model measurements retain their
+inputs, prompt/bundle identities and every failed score separately.
+The two measurements in `quality/bugbot/evidence/issue-784.json` use identical
+inputs/verdicts and runtime settings. The baseline reproduces the unsupported
+Coil header claim. The corrected sample has zero false positives/negatives and
+detects all five genuine controls, while its exact-location accuracy is 1/5 and
+fails the unchanged 0.8 gate. Both complete scores remain recorded. This sample
+does not pass every model-quality threshold and does not measure publication
+location remapping or historical-finding resolution.
+
+The six #796 generated-source cases separate Python host coordinates from the
+written Kotlin file for ordinary, leading-newline, escaped and dedented literals,
+with two genuine executed-line assertion defects. Statically authored mapping
+oracles observe their own UTF-8 bytes and statement roles; they neither execute
+Kotlin nor manufacture JaCoCo counters. An independent inert Python AST check
+confirms that those literal transformations yield the same bytes. Unknown IDs
+and modified corpus text are rejected before observation. All 106 prior corpus
+inputs/verdicts and quality thresholds remain unchanged. Existing consumer
+source and the passing named CI test were inspected read-only, separately from
+these synthetic controls; private source/logs remain outside this repository.
+Two additional literal-bearing cases retain independent shell-injection and
+strictly-positive-validator defects. The benchmark uses the same independently
+correlated candidate verifier as ordinary and partitioned review, including its
+closed failure behavior. The initial 200-candidate schema is handled in up to
+ten sequential batches of 20, with complete identity/byte preflight and no partial
+publication if a later batch fails. Every initial/retried query and verification
+query contributes to the existing analysis telemetry. Expected verdicts never
+enter either query. Serialized initial/secondary replies use a separate
+4,000,000-byte UTF-8 response envelope, with object/string equivalence tested above
+the unchanged 128,000-byte prompt ceiling. Earlier
+failed campaigns remain evidence and cannot be replaced by reference predictions.
+The [dated #796 evidence](https://github.com/vypdev/copilot/blob/develop/quality/bugbot/evidence/issue-796.json)
+records baseline classification at 3 false positives/1 false negative and final
+classification at 0/0 on identical six-case inputs. Final exact-location accuracy
+is 0/2 and fails the unchanged 0.8 gate; this is not a pass of every model-quality
+threshold. Both independent controls pass all default gates in this bounded sample.
+All intermediate regressions and complete scores remain recorded.
+
+The six #798 credential-source cases bind configuration-selected setup to the
+persisted initial session and distinguish an unused endpoint stub from a reached
+refresh. Counterexamples retain an opaque initial state, an expired-session
+refresh and a missing bearer separator; unavailable setup evidence stays unknown.
+Owned oracles use real Node HMAC/base64url and a controlled storageState JSON
+roundtrip. They execute only fixed owned fixtures, reject modified or unknown
+inputs and expose no token values, signatures or keys. They do not execute
+Playwright, jose or private consumers. The retained actual six-case baseline and
+first two corrections each omit one real fault. The final instruction has zero
+false positives or omissions; its 2/3 exact anchors still fail the unchanged 0.8
+location gate. All predictions, failed scores and source/prompt identities remain
+in `quality/bugbot/evidence/issue-798.json`; this is no all-gates or statistical
+reliability claim. Existing exact-source consumer CI and
+read-only source provenance remain separate evidence. All 114 earlier corpus
+inputs/verdicts and quality thresholds remain unchanged.
 
 ## Quality gates
 
@@ -239,3 +331,115 @@ the witness comments, whose Unicode values are passed verbatim to that function.
 This closes the initial candidate's separate kind-based modeling gap. The real
 static executor and comparison-only parser remain distinct from consumer runtime
 execution and actual model measurement.
+
+
+The six #764 Kotlin/Wasm cases cover captured Boolean, size/count and JsAny
+parameters, unavailable target evidence, and two genuinely absent identifiers
+(direct and nested). A green JVM job accompanies one failing Wasm control to
+prevent unrelated execution from hiding the defect. Production and benchmark
+share the binding instruction; private verdicts stay out of model prompts. The
+83-case reference evaluation checks scorer/schema behavior, not actual model
+accuracy. Supplied generated imports are inert synthetic evidence. These tests
+do not run a Kotlin compiler or browser, and no external-model measurement is
+claimed for #764. All earlier cases, thresholds and prompt-size limits remain
+unchanged.
+
+
+The seven #770 Action-reference cases cover checkout-free GitHub.com bootstrap,
+an independent remote-tag policy, checkout-first workspace use and unavailable
+host evidence, paired with an illegal suffix, checkout-too-late and explicitly
+unsupported-host controls. Tests parse YAML and inspect Python literals as inert
+data; no synthetic workflow runs on GitHub.com or GHES. Review checks exact
+prefix characters, validator responsibility and host-specific resolution, rather
+than inventing a malformed reference or treating an internal resolved SHA as an
+authored remote pin. Step fixes use prose suggestions instead of unsafe YAML
+replacements. Prior findings still require normal current-head verification.
+
+All five actual product-runtime observations are retained in
+`quality/bugbot/evidence/issue-770.json`. The first four fail default gates through
+wrong anchors or false positives; the final sample passes all default thresholds
+with zero false positives/negatives and exact locations, severities and categories.
+The seven inputs, expected verdicts and thresholds are unchanged. Unlike the
+first four runs from the development repository, the final run uses an empty Git
+workspace with no corpus or reference predictions copied into it. Expected arrays
+never enter the prompt, but repository files were available to the earlier runs.
+This setup change and small sample prevent attributing improvement solely to the
+prompt or making a statistical/general accuracy claim. External consumer source
+and successful-run receipts were inspected separately; they were not rerun.
+
+
+### Relative-link evidence
+
+The Markdown-link group pairs valid self, nested, companion and repository-root
+links with missing files/fragments and a nested renderer defect. An unavailable
+evidence case checks false-positive handling. Seven native oracles inspect owned
+temporary files and plain ASCII heading fixtures; corpus strings are never
+executed. These are path/source facts, rather than a generic Markdown renderer.
+Reference scores establish the evaluator contract. Separate real-agent evidence
+records runtime identities, fixed cases, default scores and all observed failures;
+current-findings benchmark scores alone do not prove historical resolution.
+
+### Kotlin Json policy evidence
+
+The eight #807 cases distinguish the active instance, both `explicitNulls`
+values, nullable fields with and without defaults, missing non-nullable input,
+inherited flags and unavailable policy. Fixed compiled test models compare the
+authored input as inert text before selecting observations; they never execute
+corpus source. Separate owned Kotlin controls compile with Kotlin 2.0.21 and
+public serialization 1.6.3 and 1.7.3, recording eight observations per version.
+They establish their own fixtures, not a private consumer's resolved dependency
+version or execution. The optional source is
+`src/tooling/__tests__/fixtures/bugbot_kotlin_json_probe.kt`; it introduces no
+Kotlin/Java provisioning requirement to mandatory Node CI.
+
+All 126 preceding corpus cases and verdicts remain unchanged. Perfect reference
+predictions check scorer behavior; actual baseline and corrected SDK predictions
+and every failed quality gate are retained separately in
+`quality/bugbot/evidence/issue-807.json`. Identical frozen cases, provider, model,
+effort and floors make the bounded observations comparable without establishing
+general model accuracy or historical-thread resolution.
+
+The actual #807 baseline emits one false positive; the first two proposals emit
+one and two respectively and are rejected. The defaults-first final sample
+emits zero false positives and misses none of the three genuine controls. Its
+exact-location accuracy remains 2/3, below the unchanged 0.8 floor. Every raw
+prediction and failed score is retained; the final sample does not pass every
+model-quality gate or certify future accuracy. The full 134-case perfect-reference
+evaluation passes independently of these actual model observations.
+
+The #772 evidence retains two failed samples that explained valid links correctly
+but still emitted informational findings. The final eight-case sample passes
+all original default gates after reinforcing actionable-only findings in the
+schema description. Separate production-builder/schema/port observations return
+an obsolete prior ID and preserve non-owner resolution boundaries in a synthetic
+Git fixture. These returned responses do not claim a provider state change or a
+future accuracy guarantee.
+
+
+## Routing-root regression
+
+The six #809 cases preserve direct and delegated installed-root selection,
+configuration on the same root, actual child selection, another application's
+root and unavailable implementation evidence. Public Ktor 3.0.2 source and
+independent public-jar disassembly corroborate the API return identity. The Node
+controls select fixed authored object identities; they do not execute Kotlin,
+interpret corpus text or inspect a private consumer's resolved dependency.
+
+The actual current SDK sample emits no false positive or false negative and
+finds both genuine wrong-root controls. One of two anchors is off by one, so its
+unchanged location floor fails. The complete predictions, score, source/SDK
+identities and evidence limits are preserved in
+`quality/bugbot/evidence/issue-809.json`. This sample does not reproduce the
+historical old-release finding, establish statistical improvement or pass every
+model gate. No production instruction or runtime behavior changes. The prior
+134 corpus cases and references remain unchanged; six cases bring the corpus
+to 140. Perfect-reference scorer inputs remain separate from actual predictions.
+
+Existing authorized read-only consumer CI evidence records a tested merge
+containing the reviewed head, with the disputed test blob identical at both
+revisions. Its successful export comparison is not a new execution or proof
+about separate malformed-body behavior or baseline adoption. An optional owned
+Ktor fixture produced no runtime observations: compilation first hit an internal
+constructor, then public test-host dependency setup stopped at a parent-managed
+version. No dependency version was guessed or visibility restriction bypassed.
+This regression adds no JVM/Ktor requirement to mandatory Node CI.

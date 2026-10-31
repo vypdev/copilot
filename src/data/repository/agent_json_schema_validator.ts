@@ -1,3 +1,4 @@
+import { AgentResponseSchemaFailure } from '../../domain/agent_response_schema_failure';
 import { AgentResponseLengthFailure } from '../../domain/agent_response_length_failure';
 
 type JsonSchema = Record<string, unknown>;
@@ -6,7 +7,7 @@ type JsonSchema = Record<string, unknown>;
 export function assertAgentResponseSchema(value: unknown, schema: JsonSchema, path = '$'): void {
     assertType(value, schema.type, path);
     if (Array.isArray(schema.enum) && !schema.enum.some(candidate => Object.is(candidate, value))) {
-        throw new Error(`Agent response schema violation at ${path}: value is outside the allowed enum.`);
+        throw new AgentResponseSchemaFailure('enum', path, `Agent response schema violation at ${path}: value is outside the allowed enum.`);
     }
     if (typeof value === 'string') validateString(value, schema, path);
     if (typeof value === 'number') validateNumber(value, schema, path);
@@ -22,7 +23,7 @@ function assertType(value: unknown, expected: unknown, path: string): void {
             : [];
     if (expectedTypes.length === 0) return;
     const valid = expectedTypes.some(type => matchesType(value, type));
-    if (!valid) throw new Error(`Agent response schema violation at ${path}: expected ${expectedTypes.join(' or ')}.`);
+    if (!valid) throw new AgentResponseSchemaFailure('type', path, `Agent response schema violation at ${path}: expected ${expectedTypes.join(' or ')}.`);
 }
 
 function matchesType(value: unknown, expected: string): boolean {
@@ -36,7 +37,7 @@ function matchesType(value: unknown, expected: string): boolean {
 function validateString(value: string, schema: JsonSchema, path: string): void {
     const length = [...value].length;
     if (typeof schema.minLength === 'number' && length < schema.minLength) {
-        throw new Error(`Agent response schema violation at ${path}: string is too short.`);
+        throw new AgentResponseSchemaFailure('string-short', path, `Agent response schema violation at ${path}: string is too short.`);
     }
     if (typeof schema.maxLength === 'number' && length > schema.maxLength) {
         throw new AgentResponseLengthFailure(path, schema.maxLength);
@@ -44,21 +45,21 @@ function validateString(value: string, schema: JsonSchema, path: string): void {
 }
 
 function validateNumber(value: number, schema: JsonSchema, path: string): void {
-    if (!Number.isFinite(value)) throw new Error(`Agent response schema violation at ${path}: number is not finite.`);
+    if (!Number.isFinite(value)) throw new AgentResponseSchemaFailure('number-finite', path, `Agent response schema violation at ${path}: number is not finite.`);
     if (typeof schema.minimum === 'number' && value < schema.minimum) {
-        throw new Error(`Agent response schema violation at ${path}: number is below minimum.`);
+        throw new AgentResponseSchemaFailure('number-min', path, `Agent response schema violation at ${path}: number is below minimum.`);
     }
     if (typeof schema.maximum === 'number' && value > schema.maximum) {
-        throw new Error(`Agent response schema violation at ${path}: number is above maximum.`);
+        throw new AgentResponseSchemaFailure('number-max', path, `Agent response schema violation at ${path}: number is above maximum.`);
     }
 }
 
 function validateArray(value: unknown[], schema: JsonSchema, path: string): void {
     if (typeof schema.minItems === 'number' && value.length < schema.minItems) {
-        throw new Error(`Agent response schema violation at ${path}: array has too few items.`);
+        throw new AgentResponseSchemaFailure('array-short', path, `Agent response schema violation at ${path}: array has too few items.`);
     }
     if (typeof schema.maxItems === 'number' && value.length > schema.maxItems) {
-        throw new Error(`Agent response schema violation at ${path}: array has too many items.`);
+        throw new AgentResponseSchemaFailure('array-long', path, `Agent response schema violation at ${path}: array has too many items.`);
     }
     if (isObject(schema.items)) {
         value.forEach((item, index) => assertAgentResponseSchema(item, schema.items as JsonSchema, `${path}[${index}]`));
@@ -70,7 +71,7 @@ function validateObject(value: Record<string, unknown>, schema: JsonSchema, path
     const required = Array.isArray(schema.required) ? schema.required.filter((item): item is string => typeof item === 'string') : [];
     for (const property of required) {
         if (!Object.prototype.hasOwnProperty.call(value, property)) {
-            throw new Error(`Agent response schema violation at ${path}: missing required property ${property}.`);
+            throw new AgentResponseSchemaFailure('required', `${path}.${property}`, `Agent response schema violation at ${path}: missing required property ${property}.`);
         }
     }
     for (const [property, nested] of Object.entries(value)) {
@@ -79,7 +80,7 @@ function validateObject(value: Record<string, unknown>, schema: JsonSchema, path
             continue;
         }
         if (schema.additionalProperties === false) {
-            throw new Error(`Agent response schema violation at ${path}: unexpected property ${property}.`);
+            throw new AgentResponseSchemaFailure('additional', path, `Agent response schema violation at ${path}: unexpected property ${property}.`);
         }
         if (isObject(schema.additionalProperties)) {
             assertAgentResponseSchema(nested, schema.additionalProperties as JsonSchema, `${path}.${property}`);

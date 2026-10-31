@@ -44,7 +44,7 @@ describe('complete comparison patch recovery', () => {
         await expect(f.read()).rejects.toThrow(); expect(f.getCommit).not.toHaveBeenCalled();
     });
     it('caps recovered files before object requests', async () => {
-        const f = fixture({}, Object.fromEntries(Array.from({ length: 65 }, (_, i) => [`file${i}`, 'x'])));
+        const f = fixture({}, Object.fromEntries(Array.from({ length: 257 }, (_, i) => [`file${i}`, 'x'])));
         await expect(f.read()).rejects.toMatchObject({ code: 'validation.evidence-too-large' }); expect(f.getCommit).not.toHaveBeenCalled();
     });
     it.each(['missing merge base', 'wrong requested base'])('rejects %s instead of mixing preimages', async scenario => {
@@ -57,8 +57,15 @@ describe('complete comparison patch recovery', () => {
         for (const path of Object.keys(after)) after[path] = '\u0001'.repeat(900_000);
         await expect(fixture({}, after).read()).rejects.toMatchObject({ code: 'validation.evidence-too-large', message: expect.stringContaining('Unreviewed paths (4)') });
     });
-    it('replays from exact objects with a fresh invocation budget and an identical complete plan', async () => {
-        const f = fixture({}, { 'a': 'x'.repeat(260_000) }); const first = await f.read(); expect(await f.read()).toEqual(first); expect(f.getCommit).toHaveBeenCalledTimes(4);
+    it('replays from exact objects with fresh invocation budgets and identities but identical complete sources', async () => {
+        const f = fixture({}, { 'a': 'x'.repeat(260_000) }); const first = await f.read(); const second = await f.read();
+        expect(first.kind).toBe('partitioned'); expect(second.kind).toBe('partitioned');
+        if (first.kind !== 'partitioned' || second.kind !== 'partitioned') throw Error('Expected multipart source');
+        expect(second.protocol!.attemptId).not.toBe(first.protocol!.attemptId);
+        expect(second.protocol!.manifestDigest).not.toBe(first.protocol!.manifestDigest);
+        expect(second.protocol!.sourcesDigest).toBe(first.protocol!.sourcesDigest);
+        expect(second.partitions.map(part => part.evidence)).toEqual(first.partitions.map(part => part.evidence));
+        expect(f.getCommit).toHaveBeenCalledTimes(4);
     });
 });
 

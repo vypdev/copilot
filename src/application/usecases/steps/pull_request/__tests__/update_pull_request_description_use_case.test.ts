@@ -1,3 +1,5 @@
+import { MANAGED_PULL_REQUEST_DESCRIPTION_START as START, MANAGED_PULL_REQUEST_DESCRIPTION_END as END } from '../../../../../domain/pull_request_description';
+import { createPendingPullRequestLink, attachPendingPullRequestLink } from '../../../../../domain/pull_request_issue_link_state';
 import { UpdatePullRequestDescriptionUseCase } from '../update_pull_request_description_use_case';
 import { Ai } from '../../../../../data/model/ai';
 import type {
@@ -16,6 +18,8 @@ const mockAskAgent = jest.fn();
 const mockUpdateDescription = jest.fn();
 const mockGetDetails = jest.fn();
 const mockGetDiff = jest.fn();
+const nativeIdentity = { number: 10, state: 'open' as const, repository: 'owner/repo', headRepository: 'owner/repo', headRef: 'feature/42-x', headSha: 'a'.repeat(40) };
+
 
 async function localizedDescription(value: Parameters<typeof mockAskAgent>[0]): Promise<AgentQueryResult> {
   const response = await mockAskAgent(value);
@@ -80,7 +84,7 @@ describe('UpdatePullRequestDescriptionUseCase', () => {
     mockGetIssueDescription.mockResolvedValue('Issue description');
     mockGetAllMembers.mockResolvedValue(['alice', 'bob']);
     mockAskAgent.mockResolvedValue('PR does X.');
-    mockGetDetails.mockResolvedValue({ body: 'Remote human context', headBranch: 'feature/42-x', baseBranch: 'develop' });
+    mockGetDetails.mockResolvedValue({ identity: nativeIdentity, body: 'Remote human context', headBranch: 'feature/42-x', baseBranch: 'develop' });
     mockUpdateDescription.mockResolvedValue(undefined);
     mockGetDiff.mockResolvedValue({ snapshot: { changes: [{ filename: 'src/login.ts', additions: 1, deletions: 0, patch: '+login()', status: 'modified' }] }, coverage: { status: 'complete' } });
   });
@@ -90,6 +94,18 @@ describe('UpdatePullRequestDescriptionUseCase', () => {
     expect(results[0]).toMatchObject({ success: true, executed: true });
     expect(mockUpdateDescription).toHaveBeenCalledWith(10, expect.stringContaining('PR does X'));
     expect(mockGetAllMembers).not.toHaveBeenCalled();
+  });
+
+  it('retains pending original-parent metadata when replacing prose after the base was restored', async () => {
+    const marker = '<!-- copilot:pr-issue-link:v1;pr=10;issue=42;base=develop;state=pending -->';
+    const body = `Original\n\nResolves #42\n\n${marker}`;
+    const current = context();
+    mockGetDetails.mockResolvedValue({ identity: nativeIdentity, body, headBranch: current.pullRequest.headBranch, baseBranch: 'develop' });
+
+    await useCase.invoke(request({ pullRequest: { ...current.pullRequest, body }, mode: 'replace' }));
+
+    expect(mockUpdateDescription).toHaveBeenCalledWith(10, expect.stringContaining('PR does X.'));
+    expect(mockUpdateDescription).toHaveBeenCalledWith(10, expect.stringContaining(marker));
   });
 
   it.each(['partial', 'unavailable'])('retains the body when GitHub diff evidence is %s', async (status) => {
@@ -150,7 +166,7 @@ describe('UpdatePullRequestDescriptionUseCase', () => {
   it('provides the diff and existing verification evidence without requiring agent shell access', async () => {
     await useCase.invoke(request());
     expect(mockAskAgent.mock.calls[0][0].prompt).toContain('+login()');
-    expect(mockAskAgent.mock.calls[0][0].prompt).toContain('Human context');
+    expect(mockAskAgent.mock.calls[0][0].prompt).toContain('Remote human context');
   });
 
   it('skips preserve mode automatically', async () => {
@@ -173,7 +189,7 @@ describe('UpdatePullRequestDescriptionUseCase', () => {
   });
 
   it('fails closed when neither event nor exact provider details supply both branches', async () => {
-    mockGetDetails.mockResolvedValue({ body: '', headBranch: '', baseBranch: 'develop' });
+    mockGetDetails.mockResolvedValue({ identity: nativeIdentity, body: '', headBranch: '', baseBranch: 'develop' });
     const pullRequest = { ...context().pullRequest, headBranch: '' };
     const results = await useCase.invoke(request({ pullRequest, eventName: 'issue_comment' }, 'authorized-command'));
     expect(results[0].success).toBe(false);
@@ -181,7 +197,7 @@ describe('UpdatePullRequestDescriptionUseCase', () => {
   });
 
   it('reports the missing provider base without obscuring the available head branch', async () => {
-    mockGetDetails.mockResolvedValue({ body: '', headBranch: 'feature/42-x', baseBranch: '' });
+    mockGetDetails.mockResolvedValue({ identity: nativeIdentity, body: '', headBranch: 'feature/42-x', baseBranch: '' });
     const pullRequest = { ...context().pullRequest, baseBranch: '' };
 
     const results = await useCase.invoke(request({ pullRequest, eventName: 'issue_comment' }, 'authorized-command'));
@@ -347,4 +363,131 @@ describe('UpdatePullRequestDescriptionUseCase', () => {
     expect(results[0].errors[0]).toMatchObject({ code: 'locale.output-invalid' });
     expect(mockUpdateDescription).not.toHaveBeenCalled();
   });
+  it('preserves pending host metadata in append mode', async () => {
+    const marker = '<!-- copilot:pr-issue-link:v1;pr=10;issue=42;base=develop;state=pending -->';
+    const body = `Human\n\nResolves #42\n\n${marker}`;
+    mockGetDetails.mockResolvedValue({ identity: nativeIdentity, body, headBranch: nativeIdentity.headRef, baseBranch: 'develop' });
+    const results = await useCase.invoke(request({ mode: 'append' }));
+    expect(results[0].success).toBe(true);
+    expect(mockUpdateDescription.mock.calls[0][1]).toContain(marker);
+    expect(mockUpdateDescription.mock.calls[0][1]).toContain('Human');
+  });
+  it('withholds an explicit description against a temporary target without gaining base authority', async () => {
+    const marker = '<!-- copilot:pr-issue-link:v1;pr=10;issue=42;base=develop;state=pending -->';
+    mockGetDetails.mockResolvedValue({ identity: nativeIdentity, body: `Human\n\nResolves #42\n\n${marker}`,
+      headBranch: nativeIdentity.headRef, baseBranch: 'main' });
+    const results = await useCase.invoke(request({ eventName: 'issue_comment', mode: 'preserve' }, 'authorized-command'));
+    expect(results[0].errors[0].code).toBe('workflow.stale');
+    expect(mockAskAgent).not.toHaveBeenCalled();
+    expect(mockUpdateDescription).not.toHaveBeenCalled();
+    const missingCanonical = await useCase.invoke(request({ pullRequest: { ...context().pullRequest, baseBranch: '' } }, 'authorized-command'));
+    expect(missingCanonical[0].errors[0].code).toBe('workflow.stale');
+    mockGetDetails.mockResolvedValue({ identity: { ...nativeIdentity, headRepository: 'fork/repo' },
+      body: `Human\n\nResolves #42\n\n${marker}`, headBranch: nativeIdentity.headRef, baseBranch: 'develop' });
+    expect((await useCase.invoke(request({}, 'authorized-command')))[0].errors[0].code).toBe('workflow.stale');
+    for (const ownership of [{ headRepository: 'foreign/repo', headRef: nativeIdentity.headRef },
+      { headRepository: nativeIdentity.headRepository, headRef: 'foreign/ref' },
+      { headRepository: nativeIdentity.headRepository, headRef: nativeIdentity.headRef }]) {
+      const v2 = createPendingPullRequestLink({ ...ownership, headSha: nativeIdentity.headSha,
+        pullRequestNumber: 10, issueNumber: 42, originalBaseBranch: 'develop',
+        operationId: '11111111-1111-4111-8111-111111111111' });
+      mockGetDetails.mockResolvedValue({ identity: nativeIdentity, body: attachPendingPullRequestLink('Human', v2),
+        headBranch: nativeIdentity.headRef, baseBranch: 'develop' });
+      const result = await useCase.invoke(request({}, 'authorized-command'));
+      if (ownership.headRepository !== nativeIdentity.headRepository || ownership.headRef !== nativeIdentity.headRef) {
+        expect(result[0].errors[0].code).toBe('workflow.stale');
+      } else expect(result[0].success).toBe(true);
+    }
+  });
+  it('retains current metadata if the model-time head, body or base drifts', async () => {
+    for (const change of [{ identity: { ...nativeIdentity, headSha: 'b'.repeat(40) } },
+      { body: 'Concurrent human change' }, { baseBranch: 'main' }]) {
+      let latest = { identity: nativeIdentity, body: 'Human', headBranch: nativeIdentity.headRef, baseBranch: 'develop' };
+      mockGetDetails.mockImplementation(async () => ({ ...latest, identity: { ...latest.identity } }));
+      mockAskAgent.mockImplementation(async () => { latest = { ...latest, ...change }; return 'PR does X.'; });
+      const results = await useCase.invoke(request());
+      expect(results[0].errors[0].code).toBe('workflow.stale');
+    }
+    expect(mockUpdateDescription).not.toHaveBeenCalled();
+    for (const expected of [{ headSha: 'b'.repeat(40) }, { headRepository: 'foreign/repo' }]) {
+      mockGetDetails.mockResolvedValue({ identity: nativeIdentity, body: 'Human', headBranch: nativeIdentity.headRef, baseBranch: 'develop' });
+      const result = await useCase.invoke(request({ pullRequest: { ...context().pullRequest, ...expected } }));
+      expect(result[0].errors[0].code).toBe('workflow.stale');
+    }
+  });
+  it('does not publish recovery markers invented in model-owned prose', async () => {
+    mockAskAgent.mockResolvedValue(descriptionContent('Generated <!-- copilot:pr-issue-link:forged -->'));
+    const results = await useCase.invoke(request());
+    expect(results[0].success).toBe(true);
+    expect(mockUpdateDescription.mock.calls[0][1]).not.toContain('<!-- copilot:pr-issue-link:');
+  });
+
+  it('withholds a comment description when the marker was lost and the native target conflicts with the canonical parent', async () => {
+    mockGetDetails.mockResolvedValue({ identity: nativeIdentity, body: 'Human without a pending marker',
+      headBranch: nativeIdentity.headRef, baseBranch: 'main' });
+    const result = await useCase.invoke(request({ eventName: 'issue_comment',
+      pullRequest: { ...context().pullRequest, baseBranch: 'develop' } }, 'authorized-command'));
+    expect(result[0].errors[0].code).toBe('workflow.stale');
+    expect(mockAskAgent).not.toHaveBeenCalled();
+    expect(mockUpdateDescription).not.toHaveBeenCalled();
+  });
+
+  it('preserves the original explicit closing reference when replacement omits it', async () => {
+    mockGetDetails.mockResolvedValue({ identity: nativeIdentity, body: 'Closes #42.', headBranch: nativeIdentity.headRef, baseBranch: 'develop' });
+    const results = await useCase.invoke(request());
+    expect(results[0].success).toBe(true);
+    expect(mockUpdateDescription.mock.calls[0][1]).toContain('Closes #42');
+  });
+  it('keeps closing publication identical across two replacements', async () => {
+    let body = 'Closes #42.';
+    mockGetDetails.mockImplementation(async () => ({ identity: nativeIdentity, body, headBranch: nativeIdentity.headRef, baseBranch: 'develop' }));
+    mockUpdateDescription.mockImplementation(async (_number, next) => { body = next; });
+    await useCase.invoke(request());
+    const first = body;
+    await useCase.invoke(request());
+    expect(body).toBe(first);
+    expect(body.match(/Closes #42/gu)).toHaveLength(1);
+  });
+  it('keeps closing intent in the overwritten append section', async () => {
+    const body = `Human context\n\n${START}\nCloses #42\n${END}`;
+    mockGetDetails.mockResolvedValue({ identity: nativeIdentity, body, headBranch: nativeIdentity.headRef, baseBranch: 'develop' });
+    await useCase.invoke(request({ mode: 'append' }));
+    const published = mockUpdateDescription.mock.calls[0][1] as string;
+    expect(published).toContain('Human context');
+    expect(published.match(/Closes #42/gu)).toHaveLength(1);
+  });
+  it('keeps managed closing intent on authorized preserve refresh', async () => {
+    const body = `Human context\n\n${START}\nCloses #42\n${END}`;
+    mockGetDetails.mockResolvedValue({ identity: nativeIdentity, body, headBranch: nativeIdentity.headRef, baseBranch: 'develop' });
+    const results = await useCase.invoke(request({ mode: 'preserve', eventName: 'issue_comment' }, 'authorized-command'));
+    expect(results[0].success).toBe(true);
+    expect(mockUpdateDescription.mock.calls[0][1]).toContain('Closes #42');
+  });
+  it('does not promote a staged reference when the response omits closing', async () => {
+    mockGetDetails.mockResolvedValue({ identity: nativeIdentity, body: 'Refs #42', headBranch: nativeIdentity.headRef, baseBranch: 'develop' });
+    await useCase.invoke(request());
+    expect(mockUpdateDescription.mock.calls[0][1]).not.toContain('Closes #42');
+  });
+  it('retains closing body without querying the model when head repository drifts', async () => {
+    mockGetDetails.mockResolvedValue({ identity: { ...nativeIdentity, headRepository: 'foreign/repo' },
+      body: 'Closes #42', headBranch: nativeIdentity.headRef, baseBranch: 'develop' });
+    const results = await useCase.invoke(request({ pullRequest: { ...context().pullRequest, headRepository: 'owner/repo' } }));
+    expect(results[0].errors[0].code).toBe('workflow.stale');
+    expect(mockAskAgent).not.toHaveBeenCalled();
+    expect(mockUpdateDescription).not.toHaveBeenCalled();
+  });
+  it('does not preserve an issue number different from the verified head branch', async () => {
+    const headRef = 'feature/43-work';
+    mockGetDetails.mockResolvedValue({ identity: { ...nativeIdentity, headRef }, body: 'Closes #42', headBranch: headRef, baseBranch: 'develop' });
+    await useCase.invoke(request({ pullRequest: { ...context().pullRequest, headBranch: headRef } }));
+    expect(mockUpdateDescription.mock.calls[0][1]).not.toContain('Closes #42');
+  });
+  it('retains original closing intent when the generated closing field is malformed', async () => {
+    mockGetDetails.mockResolvedValue({ identity: nativeIdentity, body: 'Closes #42', headBranch: nativeIdentity.headRef, baseBranch: 'develop' });
+    mockAskAgent.mockResolvedValue(descriptionContent('A concise outcome.', { closesLinkedIssue: 'false' }));
+    const results = await useCase.invoke(request());
+    expect(results[0].errors[0].code).toBe('agent.failed');
+    expect(mockUpdateDescription).not.toHaveBeenCalled();
+  });
+
 });

@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { SddTrustedCatalogMissingFailure } from '../../domain/sdd_trusted_catalog_failure';
 import { sddConsistencyFixture } from '../../testing/sdd_consistency_fixture';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -220,6 +221,38 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
     await expect(workspace.validateDraft(snapshot, plan, draft())).rejects.toThrow('SDD validation failed');
     expect(git(repo, 'status', '--porcelain')).toBe('');
     expect(git(repo, 'ls-remote', '--heads', 'origin', 'feature/42-change')).toBe('');
+  });
+
+  it.each(['update', 'companion', 'new'] as const)('keeps a greenfield %s SDD publication truthful and within its allowed diff', async action => {
+    const file = path.join(repo, 'specs/catalog.json'); const source = JSON.parse(fs.readFileSync(file, 'utf8'));
+    source.review = { ready: false, blockers: ['Owner review pending'] };
+    Object.assign(source.capabilities[0], { entrypoints: [], code: [], tests: [],
+      readiness: { state: 'draft', implementationEvidence: 'absent', changesAllowed: false } });
+    fs.rmSync(path.join(repo, 'src'), { recursive: true });
+    fs.writeFileSync(file, JSON.stringify(source));
+    git(repo, 'add', '-A'); git(repo, 'commit', '-m', 'truthful greenfield prerequisites'); git(repo, 'push', 'origin', 'develop');
+    const before = fs.readFileSync(file, 'utf8'); const workspace = new PreBranchSddWorkspaceAdapter(repo);
+    const snapshot = await workspace.loadSnapshot('develop');
+    const selected = { ...plan, action, path: action === 'update' ? plan.path : 'specs/prospective.md',
+      capabilityId: action === 'new' ? 'prospective' : plan.capabilityId };
+    const additional = action === 'new' ? { ...snapshot.capabilities[0], id: 'prospective', title: 'Prospective', specs: [selected.path] } : undefined;
+    const prepared = await workspace.validateDraft(snapshot, selected, draft(selected.path, action), additional);
+    const expected = action === 'update' ? [plan.path] : ['specs/CATALOG.md', 'specs/catalog.json', selected.path];
+    expect(prepared.changedPaths).toEqual(expected);
+    expect(prepared.markdown).toContain('Status: Draft');
+    git(repo, 'push', 'origin', 'develop:refs/heads/feature/42-change');
+    const sha = await workspace.publish('feature/42-change', prepared);
+    expect(await workspace.verifyPublication('feature/42-change', snapshot.baseSha, sha, selected.path)).toBe(true);
+    const published = JSON.parse(git(repo, 'show', sha + ':specs/catalog.json'));
+    expect(published.review).toEqual(source.review);
+    expect(published.capabilities[0]).toEqual({ ...source.capabilities[0],
+      specs: action === 'companion' ? [...source.capabilities[0].specs, selected.path] : source.capabilities[0].specs });
+    if (action === 'new') expect(published.capabilities[1]).toMatchObject({ status: 'proposed', entrypoints: [], code: [], tests: [] });
+    expect(fs.readFileSync(file, 'utf8')).toBe(before);
+    expect(fs.existsSync(path.join(repo, 'src'))).toBe(false);
+    expect(git(repo, 'diff-tree', '--no-commit-id', '--name-only', '-r', sha).split('\n').sort()).toEqual(expected);
+    expect(git(repo, 'status', '--porcelain')).toBe('');
+    expect(git(repo, 'worktree', 'list', '--porcelain').match(/^worktree /gm)).toHaveLength(1);
   });
 
   it('validates a table-only owner update with the real scratch-worktree and catalog boundary', async () => {
@@ -473,5 +506,58 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
     const snapshot = await workspace.loadSnapshot('develop');
     await expect(workspace.validateDraft(snapshot, plan, draft())).rejects.toThrow('not a regular file');
     expect(fs.readFileSync(external, 'utf8')).toBe('# Protected external file\n');
+  });
+});
+
+describe('missing catalog at a trusted immutable commit (#808)', () => {
+  let temp: string;
+  let repo: string;
+  beforeEach(() => { ({ temp, repo } = fixture()); });
+  afterEach(() => fs.rmSync(temp, { recursive: true, force: true }));
+  const commit = () => {
+    git(repo, 'add', '-A'); git(repo, 'commit', '-m', 'Owned prerequisite change');
+    return git(repo, 'rev-parse', 'HEAD');
+  };
+  it('proves catalog absence at an existing source commit', async () => {
+    fs.unlinkSync(path.join(repo, 'specs/catalog.json')); const sha = commit();
+    await expect(new PreBranchSddWorkspaceAdapter(repo).loadSnapshotAtCommit(sha))
+      .rejects.toMatchObject({ name: 'SddTrustedCatalogMissingFailure', sourceCommit: sha });
+  });
+  it('ignores an unreviewed candidate copy and recovers only at its new commit', async () => {
+    const file = path.join(repo, 'specs/catalog.json'); const catalog = fs.readFileSync(file, 'utf8');
+    fs.unlinkSync(file); const missing = commit(); fs.writeFileSync(file, catalog);
+    const workspace = new PreBranchSddWorkspaceAdapter(repo);
+    await expect(workspace.loadSnapshotAtCommit(missing)).rejects.toBeInstanceOf(SddTrustedCatalogMissingFailure);
+    const reviewed = commit(); expect((await workspace.loadSnapshotAtCommit(reviewed)).baseSha).toBe(reviewed);
+    await expect(workspace.loadSnapshotAtCommit(missing)).rejects.toBeInstanceOf(SddTrustedCatalogMissingFailure);
+  });
+  it('uses a regular committed catalog despite a malformed working-tree copy', async () => {
+    const sha = git(repo, 'rev-parse', 'HEAD'); fs.writeFileSync(path.join(repo, 'specs/catalog.json'), '{');
+    const loaded = await new PreBranchSddWorkspaceAdapter(repo).loadSnapshotAtCommit(sha);
+    expect(loaded.baseSha).toBe(sha); expect(loaded.capabilities[0].id).toBe('payments');
+  });
+  it('keeps malformed existing catalog precedence over a missing template', async () => {
+    fs.writeFileSync(path.join(repo, 'specs/catalog.json'), '{'); fs.unlinkSync(path.join(repo, 'specs/_template.md'));
+    const sha = commit();
+    await expect(new PreBranchSddWorkspaceAdapter(repo).loadSnapshotAtCommit(sha))
+      .rejects.toMatchObject({ name: 'SddCatalogCompatibilityFailure', reason: 'invalid-json', sourceCommit: sha });
+  });
+  it.each(['specs/_template.md', 'specs/README.md'])('does not report a missing catalog for an absent %s', async file => {
+    fs.unlinkSync(path.join(repo, file)); const sha = commit();
+    const error = await new PreBranchSddWorkspaceAdapter(repo).loadSnapshotAtCommit(sha).catch(error => error);
+    expect(error).toMatchObject({ message: expect.any(String), code: 128 }); expect(error).not.toBeInstanceOf(SddTrustedCatalogMissingFailure);
+    expect(error.code).toBe(128);
+  });
+  it.each(['unknown', 'tree', 'blob'] as const)('does not misclassify the %s Git object as confirmed catalog absence', async kind => {
+    const sha = kind === 'unknown' ? '0'.repeat(40) : git(repo, 'rev-parse', kind === 'tree' ? 'HEAD^{tree}' : 'HEAD:specs/catalog.json');
+    const error = await new PreBranchSddWorkspaceAdapter(repo).loadSnapshotAtCommit(sha).catch(error => error);
+    expect(error).toMatchObject({ message: expect.any(String), code: 128 }); expect(error).not.toBeInstanceOf(SddTrustedCatalogMissingFailure);
+    expect(error.code).toBe(128);
+  });
+  it('keeps a catalog directory distinct from confirmed path absence', async () => {
+    const file = path.join(repo, 'specs/catalog.json'); fs.unlinkSync(file); fs.mkdirSync(file);
+    fs.writeFileSync(path.join(file, 'candidate.json'), '{}'); const sha = commit();
+    const error = await new PreBranchSddWorkspaceAdapter(repo).loadSnapshotAtCommit(sha).catch(error => error);
+    expect(error).toMatchObject({ name: 'SddCatalogCompatibilityFailure', reason: 'invalid-json', sourceCommit: sha });
   });
 });

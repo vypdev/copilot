@@ -189,3 +189,35 @@ describe('closed catalog compatibility presentation (#716)', () => {
     expect(body.length).toBeLessThan(16000); expect(body).toContain('unsupported-profile'); expect(body).toContain('fell back to English');
   });
 });
+
+describe('missing trusted catalog presentation (#808)', () => {
+  const missing = () => new ApplicationError('configuration.unsupported', 'PRIVATE', {
+    recovery: { id: 'sdd-catalog-missing-trusted-source', variables: {} },
+  });
+  it.each(['en-US', 'es-MX'])('shows the bounded cause, trusted SHA and recovery for %s', locale => {
+    const body = renderSddPreparationFailure({ issueNumber: 42, locale, error: missing(), missingCatalogSource: 'a'.repeat(40), run });
+    expect(body).toContain('a'.repeat(40)); expect(body).toContain('specs/catalog.json');
+    expect(body).toContain(locale === 'en-US' ? 'Trusted source revision' : 'Revisión de origen confiable');
+    expect(body).not.toMatch(/PRIVATE|Specific table facts are unavailable|Catalog compatibility/u); expect(body.length).toBeLessThan(16000);
+  });
+  it.each(['PRIVATE?token=secret', 'a'.repeat(40) + '\n', 'g'.repeat(40)])('rejects unverified source text %p rather than formatting it', source => {
+    expect(() => renderSddPreparationFailure({ issueNumber: 42, error: missing(), missingCatalogSource: source })).toThrow(TypeError);
+  });
+  it('rejects source objects without coercing their text', () => {
+    const toString = jest.fn(() => 'a'.repeat(40));
+    expect(() => renderSddPreparationFailure({ issueNumber: 42, error: missing(), missingCatalogSource: { toString } as never })).toThrow(TypeError);
+    expect(toString).not.toHaveBeenCalled();
+  });
+  it('rejects simultaneous missing and incompatible catalog facts', () => {
+    expect(() => renderSddPreparationFailure({ issueNumber: 42, error: missing(), missingCatalogSource: 'a'.repeat(40), catalogReason: 'unsupported-profile' })).toThrow(TypeError);
+  });
+  it('rejects simultaneous missing-catalog and draft-table facts', () => {
+    expect(() => renderSddPreparationFailure({ issueNumber: 42, error: missing(), missingCatalogSource: 'a'.repeat(40), diagnostic: diagnostic() })).toThrow(TypeError);
+  });
+  it('withholds untrusted recovery operands and renders only the closed source fact', () => {
+    const error = { ...missing(), recovery: { id: 'sdd-catalog-missing-trusted-source', variables: { credential: 'PRIVATE' } } } as never;
+    const body = renderSddPreparationFailure({ issueNumber: 42, error, missingCatalogSource: 'a'.repeat(40) });
+    expect(body).not.toContain('PRIVATE');
+    expect(body).toContain('a'.repeat(40));
+  });
+});

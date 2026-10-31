@@ -28,7 +28,7 @@ English. Error codes and references never translate.
 | `locale.output-invalid` | Generated product content violated its target-locale contract. | Retry with a provider compatible with the configured repository locale. |
 | `locale.translation-failed` | An addressed request could not be safely adapted to the target locale. | Rephrase the request or retry when the language provider is available. |
 | `validation.evidence-unavailable` | A required patch is omitted/incomplete and bounded immutable content recovery cannot verify complete regular UTF-8 text (including a lockfile or binary change). The diagnostic identifies unreviewed paths. Progress was not assessed; existing labels and assessments remain unchanged. This is nonretryable. | Inspect the intended native PR target and exact pinned paths, then supply complete reviewable evidence. Actually changed binary contents require source and provenance; metadata or a successful build is not binary review. Retrying the same commits does not repair unavailable immutable contents; manual inspection does not certify Copilot completion. |
-| `validation.evidence-too-large` | Progress evidence or immutable recovery exceeds a fixed file/byte/request/directory/unit/aggregate/partition-count limit. Existing labels and assessments remain unchanged; this is nonretryable. | Reduce the comparison or split work into smaller reviewed changes before a new assessment. |
+| `validation.evidence-too-large` | Progress evidence or immutable recovery exceeds a fixed file/byte/request/directory/unit/aggregate/partition-count limit. Existing labels and assessments remain unchanged; this is nonretryable. | Inspect the complete pinned comparison and reported capacity. Supported recovery continues automatically across bounded parts/frames. After interruption, rerun the current managed source to collect a fresh complete attempt. Identical over-limit input cannot gain capacity; preserve coherent scope and review any unsupported total limit. |
 | `validation.invalid-input` | Entrypoint input is malformed. Comment-command failures identify the safe syntax/limit cause without echoing input. | Follow the shown command example and [argument rules](/issues/comment-commands#argument-rules-and-rejected-commands), then send a corrected comment. Other entrypoints retain their own recovery. |
 | `workflow.invalid-event` | The event cannot start the requested workflow. | Start from a supported event or surface. |
 | `workflow.stale` | A newer durable state superseded this invocation. | Inspect current state and start a fresh invocation only if needed. |
@@ -81,6 +81,14 @@ before retrying the same issue. The diagnostic preserves repository-native
 schema/readiness, answers and historical publication; a rejected profile does
 not publish a branch or start the model.
 
+Confirmed catalog absence at the trusted revision uses `configuration.unsupported`
+with `sdd-catalog-missing-trusted-source`. The owned preparation card identifies
+`specs/catalog.json` and its immutable source SHA. Review and merge the prerequisite,
+update the displayed trusted source through the normal branch workflow, and retry
+the same issue after that source changes. Existing answers, specifications and any
+linked branch are retained. A Git object/read failure keeps its distinct error
+classification. See [missing trusted catalog recovery](/issues/pre-branch-sdds#missing-catalog-in-the-trusted-source).
+
 For progress, a unique exact same-repository PR owns the comparison base; only
 proven absence uses development. Inherited production libraries can therefore be
 unchanged in the real PR delta. If binary/non-text changes remain unsupported,
@@ -90,6 +98,29 @@ total/shown counts disclose the excerpt. Progress is unassessed and retained;
 project verification is a separate result. Do not manufacture a passing status,
 retarget a legitimate PR or split production binaries just to obtain text patches.
 
+
+
+## Invalid completed progress result
+
+`agent.failed` can describe a process failure or an invalid returned assessment.
+Completed progress contract rejections additionally identify
+`progress-result-contract-invalid`. Inspect its phase, reviewed reason, known
+field and any verified requirement/original-issue line. For example, requirement
+`R2`, original line `L7` and `$.requirements[1].evidence` point to an invalid
+evidence field. The array index is a field location, not a requirement identity.
+`none` explicitly means an identity is unavailable; no positional or repeated-
+quote anchor is inferred. Blank lines keep their original physical numbering.
+
+The result remains rejected and prior labels/assessments remain unchanged. A
+fresh attempt can help if the provider can return conforming data for the same
+requirements; deterministic limits and unsupported contracts cannot be fixed by
+repeating identical invalid data. Inspect the linked run and named schema rule;
+do not weaken acceptance, verification or strict output validation, and do not
+dump raw model output. JSON/schema/semantic details use only bounded reviewed
+codes and fields, never returned values, unknown property names or exceptions.
+Existing execution/transport classification and retryability remain unchanged.
+A later optional Check Run 403 is secondary and retains the primary failure and
+correlation reference.
 
 ## Optional Check Run publication not confirmed
 
@@ -121,6 +152,15 @@ The primary warning is in the log and a Summary appendix; if the appendix fails,
 a localized note points back to the retained log. For credential selection and
 the supported default, see [workflow setup](/issues/workflow-setup).
 
+
+## Missing logs for advisory checks
+
+If GitHub CLI whole-run log retrieval reports `log not found: CHECK_ID`, use the
+[paginated inventory and per-job collection guide](/security-operations/operations/troubleshooting#collect-logs-when-advisory-checks-appear-as-jobs).
+Collect real execution jobs by their native IDs and inspect advisory check output
+separately. Preserve pending/skipped states, failed downloads and any partial
+output. Required workflow results and existing review/coverage conclusions keep
+their original meaning.
 
 ## Missing publication context
 

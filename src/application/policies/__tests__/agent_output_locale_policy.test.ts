@@ -23,6 +23,7 @@ describe('agent output locale policy', () => {
             'recommend-steps',
             'pull-request-description',
             'bugbot-review',
+            'bugbot-literal-candidate-verification',
         ]);
         expect(PRODUCT_FACING_AGENT_TASKS.map(task => productFacingAgentQueryOptions(task, schema).schemaName))
             .toEqual([
@@ -34,6 +35,7 @@ describe('agent output locale policy', () => {
                 'recommend_steps_response',
                 'pull_request_description_response',
                 'bugbot_findings',
+                'bugbot_literal_candidate_verification',
             ]);
     });
 

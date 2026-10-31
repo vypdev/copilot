@@ -9,6 +9,7 @@ export const PRODUCT_FACING_AGENT_TASKS = [
     'recommend-steps',
     'pull-request-description',
     'bugbot-review',
+    'bugbot-literal-candidate-verification',
 ] as const;
 
 export type ProductFacingAgentTask = typeof PRODUCT_FACING_AGENT_TASKS[number];
@@ -22,6 +23,7 @@ const PRODUCT_FACING_AGENT_SCHEMA_NAMES: Readonly<Record<ProductFacingAgentTask,
     'recommend-steps': 'recommend_steps_response',
     'pull-request-description': 'pull_request_description_response',
     'bugbot-review': 'bugbot_findings',
+    'bugbot-literal-candidate-verification': 'bugbot_literal_candidate_verification',
 });
 
 export const AGENT_OUTPUT_LOCALE_SCHEMA_PROPERTY = {

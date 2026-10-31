@@ -13,6 +13,7 @@ export const BUGBOT_RESPONSE_SCHEMA = {
         outputLocale: AGENT_OUTPUT_LOCALE_SCHEMA_PROPERTY,
         findings: {
             type: 'array',
+            description: 'Confirmed actionable defects only. Omit disproved candidates and explanations that the code or link is correct, including info. Return [] when no defect is demonstrated.',
             maxItems: 200,
             items: {
                 type: 'object',

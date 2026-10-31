@@ -1,5 +1,6 @@
 import { Result } from '../../../data/model/result';
-import type { IssueCompletionLabelConfiguration } from '../../../domain/issue_completion';
+import { planIssueCompletion, type IssueCompletionLabelConfiguration } from '../../../domain/issue_completion';
+import { deferredDeploymentCompletionResult } from './deferred_deployment_completion';
 import type { BoundIssueCompletionMetadataPort } from '../../ports/issue_completion_ports';
 import { ApplicationError } from '../../errors/application_error';
 import { closedIssueReconciliationError } from '../../errors/closed_issue_reconciliation_error';
@@ -21,7 +22,12 @@ export class ReconcileClosedIssueMetadataUseCase implements ParamUseCase<ClosedI
         try {
             if (!Number.isSafeInteger(context.issueNumber) || context.issueNumber < 1) throw stale();
             const target = this.issues.forIssue(context.issueNumber);
-            const repaired = await reconcileIssueCompletionMetadata(target, context.issueNumber, context.completionLabels, progress);
+            progress.phase = 'read';
+            const facts = await target.read();
+            if (facts?.number === context.issueNumber && planIssueCompletion(facts, context.completionLabels).kind === 'deferred') {
+                return [deferredDeploymentCompletionResult(this.taskId, facts, true)];
+            }
+            const repaired = await reconcileIssueCompletionMetadata(target, context.issueNumber, context.completionLabels, progress, facts);
             return [new Result({ id: this.taskId, success: true, executed: progress.labelsChanged > 0,
                 steps: ['The closed issue completion metadata was verified; historical and unrelated labels were retained.'],
                 payload: { issueCompletion: { nativeClosed: progress.nativeClosed, labelsChanged: progress.labelsChanged, reconciled: true, ...repaired } } })];

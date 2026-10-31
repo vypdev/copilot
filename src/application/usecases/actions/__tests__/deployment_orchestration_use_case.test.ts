@@ -1,3 +1,4 @@
+import { Result } from "../../../../data/model/result";
 import { DEFAULT_DEPLOYMENT_CONFIGURATION } from "../../../../domain/deployment_configuration";
 import type { DeploymentOperationSnapshot, DeploymentPhase } from "../../../../domain/deployment_operation";
 import type { Execution } from "../../../../data/model/execution";
@@ -143,7 +144,8 @@ function harness() {
     findManagedPullRequests: jest.fn().mockResolvedValue([]),
     createManagedPullRequest: jest.fn().mockResolvedValue(pr()),
     getPullRequest: jest.fn().mockResolvedValue(pr()),
-    enableAutoMerge: jest.fn(),
+    prepareIssueCompletion: jest.fn(),
+      enableAutoMerge: jest.fn(),
     isPullRequestQueued: jest.fn().mockResolvedValue(false),
     enqueuePullRequest: jest.fn(),
     mergePullRequest: jest.fn(),
@@ -193,7 +195,7 @@ function harness() {
   };
   const stateFactory = { bind: jest.fn(() => state) };
   const labels = { getLabels: jest.fn().mockResolvedValue(["release", "deploy"]), setLabels: jest.fn() };
-  const issues = { closeIssue: jest.fn().mockResolvedValue(true), addComment: jest.fn() };
+  const issues = { reconcileCompletion: jest.fn().mockResolvedValue([new Result({ id: 'ReconcileClosedIssueMetadataUseCase', success: true, executed: false, payload: { issueCompletion: { nativeClosed: true, reconciled: true, outcome: 'already-converged' } } })]), closeIssue: jest.fn().mockResolvedValue(true), addComment: jest.fn() };
   const useCase = new DeploymentOrchestrationUseCase({
     pullRequests,
     targetRules,

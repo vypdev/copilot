@@ -14,6 +14,7 @@ import type { ProjectBoardCommandPort } from "../../../application/ports/project
 import type { Execution } from "../../../data/model/execution";
 import {
   createIssueCommentUseCaseCompositionRoot,
+  createSingleActionUseCaseCompositionRoot,
   createMainRunRouteCompositionRoot,
   createPullRequestReviewCommentUseCaseCompositionRoot,
 } from "../main_run_route_composition_root";
@@ -268,4 +269,12 @@ describe("main run route composition root", () => {
     expect(mockIssueInvoke).toHaveBeenCalledTimes(2);
     expect(mockPullRequestInvoke).toHaveBeenCalledTimes(2);
   });
+  it('keeps publication capabilities on the workflow surface when composing comment recovery', () => {
+    createSingleActionUseCaseCompositionRoot('github-workflow', binding);
+    const calls = (SingleActionUseCase as jest.MockedClass<typeof SingleActionUseCase>).mock.calls;
+    expect(calls[0].slice(0, 3)).toEqual([expect.anything(), expect.anything(), expect.anything()]);
+    createSingleActionUseCaseCompositionRoot('local', binding);
+    expect(calls[1].slice(0, 3)).toEqual([undefined, undefined, undefined]);
+  });
+
 });

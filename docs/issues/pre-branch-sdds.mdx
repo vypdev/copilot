@@ -132,6 +132,92 @@ answer-permission lookup temporarily fails, retrying returns the status to
 waiting when existing questions are still incomplete. The Action keeps the
 original question record and answers and does not start drafting.
 
+## Starting without product implementation
+
+Start with the product documents that can be reviewed truthfully. SDK version 1
+accepts `proposed` capabilities with explicitly empty `entrypoints`, `code` and
+`tests` arrays. Every field remains required; `specs` and `documentation` must
+reference existing files. Every supplied implementation path is also checked for
+existence, containment and ownership. Keep prospective SDDs at Draft with their
+unresolved decisions and planned acceptance cases clearly identified.
+
+1. Open the repository's enabled documentation Issue Form for the initial
+   standard, template, SDDs, documentation and catalog.
+2. A maintainer adds `in-progress`; use the exact branch created by the Action.
+   An ordinary documentation issue follows its existing admission path.
+3. Add `specs/README.md`, `specs/_template.md`, the Draft SDDs, user documentation
+   and a version-1 proposed catalog. Generate and validate its catalog index
+   using the reviewed SDK, and review the Drafts against the standard/template.
+   See [initial catalog generation](/development/specifications#initial-catalog-generation).
+4. Review and merge those prerequisites through the normal PR lifecycle. Passing
+   structural validation leaves Draft/readiness blockers and proposed status intact.
+5. Start the feature issue normally. Its existing clarification, SDD validation,
+   immutable evidence and verified branch-publication checks still apply. Add
+   real source and meaningful executed tests as implementation proceeds; promote
+   the catalog status only with that implementation's review.
+
+For example, before payment implementation exists:
+
+```json
+{
+  "version": 1,
+  "capabilities": [{
+    "id": "payments",
+    "title": "Payments",
+    "status": "proposed",
+    "scope": "Prospective payment behavior",
+    "owner": "Maintainers",
+    "lastVerified": "2026-10-29",
+    "specs": ["specs/payments.md"],
+    "workflows": [],
+    "entrypoints": [],
+    "code": [],
+    "tests": [],
+    "documentation": ["docs/payments.md"]
+  }]
+}
+```
+
+The generated evidence map shows **Not yet implemented (proposed capability).**
+for those three empty fields. Its date identifies the reviewed metadata/document
+snapshot. Planned test cases remain plans. `implemented`, `as-built-baseline`
+and `deprecated` capabilities retain complete evidence requirements. Missing
+arrays, nonexistent supplied files and empty specification/documentation fields
+still block validation. Restore the required array or provide real files, then
+regenerate and retry the same normal workflow.
+
+An older installed SDK may reject this supported proposed state. Obtain the
+reviewed version that includes it through the normal SDK/Action upgrade route.
+Retain the prospective documents while that upgrade is pending. Keep the
+repository's native schema and readiness rules if it uses another profile;
+the compatibility recovery below still applies.
+
+## Missing catalog in the trusted source
+
+When `specs/catalog.json` is absent from the pinned trusted revision, preparation
+stops before model analysis and branch or specification publication. The blocked
+card names the missing prerequisite and shows the immutable source SHA in its
+technical details. A catalog copied into the candidate workspace or an unmerged
+documentation PR does not change that revision.
+
+Review and merge the prerequisite through the enabled documentation workflow.
+Update the displayed trusted source through the normal managed-branch workflow,
+then retry the same issue after that source changes. An existing linked branch
+uses its own trusted source; advancing development alone may not update it.
+Answers, published specifications and retained branch state remain available.
+Retrying an unchanged missing source cannot recover it.
+
+| Observed condition | Result and next step |
+|---|---|
+| Catalog absent at the trusted commit | Missing prerequisite; review and merge it before retrying |
+| Catalog exists but its format/profile is unsupported | Follow catalog publication-profile recovery below |
+| Git object/read failure or missing template/standard | Resolve that distinct read/prerequisite failure; it is not proof the catalog is absent |
+
+The Action checks source and issue freshness before replacing its owned card. A
+moved or unavailable source preserves newer status. Once a reviewed catalog
+reaches the trusted revision, normal profile validation, clarification and
+publication checks still apply; catalog presence alone does not grant readiness.
+
 ## Catalog publication profiles
 
 The installed automatic writer supports the **SDK version-1** catalog profile:
@@ -186,6 +272,22 @@ do not add fake source wrappers or omit relevant tests. Specifications remain
 Markdown under `specs/`; workflow evidence remains YAML under
 `.github/workflows/` or `setup/workflows/`. Ownership, SDD structure, numeric test
 budgets and the SDD/catalog-only publication allowlist remain enforced.
+
+Catalog discovery rejects unregistered symbolic links anywhere below `specs/`,
+including links to directories, dangling links and links whose names look like
+excluded files. It does not follow a target to decide whether it contains SDDs.
+The ordinary-file exclusions for root `README.md`, `_template.md`, `CATALOG.md`
+and non-Markdown files remain supported. Replace a reported link with ordinary
+contained files, register any resulting SDD, regenerate and retry. A rejected
+generation or validation leaves the existing catalog and targets unchanged;
+neither the Action nor the standalone SDK silently treats this tree as complete.
+
+Accepted names with parentheses, spaces, Unicode or Markdown punctuation do not
+need renaming. The generated catalog preserves their full paths and literal
+labels, with URI-escaped link destinations. Register the original filename,
+including any literal percent sign, and regenerate `specs/CATALOG.md` after
+updating the shared SDK validator. For example, `specs/foo).md` links to
+`./foo%29.md`; source files, capability ownership and readiness stay unchanged.
 
 | Convention | Verified coverage | Execution support |
 |---|---|---|

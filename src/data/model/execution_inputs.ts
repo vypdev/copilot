@@ -35,7 +35,7 @@ export interface EventPullRequestPayload {
     head?: {
         ref?: string;
         sha?: string;
-        repo?: { owner?: { login?: string } };
+        repo?: { name?: string; owner?: { login?: string } };
     };
     base?: { ref?: string };
     merged?: boolean;

@@ -212,3 +212,12 @@ it('converges a relationship-retired historical card to native issue closure', a
   const [result]=await f.useCase.invoke(context); expect(result.success).toBe(true);
   expect(parsePublicationMarker(f.stored[0].body)?.sourceVersion).toBe('closed:issue');
 });
+
+
+it('retains the active card while deployment completion is pending', async () => {
+  const f = fixture();
+  f.issues.readIssue.mockResolvedValue({ number: 42, state: 'closed', reason: 'completed', labels: ['55%'], deploymentCompletion: 'pending' });
+  expect((await f.useCase.invoke(context))[0]).toMatchObject({ success: true, executed: false,
+    payload: { outcome: 'deferred', nativeClosed: true, reconciled: false } });
+  expect(f.comments.listIssueComments).not.toHaveBeenCalled(); expect(f.comments.updateComment).not.toHaveBeenCalled();
+});

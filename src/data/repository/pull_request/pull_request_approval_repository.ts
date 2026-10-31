@@ -22,6 +22,7 @@ import { parsePullRequestApprovalPolicy } from '../../../domain/pull_request_app
 import { parseApprovalCoverageZip } from './approval_coverage_artifact';
 import { fileMatchesIgnorePatterns } from '../../../application/policies/file_ignore_policy';
 import { renderApprovalAssessment } from '../../../application/policies/pull_request_approval_presentation_policy';
+import { hasExplicitClosingReference } from '../../../domain/pull_request_closing_reference';
 
 export interface ApprovalRepositorySettings {
     readonly mainBranch: string;
@@ -118,8 +119,9 @@ export class PullRequestApprovalRepository implements PullRequestApprovalPort {
         const branchIssue = branch
             ? Number(pull.head.ref.slice(branch[1].length + 1).match(/^(\d+)-/u)?.[1])
             : NaN;
-        const linkedIssue = Number.isSafeInteger(branchIssue) && branchIssue > 0
-            && new RegExp(`\\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\\s+#${branchIssue}\\b`, 'iu').test(pull.body ?? '');
+        const linkedIssue = Number.isSafeInteger(branchIssue) && branchIssue > 0 && branchIssue !== pull.number
+            && pull.head.repo?.id === target.repositoryId && pull.base.repo?.id === target.repositoryId
+            && hasExplicitClosingReference(pull.body ?? '', `${target.owner}/${target.repository}`, branchIssue);
         const checkRuns = [...headChecks, ...mergeChecks];
         const workflowRuns = [...headRuns, ...mergeRuns];
         const latestRuns = [...new Set(policy.testChecks.map(producer => producer.workflowName))].flatMap(name => {

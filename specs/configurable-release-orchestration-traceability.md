@@ -168,3 +168,17 @@ selection and disabled-by-default consumer replacement. Native adapter cases
 exercise source/base drift after inventory without duplicating whole inspections.
 Current-head PR evidence supersedes earlier local baseline counts; no unsafe ACL
 or verification exception is introduced to make platform CI green.
+
+## Native launcher completion boundary (#792)
+
+| Requirement | Implementation / evidence |
+|---|---|
+| Prevent linked-branch promotion auto-close before handler | `github_deployment_issue_completion.ts`; stateful `deployment_issue_completion.integration.test.ts` uses actual linked-branch and managed-PR adapters |
+| Exact owned native unlink and verified absence | 200-reference bounded adapter tests, exact PR/issue/repository/head/operation checks; existing expected-head native merge/queue pins |
+| Pending state cannot produce generic completion | `deployment_issue_completion.ts`, native issue facts adapter, issue completion policy, generic close/metadata/card tests |
+| Complete functional plan before close callback | reconciliation handler persists completed after cleanup and before issue closure; strict finalization ordering test |
+| Retry issue projection without repeating irreversible effects | trusted publication handler, completion failure/replay cases, en-US/es-ES and actual Action Job Summary tests |
+
+These are deterministic regression and source/API-schema evidence, not a claim
+of a live consumer release, package upload, tag, automatic promotion or visual
+GitHub acceptance. Preserve the existing live-evidence gates above.

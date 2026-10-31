@@ -13,9 +13,14 @@ import type {
 
 import { githubDeploymentMergeError } from "./github_deployment_merge_error";
 import { DeploymentMergeEffectError } from "../../../application/errors/deployment_merge_effect_error";
+import { prepareManagedIssueCompletion } from './github_deployment_issue_completion';
 
 export class GithubManagedPullRequestRepository implements ManagedPullRequestPort {
   constructor(private readonly clientProvider: GithubClientPort<GithubDeploymentClient>) {}
+
+  prepareIssueCompletion(owner: string, repository: string, pullRequest: ManagedPullRequestRecord, token: string): Promise<void> {
+    return prepareManagedIssueCompletion(this.clientProvider.getClient(token), owner, repository, pullRequest);
+  }
 
   async findManagedPullRequests(query: ManagedPullRequestQuery): Promise<readonly ManagedPullRequestRecord[]> {
     const client = this.clientProvider.getClient(query.token);

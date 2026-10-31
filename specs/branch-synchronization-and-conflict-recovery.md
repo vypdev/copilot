@@ -1054,3 +1054,192 @@ could select the wrong linked branch. Both native-name regressions failed before
 the correction. Only durable configuration accepts full-ref notation; provider
 short names stay unchanged, and pair keys use JSON tuple serialization. Existing
 positive identical-pair deduplication and strict ambiguity tests remain required.
+
+## Catalog profile diagnosis and preserved recovery — #779
+
+### Observed problem and selected boundary
+
+The immutable before/adopted inputs cited in issue #779 both contain sixteen
+legacy owners: specs arrays, combined evidence arrays, title-case statuses and
+three null verification dates. All four fetched catalog/index blobs match both
+their GitHub identities and the report's SHA-256 receipts. Their first absent
+SDK field is workflows. The current refresh rejects evidence shape before
+identifying the profile; a clean prepare throws a generic retryable workflow
+failure. The actual consumer run aborts its merge without publication.
+
+This correction adds diagnosis and a reviewed recovery route. It does not certify
+the consumer's schema, execute its validator or convert its metadata.
+
+### Requirements, ownership and state
+
+catalog-profile-R01: classify the catalog as SDK v1, legacy combined evidence,
+repository-native, ambiguous or unknown before model-assisted catalog work or
+derived-index output. Recognize a complete SDK field set even when it retains
+opaque legacy evidence as extension data. Mixed owner dialects and partial
+legacy-to-SDK representations must not be silently normalized. Keep the existing
+10 MiB metadata/index/output boundaries; new public numeric facts are integers
+bounded by that byte limit, with zero denoting the document and positive values
+denoting one-based capability positions. No new configuration or permission is
+introduced.
+
+catalog-profile-R02: report only closed profile, field and phase identifiers and
+the bounded capability position. The legacy case identifies profile
+legacy-evidence, capability 1 and field workflows. JSON/root failures identify
+their document scope. SDK shape/path failures retain their corresponding closed
+field/position when available. Raw IDs, titles, paths, statuses, dates, provider
+text, schema URLs and evidence values never become public recovery operands.
+Forged, extra, missing or out-of-range facts fail closed. Operator logs capture
+the diagnostic before abort; the correlated CLI/GitHub reply retains it.
+
+catalog-profile-R03: preserve the current clean-merge and conflict boundaries.
+A clean unsupported catalog must abort before staging, verification, commit or
+push. If the catalog is already readable during a relevant conflict, classify
+it before the fixer. When catalog JSON is conflicted, read the two immutable
+source blobs with regular-mode, size and object-ID checks: ordinary SDK/SDK
+conflicts retain their normal fixer flow; unsupported or mixed formats stop
+before the fixer. A clean reviewed migration that produces valid SDK metadata
+must remain possible even when the old child used a legacy catalog. Do not make
+the old child format an unconditional permanent blocker.
+
+Catalog JSON changes and original JSON/index conflicts use this preflight.
+Unrelated merges retain their normal behavior. After resolution, repeat the
+normal full catalog/evidence validation. Only refreshes already admitted by the
+original merge/conflict path set use the bundled trusted index publisher;
+all other relevant catalog/index validation is read-only.
+Preserve metadata bytes and all existing HEAD/MERGE_HEAD, conflict path, index,
+whitespace, complete credential-free verification and remote-head controls.
+Never execute a validator or script supplied by the merged branch.
+
+catalog-profile-R04: carry structured catalog failures through both prepare and
+resolved-merge validation. Preserve the existing boolean refresh wrapper for
+callers while the workspace uses its detailed result. A new closed recovery
+descriptor distinguishes compatibility from generic retryable workflow failure;
+unsupported/ambiguous profiles require reviewed compatibility work, and invalid
+SDK data requires correction. Abort status is completed or unverified; completed
+means the abort call finished, not a new claim of verified application readiness.
+If abort fails, show unverified local state and require inspection before retry.
+No synchronization commit/push is attempted on this path.
+
+catalog-profile-R03a (review finding, declared before correction): a conflict in
+either catalog JSON or its index requires profile preflight. Conflicted JSON
+uses both immutable originals even if the index merged without conflict or Git
+left readable JSON without text markers (for example with a binary merge
+attribute). A
+metadata-only clean update receives the same full SDK validation. Readable
+metadata changes are also classified before resolving unrelated conflicts;
+their complete read-only validation runs after that resolution. Preserve the
+original write authority: only an already-conflicted index or the existing clean
+merge that changed both metadata and index may be regenerated. JSON-only
+resolutions use read-only full catalog/index validation. If their canonical
+index would differ, stop with a closed index-output diagnostic and preserve the
+protected index; do not add it to the conflict set or write/stage another path.
+An unrelated merge remains unchanged. No new user configuration is introduced.
+
+Reserve at least **8 additional regression cases** for this correction beyond
+the primary 48-case floor: four real JSON-only Git merges covering unsupported
+originals and compatible SDK originals, two resolved JSON-only failures
+(invalid SDK and noncanonical protected index), and two direct read-only index
+validation cases. Verify no fixer/publication on unsupported preparation and
+no index mutation or extra staging during read-only validation. The existing
+full coverage, native-platform, protected-path and zero-active-finding gates
+remain required.
+
+catalog-profile-R05: reuse the existing correlated failure reply, with complete
+English/Spanish content and the existing whole-catalog fallback for other
+locales. No new card, command, timeline notification or settings flow is added.
+Insert the trusted recovery-guide URL and existing sync command after
+localization; catalog or translation data cannot select either destination.
+
+Representative English content:
+
+> Impact: Branch synchronization stopped at catalog compatibility. Profile:
+> legacy-evidence; capability position: 1; field: workflows.
+>
+> Action: Review the catalog compatibility guide. Preserve the original
+> evidence/readiness/history; obtain a reviewed compatible adapter or complete
+> an explicitly reviewed lossless SDK mapping, then retry the existing command.
+>
+> Retained state: No synchronization commit or push was attempted. The
+> compatibility check did not rewrite catalog/index data. Local abort: completed.
+> Unverified abort requires workspace inspection before retrying.
+
+Spanish conveys the same state/action/retention. Technical profile and field
+codes are stable operands. Existing correlation and workflow links remain.
+
+### Lossless maintainer recovery and compatibility
+
+catalog-profile-R06: document a concrete review checklist. First preserve the
+original catalog/index and both source object IDs. A repository retaining its
+own schema/readiness must obtain a reviewed compatible adapter. A maintainer
+choosing SDK v1 must explicitly map owner/spec identity and evidence roles,
+retain every combined/directory evidence value and historical/null verification
+fact in reviewed extension metadata, and select actual regular implementation
+files only when they exist. The proposed-state contract from #777 permits honest
+empty implementation arrays. A metadata-review date is a new reviewed fact,
+not manufactured application/test verification; preserve the original null/date
+history separately and keep unresolved decisions/readiness intact.
+
+Review the mapping with the repository's own standards and normal CI outside
+this Action, regenerate with the matching reviewed SDK and retry the original
+sync command. No automatic migration, gate disablement, catalog deletion, fake
+source/tests/date or exceptional recovery push is offered. Our consumer access
+is read-only. Matching legacy profiles alone do not make them supported, and a
+passing consumer validator does not grant an SDK publication adapter.
+
+~~~mermaid
+flowchart LR
+    A[Authorized exact-head merge preview] --> P[Classify relevant catalog]
+    P -->|SDK| V[Normal path and bundled contract checks]
+    V --> W{Index refresh authorized by original paths}
+    W -->|Yes| I[Trusted derived index publisher]
+    W -->|No| J[Read-only canonical index check]
+    I --> F[Full verifier and head fences]
+    J --> F
+    F --> C[Trusted normal commit and push]
+    P -->|Unsupported or invalid| D[Closed profile field and position]
+    D --> B[Abort and existing correlated recovery reply]
+    B --> R[Reviewed compatible adapter or lossless maintainer mapping]
+    R --> A
+~~~
+
+Text equivalent: classify the relevant catalog before catalog model/output work;
+SDK input proceeds through unchanged safety/verification controls, while
+unsupported data aborts and requires reviewed compatibility recovery. Retry
+does not rewrite the original format automatically.
+
+### Numeric test budget and executable acceptance
+
+Reserve at least **48 distinct additional cases** before implementation:
+
+| Area | Minimum | Observable risk/outcome |
+|---|---:|---|
+| Pure classification and closed facts | 16 | SDK/proposed/extension, native/legacy/mixed/unknown, root/version/array failures and forged bounds |
+| Filesystem and index boundary | 10 | First field/position, size/mode/links/traversal, no downstream validator/output for unsupported data |
+| Real Git preparation and abort | 10 | Clean/conflicted legacy, SDK/SDK conflicts, clean reviewed migration, replay and exact catalog/index/ref retention |
+| Application ordering and failure | 6 | No fixer/verifier/push on rejection; clean/conflict diagnostic propagation and failed abort |
+| Presentation and recovery | 6 | English/Spanish, complete fallback, fixed guide/command, malformed descriptor and preserved lossless history |
+| **Total** | **48** | Existing cases and source receipts are not counted again |
+
+The pure classifier/fact guard must reach 100% all coverage metrics. Changed
+adapters, orchestration and shared recovery modules must meet the existing
+95% statements/lines and 90% branches/functions floors; retain every prior
+module/global budget. All changed coverable lines, including branches, require
+100% actual-base Codecov diff coverage. Preserve existing platform capability
+skips without adding incident-specific skips or timeout increases.
+
+Replay both exact consumer catalog/index pairs against the original and
+corrected preflight using trusted upstream code and owned temporary files.
+Record original evidence-shape rejection versus the new closed compatibility
+diagnostic, zero validator/model/writer calls and unchanged hashes. This
+preflight receipt does not claim a complete consumer merge or application run.
+Owned SDK/legacy scratch repositories prove actual abort/ref preservation and
+SDK positive synchronization with the normal verifier and all push fences.
+
+Update this owner, the semantic-publication companion, catalog evidence and
+branch-sync/recovery guides together. The presentation subset is referenced
+from the primary 48-case allocation, not added again to the communication
+ledger's existing 135/146-case budgets. Run focused tests, full root/extension
+coverage, build/package/web/types/lint, documentation/workflow/specification
+contracts, Graphify and normal commit hooks. Fresh exact-head CI, every platform,
+Codecov actual diff and complete review without active findings gate the
+authorized develop merge. No release or consumer adoption is authorized here.

@@ -180,6 +180,8 @@ async function writeActionSummary(
         };
         appendLocalizationEvidence = true;
         body = renderDeploymentJobSummary(operation, {
+            issueCompletionPending: execution.currentConfiguration.results.some(result =>
+                getResultPayload(getResultPayload(result.payload)?.deployment)?.issueCompletionVerified === false),
             owner: execution.owner,
             repository: execution.repo,
             issue: execution.singleAction.issue,

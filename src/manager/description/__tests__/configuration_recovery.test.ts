@@ -244,7 +244,7 @@ describe('stored configuration diagnostics and recovery (#635)', () => {
     });
     expect(result.issueResolution.issueNumber).toBeUndefined();
     expect(issuePort.isIssue).not.toHaveBeenCalled();
-    expect(issuePort.getDescription).not.toHaveBeenCalled();
+    expect(issuePort.getDescription).toHaveBeenCalledWith(144);
     expect(dependencies.branchVersionResolver.resolve).not.toHaveBeenCalled();
     expect(f.updateDescription).not.toHaveBeenCalled();
   });

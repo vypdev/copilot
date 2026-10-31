@@ -17,6 +17,7 @@ import { buildPublicationMarker, createSemanticDigest } from './publication_iden
 export const DEPLOYMENT_DASHBOARD_MARKER = 'copilot-deployment-dashboard';
 
 export interface DeploymentPresentationContext {
+  readonly issueCompletionPending?: boolean;
   readonly owner: string;
   readonly repository: string;
   readonly issue: number;
@@ -196,13 +197,15 @@ export function renderDeploymentJobSummary(
   catalog: DeploymentMessageCatalog = resolveStaticDeploymentCatalog(context.repositoryLocale),
 ): string {
   const messages = deploymentCopy(catalog);
-  const failure = operation.phase === 'blocked' ? requiredDeploymentFailure(operation) : undefined;
+  const issueCompletionPending = context.issueCompletionPending === true && operation.phase === 'completed';
+  const failure = operation.phase === 'blocked' ? requiredDeploymentFailure(operation)
+    : issueCompletionPending ? { message: `${messages.cleanup}: ${messages.pending}`, retryable: true } : undefined;
   const externallyPending = operation.phase === 'promotion_pr_pending' || operation.phase === 'reconciliation_pending';
-  const result = operation.phase === 'blocked'
+  const result = failure
     ? messages.workflowFailure
     : externallyPending ? messages.externalWait : messages.phase[operation.phase];
   const lines = [
-    `# ${operation.phase === 'blocked' ? '❌' : externallyPending ? '⏳' : '✅'} ${messages.jobSummary}`, '',
+    `# ${failure ? '❌' : externallyPending ? '⏳' : '✅'} ${messages.jobSummary}`, '',
     `> **${messages.result}: ${result}.**`, '',
     `| ${messages.previousPhase} | ${messages.resultingPhase} | ${messages.retryable} |`, '|---|---|---|',
     `| ${inline(previousPhase ?? operation.phase)} | ${inline(operation.phase)} | ${failure?.retryable ? messages.yes : messages.no} |`, '',
@@ -217,12 +220,13 @@ export function renderDeploymentJobSummary(
       ? inline(`${operation.publicationReceipt.tag}@${shortSha(operation.publicationReceipt.productionSha)}`)
       : messages.absent}`, '',
   ];
-  if (operation.phase === 'blocked') {
+  if (failure) {
     lines.push(
       `## ${messages.actionRequired}`, '',
       `${safeText(failure!.message)}. ${failure!.retryable ? messages.retryAfterCorrection : messages.manualIntervention}.`, '',
     );
   }
+  if (issueCompletionPending) lines.push(messages.noRepublish, '');
   lines.push(deploymentLinks(operation, context, messages, catalog).join(' · '));
   return lines.join('\n');
 }

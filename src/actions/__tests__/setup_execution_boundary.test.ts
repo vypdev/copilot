@@ -96,6 +96,17 @@ const issueResolution = {
 } as const;
 
 describe('setup execution boundary', () => {
+  it('propagates and clears the invocation-local verified PR parent outside configuration', () => {
+    const execution = target();
+    const state = { ...configuredState(), pullRequestParentBranch: 'develop' };
+    applySetupExecutionResult(execution, { status: 'configured', tokenUser: 'bot', issueResolution,
+      branchType: 'feature', state });
+    expect(execution).toHaveProperty('pullRequestParentBranch', 'develop');
+    expect(execution.currentConfiguration).not.toHaveProperty('pullRequestParentBranch');
+    applySetupExecutionResult(execution, { status: 'configured', tokenUser: 'bot', issueResolution,
+      branchType: 'feature', state: configuredState() });
+    expect(execution).toHaveProperty('pullRequestParentBranch', undefined);
+  });
   it('projects a deeply frozen copy without credentials or unrelated inputs', () => {
     const mutableSource = source();
     const context = projectSetupExecutionContext(mutableSource);

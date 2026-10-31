@@ -29,6 +29,7 @@ export function projectConfigurationPersistenceContext(
     const configuration = source.currentConfiguration;
     return Object.freeze({
         issueNumber,
+        targetKind: !source.isIssue && source.isPullRequest ? 'pull-request' : 'issue',
         currentConfiguration: Object.freeze({
             branchType: configuration.branchType,
             releaseBranch: configuration.releaseBranch,

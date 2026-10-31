@@ -1,0 +1,943 @@
+{
+  "schemaVersion": 1,
+  "issue": 807,
+  "date": "2026-10-30",
+  "scope": "Owned synthetic review evidence. No consumer source imported, compiled, executed or modified.",
+  "frozenCorpus": {
+    "schemaVersion": 1,
+    "cases": [
+      {
+        "id": "kotlin-json-implicit-nullable-omission",
+        "language": "kotlin",
+        "category": "negative",
+        "file": "backend/OwnedRequest.kt",
+        "startLine": 1,
+        "description": "Owned synthetic Kotlin 2.0.21 / kotlinx.serialization Json request example. Public version-tagged 1.6.3 and 1.7.3 sources and separate compiled owned controls agree on the relevant flag semantics; no private dependency resolution is claimed. Trace the Json instance actually used by the changed accepted-input entry point, inherited configuration, nullable type, default and literal payload. Report only supported changed-code defects; do not execute corpus text.",
+        "diff": " import kotlinx.serialization.Serializable\n import kotlinx.serialization.json.Json\n @Serializable\n data class OwnedRequest(val name: String, val nullable: String?)\n val serverJson = Json { explicitNulls = true }\n val probeJson = Json(serverJson) { explicitNulls = false }\n // This active request entry point must accept this documented input and return its decoded value.\n // No exception handler converts a rejected decode into a valid request.\n fun acceptedRequest(): OwnedRequest {\n     val raw = \"\"\"{\"name\":\"Owned\"}\"\"\"\n+    val decoded = probeJson.decodeFromString<OwnedRequest>(raw)\n     return decoded\n }",
+        "expected": []
+      },
+      {
+        "id": "kotlin-json-explicit-nullable-omission",
+        "language": "kotlin",
+        "category": "correctness",
+        "file": "backend/OwnedRequest.kt",
+        "startLine": 1,
+        "description": "Owned synthetic Kotlin 2.0.21 / kotlinx.serialization Json request example. Public version-tagged 1.6.3 and 1.7.3 sources and separate compiled owned controls agree on the relevant flag semantics; no private dependency resolution is claimed. Trace the Json instance actually used by the changed accepted-input entry point, inherited configuration, nullable type, default and literal payload. Report only supported changed-code defects; do not execute corpus text.",
+        "diff": " import kotlinx.serialization.Serializable\n import kotlinx.serialization.json.Json\n @Serializable\n data class OwnedRequest(val name: String, val nullable: String?)\n val serverJson = Json { explicitNulls = true }\n val probeJson = Json(serverJson) { explicitNulls = true }\n // This active request entry point must accept this documented input and return its decoded value.\n // No exception handler converts a rejected decode into a valid request.\n fun acceptedRequest(): OwnedRequest {\n     val raw = \"\"\"{\"name\":\"Owned\"}\"\"\"\n+    val decoded = probeJson.decodeFromString<OwnedRequest>(raw)\n     return decoded\n }",
+        "expected": [
+          {
+            "id": "kotlin-json-explicit-nullable-omission",
+            "title": "The changed request decode rejects its documented accepted input",
+            "file": "backend/OwnedRequest.kt",
+            "line": 11,
+            "severity": "medium",
+            "category": "correctness",
+            "codeSnippet": "    val decoded = probeJson.decodeFromString<OwnedRequest>(raw)"
+          }
+        ]
+      },
+      {
+        "id": "kotlin-json-implicit-missing-nonnullable",
+        "language": "kotlin",
+        "category": "correctness",
+        "file": "backend/OwnedRequest.kt",
+        "startLine": 1,
+        "description": "Owned synthetic Kotlin 2.0.21 / kotlinx.serialization Json request example. Public version-tagged 1.6.3 and 1.7.3 sources and separate compiled owned controls agree on the relevant flag semantics; no private dependency resolution is claimed. Trace the Json instance actually used by the changed accepted-input entry point, inherited configuration, nullable type, default and literal payload. Report only supported changed-code defects; do not execute corpus text.",
+        "diff": " import kotlinx.serialization.Serializable\n import kotlinx.serialization.json.Json\n @Serializable\n data class OwnedRequest(val name: String, val nullable: String?)\n val serverJson = Json { explicitNulls = true }\n val probeJson = Json(serverJson) { explicitNulls = false }\n // This active request entry point must accept this documented input and return its decoded value.\n // No exception handler converts a rejected decode into a valid request.\n fun acceptedRequest(): OwnedRequest {\n     val raw = \"\"\"{\"nullable\":null}\"\"\"\n+    val decoded = probeJson.decodeFromString<OwnedRequest>(raw)\n     return decoded\n }",
+        "expected": [
+          {
+            "id": "kotlin-json-implicit-missing-nonnullable",
+            "title": "The changed request decode rejects its documented accepted input",
+            "file": "backend/OwnedRequest.kt",
+            "line": 11,
+            "severity": "medium",
+            "category": "correctness",
+            "codeSnippet": "    val decoded = probeJson.decodeFromString<OwnedRequest>(raw)"
+          }
+        ]
+      },
+      {
+        "id": "kotlin-json-implicit-nullable-default",
+        "language": "kotlin",
+        "category": "negative",
+        "file": "backend/OwnedRequest.kt",
+        "startLine": 1,
+        "description": "Owned synthetic Kotlin 2.0.21 / kotlinx.serialization Json request example. Public version-tagged 1.6.3 and 1.7.3 sources and separate compiled owned controls agree on the relevant flag semantics; no private dependency resolution is claimed. Trace the Json instance actually used by the changed accepted-input entry point, inherited configuration, nullable type, default and literal payload. Report only supported changed-code defects; do not execute corpus text.",
+        "diff": " import kotlinx.serialization.Serializable\n import kotlinx.serialization.json.Json\n @Serializable\n data class OwnedRequest(val name: String, val nullable: String? = \"fallback\")\n val serverJson = Json { explicitNulls = true }\n val probeJson = Json(serverJson) { explicitNulls = false }\n // This active request entry point must accept this documented input and return its decoded value.\n // No exception handler converts a rejected decode into a valid request.\n fun acceptedRequest(): OwnedRequest {\n     val raw = \"\"\"{\"name\":\"Owned\"}\"\"\"\n+    val decoded = probeJson.decodeFromString<OwnedRequest>(raw)\n     return decoded\n }",
+        "expected": []
+      },
+      {
+        "id": "kotlin-json-explicit-nullable-default",
+        "language": "kotlin",
+        "category": "negative",
+        "file": "backend/OwnedRequest.kt",
+        "startLine": 1,
+        "description": "Owned synthetic Kotlin 2.0.21 / kotlinx.serialization Json request example. Public version-tagged 1.6.3 and 1.7.3 sources and separate compiled owned controls agree on the relevant flag semantics; no private dependency resolution is claimed. Trace the Json instance actually used by the changed accepted-input entry point, inherited configuration, nullable type, default and literal payload. Report only supported changed-code defects; do not execute corpus text.",
+        "diff": " import kotlinx.serialization.Serializable\n import kotlinx.serialization.json.Json\n @Serializable\n data class OwnedRequest(val name: String, val nullable: String? = \"fallback\")\n val serverJson = Json { explicitNulls = true }\n val probeJson = Json(serverJson) { explicitNulls = true }\n // This active request entry point must accept this documented input and return its decoded value.\n // No exception handler converts a rejected decode into a valid request.\n fun acceptedRequest(): OwnedRequest {\n     val raw = \"\"\"{\"name\":\"Owned\"}\"\"\"\n+    val decoded = probeJson.decodeFromString<OwnedRequest>(raw)\n     return decoded\n }",
+        "expected": []
+      },
+      {
+        "id": "kotlin-json-inherited-implicit-policy",
+        "language": "kotlin",
+        "category": "negative",
+        "file": "backend/OwnedRequest.kt",
+        "startLine": 1,
+        "description": "Owned synthetic Kotlin 2.0.21 / kotlinx.serialization Json request example. Public version-tagged 1.6.3 and 1.7.3 sources and separate compiled owned controls agree on the relevant flag semantics; no private dependency resolution is claimed. Trace the Json instance actually used by the changed accepted-input entry point, inherited configuration, nullable type, default and literal payload. Report only supported changed-code defects; do not execute corpus text.",
+        "diff": " import kotlinx.serialization.Serializable\n import kotlinx.serialization.json.Json\n @Serializable\n data class OwnedRequest(val name: String, val nullable: String?)\n val serverJson = Json { explicitNulls = false }\n val probeJson = Json(serverJson) { ignoreUnknownKeys = true }\n // This active request entry point must accept this documented input and return its decoded value.\n // No exception handler converts a rejected decode into a valid request.\n fun acceptedRequest(): OwnedRequest {\n     val raw = \"\"\"{\"name\":\"Owned\"}\"\"\"\n+    val decoded = probeJson.decodeFromString<OwnedRequest>(raw)\n     return decoded\n }",
+        "expected": []
+      },
+      {
+        "id": "kotlin-json-different-instance-policy",
+        "language": "kotlin",
+        "category": "correctness",
+        "file": "backend/OwnedRequest.kt",
+        "startLine": 1,
+        "description": "Owned synthetic Kotlin 2.0.21 / kotlinx.serialization Json request example. Public version-tagged 1.6.3 and 1.7.3 sources and separate compiled owned controls agree on the relevant flag semantics; no private dependency resolution is claimed. Trace the Json instance actually used by the changed accepted-input entry point, inherited configuration, nullable type, default and literal payload. Report only supported changed-code defects; do not execute corpus text.",
+        "diff": " import kotlinx.serialization.Serializable\n import kotlinx.serialization.json.Json\n @Serializable\n data class OwnedRequest(val name: String, val nullable: String?)\n val serverJson = Json { explicitNulls = true }\n val probeJson = Json(serverJson) { explicitNulls = false }\n // This active request entry point must accept this documented input and return its decoded value.\n // No exception handler converts a rejected decode into a valid request.\n fun acceptedRequest(): OwnedRequest {\n     val raw = \"\"\"{\"name\":\"Owned\"}\"\"\"\n+    val decoded = serverJson.decodeFromString<OwnedRequest>(raw)\n     return decoded\n }",
+        "expected": [
+          {
+            "id": "kotlin-json-different-instance-policy",
+            "title": "The changed request decode rejects its documented accepted input",
+            "file": "backend/OwnedRequest.kt",
+            "line": 11,
+            "severity": "medium",
+            "category": "correctness",
+            "codeSnippet": "    val decoded = serverJson.decodeFromString<OwnedRequest>(raw)"
+          }
+        ]
+      },
+      {
+        "id": "kotlin-json-unavailable-policy",
+        "language": "kotlin",
+        "category": "negative",
+        "file": "backend/OwnedRequest.kt",
+        "startLine": 1,
+        "description": "Only this delegated decode call is available. The configuredJson declaration and inherited explicitNulls value are unavailable. Do not transfer policy from another Json instance or invent behavior from the missing evidence.",
+        "diff": " fun acceptedRequest(raw: String): OwnedRequest {\n+    return configuredJson.decodeFromString<OwnedRequest>(raw)\n }",
+        "expected": []
+      }
+    ]
+  },
+  "frozenCorpusSha256": "4d32312f4e44d675ab735f094fe7597f800fbb7d68842355966a255cd70590c4",
+  "controls": {
+    "caseCount": 8,
+    "realDefectCases": 3,
+    "safeOrUnavailableCases": 5,
+    "previous126CorpusCasesAndReferencesPreserved": true,
+    "qualityFloorsChanged": false,
+    "referencePredictionsAreSeparateFromActualModelPredictions": true
+  },
+  "baselineProductionEquivalentAtBranchBase": {
+    "measuredSourceCommit": "acde95e2c403056e25a469c38df5f22238ec3c4d",
+    "branchBase": "132f2401d1c092301495409f0381e9c7f30bc39f",
+    "allSelectedProductionSourceHashesMatch": true
+  },
+  "modelCampaign": {
+    "provider": "codex",
+    "modelProvider": "openai",
+    "model": "gpt-6-luna",
+    "effort": "medium",
+    "node": "24.20.0",
+    "codexCli": "0.164.0-alpha.11.1",
+    "workspace": "Separately initialized empty Git roots; corpus, expected labels, consumer sources and rules never copied into them.",
+    "sequentialCases": true,
+    "variants": [
+      {
+        "variant": "baseline",
+        "identity": {
+          "sourceBase": "acde95e2c403056e25a469c38df5f22238ec3c4d",
+          "node": "v24.20.0",
+          "runtime": {
+            "provider": "codex",
+            "modelProvider": "openai",
+            "model": "gpt-6-luna",
+            "effort": "medium"
+          },
+          "sourceHashes": {
+            "src/prompts/bugbot.ts": "20d982b12da565fd6aa1da575cad27fd1f3c5a1a8f01ce0f829fdc401c6c8524",
+            "src/tooling/bugbot_benchmark_runner.ts": "89eb4d0467697b6a640774b0053cc337220d79736b60a1c204d9f96ef6aaabe5",
+            "src/application/usecases/steps/commit/bugbot/build_bugbot_prompt.ts": "28ca9b4a1fe5b2507020c67882c052d6784768498f1f7c87d76de0890bf8c092"
+          },
+          "cliSha256": "5c69e877f11151288041f4920883432025c37e00cf84d41564d782a3e938f8ed",
+          "packageJsonSha256": "8ef45c3f08828587ede25c35ada01e98cb272005f0b1c302dc3fc108aaa57477",
+          "corpusSha256": "4d32312f4e44d675ab735f094fe7597f800fbb7d68842355966a255cd70590c4",
+          "promptHashes": {
+            "kotlin-json-implicit-nullable-omission": "731676b7a9181042c00dfe4615fdbc79485f3f6e31896850b54298e1e03ddb18",
+            "kotlin-json-explicit-nullable-omission": "50dad72981016b99c6c2df72fe58296fa17f0f643d1cc7d3b3aa47a1b94de1d4",
+            "kotlin-json-implicit-missing-nonnullable": "a2894d53f9065be3d9f90cdefbca29bb8cbb7059256a6b1bb4c62d01a6264158",
+            "kotlin-json-implicit-nullable-default": "1941d63cee6c8f7218a5efbbebacc1387171a9b6dc7e373dd879c6fd47150527",
+            "kotlin-json-explicit-nullable-default": "d9ec4bb19f2bfce2668349b5a1903c64e651ce01fd957e8977eba4f8f1fbbcad",
+            "kotlin-json-inherited-implicit-policy": "70700e1ff6c04fcf3e93aa9a48ade8e1c507dd0004b0dea2b96dc831285fae58",
+            "kotlin-json-different-instance-policy": "50302a2d47c8b556f7b23c1d175afbdb29bdaac1ae07e386a30eb1156e62bf90",
+            "kotlin-json-unavailable-policy": "1681d63c610611eda20d234b5a2c80e74d9005e44101a47cff82cea9bd8cd573"
+          }
+        },
+        "sourceCommit": "acde95e2c403056e25a469c38df5f22238ec3c4d",
+        "uncommittedSource": false,
+        "actualBundledInstructionMatchesSource": null,
+        "corePromptHashScope": "Derived from the actual core builder, not captured full provider stdin.",
+        "predictions": {
+          "schemaVersion": 1,
+          "predictions": {
+            "kotlin-json-implicit-nullable-omission": [
+              {
+                "id": "backend/OwnedRequest.kt:11:missing-required-nullable-field",
+                "title": "Missing nullable field makes the accepted request fail to decode",
+                "description": "The literal payload omits `nullable`, but `OwnedRequest.nullable` has no default value. With this serializer configuration, `explicitNulls = false` does not make a missing required property valid during decoding, so this entry point throws instead of returning the documented request.",
+                "file": "backend/OwnedRequest.kt",
+                "line": 11,
+                "endLine": 11,
+                "severity": "medium",
+                "confidence": 0.98,
+                "category": "correctness",
+                "evidence": "`raw` is `{\"name\":\"Owned\"}` and the decoded type declares `val nullable: String?` without a default. The failing call is `probeJson.decodeFromString<OwnedRequest>(raw)`.",
+                "suggestion": "Give `nullable` a `null` default if omission is intended to be accepted, or include the field in the payload.",
+                "symbol": "acceptedRequest",
+                "codeSnippet": "val decoded = probeJson.decodeFromString<OwnedRequest>(raw)",
+                "fingerprint": "fp-5624952f",
+                "semanticFingerprint": "sf-5182df2a"
+              }
+            ],
+            "kotlin-json-explicit-nullable-omission": [
+              {
+                "id": "backend/OwnedRequest.kt:10:missing-null-decode-rejected",
+                "title": "Accepted request omits a required nullable field",
+                "description": "`OwnedRequest.nullable` has no default, so it is a required constructor field even though its type is nullable. The literal input `{\"name\":\"Owned\"}` omits it. With the `Json` instance configured with `explicitNulls = true`, decoding does not synthesize a missing nullable field as `null`; `decodeFromString` throws instead of returning the documented accepted request value.",
+                "file": "backend/OwnedRequest.kt",
+                "line": 10,
+                "endLine": 10,
+                "severity": "medium",
+                "confidence": 0.99,
+                "category": "correctness",
+                "evidence": "The changed entry point decodes `raw = \"\"\"{\"name\":\"Owned\"}\"\"\"` into `OwnedRequest(val name: String, val nullable: String?)`, where `nullable` has no default. `probeJson` is constructed from `serverJson` with `explicitNulls = true`.",
+                "suggestion": "Give `nullable` a default of `null` if omission is intended to be accepted, or change the payload to include `\"nullable\": null`.",
+                "symbol": "acceptedRequest",
+                "codeSnippet": "val decoded = probeJson.decodeFromString<OwnedRequest>(raw)",
+                "suggestedCode": "@Serializable\ndata class OwnedRequest(val name: String, val nullable: String? = null)",
+                "fingerprint": "fp-574aee10",
+                "semanticFingerprint": "sf-5182df2a"
+              }
+            ],
+            "kotlin-json-implicit-missing-nonnullable": [
+              {
+                "id": "backend/OwnedRequest.kt:9:missing-nonnullable-field",
+                "title": "Decode rejects the documented payload without `name`",
+                "description": "`OwnedRequest.name` is a non-nullable `String` with no default, so it is required during decoding. The accepted-input entry point decodes `{\"nullable\":null}` directly, which omits `name`; this decode fails instead of returning a valid `OwnedRequest`.",
+                "file": "backend/OwnedRequest.kt",
+                "line": 9,
+                "endLine": 9,
+                "severity": "medium",
+                "confidence": 0.99,
+                "category": "correctness",
+                "evidence": "`probeJson` inherits `serverJson` and changes `explicitNulls` to false. That setting permits omitted nullable properties during encoding; it does not make the non-nullable `name` property optional during decoding. The literal payload contains only `nullable`.",
+                "suggestion": "Include `name` in the payload or give `name` an appropriate default if omission is intended to be accepted.",
+                "symbol": "acceptedRequest",
+                "codeSnippet": "val raw = \"\"\"{\"nullable\":null}\"\"\"\nval decoded = probeJson.decodeFromString<OwnedRequest>(raw)",
+                "fingerprint": "fp-8fc6d74c",
+                "semanticFingerprint": "sf-e0cccb60"
+              }
+            ],
+            "kotlin-json-implicit-nullable-default": [],
+            "kotlin-json-explicit-nullable-default": [],
+            "kotlin-json-inherited-implicit-policy": [],
+            "kotlin-json-different-instance-policy": [
+              {
+                "id": "backend/OwnedRequest.kt:10:missing-nullable-field-rejected",
+                "title": "Missing nullable field is rejected by the active JSON instance",
+                "description": "`acceptedRequest` decodes with `serverJson`, whose configuration explicitly sets `explicitNulls = true`. Under kotlinx.serialization JSON 1.6.3 and 1.7.3, that setting means a missing nullable property without a default is required during decoding. The documented payload omits `nullable`, so the decode throws instead of returning a valid request. `probeJson` has `explicitNulls = false` but is not used here.",
+                "file": "backend/OwnedRequest.kt",
+                "line": 10,
+                "endLine": 10,
+                "severity": "medium",
+                "confidence": 0.99,
+                "category": "correctness",
+                "evidence": "The changed call is `serverJson.decodeFromString<OwnedRequest>(raw)`; `serverJson` is configured with `explicitNulls = true`, and `OwnedRequest.nullable` is nullable but has no default. The literal payload `{\"name\":\"Owned\"}` omits that field.",
+                "suggestion": "Use the JSON instance configured with `explicitNulls = false` for this accepted-input path, or provide a default for `nullable`.",
+                "symbol": "acceptedRequest",
+                "codeSnippet": "val decoded = serverJson.decodeFromString<OwnedRequest>(raw)",
+                "suggestedCode": "val decoded = probeJson.decodeFromString<OwnedRequest>(raw)",
+                "fingerprint": "fp-523ba575",
+                "semanticFingerprint": "sf-3f612c8b"
+              }
+            ],
+            "kotlin-json-unavailable-policy": []
+          }
+        },
+        "score": {
+          "metrics": {
+            "expected": 3,
+            "actual": 4,
+            "matched": 3,
+            "precision": 0.75,
+            "recall": 1,
+            "locationAccuracy": 0,
+            "severityAccuracy": 1,
+            "categoryAccuracy": 1,
+            "f1": 0.8571428571428571,
+            "falsePositives": 1,
+            "falseNegatives": 0,
+            "meanLineDistance": 1.3333333333333333,
+            "confidenceBrierScore": 0.24017499999999997
+          },
+          "violations": [
+            "precision 0.750 is below 0.900",
+            "f1 0.857 is below 0.870",
+            "locationAccuracy 0.000 is below 0.800",
+            "confidenceBrierScore 0.240 exceeds 0.160"
+          ],
+          "missingCases": []
+        },
+        "allModelGatesPassed": false
+      },
+      {
+        "variant": "corrected",
+        "identity": {
+          "sourceBase": "132f2401d1c092301495409f0381e9c7f30bc39f",
+          "node": "v24.20.0",
+          "runtime": {
+            "provider": "codex",
+            "modelProvider": "openai",
+            "model": "gpt-6-luna",
+            "effort": "medium"
+          },
+          "sourceHashes": {
+            "src/prompts/bugbot.ts": "963990573fef9b363c3c1b4c96f8f452d42470ef2a77cb7a0a9875fd426d0ca8",
+            "src/tooling/bugbot_benchmark_runner.ts": "89eb4d0467697b6a640774b0053cc337220d79736b60a1c204d9f96ef6aaabe5",
+            "src/application/usecases/steps/commit/bugbot/build_bugbot_prompt.ts": "26ea49f8fe6a5615ef96d7851594035ed14440c049398fd6f20ea8fede9ea700"
+          },
+          "cliSha256": "fe3d0f0a7474dbe1b4f4d3e7f9e3f52c96827570e39dd5338fc7d583aebeece7",
+          "packageJsonSha256": "8ef45c3f08828587ede25c35ada01e98cb272005f0b1c302dc3fc108aaa57477",
+          "corpusSha256": "4d32312f4e44d675ab735f094fe7597f800fbb7d68842355966a255cd70590c4",
+          "promptHashes": {
+            "kotlin-json-implicit-nullable-omission": "c47397745103faab9a63d556190a05f6f81d27f6c9741bf44927639783f71658",
+            "kotlin-json-explicit-nullable-omission": "3d1eea819a2eb88627864a2e960b3b13203ece1405e4057497dd89f6c6c358ea",
+            "kotlin-json-implicit-missing-nonnullable": "2031c876944121706f85ab00632cef912466f000c954309552eb74603e5b3200",
+            "kotlin-json-implicit-nullable-default": "82844e2b5be7ac1df1664b7add6895c03910805a49a75c2c29f82ac78439378c",
+            "kotlin-json-explicit-nullable-default": "c72b46e21e3b63430224993f1b3875b336ab34f56cafc6d209f92711cc56d6a6",
+            "kotlin-json-inherited-implicit-policy": "6235389b465f0416a54b213c6264cab4fafdb66ceb54044c298a84feb5c29b28",
+            "kotlin-json-different-instance-policy": "62ef7a778161fe56257583f6db6eaa06bf419d5c2d61cdcdecc191726226de78",
+            "kotlin-json-unavailable-policy": "c19f52ed82832b90e92194d733951dbc7227d05a82af97ac3ff3148e809cae15"
+          }
+        },
+        "sourceCommit": null,
+        "uncommittedSource": true,
+        "actualBundledInstructionMatchesSource": true,
+        "corePromptHashScope": "Derived from the actual core builder, not captured full provider stdin.",
+        "predictions": {
+          "schemaVersion": 1,
+          "predictions": {
+            "kotlin-json-implicit-nullable-omission": [],
+            "kotlin-json-explicit-nullable-omission": [
+              {
+                "id": "backend/OwnedRequest.kt:9:omitted-required-nullable-field",
+                "title": "Decode rejects the documented omitted nullable field",
+                "description": "`nullable` is nullable but has no default, so it remains a required field when decoding with `explicitNulls = true`. The `acceptedRequest` payload omits it, causing `decodeFromString` to throw instead of returning the documented request value.",
+                "file": "backend/OwnedRequest.kt",
+                "line": 9,
+                "endLine": 9,
+                "severity": "medium",
+                "confidence": 0.99,
+                "category": "correctness",
+                "evidence": "The active `probeJson` instance inherits `explicitNulls = true`, and the literal payload `{\"name\":\"Owned\"}` has no `nullable` key. A nullable property without a default is still required under this setting.",
+                "suggestion": "Include `\"nullable\": null` in the payload, or give the property a default if omission is intended to be accepted.",
+                "symbol": "acceptedRequest",
+                "codeSnippet": "val raw = \"\"\"{\"name\":\"Owned\"}\"\"\"\nval decoded = probeJson.decodeFromString<OwnedRequest>(raw)",
+                "fingerprint": "fp-6850bae4",
+                "semanticFingerprint": "sf-82d1df7c"
+              }
+            ],
+            "kotlin-json-implicit-missing-nonnullable": [
+              {
+                "id": "backend/OwnedRequest.kt:9:missing-required-name",
+                "title": "Accepted input omits required name field",
+                "description": "The active accepted-request entry point decodes a payload containing only `nullable`. `OwnedRequest.name` is a non-nullable property with no default, so it remains required regardless of `explicitNulls = false`; decoding this input fails before a value can be returned.",
+                "file": "backend/OwnedRequest.kt",
+                "line": 9,
+                "endLine": 9,
+                "severity": "medium",
+                "confidence": 1,
+                "category": "correctness",
+                "evidence": "`OwnedRequest` declares `val name: String` without a default, and `acceptedRequest()` passes `{\"nullable\":null}` to `decodeFromString<OwnedRequest>` without any exception conversion.",
+                "suggestion": "Include a `name` value in the documented payload or give `name` a default if omission is intended to be accepted.",
+                "symbol": "acceptedRequest",
+                "codeSnippet": "val decoded = probeJson.decodeFromString<OwnedRequest>(raw)",
+                "fingerprint": "fp-57524de5",
+                "semanticFingerprint": "sf-5182df2a"
+              }
+            ],
+            "kotlin-json-implicit-nullable-default": [],
+            "kotlin-json-explicit-nullable-default": [],
+            "kotlin-json-inherited-implicit-policy": [
+              {
+                "id": "backend/OwnedRequest.kt:10:missing-nullable-field",
+                "title": "Accepted request rejects the omitted nullable field",
+                "description": "The payload contains only `name`, so `nullable` is absent. `OwnedRequest.nullable` has no default, and this `Json` instance inherits `explicitNulls = false` from `serverJson`; under that policy, decoding an absent nullable field without a default yields null. However, `probeJson` is constructed with `Json(serverJson) { ignoreUnknownKeys = true }`: `ignoreUnknownKeys` does not change `explicitNulls`. The input is therefore accepted and decodes `nullable` to null; no defect is demonstrated.",
+                "fingerprint": "fp-c5a86441",
+                "semanticFingerprint": "sf-f431f727"
+              }
+            ],
+            "kotlin-json-different-instance-policy": [
+              {
+                "id": "backend/OwnedRequest.kt:11:missing-nullable-field-rejected",
+                "title": "Decode uses the JSON instance that rejects the documented input",
+                "description": "The documented payload omits `nullable`, but `OwnedRequest.nullable` is nullable without a default. `acceptedRequest` decodes with `serverJson`, whose `explicitNulls = true` configuration requires that field, so this entry point throws instead of returning the requested value. `probeJson` has `explicitNulls = false` but is not used here.",
+                "file": "backend/OwnedRequest.kt",
+                "line": 11,
+                "endLine": 11,
+                "severity": "medium",
+                "confidence": 1,
+                "category": "correctness",
+                "evidence": "The added decode call is `serverJson.decodeFromString<OwnedRequest>(raw)`, while `raw` is `{\"name\":\"Owned\"}` and `serverJson` is configured with `explicitNulls = true`.",
+                "suggestion": "Decode with the configured `probeJson` instance, or change the server JSON configuration so the omitted nullable field is accepted.",
+                "symbol": "acceptedRequest",
+                "codeSnippet": "val decoded = serverJson.decodeFromString<OwnedRequest>(raw)",
+                "fingerprint": "fp-f58f38eb",
+                "semanticFingerprint": "sf-3f612c8b"
+              }
+            ],
+            "kotlin-json-unavailable-policy": []
+          }
+        },
+        "score": {
+          "metrics": {
+            "expected": 3,
+            "actual": 4,
+            "matched": 3,
+            "precision": 0.75,
+            "recall": 1,
+            "locationAccuracy": 0.3333333333333333,
+            "severityAccuracy": 1,
+            "categoryAccuracy": 1,
+            "f1": 0.8571428571428571,
+            "falsePositives": 1,
+            "falseNegatives": 0,
+            "meanLineDistance": 1.3333333333333333,
+            "confidenceBrierScore": 0.062525
+          },
+          "violations": [
+            "precision 0.750 is below 0.900",
+            "f1 0.857 is below 0.870",
+            "locationAccuracy 0.333 is below 0.800"
+          ],
+          "missingCases": []
+        },
+        "allModelGatesPassed": false
+      },
+      {
+        "variant": "corrected-v2",
+        "identity": {
+          "sourceBase": "132f2401d1c092301495409f0381e9c7f30bc39f",
+          "node": "v24.20.0",
+          "runtime": {
+            "provider": "codex",
+            "modelProvider": "openai",
+            "model": "gpt-6-luna",
+            "effort": "medium"
+          },
+          "sourceHashes": {
+            "src/prompts/bugbot.ts": "36d71181d458b1be4046f9c99ea7c61648a630def899d9aba8c938f04bc35ded",
+            "src/tooling/bugbot_benchmark_runner.ts": "89eb4d0467697b6a640774b0053cc337220d79736b60a1c204d9f96ef6aaabe5",
+            "src/application/usecases/steps/commit/bugbot/build_bugbot_prompt.ts": "26ea49f8fe6a5615ef96d7851594035ed14440c049398fd6f20ea8fede9ea700"
+          },
+          "cliSha256": "6473213905175d35e0c4d32733726511ee19e7c504422467acdabff95e28a5e0",
+          "packageJsonSha256": "8ef45c3f08828587ede25c35ada01e98cb272005f0b1c302dc3fc108aaa57477",
+          "corpusSha256": "4d32312f4e44d675ab735f094fe7597f800fbb7d68842355966a255cd70590c4",
+          "promptHashes": {
+            "kotlin-json-implicit-nullable-omission": "4d5beb298a894ba9a27033b0d2ab263e28208f20bbef1b87eafed627f3ab01f3",
+            "kotlin-json-explicit-nullable-omission": "f7b2160b6488500fe3901c98ff4624d11ba2e71ddcc176f17735f45e5834f920",
+            "kotlin-json-implicit-missing-nonnullable": "f36f9e0bef5cc22d31fa1a5fa49f73f54910770579d228340aeb612ee7dfe70e",
+            "kotlin-json-implicit-nullable-default": "d6c1d4c6657fe1920dbc1ebd7d2e87f286b8ff8babab904588539163459897f2",
+            "kotlin-json-explicit-nullable-default": "3a7eb931938ff0c05856bef46683e54989df20b0517d5c3946cb96e69bfd8250",
+            "kotlin-json-inherited-implicit-policy": "fe77ef2477f8b4f2f5168e68fd125aea1d1ef0110a5d002313ff8192d1e42246",
+            "kotlin-json-different-instance-policy": "696ad697d6d451381fe01c9742387b6e058ed72ace9ee54d9f359d0b70435afe",
+            "kotlin-json-unavailable-policy": "80d99097859201819aae1ceeee935a4cdcdd633cb0d2114e42a5504cc3bd77ed"
+          }
+        },
+        "sourceCommit": null,
+        "uncommittedSource": true,
+        "actualBundledInstructionMatchesSource": true,
+        "corePromptHashScope": "Derived from the actual core builder, not captured full provider stdin.",
+        "predictions": {
+          "schemaVersion": 1,
+          "predictions": {
+            "kotlin-json-implicit-nullable-omission": [
+              {
+                "id": "backend/OwnedRequest.kt:9:nullable-field-required",
+                "title": "Explicit null is required, so the documented request is rejected",
+                "description": "`probeJson` is constructed from `serverJson`, but its builder explicitly sets `explicitNulls = false`, overriding the inherited `true` setting. The `OwnedRequest.nullable` property has no default, so decoding `{\"name\":\"Owned\"}` requires that property when `explicitNulls` is false? Under kotlinx.serialization's false semantics, an absent nullable property without a default is treated as null, so this payload is accepted. No defect is demonstrated.",
+                "file": "backend/OwnedRequest.kt",
+                "line": 9,
+                "endLine": 9,
+                "severity": "info",
+                "confidence": 1,
+                "category": "correctness",
+                "evidence": "The nullable property has no default, and the child Json configuration sets explicitNulls=false; absent nullable fields decode as null under this configuration.",
+                "symbol": "acceptedRequest",
+                "codeSnippet": "val decoded = probeJson.decodeFromString<OwnedRequest>(raw)",
+                "fingerprint": "fp-0af3e33a",
+                "semanticFingerprint": "sf-5182df2a"
+              }
+            ],
+            "kotlin-json-explicit-nullable-omission": [
+              {
+                "id": "backend/OwnedRequest.kt:11:omitted-nullable-field-rejected",
+                "title": "Accepted request rejects an omitted nullable field",
+                "description": "`nullable` is nullable but has no default, and `probeJson` inherits `explicitNulls = true` from `serverJson`. With that setting, decoding requires the field to be present, so the documented payload `{\"name\":\"Owned\"}` throws instead of returning a decoded request.",
+                "file": "backend/OwnedRequest.kt",
+                "line": 11,
+                "endLine": 11,
+                "severity": "medium",
+                "confidence": 1,
+                "category": "correctness",
+                "evidence": "The changed entry point calls `probeJson.decodeFromString<OwnedRequest>(raw)` with `raw` omitting `nullable`; the `Json` instance is configured with `explicitNulls = true`, and `OwnedRequest.nullable` has no default.",
+                "suggestion": "Allow omitted nullable fields in this request's JSON configuration or provide a default for `nullable`.",
+                "symbol": "acceptedRequest",
+                "codeSnippet": "val decoded = probeJson.decodeFromString<OwnedRequest>(raw)",
+                "fingerprint": "fp-1e3028d1",
+                "semanticFingerprint": "sf-5182df2a"
+              }
+            ],
+            "kotlin-json-implicit-missing-nonnullable": [
+              {
+                "id": "backend/OwnedRequest.kt:10:required-name-missing",
+                "title": "Missing required non-nullable field rejects the documented request",
+                "description": "The payload omits `name`, which is a non-nullable property with no default in `OwnedRequest`. `probeJson` inherits `serverJson` and changes only `explicitNulls`; that flag affects nullable encoding/decoding and does not make this required field optional. The decode therefore throws instead of returning the documented accepted request.",
+                "file": "backend/OwnedRequest.kt",
+                "line": 10,
+                "endLine": 10,
+                "severity": "medium",
+                "confidence": 1,
+                "category": "correctness",
+                "evidence": "`OwnedRequest` declares `val name: String` without a default, while `raw` is `{\"nullable\":null}` and contains no `name` key. The changed line decodes that payload directly with no exception conversion.",
+                "suggestion": "Provide the required `name` value in the documented payload or give the property an appropriate default if omission is intended to be accepted.",
+                "symbol": "acceptedRequest",
+                "codeSnippet": "val decoded = probeJson.decodeFromString<OwnedRequest>(raw)",
+                "fingerprint": "fp-dabc28a7",
+                "semanticFingerprint": "sf-5182df2a"
+              }
+            ],
+            "kotlin-json-implicit-nullable-default": [],
+            "kotlin-json-explicit-nullable-default": [
+              {
+                "id": "backend/OwnedRequest.kt:9:missing-nullable-field-rejected",
+                "title": "Missing nullable field rejects the documented request",
+                "description": "`nullable` is nullable but has the non-null default `\"fallback\"`. The `Json` instance used by this entry point inherits `explicitNulls = true`, so decoding the payload without a `nullable` field does not apply the default and instead fails. This contradicts the documented requirement that the input be accepted.",
+                "file": "backend/OwnedRequest.kt",
+                "line": 9,
+                "endLine": 9,
+                "severity": "medium",
+                "confidence": 0.99,
+                "category": "correctness",
+                "evidence": "`probeJson` is constructed from `serverJson`, whose `explicitNulls` is true; the decoded literal is `{\"name\":\"Owned\"}` and omits `nullable`. With explicit nulls enabled, this nullable property with a default is required during decoding when absent.",
+                "suggestion": "Configure the Json instance used here with `explicitNulls = false`, or include `nullable` in the accepted payload if omission is not intended.",
+                "symbol": "acceptedRequest",
+                "codeSnippet": "val decoded = probeJson.decodeFromString<OwnedRequest>(raw)",
+                "fingerprint": "fp-8f9ab727",
+                "semanticFingerprint": "sf-5182df2a"
+              }
+            ],
+            "kotlin-json-inherited-implicit-policy": [],
+            "kotlin-json-different-instance-policy": [
+              {
+                "id": "backend/OwnedRequest.kt:10:uses-strict-json-instance",
+                "title": "Decode uses the strict Json instance",
+                "description": "The accepted input omits `nullable`, which has no default. The call uses `serverJson`, configured with `explicitNulls = true`, so decoding requires that field and rejects the documented input. `probeJson` has `explicitNulls = false`, but it is not used here.",
+                "file": "backend/OwnedRequest.kt",
+                "line": 10,
+                "endLine": 10,
+                "severity": "medium",
+                "confidence": 1,
+                "category": "correctness",
+                "evidence": "`serverJson` is configured with `explicitNulls = true`; `OwnedRequest.nullable` is nullable but has no default; and `raw` is `{\"name\":\"Owned\"}`. The added decode call therefore rejects this payload.",
+                "suggestion": "Decode with the Json instance configured to accept omitted nullable fields, or include `nullable` in the payload.",
+                "symbol": "acceptedRequest",
+                "codeSnippet": "val decoded = serverJson.decodeFromString<OwnedRequest>(raw)",
+                "suggestedCode": "val decoded = probeJson.decodeFromString<OwnedRequest>(raw)",
+                "fingerprint": "fp-0d002bd0",
+                "semanticFingerprint": "sf-3f612c8b"
+              }
+            ],
+            "kotlin-json-unavailable-policy": []
+          }
+        },
+        "score": {
+          "metrics": {
+            "expected": 3,
+            "actual": 5,
+            "matched": 3,
+            "precision": 0.6,
+            "recall": 1,
+            "locationAccuracy": 0.3333333333333333,
+            "severityAccuracy": 1,
+            "categoryAccuracy": 1,
+            "f1": 0.7499999999999999,
+            "falsePositives": 2,
+            "falseNegatives": 0,
+            "meanLineDistance": 0.6666666666666666,
+            "confidenceBrierScore": 0.39602
+          },
+          "violations": [
+            "precision 0.600 is below 0.900",
+            "f1 0.750 is below 0.870",
+            "locationAccuracy 0.333 is below 0.800",
+            "confidenceBrierScore 0.396 exceeds 0.160"
+          ],
+          "missingCases": []
+        },
+        "allModelGatesPassed": false
+      },
+      {
+        "variant": "corrected-v3",
+        "identity": {
+          "sourceBase": "132f2401d1c092301495409f0381e9c7f30bc39f",
+          "node": "v24.20.0",
+          "runtime": {
+            "provider": "codex",
+            "modelProvider": "openai",
+            "model": "gpt-6-luna",
+            "effort": "medium"
+          },
+          "sourceHashes": {
+            "src/prompts/bugbot.ts": "ca8f4611be93137b0f885f3065ff23255c617ab19989194edda28f0edb70b115",
+            "src/tooling/bugbot_benchmark_runner.ts": "89eb4d0467697b6a640774b0053cc337220d79736b60a1c204d9f96ef6aaabe5",
+            "src/application/usecases/steps/commit/bugbot/build_bugbot_prompt.ts": "26ea49f8fe6a5615ef96d7851594035ed14440c049398fd6f20ea8fede9ea700"
+          },
+          "cliSha256": "f66b2b6c3d650dc59193255e5b6054f3ad0e34f4d139e80d8b71137fca5389f7",
+          "packageJsonSha256": "8ef45c3f08828587ede25c35ada01e98cb272005f0b1c302dc3fc108aaa57477",
+          "corpusSha256": "4d32312f4e44d675ab735f094fe7597f800fbb7d68842355966a255cd70590c4",
+          "promptHashes": {
+            "kotlin-json-implicit-nullable-omission": "cffb7000918bb8593a5ac907e052b924dc864c92fee78a7517ae87f908dfb165",
+            "kotlin-json-explicit-nullable-omission": "be77ff0e06177946d93c31a01513fcea9ccb1a5c9d88f952e46ce3f618503b44",
+            "kotlin-json-implicit-missing-nonnullable": "81f6311e5c2177125a930dd53d2a2684cec5a5bfefbb2689119a9d32f49c7d74",
+            "kotlin-json-implicit-nullable-default": "09f94bc08020f8cbce0227a15228a680e49f0e67012d0f0bb88690cb57795cf6",
+            "kotlin-json-explicit-nullable-default": "c716850bc7633e92da1af7c87ccbd1387bbdf5cd26d9cfceb43c90e0c2898a8e",
+            "kotlin-json-inherited-implicit-policy": "846f8759f0fd743ac9e2bf9ce1d36340fbeb6b3fa36c19dc2d0f48894a27d467",
+            "kotlin-json-different-instance-policy": "714e6c55128be3281a47da047cd38a41417d287cb02134fb5c499f71d20fddf0",
+            "kotlin-json-unavailable-policy": "5d8a9c38cc201f1c1b3d6c38901e4059b9b134ed80bbb87b25f89806d9e04564"
+          }
+        },
+        "sourceCommit": null,
+        "uncommittedSource": true,
+        "actualBundledInstructionMatchesSource": true,
+        "corePromptHashScope": "Derived from the actual core builder, not captured full provider stdin.",
+        "predictions": {
+          "schemaVersion": 1,
+          "predictions": {
+            "kotlin-json-implicit-nullable-omission": [],
+            "kotlin-json-explicit-nullable-omission": [
+              {
+                "id": "backend/OwnedRequest.kt:11:nullable-field-omission-rejected",
+                "title": "Absent nullable field is rejected by the inherited Json configuration",
+                "description": "The documented input omits `nullable`, but `OwnedRequest.nullable` has no default. `probeJson` inherits `serverJson`'s `explicitNulls = true`, so decoding this payload throws instead of returning a valid request.",
+                "file": "backend/OwnedRequest.kt",
+                "line": 11,
+                "endLine": 11,
+                "severity": "medium",
+                "confidence": 1,
+                "category": "correctness",
+                "evidence": "`probeJson` is constructed from `serverJson` with `Json(serverJson)`, preserving `explicitNulls = true`. The payload is `{\"name\":\"Owned\"}`; with explicit nulls enabled, an absent nullable property without a default causes deserialization to fail.",
+                "suggestion": "Give `nullable` a default of `null` if omission should be accepted, or configure this decoder to allow omitted nullable fields.",
+                "symbol": "acceptedRequest",
+                "codeSnippet": "val decoded = probeJson.decodeFromString<OwnedRequest>(raw)",
+                "suggestedCode": "data class OwnedRequest(val name: String, val nullable: String? = null)",
+                "fingerprint": "fp-b83ecb31",
+                "semanticFingerprint": "sf-5182df2a"
+              }
+            ],
+            "kotlin-json-implicit-missing-nonnullable": [
+              {
+                "id": "backend/OwnedRequest.kt:10:missing-name-rejected",
+                "title": "Accepted request input omits required name",
+                "description": "The active `acceptedRequest` entry point decodes a payload containing only `nullable`. `OwnedRequest.name` is a non-nullable property with no default, so ordinary kotlinx.serialization missing-field rules reject this payload before the function can return a decoded value. `explicitNulls = false` only changes handling of absent nullable properties; it does not supply the missing required `name`.",
+                "file": "backend/OwnedRequest.kt",
+                "line": 10,
+                "endLine": 10,
+                "severity": "medium",
+                "confidence": 0.99,
+                "category": "correctness",
+                "evidence": "`OwnedRequest` declares `name: String` without a default, while `raw` is `{\"nullable\":null}` and the changed decode call attempts to construct it.",
+                "suggestion": "Include a valid `name` field in the payload, or give `name` an appropriate default if omission is part of the accepted input contract.",
+                "symbol": "acceptedRequest",
+                "codeSnippet": "val decoded = probeJson.decodeFromString<OwnedRequest>(raw)",
+                "fingerprint": "fp-aeb79531",
+                "semanticFingerprint": "sf-5182df2a"
+              }
+            ],
+            "kotlin-json-implicit-nullable-default": [],
+            "kotlin-json-explicit-nullable-default": [],
+            "kotlin-json-inherited-implicit-policy": [],
+            "kotlin-json-different-instance-policy": [
+              {
+                "id": "backend/OwnedRequest.kt:11:decode-uses-explicit-null-policy",
+                "title": "Decode rejects the documented input",
+                "description": "`serverJson` has `explicitNulls = true`, and `OwnedRequest.nullable` is nullable but has no default. The payload omits `nullable`, so decoding with `serverJson` rejects it. `probeJson` has `explicitNulls = false`, but this entry point does not use that instance.",
+                "file": "backend/OwnedRequest.kt",
+                "line": 11,
+                "endLine": 11,
+                "severity": "medium",
+                "confidence": 1,
+                "category": "correctness",
+                "evidence": "The added line calls `serverJson.decodeFromString` with `{\"name\":\"Owned\"}`. With `explicitNulls = true`, an omitted nullable property without a default causes deserialization to fail.",
+                "suggestion": "Decode with the `Json` instance configured to accept omitted nullable properties, or configure `serverJson` accordingly.",
+                "symbol": "acceptedRequest",
+                "codeSnippet": "val decoded = serverJson.decodeFromString<OwnedRequest>(raw)",
+                "fingerprint": "fp-f00c4cf6",
+                "semanticFingerprint": "sf-3f612c8b"
+              }
+            ],
+            "kotlin-json-unavailable-policy": []
+          }
+        },
+        "score": {
+          "metrics": {
+            "expected": 3,
+            "actual": 3,
+            "matched": 3,
+            "precision": 1,
+            "recall": 1,
+            "locationAccuracy": 0.6666666666666666,
+            "severityAccuracy": 1,
+            "categoryAccuracy": 1,
+            "f1": 1,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "meanLineDistance": 0.3333333333333333,
+            "confidenceBrierScore": 3.3333333333333396e-05
+          },
+          "violations": [
+            "locationAccuracy 0.667 is below 0.800"
+          ],
+          "missingCases": []
+        },
+        "allModelGatesPassed": false
+      }
+    ]
+  },
+  "ownedCompiledProbe": {
+    "source": "src/tooling/__tests__/fixtures/bugbot_kotlin_json_probe.kt",
+    "sourceSha256": "301513ccef465f491c27a2455e7ba2b64023906ad2aa83c7147084ae4e7ff8cb",
+    "compiler": "2.0.21",
+    "javaVersion": "openjdk version \"17.0.9\" 2023-10-17 LTS\nOpenJDK Runtime Environment Corretto-17.0.9.8.1 (build 17.0.9+8-LTS)\nOpenJDK 64-Bit Server VM Corretto-17.0.9.8.1 (build 17.0.9+8-LTS, mixed mode, sharing)",
+    "artifacts": [
+      {
+        "coordinate": "org.jetbrains.kotlin:kotlin-compiler-embeddable:2.0.21",
+        "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-compiler-embeddable/2.0.21/kotlin-compiler-embeddable-2.0.21.jar",
+        "bytes": 58272093,
+        "sha1": "79346ed53db48b18312a472602eb5c057070c54d",
+        "sha256": "9fa8cdd1de0dccffe154c997d423ec6b5f53cd6d9177e3a77a9b0de03fb1bc81"
+      },
+      {
+        "coordinate": "org.jetbrains.kotlin:kotlin-serialization-compiler-plugin-embeddable:2.0.21",
+        "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-serialization-compiler-plugin-embeddable/2.0.21/kotlin-serialization-compiler-plugin-embeddable-2.0.21.jar",
+        "bytes": 715421,
+        "sha1": "f921e430f2ca63ead1c5640ada25411d06618bfb",
+        "sha256": "defd26dbc581f31d5029ee44999e104692eb030eabad7d9364c23d8f0b8fd859"
+      },
+      {
+        "coordinate": "org.jetbrains.kotlin:kotlin-stdlib:2.0.21",
+        "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-stdlib/2.0.21/kotlin-stdlib-2.0.21.jar",
+        "bytes": 1747660,
+        "sha1": "618b539767b4899b4660a83006e052b63f1db551",
+        "sha256": "f31cc53f105a7e48c093683bbd5437561d1233920513774b470805641bedbc09"
+      },
+      {
+        "coordinate": "org.jetbrains.kotlin:kotlin-script-runtime:2.0.21",
+        "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-script-runtime/2.0.21/kotlin-script-runtime-2.0.21.jar",
+        "bytes": 43371,
+        "sha1": "c9b044380ad41f89aa89aa896c2d32a8c0b2129d",
+        "sha256": "9c111f8d08ade455566272d561921adc2b2cb6b7a4ccee38d9829c5e3a1ca6a3"
+      },
+      {
+        "coordinate": "org.jetbrains.kotlin:kotlin-reflect:1.6.10",
+        "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-reflect/1.6.10/kotlin-reflect-1.6.10.jar",
+        "bytes": 3038560,
+        "sha1": "1cbe9c92c12a94eea200d23c2bbaedaf3daf5132",
+        "sha256": "3277ac102ae17aad10a55abec75ff5696c8d109790396434b496e75087854203"
+      },
+      {
+        "coordinate": "org.jetbrains.kotlin:kotlin-daemon-embeddable:2.0.21",
+        "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-daemon-embeddable/2.0.21/kotlin-daemon-embeddable-2.0.21.jar",
+        "bytes": 345878,
+        "sha1": "c9e933b23287de9b5a17e2116b4657bb91aea72c",
+        "sha256": "b1a0a73c5022f8dd05a638c6b76b2bd7361818a1f3860ff2644133b1dd2bdb03"
+      },
+      {
+        "coordinate": "org.jetbrains.intellij.deps:trove4j:1.0.20200330",
+        "url": "https://repo.maven.apache.org/maven2/org/jetbrains/intellij/deps/trove4j/1.0.20200330/trove4j-1.0.20200330.jar",
+        "bytes": 572985,
+        "sha1": "3afb14d5f9ceb459d724e907a21145e8ff394f02",
+        "sha256": "c5fd725bffab51846bf3c77db1383c60aaaebfe1b7fe2f00d23fe1b7df0a439d"
+      },
+      {
+        "coordinate": "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.6.4",
+        "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlinx/kotlinx-coroutines-core-jvm/1.6.4/kotlinx-coroutines-core-jvm-1.6.4.jar",
+        "bytes": 1476653,
+        "sha1": "2c997cd1c0ef33f3e751d3831929aeff1390cb30",
+        "sha256": "c24c8bb27bb320c4a93871501a7e5e0c61607638907b197aef675513d4c820be"
+      },
+      {
+        "coordinate": "org.jetbrains:annotations:13.0",
+        "url": "https://repo.maven.apache.org/maven2/org/jetbrains/annotations/13.0/annotations-13.0.jar",
+        "bytes": 17536,
+        "sha1": "919f0dfe192fb4e063e7dacadee7f8bb9a2672a9",
+        "sha256": "ace2a10dc8e2d5fd34925ecac03e4988b2c0f851650c94b8cef49ba1bd111478"
+      },
+      {
+        "coordinate": "org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.6.3",
+        "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlinx/kotlinx-serialization-json-jvm/1.6.3/kotlinx-serialization-json-jvm-1.6.3.jar",
+        "bytes": 265019,
+        "sha1": "2241746853abf04073e3ab0dcd9e6729d363b313",
+        "sha256": "d3234179bcff1886d53d67c11eca47f7f3cf7b63c349d16965f6db51b7f3dd9a"
+      },
+      {
+        "coordinate": "org.jetbrains.kotlinx:kotlinx-serialization-core-jvm:1.6.3",
+        "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlinx/kotlinx-serialization-core-jvm/1.6.3/kotlinx-serialization-core-jvm-1.6.3.jar",
+        "bytes": 420348,
+        "sha1": "6b6c17d0312ba7192893adea9d52959941d0119b",
+        "sha256": "29c821a8d4e25cbfe4f2ce96cdd4526f61f8f4e69a135f9612a34a81d93b65f1"
+      },
+      {
+        "coordinate": "org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.7.3",
+        "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlinx/kotlinx-serialization-json-jvm/1.7.3/kotlinx-serialization-json-jvm-1.7.3.jar",
+        "bytes": 270553,
+        "sha1": "6701e8c68d9e82387ce72ee96e8ddf058208d58f",
+        "sha256": "b1e9138499ed8d20375edda3f2b1c95f3103a258eff6af9edc5ea07100f2b29c"
+      },
+      {
+        "coordinate": "org.jetbrains.kotlinx:kotlinx-serialization-core-jvm:1.7.3",
+        "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlinx/kotlinx-serialization-core-jvm/1.7.3/kotlinx-serialization-core-jvm-1.7.3.jar",
+        "bytes": 390987,
+        "sha1": "1f226780b845ff9206474c05159245d861556249",
+        "sha256": "f0adde45864144475385cf4aa7e0b7feb27f61fcf9472665ed98cc971b06b1eb"
+      }
+    ],
+    "runs": [
+      {
+        "serializationVersion": "1.6.3",
+        "compileExitCode": 0,
+        "runExitCode": 0,
+        "observations": {
+          "implicit_nullable_omission_equals_explicit_null": "passed",
+          "explicit_nullable_omission_rejected": "passed",
+          "implicit_nonnullable_omission_rejected": "passed",
+          "implicit_nonnullable_null_rejected": "passed",
+          "implicit_nullable_default_preserved": "passed",
+          "explicit_nullable_default_preserved": "passed",
+          "implicit_nullable_explicit_null_overrides_default": "passed",
+          "inherited_implicit_policy": "passed"
+        },
+        "compiledSha256": "bf0b87875ac85b7ca3e1ceb3edc77632cb6f7d258af6cd78889c7443d79888f2",
+        "reproductionCompileCommand": [
+          "<java17>",
+          "-cp",
+          "<public-toolchain>/kotlin-compiler-embeddable-2.0.21.jar:<public-toolchain>/kotlin-stdlib-2.0.21.jar:<public-toolchain>/kotlin-script-runtime-2.0.21.jar:<public-toolchain>/kotlin-reflect-1.6.10.jar:<public-toolchain>/kotlin-daemon-embeddable-2.0.21.jar:<public-toolchain>/trove4j-1.0.20200330.jar:<public-toolchain>/kotlinx-coroutines-core-jvm-1.6.4.jar:<public-toolchain>/annotations-13.0.jar",
+          "org.jetbrains.kotlin.cli.jvm.K2JVMCompiler",
+          "-no-stdlib",
+          "-no-reflect",
+          "-jvm-target",
+          "17",
+          "-classpath",
+          "<public-toolchain>/kotlin-stdlib-2.0.21.jar:<public-toolchain>/kotlinx-serialization-json-jvm-1.6.3.jar:<public-toolchain>/kotlinx-serialization-core-jvm-1.6.3.jar",
+          "-Xplugin=<public-toolchain>/kotlin-serialization-compiler-plugin-embeddable-2.0.21.jar",
+          "<repo>/src/tooling/__tests__/fixtures/bugbot_kotlin_json_probe.kt",
+          "-d",
+          "<public-toolchain>/published-nullability-1.6.3.jar"
+        ],
+        "reproductionRunCommand": [
+          "<java17>",
+          "-cp",
+          "<public-toolchain>/published-nullability-1.6.3.jar:<public-toolchain>/kotlin-stdlib-2.0.21.jar:<public-toolchain>/kotlinx-serialization-json-jvm-1.6.3.jar:<public-toolchain>/kotlinx-serialization-core-jvm-1.6.3.jar",
+          "Bugbot_kotlin_json_probeKt"
+        ]
+      },
+      {
+        "serializationVersion": "1.7.3",
+        "compileExitCode": 0,
+        "runExitCode": 0,
+        "observations": {
+          "implicit_nullable_omission_equals_explicit_null": "passed",
+          "explicit_nullable_omission_rejected": "passed",
+          "implicit_nonnullable_omission_rejected": "passed",
+          "implicit_nonnullable_null_rejected": "passed",
+          "implicit_nullable_default_preserved": "passed",
+          "explicit_nullable_default_preserved": "passed",
+          "implicit_nullable_explicit_null_overrides_default": "passed",
+          "inherited_implicit_policy": "passed"
+        },
+        "compiledSha256": "cb9cb8b89a232e5045766bbfc145dd4190d77493118d5ed8ba483d243a8dd015",
+        "reproductionCompileCommand": [
+          "<java17>",
+          "-cp",
+          "<public-toolchain>/kotlin-compiler-embeddable-2.0.21.jar:<public-toolchain>/kotlin-stdlib-2.0.21.jar:<public-toolchain>/kotlin-script-runtime-2.0.21.jar:<public-toolchain>/kotlin-reflect-1.6.10.jar:<public-toolchain>/kotlin-daemon-embeddable-2.0.21.jar:<public-toolchain>/trove4j-1.0.20200330.jar:<public-toolchain>/kotlinx-coroutines-core-jvm-1.6.4.jar:<public-toolchain>/annotations-13.0.jar",
+          "org.jetbrains.kotlin.cli.jvm.K2JVMCompiler",
+          "-no-stdlib",
+          "-no-reflect",
+          "-jvm-target",
+          "17",
+          "-classpath",
+          "<public-toolchain>/kotlin-stdlib-2.0.21.jar:<public-toolchain>/kotlinx-serialization-json-jvm-1.7.3.jar:<public-toolchain>/kotlinx-serialization-core-jvm-1.7.3.jar",
+          "-Xplugin=<public-toolchain>/kotlin-serialization-compiler-plugin-embeddable-2.0.21.jar",
+          "<repo>/src/tooling/__tests__/fixtures/bugbot_kotlin_json_probe.kt",
+          "-d",
+          "<public-toolchain>/published-nullability-1.7.3.jar"
+        ],
+        "reproductionRunCommand": [
+          "<java17>",
+          "-cp",
+          "<public-toolchain>/published-nullability-1.7.3.jar:<public-toolchain>/kotlin-stdlib-2.0.21.jar:<public-toolchain>/kotlinx-serialization-json-jvm-1.7.3.jar:<public-toolchain>/kotlinx-serialization-core-jvm-1.7.3.jar",
+          "Bugbot_kotlin_json_probeKt"
+        ]
+      }
+    ],
+    "commandNormalization": "Portable reproduction paths replace local toolchain/repository paths; these are not a byte-for-byte captured command transcript.",
+    "mandatoryNodeCiProvisioningChanged": false,
+    "doesNotEstablishConsumerGradleResolution": true
+  },
+  "readOnlyConsumerProvenance": {
+    "originalReviewedCommit": "1b5e3a0ade73d21c749bceba004230fc97f2713e",
+    "auditCommit": "f017a52104a04e84e9d16a088520f838f4ae0538",
+    "generatorBlobIdenticalAtBothCommits": "b9bb5a901d39697569fa608d4204fb34a5e16213",
+    "declaredKotlin": "2.0.21",
+    "declaredSerialization": "1.6.3",
+    "declaredKtor": "3.0.2",
+    "publicKtorPomRequestsSerialization": "1.7.3",
+    "actualConsumerResolvedSerialization": "not independently established",
+    "reporterEightCompiledControls": "Reported by author; test source independently read, not compiled/executed here.",
+    "reporterTypeScriptCampaign": "Reported 64 cases / TypeScript5.9.3 and retained source floors; not executed here.",
+    "privateSourceAndLogsPublished": false
+  },
+  "versionMatchedPrimarySources": [
+    {
+      "version": "1.6.3",
+      "blob": "2a144fefc7653fd007d5170c1d61e8eb923dcc38",
+      "url": "https://github.com/Kotlin/kotlinx.serialization/blob/v1.6.3/formats/json/commonMain/src/kotlinx/serialization/json/Json.kt"
+    },
+    {
+      "version": "1.7.3",
+      "blob": "fe6b094d88bed93ce9276b7466fa9684644427a6",
+      "url": "https://github.com/Kotlin/kotlinx.serialization/blob/v1.7.3/formats/json/commonMain/src/kotlinx/serialization/json/Json.kt"
+    }
+  ],
+  "implementation": {
+    "newDeterministicCases": 24,
+    "focusedSuites": 7,
+    "focusedCasesPassed": 238,
+    "promptCoverage": "100% statements/branches/functions/lines",
+    "legacyPromptCharacterLimit": 15000,
+    "limitChanged": false,
+    "compatibilityRepairs": {
+      "initialExpandedPromptLength": 15449,
+      "firstCompactionLength": 15018,
+      "retainedExistingContextAndFindingSemantics": true
+    },
+    "selectedVariant": "corrected-v3",
+    "firstProposalRejected": "The original false premise disappeared, but a safe inherited-policy case emitted a self-refuting finding. Preserve it and all failed scores; V2 explicitly grounds Json(base) inheritance and omits disproved reports, but measured two false positives, including a self-refuting finding and an incorrect default-field claim. Reject V2; V3 orders the decision as defaults first, then nullable/explicitNulls, and explicitly returns an empty array for accepted inputs."
+  },
+  "limitations": [
+    "Eight cases are bounded observations, not statistical accuracy guarantees.",
+    "Current-finding benchmark scores do not demonstrate historical-thread resolution.",
+    "Core prompt hashes do not attest the full provider input.",
+    "Independent owned compilation does not certify any private consumer build or dependency resolution.",
+    "Retain every failed model-quality gate, including exact-line calibration; never lower floors or change the frozen inputs to pass."
+  ]
+}

@@ -20,17 +20,16 @@ GitHub recognizes a closing reference for linkage when the PR targets the
 repository's default branch. Copilot therefore reads the current body of the
 exact repository PR, adds a temporary owned `Resolves #…` reference, temporarily
 uses the default base when needed, waits for GitHub to observe the link, and then
-restores the exact original body and base. The event's PR URL is never fetched
-or trusted as a destination.
+restores and verifies the original base, and removes only its owned temporary
+reference and marker. Concurrent body changes are preserved. The event's PR URL
+is never fetched or trusted as a destination.
 
-An interruption leaves a hidden pending marker so rerunning the failed GitHub
-Actions run with its original event recovers that operation before attempting a new one; it does not add a second
-reference or marker. If cleanup only partly succeeds, the result says exactly
-whether the temporary default base, the temporary body reference, or both
-remain. Restore the named PR state in GitHub if necessary, then rerun. A fully
-compensated failure says that the original body and base were restored.
-If a newer event sees a different current base, Copilot stops without writing;
-restore the base named by the failed run or start again from the current PR state.
+An interruption leaves a hidden pending marker. The next eligible PR lifecycle
+run or authorized description command repairs that operation before ordinary
+work, including when a newer commit arrived. If cleanup partly succeeds, the
+result identifies the retained base or reference. Rerun the current workflow
+after a transient failure; inspect conflicting identity or ownership without
+deleting the recovery marker. See the fixed linkage safety rules below.
 
 The branch name must follow the pattern that includes the issue number (e.g. `<tree>/<issue-number>-<slug>`). If it does not, the PR still receives PR-native enrichment such as assignee and reviewer selection, project linking, description, and review where configured. Issue-derived title normalization, priority, size, and progress synchronization and merge closure are skipped because those policies need a separate issue. Copilot never uses the PR number itself as fallback linkage and never creates `Closes #<same-pr-number>`. See [Issues → Branch management](/issues/branch-management) for naming conventions.
 
@@ -149,6 +148,23 @@ The merge-group producer lives in the separate
 second skipped check.
 Metadata-only body/title edits do not start the PR workflow; new commits and
 lifecycle changes still do.
+
+## Interrupted issue linkage
+
+Temporary default-branch retargeting retains a bounded recovery record containing
+the original parent. Eligible PR lifecycle invocations recover it before normal
+metadata, description or review work. A newer head on the same native PR and
+repository/ref may repair metadata. An obsolete event can finish that repair but
+cannot continue with stale enrichment or configuration writes. Ready-for-review
+repairs pending state and then performs its normal review without repeating
+opening enrichment. The PAT-authored analysis-only exception gains no write
+capability.
+
+A verified original base is required before removing the owned temporary record.
+Provider failures, changed ownership or conflicting bases retain evidence and
+show recovery guidance in the existing run result and Job Summary. No additional
+success comment is published. See [fixed linkage safety rules](/pull-requests/configuration#fixed-linkage-safety-rules)
+for rerun and rollback guidance.
 
 ## Next steps
 

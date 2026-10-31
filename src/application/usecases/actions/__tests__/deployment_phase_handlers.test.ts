@@ -146,6 +146,7 @@ function runtimeHarness() {
       findManagedPullRequests: jest.fn().mockResolvedValue([]),
       createManagedPullRequest: jest.fn().mockResolvedValue(managedPullRequest({ state: "open", merged: false })),
       getPullRequest: jest.fn().mockResolvedValue(managedPullRequest()),
+      prepareIssueCompletion: jest.fn(),
       enableAutoMerge: jest.fn(),
       isPullRequestQueued: jest.fn().mockResolvedValue(false),
       enqueuePullRequest: jest.fn(),
@@ -170,7 +171,7 @@ function runtimeHarness() {
         },
       }),
     },
-    issues: { closeIssue: jest.fn(), addComment: jest.fn() },
+    issues: { reconcileCompletion: jest.fn().mockResolvedValue([new Result({ id: 'ReconcileClosedIssueMetadataUseCase', success: true, executed: false, payload: { issueCompletion: { nativeClosed: true, reconciled: true, outcome: 'already-converged' } } })]), closeIssue: jest.fn(), addComment: jest.fn() },
   };
   const blockedResult = new Result({ id: "test", success: false, executed: true });
   const runtime = {
@@ -195,6 +196,66 @@ function runtimeHarness() {
   } as unknown as DeploymentOrchestrationRuntime;
   return { runtime, dependencies, blockedResult };
 }
+
+describe('verified final native issue completion boundary', () => {
+  it('persists completed functional state before native closure and then verifies metadata', async () => {
+    const { runtime, dependencies } = runtimeHarness(); const state = operation('reconciliation_pending');
+    const request = { ...context('published', state), tokenUser: 'bot',
+      labels: { ...context('published', state).labels, completionProtectedLabels: ['branched'] } };
+    dependencies.issues.reconcileCompletion.mockResolvedValue([new Result({ id: 'metadata', success: true, executed: true,
+      payload: { issueCompletion: { nativeClosed: true, reconciled: true } } }),
+      new Result({ id: 'cards', success: true, executed: false, payload: { nativeClosed: true, reconciled: true } })]);
+    dependencies.issues.closeIssue.mockImplementation(async () => {
+      expect(request.currentConfiguration.deploymentOrchestration?.phase).toBe('completed'); return true;
+    });
+    const result = await new ReconciliationHandler(runtime).complete(request, state);
+    expect(result.success).toBe(true);
+    expect((runtime.cleanup as jest.Mock).mock.invocationCallOrder[0]).toBeLessThan((runtime.persist as jest.Mock).mock.invocationCallOrder[0]);
+    expect((runtime.persist as jest.Mock).mock.invocationCallOrder[0]).toBeLessThan(dependencies.issues.closeIssue.mock.invocationCallOrder[0]);
+    expect(dependencies.issues.reconcileCompletion).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 355,
+      trustedBotLogin: 'bot', completionLabels: { lifecycle: DEFAULT_COPILOT_LIFECYCLE_LABELS, protectedLabels: ['branched'] } }));
+  });
+  it.each(['close', 'metadata', 'metadata-without-diagnostic', 'empty', 'unverified'] as const)('retries %s projection without repeating cleanup or publication', async failure => {
+    const { runtime, dependencies } = runtimeHarness(); const state = operation('reconciliation_pending');
+    const request = context('published', state); const complete = new ReconciliationHandler(runtime);
+    if (failure === 'close') dependencies.issues.closeIssue.mockRejectedValueOnce(new Error('Native close unavailable'));
+    if (failure === 'metadata') dependencies.issues.reconcileCompletion.mockResolvedValueOnce([new Result({ id: 'metadata',
+      success: false, executed: true, errors: [new ApplicationError('provider.unavailable', 'Metadata unavailable')] })]);
+    if (failure === 'metadata-without-diagnostic') dependencies.issues.reconcileCompletion.mockResolvedValueOnce([new Result({
+      id: 'metadata', success: false, executed: false })]);
+    if (failure === 'empty') dependencies.issues.reconcileCompletion.mockResolvedValueOnce([]);
+    if (failure === 'unverified') dependencies.issues.reconcileCompletion.mockResolvedValueOnce([new Result({ id: 'metadata',
+      success: true, executed: false, payload: { issueCompletion: { nativeClosed: false, reconciled: false } } })]);
+    expect(await complete.complete(request, state)).toMatchObject({ success: false,
+      payload: { deployment: { phase: 'completed', issueCompletionVerified: false } } });
+    expect(request.currentConfiguration.deploymentOrchestration?.phase).toBe('completed');
+    const retried = await new ConfirmPublicationHandler(runtime, complete).invoke(request);
+    expect(retried.success).toBe(true); expect(runtime.cleanup).toHaveBeenCalledTimes(1);
+    expect(runtime.persist).toHaveBeenCalledTimes(1); expect(runtime.block).not.toHaveBeenCalled();
+    expect(dependencies.continuation.dispatch).not.toHaveBeenCalled();
+    expect(request.currentConfiguration.deploymentOrchestration?.publicationReceipt).toEqual(state.publicationReceipt);
+  });
+  it('retains a configured keep-open launcher after full completion', async () => {
+    const { runtime, dependencies } = runtimeHarness(); const state = operation('reconciliation_pending', { issueCompletion: 'keep-open' });
+    expect((await new ReconciliationHandler(runtime).complete(context('published', state), state)).success).toBe(true);
+    expect(dependencies.issues.closeIssue).not.toHaveBeenCalled(); expect(dependencies.issues.reconcileCompletion).not.toHaveBeenCalled();
+  });
+  it('rejects incomplete publication or reconciliation before cleanup', async () => {
+    for (const change of [{ publicationVerified: false }, { publicationReceipt: undefined },
+      { reconciliationTargets: [{ targetBranch: 'develop', sourceBranch: 'master', sourceSha, status: 'pending' as const }] }]) {
+      const { runtime, dependencies } = runtimeHarness(); const state = operation('reconciliation_pending', change);
+      await expect(new ReconciliationHandler(runtime).complete(context('published', state), state)).rejects.toMatchObject({ code: 'workflow.stale' });
+      expect(runtime.cleanup).not.toHaveBeenCalled(); expect(dependencies.issues.closeIssue).not.toHaveBeenCalled();
+    }
+  });
+  it('retains the pending operation when cleanup fails and never closes the issue', async () => {
+    const { runtime, dependencies } = runtimeHarness(); const state = operation('reconciliation_pending');
+    (runtime.cleanup as jest.Mock).mockRejectedValue(new Error('Cleanup unavailable'));
+    expect((await new ReconciliationHandler(runtime).complete(context('published', state), state)).success).toBe(false);
+    expect(runtime.persist).not.toHaveBeenCalled(); expect(dependencies.issues.closeIssue).not.toHaveBeenCalled();
+    expect(runtime.block).toHaveBeenCalledWith(expect.anything(), state, 'cleanup', expect.any(String), true, expect.anything());
+  });
+});
 
 describe("deployment phase handlers", () => {
   it.each([
@@ -233,9 +294,9 @@ describe("deployment phase handlers", () => {
 
   it("rechecks receipts on duplicate completed publication", async () => {
     const { runtime, dependencies } = runtimeHarness();
-    const reconciliation = { plan: jest.fn() } as unknown as ReconciliationHandler;
+    const reconciliation = { plan: jest.fn(), complete: jest.fn() } as unknown as ReconciliationHandler;
     await new ConfirmPublicationHandler(runtime, reconciliation).invoke(context("published", operation("completed")));
-    expect(runtime.publishDashboard).toHaveBeenCalled();
+    expect(reconciliation.complete).toHaveBeenCalled();
     expect(dependencies.publication.inspect).toHaveBeenCalled();
   });
 

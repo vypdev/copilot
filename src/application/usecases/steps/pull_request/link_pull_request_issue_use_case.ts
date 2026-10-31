@@ -10,6 +10,7 @@ import {
     runLinkPullRequestIssue,
 } from './link_pull_request_issue_workflow';
 import {
+    ApplicationError,
     toApplicationError,
     type ApplicationErrorOptions,
 } from '../../../errors/application_error';
@@ -34,7 +35,8 @@ export class LinkPullRequestIssueUseCase implements ParamUseCase<LinkPullRequest
         } catch (error) {
             const semanticError = toApplicationError(
                 error,
-                'provider.unavailable',
+                error instanceof PullRequestIssueLinkOperationError && error.primaryError instanceof ApplicationError
+                    ? error.primaryError.code : 'provider.unavailable',
                 'Unable to link the pull request to its issue.',
                 error instanceof PullRequestIssueLinkOperationError
                     ? {
@@ -45,6 +47,7 @@ export class LinkPullRequestIssueUseCase implements ParamUseCase<LinkPullRequest
             logError(semanticError);
             const recoveryStep = error instanceof PullRequestIssueLinkOperationError
                 ? describeRecovery(error)
+                : error instanceof ApplicationError ? error.message
                 : 'Unable to link the pull request to its issue. Inspect the PR base and description before rerunning the workflow.';
             return [new Result({
                 id: this.taskId,
@@ -76,7 +79,7 @@ function describeRecovery(error: PullRequestIssueLinkOperationError): string {
         error.retainedIssueReference ? 'the temporary issue reference in the description' : undefined,
     ].filter((state): state is string => state !== undefined);
     if (retainedState.length === 0) {
-        return 'Pull-request issue linkage failed, but the original base and description were restored. Re-run the workflow.';
+        return 'Pull-request issue linkage failed, but the original base and owned temporary-reference cleanup were verified. Re-run the workflow.';
     }
-    return `Pull-request issue linkage failed and retained ${retainedState.join(' and ')}. Restore that PR state, then re-run the workflow.`;
+    return `Pull-request issue linkage failed and retained ${retainedState.join(' and ')}. Re-run the current PR workflow to recover pending state; inspect ownership if recovery remains blocked.`;
 }

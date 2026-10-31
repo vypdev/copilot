@@ -5,6 +5,7 @@ import {
 } from '../issue_workflow_context';
 import {
   projectPullRequestDescriptionContext,
+  projectLinkPullRequestIssueContext,
   projectPullRequestWorkflowStepContexts,
 } from '../pull_request_workflow_context';
 
@@ -81,6 +82,24 @@ function pullRequestSource() {
 }
 
 describe('P2-E issue and pull-request context projections', () => {
+  it('uses the native base instead of an unverified stale PR parent', () => {
+    const source = { ...pullRequestSource(), currentConfiguration: { parentBranch: 'main' } };
+    expect(projectLinkPullRequestIssueContext(source).originalBaseBranch).toBe('develop');
+    expect(projectPullRequestDescriptionContext(source).pullRequest.baseBranch).toBe('develop');
+  });
+  it('retains the independently verified admitted parent after a legacy marker was lost', () => {
+    const source = { ...pullRequestSource(), pullRequestParentBranch: 'develop',
+      currentConfiguration: { parentBranch: 'main' } };
+    source.pullRequest.base = 'main';
+    expect(projectLinkPullRequestIssueContext(source).originalBaseBranch).toBe('develop');
+    expect(projectPullRequestDescriptionContext(source).pullRequest.baseBranch).toBe('develop');
+  });
+  it('leaves an unknown conversation base to the fresh native read', () => {
+    const source = { ...pullRequestSource(), currentConfiguration: { parentBranch: 'main' } };
+    source.eventName = 'issue_comment'; source.pullRequest.base = '';
+    expect(projectLinkPullRequestIssueContext(source).originalBaseBranch).toBe('');
+    expect(projectPullRequestDescriptionContext(source).pullRequest.baseBranch).toBe('');
+  });
   it('projects immutable issue step requests without credential authority', () => {
     const source = issueSource();
     const contexts = projectIssueWorkflowStepContexts(source as never);
@@ -155,6 +174,13 @@ describe('P2-E issue and pull-request context projections', () => {
       target: 'pull request', number: 84, desiredAssigneesCount: 1, creator: 'bob',
     });
     expect(contexts.linkIssue).toMatchObject({ issueNumber: 42, originalBaseBranch: 'develop', defaultBranch: 'main' });
+    const pending = { ...source, pullRequest: { ...source.pullRequest, base: 'main',
+      headSha: 'a'.repeat(40), headRepository: 'owner/repo',
+      body: 'Human\n\nResolves #42\n\n<!-- copilot:pr-issue-link:v1;pr=84;issue=42;base=develop;state=pending -->' } };
+    expect(projectPullRequestWorkflowStepContexts(pending).linkIssue).toMatchObject({ originalBaseBranch: 'develop',
+      expectedHeadSha: 'a'.repeat(40), expectedHeadRepository: 'owner/repo', expectedHeadRef: source.pullRequest.head });
+    expect(projectPullRequestDescriptionContext(pending).pullRequest.baseBranch).toBe('develop');
+    expect(projectPullRequestWorkflowStepContexts({ ...source, pullRequestParentBranch: 'release/2.0', currentConfiguration: { parentBranch: 'release/2.0' } }).linkIssue.originalBaseBranch).toBe('release/2.0');
     expect(contexts.syncLabels.sizeLabels).toEqual(['size: S', 'size: M']);
     expect(contexts.description).toMatchObject({ mode: 'append', membersOnly: true });
     expectDataOnly(contexts);
@@ -165,6 +191,11 @@ describe('P2-E issue and pull-request context projections', () => {
     source.eventName = 'issue_comment';
     source.pullRequest.number = -1;
     expect(projectPullRequestDescriptionContext(source).pullRequest.number).toBe(42);
+    source.pullRequest.body = undefined as never;
+    expect(projectPullRequestDescriptionContext(source).pullRequest.body).toBe('');
+    expect(projectPullRequestWorkflowStepContexts(source).linkIssue.originalBaseBranch).toBe('develop');
+    source.pullRequest.head = '';
+    expect(projectLinkPullRequestIssueContext({ ...source, currentConfiguration: { workingBranch: 'feature/42-resolved' } }).expectedHeadRef).toBe('feature/42-resolved');
   });
 
   it('freezes explicit configured Project Size mappings and copied Project references', () => {

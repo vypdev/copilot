@@ -9,6 +9,9 @@ module.exports = {
     'scripts/git-hooks/verification-environment.cjs',
     'issue-admission/index.cjs',
     'deployment-recovery/index.cjs',
+    'src/infrastructure/specification_catalog_publication.cjs',
+    'src/infrastructure/specification_catalog_validator.cjs',
+    'src/domain/specification_catalog_path_policy.cjs',
     'web/src/**/*.ts',
     '!web/src/main.ts',
     '!src/**/*.d.ts',
@@ -27,6 +30,12 @@ module.exports = {
       statements: 95,
       functions: 100,
       branches: 85
+    },
+    './src/infrastructure/specification_catalog_publication.cjs': {
+      lines: 95,
+      statements: 95,
+      functions: 90,
+      branches: 90
     }
   },
   coverageDirectory: 'coverage',

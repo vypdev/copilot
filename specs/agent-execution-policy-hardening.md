@@ -805,6 +805,15 @@ Run `38270745319` completed full macOS and Ubuntu verification, but Windows was 
 2026-10-12 retirement above. General hosted three-platform coverage remains
 required; new Codex integration runs target macOS and Ubuntu only.
 
+### Private repository JVM/Gradle discovery — issue #775
+
+The [verification runtime amendment](./repository-verification-runtime-prerequisites.md#21-private-jvm-and-gradle-discovery--issue-775-2026-10-29)
+owns private JVM user.home and Gradle user-home derivation for repository
+verification, its additional test budget and actual Linux runtime/native
+acceptance. These host-derived values do not admit inherited tool options or
+change provider credential environments. No universal Java prerequisite,
+verification bypass or new caller configuration is introduced.
+
 ### Complete manual fixture selection (2026-10-13)
 
 Dogfooding issue [#496](https://github.com/vypdev/copilot/issues/496) found that

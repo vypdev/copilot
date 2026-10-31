@@ -19,6 +19,7 @@ export interface ConfigurationPayloadContext {
 
 export interface ConfigurationPersistenceContext extends ConfigurationPayloadContext {
     readonly issueNumber: number;
+    readonly targetKind?: 'issue' | 'pull-request';
 }
 
 export interface ConfigurationStorePort {

@@ -21,6 +21,11 @@ const RECOVERY_CASES: readonly Readonly<{
     spanish: string;
 }>[] = [
     {
+        recovery: { id: 'branch-sync-catalog-incompatible', variables: { phase: 'profile-compatibility', profile: 'legacy-evidence', field: 'workflows', capabilityNumber: 1, abort: 'completed' } },
+        english: 'No synchronization commit or push was attempted; remote branches were preserved. Local abort: completed. completed means the abort call finished; unverified requires operator inspection. This result does not certify application readiness.',
+        spanish: 'No se intentó crear ni subir un commit de sincronización; se conservaron las ramas remotas. Aborto local: completed. completed indica que terminó la llamada de aborto; unverified exige inspección del operador. Este resultado no certifica que la aplicación esté preparada.',
+    },
+    {
         recovery: { id: 'deployment-publication-context-missing', variables: {} },
         english: 'Existing persisted state and completed external effects were preserved; this attempt did not create a GitHub release.',
         spanish: 'Se conservaron el estado persistido y los efectos externos completados; este intento no creó una release de GitHub.',
@@ -29,6 +34,11 @@ const RECOVERY_CASES: readonly Readonly<{
         recovery: { id: 'progress-binary-evidence-unavailable', variables: { paths: '["lib/a.dll"]', pathCount: 1 } },
         english: 'Existing progress labels and assessments were preserved; no model assessment was made. Project verification remains a separate result.',
         spanish: 'Se conservaron las etiquetas de progreso y las evaluaciones; no se realizó ninguna evaluación del modelo. La verificación del proyecto sigue siendo un resultado independiente.',
+    },
+    {
+        recovery: { id: 'progress-result-contract-invalid', variables: { phase: 'assessment', reason: 'requirement-evidence-invalid', field: '$.requirements[1].evidence', requirementId: 'R2', sourceLineId: 'L7' } },
+        english: 'Existing progress labels and published assessments were preserved. An optional check-publication warning is a separate result.',
+        spanish: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas. Un aviso de publicación del check opcional corresponde a otro resultado.',
     },
     {
         recovery: { id:'issue-workflow-admission-blocked', variables:{kind:'bugfix',reason:'missing-fields',fields:'["VaultStadio Version"]'} },
@@ -95,6 +105,11 @@ const RECOVERY_CASES: readonly Readonly<{
         spanish: 'El catálogo de origen, las respuestas y los SDD publicados permanecen intactos; no se intentó convertir el catálogo automáticamente.',
     },
     {
+        recovery: { id: 'sdd-catalog-missing-trusted-source', variables: {} },
+        english: 'Existing answers, published specifications and any linked branch are retained; this attempt published no specification or branch.',
+        spanish: 'Se conservan las respuestas, las especificaciones publicadas y cualquier rama enlazada; este intento no publicó ninguna especificación ni rama.',
+    },
+    {
         recovery: { id: 'sdd-draft-format-invalid', variables: {} },
         english: 'Existing answers and published SDDs were preserved; no draft was published.',
         spanish: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador.',
@@ -121,8 +136,8 @@ const RECOVERY_CASES: readonly Readonly<{
     },
     {
         recovery: { id: 'pull-request-link-restored', variables: {} },
-        english: 'The original pull-request base and description were restored.',
-        spanish: 'Se restauraron la rama base y la descripción originales de la pull request.',
+        english: 'The original pull-request base and owned temporary-reference cleanup were verified.',
+        spanish: 'Se verificaron la rama base original y la limpieza de la referencia temporal propia.',
     },
     {
         recovery: { id: 'pull-request-link-base-retained', variables: {} },
@@ -136,8 +151,8 @@ const RECOVERY_CASES: readonly Readonly<{
     },
     {
         recovery: { id: 'pull-request-link-base-and-reference-retained', variables: {} },
-        english: 'The temporary default base branch and issue reference remain.',
-        spanish: 'La rama base predeterminada temporal y la referencia a la issue permanecen.',
+        english: 'The original base and temporary-reference cleanup could not be verified; pending recovery evidence was retained when observable.',
+        spanish: 'No se pudo verificar la base original ni la limpieza de la referencia temporal; se conservó la evidencia pendiente cuando pudo observarse.',
     },
     {
         recovery: {
@@ -160,6 +175,21 @@ const RECOVERY_CASES: readonly Readonly<{
 ];
 
 describe('application error presentation policy', () => {
+    it.each([['en-US', 'completed'], ['es-ES', 'completed'], ['en-US', 'unverified'], ['es-ES', 'unverified']] as const)(
+        'renders catalog recovery in %s with truthful %s abort state and trusted destinations', (locale, abort) => {
+            const error = new ApplicationError('configuration.unsupported', 'Catalog review required.', { correlationId: CORRELATION_ID,
+                recovery: { id: 'branch-sync-catalog-incompatible', variables: {
+                    phase: 'profile-compatibility', profile: 'legacy-evidence', field: 'workflows', capabilityNumber: 1, abort,
+                } } });
+            const message = jest.fn(resolveStaticApplicationErrorCatalog(locale).message);
+            const view = buildApplicationErrorPresentation(error, message);
+            expect(view.action).toContain('https://docs.page/vypdev/copilot/security-operations/operations/troubleshooting#branch-sync-catalog-compatibility');
+            expect(view.action).toContain('/copilot sync-branch'); expect(view.retainedState).toContain(abort);
+            expect(view.retryable).toBe('No'); expect(view.reference).toBe(CORRELATION_ID);
+            expect(view.impact).toContain('workflows'); expect(view.impact).toContain('legacy-evidence');
+            expect(message.mock.calls[0][1]).toMatchObject({ syncCommand: '/copilot sync-branch',
+                catalogGuide: 'https://docs.page/vypdev/copilot/security-operations/operations/troubleshooting#branch-sync-catalog-compatibility' });
+        });
     it.each(['en-US', 'es-ES'])('explains missing evidence as nonretryable with retained progress in %s', locale => {
         const error = new ApplicationError('validation.evidence-unavailable', 'Omitted patch.', { correlationId: CORRELATION_ID });
         const catalog = resolveStaticApplicationErrorCatalog(locale);

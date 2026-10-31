@@ -84,13 +84,17 @@ export function unavailableBranchSyncResult(reason: string): Result {
 }
 
 export function failedBranchSyncResult(reason: string, cause?: unknown, recovery?: ApplicationErrorRecovery): Result {
+  const catalogCode = recovery?.id === 'branch-sync-catalog-incompatible'
+    ? (['legacy-evidence', 'native', 'ambiguous'].includes(recovery.variables.profile) ? 'configuration.unsupported' : 'configuration.invalid')
+    : undefined;
   return new Result({
     id: BRANCH_SYNC_TASK_ID,
     success: false,
     executed: true,
     steps: [reason],
     errors: [cause === undefined
-      ? new ApplicationError('workflow.failed', reason, { recovery, ...(recovery?.id === 'branch-sync-verification-failed' ? { retryable: false } : {}) })
+      ? new ApplicationError(catalogCode ?? 'workflow.failed', reason, { recovery,
+        ...(catalogCode || recovery?.id === 'branch-sync-verification-failed' ? { retryable: false } : {}) })
       : toApplicationError(cause, 'workflow.failed', reason, { recovery })],
   });
 }

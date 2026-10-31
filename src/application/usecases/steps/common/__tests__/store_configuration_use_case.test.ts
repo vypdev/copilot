@@ -57,5 +57,6 @@ describe('StoreConfigurationUseCase', () => {
     });
 
     expect(context?.issueNumber).toBe(expected);
+    if (context) expect(context.targetKind).toBe('isPullRequest' in route && route.isPullRequest ? 'pull-request' : 'issue');
   });
 });

@@ -7,7 +7,7 @@ describe('PullRequest', () => {
     number: 42,
     html_url: 'https://github.com/o/r/pull/42',
     body: 'Description',
-    head: { ref: 'feature/123-x' },
+    head: { ref: 'feature/123-x', sha: 'a'.repeat(40), repo: { name: 'repo', owner: { login: 'owner' } } },
     base: { ref: 'develop' },
     state: 'open',
     merged: false,
@@ -29,6 +29,12 @@ describe('PullRequest', () => {
     expect(p.url).toBe('https://github.com/o/r/pull/42');
     expect(p.body).toBe('Description');
     expect(p.head).toBe('feature/123-x');
+    expect(p.headSha).toBe('a'.repeat(40));
+    expect(p.headRepository).toBe('owner/repo');
+    const absent = new PullRequest(0, 0);
+    expect(absent.headSha).toBe('');
+    expect(absent.headRepository).toBe('');
+    expect(new PullRequest(0, 0, { pull_request: { head: { repo: { owner: { login: 'owner' } } } } }).headRepository).toBe('');
     expect(p.base).toBe('develop');
     expect(p.isMerged).toBe(false);
     expect(p.opened).toBe(true);
@@ -173,5 +179,8 @@ describe('PullRequest', () => {
     expect(p.number).toBe(-1);
     expect(p.commentId).toBe(-1);
     expect(p.commentInReplyToId).toBeUndefined();
+    expect(p.id).toBe(''); expect(p.title).toBe(''); expect(p.creator).toBe('');
+    expect(p.url).toBe(''); expect(p.body).toBe(''); expect(p.base).toBe('');
+    expect(p.commentBody).toBe(''); expect(p.commentAuthor).toBe('');
   });
 });

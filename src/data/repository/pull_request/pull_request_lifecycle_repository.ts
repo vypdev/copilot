@@ -232,10 +232,18 @@ export class PullRequestLifecycleRepository implements PullRequestHeadShaPort {
             repo: repository,
             pull_number: pullRequestNumber,
         });
+        const native = toBugbotPullRequestIdentity(data);
+        if (native.number !== pullRequestNumber || native.baseRepository.owner !== owner
+            || native.baseRepository.name !== repository || !native.headRepositoryName) {
+            throw new Error('Pull-request identity does not match the bound repository.');
+        }
         return {
             body: data.body ?? '',
-            headBranch: data.head?.ref ?? '',
+            headBranch: native.headRef,
             baseBranch: data.base?.ref ?? '',
+            identity: { number: native.number, state: native.state, repository: `${owner}/${repository}`,
+                headRepository: `${native.headRepositoryOwner}/${native.headRepositoryName}`,
+                headRef: native.headRef, headSha: native.headSha },
         };
     };
 

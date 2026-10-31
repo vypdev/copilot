@@ -2,10 +2,11 @@
 
 - Status: Implemented
 - Date: 2026-10-28
+- Last updated: 2026-10-30
 - Catalog capability ID: github-communication-experience
 - Owners: Copilot maintainers
-- Scope: Make optional native evidence publication actionable without changing required workflow results.
-- Related issue: [#728](https://github.com/vypdev/copilot/issues/728)
+- Scope: Make optional native evidence publication and operator log collection actionable without changing required workflow results.
+- Related issues: [#728](https://github.com/vypdev/copilot/issues/728), [#817](https://github.com/vypdev/copilot/issues/817)
 - Review gates: UX/localization, architecture, security/permissions, tests and operator documentation
 - Open decisions blocking readiness: none
 
@@ -280,3 +281,95 @@ perform owned iteration cleanup while retaining the source/evidence/rollback.
   capability is inferred from a variable name or a denied response.
 - No new check-upsert registry or automatic replay is added: an uncertain write
   is reported honestly, retaining existing identity and required-stage behavior.
+
+## 21. Recoverable run-log collection — #817 (2026-10-30)
+
+Issue #817 explicitly accepts a documented safe collection path when advisory
+checks appear in the native Actions job inventory. Select that bounded remedy;
+do not claim to repair GitHub's association or the CLI's whole-run retrieval.
+Current evidence publication and Approval have separate adapters, and the
+observed behavior does not establish either the CLI alone or one publisher
+alone as the root cause. Preserve check names, conclusions, permissions,
+credential routes and all required workflow outcomes.
+
+Authorized read-only observation of existing consumer run `41113650469` at
+`501553b73cc8cb2addd127255037ce260a380612` confirms three native records:
+
+| Record | Steps | Runner | Conclusion |
+|---|---:|---|---|
+| `124262167251`, Copilot - Commit | 7 | 234 | failure |
+| `124263870792`, Copilot / Approval | 0 | unavailable | neutral |
+| `124269094417`, Copilot / Review | 0 | unavailable | neutral |
+
+The advisory check belongs to GitHub Actions app `15368` and check suite
+`111452270326`. With the same authorized account and installed `gh` 2.96.0,
+whole-run `--log` exits 1 for missing log `124263870792`; selecting real job
+`124262167251` exits 0. Both stdout streams contain the same 44,252 bytes
+(SHA256 `665eac8dcc21da4494f8f4bad8946bfdd3873aa3bc40864c6f60bbb6b25c2027`).
+Thus the whole-run failure can coexist with available partial output. The real
+job's `validation.evidence-too-large` remains an independent required failure
+already tracked by #773. No consumer code, checks or configuration were changed
+or executed for this observation; no synthetic checks were created.
+
+```text
+pin run/attempt -> inventory every page -> classify native evidence
+ -> collect each executable job ID -> retain exits/partial output -> account for coverage
+```
+
+Text equivalent: collect logs from the jobs that actually have execution
+evidence, inspect advisory output separately and keep the bundle incomplete
+when any intended executable job is pending, unknown or unavailable.
+
+log-collection-R01: the operator guide MUST show the paginated native inventory,
+including ID, name, status, conclusion, runner and step count. Latest-attempt
+selection and the explicit older-attempt endpoint MUST be distinguished.
+Incomplete metadata or pagination/API failure cannot certify a complete bundle.
+
+log-collection-R02: zero steps/no runner alone MUST NOT classify a queued,
+running or skipped executable job as an advisory check. Completed known check
+output and native metadata establish the observed advisory case. Names and a
+missing log alone are insufficient. Preserve pending, skipped and unknown states.
+
+log-collection-R03: show `gh run view --repo OWNER/REPO --job JOB_ID --log` for
+each real job, including failed jobs. Preserve individual exit statuses and
+available partial output. A real-job download failure remains actionable;
+continue collecting other available jobs but do not claim a complete bundle.
+`--log-failed` alone is not full successful-step evidence. Log retrieval success
+does not turn required workflow failure into success.
+
+Architecture/configuration/security: documentation only; zero new runtime
+policies, executors, commands, provider writes, settings, retries, permissions,
+token routes or stored state. Native records and logs are evidence, never
+authority to change check/approval/review/coverage outcomes. Keep raw private
+consumer logs outside the repository; publish only the minimal native metadata,
+exit/count/hash facts above. The [CLI manual](https://cli.github.com/manual/gh_run_view)
+documents job-specific log retrieval and whole-run association limitations;
+the [Actions jobs API](https://docs.github.com/en/rest/actions/workflow-jobs)
+documents pagination and run/attempt identities. These sources do not attribute
+this particular observation to a single root cause.
+
+UX uses the existing native run, check output and troubleshooting page. A complete
+collection accounts for every intended executed job; a partial collection names
+pending/unavailable jobs and preserves retrieved logs; an advisory record directs
+the operator to check output. No new notifications/cards or localized runtime
+messages are introduced. The troubleshooting guide is the primary route, linked
+from the existing error reference. Ordinary source/log access remains sufficient;
+no check deletion, broader credential or blanket error suppression is a remedy.
+
+**Risk-derived verification budget:** zero new runtime test cases because no
+runtime behavior changes. Retain the existing 72-case publication contract and
+all global/module budgets. Require three existing executable documentation
+contracts (documentation routes/links, agent documentation, specifications/catalog)
+plus the two independently observed read-only log commands above. Those two are
+live observations, not new unique automated tests or fresh consumer execution.
+Do not add tests that merely mirror prose. Full normal hooks and exact-head CI,
+three native cleanup footers and complete review without active findings remain
+required. Prove the built CLI and production source unchanged; an empty added
+runtime coverage denominator is not a fabricated 100% patch result.
+
+Acceptance maps R01 to the checked inventory example and API contract; R02 to
+the state table plus the observed native projection; R03 to the working targeted
+command, preserved whole-run failure and unchanged required error. Updating the
+troubleshooting page, error-reference link, this owner and any catalog evidence
+is the implementation. Reverting those documents is the rollback; no provider
+history, branch, job or check is migrated or removed.

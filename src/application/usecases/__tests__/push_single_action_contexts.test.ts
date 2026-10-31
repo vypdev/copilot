@@ -152,8 +152,11 @@ describe('push and single-action context projection', () => {
     expect(projected.labels).toEqual({
       isRelease: kind === 'release', isHotfix: kind === 'hotfix',
       deploy: 'deploy', deployed: 'deployed', lifecycle: DEFAULT_COPILOT_LIFECYCLE_LABELS,
+      completionProtectedLabels: labels.completionProtectedLabels,
     });
     expect(projected.pullRequest).toEqual({ number: 99 });
+    expect(projected.tokenUser).toBe(input.tokenUser);
+    expect(Object.isFrozen(projected.labels.completionProtectedLabels)).toBe(true);
     pullRequest.inputs = { pull_request: { number: 100 } } as PullRequest['inputs'];
     singleAction.currentSingleAction = '';
     labels.currentIssueLabels = [];

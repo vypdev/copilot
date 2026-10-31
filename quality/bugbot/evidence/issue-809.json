@@ -1,0 +1,252 @@
+{
+  "schemaVersion": 1,
+  "issue": 809,
+  "purpose": "Regression coverage for a historical Ktor routing-root false premise; no executable production change or model-quality improvement claim.",
+  "publicContract": {
+    "source": {
+      "ref": "3.0.2",
+      "blob": "7519c959a6caba4c1b3fb3c7e429ded46e2f21e8",
+      "sha256": "257e358e274281f51fc42d6be06c5945ff7bc7b2e47bd23069a34a318ae6bda1",
+      "url": "https://github.com/ktorio/ktor/blob/3.0.2/ktor-server/ktor-server-core/common/src/io/ktor/server/routing/RoutingRoot.kt",
+      "routingFunctionLine": 165,
+      "verifiedSource": "Public Application.routing reuses non-null installed RoutingRoot via apply(configuration), otherwise installs it. Source inspection only, not consumer execution."
+    },
+    "artifact": {
+      "url": "https://repo.maven.apache.org/maven2/io/ktor/ktor-server-core-jvm/3.0.2/ktor-server-core-jvm-3.0.2.jar",
+      "artifactSha1": "97d45cdf38bdae5cc6c55dcdf9452b8b700d2b3a",
+      "artifactSha256": "e6bcc0ea69595c99c65e84a2b188af0904a58521598dde7a9028f94f8098217c",
+      "bytes": 771278,
+      "javapVersion": "17.0.9",
+      "bytecodeObservation": "Non-null plugin is stored in local2, configuration invoked on local2, then local2 returned; only the null branch calls install.",
+      "scope": "Public Maven3.0.2 artifact disassembly only. No private consumer source imported, built or executed; not a proof of its independently resolved jar."
+    }
+  },
+  "authorizedReadonlyExistingConsumerEvidence": {
+    "reviewedHead": "a63cd6b1ab5edcfb4ede0d383824cf41f7806188",
+    "testedMerge": "1f8fd372b18dcf0e56d9a8cd65f61c562b0b5b33",
+    "parents": [
+      "f6c43676e05a694b627571172356f8e26f8d7efc",
+      "a63cd6b1ab5edcfb4ede0d383824cf41f7806188"
+    ],
+    "testBlobAtBothRevisions": "0d51465692ec7281a648009a712e826c49f64bb6",
+    "testSha256": "dc4e6283c9349b35f37398beded204ecaecee0f6ddc39c546193c154197467f6",
+    "nativeRun": 41071855746,
+    "nativeJob": 124117773816,
+    "conclusion": "success",
+    "appTestTaskExecuted": true,
+    "wireVerification": {
+      "operations": 61,
+      "components": 74,
+      "frozenSha256": "111bcafb260579ec2489f8386117a531ec8498e73a90f271f9a3e4c795d65dd7",
+      "adoptionStatus": "bootstrap-review-required",
+      "scope": "Canonical wire comparison; first adoption requires human baseline review; business/provider behavior is not certified"
+    },
+    "limitations": [
+      "Existing native run observed, not a fresh execution.",
+      "Local JUnit1-test proof remains issue-author report.",
+      "No private resolved jar inspected.",
+      "Business malformed-body behavior not certified."
+    ],
+    "consumerImportedOrExecuted": false,
+    "consumerMutated": false
+  },
+  "observations": {
+    "nodeIdentityControls": "Fixed authored object identities, selected only after inert fixture identity/source checks; neither Kotlin evaluation nor Ktor execution.",
+    "optionalCompiledProbe": "No routing runtime observations. The first owned fixture failed compilation because Application constructor visibility is Kotlin internal; a public test-host bootstrap then stopped at a parent-managed transitive dependency version. No guessed version, visibility bypass or private consumer execution.",
+    "authorLocalJUnit": "One test with zero failures/errors/skips is an issue-author report, not independently executed here."
+  },
+  "frozenCorpus": {
+    "sha256": "5d5de158ed4953c7ddc2fceb42c546c118c699d2d3e674c2660962a1d79edea5",
+    "cases": [
+      {
+        "id": "ktor-routing-installed-root",
+        "language": "kotlin",
+        "category": "negative",
+        "description": "Owned inert Kotlin example using the public Ktor 3.0.2 routing contract. The pinned public RoutingRoot.kt blob 7519c959a6caba4c1b3fb3c7e429ded46e2f21e8 implements Application.routing as pluginOrNull(RoutingRoot)?.apply(configuration) ?: install(RoutingRoot, configuration); independent public 3.0.2 jar disassembly corroborates the same-object return on reuse. This is source/bytecode evidence, not execution of this example or private dependency resolution. The caller supplies two distinct Applications; the first begins without routing, then the shown setup installs exactly one child. The selected node must preserve the complete installed root identity, checked by this active caller. Review the added selection; no other files or hidden framework overrides are in scope.",
+        "file": "backend/OwnedRoutingSelection.kt",
+        "startLine": 1,
+        "diff": " import io.ktor.server.application.Application\n import io.ktor.server.routing.*\n fun existingRoot(app: Application): RoutingRoot = app.routing {}\n fun selectForExport(app: Application, otherApp: Application): RoutingNode {\n     val installed = app.routing { route(\"/owned\") {} }\n+    val selected = app.routing {}\n     check(selected === installed) { \"Export must retain the entire installed root\" }\n     return selected\n }",
+        "expected": []
+      },
+      {
+        "id": "ktor-routing-delegated-root",
+        "language": "kotlin",
+        "category": "negative",
+        "description": "Owned inert Kotlin example using the public Ktor 3.0.2 routing contract. The pinned public RoutingRoot.kt blob 7519c959a6caba4c1b3fb3c7e429ded46e2f21e8 implements Application.routing as pluginOrNull(RoutingRoot)?.apply(configuration) ?: install(RoutingRoot, configuration); independent public 3.0.2 jar disassembly corroborates the same-object return on reuse. This is source/bytecode evidence, not execution of this example or private dependency resolution. The caller supplies two distinct Applications; the first begins without routing, then the shown setup installs exactly one child. The selected node must preserve the complete installed root identity, checked by this active caller. Review the added selection; no other files or hidden framework overrides are in scope.",
+        "file": "backend/OwnedRoutingSelection.kt",
+        "startLine": 1,
+        "diff": " import io.ktor.server.application.Application\n import io.ktor.server.routing.*\n fun existingRoot(app: Application): RoutingRoot = app.routing {}\n fun selectForExport(app: Application, otherApp: Application): RoutingNode {\n     val installed = app.routing { route(\"/owned\") {} }\n+    val selected = existingRoot(app)\n     check(selected === installed) { \"Export must retain the entire installed root\" }\n     return selected\n }",
+        "expected": []
+      },
+      {
+        "id": "ktor-routing-configured-root",
+        "language": "kotlin",
+        "category": "negative",
+        "description": "Owned inert Kotlin example using the public Ktor 3.0.2 routing contract. The pinned public RoutingRoot.kt blob 7519c959a6caba4c1b3fb3c7e429ded46e2f21e8 implements Application.routing as pluginOrNull(RoutingRoot)?.apply(configuration) ?: install(RoutingRoot, configuration); independent public 3.0.2 jar disassembly corroborates the same-object return on reuse. This is source/bytecode evidence, not execution of this example or private dependency resolution. The caller supplies two distinct Applications; the first begins without routing, then the shown setup installs exactly one child. The selected node must preserve the complete installed root identity, checked by this active caller. Review the added selection; no other files or hidden framework overrides are in scope.",
+        "file": "backend/OwnedRoutingSelection.kt",
+        "startLine": 1,
+        "diff": " import io.ktor.server.application.Application\n import io.ktor.server.routing.*\n fun existingRoot(app: Application): RoutingRoot = app.routing {}\n fun selectForExport(app: Application, otherApp: Application): RoutingNode {\n     val installed = app.routing { route(\"/owned\") {} }\n+    val selected = app.routing { route(\"/extra\") {} }\n     check(selected === installed) { \"Export must retain the entire installed root\" }\n     return selected\n }",
+        "expected": []
+      },
+      {
+        "id": "ktor-routing-child-subtree",
+        "language": "kotlin",
+        "category": "correctness",
+        "description": "Owned inert Kotlin example using the public Ktor 3.0.2 routing contract. The pinned public RoutingRoot.kt blob 7519c959a6caba4c1b3fb3c7e429ded46e2f21e8 implements Application.routing as pluginOrNull(RoutingRoot)?.apply(configuration) ?: install(RoutingRoot, configuration); independent public 3.0.2 jar disassembly corroborates the same-object return on reuse. This is source/bytecode evidence, not execution of this example or private dependency resolution. The caller supplies two distinct Applications; the first begins without routing, then the shown setup installs exactly one child. The selected node must preserve the complete installed root identity, checked by this active caller. Review the added selection; no other files or hidden framework overrides are in scope.",
+        "file": "backend/OwnedRoutingSelection.kt",
+        "startLine": 1,
+        "diff": " import io.ktor.server.application.Application\n import io.ktor.server.routing.*\n fun existingRoot(app: Application): RoutingRoot = app.routing {}\n fun selectForExport(app: Application, otherApp: Application): RoutingNode {\n     val installed = app.routing { route(\"/owned\") {} }\n+    val selected = installed.children.single()\n     check(selected === installed) { \"Export must retain the entire installed root\" }\n     return selected\n }",
+        "expected": [
+          {
+            "id": "ktor-routing-child-subtree",
+            "title": "The changed selection loses the installed application routing root",
+            "file": "backend/OwnedRoutingSelection.kt",
+            "line": 6,
+            "severity": "medium",
+            "category": "correctness",
+            "codeSnippet": "    val selected = installed.children.single()"
+          }
+        ]
+      },
+      {
+        "id": "ktor-routing-different-application",
+        "language": "kotlin",
+        "category": "correctness",
+        "description": "Owned inert Kotlin example using the public Ktor 3.0.2 routing contract. The pinned public RoutingRoot.kt blob 7519c959a6caba4c1b3fb3c7e429ded46e2f21e8 implements Application.routing as pluginOrNull(RoutingRoot)?.apply(configuration) ?: install(RoutingRoot, configuration); independent public 3.0.2 jar disassembly corroborates the same-object return on reuse. This is source/bytecode evidence, not execution of this example or private dependency resolution. The caller supplies two distinct Applications; the first begins without routing, then the shown setup installs exactly one child. The selected node must preserve the complete installed root identity, checked by this active caller. Review the added selection; no other files or hidden framework overrides are in scope.",
+        "file": "backend/OwnedRoutingSelection.kt",
+        "startLine": 1,
+        "diff": " import io.ktor.server.application.Application\n import io.ktor.server.routing.*\n fun existingRoot(app: Application): RoutingRoot = app.routing {}\n fun selectForExport(app: Application, otherApp: Application): RoutingNode {\n     val installed = app.routing { route(\"/owned\") {} }\n+    val selected = otherApp.routing {}\n     check(selected === installed) { \"Export must retain the entire installed root\" }\n     return selected\n }",
+        "expected": [
+          {
+            "id": "ktor-routing-different-application",
+            "title": "The changed selection loses the installed application routing root",
+            "file": "backend/OwnedRoutingSelection.kt",
+            "line": 6,
+            "severity": "medium",
+            "category": "correctness",
+            "codeSnippet": "    val selected = otherApp.routing {}"
+          }
+        ]
+      },
+      {
+        "id": "ktor-routing-unavailable-implementation",
+        "language": "kotlin",
+        "category": "negative",
+        "file": "backend/OwnedRoutingSelection.kt",
+        "startLine": 1,
+        "description": "Only this delegated root-selection call is available. The selectConfiguredRoot declaration, dependency version and implementation are unavailable. No concrete identity mismatch or unconditional export failure is established by the supplied evidence.",
+        "diff": " fun selectForExport(app: Application): RoutingNode {\n+    return selectConfiguredRoot(app)\n }",
+        "expected": []
+      }
+    ],
+    "previousCasesPreserved": 134,
+    "totalAfterAppend": 140
+  },
+  "actualModelSamples": [
+    {
+      "variant": "current-baseline",
+      "sourceBase": "7ae2878bae22e6c38f24dd00e35face71c15344d",
+      "cliSha256": "83cd082e0cf756504433e14a42ce6838eb0e0d200746d3b4d835b5fed54ced6a",
+      "packageJsonSha256": "8ef45c3f08828587ede25c35ada01e98cb272005f0b1c302dc3fc108aaa57477",
+      "node": "v24.20.0",
+      "runtime": {
+        "provider": "codex",
+        "modelProvider": "openai",
+        "model": "gpt-6-luna",
+        "effort": "medium"
+      },
+      "codexCliVersion": "0.164.0-alpha.11.1",
+      "sourceHashes": {
+        "src/prompts/bugbot.ts": "ca8f4611be93137b0f885f3065ff23255c617ab19989194edda28f0edb70b115",
+        "src/tooling/bugbot_benchmark_runner.ts": "89eb4d0467697b6a640774b0053cc337220d79736b60a1c204d9f96ef6aaabe5",
+        "src/application/usecases/steps/commit/bugbot/build_bugbot_prompt.ts": "26ea49f8fe6a5615ef96d7851594035ed14440c049398fd6f20ea8fede9ea700"
+      },
+      "promptHashes": {
+        "ktor-routing-installed-root": "ae811261398d3d894bbf638aa243a68265131be13def4d2536fb1cbb3fca36d6",
+        "ktor-routing-delegated-root": "e543159ac8a15cc1469c486abe3431366c73eae73b025839268836d2c7970840",
+        "ktor-routing-configured-root": "e15775bb9e6f8ec5ff611fc94b567194c3f34696192e0543dbce703930de1965",
+        "ktor-routing-child-subtree": "62ba3387f4a884b2caf99160c54368b187350252637f13e5476bc10be136c73a",
+        "ktor-routing-different-application": "55a8713eb781c6a954fc870ed7c8930a0b6a504f1a3cf8f4f5576aa6794353ec",
+        "ktor-routing-unavailable-implementation": "65a82a8357ec46171b217a3d4fd1b3cda62ae00f0f6c2f3a8073288f1cd67a8b"
+      },
+      "promptHashScope": "Derived benchmark core, not a capture of full provider stdin. Expected labels were not copied to the initially empty owned Git workspace.",
+      "command": "node <frozen-cli> bugbot-benchmark --corpus <owned-corpus> --predictions <predictions> --agent-provider codex --agent-model-provider openai --agent-model gpt-6-luna --agent-effort medium --agent-executable <validated-codex-cli>",
+      "predictions": {
+        "ktor-routing-installed-root": [],
+        "ktor-routing-delegated-root": [],
+        "ktor-routing-configured-root": [],
+        "ktor-routing-child-subtree": [
+          {
+            "id": "backend/OwnedRoutingSelection.kt:6:selects-child-instead-of-root",
+            "title": "Selects a child instead of the installed routing root",
+            "description": "`installed.children.single()` returns the sole `/owned` route node, not `installed`. The following identity check therefore fails for the shown setup, and `selectForExport` throws instead of returning the complete installed root.",
+            "file": "backend/OwnedRoutingSelection.kt",
+            "line": 6,
+            "endLine": 6,
+            "severity": "medium",
+            "confidence": 0.99,
+            "category": "correctness",
+            "evidence": "The added assignment selects from `installed.children`; the next line checks `selected === installed`. The setup installs one `/owned` child, so the selected child is distinct from the root.",
+            "suggestion": "Return `installed` so the export preserves the root identity.",
+            "symbol": "selectForExport",
+            "codeSnippet": "val selected = installed.children.single()",
+            "suggestedCode": "val selected = installed",
+            "fingerprint": "fp-202dcd89",
+            "semanticFingerprint": "sf-956e20c9"
+          }
+        ],
+        "ktor-routing-different-application": [
+          {
+            "id": "backend/OwnedRoutingSelection.kt:5:selects-root-from-different-application",
+            "title": "Selects a different application's routing root",
+            "description": "`otherApp` is distinct from `app`, so `otherApp.routing {}` returns or installs a different `RoutingRoot` than the one stored in `installed`. The identity check on the next line therefore fails, and the function throws instead of returning the installed root.",
+            "file": "backend/OwnedRoutingSelection.kt",
+            "line": 5,
+            "endLine": 5,
+            "severity": "medium",
+            "confidence": 1,
+            "category": "correctness",
+            "evidence": "The supplied Ktor 3.0.2 contract returns the root installed on the receiver application. The scenario specifies distinct applications, and `installed` is obtained from `app` while `selected` is obtained from `otherApp`.",
+            "suggestion": "Return the root obtained from `app` so the selection preserves the installed root identity.",
+            "symbol": "selectForExport",
+            "codeSnippet": "val selected = otherApp.routing {}",
+            "suggestedCode": "val selected = installed",
+            "fingerprint": "fp-620ac1e2",
+            "semanticFingerprint": "sf-4fad4822"
+          }
+        ],
+        "ktor-routing-unavailable-implementation": []
+      },
+      "score": {
+        "metrics": {
+          "expected": 2,
+          "actual": 2,
+          "matched": 2,
+          "precision": 1,
+          "recall": 1,
+          "locationAccuracy": 0.5,
+          "severityAccuracy": 1,
+          "categoryAccuracy": 1,
+          "f1": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "meanLineDistance": 0.5,
+          "confidenceBrierScore": 5.000000000000009e-05
+        },
+        "violations": [
+          "locationAccuracy 0.500 is below 0.800"
+        ],
+        "missingCases": []
+      }
+    }
+  ],
+  "decision": "The current SDK reports neither a false positive nor a false negative on these six cases. One of two real-defect anchors is off by one, failing the unchanged 0.8 location floor. Preserve that complete sample. No identical-prompt rerun, label change, threshold change, new runtime instruction, parser or automatic finding suppression is justified.",
+  "limits": [
+    "Small synthetic sample; the historical old-release false positive is not reproduced on current upstream.",
+    "No statistical improvement or all-model-gates-passed claim.",
+    "Public artifact disassembly does not prove the private consumer resolved that jar.",
+    "Existing consumer CI evidence is a tested merge containing the reviewed head, with exact equality of the disputed test blob; not a new consumer execution.",
+    "Passing export consistency does not certify unrelated malformed-body business behavior or baseline adoption.",
+    "No consumer mutation or automatic dismissal of review history."
+  ]
+}

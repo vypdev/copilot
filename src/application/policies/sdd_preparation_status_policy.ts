@@ -33,6 +33,7 @@ export function renderSddPreparationFailure(options: Readonly<{
   error: ApplicationErrorPresentationSource;
   diagnostic?: SddValidationDiagnostic;
   catalogReason?: SddCatalogCompatibilityReason;
+  missingCatalogSource?: string;
   attempts?: 1 | 2;
   publicationPending?: boolean;
   run?: SddWorkflowRunFacts;
@@ -41,6 +42,11 @@ export function renderSddPreparationFailure(options: Readonly<{
     || !Object.prototype.hasOwnProperty.call(APPLICATION_ERROR_METADATA, options.error.code)
     || typeof options.error.retryable !== 'boolean' || !isApplicationErrorCorrelationId(options.error.correlationId)) {
     throw new TypeError('Invalid SDD status identity or semantic error facts.');
+  }
+  const missingCatalogSource = options.missingCatalogSource;
+  if (missingCatalogSource !== undefined && (typeof missingCatalogSource !== 'string'
+    || !/^[a-f0-9]{40}$/u.test(missingCatalogSource) || options.catalogReason !== undefined || options.diagnostic !== undefined)) {
+    throw new TypeError('Invalid exclusive missing trusted-catalog facts.');
   }
   if (options.catalogReason !== undefined && (!SDD_CATALOG_COMPATIBILITY_REASONS.includes(options.catalogReason) || options.diagnostic)) {
     throw new TypeError('Invalid exclusive catalog compatibility facts.');
@@ -66,7 +72,10 @@ export function renderSddPreparationFailure(options: Readonly<{
     `**${message('sddPreparation.code')}:** \`${view.code}\``,
     `**${message('sddPreparation.reference')}:** \`${view.reference}\``,
   ];
-  if (options.catalogReason) {
+  if (missingCatalogSource) {
+    lines.push(`**${message('sddPreparation.missingCatalogSource')}:** \`${missingCatalogSource}\``,
+      '', message('sddPreparation.missingCatalogFact'));
+  } else if (options.catalogReason) {
     lines.push(`**${message('sddPreparation.catalogCompatibility')}:** \`${options.catalogReason}\``,
       '', message('sddPreparation.catalogProfile'), '', message('sddPreparation.catalogRetained'));
   } else if (diagnostic) {

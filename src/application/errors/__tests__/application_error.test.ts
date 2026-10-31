@@ -10,6 +10,15 @@ const CORRELATION_ID = '6f173f89-96a3-4fc8-b90e-4f8f48e0e319';
 
 describe('ApplicationError', () => {
     it.each([
+        { phase: 'PRIVATE', profile: 'legacy-evidence', field: 'workflows', capabilityNumber: 1, abort: 'completed' },
+        { phase: 'profile-compatibility', profile: 'legacy-evidence', field: 'workflows', capabilityNumber: 1, abort: 'PRIVATE' },
+        { phase: 'profile-compatibility', profile: 'legacy-evidence', field: 'workflows', capabilityNumber: 1, abort: 'completed', secret: 'PRIVATE' },
+    ])('rejects forged catalog recovery operands %#', variables => {
+        expect(() => new ApplicationError('configuration.unsupported', 'Catalog review required.', {
+            recovery: { id: 'branch-sync-catalog-incompatible', variables } as never,
+        })).toThrow(TypeError);
+    });
+    it.each([
         { id: 'stored-configuration-schema-missing', variables: { issueNumber: 0, expectedVersion: 3 } },
         { id: 'stored-configuration-invalid', variables: { issueNumber: 144, expectedVersion: 0 } },
         { id: 'stored-configuration-schema-unsupported', variables: { issueNumber: 144, expectedVersion: 3, actualVersion: 'PRIVATE' } },

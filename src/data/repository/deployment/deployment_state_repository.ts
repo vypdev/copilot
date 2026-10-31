@@ -57,7 +57,7 @@ class CredentialBoundDeploymentStateRepository implements DeploymentStateStorePo
 
     const stored = this.block.getContent(description);
     const payload = buildConfigurationPayload({ currentConfiguration: command.state }, stored);
-    const updated = this.block.updateContent(description, payload);
+    const updated = this.block.updateContent(description, payload, "issue");
     if (updated === undefined) {
       return { kind: "invalid", reason: "Issue configuration markers are missing or inconsistent." };
     }

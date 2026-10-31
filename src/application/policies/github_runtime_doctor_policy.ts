@@ -12,8 +12,9 @@ const { validateSddPrerequisiteDocuments } = require('../../domain/sdd_prerequis
 };
 // CommonJS keeps this pure policy usable by the standalone Node catalog validator.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { matchesFieldBoundary } = require('../../domain/specification_catalog_path_policy.cjs') as {
+const { matchesFieldBoundary, allowsEmptyPathField } = require('../../domain/specification_catalog_path_policy.cjs') as {
     matchesFieldBoundary(field: string, value: unknown): boolean;
+    allowsEmptyPathField(status: string, field: string): boolean;
 };
 
 export function validDoctorConfiguration(value: DoctorConfiguration | undefined): value is DoctorConfiguration {
@@ -49,7 +50,7 @@ export function doctorRepositoryPrerequisites(read: DoctorRepositoryRead): 'pass
             ids.add(String(capability.id)); titles.add(String(capability.title));
             for (const field of ['specs', 'workflows', 'entrypoints', 'code', 'tests', 'documentation']) {
                 const entries = capability[field];
-                if (!Array.isArray(entries) || (field !== 'workflows' && entries.length === 0)
+                if (!Array.isArray(entries) || (!allowsEmptyPathField(String(capability.status), field) && entries.length === 0)
                     || new Set(entries).size !== entries.length) return 'blocked';
                 for (const path of entries) {
                     if (typeof path !== 'string' || !matchesFieldBoundary(field, path) || !files.has(path)) return 'blocked';

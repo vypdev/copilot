@@ -10,7 +10,8 @@ import {
   completeReconciliationTarget,
   type DeploymentOperationSnapshot,
 } from "../../../../domain/deployment_operation";
-import type { Result } from "../../../../data/model/result";
+import { Result, getResultPayload } from "../../../../data/model/result";
+import { ApplicationError, toApplicationError } from '../../../errors/application_error';
 import { parseManagedPullRequestMarker } from "../../../../domain/managed_pull_request";
 import {
   DeploymentOrchestrationRuntime,
@@ -172,13 +173,12 @@ export class ReconciliationHandler {
     operation: DeploymentOperationSnapshot,
     completionContext = "",
   ): Promise<Result> {
+    if (!operation.publicationVerified || !operation.publicationReceipt
+      || !operation.reconciliationTargets.every(target => target.status === 'completed')) {
+      throw new ApplicationError('workflow.stale', 'Deployment completion requires verified publication and all configured reconciliation.');
+    }
     try {
-      await this.runtime.cleanup(context, operation);
-      if (operation.issueCompletion === "close") {
-        await this.runtime.dependencies.issues.closeIssue(
-          context.singleAction.issue,
-        );
-      }
+      if (operation.phase !== 'completed') await this.runtime.cleanup(context, operation);
     } catch (error) {
       const semanticError = semanticCleanupError(error);
       return await this.runtime.block(
@@ -191,7 +191,29 @@ export class ReconciliationHandler {
       );
     }
     const completed: DeploymentOperationSnapshot = { ...operation, phase: "completed", lastFailure: null };
-    await this.runtime.persist(context, completed);
+    if (operation.phase !== 'completed') await this.runtime.persist(context, completed);
+    try {
+      if (completed.issueCompletion === 'close') {
+        await this.runtime.dependencies.issues.closeIssue(context.singleAction.issue);
+        const results = await this.runtime.dependencies.issues.reconcileCompletion({
+          issueNumber: context.singleAction.issue, locale: context.locale.issue, trustedBotLogin: context.tokenUser,
+          completionLabels: { lifecycle: context.labels.lifecycle,
+            protectedLabels: context.labels.completionProtectedLabels ?? [] },
+        });
+        const failed = results.find(result => !result.success);
+        if (failed) throw failed.errors?.[0] ?? new ApplicationError('workflow.stale', 'Native issue completion metadata is unverified.');
+        if (!results.length || results.some(result => {
+          const payload = getResultPayload(result.payload);
+          const completion = payload?.issueCompletion ? getResultPayload(payload.issueCompletion) : payload;
+          return completion?.nativeClosed !== true || completion.reconciled !== true;
+        })) throw new ApplicationError('workflow.stale', 'Native issue closure and completion metadata are not fully verified.');
+      }
+    } catch (cause) {
+      const error = toApplicationError(cause, 'provider.unavailable', 'Deployment completed but native issue completion remains unverified.');
+      return new Result({ id: 'DeploymentOrchestrationUseCase', success: false, executed: true,
+        steps: ['Verified publication, reconciliation and cleanup were retained. Retry the failed publication completion job to finish native issue completion.'],
+        errors: [error], payload: { deployment: { operationId: completed.operationId, phase: 'completed', issueCompletionVerified: false } } });
+    }
     await this.runtime.publishDashboard(context, completed);
     await this.runtime.publishMilestone(
       context,

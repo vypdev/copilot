@@ -1905,3 +1905,92 @@ No deployment, package retry, manual release or new permission is authorized by
 this diagnostic. The complete flow, compatibility, recovery UI and exclusive
 32-case budget are specified in
 [CLI and single-action execution](./cli-and-single-action-execution.md#explicit-action-target-restoration--740-2026-10-28).
+
+## 24. Deferred native issue completion (#792, 2026-10-30)
+
+The existing contract that promotion must not close its launcher includes GitHub's
+native relationship, not only PR text. Release/hotfix preparation calls
+`createLinkedBranch(issue)`. GitHub automatically associates the subsequent PR
+with that issue, so a default-branch merge can close it before any PR-closed
+handler even when the body has no closing keyword. This mechanism is documented
+by [GitHub branch creation](https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/creating-a-branch-for-an-issue)
+and [linked PR closure](https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/linking-a-pull-request-to-an-issue).
+The report's private timeline is supplied evidence; it has not been independently
+read. A generic temporary-reference probe does not establish its exact producer.
+
+```mermaid
+flowchart LR
+  A[Linked release branch] --> B[Native promotion PR association]
+  B --> C[Verify owner and remove only launcher closing reference]
+  C --> D[Verify reference absent and use configured native merge policy]
+  D --> E[Verified publication and all reconciliation]
+  E --> F[Cleanup and persist completed state]
+  F --> G[Native issue completion and metadata]
+```
+
+Before configured merge, auto-merge, queue or create-only handoff, verify the
+native repository, PR/issue IDs, managed operation/phase, branches and frozen head.
+Use GitHub's `removeCloseIssueReferences` only for this launcher and managed PR;
+never alter repository auto-close settings or delete a branch. Verify that the
+closing relationship is absent afterwards. The current host's schema was checked
+read-only; [the documented mutation](https://docs.github.com/en/graphql/reference/issues)
+does not remove body-keyword references. Missing support, unreadable/changed
+identity, a failed mutation or a remaining relationship blocks merge setup with
+existing semantic diagnostics and an instruction to inspect closing references.
+Retain all required checks, environment review and expected-head pins. At most
+one reference-removal mutation and two pages of 100 closing references per
+attempt; the existing one merge-readiness recovery remains the retry bound.
+Separate provider calls are observations, not atomic compare-and-swap.
+
+Fresh native completion facts must identify a validated durable deployment that
+has not completed. Generic merged-PR closure, closed-issue progress metadata and
+recommendation retirement must defer for it. Native closure alone is not evidence
+of publication or reconciliation. Malformed/unsupported durable state cannot be
+downgraded to ordinary completion. Preserve ordinary completed, duplicate and
+not-planned issue handling and configured keep-open behavior. Do not infer a
+new native reopen authority from a historical premature close; retain that fact
+and explain deferred completion rather than claiming repair.
+
+Final completion requires verified publication and its immutable receipt, all
+configured reconciliation and successful cleanup. Persist completed functional
+state before the final issue close so its native callback observes the correct
+boundary. Supported replay must finish any remaining issue projection without
+republishing, changing operation identity or repeating completed cleanup. A
+projection failure retains completed irreversible effects and reports a truthful,
+retryable result. No new public input, schema, provider permission or rollout is
+introduced. A rollback may restore the old premature relationship behavior for
+new promotions; finish active plans with the corrected runtime.
+
+Representative pending UI remains: `Release 3.4.0 — publishing artifacts`, with
+production accepted, publication/reconciliation/cleanup unchecked and the launcher
+open below 100%. Only the complete configured plan may produce closed/100%.
+Existing dashboard, result steps and Job Summary carry deferred/error guidance;
+no routine additional comment or notification is introduced. Update the release
+guide, catalog/traceability and generated bundles with this implementation.
+
+Reserve **at least 39 distinct new cases before implementation**:
+
+| Area | Minimum | Required behavior |
+|---|---:|---|
+| Pure completion policy | 10 | pending phases, verified completion, incomplete publication/targets, unknown state, ordinary completion |
+| Native PR relationship adapter | 10 | exact owned unlink, retained keyword reference, identity changes, provider failures, response/pagination bounds and idempotence |
+| Native issue facts adapter | 4 | valid pending/completed state, ordinary metadata and malformed durable state |
+| Application and finalization | 8 | deferred generic close/labels/cards, cleanup failure, completion-before-close ordering, projection retry and keep-open |
+| Stateful causal integration | 4 | actual linked-branch/PR producer, pre-handler provider auto-close, queued/failed publication and ordinary-control preservation |
+| Completion Job Summary | 3 | failed native projection remains actionable in en-US/es-ES and the real Action summary, while functional completion facts remain immutable |
+| **Total** | **39** | no double counting; record additional distinct acceptance extensions |
+
+Use owned deterministic provider fixtures, with event-order assertions before the
+closed handler. No real tag, package upload, release, environment bypass or private
+consumer execution is part of regression verification. Keep existing timeouts,
+global/module floors, architecture and setup ledger. New pure policy requires
+100% all metrics; changed adapters/application modules require at least 95%
+lines/statements and 90% branches/functions, plus exact added runtime lines 100%.
+Fresh CI/native Linux/macOS/Windows acceptance, deferred cleanup, coverage and
+complete zero-active-findings review remain merge gates. Run specification,
+workflow/documentation validators, package smoke and the AST graph update.
+
+The completion Job Summary must show a failed, retryable native issue projection
+even when functional state is already `completed`. This is transient result
+evidence, never a rewrite of persisted completion/publication facts. Reserve the
+three presentation/Action cases above before implementing this projection.

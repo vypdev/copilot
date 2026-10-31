@@ -18,7 +18,7 @@ const rejected = (action: "merge" | "enable-auto-merge" = "merge", refresh = tru
   new DeploymentMergeEffectError(action, refresh, "provider.conflict", "Safe readiness rejection");
 
 function harness(mode = "auto") {
-  const port = { mergePullRequest: jest.fn(), enableAutoMerge: jest.fn(), enqueuePullRequest: jest.fn(),
+  const port = { prepareIssueCompletion: jest.fn(), mergePullRequest: jest.fn(), enableAutoMerge: jest.fn(), enqueuePullRequest: jest.fn(),
     isPullRequestQueued: jest.fn().mockResolvedValue(false), getPullRequest: jest.fn().mockResolvedValue(pr()) };
   const inspect = jest.fn().mockResolvedValue(inspection());
   const persist = jest.fn();
@@ -29,6 +29,18 @@ function harness(mode = "auto") {
 }
 
 describe("deployment automatic merge effects", () => {
+  it.each([true, false])('removes the native launcher closing relation before automatic handoff (ready=%s)', async ready => {
+    const events: string[] = [];
+    let linked = true;
+    const port = { prepareIssueCompletion: jest.fn(async () => { events.push('detach'); linked = false; }),
+      mergePullRequest: jest.fn(async () => { events.push('merge'); expect(linked).toBe(false); }),
+      enableAutoMerge: jest.fn(async () => { events.push('enable'); expect(linked).toBe(false); }) };
+    const service = new DeploymentMergeEffects(port as unknown as BoundManagedPullRequestPort);
+    await service.configure({ prMode: 'auto' } as DeploymentOperationSnapshot, pr(), inspection(ready),
+      jest.fn(), jest.fn());
+    expect(events).toEqual(['detach', ready ? 'merge' : 'enable']);
+    expect(port.prepareIssueCompletion).toHaveBeenCalledWith(pr());
+  });
   it("re-observes a rejected ready merge and enables native waiting at the same head", async () => {
     const v = harness(); v.port.mergePullRequest.mockRejectedValue(rejected());
     await expect(v.run()).resolves.toBe("auto-merge");

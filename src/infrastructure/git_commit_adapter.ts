@@ -9,11 +9,13 @@ import { assertVerificationRuntimePrerequisites } from './verification_runtime_p
 import { DISABLED_VERIFICATION_SETUP, type PreparedVerificationSetup } from '../application/ports/verification_setup_ports';
 import { prepareRepositoryVerification } from './verification_setup_runner';
 import { captureSourceDependencyPreparation, type SourceDependencyPreparation } from './source_verification_dependencies';
+import { captureVerificationPythonLibraries } from './verification_python_library_environment';
 
 type GitCommandOptions = { stdout?: (data: Buffer) => void; env?: Record<string, string>; untrusted?: boolean; verifyRuntimePrerequisites?: boolean; resolveFromEnvironment?: boolean };
 type GitCommandExecutor = (program: string, args: string[], options?: GitCommandOptions) => Promise<number>;
 
 export class GitCommitAdapter implements GitCommitPort {
+    private readonly preparePythonLibraries: (environment: Record<string, string>) => void;
     constructor(
         private readonly executeCommand: GitCommandExecutor = (program, args, options) => options
             ? exec.exec(options.resolveFromEnvironment && options.env ? verificationExecutable(program, options.env) : program, args, {
@@ -27,7 +29,11 @@ export class GitCommitAdapter implements GitCommitPort {
         private readonly checkPrerequisites: (environment: Record<string, string>) => void = assertVerificationRuntimePrerequisites,
         private readonly verificationSetup: PreparedVerificationSetup = DISABLED_VERIFICATION_SETUP,
         private readonly prepareSourceDependencies: SourceDependencyPreparation = captureSourceDependencyPreparation(),
-    ) {}
+    ) {
+        this.preparePythonLibraries = captureVerificationPythonLibraries(
+            verificationSetup.kind === 'ready' ? verificationSetup.toolRoot : process.env.RUNNER_TOOL_CACHE,
+        );
+    }
 
     async execute(program: string, args: string[], options?: GitCommandOptions): Promise<number> {
         if (options?.verifyRuntimePrerequisites && !options.untrusted) throw new Error('Runtime preflight requires credential-free verification.');
@@ -37,6 +43,7 @@ export class GitCommitAdapter implements GitCommitPort {
         try {
             if (options.verifyRuntimePrerequisites) {
                 await prepareRepositoryVerification(this.verificationSetup, runtime.environment);
+                this.preparePythonLibraries(runtime.environment);
                 this.checkPrerequisites(runtime.environment);
                 await this.prepareSourceDependencies(runtime.environment);
             }

@@ -14,6 +14,30 @@ human-readable view. Run `pnpm run validate:specifications` after changing a
 specification or any catalogued path, and `pnpm run generate:specifications`
 after changing catalog metadata.
 
+### Truthful proposed capability bootstrap
+
+A new product repository MAY register prospective SDDs as SDK version-1
+`proposed` capabilities before product implementation exists. Every path field
+MUST be present as an array. For proposed entries only, `entrypoints`, `code`
+and `tests` MAY be empty; `specs` and `documentation` remain nonempty, and every
+supplied path MUST satisfy the ordinary existing-file, containment and ownership
+checks. Workflows retain their existing optional cardinality. Other statuses
+retain complete implementation-evidence requirements.
+
+Bootstrap the standard, template, Draft SDDs, documentation and truthful catalog
+through an enabled documentation issue and its Action-owned branch, then review
+and merge the prerequisites before starting an eligible feature's normal gate.
+Catalog validation does not make a Draft Ready for implementation or establish
+executed tests. Preserve unresolved decisions and readiness metadata. Add real
+entrypoint/source/test evidence as it exists and change status to implemented
+only with the corresponding reviewed implementation. The recorded verification
+date for a proposed entry identifies its metadata/document review.
+
+See the [greenfield initialization guide](https://docs.page/vypdev/copilot/issues/pre-branch-sdds#starting-without-product-implementation)
+for the supported lifecycle and [SDK maintenance commands](https://docs.page/vypdev/copilot/development/specifications#initial-catalog-generation)
+for generation without an application package. Upgrade an older SDK through its
+reviewed installation route; never manufacture evidence or bypass its validator.
+
 ### Retrospective (as-built) specifications
 
 An already implemented capability MAY be documented with status

@@ -5,7 +5,10 @@ import type { GithubClientPort } from '../../infrastructure/github/ports/github_
 import { isCompleteProgressPatch } from '../../application/policies/progress_patch_completeness_policy';
 import { ImmutableProgressContentRepository, safeProgressPath } from './immutable_progress_content_repository';
 import type { GithubProgressObjectClient } from '../../infrastructure/github/ports/github_progress_object_provider_port';
-import { MAX_PROGRESS_RECOVERED_FILES, progressContentUnits, progressRecoveryError } from '../../application/policies/progress_content_evidence_policy';
+import { progressContentUnits, progressRecoveryError } from '../../application/policies/progress_content_evidence_policy';
+import { PROGRESS_RECOVERY_TOTAL_LIMITS } from '../../application/policies/progress_recovery_capacity_policy';
+import { frameProgressEvidence } from '../../application/policies/progress_evidence_protocol_policy';
+import { randomUUID } from 'node:crypto';
 import { partitionProgressDiff, serializeProgressDiff, MAX_PROGRESS_EVIDENCE_BYTES, type ProgressDiffChange } from '../../application/policies/progress_diff_partition_policy';
 
 const MAX_COMPARISON_FILES = 300;
@@ -38,18 +41,25 @@ export class ProgressDiffRepository {
         }
         if (baseSha === headSha && changes.length > 0) throw unavailable('workflow.stale');
         const missing = changes.filter(file => file.recover);
-        if (missing.length === 0) return partitionProgressDiff(baseSha, headSha, changes.map(file => file.change));
+        if (missing.length === 0) {
+            const complete = changes.map(file => file.change);
+            const plan = partitionProgressDiff(baseSha, headSha, complete, 'framed-v1');
+            return plan.kind === 'single' ? plan : frameProgressEvidence(plan, data.merge_base_commit!.sha, complete, complete.map(file => file.path), undefined, randomUUID());
+        }
         const unreviewed = changes.map(file => file.change.path);
-        if (missing.length > MAX_PROGRESS_RECOVERED_FILES) throw progressRecoveryError('file recovery budget exhausted', unreviewed, true);
+        if (missing.length > PROGRESS_RECOVERY_TOTAL_LIMITS.files) throw progressRecoveryError(`file recovery budget exhausted (requested ${missing.length}, supported total ${PROGRESS_RECOVERY_TOTAL_LIMITS.files})`, unreviewed, true);
         if (!this.objects) throw progressRecoveryError('immutable content recovery is unavailable', unreviewed);
-        const recovery = new ImmutableProgressContentRepository(this.objects.getClient(token), owner, repository);
+        const recovery = new ImmutableProgressContentRepository(this.objects.getClient(token), owner, repository, 'framed-v1');
         const complete: ProgressDiffChange[] = [];
         for (const [index, file] of changes.entries()) {
             if (!file.recover) { complete.push({ ...file.change, unitId: `file-${index + 1}-patch` }); continue; }
             const content = await recovery.recover(data.merge_base_commit!.sha, headSha, file.change.path, file.change.status, file.previousPath, [file.change.path, ...unreviewed.filter(path => path !== file.change.path)]);
             complete.push(...progressContentUnits(file.change, content, `file-${index + 1}`));
         }
-        try { return partitionProgressDiff(baseSha, headSha, complete); }
+        try {
+            const plan = partitionProgressDiff(baseSha, headSha, complete, 'framed-v1');
+            return plan.kind === 'single' ? plan : frameProgressEvidence(plan, data.merge_base_commit!.sha, complete, unreviewed, recovery.usage, randomUUID());
+        }
         catch (error) {
             if (error instanceof ApplicationError && error.code === 'validation.evidence-too-large') throw progressRecoveryError('complete content exceeds the bounded multipart analysis budget', unreviewed, true);
             throw error;
