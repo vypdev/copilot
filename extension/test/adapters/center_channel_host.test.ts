@@ -5,16 +5,17 @@ import { browserFixture } from '../fixtures/browser.ts';
 import { nativePortPair } from '../fixtures/native_port.ts';
 import { CENTER_SENDER } from '../fixtures/center.ts';
 import { deferred } from '../fixtures/runtime.ts';
+import { fixtureFrameFingerprint } from '../fixtures/frame_fingerprint.ts';
 
 const open = { version: 1, method: 'center.open' };
-const tick = async () => { for (let i = 0; i < 8; i++) await Promise.resolve(); };
+const tick = async () => { for (let i = 0; i < 96; i++) await Promise.resolve(); };
 function fixture() {
     const h = browserFixture(); const handle = vi.fn(async (_value: unknown, _sender: Sender, _source: Readonly<object>) => ({ state: 'ready' }));
-    const release = vi.fn(); const host = new CenterChannelHost(h.api.runtime, { handle, release });
+    const release = vi.fn(); const host = new CenterChannelHost(h.api.runtime, { handle, release }, fixtureFrameFingerprint);
     const connect = (sender: Sender = CENTER_SENDER, name = 'copilot.center.v1') => {
         const pair = nativePortPair(name, sender); const replies: unknown[] = []; pair.client.onMessage.addListener(value => replies.push(value));
         for (const listener of h.onConnect.listeners) listener(pair.server);
-        return { ...pair, replies, send: (sequence = 1, message = open) => pair.client.postMessage({ sequence, message }) };
+        return { ...pair, replies, send: (sequence = 1, message: unknown = open) => pair.client.postMessage({ sequence, message }) };
     };
     return { ...h, handle, release, host, connect };
 }
@@ -55,7 +56,8 @@ it('native host admits missing optional document/tab facts only as a distinct na
     expect(h.handle).toHaveBeenCalledOnce(); h.host.stop();
 });
 it('native host rejects a duplicate correlation without executing it again', async () => {
-    const h = fixture(); const pair = h.connect(); pair.send(); await tick(); pair.send(); await tick();
+    const h = fixture(); const pair = h.connect(); pair.send(); await tick();
+    pair.send(1, { version: 1, method: 'center.read', clientId: 'a'.repeat(32) }); await tick();
     expect(h.handle).toHaveBeenCalledOnce(); expect(h.release).toHaveBeenCalledOnce(); expect(pair.live()).toBe(false); h.host.stop();
 });
 it('native host rejects malformed envelopes before dispatch and releases the native source', async () => {

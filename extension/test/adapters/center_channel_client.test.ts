@@ -4,6 +4,7 @@ import { CENTER_CHANNEL_DEADLINE, type ChannelMessage } from '../../src/domain/c
 import { browserFixture } from '../fixtures/browser.ts';
 import { nativePortPair } from '../fixtures/native_port.ts';
 import { CENTER_SENDER } from '../fixtures/center.ts';
+import { fixtureFrameFingerprint } from '../fixtures/frame_fingerprint.ts';
 
 afterEach(() => vi.useRealTimers());
 const open = { version: 1, method: 'center.open' } as const;
@@ -12,7 +13,7 @@ function fixture() {
     vi.mocked(h.api.runtime.connect).mockImplementation(({ name }) => {
         const pair = nativePortPair(name, CENTER_SENDER); pairs.push(pair); return pair.client;
     });
-    const lost = vi.fn(); const client = new CenterChannelClient(h.api.runtime, lost);
+    const lost = vi.fn(); const client = new CenterChannelClient(h.api.runtime, lost, fixtureFrameFingerprint);
     const respond = (sequence: number, result: unknown = { state: 'ready' }) => pairs.at(-1)!.server.postMessage({ sequence, result });
     return { ...h, client, pairs, lost, respond };
 }
@@ -68,7 +69,7 @@ it.each([['malformed', { sequence: 1, result: null }], ['unsolicited', { sequenc
 });
 it('native client rejects a duplicated reply rather than accepting it for another request', async () => {
     const h = fixture(); const first = h.client.send(open); h.respond(1); await first;
-    const second = h.client.send(open); const rejection = expect(second).rejects.toThrow('unavailable'); h.respond(1); await rejection;
+    const second = h.client.send(open); const rejection = expect(second).rejects.toThrow('unavailable'); h.respond(1, { state: 'changed' }); await rejection;
     expect(h.lost).toHaveBeenCalledOnce(); h.client.stop();
 });
 it('native client expires a hung request at its bounded deadline with no background replay', async () => {

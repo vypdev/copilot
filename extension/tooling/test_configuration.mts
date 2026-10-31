@@ -12,6 +12,7 @@ export default defineConfig({
     // Scope the browser export to Svelte; Node build/driver tests retain their native exports.
     resolve: { alias: [{ find: /^svelte$/u, replacement: fileURLToPath(svelteClient) }] },
     test: {
+        setupFiles: ['./test/setup_crypto.ts'],
         include: ['test/**/*.test.ts'], maxWorkers: 2, testTimeout: 30_000, hookTimeout: 30_000,
         coverage: {
             provider: 'v8', allowExternal: true, reportsDirectory: 'coverage',

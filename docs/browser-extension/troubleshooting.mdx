@@ -47,7 +47,9 @@ current settings with the retained draft before creating a new review. An old
 preview cannot be confirmed through the new connection. If a save was already
 submitted, read its result before deciding what to do next: a missing response
 does not prove the save failed. A later read failure does not undo a save that
-was already observed. Reconnecting never repeats the mutation automatically.
+was already observed. Reconnecting never repeats the mutation automatically. A repeated browser delivery also cannot repeat your confirmed save. If the connection
+receives conflicting data, editing retires and the same explicit read/review
+recovery applies.
 
 ## An uncertain save or clear
 

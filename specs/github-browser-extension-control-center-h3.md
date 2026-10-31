@@ -454,6 +454,11 @@ whose private source survives same-document route changes. Generic tab loading
 events are insufficient to prove disposal. Native disconnect, tab removal and
 departure retire that source; recovery is an explicit read without write replay.
 The refinement's tests and actual browser proof are additional H3 requirements.
+Identical retained deliveries on that same native source are ignored using a
+bounded SHA-256 window; changed-content collisions and unknown stale replies
+still retire it. Queued hashing is lifetime-fenced and retains no completed
+message bodies. This transport behavior never retries a mutation, refreshes
+editing authority or substitutes a fingerprint for native sender/epoch checks.
 
 Appearance is one atomic intent covering theme, density, text size, motion and
 contrast. Profile create/edit/select/remove, language, import/reset/rollback use

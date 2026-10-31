@@ -12,7 +12,7 @@ function storageFixture() {
         remove: vi.fn(async key => { values.delete(key); }), setAccessLevel: vi.fn(async () => undefined) };
     return { area, values };
 }
-export function browserFixture() {
+export function browserFixture(copies?: Readonly<{ request: 1 | 2; reply: 1 | 2 }>) {
     const local = storageFixture(); const session = storageFixture();
     const onMessage = event<Parameters<BrowserApi['runtime']['onMessage']['addListener']>[0]>();
     const onUpdated = event<Parameters<BrowserApi['tabs']['onUpdated']['addListener']>[0]>();
@@ -24,7 +24,7 @@ export function browserFixture() {
     const onConnect = event<Parameters<BrowserApi['runtime']['onConnect']['addListener']>[0]>();
     const ports: ReturnType<typeof nativePortPair>[] = [];
     const connect: BrowserApi['runtime']['connect'] = options => {
-        const pair = nativePortPair(options.name, CENTER_SENDER); ports.push(pair);
+        const pair = nativePortPair(options.name, CENTER_SENDER, copies); ports.push(pair);
         queueMicrotask(() => { if (!onConnect.listeners.size) pair.server.disconnect(); else for (const listener of onConnect.listeners) listener(pair.server); });
         return pair.client;
     };

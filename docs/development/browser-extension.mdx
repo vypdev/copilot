@@ -449,6 +449,34 @@ and individually hashed; CSS cannot fetch resources. Safari-resource and
 reproducibility checks include every chunk. Mounted tests use deterministic
 native ports and a nonopaque jsdom URL, not a loaded extension.
 
+### Native center transport
+
+One private `runtime.connect` port represents the center document. Anchor
+navigation retains that source; disconnect or real departure retires it.
+Native frames keep the closed existing envelope and byte limits. Each source
+retains at most16 correlation/SHA-256 pairs and32 incoming frames, including the
+one being hashed. Object-key order is normalized before native WebCrypto hashes
+the UTF-8 JSON; array order and values are retained. Completed request/reply
+bodies and credentials are absent from the fingerprint window.
+
+An identical retained copy causes no extra gateway call, response or observed
+completion. Changed-content collisions retire the source. Requests outside the
+window still need an increasing correlation, and replies still need a pending
+request. The adapter never retransmits a mutation or a cached response. Hash
+success and failure recheck lifetime, so a retired task cannot disconnect a
+replacement. Missing or failed native crypto exposes the existing recovery
+state without downgrading the sender/source checks.
+
+The canonicalization/window policy is pure domain code. Native hashing and the
+ordered queue stay in browser adapters; application operation/approval policy
+remains independent. No runtime dependency or permission is added. jsdom's
+missing SubtleCrypto is supplied by Node's actual API in test setup; scheduling
+unit cases can use the test-only Node SHA-256 adapter. Paired-port tests cover
+separately cloned duplicate requests/replies, collisions, eviction, review/save,
+cancel, worker loss and exact readback. Native engine and human evidence remain
+separate gates in the [lifetime specification](https://github.com/vypdev/copilot/blob/develop/specs/github-browser-extension-center-lifetime.md).
+
+
 Unfinished development sections do not satisfy CENTER acceptance. Complete
 repository management, full searchable inventory/provenance,
 remaining routes and all source-bound Chrome/Firefox/Safari and human

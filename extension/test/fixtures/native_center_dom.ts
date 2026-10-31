@@ -10,8 +10,8 @@ import { ready } from './center_app_dom.ts';
 const stops: (() => void)[] = [];
 afterEach(async () => { for (const stop of stops.splice(0).reverse()) stop(); await tick(); });
 /** Whole options/client/native-port/background/storage composition; deterministic fakes, never native-browser acceptance. */
-export async function nativeCenterDom(route = 'appearance', locale = 'en') {
-    const background = browserFixture(); const foreground = browserFixture();
+export async function nativeCenterDom(route = 'appearance', locale = 'en', copies?: Readonly<{ request: 1 | 2; reply: 1 | 2 }>) {
+    const background = browserFixture(copies); const foreground = browserFixture();
     vi.stubGlobal('__COPILOT_SOURCE_TREE__', 'unbundled');
     background.localValues.set(SETTINGS_KEY, { ...DEFAULT_SETTINGS, locale });
     foreground.api.runtime.getURL = path => `https://extension.test/${path}`;

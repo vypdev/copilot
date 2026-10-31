@@ -29,6 +29,13 @@ and retained its credential epoch, but the background retired the editor.
 Firefox 159.0 loaded all 20 sections in the same exploratory package test.
 These are exploratory observations, not complete H3 acceptance.
 
+H3 validation on Safari27.0.1 also measured one client publication and two
+separately cloned deliveries of request sequence1 on one admitted native port,
+before the first reply. The blanket repeated-sequence guard closed the channel
+and left the center in recovery. Bounded diagnostic counters established the
+single publication; they are removed from accepted source. Native receipts and
+deterministic paired-port regressions remain separate evidence.
+
 The pre-fix background integration regression reproduces the same owner loss.
 Existing source: `background_runtime.ts`, `center_controller.ts`, `center_app.ts`.
 Prospective design: retrospective classification does not apply. Current H2
@@ -51,6 +58,10 @@ The existing controller epoch and credential epoch remain independent fences.
 4. Native tab removal/departure MUST also retire its ports; another window and
    a replacement document MUST survive late events belonging to the old source.
 5. No schema migration, GitHub Action command or remote operation is introduced.
+6. An identical retained native delivery MUST be ignored without dispatching
+   another application call, returning a cached reply or extending editing
+   authority. A changed body or an unrecognized stale correlation MUST still
+   retire the connection. Fingerprints cannot establish identity or permission.
 
 ## 5. Current versus proposed journey
 
@@ -90,6 +101,21 @@ fact; an unsubmitted preview becomes stale. Already observed saved facts remain
 saved. An explicit read may reconnect; no mutation is transparently resubmitted.
 Inactivity can stop a worker: keeping a port object does not prove it is alive.
 
+Each private connection additionally owns a bounded delivery window. Parse the
+closed envelope and byte limits first; process arrivals in order, using native
+WebCrypto SHA-256 over canonical UTF-8 JSON. Object keys are sorted recursively;
+arrays and scalar values keep their meaning and ordering. The retained window
+contains only correlations and digests. Equal correlations with equal digests
+are copies and cause no further effect. Different digests retire that source.
+Unrecognized requests still require an increasing sequence; unrecognized replies
+still require a matching pending request. Eviction never exempts those checks.
+
+Hash completion MUST recheck transport lifetime before recording a fingerprint
+or dispatching. Retirement clears queued frames and the window. A late hashing
+success or failure cannot call the retired connection's observer, repaint the
+page, disconnect its replacement or recreate authority. No acknowledgement,
+ready-message exchange, automatic retransmission or cached response is added.
+
 ## 7. Configuration
 
 No user setting can weaken source admission, deadlines, bounds or retirement.
@@ -102,21 +128,26 @@ takeover; neither requires new permissions or persistence.
 | Port name/version | `copilot.center.v1` | native channel only |
 | Admitted ports | 8 | worker memory |
 | Outstanding requests | 16 per port | memory, cleared on retirement |
-| Correlation | positive safe integer, strictly increasing | per connection |
+| New request correlation | positive safe integer, strictly increasing | per connection |
+| Reply correlation | matches a pending request; completion may arrive out of order | per connection |
+| Delivery window | 16 correlations with 64-character SHA-256 values | private memory, cleared on retirement |
+| Incoming hashing queue | 32 validated frames, including one being hashed | per connection, cleared on retirement |
 | Request deadline | 30 seconds | one request; expiry retires channel |
 | Payload | existing center request/reply bounds plus 1024 envelope bytes | no expansion of payload limits |
 
 Unknown fields, invalid sequence, invalid method family, excessive bytes or
 capacity MUST fail closed. No fallback to unbound messaging is permitted when
 native connect is unavailable. H2/content messaging retains its existing gates.
+An identical retained copy does not allocate another request slot or refresh
+window eviction order. The request deadline includes fingerprint processing.
 
 ## 8. Clean Architecture
 
 | Layer | Owns | Forbidden responsibility |
 |---|---|---|
-| Pure domain | bounded closed request/reply envelopes | native globals or clocks |
+| Pure domain | bounded closed envelopes, canonical JSON and digest-window decisions | native globals or clocks |
 | Application | source identity, editor, review retirement | browser Port DTOs |
-| Browser adapters | native connection/events, correlation/deadline | mutation policy |
+| Browser adapters | native connection/events, SHA-256, ordered bounded arrivals, correlation/deadline | mutation policy |
 | Composition | bind private source, source-tree envelope, disposal | weakening sender admission |
 | Presentation | semantic callbacks, drafts, localized status | native authority/ports |
 
@@ -158,6 +189,10 @@ GitHub comment or modal is generated for a routine section change.
 Disconnect, malformed frame, timeout, capacity exhaustion or native exceptions
 retire the relevant channel, reject pending requests with a fixed semantic
 failure and remove all listeners/timers. New requests require a fresh open.
+Missing/failed native crypto also retires the connection with the existing
+semantic recovery state. It cannot downgrade to weaker comparison or unbound
+messaging. Conflicting frames remain failures even after an earlier reply was
+observed; an ignored copy cannot replace that observed fact.
 A late completion may leave an actual durable effect, but cannot send a current
 receipt through a retired source. Recovery reads storage and never repeats the
 mutation. Shutdown unregisters the native listener and retires each owned port.
@@ -171,6 +206,10 @@ subframes and malformed native metadata cannot open this channel. Each frame
 uses the existing closed center parsers and controller/credential/revision
 checks. Credential-bearing requests remain transient; neither adapter logs nor
 retains completed request bodies. No credentials appear in evidence fixtures.
+Queued frames remain transient. The delivery window stores no original request
+or reply body, credential or private source pointer. The adapter clears its own
+temporary UTF-8 byte array on hashing success and failure. A digest is neither
+an exported capability nor a replacement for sender, source or epoch admission.
 
 ## 12. Observability and operational UX
 
@@ -203,6 +242,27 @@ partials; new pure policy branches and changed module metrics must reach 100%.
 Deterministic clocks/paired native fakes cover races; native evidence uses real
 loaded packages without API replacement. Human accessibility remains separate.
 
+Native redelivery adds the following minimum43 distinct risks, including three
+full source-bound engine journeys. Existing blanket-duplicate adapter cases are
+refined to reject changed-content correlation collisions; new cases separately
+prove that identical copies preserve at-most-once behavior. No existing source,
+timeout, byte, capacity, owner, uncertainty or approval fence is removed.
+
+| Supplemental area | Minimum | Required evidence |
+|---|---:|---|
+| Canonical JSON and digest window | 12 | shape, ordering, conflicts, eviction, isolation |
+| Native fingerprint/privacy adapter | 6 | known bytes, Unicode, provider errors, transient byte cleanup |
+| Ordered native arrivals | 12 | bounded queue, parsing, failures, retirement, late hash success/error |
+| Client/background correlation | 6 | both directions, old correlations, out-of-order replies, replacement safety |
+| Complete composed review | 4 | one save, cancel, uncertain readback, same-document draft |
+| Actual Chrome/Firefox/Safari | 3 | current packaged source; boot, routes, persistence and recovery |
+| **Total** | **43** | **40 automated plus3 native journeys** |
+
+The jsdom environment supplies Node's actual SubtleCrypto API, which jsdom does
+not implement. Deterministic adapter scheduling may inject the same SHA-256
+algorithm through a test-only Node adapter. Neither proves a loaded browser;
+native campaigns use each engine's own API with no replacement.
+
 ## 15. Documentation and discoverability
 
 Update runtime architecture/lifecycle and troubleshooting with source retirement,
@@ -220,6 +280,10 @@ source budgets and all package targets.
 6. Invalid sender/frame/sequence/capacity cannot execute a mutation.
 7. Explicit reread reconnects; no automatic mutation or credential restoration.
 8. Actual Chrome, Firefox and containing-app Safari prove source-bound journeys.
+9. Distinct native copies dispatch one request and resolve one pending reply;
+   a changed body or a correlation outside the window cannot bypass retirement.
+10. Loss during hashing or confirmation preserves the retired-source fence and
+    uncertain/saved facts. Exact readback never issues a second mutation.
 
 ## 17. Traceability
 
@@ -253,5 +317,6 @@ Then run complete coverage, exact-source native acceptance and independent UX.
 - [Chrome messaging and port lifetime](https://developer.chrome.com/docs/extensions/develop/concepts/messaging).
 - [Mozilla Port lifecycle](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/runtime/Port).
 - [Chrome worker lifecycle](https://developer.chrome.com/docs/extensions/develop/concepts/service-workers/lifecycle).
+- [Native SHA-256 digest API](https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest).
 - Rejected: ignoring loading globally, time-based grace periods or a document
   token supplied by the page. Native Port identity establishes the source.
