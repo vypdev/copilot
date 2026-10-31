@@ -5,6 +5,7 @@ import { connectionIntent, type ConnectionIntent } from './named_sessions.ts';
 import { isHistoryMessage, type HistoryMessage } from './history_protocol.ts';
 import { isPauseMessage, type PauseMessage } from './temporary_pause_protocol.ts';
 import { isSessionPreferenceMessage, type SessionPreferenceMessage } from './session_preference_protocol.ts';
+import { isApiCacheMessage, type ApiCacheMessage } from './api_cache_protocol.ts';
 
 interface Version { readonly version: 1 }
 interface Client extends Version { readonly clientId: string }
@@ -22,7 +23,7 @@ export type CenterMessage = Version & { readonly method: 'center.open' }
     | Confirmation & { readonly method: 'center.cancel' };
 export type ConnectionMessage = Client & { readonly method: 'center.connections.read' }
     | Editor & { readonly method: 'center.connections.change'; readonly credentialEpoch: number; readonly expectedRevision: number; readonly intent: ConnectionIntent };
-export type CenterRequestMessage = CenterMessage | ConnectionMessage | HistoryMessage | PauseMessage | SessionPreferenceMessage;
+export type CenterRequestMessage = CenterMessage | ConnectionMessage | HistoryMessage | PauseMessage | SessionPreferenceMessage | ApiCacheMessage;
 export { MAX_CENTER_RESPONSE_BYTES } from './center_limits.ts';
 
 /** Center authority is a closed protocol; content pages never receive these methods. */
@@ -30,6 +31,7 @@ export function parseCenterMessage(value: unknown): CenterRequestMessage | null 
     if (isHistoryMessage(value)) return value;
     if (isPauseMessage(value)) return value;
     if (isSessionPreferenceMessage(value)) return value;
+    if (isApiCacheMessage(value)) return value;
     if (!record(value) || value.version !== 1 || typeof value.method !== 'string') return null;
     const fields = ['version', 'method'];
     if (value.method === 'center.open') return keys(value, fields) && Object.keys(value).length === 2 ? value as unknown as CenterMessage : null;

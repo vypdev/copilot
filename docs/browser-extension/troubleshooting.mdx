@@ -134,6 +134,28 @@ login, token, billing, security and administration pages intentionally offer no
 runtime helper. Standalone local configuration remains available through the
 browser's extension options.
 
+## Temporary API cache result is unknown
+
+In **Privacy**, use **Read this operation's result** after a lost response. This
+reads the retained result of that review; it does not repeat clearing or call
+GitHub. Closing the review keeps result inspection available in the same current
+view. A confirmed result remains historical: new explicit reads can cache new
+responses after the clear.
+
+If the result says no clear had been submitted, choose **Keep cache** to cancel
+that unsubmitted review. Do not infer an earlier clear from an empty cache, a
+changed setting or a successful new review. An expired record, replaced editing
+session or restarted background can make the earlier result unavailable. The
+interface must keep that uncertainty visible. A new review is a separate explicit
+choice, never an automatic retry or proof of the earlier outcome.
+
+A pending review or full retained capacity can report busy. Inspect the previous
+result and explicitly cancel an unsubmitted review, or wait for its five-minute
+expiry. Do not disconnect or remove credentials to clear temporary responses;
+those are separate controls. Future/corrupt preferences can stay preserved while
+this independent native control runs. See the
+[fixed cache scope](/browser-extension/configuration#clear-temporary-api-responses).
+
 ## Diagnose or reset only the chosen scope
 
 **Diagnostics** separates current feature availability, helper samples and optional

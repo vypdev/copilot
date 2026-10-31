@@ -116,6 +116,24 @@ credential revocation also requires a fresh connection read.
 
 ## Understand retention
 
+**Privacy → Review clearing temporary API responses** is an independent reviewed
+control in the H3 development source. It clears this extension background's
+temporary API responses and ETags across credential purposes, and aborts old
+pending reads. Preview, cancellation and result inspection make no HTTP request.
+Confirmed clearing keeps credentials, authored preferences, existing generated
+history, request budgets and cooldowns. It neither clears browser history or
+browser HTTP caches nor removes content from GitHub pages. New explicit reads
+can cache responses again. Follow the
+[review and result flow](/browser-extension/configuration#clear-temporary-api-responses).
+
+Its retained review/result uses worker memory for five minutes, with one pending
+review per editor and at most 32 combined review/result records. No cached body,
+key, identity, entry count, operation selector or witness is displayed or exported.
+Unknown results are inspected explicitly without another clearing attempt. A
+restart or lost editing source retires the earlier authority; it cannot certify
+what happened. Existing optional consent controls any new redacted diagnostic
+fact. Full native/human product acceptance remains outstanding.
+
 Nonsecret settings belong to local preferences. Credential material and private
 API evidence stay in the extension's protected session storage, with no fallback
 to local preferences. The inspector neither reads credential material nor saves

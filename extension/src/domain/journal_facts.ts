@@ -7,6 +7,7 @@ import { validSessionFact, sessionFactTransition, type SessionFact } from './ses
 import { validCollectionFact, collectionFactTransition, type CollectionFact } from './collection_fact.ts';
 import { validClearFact, clearFactTransition, type ClearFact } from './clear_fact.ts';
 import { validPauseFact, pauseFactTransition, type PauseFact } from './pause_fact.ts';
+import { apiCacheFact, apiCacheFactTransition, type ApiCacheFact } from './api_cache.ts';
 
 const SETTINGS_ACTIONS: Readonly<Record<SettingsAction, true>> = Object.freeze({
     'profile-create': true, 'profile-edit': true, 'profile-select': true, 'profile-deselect': true, 'profile-remove': true,
@@ -27,8 +28,8 @@ export interface HelperFact {
     readonly scope: 'active-at-observation' | 'retired-at-observation';
 }
 export interface DestinationFact { readonly kind: 'destination'; readonly route: CenterRoute; readonly featureId?: string }
-export type ProgressiveFact = OperationFact | SessionFact | CollectionFact | ClearFact | PauseFact;
-export const progressiveFact = (value: JournalFact | null | undefined): value is ProgressiveFact => value?.kind === 'operation' || value?.kind === 'session-operation' || value?.kind === 'collection-operation' || value?.kind === 'clear-operation' || value?.kind === 'pause-operation';
+export type ProgressiveFact = OperationFact | SessionFact | CollectionFact | ClearFact | PauseFact | ApiCacheFact;
+export const progressiveFact = (value: JournalFact | null | undefined): value is ProgressiveFact => value?.kind === 'operation' || value?.kind === 'session-operation' || value?.kind === 'collection-operation' || value?.kind === 'clear-operation' || value?.kind === 'pause-operation' || value?.kind === 'cache-operation';
 export type DiagnosticFact = ProgressiveFact | HelperFact;
 export type JournalFact = DiagnosticFact | DestinationFact;
 export type JournalKind = 'diagnostics' | 'recents';
@@ -49,6 +50,7 @@ export function journalFact(kind: JournalKind, value: unknown): value is Journal
     if (value.kind === 'collection-operation') return validCollectionFact(value);
     if (value.kind === 'clear-operation') return validClearFact(value);
     if (value.kind === 'pause-operation') return validPauseFact(value);
+    if (value.kind === 'cache-operation') return apiCacheFact(value);
     if (value.kind !== 'operation' || !keys(value, ['kind', 'action', 'phase', 'acknowledgement', 'observation'])
         || Object.keys(value).length !== 5 || typeof value.action !== 'string'
         || !(Object.hasOwn(SETTINGS_ACTIONS, value.action) || ['connect-read', 'disconnect-read', 'rename-session'].includes(value.action))) return false;
@@ -73,9 +75,11 @@ export function progressiveTransition(before: ProgressiveFact, after: Progressiv
         : before.kind === 'session-operation' && after.kind === 'session-operation' ? sessionFactTransition(before, after)
             : before.kind === 'collection-operation' && after.kind === 'collection-operation' ? collectionFactTransition(before, after)
                 : before.kind === 'clear-operation' && after.kind === 'clear-operation' ? clearFactTransition(before, after)
-                    : before.kind === 'pause-operation' && after.kind === 'pause-operation' && pauseFactTransition(before, after);
+                    : before.kind === 'pause-operation' && after.kind === 'pause-operation' ? pauseFactTransition(before, after)
+                        : before.kind === 'cache-operation' && after.kind === 'cache-operation' && apiCacheFactTransition(before, after);
 }
 export function progressiveTerminal(value: ProgressiveFact): boolean {
     return value.kind === 'operation' ? ['cancelled', 'blocked'].includes(value.phase) || value.phase === 'settled' && value.observation === 'committed'
-        : value.kind === 'session-operation' ? value.state === 'settled' : ['cancelled', 'blocked', 'settled'].includes(value.state);
+        : value.kind === 'session-operation' ? value.state === 'settled' : value.kind === 'cache-operation'
+            ? !['reviewed', 'submitted'].includes(value.state) : ['cancelled', 'blocked', 'settled'].includes(value.state);
 }

@@ -2238,3 +2238,105 @@ executable acceptance contract are in
 This does not complete full runtime provenance, verified-session overrides,
 optional purpose management or native/human H3 gates. The entire H3 remains in
 progress until those requirements and its full acceptance gates pass.
+
+### Reviewed private API cache clearing (2026-10-31)
+
+**Required H3 behavior; source implemented, full acceptance pending.** CENTER14-C01
+requires cache clearing. Before this refinement, `ReadScheduler` owned the bounded
+in-memory API response cache and retired it on internal invalidation, but the
+center had no independent user cache control. Disconnecting a credential is a different
+choice. This refinement completes CENTER14 with the existing H3 native owner,
+review, current-operation and optional diagnostic boundaries; it adds no Action
+operation, provider endpoint, permission, preference or persistent cache schema.
+
+```text
+Privacy → Review clearing temporary API responses → Confirm / Keep cache
+ → native source/witness admission → clear + abort old reads → observed result
+ → lost response: inspect retained result; never submit another clear implicitly
+```
+
+Text equivalent: preview captures an opaque current-cache witness without
+mutating it. A separate native confirmation clears only the reviewed cache
+scope. Cancellation changes no cache. A lost response requires observation.
+
+| ID | Required observable behavior |
+|---|---|
+| H3-CACHE01 | Privacy offers **Review clearing temporary API responses**, naming this extension's current background cache and all its credential purposes. No cache bodies, keys, identities or entry counts are exposed. |
+| H3-CACHE02 | Preview/cancel perform no clear, credential inspection, HTTP, grant, preference change or automatic retry. Confirmed clearing preserves credentials, authored settings, existing activity, budgets, backoff and cooldowns. |
+| H3-CACHE03 | Confirmation admits the current native editor, source, controller/credential fence and private cache witness. A retired witness or owner cannot clear a replacement generation. Foreign/content/private senders and expanded packets fail closed. |
+| H3-CACHE04 | Native clearing retires cached ETags/bodies and aborts old pending reads; their later responses cannot repopulate that generation. A later independently admitted read may populate a new cache and does not undo the historical clear. |
+| H3-CACHE05 | A retained operation ID clears at most once. Closed result observation never submits an effect. Source loss, expiry, unknown ID or worker restart never fabricate old completion or replay it. |
+| H3-CACHE06 | The review, its independent current-operation fact and consented optional redacted diagnostics separate reviewed/cancelled/submitted/cleared/unknown outcomes. Observability failure cannot affect clearing or enable collection. |
+| H3-CACHE07 | Complete en/es/fr/pt controls, named review/result actions, focus/status handling and help distinguish cache clearing from credential removal, activity deletion and browser-wide data clearing. |
+
+The scope is fixed: **this extension background's temporary private API response
+cache across its purposes**. It excludes browser history, browser HTTP caches,
+credentials, profiles, saved searches, notes, generated activity and scheduling
+state. Existing generated activity is not deleted; an optional new closed clear
+fact may be retained only under existing verified consent. Keeping the cache is
+the default. Clearing after inspection is the supported alternative. There is
+no selectable key, URL, account, provider payload, arbitrary storage operand,
+configurable lifetime or background polling. This safety contract is not configurable.
+
+Application ports capture an opaque worker-local witness, test that witness and
+clear only under a current-source guard. The scheduler owns its generation and
+pending-read cancellation; the center never receives the cache itself. Witnesses
+are not serialized or accepted from a renderer. A bounded retained-review use
+case owns IDs, owner fences, cancellation and outcomes. Native composition binds
+that use case to the actual scheduler. Domain contracts own the closed replies
+and redacted fact; presentation renders them and invokes semantic actions. The
+existing AST layer/import/cycle, closed message/reply, sender and bundle gates
+remain mandatory. A settings or generated-history clear is not reused as cache
+write authority.
+
+Retained reviews/results have the existing five-minute horizon and a combined
+32-record worker bound. Capacity reports busy without evicting an unresolved
+record. Missing/throwing source facts, malformed IDs, backward clocks and expired
+plans fail closed. An already submitted or completed confirmation cannot be
+cancelled into a claim that nothing happened. No ID or cache witness survives a
+worker restart. Clearing is synchronous at its native admission point; a thrown
+boundary with no trustworthy result remains unknown and is not retried. Pending
+review notifications are followed by source/witness revalidation before the
+first effect. A verified clear remains a completed fact after later source loss.
+
+Representative UI:
+
+| State | Meaning and next action |
+|---|---|
+| Review | “Clear temporary API responses kept by Copilot? Saved preferences, credentials and existing activity are kept.” **Clear temporary responses** / **Keep cache**. |
+| Pending | “Clearing temporary API responses…” No duplicate confirmation or cancellation that implies an undo. |
+| Cancelled | “The cache was not cleared.” Return to Privacy; a new review is a separate choice. |
+| Cleared | “Temporary API responses were cleared. New explicit reads can cache responses again.” Close review. |
+| Stale/blocked | “The source or cache changed. This request cannot establish the earlier outcome.” Inspect retained facts and the current context before a new review. |
+| Unknown | “The response does not establish whether clearing completed.” **Read this operation's result**; no automatic retry. An unavailable/expired result remains unknown. |
+
+This safety control can work with future/corrupt preference data because it does
+not parse, initialize, migrate or replace preferences. Editing authority and the
+native source remain required. Unsupported old protocol/builds stay unavailable;
+no fallback calls the legacy settings writer. Optional generated history retains
+only the closed cache-action fact, never the cache witness/body or target. Older
+closed readers preserve an unsupported observation rather than downgrade it.
+No cache data is migrated or restored by rollback. This refinement makes no new
+GitHub comment, Job Summary, release or deployment.
+
+The **minimum 15 distinct additional risk cases** supplement both 56-case
+inventories and existing budgets. Matrix repetitions do not inflate this floor.
+
+| Area | Cases | Required evidence |
+|---|---:|---|
+| Domain/protocol | 2 | Closed action/reply/fact shapes and transitions; foreign or expanded operands rejected. |
+| Retained application state | 5 | No-effect preview/cancel, exactly-once replay, stale owner/witness, expiry/capacity/clock handling, thrown or unknown effect and read-only result inspection. |
+| Scheduler/provider boundary | 3 | Real scheduler clears bodies/ETags and aborts late reads, keeps scheduling/cooldown state, and forbids foreign/retired witnesses. No HTTP caused by clearing. |
+| UI/localization | 2 | Actual mounted review/cancel/confirm/unknown inspection with focus/status, all four complete resources and observer gating. |
+| Composition/security | 3 | Actual native composition preserves preferences/vault/history, lost transport cannot resubmit, worker/source/permission retirement fences old review. |
+| **Total** | **15** | Distinct behavior families, not a replacement for branch/race coverage. |
+
+New pure policy requires 100% branches; changed executable lines/branches must be
+covered without exclusions. Existing full suite, Node 24 floor, type/lint/package,
+reproducibility, architecture and source-bound three-browser/human gates remain.
+Native evidence from the preceding `da3c7ad89f2e…` baseline is historical for a
+changed successor and cannot certify these controls. User privacy/configuration,
+unknown-result troubleshooting and contributor port/observation documentation
+must ship together. Implement contracts and scheduler witnesses, retained use
+case, native protocol/composition/current facts, localized UI, then full source-
+bound acceptance. H3 remains unpublished until its complete scope passes.

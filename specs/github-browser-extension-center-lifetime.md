@@ -211,6 +211,16 @@ or reply body, credential or private source pointer. The adapter clears its own
 temporary UTF-8 byte array on hashing success and failure. A digest is neither
 an exported capability nor a replacement for sender, source or epoch admission.
 
+The [independent API-cache family](github-browser-extension-control-center-h3.md#reviewed-private-api-cache-clearing-2026-10-31)
+uses the same native channel, editor and controller/credential fences, with a
+worker-private cache witness instead of a settings revision. Its closed
+preview/confirm/cancel/result packets accept no cache operand. Result inspection
+never retries a lost confirmation. A new review cannot borrow an older completed
+result; losing that new preview response does not restore the old selector as
+its authority. Source retirement discards private selectors and preserves honest
+uncertainty. This adds no transport fallback, retransmission or delivery-window
+exception. The owning refinement's risk budget supplements the existing gates.
+
 ## 12. Observability and operational UX
 
 Technical source/build identity remains the packaged digest. No heartbeat or

@@ -22,7 +22,7 @@
     const detail = $derived(frame.location.detail);
     const data = $derived(frame.client.data);
     const copy = $derived(frame.copy);
-    const historyEditable = $derived(!frame.sessionPreferences.review && !frame.sessionPreferences.busy && !frame.pauses.review && !frame.pauses.busy && frame.client.phase === 'ready' && frame.client.role === 'editor' && !frame.client.review && !frame.hasDraft
+    const historyEditable = $derived(!frame.cache.open && frame.cache.phase === 'idle' && !frame.sessionPreferences.review && !frame.sessionPreferences.busy && !frame.pauses.review && !frame.pauses.busy && frame.client.phase === 'ready' && frame.client.role === 'editor' && !frame.client.review && !frame.hasDraft
         && (frame.client.issue === null || frame.client.issue === 'invalid' || frame.client.issue === 'unchanged'));
     $effect(() => {
         const destination = route; const parameter = detail;
@@ -40,7 +40,10 @@
 {:else if route === 'privacy'}
     {#if loadFailed}<p role="alert">{copy.messages.unavailable}</p>
     {:else if Privacy}<Privacy context={{ copy, inspection: frame.inspection, connection: privacyConnection(frame.client, frame.inspection.grants['github-api']),
-        canInspectConnection: !busy && !frame.client.review && (frame.client.role === 'editor' || frame.client.role === 'observer') }} actions={surface.actions}/>
+        canInspectConnection: !busy && !frame.cache.open && !frame.client.review && (frame.client.role === 'editor' || frame.client.role === 'observer'), cache: frame.cache,
+        canReviewCache: !frame.hasDraft && !frame.client.review && !frame.history.busy && !frame.history.exportBusy && !frame.history.review && !frame.history.exportReview && !frame.pauses.busy && !frame.pauses.review && !frame.sessionPreferences.busy && !frame.sessionPreferences.review
+            && frame.client.role === 'editor' && frame.client.issue !== 'incompatible' && !['claiming', 'previewing', 'committing', 'stopped'].includes(frame.client.phase),
+        canInspectCache: frame.client.role === 'editor' && frame.client.issue !== 'incompatible' && !['claiming', 'previewing', 'committing', 'stopped'].includes(frame.client.phase) }} actions={surface.actions}/>
     {:else}<p role="status">{copy.messages.loading}</p>{/if}
     <HistoryRoute context={{ copy, view: frame.history, visits: frame.visits, route: 'privacy', editable: historyEditable }} actions={surface.actions.history} load={surface.loadHistory}/>
 {:else if route === 'activity' || route === 'diagnostics'}

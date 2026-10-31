@@ -24,6 +24,7 @@ import { ClosedPauseCleanup } from '../application/closed_pause_cleanup.ts';
 import { SessionPreferencesStore } from '../application/session_preferences_store.ts';
 import { SESSION_PREFERENCES_KEY, SessionPreferencesReader } from '../application/session_preferences_reader.ts';
 import { SessionPreferenceAdmission } from '../application/session_preference_admission.ts';
+import { createApiCache } from './api_cache_runtime.ts';
 
 export function startBackground(api: BrowserApi): () => void {
     const local = new BrowserStorage(api.storage.local);
@@ -69,7 +70,8 @@ export function startBackground(api: BrowserApi): () => void {
             return opened;
         },
             cancellation: () => new BrowserCancellation(),
-            online: () => globalThis.navigator?.onLine !== false, notify }, createCenter(api, settings, sessions, notify, connections, { owner: history, policies }, helpers, pauseStore, sessionPreferences), connections, helpers, pauses,
+            online: () => globalThis.navigator?.onLine !== false, notify }, createCenter(api, settings, sessions, notify, connections, { owner: history, policies }, helpers, pauseStore, sessionPreferences,
+            createApiCache(scheduler, () => gateway.invalidate(undefined, false), notify)), connections, helpers, pauses,
         new SessionPreferenceAdmission(new SessionPreferencesReader(session, () => session.protect(), () => sessionPreferences.guard.condition), connections));
     const message: Parameters<typeof api.runtime.onMessage.addListener>[0] = (value, sender, respond) => {
         void gateway.handle(value, sender).then(result => respond({ ...(record(result) ? result : { state: 'unavailable' }), sourceTree: buildSourceIdentity() })); return true;

@@ -30,6 +30,10 @@ revocation, and separates browser access from a selected GitHub read identity.
 Inspecting that identity is a separate explicit action that may contact GitHub.
 The native inspector remains available when saved settings cannot be read.
 
+The development source also provides a reviewed
+[temporary API response clear](#clear-temporary-api-responses) in Privacy.
+This independent control keeps preferences, credentials and existing activity.
+
 Optional Activity/Diagnostics collection remains under development. Its source
 now separates saved intent from actual consent policy: importing or restoring an
 enabled preference will not itself start collection. Disabling it first attempts
@@ -51,6 +55,37 @@ Start/stop operations now also show their preference, prerequisite pause and act
 with the global enabled preference. Draft clearing, duplicate detection,
 protected typing and current native context checks remain separate from browser
 or system conflict uncertainty. Saving a combination never certifies delivery.
+
+## Clear temporary API responses
+
+1. Open **Privacy** and choose **Review clearing temporary API responses**.
+2. Read the scope. It covers Copilot's temporary API responses in this browser
+   profile, across its credential purposes. It does not clear browser history,
+   browser caches or GitHub page content.
+3. Choose **Keep cache** to cancel, or **Clear temporary responses** to confirm.
+   Opening the review does not clear anything.
+4. Read the result before closing the review. Confirmed clearing removes cached
+   responses and ETags and cancels their old pending reads. A later explicit read
+   can cache new responses again.
+
+Saved preferences, credentials, existing activity, request budgets and cooldowns
+are kept. Clearing does not call GitHub, reconnect or request permission. Optional
+diagnostic history receives only a closed operation fact under existing consent;
+collection stays off unless separately enabled. This control can work with
+future or corrupt preferences without migrating or replacing them, but it still
+requires the current editing session.
+
+If the response is lost, select **Read this operation's result**. Closing its
+review keeps that result action available in the same current view. Result
+inspection never repeats the clear. If it reports no submitted clear, **Keep
+cache** explicitly cancels that unsubmitted review. An expired result, replaced
+editing session or restarted background cannot establish the earlier outcome.
+A new review is a separate operation, not a way to prove the previous one ran.
+See [uncertain cache results](/browser-extension/troubleshooting#temporary-api-cache-result-is-unknown).
+
+The controls are present in development source. Full H3 acceptance, including
+native-browser and human accessibility checks for the final package, remains
+required before publication.
 
 ## Change a preference
 

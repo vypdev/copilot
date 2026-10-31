@@ -1330,3 +1330,50 @@ provider and native-storage await. Only callbacks from the same operation’s ow
 read connect/revoke can advance its private expected generation. An unrelated
 account change retires it. A save already submitted remains an observed local
 effect; retirement cannot certify that identity, replay the save or undo it.
+
+## Reviewed temporary API response clearing
+
+H3's independent cache control is in progress. The owning contract is the
+[cache-clearing refinement](https://github.com/vypdev/copilot/blob/develop/specs/github-browser-extension-control-center-h3.md#reviewed-private-api-cache-clearing-2026-10-31).
+Its fixed scope is this background's temporary API response cache. Credentials,
+authored preferences, scheduling budgets/cooldowns and existing generated history
+have separate owners.
+
+`ReadScheduler` captures a frozen opaque worker-local witness and admits clearing
+only against its original generation plus a live source guard. Clearing retires
+ETags/bodies and aborts shared pending reads; a late response cannot restore the
+old generation. The generation uses reference identity rather than a wrapping
+counter. No cache key, body, count, credential or witness enters the center wire.
+
+`ApiCacheReviews` owns preview/cancel/confirm/read-result, a five-minute lifetime,
+one pending review per owner and 32 combined retained records. Confirmation reserves
+its attempt before notifying observers. Re-entry cannot submit a second clear or
+confirm an unreturned preview. A source that was lost cannot revive the old plan.
+Known completion, not-applied and uncertain completion remain distinct; result
+inspection never repeats the effect. Optional observations cannot change primary
+outcomes or enable collection. The native composition binds the service to the
+actual scheduler, retires old page leases after a clear and sends metadata
+invalidation without reconnecting. Publication failure cannot change a known
+clear. The closed protocol admits only the native editor and private owner fence;
+it never uses a settings revision as cache authority.
+
+`ApiCacheClient` keeps its retained selector out of the rendered view. A lost
+confirm response leaves an explicit read-result action, including after closing
+the review. Reading that result never sends another confirmation. An observed
+unsubmitted review can be explicitly cancelled; it cannot authorize a retry of
+an uncertain confirmation. Source loss retires the old selector rather than
+binding it to a new owner. Busy operations and live reviews protect navigation,
+other reviews and drafts. Future/corrupt saved preferences do not disable this
+independent safety control.
+
+Current-operation metadata and the optional consented journal use a closed
+`cache-operation` / `clear-api-cache` / state fact. Coalesced journal updates
+persist the submitted transition before a terminal outcome. No private target,
+operation ID, response body, ETag or witness enters those facts. The Privacy,
+current-operation and history presentations have complete en/es/fr/pt resources.
+Source-bound browser and human acceptance must still complete before H3 ships.
+
+The cache scheduler and review suites use the real scheduler/use case with bounded
+synthetic provider and authority boundaries. They do not certify a loaded browser
+or the remaining complete H3 product. No source publication is allowed before the
+full milestone's controls, documents and acceptance gates are complete.

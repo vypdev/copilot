@@ -73,6 +73,16 @@ optional history: collection can be off or history storage unavailable. Reading
 does not confirm, cancel, retry or start any write, permission request or GitHub
 request.
 
+The development cache control has its own closed last-operation fact: reviewed,
+cancelled, blocked, submitted, cleared, not-applied or unknown. It names only
+temporary API responses, with no private target or cache content. A successful
+clear stays historical even when a new explicit read later caches a response.
+Inspect an uncertain retained result in
+[Privacy](/browser-extension/configuration#clear-temporary-api-responses);
+reading last-operation metadata or an empty cache cannot establish completion.
+Existing verified diagnostics consent may retain one redacted cache-action row.
+Clearing this cache does not enable collection or delete existing history.
+
 The panel distinguishes a reviewed change, pending confirmation, an observed
 write attempt, cancellation, a preflight block, verified saving and an unknown
 result. It shows the last proved acknowledgement and observed persistence

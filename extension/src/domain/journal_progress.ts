@@ -4,6 +4,7 @@ import { sameSessionFact, mergeSessionFact } from './session_fact.ts';
 import { sameCollectionFact, mergeCollectionFact } from './collection_fact.ts';
 import { sameClearFact, mergeClearFact } from './clear_fact.ts';
 import { samePauseFact, mergePauseFact } from './pause_fact.ts';
+import { mergeApiCacheFact, nextStoredApiCache } from './api_cache.ts';
 
 export function snapshotJournalFact(kind: JournalKind, value: unknown): JournalFact | null {
     try {
@@ -26,10 +27,12 @@ export function mergeProgressiveFact(before: ProgressiveFact, after: Progressive
         : before.kind === 'session-operation' && after.kind === 'session-operation' ? mergeSessionFact(before, after)
             : before.kind === 'collection-operation' && after.kind === 'collection-operation' ? mergeCollectionFact(before, after)
                 : before.kind === 'clear-operation' && after.kind === 'clear-operation' ? mergeClearFact(before, after)
-                    : before.kind === 'pause-operation' && after.kind === 'pause-operation' ? mergePauseFact(before, after) : null;
+                    : before.kind === 'pause-operation' && after.kind === 'pause-operation' ? mergePauseFact(before, after)
+                        : before.kind === 'cache-operation' && after.kind === 'cache-operation' ? mergeApiCacheFact(before, after) : null;
 }
 export function nextStoredProgress(before: ProgressiveFact, desired: ProgressiveFact): ProgressiveFact {
-    return before.kind === 'operation' && desired.kind === 'operation' ? nextStoredOperation(before, desired) : desired;
+    return before.kind === 'operation' && desired.kind === 'operation' ? nextStoredOperation(before, desired)
+        : before.kind === 'cache-operation' && desired.kind === 'cache-operation' ? nextStoredApiCache(before, desired) : desired;
 }
 /** A later read cannot erase an acknowledgement or already established completion of this same operation. */
 export function mergeOperationFact(before: OperationFact, after: OperationFact): OperationFact | null {

@@ -1174,6 +1174,32 @@ local shell are integrated in source. Deterministic composition and mounted
 regressions cover these contracts. Complete unfiltered coverage, native-browser
 and human acceptance remain distinct gates; this is not full H3 acceptance.
 
+### 6.17 Private API cache clear observations
+
+The [owning H3 cache-clearing refinement](github-browser-extension-control-center-h3.md#reviewed-private-api-cache-clearing-2026-10-31)
+defines the fixed scope, native admission, retained result and additional numeric
+test budget. Cache clearing has a separate `family: cache` current-operation
+variant whose closed fact contains only `kind: cache-operation`,
+`action: clear-api-cache` and its state. Its exact target is null or the current
+Privacy route with a null label. No cache selector, body, identity, count, ETag,
+operation ID or reusable witness enters current metadata or diagnostic history.
+
+Native preview captures the current-operation fact independently of optional
+history. Its live callback latches source retirement, but a successful clear's
+own cache-generation replacement does not retire its completion observation.
+Old completions may update only their original optional ticket and cannot replace
+a newer primary operation. Reviewed, cancelled, blocked, submitted, cleared,
+not-applied and unknown remain distinct. Existing consent may admit one redacted
+diagnostic ticket; unavailable/off collection never blocks clearing. A coalesced
+terminal update persists submission first. An unknown native boundary remains
+unknown; later empty/newly populated cache state cannot reconcile that history.
+
+Privacy provides explicit result inspection. It never repeats clearing. A new
+review cannot borrow a previous operation's result, including when its own
+acknowledgement is lost. The unpublished H3 closed reader preserves unsupported
+facts rather than silently repairing them. Full source-bound browser and human
+acceptance remains required alongside the owning refinement's local risk cases.
+
 ## 7. User-facing configuration
 
 | Input | Default | Scope/limit |
@@ -1265,7 +1291,7 @@ on opt-in. An explicit old-ring sample is an observation at capture time.
 
 ## 13. Compatibility, migration, rollout, and rollback
 
-The unpublished H3 version1 journal admits closed session, compound collection and explicit clear
+The unpublished H3 version1 journal admits closed session, compound collection, private API-cache clear and explicit history-clear
 facts alongside existing operation/helper facts. Existing supported rows keep
 their meaning. An older draft reader that does not recognize a fact MUST preserve
 the record as unavailable rather than downgrade or delete it. The existing exact

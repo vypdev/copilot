@@ -1,35 +1,38 @@
-import { MAX_CENTER_RESPONSE_BYTES, type CenterMessage, type ConnectionMessage } from '../domain/center_protocol.ts';
+import { MAX_CENTER_RESPONSE_BYTES, type CenterRequestMessage } from '../domain/center_protocol.ts';
 import type { NamedSessions } from './named_sessions.ts';
 import type { Sender } from '../domain/protocol.ts';
 import { jsonBytesWithin } from '../domain/value.ts';
 import { centerBinding, CenterController } from './center_controller.ts';
 import { SettingsOperations } from './settings_operations.ts';
 import { SettingsRepository, SettingsMigrationError } from './settings_repository.ts';
-import { isHistoryMessage, type HistoryMessage } from '../domain/history_protocol.ts';
+import { isHistoryMessage } from '../domain/history_protocol.ts';
 import type { HistoryGateway } from './history_gateway.ts';
 import type { CurrentOperations } from './current_operations.ts';
 import type { HelperSamples } from './helper_samples.ts';
-import { isPauseMessage, type PauseMessage } from '../domain/temporary_pause_protocol.ts';
+import { isPauseMessage } from '../domain/temporary_pause_protocol.ts';
 import type { TemporaryPauseGateway } from './temporary_pause_gateway.ts';
-import { isSessionPreferenceMessage, type SessionPreferenceMessage } from '../domain/session_preference_protocol.ts';
+import { isSessionPreferenceMessage } from '../domain/session_preference_protocol.ts';
 import type { SessionPreferenceGateway } from './session_preference_gateway.ts';
+import { isApiCacheMessage } from '../domain/api_cache_protocol.ts';
+import type { ApiCacheReviews } from './api_cache_reviews.ts';
 
 /** Called only after native extension-origin admission by MessageGateway. */
 export class CenterGateway {
     constructor(private readonly controller: CenterController, private readonly operations: SettingsOperations,
         private readonly settings: SettingsRepository, private readonly connections?: NamedSessions, private readonly history?: HistoryGateway,
-        private readonly current?: CurrentOperations, private readonly helpers?: HelperSamples, private readonly pauses?: TemporaryPauseGateway, private readonly sessionPreferences?: SessionPreferenceGateway) {}
+        private readonly current?: CurrentOperations, private readonly helpers?: HelperSamples, private readonly pauses?: TemporaryPauseGateway, private readonly sessionPreferences?: SessionPreferenceGateway,
+        private readonly cache?: ApiCacheReviews) {}
     invalidatePreferenceSources(): void { this.sessionPreferences?.invalidate(); }
     releaseTab(id: number, legacyOnly = false): void { this.pauses?.invalidateTab(id); this.controller.releaseTab(id, legacyOnly); }
     releaseSource(source: Readonly<object>): void { this.controller.releaseSource(source); }
-    shutdown(): void { this.sessionPreferences?.invalidate(); this.pauses?.invalidate(); this.current?.stop(); this.controller.shutdown(); }
-    async handle(message: CenterMessage | ConnectionMessage | HistoryMessage | PauseMessage | SessionPreferenceMessage, sender: Sender, source?: Readonly<object>): Promise<unknown> {
+    shutdown(): void { this.cache?.stop(); this.sessionPreferences?.invalidate(); this.pauses?.invalidate(); this.current?.stop(); this.controller.shutdown(); }
+    async handle(message: CenterRequestMessage, sender: Sender, source?: Readonly<object>): Promise<unknown> {
         try {
             const result = await this.dispatch(message, sender, source);
             return jsonBytesWithin(result, MAX_CENTER_RESPONSE_BYTES) ? result : { state: 'unavailable' };
         } catch { return { state: 'unavailable' }; }
     }
-    private async dispatch(message: CenterMessage | ConnectionMessage | HistoryMessage | PauseMessage | SessionPreferenceMessage, sender: Sender, source?: Readonly<object>): Promise<unknown> {
+    private async dispatch(message: CenterRequestMessage, sender: Sender, source?: Readonly<object>): Promise<unknown> {
         const native = centerBinding(sender);
         if (!native) return { state: 'rejected' };
         const binding = source === undefined ? native : { ...native, source };
@@ -44,6 +47,15 @@ export class CenterGateway {
         if (isHistoryMessage(message)) return this.history?.handle(message, client, binding) ?? { state: 'unavailable' };
         if (isPauseMessage(message)) return this.pauses?.handle(message, client, binding) ?? { state: 'unavailable' };
         if (isSessionPreferenceMessage(message)) return this.sessionPreferences?.handle(message, client, binding) ?? { state: 'unavailable' };
+        if (isApiCacheMessage(message)) {
+            if (client.role !== 'editor') return { state: 'denied' };
+            if (client.credentialEpoch !== message.credentialEpoch) return { state: 'stale' };
+            if (!this.cache) return { state: 'unavailable' };
+            if (message.method === 'center.cache.preview') return this.cache.preview(client.clientId);
+            if (message.method === 'center.cache.confirm') return this.cache.confirm(message.operationId, client.clientId);
+            if (message.method === 'center.cache.cancel') return this.cache.cancel(message.operationId, client.clientId);
+            return this.cache.inspect(message.operationId, client.clientId);
+        }
         if (message.method === 'center.connections.read') return this.connections?.read(() =>
             this.controller.authorize(message.clientId, binding, client.controllerEpoch) !== null) ?? { state: 'unavailable' };
         if (message.method === 'center.connections.change') {

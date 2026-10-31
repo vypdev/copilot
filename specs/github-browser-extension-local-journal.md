@@ -334,6 +334,19 @@ Native tab expiry never creates a user operation. No native IDs, paths, snapshot
 or reusable authority enter retained facts or exports. Unknown variants remain
 preserved inert, including on downgrade; no implicit repair is authorized.
 
+Private API cache observations follow the
+[H3 cache-clearing contract](github-browser-extension-control-center-h3.md#reviewed-private-api-cache-clearing-2026-10-31).
+The exact three-field diagnostic fact is `kind: cache-operation`,
+`action: clear-api-cache` and one closed state: reviewed, cancelled, blocked,
+submitted, cleared, not-applied or unknown. A reviewed row can become cancelled,
+blocked or submitted; submitted can become cleared, not-applied or unknown.
+Terminal facts cannot reopen. Coalesced updates persist the submitted transition
+before their terminal state. Only existing consent admits one diagnostic ticket;
+cache clearing never enables collection, deletes history or exports a cache
+body, ETag, key, private target, operation ID or witness. Result inspection cannot
+infer completion from an empty cache or repeat clearing. Existing journal bounds,
+clear generations and future/unsupported-data preservation remain in force.
+
 ## 12. Observability and operational UX
 
 History reports its own availability, capture pause and retained count. Closed

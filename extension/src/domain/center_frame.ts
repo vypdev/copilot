@@ -17,6 +17,7 @@ import { EMPTY_CURRENT_OPERATION, type CurrentOperationView } from './current_op
 import { EMPTY_PAUSE_VIEW, type PauseClientView } from './pause_client_view.ts';
 import { EMPTY_HELPER_SAMPLE, type HelperSampleView } from './helper_sample_view.ts';
 import { EMPTY_SESSION_PREFERENCE_VIEW, type SessionPreferenceClientView } from './session_preference_client_view.ts';
+import { EMPTY_API_CACHE_VIEW, type ApiCacheView } from './api_cache_ui.ts';
 
 export interface CenterFrame {
     readonly client: CenterClientView; readonly location: CenterLocation; readonly pendingLocation: CenterLocation | null;
@@ -30,6 +31,7 @@ export interface CenterFrame {
     readonly helperSample: HelperSampleView;
     readonly pauses: PauseClientView;
     readonly sessionPreferences: SessionPreferenceClientView;
+    readonly cache: ApiCacheView;
 }
 /** Complete local preference delta, including removals. Input is validated credential-free Settings. */
 export function settingsReviewChanges(before: unknown, after: unknown, copy: CenterCopy, connections?: ConnectionOutcome | null): readonly ReviewChange[] {
@@ -70,12 +72,12 @@ export function settingsReviewChanges(before: unknown, after: unknown, copy: Cen
     }
     walk(before, after, []); return deepFreeze(changes);
 }
-export function centerFrame(client: CenterClientView, location: CenterLocation, pendingLocation: CenterLocation | null, nativeLanguage: string, draftEpoch = 0, hasDraft = false, inventory = EMPTY_INVENTORY_NAVIGATION, inspection = EMPTY_PERMISSION_INSPECTION, packageIdentity = UNKNOWN_PACKAGE_IDENTITY, history = EMPTY_HISTORY_VIEW, visits = EMPTY_VISIT_DELIVERY, operation = EMPTY_CURRENT_OPERATION, helperSample = EMPTY_HELPER_SAMPLE, pauses = EMPTY_PAUSE_VIEW, sessionPreferences = EMPTY_SESSION_PREFERENCE_VIEW): CenterFrame {
+export function centerFrame(client: CenterClientView, location: CenterLocation, pendingLocation: CenterLocation | null, nativeLanguage: string, draftEpoch = 0, hasDraft = false, inventory = EMPTY_INVENTORY_NAVIGATION, inspection = EMPTY_PERMISSION_INSPECTION, packageIdentity = UNKNOWN_PACKAGE_IDENTITY, history = EMPTY_HISTORY_VIEW, visits = EMPTY_VISIT_DELIVERY, operation = EMPTY_CURRENT_OPERATION, helperSample = EMPTY_HELPER_SAMPLE, pauses = EMPTY_PAUSE_VIEW, sessionPreferences = EMPTY_SESSION_PREFERENCE_VIEW, cache = EMPTY_API_CACHE_VIEW): CenterFrame {
     const copy = centerCopy(client.data?.settings?.locale ?? 'auto', nativeLanguage);
     const plan = client.review;
     const review: CenterReview | null = plan ? { state: plan.state, title: copy.messages.reviewTitle,
         summary: copy.messages.reviewSummary, revision: plan.revision,
         editable: client.data?.role === 'editor' && client.issue === null,
         changes: settingsReviewChanges(plan.before, plan.after, copy, client.connections) } : null;
-    return deepFreeze({ client, location, pendingLocation, copy, review, draftEpoch, hasDraft, inventory, inspection, packageIdentity, history, visits, operation, helperSample, pauses, sessionPreferences });
+    return deepFreeze({ client, location, pendingLocation, copy, review, draftEpoch, hasDraft, inventory, inspection, packageIdentity, history, visits, operation, helperSample, pauses, sessionPreferences, cache });
 }

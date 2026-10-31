@@ -12,6 +12,8 @@
     import { helperCopy } from '../domain/helper_copy.ts';
     import ClearEffects from './ClearEffects.svelte';
     import PauseEffects from './PauseEffects.svelte';
+    import ApiCacheEffects from './ApiCacheEffects.svelte';
+    import { apiCacheCopy } from '../domain/api_cache_copy.ts';
     import { pauseObservationCopy } from '../domain/pause_observation_copy.ts';
     let { snapshot, copy, center }: { snapshot: JournalSnapshot; copy: HistoryCopy; center: CenterCopy } = $props();
 </script>
@@ -35,6 +37,8 @@
                 <h3><span>{clearCopy(center.locale).action}</span> · <span>{copy.text[entry.fact.collection]}</span></h3><ClearEffects fact={entry.fact} {center} heading="h4"/>
             {:else if entry.fact.kind === 'pause-operation'}
                 <h3>{pauseObservationCopy(center.locale).actions[entry.fact.action]}</h3><PauseEffects fact={entry.fact} {center} heading="h4"/>
+            {:else if entry.fact.kind === 'cache-operation'}
+                <h3>{apiCacheCopy(center.locale).title}</h3><ApiCacheEffects fact={entry.fact} locale={center.locale}/>
             {:else if entry.fact.kind === 'destination'}
                 <a href={centerLocationHash({ route: entry.fact.route, ...(entry.fact.featureId ? { detail: entry.fact.featureId } : {}) })}>
                     <span>{center.routes[entry.fact.route]}</span>{#if entry.fact.featureId} · <code>{entry.fact.featureId}</code>{/if}</a>

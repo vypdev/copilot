@@ -5,17 +5,28 @@ import type { GitHubReadPort, ReadCancellation, ReadResult } from './read_ports.
 
 import { SharedReadCancellation } from './shared_read_cancellation.ts';
 
-interface CacheEntry { readonly result: Extract<ReadResult, { state: 'ok' }>; readonly expires: number; readonly epoch: number }
+interface CacheEntry { readonly result: Extract<ReadResult, { state: 'ok' }>; readonly expires: number; readonly epoch: object }
 export type ScheduledRead = (ReadResult & { readonly retryAt?: number }) | { readonly state: 'inactive' | 'cooldown' | 'budget' | 'busy' | 'storage-unavailable'; readonly bytes: 0; readonly retryAt?: number };
 export class ReadScheduler {
     private state: ScheduleState | undefined;
     private readonly pending = new Map<string, { task: Promise<ScheduledRead>; cancellation: SharedReadCancellation }>();
     private readonly cache = new Map<string, CacheEntry>();
     private gate: Promise<unknown> = Promise.resolve();
-    private epoch = 0;
+    private epoch: object = {};
+    private readonly cacheWitnesses = new WeakMap<object, object>();
     constructor(private readonly store: StoragePort, private readonly reader: GitHubReadPort,
         private readonly now: () => number, private readonly jitter: () => number) {}
-    invalidate(): void { this.epoch++; this.cache.clear(); for (const entry of this.pending.values()) entry.cancellation.abort(); }
+    invalidate(): void { this.epoch = {}; this.cache.clear(); for (const entry of this.pending.values()) entry.cancellation.abort(); }
+    /** Opaque worker-local witness; contains no cache key, body, identity or scheduling authority. */
+    captureApiCache(): Readonly<object> {
+        const witness = Object.freeze({}); this.cacheWitnesses.set(witness, this.epoch); return witness;
+    }
+    apiCacheCurrent(witness: Readonly<object>): boolean { return this.cacheWitnesses.get(witness) === this.epoch; }
+    clearApiCache(witness: Readonly<object>, current: () => boolean): boolean {
+        if (!this.apiCacheCurrent(witness)) return false;
+        try { if (current() !== true || !this.apiCacheCurrent(witness)) return false; } catch { return false; }
+        this.invalidate(); return true;
+    }
     async run(key: string, repository: string, request: ReadRequest, secret: string, cancellation: ReadCancellation,
         activity: Activity): Promise<ScheduledRead> {
         if (cancellation.aborted) return { state: 'aborted', bytes: 0 };
@@ -36,7 +47,7 @@ export class ReadScheduler {
         finally { release(); }
     }
     private async execute(key: string, repository: string, request: ReadRequest, secret: string, cancellation: ReadCancellation,
-        activity: Activity, epoch: number): Promise<ScheduledRead> {
+        activity: Activity, epoch: object): Promise<ScheduledRead> {
         const reserve = this.gate.then(async () => {
             if (!this.state) {
                 const persisted = await this.store.get('copilot.schedule.v1');

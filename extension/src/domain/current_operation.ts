@@ -7,6 +7,7 @@ import { validSessionFact, type SessionFact } from './session_fact.ts';
 import { validCollectionFact, type CollectionFact } from './collection_fact.ts';
 import { validClearFact, type ClearFact } from './clear_fact.ts';
 import { validPauseFact, type PauseFact } from './pause_fact.ts';
+import { apiCacheFact, type ApiCacheFact } from './api_cache.ts';
 
 /** Private target detail is current-worker memory only, never a generated journal fact. */
 export interface CurrentTarget { readonly location: CenterLocation; readonly label: string | null }
@@ -33,7 +34,11 @@ export interface CurrentPauseOperation {
     readonly family: 'pauses'; readonly stage: PauseFact['state']; readonly fact: PauseFact;
     readonly target: CurrentTarget | null; readonly sourceCurrent: boolean; readonly firstObserved: number; readonly retention: JournalRetention;
 }
-export type CurrentOperationReply = { readonly state: 'empty' } | { readonly state: 'current'; readonly operation: CurrentSettingsOperation | CurrentSessionOperation | CurrentCollectionOperation | CurrentClearOperation | CurrentPauseOperation };
+export interface CurrentApiCacheOperation {
+    readonly family: 'cache'; readonly stage: ApiCacheFact['state']; readonly fact: ApiCacheFact;
+    readonly target: CurrentTarget | null; readonly sourceCurrent: boolean; readonly firstObserved: number; readonly retention: JournalRetention;
+}
+export type CurrentOperationReply = { readonly state: 'empty' } | { readonly state: 'current'; readonly operation: CurrentSettingsOperation | CurrentSessionOperation | CurrentCollectionOperation | CurrentClearOperation | CurrentPauseOperation | CurrentApiCacheOperation };
 export interface CurrentOperationView {
     readonly phase: 'idle' | 'reading' | 'ready' | 'unavailable'; readonly current: boolean; readonly value: CurrentOperationReply | null;
 }
@@ -63,7 +68,15 @@ export function currentSessionOperation(value: unknown): value is CurrentSession
 }
 export function decodeCurrentOperation(value: unknown): CurrentOperationReply | null {
     return decodeHistoryValue(value, (v): v is CurrentOperationReply => exactHistoryFields(v, ['state']) && v.state === 'empty'
-        || exactHistoryFields(v, ['state', 'operation']) && v.state === 'current' && (currentSettingsOperation(v.operation) || currentSessionOperation(v.operation) || currentCollectionOperation(v.operation) || currentClearOperation(v.operation) || currentPauseOperation(v.operation)));
+        || exactHistoryFields(v, ['state', 'operation']) && v.state === 'current' && (currentSettingsOperation(v.operation) || currentSessionOperation(v.operation) || currentCollectionOperation(v.operation) || currentClearOperation(v.operation) || currentPauseOperation(v.operation) || currentApiCacheOperation(v.operation)));
+}
+export function currentApiCacheOperation(value: unknown): value is CurrentApiCacheOperation {
+    return exactHistoryFields(value, ['family', 'stage', 'fact', 'target', 'sourceCurrent', 'firstObserved', 'retention'])
+        && value.family === 'cache' && apiCacheFact(value.fact) && value.stage === value.fact.state
+        && typeof value.sourceCurrent === 'boolean' && natural(value.firstObserved)
+        && (value.target === null || value.sourceCurrent && currentTarget(value.target)
+            && value.target.location.route === 'privacy' && value.target.label === null)
+        && ['pending', 'stored', 'not-retained', 'unknown', 'untracked'].includes(value.retention as string);
 }
 export function currentPauseOperation(value: unknown): value is CurrentPauseOperation {
     return exactHistoryFields(value, ['family', 'stage', 'fact', 'target', 'sourceCurrent', 'firstObserved', 'retention'])

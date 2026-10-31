@@ -3,6 +3,7 @@
     import type { PrivacyRouteProps } from '../domain/center_ui.ts';
     import { BROWSER_CAPABILITIES } from '../domain/permission_inspection.ts';
     import { privacyCopy } from '../domain/privacy_copy.ts';
+    import ApiCachePanel from './ApiCachePanel.svelte';
     let { context, actions }: PrivacyRouteProps = $props();
     const copy = $derived(privacyCopy(context.copy.locale));
     const report = $derived(context.inspection);
@@ -13,6 +14,7 @@
 <a href="#/repositories/pauses">{pauseCopy(context.copy.locale).title}</a>
 <p>{copy.intro}</p>
 <a href="https://docs.page/vypdev/copilot/browser-extension/permissions">{copy.guide}</a>
+<ApiCachePanel locale={context.copy.locale} view={context.cache} canReview={context.canReviewCache} canInspect={context.canInspectCache} actions={actions.cache}/>
 <section aria-labelledby="browser-permissions-heading" aria-busy={report.phase === 'checking'}>
     <h2 id="browser-permissions-heading">{copy.nativeTitle}</h2>
     <button type="button" disabled={report.pending} onclick={() => actions.inspectPermissions()}>{copy.read}</button>

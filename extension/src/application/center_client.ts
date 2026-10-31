@@ -13,6 +13,8 @@ import { RecentsClient } from './recents_client.ts';
 import { readCurrentOperation, readHelperSample, observationContextChanged } from './center_observation_context.ts';
 import { retiredCenterReview, observedSubmittedSettings, type SubmittedSettings } from '../domain/center_retirement.ts';
 import { centerResponse } from './center_response.ts';
+import { requestApiCacheContext } from './api_cache_context.ts';
+import type { ApiCacheRequest } from '../domain/api_cache_request.ts';
 export interface CenterClientPort { readonly sourceTree: string; send(message: CenterRequestMessage): Promise<unknown>; contextChanged?(): void }
 /** One mounted view; reusable authority stays private, while committed receipts are inspectable facts. */
 export class CenterClient {
@@ -75,6 +77,7 @@ export class CenterClient {
         return requestSessionPreferenceContext(input, this.owner, this.stopped || this.value.issue === 'incompatible', ['claiming', 'previewing', 'committing'].includes(this.value.phase) || !!this.value.review,
             message => this.request(message, true), () => this.owner);
     }
+    requestApiCache(input: ApiCacheRequest): Promise<Record<string, unknown> | null> { return requestApiCacheContext(input, this.owner, this.stopped || this.value.issue === 'incompatible', ['claiming', 'previewing', 'committing'].includes(this.value.phase) || !!this.value.review, message => this.request(message, true), () => this.owner); }
     private async finish(generation: number): Promise<void> {
         if (!this.current(generation)) return;
         this.busy = false; this.update({ phase: 'ready' });
@@ -84,8 +87,7 @@ export class CenterClient {
     async start(): Promise<void> {
         if (this.stopped || this.busy) return;
         this.busy = true; const generation = ++this.generation;
-        this.pending = null; this.owner = null; this.recents.contextChanged();
-        this.update({ phase: 'loading', issue: null, review: this.attempted ? publicReview(this.attempted.plan, 'unknown', uncertain()) : this.value.review?.state === 'saved' ? this.value.review : null, role: null, connections: null });
+        this.pending = null; this.owner = null; this.recents.contextChanged(); this.update({ phase: 'loading', issue: null, review: this.attempted ? publicReview(this.attempted.plan, 'unknown', uncertain()) : this.value.review?.state === 'saved' ? this.value.review : null, role: null, connections: null });
         if (!this.current(generation)) return;
         const owner = decodeCenterIdentity(await this.request({ version: 1, method: 'center.open' }));
         if (!this.current(generation)) {
@@ -137,8 +139,7 @@ export class CenterClient {
     async takeControl(): Promise<void> {
         if (this.stopped || !this.owner || this.busy && (this.owner.role !== 'observer' || !['loading', 'reading'].includes(this.value.phase))) return;
         this.busy = true; const generation = ++this.generation; const owner = this.owner;
-        this.pending = null; this.update({ phase: 'claiming', review: null, issue: null });
-        if (!this.current(generation)) return;
+        this.pending = null; this.update({ phase: 'claiming', review: null, issue: null }); if (!this.current(generation)) return;
         const next = decodeCenterIdentity(await this.request({ version: 1, method: 'center.claim', clientId: owner.clientId, controllerEpoch: owner.controllerEpoch }));
         if (this.current(generation)) {
             if (next && next.clientId === owner.clientId) { this.owner = next; this.recents.contextChanged(); this.update({ role: next.role, phase: 'reading' }); await this.load(generation); }
@@ -154,8 +155,7 @@ export class CenterClient {
         if (this.owner.role !== 'editor') { this.update({ issue: 'denied' }); return; }
         this.attempted = null;
         this.busy = true; const generation = this.generation; const owner = this.owner;
-        this.update({ phase: 'previewing', issue: null });
-        if (!this.current(generation)) return;
+        this.update({ phase: 'previewing', issue: null }); if (!this.current(generation)) return;
         const result = decodeCenterPreview(await this.request({ version: 1, method: 'center.preview',
             clientId: owner.clientId, controllerEpoch: owner.controllerEpoch, credentialEpoch: owner.credentialEpoch,
             expectedRevision, intent }));
