@@ -99,6 +99,16 @@ with fresh source builds. Invalid UTF-8 and malformed/noncanonical receipts are
 rejected rather than accepted as verified output.
 No timestamps, absolute source paths or secrets are included in the receipt.
 
+The builder always selects production mode, production browser/module exports
+and a constant production `process.env.NODE_ENV`, and ignores local environment
+files. Running it from a test runner or a development shell must produce the
+same complete artifacts and receipt as a production caller. No packaging
+environment override is exposed. `development-build-only` identifies local
+distribution evidence; the runtime itself uses the production Svelte build.
+The four-environment regression runs the real compiler in fresh child processes
+and compares every target byte. When validation reports stale output, run the
+complete build and validation again; do not edit its receipt to match old bytes.
+
 | Target | Chosen API floor | Development background | Identity |
 |---|---|---|---|
 | Chrome | 140 | MV3 module service worker | Development name; unpacked artifact |

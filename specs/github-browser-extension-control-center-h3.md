@@ -389,6 +389,24 @@ Executable test configuration lives in the covered tooling module; the Vitest
 entrypoint only re-exports it. A green empty report for an automatically excluded
 configuration file does not establish coverage of its logic.
 
+Every packaged target MUST select production browser/module export conditions,
+production mode and the constant production `process.env.NODE_ENV`, regardless
+of whether its caller runs under production, test, development or an unset
+`NODE_ENV`. The build ignores local environment files; these are not declared
+extension inputs. Each compiler invocation receives fresh resolution conditions
+because plugins can extend them. This fixed packaging policy has no user
+override and does not require changing the caller's environment. The receipt's
+`development-build-only` label describes distribution/signing evidence, not
+permission to include the development Svelte runtime. Explicit component
+`dev: false` alone does not control imported runtime conditional exports.
+The actual four-environment child-process regression compares complete target
+bytes and receipts and rejects the development-only hooks observed in the
+failure. Existing integrity, current-source and two-clean-build gates remain
+mandatory. This follows Vite's primary guidance on
+[conditional resolution](https://vite.dev/config/shared-options.html#resolve-conditions),
+[environment versus mode](https://vite.dev/guide/env-and-mode.html) and
+[library builds](https://vite.dev/guide/build.html#library-mode).
+
 Architecture validation inspects the original typed instance/module scripts,
 markup and styles before compilation. Erased type-only imports still obey layer
 boundaries. Components stay in presentation and at most ninety lines; domain
@@ -1046,6 +1064,15 @@ an import conflicted by a newer stored revision, and a reset quota failure with
 the original complete envelope retained and explicit read recovery. It mounts
 the actual foreground/review/gateway; its file and native-storage boundaries are
 deterministic fixtures, so it cannot replace native or human acceptance.
+
+`build_environment.test.ts` adds a three-case packaging risk supplement: a
+test-runner caller versus production, development/unset callers with the parent
+environment retained, and absence of the actual development-only HMR/proxy
+hooks in the pinned production runtime. These build real complete artifacts in
+fresh child processes without compiler mocks. Target and environment matrix
+repetitions do not increase this three-case count. Byte equality includes each
+receipt and every target file; it is packaging evidence rather than loaded
+browser or human acceptance.
 
 Repository-wide existing gates remain in force. New pure evidence/eligibility/intent/approval policies require 100% branch coverage; other new modules require at least 95% statements and 90% branches, with changed executable lines covered. Keep modules at or below 220 lines and Svelte components at or below 90 lines unless a reviewed decomposition exception is recorded. Add risk-derived cases beyond this floor when findings require them. Use deterministic clocks, IDs and fakes; no real waits or live services in unit tests. Contract tests parse schemas/routes/manifests rather than grep prose. Golden UI fixtures require semantic assertions. Human evidence must assess readability, keyboard/focus, screen-reader behavior, 200% zoom and narrow layouts on all three target environments. Existing catalog cases, including all 56 CENTER cases and relevant existing center cross-boundary cases, remain required and are not counted in this new inventory.
 

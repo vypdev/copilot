@@ -3788,7 +3788,8 @@
         "extension/test/integration/center_browser_journey.test.ts",
         "extension/test/integration/center_browser_scripts.test.ts",
         "extension/test/integration/center_browser_cli.test.ts",
-        "extension/test/integration/data_recovery_journeys.test.ts"
+        "extension/test/integration/data_recovery_journeys.test.ts",
+        "extension/test/integration/build_environment.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",
