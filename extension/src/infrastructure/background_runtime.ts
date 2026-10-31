@@ -1,4 +1,5 @@
 import { buildSourceIdentity } from './build_identity.ts';
+import { CenterChannelHost } from '../adapters/browser/center_channel_host.ts';
 import { record } from '../domain/value.ts';
 import { extensionSender } from '../domain/protocol.ts';
 import type { BrowserApi } from '../adapters/browser/api.ts';
@@ -73,13 +74,16 @@ export function startBackground(api: BrowserApi): () => void {
     const message: Parameters<typeof api.runtime.onMessage.addListener>[0] = (value, sender, respond) => {
         void gateway.handle(value, sender).then(result => respond({ ...(record(result) ? result : { state: 'unavailable' }), sourceTree: buildSourceIdentity() })); return true;
     };
+    const channel = new CenterChannelHost(api.runtime, { release: source => gateway.releaseCenterSource(source),
+        handle: async (value, sender, source) => ({ ...await gateway.handle(value, sender, source) as object, sourceTree: buildSourceIdentity() }) });
     const pauseTargetsChanged = (tabId: number, retired: boolean) => { void api.runtime.sendMessage({ version: 1, method: 'center.pauses.targets.changed', tabId, retired }).catch(() => undefined); };
-    const removed = (id: number) => { gateway.invalidate(id); gateway.releaseCenterTab(id); gateway.releaseHelperTab(id); closedPauses.close(id); pauseTargetsChanged(id, true); };
+    const removed = (id: number) => { channel.releaseTab(id); gateway.invalidate(id); gateway.releaseCenterTab(id); gateway.releaseHelperTab(id); closedPauses.close(id); pauseTargetsChanged(id, true); };
     // Native tab events cancel the owning lease even on protected routes and same-URL reloads.
     const updated = (id: number, changes: { url?: string; status?: string }) => {
         if (changes.url || changes.status === 'loading' || changes.status === 'complete') pauseTargetsChanged(id, !!changes.url || changes.status === 'loading');
         if (changes.url || changes.status === 'loading') gateway.invalidate(id);
-        if (changes.status === 'loading' || (changes.url && !extensionSender({ id: api.runtime.id, url: changes.url }, api.runtime.id, api.runtime.getURL('')))) gateway.releaseCenterTab(id);
+        if (changes.url && !extensionSender({ id: api.runtime.id, url: changes.url }, api.runtime.id, api.runtime.getURL(''))) { channel.releaseTab(id); gateway.releaseCenterTab(id); }
+        else if (changes.status === 'loading') gateway.releaseCenterTab(id, true);
     };
     // An activated tab's URL may still be unavailable; use this only to cancel, never to authorize.
     const activated = () => { gateway.invalidate(); };
@@ -104,7 +108,7 @@ export function startBackground(api: BrowserApi): () => void {
     api.storage.onChanged.addListener(storage); api.action.onClicked.addListener(open);
     void history.refresh();
     return () => {
-        closedPauses.stop(); history.stop(); gateway.shutdown(); void sessions.revoke();
+        channel.stop(); closedPauses.stop(); history.stop(); gateway.shutdown(); void sessions.revoke();
         api.runtime.onMessage.removeListener(message); api.tabs.onRemoved.removeListener(removed);
         api.tabs.onUpdated.removeListener(updated); api.permissions.onRemoved.removeListener(permission);
         api.tabs.onActivated.removeListener(activated);

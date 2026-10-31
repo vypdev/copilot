@@ -1,6 +1,7 @@
 import { mount, unmount, flushSync, tick } from 'svelte';
 import type { BrowserApi } from '../adapters/browser/api.ts';
 import { CenterClient } from '../application/center_client.ts';
+import { CenterChannelClient } from '../adapters/browser/center_channel_client.ts';
 import { CenterNavigation } from '../application/center_navigation.ts';
 import { SETTINGS_KEY } from '../application/settings_repository.ts';
 import { centerFrame } from '../domain/center_frame.ts';
@@ -37,7 +38,8 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
     if (window.location.search || !parseCenterLocation(window.location.hash)) {
         window.location.replace(`${canonical}#/recovery`); return () => undefined;
     }
-    const client = new CenterClient({ sourceTree: buildSourceIdentity(), send: message => api.runtime.sendMessage(message), contextChanged: () => {
+    const channel = new CenterChannelClient(api.runtime, () => client.disconnected());
+    const client = new CenterClient({ sourceTree: buildSourceIdentity(), send: message => channel.send(message), contextChanged: () => {
         operation.clear(); void operation.read(); helpers.invalidate(); void helpers.read(); pauses.contextChanged(); readPauses(); transient.contextChanged();
     } });
     const packageIdentity = readPackageIdentity(api, buildSourceIdentity());
@@ -117,8 +119,8 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
     let operationRole: typeof client.view.role;
     const unsubscribe = client.subscribe(view => {
         if (view.role !== operationRole) { operationRole = view.role; pauses.contextChanged(); readPauses(); transient.contextChanged(); if (view.role === 'editor' || view.role === 'observer') { void operation.read(); void helpers.read(); } }
-        if (view.role === null || view.issue === 'incompatible') { operation.clear(); helpers.invalidate(); pauses.contextChanged(); transient.contextChanged(); }
-        if (view.role === 'observer' || view.issue === 'incompatible') history.reviews.retire();
+        if (view.role === null || view.issue === 'incompatible') { operation.clear(); helpers.invalidate(); pauses.contextChanged(); transient.contextChanged(); history.reader.invalidate(); }
+        if (view.role === null || view.role === 'observer' || view.issue === 'incompatible') history.reviews.retire();
         if (view.issue === 'incompatible') history.reader.invalidate();
         protect();
         if (view.review?.state === 'saved' && savedRevision < view.review.revision + 1) savedCandidate = { ...view.review.after, revision: view.review.revision + 1 };
@@ -173,7 +175,7 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
         retireObservations();
         readPauses();
         transient.read();
-        if (focused && document.visibilityState !== 'hidden') { connectionReadPending = true; void client.refresh().then(() => { readHistory(); void operation.read(); void helpers.read(); }); readPermissions(); }
+        if (focused && document.visibilityState !== 'hidden') { connectionReadPending = true; void client.refreshActive().then(() => { readHistory(); void operation.read(); void helpers.read(); }); readPermissions(); }
     };
     const blurred = () => { focused = false; retireObservations(); };
     const foreground = () => { focused = true; visible(); };
@@ -192,7 +194,7 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
     const beforeUnload = (event: BeforeUnloadEvent) => { if (navigation.guarded) { event.preventDefault(); event.returnValue = ''; } };
     const stop = () => {
         if (stopped) return;
-        stopped = true; inspector.stop(); unobservePermissions(); unsubscribe(); unhistory(); unpauses(); history.stop(); pauses.stop(); transient.stop(); operation.stop(); helpers.stop(); client.stop(); listeners.clear(); void unmount(host);
+        stopped = true; inspector.stop(); unobservePermissions(); unsubscribe(); unhistory(); unpauses(); history.stop(); pauses.stop(); transient.stop(); operation.stop(); helpers.stop(); client.stop(); channel.stop(); listeners.clear(); void unmount(host);
         window.removeEventListener('hashchange', hash); document.removeEventListener('visibilitychange', visible);
         window.removeEventListener('beforeunload', beforeUnload); window.removeEventListener('pagehide', stop);
         window.removeEventListener('blur', blurred); window.removeEventListener('focus', foreground);

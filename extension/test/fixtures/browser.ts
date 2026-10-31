@@ -1,10 +1,10 @@
 import { vi } from 'vitest';
-import type { BrowserApi, BrowserEvent, BrowserStorageArea } from '../../src/adapters/browser/api.ts';
+import type { BrowserApi, BrowserStorageArea } from '../../src/adapters/browser/api.ts';
+import { nativePortPair } from './native_port.ts';
+import { CENTER_SENDER } from './center.ts';
+import { event } from './browser_event.ts';
+export { event } from './browser_event.ts';
 
-export function event<T>(): BrowserEvent<T> & { listeners: Set<T> } {
-    const listeners = new Set<T>();
-    return { listeners, addListener: vi.fn(listener => { listeners.add(listener); }), removeListener: vi.fn(listener => { listeners.delete(listener); }) };
-}
 function storageFixture() {
     const values = new Map<string, unknown>();
     const area: BrowserStorageArea = { get: vi.fn(async key => ({ [key]: values.get(key) })),
@@ -21,12 +21,19 @@ export function browserFixture() {
     const permissionRemoved = event<(value: { origins?: string[] }) => void>();
     const changed = event<(value: Record<string, unknown>, area: string) => void>();
     const clicked = event<() => void>();
+    const onConnect = event<Parameters<BrowserApi['runtime']['onConnect']['addListener']>[0]>();
+    const ports: ReturnType<typeof nativePortPair>[] = [];
+    const connect: BrowserApi['runtime']['connect'] = options => {
+        const pair = nativePortPair(options.name, CENTER_SENDER); ports.push(pair);
+        queueMicrotask(() => { if (!onConnect.listeners.size) pair.server.disconnect(); else for (const listener of onConnect.listeners) listener(pair.server); });
+        return pair.client;
+    };
     const api: BrowserApi = { runtime: { id: 'test', getURL: path => `chrome-extension://test/${path}`,
-        sendMessage: vi.fn(async () => ({ state: 'disconnected' })), onMessage },
+        sendMessage: vi.fn(async () => ({ state: 'disconnected' })), onMessage, onConnect, connect: vi.fn(connect) },
     storage: { local: local.area, session: session.area, onChanged: changed },
     permissions: { contains: vi.fn(async () => true), request: vi.fn(async () => true), onRemoved: permissionRemoved },
     tabs: { get: vi.fn(async () => ({ url: 'https://github.com/octo/example/issues/42', active: true, incognito: false, windowId: 1 })),
         query: vi.fn(async () => []), sendMessage: vi.fn(async () => undefined), create: vi.fn(async () => undefined), onUpdated, onRemoved, onActivated },
     action: { onClicked: clicked }, extension: { inIncognitoContext: false } };
-    return { api, localArea: local.area, localValues: local.values, sessionArea: session.area, sessionValues: session.values, onMessage, onUpdated, onRemoved, onActivated, permissionRemoved, changed, clicked };
+    return { api, localArea: local.area, localValues: local.values, sessionArea: session.area, sessionValues: session.values, onMessage, onConnect, ports, onUpdated, onRemoved, onActivated, permissionRemoved, changed, clicked };
 }

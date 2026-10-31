@@ -22,10 +22,11 @@ export type CenterMessage = Version & { readonly method: 'center.open' }
     | Confirmation & { readonly method: 'center.cancel' };
 export type ConnectionMessage = Client & { readonly method: 'center.connections.read' }
     | Editor & { readonly method: 'center.connections.change'; readonly credentialEpoch: number; readonly expectedRevision: number; readonly intent: ConnectionIntent };
+export type CenterRequestMessage = CenterMessage | ConnectionMessage | HistoryMessage | PauseMessage | SessionPreferenceMessage;
 export { MAX_CENTER_RESPONSE_BYTES } from './center_limits.ts';
 
 /** Center authority is a closed protocol; content pages never receive these methods. */
-export function parseCenterMessage(value: unknown): CenterMessage | ConnectionMessage | HistoryMessage | PauseMessage | SessionPreferenceMessage | null {
+export function parseCenterMessage(value: unknown): CenterRequestMessage | null {
     if (isHistoryMessage(value)) return value;
     if (isPauseMessage(value)) return value;
     if (isSessionPreferenceMessage(value)) return value;

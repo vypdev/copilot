@@ -35,7 +35,8 @@ export class MessageGateway {
         private readonly connections?: NamedSessions, private readonly helpers?: HelperSamples, private readonly pauses?: TemporaryPauseReader,
         private readonly sessionPreferences?: SessionPreferenceAdmission) {}
     releaseHelperTab(id: number): void { this.helpers?.releaseTab(id); }
-    releaseCenterTab(id: number): void { this.center?.releaseTab(id); }
+    releaseCenterTab(id: number, legacyOnly = false): void { this.center?.releaseTab(id, legacyOnly); }
+    releaseCenterSource(source: Readonly<object>): void { this.center?.releaseSource(source); }
     shutdown(): void { if (this.stopped) return; this.stopped = true; this.invalidate(); this.center?.shutdown(); this.helpers?.stop(); }
     invalidatePreferenceSources(): void { this.center?.invalidatePreferenceSources(); }
     invalidate(tabId?: number, notify = true): void {
@@ -92,11 +93,11 @@ export class MessageGateway {
             await this.sessions.revoke(); return { state: 'unavailable' };
         }
     }
-    async handle(value: unknown, sender: Sender): Promise<unknown> {
+    async handle(value: unknown, sender: Sender, source?: Readonly<object>): Promise<unknown> {
         if (this.stopped) return { state: 'rejected' };
         const center = parseCenterMessage(value);
         if (center) return extensionSender(sender, this.id, this.origin) && this.center
-            ? this.center.handle(center, sender) : { state: 'rejected' };
+            ? this.center.handle(center, sender, source) : { state: 'rejected' };
         const message = parseMessage(value);
         if (!message || !allowedMessage(message, sender, this.id, this.origin)) return { state: 'rejected' };
         // Retained H2 tabs cannot bypass H3's review, controller or named-selection authority.

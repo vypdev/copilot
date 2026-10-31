@@ -10,6 +10,7 @@ import { startCenter } from '../../src/infrastructure/center_app.ts';
 import { DEFAULT_SETTINGS } from '../../src/domain/settings.ts';
 import { supportCopy } from '../../src/domain/support_copy.ts';
 import { SETTINGS_KEY } from '../../src/application/settings_repository.ts';
+import { semanticCenterChannel } from '../fixtures/semantic_center_channel.ts';
 
 const copy = supportCopy('en');
 const seen = () => document.querySelector('[data-support-status]')?.textContent;
@@ -17,6 +18,7 @@ const observed = () => ready(() => !!document.querySelector('[data-support-statu
 it.each(['help', 'about', 'recovery'] as const)('the %s route works even when native settings opening never settles', async route => {
     const h = browserFixture(); const wait = deferred<unknown>();
     h.api.runtime.getURL = path => `https://extension.test/${path}`; vi.mocked(h.api.runtime.sendMessage).mockImplementation(() => wait.promise);
+    semanticCenterChannel(h.api, message => h.api.runtime.sendMessage(message), 'unbundled');
     h.api.runtime.getManifest = vi.fn(() => ({ name: 'Copilot', version: '0.1.0', manifest_version: 3 }));
     window.history.replaceState(null, '', `https://extension.test/runtime.html#/${route}`); const stop = startCenter(h.api, document, 'en');
     try {

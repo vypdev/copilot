@@ -5,6 +5,7 @@ import { SETTINGS_KEY } from '../../src/application/settings_repository.ts';
 import { browserFixture } from './browser.ts';
 import { centerClientFixture } from './center_client.ts';
 import { CENTER_BINDING } from './center.ts';
+import { semanticCenterChannel } from './semantic_center_channel.ts';
 
 const stops: (() => void)[] = [];
 afterEach(async () => { for (const stop of stops.splice(0)) stop(); await tick(); document.body.replaceChildren();
@@ -19,6 +20,7 @@ export async function render(route = 'overview', observer = false, initial?: unk
     if (observer) native.native.open({ ...CENTER_BINDING, documentId: 'other-window', tabId: 2 });
     vi.stubGlobal('__COPILOT_SOURCE_TREE__', native.port.sourceTree);
     browser.api.runtime.sendMessage = vi.fn(message => native.port.send(message as Parameters<typeof native.port.send>[0]));
+    semanticCenterChannel(browser.api, message => browser.api.runtime.sendMessage(message), native.port.sourceTree);
     configure(browser);
     const stop = startCenter(browser.api, document, language); stops.push(stop);
     await ready(() => document.querySelector('h1') !== null && document.querySelector('main')?.getAttribute('aria-busy') === 'false' && (!hasSettings || !!document.querySelector('main .revision')));

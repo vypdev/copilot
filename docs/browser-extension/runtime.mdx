@@ -184,9 +184,24 @@ selected read session. An older attempt cannot mix its credential or repository
 with the newer identity, or overwrite its status after a late permission result.
 
 This also applies while connection preferences are being saved: an older failed
-save or permission check cannot disconnect the newer session. Leaving a page or
-reloading the same URL cancels that page's pending background read through the
-browser's native navigation events.
+save or permission check cannot disconnect the newer session. Leaving a GitHub
+page or reloading the same URL cancels that page's pending background read
+through the browser's native navigation events.
+
+The local center has a separate document lifetime. Moving between its sections
+keeps the same native connection and editing window, including unsaved drafts.
+Tab loading events alone do not close it: Chrome also reports loading during
+some same-document navigation. Closing or reloading the actual document retires
+its connection. A background restart can also disconnect it; keeping an options
+tab open does not keep the background alive indefinitely.
+
+When the background cannot be reached, editing becomes unavailable. Choose
+**Read current settings** to reconnect and inspect current facts. A pending
+preview becomes stale; an already submitted save remains uncertain until its
+exact receipt and values are read back. A saved fact is preserved across a later
+failed read. No reconnect repeats a mutation or restores a credential implicitly.
+See [center recovery](/browser-extension/troubleshooting) and
+[local data and privacy](/browser-extension/privacy).
 
 
 ## Bring a helper sample to the local center

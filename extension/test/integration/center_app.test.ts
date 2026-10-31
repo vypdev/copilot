@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // @vitest-environment-options {"url":"https://extension.test/runtime.html"}
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 import { flushSync, tick } from 'svelte';
 import { ready, render, button, change, navigate, save } from '../fixtures/center_app_dom.ts';
 import { SETTINGS_KEY } from '../../src/application/settings_repository.ts';
@@ -72,7 +72,7 @@ it('reacts only to native background invalidations and settings changes, and clo
     for (const listener of h.browser.changed.listeners) listener({ [SETTINGS_KEY]: {} }, 'local');
     await ready(() => h.port.send.mock.calls.length > reads); h.stop(); h.stop(); await tick();
     expect(h.browser.onMessage.listeners.size).toBe(0); expect(h.browser.changed.listeners.size).toBe(0);
-    expect(h.port.send.mock.calls.at(-1)?.[0].method).toBe('center.close');
+    expect(vi.mocked(h.browser.api.runtime.connect).mock.results[0].value.disconnect).toHaveBeenCalledOnce();
 });
 it('imports only a bounded validated preferences document and previews it before writing', async () => {
     const h = await render('data'); await ready(() => !!document.querySelector('#center-import'));

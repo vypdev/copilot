@@ -448,6 +448,13 @@ a draft restores the local route, and leaving requires explicit discard.
 Navigation cannot undo an in-flight write. Options URLs containing queries or
 invalid initial routes reload the fixed recovery URL before registration.
 
+The [native document-lifetime refinement](github-browser-extension-center-lifetime.md)
+owns transport and retirement: the options document uses a bounded native Port
+whose private source survives same-document route changes. Generic tab loading
+events are insufficient to prove disposal. Native disconnect, tab removal and
+departure retire that source; recovery is an explicit read without write replay.
+The refinement's tests and actual browser proof are additional H3 requirements.
+
 Appearance is one atomic intent covering theme, density, text size, motion and
 contrast. Profile create/edit/select/remove, language, import/reset/rollback use
 the same retained review protocol. Import reads at most 64 KiB, requires valid

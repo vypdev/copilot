@@ -20,17 +20,19 @@ export class CenterGateway {
         private readonly settings: SettingsRepository, private readonly connections?: NamedSessions, private readonly history?: HistoryGateway,
         private readonly current?: CurrentOperations, private readonly helpers?: HelperSamples, private readonly pauses?: TemporaryPauseGateway, private readonly sessionPreferences?: SessionPreferenceGateway) {}
     invalidatePreferenceSources(): void { this.sessionPreferences?.invalidate(); }
-    releaseTab(id: number): void { this.pauses?.invalidateTab(id); this.controller.releaseTab(id); }
+    releaseTab(id: number, legacyOnly = false): void { this.pauses?.invalidateTab(id); this.controller.releaseTab(id, legacyOnly); }
+    releaseSource(source: Readonly<object>): void { this.controller.releaseSource(source); }
     shutdown(): void { this.sessionPreferences?.invalidate(); this.pauses?.invalidate(); this.current?.stop(); this.controller.shutdown(); }
-    async handle(message: CenterMessage | ConnectionMessage | HistoryMessage | PauseMessage | SessionPreferenceMessage, sender: Sender): Promise<unknown> {
+    async handle(message: CenterMessage | ConnectionMessage | HistoryMessage | PauseMessage | SessionPreferenceMessage, sender: Sender, source?: Readonly<object>): Promise<unknown> {
         try {
-            const result = await this.dispatch(message, sender);
+            const result = await this.dispatch(message, sender, source);
             return jsonBytesWithin(result, MAX_CENTER_RESPONSE_BYTES) ? result : { state: 'unavailable' };
         } catch { return { state: 'unavailable' }; }
     }
-    private async dispatch(message: CenterMessage | ConnectionMessage | HistoryMessage | PauseMessage | SessionPreferenceMessage, sender: Sender): Promise<unknown> {
-        const binding = centerBinding(sender);
-        if (!binding) return { state: 'rejected' };
+    private async dispatch(message: CenterMessage | ConnectionMessage | HistoryMessage | PauseMessage | SessionPreferenceMessage, sender: Sender, source?: Readonly<object>): Promise<unknown> {
+        const native = centerBinding(sender);
+        if (!native) return { state: 'rejected' };
+        const binding = source === undefined ? native : { ...native, source };
         if (message.method === 'center.open') return this.controller.open(binding);
         if (message.method === 'center.claim') return this.controller.claim(message.clientId, binding, message.controllerEpoch);
         if (message.method === 'center.close') return this.controller.close(message.clientId, binding, message.controllerEpoch);

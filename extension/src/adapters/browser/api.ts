@@ -1,6 +1,12 @@
 import type { Sender } from '../../domain/protocol.ts';
 
 export interface BrowserEvent<T> { addListener(listener: T): void; removeListener(listener: T): void }
+export interface BrowserPort {
+    readonly name: string; readonly sender?: Sender;
+    postMessage(value: unknown): void; disconnect(): void;
+    onMessage: BrowserEvent<(value: unknown) => void>;
+    onDisconnect: BrowserEvent<() => void>;
+}
 export interface BrowserStorageArea {
     get(key: string): Promise<Record<string, unknown>>;
     set(value: Record<string, unknown>): Promise<void>;
@@ -10,6 +16,9 @@ export interface BrowserStorageArea {
 export interface BrowserApi {
     runtime: {
         id: string; getURL(path: string): string; sendMessage(value: unknown): Promise<unknown>;
+        connect(options: { name: string }): BrowserPort;
+        readonly lastError?: unknown;
+        onConnect: BrowserEvent<(port: BrowserPort) => void>;
         getManifest?(): unknown;
         onMessage: BrowserEvent<(value: unknown, sender: Sender, respond: (result: unknown) => void) => boolean | void>;
     };

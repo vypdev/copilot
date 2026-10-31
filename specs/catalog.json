@@ -2929,7 +2929,7 @@
       "status": "proposed",
       "scope": "Complete proposed desktop product: 150 required functions, local center, Action integration, shared setup and 803 product cases. H1 establishes builds; H2 implements shared runtime/session/settings/GET services and exact native-browser harnesses. Full product/core acceptance and signed delivery remain separate gates.",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-30",
+      "lastVerified": "2026-10-31",
       "specs": [
         "specs/github-browser-extension.md",
         "specs/github-browser-extension-action-integration.md",
@@ -2943,7 +2943,8 @@
         "specs/github-browser-extension-local-journal.md",
         "specs/github-browser-extension-collection-consent.md",
         "specs/github-browser-extension-session-preferences.md",
-        "specs/github-browser-extension-credential-roles.md"
+        "specs/github-browser-extension-credential-roles.md",
+        "specs/github-browser-extension-center-lifetime.md"
       ],
       "workflows": [
         ".github/workflows/ci_check.yml",
@@ -3342,7 +3343,12 @@
         "extension/src/domain/credential_role_copy.ts",
         "extension/src/domain/session_vault_plan.ts",
         "extension/src/presentation/OptionalRoleStates.svelte",
-        "extension/src/presentation/RoleSelectionReview.svelte"
+        "extension/src/presentation/RoleSelectionReview.svelte",
+        "extension/src/domain/center_channel.ts",
+        "extension/src/domain/center_retirement.ts",
+        "extension/src/adapters/browser/center_channel_client.ts",
+        "extension/src/adapters/browser/center_channel_host.ts",
+        "extension/src/application/center_response.ts"
       ],
       "tests": [
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
@@ -3745,7 +3751,15 @@
         "extension/test/contracts/read_role_consumers.test.ts",
         "extension/test/integration/read_role_presentation.test.ts",
         "extension/test/integration/read_role_composition.test.ts",
-        "extension/test/fixtures/read_role_center.ts"
+        "extension/test/fixtures/read_role_center.ts",
+        "extension/test/contracts/center_channel.test.ts",
+        "extension/test/contracts/center_retirement.test.ts",
+        "extension/test/adapters/center_channel_client.test.ts",
+        "extension/test/adapters/center_channel_host.test.ts",
+        "extension/test/integration/center_source_ownership.test.ts",
+        "extension/test/integration/native_center_lifetime.test.ts",
+        "extension/test/integration/native_center_page.test.ts",
+        "extension/test/integration/center_transport_retirement.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",
@@ -3782,7 +3796,8 @@
         "docs/browser-extension/shortcuts.mdx",
         "docs/browser-extension/onboarding.mdx",
         "docs/browser-extension/local-history.mdx",
-        "docs/browser-extension/troubleshooting.mdx"
+        "docs/browser-extension/troubleshooting.mdx",
+        "docs/browser-extension/privacy.mdx"
       ]
     }
   ]

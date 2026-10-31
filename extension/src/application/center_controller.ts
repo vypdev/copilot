@@ -3,7 +3,7 @@ import { natural } from '../domain/value.ts';
 import type { Sender } from '../domain/protocol.ts';
 import type { SettingsOwnerFence } from './settings_transaction_ports.ts';
 
-export interface CenterBinding { readonly documentId: string | null; readonly tabId: number | null }
+export interface CenterBinding { readonly documentId: string | null; readonly tabId: number | null; readonly source?: Readonly<object> }
 export interface CenterClient extends SettingsOwnerFence { readonly state: 'ready'; readonly clientId: string; readonly role: 'editor' | 'observer' }
 export interface CenterControllerPorts {
     now(): number; identifier(): string; permitted(): boolean; credentialEpoch(): number; changed(): void;
@@ -16,7 +16,7 @@ export function centerBinding(sender: Sender): CenterBinding | null {
     if (sender.tab?.id !== undefined && !natural(sender.tab.id)) return null;
     return { documentId: sender.documentId ?? null, tabId: sender.tab?.id ?? null };
 }
-const sameBinding = (a: CenterBinding, b: CenterBinding) => a.documentId === b.documentId && a.tabId === b.tabId;
+const sameBinding = (a: CenterBinding, b: CenterBinding) => a.documentId === b.documentId && a.tabId === b.tabId && a.source === b.source;
 
 /** Worker-local editing ownership is separate from persisted settings and credentials. */
 export class CenterController {
@@ -52,7 +52,7 @@ export class CenterController {
         const now = this.time();
         if (now === null) return { state: 'unavailable' };
         // A tab ID alone survives reloads: it must never revive another document's client.
-        if (binding.documentId !== null) for (const [id, client] of this.clients) if (sameBinding(client.binding, binding)) {
+        if (binding.source !== undefined || binding.documentId !== null) for (const [id, client] of this.clients) if (sameBinding(client.binding, binding)) {
             client.touchedAt = now; return this.view(id);
         }
         if (this.clients.size >= 8) return { state: 'busy' };
@@ -80,8 +80,12 @@ export class CenterController {
         this.clients.delete(id); if (this.editor === id) this.bump();
         return { state: 'closed' };
     }
-    releaseTab(tabId: number): void {
-        for (const [id, client] of this.clients) if (client.binding.tabId === tabId) {
+    releaseTab(tabId: number, legacyOnly = false): void {
+        this.release(binding => binding.tabId === tabId && (!legacyOnly || binding.source === undefined));
+    }
+    releaseSource(source: Readonly<object>): void { this.release(binding => binding.source === source); }
+    private release(matches: (binding: CenterBinding) => boolean): void {
+        for (const [id, client] of this.clients) if (matches(client.binding)) {
             this.clients.delete(id); if (this.editor === id) this.bump();
         }
     }

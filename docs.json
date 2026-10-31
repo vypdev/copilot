@@ -355,6 +355,11 @@
           "icon": "shield"
         },
         {
+          "title": "Local data and privacy",
+          "href": "/browser-extension/privacy",
+          "icon": "shield"
+        },
+        {
           "title": "Local activity and history",
           "href": "/browser-extension/local-history",
           "icon": "clock"
