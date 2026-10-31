@@ -2441,3 +2441,33 @@ docs, Graphify and complete reproducible package gates. Final-source real-browse
 and human H3 acceptance remains required after these intended flows are complete;
 the preceding cache-only package does not certify them. No source push or PR is
 allowed until the complete #704 requirements and acceptance are satisfied.
+
+### Migration and identity-isolation acceptance cross-check (2026-10-31)
+
+The canonical CENTER migration/isolation scenarios require behavior assertions,
+not a case tag or an inventory count. Add two distinct composed acceptance cases
+for the supported nested Center schema 1→2 migration:
+
+1. Open the actual center with a complete authored legacy revision. Verify one
+   atomic current/previous envelope, unchanged revision, exact preservation of
+   feature choices, scoped profiles, favorites, shortcut bindings, appearance,
+   language, onboarding and collection preferences. Visit the corresponding
+   mounted tools and verify their retained values. The protected connection
+   vault remains byte-for-byte unchanged; viewing performs no browser grant or
+   second migration write.
+2. Starting from that migrated center, change the verified repository and then
+   the verified account through the actual connection owner. The native
+   invalidation clears the prior private projection before asynchronous refresh.
+   The old scoped profile cannot become the new selection's effective feature
+   source. Personal appearance/language choices intentionally remain global;
+   isolation must not erase authored preferences or implicitly save defaults.
+
+These are two shared cross-boundary cases, not one new case per feature or route.
+Keep the existing migration quota/lost-acknowledgement and protected-purpose
+isolation cases. Strengthen the existing unknown-preferences history case with
+both future and corrupt inputs: Activity/Diagnostics may inspect separately
+owned retained facts, but cannot activate collection or replace the exact
+unreadable preference record. No production behavior, configuration, permission,
+schema or architecture boundary changes in this acceptance-only refinement.
+Run both full normal/Node-floor suites and the existing catalog/documentation,
+Graphify and package gates; final-source native and human acceptance stays open.

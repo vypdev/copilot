@@ -19,10 +19,14 @@ it('actual native-center routes preserve stop/start and clear as distinct review
     expect(await f.call({ ...owner, method: 'center.history.clear.confirm', operationId: clear.operationId })).toMatchObject({ state: 'observed-cleared', acknowledgement: 'accepted' });
     expect(f.history.writer.retention(ticket)).toBe('untracked'); expect(f.sessions.reader.read).not.toHaveBeenCalled();
 });
-it('history inspection is independent from unreadable preferences; native source admission still applies', async () => {
-    const f = historyGatewayFixture(); const owner = await f.open(); f.values.set(SETTINGS_KEY, { schemaVersion: 99 });
-    expect(await f.call({ method: 'center.history.read', kind: 'recents', clientId: owner.clientId })).toMatchObject({ state: 'ready', collection: { preference: 'unknown' }, retained: { state: 'ready' } });
-    const preview = await f.call({ ...owner, method: 'center.collection.preview', kind: 'recents', action: 'start' }); expect(preview).toEqual({ state: 'future' });
+it.each([{ schemaVersion: 99 }, { malformed: true }])('history inspection preserves exact unreadable preferences %j; native source admission still applies', async initial => {
+    const f = historyGatewayFixture(); const owner = await f.open(); f.values.set(SETTINGS_KEY, initial);
+    for (const kind of ['recents', 'diagnostics']) {
+        expect(await f.call({ method: 'center.history.read', kind, clientId: owner.clientId })).toMatchObject({ state: 'ready', collection: { preference: 'unknown' }, retained: { state: 'ready' } });
+        const preview = await f.call({ ...owner, method: 'center.collection.preview', kind, action: 'start' });
+        expect(preview).toEqual({ state: 'schemaVersion' in initial ? 'future' : 'corrupt' });
+    }
+    expect(f.values.get(SETTINGS_KEY)).toEqual(initial);
     expect(f.port.set).not.toHaveBeenCalled();
 });
 it('observers may inspect but cannot change collection or clear; takeover invalidates both kinds of old retained plan', async () => {

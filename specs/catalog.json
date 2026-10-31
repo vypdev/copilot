@@ -3833,7 +3833,8 @@
         "extension/test/contracts/local_navigation.test.ts",
         "extension/test/integration/local_navigation_component.test.ts",
         "extension/test/integration/local_navigation_page.test.ts",
-        "extension/test/integration/local_navigation_runtime.test.ts"
+        "extension/test/integration/local_navigation_runtime.test.ts",
+        "extension/test/integration/center_migration_isolation.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",
