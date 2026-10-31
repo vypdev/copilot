@@ -42,6 +42,13 @@ it('bexh1-foundation-C28 parses root commands and CI gates; contributor guidance
         reporter: expect.arrayContaining([['lcovonly', { projectRoot: root }]]),
         include: expect.arrayContaining(['src/**/*.svelte', 'tooling/*.mts']) });
 });
+
+it('Safari H3 command registration cannot accidentally invoke the H2 rollback builder', () => {
+    const wrongRoot = pkg(); wrongRoot.scripts['build:safari:center:extension'] = 'pnpm --dir extension run build:safari';
+    expect(() => validatePackageContract(wrongRoot, extension(), workspace(), ci())).toThrow('dedicated Safari H3');
+    const wrongEntry = extension(); wrongEntry.scripts['build:safari:center'] = 'node tooling/safari_cli.mts';
+    expect(() => validatePackageContract(pkg(), wrongEntry, workspace(), ci())).toThrow('dedicated Safari H3');
+});
 it('rejects package publication drift and verifies meaningful missing orchestration/CI failures', () => {
     for (const mutate of [
         (value: ReturnType<typeof pkg>) => { value.files = ['**']; },

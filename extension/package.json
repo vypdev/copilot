@@ -12,7 +12,8 @@
     "test": "vitest run --coverage",
     "validate": "node tooling/cli.mts validate",
     "test:browsers": "node tooling/browser_cli.mts",
-    "build:safari": "node tooling/safari_cli.mts"
+    "build:safari": "node tooling/safari_cli.mts",
+    "build:safari:center": "node tooling/safari_center_cli.mts"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "7.3.1",

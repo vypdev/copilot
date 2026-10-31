@@ -3348,7 +3348,10 @@
         "extension/src/domain/center_retirement.ts",
         "extension/src/adapters/browser/center_channel_client.ts",
         "extension/src/adapters/browser/center_channel_host.ts",
-        "extension/src/application/center_response.ts"
+        "extension/src/application/center_response.ts",
+        "extension/tooling/safari_profile.mts",
+        "extension/tooling/safari_generated_project.mts",
+        "extension/tooling/safari_center_cli.mts"
       ],
       "tests": [
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
@@ -3759,7 +3762,12 @@
         "extension/test/integration/center_source_ownership.test.ts",
         "extension/test/integration/native_center_lifetime.test.ts",
         "extension/test/integration/native_center_page.test.ts",
-        "extension/test/integration/center_transport_retirement.test.ts"
+        "extension/test/integration/center_transport_retirement.test.ts",
+        "extension/test/contracts/safari_generated_project.test.ts",
+        "extension/test/integration/safari_json_project.test.ts",
+        "extension/test/integration/safari_project_files.test.ts",
+        "extension/test/integration/safari_h3_container.test.ts",
+        "extension/test/integration/safari_center_cli.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",

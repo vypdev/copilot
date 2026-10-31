@@ -271,6 +271,48 @@ from the verified registered containing app. Ordinary WebKit is never used.
 Receipts distinguish this automation from normal-profile enablement and signed
 store delivery. Never replace a failed prerequisite with a generic WebKit pass.
 
+### Prepare the separate H3 Safari container
+
+For the current local-center work, use the H3 command instead of rebuilding the
+registered H2 rollback:
+
+```sh
+pnpm run build:extension
+pnpm run build:safari:center:extension
+```
+
+This creates `CopilotH3.app` under
+`.tmp/safari-h3/derived/Build/Products/Debug`, with fixed private identity
+`invalid.extensions.copilot.h3` and embedded `.Extension` identity. H2 retains its
+existing default command and separate `.tmp/safari-h2` output. Neither command
+accepts app-name, identifier, output-path or signing overrides. Both use local
+ad-hoc signing without a distribution identity or store action.
+
+The constructor detects exactly one generated `project.pbxproj` or
+`project.xcproj`, limited to1MiB. Xcode27.2's JSONC generation is supported in
+addition to the legacy format. Modern projects require the two expected targets;
+unknown identities, versions, malformed data, ambiguous layouts and symlinked
+files fail before compilation. Only the generated scratch project is normalized;
+unrelated generated settings are retained. Native identity, embedded resource
+hashes, signature and registration are verified after building.
+
+`attempt.json` reports the current phase and `building`, `failed` or `verified`.
+`container.json` is the last verified app receipt, which may belong to an earlier
+source; a failed attempt does not promote it into a new success. `build.log`
+contains the current failure diagnostics, capped at4MiB of valid UTF-8. Inspect
+these files under the selected profile's directory. Correct the failed phase
+before rebuilding; no reset of browser data or permissions is performed.
+
+The Xcode27.1/versioned H2 receipts above remain historical H2 evidence. A new H3
+build, including one made with Xcode27.2, is preparation evidence only. Complete
+source-bound Safari options/storage/session journeys and independent human
+accessibility evidence remain required. A `session not created`/RWI readiness
+failure occurs before extension behavior can be observed; report it as an
+automation prerequisite and preserve the failed receipt. Do not replace it with
+another WebKit engine or claim a native pass from a command-plan fixture.
+
+[Apple documents the modern project format](https://developer.apple.com/documentation/xcode/updating-your-xcode-project-configuration-file-format).
+
 The automated browser workflow starts at an unauthenticated public github.com
 page to establish the genuine content-script origin, then installs the original
 DOM fixture through WebDriver. Extension code and WebExtension APIs remain

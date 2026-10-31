@@ -22,6 +22,8 @@ export function validatePackageContract(root: Package, extension: Package, works
     for (const operation of ['build', 'typecheck', 'test', 'validate']) {
         if (root.scripts?.[`${operation}:extension`] !== `pnpm --dir extension run ${operation}`) fail(`missing ${operation}:extension command`);
     }
+    if (root.scripts?.['build:safari:center:extension'] !== 'pnpm --dir extension run build:safari:center'
+        || extension.scripts?.['build:safari:center'] !== 'node tooling/safari_center_cli.mts') fail('dedicated Safari H3 command required');
     if (!root.scripts?.build?.includes('ncc build src/actions/github_action.ts')
         || !root.scripts.build.includes('pnpm run build:extension')
         || root.scripts.test !== 'jest'

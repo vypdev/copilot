@@ -819,6 +819,56 @@ Errors follow impact → cause → action → retained state. They never claim a
 
 ## 14. Testing strategy
 
+### Native Safari container preparation
+
+H3 MUST have its own local `CopilotH3` containing app, bundle identifiers
+`invalid.extensions.copilot.h3` / `.Extension`, and `.tmp/safari-h3` workspace.
+Preparing H3 MUST preserve the registered H2 app and its signature/resources.
+The existing H2 command/API default remains compatible; the dedicated H3 CLI
+selects H3 explicitly. Profiles are the closed internal choices `h2` and `h3`;
+arbitrary app names, identifiers, output overrides or unknown profiles are
+rejected. Neither profile permits distribution signing, publishing or deployment.
+
+The native converter's generated project can contain legacy `project.pbxproj`
+or modern `project.xcproj`. Xcode27.2 introduced the latter format; see
+[Apple's project format guide](https://developer.apple.com/documentation/xcode/updating-your-xcode-project-configuration-file-format).
+The locally observed generated JSON also permits comments/trailing commas.
+The preparation adapter MUST detect one unambiguous regular project file,
+bound it to1MiB, and reject missing, ambiguous, symlinked or malformed inputs
+before compilation. It MUST preserve unrelated generated settings. For JSONC,
+it MUST validate the two expected application/extension targets before changing
+their fixed identifiers and local version. Legacy PBX retains its known-namespace
+and version normalization, followed by native identity/resource verification;
+this is not a general parser for authored OpenStep projects.
+
+Only the generated scratch project is edited. Persisted preferences, runtime
+permissions, credentials and authored Xcode projects are outside this operation.
+No product setting can weaken this ownership/format policy. Generated-project
+normalization is a separate testable tooling responsibility; native compilation,
+signing, resource verification and registration remain adapter/composition work.
+The existing dependency, cycle and220-line module gates remain mandatory.
+
+```text
+Choose fixed H3 profile → generate owned project → detect/validate format
+→ normalize only identity/version → build ad hoc → verify resources/signature
+→ register app → run separate loaded-browser and human acceptance
+```
+
+Text equivalent: generation and native build establish a verified local app;
+they never certify that its options or controls work in Safari. A failed phase
+retains diagnostics, names the next recovery action and cannot reuse a stale
+success receipt. Native RWI/Safari unavailability remains a distinct prerequisite,
+not an extension behavior failure. No browser settings change automatically.
+
+This subflow adds26 distinct automated risks:10 generated-format/target policies,
+8 filesystem/adaptor failure and ownership cases, and8 H2/H3 composition/CLI,
+resource/registration and diagnostic cases. Repeated layouts/locales do not
+inflate the count. All changed executable lines and pure decisions remain100%
+covered without partials. These cases supplement the56case inventory below and
+the native-lifetime refinement; actual native Safari and human evidence remain
+separate. Contributor docs MUST explain both fixed commands, prerequisites,
+formats, output/diagnostic paths, ad-hoc scope and unchanged rollback.
+
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
 | Domain/configuration/pure planning | 8 | Observable scenarios in the case inventory. |

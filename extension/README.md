@@ -21,6 +21,13 @@ Chrome/Firefox/ESR binaries, native harness commands, Safari containing-app
 prerequisites and failure receipts, and the [runtime preview](../docs/browser-extension/runtime.mdx)
 for connection/privacy/recovery. Never use real credentials in automated tests.
 
+Prepare the current H3 Safari app with `pnpm run build:safari:center:extension`
+after building the development set. It uses the separate `.tmp/safari-h3`
+workspace and preserves the registered H2 rollback. Both legacy PBX and Xcode27.2
+JSONC projects are supported; `attempt.json` distinguishes the current failed or
+verified preparation from the last `container.json` receipt. Native-browser and
+human acceptance are separate from this local ad-hoc build.
+
 Each development target has `manifest.json`, `background.js`, `content.js`,
 `runtime.html`, `runtime.js`, `runtime.css` and declared packaged center chunks;
 `dist/receipt.json` binds the revision, input-tree
