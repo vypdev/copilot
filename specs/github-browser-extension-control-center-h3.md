@@ -1040,6 +1040,13 @@ does not replace the56 CENTER cases, full H3 native journeys or human gate.
 | bexh3-center-C55 | Documentation/discoverability | H3-R10 | Locale, keyboard, zoom, theme and reduced-motion help is discoverable. |
 | bexh3-center-C56 | Documentation/discoverability | H3-R12 | Contributor guide records architecture boundaries and source-bound target receipts. |
 
+`data_recovery_journeys.test.ts` supplies three composed regression risks for
+C41/C42: a valid file-to-preview-to-confirm import with complete durable readback,
+an import conflicted by a newer stored revision, and a reset quota failure with
+the original complete envelope retained and explicit read recovery. It mounts
+the actual foreground/review/gateway; its file and native-storage boundaries are
+deterministic fixtures, so it cannot replace native or human acceptance.
+
 Repository-wide existing gates remain in force. New pure evidence/eligibility/intent/approval policies require 100% branch coverage; other new modules require at least 95% statements and 90% branches, with changed executable lines covered. Keep modules at or below 220 lines and Svelte components at or below 90 lines unless a reviewed decomposition exception is recorded. Add risk-derived cases beyond this floor when findings require them. Use deterministic clocks, IDs and fakes; no real waits or live services in unit tests. Contract tests parse schemas/routes/manifests rather than grep prose. Golden UI fixtures require semantic assertions. Human evidence must assess readability, keyboard/focus, screen-reader behavior, 200% zoom and narrow layouts on all three target environments. Existing catalog cases, including all 56 CENTER cases and relevant existing center cross-boundary cases, remain required and are not counted in this new inventory.
 
 ## 15. Documentation and discoverability
