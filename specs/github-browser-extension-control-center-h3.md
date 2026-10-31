@@ -2289,6 +2289,22 @@ existing AST layer/import/cycle, closed message/reply, sender and bundle gates
 remain mandatory. A settings or generated-history clear is not reused as cache
 write authority.
 
+After clearing, the native background sends the fixed two-field
+`runtime.cache.invalidated` notification to eligible GitHub tabs. It retires
+their old leases and requests a `page.configuration` with literal
+`inspectOnly: true`. It MUST NOT reuse ordinary runtime invalidation, which can
+admit credential restoration and issue identity GETs. Wrong senders or expanded
+notifications are inert. Current-center invalidation remains metadata-only.
+Actual content/background regressions cover a formerly paused retained session
+that could otherwise reconnect after clearing, including preservation of the
+GitHub editor's text, selection and focus.
+
+Options review/result focus is owned by that immutable cache view and the current
+foreground Privacy route. Delivery rechecks those facts after the render tick.
+Moving focus to another control, hiding/blurring, leaving the route or replacing
+the view prevents an old completion from moving focus back. A known primary
+result remains inspectable even when focus delivery is skipped.
+
 Retained reviews/results have the existing five-minute horizon and a combined
 32-record worker bound. Capacity reports busy without evicting an unresolved
 record. Missing/throwing source facts, malformed IDs, backward clocks and expired

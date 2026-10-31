@@ -1,4 +1,4 @@
-import { expect, it, vi } from 'vitest';
+import { expect, it } from 'vitest';
 import { apiCacheReviewsFixture, CACHE_OWNER } from '../fixtures/api_cache_reviews.ts';
 import { CACHE_SUCCESS } from '../fixtures/cache_scheduler.ts';
 

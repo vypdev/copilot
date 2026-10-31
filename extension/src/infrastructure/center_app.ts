@@ -55,7 +55,7 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
     const inspector = new PermissionInspector({ query: capability => permissionReader.query(capability),
         after: (milliseconds, action) => { const id = window.setTimeout(action, milliseconds); return () => window.clearTimeout(id); }, changed: () => publish() });
     const listeners = new Set<Parameters<CenterSurface['subscribe']>[0]>();
-    const focus = (selector: string) => { void tick().then(() => { if (!stopped) document.querySelector<HTMLElement>(selector)?.focus(); }); };
+    const focus = (selector: string, current: () => boolean = () => true) => { void tick().then(() => { if (!stopped && current()) document.querySelector<HTMLElement>(selector)?.focus(); }); };
     const navigation = new CenterNavigation(window.location.hash, {
         replace: hash => { window.history.replaceState(null, '', `${canonical}${hash}`); },
         changed: () => {
@@ -76,7 +76,9 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
     const transient = createCenterSessionPreferences(client, navigation, { foreground: () => !stopped && focused && document.visibilityState !== 'hidden',
         blocked: () => cache.client.held || historyHeld() || pauses.view.busy || !!pauses.view.review, changed: () => { protect(); publish(); }, focus: () => focus('#session-preference-review-heading') });
     const cache = createCenterApiCache(client, navigation, { foreground: () => !stopped && focused && document.visibilityState !== 'hidden', blocked: () => historyHeld() || pauseHeld(),
-        changed: () => { protect(); publish(); }, focus: review => focus(review ? '#api-cache-review-heading' : '#api-cache-review-button') });
+        changed: () => { protect(); publish(); }, focus: review => { const view = cache.client.view;
+            focus(review ? '#api-cache-review-heading' : '#api-cache-review-button', () => cache.client.view === view && focused && document.visibilityState !== 'hidden'
+                && navigation.location.route === 'privacy' && (document.activeElement === document.body || document.querySelector('[data-api-cache]')?.contains(document.activeElement) === true)); } });
     const pauseHeld = (): boolean => pauses.view.busy || !!pauses.view.review || transient.held();
     const historyHeld = (): boolean => history.view.busy || history.view.exportBusy || !!history.view.review || !!history.view.exportReview;
     const protect = () => navigation.protect(cache.client.view.open || !!transient.client.view.review || !!pauses.view.review || !!history.view.review || !!history.view.exportReview || client.view.review?.state === 'preview'

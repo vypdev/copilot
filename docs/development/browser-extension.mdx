@@ -1357,6 +1357,14 @@ invalidation without reconnecting. Publication failure cannot change a known
 clear. The closed protocol admits only the native editor and private owner fence;
 it never uses a settings revision as cache authority.
 
+The background's fixed `runtime.cache.invalidated` notification is distinct from
+ordinary invalidation. Content handles it with `page.configuration` and literal
+`inspectOnly: true`, so a formerly blocked retained credential cannot restore or
+issue identity GETs merely because the cache was cleared. Native sender/closed
+packet admission and the normal source fence still apply. The actual composed
+content/background regression verifies no HTTP or credential read and preserves
+the GitHub editor's text, selection and focus.
+
 `ApiCacheClient` keeps its retained selector out of the rendered view. A lost
 confirm response leaves an explicit read-result action, including after closing
 the review. Reading that result never sends another confirmation. An observed

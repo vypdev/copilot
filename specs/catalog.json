@@ -3822,7 +3822,9 @@
         "extension/test/integration/api_cache_history.test.ts",
         "extension/test/integration/api_cache_page.test.ts",
         "extension/test/integration/api_cache_presentation.test.ts",
-        "extension/test/integration/api_cache_composed_page.test.ts"
+        "extension/test/integration/api_cache_composed_page.test.ts",
+        "extension/test/integration/api_cache_content.test.ts",
+        "extension/test/integration/api_cache_focus.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",

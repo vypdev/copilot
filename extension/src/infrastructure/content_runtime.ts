@@ -114,6 +114,7 @@ export function startContent(api: BrowserApi, window: Window, document: Document
             } catch { /* A closed native context cannot certify current health. */ }
             try { respond(response); } catch { /* Never deliver a second response or change another feature after a failed acknowledgement. */ }
         } else if (value.method === 'runtime.invalidated') { credentialEpoch++; reconcile(true); }
+        else if (value.method === 'runtime.cache.invalidated') { credentialEpoch++; reconcile(true, true); }
     };
     const events = ['popstate', 'hashchange', 'pageshow', 'online', 'offline', 'turbo:load', 'turbo:render', 'pjax:end'];
     for (const name of events) window.addEventListener(name, event);

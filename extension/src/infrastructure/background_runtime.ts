@@ -43,11 +43,11 @@ export function startBackground(api: BrowserApi): () => void {
     };
     const sessions = new ProtectedSessionService(session, scheduler, credentialPorts);
     const roleVerifier = new PurposeIdentityVerifier(scheduler, credentialPorts);
-    const notify = () => {
+    const notify = (cacheOnly = false) => {
         void api.runtime.sendMessage({ version: 1, method: 'center.invalidated' }).catch(() => undefined);
         void api.tabs.query({ url: 'https://github.com/*' }).then(tabs => {
             for (const tab of tabs.slice(0, 128)) if (tab.id !== undefined) {
-                void api.tabs.sendMessage(tab.id, { version: 1, method: 'runtime.invalidated' }).catch(() => undefined);
+                void api.tabs.sendMessage(tab.id, { version: 1, method: cacheOnly ? 'runtime.cache.invalidated' : 'runtime.invalidated' }).catch(() => undefined);
             }
         }).catch(() => undefined);
     };
@@ -71,7 +71,7 @@ export function startBackground(api: BrowserApi): () => void {
         },
             cancellation: () => new BrowserCancellation(),
             online: () => globalThis.navigator?.onLine !== false, notify }, createCenter(api, settings, sessions, notify, connections, { owner: history, policies }, helpers, pauseStore, sessionPreferences,
-            createApiCache(scheduler, () => gateway.invalidate(undefined, false), notify)), connections, helpers, pauses,
+            createApiCache(scheduler, () => gateway.invalidate(undefined, false), () => notify(true))), connections, helpers, pauses,
         new SessionPreferenceAdmission(new SessionPreferencesReader(session, () => session.protect(), () => sessionPreferences.guard.condition), connections));
     const message: Parameters<typeof api.runtime.onMessage.addListener>[0] = (value, sender, respond) => {
         void gateway.handle(value, sender).then(result => respond({ ...(record(result) ? result : { state: 'unavailable' }), sourceTree: buildSourceIdentity() })); return true;

@@ -1,4 +1,4 @@
-import { expect, it, vi } from 'vitest';
+import { expect, it } from 'vitest';
 import { apiCacheClientFixture } from '../fixtures/api_cache_client.ts';
 import { deferred } from '../fixtures/runtime.ts';
 
