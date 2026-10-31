@@ -170,7 +170,26 @@ outcome status states whether the attempted change was observed as saved.
 | Favorites | Bounded ID list | Empty | Registered inventory IDs, bounded by schema | Local persistent |
 | Backup schema | Versioned structured document | Current supported version | Current known version only for restore | Export file; import preview |
 
-Validation rejects unknown profile references, malformed repository identity, duplicate IDs, out-of-range collections and incompatible schema versions. The complete owning contract's precedence remains feature default → global preference/profile → host → account → organization → repository → current session. The effective-state view names the winning layer and any unavailable dependency. A preview snapshots source revision and proposed values; confirmation rereads revision and requires a new preview if state changed. Missing values use documented defaults; retired values migrate explicitly; unknown/future values are preserved inert and exportable without destructive downgrade. Recommended configuration is system appearance with personal defaults; a meaningful alternative is a repository profile overriding one preference while retaining personal values elsewhere. Permission boundaries, privacy exclusions and explicit confirmation are not configurable.
+Validation rejects unknown profile references, malformed repository identity,
+duplicate IDs, out-of-range collections and incompatible schema versions. The
+complete owning contract's precedence remains feature default → global
+preference/profile → host → account → organization → repository → current
+session. The effective-state view names the winning layer and any unavailable
+dependency. A preview snapshots source revision and proposed values; confirmation
+rereads revision and requires a new preview if state changed.
+
+Missing values use documented defaults; retired values migrate explicitly.
+Unknown/future values are preserved inert without destructive downgrade.
+Preference export accepts only a readable, fully validated supported schema and
+its closed nonsecret projection; it never serializes an unknown record as a
+recovery backup. For newer or corrupt stored data, recovery preserves the original
+and directs the user to a compatible package or documented recovery rather than
+exporting unreviewed fields.
+
+Recommended configuration is system appearance with personal defaults; a
+meaningful alternative is a repository profile overriding one preference while
+retaining personal values elsewhere. Permission boundaries, privacy exclusions
+and explicit confirmation are not configurable.
 
 ### 7.1 Concrete profile, navigation and session contract
 
@@ -1102,6 +1121,14 @@ does not replace the56 CENTER cases, full H3 native journeys or human gate.
 | bexh3-center-C54 | Documentation/discoverability | H3-R11 | Troubleshooting page covers quota, migration, future schema and rollback preview. |
 | bexh3-center-C55 | Documentation/discoverability | H3-R10 | Locale, keyboard, zoom, theme and reduced-motion help is discoverable. |
 | bexh3-center-C56 | Documentation/discoverability | H3-R12 | Contributor guide records architecture boundaries and source-bound target receipts. |
+
+The configuration guide’s **Use the center with a keyboard or assistive technology**
+section documents the native focus controls, named review/recovery actions,
+Safari/macOS Tab behavior, screen-reader landmarks, complete locale selection,
+theme/text/motion/contrast choices and independent browser zoom. Help links into
+the local-center guides; their links resolve to that section. These instructions
+are documentation evidence for C55, not certification of the independent native
+and human acceptance matrix.
 
 `data_recovery_journeys.test.ts` supplies three composed regression risks for
 C41/C42: a valid file-to-preview-to-confirm import with complete durable readback,

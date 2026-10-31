@@ -15,6 +15,9 @@ are being implemented and tested. Sections marked as unfinished do not offer
 their advertised workflow yet. The full product, remaining CENTER acceptance
 cases and new native-browser and accessibility evidence remain required.
 
+For keyboard navigation, screen readers, language, appearance and browser zoom,
+see [accessibility help](#use-the-center-with-a-keyboard-or-assistive-technology).
+
 **Features** now searches the [complete 150-function inventory](/browser-extension/features)
 with localized details, implementation milestones, personal favorites and
 per-feature effective preference sources. The inventory keeps future work visible
@@ -72,6 +75,67 @@ Appearance reviews theme, density, text size, motion and contrast together in
 one change. **Follow browser** selects one complete language resource from
 English, Spanish, French or Portuguese, falling back to English for other
 languages. A language change takes effect after confirmation.
+
+## Use the center with a keyboard or assistive technology
+
+Use the first **Skip to content** link to move past navigation. Tab and
+Shift+Tab move between links and controls; Enter follows a link or activates a
+button, and Space activates a focused button or checkbox. Native select menus
+use the browser's standard arrow-key behavior. Keep the visible focus outline
+in view. These controls work without enabling custom extension shortcuts.
+
+On macOS, which links and buttons receive Tab focus also depends on browser and
+system keyboard navigation. Safari supports Option+Tab for webpage links and
+an Advanced setting named **Press Tab to highlight each item on a webpage**.
+Use the browser's own accessibility guidance if Tab skips controls; the center
+does not change system settings. See [Safari keyboard navigation](https://support.apple.com/guide/safari/keyboard-shortcuts-and-gestures-cpsh003/mac)
+and [Firefox accessibility features](https://support.mozilla.org/en-US/kb/accessibility-features-firefox).
+
+Reviewing a preference opens an in-page comparison with a named heading and
+status. Read the before-and-after values, then choose **Confirm change** or
+**Cancel change**. Cancellation keeps your form draft. **Close review** returns
+to editing. An uncertain result offers **Read current settings** rather than
+another confirmation. When leaving an unsaved draft, **Keep editing** and
+**Discard draft and leave** are separate choices. Do not assume Escape saves,
+cancels or undoes an operation; use its named control.
+
+With a screen reader, use the navigation and main landmarks, page headings,
+field labels and review/status messages. A disabled control may require the
+current editing window, readable settings or an available capability. Inspect
+the adjacent explanation or [recovery guidance](#recover-safely). If a control
+has no usable label, the focus becomes trapped, a result is not announced or a
+layout hides an action, record the browser/version, route and steps to reproduce.
+Exclude credentials and private repository data from the report.
+
+### Choose language, appearance and zoom
+
+In **Language**, choose English, Spanish, French, Portuguese or **Follow
+browser**, then review and confirm. Follow browser uses a complete English
+resource when the browser language is unsupported. This changes the local
+center, independently of the Action's source language.
+
+In **Appearance**, review theme, density, text size, motion and contrast:
+
+- Choose **Light**, **Dark** or **Follow GitHub** for the theme. In the standalone
+  center, Follow GitHub follows the browser's preferred color scheme.
+- Choose **Large** text or comfortable density for more space.
+- Choose **Reduced** motion to suppress the center's animations and transitions;
+  the operating system's reduced-motion preference is also respected.
+- Choose **High** contrast for stronger borders. Native forced-color settings
+  remain respected.
+
+Use the browser's page zoom independently of those saved preferences. Its menu
+shows the current percentage; at 200%, check both navigation and the full review.
+A narrow window stacks navigation above the main content. On Chrome and Firefox,
+Command++/Command+− on macOS or Ctrl++/Ctrl+− on other desktop systems adjusts
+page zoom. Use the browser menu to restore your previous value. See
+[Chrome zoom help](https://support.google.com/chrome/answer/96810?hl=en&co=GENIE.Platform%3DDesktop)
+and [Firefox zoom help](https://support.mozilla.org/en-US/kb/font-size-and-zoom-increase-size-of-web-pages).
+If a control is clipped or requires page-level sideways scrolling, report that
+route and zoom level rather than resetting your saved preferences.
+
+These instructions describe the controls and recovery paths. They do not
+certify the complete assistive-technology and native-browser acceptance matrix.
 
 ## Keep control of your draft
 
@@ -260,9 +324,9 @@ forgetting/reconnection only if you intend to remove those credentials.
 
 In **Your data**, **Export local preferences** downloads
 `copilot-preferences.json`. It includes your preference values, authored profile
-names, workspace labels, saved searches and selections. Keep the file somewhere appropriate for those personal
-labels. Connection grants, credentials and private runtime/session data are
-excluded; it is not an account or session backup.
+names, workspace labels, saved searches and selections. Keep the file somewhere
+appropriate for those personal labels. Connection grants, credentials and private
+runtime/session data are excluded; it is not an account or session backup.
 Exporting leaves your saved settings and current connection unchanged.
 
 Import accepts one supported UTF-8 JSON preference file of at most 64 KiB.
