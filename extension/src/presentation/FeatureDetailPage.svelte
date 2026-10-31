@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { InventoryRouteProps } from '../domain/center_ui.ts';
-    import { featureInventory } from '../domain/feature_inventory.ts';
+    import { featureInventory, featureCurrentTools } from '../domain/feature_inventory.ts';
     import { inventoryCopy } from '../domain/inventory_copy.ts';
     import { centerLocationHash } from '../domain/center_routes.ts';
     import { featureReferenceLink } from '../domain/feature_links.ts';
@@ -35,7 +35,8 @@
         </dl>
         <p>{copy.notGrant}</p>
         <p><a href={featureReferenceLink({ kind: 'milestone', id: feature.id })}>{`${copy.roadmap} · H${feature.milestone}`}</a></p>
-        {#if feature.tools}<a href={centerLocationHash({ route: feature.tools })}>{copy.currentTools}</a>{/if}
+        {#if feature.tools}<h3>{copy.currentTools}</h3><ul>{#each featureCurrentTools(feature.id) as route}
+            <li><a href={centerLocationHash({ route })}>{context.copy.routes[route]}</a></li>{/each}</ul>{/if}
         <details><summary>{copy.technical}</summary>
             <p><code>{feature.id}</code></p><p>{copy.browsers}</p><h3>{copy.optional}</h3>
             {#if feature.optionalPermissions.length}<ul>{#each feature.optionalPermissions as permission}<li><code>{permission}</code></li>{/each}</ul>

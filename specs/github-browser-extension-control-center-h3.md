@@ -2356,3 +2356,88 @@ unknown-result troubleshooting and contributor port/observation documentation
 must ship together. Implement contracts and scheduler witnesses, retained use
 case, native protocol/composition/current facts, localized UI, then full source-
 bound acceptance. H3 remains unpublished until its complete scope passes.
+
+### Useful local Work/Attention and dependency discovery (2026-10-31)
+
+**Required H3-R01/R06 behavior; source implemented, full acceptance pending.**
+Before this refinement, Work, Attention, Copilot and Setup resolved to generic pending text. That is not a useful
+workflow and cannot satisfy the owning issue. This refinement replaces those
+tabs with original packaged views. GitHub work queues remain H6/#707, Copilot
+integration H9/#710 and shared setup H11/#712, as defined by the canonical
+`FEATURE_MILESTONES` and inventory mapping. Their engines and authority remain
+owned by those later milestones.
+
+```text
+Work → saved favorites / selected profiles / authored groups → exact local tool
+Attention → saved configuration item → its existing reviewed configuration flow
+Copilot / Setup → useful current local tools + precise capability/dependency guide
+```
+
+Text equivalent: the views help users navigate their saved local configuration.
+Following a link does not activate a feature, select a credential, run the Action
+or apply repository setup. Future capability links open their registered feature
+guide or existing milestone, with implementation availability stated explicitly.
+
+| Requirement | Observable outcome |
+|---|---|
+| H3-NAV01 | Work lists up to 20 favorites in saved order with localized feature titles, closed detail links and actual milestone information. Missing favorites have a useful Features destination. |
+| H3-NAV02 | Work exposes authored selected profiles and up to ten groups with local management links. Selection and reference counts describe saved choices; they do not certify a current account, repository, connected identity or applicable scope. |
+| H3-NAV03 | Work provides useful existing local tools, including profile/group management and shortcuts. Reading the view performs no provider request or credential selection. |
+| H3-NAV04 | Attention derives review items from the saved global pause, incomplete onboarding and selected profiles with an authored pause. Each item names its exact local review destination. Scoped selections remain unverified until the existing scope-aware flow checks them. |
+| H3-NAV05 | An empty Attention projection says only that this saved revision has no matching local review items. It cannot claim no GitHub tasks, working permissions, a healthy connection or completed background work. |
+| H3-NAV06 | Copilot and Setup provide distinct useful current local tools and localized discovery of their canonical capabilities. They name their actual existing dependencies and preserve later implementation scope. No fake status, draft/Apply button or duplicate Action/CLI authority is introduced. |
+| H3-NAV07 | All four views use complete en/es/fr/pt resources, semantic headings/lists, named links and existing responsive/focus behavior. Authored names are escaped text. URLs come only from closed local destinations or fixed reviewed help/milestone references. |
+| H3-NAV08 | Unknown/future/corrupt preferences keep the existing honest recovery gate; no empty workspace or editable defaults are invented. The independently available feature inventory, Privacy and recovery/help stay accessible. |
+| H3-NAV09 | Feature guides expose the implemented Activity/Diagnostics destinations and all distinct current privacy/reset tools. Your data links to the separate cache, credential and global-pause controls without treating preference reset as their authority. |
+
+Representative content:
+
+| View/state | Content and next action |
+|---|---|
+| Work, favorites present | “Your saved shortcuts to feature guides.” Localized feature title, implementation phase and its exact feature-detail destination. |
+| Work, no favorites | “Choose favorites in Features to keep their guides here.” **Browse features**. |
+| Selected group | Authored group name and saved reference count. “Review connection availability in repository groups.” **Manage groups**. |
+| Attention, saved global pause | “A global pause is saved.” **Review global preferences** opens the existing reviewed control. |
+| Attention, selected paused profile | Authored profile name. “This selected profile saves a pause; review when its scope applies.” Exact profile-detail link. |
+| Attention, empty | “No matching local configuration review items in this saved revision.” State that GitHub tasks, permissions and connection health were not inspected here. |
+| Copilot / Setup | Current local configuration tools first, then the distinct capability guide and the existing H9/#710 or H11/#712 dependency. No active integration or setup execution is claimed. |
+
+Domain selectors own bounded, immutable local projections and closed destinations.
+They reuse canonical metadata and localized feature titles rather than maintain
+a second feature registry. Models carry closed local location records and
+registered feature references; presentation resolves them through the existing
+checked `centerLocationHash` / `featureReferenceLink` builders at the actual
+anchor. No model-supplied URL bypasses the presentation gate. Views are literal lazy imports using the existing
+validated-settings route contract and source-fenced loader. Presentation owns
+semantic lists and escaped labels; existing destination tools retain all review,
+native owner, permission, freshness and mutation rules. Do not put a controller,
+provider, storage operation or arbitrary URL into a navigation model.
+
+No preference, schema, public knob, storage key, permission or background task is
+added. Existing limits, reset/import behavior and source-tree admission remain.
+Current committed settings are the freshness source; a refreshed revision updates
+these read-only projections. Work/Attention entry does not request connection
+metadata merely to label a saved selection. Existing separately consented recent
+destination capture may still record its closed route; the new pages neither
+enable collection nor add authored names to retained history. No automatic API,
+Action run, CLI invocation, native grant or credential restoration is permitted.
+
+This adds a minimum **20 distinct risk cases**, beyond the existing inventories.
+Locale repetitions and common loader cases do not inflate that number.
+
+| Area | Cases | Required evidence |
+|---|---:|---|
+| Pure projections and resources | 7 | Ordered favorites/canonical dependencies; saved profile/group scope; each Attention cause; bounded empty-state claim; closed escaped destinations, current scoped tools and complete atomic locale resources. |
+| Mounted user outcomes | 7 | Populated/empty Work; actionable/empty Attention; distinct useful Copilot/Setup guides; named links and four complete locales; preserved focus/navigation, escaped authored labels and independent privacy/reset discovery. |
+| Actual composition/recovery | 6 | Real route/detail navigation; offline/no-provider behavior; current revision updates; observer without editing claim; future/corrupt source preservation; no unconsented writes or new retained private names. |
+| **Total** | **20** | Distinct semantic risks with assertions, not placeholder renders. |
+
+Update configuration/discovery/recovery and contributor documentation, the owning
+catalog evidence and executable traceability together. Pure selectors require
+100% branches; all changed executable lines and branches remain covered without
+exclusions. Keep modules at most 220 lines and Svelte components at most 90.
+Run the full unfiltered current normal/Node-floor suite, type/lint, specifications,
+docs, Graphify and complete reproducible package gates. Final-source real-browser
+and human H3 acceptance remains required after these intended flows are complete;
+the preceding cache-only package does not certify them. No source push or PR is
+allowed until the complete #704 requirements and acceptance are satisfied.

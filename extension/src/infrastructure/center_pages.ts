@@ -13,6 +13,9 @@ export async function loadCenterPage(route: Exclude<CenterRoute, 'features' | 'p
         case 'appearance': return (await import('../presentation/AppearancePage.svelte')).default;
         case 'language': return (await import('../presentation/LanguagePage.svelte')).default;
         case 'shortcuts': return (await import('../presentation/ShortcutsPage.svelte')).default;
+        case 'work': return (await import('../presentation/WorkPage.svelte')).default;
+        case 'attention': return (await import('../presentation/AttentionPage.svelte')).default;
+        case 'copilot': case 'setup': return (await import('../presentation/DependencyPage.svelte')).default;
         case 'repositories': return detail === 'workspaces' ? (await import('../presentation/WorkspacesPage.svelte')).default
             : (await import('../presentation/InformationPage.svelte')).default;
         case 'profiles': return (await import('../presentation/ProfilesPage.svelte')).default;

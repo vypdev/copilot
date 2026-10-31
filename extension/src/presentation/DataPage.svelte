@@ -2,11 +2,15 @@
     import { workspaceCopy } from '../domain/workspace_copy.ts';
     import { onDestroy, untrack } from 'svelte';
     import type { CenterRouteProps } from '../domain/center_ui.ts';
+    import { navigationCopy } from '../domain/navigation_copy.ts';
+    import { centerLocationHash } from '../domain/center_routes.ts';
     let { context, actions }: CenterRouteProps = $props();
     const revision = untrack(() => context.settings.revision);
     let hasFile = $state(false); let fileError = $state(false); let exportError = $state(false); let readingFile = $state(false);
     let scope = $state('appearance');
     const m = $derived(context.copy.messages);
+    const navigation = $derived(navigationCopy(context.copy.locale));
+    const privacyTools = ['privacy', 'connections', 'overview'] as const;
     $effect(() => actions.dirty(hasFile)); onDestroy(() => actions.dirty(false));
     async function importFile(): Promise<void> {
         if (readingFile) return;
@@ -35,3 +39,6 @@
 </form>
 <button type="button" disabled={!context.editable || hasFile || !context.rollbackAvailable} onclick={() => actions.preview({ type: 'rollback' }, context.settings.revision)}>{m.rollback}</button>
 {#if !context.rollbackAvailable}<p>{m.noRollback}</p>{/if}
+<section aria-labelledby="data-privacy-tools-heading"><h2 id="data-privacy-tools-heading">{navigation.privacyTools}</h2>
+    <p>{navigation.privacyScope}</p><ul>{#each privacyTools as route}<li><a href={centerLocationHash({ route })}>{context.copy.routes[route]}</a></li>{/each}</ul>
+</section>

@@ -3373,7 +3373,12 @@
         "extension/src/infrastructure/api_cache_runtime.ts",
         "extension/src/infrastructure/center_api_cache.ts",
         "extension/src/presentation/ApiCacheEffects.svelte",
-        "extension/src/presentation/ApiCachePanel.svelte"
+        "extension/src/presentation/ApiCachePanel.svelte",
+        "extension/src/domain/local_navigation.ts",
+        "extension/src/domain/navigation_copy.ts",
+        "extension/src/presentation/AttentionPage.svelte",
+        "extension/src/presentation/DependencyPage.svelte",
+        "extension/src/presentation/WorkPage.svelte"
       ],
       "tests": [
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
@@ -3824,7 +3829,11 @@
         "extension/test/integration/api_cache_presentation.test.ts",
         "extension/test/integration/api_cache_composed_page.test.ts",
         "extension/test/integration/api_cache_content.test.ts",
-        "extension/test/integration/api_cache_focus.test.ts"
+        "extension/test/integration/api_cache_focus.test.ts",
+        "extension/test/contracts/local_navigation.test.ts",
+        "extension/test/integration/local_navigation_component.test.ts",
+        "extension/test/integration/local_navigation_page.test.ts",
+        "extension/test/integration/local_navigation_runtime.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",

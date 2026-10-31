@@ -14,8 +14,13 @@ import { deepFreeze } from './value.ts';
 import type { InventoryFilters } from './inventory_filters.ts';
 
 const routes: Readonly<Record<string, CenterRoute>> = Object.freeze({ 'BEX-CENTER-01': 'overview', 'BEX-CENTER-02': 'features', 'BEX-CENTER-03': 'profiles',
-    'BEX-CENTER-04': 'repositories', 'BEX-CENTER-05': 'connections', 'BEX-CENTER-06': 'privacy', 'BEX-CENTER-07': 'shortcuts', 'BEX-CENTER-08': 'data',
+    'BEX-CENTER-04': 'repositories', 'BEX-CENTER-05': 'connections', 'BEX-CENTER-06': 'privacy', 'BEX-CENTER-07': 'shortcuts', 'BEX-CENTER-08': 'data', 'BEX-CENTER-09': 'activity', 'BEX-CENTER-10': 'diagnostics',
     'BEX-CENTER-11': 'appearance', 'BEX-CENTER-12': 'language', 'BEX-CENTER-13': 'welcome', 'BEX-CENTER-14': 'data' });
+/** Distinct privacy scopes remain distinct destinations, with no write or selected-identity handoff. */
+export function featureCurrentTools(id: string): readonly CenterRoute[] {
+    if (!Object.hasOwn(routes, id)) return Object.freeze([]);
+    return Object.freeze(id === 'BEX-CENTER-14' ? [routes[id], 'privacy', 'connections', 'overview'] : [routes[id]]);
+}
 export type InventorySource = keyof InventoryCopy['sources'];
 export interface InventoryFeature extends FeatureMetadata {
     readonly favorite: boolean | null; readonly enabled: boolean | null; readonly defaultEnabled: boolean; readonly paused: boolean | null; readonly source: InventorySource;

@@ -66,9 +66,9 @@ it('reports a failed download and still allows a later explicit export', async (
     button('Exportar preferencias locales').click(); await ready(() => document.body.textContent?.includes('No se ha podido descargar') === true);
     expect(document.body.textContent).not.toContain('private-download-error');
 });
-it.each(['help', 'about', 'recovery', 'work'])('opens the %s route with useful information and honest unfinished-state copy', async route => {
-    await render(route); await ready(() => route === 'work' ? document.querySelector('main a')?.textContent === 'Abrir documentación' : !!document.querySelector('[data-support-status]'));
-    if (route === 'work') expect(document.body.textContent).toContain('Esta sección sigue en desarrollo');
+it.each(['help', 'about', 'recovery', 'work'])('opens the %s route with useful local content and honest capability boundaries', async route => {
+    await render(route); await ready(() => route === 'work' ? !!document.querySelector('#work-favorites-heading') : !!document.querySelector('[data-support-status]'));
+    if (route === 'work') { expect(document.querySelector('a[href="#/features"]')).not.toBeNull(); expect(document.querySelector('a[href="https://github.com/vypdev/copilot/issues/707"]')).not.toBeNull(); }
     else expect(document.body.textContent).toContain(supportCopy('es').safety);
     if (route === 'recovery') [...document.querySelectorAll('button')].filter(node => node.textContent === 'Consultar configuración actual').at(-1)!.click();
 });

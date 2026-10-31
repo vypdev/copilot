@@ -85,5 +85,5 @@
     {:else}<p role="status">{copy.messages.loading}</p>{/if}
 {:else if data}
     <p class="notice">{data.state === 'future' ? copy.messages.future : data.state === 'corrupt' ? copy.messages.corrupt : copy.messages.migration}</p>
-    <a href="https://docs.page/vypdev/copilot/">{copy.messages.documentation}</a>
-{:else if frame.client.phase === 'ready'}<p>{copy.messages.unavailable}</p>{/if}
+    <a href="#/recovery">{copy.routes.recovery}</a> <a href="https://docs.page/vypdev/copilot/">{copy.messages.documentation}</a>
+{:else if frame.client.phase === 'ready'}<p>{copy.messages.unavailable}</p><a href="#/recovery">{copy.routes.recovery}</a>{/if}
