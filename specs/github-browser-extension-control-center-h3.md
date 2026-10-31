@@ -2487,3 +2487,55 @@ unreadable preference record. No production behavior, configuration, permission,
 schema or architecture boundary changes in this acceptance-only refinement.
 Run both full normal/Node-floor suites and the existing catalog/documentation,
 Graphify and package gates; final-source native and human acceptance stays open.
+
+### Focus continuity after a background disconnect (2026-10-31)
+
+**Required H3-R10/R11 behavior; native and human acceptance remains open.**
+During actual Safari execution, an enabled, focused Theme selector in Appearance
+was followed by an unavailable background, the disabled selector and keyboard
+focus on the document. The independent VoiceOver journey also reported difficulty;
+that response does not establish the spoken phrase or its precise cause. A
+composed regression must reproduce the keyboard handoff independently.
+
+```text
+Focused editor → native read/disconnect → explicit recovery button receives focus
+ → user activates Read current settings → fresh observation; draft remains
+```
+
+Text equivalent: capture the focused control before a native read can disable it.
+If that read loses the background, lead the user to the existing explicit read
+action with its localized failure explanation. Reading requires user activation;
+focus alone cannot reconnect, confirm, cancel or repeat any operation.
+
+The foreground composition owns one pending focus handoff, captured before reading or
+explicit opening can disable an enabled native control inside this center's
+main region and the same route/detail. After
+rendering, move focus only when the former control is disabled or removed and
+there is no newer focused control. A busy recovery button defers the handoff
+until another native frame; no timer, periodic keepalive or extra request is
+introduced. A successful observation restores the same surviving, enabled control
+only while this document is still the editor; a new owner or removed control
+retires it. A route change, hidden/unfocused document, new user focus or teardown
+also retires the handoff. A review heading receives focus once for a new review;
+refreshing that same review does not rewind its current focus. Navigation headings and other
+windows retain their existing ownership. The recovery button's accessible
+description references the actual current unavailable message.
+
+The infrastructure `center_recovery_focus` owns DOM capture and subscription disposal; `CenterHost`
+renders the named action and message. Application/native source, controller,
+revision, persistence and replay rules remain unchanged. There is no new
+configuration, permission, storage key, schema, migration or automatic retry.
+Existing architecture rules and the 220/90-line module/component limits apply.
+
+Minimum **31 distinct regressions**, with no matrix rerun counted as a new case:
+
+| Area | Cases | Observable risks |
+|---|---:|---|
+| DOM capture and handoff | 17 | Missing host/main/focus, native controls, inactive/hidden documents, newer focus, disabled/removed targets and safe recovery without activation. |
+| Render/subscription lifecycle | 10 | Capture before a read/open, busy-to-ready recovery, successful control restoration, changed owner, interleaved reads, route changes and teardown cancellation. |
+| Whole foreground/native composition | 4 | Real client/port/background shutdown, retained unsaved draft, explicit-only reconnect, navigation focus, retired confirmation without replay and refreshed review continuity. |
+
+The configuration guide explains the handoff and explicit read. These cases
+support CENTER11-C02 and H3 C33/C39/C43; DOM/native-port fixtures do not certify
+actual screen-reader speech. Final-source Chrome, Firefox, Safari and independent
+human accessibility evidence must be repeated as applicable before H3 acceptance.

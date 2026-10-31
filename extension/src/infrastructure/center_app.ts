@@ -30,6 +30,7 @@ import type { HistoryReview } from '../domain/history_client_view.ts';
 import { CurrentOperationReader } from '../application/current_operation_reader.ts';
 import { HelperSampleReader } from '../application/helper_sample_reader.ts';
 import { createCenterApiCache } from './center_api_cache.ts';
+import { subscribeCenterRecoveryFocus } from './center_recovery_focus.ts';
 
 /** Native options-page composition. The UI receives preferences and callbacks, never reusable authority. */
 export function startCenter(api: BrowserApi, document: Document, nativeLanguage: string): () => void {
@@ -123,6 +124,7 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
         },
     };
     let operationRole: typeof client.view.role;
+    let priorSettingsReview = client.view.review;
     const unsubscribe = client.subscribe(view => {
         if (view.role !== operationRole) { operationRole = view.role; pauses.contextChanged(); readPauses(); transient.contextChanged(); cache.contextChanged(); if (view.role === 'editor' || view.role === 'observer') { void operation.read(); void helpers.read(); } }
         if (view.role === null || view.issue === 'incompatible') { operation.clear(); helpers.invalidate(); pauses.contextChanged(); transient.contextChanged(); cache.contextChanged(); history.reader.invalidate(); }
@@ -138,7 +140,8 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
             if (stopped || !connectionReadPending || client.view.phase !== 'ready' || client.view.review) return;
             connectionReadPending = false; readConnections();
         });
-        if (view.review?.state === 'preview') focus('#settings-review-heading');
+        if (view.review?.state === 'preview' && view.review !== priorSettingsReview) focus('#settings-review-heading');
+        priorSettingsReview = view.review;
     });
     let priorHistoryReview: HistoryReview | null = null; let refreshedHistory: HistoryReview | null = null; let priorExport = history.view.exportReview;
     const unhistory = history.subscribe(view => {
@@ -155,7 +158,9 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
     });
     transient.start();
     const surface: CenterSurface = { initial: frame(), actions, load: loadCenterPage, loadInventory: loadInventoryPage, loadPrivacy: loadPrivacyPage, loadSupport: loadSupportPage, loadHistory: loadHistoryPage, loadPauses: loadPausesPage, loadSessionPreferences: loadSessionPreferencesPage,
-        subscribe: listener => { listeners.add(listener); listener(frame()); return () => { listeners.delete(listener); }; } };
+        subscribe: listener => subscribeCenterRecoveryFocus({ initial: frame(), subscribe: sink => {
+            listeners.add(sink); sink(frame()); return () => { listeners.delete(sink); };
+        } }, () => document.querySelector<HTMLElement>('.center'), listener) };
     const host = mount(CenterHost, { target: document.body, props: { surface } }); flushSync();
     function readConnections(): void {
         const route = navigation.location.route;

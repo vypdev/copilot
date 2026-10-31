@@ -41,7 +41,7 @@
                 <span role="status">{role === 'editor' ? copy.messages.editor
                     : role === 'observer' ? copy.messages.observer : busy ? copy.messages.loading : copy.routes.recovery}</span>
                 {#if role === 'observer'}<button type="button" disabled={busy} onclick={() => surface.actions.takeControl()}>{copy.messages.takeControl}</button>{/if}
-                <button type="button" disabled={busy} onclick={() => surface.actions.reload()}>{copy.messages.refresh}</button>
+                <button id="center-read-settings" type="button" disabled={busy} aria-describedby={frame.client.issue === 'unavailable' ? 'center-runtime-issue' : undefined} onclick={() => surface.actions.reload()}>{copy.messages.refresh}</button>
             </div>
             {#if frame.pendingLocation}
                 <section class="notice" role="alert" aria-label={copy.messages.unsaved}>
@@ -52,7 +52,7 @@
                     <button type="button" disabled={frame.cache.phase !== 'idle' || frame.client.phase === 'committing' || frame.history.busy || frame.history.exportBusy || frame.pauses.busy || frame.sessionPreferences.busy} onclick={() => surface.actions.leave()}>{frame.cache.open ? apiCacheCopy(copy.locale).close : frame.pauses.review && frame.pauses.review.phase !== 'preview' || frame.sessionPreferences.review && frame.sessionPreferences.review.phase !== 'preview' ? pauseCopy(copy.locale).leave : copy.messages.discard}</button>
                 </section>
             {/if}
-            {#if frame.client.issue}<p role="alert" class="notice">{copy.issues[frame.client.issue]}</p>{/if}
+            {#if frame.client.issue}<p id="center-runtime-issue" role="alert" class="notice">{copy.issues[frame.client.issue]}</p>{/if}
             {#if frame.review}<SettingsReview view={frame.review} copy={reviewCopy(copy.locale)} actions={surface.actions}/>{/if}
             <CurrentOperationPanel view={frame.operation} center={copy} read={surface.actions.inspectOperation} available={role === 'editor' || role === 'observer'} expanded={route === 'activity' || route === 'diagnostics'}/>
             {#if route === 'diagnostics' || route === 'help'}<HelperSamplePanel view={frame.helperSample} center={copy} read={surface.actions.inspectHelpers} available={(role === 'editor' || role === 'observer') && frame.client.issue !== 'incompatible'}/>{/if}
