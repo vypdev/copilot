@@ -1,6 +1,6 @@
 {
   "name": "@vypdev/copilot",
-  "version": "3.10.6",
+  "version": "3.10.7",
   "packageManager": "pnpm@10.12.4",
   "pnpm": {
     "overrides": {
