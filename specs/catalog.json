@@ -3354,7 +3354,11 @@
         "extension/tooling/safari_center_cli.mts",
         "extension/src/domain/center_delivery.ts",
         "extension/src/adapters/browser/center_frame_fingerprint.ts",
-        "extension/src/adapters/browser/center_frame_delivery.ts"
+        "extension/src/adapters/browser/center_frame_delivery.ts",
+        "extension/tooling/webdriver_page.mts",
+        "extension/tooling/center_browser_cli.mts",
+        "extension/tooling/center_browser_journey.mts",
+        "extension/tooling/center_browser_scripts.mts"
       ],
       "tests": [
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
@@ -3777,7 +3781,13 @@
         "extension/test/adapters/center_channel_redelivery.test.ts",
         "extension/test/integration/native_center_redelivery.test.ts",
         "extension/test/fixtures/frame_fingerprint.ts",
-        "extension/test/setup_crypto.ts"
+        "extension/test/setup_crypto.ts",
+        "extension/test/fixtures/center_browser_driver.ts",
+        "extension/test/integration/webdriver_page.test.ts",
+        "extension/test/integration/center_browser_node_entry.test.ts",
+        "extension/test/integration/center_browser_journey.test.ts",
+        "extension/test/integration/center_browser_scripts.test.ts",
+        "extension/test/integration/center_browser_cli.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",

@@ -11,7 +11,7 @@ import { NativeDriver, freePort, pauseDriver } from '../../tooling/webdriver.mts
 
 const artifacts = '/isolated/artifacts';
 afterEach(() => { mocks.listenFailure = false; mocks.closeFailure = false; vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
-function transport(target: 'chrome' | 'firefox' | 'firefox-esr' | 'safari' = 'chrome') {
+function transport(target: 'chrome' | 'firefox' | 'firefox-esr' | 'safari' = 'chrome', visible?: true) {
     const child = { exitCode: null as number | null, on: vi.fn(), kill: vi.fn() }; mocks.spawn.mockReturnValue(child);
     let windows = 0;
     const send = vi.fn(async (url: string, options: RequestInit) => {
@@ -20,7 +20,7 @@ function transport(target: 'chrome' | 'firefox' | 'firefox-esr' | 'safari' = 'ch
         return new Response(JSON.stringify({ value }), { headers: { 'content-type': 'application/json' } });
     });
     vi.stubGlobal('fetch', send);
-    const driver = new NativeDriver({ target, binary: '/isolated/browser', driver: '/isolated/driver', artifact: artifacts }, async () => undefined);
+    const driver = new NativeDriver({ target, binary: '/isolated/browser', driver: '/isolated/driver', artifact: artifacts, ...(visible ? { visible } : {}) }, async () => undefined);
     return { child, send, driver };
 }
 it('allocates only a loopback port and reports listen/close failure instead of proceeding', async () => {
@@ -158,4 +158,27 @@ it('native fixture focus clicks only the authored inert heading before inspectin
     const find = h.send.mock.calls.find(([url]) => url.endsWith('/element'))!;
     expect(JSON.parse(String(find[1].body))).toEqual({ using: 'css selector', value: 'main > h1' });
     expect(h.state.clicked).toBe(true); await h.driver.close();
+});
+
+it('public native page controls bind to the owned current session and cannot issue commands before start or after cleanup', async () => {
+    const h = transport(); await expect(h.driver.page.click('#owned')).rejects.toThrow('session-not-started');
+    expect(h.send).not.toHaveBeenCalled(); await h.driver.start(); const base = h.send.getMockImplementation()!;
+    h.send.mockImplementation(async (url: string, options: RequestInit) => url.endsWith('/element')
+        ? new Response(JSON.stringify({ value: { 'element-6066-11e4-a52e-4f735466cecf': 'owned/element' } })) : base(url, options));
+    await h.driver.page.click('#owned');
+    expect(h.send.mock.calls.some(([url]) => url.endsWith('/session/owned-test-session/element/owned%2Felement/click'))).toBe(true);
+    await h.driver.close(); const calls = h.send.mock.calls.length;
+    await expect(h.driver.page.click('#owned')).rejects.toThrow('session-not-started'); expect(h.send).toHaveBeenCalledTimes(calls);
+});
+it('explicit visible Chrome and Firefox sessions retain their isolated artifacts while omitting only headless switches', async () => {
+    for (const target of ['chrome', 'firefox'] as const) {
+        const h = transport(target, true); await h.driver.start();
+        const start = JSON.parse(String(h.send.mock.calls.find(([url]) => url.endsWith('/session'))![1].body));
+        const capabilities = start.capabilities.alwaysMatch;
+        const options = capabilities[target === 'chrome' ? 'goog:chromeOptions' : 'moz:firefoxOptions'];
+        expect(options.binary).toBe('/isolated/browser'); expect(options.args.some((value: string) => value.includes('headless'))).toBe(false);
+        if (target === 'chrome') expect(options.args).toContain(`--load-extension=${artifacts}`);
+        else expect(h.send.mock.calls.some(([url]) => url.endsWith('/moz/addon/install'))).toBe(true);
+        await h.driver.close(); expect(h.child.kill).toHaveBeenCalledOnce();
+    }
 });

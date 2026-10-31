@@ -49,6 +49,12 @@ it('Safari H3 command registration cannot accidentally invoke the H2 rollback bu
     const wrongEntry = extension(); wrongEntry.scripts['build:safari:center'] = 'node tooling/safari_cli.mts';
     expect(() => validatePackageContract(pkg(), wrongEntry, workspace(), ci())).toThrow('dedicated Safari H3');
 });
+it('native center command registration keeps the H3 journey and H2 runtime harness independently selectable', () => {
+    const wrongRoot = pkg(); wrongRoot.scripts['test:center-browsers:extension'] = 'pnpm --dir extension run test:browsers';
+    expect(() => validatePackageContract(wrongRoot, extension(), workspace(), ci())).toThrow('dedicated native H3 center');
+    const wrongEntry = extension(); wrongEntry.scripts['test:center-browsers'] = 'node tooling/browser_cli.mts';
+    expect(() => validatePackageContract(pkg(), wrongEntry, workspace(), ci())).toThrow('dedicated native H3 center');
+});
 it('rejects package publication drift and verifies meaningful missing orchestration/CI failures', () => {
     for (const mutate of [
         (value: ReturnType<typeof pkg>) => { value.files = ['**']; },

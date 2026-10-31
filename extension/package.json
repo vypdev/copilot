@@ -12,6 +12,7 @@
     "test": "vitest run --coverage",
     "validate": "node tooling/cli.mts validate",
     "test:browsers": "node tooling/browser_cli.mts",
+    "test:center-browsers": "node tooling/center_browser_cli.mts",
     "build:safari": "node tooling/safari_cli.mts",
     "build:safari:center": "node tooling/safari_center_cli.mts"
   },

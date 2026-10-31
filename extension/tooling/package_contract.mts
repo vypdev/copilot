@@ -24,6 +24,8 @@ export function validatePackageContract(root: Package, extension: Package, works
     }
     if (root.scripts?.['build:safari:center:extension'] !== 'pnpm --dir extension run build:safari:center'
         || extension.scripts?.['build:safari:center'] !== 'node tooling/safari_center_cli.mts') fail('dedicated Safari H3 command required');
+    if (root.scripts?.['test:center-browsers:extension'] !== 'pnpm --dir extension run test:center-browsers'
+        || extension.scripts?.['test:center-browsers'] !== 'node tooling/center_browser_cli.mts') fail('dedicated native H3 center command required');
     if (!root.scripts?.build?.includes('ncc build src/actions/github_action.ts')
         || !root.scripts.build.includes('pnpm run build:extension')
         || root.scripts.test !== 'jest'

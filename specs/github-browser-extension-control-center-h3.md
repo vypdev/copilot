@@ -839,6 +839,79 @@ Errors follow impact → cause → action → retained state. They never claim a
 
 ## 14. Testing strategy
 
+### Public native center journey and evidence boundary
+
+H3-R01/R07/R11/R12 use a separate `test:center-browsers:extension` component
+journey for Chrome and Firefox. The closed CLI accepts one target and optional
+`--visible`, requires explicit absolute native binary/driver paths, and owns a
+fresh isolated profile. Reviewed engine/driver pins are Chrome156.0.8078.80 /
+ChromeDriver156.0.8078.80 and Firefox159.0 / geckodriver0.37.1. These current
+execution pins do not alter the compatibility floors. Safari uses the actual
+registered H3 containing app; an unpacked automation identity cannot replace it.
+
+```text
+Closed inputs → package-cwd validation + two complete clean builds
+ → pinned native profile → public GitHub bootstrap + original inert DOM fixture
+ → native content settings click → executed options/background source checks
+ → cancel/confirm +20 routes → destroy/reopen document + exact readback
+ → isolated provider probe + empty-vault revocation → reviewed theme restoration
+ → PNG transport capture → confirmed owned-session cleanup → scoped receipt
+```
+
+Text equivalent: the composition verifies current artifacts before starting the
+native browser, exercises actual packaged behavior and closes only its owned
+session before publishing success. The source tree, commit, dirty/committed
+state, executable hashes, engine/driver versions, fixture hash and screenshot
+hash MUST be recorded. Failure preserves its original phase through cleanup;
+an unknown thrown value, failed progress write or failed cleanup cannot become
+success. Each run gets a unique receipt, and the latest attempt points to that
+run. No product setting can override pins, source checks, output location or
+cleanup. CLI diagnostics disclose fixed reasons rather than native payloads.
+
+`NativePage` is a public session-relative W3C command interface. Controls use
+native element click, clear/send keys, option selection and window commands;
+neither script-dispatched product events nor private session casts are allowed.
+Selectors/values/options are bounded to1000/4096/128 characters, element/window
+identifiers to512, and observed contexts to16 distinct nonempty handles. Closing
+the last owned context is rejected. Outer window requests are bounded to
+320–3840 by240–2160 pixels and do not establish CSS viewport or zoom acceptance.
+Screenshot transport accepts canonical base64 at most12MiB, at most8MiB decoded,
+and a PNG signature; rendered-image review remains separate.
+
+Fixed scripts inspect source/metadata, state and durable preference envelopes.
+A route wait MUST observe the requested title and active link after native
+navigation; an earlier ready route is insufficient. Preview and cancellation
+compare the entire envelope byte-for-byte. Confirmed settings must advance one
+revision and survive an actually recreated document. The local/session provider
+probe uses only one fixed nonsecret key, never overwrites an existing key, and
+removes only its own marker. A fresh empty protected vault is inspected/revoked
+through product controls; provider probing cannot claim a real credential or
+permission journey. Polling is bounded to150 observations with100ms pauses.
+
+At least40 distinct tooling risks supplement the existing H3/CENTER inventories:
+18 public-protocol/input/context/ownership cases, eight journey assertion and
+navigation/readback failures, ten CLI provenance/phase/cleanup cases, and four
+fixed inspection/provider ownership cases. Repeated engines/locales do not add
+distinct cases. Direct unmodified Node24 loading also guards against syntax
+hidden by Vitest transformation. These fixtures prove failure detection only;
+they cannot publish native acceptance. The owning tests are `webdriver_page`,
+`webdriver`, `center_browser_node_entry`, `center_browser_journey`,
+`center_browser_scripts`, `center_browser_cli` and the package command contract.
+All changed executable lines and branches retain complete coverage without
+exclusions or partials; the existing full test and module-size gates remain.
+
+The journey always reports `fullH3Acceptance: false`. Native toolbar/browser
+Settings entrypoints, background-idle and uncertain-write recovery, the other
+normative cases and independent human accessibility require their own final
+source-bound observations. Development ad-hoc Safari rebuilds also do not prove
+signed upgrade continuity: two locally verified H3 builds exposed different
+extension origins with observed revisions2 and0. Preserve both facts without
+asserting that one profile was erased. Apple describes ad-hoc designated
+requirements as [specific to a binary version](https://developer.apple.com/documentation/technotes/tn3127-inside-code-signing-requirements/).
+No automatic import, data reset or signing-rule bypass may convert that
+observation into an upgrade pass. Contributor guidance MUST document the closed
+commands, pins, receipts, profile ownership and these evidence boundaries.
+
 ### Native Safari container preparation
 
 H3 MUST have its own local `CopilotH3` containing app, bundle identifiers

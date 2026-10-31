@@ -313,6 +313,65 @@ another WebKit engine or claim a native pass from a command-plan fixture.
 
 [Apple documents the modern project format](https://developer.apple.com/documentation/xcode/updating-your-xcode-project-configuration-file-format).
 
+Ad-hoc rebuilds do not establish a data-preserving upgrade. Apple documents that
+an [ad-hoc designated requirement is tied to a specific binary version](https://developer.apple.com/documentation/technotes/tn3127-inside-code-signing-requirements/).
+During local H3 preparation, two verified containing-app builds exposed different
+Safari extension origins: the previous origin had preference revision2 and the
+new origin revision0. This observation does not prove that the same profile was
+erased or that production upgrades preserve data. Keep both source-bound
+observations, verify the actual native identity, and test upgrade continuity
+separately with the intended signing identity. Do not change signing rules,
+restore/import data automatically, or reuse an earlier receipt as an upgrade pass.
+
+### H3 native center component journey
+
+Run the separate center command with explicit browser and matching driver paths:
+
+```sh
+export COPILOT_H3_CHROME_BINARY=/absolute/path/to/chrome
+export COPILOT_H3_CHROME_DRIVER=/absolute/path/to/chromedriver
+pnpm run build:extension
+pnpm run test:center-browsers:extension chrome
+# Firefox uses COPILOT_H3_FIREFOX_BINARY and COPILOT_H3_FIREFOX_DRIVER:
+pnpm run test:center-browsers:extension firefox
+```
+
+Node24 is required. The reviewed native pins for this component journey are
+Chrome156.0.8078.80/ChromeDriver156.0.8078.80 and Firefox159.0/geckodriver0.37.1.
+These identify the tested current engines; they do not change the API floors
+below. `--visible` is the only optional switch; it retains the same owned fresh
+profile and allows separate native browser UI observations. The default is
+headless. Safari uses the registered H3 containing-app procedure above; this
+command rejects Safari instead of substituting an unpacked installation identity.
+
+Before browser startup, the command validates the complete current package and
+two clean reproducible builds through the package command in its own working
+directory. It never changes the caller's working directory. It records browser
+and driver hashes, verifies the native engine/version, and checks the executed
+content/options/background source identities. A changed working tree is labeled
+`development-worktree`, rather than evidence of an exact committed candidate.
+
+The journey uses the extension-owned GitHub Runtime settings control, visits all
+20 sections, checks preview/cancel without durable writes, confirms a reviewed
+appearance change, destroys/reopens the options document, and reads back the
+retained value. It separately probes actual local/session storage with a
+nonsecret owned marker, skips an existing foreign key, cleans up its own marker,
+reads and explicitly revokes a fresh empty vault, verifies preferences remain,
+and restores the initial theme through review. No credential is injected.
+The public W3C page interface sends native clicks, typing, option selection and
+window commands; it never dispatches synthetic product input events or casts
+private driver/session fields. Rectangle requests are outer window dimensions,
+so responsive acceptance must measure the CSS viewport independently.
+
+Unique receipts and PNGs live under `.tmp/extension-browser-center-evidence`;
+`<target>-attempt.json` identifies the latest phase and failed/verified outcome.
+Success requires the owned session to close. Failed or incomplete cleanup cannot
+produce a successful receipt. PNG transport validation is not rendered-image
+inspection. Unit fixtures prove assertion/cleanup behavior only. Toolbar and
+browser Settings entrypoints, worker-idle/uncertain-write recovery, other H3
+acceptance cases and independent human accessibility remain separate evidence;
+this component journey always reports `fullH3Acceptance: false`.
+
 The automated browser workflow starts at an unauthenticated public github.com
 page to establish the genuine content-script origin, then installs the original
 DOM fixture through WebDriver. Extension code and WebExtension APIs remain
