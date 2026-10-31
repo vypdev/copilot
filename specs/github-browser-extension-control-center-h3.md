@@ -1110,6 +1110,19 @@ the original complete envelope retained and explicit read recovery. It mounts
 the actual foreground/review/gateway; its file and native-storage boundaries are
 deterministic fixtures, so it cannot replace native or human acceptance.
 
+`data_portability_journey.test.ts` adds five composed acceptance risks for
+C06/C28/C29/C46: one actual Data-page Blob export and validated file round-trip
+with a live synthetic protected vault, one complete151-row import review for all
+150 feature preferences plus theme, and three invalid-file UI paths (malformed,
+oversized, unknown field). The export preserves authored labels/searches/groups,
+excludes native credentials/provider identities and performs no preference,
+vault or provider mutation. The bulk review retains every before/after value,
+stays within the existing request/reply bounds and cancels without writing.
+Invalid files never reach preview, never echo their body and never persist.
+Native provider/file/download boundaries are deterministic; Blob, FileReader,
+foreground, gateway and review composition are real application code. These
+five cases supplement existing budgets without claiming browser/human evidence.
+
 `build_environment.test.ts` adds a three-case packaging risk supplement: a
 test-runner caller versus production, development/unset callers with the parent
 environment retained, and absence of the actual development-only HMR/proxy

@@ -3793,7 +3793,8 @@
         "extension/test/integration/data_recovery_journeys.test.ts",
         "extension/test/integration/build_environment.test.ts",
         "extension/test/integration/safari_resource_inventory.test.ts",
-        "extension/test/integration/safari_staged_publication.test.ts"
+        "extension/test/integration/safari_staged_publication.test.ts",
+        "extension/test/integration/data_portability_journey.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",
