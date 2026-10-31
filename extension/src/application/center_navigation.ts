@@ -15,8 +15,12 @@ export class CenterNavigation {
     dirty(value: boolean): void { this.draft = value; }
     protect(review: boolean, committing: boolean): void { this.review = review; this.committing = committing; }
     navigate(hash: string): void {
-        const next = parseCenterLocation(hash) ?? { route: 'recovery' };
-        if (centerLocationHash(next) === centerLocationHash(this.value)) return;
+        const parsed = parseCenterLocation(hash);
+        const next = parsed ?? { route: 'recovery' };
+        if (centerLocationHash(next) === centerLocationHash(this.value)) {
+            if (!parsed) this.port.replace(centerLocationHash(this.value)!);
+            return;
+        }
         if (this.guarded) { this.pending = next; this.port.replace(centerLocationHash(this.value)!); }
         else { this.value = next; this.pending = null; this.port.replace(centerLocationHash(next)!); }
         this.port.changed();

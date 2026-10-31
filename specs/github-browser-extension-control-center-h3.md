@@ -140,6 +140,22 @@ Text equivalent: entrypoint → packaged route → inspect inventory/state → p
 - Unsupported browser APIs are identified with a supported alternative or explanation, not a false success.
 - Import containing unknown fields, future schema, invalid values or private data is rejected or safely quarantined according to schema policy; it is never partially applied without a preview and explicit contract.
 
+A rejected fragment encountered after startup MUST follow the normal guarded
+navigation to the checked local Recovery destination. When Recovery is already
+selected, it MUST still replace the address with that canonical destination.
+That same-route correction MUST preserve focus, preferences and navigation
+draft/guard state; it MUST NOT publish the rejected content or trigger a new
+native observation. The browser may independently retire authority on departure
+from the admitted URL set; canonicalization MUST NOT restore it. In that case,
+the existing explicit read reconnects, and retired reviews remain stale or
+uncertain according to the native-lifetime contract. Valid same-route navigation
+remains a no-op. Three
+focused regressions cover rejected fragment families, guarded state preservation
+and the actual mounted application in
+`extension/test/contracts/center_navigation_recovery.test.ts` and
+`extension/test/integration/center_navigation_recovery.test.ts`; the user recovery
+contract is documented in `docs/browser-extension/configuration.mdx`.
+
 ### 6.3 State machine
 
 | State | Entered when | User-visible meaning | Allowed next states | Recovery/owner |

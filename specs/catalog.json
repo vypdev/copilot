@@ -3568,6 +3568,8 @@
         "extension/test/integration/settings_review.test.ts",
         "extension/test/contracts/center_assets.test.ts",
         "extension/test/contracts/center_frame.test.ts",
+        "extension/test/contracts/center_navigation_recovery.test.ts",
+        "extension/test/integration/center_navigation_recovery.test.ts",
         "extension/test/fixtures/center_client.ts",
         "extension/test/fixtures/legacy_options.ts",
         "extension/test/integration/center_app.test.ts",
