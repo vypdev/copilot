@@ -17,6 +17,18 @@ it('bexh3-center-C13 preview and cancellation retain durable settings byte-for-b
     expect(await h.operations.confirm(result.operationId, result.revision, OWNER)).toEqual({ state: 'expired' });
     expect(JSON.stringify(h.values.get(SETTINGS_KEY))).toBe(before); expect(h.port.set).not.toHaveBeenCalled();
 });
+it('bexh3-center-C13 cancelling an actual import preview preserves the complete durable envelope and rejects later confirmation', async () => {
+    const h = settingsOperationsFixture(); const original = { current: { ...DEFAULT_SETTINGS, density: 'compact' as const } };
+    h.values.set(SETTINGS_KEY, structuredClone(original)); const before = JSON.stringify(h.values.get(SETTINGS_KEY));
+    const result = await h.operations.preview({ type: 'import', settings: { ...DEFAULT_SETTINGS, theme: 'dark' } }, OWNER);
+    expect(result).toMatchObject({ state: 'preview', action: 'import', revision: 0,
+        before: original.current, after: { theme: 'dark', density: 'comfortable' } });
+    if (result.state !== 'preview') throw new Error('expected import preview');
+    expect(h.port.set).not.toHaveBeenCalled();
+    expect(h.operations.cancel(result.operationId, result.revision, OWNER)).toEqual({ state: 'cancelled' });
+    expect(await h.operations.confirm(result.operationId, result.revision, OWNER)).toEqual({ state: 'expired' });
+    expect(JSON.stringify(h.values.get(SETTINGS_KEY))).toBe(before); expect(h.port.set).not.toHaveBeenCalled();
+});
 it('a confirmed immutable plan writes exactly its retained after-state, not a changed copy of the browser view', async () => {
     const h = settingsOperationsFixture(); const preview = await h.operations.preview(change, OWNER);
     if (preview.state !== 'preview') throw new Error('expected preview');

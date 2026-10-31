@@ -14,7 +14,7 @@ export const en: CenterCopy = {
     messages: { title: 'Copilot control center', local: 'Your preferences stay in this browser. Every change is reviewed before saving.',
         skip: 'Skip to content', navigation: 'Control center', loading: 'Loading…', editor: 'Editing in this window', observer: 'Read-only window',
         takeControl: 'Take control of editing', refresh: 'Read current settings', preview: 'Review change', revision: 'Saved revision',
-        reviewTitle: 'Review your settings change', reviewSummary: 'These local preferences will change. Connection permissions are not granted by this change.',
+        reviewTitle: 'Review your settings change', reviewSummary: 'Scope of this review: local preferences only. It does not grant connection permissions.',
         unset: 'Not set', yes: 'Yes', no: 'No', draftChanged: 'A newer saved revision exists. This draft has not been replaced.',
         draftPending: 'Finish or discard your draft before changing another profile.',
         unsaved: 'You have an unsaved draft. Leave this page and discard it?', stay: 'Keep editing', discard: 'Discard draft and leave',

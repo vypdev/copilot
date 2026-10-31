@@ -3,12 +3,13 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { mount, unmount, flushSync } from 'svelte';
 import SettingsReview from '../../src/presentation/SettingsReview.svelte';
 import { reviewCopy } from '../../src/domain/review_copy.ts';
+import { centerCopy } from '../../src/domain/center_copy.ts';
 import type { CenterReview, ReviewState } from '../../src/domain/center_review.ts';
 
 const mounted: Record<string, unknown>[] = [];
 afterEach(async () => { for (const value of mounted.splice(0)) await unmount(value); document.body.replaceChildren(); });
 function render(state: ReviewState = 'preview', editable = true, changes = true, locale = 'en') {
-    const view: CenterReview = { state, editable, revision: 7, title: 'Save the Work profile', summary: 'Only your local preferences will change.',
+    const view: CenterReview = { state, editable, revision: 7, title: 'Save the Work profile', summary: centerCopy(locale).messages.reviewSummary,
         changes: changes ? [{ id: 'density', label: 'Page density', before: 'Comfortable', after: 'Compact' }] : [] };
     const actions = { confirm: vi.fn(), cancel: vi.fn(), reload: vi.fn(), dismiss: vi.fn() };
     const app = mount(SettingsReview, { target: document.body, props: { view, copy: reviewCopy(locale), actions } }); mounted.push(app); flushSync();

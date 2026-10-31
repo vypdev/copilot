@@ -14,7 +14,7 @@ export const fr: CenterCopy = {
     messages: { title: 'Centre de contrôle Copilot', local: 'Vos préférences restent dans ce navigateur. Chaque modification est vérifiée avant l’enregistrement.',
         skip: 'Aller au contenu', navigation: 'Centre de contrôle', loading: 'Chargement…', editor: 'Modification dans cette fenêtre', observer: 'Fenêtre en lecture seule',
         takeControl: 'Prendre le contrôle des modifications', refresh: 'Consulter les paramètres actuels', preview: 'Vérifier la modification', revision: 'Révision enregistrée',
-        reviewTitle: 'Vérifiez votre modification des paramètres', reviewSummary: 'Ces préférences locales vont changer. Cette modification n’accorde aucun droit de connexion.',
+        reviewTitle: 'Vérifiez votre modification des paramètres', reviewSummary: 'Portée de cette vérification : préférences locales uniquement. Elle n’accorde aucun droit de connexion.',
         unset: 'Non défini', yes: 'Oui', no: 'Non', draftChanged: 'Une révision enregistrée plus récente existe. Ce brouillon n’a pas été remplacé.',
         draftPending: 'Terminez ou abandonnez votre brouillon avant de modifier un autre profil.',
         unsaved: 'Vous avez un brouillon non enregistré. Quitter cette page et l’abandonner ?', stay: 'Continuer la modification', discard: 'Abandonner le brouillon et quitter',

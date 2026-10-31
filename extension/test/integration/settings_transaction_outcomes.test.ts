@@ -24,6 +24,22 @@ it('bexh3-center-C16 observes an atomic commit after its acknowledgement fails a
     expect(await repository.commit(desired, 0, ID, () => true)).toEqual({ state: 'committed', revision: 1, acknowledgement: 'unknown', current: true });
     expect(h.port.set).toHaveBeenCalledTimes(1);
 });
+it('bexh3-center-C16 a lost acknowledgement performs one initial inspection and exactly one readback of the complete saved records', async () => {
+    const h = memoryStore(); const repository = new SettingsRepository(h.port);
+    vi.mocked(h.port.set).mockImplementationOnce(async (key, value) => {
+        h.values.set(key, structuredClone(value)); throw new Error('synthetic lost acknowledgement');
+    });
+    expect(await repository.commit(desired, 0, ID, () => true)).toEqual({
+        state: 'committed', revision: 1, acknowledgement: 'unknown', current: true,
+    });
+    // The first get admits the current revision; the only subsequent get observes the attempted write.
+    expect(h.port.get).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(h.port.get).mock.calls).toEqual([[SETTINGS_KEY], [SETTINGS_KEY]]);
+    expect(h.port.set).toHaveBeenCalledExactlyOnceWith(SETTINGS_KEY, {
+        current: { ...desired, revision: 1 }, previous: DEFAULT_SETTINGS, operation: { id: ID, beforeRevision: 0 },
+    });
+    expect(h.values.get(SETTINGS_KEY)).toEqual(vi.mocked(h.port.set).mock.calls[0][1]);
+});
 it('an acknowledgement alone cannot prove that a complete record was persisted', async () => {
     const h = memoryStore(); const repository = new SettingsRepository(h.port);
     vi.mocked(h.port.set).mockResolvedValueOnce(undefined);

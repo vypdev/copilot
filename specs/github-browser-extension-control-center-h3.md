@@ -153,6 +153,12 @@ Text equivalent: entrypoint → packaged route → inspect inventory/state → p
 
 Duplicate confirmations MUST be idempotent; stale previews MUST be invalidated when their source revision changes. Canceled and out-of-order operations MUST NOT overwrite newer durable state. Partial persistence MUST be detected by rereading and reported with exact retained facts.
 
+The observed outcome and the retained review scope MUST be separate content.
+The scope summary uses state-neutral language in all four locales: it describes
+local preferences and the unchanged permission boundary without promising a
+future write after saving, cancellation or an uncertain result. Only the
+outcome status states whether the attempted change was observed as saved.
+
 ## 7. User-facing configuration
 
 | Input | Type | Recommended default | Allowed values/range | Scope/persistence |
@@ -280,6 +286,15 @@ prerequisite rather than writing during a cancelable review. Confirmations
 serialize with all existing preference updates. Duplicate confirmation reuses
 its result, and cancellation during persistence says that the operation is
 already in progress instead of claiming an undo.
+
+Canceling an import preserves the complete durable envelope byte-for-byte and
+retires that preview's confirmation reference. Its acceptance test MUST use an
+actual import intent. For an attempted settings transaction, the transaction's
+single final settings readback is distinct from its initial revision inspection
+and later explicit user reads. A lost acknowledgement cannot add another write
+or infer success from a partial record. These behaviors are exercised by the
+explicit import-cancellation and readback-count cases in
+`settings_operations.test.ts` and `settings_transaction_outcomes.test.ts`.
 
 The complete current record, prior rollback record and operation ID/before
 revision receipt share one storage set. Confirmation then rereads storage and

@@ -14,7 +14,7 @@ export const es: CenterCopy = {
     messages: { title: 'Centro de control de Copilot', local: 'Tus preferencias se quedan en este navegador. Cada cambio se revisa antes de guardarlo.',
         skip: 'Saltar al contenido', navigation: 'Centro de control', loading: 'Cargando…', editor: 'Editando en esta ventana', observer: 'Ventana de solo lectura',
         takeControl: 'Tomar el control de la edición', refresh: 'Consultar configuración actual', preview: 'Revisar cambio', revision: 'Revisión guardada',
-        reviewTitle: 'Revisa el cambio de configuración', reviewSummary: 'Cambiarán estas preferencias locales. Este cambio no concede permisos de conexión.',
+        reviewTitle: 'Revisa el cambio de configuración', reviewSummary: 'Alcance de esta revisión: solo preferencias locales. No concede permisos de conexión.',
         unset: 'Sin definir', yes: 'Sí', no: 'No', draftChanged: 'Existe una revisión guardada más reciente. Este borrador no se ha reemplazado.',
         draftPending: 'Termina o descarta tu borrador antes de cambiar otro perfil.',
         unsaved: 'Tienes un borrador sin guardar. ¿Quieres salir de esta página y descartarlo?', stay: 'Seguir editando', discard: 'Descartar borrador y salir',

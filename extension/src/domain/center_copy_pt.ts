@@ -14,7 +14,7 @@ export const pt: CenterCopy = {
     messages: { title: 'Centro de controlo Copilot', local: 'As suas preferências ficam neste navegador. Cada alteração é revista antes de guardar.',
         skip: 'Saltar para o conteúdo', navigation: 'Centro de controlo', loading: 'A carregar…', editor: 'A editar nesta janela', observer: 'Janela só de leitura',
         takeControl: 'Assumir o controlo da edição', refresh: 'Consultar definições atuais', preview: 'Rever alteração', revision: 'Revisão guardada',
-        reviewTitle: 'Reveja a alteração das definições', reviewSummary: 'Estas preferências locais vão mudar. Esta alteração não concede permissões de ligação.',
+        reviewTitle: 'Reveja a alteração das definições', reviewSummary: 'Âmbito desta revisão: apenas preferências locais. Não concede permissões de ligação.',
         unset: 'Não definido', yes: 'Sim', no: 'Não', draftChanged: 'Existe uma revisão guardada mais recente. Este rascunho não foi substituído.',
         draftPending: 'Termine ou descarte o rascunho antes de alterar outro perfil.',
         unsaved: 'Tem um rascunho por guardar. Sair desta página e descartá-lo?', stay: 'Continuar a editar', discard: 'Descartar rascunho e sair',
