@@ -959,10 +959,35 @@ normalization is a separate testable tooling responsibility; native compilation,
 signing, resource verification and registration remain adapter/composition work.
 The existing dependency, cycle and220-line module gates remain mandatory.
 
+Each build MUST use a fresh owned staging directory for both the converter's
+project and Xcode's derived output. Reusing either tree can retain historical
+web chunks even when every currently declared resource matches its hash. Verify
+the candidate's complete web resource inventory, native identifiers/version and
+local code signature before replacing the fixed profile app directory. The
+existing complete-directory publisher owns replacement/rollback; an interrupted
+`.app.previous` backup blocks replacement instead of being silently deleted.
+Only the complete inspected app is opened for registration, at its fixed path.
+Each profile owns one exclusive `.build.lock` across preparation, replacement,
+registration, evidence and staging cleanup. Another call MUST fail before
+overwriting the active attempt or invoking native tools. An existing lock and
+its owner evidence cannot be reclaimed automatically; inspect the recorded
+process and write permissions before retrying. The owning call releases its lock
+even when the initial attempt write fails. H2 and H3 locks remain independent.
+
+Resource verification MUST reject undeclared web resources at any depth, missing
+declared files, malformed UTF-8, links and nonregular entries. The only native
+metadata exceptions are a regular root `Assets.car` and regular bounded-name
+`.strings` files inside one level of bounded-name `.lproj` directories; native
+signature verification still covers them. They never enter the web hash map.
+The fixed workspace/app parents must be regular directories, and evidence writes
+must not follow file links into H2 or another integration. These policies have
+no caller override.
+
 ```text
-Choose fixed H3 profile → generate owned project → detect/validate format
-→ normalize only identity/version → build ad hoc → verify resources/signature
-→ register app → run separate loaded-browser and human acceptance
+Choose fixed H3 profile → fresh owned project/output → detect/validate format
+→ normalize only identity/version → build ad hoc → verify complete candidate
+→ replace fixed app → register/reverify → clean staging → publish local receipt
+→ run separate loaded-browser and human acceptance
 ```
 
 Text equivalent: generation and native build establish a verified local app;
@@ -970,6 +995,16 @@ they never certify that its options or controls work in Safari. A failed phase
 retains diagnostics, names the next recovery action and cannot reuse a stale
 success receipt. Native RWI/Safari unavailability remains a distinct prerequisite,
 not an extension behavior failure. No browser settings change automatically.
+
+`attempt.json` distinguishes `appReplaced` from its current phase and from
+`cleanup` (`not-created`, `pending`, `complete`, `failed`). Before replacement,
+failure retains the previous complete app. After replacement, registration,
+verification or receipt failure leaves the new complete app and a failed
+attempt; it does not turn the historical receipt into current success. A backup
+cleanup failure explicitly retains both app versions. Staging cleanup runs on
+success and failure, preserves the original failing phase/diagnostic when both
+fail, and cannot be reported as a completed build when its outcome is unknown.
+Native data, permissions and H2 rollback remain outside staging cleanup.
 
 This subflow adds26 distinct automated risks:10 generated-format/target policies,
 8 filesystem/adaptor failure and ownership cases, and8 H2/H3 composition/CLI,
@@ -979,6 +1014,16 @@ covered without partials. These cases supplement the56case inventory below and
 the native-lifetime refinement; actual native Safari and human evidence remain
 separate. Contributor docs MUST explain both fixed commands, prerequisites,
 formats, output/diagnostic paths, ad-hoc scope and unchanged rollback.
+
+The resource/completeness repair adds26 distinct regression cases beyond that
+subflow:10 complete inventory/metadata/UTF-8/filesystem-boundary cases and16
+fresh-build, candidate verification, replacement rollback, ownership, cleanup
+and receipt-failure cases, including concurrent-owner exclusion, unreclaimed
+foreign locks and H2/H3 lock isolation. The latter inspect actual temporary filesystem
+effects while native compiler/signature/registration calls are deterministic
+boundary fixtures. Identity and signature failures are distinct policies;
+layout repetitions do not add cases. These cases do not certify a native build
+or human acceptance, and modified executable branches remain100% covered.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|

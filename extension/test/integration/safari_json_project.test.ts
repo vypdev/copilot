@@ -1,5 +1,5 @@
 import { beforeAll, afterAll, expect, it } from 'vitest';
-import { mkdtemp, mkdir, writeFile, readdir, copyFile, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, writeFile, readdir, copyFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -16,7 +16,7 @@ it('Safari container preparation supports the actual modern converter JSONC layo
     const target = path.join(temporary, '.tmp/safari-h2/derived/Build/Products/Debug/CopilotH2.app');
     const run: ContainerCommand = async (file, args) => {
         if (file.endsWith('xcrun')) {
-            const project = path.join(temporary, '.tmp/safari-h2/project/CopilotH2/CopilotH2.xcodeproj');
+            const project = path.join(args[args.indexOf('--project-location') + 1], 'CopilotH2/CopilotH2.xcodeproj');
             await mkdir(project, { recursive: true });
             await writeFile(path.join(project, 'project.xcproj'), `{
                 // Native converter permits trailing commas.
@@ -25,7 +25,15 @@ it('Safari container preparation supports the actual modern converter JSONC layo
                     {"name":"CopilotH2 Extension","product-type":"app-extension","build-settings":{"PRODUCT_BUNDLE_IDENTIFIER":"${CONTAINER_ID}.Extension","MARKETING_VERSION":"1.0",}},
                 ],
             }`);
-            const resources = path.join(target, 'Contents/PlugIns/CopilotH2 Extension.appex/Contents/Resources'); await mkdir(resources, { recursive: true });
+        }
+        if (file.endsWith('xcodebuild') && args.includes('build')) {
+            const normalized = JSON.parse(await readFile(path.join(args[args.indexOf('-project') + 1], 'project.xcproj'), 'utf8'));
+            expect(normalized.targets).toMatchObject([
+                { 'build-settings': { PRODUCT_BUNDLE_IDENTIFIER: CONTAINER_ID, MARKETING_VERSION: '0.1.0' } },
+                { 'build-settings': { PRODUCT_BUNDLE_IDENTIFIER: `${CONTAINER_ID}.Extension`, MARKETING_VERSION: '0.1.0' } },
+            ]);
+            const candidate = path.join(args[args.indexOf('-derivedDataPath') + 1], 'Build/Products/Debug/CopilotH2.app');
+            const resources = path.join(candidate, 'Contents/PlugIns/CopilotH2 Extension.appex/Contents/Resources'); await mkdir(resources, { recursive: true });
             for (const asset of await readdir(path.join(temporary, 'extension/dist/safari'))) await copyFile(path.join(temporary, 'extension/dist/safari', asset), path.join(resources, asset));
         }
         if (file.endsWith('PlistBuddy')) return args[1].includes('ShortVersion') ? '0.1.0' : args[2].includes('.appex') ? `${CONTAINER_ID}.Extension` : CONTAINER_ID;

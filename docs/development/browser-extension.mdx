@@ -306,12 +306,38 @@ files fail before compilation. Only the generated scratch project is normalized;
 unrelated generated settings are retained. Native identity, embedded resource
 hashes, signature and registration are verified after building.
 
+Each invocation generates a fresh project and fresh Xcode output under an owned
+`candidate-*` staging directory. It verifies the complete web resource set,
+identifiers and signature before replacing the fixed app directory, then opens
+that complete app for registration and verifies it again. Historical chunks in
+an old app or converter cache cannot become part of the new app. Unknown web
+resources, links, invalid UTF-8 and missing declared assets fail validation.
+Only regular native `Assets.car` and one-level `.lproj/*.strings` metadata are
+allowed outside the web receipt; native signature verification still applies.
+
 `attempt.json` reports the current phase and `building`, `failed` or `verified`.
 `container.json` is the last verified app receipt, which may belong to an earlier
 source; a failed attempt does not promote it into a new success. `build.log`
 contains the current failure diagnostics, capped at4MiB of valid UTF-8. Inspect
 these files under the selected profile's directory. Correct the failed phase
 before rebuilding; no reset of browser data or permissions is performed.
+
+The attempt also records `appReplaced` and staging `cleanup`. A failure before
+replacement keeps the old complete app. A later failure can leave the new
+complete app without confirmed registration or a current success receipt;
+inspect the phase rather than assuming the old app is still installed. An
+interrupted `.app.previous` backup remains evidence: inspect both versions
+before retrying. Staging is removed after ordinary success/failure; if cleanup
+fails, the attempt says so and preserves the original failure diagnostic.
+Fixed output parents and evidence files cannot follow links into H2. Neither
+cleanup nor rebuild changes browser permissions or stored preferences.
+
+Each fixed profile also owns `.build.lock` for the entire command. A second H3
+build cannot rewrite the first attempt or launch another native build. If the
+lock already exists, inspect its `owner.json`, the recorded process and write
+permissions; do not remove it blindly. H2 and H3 use independent locks. The owner
+releases its lock on success and failure, including failure to write the initial
+attempt; an interrupted process can leave evidence that requires inspection.
 
 The Xcode27.1/versioned H2 receipts above remain historical H2 evidence. A new H3
 build, including one made with Xcode27.2, is preparation evidence only. Complete

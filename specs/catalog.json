@@ -3358,7 +3358,9 @@
         "extension/tooling/webdriver_page.mts",
         "extension/tooling/center_browser_cli.mts",
         "extension/tooling/center_browser_journey.mts",
-        "extension/tooling/center_browser_scripts.mts"
+        "extension/tooling/center_browser_scripts.mts",
+        "extension/tooling/safari_resources.mts",
+        "extension/tooling/safari_build_paths.mts"
       ],
       "tests": [
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
@@ -3789,7 +3791,9 @@
         "extension/test/integration/center_browser_scripts.test.ts",
         "extension/test/integration/center_browser_cli.test.ts",
         "extension/test/integration/data_recovery_journeys.test.ts",
-        "extension/test/integration/build_environment.test.ts"
+        "extension/test/integration/build_environment.test.ts",
+        "extension/test/integration/safari_resource_inventory.test.ts",
+        "extension/test/integration/safari_staged_publication.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",

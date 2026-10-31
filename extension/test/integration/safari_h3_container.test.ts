@@ -57,8 +57,9 @@ it('stale artifact preflight records failure before conversion instead of reusin
     } finally { await writeFile(asset, original); }
 });
 it.each(['registration', 'verification'] as const)('H3 %s failure cannot leave a successful current attempt', async phase => {
-    const h = await fixture(); const run: ContainerCommand = async (file, args) => {
-        if (phase === 'registration' && file.endsWith('/open') || phase === 'verification' && file.endsWith('/codesign')) throw new Error('native phase failed');
+    const h = await fixture(); let signatures = 0; const run: ContainerCommand = async (file, args) => {
+        if (file.endsWith('/codesign')) signatures++;
+        if (phase === 'registration' && file.endsWith('/open') || phase === 'verification' && file.endsWith('/codesign') && signatures === 2) throw new Error('native phase failed');
         return h.execute(file, args);
     };
     await expect(buildSafariContainer(root, run, 'h3')).rejects.toThrow('native phase failed'); expect(await h.attempt()).toMatchObject({ state: 'failed', phase });
