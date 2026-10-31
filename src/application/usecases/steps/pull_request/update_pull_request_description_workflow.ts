@@ -1,3 +1,5 @@
+import { isOpenPullRequestLinkIdentity, readPendingPullRequestLink, pendingPullRequestParent, preservePendingPullRequestLink } from '../../../../domain/pull_request_issue_link_state';
+import type { PullRequestDescriptionDetails } from '../../../ports/pull_request_description_ports';
 import { Result } from '../../../../data/model/result';
 import { AGENT_PLAN } from '../../../../application/policies/agent_task_policy';
 import type { FindingsQueryPort } from '../../../ports/agent_findings_ports';
@@ -21,6 +23,7 @@ import {
     validateAgentOutputLocale,
 } from '../../../policies/agent_output_locale_policy';
 import { renderPullRequestDescriptionContent } from '../../../policies/pull_request_description_content_policy';
+import { shouldPreserveClosingReference } from '../../../../domain/pull_request_closing_reference';
 import type {
     PullRequestDescriptionRequest,
     PullRequestDescriptionContext,
@@ -50,6 +53,18 @@ export async function runUpdatePullRequestDescriptionWorkflow(
         }
 
         const details = await loadPullRequestDetails(context, dependencies, request.trigger);
+        const identity = details.identity;
+        if (!isOpenPullRequestLinkIdentity(identity, context.pullRequest.number)
+            || (context.pullRequest.headSha && identity.headSha !== context.pullRequest.headSha)
+            || (context.pullRequest.headRepository && identity.headRepository !== context.pullRequest.headRepository)
+            || (context.pullRequest.headBranch && identity.headRef !== context.pullRequest.headBranch)) throw staleDescription();
+        if (context.pullRequest.baseBranch && details.baseBranch !== context.pullRequest.baseBranch) throw staleDescription();
+        const pending = readPendingPullRequestLink(details.body);
+        if (pending.kind === 'pending' && identity.headRepository !== identity.repository) throw staleDescription();
+        if (pending.kind === 'pending' && pending.record.version === 2
+            && (pending.record.headRepository !== identity.headRepository || pending.record.headRef !== identity.headRef)) throw staleDescription();
+        const pendingParent = pendingPullRequestParent(details.body, context.pullRequest.number, context.issueNumber);
+        if (pendingParent && details.baseBranch !== pendingParent) throw staleDescription();
         const branches = resolveBranches(context, details);
         if (!branches) {
             return [new Result({
@@ -83,7 +98,7 @@ export async function runUpdatePullRequestDescriptionWorkflow(
             }
         }
 
-        const currentBody = details?.body ?? context.pullRequest.body;
+        const currentBody = details.body;
         const diff = await dependencies.pullRequestDescriptionCommandPort.getDiff(context.pullRequest.number);
         const changes = diff.snapshot.changes;
         const diffEvidence = JSON.stringify(changes);
@@ -124,14 +139,20 @@ export async function runUpdatePullRequestDescriptionWorkflow(
                 PULL_REQUEST_DESCRIPTION_RESPONSE_SCHEMA,
             ),
         });
-        const generatedDescription = extractDescription(response, context.targetLocale, linkedIssueNumber);
+        const generatedDescription = extractDescription(response, context.targetLocale, linkedIssueNumber,
+            shouldPreserveClosingReference(currentBody, context.mode, identity, linkedIssueNumber));
 
-        const pullRequestBody = context.mode === 'replace'
+        const latest = await dependencies.pullRequestDescriptionCommandPort.getDetails(context.pullRequest.number);
+        if (!isOpenPullRequestLinkIdentity(latest.identity, context.pullRequest.number)
+            || latest.identity.headRepository !== identity.headRepository || latest.identity.headRef !== identity.headRef
+            || latest.identity.headSha !== identity.headSha || latest.baseBranch !== details.baseBranch
+            || latest.body !== currentBody) throw staleDescription();
+        const rendered = context.mode === 'replace'
             ? generatedDescription
             : mergeManagedPullRequestDescription(currentBody, generatedDescription);
         await dependencies.pullRequestDescriptionCommandPort.updateDescription(
             context.pullRequest.number,
-            pullRequestBody,
+            preservePendingPullRequestLink(latest.body, rendered),
         );
         return [new Result({ id: taskId, success: true, executed: true, steps: [] })];
     } catch (cause) {
@@ -157,29 +178,27 @@ function resolveBranches(
     context: PullRequestDescriptionContext,
     details?: { readonly headBranch: string; readonly baseBranch: string },
 ): { headBranch: string; baseBranch: string } | undefined {
-    const headBranch = context.pullRequest.headBranch || details?.headBranch;
-    const baseBranch = context.pullRequest.baseBranch || details?.baseBranch;
+    const headBranch = details?.headBranch || context.pullRequest.headBranch;
+    const baseBranch = details?.baseBranch || context.pullRequest.baseBranch;
     return headBranch && baseBranch ? { headBranch, baseBranch } : undefined;
 }
 
 async function loadPullRequestDetails(
     context: PullRequestDescriptionContext,
     dependencies: UpdatePullRequestDescriptionWorkflowDependencies,
-    trigger: PullRequestDescriptionRequest['trigger'],
-): Promise<{ body: string; headBranch: string; baseBranch: string } | undefined> {
-    const needsRemoteDetails = context.eventName === 'issue_comment'
-        || trigger === 'authorized-command'
-        || !context.pullRequest.headBranch
-        || !context.pullRequest.baseBranch;
-    return needsRemoteDetails
-        ? dependencies.pullRequestDescriptionCommandPort.getDetails(context.pullRequest.number)
-        : undefined;
+    _trigger: PullRequestDescriptionRequest['trigger'],
+): Promise<PullRequestDescriptionDetails> {
+    return dependencies.pullRequestDescriptionCommandPort.getDetails(context.pullRequest.number);
+}
+function staleDescription(): ApplicationError {
+    return new ApplicationError('workflow.stale', 'PR identity, body or pending linkage changed. Existing body retained; rerun the current PR workflow.');
 }
 
 function extractDescription(
     response: string | Record<string, unknown> | undefined,
     targetLocale: string,
-    linkedIssueNumber?: number,
+    linkedIssueNumber: number | undefined,
+    preserveClosingReference: boolean,
 ): string {
     if (response == null) {
         throw new ApplicationError('agent.failed', 'Configured agent did not return PR description content. Existing body retained.');
@@ -188,7 +207,7 @@ function extractDescription(
     if (validation.kind === 'invalid') {
         throw new ApplicationError('locale.output-invalid', agentOutputLocaleFailureMessage(validation));
     }
-    const rendered = renderPullRequestDescriptionContent(validation.payload, targetLocale, linkedIssueNumber);
+    const rendered = renderPullRequestDescriptionContent(validation.payload, targetLocale, linkedIssueNumber, preserveClosingReference);
     if (rendered.kind === 'invalid') {
         throw new ApplicationError(
             'agent.failed',

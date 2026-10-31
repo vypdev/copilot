@@ -3,7 +3,7 @@
 - Status: Implemented — automated verification complete; live provider UX review pending
 - Date: 2026-09-17
 - Catalog capability ID: `issue-start-and-sdd-readiness`
-- Last verified: 2026-10-27 (actionable blocked preparation and safe diagnostics, #714)
+- Last verified: 2026-10-31 (literal accepted catalog titles, #820; missing trusted-catalog prerequisite, #808; complete no-follow specification discovery, #804; navigable accepted catalog filenames, #782; truthful proposed SDK bootstrap, #777; safe portable catalog publication, #771; nested catalog links, #768; actionable blocked preparation and safe diagnostics, #714)
 - Owners: Copilot maintainers
 - Scope: clarify, update, validate, and publish the owning SDD before eligible branch-based work
 - Related issues/PRs: none; local design work; companion SDD `issue-start-and-branch-readiness.md`
@@ -1728,3 +1728,746 @@ and remain blocked pending a reviewed compatible adapter. The disabled-by-defaul
 opt-in, no-deployment policy, remote branch ownership and human approval gates
 are unchanged. Rollback restores the prior visibility/compatibility defect;
 retained data and historical publication are never rewritten by this fix.
+
+
+### Nested catalog specification links — #768 (2026-10-29)
+
+**Observed defect and intentional contract.** The portable validator accepts
+nested regular SDDs, but the catalog renderer previously kept only their
+basename. For example, `specs/group/example.md` incorrectly linked to
+`./example.md`. Both the primary-SDD table and companion evidence links were
+affected; equal filenames in separate groups could silently select the wrong
+contract. See [#768](https://github.com/vypdev/copilot/issues/768).
+
+The generated `specs/CATALOG.md` MUST preserve the full path after `specs/` in
+all primary and companion specification links. Root-level links MUST remain
+compatible, and other evidence MUST retain its repository-relative `../` target.
+Registered metadata, source files, titles, companion counts and ownership MUST
+remain unchanged. This corrects the existing supported layout contract; it adds
+no new layout policy or status/readiness semantics.
+
+| Registered path (example) | Catalog-relative target |
+|---|---|
+| `specs/example.md` | `./example.md` |
+| `specs/group/example.md` | `./group/example.md` |
+| `specs/other/example.md` | `./other/example.md` |
+| `docs/guide.mdx` | `../docs/guide.mdx` |
+
+Text equivalent: remove the leading `specs/` from specification targets and
+retain the remaining directory path; other evidence remains relative to the
+repository root. Equal basenames in different directories stay distinct.
+
+**Architecture, configuration and safety.** The existing pure `renderCatalog`
+and `renderPathLinks` functions own this presentation mapping. Validation,
+filesystem containment, unique ownership, publication allowlists, immutable
+revisions, state, adapters and permissions keep their existing responsibilities.
+No configuration or schema field changes. Existing invalid catalogs continue to
+fail through the same validation/recovery path; this renderer does not admit new
+files or read paths. Existing architecture and specification contracts remain
+executable gates.
+
+**UX, recovery and compatibility.** The generated Markdown table and evidence
+map keep their labels, ordering and companion counts. Their links now open the
+intended nested SDD; for example `[Example](./group/example.md)`. No new pending,
+blocked, partial, failure or complete operation state, notification, localization
+string or interaction is introduced; existing gate/CLI states apply unchanged.
+Regenerating the catalog repairs existing flattened links without moving source
+files or changing metadata. Rollback reverts rendering without a data migration;
+previously generated nested links would again require repair. Automated target
+resolution covers this static-link correction; no new manual UI flow is claimed.
+
+Allocate **seven additional distinct cases** in
+`portable_specification_catalog.test.ts`: root primary, nested primary, nested
+primary plus companion, equal basenames in separate directories, deeply nested
+primary, root primary with an equal-name nested companion, and unchanged
+non-specification evidence links. The six specification fixtures MUST pass the
+real catalog validator, assert exact table/evidence targets, and resolve every
+rendered relative target to an existing regular file in a temporary repository.
+Five nested cases fail before the fix; root and non-spec controls stay green.
+All existing unsafe-path and symlink cases remain required. Fixtures use regular
+files and execute no consumer toolchain. Existing global/module coverage limits
+remain mandatory.
+
+**Traceability and DoD.** The seven renderer cases cover the mapping and
+compatibility requirements; the existing repository-catalog and branch-sync
+suites cover generated-output and integration compatibility. Documentation in
+`docs/development/specifications.mdx` explains nested links and regeneration;
+`docs/issues/pre-branch-sdds.mdx` retains layout/support and recovery guidance.
+Catalog metadata/evidence and its generated view are updated with this change.
+Acceptance requires all seven cases, unchanged path/security tests, branch-sync
+checks, specification generation/validation, typecheck/lint, documentation and
+workflow contracts, generated bundles and package smoke, required CI coverage,
+platform checks and exact-head review without unresolved findings before merge.
+No unresolved design decision or new operator permission blocks this fix.
+
+
+### Safe portable catalog publication — #771 (2026-10-29)
+
+**Observed defect and evidence.** The [reported generator defect](https://github.com/vypdev/copilot/issues/771)
+is reproduced with the actual exported portable validator at base
+`a0ddd1ef8a4edaafe77fb690b5d9d1d37bca09e2`: a valid synthetic catalog with
+`specs/CATALOG.md` linked to an owned sibling sentinel returns no validation
+errors, prints a generation success receipt, and overwrites that sibling.
+The reproduction creates and removes one temporary parent; no real consumer,
+account data or user file is read or modified. This is a destination-publication
+fault, separate from nested link rendering and catalog profile admission.
+
+**Intentional requirements.** Catalog generation MUST accept a missing output or
+an existing regular file in real repository directories. It MUST reject an
+observed symlink, dangling link, directory or other nonregular output before
+publication. Every destination-directory component MUST be a real directory.
+A check followed by an ordinary pathname write is insufficient: parent or leaf
+replacement MUST NOT redirect writes through a link to an external target.
+Concurrent creation of a new output MUST win over this generator's create attempt.
+A late link substitution at atomic replacement may itself be replaced, but its
+target MUST remain untouched and the resulting catalog MUST be this operation's
+regular file. Existing hard-link aliases MUST retain their prior bytes.
+
+Read-only validation MUST likewise reject a linked index and verify the opened
+file identity before consuming its data. Normal catalog validation, status,
+readiness, evidence containment, unique ownership and nested-link rendering
+remain unchanged. No new input, service, permission or migration is introduced.
+
+```mermaid
+flowchart LR
+  A[Validate catalog] --> B[Pin real root and specs directory]
+  B --> C[Inspect output and create exclusive temporary file]
+  C --> D[Write and verify route and file identities]
+  D --> E{Output existed?}
+  E -->|yes| F[Atomic directory entry replacement]
+  E -->|no| G[Atomic no-replace creation]
+  F --> H[Verify result and clean owned temporary file]
+  G --> H
+  H --> I[Restore working directory and emit PASS]
+```
+
+Text equivalent: keep the operating-system directory fixed, prepare the output
+privately, verify identities, publish one complete regular file without following
+a destination link, clean only owned temporary data, then report success.
+
+**Architecture and bounds.** The bundled infrastructure module
+`specification_catalog_publication.cjs` owns fixed-name catalog I/O. The existing
+validator retains parsing, policy validation and rendering. The publication
+helper uses Node built-ins and the existing native directory-pinning pattern
+from `setup_verification_action.ts`; Node has no portable `openat`. Its critical
+section is synchronous, invokes no repository code, uses only single-component
+relative operations after directory entry, and restores the original cwd by identity when still addressable or already
+pinned. An unavailable/replaced caller directory fails without a success receipt.
+Directory descriptors bind metadata while entering; the OS cwd then retains the
+directory through POSIX renames or prevents its rename on Windows. Route/inode
+checks detect observed relocation and replacement. Unsupported identity or I/O
+operations fail closed. No process-wide cwd change may span an await.
+
+The sibling temporary name uses a fresh UUID, exclusive creation and initial
+mode 0600. Publication keeps its descriptor open through cleanup to prevent inode
+reuse, honors the caller's umask for new files and existing ordinary permission
+bits for replacement, and never removes a foreign entry at the temporary name.
+If the first descriptor stat fails after exclusive creation, cleanup MUST make
+one bounded identity-recovery attempt while that descriptor remains held. A
+recovered identity permits only matching owned-entry removal; generation still
+fails. Two failed stats, or failed cleanup inspection/unlink, MUST emit a cleanup
+diagnostic naming the host-generated UUID entry before descriptor close and cwd
+restoration. Preserve unverifiable/foreign entries and require ownership inspection
+before manual cleanup. A secondary close/restore failure cannot suppress an
+already emitted cleanup notice. No automatic delete is authorized by a filename
+alone, and no retained entry is reused on the next invocation.
+
+Existing outputs use atomic rename; missing outputs use atomic no-replace hard
+link creation. Parent pinning prevents either operation from following a swapped
+parent. Read-only opening checks type, identity and metadata before data access.
+No arbitrary destination path or callback is a public option. The isolated
+portable-copy fixture includes validator, path policy and publication module;
+normal CLI/Action bundles include the same dependency closure.
+
+**UX, failures and recovery.** A successful generator keeps its current single
+`specification catalog generation: PASS` receipt after publication and cleanup.
+A stale ordinary index still reports the existing regeneration instruction.
+Unsafe or changed output access returns nonzero, prints a fixed actionable
+English CLI diagnostic and emits no success receipt. An incomplete cleanup also
+prints its host-generated UUID basename and an ownership-inspection next step; no
+repository content, arbitrary pathname or raw filesystem exception is exposed. Inspect
+links/collisions, concurrent changes, capacity and permissions before rerunning.
+The same current generation command retries from fresh metadata. The operation
+adds no background job, notification, provider write or stored review state.
+
+Pre-publication write/open/rename failures preserve the old catalog; external
+link targets are never changed. A route change or another writer after atomic
+publication can invalidate the success claim even though the originally pinned
+directory received the complete output. In that case inspect both locations and
+regenerate; no rollback of another writer's file is attempted. Cleanup removes
+only an entry still matching this operation's held descriptor. Foreign temporary
+replacements are preserved. This guarantees atomic file visibility, not an OS
+sandbox or a full power-loss transaction. Rollback reverts the module and main
+integration together; source metadata needs no conversion. Vendored installations
+must adopt the complete matching source dependency set or updated bundles.
+
+Allocate **40 additional distinct native cases**, exclusively in
+`specification_catalog_publication.test.ts`:
+
+| Area | Cases | Executable acceptance |
+|---|---:|---|
+| Supported creation, regeneration, portable copy and hard-link alias | 4 | exact output, ordinary modes, successful read validation, preserved external alias |
+| Existing unsafe destination or parent | 5 | internal/external/dangling links, directory collision, linked specs parent; nonzero, no success, retained targets |
+| Publication races | 11 | early leaf swaps (2), directory entry race (1), open/metadata parent replacements (2), pre-open parent swap (1), new output winner (1), pre-publication regular edit (1), final leaf substitution (1), substituted temporary link (1), post-publication winner (1) |
+| I/O failure and ownership-aware cleanup | 5 | metadata/write/open/rename failure and foreign temporary replacement preserve other data |
+| Read-only link and identity races | 5 | observed link, pre-open replacement, post-open link, post-stat edit and post-read edit; no unverified success |
+| Caller directory restoration | 2 | keep its pinned inode after rename; reject a replacement at its original path |
+| Invalid catalog | 1 | no output or temporary publication |
+| Independent directory metadata mismatches | 2 | real owned directory/link metadata exercises fail-closed guards even where the OS prevents renames |
+| Post-creation identity and cleanup failures | 5 | bounded stat recovery; persistent stat failure with/without foreign replacement; cleanup stat/unlink failure is explicitly disclosed |
+| **Total** | **40** | no double counting with prior amendments |
+
+The original 19-case candidate has 14 failures before the fix; later cases cover
+additional native boundary and packaging risks. Three post-creation stat cases
+also fail against initial PR head `2252127de6040a7a2c5f0a12cbf93733ca115a65`,
+proving the review-reported cleanup gap before its correction. Fault injection changes actual
+filesystem entries at the boundary; it does not execute consumer strings. CLI
+fixtures run Node against the actual exported main in fresh temporary repositories.
+Windows directory-rename denial is a successful OS prevention of that attack,
+not skipped verification; unsupported file-symlink capability follows the suite's
+existing explicit platform capability convention. All source and outside sentinels
+are test-owned. These cases do not claim a real consumer setup/deployment run.
+
+**Traceability and DoD.** The new suite maps to the table above; existing portable,
+repository-catalog, pre-branch and branch-sync suites retain compatibility checks.
+Explicitly collect the new CJS helper in mandatory Jest coverage and enforce
+95% lines/statements and 90% branches/functions for that module. Keep every
+existing global/module budget unchanged. Also measure native V8 coverage of CLI
+subprocesses, retaining source/hash/result receipts and disclosing unexecuted
+platform-only or defensive branches. Update development documentation, catalog code/test evidence and generated
+catalog. Acceptance requires focused/native tests, architecture, typecheck/lint,
+all documentation/workflow/specification contracts, generated bundles/package
+smoke, exact-head CI and every platform check, plus complete review with no
+unresolved findings before merge. No new operator authorization is required.
+
+### Truthful proposed SDK capability bootstrap — #777 (2026-10-29)
+
+**Problem and observed evidence.** The SDK version-1 catalog already recognizes
+`proposed`, but its filesystem validator, immutable profile reader and new-entry
+parser require implementation paths even before implementation exists. The
+authorized, read-only reproduction of the snapshot cited in
+[issue #777](https://github.com/vypdev/copilot/issues/777) contains eleven proposed
+capabilities and produces exactly 33 errors: empty entrypoints/code/tests for
+each entry. Its specification and documentation files exist. Draft validation
+and planned acceptance inventories are not executed application evidence.
+
+**Contract and readiness.** `proposed-sdk-R01`: every SDK path field MUST remain
+an explicitly present array. Only `entrypoints`, `code` and `tests` MAY be empty
+for `status: proposed`; workflows retain their existing optional cardinality.
+Specifications and documentation remain nonempty. Implemented, as-built and
+deprecated entries retain their complete evidence requirements. All supplied
+paths still require the existing role boundary, normalized contained regular
+file, no-symlink, uniqueness and ownership checks. An empty array is absence of
+implementation evidence; a missing/null field or a nonexistent supplied path
+is invalid, including in a proposed entry.
+
+`proposed-sdk-R02`: the filesystem validator, immutable reader, doctor and new-entry
+parser MUST use the same pure cardinality policy. Analysis guidance MUST allow
+truthful empty implementation arrays and prohibit fabricated source, wrapper
+tests or documents substituted for implementation. Existing extension metadata,
+requirements, blockers, status, dates and readiness MUST be preserved by SDK
+round trips. No native-profile adapter or schema migration is added.
+
+`proposed-sdk-R03`: structural acceptance MUST NOT set an SDD to Ready for
+implementation, promote a capability to implemented, erase blockers or imply
+that planned tests executed. Existing clarification, SDD consistency, case/budget
+traceability, immutable evidence, allowed-diff, publication and branch checks
+remain mandatory. The normal eligible feature flow reviews its own contract
+before implementation; catalog acceptance alone establishes none of that work.
+
+**Supported initialization and transition.** `proposed-sdk-R04`: a maintainer
+uses the enabled documentation Issue Form for the initial standard, template,
+prospective SDDs, documentation and version-1 proposed catalog. They start it
+with in-progress and use the exact Action-owned branch. Its existing exemption
+from the feature gate allows prerequisite documentation to be reviewed without
+disabling the gate or creating fake source. Merge those reviewed prerequisites
+through the normal PR lifecycle, then start the feature issue and its ordinary
+clarification/publication flow. A source-vendored SDK uses the matching reviewed
+validator, publication helper and path policy in their original layout; its
+existing Node generation/validation entrypoint requires no application package.
+An older installed validator must be upgraded through the reviewed SDK/Action
+installation route, never patched or bypassed in a consumer to manufacture green.
+
+```mermaid
+flowchart LR
+    E[Empty product repository] --> D[Action-owned documentation branch]
+    D --> P[Draft SDDs and proposed catalog with absent implementation arrays]
+    P --> V[Structural validation and reviewed prerequisite PR]
+    V --> G[Ordinary feature clarification and verified SDD publication]
+    G --> I[Implement and execute meaningful tests]
+    I --> R[Review real evidence paths and implemented status]
+```
+
+Text equivalent: bootstrap the reviewed documents through the existing
+documentation workflow, validate truthful proposed metadata, then follow the
+normal feature gate. Add real implementation evidence as it exists and promote
+status only with the corresponding review. A failed or interrupted preparation
+retains its documents and blockers and retries the same normal workflow.
+
+**Visible content and recovery.** `proposed-sdk-R05`: an empty proposed
+implementation field renders **Not yet implemented (proposed capability).**
+in the generated evidence map. Empty workflows retain their current
+not-applicable message; existing populated evidence links are unchanged. For
+example, a proposed payments SDD with entrypoints/code/tests empty shows its
+specification/documentation paths, the explicit absence message and its recorded
+date. That date records the reviewed metadata/document snapshot, not test
+execution. Invalid/missing fields keep their actionable field diagnostic; users
+restore the required array or supply real contained files, regenerate and retry.
+Unsupported native profiles retain their existing compatibility recovery and
+byte-preservation behavior. No new comment, notification, locale field, config
+flag, permission, workflow or runtime is introduced.
+
+**Numeric budget, coverage and executable acceptance.** Before implementation,
+reserve at least **34 distinct additional cases**; existing cases do not count
+again:
+
+| Area | Minimum | Observable behavior |
+|---|---:|---|
+| Pure cardinality and immutable SDK views | 12 | Three proposed omissions and strict status/field alternatives; arrays remain required |
+| Real filesystem and transition | 8 | All-proposed/mixed repositories; missing/unsafe/linked paths, ownership, required docs/specs and real evidence transition |
+| SDD planning and publication | 6 | New proposed entry, rejected promotion, update/companion/new scratch writes and metadata retention |
+| Generator/validator entrypoint | 4 | Generate, read-only validation, stale output and invalid evidence without false success |
+| Generated UX and documentation | 4 | Explicit not-implemented state, retained workflow semantics, populated links and executable bootstrap guidance |
+| Recovery registry | 1 | Required closed-variant matrix covers the new EN/ES retained-state contract |
+| **Total** | **35** | Deterministic, owned fixtures; no consumer mutations or claimed live application acceptance |
+
+Collect the previously unmeasured CJS path policy and catalog validator in the
+mandatory root coverage run. Enforce 100% statements/branches/functions/lines
+for the pure path policy and immutable compatibility reader, and 95% statements/
+lines plus 90% branches/functions for the catalog validator, doctor policy and changed gate use
+case. Retain every prior global/module budget. CLI/root-shape/error cases that
+close the old coverage gap must test meaningful observable outcomes.
+
+`proposed-sdk-R06`: the original immutable consumer snapshot MUST fail before
+the correction with its 33 absent-evidence errors, then validate unchanged with
+zero errors under the corrected SDK. It remains proposed with the same decoded
+readiness/blockers/metadata; this proves catalog compatibility, not consumer
+implementation or live gate readiness. Owned scratch repositories cover actual
+SDD allowlisted writes and real Node generator/validator invocation. Update this
+owner, the canonical standard's bootstrap guidance, both specification guides,
+catalog evidence and generated index together. Map R01/R02 to policy/reader/CJS
+fixtures, R03/R04 to gate and scratch publication fixtures, R05 to generator/guide
+contracts and R06 to the immutable reproduction receipt. Complete focused and
+full coverage, extension/package/build/web/types/lint, documentation/workflow/
+specification contracts, Graphify, normal commit hooks and fresh exact-head CI,
+all platforms, Codecov diff audit and complete review without active findings
+before the authorized develop merge. No release or consumer update is implied.
+
+**Executed focused evidence.** The change adds 59 distinct cases: 32 catalog/
+immutable-view/filesystem/transition cases, 14 entrypoint/rendered-guide cases,
+seven doctor cases, three gate cases and three real Git scratch-publication
+cases. The initial focused run has seven genuine failures and 25 passing cases;
+the corrected core and workflow groups pass 455 tests with one existing platform
+skip. The shared path policy and immutable reader have 100% all metrics. The
+previously unmeasured CJS validator has 100% lines/functions, 97.70% statements
+and 94.73% branches in the focused run; the full run and strict new budgets remain
+mandatory.
+
+The nineteen fetched reference files from the issue's immutable consumer
+snapshot match their GitHub Git blob SHA and remain byte-identical (SHA-256
+447871dcfa8d8c32f016ed717f1baccfd569ab0a4fce2e347ad00a5921340e9c).
+The unchanged validator initially reports exactly 33 missing implementation-array
+errors; the corrected validator reports zero. All eleven capabilities remain
+proposed and all retained readiness facts still say Draft/absent implementation/
+changes disallowed. No consumer application command, implementation acceptance,
+feature gate or remote mutation is claimed by that structural reproduction.
+
+The complete local run passes 794 suites and 14,793 tests with the same 35
+existing platform skips. Coverage is 97.31% statements, 95.05% branches, 97.96%
+functions and 98.09% lines; every previous and new module budget passes. Doctor,
+the shared path policy and compatibility reader each reach 100% all metrics.
+The gate retains 98.14% statements/98.68% lines/97.56% functions/95.42% branches;
+the CJS validator retains its focused 100% lines/functions and 97.70% statements/
+94.73% branches. Fresh remote gates remain required before merge.
+
+## Navigable accepted catalog paths — #782 (2026-10-30)
+
+The shared renderer accepts a repository file such as `specs/foo).md` but emits
+an unescaped Markdown destination that ends before that filename does. The same
+defect affects the primary table link, companion SDDs and every evidence role.
+The complete product/SDD scope and the existing path policy remain authoritative;
+rejecting valid names or dropping entries is not a repair.
+
+catalog-link-R01: percent-encode each validated repository-path segment for its
+Markdown destination, including parentheses, spaces, Unicode, literal percent
+signs and fragment-like characters. Preserve slash separators, the full nested
+specification path after `specs/`, and the existing `./` versus `../` catalog
+base. Use the same UTF-8 representation as Node filesystem paths, including
+replacement of unpaired UTF-16 surrogates. Encode literal percent signs exactly
+once so URI-looking names still
+identify their real files. Primary and evidence links share this mapping.
+
+catalog-link-R02: display path labels literally, including accepted backticks,
+using unambiguous CommonMark code-span delimiters. Preserve ordinary labels,
+ordering, companion counts, metadata, ownership and readiness. No new state,
+notification, configuration, path allowance, consumer command or permission is
+introduced. This is pure rendering; containment, traversal, symlink and regular
+file checks remain mandatory and unchanged.
+
+| Registered example | Catalog destination |
+|---|---|
+| `specs/nested/foo).md` | `./nested/foo%29.md` |
+| `specs/(owner).md` | `./%28owner%29.md` |
+| `docs/guide #1.md` | `../docs/guide%20%231.md` |
+| `docs/literal%20.md` | `../docs/literal%2520.md` |
+
+Text equivalent: render a URI for the complete original file path, with every
+path separator retained and delimiter characters encoded within each segment.
+Parsing the resulting Markdown and decoding its destination once must resolve
+to that same contained regular file. Displayed path text remains the original
+value. Regenerate an existing catalog with the normal SDK commands to repair
+its links; no source-file move or metadata migration is required.
+
+Reserve **17 distinct additional cases before implementation**: twelve
+temporary-repository navigation variants covering unmatched/balanced parentheses,
+nested paths, spaces, Unicode, hashes, literal percent sequences, brackets,
+backtick runs, apostrophes and exclamation marks; two code-span boundary cases;
+one accepted evidence-name case with an unpaired UTF-16 surrogate, and two public
+generation/validation entrypoints, including a matching standalone
+three-file SDK with no consumer package. Use the real pinned CommonMark reference
+parser as a development-only dependency. Inspect its AST links and literal code
+labels, then resolve destinations against actual files; regex extraction or raw
+string equality alone cannot establish navigation. Preserve all existing unsafe
+path, alias, publication, proposed-entry and branch-sync regressions.
+
+The renderer's new executable lines require 100% exact-base diff coverage; the
+existing validator 95/90 and all project/module budgets remain unchanged.
+Update this owner, catalog evidence, developer/support documentation and generated
+artifacts together. Run specification generation/validation, focused parser and
+entrypoint tests, full coverage/acceptance, package/build/web/type/lint and native
+platform gates, then complete exact-head review without active findings before
+the authorized develop merge. This validates catalog navigation, not consumer
+application execution or readiness.
+
+The syntax reference is [CommonMark links](https://spec.commonmark.org/0.31.2/#links)
+and the AST oracle is the [CommonMark JavaScript reference implementation](https://github.com/commonmark/commonmark.js).
+
+Local verification for #782: the unchanged renderer first failed 12 of the 17
+new navigation cases; the repaired renderer passes all 17 and all 154 focused
+compatibility cases. Full serial coverage passes 799 suites and 14,948 tests
+with 35 pre-existing skips, all existing budgets, and 98.10% lines/97.33%
+statements/97.97% functions/95.10% branches. The shared validator reaches 100%
+lines/functions, 97.81% statements and 94.96% branches. Extension verification
+passes 267 tests with 100% all metrics. The setup ledger remains 336/350 passed
+with its 14 explicitly open existing cases. Exact-head remote platform checks,
+diff coverage and a complete review without active findings remain merge gates.
+
+## Complete specification discovery without following links — #804 (2026-10-30)
+
+**Observed defect and scope.** At develop `adf86815783f72a6d85a18ce5d27db680ff37e4b`,
+the standalone validator rejects an ordinary unregistered Markdown SDD but
+silently omits unregistered file and directory symlinks from its discovery walk.
+An owned disposable reproduction also gets a successful standalone validation.
+Registered symlinks are already rejected. This correction concerns catalog
+completeness; the former discovery does not follow links or execute their targets.
+
+discovery-R01: every symbolic-link entry encountered below the ordinary `specs/`
+directory MUST produce an explicit unsupported-path diagnostic without following
+the link, reading its target, or recursing into it. Internal, external, dangling
+and cyclic links follow the same rule. All names and extensions are included:
+determining whether an unknown target is a directory must not require following
+it. Root `README.md`, `_template.md` and `CATALOG.md` exclusions continue to apply
+to ordinary files; ordinary non-Markdown files remain excluded. Registered and
+unregistered nested ordinary SDDs retain their existing ownership rules.
+
+discovery-R02: `validateCatalog` MUST retain its error-array contract, collect
+discovery diagnostics and reject incomplete discovery. The exported
+`discoverSpecificationFiles` helper retains its sorted-array result for supported
+trees and MUST throw an explicit diagnostic for unsupported discovery instead of
+returning an apparently complete partial list. A private filesystem scan owns
+file enumeration and diagnostics; no domain/provider dependency, public option,
+new package or fourth standalone SDK file is introduced.
+
+discovery-R03: actual generation and validation entrypoints MUST return a failing
+exit status, omit `PASS`, and leave the existing generated catalog and link
+targets unchanged when discovery is unsupported. Generation validates before its
+existing atomic publication boundary. The same behavior applies to the matching
+three-file standalone SDK without an application package. No automatic deletion,
+conversion, consumer toolchain invocation or remote mutation is permitted.
+
+```text
+catalog command -> inspect ordinary specs tree -> unsupported link: reject
+                                          -> supported files: ownership checks
+                                          -> render and safely publish/compare
+```
+
+Text equivalent: both commands inspect the same ordinary tree. A link blocks
+before publication or successful validation; supported files continue through
+the existing catalog and publication checks.
+
+**User flow and recovery.** The CLI remains synchronous with no new progress
+notification. Pending means the command is inspecting the tree. A blocked command
+shows a relative path and one recovery action, for example:
+
+```text
+specs/alias.md is an unsupported symbolic link. Replace it with ordinary repository files before retrying specification catalog validation.
+```
+
+The maintainer replaces the link through normal reviewed repository work,
+registers any resulting SDD, regenerates the catalog and retries the same command.
+The existing catalog remains available after failure; there is no new partial
+publication state. Success retains the existing `generation: PASS` or
+`validation: PASS` content and capability count. Existing read-only doctor and
+gate consumers receive the same validator failure without gaining bypass or
+publication authority. CLI diagnostics retain their existing English text
+contract; the relative path and plain text carry meaning without color, HTML or
+a diagram. No issue comment, check schema or localization key is added.
+
+**Compatibility, security and operations.** No catalog schema, readiness state,
+configuration, default, permission or branch policy changes. Previously ignored
+links now block the next validation, including an in-flight draft; historical
+commits are not rewritten. Never resolve targets to decide whether to ignore a
+link. Existing containment, regular-file, ownership, supported-profile and atomic
+publication checks remain mandatory. Race hardening beyond the existing
+filesystem checks is outside this bounded correction. Rollback restores the
+prior reviewed SDK, including its known omission; it cannot certify the links.
+
+**Numeric budget before implementation.** Reserve **20 distinct additional cases**:
+
+| Area | Cases | Observable requirement |
+|---|---:|---|
+| Real file links | 6 | Internal/external/dangling at root and nested paths; R01 |
+| Real directory links | 4 | Internal/external/cyclic/dangling without recursion; R01 |
+| Reserved root names as links | 3 | Ordinary-file exclusions cannot hide links; R01 |
+| Supported-tree controls | 2 | Ordinary exclusions and nested registration; R01/R02 |
+| Actual CLI entrypoints | 2 | Generate/check reject file/directory links without publication; R03 |
+| Exported discovery helper | 1 | Supported sorted result and explicit incomplete-discovery failure; R02 |
+| Isolated three-file SDK | 2 | Real generate/check failure without an application package; R03 |
+| **Total** | **20** | No case counted twice |
+
+Use owned temporary files and targets only. Follow the established Windows
+file-symlink privilege probe; directory junctions remain executable platform
+controls. Preserve honest platform skips rather than substituting a mock for
+filesystem evidence. New executable lines/branches require full focused and
+exact-base patch coverage; the existing validator 95/90 and all repository/module
+budgets remain enforced. Real generation/validation failures must preserve
+sentinels and existing output, and must never read the target directory.
+
+Update this owner, catalog evidence/index, `docs/development/specifications.mdx`
+and `docs/issues/pre-branch-sdds.mdx` together. Complete focused regression and
+coverage, specification/docs/workflow/type/lint/package/build checks, Graphify,
+normal commit hooks and exact-head CI, all three native platforms, Codecov audit
+and complete review without active findings before the authorized develop merge.
+The upstream API reference is [Node.js Dirent symbolic-link classification](https://nodejs.org/docs/latest-v24.x/api/fs.html#direntissymboliclink).
+
+Local execution for #804: all 20 new cases ran against the unchanged validator;
+18 reproduced the omission and two supported-tree controls passed. After the
+correction, all 174 catalog regressions pass. The validator reaches 100% lines/
+functions, 97.91% statements and 95.10% branches, with zero uncovered statements
+or branches intersecting added source lines. Four related doctor, branch-sync
+and workspace suites pass 115 tests with one existing platform skip. Fresh
+full-hook and remote gates remain required; these owned fixtures do not claim
+consumer application execution or adoption.
+
+### Missing catalog in the trusted revision — #808 (2026-10-30)
+
+The existing Git adapter reads the pinned catalog before its typed profile
+validation. An absent catalog therefore becomes generic workflow.failed and
+transient retry guidance. An owned Git reproduction confirms that absence at
+an existing commit and a missing Git object both currently produce Error 128;
+localized stderr cannot safely distinguish them. Read-only consumer evidence
+independently confirms the configured catalog is absent at its trusted commit;
+its unmerged documentation proposal and mutable failure card are separate facts.
+
+trusted-catalog-R01: the adapter MUST confirm catalog absence through a successful
+immutable Git tree lookup rooted at the validated commit, before loading it.
+A failed object/read/provider operation MUST retain its original failure class.
+Working-tree/candidate copies cannot replace this source. Existing catalog
+profile/malformed-data handling and missing template/standard failures retain
+separate semantics. Only the fixed specs/catalog.json path enters the new
+missing-catalog diagnostic; no repository text or raw Git output is copied.
+
+trusted-catalog-R02: use a frozen typed missing-catalog fact carrying a validated
+immutable SHA. Map it to configuration.unsupported and the operand-free recovery
+sdd-catalog-missing-trusted-source. Before publishing one owned status card,
+recheck issue body/title and the actual source reference, including an existing
+linked branch. Missing freshness, a moved source or failed publication stays
+blocked and preserves newer status and the original error. No model analysis,
+branch/specification publication, catalog initialization or readiness bypass is
+permitted by this diagnostic.
+
+```text
+immutable commit -> bounded catalog tree lookup -> missing catalog fact + SHA
+ -> independent issue/source freshness -> owned blocked card -> reviewed
+ prerequisite merged/synchronized -> new trusted revision -> normal gate
+```
+
+Text equivalent: prove absence at the pinned source, publish only fresh closed
+facts, and retry through the normal gate after the prerequisite reaches the
+trusted source. The domain owns the typed fact; the Git adapter owns object
+lookup; the use case maps semantics and freshness; static EN/ES catalogs and the
+existing renderer/upsert own presentation. Existing type/architecture, catalog,
+localization and workflow checks enforce those boundaries. No new port, setting,
+permission, credential, storage schema, repair budget or external provider integration is added.
+The existing read-only source-revision port supplies the freshness check.
+The existing 16,000-character card limit and whole-card locale fallback remain.
+
+Representative card:
+
+> ## Specification preparation is blocked
+>
+> **Impact:** specs/catalog.json is missing from the trusted source; model
+> analysis has not started.
+>
+> **Action:** Review and merge the prerequisite through the enabled documentation
+> workflow. Update the displayed trusted source through the normal managed-branch
+> workflow and retry this same issue after the source changes.
+>
+> **Retained state:** Answers, any linked branch and published specifications are
+> retained; this attempt published no specification or branch.
+>
+> **Technical details:** configuration.unsupported; correlation reference;
+> trusted revision aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa; originating run.
+
+Pending/complete analysis, cancellation and successful recovery use the existing
+surfaces. An unchanged missing source remains blocked; provider failure retains
+its existing recovery. A moved issue/source withholds an obsolete card. A later
+reviewed valid source resumes the same issue and keeps historical answers/state.
+Normal package adoption delivers the diagnostic; rollback reverts the typed
+mapping and copy together without changing repository/catalog state. Source SHA
+is technical evidence, not an approval or branch-creation authority.
+
+Reserve **35 distinct additional cases before implementation**:
+
+| Area | Minimum | Behaviors |
+|---|---:|---|
+| Domain fact | 6 | Immutable source, canonical SHA, invalid/missing/non-string provenance without coercion |
+| Git adapter | 10 | Confirmed absence, candidate copy, valid regular catalog, malformed catalog, missing support files, unknown/tree/blob objects and non-file catalog |
+| Application/recovery | 9 | Fail before model/publication, replay, source/issue races, retained branch, Spanish/foreign marker, unavailable freshness, genuine provider failure, reviewed-source recovery, publication failure |
+| Presentation/security | 9 | EN/ES cause and SHA, invalid provenance, mutually exclusive diagnostic kinds, withheld untrusted recovery operands |
+| **Total** | **34** | No double counting with existing SDD cases |
+
+Keep unchanged global/module floors, 100% new pure-fact coverage, and fully hit
+added statements/branches. Acceptance requires RED absent-catalog diagnostics,
+all cases, full hooks, types/lint, build/package smoke, documentation,
+specification/catalog generation and validation, Graphify, exact-head CI/Codecov,
+three native final-cleanup footers and complete review without active findings
+before merge. Update docs/issues/pre-branch-sdds.mdx, error-reference recovery,
+this owner and the catalog evidence/index together. No material decision remains
+open. The immutable lookup follows the official
+[git-ls-tree contract](https://git-scm.com/docs/git-ls-tree).
+
+The budget includes four additional provenance cases before implementation:
+terminal line breaks, exact-length non-hex text and non-string renderer input.
+A hexadecimal revision must have exactly 40 characters, including at end of input.
+
+Before extending the existing closed-recovery registry matrix, reserve one
+additional case (35 total). Its completeness assertion intentionally rejects a
+new recovery ID without matching English/Spanish retained-state coverage.
+
+Executed local evidence: the 35 reserved cases pass within seven suites containing
+395 passing tests and one pre-existing platform-only skip. The new domain fact
+and both message catalogs/status renderer have 100% statements, branches,
+functions and lines. The focused changed-module group passes 94.57% lines and
+92.01% branches; these are focused observations, not the full-repository coverage
+certificate. No added runtime statement or branch is uncovered. The independent
+owned Git probe now emits the typed missing-catalog fact with its actual commit,
+while an unknown Git object remains Error 128. Actual EN/ES renderer previews
+include that source SHA and no raw Git command. No consumer code or live issue
+was executed or published by these probes. Keep full hooks and fresh remote
+merge gates separate and mandatory.
+
+## Accepted catalog titles as literal text — #820 (2026-10-31)
+
+**Observed defect.** An owned reproduction against validator SHA256
+`d79519d7257cb1ba7fdbbe273de0951a2beea58f388301285b6cbcaf72de771f`
+passes catalog validation for a title containing a newline, a heading and a
+link. Parsing the generated catalog finds the additional heading and external
+destinations. The primary-SDD link label and the evidence heading are distinct
+affected contexts. This establishes document-fidelity impact, without evidence
+of execution or a privileged operation. The original reproduction uses only
+ordinary owned temporary files; no consumer is modified or executed.
+
+catalog-title-R01: render accepted capability titles as literal inline text in
+both primary/companion table link labels and evidence headings. Collapse CR/LF
+runs to a single display space and encode ASCII punctuation as numeric character
+references. Markdown delimiters, entity-looking strings, links, images, HTML,
+reference definitions and trailing heading markers remain title text; they MUST
+NOT introduce document structure or destinations. Ordinary and multilingual
+titles remain readable under normal renderer whitespace rules. Preserve the
+original title string and complete source catalog JSON.
+
+catalog-title-R02: preserve capability IDs, metadata, ordering, companion counts,
+primary/companion/evidence destinations and all ownership/readiness/status rules.
+Do not restrict accepted title forms, change the SDK schema, broaden path
+allowances or modify consumer sources as a workaround. Existing path containment,
+no-follow discovery/publication, regular-file and fixed size bounds remain
+mandatory. Presentation expansion must use the existing bounded publication
+path and never bypass its errors or truncate silently.
+
+```text
+author title in catalog.json -> ordinary validation -> literal title rendering
+ -> bounded atomic CATALOG.md publication -> inspect table/evidence map
+```
+
+Text equivalent: validation continues to accept the existing title data; only
+the generated presentation treats punctuation and line breaks as display data.
+The authored catalog and navigation targets remain unchanged.
+
+| Accepted title content | Generated presentation |
+|---|---|
+| `Café 東京 العربية` | Same readable multilingual text |
+| A newline followed by a heading marker | One inline title with a display space |
+| Markdown link/image or HTML syntax | Visible literal title text; no added link/image/HTML |
+| Backticks, pipes, emphasis, entity references or closing hashes | Literal characters in both contexts |
+
+The existing pure renderer in the shared CJS validator owns the formatter; the
+application/SDK entrypoints and publication adapter retain their responsibilities.
+No new dependency, fourth standalone SDK file, provider call, permission, setting,
+state, localization catalog or notification is introduced. Normal invalid-input,
+blocked publication, partial-I/O and retry/recovery behavior remains unchanged.
+Regenerate with the matching reviewed SDK to repair an index; rollback restores
+the previous formatting defect without a metadata migration or provider change.
+
+Reserve **20 distinct cases before implementation**:
+
+| Area | Cases | Observable acceptance |
+|---|---:|---|
+| Parsed title presentation | 18 | Ordinary, multilingual, heading/link injection, nested links, images, HTML image/comment, code, emphasis/strike, pipe, entity-looking text, autolink/bare URL, CRLF/thematic break, CR/quote, LF/list, backslash/closing hashes and reference definition |
+| Instrumented public generation/validation | 1 | Accepted adversarial source generates and validates, retaining source JSON and intended destinations |
+| Matching standalone three-file SDK | 1 | Same behavior and companion navigation with no consumer package/dependencies |
+| **Total** | **20** | No double counting; external renderer observations are separate evidence |
+
+The real CommonMark AST MUST retain only the expected headings/destinations,
+literal primary-link text and no title-induced HTML/images. Assert the unchanged
+catalog object/file, not only a raw output snapshot. Run the new cases against
+the unchanged validator first and retain the actual RED results. Preserve all
+existing path, alias, size, symlink/discovery, proposed-entry, publisher and
+branch-sync regressions. New formatter statements/functions and all added
+runtime lines require 100% coverage; retain the existing validator 95/90 and
+all project/module budgets without exclusions or relaxed thresholds.
+
+An early owned encoding experiment passed 18 CommonMark cases and independent
+GitHub Markdown API rendering: 18 tables, literal evidence headings, no injected
+external destinations and no images. That experiment did not apply the source
+fix. Corroborate the corrected actual renderer separately before claiming it
+implemented. API rendering is read-only evidence, not browser execution or a
+consumer adoption claim. The syntax basis is
+[CommonMark character references](https://spec.commonmark.org/0.31.2/#entity-and-numeric-character-references),
+whose decoded characters do not supply Markdown structure delimiters.
+
+Update this owner, catalog test evidence/index, developer guidance and generated
+bundles together. Acceptance R01 maps to the 18 AST cases and actual renderer
+evidence; R02 maps to unchanged-source/navigation assertions, both entrypoints
+and the retained path/publication suites. Require full normal hooks, focused
+coverage, specification/docs/workflow/type/lint/build/package checks, Graphify,
+exact-head CI/Codecov, all three native cleanup footers and complete review
+without active findings before the normal authorized merge.
+
+Local execution for #820: the unchanged admitted validator fails 16 of the 20
+new cases; four already satisfy the CommonMark assertions. The correction passes all 20 new cases and
+174 existing compatibility cases in eight suites. The shared validator reaches
+100% lines/functions, 97.93% statements and 95.10% branches; local counters fully
+hit the new formatter, statements and added branches. The existing publisher
+budgets and canonical repository thresholds are retained. An initial compatibility
+failure identified the generated index pending regeneration; final generation
+and validation pass. The corrected actual renderer's 18-case Markdown is
+byte-identical to the owned input already rendered independently by GitHub,
+so the original API observation is reused by exact input equality rather than
+claimed as a new API/browser execution. Full normal hooks and fresh remote gates
+remain required before merge.
+
+Four additional existing branch-sync suites pass all 83 compatibility cases.
+Together with the eight renderer/SDK suites, this is 277 directed cases;
+only the 20 title cases are new. No repository coverage configuration or
+threshold was changed.

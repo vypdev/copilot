@@ -166,11 +166,12 @@ describe("PullRequestLifecycleRepository", () => {
     });
 
     it('reads pull-request details for explicit description commands', async () => {
-        mockGet.mockResolvedValue({ data: { body: 'Human text', head: { ref: 'feature/12' }, base: { ref: 'develop' } } });
+        mockGet.mockResolvedValue({ data: { ...pullRequestIdentity(12), body: 'Human text', head: { ...pullRequestIdentity(12).head, repo: { name: 'fork-repo', owner: { login: 'fork-owner' } } }, base: { ...pullRequestIdentity(12).base, ref: 'develop' } } });
         const repository = new PullRequestLifecycleRepository(new OctokitPullRequestLifecycleClientAdapter());
 
         await expect(repository.getDetails('owner', 'repo', 12, 'token')).resolves.toEqual({
             body: 'Human text',
+            identity: { number: 12, state: 'open', repository: 'owner/repo', headRepository: 'fork-owner/fork-repo', headRef: 'feature/12', headSha: 'a'.repeat(40) },
             headBranch: 'feature/12',
             baseBranch: 'develop',
         });
@@ -308,3 +309,24 @@ function linkage(numbers: number[], hasNextPage = false, endCursor: string | nul
         },
     } } };
 }
+
+
+it('binds mutation snapshots to the native PR/repository and complete head repository name', async () => {
+    const repository = new PullRequestLifecycleRepository(new OctokitPullRequestLifecycleClientAdapter());
+    const complete = { ...pullRequestIdentity(12), head: { ...pullRequestIdentity(12).head,
+        repo: { name: 'fork-repo', owner: { login: 'fork-owner' } } } };
+    for (const invalid of [{ ...complete, number: 13 },
+        { ...complete, base: { repo: { name: 'foreign', owner: { login: 'owner' } } } },
+        { ...complete, base: { repo: { name: 'repo', owner: { login: 'foreign' } } } },
+        pullRequestIdentity(12), { ...complete, number: 0 }, { ...complete, state: 'unknown' },
+        { ...complete, head: { ...complete.head, sha: 'invalid' } }, { ...complete, head: undefined }]) {
+        mockGet.mockResolvedValue({ data: invalid });
+        await expect(repository.getDetails('owner', 'repo', 12, 'token')).rejects.toThrow();
+    }
+    mockGet.mockResolvedValue({ data: complete });
+    await expect(repository.getDetails('owner', 'repo', 12, 'token')).resolves.toMatchObject({ body: '', baseBranch: '' });
+    const missing = new PullRequestLifecycleRepository({ getClient: () => ({ rest: { pulls: {} } }) } as never);
+    await expect(missing.getDetails('owner', 'repo', 12, 'token')).rejects.toThrow();
+    await expect(missing.getBugbotPullRequestIdentity('owner', 'repo', 12, 'token')).rejects.toMatchObject({ code: 'provider.unavailable' });
+    await expect(missing.getPullRequestHeadSha('owner', 'repo', 12, 'token')).resolves.toBeUndefined();
+});

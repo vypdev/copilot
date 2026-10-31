@@ -1,3 +1,4 @@
+import { applyAgentEffortInstruction } from '../../../application/policies/agent_prompt_envelope_policy';
 import { AGENT_REQUEST_TIMEOUT_MS } from './agent_constants';
 import { AgentCliError } from '../agent_cli_contracts';
 import { ApplicationError, APPLICATION_ERROR_METADATA } from '../../../application/errors/application_error';
@@ -32,7 +33,7 @@ export abstract class AgentCapabilityAdapter {
         try {
             output = await this.cliAdapter.execute({
             configuration: taskConfiguration,
-            prompt: this.addEffortInstruction(request.prompt, taskConfiguration.effort),
+            prompt: applyAgentEffortInstruction(request.prompt, taskConfiguration.effort),
             timeoutMs: AGENT_REQUEST_TIMEOUT_MS,
             capability: request.capability,
             ...(request.outputSchema ? { outputSchema: request.outputSchema } : {}),
@@ -47,9 +48,4 @@ export abstract class AgentCapabilityAdapter {
         return request.mapCliOutput(output);
     }
 
-    private addEffortInstruction(prompt: string, effort: string | undefined): string {
-        const normalizedEffort = effort?.trim();
-        if (!normalizedEffort) return prompt;
-        return `${prompt}\n\nExecution preference: use the configured reasoning effort or model variant "${normalizedEffort}" when supported by the selected agent.`;
-    }
 }

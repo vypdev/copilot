@@ -112,6 +112,7 @@ export interface SetupConfigurationPatch {
 }
 
 export interface SetupExecutionState {
+    readonly pullRequestParentBranch?: string;
     readonly previousConfiguration?: Config;
     readonly currentIssueLabels: readonly string[];
     readonly currentPullRequestLabels: readonly string[];

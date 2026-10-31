@@ -1,3 +1,5 @@
+import { readPendingPullRequestLink } from '../../domain/pull_request_issue_link_state';
+import { ApplicationError } from '../errors/application_error';
 import type { Execution } from "../../data/model/execution";
 import { Result } from "../../data/model/result";
 import { logInfo } from "../ports/logging_ports";
@@ -47,6 +49,11 @@ export class PullRequestUseCase implements ParamUseCase<Execution, Result[]> {
     if (param.eventName !== 'pull_request'
       || !['opened', 'reopened', 'synchronize'].includes(param.pullRequest.action)
       || !this.reviewPotentialProblemsUseCase) return [];
+    if (readPendingPullRequestLink(param.pullRequest.body).kind !== 'none'
+      || (param.currentConfiguration.parentBranch && param.currentConfiguration.parentBranch !== param.pullRequest.base)) {
+      const error = new ApplicationError('workflow.stale', 'Pending linkage requires the normal PR workflow before analysis-only review.');
+      return [new Result({ id: this.taskId, success: false, executed: false, steps: [error.message], errors: [error] })];
+    }
     return this.reviewPotentialProblemsUseCase.invoke(projectBugbotReviewOperationContext(param));
   }
 }

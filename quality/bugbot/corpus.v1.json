@@ -821,6 +821,908 @@
           "codeSnippet": "const stored = domain.normalize('NFKC');"
         }
       ]
+    },
+    {
+      "language": "kotlin",
+      "file": "fixtures/WasmBindings.kt",
+      "startLine": 1,
+      "id": "kt-wasm-parameter-closure",
+      "category": "negative",
+      "description": "Kotlin/Wasm package-level bridge installs a delayed callback; inspect lexical bindings.",
+      "diff": "+private fun installDirectory(empty: Boolean): Unit = js(\n+    \"\"\"{\n+    globalThis.onSelection = () => empty ? new Uint8Array(0) : new Uint8Array([1]);\n+    }\"\"\"\n+)\n // Applicable Kotlin/Wasm interop contract: snippets become generated JS functions with declared formals.\n // Synthetic same-source generated import: installDirectory: (empty) => { globalThis.onSelection = () => empty ? new Uint8Array(0) : new Uint8Array([1]); }\n // This supplied synthetic excerpt is evidence, not a new compiler execution.",
+      "expected": []
+    },
+    {
+      "language": "kotlin",
+      "file": "fixtures/WasmBindings.kt",
+      "startLine": 1,
+      "id": "kt-wasm-size-count-parameters",
+      "category": "negative",
+      "description": "Kotlin/Wasm creates a byte array per requested file.",
+      "diff": "+private fun installBudget(size: Int, count: Int): JsAny = js(\n+    \"\"\"Array.from({length: count}, () => new Uint8Array(size))\"\"\"\n+)\n // Kotlin/Wasm package-level expression body; generated import has formal parameters (size, count).",
+      "expected": []
+    },
+    {
+      "language": "kotlin",
+      "file": "fixtures/WasmBindings.kt",
+      "startLine": 1,
+      "id": "kt-wasm-object-parameter",
+      "category": "negative",
+      "description": "Kotlin/Wasm metadata bridge accepts a JavaScript object and captures the new size.",
+      "diff": "+private fun changeReportedSize(file: JsAny, size: Int): Unit = js(\n+    \"\"\"{\n+    Object.defineProperty(file, \"size\", {get: () => size});\n+    }\"\"\"\n+)\n // Kotlin/Wasm JsAny interop; generated import has formal parameters (file, size).",
+      "expected": []
+    },
+    {
+      "language": "kotlin",
+      "file": "fixtures/WasmBindings.kt",
+      "startLine": 1,
+      "id": "kt-wasm-binding-evidence-unavailable",
+      "category": "negative",
+      "description": "An interop snippet is supplied without its target or resolved compiler contract.",
+      "diff": "+fun bridge(value: Int): JsAny = js(\"({value: value})\")\n // Target/compiler metadata, generated imports and applicable execution evidence are unavailable.\n // No observed runtime failure is supplied.",
+      "expected": []
+    },
+    {
+      "language": "kotlin",
+      "file": "fixtures/WasmBindings.kt",
+      "startLine": 1,
+      "id": "kt-wasm-missing-direct-identifier",
+      "category": "correctness",
+      "description": "A Kotlin/Wasm bridge constructs files; an unrelated test job is green.",
+      "diff": "+private fun installBudget(size: Int): JsAny = js(\n+    \"\"\"Array.from({length: count}, () => new Uint8Array(size))\"\"\"\n+)\n // Complete generated import: installBudget: (size) => Array.from({length: count}, () => new Uint8Array(size))\n // No count binding/global exists; calling installBudget(4) raises ReferenceError.\n // The green job tested the JVM target, not this wasmJs bridge.",
+      "expected": [
+        {
+          "id": "kt-wasm-missing-direct-identifier-missing-binding",
+          "title": "Missing JavaScript binding fails when the bridge runs",
+          "file": "fixtures/WasmBindings.kt",
+          "line": 2,
+          "severity": "medium",
+          "category": "correctness",
+          "symbol": "installBudget",
+          "codeSnippet": "\"\"\"Array.from({length: count}, () => new Uint8Array(size))\"\"\""
+        }
+      ]
+    },
+    {
+      "language": "kotlin",
+      "file": "fixtures/WasmBindings.kt",
+      "startLine": 1,
+      "id": "kt-wasm-missing-callback-identifier",
+      "category": "correctness",
+      "description": "A Kotlin/Wasm bridge installs a callback which reads another identifier.",
+      "diff": "+private fun installDirectory(selected: Boolean): Unit = js(\n+    \"\"\"{\n+    globalThis.onSelection = () => empty ? new Uint8Array(0) : new Uint8Array([1]);\n+    }\"\"\"\n+)\n // Complete generated import has only (selected); no empty binding/global exists.\n // Invoking the installed callback raises ReferenceError.",
+      "expected": [
+        {
+          "id": "kt-wasm-missing-callback-identifier-missing-binding",
+          "title": "Missing JavaScript binding fails when the bridge runs",
+          "file": "fixtures/WasmBindings.kt",
+          "line": 3,
+          "severity": "medium",
+          "category": "correctness",
+          "symbol": "installDirectory",
+          "codeSnippet": "globalThis.onSelection = () => empty ? new Uint8Array(0) : new Uint8Array([1]);"
+        }
+      ]
+    },
+    {
+      "language": "yaml",
+      "file": ".github/workflows/build.yml",
+      "startLine": 1,
+      "id": "action-self-ref-bootstrap",
+      "category": "negative",
+      "description": "A first-step repository action initializes a fresh checkout.",
+      "diff": "+jobs:\n+  build:\n+    runs-on: ubuntu-latest\n+    steps:\n+      - uses: $/.github/actions/bootstrap\n // Contract snapshot 2026-10-29: GitHub.com supports $/path in the containing workflow repository at its running commit, without checkout; an explicit @ref suffix is invalid.\n // Host: GitHub.com. Fresh empty workspace; .github/actions/bootstrap/action.yml exists at the reviewed repository commit.\n // Synthetic matching execution: first step resolved to fixture/repo/.github/actions/bootstrap@1111111111111111111111111111111111111111 and succeeded.",
+      "expected": []
+    },
+    {
+      "language": "python",
+      "file": ".github/scripts/check_actions.py",
+      "startLine": 1,
+      "id": "action-self-ref-version-policy",
+      "category": "negative",
+      "description": "A remote-tag checker changes while an existing workflow bootstraps its repository action.",
+      "diff": " import re\n VERSION = re.compile(r\"v[0-9]+(?:\\.[0-9]+){0,2}(?:-[0-9A-Za-z.-]+)?\")\n+def remote_tag_allowed(reference):\n+    if isinstance(reference, str) and reference.startswith((\"./\", \"$/.github/actions/\")):\n+        return True\n+    return isinstance(reference, str) and \"@\" in reference and VERSION.fullmatch(reference.rsplit(\"@\", 1)[-1]) is not None\n // Policy scope: require version tags for remote references; the platform independently validates local-reference grammar.\n // Contract snapshot 2026-10-29: GitHub.com supports $/path in the containing workflow repository at its running commit, without checkout; an explicit @ref suffix is invalid.\n // Existing workflow:\n // |jobs:\n // |  build:\n // |    runs-on: ubuntu-latest\n // |    steps:\n // |      - uses: $/.github/actions/bootstrap\n // All workflow references use this exact shape without an @ref suffix.\n // Synthetic same-source job log: Run fixture/repo/.github/actions/bootstrap@1111111111111111111111111111111111111111 succeeded before checkout.",
+      "expected": []
+    },
+    {
+      "language": "yaml",
+      "file": ".github/workflows/build.yml",
+      "startLine": 1,
+      "id": "action-workspace-ref-after-checkout",
+      "category": "negative",
+      "description": "A workflow loads an action from its populated workspace.",
+      "diff": "+jobs:\n+  build:\n+    runs-on: ubuntu-latest\n+    steps:\n+      - uses: actions/checkout@v5\n+      - uses: ./.github/actions/bootstrap\n // Contract snapshot 2026-10-29: GitHub.com supports $/path in the containing workflow repository at its running commit, without checkout; an explicit @ref suffix is invalid.\n // Host: GitHub.com. Checkout populates the workspace root; .github/actions/bootstrap/action.yml exists there.",
+      "expected": []
+    },
+    {
+      "language": "yaml",
+      "file": ".github/workflows/build.yml",
+      "startLine": 1,
+      "id": "action-reference-contract-unavailable",
+      "category": "negative",
+      "description": "A repository-action reference is supplied without the hosting contract.",
+      "diff": "+jobs:\n+  build:\n+    runs-on: self-hosted\n+    steps:\n+      - uses: $/.github/actions/bootstrap\n // Host implementation/version, applicable syntax documentation and matching execution evidence are unavailable. No resolution failure is supplied.",
+      "expected": []
+    },
+    {
+      "language": "yaml",
+      "file": ".github/workflows/build.yml",
+      "startLine": 1,
+      "id": "action-self-ref-explicit-suffix",
+      "category": "reliability",
+      "description": "A workflow selects a ref on its self-repository action.",
+      "diff": "+jobs:\n+  build:\n+    runs-on: ubuntu-latest\n+    steps:\n+      - uses: $/.github/actions/bootstrap@v1\n // Contract snapshot 2026-10-29: GitHub.com supports $/path in the containing workflow repository at its running commit, without checkout; an explicit @ref suffix is invalid.\n // Host: GitHub.com. The action exists; this is the literal changed uses value, not an internal resolved job-log name.",
+      "expected": [
+        {
+          "id": "action-self-ref-explicit-suffix-invalid-reference",
+          "title": "Action reference cannot resolve in this execution context",
+          "file": ".github/workflows/build.yml",
+          "line": 5,
+          "severity": "medium",
+          "category": "reliability",
+          "codeSnippet": "- uses: $/.github/actions/bootstrap@v1"
+        }
+      ]
+    },
+    {
+      "language": "yaml",
+      "file": ".github/workflows/build.yml",
+      "startLine": 1,
+      "id": "action-workspace-ref-before-checkout",
+      "category": "reliability",
+      "description": "A fresh workspace runs a repository action before its source is populated.",
+      "diff": "+jobs:\n+  build:\n+    runs-on: ubuntu-latest\n+    steps:\n+      - uses: ./.github/actions/bootstrap\n+      - uses: actions/checkout@v5\n // Contract snapshot 2026-10-29: GitHub.com supports $/path in the containing workflow repository at its running commit, without checkout; an explicit @ref suffix is invalid.\n // Host: GitHub.com. Workspace is initially empty; action files exist only in repository source. The checkout step is later.\n // Applicable contract: ./path resolves from workspace and requires its files to be checked out before use.",
+      "expected": [
+        {
+          "id": "action-workspace-ref-before-checkout-invalid-reference",
+          "title": "Action reference cannot resolve in this execution context",
+          "file": ".github/workflows/build.yml",
+          "line": 5,
+          "severity": "medium",
+          "category": "reliability",
+          "codeSnippet": "- uses: ./.github/actions/bootstrap"
+        }
+      ]
+    },
+    {
+      "language": "yaml",
+      "file": ".github/workflows/build.yml",
+      "startLine": 1,
+      "id": "action-self-ref-unsupported-host",
+      "category": "reliability",
+      "description": "A workflow uses the same-repository shorthand on an identified enterprise host.",
+      "diff": "+jobs:\n+  build:\n+    runs-on: self-hosted\n+    steps:\n+      - uses: $/.github/actions/bootstrap\n // Host: GitHub Enterprise Server (GHES) 3.19. Applicable documented contract snapshot: $/ is unsupported on this host; use an available workspace or remote repository reference.\n // This contract is host-specific; successful GitHub.com execution is not execution on this server.",
+      "expected": [
+        {
+          "id": "action-self-ref-unsupported-host-invalid-reference",
+          "title": "Action reference cannot resolve in this execution context",
+          "file": ".github/workflows/build.yml",
+          "line": 5,
+          "severity": "medium",
+          "category": "reliability",
+          "codeSnippet": "- uses: $/.github/actions/bootstrap"
+        }
+      ]
+    },
+    {
+      "id": "md-link-root-self",
+      "language": "markdown",
+      "category": "negative",
+      "description": "Architecture navigation from specs/payments.md.",
+      "file": "specs/payments.md",
+      "startLine": 41,
+      "diff": "+[Design](../specs/payments.md#architecture)\n ## Architecture\n <!-- Synthetic same-revision complete tracked-file inventory: specs/payments.md. -->\n <!-- Each document consists only of this added link (for the source) and the plain Architecture heading; no custom anchors. -->\n <!-- GitHub Markdown: relative paths use the source directory; initial / means repository root. The plain heading ## Architecture has anchor architecture. -->",
+      "expected": []
+    },
+    {
+      "id": "md-link-nested-self",
+      "language": "markdown",
+      "category": "negative",
+      "description": "Architecture navigation from specs/payments/design.md.",
+      "file": "specs/payments/design.md",
+      "startLine": 41,
+      "diff": "+[Design](../payments/design.md#architecture)\n ## Architecture\n <!-- Synthetic same-revision complete tracked-file inventory: specs/payments/design.md. -->\n <!-- Each document consists only of this added link (for the source) and the plain Architecture heading; no custom anchors. -->\n <!-- GitHub Markdown: relative paths use the source directory; initial / means repository root. The plain heading ## Architecture has anchor architecture. -->",
+      "expected": []
+    },
+    {
+      "id": "md-link-companion",
+      "language": "markdown",
+      "category": "negative",
+      "description": "Architecture navigation from specs/payments/design.md.",
+      "file": "specs/payments/design.md",
+      "startLine": 41,
+      "diff": "+[Design](../../specs/private-sharing.md#architecture)\n ## Architecture\n <!-- Synthetic same-revision complete tracked-file inventory: specs/payments/design.md, specs/private-sharing.md. -->\n <!-- Each document consists only of this added link (for the source) and the plain Architecture heading; no custom anchors. -->\n <!-- GitHub Markdown: relative paths use the source directory; initial / means repository root. The plain heading ## Architecture has anchor architecture. -->",
+      "expected": []
+    },
+    {
+      "id": "md-link-root-relative",
+      "language": "markdown",
+      "category": "negative",
+      "description": "Architecture navigation from specs/payments/design.md.",
+      "file": "specs/payments/design.md",
+      "startLine": 41,
+      "diff": "+[Design](/specs/semantic-editor.md#architecture)\n ## Architecture\n <!-- Synthetic same-revision complete tracked-file inventory: specs/payments/design.md, specs/semantic-editor.md. -->\n <!-- Each document consists only of this added link (for the source) and the plain Architecture heading; no custom anchors. -->\n <!-- GitHub Markdown: relative paths use the source directory; initial / means repository root. The plain heading ## Architecture has anchor architecture. -->",
+      "expected": []
+    },
+    {
+      "id": "md-link-evidence-unavailable",
+      "language": "markdown",
+      "category": "negative",
+      "description": "Architecture navigation from specs/payments.md.",
+      "file": "specs/payments.md",
+      "startLine": 41,
+      "diff": "+[Design](../specs/unknown.md#architecture)\n // Target source, tree inventory, renderer and heading context are unavailable; no lookup or execution receipt is supplied.",
+      "expected": []
+    },
+    {
+      "id": "md-link-extra-specs-directory",
+      "language": "markdown",
+      "category": "correctness",
+      "description": "Architecture navigation from specs/payments.md.",
+      "file": "specs/payments.md",
+      "startLine": 41,
+      "diff": "+[Design](./specs/payments.md#architecture)\n ## Architecture\n <!-- Synthetic same-revision complete tracked-file inventory: specs/payments.md. -->\n <!-- Each document consists only of this added link (for the source) and the plain Architecture heading; no custom anchors. -->\n <!-- GitHub Markdown: relative paths use the source directory; initial / means repository root. The plain heading ## Architecture has anchor architecture. -->",
+      "expected": [
+        {
+          "id": "md-link-extra-specs-directory-broken-navigation",
+          "title": "The rendered architecture link does not reach its target",
+          "file": "specs/payments.md",
+          "line": 41,
+          "severity": "low",
+          "category": "correctness",
+          "codeSnippet": "[Design](./specs/payments.md#architecture)"
+        }
+      ]
+    },
+    {
+      "id": "md-link-missing-fragment",
+      "language": "markdown",
+      "category": "correctness",
+      "description": "Architecture navigation from specs/payments.md.",
+      "file": "specs/payments.md",
+      "startLine": 41,
+      "diff": "+[Design](../specs/payments.md#missing-architecture)\n ## Architecture\n <!-- Synthetic same-revision complete tracked-file inventory: specs/payments.md. -->\n <!-- Each document consists only of this added link (for the source) and the plain Architecture heading; no custom anchors. -->\n <!-- GitHub Markdown: relative paths use the source directory; initial / means repository root. The plain heading ## Architecture has anchor architecture. -->",
+      "expected": [
+        {
+          "id": "md-link-missing-fragment-broken-navigation",
+          "title": "The rendered architecture link does not reach its target",
+          "file": "specs/payments.md",
+          "line": 41,
+          "severity": "low",
+          "category": "correctness",
+          "codeSnippet": "[Design](../specs/payments.md#missing-architecture)"
+        }
+      ]
+    },
+    {
+      "id": "md-link-renderer-drops-directory",
+      "language": "typescript",
+      "category": "correctness",
+      "description": "A catalog renderer maps a catalogued specification to a Markdown destination.",
+      "file": "scripts/catalog.ts",
+      "startLine": 41,
+      "diff": "+function renderSpecLink(spec: string): string { return './' + spec.slice(spec.lastIndexOf('/') + 1); }\n // Synthetic same-revision renderer call: renderSpecLink(\"specs/payments/design.md\")\n // The result becomes [Design](result) in specs/CATALOG.md.\n // Complete tracked-file inventory: scripts/catalog.ts, specs/CATALOG.md, specs/payments/design.md.\n // Every Markdown target contains only ## Architecture; no custom anchors or other files exist.\n // GitHub Markdown: relative paths use the source directory; initial / means repository root. The plain heading ## Architecture has anchor architecture.",
+      "expected": [
+        {
+          "id": "md-link-renderer-drops-directory-broken-navigation",
+          "title": "The rendered architecture link does not reach its target",
+          "file": "scripts/catalog.ts",
+          "line": 41,
+          "severity": "low",
+          "category": "correctness",
+          "codeSnippet": "function renderSpecLink(spec: string): string { return './' + spec.slice(spec.lastIndexOf('/') + 1); }"
+        }
+      ]
+    },
+    {
+      "id": "request-transform-coil",
+      "language": "kotlin",
+      "category": "negative",
+      "description": "Source-evidence fixture for Coil 3.6.3, not a new Coil execution. Valid unchanged desktop imports, context, imageUrl and PNG fixtures surround the diff. Official NetworkFetcher.newRequest maps enabled network reads plus disabled disk reads/writes to Cache-Control: no-cache, no-store before Ktor: https://github.com/coil-kt/coil/blob/3.6.3/coil-network-core/src/commonMain/kotlin/coil3/network/NetworkFetcher.kt . Matching Options defaults networkCachePolicy to ENABLED; CachePolicy.DISABLED has both flags false. MockEngine observes the outgoing request and supplies a response PNG, not request headers. Review the added factory configuration.",
+      "file": "media/PrivateLoader.kt",
+      "startLine": 1,
+      "diff": " val engine = MockEngine { request ->\n     assertTrue(request.headers[HttpHeaders.CacheControl]!!.contains(\"no-store\"))\n     respond(validPng, headers = headersOf(HttpHeaders.ContentType, \"image/png\"))\n }\n val client = HttpClient(engine)\n+val loader = ImageLoader.Builder(context)\n+    .components { add(KtorNetworkFetcherFactory(client)) }\n+    .diskCachePolicy(CachePolicy.DISABLED)\n+    .build()\n assertIs<SuccessResult>(loader.execute(ImageRequest.Builder(context).data(imageUrl).build()))",
+      "expected": []
+    },
+    {
+      "id": "request-transform-middleware",
+      "language": "typescript",
+      "category": "negative",
+      "description": "Controlled executable JavaScript-subset request pipeline. The unchanged library builder and middleware are supplied as context. The application contract requires no-store at the transport. The new test traverses those real authored functions; it does not inject request headers. This is a synthetic oracle, not execution of Coil or a consumer application.",
+      "file": "media/request.ts",
+      "startLine": 1,
+      "diff": " const policy = { diskRead: false, diskWrite: false, networkRead: true };\n function newRequest() {\n   const headers = {};\n   if (policy.networkRead && !policy.diskRead) {\n     headers[\"Cache-Control\"] = policy.diskWrite ? \"no-cache\" : \"no-cache, no-store\";\n   }\n   return { headers };\n }\n function middleware() { return newRequest(); }\n function applicationRequest() {\n   const request = middleware();\n   // Preserve the upstream request headers.\n   return request;\n }\n function transport(request) { return request.headers[\"Cache-Control\"]; }\n function testTransport(request) {\n   // The test observes the request without adding headers.\n   if (!String(transport(request)).includes(\"no-store\")) throw new Error(\"no-store required\");\n }\n const outgoing = applicationRequest();\n+testTransport(outgoing);",
+      "expected": []
+    },
+    {
+      "id": "request-transform-unknown",
+      "language": "typescript",
+      "category": "negative",
+      "description": "No version-matched dependency source, resolved artifact contract or source-bound execution observation is available. The application requires no-store at the transport. Inspect only the supplied change; do not invent library semantics or an execution result.",
+      "file": "media/request.ts",
+      "startLine": 1,
+      "diff": " import { createLoader } from \"unavailable-image-sdk\";\n+const loader = createLoader({ diskCache: \"disabled\" });\n // The resolved dependency request builder and execution evidence are unavailable.\n await loader.load(\"https://fixture.invalid/image.png\");",
+      "expected": []
+    },
+    {
+      "id": "request-transform-write",
+      "language": "typescript",
+      "category": "correctness",
+      "description": "Controlled executable request pipeline. Private image requests require no-store at the actual transport, not just no-cache. The unchanged versioned builder maps policy flags as shown. Review the changed policy; all shown functions are the actual authored fixture path.",
+      "file": "media/request.ts",
+      "startLine": 1,
+      "diff": "+const policy = { diskRead: false, diskWrite: true, networkRead: true };\n function newRequest() {\n   const headers = {};\n   if (policy.networkRead && !policy.diskRead) {\n     headers[\"Cache-Control\"] = policy.diskWrite ? \"no-cache\" : \"no-cache, no-store\";\n   }\n   return { headers };\n }\n function middleware() { return newRequest(); }\n function applicationRequest() {\n   const request = middleware();\n   // Preserve the upstream request headers.\n   return request;\n }\n function transport(request) { return request.headers[\"Cache-Control\"]; }\n function testTransport(request) {\n   // The test observes the request without adding headers.\n   if (!String(transport(request)).includes(\"no-store\")) throw new Error(\"no-store required\");\n }\n const outgoing = applicationRequest();\n testTransport(outgoing);",
+      "expected": [
+        {
+          "id": "request-transform-write",
+          "title": "Write-enabled policy does not provide the required no-store header",
+          "file": "media/request.ts",
+          "line": 1,
+          "severity": "medium",
+          "category": "correctness",
+          "codeSnippet": "const policy = { diskRead: false, diskWrite: true, networkRead: true };"
+        }
+      ]
+    },
+    {
+      "id": "request-transform-bypass",
+      "language": "typescript",
+      "category": "correctness",
+      "description": "Controlled executable request pipeline requiring no-store at the transport. The unchanged middleware invokes the header-producing builder. Review the changed application request construction and the downstream assertion.",
+      "file": "media/request.ts",
+      "startLine": 1,
+      "diff": " const policy = { diskRead: false, diskWrite: false, networkRead: true };\n function newRequest() {\n   const headers = {};\n   if (policy.networkRead && !policy.diskRead) {\n     headers[\"Cache-Control\"] = policy.diskWrite ? \"no-cache\" : \"no-cache, no-store\";\n   }\n   return { headers };\n }\n function middleware() { return newRequest(); }\n function applicationRequest() {\n+  const request = { headers: {} };\n   // Preserve the upstream request headers.\n   return request;\n }\n function transport(request) { return request.headers[\"Cache-Control\"]; }\n function testTransport(request) {\n   // The test observes the request without adding headers.\n   if (!String(transport(request)).includes(\"no-store\")) throw new Error(\"no-store required\");\n }\n const outgoing = applicationRequest();\n testTransport(outgoing);",
+      "expected": [
+        {
+          "id": "request-transform-bypass",
+          "title": "Raw request bypasses the header-producing middleware",
+          "file": "media/request.ts",
+          "line": 11,
+          "severity": "medium",
+          "category": "correctness",
+          "codeSnippet": "const request = { headers: {} };"
+        }
+      ]
+    },
+    {
+      "id": "request-transform-overwrite",
+      "language": "typescript",
+      "category": "correctness",
+      "description": "Controlled executable request pipeline requiring no-store at the transport. The unchanged upstream builder produces its policy-derived header. Review the added downstream assignment before the actual transport observes the request.",
+      "file": "media/request.ts",
+      "startLine": 1,
+      "diff": " const policy = { diskRead: false, diskWrite: false, networkRead: true };\n function newRequest() {\n   const headers = {};\n   if (policy.networkRead && !policy.diskRead) {\n     headers[\"Cache-Control\"] = policy.diskWrite ? \"no-cache\" : \"no-cache, no-store\";\n   }\n   return { headers };\n }\n function middleware() { return newRequest(); }\n function applicationRequest() {\n   const request = middleware();\n+  request.headers[\"Cache-Control\"] = \"no-cache\";\n   return request;\n }\n function transport(request) { return request.headers[\"Cache-Control\"]; }\n function testTransport(request) {\n   // The test observes the request without adding headers.\n   if (!String(transport(request)).includes(\"no-store\")) throw new Error(\"no-store required\");\n }\n const outgoing = applicationRequest();\n testTransport(outgoing);",
+      "expected": [
+        {
+          "id": "request-transform-overwrite",
+          "title": "Downstream assignment removes the required no-store directive",
+          "file": "media/request.ts",
+          "line": 12,
+          "severity": "medium",
+          "category": "correctness",
+          "codeSnippet": "request.headers[\"Cache-Control\"] = \"no-cache\";"
+        }
+      ]
+    },
+    {
+      "id": "request-transform-mock",
+      "language": "typescript",
+      "category": "correctness",
+      "description": "Controlled executable request pipeline requiring no-store in production. The shown test mock mutates its input request before asserting. Production invokes applicationRequest followed by transport without testTransport. Review the changed production construction; a passing injecting mock is not production execution evidence.",
+      "file": "media/request.ts",
+      "startLine": 1,
+      "diff": " const policy = { diskRead: false, diskWrite: false, networkRead: true };\n function newRequest() {\n   const headers = {};\n   if (policy.networkRead && !policy.diskRead) {\n     headers[\"Cache-Control\"] = policy.diskWrite ? \"no-cache\" : \"no-cache, no-store\";\n   }\n   return { headers };\n }\n function middleware() { return newRequest(); }\n function applicationRequest() {\n+  const request = { headers: {} };\n   // Preserve the upstream request headers.\n   return request;\n }\n function transport(request) { return request.headers[\"Cache-Control\"]; }\n function testTransport(request) {\n   request.headers[\"Cache-Control\"] = \"no-cache, no-store\";\n   if (!String(transport(request)).includes(\"no-store\")) throw new Error(\"no-store required\");\n }\n const outgoing = applicationRequest();\n testTransport(outgoing);",
+      "expected": [
+        {
+          "id": "request-transform-mock",
+          "title": "Header-injecting mock hides a missing production request header",
+          "file": "media/request.ts",
+          "line": 11,
+          "severity": "medium",
+          "category": "correctness",
+          "codeSnippet": "const request = { headers: {} };"
+        }
+      ]
+    },
+    {
+      "id": "request-transform-utf8",
+      "language": "typescript",
+      "category": "correctness",
+      "description": "Controlled executable request pipeline plus UTF-8 preview. The header builder and transport assertion are supplied. The preview contract requires valid UTF-8; its unchanged strict decoder rejects malformed bytes. Review the added byte truncation independently of request-header correctness.",
+      "file": "media/request.ts",
+      "startLine": 1,
+      "diff": " const policy = { diskRead: false, diskWrite: false, networkRead: true };\n function newRequest() {\n   const headers = {};\n   if (policy.networkRead && !policy.diskRead) {\n     headers[\"Cache-Control\"] = policy.diskWrite ? \"no-cache\" : \"no-cache, no-store\";\n   }\n   return { headers };\n }\n function middleware() { return newRequest(); }\n function applicationRequest() {\n   const request = middleware();\n   // Preserve the upstream request headers.\n   return request;\n }\n function transport(request) { return request.headers[\"Cache-Control\"]; }\n function testTransport(request) {\n   // The test observes the request without adding headers.\n   if (!String(transport(request)).includes(\"no-store\")) throw new Error(\"no-store required\");\n }\n const outgoing = applicationRequest();\n testTransport(outgoing);\n const encoded = new TextEncoder().encode(\"é\");\n+const preview = encoded.slice(0, 1);\n new TextDecoder(\"utf-8\", { fatal: true }).decode(preview);",
+      "expected": [
+        {
+          "id": "request-transform-utf8",
+          "title": "Byte truncation splits a multibyte UTF-8 character",
+          "file": "media/request.ts",
+          "line": 23,
+          "severity": "medium",
+          "category": "correctness",
+          "codeSnippet": "const preview = encoded.slice(0, 1);"
+        }
+      ]
+    },
+    {
+      "id": "generated-source-literal",
+      "language": "python",
+      "category": "negative",
+      "description": "Synthetic host-language fixture writes generated Kotlin. The writer has no implicit newline; apply the shown literal escapes and explicit transformations. The existing instrumentation runner maps covered instructions to one-based generated source lines. Review the changed assertion using the supplied source and JUnit input. No actual compiler or instrumentation execution outcome is supplied to this model.",
+      "file": "coverage/generated_fixture.py",
+      "startLine": 1,
+      "diff": " def test_generated_counters(tmp_path):\n     kotlin = \"\"\"package demo\n class Route {\n     fun describe(): String = \"synthetic\"\n     fun route(value: Int): Int {\n         val checked = value\n         if (checked > 0) return 1\n         return -1\n     }\n     fun neverCalled(): Int = 99\n }\n \"\"\"\n     (tmp_path / \"Route.kt\").write_bytes(kotlin.encode(\"utf-8\"))\n     junit = \"assertEquals(1, Route().route(4))\"\n     # Existing runner compiles the exact written source and runs this assertion.\n     # rows keys are one-based Route.kt source lines; ci means covered instructions.\n     rows = run_real_jacoco(tmp_path, junit)\n+    assert rows[7][\"ci\"] == 0",
+      "expected": []
+    },
+    {
+      "id": "generated-source-leading-newline",
+      "language": "python",
+      "category": "negative",
+      "description": "Synthetic host-language fixture writes generated Kotlin. The writer has no implicit newline; apply the shown literal escapes and explicit transformations. The existing instrumentation runner maps covered instructions to one-based generated source lines. Review the changed assertion using the supplied source and JUnit input. No actual compiler or instrumentation execution outcome is supplied to this model.",
+      "file": "coverage/generated_fixture.py",
+      "startLine": 1,
+      "diff": " def test_generated_counters(tmp_path):\n     kotlin = \"\"\"\n package demo\n class Route {\n     fun describe(): String = \"synthetic\"\n     fun route(value: Int): Int {\n         val checked = value\n         if (checked > 0) return 1\n         return -1\n     }\n     fun neverCalled(): Int = 99\n }\n \"\"\"\n     (tmp_path / \"Route.kt\").write_bytes(kotlin.encode(\"utf-8\"))\n     junit = \"assertEquals(1, Route().route(4))\"\n     # Existing runner compiles the exact written source and runs this assertion.\n     # rows keys are one-based Route.kt source lines; ci means covered instructions.\n     rows = run_real_jacoco(tmp_path, junit)\n+    assert rows[8][\"ci\"] == 0",
+      "expected": []
+    },
+    {
+      "id": "generated-source-escaped",
+      "language": "python",
+      "category": "negative",
+      "description": "Synthetic host-language fixture writes generated Kotlin. The writer has no implicit newline; apply the shown literal escapes and explicit transformations. The existing instrumentation runner maps covered instructions to one-based generated source lines. Review the changed assertion using the supplied source and JUnit input. No actual compiler or instrumentation execution outcome is supplied to this model.",
+      "file": "coverage/generated_fixture.py",
+      "startLine": 1,
+      "diff": " def test_generated_counters(tmp_path):\n     kotlin = \"package demo\\nclass Route {\\n    fun describe(): String = \\\"synthetic\\\"\\n    fun route(value: Int): Int {\\n        val checked = value\\n        if (checked > 0) return 1\\n        return -1\\n    }\\n    fun neverCalled(): Int = 99\\n}\\n\"\n     (tmp_path / \"Route.kt\").write_bytes(kotlin.encode(\"utf-8\"))\n     junit = \"assertEquals(1, Route().route(4))\"\n     # Existing runner compiles the exact written source and runs this assertion.\n     # rows keys are one-based Route.kt source lines; ci means covered instructions.\n     rows = run_real_jacoco(tmp_path, junit)\n+    assert rows[7][\"ci\"] == 0",
+      "expected": []
+    },
+    {
+      "id": "generated-source-dedent",
+      "language": "python",
+      "category": "negative",
+      "description": "Synthetic host-language fixture writes generated Kotlin. The writer has no implicit newline; apply the shown literal escapes and explicit transformations. The existing instrumentation runner maps covered instructions to one-based generated source lines. Review the changed assertion using the supplied source and JUnit input. No actual compiler or instrumentation execution outcome is supplied to this model.",
+      "file": "coverage/generated_fixture.py",
+      "startLine": 1,
+      "diff": " import textwrap\n def test_generated_counters(tmp_path):\n     kotlin = textwrap.dedent(\"\"\"\n     package demo\n     class Route {\n         fun describe(): String = \"synthetic\"\n         fun route(value: Int): Int {\n             val checked = value\n             if (checked > 0) return 1\n             return -1\n         }\n         fun neverCalled(): Int = 99\n     }\n \"\"\").lstrip(\"\\n\")\n     (tmp_path / \"Route.kt\").write_bytes(kotlin.encode(\"utf-8\"))\n     junit = \"assertEquals(1, Route().route(4))\"\n     # Existing runner compiles the exact written source and runs this assertion.\n     # rows keys are one-based Route.kt source lines; ci means covered instructions.\n     rows = run_real_jacoco(tmp_path, junit)\n+    assert rows[7][\"ci\"] == 0",
+      "expected": []
+    },
+    {
+      "id": "generated-source-wrong-literal",
+      "language": "python",
+      "category": "correctness",
+      "description": "Synthetic host-language fixture writes generated Kotlin. The writer has no implicit newline; apply the shown literal escapes and explicit transformations. The existing instrumentation runner maps covered instructions to one-based generated source lines. Review the changed assertion using the supplied source and JUnit input. No actual compiler or instrumentation execution outcome is supplied to this model.",
+      "file": "coverage/generated_fixture.py",
+      "startLine": 1,
+      "diff": " def test_generated_counters(tmp_path):\n     kotlin = \"\"\"package demo\n class Route {\n     fun describe(): String = \"synthetic\"\n     fun route(value: Int): Int {\n         val checked = value\n         if (checked > 0) return 1\n         return -1\n     }\n     fun neverCalled(): Int = 99\n }\n \"\"\"\n     (tmp_path / \"Route.kt\").write_bytes(kotlin.encode(\"utf-8\"))\n     junit = \"assertEquals(1, Route().route(4))\"\n     # Existing runner compiles the exact written source and runs this assertion.\n     # rows keys are one-based Route.kt source lines; ci means covered instructions.\n     rows = run_real_jacoco(tmp_path, junit)\n+    assert rows[6][\"ci\"] == 0",
+      "expected": [
+        {
+          "id": "generated-source-wrong-literal",
+          "title": "Executed positive statement is asserted uncovered",
+          "file": "coverage/generated_fixture.py",
+          "line": 18,
+          "severity": "medium",
+          "category": "correctness",
+          "codeSnippet": "assert rows[6][\"ci\"] == 0"
+        }
+      ]
+    },
+    {
+      "id": "generated-source-wrong-leading-newline",
+      "language": "python",
+      "category": "correctness",
+      "description": "Synthetic host-language fixture writes generated Kotlin. The writer has no implicit newline; apply the shown literal escapes and explicit transformations. The existing instrumentation runner maps covered instructions to one-based generated source lines. Review the changed assertion using the supplied source and JUnit input. No actual compiler or instrumentation execution outcome is supplied to this model.",
+      "file": "coverage/generated_fixture.py",
+      "startLine": 1,
+      "diff": " def test_generated_counters(tmp_path):\n     kotlin = \"\"\"\n package demo\n class Route {\n     fun describe(): String = \"synthetic\"\n     fun route(value: Int): Int {\n         val checked = value\n         if (checked > 0) return 1\n         return -1\n     }\n     fun neverCalled(): Int = 99\n }\n \"\"\"\n     (tmp_path / \"Route.kt\").write_bytes(kotlin.encode(\"utf-8\"))\n     junit = \"assertEquals(1, Route().route(4))\"\n     # Existing runner compiles the exact written source and runs this assertion.\n     # rows keys are one-based Route.kt source lines; ci means covered instructions.\n     rows = run_real_jacoco(tmp_path, junit)\n+    assert rows[7][\"ci\"] == 0",
+      "expected": [
+        {
+          "id": "generated-source-wrong-leading-newline",
+          "title": "Executed positive statement is asserted uncovered",
+          "file": "coverage/generated_fixture.py",
+          "line": 19,
+          "severity": "medium",
+          "category": "correctness",
+          "codeSnippet": "assert rows[7][\"ci\"] == 0"
+        }
+      ]
+    },
+    {
+      "id": "generated-literal-independent-shell",
+      "language": "python",
+      "category": "security",
+      "description": "Owned synthetic Python fixture includes a literal plus a separate request handler. user_path is an untrusted HTTP query parameter; review the changed handler.",
+      "file": "coverage/literal_handler.py",
+      "startLine": 1,
+      "diff": " source = \"\"\"package demo\n class Empty {}\"\"\"\n import subprocess\n+def export_report(user_path):\n+    return subprocess.run(\"cat \" + user_path, shell=True, check=True)",
+      "expected": [
+        {
+          "id": "generated-literal-independent-shell",
+          "title": "Untrusted query parameter reaches the shell",
+          "file": "coverage/literal_handler.py",
+          "line": 5,
+          "category": "security",
+          "severity": "high",
+          "codeSnippet": "return subprocess.run(\"cat \" + user_path, shell=True, check=True)"
+        }
+      ]
+    },
+    {
+      "id": "generated-literal-independent-contract",
+      "language": "python",
+      "category": "correctness",
+      "description": "Owned synthetic Python fixture includes a literal plus an independent public validator. Its documented contract accepts strictly positive integer counts only. Review the changed return.",
+      "file": "coverage/literal_validator.py",
+      "startLine": 1,
+      "diff": " source = \"\"\"package demo\n class Empty {}\"\"\"\n def accepts_count(count):\n     \"\"\"Return True exactly when integer count is strictly positive.\"\"\"\n-    return count > 0\n+    return count >= 0",
+      "expected": [
+        {
+          "id": "generated-literal-independent-contract",
+          "title": "Zero is accepted despite the strictly positive contract",
+          "file": "coverage/literal_validator.py",
+          "line": 6,
+          "category": "correctness",
+          "severity": "medium",
+          "codeSnippet": "return count >= 0"
+        }
+      ]
+    },
+    {
+      "id": "session-source-signed-bootstrap",
+      "language": "typescript",
+      "category": "negative",
+      "description": "Owned synthetic harness dispatches configuration-selected setup, persists the storageState JSON shape and reads its localStorage session. Real Node HMAC/base64url creates compact tokens. The token endpoint supplies only the explicitly selected initial or expiry path. The assertion checks the selected header under a fixed test clock; no browser, private consumer or external auth provider is executed.",
+      "file": "e2e/owned-session.spec.ts",
+      "startLine": 1,
+      "diff": " const assert = require(\"node:assert/strict\");\n const { createHmac } = require(\"node:crypto\");\n const persistedFiles = new Map();\n const statePath = \".auth/owned-user.json\";\n let tokenEndpointCalls = 0;\n const fakeAuthResponse = { access_token: \"opaque-token-response\" };\n function mockedTokenEndpoint() { tokenEndpointCalls++; return fakeAuthResponse; }\n function persistSession(session) {\n   const state = { cookies: [], origins: [{ origin: \"http://owned.invalid\", localStorage: [{ name: \"owned-session\", value: JSON.stringify(session) }] }] };\n   persistedFiles.set(statePath, JSON.stringify(state));\n }\n function signedSetup() {\n   const header = Buffer.from(JSON.stringify({alg:\"HS256\",typ:\"JWT\"})).toString(\"base64url\");\n   const payload = Buffer.from(JSON.stringify({sub:\"owned-synthetic-user\"})).toString(\"base64url\");\n   const unsigned = header + \".\" + payload;\n   const signature = createHmac(\"sha256\", \"owned-synthetic-fixture-key\").update(unsigned).digest(\"base64url\");\n   persistSession({ access_token: unsigned + \".\" + signature, expires_at: 10000 });\n }\n function opaqueSetup() { persistSession({ ...mockedTokenEndpoint(), expires_at: 10000 }); }\n function aliasSetup() { return signedSetup(); }\n const setupModules = { \"signed.setup.ts\": signedSetup, \"alias.setup.ts\": aliasSetup, \"opaque.setup.ts\": opaqueSetup };\n const projectConfig = { globalSetup: \"signed.setup.ts\", storageState: statePath };\n setupModules[projectConfig.globalSetup]();\n const browserState = JSON.parse(persistedFiles.get(projectConfig.storageState));\n const storedSession = JSON.parse(browserState.origins[0].localStorage.find(item => item.name === \"owned-session\").value);\n const testClock = 1000;\n let accessToken = storedSession.access_token;\n if (storedSession.expires_at <= testClock) accessToken = mockedTokenEndpoint().access_token;\n const authorization = \"Bearer \" + accessToken;\n+assert.match(authorization, /^Bearer [A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$/);",
+      "expected": []
+    },
+    {
+      "id": "session-source-storage-alias",
+      "language": "typescript",
+      "category": "negative",
+      "description": "Owned synthetic harness dispatches configuration-selected setup, persists the storageState JSON shape and reads its localStorage session. Real Node HMAC/base64url creates compact tokens. The token endpoint supplies only the explicitly selected initial or expiry path. The assertion checks the selected header under a fixed test clock; no browser, private consumer or external auth provider is executed.",
+      "file": "e2e/owned-session.spec.ts",
+      "startLine": 1,
+      "diff": " const assert = require(\"node:assert/strict\");\n const { createHmac } = require(\"node:crypto\");\n const persistedFiles = new Map();\n const statePath = \".auth/owned-user.json\";\n let tokenEndpointCalls = 0;\n const fakeAuthResponse = { access_token: \"opaque-token-response\" };\n function mockedTokenEndpoint() { tokenEndpointCalls++; return fakeAuthResponse; }\n function persistSession(session) {\n   const state = { cookies: [], origins: [{ origin: \"http://owned.invalid\", localStorage: [{ name: \"owned-session\", value: JSON.stringify(session) }] }] };\n   persistedFiles.set(statePath, JSON.stringify(state));\n }\n function signedSetup() {\n   const header = Buffer.from(JSON.stringify({alg:\"HS256\",typ:\"JWT\"})).toString(\"base64url\");\n   const payload = Buffer.from(JSON.stringify({sub:\"owned-synthetic-user\"})).toString(\"base64url\");\n   const unsigned = header + \".\" + payload;\n   const signature = createHmac(\"sha256\", \"owned-synthetic-fixture-key\").update(unsigned).digest(\"base64url\");\n   persistSession({ access_token: unsigned + \".\" + signature, expires_at: 10000 });\n }\n function opaqueSetup() { persistSession({ ...mockedTokenEndpoint(), expires_at: 10000 }); }\n function aliasSetup() { return signedSetup(); }\n const setupModules = { \"signed.setup.ts\": signedSetup, \"alias.setup.ts\": aliasSetup, \"opaque.setup.ts\": opaqueSetup };\n const projectConfig = { globalSetup: \"alias.setup.ts\", storageState: statePath };\n setupModules[projectConfig.globalSetup]();\n const browserState = JSON.parse(persistedFiles.get(projectConfig.storageState));\n const storedSession = JSON.parse(browserState.origins[0].localStorage.find(item => item.name === \"owned-session\").value);\n const testClock = 1000;\n let accessToken = storedSession.access_token;\n if (storedSession.expires_at <= testClock) accessToken = mockedTokenEndpoint().access_token;\n const authorization = \"Bearer \" + accessToken;\n+assert.match(authorization, /^Bearer [A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$/);",
+      "expected": []
+    },
+    {
+      "id": "session-source-opaque-bootstrap",
+      "language": "typescript",
+      "category": "correctness",
+      "description": "Owned synthetic harness dispatches configuration-selected setup, persists the storageState JSON shape and reads its localStorage session. Real Node HMAC/base64url creates compact tokens. The token endpoint supplies only the explicitly selected initial or expiry path. The assertion checks the selected header under a fixed test clock; no browser, private consumer or external auth provider is executed.",
+      "file": "e2e/owned-session.spec.ts",
+      "startLine": 1,
+      "diff": " const assert = require(\"node:assert/strict\");\n const { createHmac } = require(\"node:crypto\");\n const persistedFiles = new Map();\n const statePath = \".auth/owned-user.json\";\n let tokenEndpointCalls = 0;\n const fakeAuthResponse = { access_token: \"opaque-token-response\" };\n function mockedTokenEndpoint() { tokenEndpointCalls++; return fakeAuthResponse; }\n function persistSession(session) {\n   const state = { cookies: [], origins: [{ origin: \"http://owned.invalid\", localStorage: [{ name: \"owned-session\", value: JSON.stringify(session) }] }] };\n   persistedFiles.set(statePath, JSON.stringify(state));\n }\n function signedSetup() {\n   const header = Buffer.from(JSON.stringify({alg:\"HS256\",typ:\"JWT\"})).toString(\"base64url\");\n   const payload = Buffer.from(JSON.stringify({sub:\"owned-synthetic-user\"})).toString(\"base64url\");\n   const unsigned = header + \".\" + payload;\n   const signature = createHmac(\"sha256\", \"owned-synthetic-fixture-key\").update(unsigned).digest(\"base64url\");\n   persistSession({ access_token: unsigned + \".\" + signature, expires_at: 10000 });\n }\n function opaqueSetup() { persistSession({ ...mockedTokenEndpoint(), expires_at: 10000 }); }\n function aliasSetup() { return signedSetup(); }\n const setupModules = { \"signed.setup.ts\": signedSetup, \"alias.setup.ts\": aliasSetup, \"opaque.setup.ts\": opaqueSetup };\n const projectConfig = { globalSetup: \"opaque.setup.ts\", storageState: statePath };\n setupModules[projectConfig.globalSetup]();\n const browserState = JSON.parse(persistedFiles.get(projectConfig.storageState));\n const storedSession = JSON.parse(browserState.origins[0].localStorage.find(item => item.name === \"owned-session\").value);\n const testClock = 1000;\n let accessToken = storedSession.access_token;\n if (storedSession.expires_at <= testClock) accessToken = mockedTokenEndpoint().access_token;\n const authorization = \"Bearer \" + accessToken;\n+assert.match(authorization, /^Bearer [A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$/);",
+      "expected": [
+        {
+          "id": "session-source-opaque-bootstrap",
+          "title": "The selected session supplies an opaque token to the compact-token assertion",
+          "file": "e2e/owned-session.spec.ts",
+          "line": 30,
+          "severity": "medium",
+          "category": "correctness",
+          "codeSnippet": "assert.match(authorization, /^Bearer [A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$/);"
+        }
+      ]
+    },
+    {
+      "id": "session-source-expired-refresh",
+      "language": "typescript",
+      "category": "correctness",
+      "description": "Owned synthetic harness dispatches configuration-selected setup, persists the storageState JSON shape and reads its localStorage session. Real Node HMAC/base64url creates compact tokens. The token endpoint supplies only the explicitly selected initial or expiry path. The assertion checks the selected header under a fixed test clock; no browser, private consumer or external auth provider is executed.",
+      "file": "e2e/owned-session.spec.ts",
+      "startLine": 1,
+      "diff": " const assert = require(\"node:assert/strict\");\n const { createHmac } = require(\"node:crypto\");\n const persistedFiles = new Map();\n const statePath = \".auth/owned-user.json\";\n let tokenEndpointCalls = 0;\n const fakeAuthResponse = { access_token: \"opaque-token-response\" };\n function mockedTokenEndpoint() { tokenEndpointCalls++; return fakeAuthResponse; }\n function persistSession(session) {\n   const state = { cookies: [], origins: [{ origin: \"http://owned.invalid\", localStorage: [{ name: \"owned-session\", value: JSON.stringify(session) }] }] };\n   persistedFiles.set(statePath, JSON.stringify(state));\n }\n function signedSetup() {\n   const header = Buffer.from(JSON.stringify({alg:\"HS256\",typ:\"JWT\"})).toString(\"base64url\");\n   const payload = Buffer.from(JSON.stringify({sub:\"owned-synthetic-user\"})).toString(\"base64url\");\n   const unsigned = header + \".\" + payload;\n   const signature = createHmac(\"sha256\", \"owned-synthetic-fixture-key\").update(unsigned).digest(\"base64url\");\n   persistSession({ access_token: unsigned + \".\" + signature, expires_at: 10000 });\n }\n function opaqueSetup() { persistSession({ ...mockedTokenEndpoint(), expires_at: 10000 }); }\n function aliasSetup() { return signedSetup(); }\n const setupModules = { \"signed.setup.ts\": signedSetup, \"alias.setup.ts\": aliasSetup, \"opaque.setup.ts\": opaqueSetup };\n const projectConfig = { globalSetup: \"signed.setup.ts\", storageState: statePath };\n setupModules[projectConfig.globalSetup]();\n const browserState = JSON.parse(persistedFiles.get(projectConfig.storageState));\n const storedSession = JSON.parse(browserState.origins[0].localStorage.find(item => item.name === \"owned-session\").value);\n const testClock = 20000;\n let accessToken = storedSession.access_token;\n if (storedSession.expires_at <= testClock) accessToken = mockedTokenEndpoint().access_token;\n const authorization = \"Bearer \" + accessToken;\n+assert.match(authorization, /^Bearer [A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$/);",
+      "expected": [
+        {
+          "id": "session-source-expired-refresh",
+          "title": "The selected session supplies an opaque token to the compact-token assertion",
+          "file": "e2e/owned-session.spec.ts",
+          "line": 30,
+          "severity": "medium",
+          "category": "correctness",
+          "codeSnippet": "assert.match(authorization, /^Bearer [A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$/);"
+        }
+      ]
+    },
+    {
+      "id": "session-source-prefix-gap",
+      "language": "typescript",
+      "category": "correctness",
+      "description": "Owned synthetic harness dispatches configuration-selected setup, persists the storageState JSON shape and reads its localStorage session. Real Node HMAC/base64url creates compact tokens. The token endpoint supplies only the explicitly selected initial or expiry path. The assertion checks the selected header under a fixed test clock; no browser, private consumer or external auth provider is executed.",
+      "file": "e2e/owned-session.spec.ts",
+      "startLine": 1,
+      "diff": " const assert = require(\"node:assert/strict\");\n const { createHmac } = require(\"node:crypto\");\n const persistedFiles = new Map();\n const statePath = \".auth/owned-user.json\";\n let tokenEndpointCalls = 0;\n const fakeAuthResponse = { access_token: \"opaque-token-response\" };\n function mockedTokenEndpoint() { tokenEndpointCalls++; return fakeAuthResponse; }\n function persistSession(session) {\n   const state = { cookies: [], origins: [{ origin: \"http://owned.invalid\", localStorage: [{ name: \"owned-session\", value: JSON.stringify(session) }] }] };\n   persistedFiles.set(statePath, JSON.stringify(state));\n }\n function signedSetup() {\n   const header = Buffer.from(JSON.stringify({alg:\"HS256\",typ:\"JWT\"})).toString(\"base64url\");\n   const payload = Buffer.from(JSON.stringify({sub:\"owned-synthetic-user\"})).toString(\"base64url\");\n   const unsigned = header + \".\" + payload;\n   const signature = createHmac(\"sha256\", \"owned-synthetic-fixture-key\").update(unsigned).digest(\"base64url\");\n   persistSession({ access_token: unsigned + \".\" + signature, expires_at: 10000 });\n }\n function opaqueSetup() { persistSession({ ...mockedTokenEndpoint(), expires_at: 10000 }); }\n function aliasSetup() { return signedSetup(); }\n const setupModules = { \"signed.setup.ts\": signedSetup, \"alias.setup.ts\": aliasSetup, \"opaque.setup.ts\": opaqueSetup };\n const projectConfig = { globalSetup: \"signed.setup.ts\", storageState: statePath };\n setupModules[projectConfig.globalSetup]();\n const browserState = JSON.parse(persistedFiles.get(projectConfig.storageState));\n const storedSession = JSON.parse(browserState.origins[0].localStorage.find(item => item.name === \"owned-session\").value);\n const testClock = 1000;\n let accessToken = storedSession.access_token;\n if (storedSession.expires_at <= testClock) accessToken = mockedTokenEndpoint().access_token;\n+const authorization = \"Bearer\" + accessToken;\n+assert.match(authorization, /^Bearer [A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$/);",
+      "expected": [
+        {
+          "id": "session-source-prefix-gap",
+          "title": "The changed header omits the bearer separator",
+          "file": "e2e/owned-session.spec.ts",
+          "line": 29,
+          "severity": "medium",
+          "category": "correctness",
+          "codeSnippet": "const authorization = \"Bearer\" + accessToken;"
+        }
+      ]
+    },
+    {
+      "id": "session-source-setup-unavailable",
+      "language": "typescript",
+      "category": "negative",
+      "description": "Bounded source excerpt: the configured setup and persisted initial session producer are not supplied. A separate token endpoint stub is visible. No execution outcome is provided; review only supported defects in the changed assertion.",
+      "file": "e2e/owned-session.spec.ts",
+      "startLine": 1,
+      "diff": " const fakeAuthResponse = { access_token: \"opaque-token-response\" };\n function tokenEndpoint() { return fakeAuthResponse; }\n const initialSession = loadConfiguredStorageState();\n+assert.equal(initialSession.access_token.split(\".\").length, 3);",
+      "expected": []
+    },
+    {
+      "id": "unittest-discovery-delegated-wildcard",
+      "language": "python",
+      "category": "negative",
+      "file": ".github/scripts/tests/run_manifest_tests.py",
+      "startLine": 1,
+      "description": "Owned synthetic runner and fixed flat importable test inventory. The configured workflow invokes this file, including through delegates; its contract requires both manifest modules. Review the changed discovery command, effective cwd and module selection. Supplied observations are separate from model predictions; do not execute fixtures or infer defects from the absence of direct workflow module invocation.",
+      "diff": " import subprocess\n import sys\n from pathlib import Path\n ROOT = Path(__file__).resolve().parents[3]\n # Workflow cwd: .; run: python .github/scripts/tests/run_manifest_tests.py.\n # Owned ordinary importable unittest fixtures:\n # .github/scripts/tests/test_manifest_core.py: 14 TestCase methods.\n # .github/scripts/tests/test_manifest_export.py: 5 TestCase methods.\n # backend/checks/test_manifest_health.py: 1 unrelated TestCase method.\n # Both manifest modules are required by this CI verification contract.\n # Separate owned command observation: 19 tests passed, including all five export methods.\n # The observation uses this exact runner argv, root and owned module sources; no consumer run is claimed.\n def command():\n+    return [sys.executable, \"-m\", \"unittest\", \"discover\", \"-s\", \".github/scripts/tests\", \"-p\", \"test_manifest_*.py\", \"-v\"]\n def run_discovery():\n     return subprocess.run(command(), cwd=ROOT, check=True)\n def delegate():\n     return run_discovery()\n def alias():\n     return delegate()\n if __name__ == \"__main__\": delegate()",
+      "expected": []
+    },
+    {
+      "id": "unittest-discovery-nested-working-directory",
+      "language": "python",
+      "category": "negative",
+      "file": ".github/scripts/tests/run_manifest_tests.py",
+      "startLine": 1,
+      "description": "Owned synthetic runner and fixed flat importable test inventory. The configured workflow invokes this file, including through delegates; its contract requires both manifest modules. Review the changed discovery command, effective cwd and module selection. Supplied observations are separate from model predictions; do not execute fixtures or infer defects from the absence of direct workflow module invocation.",
+      "diff": " import subprocess\n import sys\n from pathlib import Path\n ROOT = Path(__file__).resolve().parents[3]\n # Workflow cwd: backend; run: python ../.github/scripts/tests/run_manifest_tests.py.\n # Owned ordinary importable unittest fixtures:\n # .github/scripts/tests/test_manifest_core.py: 14 TestCase methods.\n # .github/scripts/tests/test_manifest_export.py: 5 TestCase methods.\n # backend/checks/test_manifest_health.py: 1 unrelated TestCase method.\n # Both manifest modules are required by this CI verification contract.\n def command():\n+    return [sys.executable, \"-m\", \"unittest\", \"discover\", \"-s\", \".github/scripts/tests\", \"-p\", \"test_manifest_*.py\", \"-v\"]\n def run_discovery():\n     return subprocess.run(command(), cwd=ROOT, check=True)\n def delegate():\n     return run_discovery()\n def alias():\n     return delegate()\n if __name__ == \"__main__\": alias()",
+      "expected": []
+    },
+    {
+      "id": "unittest-discovery-literal-argv-pattern",
+      "language": "python",
+      "category": "negative",
+      "file": ".github/scripts/tests/run_manifest_tests.py",
+      "startLine": 1,
+      "description": "Owned synthetic runner and fixed flat importable test inventory. The configured workflow invokes this file, including through delegates; its contract requires both manifest modules. Review the changed discovery command, effective cwd and module selection. Supplied observations are separate from model predictions; do not execute fixtures or infer defects from the absence of direct workflow module invocation.",
+      "diff": " import subprocess\n import sys\n from pathlib import Path\n ROOT = Path(__file__).resolve().parents[3]\n # Workflow cwd: .; run: python .github/scripts/tests/run_manifest_tests.py.\n # Owned ordinary importable unittest fixtures:\n # .github/scripts/tests/test_manifest_core.py: 14 TestCase methods.\n # .github/scripts/tests/test_manifest_export.py: 5 TestCase methods.\n # backend/checks/test_manifest_health.py: 1 unrelated TestCase method.\n # Both manifest modules are required by this CI verification contract.\n def command():\n+    return [sys.executable, \"-m\", \"unittest\", \"discover\", \"-s\", \".github/scripts/tests\", \"-p\", \"test_manifest_*.py\", \"-v\"]\n def run_discovery():\n     return subprocess.run(command(), cwd=ROOT, check=True)\n def delegate():\n     return run_discovery()\n def alias():\n     return delegate()\n if __name__ == \"__main__\": run_discovery()",
+      "expected": []
+    },
+    {
+      "id": "unittest-discovery-excluded-by-pattern",
+      "language": "python",
+      "category": "correctness",
+      "file": ".github/scripts/tests/run_manifest_tests.py",
+      "startLine": 1,
+      "description": "Owned synthetic runner and fixed flat importable test inventory. The configured workflow invokes this file, including through delegates; its contract requires both manifest modules. Review the changed discovery command, effective cwd and module selection. Supplied observations are separate from model predictions; do not execute fixtures or infer defects from the absence of direct workflow module invocation.",
+      "diff": " import subprocess\n import sys\n from pathlib import Path\n ROOT = Path(__file__).resolve().parents[3]\n # Workflow cwd: .; run: python .github/scripts/tests/run_manifest_tests.py.\n # Owned ordinary importable unittest fixtures:\n # .github/scripts/tests/test_manifest_core.py: 14 TestCase methods.\n # .github/scripts/tests/test_manifest_export.py: 5 TestCase methods.\n # backend/checks/test_manifest_health.py: 1 unrelated TestCase method.\n # Both manifest modules are required by this CI verification contract.\n def command():\n+    return [sys.executable, \"-m\", \"unittest\", \"discover\", \"-s\", \".github/scripts/tests\", \"-p\", \"test_manifest_core.py\", \"-v\"]\n def run_discovery():\n     return subprocess.run(command(), cwd=ROOT, check=True)\n def delegate():\n     return run_discovery()\n def alias():\n     return delegate()\n if __name__ == \"__main__\": delegate()",
+      "expected": [
+        {
+          "id": "unittest-discovery-excluded-by-pattern",
+          "title": "The changed discovery selector excludes the required export module",
+          "file": ".github/scripts/tests/run_manifest_tests.py",
+          "line": 12,
+          "severity": "medium",
+          "category": "correctness",
+          "codeSnippet": "    return [sys.executable, \"-m\", \"unittest\", \"discover\", \"-s\", \".github/scripts/tests\", \"-p\", \"test_manifest_core.py\", \"-v\"]"
+        }
+      ]
+    },
+    {
+      "id": "unittest-discovery-wrong-start-directory",
+      "language": "python",
+      "category": "correctness",
+      "file": ".github/scripts/tests/run_manifest_tests.py",
+      "startLine": 1,
+      "description": "Owned synthetic runner and fixed flat importable test inventory. The configured workflow invokes this file, including through delegates; its contract requires both manifest modules. Review the changed discovery command, effective cwd and module selection. Supplied observations are separate from model predictions; do not execute fixtures or infer defects from the absence of direct workflow module invocation.",
+      "diff": " import subprocess\n import sys\n from pathlib import Path\n ROOT = Path(__file__).resolve().parents[3]\n # Workflow cwd: .; run: python .github/scripts/tests/run_manifest_tests.py.\n # Owned ordinary importable unittest fixtures:\n # .github/scripts/tests/test_manifest_core.py: 14 TestCase methods.\n # .github/scripts/tests/test_manifest_export.py: 5 TestCase methods.\n # backend/checks/test_manifest_health.py: 1 unrelated TestCase method.\n # Both manifest modules are required by this CI verification contract.\n def command():\n+    return [sys.executable, \"-m\", \"unittest\", \"discover\", \"-s\", \"backend/checks\", \"-p\", \"test_manifest_*.py\", \"-v\"]\n def run_discovery():\n     return subprocess.run(command(), cwd=ROOT, check=True)\n def delegate():\n     return run_discovery()\n def alias():\n     return delegate()\n if __name__ == \"__main__\": delegate()",
+      "expected": [
+        {
+          "id": "unittest-discovery-wrong-start-directory",
+          "title": "The changed discovery selector excludes the required export module",
+          "file": ".github/scripts/tests/run_manifest_tests.py",
+          "line": 12,
+          "severity": "medium",
+          "category": "correctness",
+          "codeSnippet": "    return [sys.executable, \"-m\", \"unittest\", \"discover\", \"-s\", \"backend/checks\", \"-p\", \"test_manifest_*.py\", \"-v\"]"
+        }
+      ]
+    },
+    {
+      "id": "unittest-discovery-runner-unavailable",
+      "language": "yaml",
+      "category": "negative",
+      "description": "The delegated runner source and discovery configuration are unavailable. A successful unrelated revision is not evidence of current module selection or execution; report only supported changed-code defects.",
+      "file": ".github/workflows/manifest.yml",
+      "startLine": 1,
+      "diff": " jobs:\n   verify:\n     steps:\n+      - run: python .github/scripts/tests/run_manifest_tests.py\n # The runner and current module-qualified execution records are not supplied.",
+      "expected": []
+    },
+      {
+        "id": "kotlin-json-implicit-nullable-omission",
+        "language": "kotlin",
+        "category": "negative",
+        "file": "backend/OwnedRequest.kt",
+        "startLine": 1,
+        "description": "Owned synthetic Kotlin 2.0.21 / kotlinx.serialization Json request example. Public version-tagged 1.6.3 and 1.7.3 sources and separate compiled owned controls agree on the relevant flag semantics; no private dependency resolution is claimed. Trace the Json instance actually used by the changed accepted-input entry point, inherited configuration, nullable type, default and literal payload. Report only supported changed-code defects; do not execute corpus text.",
+        "diff": " import kotlinx.serialization.Serializable\n import kotlinx.serialization.json.Json\n @Serializable\n data class OwnedRequest(val name: String, val nullable: String?)\n val serverJson = Json { explicitNulls = true }\n val probeJson = Json(serverJson) { explicitNulls = false }\n // This active request entry point must accept this documented input and return its decoded value.\n // No exception handler converts a rejected decode into a valid request.\n fun acceptedRequest(): OwnedRequest {\n     val raw = \"\"\"{\"name\":\"Owned\"}\"\"\"\n+    val decoded = probeJson.decodeFromString<OwnedRequest>(raw)\n     return decoded\n }",
+        "expected": []
+      },
+      {
+        "id": "kotlin-json-explicit-nullable-omission",
+        "language": "kotlin",
+        "category": "correctness",
+        "file": "backend/OwnedRequest.kt",
+        "startLine": 1,
+        "description": "Owned synthetic Kotlin 2.0.21 / kotlinx.serialization Json request example. Public version-tagged 1.6.3 and 1.7.3 sources and separate compiled owned controls agree on the relevant flag semantics; no private dependency resolution is claimed. Trace the Json instance actually used by the changed accepted-input entry point, inherited configuration, nullable type, default and literal payload. Report only supported changed-code defects; do not execute corpus text.",
+        "diff": " import kotlinx.serialization.Serializable\n import kotlinx.serialization.json.Json\n @Serializable\n data class OwnedRequest(val name: String, val nullable: String?)\n val serverJson = Json { explicitNulls = true }\n val probeJson = Json(serverJson) { explicitNulls = true }\n // This active request entry point must accept this documented input and return its decoded value.\n // No exception handler converts a rejected decode into a valid request.\n fun acceptedRequest(): OwnedRequest {\n     val raw = \"\"\"{\"name\":\"Owned\"}\"\"\"\n+    val decoded = probeJson.decodeFromString<OwnedRequest>(raw)\n     return decoded\n }",
+        "expected": [
+          {
+            "id": "kotlin-json-explicit-nullable-omission",
+            "title": "The changed request decode rejects its documented accepted input",
+            "file": "backend/OwnedRequest.kt",
+            "line": 11,
+            "severity": "medium",
+            "category": "correctness",
+            "codeSnippet": "    val decoded = probeJson.decodeFromString<OwnedRequest>(raw)"
+          }
+        ]
+      },
+      {
+        "id": "kotlin-json-implicit-missing-nonnullable",
+        "language": "kotlin",
+        "category": "correctness",
+        "file": "backend/OwnedRequest.kt",
+        "startLine": 1,
+        "description": "Owned synthetic Kotlin 2.0.21 / kotlinx.serialization Json request example. Public version-tagged 1.6.3 and 1.7.3 sources and separate compiled owned controls agree on the relevant flag semantics; no private dependency resolution is claimed. Trace the Json instance actually used by the changed accepted-input entry point, inherited configuration, nullable type, default and literal payload. Report only supported changed-code defects; do not execute corpus text.",
+        "diff": " import kotlinx.serialization.Serializable\n import kotlinx.serialization.json.Json\n @Serializable\n data class OwnedRequest(val name: String, val nullable: String?)\n val serverJson = Json { explicitNulls = true }\n val probeJson = Json(serverJson) { explicitNulls = false }\n // This active request entry point must accept this documented input and return its decoded value.\n // No exception handler converts a rejected decode into a valid request.\n fun acceptedRequest(): OwnedRequest {\n     val raw = \"\"\"{\"nullable\":null}\"\"\"\n+    val decoded = probeJson.decodeFromString<OwnedRequest>(raw)\n     return decoded\n }",
+        "expected": [
+          {
+            "id": "kotlin-json-implicit-missing-nonnullable",
+            "title": "The changed request decode rejects its documented accepted input",
+            "file": "backend/OwnedRequest.kt",
+            "line": 11,
+            "severity": "medium",
+            "category": "correctness",
+            "codeSnippet": "    val decoded = probeJson.decodeFromString<OwnedRequest>(raw)"
+          }
+        ]
+      },
+      {
+        "id": "kotlin-json-implicit-nullable-default",
+        "language": "kotlin",
+        "category": "negative",
+        "file": "backend/OwnedRequest.kt",
+        "startLine": 1,
+        "description": "Owned synthetic Kotlin 2.0.21 / kotlinx.serialization Json request example. Public version-tagged 1.6.3 and 1.7.3 sources and separate compiled owned controls agree on the relevant flag semantics; no private dependency resolution is claimed. Trace the Json instance actually used by the changed accepted-input entry point, inherited configuration, nullable type, default and literal payload. Report only supported changed-code defects; do not execute corpus text.",
+        "diff": " import kotlinx.serialization.Serializable\n import kotlinx.serialization.json.Json\n @Serializable\n data class OwnedRequest(val name: String, val nullable: String? = \"fallback\")\n val serverJson = Json { explicitNulls = true }\n val probeJson = Json(serverJson) { explicitNulls = false }\n // This active request entry point must accept this documented input and return its decoded value.\n // No exception handler converts a rejected decode into a valid request.\n fun acceptedRequest(): OwnedRequest {\n     val raw = \"\"\"{\"name\":\"Owned\"}\"\"\"\n+    val decoded = probeJson.decodeFromString<OwnedRequest>(raw)\n     return decoded\n }",
+        "expected": []
+      },
+      {
+        "id": "kotlin-json-explicit-nullable-default",
+        "language": "kotlin",
+        "category": "negative",
+        "file": "backend/OwnedRequest.kt",
+        "startLine": 1,
+        "description": "Owned synthetic Kotlin 2.0.21 / kotlinx.serialization Json request example. Public version-tagged 1.6.3 and 1.7.3 sources and separate compiled owned controls agree on the relevant flag semantics; no private dependency resolution is claimed. Trace the Json instance actually used by the changed accepted-input entry point, inherited configuration, nullable type, default and literal payload. Report only supported changed-code defects; do not execute corpus text.",
+        "diff": " import kotlinx.serialization.Serializable\n import kotlinx.serialization.json.Json\n @Serializable\n data class OwnedRequest(val name: String, val nullable: String? = \"fallback\")\n val serverJson = Json { explicitNulls = true }\n val probeJson = Json(serverJson) { explicitNulls = true }\n // This active request entry point must accept this documented input and return its decoded value.\n // No exception handler converts a rejected decode into a valid request.\n fun acceptedRequest(): OwnedRequest {\n     val raw = \"\"\"{\"name\":\"Owned\"}\"\"\"\n+    val decoded = probeJson.decodeFromString<OwnedRequest>(raw)\n     return decoded\n }",
+        "expected": []
+      },
+      {
+        "id": "kotlin-json-inherited-implicit-policy",
+        "language": "kotlin",
+        "category": "negative",
+        "file": "backend/OwnedRequest.kt",
+        "startLine": 1,
+        "description": "Owned synthetic Kotlin 2.0.21 / kotlinx.serialization Json request example. Public version-tagged 1.6.3 and 1.7.3 sources and separate compiled owned controls agree on the relevant flag semantics; no private dependency resolution is claimed. Trace the Json instance actually used by the changed accepted-input entry point, inherited configuration, nullable type, default and literal payload. Report only supported changed-code defects; do not execute corpus text.",
+        "diff": " import kotlinx.serialization.Serializable\n import kotlinx.serialization.json.Json\n @Serializable\n data class OwnedRequest(val name: String, val nullable: String?)\n val serverJson = Json { explicitNulls = false }\n val probeJson = Json(serverJson) { ignoreUnknownKeys = true }\n // This active request entry point must accept this documented input and return its decoded value.\n // No exception handler converts a rejected decode into a valid request.\n fun acceptedRequest(): OwnedRequest {\n     val raw = \"\"\"{\"name\":\"Owned\"}\"\"\"\n+    val decoded = probeJson.decodeFromString<OwnedRequest>(raw)\n     return decoded\n }",
+        "expected": []
+      },
+      {
+        "id": "kotlin-json-different-instance-policy",
+        "language": "kotlin",
+        "category": "correctness",
+        "file": "backend/OwnedRequest.kt",
+        "startLine": 1,
+        "description": "Owned synthetic Kotlin 2.0.21 / kotlinx.serialization Json request example. Public version-tagged 1.6.3 and 1.7.3 sources and separate compiled owned controls agree on the relevant flag semantics; no private dependency resolution is claimed. Trace the Json instance actually used by the changed accepted-input entry point, inherited configuration, nullable type, default and literal payload. Report only supported changed-code defects; do not execute corpus text.",
+        "diff": " import kotlinx.serialization.Serializable\n import kotlinx.serialization.json.Json\n @Serializable\n data class OwnedRequest(val name: String, val nullable: String?)\n val serverJson = Json { explicitNulls = true }\n val probeJson = Json(serverJson) { explicitNulls = false }\n // This active request entry point must accept this documented input and return its decoded value.\n // No exception handler converts a rejected decode into a valid request.\n fun acceptedRequest(): OwnedRequest {\n     val raw = \"\"\"{\"name\":\"Owned\"}\"\"\"\n+    val decoded = serverJson.decodeFromString<OwnedRequest>(raw)\n     return decoded\n }",
+        "expected": [
+          {
+            "id": "kotlin-json-different-instance-policy",
+            "title": "The changed request decode rejects its documented accepted input",
+            "file": "backend/OwnedRequest.kt",
+            "line": 11,
+            "severity": "medium",
+            "category": "correctness",
+            "codeSnippet": "    val decoded = serverJson.decodeFromString<OwnedRequest>(raw)"
+          }
+        ]
+      },
+      {
+        "id": "kotlin-json-unavailable-policy",
+        "language": "kotlin",
+        "category": "negative",
+        "file": "backend/OwnedRequest.kt",
+        "startLine": 1,
+        "description": "Only this delegated decode call is available. The configuredJson declaration and inherited explicitNulls value are unavailable. Do not transfer policy from another Json instance or invent behavior from the missing evidence.",
+        "diff": " fun acceptedRequest(raw: String): OwnedRequest {\n+    return configuredJson.decodeFromString<OwnedRequest>(raw)\n }",
+        "expected": []
+      },
+    {
+      "id": "ktor-routing-installed-root",
+      "language": "kotlin",
+      "category": "negative",
+      "description": "Owned inert Kotlin example using the public Ktor 3.0.2 routing contract. The pinned public RoutingRoot.kt blob 7519c959a6caba4c1b3fb3c7e429ded46e2f21e8 implements Application.routing as pluginOrNull(RoutingRoot)?.apply(configuration) ?: install(RoutingRoot, configuration); independent public 3.0.2 jar disassembly corroborates the same-object return on reuse. This is source/bytecode evidence, not execution of this example or private dependency resolution. The caller supplies two distinct Applications; the first begins without routing, then the shown setup installs exactly one child. The selected node must preserve the complete installed root identity, checked by this active caller. Review the added selection; no other files or hidden framework overrides are in scope.",
+      "file": "backend/OwnedRoutingSelection.kt",
+      "startLine": 1,
+      "diff": " import io.ktor.server.application.Application\n import io.ktor.server.routing.*\n fun existingRoot(app: Application): RoutingRoot = app.routing {}\n fun selectForExport(app: Application, otherApp: Application): RoutingNode {\n     val installed = app.routing { route(\"/owned\") {} }\n+    val selected = app.routing {}\n     check(selected === installed) { \"Export must retain the entire installed root\" }\n     return selected\n }",
+      "expected": []
+    },
+    {
+      "id": "ktor-routing-delegated-root",
+      "language": "kotlin",
+      "category": "negative",
+      "description": "Owned inert Kotlin example using the public Ktor 3.0.2 routing contract. The pinned public RoutingRoot.kt blob 7519c959a6caba4c1b3fb3c7e429ded46e2f21e8 implements Application.routing as pluginOrNull(RoutingRoot)?.apply(configuration) ?: install(RoutingRoot, configuration); independent public 3.0.2 jar disassembly corroborates the same-object return on reuse. This is source/bytecode evidence, not execution of this example or private dependency resolution. The caller supplies two distinct Applications; the first begins without routing, then the shown setup installs exactly one child. The selected node must preserve the complete installed root identity, checked by this active caller. Review the added selection; no other files or hidden framework overrides are in scope.",
+      "file": "backend/OwnedRoutingSelection.kt",
+      "startLine": 1,
+      "diff": " import io.ktor.server.application.Application\n import io.ktor.server.routing.*\n fun existingRoot(app: Application): RoutingRoot = app.routing {}\n fun selectForExport(app: Application, otherApp: Application): RoutingNode {\n     val installed = app.routing { route(\"/owned\") {} }\n+    val selected = existingRoot(app)\n     check(selected === installed) { \"Export must retain the entire installed root\" }\n     return selected\n }",
+      "expected": []
+    },
+    {
+      "id": "ktor-routing-configured-root",
+      "language": "kotlin",
+      "category": "negative",
+      "description": "Owned inert Kotlin example using the public Ktor 3.0.2 routing contract. The pinned public RoutingRoot.kt blob 7519c959a6caba4c1b3fb3c7e429ded46e2f21e8 implements Application.routing as pluginOrNull(RoutingRoot)?.apply(configuration) ?: install(RoutingRoot, configuration); independent public 3.0.2 jar disassembly corroborates the same-object return on reuse. This is source/bytecode evidence, not execution of this example or private dependency resolution. The caller supplies two distinct Applications; the first begins without routing, then the shown setup installs exactly one child. The selected node must preserve the complete installed root identity, checked by this active caller. Review the added selection; no other files or hidden framework overrides are in scope.",
+      "file": "backend/OwnedRoutingSelection.kt",
+      "startLine": 1,
+      "diff": " import io.ktor.server.application.Application\n import io.ktor.server.routing.*\n fun existingRoot(app: Application): RoutingRoot = app.routing {}\n fun selectForExport(app: Application, otherApp: Application): RoutingNode {\n     val installed = app.routing { route(\"/owned\") {} }\n+    val selected = app.routing { route(\"/extra\") {} }\n     check(selected === installed) { \"Export must retain the entire installed root\" }\n     return selected\n }",
+      "expected": []
+    },
+    {
+      "id": "ktor-routing-child-subtree",
+      "language": "kotlin",
+      "category": "correctness",
+      "description": "Owned inert Kotlin example using the public Ktor 3.0.2 routing contract. The pinned public RoutingRoot.kt blob 7519c959a6caba4c1b3fb3c7e429ded46e2f21e8 implements Application.routing as pluginOrNull(RoutingRoot)?.apply(configuration) ?: install(RoutingRoot, configuration); independent public 3.0.2 jar disassembly corroborates the same-object return on reuse. This is source/bytecode evidence, not execution of this example or private dependency resolution. The caller supplies two distinct Applications; the first begins without routing, then the shown setup installs exactly one child. The selected node must preserve the complete installed root identity, checked by this active caller. Review the added selection; no other files or hidden framework overrides are in scope.",
+      "file": "backend/OwnedRoutingSelection.kt",
+      "startLine": 1,
+      "diff": " import io.ktor.server.application.Application\n import io.ktor.server.routing.*\n fun existingRoot(app: Application): RoutingRoot = app.routing {}\n fun selectForExport(app: Application, otherApp: Application): RoutingNode {\n     val installed = app.routing { route(\"/owned\") {} }\n+    val selected = installed.children.single()\n     check(selected === installed) { \"Export must retain the entire installed root\" }\n     return selected\n }",
+      "expected": [
+        {
+          "id": "ktor-routing-child-subtree",
+          "title": "The changed selection loses the installed application routing root",
+          "file": "backend/OwnedRoutingSelection.kt",
+          "line": 6,
+          "severity": "medium",
+          "category": "correctness",
+          "codeSnippet": "    val selected = installed.children.single()"
+        }
+      ]
+    },
+    {
+      "id": "ktor-routing-different-application",
+      "language": "kotlin",
+      "category": "correctness",
+      "description": "Owned inert Kotlin example using the public Ktor 3.0.2 routing contract. The pinned public RoutingRoot.kt blob 7519c959a6caba4c1b3fb3c7e429ded46e2f21e8 implements Application.routing as pluginOrNull(RoutingRoot)?.apply(configuration) ?: install(RoutingRoot, configuration); independent public 3.0.2 jar disassembly corroborates the same-object return on reuse. This is source/bytecode evidence, not execution of this example or private dependency resolution. The caller supplies two distinct Applications; the first begins without routing, then the shown setup installs exactly one child. The selected node must preserve the complete installed root identity, checked by this active caller. Review the added selection; no other files or hidden framework overrides are in scope.",
+      "file": "backend/OwnedRoutingSelection.kt",
+      "startLine": 1,
+      "diff": " import io.ktor.server.application.Application\n import io.ktor.server.routing.*\n fun existingRoot(app: Application): RoutingRoot = app.routing {}\n fun selectForExport(app: Application, otherApp: Application): RoutingNode {\n     val installed = app.routing { route(\"/owned\") {} }\n+    val selected = otherApp.routing {}\n     check(selected === installed) { \"Export must retain the entire installed root\" }\n     return selected\n }",
+      "expected": [
+        {
+          "id": "ktor-routing-different-application",
+          "title": "The changed selection loses the installed application routing root",
+          "file": "backend/OwnedRoutingSelection.kt",
+          "line": 6,
+          "severity": "medium",
+          "category": "correctness",
+          "codeSnippet": "    val selected = otherApp.routing {}"
+        }
+      ]
+    },
+    {
+      "id": "ktor-routing-unavailable-implementation",
+      "language": "kotlin",
+      "category": "negative",
+      "file": "backend/OwnedRoutingSelection.kt",
+      "startLine": 1,
+      "description": "Only this delegated root-selection call is available. The selectConfiguredRoot declaration, dependency version and implementation are unavailable. No concrete identity mismatch or unconditional export failure is established by the supplied evidence.",
+      "diff": " fun selectForExport(app: Application): RoutingNode {\n+    return selectConfiguredRoot(app)\n }",
+      "expected": []
     }
   ]
 }

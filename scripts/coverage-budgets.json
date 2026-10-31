@@ -52,7 +52,8 @@
             "src/application/policies/bugbot_partition_completion_policy.ts",
             "src/application/usecases/steps/commit/bugbot/bugbot_partition_aggregation.ts",
             "src/application/usecases/steps/commit/bugbot/bugbot_previous_findings_context.ts",
-            "src/application/usecases/steps/commit/bugbot/bugbot_review_context.ts"
+            "src/application/usecases/steps/commit/bugbot/bugbot_review_context.ts",
+            "src/application/policies/bugbot_python_literal_witness_policy.ts"
           ],
           "mode": "each",
           "thresholdProfile": "exhaustive"
@@ -79,7 +80,8 @@
             "src/application/usecases/steps/commit/bugbot/schema.ts",
             "src/application/usecases/steps/commit/bugbot/bugbot_review_telemetry.ts",
             "src/data/repository/issue/bugbot_issue_comment_query_repository.ts",
-            "src/infrastructure/composition/bugbot_scm_port_factory.ts"
+            "src/infrastructure/composition/bugbot_scm_port_factory.ts",
+            "src/application/policies/bugbot_python_literal_witness_policy.ts"
           ],
           "mode": "aggregate",
           "thresholdProfile": "default"
@@ -842,7 +844,15 @@
             "src/application/policies/progress_patch_completeness_policy.ts",
             "src/application/policies/progress_comparison_source_policy.ts",
             "src/domain/progress_binary_evidence_diagnostic.ts",
-            "src/domain/progress_evidence_path.ts"
+            "src/domain/progress_evidence_path.ts",
+            "src/application/policies/progress_evidence_protocol_policy.ts",
+            "src/application/policies/progress_partition_receipt_policy.ts",
+            "src/application/policies/progress_prompt_capacity_policy.ts",
+            "src/application/policies/progress_recovery_capacity_policy.ts",
+            "src/application/policies/agent_prompt_envelope_policy.ts",
+            "src/domain/progress_response_diagnostic.ts",
+            "src/domain/agent_response_schema_failure.ts",
+            "src/application/policies/progress_response_rejection_policy.ts"
           ],
           "mode": "each",
           "thresholdProfile": "exhaustive"
@@ -851,7 +861,8 @@
           "files": [
             "src/application/usecases/actions/summarize_progress_diff_workflow.ts",
             "src/application/usecases/actions/check_progress_workflow.ts",
-            "src/application/usecases/actions/progress_analysis_workflow.ts"
+            "src/application/usecases/actions/progress_analysis_workflow.ts",
+            "src/application/usecases/actions/query_progress_result_workflow.ts"
           ],
           "mode": "each",
           "thresholdProfile": "default"
@@ -860,7 +871,8 @@
           "files": [
             "src/data/repository/immutable_progress_content_repository.ts",
             "src/data/repository/progress_comparison_source_repository.ts",
-            "src/infrastructure/composition/check_progress_composition_root.ts"
+            "src/infrastructure/composition/check_progress_composition_root.ts",
+            "src/data/repository/progress_agent_response_policy.ts"
           ],
           "mode": "each",
           "thresholdProfile": "exhaustive"
@@ -1133,6 +1145,164 @@
         }
       ],
       "successMessage": "unpublished candidate replacement coverage: PASS (100% lines/statements/branches/functions)"
+    },
+    {
+      "name": "Private JVM and Gradle discovery",
+      "missingEntryLabel": "private JVM and Gradle discovery",
+      "rules": [
+        {
+          "files": [
+            "src/infrastructure/private_jvm_environment.ts",
+            "src/infrastructure/untrusted_command_environment.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/infrastructure/native_verification_controller.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "private JVM/Gradle coverage: PASS (encoding/profile100%; native controller95/90)"
+    },
+    {
+      "name": "CPython verification libraries",
+      "missingEntryLabel": "CPython verification libraries",
+      "rules": [
+        {
+          "files": [
+            "src/infrastructure/verification_python_library_environment.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/infrastructure/git_commit_adapter.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "CPython library coverage: PASS (derivation100%; verification adapter95/90)"
+    },
+    {
+      "name": "Proposed SDK catalog evidence",
+      "missingEntryLabel": "proposed SDK catalog evidence",
+      "rules": [
+        {
+          "files": [
+            "src/domain/specification_catalog_path_policy.cjs",
+            "src/domain/sdd_catalog_compatibility.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/infrastructure/specification_catalog_validator.cjs",
+            "src/application/usecases/sdd/pre_branch_sdd_gate_use_case.ts",
+            "src/application/policies/github_runtime_doctor_policy.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "proposed SDK catalog coverage: PASS (path/compatibility100%; validator/gate/doctor95/90)"
+    },
+    {
+      "name": "Branch sync catalog compatibility",
+      "missingEntryLabel": "branch sync catalog compatibility",
+      "rules": [
+        {
+          "files": [
+            "src/domain/branch_sync_catalog_diagnostic.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/infrastructure/branch_sync_sdd_catalog.ts",
+            "src/infrastructure/branch_sync_workspace_adapter.ts",
+            "src/application/usecases/branch_sync/sync_branch_use_case.ts",
+            "src/application/usecases/branch_sync/branch_sync_execution_policy.ts",
+            "src/data/model/application_error.ts",
+            "src/application/policies/application_error_presentation_policy.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "branch sync catalog coverage: PASS (closed classification100%; adapters/recovery95/90)"
+    },
+    {
+      "name": "Deferred native deployment issue completion",
+      "missingEntryLabel": "deployment issue completion",
+      "rules": [
+        {
+          "files": [
+            "src/domain/deployment_issue_completion.ts",
+            "src/domain/issue_completion.ts",
+            "src/application/usecases/actions/deferred_deployment_completion.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/data/repository/deployment/github_deployment_issue_completion.ts",
+            "src/data/repository/deployment/github_managed_pull_request_repository.ts",
+            "src/data/repository/issue/issue_completion_repository.ts",
+            "src/application/services/deployment_merge_effects.ts",
+            "src/application/usecases/actions/deployment_handlers/reconciliation_handler.ts",
+            "src/application/usecases/actions/deployment_handlers/confirm_publication_handler.ts",
+            "src/application/usecases/actions/reconcile_closed_issue_metadata_use_case.ts",
+            "src/application/usecases/actions/retire_branch_sync_use_case.ts",
+            "src/application/usecases/actions/retire_progress_use_case.ts",
+            "src/application/usecases/steps/issue/close_issue_after_merging_use_case.ts",
+            "src/application/policies/closed_issue_reconciliation_outcome_policy.ts",
+            "src/application/usecases/push_single_action_contexts.ts",
+            "src/infrastructure/composition/main_run_route_composition_root.ts",
+            "src/infrastructure/composition/push_single_action_capability_port_binding.ts",
+            "src/actions/github_action_completion.ts",
+            "src/application/policies/deployment_presentation_policy.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "deferred native deployment completion: PASS (pure 100%; changed modules 95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Generated Python literal evidence",
+      "missingEntryLabel": "generated Python literal evidence",
+      "rules": [
+        {
+          "files": [
+            "src/application/policies/bugbot_python_literal_witness_policy.ts",
+            "src/application/policies/bugbot_literal_verification_policy.ts",
+            "src/prompts/bugbot.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/application/usecases/steps/commit/bugbot/build_bugbot_prompt.ts",
+            "src/application/usecases/steps/commit/bugbot/query_bugbot_findings.ts",
+            "src/application/usecases/steps/commit/bugbot/analyze_bugbot_revision_use_case.ts",
+            "src/application/usecases/steps/commit/bugbot/verify_generated_literal_findings.ts",
+            "src/tooling/bugbot_benchmark_runner.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "generated Python literal evidence coverage: PASS (pure projection/prompts100%; each delivery module95/90)"
     }
   ]
 }

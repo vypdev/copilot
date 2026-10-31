@@ -35,6 +35,20 @@ describe('encapsulated native verification workflow contract', () => {
         expect(workflow).toEqual(runtimeWorkflow());
         expect(() => assertNativeVerificationWorkflow(file, workflow)).not.toThrow();
     });
+    it.each(['JDK_JAVA_OPTIONS', 'GRADLE_USER_HOME'].flatMap(key => ['missing', 'foreign'].map(kind => [key, kind])))(
+        'rejects %s %s native profile binding', (key, kind) => {
+            const { file, workflow } = read('.github/workflows', RUNTIME);
+            const setup = workflow.jobs.copilot.steps.find((step: any) => step.id === 'verification_setup_1');
+            if (kind === 'missing') delete setup.env[key];
+            else setup.env[key] = '${{ env.UNREVIEWED_OPTIONS }}';
+            expect(() => assertNativeVerificationWorkflow(file, workflow)).toThrow(/native/u);
+        });
+    it.each(['JDK_JAVA_OPTIONS', 'GRADLE_USER_HOME'])('rejects forwarding setup-only %s as a Node continuation control', key => {
+        const { file, workflow } = read('.github/workflows', RUNTIME);
+        const continuation = workflow.jobs.copilot.steps.find((step: any) => step.id === 'verification_continue_1');
+        continuation.env[key] = 'foreign-options';
+        expect(() => assertNativeVerificationWorkflow(file, workflow)).toThrow(/native/u);
+    });
     it.each(['.github/workflows', 'setup/workflows'])('accepts a reviewed group route in %s without changing other boundaries', directory => {
         const { file, workflow } = read(directory, 'copilot_issue_comment.yml');
         const job = Object.values(workflow.jobs)[0] as any;
@@ -67,7 +81,7 @@ describe('encapsulated native verification workflow contract', () => {
         expect(credentialSteps.map((step: any) => step.id)).toEqual(['copilot']);
         for (const step of job.steps.filter((step: any) => step.uses === './.git/copilot-verification-setup')) {
             expect(step.with).toBeUndefined();
-            expect(Object.keys(step.env).sort()).toEqual(['HOME', 'USERPROFILE', 'APPDATA', 'LOCALAPPDATA', 'PATH', 'JAVA_HOME', 'TMP', 'TEMP', 'TMPDIR'].sort());
+            expect(Object.keys(step.env).sort()).toEqual(['HOME', 'USERPROFILE', 'APPDATA', 'LOCALAPPDATA', 'PATH', 'JAVA_HOME', 'JDK_JAVA_OPTIONS', 'GRADLE_USER_HOME', 'TMP', 'TEMP', 'TMPDIR'].sort());
         }
     });
     it.each(['timeout', 'env', 'condition', 'reference', 'request', 'outcome', 'finish', 'extra', 'remove', 'prepare', 'initial-source', 'credential-scope'])(

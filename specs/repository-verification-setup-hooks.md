@@ -314,3 +314,25 @@ setup execution contract; no cross-job candidate transport is introduced.
 ### Source candidate dependency correction — #746
 
 The [source candidate readiness amendment](./branch-synchronization-and-conflict-recovery.md#candidate-dependency-readiness-and-failure-facts--746-2026-10-27) owns the incremental source-only frozen-pnpm preparation and closed sync failure facts. Source runtime bootstrap remains before the Action; source dependencies move to each actual candidate verifier boundary after optional native setup and runtime probes. Consumer setup opt-in, runtime-only declarations and generic no-installer behavior remain unchanged. The amendment owns its incremental test budget and separately authorized default-runtime rollout; do not double count it here.
+
+### Derived JVM/Gradle discovery — issue #775
+
+The [private discovery amendment](./repository-verification-runtime-prerequisites.md#21-private-jvm-and-gradle-discovery--issue-775-2026-10-29)
+owns the additional 32-case budget and actual JVM/Gradle acceptance. Native
+setup receives host-derived JDK_JAVA_OPTIONS and GRADLE_USER_HOME for the current
+private profile. They are output metadata, not new caller inputs or accepted
+setup-result overrides; the response remains approved PATH/JAVA_HOME only.
+Canonical setup bindings carry them, while Node continuation and provider-secret
+boundaries remain unchanged. Each subsequent command uses a new private profile;
+existing candidate/session/publication guards and post cleanup still apply.
+
+### Derived CPython loader discovery — issue #776
+
+The [CPython amendment](./repository-verification-runtime-prerequisites.md#22-dynamically-linked-cpython-verification-issue-776)
+owns the incremental minimum 40-case budget and real Linux acceptance. Its
+bootstrap loader directory is local to the trusted Python run step. Verifier
+children separately derive a contained library from the captured tool cache,
+including copied private-venv base metadata, before ordinary runtime probes.
+PATH/JAVA_HOME remain the only native result fields; the parent Node environment,
+provider credentials, complete configured commands and deferred cleanup keep
+their existing boundaries. Do not double count the amendment's cases here.

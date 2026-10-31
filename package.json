@@ -1,6 +1,6 @@
 {
   "name": "@vypdev/copilot",
-  "version": "3.10.4",
+  "version": "3.10.7",
   "packageManager": "pnpm@10.12.4",
   "pnpm": {
     "overrides": {
@@ -67,7 +67,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage --json --outputFile=coverage/setup-acceptance-jest.json && node scripts/validate-coverage-budgets.cjs && node scripts/validate-setup-assistant-acceptance.cjs coverage/setup-acceptance-jest.json && pnpm run test:extension",
-    "eval:bugbot": "jest src/tooling/__tests__/bugbot_quality_eval.test.ts src/tooling/__tests__/bugbot_benchmark.test.ts --runInBand",
+    "eval:bugbot": "jest src/tooling/__tests__/bugbot_quality_eval.test.ts src/tooling/__tests__/bugbot_benchmark.test.ts src/tooling/__tests__/bugbot_request_transform_evidence.test.ts --runInBand",
     "typecheck": "tsc --noEmit && pnpm run typecheck:extension",
     "metrics:architecture": "node scripts/collect-architecture-metrics.cjs",
     "lint": "eslint src extension",
@@ -98,6 +98,7 @@
     "boxen": "^8.0.1",
     "chalk": "^5.4.1",
     "commander": "^12.0.0",
+    "commonmark": "0.31.2",
     "js-yaml": "^5.4.1",
     "libsodium-wrappers": "^0.8.4",
     "shell-quote": "^1.12.0"
@@ -105,6 +106,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@sveltejs/vite-plugin-svelte": "^7.3.1",
+    "@types/commonmark": "0.27.10",
     "@types/jest": "^30.0.0",
     "@types/node": "^22.9.1",
     "@vercel/ncc": "^0.36.1",

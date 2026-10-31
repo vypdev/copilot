@@ -592,6 +592,65 @@ operation facts are valid. Authorization and temporary GitHub read failures
 retain their own error categories; follow their permission/provider recovery
 instead of deleting configuration.
 
+## Branch sync catalog compatibility
+
+`configuration.unsupported` with profile `legacy-evidence`, `native` or
+`ambiguous` means the catalog does not establish the SDK version-1 contract.
+`configuration.invalid` identifies an unknown shape or invalid SDK field.
+The response names a closed phase, field and capability position: position 0
+means the document; positive positions count entries from 1. Repository titles,
+IDs, paths and validator output are excluded from this diagnostic.
+
+For example, a catalog with `specs` and combined `evidence`, title-case
+`Proposed` / `As-built baseline`, and historical null dates is identified as
+`legacy-evidence`, field `workflows`. Copilot stops before a conflict fixer,
+repository verifier, commit or push. It does not run the repository's validator
+to certify a different schema. On conflicted JSON, both immutable original
+catalog objects must establish SDK compatibility before a fixer can proceed.
+A clean merged SDK catalog can establish a reviewed migration directly.
+
+Conflicts in JSON alone receive these same checks. The resolved catalog still
+has to pass full SDK validation. If its index was not authorized for refresh by
+the original merge paths, Copilot checks that index without writing or staging
+it. An `index-output` failure in this case requires a reviewed repair of the
+catalog/index pair before retrying; it does not authorize an extra fixer path.
+Metadata that merged cleanly is also classified before resolving another file's
+conflict, then validated read-only after that resolution.
+
+1. Inspect the workflow response and original catalog at the reported entry
+   position. `abort: completed` means the local abort call finished;
+   `unverified` requires inspecting the local merge state before retrying.
+   Neither value certifies application readiness or executed tests.
+2. Have maintainers review the intended catalog contract. Keep an exact copy of
+   the original metadata and index in the review evidence. Preserve every
+   combined/directory evidence item, unresolved decision and historical null
+   or date in a reviewed extension or companion document. Never silently turn
+   directory evidence into claims about individual source or test files.
+3. If adopting SDK version 1, supply every path array and map only existing
+   regular repository files to the correct roles. `specs` and `documentation`
+   are nonempty; `workflows` may be empty. Only `proposed` entries may also have
+   empty `entrypoints`, `code` and `tests`. Review status mapping explicitly:
+   title-case legacy labels alone do not prove implementation. A new
+   `lastVerified` records an actual metadata/document review; preserve its
+   historical predecessor separately, and never describe that review as an
+   application test run. Existing SDK entries may retain opaque evidence
+   extensions, which do not satisfy required role arrays.
+4. Run the trusted SDK catalog generation/validation commands from the
+   [specification guide](/development/specifications#initial-catalog-generation),
+   inspect the generated links and evidence, then review and merge the migration
+   through the normal managed issue workflow. Repository-native `$schema` or
+   `specification` formats need a supported adapter or an explicit reviewed SDK
+   adoption; changing a version number alone does not provide either.
+5. Adopt the corrected Copilot runtime through the normal installation route on
+   the branch used by comment workflows, then retry `/copilot sync-branch` from
+   fresh heads. Successful catalog validation establishes the catalog contract;
+   the configured application verifiers must still pass before publication.
+
+Catalog metadata and rendered output retain the existing fixed 10 MiB limit.
+No new configuration, automatic conversion, date repair, evidence omission or
+verification bypass is introduced. An incompatible catalog stays unchanged;
+only an already-authorized generated index can be refreshed after SDK validation.
+
 ## Repository setup blocks verification
 
 `Repository setup blocked verification` means preparation did not establish a safe
@@ -648,3 +707,60 @@ Do not enable active cancellation or single-pending replacement as a workaround.
 Older runtime references missing `issue-admission` require the matching runtime
 upgrade before installing the new generated workflow. This upstream change does
 not itself prove a consumer's queue improved.
+
+
+## Collect logs when advisory checks appear as jobs
+
+If `gh run view RUN_ID --repo OWNER/REPO --log` reports
+`log not found: CHECK_ID`, inspect the native job inventory before retrying.
+Optional `Copilot / Approval`, `Copilot / Review` or `Copilot / Verification`
+checks published by the GitHub Actions app can appear beside executable jobs
+with zero steps and no assigned runner. Those advisory records have check
+output, rather than an executed job log. This does not establish the cause of
+the workflow's own success or failure.
+
+1. Select the exact run and attempt. For a complete collection, wait for its
+   real jobs to finish. Inventory every page; the endpoint below explicitly
+   selects the latest attempt. When auditing an older attempt, use the native
+   `/actions/runs/RUN_ID/attempts/ATTEMPT/jobs` endpoint instead.
+
+   ```bash
+   gh api --paginate \
+     'repos/OWNER/REPO/actions/runs/RUN_ID/jobs?filter=latest&per_page=100' \
+     --jq '.jobs[] | {id, name, status, conclusion, runner_id, stepCount: (if (.steps | type) == "array" then (.steps | length) else null end)}'
+   ```
+
+2. Match each record to the native run. Inspect advisory check output separately
+   when a completed zero-step/no-runner record corresponds to a Copilot check.
+   A name or missing log alone does not prove a record advisory.
+
+   | Native record | Next action |
+   |---|---|
+   | Completed job with execution steps | Fetch that exact job ID, including failed jobs |
+   | Confirmed completed advisory check without steps/runner | Read its check output; no job execution log is expected |
+   | Queued or running job, possibly without steps/runner yet | Keep it pending; wait for execution/completion |
+   | Skipped job | Preserve the skip and its condition; do not call it executed or advisory |
+   | Missing/incomplete metadata or failed inventory request | Keep collection incomplete; investigate the actual API error |
+
+3. Retrieve each real job independently with the ID from that inventory:
+
+   ```bash
+   gh run view --repo OWNER/REPO --job JOB_ID --log
+   ```
+
+   Preserve every command's exit status and any partial output. A whole-run
+   command may already print real logs before failing on an advisory record.
+   A failed per-job download for an executable job remains a genuine collection
+   failure; inspect the native job, access, availability or log retention rather
+   than suppressing it. Continue collecting other available real jobs, but call
+   the bundle partial until all intended executable jobs are accounted for.
+   `--log-failed` alone does not collect successful-step evidence.
+
+The supported per-job command is documented in the
+[GitHub CLI manual](https://cli.github.com/manual/gh_run_view); native job and
+attempt inventories are described in the
+[Actions jobs API](https://docs.github.com/en/rest/actions/workflow-jobs).
+An exported log proves what that job recorded, not that its workflow passed.
+Keep required failures, review findings and coverage results unchanged. No
+check deletion, permission expansion, token replacement, workflow rerun or
+blanket error suppression is needed for this read-only collection route.

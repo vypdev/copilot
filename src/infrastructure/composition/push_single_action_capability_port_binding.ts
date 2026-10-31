@@ -69,6 +69,7 @@ export function bindManagedPullRequests(
   binding: RepositoryCredentialBinding,
 ): BoundManagedPullRequestPort {
   return Object.freeze({
+    prepareIssueCompletion: pullRequest => port.prepareIssueCompletion(binding.owner, binding.repository, pullRequest, binding.token),
     findManagedPullRequests: (query) => port.findManagedPullRequests({ ...query, owner: binding.owner, repository: binding.repository, token: binding.token }),
     createManagedPullRequest: (command) => port.createManagedPullRequest({ ...command, owner: binding.owner, repository: binding.repository, token: binding.token }),
     getPullRequest: (pullRequest) => port.getPullRequest(binding.owner, binding.repository, pullRequest, binding.token),

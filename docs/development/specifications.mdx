@@ -44,11 +44,132 @@ The specification validator rejects missing or escaped paths, duplicate
 capability/spec ownership, invalid status/date metadata, unregistered top-level
 SDDs, and a stale generated `CATALOG.md`.
 
+Discovery also rejects every symbolic link encountered under `specs/`, including
+unregistered file links and directory links. It never follows their targets.
+Replace a reported link with ordinary repository files, register any resulting
+SDD, regenerate the catalog and retry. A blocked command leaves the existing
+catalog and link targets unchanged. Ordinary root `README.md`, `_template.md`
+and `CATALOG.md`, and ordinary non-Markdown files, retain their exclusions;
+those names do not exempt a symbolic link. The standalone SDK applies the same
+rule to generation and validation. Its exported discovery helper reports an
+unsupported tree explicitly instead of returning a partial file list.
+
 Catalog evidence uses the consumer repository's own roots and language
 conventions. Source, entrypoints, tests and documentation can be any regular
 contained files; `specs/` and workflow publication boundaries stay fixed. Run
 `copilot doctor` before enabling the gate and verify compiler/framework tooling
 separately. See [layout support and migration](/issues/pre-branch-sdds#repository-layouts-and-support-limits).
+
+Nested SDD directories are preserved in the generated catalog. For example,
+`specs/group/example.md` links to `./group/example.md` from `specs/CATALOG.md`,
+in both the primary-SDD table and the evidence map. Companion SDDs keep their
+directories too, so equal filenames in separate groups point to separate files.
+Root-level SDD links and `../` links to other repository evidence keep their
+existing format. Regenerate the catalog after upgrading to repair older flattened
+links; the source files and registered paths do not need to move.
+
+Accepted filenames containing parentheses, spaces, Unicode, hashes, percent signs
+or backticks also keep navigable links. For example, `specs/group/foo).md` becomes
+`./group/foo%29.md`, and `docs/literal%20.md` becomes `../docs/literal%2520.md`.
+The catalog preserves literal path labels and encodes each destination segment;
+do not pre-encode paths in `catalog.json`. Regenerate the catalog with the normal
+commands below after updating the shared SDK validator. The same renderer serves
+primary SDDs, companion SDDs and every evidence role.
+
+## Capability titles
+
+Capability titles appear as literal text in the catalog's specification link
+labels and evidence headings. Markdown such as `[draft](https://example.invalid)`,
+backticks, emphasis, pipes, HTML and entity-looking strings stays visible as title
+text. Carriage-return and newline runs become a display space. Ordinary and
+multilingual titles keep their text under the renderer's normal whitespace rules.
+
+Author the title in `specs/catalog.json` without pre-escaping it. Generation keeps
+that source JSON unchanged and uses character references where needed in the
+generated Markdown. Capability IDs, companion counts, evidence paths, ownership
+and readiness rules retain their meaning.
+
+After updating the matching SDK, regenerate and validate with the normal
+[catalog commands](#initial-catalog-generation) to repair an existing index.
+Existing path, symlink, output-publication and size safeguards continue to apply.
+
+
+## Initial catalog generation
+
+For a new product, register existing Draft specifications and user documentation
+under SDK version-1 `proposed` capabilities. Keep `entrypoints`, `code` and
+`tests` explicitly empty until real implementation evidence exists. The
+[initialization lifecycle](/issues/pre-branch-sdds#starting-without-product-implementation)
+uses the existing documentation workflow and then the normal feature gate.
+Generated entries say **Not yet implemented (proposed capability).**; validation
+preserves Draft/readiness blockers and does not certify application tests.
+
+In this Copilot source repository, use the package tasks shown above. A repository
+adopting the source-vendored SDK copies these three matching files from the same
+reviewed SDK version, retaining their original layout:
+
+- `src/infrastructure/specification_catalog_validator.cjs`
+- `src/infrastructure/specification_catalog_publication.cjs`
+- `src/domain/specification_catalog_path_policy.cjs`
+
+Its existing standalone entrypoint works with Node and no application package:
+
+```bash
+node src/infrastructure/specification_catalog_validator.cjs --write
+node src/infrastructure/specification_catalog_validator.cjs
+```
+
+Run them from that repository after creating the catalog and its referenced
+documents. These commands check catalog metadata, registered files and the
+generated index. SDD content/consistency and application execution remain
+separate checks in the ordinary workflow. Generation creates or safely replaces
+`specs/CATALOG.md`; validation
+returns nonzero for stale output, missing arrays, unsafe or nonexistent supplied
+files, or missing required evidence. Follow the reported field/output recovery,
+regenerate and retry. Keep all source-vendored dependencies at the same reviewed
+revision. Upgrade an older installed Action/SDK through its normal reviewed route;
+changing its validator, declaring fake evidence or disabling a gate cannot
+establish readiness.
+
+When implementation exists, record its actual entrypoints, source and meaningful
+tests and review the implementation before changing to `implemented`. Mixed
+proposed/implemented catalogs are supported; implemented, as-built and deprecated
+entries retain their full evidence requirements. Existing dates and extension
+metadata remain unchanged by generation. Native catalogs still need a compatible
+reviewed publication adapter.
+
+## Safe catalog output
+
+Generation accepts a missing `specs/CATALOG.md` or a regular file under real
+repository directories. It rejects existing or dangling output links and
+nonregular collisions. The writer pins its directories during synchronous I/O,
+prepares a private exclusive temporary file, then publishes the complete catalog
+atomically. It cannot follow a replaced parent or final link to overwrite its
+target, and a competing new file is preserved. Regenerating a regular file also
+preserves the bytes of any other hard-link alias. Read-only validation verifies
+its opened index before consuming data.
+
+Unsafe access returns nonzero with an actionable diagnostic and no generation
+success receipt. Inspect links, directory/file collisions, concurrent changes,
+free space and permissions before retrying the normal generation command. Review
+and preserve any intentional link target before replacing that link with a regular
+repository output. Pre-publication failures preserve the old index; another
+writer or relocation after atomic publication requires inspection and fresh
+regeneration. Cleanup never removes another writer's temporary replacement. If the first stat
+of a newly created temporary file fails, cleanup retries that identity read once.
+A verified match can be removed safely; generation still fails. Unavailable
+identity or failed cleanup produces a diagnostic naming the generated UUID entry.
+Inspect it in the original specs directory and verify ownership before manual
+cleanup; the generator preserves unverifiable or foreign entries. Directory restoration
+uses the caller's original identity; a replaced or unavailable caller path fails
+without claiming success.
+
+Updated CLI/Action bundles include this behavior. A source-vendored portable
+validator must copy the matching `specification_catalog_validator.cjs`,
+`specification_catalog_publication.cjs` and `specification_catalog_path_policy.cjs`
+in their original infrastructure/domain layout; the isolated-copy regression
+verifies that complete dependency set. This is destination safety, not a change
+to catalog evidence or implementation-readiness requirements.
 
 ## Issue-driven specification gate
 

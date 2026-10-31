@@ -49,6 +49,13 @@ export class PullRequest {
             ?? '';
     }
 
+    get headSha(): string { return this.inputs?.pull_request?.head?.sha ?? ''; }
+
+    get headRepository(): string {
+        const repo = this.inputs?.pull_request?.head?.repo;
+        return repo?.owner?.login && repo.name ? `${repo.owner.login}/${repo.name}` : '';
+    }
+
     get base(): string {
         return this.inputs?.pull_request?.base?.ref ?? '';
     }

@@ -7,7 +7,7 @@
       "status": "implemented",
       "scope": "English-default, localized, semantic, bounded, and idempotent product messages across GitHub and repository-aware operator surfaces",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-28",
+      "lastVerified": "2026-10-30",
       "specs": [
         "specs/semantic-github-publication-and-notification.md",
         "specs/repository-locale-and-localization.md",
@@ -188,7 +188,18 @@
         "src/infrastructure/github/ports/github_progress_comparison_provider_port.ts",
         "src/application/ports/copilot_evidence_error.ts",
         "src/application/policies/optional_check_diagnostic_policy.ts",
-        "src/data/repository/github/copilot_evidence_provider_failure.ts"
+        "src/data/repository/github/copilot_evidence_provider_failure.ts",
+        "src/application/policies/progress_evidence_protocol_policy.ts",
+        "src/application/policies/progress_partition_receipt_policy.ts",
+        "src/application/policies/progress_prompt_capacity_policy.ts",
+        "src/application/policies/progress_recovery_capacity_policy.ts",
+        "src/application/policies/agent_prompt_envelope_policy.ts",
+        "src/data/repository/ai/agent_capability_adapter.ts",
+        "src/domain/progress_response_diagnostic.ts",
+        "src/domain/agent_response_schema_failure.ts",
+        "src/data/repository/progress_agent_response_policy.ts",
+        "src/application/policies/progress_response_rejection_policy.ts",
+        "src/application/usecases/actions/query_progress_result_workflow.ts"
       ],
       "tests": [
         "src/domain/__tests__/implementation_plan.test.ts",
@@ -314,7 +325,22 @@
         "src/application/policies/__tests__/optional_check_diagnostic_policy.test.ts",
         "src/data/repository/__tests__/copilot_evidence_failure.test.ts",
         "src/actions/__tests__/optional_check_completion.test.ts",
-        "src/architecture/__tests__/raw_error_logging_boundaries.test.ts"
+        "src/architecture/__tests__/raw_error_logging_boundaries.test.ts",
+        "src/data/repository/__tests__/progress_framed_recovery.test.ts",
+        "src/application/usecases/actions/__tests__/progress_framed_protocol.integration.test.ts",
+        "src/application/usecases/actions/__tests__/progress_large_comparison.integration.test.ts",
+        "src/application/policies/__tests__/progress_framed_diagnostics.test.ts",
+        "src/application/policies/__tests__/progress_partition_receipt_policy.test.ts",
+        "src/application/policies/__tests__/progress_prompt_capacity_policy.test.ts",
+        "src/application/policies/__tests__/progress_evidence_protocol_policy.test.ts",
+        "src/application/policies/__tests__/progress_recovery_capacity_policy.test.ts",
+        "src/application/usecases/actions/__tests__/progress_prompt_preflight.test.ts",
+        "src/application/usecases/actions/__tests__/progress_agent_prompt_capacity.integration.test.ts",
+        "src/domain/__tests__/progress_response_diagnostic.test.ts",
+        "src/data/repository/__tests__/progress_agent_response_policy.test.ts",
+        "src/application/usecases/actions/__tests__/progress_result_rejection.integration.test.ts",
+        "src/application/policies/__tests__/progress_rejection_diagnostics.test.ts",
+        "src/application/policies/__tests__/progress_response_error_presentation.test.ts"
       ],
       "documentation": [
         "docs/configuration.mdx",
@@ -355,7 +381,8 @@
         "docs/agents/execution-contract.mdx",
         "docs/security-operations/operations/error-reference.mdx",
         "docs/issues/pre-branch-sdds.mdx",
-        "docs/development/specifications.mdx"
+        "docs/development/specifications.mdx",
+        "docs/security-operations/operations/troubleshooting.mdx"
       ]
     },
     {
@@ -364,7 +391,7 @@
       "status": "implemented",
       "scope": "Release and hotfix promotion, publication, bounded merge readiness recovery, and receipt-verified reconciliation without republication; explicit native-guarded replacement of closed unpublished candidates with complete fresh validation and bounded audit history",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-28",
+      "lastVerified": "2026-10-30",
       "specs": [
         "specs/configurable-release-orchestration.md",
         "specs/configurable-release-orchestration-traceability.md",
@@ -424,7 +451,10 @@
         "src/application/policies/deployment_candidate_preflight_presentation.ts",
         "deployment-recovery/action.yml",
         "deployment-recovery/index.cjs",
-        "scripts/deployment-replacement-contract.cjs"
+        "scripts/deployment-replacement-contract.cjs",
+        "src/domain/deployment_issue_completion.ts",
+        "src/data/repository/deployment/github_deployment_issue_completion.ts",
+        "src/application/usecases/actions/deferred_deployment_completion.ts"
       ],
       "tests": [
         "src/domain/__tests__/deployment_operation.test.ts",
@@ -456,7 +486,10 @@
         "src/actions/__tests__/deployment_candidate_declared_inputs.test.ts",
         "src/actions/__tests__/deployment_candidate_preflight_action.test.ts",
         "src/tooling/__tests__/deployment_replacement_workflows.test.ts",
-        "src/application/usecases/execution/__tests__/single_action_target_restore.integration.test.ts"
+        "src/application/usecases/execution/__tests__/single_action_target_restore.integration.test.ts",
+        "src/domain/__tests__/deployment_issue_completion.test.ts",
+        "src/data/repository/deployment/__tests__/github_deployment_issue_completion.test.ts",
+        "src/application/usecases/actions/__tests__/deployment_issue_completion.integration.test.ts"
       ],
       "documentation": [
         "docs/issues/deployment-orchestration.mdx",
@@ -630,7 +663,7 @@
       "status": "implemented",
       "scope": "Shared GitHub Action lifecycle with pinned native resource/lane coordination proof, conservative predecessor fencing, routing and durable user-facing results",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-28",
+      "lastVerified": "2026-10-29",
       "specs": [
         "specs/execution-admission-queue-and-publication.md",
         "specs/execution-error-and-context-hardening.md",
@@ -726,7 +759,9 @@
         "src/application/ports/issue_event_admission_ports.ts",
         "src/application/usecases/execution/issue_event_admission_workflow.ts",
         "src/application/policies/setup_runner_policy.ts",
-        "src/manager/description/base/issue_content_interface.ts"
+        "src/manager/description/base/issue_content_interface.ts",
+        "src/domain/agent_response_schema_failure.ts",
+        "src/data/repository/agent_json_schema_validator.ts"
       ],
       "tests": [
         "src/tooling/__tests__/coverage_budget_validator.test.ts",
@@ -785,7 +820,9 @@
         "src/manager/description/base/__tests__/issue_content_interface.test.ts",
         "src/application/usecases/__tests__/issue_use_case.test.ts",
         "src/utils/__tests__/setup_runner_installation.test.ts",
-        "src/application/usecases/execution/__tests__/single_action_target_restore.integration.test.ts"
+        "src/application/usecases/execution/__tests__/single_action_target_restore.integration.test.ts",
+        "src/data/repository/__tests__/agent_json_schema_validator.test.ts",
+        "src/data/repository/__tests__/progress_agent_response_policy.test.ts"
       ],
       "documentation": [
         "docs/overview.mdx",
@@ -904,7 +941,7 @@
       "status": "implemented",
       "scope": "Plan, validate, provision, and audit a repository installation without exposing credentials",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-24",
+      "lastVerified": "2026-10-29",
       "specs": [
         "specs/setup-configuration-credentials-and-doctor.md",
         "specs/setup-doctor-architecture-hardening.md",
@@ -1096,7 +1133,8 @@
         "src/application/usecases/steps/commit/bugbot/verify_command_runner.ts",
         "src/cli/setup_config_file.ts",
         "src/domain/copilot_comment_workflow.ts",
-        "src/infrastructure/copilot_comment_inputs.json"
+        "src/infrastructure/copilot_comment_inputs.json",
+        "src/infrastructure/private_jvm_environment.ts"
       ],
       "tests": [
         "src/data/repository/__tests__/repository_version_tags_query_repository.test.ts",
@@ -1229,7 +1267,8 @@
         "src/tooling/__tests__/verification_runtime_guidance.test.ts",
         "src/infrastructure/__tests__/verification_setup_configuration.test.ts",
         "src/domain/__tests__/copilot_comment_workflow.test.ts",
-        "src/tooling/__tests__/credential_health_transport.test.ts"
+        "src/tooling/__tests__/credential_health_transport.test.ts",
+        "src/infrastructure/__tests__/private_jvm_environment.test.ts"
       ],
       "documentation": [
         "README.md",
@@ -1647,9 +1686,9 @@
       "id": "issue-start-and-sdd-readiness",
       "title": "Uniform issue start and pre-branch SDD readiness",
       "status": "implemented",
-      "scope": "Start every admitted issue with one explicit signal and publish a validated SDD before eligible Action-managed branch work; inspect verified SDD status and bounded structural publication comparisons",
+      "scope": "Start every admitted issue with one explicit signal and publish a validated SDD before eligible Action-managed branch work; inspect verified SDD status and bounded structural publication comparisons and preserve complete navigable catalog links for accepted repository filenames and safely publish generated catalogs without following destination links; bootstrap truthful proposed SDK capabilities before implementation without changing readiness; reject incomplete specification discovery explicitly without following unregistered symbolic links; report confirmed missing trusted catalogs with immutable source provenance and prerequisite recovery before model or publication",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-27",
+      "lastVerified": "2026-10-31",
       "specs": [
         "specs/issue-start-and-branch-readiness.md",
         "specs/pre-branch-sdd-gate.md",
@@ -1732,7 +1771,10 @@
         "src/application/errors/sdd_draft_preparation_failure.ts",
         "src/application/policies/sdd_preparation_message_catalog.ts",
         "src/application/policies/sdd_preparation_status_policy.ts",
-        "src/domain/sdd_catalog_compatibility.ts"
+        "src/domain/sdd_catalog_compatibility.ts",
+        "src/infrastructure/specification_catalog_publication.cjs",
+        "jest.config.js",
+        "src/domain/sdd_trusted_catalog_failure.ts"
       ],
       "tests": [
         "src/domain/__tests__/issue_workflow_runtime_policy.test.ts",
@@ -1783,7 +1825,14 @@
         "src/domain/__tests__/sdd_catalog_compatibility.test.ts",
         "src/testing/fixtures/sdd-native-catalog/catalog.json",
         "src/testing/fixtures/sdd-native-catalog/catalog.schema.json",
-        "src/testing/fixtures/sdd-native-catalog/provenance.json"
+        "src/testing/fixtures/sdd-native-catalog/provenance.json",
+        "src/tooling/__tests__/specification_catalog_publication.test.ts",
+        "src/tooling/__tests__/proposed_sdd_catalog.test.ts",
+        "src/tooling/__tests__/proposed_sdd_catalog_entrypoint.test.ts",
+        "src/tooling/__tests__/specification_catalog_markdown_links.test.ts",
+        "src/tooling/__tests__/specification_catalog_discovery.test.ts",
+        "src/domain/__tests__/sdd_trusted_catalog_failure.test.ts",
+        "src/tooling/__tests__/specification_catalog_title_text.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-management.mdx",
@@ -1796,7 +1845,8 @@
         "docs/issues/configuration.mdx",
         "docs/configuration.mdx",
         "docs/single-actions/workflow-and-cli.mdx",
-        "docs/security-operations/operations/error-reference.mdx"
+        "docs/security-operations/operations/error-reference.mdx",
+        "specs/README.md"
       ]
     },
     {
@@ -1805,7 +1855,7 @@
       "status": "as-built-baseline",
       "scope": "Convert typed issues into traceable work branches, project state, and lifecycle state",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-20",
+      "lastVerified": "2026-10-30",
       "specs": [
         "specs/managed-issue-and-branch-lifecycle.md"
       ],
@@ -1853,7 +1903,9 @@
         "src/application/errors/closed_issue_reconciliation_error.ts",
         "src/application/usecases/actions/reconcile_issue_completion_metadata.ts",
         "src/application/usecases/actions/verify_closed_issue_card_retirement.ts",
-        "src/application/policies/closed_issue_reconciliation_outcome_policy.ts"
+        "src/application/policies/closed_issue_reconciliation_outcome_policy.ts",
+        "src/domain/deployment_issue_completion.ts",
+        "src/application/usecases/actions/deferred_deployment_completion.ts"
       ],
       "tests": [
         "src/application/usecases/__tests__/issue_pull_request_context_projection.test.ts",
@@ -1880,7 +1932,9 @@
         "src/application/usecases/actions/__tests__/reconcile_closed_issue_metadata_use_case.test.ts",
         "src/application/usecases/actions/__tests__/reconcile_closed_issue_use_case.test.ts",
         "src/application/errors/__tests__/closed_issue_reconciliation_error.test.ts",
-        "src/application/policies/__tests__/closed_issue_reconciliation_summary.test.ts"
+        "src/application/policies/__tests__/closed_issue_reconciliation_summary.test.ts",
+        "src/domain/__tests__/deployment_issue_completion.test.ts",
+        "src/application/usecases/actions/__tests__/deployment_issue_completion.integration.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-management.mdx",
@@ -2004,9 +2058,9 @@
       "id": "bugbot-analysis-and-autofix",
       "title": "Bugbot analysis, finding publication, and autofix",
       "status": "implemented",
-      "scope": "Select one canonical PR, exhaustively analyze bounded diff partitions with version-grounded dependency, delegated test-path and external Action input-contract evidence, publish stable findings atomically, and apply authorized verified fixes",
+      "scope": "Select one canonical PR, exhaustively analyze bounded diff partitions with version-grounded dependency, policy-to-request transformation and source-bound assertion and generated-source coordinates with independent candidate verification, configuration-selected initial-session credential ownership, delegated test-path and external Action input-contract, host-aware self-repository references and Kotlin/Wasm lexical-binding and renderer-grounded Markdown path evidence, publish stable findings atomically, and apply authorized verified fixes with regression coverage for cwd/pattern-grounded indirect unittest discovery and source-bound module execution evidence, with active-instance Kotlin Json nullable-input policy grounding",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-28",
+      "lastVerified": "2026-10-30",
       "specs": [
         "specs/bugbot-analysis-publication-and-autofix.md",
         "specs/bugbot-context-selection-and-budgeting.md",
@@ -2086,7 +2140,12 @@
         "quality/bugbot/evidence/issue-736.json",
         "quality/bugbot/evidence/issue-738.json",
         "quality/bugbot/evidence/issue-739.json",
-        "quality/bugbot/evidence/issue-749.json"
+        "quality/bugbot/evidence/issue-749.json",
+        "quality/bugbot/evidence/issue-770.json",
+        "src/application/policies/bugbot_python_literal_witness_policy.ts",
+        "src/application/policies/bugbot_literal_verification_policy.ts",
+        "src/application/usecases/steps/commit/bugbot/verify_generated_literal_findings.ts",
+        "src/application/policies/agent_output_locale_policy.ts"
       ],
       "tests": [
         "src/application/usecases/steps/commit/__tests__/bugbot_review_lifecycle.e2e.test.ts",
@@ -2135,7 +2194,32 @@
         "src/prompts/__tests__/bugbot.test.ts",
         "src/prompts/__tests__/bugbot_framework_semantics.test.ts",
         "src/tooling/__tests__/fixtures/bugbot_validation_oracles.ts",
-        "src/tooling/__tests__/fixtures/bugbot_validation_functions.ts"
+        "src/tooling/__tests__/fixtures/bugbot_validation_functions.ts",
+        "src/tooling/__tests__/fixtures/bugbot_markdown_link_oracles.ts",
+        "quality/bugbot/evidence/issue-772.json",
+        "src/tooling/__tests__/bugbot_request_transform_evidence.test.ts",
+        "src/tooling/__tests__/fixtures/bugbot_request_transform_oracles.ts",
+        "quality/bugbot/evidence/issue-784.json",
+        "src/tooling/__tests__/fixtures/bugbot_generated_coordinate_oracles.ts",
+        "src/tooling/__tests__/bugbot_generated_coordinate_evidence.test.ts",
+        "src/application/policies/__tests__/bugbot_python_literal_witness_policy.test.ts",
+        "src/application/policies/__tests__/bugbot_literal_verification_policy.test.ts",
+        "src/application/usecases/steps/commit/bugbot/__tests__/verify_generated_literal_findings.test.ts",
+        "quality/bugbot/evidence/issue-796.json",
+        "src/tooling/__tests__/fixtures/bugbot_initial_session_oracles.ts",
+        "src/tooling/__tests__/bugbot_initial_session_evidence.test.ts",
+        "quality/bugbot/evidence/issue-798.json",
+        "src/tooling/__tests__/bugbot_unittest_discovery.test.ts",
+        "src/tooling/__tests__/fixtures/bugbot_unittest_discovery_oracles.ts",
+        "quality/bugbot/evidence/issue-806.json",
+        "src/tooling/__tests__/fixtures/bugbot_unittest_discovery_probe.py",
+        "src/tooling/__tests__/bugbot_kotlin_json.test.ts",
+        "src/tooling/__tests__/fixtures/bugbot_kotlin_json_oracles.ts",
+        "src/tooling/__tests__/fixtures/bugbot_kotlin_json_probe.kt",
+        "quality/bugbot/evidence/issue-807.json",
+        "src/tooling/__tests__/bugbot_ktor_routing.test.ts",
+        "src/tooling/__tests__/fixtures/bugbot_ktor_routing_oracles.ts",
+        "quality/bugbot/evidence/issue-809.json"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",
@@ -2157,7 +2241,7 @@
       "status": "implemented",
       "scope": "Observe parent drift with one localized status card and transition-only notifications, then safely merge a parent branch into a linked working branch",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-27",
+      "lastVerified": "2026-10-30",
       "specs": [
         "specs/branch-synchronization-and-conflict-recovery.md",
         "specs/repository-verification-runtime-prerequisites.md",
@@ -2244,7 +2328,17 @@
         "src/application/policies/source_verification_dependency_policy.ts",
         "src/infrastructure/source_verification_dependencies.ts",
         "src/application/policies/branch_sync_relationship_retirement_policy.ts",
-        "src/application/usecases/actions/retire_unrelated_branch_sync_cards.ts"
+        "src/application/usecases/actions/retire_unrelated_branch_sync_cards.ts",
+        "src/infrastructure/private_jvm_environment.ts",
+        "src/tooling/__tests__/fixtures/verification_jvm_gradle_probe.cjs",
+        "src/tooling/__tests__/fixtures/verification_jvm_gradle_container_fixture.ts",
+        "src/tooling/__tests__/fixtures/verification_native_fixture.ts",
+        "src/infrastructure/verification_python_library_environment.ts",
+        "src/tooling/__tests__/fixtures/verification_python_container_fixture.ts",
+        "src/tooling/__tests__/fixtures/verification_python_probe.cjs",
+        "src/tooling/__tests__/fixtures/verification_native_setup_action.ts",
+        "src/domain/branch_sync_catalog_diagnostic.ts",
+        "src/application/policies/application_error_presentation_policy.ts"
       ],
       "tests": [
         "src/application/policies/__tests__/branch_sync_notification_policy.test.ts",
@@ -2296,7 +2390,14 @@
         "src/domain/__tests__/copilot_comment_workflow.test.ts",
         "src/domain/__tests__/verification_failure.test.ts",
         "src/infrastructure/__tests__/source_verification_dependencies.test.ts",
-        "src/application/usecases/actions/__tests__/retire_unrelated_branch_sync_cards.test.ts"
+        "src/application/usecases/actions/__tests__/retire_unrelated_branch_sync_cards.test.ts",
+        "src/infrastructure/__tests__/private_jvm_environment.test.ts",
+        "src/infrastructure/__tests__/verification_python_library_environment.test.ts",
+        "src/infrastructure/__tests__/git_commit_python_runtime.test.ts",
+        "src/domain/__tests__/branch_sync_catalog_diagnostic.test.ts",
+        "src/infrastructure/__tests__/branch_sync_catalog_profiles.test.ts",
+        "src/infrastructure/__tests__/branch_sync_catalog_compatibility_git.test.ts",
+        "src/infrastructure/__tests__/branch_sync_catalog_json_only.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-synchronization.mdx",
@@ -2312,9 +2413,9 @@
       "id": "pull-request-lifecycle",
       "title": "Pull request lifecycle and enrichment",
       "status": "implemented",
-      "scope": "Enrich linked and unlinked pull requests with safe issue linkage, projects, metadata, reviewers, concise descriptions, and distinct workflow evidence",
+      "scope": "Enrich linked and unlinked pull requests with safe issue linkage, metadata, concise descriptions preserving validated closing intent, and distinct workflow evidence",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-20",
+      "lastVerified": "2026-10-30",
       "specs": [
         "specs/pull-request-lifecycle-and-enrichment.md"
       ],
@@ -2364,7 +2465,16 @@
         "src/data/repository/project/project_board_item_query.ts",
         "src/data/repository/project/project_board_field_update.ts",
         "src/application/ports/pull_request_issue_link_ports.ts",
-        "src/infrastructure/github/ports/github_pull_request_provider_ports.ts"
+        "src/infrastructure/github/ports/github_pull_request_provider_ports.ts",
+        "src/domain/pull_request_issue_link_state.ts",
+        "src/application/policies/configuration_persistence_policy.ts",
+        "src/manager/description/configuration_handler.ts",
+        "src/application/ports/configuration_store_ports.ts",
+        "src/application/usecases/steps/common/store_configuration_use_case.ts",
+        "src/manager/description/base/issue_content_interface.ts",
+        "src/application/usecases/steps/pull_request/description_command_preparation.ts",
+        "src/infrastructure/composition/main_run_route_composition_root.ts",
+        "src/domain/pull_request_closing_reference.ts"
       ],
       "tests": [
         "src/application/usecases/execution/__tests__/execution_issue_number_policy.test.ts",
@@ -2391,7 +2501,19 @@
         "src/application/usecases/actions/__tests__/synchronize_lifecycle_state_use_case.test.ts",
         "src/application/policies/__tests__/copilot_evidence_policy.test.ts",
         "src/actions/__tests__/github_action_completion.test.ts",
-        "src/data/repository/project/__tests__/project_board_visibility_recovery.test.ts"
+        "src/data/repository/project/__tests__/project_board_visibility_recovery.test.ts",
+        "src/domain/__tests__/pull_request_issue_link_state.test.ts",
+        "src/application/usecases/steps/pull_request/__tests__/killed_link_recovery.test.ts",
+        "src/application/usecases/execution/__tests__/setup_execution_workflow.test.ts",
+        "src/application/policies/__tests__/configuration_persistence_policy.test.ts",
+        "src/manager/description/__tests__/configuration_handler.test.ts",
+        "src/application/usecases/steps/common/__tests__/store_configuration_use_case.test.ts",
+        "src/application/usecases/steps/common/__tests__/shared_capability_context_projection.test.ts",
+        "src/manager/description/base/__tests__/issue_content_interface.test.ts",
+        "src/application/usecases/steps/pull_request/__tests__/description_command_preparation.test.ts",
+        "src/infrastructure/composition/__tests__/main_run_route_composition_root.test.ts",
+        "src/domain/__tests__/pull_request_closing_reference.test.ts",
+        "src/data/repository/pull_request/__tests__/pull_request_approval_repository.test.ts"
       ],
       "documentation": [
         "docs/pull-requests/capabilities.mdx",
@@ -2412,7 +2534,7 @@
       "status": "implemented",
       "scope": "Resolve, provision, authenticate, authorize, and execute only the agent roles reachable by a run",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-24",
+      "lastVerified": "2026-10-29",
       "specs": [
         "specs/agent-runtime-provider-and-model-routing.md",
         "specs/agent-execution-policy-hardening.md"
@@ -2473,7 +2595,8 @@
         "scripts/diagnose-windows-powershell-startup.cjs",
         "scripts/diagnose-windows-sandbox-prerequisites.cjs",
         "src/infrastructure/logging/logger_agent_execution_observer_adapter.ts",
-        "scripts/coverage-budgets.json"
+        "scripts/coverage-budgets.json",
+        "src/infrastructure/private_jvm_environment.ts"
       ],
       "tests": [
         "src/actions/__tests__/agent_configuration_builder.test.ts",
@@ -2504,7 +2627,8 @@
         "src/data/repository/ai/__tests__/agent_capability_adapters.test.ts",
         "src/infrastructure/__tests__/untrusted_command_environment.test.ts",
         "src/infrastructure/agents/__tests__/windows_acl_probe_contract.test.ts",
-        "src/infrastructure/logging/__tests__/logger_agent_execution_observer_adapter.test.ts"
+        "src/infrastructure/logging/__tests__/logger_agent_execution_observer_adapter.test.ts",
+        "src/infrastructure/__tests__/private_jvm_environment.test.ts"
       ],
       "documentation": [
         "docs/configuration-checklist.mdx",
@@ -2810,9 +2934,9 @@
       "id": "guarded-pull-request-approval",
       "title": "Guarded pull-request approval and setup readiness",
       "status": "proposed",
-      "scope": "Specify and locally implement revision-bound, evidence-gated native bot approvals for eligible human pull requests, with safe setup defaults, read-only doctor checks, and explainable recovery",
+      "scope": "Provide revision-bound native bot approvals using validated explicit issue references, evidence gates, safe setup defaults and explainable recovery",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-22",
+      "lastVerified": "2026-10-30",
       "specs": [
         "specs/guarded-pull-request-approval.md",
         "specs/guarded-pull-request-approval-setup-and-doctor.md",
@@ -2877,7 +3001,8 @@
         "src/data/repository/pull_request/current_base_revision_query.ts",
         "src/domain/approval_evidence_diagnostic.ts",
         "src/application/errors/approval_evidence_error.ts",
-        "src/data/repository/pull_request/approval_evidence_read.ts"
+        "src/data/repository/pull_request/approval_evidence_read.ts",
+        "src/domain/pull_request_closing_reference.ts"
       ],
       "tests": [
         "src/application/policies/__tests__/setup_questionnaire_policy.test.ts",
@@ -2909,7 +3034,10 @@
         "src/infrastructure/composition/__tests__/main_run_route_composition_root.test.ts",
         "src/application/policies/__tests__/setup_approval_operator_permissions.test.ts",
         "src/application/usecases/setup/__tests__/audit_configured_setup_pat_use_case.test.ts",
-        "src/data/repository/pull_request/__tests__/approval_evidence_read.test.ts"
+        "src/data/repository/pull_request/__tests__/approval_evidence_read.test.ts",
+        "src/domain/__tests__/pull_request_closing_reference.test.ts",
+        "src/application/policies/__tests__/pull_request_description_content_policy.test.ts",
+        "src/application/usecases/steps/pull_request/__tests__/update_pull_request_description_use_case.test.ts"
       ],
       "documentation": [
         "docs/authentication.mdx",

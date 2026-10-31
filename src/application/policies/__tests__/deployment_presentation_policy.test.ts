@@ -58,6 +58,16 @@ const context = {
 };
 
 describe("deployment presentation policy", () => {
+  it.each(['en-US', 'es-ES'])('shows actionable native completion failure in %s without changing published facts', repositoryLocale => {
+    const state = operation('completed', { productionSha: 'c'.repeat(40), publicationVerified: true,
+      publicationReceipt: { tag: 'v3.4.0', productionSha: 'c'.repeat(40), operationId: 'operation-12345678',
+        releaseUrl: 'https://github.com/vypdev/copilot/releases/tag/v3.4.0' } });
+    const summary = renderDeploymentJobSummary(state, { ...context, repositoryLocale, issueCompletionPending: true });
+    expect(summary).toContain('# ❌'); expect(summary).not.toContain('# ✅');
+    expect(summary.replace(/\u200b/gu, '')).toContain('v3.4.0@ccccccc'); expect(summary).toContain('`completed`');
+    expect(state.phase).toBe('completed'); expect(state.lastFailure).toBeNull();
+    expect(state.publicationVerified).toBe(true);
+  });
   it("uses a stable operation-scoped dashboard marker", () => {
     expect(deploymentDashboardMarker("operation-12345678", 355))
       .toBe('<!-- copilot-deployment-dashboard operation-id="operation-12345678" issue="355" -->');

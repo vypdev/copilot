@@ -177,6 +177,8 @@ jobs:
           LOCALAPPDATA: ${{ steps.copilot.outputs.verification-localappdata }}
           PATH: ${{ steps.copilot.outputs.verification-path }}
           JAVA_HOME: ${{ steps.copilot.outputs.verification-java_home }}
+          JDK_JAVA_OPTIONS: ${{ steps.copilot.outputs.verification-jdk_java_options }}
+          GRADLE_USER_HOME: ${{ steps.copilot.outputs.verification-gradle_user_home }}
           TMP: ${{ steps.copilot.outputs.verification-tmp }}
           TEMP: ${{ steps.copilot.outputs.verification-temp }}
           TMPDIR: ${{ steps.copilot.outputs.verification-tmpdir }}
@@ -205,6 +207,8 @@ jobs:
           LOCALAPPDATA: ${{ steps.verification_continue_1.outputs.verification-localappdata }}
           PATH: ${{ steps.verification_continue_1.outputs.verification-path }}
           JAVA_HOME: ${{ steps.verification_continue_1.outputs.verification-java_home }}
+          JDK_JAVA_OPTIONS: ${{ steps.verification_continue_1.outputs.verification-jdk_java_options }}
+          GRADLE_USER_HOME: ${{ steps.verification_continue_1.outputs.verification-gradle_user_home }}
           TMP: ${{ steps.verification_continue_1.outputs.verification-tmp }}
           TEMP: ${{ steps.verification_continue_1.outputs.verification-temp }}
           TMPDIR: ${{ steps.verification_continue_1.outputs.verification-tmpdir }}
@@ -233,6 +237,8 @@ jobs:
           LOCALAPPDATA: ${{ steps.verification_continue_2.outputs.verification-localappdata }}
           PATH: ${{ steps.verification_continue_2.outputs.verification-path }}
           JAVA_HOME: ${{ steps.verification_continue_2.outputs.verification-java_home }}
+          JDK_JAVA_OPTIONS: ${{ steps.verification_continue_2.outputs.verification-jdk_java_options }}
+          GRADLE_USER_HOME: ${{ steps.verification_continue_2.outputs.verification-gradle_user_home }}
           TMP: ${{ steps.verification_continue_2.outputs.verification-tmp }}
           TEMP: ${{ steps.verification_continue_2.outputs.verification-temp }}
           TMPDIR: ${{ steps.verification_continue_2.outputs.verification-tmpdir }}
@@ -261,6 +267,8 @@ jobs:
           LOCALAPPDATA: ${{ steps.verification_continue_3.outputs.verification-localappdata }}
           PATH: ${{ steps.verification_continue_3.outputs.verification-path }}
           JAVA_HOME: ${{ steps.verification_continue_3.outputs.verification-java_home }}
+          JDK_JAVA_OPTIONS: ${{ steps.verification_continue_3.outputs.verification-jdk_java_options }}
+          GRADLE_USER_HOME: ${{ steps.verification_continue_3.outputs.verification-gradle_user_home }}
           TMP: ${{ steps.verification_continue_3.outputs.verification-tmp }}
           TEMP: ${{ steps.verification_continue_3.outputs.verification-temp }}
           TMPDIR: ${{ steps.verification_continue_3.outputs.verification-tmpdir }}
@@ -289,6 +297,8 @@ jobs:
           LOCALAPPDATA: ${{ steps.verification_continue_4.outputs.verification-localappdata }}
           PATH: ${{ steps.verification_continue_4.outputs.verification-path }}
           JAVA_HOME: ${{ steps.verification_continue_4.outputs.verification-java_home }}
+          JDK_JAVA_OPTIONS: ${{ steps.verification_continue_4.outputs.verification-jdk_java_options }}
+          GRADLE_USER_HOME: ${{ steps.verification_continue_4.outputs.verification-gradle_user_home }}
           TMP: ${{ steps.verification_continue_4.outputs.verification-tmp }}
           TEMP: ${{ steps.verification_continue_4.outputs.verification-temp }}
           TMPDIR: ${{ steps.verification_continue_4.outputs.verification-tmpdir }}
@@ -317,6 +327,8 @@ jobs:
           LOCALAPPDATA: ${{ steps.verification_continue_5.outputs.verification-localappdata }}
           PATH: ${{ steps.verification_continue_5.outputs.verification-path }}
           JAVA_HOME: ${{ steps.verification_continue_5.outputs.verification-java_home }}
+          JDK_JAVA_OPTIONS: ${{ steps.verification_continue_5.outputs.verification-jdk_java_options }}
+          GRADLE_USER_HOME: ${{ steps.verification_continue_5.outputs.verification-gradle_user_home }}
           TMP: ${{ steps.verification_continue_5.outputs.verification-tmp }}
           TEMP: ${{ steps.verification_continue_5.outputs.verification-temp }}
           TMPDIR: ${{ steps.verification_continue_5.outputs.verification-tmpdir }}
@@ -345,6 +357,8 @@ jobs:
           LOCALAPPDATA: ${{ steps.verification_continue_6.outputs.verification-localappdata }}
           PATH: ${{ steps.verification_continue_6.outputs.verification-path }}
           JAVA_HOME: ${{ steps.verification_continue_6.outputs.verification-java_home }}
+          JDK_JAVA_OPTIONS: ${{ steps.verification_continue_6.outputs.verification-jdk_java_options }}
+          GRADLE_USER_HOME: ${{ steps.verification_continue_6.outputs.verification-gradle_user_home }}
           TMP: ${{ steps.verification_continue_6.outputs.verification-tmp }}
           TEMP: ${{ steps.verification_continue_6.outputs.verification-temp }}
           TMPDIR: ${{ steps.verification_continue_6.outputs.verification-tmpdir }}
@@ -373,6 +387,8 @@ jobs:
           LOCALAPPDATA: ${{ steps.verification_continue_7.outputs.verification-localappdata }}
           PATH: ${{ steps.verification_continue_7.outputs.verification-path }}
           JAVA_HOME: ${{ steps.verification_continue_7.outputs.verification-java_home }}
+          JDK_JAVA_OPTIONS: ${{ steps.verification_continue_7.outputs.verification-jdk_java_options }}
+          GRADLE_USER_HOME: ${{ steps.verification_continue_7.outputs.verification-gradle_user_home }}
           TMP: ${{ steps.verification_continue_7.outputs.verification-tmp }}
           TEMP: ${{ steps.verification_continue_7.outputs.verification-temp }}
           TMPDIR: ${{ steps.verification_continue_7.outputs.verification-tmpdir }}
@@ -401,6 +417,8 @@ jobs:
           LOCALAPPDATA: ${{ steps.verification_continue_8.outputs.verification-localappdata }}
           PATH: ${{ steps.verification_continue_8.outputs.verification-path }}
           JAVA_HOME: ${{ steps.verification_continue_8.outputs.verification-java_home }}
+          JDK_JAVA_OPTIONS: ${{ steps.verification_continue_8.outputs.verification-jdk_java_options }}
+          GRADLE_USER_HOME: ${{ steps.verification_continue_8.outputs.verification-gradle_user_home }}
           TMP: ${{ steps.verification_continue_8.outputs.verification-tmp }}
           TEMP: ${{ steps.verification_continue_8.outputs.verification-temp }}
           TMPDIR: ${{ steps.verification_continue_8.outputs.verification-tmpdir }}
@@ -429,6 +447,8 @@ jobs:
           LOCALAPPDATA: ${{ steps.verification_continue_9.outputs.verification-localappdata }}
           PATH: ${{ steps.verification_continue_9.outputs.verification-path }}
           JAVA_HOME: ${{ steps.verification_continue_9.outputs.verification-java_home }}
+          JDK_JAVA_OPTIONS: ${{ steps.verification_continue_9.outputs.verification-jdk_java_options }}
+          GRADLE_USER_HOME: ${{ steps.verification_continue_9.outputs.verification-gradle_user_home }}
           TMP: ${{ steps.verification_continue_9.outputs.verification-tmp }}
           TEMP: ${{ steps.verification_continue_9.outputs.verification-temp }}
           TMPDIR: ${{ steps.verification_continue_9.outputs.verification-tmpdir }}
@@ -457,6 +477,8 @@ jobs:
           LOCALAPPDATA: ${{ steps.verification_continue_10.outputs.verification-localappdata }}
           PATH: ${{ steps.verification_continue_10.outputs.verification-path }}
           JAVA_HOME: ${{ steps.verification_continue_10.outputs.verification-java_home }}
+          JDK_JAVA_OPTIONS: ${{ steps.verification_continue_10.outputs.verification-jdk_java_options }}
+          GRADLE_USER_HOME: ${{ steps.verification_continue_10.outputs.verification-gradle_user_home }}
           TMP: ${{ steps.verification_continue_10.outputs.verification-tmp }}
           TEMP: ${{ steps.verification_continue_10.outputs.verification-temp }}
           TMPDIR: ${{ steps.verification_continue_10.outputs.verification-tmpdir }}
@@ -485,6 +507,8 @@ jobs:
           LOCALAPPDATA: ${{ steps.verification_continue_11.outputs.verification-localappdata }}
           PATH: ${{ steps.verification_continue_11.outputs.verification-path }}
           JAVA_HOME: ${{ steps.verification_continue_11.outputs.verification-java_home }}
+          JDK_JAVA_OPTIONS: ${{ steps.verification_continue_11.outputs.verification-jdk_java_options }}
+          GRADLE_USER_HOME: ${{ steps.verification_continue_11.outputs.verification-gradle_user_home }}
           TMP: ${{ steps.verification_continue_11.outputs.verification-tmp }}
           TEMP: ${{ steps.verification_continue_11.outputs.verification-temp }}
           TMPDIR: ${{ steps.verification_continue_11.outputs.verification-tmpdir }}
@@ -513,6 +537,8 @@ jobs:
           LOCALAPPDATA: ${{ steps.verification_continue_12.outputs.verification-localappdata }}
           PATH: ${{ steps.verification_continue_12.outputs.verification-path }}
           JAVA_HOME: ${{ steps.verification_continue_12.outputs.verification-java_home }}
+          JDK_JAVA_OPTIONS: ${{ steps.verification_continue_12.outputs.verification-jdk_java_options }}
+          GRADLE_USER_HOME: ${{ steps.verification_continue_12.outputs.verification-gradle_user_home }}
           TMP: ${{ steps.verification_continue_12.outputs.verification-tmp }}
           TEMP: ${{ steps.verification_continue_12.outputs.verification-temp }}
           TMPDIR: ${{ steps.verification_continue_12.outputs.verification-tmpdir }}
@@ -541,6 +567,8 @@ jobs:
           LOCALAPPDATA: ${{ steps.verification_continue_13.outputs.verification-localappdata }}
           PATH: ${{ steps.verification_continue_13.outputs.verification-path }}
           JAVA_HOME: ${{ steps.verification_continue_13.outputs.verification-java_home }}
+          JDK_JAVA_OPTIONS: ${{ steps.verification_continue_13.outputs.verification-jdk_java_options }}
+          GRADLE_USER_HOME: ${{ steps.verification_continue_13.outputs.verification-gradle_user_home }}
           TMP: ${{ steps.verification_continue_13.outputs.verification-tmp }}
           TEMP: ${{ steps.verification_continue_13.outputs.verification-temp }}
           TMPDIR: ${{ steps.verification_continue_13.outputs.verification-tmpdir }}
@@ -569,6 +597,8 @@ jobs:
           LOCALAPPDATA: ${{ steps.verification_continue_14.outputs.verification-localappdata }}
           PATH: ${{ steps.verification_continue_14.outputs.verification-path }}
           JAVA_HOME: ${{ steps.verification_continue_14.outputs.verification-java_home }}
+          JDK_JAVA_OPTIONS: ${{ steps.verification_continue_14.outputs.verification-jdk_java_options }}
+          GRADLE_USER_HOME: ${{ steps.verification_continue_14.outputs.verification-gradle_user_home }}
           TMP: ${{ steps.verification_continue_14.outputs.verification-tmp }}
           TEMP: ${{ steps.verification_continue_14.outputs.verification-temp }}
           TMPDIR: ${{ steps.verification_continue_14.outputs.verification-tmpdir }}
@@ -597,6 +627,8 @@ jobs:
           LOCALAPPDATA: ${{ steps.verification_continue_15.outputs.verification-localappdata }}
           PATH: ${{ steps.verification_continue_15.outputs.verification-path }}
           JAVA_HOME: ${{ steps.verification_continue_15.outputs.verification-java_home }}
+          JDK_JAVA_OPTIONS: ${{ steps.verification_continue_15.outputs.verification-jdk_java_options }}
+          GRADLE_USER_HOME: ${{ steps.verification_continue_15.outputs.verification-gradle_user_home }}
           TMP: ${{ steps.verification_continue_15.outputs.verification-tmp }}
           TEMP: ${{ steps.verification_continue_15.outputs.verification-temp }}
           TMPDIR: ${{ steps.verification_continue_15.outputs.verification-tmpdir }}
@@ -625,6 +657,8 @@ jobs:
           LOCALAPPDATA: ${{ steps.verification_continue_16.outputs.verification-localappdata }}
           PATH: ${{ steps.verification_continue_16.outputs.verification-path }}
           JAVA_HOME: ${{ steps.verification_continue_16.outputs.verification-java_home }}
+          JDK_JAVA_OPTIONS: ${{ steps.verification_continue_16.outputs.verification-jdk_java_options }}
+          GRADLE_USER_HOME: ${{ steps.verification_continue_16.outputs.verification-gradle_user_home }}
           TMP: ${{ steps.verification_continue_16.outputs.verification-tmp }}
           TEMP: ${{ steps.verification_continue_16.outputs.verification-temp }}
           TMPDIR: ${{ steps.verification_continue_16.outputs.verification-tmpdir }}
@@ -653,6 +687,8 @@ jobs:
           LOCALAPPDATA: ${{ steps.verification_continue_17.outputs.verification-localappdata }}
           PATH: ${{ steps.verification_continue_17.outputs.verification-path }}
           JAVA_HOME: ${{ steps.verification_continue_17.outputs.verification-java_home }}
+          JDK_JAVA_OPTIONS: ${{ steps.verification_continue_17.outputs.verification-jdk_java_options }}
+          GRADLE_USER_HOME: ${{ steps.verification_continue_17.outputs.verification-gradle_user_home }}
           TMP: ${{ steps.verification_continue_17.outputs.verification-tmp }}
           TEMP: ${{ steps.verification_continue_17.outputs.verification-temp }}
           TMPDIR: ${{ steps.verification_continue_17.outputs.verification-tmpdir }}
@@ -681,6 +717,8 @@ jobs:
           LOCALAPPDATA: ${{ steps.verification_continue_18.outputs.verification-localappdata }}
           PATH: ${{ steps.verification_continue_18.outputs.verification-path }}
           JAVA_HOME: ${{ steps.verification_continue_18.outputs.verification-java_home }}
+          JDK_JAVA_OPTIONS: ${{ steps.verification_continue_18.outputs.verification-jdk_java_options }}
+          GRADLE_USER_HOME: ${{ steps.verification_continue_18.outputs.verification-gradle_user_home }}
           TMP: ${{ steps.verification_continue_18.outputs.verification-tmp }}
           TEMP: ${{ steps.verification_continue_18.outputs.verification-temp }}
           TMPDIR: ${{ steps.verification_continue_18.outputs.verification-tmpdir }}
@@ -709,6 +747,8 @@ jobs:
           LOCALAPPDATA: ${{ steps.verification_continue_19.outputs.verification-localappdata }}
           PATH: ${{ steps.verification_continue_19.outputs.verification-path }}
           JAVA_HOME: ${{ steps.verification_continue_19.outputs.verification-java_home }}
+          JDK_JAVA_OPTIONS: ${{ steps.verification_continue_19.outputs.verification-jdk_java_options }}
+          GRADLE_USER_HOME: ${{ steps.verification_continue_19.outputs.verification-gradle_user_home }}
           TMP: ${{ steps.verification_continue_19.outputs.verification-tmp }}
           TEMP: ${{ steps.verification_continue_19.outputs.verification-temp }}
           TMPDIR: ${{ steps.verification_continue_19.outputs.verification-tmpdir }}

@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 
+const { Buffer } = require('node:buffer');
 const fs = require('node:fs');
 const path = require('node:path');
-const { isSafeRelativePath, matchesFieldBoundary } = require('../domain/specification_catalog_path_policy.cjs');
+const { isSafeRelativePath, matchesFieldBoundary, allowsEmptyPathField } = require('../domain/specification_catalog_path_policy.cjs');
+const { publishCatalogMarkdown, readCatalogMarkdown } = require('./specification_catalog_publication.cjs');
 
 const DEFAULT_ROOT = path.resolve(__dirname, '../..');
 const CATALOG_JSON = 'specs/catalog.json';
@@ -63,7 +65,7 @@ function validateCatalog(root, catalog) {
         errors.push(`${prefix}.${field} must be an array.`);
         continue;
       }
-      if (field !== 'workflows' && values.length === 0) {
+      if (!allowsEmptyPathField(capability.status, field) && values.length === 0) {
         errors.push(`${prefix}.${field} must not be empty.`);
       }
       if (new Set(values).size !== values.length) {
@@ -106,7 +108,9 @@ function validateCatalog(root, catalog) {
     errors.push('specs must be an existing repository directory without symlinks.');
     return errors;
   }
-  for (const spec of discoverSpecificationFiles(root)) {
+  const discovery = scanSpecificationFiles(root);
+  errors.push(...discovery.errors);
+  for (const spec of discovery.files) {
     if (!registeredSpecs.has(spec)) errors.push(`${spec} is not registered in the specification catalog.`);
   }
   return errors;
@@ -177,20 +181,29 @@ function isRegularRepositoryFile(root, relativePath) { return isRegularRepositor
 function isRegularRepositoryDirectory(root, relativePath) { return isRegularRepositoryPath(root, relativePath, true); }
 
 function discoverSpecificationFiles(root) {
+  const discovery = scanSpecificationFiles(root);
+  if (discovery.errors.length > 0) throw new Error(discovery.errors.join('\n'));
+  return discovery.files;
+}
+
+function scanSpecificationFiles(root) {
   const excluded = new Set(['README.md', '_template.md', 'CATALOG.md']);
   const specsRoot = path.join(root, 'specs');
   const files = [];
+  const errors = [];
   function visit(directory, prefix = '') {
     for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
       const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
-      if (entry.isDirectory()) visit(path.join(directory, entry.name), relative);
+      if (entry.isSymbolicLink()) {
+        errors.push(`specs/${relative} is an unsupported symbolic link. Replace it with ordinary repository files before retrying specification catalog validation.`);
+      } else if (entry.isDirectory()) visit(path.join(directory, entry.name), relative);
       else if (entry.isFile() && entry.name.endsWith('.md') && !(prefix === '' && excluded.has(entry.name))) {
         files.push(`specs/${relative}`);
       }
     }
   }
   visit(specsRoot);
-  return files.sort();
+  return { files: files.sort(), errors: errors.sort() };
 }
 
 function renderCatalog(catalog) {
@@ -198,8 +211,8 @@ function renderCatalog(catalog) {
     const primarySpec = capability.specs[0];
     const companionCount = capability.specs.length - 1;
     const specLabel = companionCount > 0
-      ? `[${escapeCell(capability.title)}](./${path.posix.basename(primarySpec)}) + ${companionCount} companion`
-      : `[${escapeCell(capability.title)}](./${path.posix.basename(primarySpec)})`;
+      ? `[${escapeCatalogTitle(capability.title)}](${catalogPathTarget(primarySpec)}) + ${companionCount} companion`
+      : `[${escapeCatalogTitle(capability.title)}](${catalogPathTarget(primarySpec)})`;
     const evidenceCount = capability.workflows.length
       + capability.entrypoints.length
       + capability.code.length
@@ -208,15 +221,15 @@ function renderCatalog(catalog) {
     return `| \`${capability.id}\` | ${STATUS_LABELS[capability.status]} | ${escapeCell(capability.scope)} | ${specLabel} | ${evidenceCount} paths · ${capability.lastVerified} |`;
   });
   const evidenceSections = catalog.capabilities.flatMap(capability => [
-    `### \`${capability.id}\` — ${capability.title}`,
+    `### \`${capability.id}\` — ${escapeCatalogTitle(capability.title)}`,
     '',
     `- Owner: ${capability.owner}`,
     `- Last verified: ${capability.lastVerified}`,
     `- Specifications: ${renderPathLinks(capability.specs)}`,
     `- Workflows: ${renderPathLinks(capability.workflows)}`,
-    `- Entrypoints: ${renderPathLinks(capability.entrypoints)}`,
-    `- Core code: ${renderPathLinks(capability.code)}`,
-    `- Tests: ${renderPathLinks(capability.tests)}`,
+    `- Entrypoints: ${renderImplementationLinks(capability.entrypoints, capability.status)}`,
+    `- Core code: ${renderImplementationLinks(capability.code, capability.status)}`,
+    `- Tests: ${renderImplementationLinks(capability.tests, capability.status)}`,
     `- User documentation: ${renderPathLinks(capability.documentation)}`,
     '',
   ]);
@@ -254,14 +267,38 @@ function normalizeCheckoutLineEndings(content, platform = process.platform) {
   return platform === 'win32' ? content.replace(/\r\n/g, '\n') : content;
 }
 
+function renderImplementationLinks(paths, status) {
+  return status === 'proposed' && paths.length === 0
+    ? 'Not yet implemented (proposed capability).'
+    : renderPathLinks(paths);
+}
+
 function renderPathLinks(paths) {
   if (paths.length === 0) return 'Not applicable for this capability.';
-  return paths.map(relativePath => {
-    const target = relativePath.startsWith('specs/')
-      ? `./${path.posix.basename(relativePath)}`
-      : `../${relativePath}`;
-    return `[\`${relativePath}\`](${target})`;
-  }).join(' · ');
+  return paths.map(relativePath => `[${catalogPathLabel(relativePath)}](${catalogPathTarget(relativePath)})`).join(' · ');
+}
+
+function catalogPathTarget(relativePath) {
+  const target = relativePath.startsWith('specs/')
+    ? `./${relativePath.slice('specs/'.length)}`
+    : `../${relativePath}`;
+  return target.split('/').map(segment =>
+    encodeURIComponent(Buffer.from(segment, 'utf8').toString('utf8'))
+      .replace(/[!'()*]/g, character => `%${character.charCodeAt(0).toString(16).toUpperCase()}`)
+  ).join('/');
+}
+
+function catalogPathLabel(relativePath) {
+  const runs = relativePath.match(/`+/g) || [];
+  const delimiter = '`'.repeat(runs.reduce((longest, run) => Math.max(longest, run.length), 0) + 1);
+  const content = relativePath.startsWith('`') || relativePath.endsWith('`') ? ` ${relativePath} ` : relativePath;
+  return `${delimiter}${content}${delimiter}`;
+}
+
+function escapeCatalogTitle(value) {
+  // Character references display punctuation without introducing Markdown structure.
+  return String(value).replace(/[\r\n]+/g, ' ')
+    .replace(/[\x21-\x2f\x3a-\x40\x5b-\x60\x7b-\x7e]/g, character => `&#${character.charCodeAt(0)};`);
 }
 
 function escapeCell(value) {
@@ -277,13 +314,19 @@ function main(argv = process.argv.slice(2), root = DEFAULT_ROOT) {
     return;
   }
   const rendered = renderCatalog(catalog);
-  const markdownPath = path.join(root, CATALOG_MARKDOWN);
-  if (argv.includes('--write')) {
-    fs.writeFileSync(markdownPath, rendered, 'utf8');
-    console.log(`specification catalog generation: PASS (${catalog.capabilities.length} capabilities)`);
+  let current;
+  try {
+    if (argv.includes('--write')) {
+      publishCatalogMarkdown(root, rendered);
+      console.log(`specification catalog generation: PASS (${catalog.capabilities.length} capabilities)`);
+      return;
+    }
+    current = readCatalogMarkdown(root);
+  } catch {
+    console.error(`${CATALOG_MARKDOWN} could not be safely accessed. Inspect links, directory or file collisions, concurrent changes, available space and permissions; then regenerate the catalog.`);
+    process.exitCode = 1;
     return;
   }
-  const current = fs.existsSync(markdownPath) ? fs.readFileSync(markdownPath, 'utf8') : '';
   if (normalizeCheckoutLineEndings(current) !== rendered) {
     console.error(`${CATALOG_MARKDOWN} is stale; run pnpm run generate:specifications.`);
     process.exitCode = 1;
