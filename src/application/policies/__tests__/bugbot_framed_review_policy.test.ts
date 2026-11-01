@@ -190,3 +190,31 @@ it('binds removed and modified regular Git sides and retains optional repository
 it('blocks required input whose control-only contents disappear during normalization', () => {
     expect(() => build(framedSource([framedChange({ patch: '\u0001' })]))).toThrow(BugbotReviewCompletenessError);
 });
+
+
+it.each([
+    ['ASCII at the byte limit', 'a'.repeat(1024), true],
+    ['ASCII one byte over', 'a'.repeat(1025), false],
+    ['multibyte at the byte limit', 'é'.repeat(512), true],
+    ['multibyte one byte over', 'é'.repeat(512) + 'a', false],
+    ['astral at the byte limit', '🚀'.repeat(256), true],
+    ['astral one byte over', '🚀'.repeat(256) + 'a', false],
+] as const)('enforces the inherited literal path byte boundary: %s', (_name, filename, valid) => {
+    expect(validBugbotReviewPath(filename)).toBe(valid);
+    const source = framedSource([framedChange({ filename })]);
+    if (valid) expect(build(source).source.changes[0].filename).toBe(filename);
+    else expect(() => build(source)).toThrow(expect.objectContaining({ facts: { profile: 'framed-v1', countKind: 'exact', resource: 'source', observed: 1, limit: 0, unit: 'items' } }));
+});
+
+it.each([
+    ['ASCII at the byte limit', 'a'.repeat(1024), true],
+    ['ASCII one byte over', 'a'.repeat(1025), false],
+    ['multibyte at the byte limit', 'é'.repeat(512), true],
+    ['multibyte one byte over', 'é'.repeat(512) + 'a', false],
+    ['astral at the byte limit', '🚀'.repeat(256), true],
+    ['astral one byte over', '🚀'.repeat(256) + 'a', false],
+] as const)('enforces the same byte boundary on the previous rename path: %s', (_name, previousFilename, valid) => {
+    const source = framedSource([framedChange({ filename: 'current', previousFilename, status: 'renamed' })]);
+    if (valid) expect(build(source).source.changes[0].previousFilename).toBe(previousFilename);
+    else expect(() => build(source)).toThrow(BugbotReviewCompletenessError);
+});

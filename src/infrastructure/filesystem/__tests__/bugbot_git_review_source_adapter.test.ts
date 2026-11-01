@@ -362,3 +362,51 @@ it('uses the current working root only when explicitly composed without an alter
             .rejects.toBeInstanceOf(BugbotReviewCompletenessError);
     } finally { fixture.dispose(); }
 });
+
+
+it.each([
+    ['current oversized ASCII', 'filename', 'a'.repeat(12001)],
+    ['previous oversized ASCII', 'previousFilename', 'a'.repeat(12001)],
+    ['current UTF-8 one byte over', 'filename', 'é'.repeat(512) + 'a'],
+    ['previous UTF-8 one byte over', 'previousFilename', 'é'.repeat(512) + 'a'],
+] as const)('rejects %s before acquiring Git source', async (_name, field, path) => {
+    const fixture = repository({ file: 'old\n' }, { file: 'new\n' });
+    const execute = jest.spyOn(child, 'execFile');
+    try {
+        const record = { ...change('file'), status: 'renamed', previousFilename: 'old', [field]: path };
+        await expect(fixture.read([record])).rejects.toMatchObject({ facts: { resource: 'source' } });
+        expect(execute).not.toHaveBeenCalled();
+    } finally { execute.mockRestore(); fixture.dispose(); }
+});
+
+it('consumes every maximum-length admitted path through bounded native tree batches', async () => {
+    const directories = ['d'.repeat(200), 'e'.repeat(200), 'f'.repeat(200), 'g'.repeat(200)];
+    const leaves = Array.from({ length: 12 }, (_, index) => String(index).padStart(2, '0') + 'n'.repeat(218));
+    const paths = leaves.map(leaf => [...directories, leaf].join('/'));
+    expect(paths.every(path => Buffer.byteLength(path) === 1024)).toBe(true);
+    const fixture = repository({ file: 'old\n' }, { file: 'new\n' });
+    const execute = jest.spyOn(child, 'execFile');
+    try {
+        // Git objects admit literal paths independently of the host's checkout path limit.
+        const tree = (rows: string) => execFileSync('git', ['-C', fixture.root, 'mktree'], {
+            encoding: 'utf8', input: rows,
+            env: Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.toUpperCase().startsWith('GIT_'))),
+        }).trim();
+        const sourceTree = (blob: string) => {
+            let oid = tree(leaves.map(leaf => `100644 blob ${blob}\t${leaf}\n`).join(''));
+            for (const directory of [...directories].reverse()) oid = tree(`040000 tree ${oid}\t${directory}\n`);
+            return oid;
+        };
+        const base = fixture.git('commit-tree', sourceTree(fixture.git('rev-parse', `${fixture.base}:file`)), '-p', fixture.base, '-m', 'long-path base');
+        const head = fixture.git('commit-tree', sourceTree(fixture.git('rev-parse', `${fixture.head}:file`)), '-p', base, '-m', 'long-path head');
+        const changes = paths.map(path => change(path, 'modified', 1, 1, '@@ -1 +1 @@\n-old\n+new\n'));
+        const source = await fixture.read(changes, true, { ...fixture.pr(paths.length), baseSha: base, baseRefSha: base, headSha: head });
+        expect(source.changes.map(item => item.filename)).toEqual(paths);
+        const batches = execute.mock.calls.filter(call => (call[1] as string[]).includes('ls-tree'))
+            .map(call => { const args = call[1] as string[]; return args.slice(args.lastIndexOf('--') + 1); });
+        expect(batches.map(batch => batch.length)).toEqual([11, 1, 11, 1]);
+        expect(batches.slice(0, 2).flat()).toEqual(paths);
+        expect(batches.slice(2).flat()).toEqual(paths);
+        expect(batches.every(batch => batch.length > 0 && batch.reduce((bytes, path) => bytes + Buffer.byteLength(path) + 1, 0) <= 12000)).toBe(true);
+    } finally { execute.mockRestore(); fixture.dispose(); }
+}, 30000);

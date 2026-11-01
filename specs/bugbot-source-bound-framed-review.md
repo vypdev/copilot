@@ -611,3 +611,17 @@ explicit action must supply the applicable current-head assessment/review;
 Codecov must compare the final head against the live target base, and the
 protected approval decision remains independent. See the
 [post-synchronization checklist](../docs/issues/branch-synchronization.mdx#validate-the-synchronized-pull-request).
+
+
+Path-boundary review follow-up: `validateBugbotFramedChange` validates both current
+and previous paths before filesystem/Git source acquisition. Its
+`validBugbotReviewPath -> isProgressEvidencePath` chain already rejects paths
+above 1,024 UTF-8 bytes; a single admitted path therefore fits an empty
+12,000-character tree batch. Seventeen additional regressions verify the exact
+and one-byte-over ASCII/multibyte/astral limits for current and renamed paths,
+zero Git reads for rejected input, and complete native `11 + 1` batching of twelve
+maximum-length paths on each tree side. The native fixture creates real Git
+objects rather than materializing long checkout paths, preserving portability
+across host filesystem limits. The two affected suites pass 220 cases. These
+regressions preserve the existing admission contract and add no runtime bypass,
+capacity increase, coverage exclusion or claim of final PR acceptance.
