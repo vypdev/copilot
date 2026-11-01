@@ -1,24 +1,19 @@
-import { progressResponseRejected, progressResponsePayload } from './progress_response_rejection_policy';
+import { progressScopeSourceLines, type ProgressScopeSourceLine } from './progress_scope_source_policy';
+export { progressScopeSourceLines, type ProgressScopeSourceLine } from './progress_scope_source_policy';
+import { progressScopeCapacityRejected, progressResponseRejected, progressResponsePayload } from './progress_response_rejection_policy';
 import { isProgressRequirementId, isProgressSourceLineId, type ProgressResponseReason } from '../../domain/progress_response_diagnostic';
-import { progressEvidenceTooLarge } from './progress_diff_partition_policy';
+
 import { MAX_PROGRESS_FACT_POINTS, MAX_PROGRESS_ASSESSMENT_POINTS, progressAssessmentFactLimit, progressAssessmentPrefix } from './progress_assessment_capacity_policy';
 import { AGENT_OUTPUT_LOCALE_SCHEMA_PROPERTY } from './agent_output_locale_policy';
 
 export const MAX_PROGRESS_SCOPE_BYTES = 64_000;
 export const MAX_PROGRESS_SCOPE_CLAUSES = 32;
-const MAX_QUOTE = 1_200;
 const MAX_FACT = MAX_PROGRESS_FACT_POINTS;
 export interface ProgressScopeClause { readonly id: string; readonly quote: string; readonly uncertain?: true }
 export type ProgressScopeAnchors = Readonly<Record<string, string>>;
 export interface ProgressScopeExtraction { readonly scope: ProgressScope; readonly anchors: ProgressScopeAnchors }
 export interface ProgressScope { readonly requirements: readonly ProgressScopeClause[]; readonly exclusions: readonly ProgressScopeClause[] }
 
-export interface ProgressScopeSourceLine { readonly id: string; readonly quote: string }
-export function progressScopeSourceLines(issue: string): readonly ProgressScopeSourceLine[] {
-    const lines = issue.split(/\r?\n/).map((line, index) => ({ id: `L${index + 1}`, quote: line.trim() })).filter(line => line.quote);
-    if (lines.length === 0 || lines.length > 1_024 || lines.some(line => [...line.quote].length > MAX_QUOTE)) throw progressEvidenceTooLarge();
-    return Object.freeze(lines.map(line => Object.freeze(line)));
-}
 export function progressScopeResponseSchema(lines: readonly ProgressScopeSourceLine[]) {
     return { type: 'object', additionalProperties: false,
         properties: { outputLocale: AGENT_OUTPUT_LOCALE_SCHEMA_PROPERTY,
@@ -68,7 +63,7 @@ export function parseProgressScopeWithAnchors(response: unknown, issue: string, 
     const anchors: Record<string, string> = {};
     function clauses(kinds: readonly string[], prefix: string): readonly ProgressScopeClause[] {
         const selected = source.filter(line => kinds.includes(classified.find(item => item.id === line.id)!.kind as string));
-        if (selected.length > MAX_PROGRESS_SCOPE_CLAUSES) reject('scope-clause-limit', '$.lines', selected[MAX_PROGRESS_SCOPE_CLAUSES].id);
+        if (selected.length > MAX_PROGRESS_SCOPE_CLAUSES) throw progressScopeCapacityRejected({ clauseKind: prefix === 'R' ? 'required-or-uncertain' : 'excluded', observed: selected.length, limit: 32, sourceLineId: selected[MAX_PROGRESS_SCOPE_CLAUSES].id });
         return Object.freeze(selected.map((line, index) => {
             const id = `${prefix}${index + 1}`; anchors[id] = line.id;
             return Object.freeze({ id, quote: line.quote,

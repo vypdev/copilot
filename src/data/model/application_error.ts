@@ -1,3 +1,4 @@
+import { isProgressScopeCapacityFacts, type ProgressScopeCapacityFacts } from '../../domain/progress_response_diagnostic';
 import { isProgressInventoryDiagnostic, type ProgressInventoryDiagnostic } from '../../domain/progress_inventory_diagnostic';
 import { isProgressResponseDiagnosticFacts, type ProgressResponseDiagnosticFacts } from '../../domain/progress_response_diagnostic';
 import { isProgressBinaryEvidenceFacts, type ProgressBinaryEvidenceFacts } from '../../domain/progress_binary_evidence_diagnostic';
@@ -80,6 +81,7 @@ export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'progress-inventory-incomplete',
     'progress-result-contract-invalid',
     'progress-assessment-capacity-exceeded',
+    'progress-scope-clause-limit',
     'stored-configuration-schema-missing',
     'stored-configuration-schema-unsupported',
     'stored-configuration-invalid',
@@ -100,6 +102,7 @@ interface ApplicationErrorRecoveryVariables extends Readonly<Record<CopilotComma
     readonly 'progress-inventory-incomplete': ProgressInventoryDiagnostic;
     readonly 'progress-result-contract-invalid': ProgressResponseDiagnosticFacts;
     readonly 'progress-assessment-capacity-exceeded': ProgressResponseDiagnosticFacts;
+    readonly 'progress-scope-clause-limit': ProgressScopeCapacityFacts;
 
     readonly 'pull-request-link-restored': Readonly<Record<string, never>>;
     readonly 'pull-request-link-base-retained': Readonly<Record<string, never>>;
@@ -417,6 +420,7 @@ const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readon
     'progress-inventory-incomplete': Object.freeze(['profile', 'reason', 'observedCount', 'supportedLimit', 'countKind', 'paths']),
     'progress-result-contract-invalid': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
     'progress-assessment-capacity-exceeded': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
+    'progress-scope-clause-limit': Object.freeze(['clauseKind', 'observed', 'limit', 'sourceLineId']),
     'deployment-publication-context-missing': Object.freeze([]),
     'workspace-changes-rejected': Object.freeze([]),
 });
@@ -499,6 +503,7 @@ function normalizeApplicationErrorRecovery(
         && (!isProgressResponseDiagnosticFacts(variables) || variables.phase !== 'assessment' || variables.reason !== 'assessment-text-limit')) {
         throw new TypeError('Progress assessment capacity diagnostic is invalid.');
     }
+    if (recovery.id === 'progress-scope-clause-limit' && !isProgressScopeCapacityFacts(variables)) throw new TypeError('Progress scope capacity diagnostic is invalid.');
     if (recovery.id === 'progress-result-contract-invalid' && !isProgressResponseDiagnosticFacts(variables)) throw new TypeError('Progress response diagnostic is invalid.');
     if (recovery.id === 'progress-inventory-incomplete' && !isProgressInventoryDiagnostic(variables)) throw new TypeError('Progress inventory diagnostic is invalid.');
     if (recovery.id === 'progress-binary-evidence-unavailable' && !isProgressBinaryEvidenceFacts(variables)) throw new TypeError('Progress binary evidence diagnostic is invalid.');

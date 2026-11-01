@@ -1311,6 +1311,21 @@
         }
       ],
       "successMessage": "generated Python literal evidence coverage: PASS (pure projection/prompts100%; each delivery module95/90)"
+    },
+    {
+      "name": "Progress scope ownership",
+      "missingEntryLabel": "Progress scope ownership policy",
+      "rules": [
+        {
+          "files": [
+            "src/application/policies/progress_scope_source_policy.ts",
+            "src/domain/configuration_markers.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        }
+      ],
+      "successMessage": "Progress scope ownership policy: PASS (100% all metrics)"
     }
   ]
 }

@@ -238,6 +238,11 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     action: 'Inspect the original issue and the supported assessment protocol. The unchanged 8,000-code-point field limit must include every citation and a nonempty fact. Details: phase {phase}, reason {reason}, field {field}, requirement {requirementId}, original issue line {sourceLineId}. none means no verified identity is available. An identical retry cannot add capacity; preserve every requirement and verification gate when reviewing a supported protocol.',
     retainedState: 'Existing progress labels and published assessments were preserved. No partial result or passing verification is authorized.',
   }),
+  'progress-scope-clause-limit': Object.freeze({
+    impact: 'The complete human scope classification selected {observed} {clauseKind} lines; the supported limit is {limit}. Progress was not published.',
+    action: 'Inspect the original human scope and classifier result at source {sourceLineId}, phase scope. A fresh valid classification may help; do not remove requirements, promote generated state or raise limits to pass. Genuine over-limit human scope requires a reviewed supported protocol.',
+    retainedState: 'Existing progress labels and published assessments were preserved. No partial assessment or passing verification is authorized.',
+  }),
   'progress-result-contract-invalid': Object.freeze({
     impact: 'The returned progress result violated its contract; progress was not published.',
     action: 'Inspect the original requirement and response schema. Details: phase {phase}, reason {reason}, field {field}, requirement {requirementId}, original issue line {sourceLineId}. none means no verified identity is available. A fresh attempt may help when the provider can satisfy the unchanged contract; do not relax acceptance or verification.',
@@ -412,6 +417,11 @@ const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     impact: 'Las citas originales de los requisitos no caben en una evaluación de progreso completa; no se consultó evidencia ni evaluación después de clasificar el alcance.',
     action: 'Inspecciona la issue original y el protocolo de evaluación admitido. El límite fijo de 8,000 puntos de código por campo debe incluir cada cita y un dato no vacío. Detalles: fase {phase}, motivo {reason}, campo {field}, requisito {requirementId}, línea original de la issue {sourceLineId}. none indica que no hay una identidad verificada. Repetir el intento no añade capacidad; conserva todos los requisitos y controles de verificación al revisar un protocolo compatible.',
     retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas. No se autoriza un resultado parcial ni una verificación aprobada.',
+  }),
+  'progress-scope-clause-limit': Object.freeze({
+    impact: 'La clasificación completa del alcance humano seleccionó {observed} líneas de tipo {clauseKind}; el límite admitido es {limit}. No se publicó el progreso.',
+    action: 'Inspecciona el alcance humano original y la clasificación en la línea {sourceLineId}, fase scope. Una nueva clasificación válida puede ayudar; no elimines requisitos, conviertas estado generado en requisitos ni aumentes límites para aprobar. El alcance humano que excede el límite necesita un protocolo compatible revisado.',
+    retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas. No se autoriza ninguna evaluación parcial ni verificación aprobada.',
   }),
   'progress-result-contract-invalid': Object.freeze({
     impact: 'El resultado de progreso devuelto incumplió su contrato; no se publicó el progreso.',

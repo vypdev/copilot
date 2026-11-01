@@ -20,6 +20,9 @@ const RECOVERY_CASES: readonly Readonly<{
     english: string;
     spanish: string;
 }>[] = [
+    { recovery: { id: 'progress-scope-clause-limit', variables: { clauseKind: 'required-or-uncertain', observed: 33, limit: 32, sourceLineId: 'L41' } },
+      english: 'Existing progress labels and published assessments were preserved. No partial assessment or passing verification is authorized.',
+      spanish: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas. No se autoriza ninguna evaluación parcial ni verificación aprobada.' },
     { recovery: { id: 'progress-inventory-incomplete', variables: { profile: 'immutable-tree-v1', reason: 'file-count', observedCount: 1025, supportedLimit: 1024, countKind: 'at-least', paths: '["src/a"]' } },
       english: 'Existing progress was retained. No partial assessment or progress publication was accepted. Build, review, coverage and approval remain independent gates.',
       spanish: 'Se conservó el progreso existente. No se aceptó ninguna evaluación parcial ni publicación del progreso. Build, revisión, cobertura y aprobación siguen siendo controles independientes.' },
