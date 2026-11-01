@@ -230,6 +230,9 @@ requires a separate change record; copy provenance cannot stand in for it. Only
 a rename can account for both its deleted old path and its new path. The native
 inventory check runs before ignores and rejects an unassigned source change
 even when the copy destination is ignored.
+Renamed metadata must match a native deletion of the previous path and addition
+of the current path. A retained origin or preexisting modified destination is
+not accepted as a rename, including when the destination matches an ignore.
 
 ```mermaid
 flowchart LR

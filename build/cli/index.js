@@ -104888,15 +104888,17 @@ async function verifyInventory(git, id, changes) {
     if (fields.pop() !== '' || fields.length % 2)
         throw new framed_review_1.BugbotReviewCompletenessError('coverage');
     const allowed = new Set(changes.flatMap(c => [c.filename, ...(c.status === 'renamed' && c.previousFilename ? [c.previousFilename] : [])]));
-    const actual = new Set();
+    const actual = new Map();
     for (let index = 0; index < fields.length; index += 2) {
         if (!/^:[0-7]{6} [0-7]{6} (?:[a-f0-9]{40}|[a-f0-9]{64}) (?:[a-f0-9]{40}|[a-f0-9]{64}) [A-Z]$/u.test(fields[index])
             || !allowed.has(fields[index + 1]) || actual.has(fields[index + 1]))
             throw new framed_review_1.BugbotReviewCompletenessError('coverage');
-        actual.add(fields[index + 1]);
+        actual.set(fields[index + 1], fields[index].slice(-1));
     }
-    if (changes.some(c => !actual.has(c.filename)))
+    if (changes.some(c => !actual.has(c.filename)
+        || (c.status === 'renamed' && (actual.get(c.previousFilename) !== 'D' || actual.get(c.filename) !== 'A')))) {
         throw new framed_review_1.BugbotReviewCompletenessError('coverage');
+    }
 }
 async function readTree(git, sha, paths) {
     const result = new Map();

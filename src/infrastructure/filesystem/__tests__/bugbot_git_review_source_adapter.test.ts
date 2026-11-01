@@ -474,3 +474,18 @@ it('verifies all current-side content when optional copy-source metadata is abse
         expect(completeTextPatch(source.changes[0].patch, 1, 0)).toBe(true);
     } finally { fixture.dispose(); }
 });
+
+
+it.each([
+    ['modified source behind an ignored destination', { old: 'old\n' }, { old: 'changed\n', current: 'new\n' }, ['current']],
+    ['unchanged source behind an ignored destination', { old: 'old\n' }, { old: 'old\n', current: 'new\n' }, ['current']],
+    ['preexisting modified destination', { old: 'old\n', current: 'previous destination\n' }, { current: 'new\n' }, []],
+] as const)('requires native deletion/addition for a claimed rename: %s', async (_name, oldFiles, newFiles, ignores) => {
+    const fixture = repository(oldFiles, newFiles);
+    try {
+        const records = [{ ...change('current', 'renamed'), previousFilename: 'old' }];
+        await expect(new BugbotGitReviewSourceAdapter(fixture.root).readCompleteSource(fixture.pr(1),
+            { changes: records, filesWithFirstDiffLine: [], filesWithDiffLocations: [] }, true, ignores))
+            .rejects.toMatchObject({ facts: { resource: 'coverage' } });
+    } finally { fixture.dispose(); }
+});

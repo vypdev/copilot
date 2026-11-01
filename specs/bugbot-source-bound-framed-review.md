@@ -686,5 +686,30 @@ and absent optional copy provenance. The omissions fail with `coverage` before
 any tree/blob read; complete records remain reviewable. All 78 adapter-suite
 cases pass on the existing runtime. This supplies independent executable proof
 for `copied-previous-path-can-hide-change`; native finding adjudication and final
-head validation remain separate gates. No runtime rule, ignore scope or capacity
-limit is changed by this test/documentation follow-up.
+head validation remain separate gates. The copy allowlist remains unchanged. The separate rename-transition correction
+below preserves the same ignore scope and capacity limits.
+
+
+### Native rename transition binding — independently reproduced correction
+
+Further native-Git checks reproduced three false-complete results in the
+previous runtime: an ignored rename whose origin was modified, an ignored rename
+whose origin remained unchanged, and a claimed rename over a preexisting modified
+destination. A path-only inventory could accept those declarations without proving
+the deletion/addition pair; selected-side checks did not protect ignored records
+or the destination's displaced original content.
+
+The inventory now retains each native status and requires every `renamed` record
+to own `D` at its previous path and `A` at its current path before ignore-based
+selection and tree/blob reads. Missing or mismatched transitions fail with the
+existing `coverage` completeness reason. The later immutable-side checks remain
+in place. No additional Git call, capacity, permission, ignore or publication
+exception is introduced. Copies still own only their current path; an independently
+changed copy source requires a separate record.
+
+All three new native regressions failed against the previous runtime by returning
+`complete: true`. They pass after the correction; the adapter suite passes 81
+cases. Valid renames, zero-line metadata, copy inventories and native read-budget
+boundaries remain covered. Full configured coverage budgets, generated artifacts
+and final current-head remote review/Codecov remain mandatory gates; this receipt
+does not certify a pending PR revision.
