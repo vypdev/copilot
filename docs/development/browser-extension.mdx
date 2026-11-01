@@ -276,8 +276,11 @@ interception, malformed-reference and other failures still fail the journey;
 an uncertain click is never replayed or counted as a successful navigation.
 The separate Safari replaced-window handling still requires one new owned view.
 Cold three-target fixture setup in the package/receipt/Safari harness suites has
-an explicit 120-second hook budget; ordinary assertions keep their existing
-timeouts. Reference-composition assertions wait for native metadata inspection
+an explicit 120-second hook budget. The public validation-command integration
+case has the same budget for its two actual complete clean builds; ordinary
+assertions keep their existing timeouts. Privacy inspection waits for the
+independent history hydration before asserting its exact request sequence.
+Reference-composition assertions wait for native metadata inspection
 to finish before distinguishing a missing reference from unavailable inspection.
 The hosted Windows job allows 60 minutes for the complete root and extension
 coverage campaign; Linux/macOS keep 20 minutes. This job budget does not change
