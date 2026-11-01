@@ -625,3 +625,24 @@ objects rather than materializing long checkout paths, preserving portability
 across host filesystem limits. The two affected suites pass 220 cases. These
 regressions preserve the existing admission contract and add no runtime bypass,
 capacity increase, coverage exclusion or claim of final PR acceptance.
+
+
+Integration verification after #828: the Action merged `develop` at
+`2f5b3a04fe6b99e519e1ff04e4acbb0920f104af` into the managed branch as
+`a6ec7e9c1bfc6b899a000267ee82382241226c44` in its
+[configured synchronization run](https://github.com/vypdev/copilot/actions/runs/41320189011).
+Nine conflicts were resolved before all six verification commands passed:
+build, types, full coverage (842 Jest suites / 16,284 passed tests with 35
+preexisting skips; 267 extension tests at 100%), lint, documentation and
+specifications. An independent parent comparison confirms all 53 coverage
+budgets are preserved exactly, including both exhaustive pure-policy families;
+framed-review runtime source is unchanged from `842ba24f`.
+
+The integrated [progress source-ownership contract](./progress-scope-source-ownership.md)
+keeps recognized persisted state out of acceptance classification while retaining
+whole-body input bounds and freshness. It does not increase review capacity or
+certify the PR. Bot-actor admission again skipped Commit and PR analysis for the
+synchronization push; the final contributor revision still needs its own current-head
+assessment, complete review, Codecov against the live base, and specific protected
+approval decision. This receipt records the Action's prepared-merge verification,
+not completion of those remaining PR gates or the historical H3 review.

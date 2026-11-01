@@ -286,6 +286,15 @@ configured `check_progress_action` single action. Inspect each applicable
 current-head result, including unresolved findings and any human approval gate;
 a clean synchronization is not merge approval.
 
+Progress assessment separates human acceptance text from a recognized persisted
+recommendation-state block. The full original issue body still controls input
+bounds and freshness; saved operational state does not create extra requirements.
+For a scope-capacity failure, inspect the reported phase, clause kind, count and
+original source line, keeping the human requirements intact. Follow the
+[scope recovery guide](../security-operations/operations/troubleshooting#progress-scope-rejects-a-generated-plan-or-exceeds-32-clauses)
+before starting another assessment; Bugbot review has its own independent
+completeness and capacity checks.
+
 ## Why the normal commit workflow remains limited
 
 `copilot_commit.yml` is an issue-centric, agent-capable pipeline: it can
