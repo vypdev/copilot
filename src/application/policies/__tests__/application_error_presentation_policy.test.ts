@@ -47,6 +47,11 @@ const RECOVERY_CASES: readonly Readonly<{
         spanish: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas. Un aviso de publicación del check opcional corresponde a otro resultado.',
     },
     {
+        recovery: { id: 'progress-assessment-capacity-exceeded', variables: { phase: 'assessment', reason: 'assessment-text-limit', field: '$.requirements[1].summary', requirementId: 'R2', sourceLineId: 'L7' } },
+        english: 'Existing progress labels and published assessments were preserved. No partial result or passing verification is authorized.',
+        spanish: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas. No se autoriza un resultado parcial ni una verificación aprobada.',
+    },
+    {
         recovery: { id:'issue-workflow-admission-blocked', variables:{kind:'bugfix',reason:'missing-fields',fields:'["VaultStadio Version"]'} },
         english: 'No branch or planner was started. Issue configuration is unchanged; this run only reports the admission diagnostic.',
         spanish: 'No se inició ninguna rama ni planificador. La configuración de la issue permanece igual; esta ejecución solo informa del diagnóstico de admisión.',

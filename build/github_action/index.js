@@ -41314,6 +41314,11 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
         action: 'Inspect the closed-issue or merged-PR run and current native state. Retry cleanup only if the issue is still closed with the intended reason; leave reopened work open. Resolve the named failure before retrying.',
         retainedState: 'Native state was preserved. Confirmed changes: {changed}; remaining required changes in the last verified plan: {remaining}. Unavailable reads do not establish completion.',
     }),
+    'progress-assessment-capacity-exceeded': Object.freeze({
+        impact: 'The original requirement citations cannot fit a complete progress assessment; no evidence or assessment query was made after scope classification.',
+        action: 'Inspect the original issue and the supported assessment protocol. The unchanged 8,000-code-point field limit must include every citation and a nonempty fact. Details: phase {phase}, reason {reason}, field {field}, requirement {requirementId}, original issue line {sourceLineId}. none means no verified identity is available. An identical retry cannot add capacity; preserve every requirement and verification gate when reviewing a supported protocol.',
+        retainedState: 'Existing progress labels and published assessments were preserved. No partial result or passing verification is authorized.',
+    }),
     'progress-result-contract-invalid': Object.freeze({
         impact: 'The returned progress result violated its contract; progress was not published.',
         action: 'Inspect the original requirement and response schema. Details: phase {phase}, reason {reason}, field {field}, requirement {requirementId}, original issue line {sourceLineId}. none means no verified identity is available. A fresh attempt may help when the provider can satisfy the unchanged contract; do not relax acceptance or verification.',
@@ -41486,6 +41491,11 @@ const SPANISH_RECOVERY_CONTENT = Object.freeze({
         impact: 'La limpieza de la issue sigue sin verificarse: {resultId}, fase {phase}; estado nativo {state}, motivo {reason}.',
         action: 'Revisa la ejecución de cierre o de la PR fusionada y el estado nativo actual. Reintenta la limpieza solo si la issue sigue cerrada con el motivo previsto; conserva abierto el trabajo reabierto. Resuelve el fallo indicado antes de reintentar.',
         retainedState: 'Se conservó el estado nativo. Cambios confirmados: {changed}; cambios pendientes en el último plan verificado: {remaining}. Una lectura no disponible no demuestra que haya finalizado.',
+    }),
+    'progress-assessment-capacity-exceeded': Object.freeze({
+        impact: 'Las citas originales de los requisitos no caben en una evaluación de progreso completa; no se consultó evidencia ni evaluación después de clasificar el alcance.',
+        action: 'Inspecciona la issue original y el protocolo de evaluación admitido. El límite fijo de 8,000 puntos de código por campo debe incluir cada cita y un dato no vacío. Detalles: fase {phase}, motivo {reason}, campo {field}, requisito {requirementId}, línea original de la issue {sourceLineId}. none indica que no hay una identidad verificada. Repetir el intento no añade capacidad; conserva todos los requisitos y controles de verificación al revisar un protocolo compatible.',
+        retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas. No se autoriza un resultado parcial ni una verificación aprobada.',
     }),
     'progress-result-contract-invalid': Object.freeze({
         impact: 'El resultado de progreso devuelto incumplió su contrato; no se publicó el progreso.',
@@ -48141,6 +48151,49 @@ function optionalCheckDiagnostic(evidence, route, error, catalog) {
 
 /***/ }),
 
+/***/ 67329:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.MAX_PROGRESS_ASSESSMENT_POINTS = exports.MAX_PROGRESS_FACT_POINTS = void 0;
+exports.progressAssessmentPrefix = progressAssessmentPrefix;
+exports.progressAssessmentFactLimit = progressAssessmentFactLimit;
+const application_error_1 = __nccwpck_require__(75999);
+const progress_response_diagnostic_1 = __nccwpck_require__(56289);
+exports.MAX_PROGRESS_FACT_POINTS = 800;
+exports.MAX_PROGRESS_ASSESSMENT_POINTS = 8000;
+/** Shared host framing; these exact characters consume the published field budget. */
+function progressAssessmentPrefix(requirement) {
+    return `[${requirement.id}] ${requirement.quote} — `;
+}
+/** Reserve every original citation and a nonempty fact before any evidence/assessment query. */
+function progressAssessmentFactLimit(requirements, anchors = {}) {
+    const prefixPoints = requirements.map(requirement => [...progressAssessmentPrefix(requirement)].length);
+    const fixedPoints = prefixPoints.reduce((sum, points) => sum + points, Math.max(0, requirements.length - 1));
+    if (fixedPoints + requirements.length > exports.MAX_PROGRESS_ASSESSMENT_POINTS) {
+        let points = 0;
+        const index = prefixPoints.findIndex((size, i) => {
+            points += size + 1 + (i === 0 ? 0 : 1);
+            return points > exports.MAX_PROGRESS_ASSESSMENT_POINTS;
+        });
+        const id = requirements[index].id;
+        const requirementId = (0, progress_response_diagnostic_1.isProgressRequirementId)(id) ? id : 'none';
+        const sourceLineId = requirementId !== 'none' && (0, progress_response_diagnostic_1.isProgressSourceLineId)(anchors[id]) ? anchors[id] : 'none';
+        throw new application_error_1.ApplicationError('validation.evidence-too-large', 'Original progress citations cannot fit the unchanged assessment text limits. Existing progress was retained.', {
+            recovery: { id: 'progress-assessment-capacity-exceeded', variables: {
+                    phase: 'assessment', reason: 'assessment-text-limit', field: `$.requirements[${index}].summary`, requirementId, sourceLineId,
+                } },
+        });
+    }
+    return requirements.length === 0 ? exports.MAX_PROGRESS_FACT_POINTS
+        : Math.min(exports.MAX_PROGRESS_FACT_POINTS, Math.floor((exports.MAX_PROGRESS_ASSESSMENT_POINTS - fixedPoints) / requirements.length));
+}
+
+
+/***/ }),
+
 /***/ 33167:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -48917,11 +48970,12 @@ exports.parseScopedProgressResponse = parseScopedProgressResponse;
 const progress_response_rejection_policy_1 = __nccwpck_require__(43023);
 const progress_response_diagnostic_1 = __nccwpck_require__(56289);
 const progress_diff_partition_policy_1 = __nccwpck_require__(70628);
+const progress_assessment_capacity_policy_1 = __nccwpck_require__(67329);
 const agent_output_locale_policy_1 = __nccwpck_require__(30601);
 exports.MAX_PROGRESS_SCOPE_BYTES = 64000;
 exports.MAX_PROGRESS_SCOPE_CLAUSES = 32;
 const MAX_QUOTE = 1200;
-const MAX_FACT = 800;
+const MAX_FACT = progress_assessment_capacity_policy_1.MAX_PROGRESS_FACT_POINTS;
 function progressScopeSourceLines(issue) {
     const lines = issue.split(/\r?\n/).map((line, index) => ({ id: `L${index + 1}`, quote: line.trim() })).filter(line => line.quote);
     if (lines.length === 0 || lines.length > 1024 || lines.some(line => [...line.quote].length > MAX_QUOTE))
@@ -48998,8 +49052,8 @@ function parseProgressScopeWithAnchors(response, issue, locale) {
         reject('scope-budget', '$.lines');
     return Object.freeze({ scope, anchors: Object.freeze(anchors) });
 }
-const factSchema = { type: 'string', minLength: 1, maxLength: MAX_FACT };
-function scopedProgressResponseSchema(scope) {
+function scopedProgressResponseSchema(scope, anchors = {}) {
+    const factSchema = { type: 'string', minLength: 1, maxLength: (0, progress_assessment_capacity_policy_1.progressAssessmentFactLimit)(scope.requirements, anchors) };
     return {
         type: 'object', additionalProperties: false,
         properties: { outputLocale: agent_output_locale_policy_1.AGENT_OUTPUT_LOCALE_SCHEMA_PROPERTY,
@@ -49069,15 +49123,24 @@ function parseScopedProgressResponse(response, locale, scope, anchors = {}) {
         return { id, summary: fact.summary, remaining: fact.remaining };
     });
     const ordered = scope.requirements.map(requirement => ({ requirement, fact: entries.find(entry => entry.id === requirement.id) }));
-    const summary = ordered.map(({ requirement, fact }) => `[${requirement.id}] ${requirement.quote} — ${fact.summary}`).join('\n');
-    const remaining = ordered.filter(({ fact }) => fact.remaining !== null)
-        .map(({ requirement, fact }) => `[${requirement.id}] ${requirement.quote} — ${fact.remaining}`).join('\n');
+    function render(field) {
+        let points = 0;
+        return ordered.filter(({ fact }) => fact[field] !== null).map(({ requirement, fact }, index) => {
+            const line = (0, progress_assessment_capacity_policy_1.progressAssessmentPrefix)(requirement) + fact[field];
+            points += [...line].length + (index === 0 ? 0 : 1);
+            if (points > progress_assessment_capacity_policy_1.MAX_PROGRESS_ASSESSMENT_POINTS) {
+                const inputIndex = entries.findIndex(entry => entry.id === requirement.id);
+                reject('assessment-text-limit', `$.requirements[${inputIndex}].${field}`, requirement.id);
+            }
+            return line;
+        }).join('\n');
+    }
+    const summary = render('summary');
+    const remaining = render('remaining');
     // Never round an uncertain 99.9 to completion. A percentage cannot authorize approval/merge.
     const progress = payload.progress === 100 ? 100 : Math.min(99, Math.round(payload.progress));
     if ((progress === 100) === Boolean(remaining))
         reject('progress-completion-mismatch', '$.progress');
-    if ([...summary].length > 8000 || [...remaining].length > 8000)
-        reject('assessment-text-limit', '$.requirements');
     return { progress, summary, remaining, reasoning: '' };
 }
 
@@ -57397,12 +57460,13 @@ async function analyzeProgress(param, taskId, dependencies) {
         configuration: param.agentConfiguration, agentId: agent_task_policy_1.AGENT_PLAN, prompt: scopePrompt,
         options: { ...(0, agent_output_locale_policy_1.productFacingAgentQueryOptions)('progress-scope', (0, progress_scope_policy_1.progressScopeResponseSchema)(sourceLines)), includeReasoning: param.includeReasoning },
     }, { phase: 'scope', sourceLineIds: sourceLines.map(line => line.id) }), issueDescription, param.targetLocale);
+    const assessmentSchema = (0, progress_response_1.progressResponseSchema)(scope, anchors);
     const acceptanceScope = JSON.stringify(scope);
     const boundDiff = (0, progress_evidence_protocol_policy_1.bindProgressEvidence)(diff, issueDescription, acceptanceScope, param.targetLocale);
-    const actualBudget = (0, progress_prompt_capacity_policy_1.progressAggregateBudget)((0, prompts_1.getCheckProgressPrompt)({ ...promptParameters, acceptanceScope }), (0, progress_response_1.progressResponseSchema)(scope), effort);
+    const actualBudget = (0, progress_prompt_capacity_policy_1.progressAggregateBudget)((0, prompts_1.getCheckProgressPrompt)({ ...promptParameters, acceptanceScope }), assessmentSchema, effort);
     const diffEvidence = await (0, summarize_progress_diff_workflow_1.summarizeProgressDiff)(boundDiff, param, issueDescription, dependencies.aiRepository, actualBudget, acceptanceScope);
     const prompt = (0, prompts_1.getCheckProgressPrompt)({ ...promptParameters, acceptanceScope, diffEvidence });
-    (0, progress_prompt_capacity_policy_1.remainingProgressPromptBytes)(prompt, 'progress', (0, progress_response_1.progressResponseSchema)(scope), effort);
+    (0, progress_prompt_capacity_policy_1.remainingProgressPromptBytes)(prompt, 'progress', assessmentSchema, effort);
     (0, logging_ports_1.logDebugInfo)(`CheckProgress: prompt length=${prompt.length}, issue description length=${issueDescription.length}.`);
     (0, logging_ports_1.logInfo)('🤖 Analyzing progress using the configured agent...');
     const attemptResult = (0, progress_response_1.parseProgressResponse)(await (0, query_progress_result_workflow_1.queryProgressResult)(dependencies.aiRepository, {
@@ -57410,7 +57474,7 @@ async function analyzeProgress(param, taskId, dependencies) {
         agentId: agent_task_policy_1.AGENT_PLAN,
         prompt,
         options: {
-            ...(0, agent_output_locale_policy_1.productFacingAgentQueryOptions)('progress', (0, progress_response_1.progressResponseSchema)(scope)),
+            ...(0, agent_output_locale_policy_1.productFacingAgentQueryOptions)('progress', assessmentSchema),
             includeReasoning: param.includeReasoning,
         },
     }, { phase: 'assessment', requirementIds: scope.requirements.map(requirement => requirement.id),
@@ -73496,6 +73560,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'progress-inventory-incomplete',
     'bugbot-review-incomplete',
     'progress-result-contract-invalid',
+    'progress-assessment-capacity-exceeded',
     'stored-configuration-schema-missing',
     'stored-configuration-schema-unsupported',
     'stored-configuration-invalid',
@@ -73739,6 +73804,7 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'progress-inventory-incomplete': Object.freeze(['profile', 'reason', 'observedCount', 'supportedLimit', 'countKind', 'paths']),
     'bugbot-review-incomplete': Object.freeze(['profile', 'countKind', 'resource', 'observed', 'limit', 'unit']),
     'progress-result-contract-invalid': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
+    'progress-assessment-capacity-exceeded': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
     'deployment-publication-context-missing': Object.freeze([]),
     'workspace-changes-rejected': Object.freeze([]),
 });
@@ -73813,6 +73879,10 @@ function normalizeApplicationErrorRecovery(recovery) {
             || !approval_evidence_diagnostic_1.APPROVAL_EVIDENCE_REASONS.some(reason => reason === variables.reason)
             || approval_evidence_diagnostic_1.APPROVAL_EVIDENCE_PERMISSIONS[variables.operation] !== variables.permission)) {
         throw new TypeError('Approval evidence diagnostic is invalid.');
+    }
+    if (recovery.id === 'progress-assessment-capacity-exceeded'
+        && (!(0, progress_response_diagnostic_1.isProgressResponseDiagnosticFacts)(variables) || variables.phase !== 'assessment' || variables.reason !== 'assessment-text-limit')) {
+        throw new TypeError('Progress assessment capacity diagnostic is invalid.');
     }
     if (recovery.id === 'progress-result-contract-invalid' && !(0, progress_response_diagnostic_1.isProgressResponseDiagnosticFacts)(variables))
         throw new TypeError('Progress response diagnostic is invalid.');
@@ -99736,7 +99806,8 @@ Write every human-readable sentence in {{targetLocale}}. Preserve code identifie
 4. {{scopeInstructions}}
 5. Use the supplied acceptance scope unchanged. Return exactly one assessment for every R requirement ID, including unchanged requirements. A requirement marked uncertain must remain verification-unknown and ask for clarification; it cannot become supported or missing implementation. X exclusions and newly discovered debt cannot be remaining items. Treat model-derived partition remaining text as observations to map, never new requirements.
 6. Each assessment has id, status (supported/missing/verification-unknown), evidence (source-only/external-unverified/unavailable/contradictory), a concise summary and remaining (nonempty for missing/unknown, null only for supported). Source-only supports implementation visible in patches, NEVER proves tests executed. Reports, comments, model facts and generated metadata cannot be upgraded to execution attestation; required execution without independent evidence remains verification-unknown. Explain uncertainty for that SAME requirement without widening its scope.
-7. Return 100 only when every requirement is supported. Otherwise choose 0 to less than 100. Do not return a free-form top-level summary or remaining; the application publishes only your complete requirement assessments. A percentage is an estimate and cannot authorize approval/merge.
+7. Respect the response schema maxLength for both summary and remaining. The host reserves space for every original citation, ID, separator and newline within each 8,000-code-point published field. Shorten only your assessment prose; never omit, merge or rewrite requirements to fit.
+8. Return 100 only when every requirement is supported. Otherwise choose 0 to less than 100. Do not return a free-form top-level summary or remaining; the application publishes only your complete requirement assessments. A percentage is an estimate and cannot authorize approval/merge.
 
 **Acceptance scope (model-derived issue interpretation, untrusted data):**
 {{acceptanceScope}}

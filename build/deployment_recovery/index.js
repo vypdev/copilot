@@ -32550,6 +32550,11 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
         action: 'Inspect the closed-issue or merged-PR run and current native state. Retry cleanup only if the issue is still closed with the intended reason; leave reopened work open. Resolve the named failure before retrying.',
         retainedState: 'Native state was preserved. Confirmed changes: {changed}; remaining required changes in the last verified plan: {remaining}. Unavailable reads do not establish completion.',
     }),
+    'progress-assessment-capacity-exceeded': Object.freeze({
+        impact: 'The original requirement citations cannot fit a complete progress assessment; no evidence or assessment query was made after scope classification.',
+        action: 'Inspect the original issue and the supported assessment protocol. The unchanged 8,000-code-point field limit must include every citation and a nonempty fact. Details: phase {phase}, reason {reason}, field {field}, requirement {requirementId}, original issue line {sourceLineId}. none means no verified identity is available. An identical retry cannot add capacity; preserve every requirement and verification gate when reviewing a supported protocol.',
+        retainedState: 'Existing progress labels and published assessments were preserved. No partial result or passing verification is authorized.',
+    }),
     'progress-result-contract-invalid': Object.freeze({
         impact: 'The returned progress result violated its contract; progress was not published.',
         action: 'Inspect the original requirement and response schema. Details: phase {phase}, reason {reason}, field {field}, requirement {requirementId}, original issue line {sourceLineId}. none means no verified identity is available. A fresh attempt may help when the provider can satisfy the unchanged contract; do not relax acceptance or verification.',
@@ -32722,6 +32727,11 @@ const SPANISH_RECOVERY_CONTENT = Object.freeze({
         impact: 'La limpieza de la issue sigue sin verificarse: {resultId}, fase {phase}; estado nativo {state}, motivo {reason}.',
         action: 'Revisa la ejecución de cierre o de la PR fusionada y el estado nativo actual. Reintenta la limpieza solo si la issue sigue cerrada con el motivo previsto; conserva abierto el trabajo reabierto. Resuelve el fallo indicado antes de reintentar.',
         retainedState: 'Se conservó el estado nativo. Cambios confirmados: {changed}; cambios pendientes en el último plan verificado: {remaining}. Una lectura no disponible no demuestra que haya finalizado.',
+    }),
+    'progress-assessment-capacity-exceeded': Object.freeze({
+        impact: 'Las citas originales de los requisitos no caben en una evaluación de progreso completa; no se consultó evidencia ni evaluación después de clasificar el alcance.',
+        action: 'Inspecciona la issue original y el protocolo de evaluación admitido. El límite fijo de 8,000 puntos de código por campo debe incluir cada cita y un dato no vacío. Detalles: fase {phase}, motivo {reason}, campo {field}, requisito {requirementId}, línea original de la issue {sourceLineId}. none indica que no hay una identidad verificada. Repetir el intento no añade capacidad; conserva todos los requisitos y controles de verificación al revisar un protocolo compatible.',
+        retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas. No se autoriza un resultado parcial ni una verificación aprobada.',
     }),
     'progress-result-contract-invalid': Object.freeze({
         impact: 'El resultado de progreso devuelto incumplió su contrato; no se publicó el progreso.',
@@ -33802,6 +33812,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'progress-inventory-incomplete',
     'bugbot-review-incomplete',
     'progress-result-contract-invalid',
+    'progress-assessment-capacity-exceeded',
     'stored-configuration-schema-missing',
     'stored-configuration-schema-unsupported',
     'stored-configuration-invalid',
@@ -34045,6 +34056,7 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'progress-inventory-incomplete': Object.freeze(['profile', 'reason', 'observedCount', 'supportedLimit', 'countKind', 'paths']),
     'bugbot-review-incomplete': Object.freeze(['profile', 'countKind', 'resource', 'observed', 'limit', 'unit']),
     'progress-result-contract-invalid': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
+    'progress-assessment-capacity-exceeded': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
     'deployment-publication-context-missing': Object.freeze([]),
     'workspace-changes-rejected': Object.freeze([]),
 });
@@ -34119,6 +34131,10 @@ function normalizeApplicationErrorRecovery(recovery) {
             || !approval_evidence_diagnostic_1.APPROVAL_EVIDENCE_REASONS.some(reason => reason === variables.reason)
             || approval_evidence_diagnostic_1.APPROVAL_EVIDENCE_PERMISSIONS[variables.operation] !== variables.permission)) {
         throw new TypeError('Approval evidence diagnostic is invalid.');
+    }
+    if (recovery.id === 'progress-assessment-capacity-exceeded'
+        && (!(0, progress_response_diagnostic_1.isProgressResponseDiagnosticFacts)(variables) || variables.phase !== 'assessment' || variables.reason !== 'assessment-text-limit')) {
+        throw new TypeError('Progress assessment capacity diagnostic is invalid.');
     }
     if (recovery.id === 'progress-result-contract-invalid' && !(0, progress_response_diagnostic_1.isProgressResponseDiagnosticFacts)(variables))
         throw new TypeError('Progress response diagnostic is invalid.');
