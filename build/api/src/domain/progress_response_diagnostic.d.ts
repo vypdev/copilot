@@ -24,3 +24,11 @@ export declare class ProgressResponseContractFailure extends Error {
     readonly facts: ProgressResponseDiagnosticFacts;
     constructor(facts: ProgressResponseDiagnosticFacts);
 }
+/** Exact counts after complete host-validated source classification; never raw model prose. */
+export type ProgressScopeCapacityFacts = Readonly<{
+    clauseKind: 'required-or-uncertain' | 'excluded';
+    observed: number;
+    limit: 32;
+    sourceLineId: string;
+}>;
+export declare function isProgressScopeCapacityFacts(value: unknown): value is ProgressScopeCapacityFacts;

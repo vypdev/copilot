@@ -2098,8 +2098,12 @@ construction remains in `src/prompts`. `check_progress_workflow` owns final
 issue-body freshness alongside existing Git/native gates and publication. Full
 Jest architecture/dependency checks and type checking enforce these boundaries.
 
-Scope extraction receives the complete nonempty source-line inventory as untrusted
-JSON, with immutable physical-line IDs and full trimmed line text. No patches,
+Scope extraction receives the complete human-owned nonempty source-line inventory as untrusted
+JSON, with immutable physical-line IDs and full trimmed line text. The
+[operational source-ownership amendment](./progress-scope-source-ownership.md)
+accounts for recognized persisted configuration separately, after applying the
+original guards to the full body. Every other source line remains mandatory;
+complete original-body freshness and all scope/output bounds remain unchanged. No patches,
 model summaries, generic field clipping or workspace access participate. The
 native strict schema enumerates exact source IDs and requires one result for
 EVERY source line. Runtime validation rejects missing/extra/unknown/duplicate
