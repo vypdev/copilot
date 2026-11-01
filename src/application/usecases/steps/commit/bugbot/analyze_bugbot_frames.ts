@@ -3,7 +3,8 @@ import type { BugbotContext } from './types';
 import type { BugbotReviewOperationContext } from './bugbot_review_operation_context';
 import type { BugbotReviewTelemetry } from './bugbot_review_telemetry';
 import { buildBugbotReviewInput } from './build_bugbot_prompt';
-import { queryBugbotPartitionFindings } from './query_bugbot_findings';
+import { bugbotFramedPromptBytes } from '../../../../policies/bugbot_framed_prompt_policy';
+import { buildBugbotPartitionQueryRequest, queryBugbotPartitionFindings } from './query_bugbot_findings';
 import { aggregateBugbotPartitionResponses } from './bugbot_partition_aggregation';
 import { runWithConcurrencyLimit } from '../../../../policies/bounded_concurrency_policy';
 import { bugbotReviewDigest, validateBugbotFramedReviewPlan, type BugbotFramedReviewPlan } from '../../../../policies/bugbot_framed_review_policy';
@@ -26,7 +27,8 @@ export async function analyzeBugbotFrames(operation: BugbotReviewOperationContex
     let promptBytes = 0;
     const inputs = plan.partitions.map(partition => {
         const input = buildBugbotReviewInput(operation, context, { partition });
-        const size = Buffer.byteLength(input.prompt);
+        const size = bugbotFramedPromptBytes(buildBugbotPartitionQueryRequest(operation.analysis.agentConfiguration, input.prompt,
+            { partitionId: partition.id, headSha: partition.headSha, framed: partition.framed }));
         enforceBugbotFramedBudget('promptBytes', size);
         promptBytes += size; enforceBugbotFramedBudget('promptTotalBytes', promptBytes);
         return input;
@@ -35,12 +37,18 @@ export async function analyzeBugbotFrames(operation: BugbotReviewOperationContex
     const targetLocale = operation.locale.pullRequest;
     const all: Readonly<Record<string, unknown>>[] = [];
     let retainedBytes = 0, findingCount = 0, consumedPromptBytes = 0;
-    const observePrompt = (prompt: string) => {
-        enforceBugbotFramedBudget('promptBytes', Buffer.byteLength(prompt));
-        consumedPromptBytes += Buffer.byteLength(prompt);
+    // Intercept actual requests so retries and generated-source verification use the same exact ledger.
+    const boundedAgent: FindingsQueryPort = { query: async request => {
+        const size = bugbotFramedPromptBytes(request);
+        enforceBugbotFramedBudget('promptBytes', size);
+        consumedPromptBytes += size;
         enforceBugbotFramedBudget('promptTotalBytes', consumedPromptBytes);
-        dependencies.telemetry.observePrompt(prompt);
-    };
+        dependencies.telemetry.observeFramedPrompt(request.prompt, size);
+        const response = await dependencies.agent.query(request);
+        enforceBugbotFramedBudget('responseBytes', Buffer.byteLength(JSON.stringify(response) ?? ''));
+        dependencies.telemetry.observeResponse(response);
+        return response;
+    } };
     for (const frame of plan.frames) {
         if (bugbotFramedContextDigest(operation, context) !== plan.contextDigest
             || !(await dependencies.isSourceCurrent())) throw new BugbotReviewCompletenessError('identity');
@@ -49,12 +57,11 @@ export async function analyzeBugbotFrames(operation: BugbotReviewOperationContex
         if (bugbotReviewDigest(assigned.map(x => x.id)) !== bugbotReviewDigest(frame.partitionIds)) throw new BugbotReviewCompletenessError('coverage');
         const responses = await runWithConcurrencyLimit(assigned.map(partition => async () => {
             const input = inputs[partition.ordinal - 1];
-            observePrompt(input.prompt);
             dependencies.telemetry.beginPartition();
             try {
-                const response = await queryBugbotPartitionFindings(dependencies.agent, operation.analysis.agentConfiguration,
+                const response = await queryBugbotPartitionFindings(boundedAgent, operation.analysis.agentConfiguration,
                     input.prompt, targetLocale, { partitionId: partition.id, headSha: partition.headSha, framed: partition.framed },
-                    { enabled: input.hasLiteralWitnesses, observePrompt, observeResponse: value => { enforceBugbotFramedBudget('responseBytes', Buffer.byteLength(JSON.stringify(value) ?? '')); dependencies.telemetry.observeResponse(value); } });
+                    { enabled: input.hasLiteralWitnesses });
                 const serialized = JSON.stringify(response);
                 enforceBugbotFramedBudget('responseBytes', Buffer.byteLength(serialized));
                 const admitted: Readonly<Record<string, unknown>> = JSON.parse(serialized);

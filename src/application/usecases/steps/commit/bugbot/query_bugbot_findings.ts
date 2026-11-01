@@ -1,7 +1,7 @@
 import { BugbotReviewCompletenessError, type BugbotFramedAssignment } from '../../../../../domain/bugbot/framed_review';
 import { matchesBugbotFramedReceipt } from '../../../../policies/bugbot_framed_receipt_policy';
 import type { AgentConfiguration } from '../../../../../domain/agent';
-import type { FindingsQueryPort } from '../../../../ports/agent_findings_ports';
+import type { FindingsQueryRequest, FindingsQueryPort } from '../../../../ports/agent_findings_ports';
 import { AGENT_PLAN } from '../../../../../application/policies/agent_task_policy';
 import { buildBugbotPartitionResponseSchema, BUGBOT_RESPONSE_SCHEMA } from './schema';
 import {
@@ -58,6 +58,13 @@ export interface BugbotPartitionAttestation {
     readonly headSha: string;
 }
 
+/** Shared by whole-plan preflight and the actual identical partition queries. */
+export function buildBugbotPartitionQueryRequest(configuration: Readonly<AgentConfiguration>, prompt: string,
+    expected: BugbotPartitionAttestation): FindingsQueryRequest {
+    return { configuration, agentId: AGENT_PLAN, prompt,
+        options: bugbotQueryOptions(buildBugbotPartitionResponseSchema(expected)) };
+}
+
 /** Queries one immutable diff partition and rejects stale, replayed, or malformed attestations. */
 export async function queryBugbotPartitionFindings(
     repository: FindingsQueryPort,
@@ -67,16 +74,10 @@ export async function queryBugbotPartitionFindings(
     expected: BugbotPartitionAttestation,
     verification?: BugbotLiteralVerificationOptions,
 ): Promise<Readonly<Record<string, unknown>>> {
-    const schema = buildBugbotPartitionResponseSchema(expected);
     for (let attempt = 1; attempt <= MAX_PARTITION_QUERY_ATTEMPTS; attempt += 1) {
         try {
             if (attempt > 1) verification?.observePrompt?.(prompt);
-            const response = await repository.query({
-                configuration,
-                agentId: AGENT_PLAN,
-                prompt,
-                options: bugbotQueryOptions(schema),
-            });
+            const response = await repository.query(buildBugbotPartitionQueryRequest(configuration, prompt, expected));
             verification?.observeResponse?.(response);
             const validation = validateAgentOutputLocale(response, targetLocale);
             if (validation.kind === 'invalid') {

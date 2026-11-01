@@ -68,7 +68,11 @@ export class BugbotReviewTelemetry {
 
     observePrompt(prompt: string): void {
         this.promptCharacters += prompt.length;
-        this.promptBytes += Buffer.byteLength(prompt);
+    }
+
+    observeFramedPrompt(prompt: string, finalBytes: number): void {
+        this.observePrompt(prompt);
+        this.promptBytes += finalBytes;
     }
 
     observeResponse(response: unknown): void {

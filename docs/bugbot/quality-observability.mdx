@@ -448,7 +448,7 @@ This regression adds no JVM/Ktor requirement to mandatory Node CI.
 
 A framed review adds content-free `framedReview` telemetry: the closed profile,
 planned/completed frame counts, manifest digest, raw/rendered UTF-16 units,
-measured prompt/response UTF-8 bytes, and verified source counts (Git reads,
+measured final native prompt (security/schema/effort included) and response UTF-8 bytes, and verified source counts (Git reads,
 unique blobs/bytes, recovered patches/bytes). Existing partition progress and
 maximum concurrency remain available. A completed frame never means a complete
 PR review. Failed work does not publish intermediate findings or resolutions.

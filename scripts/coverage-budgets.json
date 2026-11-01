@@ -1324,7 +1324,8 @@
             "src/application/policies/bugbot_framed_snapshot_policy.ts",
             "src/application/policies/bugbot_patch_binding_policy.ts",
             "src/application/policies/bugbot_review_diagnostic_labels.ts",
-            "src/application/usecases/steps/commit/bugbot/analyze_bugbot_frames.ts"
+            "src/application/usecases/steps/commit/bugbot/analyze_bugbot_frames.ts",
+            "src/application/policies/bugbot_framed_prompt_policy.ts"
           ],
           "mode": "each",
           "thresholdProfile": "exhaustive"

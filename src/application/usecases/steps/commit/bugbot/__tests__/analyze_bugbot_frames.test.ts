@@ -278,3 +278,48 @@ it('requires the live identity read capability at every framed freshness fence',
     const f = setup();
     await expect(hasNewerBugbotRevision(f.context, {} as any)).rejects.toMatchObject({ facts: { resource: 'capability' } });
 });
+
+it.each([false, true])('preflights the exact final native prompt boundary, overflow=%s', async overflow => {
+    const { bugbotFramedPromptBytes } = await import('../../../../../policies/bugbot_framed_prompt_policy');
+    const { buildBugbotPartitionQueryRequest } = await import('../query_bugbot_findings');
+    const { buildBugbotReviewInput } = await import('../build_bugbot_prompt');
+    const f = setup(); f.context.reviewRulesBlock = 'x';
+    const size = (plan: BugbotFramedReviewPlan) => {
+        const p = plan.partitions[0], input = buildBugbotReviewInput(f.operation, f.context, { partition: p });
+        return bugbotFramedPromptBytes(buildBugbotPartitionQueryRequest(f.operation.analysis.agentConfiguration, input.prompt,
+            { partitionId: p.id, headSha: p.headSha, framed: p.framed }));
+    };
+    const original = size(f.plan); f.context.reviewRulesBlock += 'x'.repeat(524288 - original + Number(overflow));
+    const plan = buildBugbotFramedReviewPlan(f.source, bugbotFramedContextDigest(f.operation, f.context), FRAME_NONCE, []);
+    expect(size(plan)).toBe(524288 + Number(overflow));
+    const query = jest.fn(async (request: FindingsQueryRequest) => reply(request));
+    if (overflow) { await expect(run(f, query, undefined, plan)).rejects.toMatchObject({ facts: { resource: 'promptBytes', observed: 524289 } }); expect(query).not.toHaveBeenCalled(); }
+    else { await expect(run(f, query, undefined, plan)).resolves.toBeDefined(); expect(query).toHaveBeenCalledTimes(1); }
+});
+it('detects final native envelope overflow in a later assignment before the first model query', async () => {
+    const { bugbotFramedPromptBytes } = await import('../../../../../policies/bugbot_framed_prompt_policy');
+    const { buildBugbotPartitionQueryRequest } = await import('../query_bugbot_findings');
+    const { buildBugbotReviewInput } = await import('../build_bugbot_prompt');
+    const f = setup(framedSource([framedChange({ filename: 'one.ts', patch: 'x'.repeat(48000) }), framedChange({ filename: Array(5).fill('directory-' + 'x'.repeat(160)).join('/') + '/two.ts', patch: 'x'.repeat(48000) })]));
+    f.context.reviewRulesBlock = 'x';
+    const bytes = (plan: BugbotFramedReviewPlan) => plan.partitions.map(p => bugbotFramedPromptBytes(buildBugbotPartitionQueryRequest(f.operation.analysis.agentConfiguration,
+        buildBugbotReviewInput(f.operation, f.context, { partition: p }).prompt, { partitionId: p.id, headSha: p.headSha, framed: p.framed })));
+    const initial = bytes(f.plan); expect(initial).toHaveLength(2); expect(initial[1]).toBeGreaterThan(initial[0] + 100);
+    f.context.reviewRulesBlock += 'x'.repeat(524288 - initial[0] - 100);
+    const plan = buildBugbotFramedReviewPlan(f.source, bugbotFramedContextDigest(f.operation, f.context), FRAME_NONCE, []);
+    expect(bytes(plan)[0]).toBeLessThan(524288); expect(bytes(plan)[1]).toBeGreaterThan(524288);
+    const query = jest.fn(async (request: FindingsQueryRequest) => reply(request));
+    await expect(run(f, query, undefined, plan)).rejects.toMatchObject({ facts: { resource: 'promptBytes' } });
+    expect(query).not.toHaveBeenCalled();
+});
+
+it('reconstructs an identical retry request even when a query port mutates its received request object', async () => {
+    const f = setup(), observed: string[] = [];
+    const query = jest.fn(async (request: FindingsQueryRequest) => {
+        observed.push(request.prompt);
+        if (observed.length === 1) { request.prompt = 'foreign task'; return reply(request, { partition_id: 'foreign' }); }
+        return reply(request);
+    });
+    await run(f, query);
+    expect(query).toHaveBeenCalledTimes(2); expect(observed[0]).toBe(observed[1]);
+});

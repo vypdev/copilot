@@ -41375,6 +41375,23 @@ function bugbotFramedSourceMatchesPullRequest(source, pr) {
 
 /***/ }),
 
+/***/ 76145:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.bugbotFramedPromptBytes = bugbotFramedPromptBytes;
+const agent_prompt_envelope_policy_1 = __nccwpck_require__(82923);
+/** Exact native findings envelope, including schema, security framing and effort suffix. */
+function bugbotFramedPromptBytes(request) {
+    const options = request.options ?? {};
+    return Buffer.byteLength((0, agent_prompt_envelope_policy_1.applyAgentEffortInstruction)((0, agent_prompt_envelope_policy_1.buildAgentPrompt)(request.prompt, options.expectJson ?? false, options.schema, options.schemaName ?? 'response'), request.configuration?.effort));
+}
+
+
+/***/ }),
+
 /***/ 54411:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -68180,6 +68197,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.bugbotFramedContextDigest = bugbotFramedContextDigest;
 exports.analyzeBugbotFrames = analyzeBugbotFrames;
 const build_bugbot_prompt_1 = __nccwpck_require__(52483);
+const bugbot_framed_prompt_policy_1 = __nccwpck_require__(76145);
 const query_bugbot_findings_1 = __nccwpck_require__(13059);
 const bugbot_partition_aggregation_1 = __nccwpck_require__(84575);
 const bounded_concurrency_policy_1 = __nccwpck_require__(35596);
@@ -68197,7 +68215,7 @@ async function analyzeBugbotFrames(operation, context, plan, dependencies) {
     let promptBytes = 0;
     const inputs = plan.partitions.map(partition => {
         const input = (0, build_bugbot_prompt_1.buildBugbotReviewInput)(operation, context, { partition });
-        const size = Buffer.byteLength(input.prompt);
+        const size = (0, bugbot_framed_prompt_policy_1.bugbotFramedPromptBytes)((0, query_bugbot_findings_1.buildBugbotPartitionQueryRequest)(operation.analysis.agentConfiguration, input.prompt, { partitionId: partition.id, headSha: partition.headSha, framed: partition.framed }));
         (0, framed_review_1.enforceBugbotFramedBudget)('promptBytes', size);
         promptBytes += size;
         (0, framed_review_1.enforceBugbotFramedBudget)('promptTotalBytes', promptBytes);
@@ -68207,12 +68225,18 @@ async function analyzeBugbotFrames(operation, context, plan, dependencies) {
     const targetLocale = operation.locale.pullRequest;
     const all = [];
     let retainedBytes = 0, findingCount = 0, consumedPromptBytes = 0;
-    const observePrompt = (prompt) => {
-        (0, framed_review_1.enforceBugbotFramedBudget)('promptBytes', Buffer.byteLength(prompt));
-        consumedPromptBytes += Buffer.byteLength(prompt);
-        (0, framed_review_1.enforceBugbotFramedBudget)('promptTotalBytes', consumedPromptBytes);
-        dependencies.telemetry.observePrompt(prompt);
-    };
+    // Intercept actual requests so retries and generated-source verification use the same exact ledger.
+    const boundedAgent = { query: async (request) => {
+            const size = (0, bugbot_framed_prompt_policy_1.bugbotFramedPromptBytes)(request);
+            (0, framed_review_1.enforceBugbotFramedBudget)('promptBytes', size);
+            consumedPromptBytes += size;
+            (0, framed_review_1.enforceBugbotFramedBudget)('promptTotalBytes', consumedPromptBytes);
+            dependencies.telemetry.observeFramedPrompt(request.prompt, size);
+            const response = await dependencies.agent.query(request);
+            (0, framed_review_1.enforceBugbotFramedBudget)('responseBytes', Buffer.byteLength(JSON.stringify(response) ?? ''));
+            dependencies.telemetry.observeResponse(response);
+            return response;
+        } };
     for (const frame of plan.frames) {
         if (bugbotFramedContextDigest(operation, context) !== plan.contextDigest
             || !(await dependencies.isSourceCurrent()))
@@ -68223,10 +68247,9 @@ async function analyzeBugbotFrames(operation, context, plan, dependencies) {
             throw new framed_review_1.BugbotReviewCompletenessError('coverage');
         const responses = await (0, bounded_concurrency_policy_1.runWithConcurrencyLimit)(assigned.map(partition => async () => {
             const input = inputs[partition.ordinal - 1];
-            observePrompt(input.prompt);
             dependencies.telemetry.beginPartition();
             try {
-                const response = await (0, query_bugbot_findings_1.queryBugbotPartitionFindings)(dependencies.agent, operation.analysis.agentConfiguration, input.prompt, targetLocale, { partitionId: partition.id, headSha: partition.headSha, framed: partition.framed }, { enabled: input.hasLiteralWitnesses, observePrompt, observeResponse: value => { (0, framed_review_1.enforceBugbotFramedBudget)('responseBytes', Buffer.byteLength(JSON.stringify(value) ?? '')); dependencies.telemetry.observeResponse(value); } });
+                const response = await (0, query_bugbot_findings_1.queryBugbotPartitionFindings)(boundedAgent, operation.analysis.agentConfiguration, input.prompt, targetLocale, { partitionId: partition.id, headSha: partition.headSha, framed: partition.framed }, { enabled: input.hasLiteralWitnesses });
                 const serialized = JSON.stringify(response);
                 (0, framed_review_1.enforceBugbotFramedBudget)('responseBytes', Buffer.byteLength(serialized));
                 const admitted = JSON.parse(serialized);
@@ -69364,7 +69387,10 @@ class BugbotReviewTelemetry {
     }
     observePrompt(prompt) {
         this.promptCharacters += prompt.length;
-        this.promptBytes += Buffer.byteLength(prompt);
+    }
+    observeFramedPrompt(prompt, finalBytes) {
+        this.observePrompt(prompt);
+        this.promptBytes += finalBytes;
     }
     observeResponse(response) {
         const serialized = safeSerializedText(response);
@@ -71423,6 +71449,7 @@ function sanitizeSummaryText(value, maximum) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.queryBugbotFindings = queryBugbotFindings;
+exports.buildBugbotPartitionQueryRequest = buildBugbotPartitionQueryRequest;
 exports.queryBugbotPartitionFindings = queryBugbotPartitionFindings;
 const framed_review_1 = __nccwpck_require__(43750);
 const bugbot_framed_receipt_policy_1 = __nccwpck_require__(54411);
@@ -71455,19 +71482,18 @@ async function queryBugbotFindings(repository, configuration, prompt, targetLoca
         ? (0, verify_generated_literal_findings_1.verifyGeneratedLiteralFindings)(repository, configuration, prompt, validation.payload, targetLocale, verification.observePrompt, verification.observeResponse)
         : validation.payload;
 }
+/** Shared by whole-plan preflight and the actual identical partition queries. */
+function buildBugbotPartitionQueryRequest(configuration, prompt, expected) {
+    return { configuration, agentId: agent_task_policy_1.AGENT_PLAN, prompt,
+        options: bugbotQueryOptions((0, schema_1.buildBugbotPartitionResponseSchema)(expected)) };
+}
 /** Queries one immutable diff partition and rejects stale, replayed, or malformed attestations. */
 async function queryBugbotPartitionFindings(repository, configuration, prompt, targetLocale, expected, verification) {
-    const schema = (0, schema_1.buildBugbotPartitionResponseSchema)(expected);
     for (let attempt = 1; attempt <= MAX_PARTITION_QUERY_ATTEMPTS; attempt += 1) {
         try {
             if (attempt > 1)
                 verification?.observePrompt?.(prompt);
-            const response = await repository.query({
-                configuration,
-                agentId: agent_task_policy_1.AGENT_PLAN,
-                prompt,
-                options: bugbotQueryOptions(schema),
-            });
+            const response = await repository.query(buildBugbotPartitionQueryRequest(configuration, prompt, expected));
             verification?.observeResponse?.(response);
             const validation = (0, agent_output_locale_policy_1.validateAgentOutputLocale)(response, targetLocale);
             if (validation.kind === 'invalid') {

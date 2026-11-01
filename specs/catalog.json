@@ -2175,7 +2175,8 @@
         "src/application/ports/bugbot_review_source_ports.ts",
         "src/application/ports/bugbot_telemetry_ports.ts",
         "src/infrastructure/filesystem/bugbot_git_review_source_adapter.ts",
-        "src/application/usecases/steps/commit/bugbot/analyze_bugbot_frames.ts"
+        "src/application/usecases/steps/commit/bugbot/analyze_bugbot_frames.ts",
+        "src/application/policies/bugbot_framed_prompt_policy.ts"
       ],
       "tests": [
         "src/application/usecases/steps/commit/__tests__/bugbot_review_lifecycle.e2e.test.ts",
@@ -2258,7 +2259,8 @@
         "src/infrastructure/filesystem/__tests__/bugbot_git_review_source_adapter.test.ts",
         "src/data/repository/__tests__/bugbot_source_bound_identity_repository.test.ts",
         "src/application/usecases/steps/commit/__tests__/bugbot_framed_complete_review.integration.test.ts",
-        "src/application/policies/__tests__/bugbot_framed_snapshot_policy.test.ts"
+        "src/application/policies/__tests__/bugbot_framed_snapshot_policy.test.ts",
+        "src/application/policies/__tests__/bugbot_framed_prompt_policy.test.ts"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",
