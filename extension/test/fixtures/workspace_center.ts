@@ -1,5 +1,5 @@
 import { flushSync } from 'svelte';
-import { button, change, ready, render } from './center_app_dom.ts';
+import { button, change, ready, render, save } from './center_app_dom.ts';
 import { centerClientFixture } from './center_client.ts';
 import { CONNECTION_INPUT, namedSessionsFixture } from './named_sessions.ts';
 import { workspaceCopy } from '../../src/domain/workspace_copy.ts';
@@ -14,8 +14,5 @@ export async function workspaceCenter(locale: 'en' | 'es' | 'fr' | 'pt' = 'en', 
         button(copy.create).click(); flushSync(); change('workspace-id', id); change('workspace-name', name);
         if (include) { await ready(() => !!document.querySelector('#workspace-member-session-1'), 'saved entry choice'); (document.querySelector('#workspace-member-session-1') as HTMLInputElement).click(); flushSync(); }
     }, preview: async () => { button(copy.review).click(); await ready(() => !!document.querySelector('#settings-review-heading'), 'workspace preview'); },
-    confirm: async () => {
-        button(review.confirm).click(); await ready(() => document.querySelector('#settings-review-heading + p')?.textContent === review.states.saved, 'canonical saved review');
-        button(review.dismiss).click(); await ready(() => !document.querySelector('#settings-review-heading'));
-    }, state: async () => (await app.native.repository.read()).settings };
+    confirm: save, state: async () => (await app.native.repository.read()).settings };
 }

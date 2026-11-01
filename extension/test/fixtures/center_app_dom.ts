@@ -6,8 +6,12 @@ import { browserFixture } from './browser.ts';
 import { centerClientFixture } from './center_client.ts';
 import { CENTER_BINDING } from './center.ts';
 import { semanticCenterChannel } from './semantic_center_channel.ts';
+import { centerCopy } from '../../src/domain/center_copy.ts';
+import { reviewCopy } from '../../src/domain/review_copy.ts';
 
 const stops: (() => void)[] = [];
+const currentCopy = () => centerCopy('auto', document.documentElement.lang);
+const routeContentReady = () => ![...document.querySelectorAll('main > p[role=status]')].some(node => node.textContent === currentCopy().messages.loading);
 afterEach(async () => { for (const stop of stops.splice(0)) stop(); await tick(); document.body.replaceChildren();
     window.history.replaceState(null, '', 'https://extension.test/runtime.html'); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 export async function ready(predicate: () => boolean, message?: string): Promise<void> { await vi.waitFor(() => { flushSync(); expect(predicate(), message).toBe(true); }, { timeout: 5000 }); }
@@ -23,7 +27,7 @@ export async function render(route = 'overview', observer = false, initial?: unk
     semanticCenterChannel(browser.api, message => browser.api.runtime.sendMessage(message), native.port.sourceTree);
     configure(browser);
     const stop = startCenter(browser.api, document, language); stops.push(stop);
-    await ready(() => document.querySelector('h1') !== null && document.querySelector('main')?.getAttribute('aria-busy') === 'false' && (!hasSettings || !!document.querySelector('main .revision')));
+    await ready(() => document.querySelector('h1') !== null && document.querySelector('main')?.getAttribute('aria-busy') === 'false' && (!hasSettings || !!document.querySelector('main .revision')) && routeContentReady());
     return { ...native, browser, stop };
 }
 export function button(label: string): HTMLButtonElement {
@@ -35,10 +39,17 @@ export function change(id: string, value: string): void {
     input.value = value; input.dispatchEvent(new Event(input.tagName === 'SELECT' ? 'change' : 'input', { bubbles: true })); flushSync();
 }
 export async function navigate(route: string): Promise<void> {
-    window.location.hash = `#/${route}`; await ready(() => document.querySelector('nav [aria-current=page]')?.getAttribute('href') === `#/${route.split('/')[0]}`);
+    window.location.hash = `#/${route}`; await ready(() => document.querySelector('nav [aria-current=page]')?.getAttribute('href') === `#/${route.split('/')[0]}` && routeContentReady());
 }
 export async function save(): Promise<void> {
     await ready(() => !!document.querySelector('#settings-review-heading'));
-    button('Confirmar cambio').click(); await ready(() => document.querySelector('section [role=status]')?.textContent === 'El cambio está guardado.');
-    button('Cerrar revisión').click(); await ready(() => !document.querySelector('#settings-review-heading'));
+    const revision = Number(document.querySelector('#settings-review-heading')?.closest('section')?.querySelector('details code')?.textContent);
+    expect(Number.isSafeInteger(revision) && revision >= 0).toBe(true);
+    button(reviewCopy(currentCopy().locale).confirm).click();
+    // A saved receipt precedes the independent canonical reread and route remount.
+    await ready(() => document.querySelector('#settings-review-status')?.textContent === reviewCopy(currentCopy().locale).states.saved
+        && document.querySelector('main .revision code')?.textContent === String(revision + 1)
+        && document.querySelector('main')?.getAttribute('aria-busy') === 'false' && routeContentReady());
+    button(reviewCopy(currentCopy().locale).dismiss).click();
+    await ready(() => !document.querySelector('#settings-review-heading') && document.querySelector('main')?.getAttribute('aria-busy') === 'false' && routeContentReady());
 }
