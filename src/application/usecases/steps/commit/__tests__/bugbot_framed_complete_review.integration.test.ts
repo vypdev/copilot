@@ -1,3 +1,4 @@
+import { BugbotReviewService } from '../../../../../api';
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, chmodSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -123,9 +124,12 @@ it('does not call any reviewer when the fresh native snapshot omits a required f
     const results = await runDetectPotentialProblemsWorkflow(f.operation, { aiRepository: { query: f.query }, scm: f.scm });
     expect(results[0].success).toBe(false); expect(f.query).not.toHaveBeenCalled(); expect(f.mutations).toEqual([]);
 }, 120000);
-it('verifies all real source and frames in dry-run without any SCM mutation', async () => {
+it('verifies all real source and frames through the public API dry-run without any SCM mutation', async () => {
     const f = fixture('dry-run');
-    const results = await runDetectPotentialProblemsWorkflow(f.operation, { aiRepository: { query: f.query }, scm: f.scm });
+    const service = new BugbotReviewService({ query: f.query }, { ...f.scm, repository: { owner: 'owner', name: 'repo' } });
+    const results = await service.review({ target: { kind: 'pull-request', number: 7, head: 'feature/review', base: 'develop' },
+        agent: { provider: 'codex', modelProvider: 'openai', model: 'fixture', executable: 'codex' },
+        configuration: { publicationMode: 'dry-run' } });
     expect(results[0].success).toBe(true); expect(f.query.mock.calls.length).toBeGreaterThan(64); expect(f.mutations).toEqual([]);
 }, 120000);
 it('rejects an altered final blob before reviewer execution, independently of native patch counters', async () => {

@@ -481,6 +481,7 @@ Documentation is part of the implementation. Update the existing owning SDD link
 | `docs/bugbot/quality-observability.mdx` | update |
 | `docs/bugbot/permissions.mdx` | update |
 | `docs/bugbot/configuration.mdx` | update |
+| `docs/bugbot/programmatic-api.mdx` | update |
 | `docs/security-operations/operations/error-reference.mdx` | update |
 
 ## 16. Acceptance
