@@ -323,3 +323,67 @@ it('reconstructs an identical retry request even when a query port mutates its r
     await run(f, query);
     expect(query).toHaveBeenCalledTimes(2); expect(observed[0]).toBe(observed[1]);
 });
+
+
+function literalFrameFixture(count = 1) {
+    const patch = '@@ -1 +1,2 @@\n-old\n+script = "a\\nb"\n+#' + 'x'.repeat(count > 1 ? 48000 : 0);
+    return setup(framedSource(Array.from({ length: count }, (_, index) => framedChange({
+        filename: `src/generated-${index}.py`, patch, additions: 2, deletions: 1,
+    }))));
+}
+function literalHypotheses(file: string, count: number) {
+    return Array.from({ length: count }, (_, index) => ({ id: `hypothesis-${index}`, file, line: 1,
+        title: 'Candidate hypothesis', description: 'Verify the literal against its immutable source.',
+        codeSnippet: 'script = "a\\nb"', evidence: 'Unverified hypothesis', severity: 'medium', confidence: 0.9 }));
+}
+function rejectLiteralHypotheses(request: FindingsQueryRequest) {
+    const properties = (request.options!.schema as any).properties;
+    return { outputLocale: 'en-US', verification_id: properties.verification_id.enum[0], findings: [],
+        rejected_ids: properties.rejected_ids.items.enum };
+}
+
+it('admits a response-dependent generated verification request through the actual framed query port', async () => {
+    const f = literalFrameFixture();
+    expect(f.plan.partitions[0].hasPythonLiteralWitnesses).toBe(true);
+    const query = jest.fn(async (request: FindingsQueryRequest) => request.agentId === 'bugbot-literal-candidate-verification'
+        ? rejectLiteralHypotheses(request)
+        : reply(request, { findings: literalHypotheses(f.plan.partitions[0].files[0], 1) }));
+    await expect(run(f, query)).resolves.toEqual({ findings: [], resolved_findings: [] });
+    expect(query).toHaveBeenCalledTimes(2);
+    expect(query.mock.calls[1][0].agentId).toBe('bugbot-literal-candidate-verification');
+});
+
+it.each([false, true])('bounds dependent verification and actual retries with one traffic ledger; retry=%s', async retry => {
+    const { bugbotFramedPromptBytes } = await import('../../../../../policies/bugbot_framed_prompt_policy');
+    const { buildBugbotPartitionQueryRequest } = await import('../query_bugbot_findings');
+    const { buildBugbotReviewInput } = await import('../build_bugbot_prompt');
+    const f = literalFrameFixture(128), limit = 32 * 1024 * 1024;
+    f.telemetry.observeContext(f.context);
+    expect(f.plan.partitions).toHaveLength(128);
+    // Fragment packing can leave a final assignment with only the tail of a Python file.
+    expect(f.plan.partitions.filter(p => p.hasPythonLiteralWitnesses).length).toBeGreaterThan(64);
+    const primaryBytes = f.plan.partitions.reduce((total, p) => total + bugbotFramedPromptBytes(buildBugbotPartitionQueryRequest(
+        f.operation.analysis.agentConfiguration, buildBugbotReviewInput(f.operation, f.context, { partition: p }).prompt,
+        { partitionId: p.id, headSha: p.headSha, framed: p.framed })), 0);
+    expect(primaryBytes).toBeLessThan(limit);
+    let delegatedBytes = 0, auxiliaryCalls = 0, failedOnce = false;
+    const primaryAttempts = new Map<string, number>();
+    const query = jest.fn(async (request: FindingsQueryRequest) => {
+        delegatedBytes += bugbotFramedPromptBytes(request);
+        expect(delegatedBytes).toBeLessThanOrEqual(limit);
+        if (request.agentId === 'bugbot-literal-candidate-verification') {
+            auxiliaryCalls++; return rejectLiteralHypotheses(request);
+        }
+        const result = reply(request), id = result.partition_id as string;
+        primaryAttempts.set(id, (primaryAttempts.get(id) ?? 0) + 1);
+        if (retry && !failedOnce) { failedOnce = true; throw new Error('one transient primary failure'); }
+        const partition = f.plan.partitions.find(p => p.id === id)!;
+        return { ...result, findings: literalHypotheses(partition.files[0], partition.hasPythonLiteralWitnesses ? 200 : 0) };
+    });
+    await expect(run(f, query)).rejects.toMatchObject({ facts: { resource: 'promptTotalBytes', limit } });
+    expect(auxiliaryCalls).toBeGreaterThan(10);
+    expect(primaryAttempts.size).toBeLessThan(f.plan.partitions.length);
+    expect([...primaryAttempts.values()].filter(attempts => attempts === 2)).toHaveLength(Number(retry));
+    expect([...primaryAttempts.values()].every(attempts => attempts <= 2)).toBe(true);
+    expect(f.telemetry.snapshot('failed').framedReview!.completedFrames).toBeLessThan(f.plan.frames.length);
+});

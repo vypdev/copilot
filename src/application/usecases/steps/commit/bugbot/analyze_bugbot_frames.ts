@@ -17,7 +17,7 @@ export function bugbotFramedContextDigest(operation: BugbotReviewOperationContex
         context.reviewRulesBlock ?? '', context.coverage, [...context.eligibleResolutionIds].sort().map(id => [id, context.existingByFindingId[id]])]);
 }
 
-/** All prompts preflight first. Frames retain no externally resumable or publishable partial state. */
+/** Preflight every planned primary prompt; admit retries and dependent queries through the shared traffic ledger. */
 export async function analyzeBugbotFrames(operation: BugbotReviewOperationContext, context: BugbotContext,
     plan: BugbotFramedReviewPlan, dependencies: {
         readonly agent: FindingsQueryPort; readonly telemetry: BugbotReviewTelemetry;

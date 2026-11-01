@@ -227,13 +227,13 @@ objects. Workspace inspection is not proof that an absent patch was reviewed.
 
 ```mermaid
 flowchart LR
-    A[Verify current PR and immutable source] --> B[Preflight every prompt]
+    A[Verify current PR and immutable source] --> B[Preflight planned primary prompts]
     B --> C[Review sequential frames]
     C --> D[Validate all receipts and current identity]
     D --> E[Reconcile and publish once]
 ```
 
-Text equivalent: verify all source, preflight all prompts, review each frame,
+Text equivalent: verify all source, preflight planned primary prompts, review each frame,
 validate complete coverage and freshness, then publish one global result.
 
 The internal `framed-v1` profile permits up to two sequential frames of 64
@@ -243,6 +243,13 @@ assignment. A frame's completion is progress only. Findings, resolutions and a
 clean review are withheld until every assignment validates and the current PR
 identity is rechecked immediately before publication. No cross-run resume is
 stored. One failed or interrupted frame discards the invocation's internal work.
+
+All planned primary requests, including their final native envelope, are measured
+before the first reviewer call. Generated-source verification depends on the
+returned candidate hypotheses; its prompts are constructed afterward. Every
+actual retry and auxiliary request must pass the same per-request and aggregate
+traffic checks before delegation, along with the verifier's own limits. Exhausting
+that shared budget discards the invocation and publishes no partial result.
 
 | Independent bound | Maximum |
 | --- | ---: |

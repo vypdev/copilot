@@ -73,7 +73,7 @@ The following requirements are normative; each requirement has executable accept
 | BFR-R03 | Assign every required path and sanitized character exactly once with scalar-safe ordered fragments and explicit coverage. |
 | BFR-R04 | Require complete native enumeration and recover absent required text patches from verified immutable local Git objects before review. |
 | BFR-R05 | Bind manifest, assignments and receipts to immutable PR source identity, effective context, protocol and invocation nonce. |
-| BFR-R06 | Preflight all final prompts; execute at most two sequential64-part frames with global concurrency2. |
+| BFR-R06 | Preflight every planned primary prompt with its final native envelope; bound actual retries and dependent verification before delegation; execute at most two sequential64-part frames with global concurrency2. |
 | BFR-R07 | Accept only a complete ordered set of schema-valid source-bound receipts; publish one globally reconciled result. |
 | BFR-R08 | Enforce independent per-response and global output/count/byte limits before retaining results. |
 | BFR-R09 | Retry only the identical failed partition at most3 times; discard all work on whole-run failure or interruption. |
@@ -113,7 +113,7 @@ The following requirements are normative; each requirement has executable accept
 flowchart LR
     A[Canonical PR identity] --> B[Complete native enumeration]
     B --> C[Verify and recover required text]
-    C --> D[Validate and preflight all prompts]
+    C --> D[Preflight planned primary prompts]
     D --> E[Sequential bounded frames]
     E --> F[Global coverage and finding reconciliation]
     F --> G[Freshness fence and atomic publication]
@@ -122,7 +122,7 @@ flowchart LR
     F --> H
 ```
 
-Text equivalent: verify PR identity, enumerate and verify all required source, preflight every prompt, execute bounded frames, then either validate and publish one complete result or report a block without partial publication.
+Text equivalent: verify PR identity, enumerate and verify all required source, preflight every planned primary prompt, execute bounded frames, then either validate and publish one complete result or report a block without partial publication.
 
 ## 6. Functional behavior and state model
 
@@ -646,3 +646,27 @@ synchronization push; the final contributor revision still needs its own current
 assessment, complete review, Codecov against the live base, and specific protected
 approval decision. This receipt records the Action's prepared-merge verification,
 not completion of those remaining PR gates or the historical H3 review.
+
+
+### Primary preflight and response-dependent traffic — review follow-up
+
+The existing section 6.1 contract preflights every planned primary request, with
+its final native envelope, before the first reviewer call. Candidate-dependent
+verification prompts exist only after a primary response. The same bounded
+query port measures each actual retry and auxiliary request before delegation;
+the verifier's independent limits also remain in force. Primary preflight does
+not promise that every possible dependent response sequence will fit the shared
+32 MiB traffic budget. Exhaustion is terminal for the invocation: pending work
+stops, in-flight workers drain, and no aggregate result is returned for publication.
+
+The summaries, diagram and engine comment now state that distinction explicitly.
+Three additional tests exercise the real generated-source verification path:
+one successful correlated rejection and two 128-partition workloads exhausting
+shared traffic, with and without one transient primary retry. Every delegated
+request uses the actual native-envelope byte measurement, stays within the fixed
+aggregate bound, and overflow prevents completion without retrying the capacity
+failure. All 49 engine-suite cases pass. Earlier fixture diagnostics concerned a
+fragment tail without a literal witness and missing test-side telemetry setup;
+they do not establish a production failure. The query ledger, budgets and
+executable engine behavior are unchanged. Native finding resolution and the final
+head's remote checks/Codecov remain required.
