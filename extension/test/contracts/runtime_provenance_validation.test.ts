@@ -77,9 +77,12 @@ it('a saved, native, claimed or retained veto must agree with paused/connected s
     expect(decode(global)).not.toBeNull(); expect(decode({ ...global, settings: { ...global.settings, paused: false } })).toBeNull();
     expect(decode({ ...value, connected: true, provenance: { ...value.provenance, preferences: { ...value.provenance.preferences, scope: { account: false, repository: false, organization: false, session: false } } } })).toBeNull();
 });
-it('unknown native tab scope keeps the independently observed emergency fact and cannot certify absence of a tab pause', () => {
-    const native = nativePauseProvenance({ condition: 'clear', loaded: { state: 'ready', value: { ...DEFAULT_TEMPORARY_PAUSES, emergency: true } } }, undefined);
-    expect(validNativePauseProvenance(native)).toBe(true); expect(native).toMatchObject({ native: 'unavailable', emergency: true, tab: null, restricted: true });
+it.each([true, false])('unknown native tab scope keeps the independently observed emergency=%s fact and cannot certify absence of a tab pause', emergency => {
+    const native = nativePauseProvenance({ condition: 'clear', loaded: { state: 'ready', value: { ...DEFAULT_TEMPORARY_PAUSES, emergency } } }, undefined);
+    expect(validNativePauseProvenance(native)).toBe(true); expect(native).toMatchObject({ native: 'unavailable', emergency, tab: null, restricted: true });
+    const configuration = runtimeConfiguration(DEFAULT_SETTINGS, CONFIG, null, 0, { ...clearNativeRestriction(), native })!;
+    expect(configuration.settings.paused).toBe(true); expect(configuration.connected).toBe(false);
+    expect(decode({ ...configuration, sourceTree: 'unbundled' })).toMatchObject({ provenance: { restriction: { native } } });
 });
 it('detached validation rejects mutable toJSON substitution rather than validating one object and returning another', () => {
     const value = wire(); let calls = 0; const input = { toJSON: () => ++calls === 1 ? value : { ...value, provenance: { token: 'private' } } };

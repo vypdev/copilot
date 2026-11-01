@@ -747,8 +747,8 @@ Current evidence: `profile_context.test.ts`, `repository_owner.test.ts`,
 `scoped_profiles.test.ts`, `session_owner_projection.test.ts`,
 `legacy_center_upgrade.test.ts` and the real background composition contract.
 These are deterministic policy/mounted integration tests; native browser and
-human acceptance still require new source-bound receipts. The 160 distinct risk
-floor and the complete 56+56 CENTER case obligations are unchanged.
+human acceptance still require new source-bound receipts. The original H3 risk baseline, every addition in the cumulative risk budget
+and the complete 56+56 CENTER case obligations remain required.
 
 ### 8.9 Live profile configuration and read admission
 
@@ -1102,6 +1102,58 @@ or human acceptance, and modified executable branches remain100% covered.
 | Documentation/discoverability | 6 | Observable scenarios in the case inventory. |
 | Total | 56 | Distinct inventory cases; repeated executions do not add cases. |
 
+### Cumulative risk budget
+
+The historical 160-case H3 risk baseline is a starting minimum, not the complete
+acceptance threshold. Every additive minimum below is mandatory. The cumulative
+minimum is **881 distinct H3 risk cases: 160 baseline + 721 additions**. Reaching
+160 alone cannot satisfy H3. The original 56 CENTER catalog cases, the 56-case
+implementation inventory above and the full 803-case product catalog remain
+separately required; their execution does not offset an additive minimum.
+
+| Risk allocation | Minimum distinct cases | Owning contract/evidence |
+|---|---:|---|
+| Original H3 risk baseline | 160 | Existing H3 requirement and cross-boundary risk evidence |
+| Native center harness | 40 | Public native center journey and its tooling contracts |
+| Safari generated formats and container | 26 | Safari H3 native build subflow |
+| Safari complete resources and replacement | 26 | Resource/completeness repair of that subflow |
+| Active-session persistence | 16 | Native acknowledgement, canonical readback and races |
+| Data recovery journeys | 3 | `data_recovery_journeys.test.ts`, original import/conflict/reset journeys |
+| Data portability journeys | 5 | `data_portability_journey.test.ts` |
+| Production build environment | 3 | `build_environment.test.ts` |
+| Inventory discovery | 24 | Discoverability refinement |
+| Unavailable data and draft recovery | 16 | Catalog/read admission refinement |
+| Browser permission inspection | 40 | Permission inspection refinement |
+| Shortcut editing and execution | 40 | Shortcut refinement |
+| Bounded diagnostic ring | 24 | Diagnostic registry/lifecycle/composition refinement |
+| Runtime provenance | 34 | Runtime source/restriction explanation refinement |
+| Workspaces and reference composition | 48 | Workspace refinement |
+| Temporary pauses | 64 | Native temporary-pause foundation |
+| Local journal | 56 | Consent, canonical writes and retention refinement |
+| Named sessions | 120 | Closed protocol, owners and composed session journeys |
+| Private API cache clearing | 15 | Cache-clear additional risk inventory |
+| Useful local destinations | 20 | Navigation and destination inventory |
+| Native focus composition | 2 | Two composed acceptance cases following that inventory |
+| Focus capture and recovery | 31 | Capture/handoff, lifecycle and complete foreground composition |
+| Reviewed operation focus | 27 | DOM/composition lifecycle and operation outcomes |
+| Component authority | 12 | Global-capability, script-scope and packaging boundaries |
+| Recent destination admission | 3 | Journal admission/readiness and composed capacity |
+| Preparation and current-document admission | 15 | Reservation, import revision and reopen regressions |
+| Independent imported profile pause | 10 | `settings_import_pauses.test.ts`, section 13 |
+| Independently observed negative emergency fact | 1 | Unknown-tab producer/factory/wire preservation case, beyond the existing affirmative case |
+| **Total** | **881** | **160 + 721; every row is required** |
+
+Assign each semantic risk case one primary row and retain its executable test
+name and assertions in the source-bound evidence. A case may trace several
+requirements, but contributes once to this sum. An integration case covering
+several layers is one case. Engine, locale, layout, Node-version and repeated
+execution matrices do not add cases. Existing cases may satisfy a row only
+with the same asserted risk and current-source execution; they cannot also be
+allocated to another row. A total Vitest/Jest test counter is not this ledger.
+Check each row and the deduplicated aggregate before declaring acceptance;
+passing the aggregate cannot compensate for a missing row. Later refinements
+must update this ledger and arithmetic when they add mandatory cases.
+
 Active-session persistence adds a minimum16 distinct regression cases: four
 save/removal acknowledgement-versus-observation combinations, four exact-record
 and optional-identity validation cases, four source/epoch/queue races, and four
@@ -1400,8 +1452,8 @@ This refinement adds a minimum 24 distinct risk cases to the implementation
 campaign: 6 pure filter/provenance/planning/pagination cases, 6 metadata/locale/
 closed-link contract cases, 8 mounted discovery/review/navigation/favorite/role
 journeys, and 4 freshness/race/architecture cases. Matrix repetitions and metadata
-presence cannot substitute for feature implementations or the unchanged 160
-risk floor,56+56 CENTER obligations and full 803 product baseline.
+presence cannot substitute for feature implementations or any row of the cumulative risk budget,
+56+56 CENTER obligations and full 803 product baseline.
 
 | Requirement | Current owners and executable evidence | User guidance |
 |---|---|---|
@@ -1488,9 +1540,8 @@ Parameterized translations supplement the locale obligation without counting
 as four distinct product journeys. Evidence owners are catalog_readonly.test.ts
 (contract and mounted integration), center_host.test.ts, the shared inventory,
 center_client_view admission, typed local loader/host and feature editor.
-The feature guide documents recovery and the original revision fence. Keep the
-160 distinct H3 risk floor, 56+56 CENTER obligations, full 803-case baseline and
-all architecture/coverage/browser/human gates unchanged.
+The feature guide documents recovery and the original revision fence. Keep every row of the cumulative H3 risk budget, 56+56 CENTER obligations,
+full 803-case baseline and all architecture/coverage/browser/human gates.
 
 Additional lifetime evidence exercises the existing H3-R01/R07/R11 contracts
 without adding capabilities: `center_client_retirement.test.ts` covers disposal
@@ -1813,7 +1864,7 @@ credential epoch or vault revision remains rejected by independent native gates.
 Add **34 distinct risk cases**: 8 closed-wire/identity policies, 10 application
 verification/persistence/fence cases, 10 mounted review/draft/localization cases,
 and 6 transport/composition/privacy cases. Count reruns once. Every changed
-runtime line and branch must be covered; the existing 160 H3 risk floor,
+runtime line and branch must be covered; every row of the cumulative H3 risk budget,
 56+56 CENTER cases and 803-case product floor remain unchanged. Document the
 normal recovery flow, unsupported redirects, wrong-identity/unknown outcomes,
 retained protected credential and explicit retry/revocation in configuration,
@@ -1933,7 +1984,7 @@ Add **48 distinct cases**: 16 domain/schema/migration/closed-intent cases,
 14 application/preview/persistence/replay cases, 12 mounted editing/localization/
 navigation/preview cases, and 6 actual composition/privacy/unavailable-reference
 cases. Translation/platform reruns count once. All changed executable lines and
-branches must be covered; the 160 H3 risk floor, 56+56 CENTER obligations and 803
+branches must be covered; the cumulative H3 risk budget, 56+56 CENTER obligations and 803
 product cases remain required. Document bounds/defaults, private-reference expiry,
 explicit repair, backup/migration/reset/rollback and separate verification in
 configuration, privacy/data, troubleshooting and contributor guides. Required
@@ -2058,8 +2109,8 @@ timers, host permissions or notifications beyond existing invalidation.
 This foundation has a **minimum 64 distinct-case risk budget**: 36 closed/pure
 schema and revision/scope planning, 12 protected reader/admission, 8 actual native
 composition and 8 asynchronous source/observation races. Each test counts once;
-parameter rows count only distinct invalid/native states. The full H3 160-case
-risk floor, complete 56+56 CENTER obligations and 803 catalog cases remain.
+parameter rows count only distinct invalid/native states. The full cumulative H3
+risk budget, complete 56+56 CENTER obligations and 803 catalog cases remain.
 New pure/runtime lines, branches, functions and statements require 100% local
 coverage; final PR acceptance still requires every modified line covered without
 partials in remote Codecov against the then-current base. No exclusion or
@@ -2268,7 +2319,7 @@ remote Codecov. Evidence families are `temporary_pause_protocol`,
 `temporary_pause_review_limits`, `temporary_pause_targets`, `closed_tab_pauses`,
 `closed_pause_cleanup` and `temporary_pause_native_gateway`. Architecture/type
 checks must preserve native authority and 220/90-line module budgets. The full
-H3 160-case floor and 803-case catalog remain unchanged. Current/retained operation
+cumulative H3 risk budget and 803-case catalog remain required. Current/retained operation
 observations, localized authoring/recovery/provenance UI, loaded-browser journeys
 and human acceptance are still required; deterministic native-port tests do not
 constitute those acceptance gates.
@@ -2730,3 +2781,22 @@ journeys suspended at open/read; and two mounted Data-page imports distinguishin
 a refresh before submission from one during file IO. Eight of these cases
 reproduce failures before the changes. Keep the existing concurrent retained-plan
 limit test and all full-coverage, architecture, browser and H12 acceptance gates.
+
+### Partial native observation and style admission (2026-11-02)
+
+The native provenance code `unavailable` describes two bounded observations:
+if storage itself is unavailable, both emergency and tab remain null; if a ready
+record was read but the native tab identifier is unavailable, emergency retains
+its observed true/false value and only tab is null. Both outcomes restrict
+execution. The public factory and decoder MUST preserve that independently
+known fact rather than inventing absence of a tab pause or rejecting a canonical
+producer result. The pre-existing affirmative case and one added negative case
+exercise the real producer, factory and closed wire decoder. The additive case
+is included once in the cumulative risk ledger. Existing unavailable-record
+cases still require both facts to remain unknown.
+
+Packaged styles reject every CSS backslash before parsing or declaration-value
+inspection. The literal resource-function guard is a second admission check.
+`component_styles.test.ts` already exercises the escaped `u\72l(remote)` form
+and requires `style-escape`; it must not be counted again as new risk evidence.
+No resource exception, decoder relaxation, new permission or setting is added.
