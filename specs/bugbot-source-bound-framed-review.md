@@ -590,3 +590,9 @@ lines with no partial branches against the same base. Native prompt-envelope
 parity, exact/one-over capacity, a late oversized assignment with zero calls and
 fresh identical retry requests are included. Current-head remote checks and
 Codecov must be repeated after publication of this follow-up.
+
+Preparation provenance: the [complete admission transcript](./evidence/issue-839-preparation.txt)
+is retained as versioned source so the discussion can link it without exhausting
+human-conversation context. All 15 normative requirements and 130 acceptance
+cases remain in this canonical SDD. The transcript records preparation data and
+does not independently change the implementation contract.
