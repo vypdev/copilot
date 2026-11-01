@@ -839,6 +839,7 @@
             "src/application/policies/progress_diff_partition_policy.ts",
             "src/application/policies/progress_partition_response_policy.ts",
             "src/application/policies/progress_scope_policy.ts",
+            "src/application/policies/progress_assessment_capacity_policy.ts",
             "src/prompts/progress_scope.ts",
             "src/application/policies/progress_content_evidence_policy.ts",
             "src/application/policies/progress_patch_completeness_policy.ts",

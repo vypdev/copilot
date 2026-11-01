@@ -145,12 +145,13 @@ export async function analyzeProgress(
         configuration: param.agentConfiguration, agentId: AGENT_PLAN, prompt: scopePrompt,
         options: { ...productFacingAgentQueryOptions('progress-scope', progressScopeResponseSchema(sourceLines)), includeReasoning: param.includeReasoning },
     }, { phase: 'scope', sourceLineIds: sourceLines.map(line => line.id) }), issueDescription, param.targetLocale);
+    const assessmentSchema = progressResponseSchema(scope, anchors);
     const acceptanceScope = JSON.stringify(scope);
     const boundDiff = bindProgressEvidence(diff, issueDescription, acceptanceScope, param.targetLocale);
-    const actualBudget = progressAggregateBudget(getCheckProgressPrompt({ ...promptParameters, acceptanceScope }), progressResponseSchema(scope), effort);
+    const actualBudget = progressAggregateBudget(getCheckProgressPrompt({ ...promptParameters, acceptanceScope }), assessmentSchema, effort);
     const diffEvidence = await summarizeProgressDiff(boundDiff, param, issueDescription, dependencies.aiRepository, actualBudget, acceptanceScope);
     const prompt = getCheckProgressPrompt({ ...promptParameters, acceptanceScope, diffEvidence });
-    remainingProgressPromptBytes(prompt, 'progress', progressResponseSchema(scope), effort);
+    remainingProgressPromptBytes(prompt, 'progress', assessmentSchema, effort);
     logDebugInfo(
         `CheckProgress: prompt length=${prompt.length}, issue description length=${issueDescription.length}.`,
     );
@@ -161,7 +162,7 @@ export async function analyzeProgress(
             agentId: AGENT_PLAN,
             prompt,
             options: {
-                ...productFacingAgentQueryOptions('progress', progressResponseSchema(scope)),
+                ...productFacingAgentQueryOptions('progress', assessmentSchema),
                 includeReasoning: param.includeReasoning,
             },
         }, { phase: 'assessment', requirementIds: scope.requirements.map(requirement => requirement.id),
