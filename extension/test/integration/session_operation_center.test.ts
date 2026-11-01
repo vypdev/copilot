@@ -76,7 +76,9 @@ it('disposing the actual page prevents a delayed native metadata response from r
 });
 it('canceling an unsubmitted removal dialog cannot fabricate a native removal or another history operation', async () => {
     const f = await fixture(); await f.connect(); const mutations = f.app.port.send.mock.calls.filter(([m]) => m.method === 'center.connections.change').length;
-    button(f.copy.remove).click(); flushSync(); button(f.copy.cancel).click(); expect(f.app.port.send.mock.calls.filter(([m]) => m.method === 'center.connections.change')).toHaveLength(mutations); expect(text()).toContain(f.session.actions.connect);
+    await ready(() => !button(f.copy.remove).disabled);
+    button(f.copy.remove).click(); await ready(() => [...document.querySelectorAll('button')].some(value => value.textContent === f.copy.cancel));
+    button(f.copy.cancel).click(); expect(f.app.port.send.mock.calls.filter(([m]) => m.method === 'center.connections.change')).toHaveLength(mutations); expect(text()).toContain(f.session.actions.connect);
 });
 it('a proved successful connection clears its submitted draft despite the operation’s own native invalidations', async () => {
     const f = await fixture(); await f.connect(); expect((document.querySelector('#connection-name') as HTMLInputElement).value).toBe('');

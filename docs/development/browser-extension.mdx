@@ -287,9 +287,15 @@ assertions wait for verified provenance, enabled native controls and completed
 permission/history initialization before interacting or measuring new effects.
 Reference-composition assertions wait for native metadata inspection to finish
 before distinguishing a missing reference from unavailable inspection.
-The hosted Windows job allows 60 minutes for the complete root and extension
+The hosted Windows job allows 90 minutes for the complete root and extension
 coverage campaign; Linux/macOS keep 20 minutes. This job budget does not change
 test assertions, ordinary test timeouts, coverage or approval requirements.
+The previous Windows campaign reached the enforced 60-minute job cap; that
+cancelled run is not evidence of a completed coverage campaign. Lazy Data
+routes, session removal dialogs and updated favorite controls must be observed
+before tests interact with them. A successful connection fixture waits for the
+actual form reset that follows the completed connection promise, so a later
+settings-driven remount cannot erase a newly opened removal dialog.
 
 Both original Svelte script scopes pass through the same TypeScript architecture
 gate as ordinary presentation modules. It rejects direct `window`, `document`,
@@ -1454,3 +1460,9 @@ foreground/native-channel/background tests cover offline viewing, no retained
 credential read, observer navigation, another editor's confirmed revision and
 opaque-source preservation. Those deterministic tests remain separate from
 final-source loaded-browser and human acceptance.
+
+Recent-destination delivery reports an observation only when the background
+journal accepts its ticket. Capacity or readiness rejection stays unavailable
+on duplicate delivery and contributes to incomplete delivery evidence; it is
+never retried automatically. Admission is secondary retention, not proof that
+the eventual native write completed.

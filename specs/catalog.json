@@ -3700,6 +3700,7 @@
         "extension/test/fixtures/recents_client.ts",
         "extension/test/fixtures/recents_gateway.ts",
         "extension/test/integration/recents_capture.test.ts",
+        "extension/test/integration/recents_admission.test.ts",
         "extension/test/integration/recents_client.test.ts",
         "extension/test/integration/recents_gateway.test.ts",
         "extension/test/integration/recents_center.test.ts",

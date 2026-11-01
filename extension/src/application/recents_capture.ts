@@ -2,6 +2,7 @@ import { recentsPermitId, validCenterDestination, type CenterDestination, type R
 import type { DestinationFact } from '../domain/journal_facts.ts';
 import { collectionCurrent } from './collection_restrictions.ts';
 import { natural } from '../domain/value.ts';
+import type { JournalTicket } from './journal_writer_ports.ts';
 
 export interface RecentsSource {
     readonly clientId: string; readonly controllerEpoch: number; readonly credentialEpoch: number;
@@ -10,7 +11,7 @@ export interface RecentsSource {
 export interface RecentsCapturePorts {
     admission(): { readonly policyRevision: number; current(): boolean } | null;
     epoch(): number | null; identifier(): string;
-    admit(fact: DestinationFact, current: () => boolean): unknown;
+    admit(fact: DestinationFact, current: () => boolean): JournalTicket | null;
 }
 interface Permit {
     readonly id: string; readonly source: RecentsSource; readonly epoch: number; readonly admission: NonNullable<ReturnType<RecentsCapturePorts['admission']>>;
@@ -62,7 +63,8 @@ export class RecentsCapture {
         value.sequence = sequence; value.last = signature; value.result = Object.freeze({ state: 'unavailable' });
         const fact: DestinationFact = { kind: 'destination', route: destination.route, ...(destination.featureId ? { featureId: destination.featureId } : {}) };
         try {
-            this.ports.admit(fact, () => this.permits.get(source.clientId) === value && this.live(value) && collectionCurrent(current));
+            const ticket = this.ports.admit(fact, () => this.permits.get(source.clientId) === value && this.live(value) && collectionCurrent(current));
+            if (ticket === null) return value.result;
             value.result = Object.freeze({ state: 'observed' }); return value.result;
         } catch { return value.result; }
     }

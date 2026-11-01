@@ -22,6 +22,7 @@ export async function sessionCenterFixture(locale: CenterLocale = 'en', active =
     await ready(() => !!document.querySelector('#connection-name') && !button(copy.connect).disabled);
     return { ...f, app, copy, op, center, session, bridge,
         fill: (name = 'Work') => { change('connection-name', name); change('connection-repository', CONNECTION_INPUT.repository); change('connection-secret', CONNECTION_INPUT.secret); },
-        connect: async (name = 'Work') => { change('connection-name', name); change('connection-repository', CONNECTION_INPUT.repository); change('connection-secret', CONNECTION_INPUT.secret); button(copy.connect).click(); await ready(() => document.querySelector('[data-current-operation] [data-session-effects]')?.textContent?.includes(session.results.ready) === true && !button(copy.connect).disabled); } };
+        connect: async (name = 'Work') => { change('connection-name', name); change('connection-repository', CONNECTION_INPUT.repository); change('connection-secret', CONNECTION_INPUT.secret); button(copy.connect).click(); await ready(() => document.querySelector('[data-current-operation] [data-session-effects]')?.textContent?.includes(session.results.ready) === true && !button(copy.connect).disabled
+            && document.querySelector<HTMLInputElement>('#connection-name')?.value === ''); } };
 }
 export const sessionOperationText = () => document.querySelector('[data-current-operation]')?.textContent ?? '';

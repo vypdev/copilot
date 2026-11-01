@@ -54,6 +54,7 @@ it('capacity20 blocks only additions and a removed favorite makes room without d
     const h = await inventory({ ...DEFAULT_SETTINGS, center: { ...DEFAULT_SETTINGS.center, favorites } });
     expect(favorite('BEX-CODE-09').disabled).toBe(true); expect(favorite('BEX-NAV-01').disabled).toBe(false); expect(document.body.textContent).toContain('hasta 20 favoritos');
     favorite('BEX-NAV-01').click(); await save(); expect((await h.native.repository.read()).settings.center.favorites).toHaveLength(19);
+    await ready(() => !favorite('BEX-CODE-09').disabled);
     expect(favorite('BEX-CODE-09').disabled).toBe(false);
 });
 it.each(['en', 'es', 'fr', 'pt'] as const)('complete %s detail localizes purpose, current development status, privacy and review without a remote implementation', async locale => {

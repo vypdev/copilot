@@ -2641,3 +2641,32 @@ extension development guide. Every changed executable line and branch remains
 covered. There is no new configuration, permission, runtime DOM operation or
 exception switch. Native-browser and deferred H12 human evidence retain their
 separate source and scope requirements.
+
+### Recent destination admission acknowledgement (2026-11-01)
+
+The native producer acknowledges `observed` only after `JournalWriter.admit`
+returns an in-process ticket. A null ticket (including capacity or missing writer
+epoch) keeps the result `unavailable`; replay of that exact sequence returns the
+same result without another admission. A later sequence remains independently
+eligible. `observed` proves admission, not durable retention; existing writer
+evidence reports subsequent persistence independently.
+
+```mermaid
+flowchart LR
+  D[Closed destination and source permit] --> A[Native journal admission]
+  A -->|ticket| O[Observed admission]
+  A -->|no ticket| U[Unavailable delivery]
+  U --> I[Incomplete delivery evidence; no automatic retry]
+```
+
+The control center retains navigation when secondary retention is unavailable.
+For example, a full 200-record live writer must not show a successful destination
+observation: the delivery view records one dropped observation and incomplete
+history. No setting, permission, capacity increase or storage authority is added.
+
+Add three regression cases: rejected admission with exact-sequence replay and
+independent subsequent delivery; actual composed 200-record capacity plus client
+delivery evidence; and loss of actual writer readiness after permit capture.
+The first three fail against the previous implementation. Document the distinction
+between admission and persistence in the contributor guide and retain all native
+source, consent and generation guards.

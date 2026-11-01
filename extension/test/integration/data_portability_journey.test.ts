@@ -26,6 +26,7 @@ it('bexh3-center-C28/C46 the actual Data page exports a safe Blob that round-tri
             selected: ['personal'], workspaces: [{ id: 'work', name: 'Authored workspace', members: ['session-1'] }], selectedWorkspace: 'work' } };
     const envelope = { current, previous: { ...DEFAULT_SETTINGS, revision: 3 } };
     const app = await render('data', false, envelope, true, centerClientFixture(native.center), 'en-US');
+    await ready(() => document.querySelector('#center-import') !== null);
     expect(document.documentElement.lang).toBe('en');
     const preferencesBefore = JSON.stringify([...app.native.values]); const privateBefore = JSON.stringify([...native.values]);
     const preferenceWrites = vi.mocked(app.native.port.set).mock.calls.length; const privateWrites = vi.mocked(native.port.set).mock.calls.length;

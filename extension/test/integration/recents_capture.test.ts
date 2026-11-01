@@ -47,7 +47,7 @@ it('does not mint after source or consent movement reenters the identifier bound
 it('reentrant capture reuses its already registered source and reentrant duplicate observation submits once', () => {
     const f = fixture(); let nested: string | null = null;
     f.ports.identifier.mockImplementationOnce(() => { nested = f.capture(); return 'c'.repeat(32); }); expect(f.capture()).toBe(nested);
-    f.ports.admit.mockImplementationOnce(() => { f.producer.observe(RECENT_SOURCE, nested!, 1, { route: 'privacy' }, f.current); });
+    f.ports.admit.mockImplementationOnce(() => { f.producer.observe(RECENT_SOURCE, nested!, 1, { route: 'privacy' }, f.current); return Object.freeze({}); });
     f.producer.observe(RECENT_SOURCE, nested!, 1, { route: 'privacy' }, f.current); expect(f.ports.admit).toHaveBeenCalledOnce();
 });
 it('a failed observation keeps the same uncertain answer on duplicate delivery without a retry', () => {
@@ -84,4 +84,14 @@ it('generation metadata becoming unavailable inside the source check fails close
 });
 it.each([0, -1, NaN, Number.MAX_SAFE_INTEGER + 1])('invalid delivery sequence %s cannot consume a permit', sequence => {
     const f = fixture(); const permit = f.capture(); expect(f.producer.observe(RECENT_SOURCE, permit, sequence, { route: 'privacy' }, f.current)).toEqual({ state: 'invalid' }); expect(f.ports.admit).not.toHaveBeenCalled();
+});
+
+it('a rejected admission is unavailable on replay and a later delivery can obtain its own ticket', () => {
+    const f = fixture(); const permit = f.capture(); f.ports.admit.mockReturnValueOnce(null);
+    const result = f.producer.observe(RECENT_SOURCE, permit, 1, { route: 'privacy' }, f.current);
+    expect(result).toEqual({ state: 'unavailable' });
+    expect(f.producer.observe(RECENT_SOURCE, permit, 1, { route: 'privacy' }, f.current)).toBe(result);
+    expect(f.ports.admit).toHaveBeenCalledOnce();
+    expect(f.producer.observe(RECENT_SOURCE, permit, 2, { route: 'work' }, f.current)).toEqual({ state: 'observed' });
+    expect(f.ports.admit).toHaveBeenCalledTimes(2);
 });
