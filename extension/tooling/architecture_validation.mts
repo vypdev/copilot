@@ -13,6 +13,7 @@ const DIRECTIONS: Record<string, readonly string[]> = {
 const NETWORK = new Set(['fetch', 'XMLHttpRequest', 'WebSocket', 'EventSource', 'sendBeacon']);
 const AUTHORITY = new Set(['fetch', 'XMLHttpRequest', 'WebSocket', 'EventSource', 'chrome', 'browser',
     'localStorage', 'sessionStorage', 'sendBeacon', 'credentials', 'authorization', 'token']);
+const DOM_GLOBALS = new Set(['window', 'document', 'self', 'navigator']);
 
 export function validateArchitecture(root: string, sources: Sources): void {
     const errors: string[] = [];
@@ -59,11 +60,14 @@ export function validateArchitecture(root: string, sources: Sources): void {
                 const parent = node.parent;
                 const propertyName = (ts.isPropertyAssignment(parent) || ts.isPropertySignature(parent)
                     || ts.isPropertyAccessExpression(parent)) && parent.name === node;
+                const domAuthority = DOM_GLOBALS.has(node.text) && !propertyName
+                    && !(ts.isPropertyDeclaration(parent) && parent.name === node)
+                    && !(ts.isBindingElement(parent) && parent.propertyName === node);
                 if (['eval', 'Function', 'require', 'globalThis', 'window', 'document', 'chrome', 'browser',
                     'process', 'Buffer', 'fetch', 'self', 'navigator', 'localStorage', 'sessionStorage'].includes(node.text)
                     && layer === 'domain' && !propertyName) report(name, 'pure-global');
                 if (['eval', 'Function', 'require'].includes(node.text)) report(name, 'executable-primitive');
-                if (layer === 'presentation' && (AUTHORITY.has(node.text) || node.text === 'globalThis')) report(name, 'presentation-authority');
+                if (layer === 'presentation' && (AUTHORITY.has(node.text) || node.text === 'globalThis' || domAuthority)) report(name, 'presentation-authority');
             }
             ts.forEachChild(node, visit);
         }

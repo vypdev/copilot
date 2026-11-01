@@ -94,7 +94,7 @@ it('rejects a consistently rehashed changed bundle when comparing it to clean so
         await validateArtifactSet(output);
         await expect(validateDevelopmentBuild(root, output)).rejects.toThrow('existing output is stale');
     } finally { await writeFile(file, original); await writeFile(path.join(output, 'receipt.json'), receipt); }
-});
+}, 120_000);
 
 it('rejects a later target hash mismatch before parsing unrelated code, then still rejects rehashed executable authority', async () => {
     const { assetHashes } = await import('../../tooling/artifact_validation.mts');

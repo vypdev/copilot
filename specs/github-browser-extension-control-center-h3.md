@@ -2605,3 +2605,39 @@ on all required browsers, against the final complete-product package.
 
 Primary guidance: [WAI button focus behavior](https://www.w3.org/WAI/ARIA/apg/patterns/button/)
 and [WCAG status messages](https://www.w3.org/WAI/WCAG22/Understanding/status-messages.html).
+
+### Original component script authority
+
+Review of PR #837 found that markup rejected native DOM globals while the
+downstream presentation policy still admitted those identifiers in original
+Svelte module and instance scripts. Ten negative production-gate cases reproduced
+that gap before correction; a green runtime suite alone did not establish the
+architecture boundary.
+
+```text
+Original Svelte module + instance scripts → extracted original TypeScript
+ → shared presentation authority gate → reject capability or admit safe data
+ → complete packaged build
+```
+
+Text equivalent: the existing architecture validator MUST reject direct
+`window`, `document`, `self` and `navigator` references in presentation code,
+including nested callbacks in either original script scope. Infrastructure owns
+native globals; presentation receives semantic actions and view data. Ordinary
+property declarations and property accesses such as a translated `document`
+label, including class fields and renamed destructuring keys, remain data and
+MUST NOT be rejected as global acquisition. Existing
+markup, dependency, network, native-control and checked-navigation rules remain
+in force. Rejection uses the existing safe `presentation-authority` diagnostic
+before artifact publication, without including authored source contents.
+
+Minimum **12 distinct regressions** supplement H3-R10/R12 and the existing
+architecture budgets: eight global-capability/script-scope boundaries, two
+nested-callback boundaries and two safe typed-data/property controls. The actual
+`validateArchitecture` composition and both original Svelte script scopes are
+exercised; compiler/provider mocks cannot establish this boundary. Owning tests
+are in `component_architecture.test.ts`, with contributor guidance in the browser
+extension development guide. Every changed executable line and branch remains
+covered. There is no new configuration, permission, runtime DOM operation or
+exception switch. Native-browser and deferred H12 human evidence retain their
+separate source and scope requirements.

@@ -33,12 +33,12 @@ afterAll(async () => { if (temporary) await rm(temporary, { recursive: true, for
 
 it('a test runner environment produces the same complete production runtime and receipt as the standalone builder', async () => {
     await identical(production, await build('test', 'test'));
-});
+}, 60_000);
 it('development and unset caller environments preserve the same complete production artifacts without changing the caller', async () => {
     const before = process.env.NODE_ENV;
     await identical(production, await build('development', 'development'));
     await identical(production, await build('unset', undefined)); expect(process.env.NODE_ENV).toBe(before);
-});
+}, 120_000);
 it('the pinned production runtime excludes the actual development-only HMR hooks exposed by the regression', async () => {
     for (const target of TARGETS) {
         const files = await readTarget(path.join(production, target));

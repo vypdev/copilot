@@ -19,7 +19,7 @@ beforeAll(async () => {
     temporary = await mkdtemp(path.join(tmpdir(), 'copilot-h1-build-test-'));
     first = await buildDevelopmentSet(root, path.join(temporary, 'first'));
     second = await buildDevelopmentSet(root, path.join(temporary, 'second'));
-}, 60_000);
+}, 120_000);
 afterAll(async () => { await rm(temporary, { recursive: true, force: true }); });
 
 it('bexh1-foundation-C23 builds actual declared target assets whose content entry remains inert', async () => {

@@ -16,7 +16,7 @@ it('migrates one complete nested center revision and keeps actual feature, profi
     expect(app.native.port.set).toHaveBeenCalledTimes(1);
     expect(document.querySelector('[data-feature-setting]')?.textContent).toBe(inventoryCopy('es').disabled);
     expect(document.querySelector('[data-feature-source] a')?.getAttribute('href')).toBe('#/profiles/work');
-    await navigate('profiles'); await ready(() => !!document.querySelector('[data-preference=density]'));
+    await navigate('profiles'); await ready(() => document.querySelector('[data-preference=density]')?.textContent?.includes('Private work') === true);
     expect(document.querySelector('[data-preference=density]')?.textContent).toContain('Compacta');
     expect(document.querySelector('[data-preference=density]')?.textContent).toContain('Private work');
     await navigate('appearance'); await ready(() => !!document.querySelector('#center-theme'));

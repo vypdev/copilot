@@ -61,7 +61,7 @@ const outcomes: readonly PauseReviewOutcome[] = [
 ];
 it.each(outcomes)('a retained $state outcome keeps acknowledgement, canonical observation and source sample separate', outcome => {
     const h = render({ review: publicPauseReview(pausePlanWire(), outcome.state === 'unknown' ? 'unknown' : 'result', outcome), canInspect: true });
-    const text = document.querySelector('[data-pause-review]')?.textContent; expect(text).toContain('current' in outcome ? pauseObservationCopy('en').results[outcome.state as 'committed'] : outcome.state === 'not-submitted' ? pauseObservationCopy('en').states.reviewed : outcome.state === 'pending' || outcome.state === 'cancelled' ? pauseObservationCopy('en').results[outcome.state] : h.copy.issues[outcome.state]);
+    const text = document.querySelector('[data-pause-review]')?.textContent; expect(text).toContain('current' in outcome ? pauseObservationCopy('en').results[outcome.state] : outcome.state === 'not-submitted' ? pauseObservationCopy('en').states.reviewed : outcome.state === 'pending' || outcome.state === 'cancelled' ? pauseObservationCopy('en').results[outcome.state] : h.copy.issues[outcome.state]);
     button(h.copy.inspect).click(); button(h.copy.dismiss).click(); expect(h.actions.inspect).toHaveBeenCalledOnce(); expect(h.actions.dismiss).toHaveBeenCalledOnce();
     expect(document.querySelector('[data-pause-review] button')?.textContent).not.toBe(h.copy.confirm);
 });

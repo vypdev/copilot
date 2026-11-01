@@ -7,6 +7,7 @@ import { ready, change, button, navigate } from '../fixtures/center_app_dom.ts';
 import { deferred } from '../fixtures/runtime.ts';
 import { operationCopy } from '../../src/domain/operation_copy.ts';
 import { SETTINGS_KEY } from '../../src/application/settings_repository.ts';
+import { privacyCopy } from '../../src/domain/privacy_copy.ts';
 
 it.each(['en', 'es', 'fr', 'pt'])('the actual %s center reports reviewed and canonically saved preferences independently from off history', async locale => {
     const f = await fixture(locale); change('center-theme', 'dark'); button(f.centerCopy.messages.preview).click();
@@ -27,7 +28,7 @@ it('cancellation reports the cancelled preview and cannot be presented as a writ
     button(f.reviewCopy.cancel).click(); await ready(() => operationText().includes(f.opCopy.stages.cancelled)); expect(f.port.set).not.toHaveBeenCalled();
 });
 it('private current targets are escaped, retired on blur and excluded from actual retained history', async () => {
-    const f = await fixture('en', true); await navigate('profiles'); await ready(() => !!document.querySelector('#profile-id'));
+    const f = await fixture('en', true); await navigate('profiles'); await ready(() => !!document.querySelector('#profile-id:not(:disabled)'));
     change('profile-id', 'private-profile'); change('profile-name', '<img src=x>'); button(f.centerCopy.messages.preview).click();
     await ready(() => document.querySelector('[data-operation-target]')?.textContent === '<img src=x>'); expect(document.querySelector('img')).toBeNull();
     window.dispatchEvent(new Event('blur')); await tick(); expect(document.querySelector('[data-operation-target]')).toBeNull();
@@ -41,7 +42,9 @@ it('a failed metadata read removes private detail without poisoning ordinary pre
     button(f.reviewCopy.confirm).click(); await ready(() => document.querySelector('section [role=status]')?.textContent === f.reviewCopy.states.saved); expect(f.port.set).toHaveBeenCalledOnce();
 });
 it('operation-only notifications neither inspect GitHub nor reread history and do not reset permission state', async () => {
-    const f = await fixture(); await navigate('privacy'); await ready(() => !!document.querySelector('[data-permission-status]'));
+    const f = await fixture(); await navigate('privacy');
+    await ready(() => document.querySelector('[data-permission-status]')?.textContent === privacyCopy('en').complete);
+    await ready(() => f.app.port.send.mock.calls.filter(([m]) => m.method === 'center.history.read').length === 2);
     const historyReads = f.app.port.send.mock.calls.filter(([m]) => m.method === 'center.history.read').length; const providerReads = vi.mocked(f.sessions.reader.read).mock.calls.length;
     const permissionReads = f.app.browser.api.permissions.contains;
     await f.browser.api.runtime.sendMessage({ version: 1, method: 'center.operation.invalidated' }); await ready(() => document.querySelector('[data-current-operation]')?.getAttribute('aria-busy') === 'false');

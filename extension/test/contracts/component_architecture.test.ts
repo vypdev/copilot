@@ -65,3 +65,21 @@ it('keeps control and bidi characters out of component diagnostics without erasi
     expect(() => componentScript('extension/src/presentation/invalid\t.svelte', '<h1>')).toThrow('invalid?.svelte: component-syntax');
     expect(() => componentScript('extension/src/presentation/invalid\u202e.svelte', '<h1>')).toThrow('invalid?.svelte: component-syntax');
 });
+
+const scopes = ['instance', 'module'] as const;
+const scriptView = (scope: typeof scopes[number], body: string) => `<script ${scope === 'module' ? 'module ' : ''}lang="ts">${body}</script><p>{value}</p>`;
+const globals = [
+    { capability: 'window', expression: 'window.location.href' }, { capability: 'document', expression: 'document.title' },
+    { capability: 'self', expression: 'self.location.href' }, { capability: 'navigator', expression: 'navigator.userAgent' },
+];
+it.each(scopes.flatMap(scope => globals.map(global => ({ scope, ...global }))))('rejects $capability authority in the original $scope script through the full build architecture gate', ({ scope, expression }) => {
+    expect(() => validate(scriptView(scope, `const value=${expression};`))).toThrow('presentation-authority');
+});
+it.each(scopes)('rejects DOM authority nested inside a callback in the %s script', scope => {
+    expect(() => validate(scriptView(scope, 'const value=(()=>document.title)();'))).toThrow('presentation-authority');
+});
+it.each(scopes)('retains inert authored DOM vocabulary in the %s script', scope => {
+    const data = 'const labels:{window:string,document:string,self:string,navigator:string}={window:"window",document:"document",self:"self",navigator:"navigator"};';
+    const fields = 'const {document:label}=labels;class Label {document=label;}';
+    expect(() => validate(scriptView(scope, `${data}${fields}const value=labels.window+new Label().document+labels.self+labels.navigator;`))).not.toThrow();
+});

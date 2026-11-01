@@ -280,11 +280,25 @@ an explicit 120-second hook budget. The public validation-command integration
 case has the same budget for its two actual complete clean builds; ordinary
 assertions keep their existing timeouts. Privacy inspection waits for the
 independent history hydration before asserting its exact request sequence.
-Reference-composition assertions wait for native metadata inspection
-to finish before distinguishing a missing reference from unavailable inspection.
+Cold two-build fixtures and receipt/source comparison use that same 120-second
+budget. Environment-isolation cases keep a 60-second bound per real child build,
+and allow 120 seconds for a case that runs two of them. Profile and operation
+assertions wait for verified provenance, enabled native controls and completed
+permission/history initialization before interacting or measuring new effects.
+Reference-composition assertions wait for native metadata inspection to finish
+before distinguishing a missing reference from unavailable inspection.
 The hosted Windows job allows 60 minutes for the complete root and extension
 coverage campaign; Linux/macOS keep 20 minutes. This job budget does not change
 test assertions, ordinary test timeouts, coverage or approval requirements.
+
+Both original Svelte script scopes pass through the same TypeScript architecture
+gate as ordinary presentation modules. It rejects direct `window`, `document`,
+`self` and `navigator` authority, including nested callbacks. Keep native DOM
+capabilities in infrastructure and pass semantic actions or view data inward.
+Ordinary data fields such as a translated `document` label remain valid; their
+property names, class fields and renamed destructuring keys do not acquire a
+global capability. Markup restrictions, checked
+navigation and explicit native control event handling remain separate gates.
 
 Safari prerequisites are macOS 27.0.1 build 26A434, Safari 27.0.1 build
 22625.1.29.11.28, Xcode 27.1 build 27A9275, enabled remote automation and local
