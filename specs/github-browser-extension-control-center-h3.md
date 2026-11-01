@@ -2679,3 +2679,54 @@ delivery evidence; and loss of actual writer readiness after permit capture.
 The first three fail against the previous implementation. Document the distinction
 between admission and persistence in the contributor guide and retain all native
 source, consent and generation guards.
+
+### Preparation and current-document admission (2026-11-01)
+
+The existing 16 live settings-operation limit MUST include preparations waiting
+for native inspection as well as retained previews and running confirmations.
+Admission reserves one slot before asynchronous storage work. Overflow returns
+the existing localized Busy state without another native read. A successful
+preparation transfers its reservation to the retained preview synchronously;
+every unsuccessful exit releases it. Invalidating a source retires its authority
+but MUST NOT invent completion of outstanding native IO: those reservations
+remain counted until their actual preparation settles. The separate 32-result
+history, five-minute source lifetime and all revision/owner guards stay intact.
+
+```mermaid
+flowchart LR
+  A[Preview requested] --> B{Live operations below 16?}
+  B -->|No| C[Busy; no new inspection]
+  B -->|Yes| D[Reserve preparation]
+  D --> E[Inspect native settings]
+  E -->|Current valid plan| F[Transfer slot to retained preview]
+  E -->|Failure or retired source| G[Release reservation]
+  F --> H[Confirm or cancel with existing guards]
+```
+
+Text equivalent: admission first reserves bounded work; storage inspection then
+either produces an immutable current preview or releases the reservation. The
+capacity budget is fixed and introduces no user setting or automatic retry.
+
+A Data page import MUST capture the currently observed settings revision when
+the user submits the import. A prior mount revision cannot substitute for that
+current observation after a refresh. The captured submit-time value remains the
+fence throughout file IO; a settings change during that read still produces a
+conflict and preserves the newer envelope. The same file input remains mounted
+across an ordinary settings refresh. Unknown/malformed file behavior, cleared
+file values, explicit review and complete-envelope persistence remain unchanged.
+
+The current-settings admission policy MUST reject retained data while the client
+is opening a fresh native document (`loading`) or has been disposed (`stopped`).
+Retained data is not a compatible current-document observation. Read-only
+discovery uses its existing unknown-state presentation until fresh admission;
+recoverable draft states do not override either phase guard. This introduces no
+credential read, connection grant, schema migration or mutation authority.
+
+Add **15 distinct regressions**: nine preparation cases (suspended-read overflow,
+atomic retention/cancellation reuse, invalidation with outstanding IO, and six
+unsuccessful exits); two phase contracts including all three recoverable issue
+variants without counting those variants again; two actual client reopen
+journeys suspended at open/read; and two mounted Data-page imports distinguishing
+a refresh before submission from one during file IO. Eight of these cases
+reproduce failures before the changes. Keep the existing concurrent retained-plan
+limit test and all full-coverage, architecture, browser and H12 acceptance gates.

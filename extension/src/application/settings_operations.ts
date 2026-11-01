@@ -22,6 +22,7 @@ const PREVIEW_TTL = 300_000;
 
 /** Background-owned previews; browser views receive copies and can confirm only the retained exact plan. */
 export class SettingsOperations {
+    private readonly preparing = new Set<object>();
     private readonly pending = new Map<string, Pending>();
     private readonly completed = new Map<string, Completed>();
     private readonly running = new Map<string, Running>();
@@ -68,9 +69,10 @@ export class SettingsOperations {
         if (!fence) return { state: 'denied' };
         if (now === null || !natural(now + PREVIEW_TTL)) return { state: 'unavailable' };
         this.prune(now);
-        if (this.pending.size + this.running.size >= 16) return { state: 'busy' };
+        if (this.preparing.size + this.pending.size + this.running.size >= 16) return { state: 'busy' };
         const generation = this.generation;
         const bound = { owner, fence, generation, createdAt: now, expiresAt: now + PREVIEW_TTL };
+        this.preparing.add(bound);
         try {
             if (!record(intent) || !jsonBytesWithin(intent, MAX_CENTER_REQUEST_BYTES)) return { state: 'invalid', reason: 'invalid-input' };
             const input: unknown = JSON.parse(JSON.stringify(intent));
@@ -85,10 +87,10 @@ export class SettingsOperations {
             const id = this.ports.identifier();
             if (!settingsOperationId(id) || this.pending.has(id) || this.running.has(id) || this.completed.has(id)
                 || inspected.operation?.id === id) return { state: 'unavailable' };
-            // A concurrent preview may have consumed capacity while storage was read.
-            if (this.pending.size + this.running.size >= 16) return { state: 'busy' };
             if (!this.current(bound)) return { state: 'stale' };
             const retained: Pending = { ...bound, revision: before.revision, before, after: plan.settings, action: plan.action, trace: null };
+            // Transfer the reserved slot without awaiting between preparation and retention.
+            this.preparing.delete(bound);
             this.pending.set(id, retained);
             try { retained.trace = this.ports.observe?.(owner, plan.action, settingsOperationTarget(plan.action, input, before, plan.settings), () => this.current(bound)) ?? null; }
             catch { /* Current/history observation is secondary to the admitted preview. */ }
@@ -96,6 +98,7 @@ export class SettingsOperations {
             return deepFreeze({ state: 'preview', operationId: id, revision: before.revision, expiresAt: bound.expiresAt,
                 action: plan.action, before, after: plan.settings });
         } catch { return { state: 'unavailable' }; }
+        finally { this.preparing.delete(bound); }
     }
     confirm(id: string, revision: number, owner: string): Promise<SettingsOperationOutcome> {
         if (!settingsOperationId(id) || !natural(revision)) return Promise.resolve({ state: 'invalid' });

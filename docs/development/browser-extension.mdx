@@ -305,6 +305,25 @@ effects. Optional identity journeys observe enabled review/confirm/close/disable
 controls as well as returned focus. These are readiness conditions, with the
 existing five-second bound, rather than retries of a possibly submitted action.
 
+Settings preview admission reserves capacity before reading native storage.
+The fixed 16-operation budget includes preparations, retained previews and
+running confirmations. A suspended native read keeps its reservation until it
+settles, including after invalidation; overflow returns Busy without another
+inspection. Every failed preparation releases its reservation, and successful
+preparation transfers the slot to its retained preview without an async gap.
+Closed operation receipts retain their separate bounded history.
+
+Imports use the currently observed revision when submitted, including after a
+refresh on the same Data page. That submit-time revision remains the fence while
+the file is read: a later refresh cannot silently move the import onto newer
+settings. A newly opening or disposed native client exposes no retained snapshot
+as current settings; discovery waits for a compatible current document.
+
+The native driver sends the string `text` parameter required by
+[W3C Element Send Keys](https://www.w3.org/TR/webdriver2/#element-send-keys).
+The adapter's wire tests cover unchanged Unicode, multiline/empty replacement
+and keyboard tokens; loaded-browser evidence remains a separate requirement.
+
 Both original Svelte script scopes pass through the same TypeScript architecture
 gate as ordinary presentation modules. It rejects direct `window`, `document`,
 `self` and `navigator` authority, including nested callbacks. Keep native DOM

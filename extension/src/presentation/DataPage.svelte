@@ -1,11 +1,10 @@
 <script lang="ts">
     import { workspaceCopy } from '../domain/workspace_copy.ts';
-    import { onDestroy, untrack } from 'svelte';
+    import { onDestroy } from 'svelte';
     import type { CenterRouteProps } from '../domain/center_ui.ts';
     import { navigationCopy } from '../domain/navigation_copy.ts';
     import { centerLocationHash } from '../domain/center_routes.ts';
     let { context, actions }: CenterRouteProps = $props();
-    const revision = untrack(() => context.settings.revision);
     let hasFile = $state(false); let fileError = $state(false); let exportError = $state(false); let readingFile = $state(false);
     let scope = $state('appearance');
     const m = $derived(context.copy.messages);
@@ -14,7 +13,7 @@
     $effect(() => actions.dirty(hasFile)); onDestroy(() => actions.dirty(false));
     async function importFile(): Promise<void> {
         if (readingFile) return;
-        readingFile = true; fileError = !await actions.importSettings(revision); hasFile = false; readingFile = false;
+        readingFile = true; fileError = !await actions.importSettings(context.settings.revision); hasFile = false; readingFile = false;
     }
     async function exportFile(): Promise<void> { exportError = !await actions.exportSettings(); }
 </script>

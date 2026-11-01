@@ -3607,6 +3607,8 @@
         "extension/test/integration/settings_transactions.test.ts",
         "extension/test/integration/settings_transaction_outcomes.test.ts",
         "extension/test/integration/settings_operations.test.ts",
+        "extension/test/integration/settings_preparation_budget.test.ts",
+        "extension/test/integration/center_reopening_admission.test.ts",
         "extension/test/integration/settings_import_pauses.test.ts",
         "extension/test/integration/settings_operation_fences.test.ts",
         "extension/test/fixtures/settings_operations.ts",

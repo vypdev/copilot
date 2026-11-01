@@ -16,7 +16,8 @@ export interface CenterClientView {
     readonly data: CenterData | null; readonly review: ClientReview | null;
     readonly issue: 'unavailable' | 'incompatible' | 'stale' | 'denied' | 'busy' | 'invalid' | 'unchanged' | 'conflict' | 'expired' | null;
 }
-/** A failed current observation cannot promote retained preferences to current facts. */
+/** Opening, disposal or a failed current observation cannot promote retained preferences to current facts. */
 export function currentCenterSettings(view: CenterClientView): Settings | null {
-    return view.data?.state === 'ready' && (view.issue === null || view.issue === 'invalid' || view.issue === 'unchanged') ? view.data.settings : null;
+    return view.phase !== 'loading' && view.phase !== 'stopped' && view.data?.state === 'ready'
+        && (view.issue === null || view.issue === 'invalid' || view.issue === 'unchanged') ? view.data.settings : null;
 }

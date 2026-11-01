@@ -32,6 +32,7 @@ export class NativePage {
     async fill(selector: string, value: string): Promise<void> {
         if (!input(value, 4096)) throw new Error('webdriver:page:invalid-input');
         const element = await this.find(selector); await this.command('POST', `/element/${element}/clear`, {});
+        // W3C Element Send Keys reads a string "text" parameter: https://www.w3.org/TR/webdriver2/#element-send-keys
         await this.command('POST', `/element/${element}/value`, { text: value });
     }
     async keys(selector: string, value: string): Promise<void> {

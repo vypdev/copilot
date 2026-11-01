@@ -47,3 +47,6 @@ it.each(['future', 'corrupt', 'migration-required'] as const)('does not promote 
 it('has no current settings before the native document is available', () => {
     expect(currentCenterSettings({ ...ready, phase: 'loading', data: null })).toBe(null);
 });
+it.each(['loading', 'stopped'] as const)('does not expose a retained snapshot as current in %s, including recoverable draft states', phase => {
+    for (const issue of [null, 'invalid', 'unchanged'] as const) expect(currentCenterSettings({ ...ready, phase, issue })).toBe(null);
+});
