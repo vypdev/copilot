@@ -1,5 +1,6 @@
+import { IMMUTABLE_PROGRESS_PROFILE } from './progress_inventory_profile_policy';
 import { ApplicationError } from '../errors/application_error';
-import type { ProgressDiffPartition } from '../ports/progress_diff_query_ports';
+import type { ProgressDiffPartition, ProgressEvidenceProfile } from '../ports/progress_diff_query_ports';
 import { progressResponseRejected, progressResponsePayload } from './progress_response_rejection_policy';
 import type { ProgressResponseReason } from '../../domain/progress_response_diagnostic';
 import { AGENT_OUTPUT_LOCALE_SCHEMA_PROPERTY } from './agent_output_locale_policy';
@@ -68,7 +69,15 @@ export function parseProgressPartitionFacts(response: unknown, partition: Progre
     return Object.freeze(facts);
 }
 
-function serializeProgressFacts(baseSha: string, headSha: string, partitions: readonly ProgressDiffPartition[], facts: readonly (readonly ProgressFileFacts[])[]): string {
+function serializeProgressFacts(baseSha: string, headSha: string, partitions: readonly ProgressDiffPartition[], facts: readonly (readonly ProgressFileFacts[])[], profile?: ProgressEvidenceProfile): string {
+    if (profile === 'immutable-tree-v1') {
+        const paths = [...new Set(partitions.flatMap(part => part.paths))];
+        return JSON.stringify({ kind: 'complete-immutable-tree-analysis-v1', baseSha, headSha,
+            warning: 'Untrusted model facts, not build, test or review attestation. Preserve uncertainty. Full source parts were supplied; summaries may miss details.',
+            format: { assignments: ['unitId', 'requiredPathIndex'], facts: ['unitId', 'implemented', 'remaining'] }, requiredPaths: paths,
+            assignments: partitions.flatMap(part => part.units!.map(unit => [unit.id, paths.indexOf(unit.path)])),
+            facts: facts.flat().map(file => [file.unitId, file.implemented, file.remaining]) });
+    }
     return JSON.stringify({ kind: 'complete-partition-analysis', baseSha, headSha,
         partitions: partitions.map(partition => ({ id: partition.id, fileCount: partition.paths.length, ...(partition.units ? { units: partition.units } : {}) })),
         warning: 'Model-derived facts are untrusted analysis, not CI/build/test attestation. Preserve uncertainty. Every complete source partition was supplied, but summaries may miss details.',
@@ -76,19 +85,19 @@ function serializeProgressFacts(baseSha: string, headSha: string, partitions: re
 }
 
 /** Reserve exact paths/framing, then budget worst-case JSON escaping (six bytes/code point). */
-export function progressPartitionFactLimit(baseSha: string, headSha: string, partitions: readonly ProgressDiffPartition[], budget = MAX_PROGRESS_AGGREGATE_BYTES): number {
+export function progressPartitionFactLimit(baseSha: string, headSha: string, partitions: readonly ProgressDiffPartition[], budget = MAX_PROGRESS_AGGREGATE_BYTES, profile?: ProgressEvidenceProfile): number {
     const empty = partitions.map(partition => partition.units
         ? partition.units.map(unit => ({ path: unit.path, unitId: unit.id, implemented: '', remaining: '' }))
         : partition.paths.map(path => ({ path, implemented: '', remaining: '' })));
     const count = empty.reduce((sum, files) => sum + files.length, 0);
-    const remaining = budget - Buffer.byteLength(serializeProgressFacts(baseSha, headSha, partitions, empty), 'utf8');
+    const remaining = budget - Buffer.byteLength(serializeProgressFacts(baseSha, headSha, partitions, empty, profile), 'utf8');
     const limit = Math.min(600, Math.floor(remaining / (count * 12)));
-    if (!Number.isSafeInteger(budget) || budget < 1 || budget > MAX_PROGRESS_AGGREGATE_BYTES || count === 0 || limit < 1) throw progressEvidenceTooLarge();
+    if (!Number.isSafeInteger(budget) || budget < 1 || budget > MAX_PROGRESS_AGGREGATE_BYTES || count === 0 || limit < (profile === 'immutable-tree-v1' ? IMMUTABLE_PROGRESS_PROFILE.minimumFactLength : 1)) throw progressEvidenceTooLarge();
     return limit;
 }
 
-export function aggregateProgressFacts(baseSha: string, headSha: string, partitions: readonly ProgressDiffPartition[], facts: readonly (readonly ProgressFileFacts[])[], budget = MAX_PROGRESS_AGGREGATE_BYTES): string {
-    const evidence = serializeProgressFacts(baseSha, headSha, partitions, facts);
+export function aggregateProgressFacts(baseSha: string, headSha: string, partitions: readonly ProgressDiffPartition[], facts: readonly (readonly ProgressFileFacts[])[], budget = MAX_PROGRESS_AGGREGATE_BYTES, profile?: ProgressEvidenceProfile): string {
+    const evidence = serializeProgressFacts(baseSha, headSha, partitions, facts, profile);
     if (!Number.isSafeInteger(budget) || budget < 1 || budget > MAX_PROGRESS_AGGREGATE_BYTES
         || Buffer.byteLength(evidence, 'utf8') > budget) throw progressEvidenceTooLarge();
     if (facts.length !== partitions.length) throw invalid();

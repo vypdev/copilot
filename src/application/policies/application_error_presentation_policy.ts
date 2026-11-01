@@ -1,3 +1,4 @@
+import { progressInventoryPresentation } from '../../domain/progress_inventory_diagnostic';
 import { progressBinaryEvidencePresentation } from '../../domain/progress_binary_evidence_diagnostic';
 import { issueWorkflowDiagnosticPresentation } from '../../domain/issue_workflow_diagnostic';
 import { isCopilotCommandValidationReason } from '../../domain/copilot_command_validation';
@@ -39,7 +40,9 @@ export function buildApplicationErrorPresentation(
     const descriptor = error.recovery
         ? `error.recovery.${error.recovery.id}` as const
         : `error.${error.code}` as const;
-    const variables = error.recovery?.id === 'progress-binary-evidence-unavailable'
+    const variables = error.recovery?.id === 'progress-inventory-incomplete'
+        ? progressInventoryPresentation(error.recovery.variables)
+        : error.recovery?.id === 'progress-binary-evidence-unavailable'
         ? progressBinaryEvidencePresentation(error.recovery.variables)
         : error.recovery?.id === 'issue-workflow-admission-blocked'
         ? issueWorkflowDiagnosticPresentation(error.recovery.variables)

@@ -32551,6 +32551,11 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
         action: 'Inspect the original requirement and response schema. Details: phase {phase}, reason {reason}, field {field}, requirement {requirementId}, original issue line {sourceLineId}. none means no verified identity is available. A fresh attempt may help when the provider can satisfy the unchanged contract; do not relax acceptance or verification.',
         retainedState: 'Existing progress labels and published assessments were preserved. An optional check-publication warning is a separate result.',
     }),
+    'progress-inventory-incomplete': Object.freeze({
+        impact: 'Complete progress evidence is unavailable ({profile}, {reason}); observed {countKind} {observedCount}, supported limit {supportedLimit}. Unreviewed path excerpt: {paths}.',
+        action: 'Inspect the pinned comparison and named capacity or integrity boundary. An identical retry cannot repair unsupported evidence; repair its source or use a reviewed supported protocol. A zero limit denotes an integrity check, not a file allowance.',
+        retainedState: 'Existing progress was retained. No partial assessment or progress publication was accepted. Build, review, coverage and approval remain independent gates.',
+    }),
     'progress-binary-evidence-unavailable': Object.freeze({
         impact: 'Progress was not assessed because required binary or non-text contents cannot be reviewed. Unreviewed paths ({pathCount} total; {shownCount} shown; complete inventory in run details): {paths}.',
         action: 'Inspect the intended pull request base and the pinned paths. Changed binary contents need reviewable source and provenance; file metadata or a successful build does not establish binary correctness.',
@@ -32713,6 +32718,11 @@ const SPANISH_RECOVERY_CONTENT = Object.freeze({
         impact: 'El resultado de progreso devuelto incumplió su contrato; no se publicó el progreso.',
         action: 'Inspecciona el requisito original y el esquema de respuesta. Detalles: fase {phase}, motivo {reason}, campo {field}, requisito {requirementId}, línea original de la issue {sourceLineId}. none indica que no hay una identidad verificada. Un nuevo intento puede ayudar si el proveedor cumple el contrato sin cambiarlo; no relajes la aceptación ni la verificación.',
         retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas. Un aviso de publicación del check opcional corresponde a otro resultado.',
+    }),
+    'progress-inventory-incomplete': Object.freeze({
+        impact: 'La evidencia completa de progreso no está disponible ({profile}, {reason}); observado {countKind} {observedCount}, límite admitido {supportedLimit}. Extracto de rutas sin revisar: {paths}.',
+        action: 'Inspecciona la comparación fijada y el límite de capacidad o integridad indicado. Repetir el intento no repara evidencia no admitida; corrige su origen o usa un protocolo revisado compatible. Un límite cero indica una comprobación de integridad, no un cupo de archivos.',
+        retainedState: 'Se conservó el progreso existente. No se aceptó ninguna evaluación parcial ni publicación del progreso. Build, revisión, cobertura y aprobación siguen siendo controles independientes.',
     }),
     'progress-binary-evidence-unavailable': Object.freeze({
         impact: 'No se evaluó el progreso porque no se pueden revisar los contenidos binarios o no textuales necesarios. Rutas sin revisar ({pathCount} en total; {shownCount} mostradas; inventario completo en los detalles de ejecución): {paths}.',
@@ -33686,6 +33696,7 @@ var _ApplicationError_cause;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = exports.APPLICATION_ERROR_RECOVERY_IDS = void 0;
 exports.isApplicationErrorCorrelationId = isApplicationErrorCorrelationId;
+const progress_inventory_diagnostic_1 = __nccwpck_require__(4048);
 const progress_response_diagnostic_1 = __nccwpck_require__(6289);
 const progress_binary_evidence_diagnostic_1 = __nccwpck_require__(364);
 const issue_workflow_diagnostic_1 = __nccwpck_require__(4347);
@@ -33726,6 +33737,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'change-size-reconciliation-failed',
     'issue-workflow-admission-blocked',
     'progress-binary-evidence-unavailable',
+    'progress-inventory-incomplete',
     'progress-result-contract-invalid',
     'stored-configuration-schema-missing',
     'stored-configuration-schema-unsupported',
@@ -33967,6 +33979,7 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'sdd-draft-requirement-mapping-invalid': Object.freeze([]),
     'sdd-draft-repository-path-invalid': Object.freeze([]),
     'progress-binary-evidence-unavailable': Object.freeze(['paths', 'pathCount']),
+    'progress-inventory-incomplete': Object.freeze(['profile', 'reason', 'observedCount', 'supportedLimit', 'countKind', 'paths']),
     'progress-result-contract-invalid': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
     'deployment-publication-context-missing': Object.freeze([]),
     'workspace-changes-rejected': Object.freeze([]),
@@ -34045,6 +34058,8 @@ function normalizeApplicationErrorRecovery(recovery) {
     }
     if (recovery.id === 'progress-result-contract-invalid' && !(0, progress_response_diagnostic_1.isProgressResponseDiagnosticFacts)(variables))
         throw new TypeError('Progress response diagnostic is invalid.');
+    if (recovery.id === 'progress-inventory-incomplete' && !(0, progress_inventory_diagnostic_1.isProgressInventoryDiagnostic)(variables))
+        throw new TypeError('Progress inventory diagnostic is invalid.');
     if (recovery.id === 'progress-binary-evidence-unavailable' && !(0, progress_binary_evidence_diagnostic_1.isProgressBinaryEvidenceFacts)(variables))
         throw new TypeError('Progress binary evidence diagnostic is invalid.');
     if (recovery.id === 'issue-workflow-admission-blocked' && !(0, issue_workflow_diagnostic_1.isIssueWorkflowDiagnostic)(variables))
@@ -36617,6 +36632,55 @@ function renderProgressEvidencePath(path) {
     while (visible.includes(delimiter))
         delimiter += '`';
     return `${delimiter}${visible}${delimiter}`;
+}
+
+
+/***/ }),
+
+/***/ 4048:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PROGRESS_INVENTORY_REASONS = void 0;
+exports.progressInventoryDiagnostic = progressInventoryDiagnostic;
+exports.isProgressInventoryDiagnostic = isProgressInventoryDiagnostic;
+exports.progressInventoryPresentation = progressInventoryPresentation;
+const progress_evidence_path_1 = __nccwpck_require__(5887);
+exports.PROGRESS_INVENTORY_REASONS = Object.freeze([
+    'inventory', 'identity', 'capability', 'prefix', 'source-moved', 'binary', 'file-count', 'files', 'bytes', 'requests',
+    'treeEntries', 'frames', 'blob-size', 'units', 'partition', 'manifest', 'facts',
+]);
+function progressInventoryDiagnostic(reason, observedCount, supportedLimit, paths, countKind = 'exact') {
+    const named = [];
+    for (const path of [...new Set(paths)].slice(0, 8)) {
+        if (Buffer.byteLength(JSON.stringify([...named, path])) > 8192)
+            break;
+        named.push(path);
+    }
+    return Object.freeze({ profile: 'immutable-tree-v1', reason, observedCount, supportedLimit, countKind, paths: JSON.stringify(named) });
+}
+function isProgressInventoryDiagnostic(value) {
+    const facts = value;
+    if (Object.keys(facts).sort().join(',') !== 'countKind,observedCount,paths,profile,reason,supportedLimit'
+        || facts.profile !== 'immutable-tree-v1' || !exports.PROGRESS_INVENTORY_REASONS.includes(facts.reason)
+        || !['exact', 'at-least'].includes(facts.countKind)
+        || ![facts.observedCount, facts.supportedLimit].every(count => Number.isSafeInteger(count) && count >= 0)
+        || typeof facts.paths !== 'string' || Buffer.byteLength(facts.paths) > 8192)
+        return false;
+    let paths;
+    try {
+        paths = JSON.parse(facts.paths);
+    }
+    catch {
+        return false;
+    }
+    return Array.isArray(paths) && paths.length <= 8 && new Set(paths).size === paths.length
+        && paths.every(progress_evidence_path_1.isProgressEvidencePath) && JSON.stringify(paths) === facts.paths;
+}
+function progressInventoryPresentation(facts) {
+    return Object.freeze({ ...facts, countKind: facts.countKind === 'at-least' ? '≥' : '=', paths: JSON.parse(facts.paths).map(progress_evidence_path_1.renderProgressEvidencePath).join('; ') });
 }
 
 

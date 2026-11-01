@@ -238,6 +238,11 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     action: 'Inspect the original requirement and response schema. Details: phase {phase}, reason {reason}, field {field}, requirement {requirementId}, original issue line {sourceLineId}. none means no verified identity is available. A fresh attempt may help when the provider can satisfy the unchanged contract; do not relax acceptance or verification.',
     retainedState: 'Existing progress labels and published assessments were preserved. An optional check-publication warning is a separate result.',
   }),
+  'progress-inventory-incomplete': Object.freeze({
+    impact: 'Complete progress evidence is unavailable ({profile}, {reason}); observed {countKind} {observedCount}, supported limit {supportedLimit}. Unreviewed path excerpt: {paths}.',
+    action: 'Inspect the pinned comparison and named capacity or integrity boundary. An identical retry cannot repair unsupported evidence; repair its source or use a reviewed supported protocol. A zero limit denotes an integrity check, not a file allowance.',
+    retainedState: 'Existing progress was retained. No partial assessment or progress publication was accepted. Build, review, coverage and approval remain independent gates.',
+  }),
   'progress-binary-evidence-unavailable': Object.freeze({
     impact: 'Progress was not assessed because required binary or non-text contents cannot be reviewed. Unreviewed paths ({pathCount} total; {shownCount} shown; complete inventory in run details): {paths}.',
     action: 'Inspect the intended pull request base and the pinned paths. Changed binary contents need reviewable source and provenance; file metadata or a successful build does not establish binary correctness.',
@@ -402,6 +407,11 @@ const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     impact: 'El resultado de progreso devuelto incumplió su contrato; no se publicó el progreso.',
     action: 'Inspecciona el requisito original y el esquema de respuesta. Detalles: fase {phase}, motivo {reason}, campo {field}, requisito {requirementId}, línea original de la issue {sourceLineId}. none indica que no hay una identidad verificada. Un nuevo intento puede ayudar si el proveedor cumple el contrato sin cambiarlo; no relajes la aceptación ni la verificación.',
     retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas. Un aviso de publicación del check opcional corresponde a otro resultado.',
+  }),
+  'progress-inventory-incomplete': Object.freeze({
+    impact: 'La evidencia completa de progreso no está disponible ({profile}, {reason}); observado {countKind} {observedCount}, límite admitido {supportedLimit}. Extracto de rutas sin revisar: {paths}.',
+    action: 'Inspecciona la comparación fijada y el límite de capacidad o integridad indicado. Repetir el intento no repara evidencia no admitida; corrige su origen o usa un protocolo revisado compatible. Un límite cero indica una comprobación de integridad, no un cupo de archivos.',
+    retainedState: 'Se conservó el progreso existente. No se aceptó ninguna evaluación parcial ni publicación del progreso. Build, revisión, cobertura y aprobación siguen siendo controles independientes.',
   }),
   'progress-binary-evidence-unavailable': Object.freeze({
     impact: 'No se evaluó el progreso porque no se pueden revisar los contenidos binarios o no textuales necesarios. Rutas sin revisar ({pathCount} en total; {shownCount} mostradas; inventario completo en los detalles de ejecución): {paths}.',

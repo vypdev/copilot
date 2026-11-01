@@ -173,6 +173,43 @@ If source evidence is missing or any part fails, the Action retains the current 
 
 ### Invalid returned assessments
 
+### Complete inventories beyond the compare API ceiling
+
+GitHub compare returns at most 300 file records. When that boundary is reached,
+Copilot collects the complete delta from the pinned merge-base and head Git trees.
+It verifies every complete directory against its Git object hash and recovers
+all changed regular UTF-8 contents. The first 300 records cannot attest completeness.
+Renames and copies become exact independent removed/added paths; a canonical path
+count can therefore differ from GitHub's rename-record count. This route supplies
+complete contents with explicitly unavailable line statistics, rather than invented
+zero additions or deletions. The existing generated `build/` and `specs/CATALOG.md`
+metadata exceptions remain the only exceptions.
+
+The closed `immutable-tree-v1` profile supports up to 1,024 canonical paths, 4,096
+content units and 16 recovery epochs. Each epoch retains the existing 64-file,
+4 MiB, 256-read and 50,000-directory-entry limits. Global accounting is shared by
+inventory and recovery: at most 1,024 files, 16 MiB represented before/after bytes,
+2,048 Git-object reads and 200,000 directory entries. Cached bytes are charged for
+each represented side. Each blob remains bounded by 2 MiB; each source part and
+the complete manifest by 256,000 bytes; at most 64 parts may be analyzed.
+
+Compact manifests and final facts preserve exact unit/path and request identities;
+full content and metadata remain in their digest-bound source parts. All source
+parts, complete response receipts and the final assessment must validate. The
+384,000-byte aggregate and 512 KiB full runtime prompt limits remain unchanged.
+Facts receive an adaptive 16–600-code-point budget; if the minimum cannot fit,
+assessment stops before the first model request. These independent capacities
+can reject an otherwise supported file count; no text is clipped to fit.
+
+`progress-inventory-incomplete` reports the protocol, finite reason, observed
+count, supported limit and an inert bounded path excerpt in the CLI, Check and
+Job Summary. `≥` marks a lower bound after collection stopped; `=` marks an exact
+count. A zero limit denotes failed integrity rather than a file allowance. The
+result is nonretryable for identical unsupported evidence and retains previous
+progress. Genuine provider outages keep their own category. Small comparisons
+retain the previous protocol, and native PR/ref/issue freshness checks remain
+required before publication. No permission or configuration switch is added.
+
 A completed agent operation can return data that violates the progress contract.
 Copilot rejects that result and retains the previous progress. Its existing
 CLI, Check and Job Summary expose `progress-result-contract-invalid` with a
