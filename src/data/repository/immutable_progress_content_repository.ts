@@ -7,7 +7,7 @@ export { safeProgressPath };
 import { createHash } from 'node:crypto';
 import type { ProgressEvidenceProfile, ProgressRecoveryUsage } from '../../application/ports/progress_diff_query_ports';
 import { initialProgressRecoveryUsage, spendProgressRecovery, ProgressRecoveryCapacityFailure,
-    MAX_FRAMED_PROGRESS_FILE_BYTES, MAX_PROGRESS_RECOVERY_FRAMES, PROGRESS_RECOVERY_TOTAL_LIMITS,
+    MAX_FRAMED_PROGRESS_FILE_BYTES, MAX_PROGRESS_RECOVERY_FRAMES, PROGRESS_RECOVERY_TOTAL_LIMITS, PROGRESS_RECOVERY_FRAME_LIMITS,
     type ProgressRecoveryResource } from '../../application/policies/progress_recovery_capacity_policy';
 import type { GithubProgressObjectClient } from '../../infrastructure/github/ports/github_progress_object_provider_port';
 import { MAX_PROGRESS_OBJECT_REQUESTS, MAX_PROGRESS_RECOVERED_BYTES, MAX_PROGRESS_RECOVERED_FILE_BYTES, MAX_PROGRESS_TREE_ENTRIES,
@@ -43,6 +43,7 @@ export class ImmutableProgressContentRepository {
         catch (error) {
             if (!(error instanceof ProgressRecoveryCapacityFailure)) throw error;
             if (this.profile === 'immutable-tree-v1') {
+                if (error.reason === 'single-claim') throw progressInventoryError(resource, amount, PROGRESS_RECOVERY_FRAME_LIMITS[resource], paths);
                 const failureResource = error.reason === 'frames' ? 'frames' : resource;
                 throw progressInventoryError(failureResource, failureResource === 'frames' ? error.usage.frames + 1 : error.usage.total[failureResource] + amount,
                     failureResource === 'frames' ? IMMUTABLE_PROGRESS_PROFILE.frames : IMMUTABLE_PROGRESS_PROFILE.total[failureResource], paths, 'at-least');

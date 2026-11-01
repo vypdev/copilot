@@ -38,4 +38,10 @@ describe('complete immutable changed-path inventory', () => {
         for(const sha of hashes.slice(0,256))await r.directory(sha,['generated']);
         await expect(r.directory(hashes[256],['generated'])).rejects.toMatchObject({recovery:{variables:{reason:'frames',observedCount:17,supportedLimit:16}}});expect(f.getTree).toHaveBeenCalledTimes(256);
     });
+    it('reports the single-response directory limit rather than the global allowance',async()=>{
+        const f=fixture(),r=reader(f),entries=Array.from({length:50001},(_,n)=>({path:'file-'+n,type:'blob',mode:'100644',sha:'a'.repeat(40),size:1})),sha=directoryHash(entries);
+        f.getTree.mockResolvedValue({data:{sha,truncated:false,tree:entries}});
+        await expect(r.directory(sha,['src/pending'])).rejects.toMatchObject({retryable:false,recovery:{variables:{reason:'treeEntries',observedCount:50001,supportedLimit:50000,countKind:'exact'}}});
+        expect(f.getTree).toHaveBeenCalledTimes(1);
+    });
 });

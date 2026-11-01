@@ -79645,6 +79645,8 @@ class ImmutableProgressContentRepository {
             if (!(error instanceof progress_recovery_capacity_policy_1.ProgressRecoveryCapacityFailure))
                 throw error;
             if (this.profile === 'immutable-tree-v1') {
+                if (error.reason === 'single-claim')
+                    throw (0, progress_inventory_error_policy_1.progressInventoryError)(resource, amount, progress_recovery_capacity_policy_1.PROGRESS_RECOVERY_FRAME_LIMITS[resource], paths);
                 const failureResource = error.reason === 'frames' ? 'frames' : resource;
                 throw (0, progress_inventory_error_policy_1.progressInventoryError)(failureResource, failureResource === 'frames' ? error.usage.frames + 1 : error.usage.total[failureResource] + amount, failureResource === 'frames' ? progress_inventory_profile_policy_1.IMMUTABLE_PROGRESS_PROFILE.frames : progress_inventory_profile_policy_1.IMMUTABLE_PROGRESS_PROFILE.total[failureResource], paths, 'at-least');
             }

@@ -486,10 +486,10 @@ Coverage requirements: preserve repository-wide thresholds and require 100% cove
 
 ### Local implementation evidence (remote acceptance pending)
 
-The candidate adds 244 distinct new test declarations across eight suites; repeated
+The candidate adds 245 distinct new test declarations across eight suites; repeated
 runs are not counted as additional cases. The complete root run passed 826 suites
 and 15,796 tests (35 pre-existing skips); an additional 25-case focused diagnostic
-run covers the final closed recovery-descriptor guard. All original coverage
+run covers the final closed recovery-descriptor guard. A further native-directory regression distinguishes the 50,000-entry response limit from the 200,000-entry global allowance, using a complete valid 50,001-entry Git tree. All original coverage
 budgets pass, and the new pure policies and native inventory adapters are now
 included in the existing exhaustive 100% gate. The final commit hooks and remote
 current-head checks remain separate verification steps.
