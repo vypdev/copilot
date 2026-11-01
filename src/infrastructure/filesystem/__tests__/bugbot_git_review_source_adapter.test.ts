@@ -410,3 +410,67 @@ it('consumes every maximum-length admitted path through bounded native tree batc
         expect(batches.every(batch => batch.length > 0 && batch.reduce((bytes, path) => bytes + Buffer.byteLength(path) + 1, 0) <= 12000)).toBe(true);
     } finally { execute.mockRestore(); fixture.dispose(); }
 }, 30000);
+
+
+it('verifies a copy as its own addition without consuming its unchanged previous path', async () => {
+    const fixture = repository({ old: 'old\n' }, { old: 'old\n', current: 'old\n' });
+    try {
+        const source = await fixture.read([{ ...change('current', 'copied', 1, 0), previousFilename: 'old' }]);
+        expect(source.complete).toBe(true);
+        expect(source.changes).toHaveLength(1);
+        expect(source.changes[0]).toMatchObject({ filename: 'current', previousFilename: 'old', status: 'copied' });
+        expect(completeTextPatch(source.changes[0].patch, 1, 0)).toBe(true);
+    } finally { fixture.dispose(); }
+});
+
+it.each(['modified', 'removed'] as const)('rejects a copy that omits its separately %s source before any blob reads', async status => {
+    const fixture = repository({ old: 'old\n' }, { current: 'old\n', ...(status === 'modified' ? { old: 'new\n' } : {}) });
+    const execute = jest.spyOn(child, 'execFile');
+    try {
+        const before = fixture.git('status', '--porcelain');
+        await expect(fixture.read([{ ...change('current', 'copied', 1, 0), previousFilename: 'old' }]))
+            .rejects.toMatchObject({ facts: { resource: 'coverage' } });
+        expect(execute.mock.calls.some(call => (call[1] as string[]).includes('ls-tree'))).toBe(false);
+        expect(execute.mock.calls.some(call => (call[1] as string[]).includes('cat-file'))).toBe(false);
+        expect(fixture.git('status', '--porcelain')).toBe(before);
+    } finally { execute.mockRestore(); fixture.dispose(); }
+});
+
+it.each(['modified', 'removed'] as const)('retains both native records when a copy source is separately %s', async status => {
+    const fixture = repository({ old: 'old\n' }, { current: 'old\n', ...(status === 'modified' ? { old: 'new\n' } : {}) });
+    try {
+        const records = [{ ...change('current', 'copied', 1, 0), previousFilename: 'old' }, change('old', status, status === 'modified' ? 1 : 0, 1)];
+        const source = await fixture.read(records);
+        expect(source.complete).toBe(true);
+        expect(source.changes.map(c => [c.filename, c.status])).toEqual([['current', 'copied'], ['old', status]]);
+        for (const record of source.changes) expect(completeTextPatch(record.patch, record.additions, record.deletions)).toBe(true);
+    } finally { fixture.dispose(); }
+});
+
+it.each(['modified', 'removed'] as const)('does not let an ignored copy hide its unassigned %s source', async status => {
+    const fixture = repository({ old: 'old\n' }, { current: 'old\n', ...(status === 'modified' ? { old: 'new\n' } : {}) });
+    try {
+        const records = [{ ...change('current', 'copied', 1, 0), previousFilename: 'old' }];
+        await expect(new BugbotGitReviewSourceAdapter(fixture.root).readCompleteSource(fixture.pr(1),
+            { changes: records, filesWithFirstDiffLine: [], filesWithDiffLocations: [] }, true, ['current']))
+            .rejects.toMatchObject({ facts: { resource: 'coverage' } });
+    } finally { fixture.dispose(); }
+});
+
+it('permits multiple complete copy additions sharing one unchanged source without duplicate native ownership', async () => {
+    const fixture = repository({ old: 'old\n' }, { old: 'old\n', first: 'old\n', second: 'old\n' });
+    try {
+        const source = await fixture.read(['first', 'second'].map(filename => ({ ...change(filename, 'copied', 1, 0), previousFilename: 'old' })));
+        expect(source.complete).toBe(true);
+        expect(source.changes.map(c => c.filename)).toEqual(['first', 'second']);
+    } finally { fixture.dispose(); }
+});
+
+it('verifies all current-side content when optional copy-source metadata is absent', async () => {
+    const fixture = repository({ old: 'old\n' }, { old: 'old\n', current: 'old\n' });
+    try {
+        const source = await fixture.read([change('current', 'copied', 1, 0)]);
+        expect(source.complete).toBe(true);
+        expect(completeTextPatch(source.changes[0].patch, 1, 0)).toBe(true);
+    } finally { fixture.dispose(); }
+});

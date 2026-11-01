@@ -225,6 +225,12 @@ A unique merge-base establishes the comparison. Missing, truncated, or
 content-mismatching provider patches are reconstructed only from those verified
 objects. Workspace inspection is not proof that an absent patch was reviewed.
 
+A copied file owns its new current path. If its source also changed, that source
+requires a separate change record; copy provenance cannot stand in for it. Only
+a rename can account for both its deleted old path and its new path. The native
+inventory check runs before ignores and rejects an unassigned source change
+even when the copy destination is ignored.
+
 ```mermaid
 flowchart LR
     A[Verify current PR and immutable source] --> B[Preflight planned primary prompts]

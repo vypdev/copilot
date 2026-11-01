@@ -668,3 +668,23 @@ aggregate bound, and overflow prevents completion without retrying the capacity
 failure. All 49 engine-suite cases pass. The query ledger, budgets and executable
 engine behavior are unchanged. Native finding resolution and the final
 head's remote checks/Codecov remain required.
+
+
+### Copy provenance and independent changed-path coverage — review follow-up
+
+`verifyInventory` already allows a previous path only for `status === 'renamed'`.
+A `copied` record accounts for its current path; its optional provenance does not
+permit any independently changed source path to be omitted. This check precedes
+ignore filtering and all tree/blob reads. A source modified or deleted in the
+same comparison needs its own current-path record, which the ordinary native
+inventory and immutable-side verification then validate.
+
+Nine additional native Git regressions preserve this existing boundary: a valid
+unchanged-source copy, modified/deleted source omissions, both complete record
+sets, the same two omissions with an ignored destination, shared-source copies,
+and absent optional copy provenance. The omissions fail with `coverage` before
+any tree/blob read; complete records remain reviewable. All 78 adapter-suite
+cases pass on the existing runtime. This supplies independent executable proof
+for `copied-previous-path-can-hide-change`; native finding adjudication and final
+head validation remain separate gates. No runtime rule, ignore scope or capacity
+limit is changed by this test/documentation follow-up.
