@@ -15,7 +15,8 @@
         "specs/pull-request-title-compatibility.md",
         "specs/immutable-progress-content-recovery.md",
         "specs/optional-check-run-diagnostics.md",
-        "specs/complete-progress-comparison-inventory.md"
+        "specs/complete-progress-comparison-inventory.md",
+        "specs/progress-scope-source-ownership.md"
       ],
       "workflows": [
         ".github/workflows/copilot_issue.yml",
@@ -208,7 +209,8 @@
         "src/data/repository/immutable_progress_inventory_repository.ts",
         "src/data/repository/complete_progress_diff_repository.ts",
         "src/domain/progress_inventory_diagnostic.ts",
-        "src/application/policies/progress_assessment_capacity_policy.ts"
+        "src/application/policies/progress_assessment_capacity_policy.ts",
+        "src/application/policies/progress_scope_source_policy.ts"
       ],
       "tests": [
         "src/domain/__tests__/implementation_plan.test.ts",
@@ -361,7 +363,10 @@
         "src/application/usecases/actions/__tests__/fixtures/complete_inventory_workflow_fixture.ts",
         "src/data/repository/__tests__/support/large_complete_progress_fixture.ts",
         "src/application/policies/__tests__/progress_assessment_capacity_policy.test.ts",
-        "src/application/usecases/actions/__tests__/progress_assessment_capacity.integration.test.ts"
+        "src/application/usecases/actions/__tests__/progress_assessment_capacity.integration.test.ts",
+        "src/application/policies/__tests__/progress_scope_ownership.test.ts",
+        "src/application/policies/__tests__/progress_scope_capacity_diagnostic.test.ts",
+        "src/application/usecases/actions/__tests__/progress_scope_ownership.integration.test.ts"
       ],
       "documentation": [
         "docs/configuration.mdx",
@@ -782,7 +787,8 @@
         "src/application/policies/setup_runner_policy.ts",
         "src/manager/description/base/issue_content_interface.ts",
         "src/domain/agent_response_schema_failure.ts",
-        "src/data/repository/agent_json_schema_validator.ts"
+        "src/data/repository/agent_json_schema_validator.ts",
+        "src/domain/configuration_markers.ts"
       ],
       "tests": [
         "src/tooling/__tests__/coverage_budget_validator.test.ts",
@@ -843,7 +849,8 @@
         "src/utils/__tests__/setup_runner_installation.test.ts",
         "src/application/usecases/execution/__tests__/single_action_target_restore.integration.test.ts",
         "src/data/repository/__tests__/agent_json_schema_validator.test.ts",
-        "src/data/repository/__tests__/progress_agent_response_policy.test.ts"
+        "src/data/repository/__tests__/progress_agent_response_policy.test.ts",
+        "src/domain/__tests__/configuration_markers.test.ts"
       ],
       "documentation": [
         "docs/overview.mdx",

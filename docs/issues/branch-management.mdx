@@ -46,7 +46,7 @@ Automatic title formatting keeps the boundaries between hyphenated words. A titl
 
 Progress assessments use an immutable GitHub comparison of the actual native PR target and the managed branch head. If no open PR owns that exact head branch, they use the configured development base. The agent receives the source patches directly and does not need shell commands. Generated build files contribute metadata only; a percentage does not certify CI or a build.
 
-Copilot first classifies every nonempty line of the full issue body by source identifier as required, excluded, context or uncertain, before it analyzes patches. The scope request, comparison parts and final assessment keep complete issue text, extracted scope and model facts inside explicit untrusted-data blocks. Embedded instructions cannot grant workflow authority. Inputs that exceed the fixed UTF-8 budgets are rejected with retained progress rather than shortened to fit. Small comparisons then use one assessment. Larger complete comparisons are reviewed in up to four rounds of 16 parts (64 parts total), each containing complete patches or identified content slices within the unchanged 256,000-byte UTF-8 evidence limit. Every part must return bounded facts for every assigned file or content unit before one final assessment can update progress. These facts preserve uncertainty and do not certify CI. Their final combined summary has a maximum 384,000-byte budget. Copilot reserves every admitted path and the complete security/schema/task envelope and configured effort suffix inside the unchanged 512 KiB runtime ceiling, then requests concise facts using the same calculated limit in the schema and parser. No returned facts are silently shortened. Source parts and the manifest retain the 256,000-byte limit.
+Copilot accounts for every original nonempty issue line before analyzing patches. It validates the one reserved persisted-configuration block using the same delimiter scanner and supported version as storage; that operational state, including generated implementation plans, cannot define acceptance. The classifier classifies every remaining human line by its original physical source identifier as required, excluded, context or uncertain. Ordinary prose, unrelated HTML, examples and acceptance before or after the reserved state are preserved. All original line/count limits apply before separation, and malformed or unsupported state stops assessment without changing progress. The scope request, comparison parts and final assessment keep complete issue text, extracted scope and model facts inside explicit untrusted-data blocks. Embedded instructions cannot grant workflow authority. Inputs that exceed the fixed UTF-8 budgets are rejected with retained progress rather than shortened to fit. Small comparisons then use one assessment. Larger complete comparisons are reviewed in up to four rounds of 16 parts (64 parts total), each containing complete patches or identified content slices within the unchanged 256,000-byte UTF-8 evidence limit. Every part must return bounded facts for every assigned file or content unit before one final assessment can update progress. These facts preserve uncertainty and do not certify CI. Their final combined summary has a maximum 384,000-byte budget. Copilot reserves every admitted path and the complete security/schema/task envelope and configured effort suffix inside the unchanged 512 KiB runtime ceiling, then requests concise facts using the same calculated limit in the schema and parser. No returned facts are silently shortened. Source parts and the manifest retain the 256,000-byte limit.
 
 ### Which comparison is assessed
 
@@ -229,6 +229,16 @@ when the provider can satisfy the unchanged contract, as opposed to changing
 acceptance or dropping verification. Process/transport failures retain their
 own status and retry guidance. A later optional check-publication warning remains
 a separate outcome and cannot replace the primary rejection.
+
+`progress-scope-clause-limit` reports a completely validated human classification
+that selected more than 32 required/uncertain lines or more than 32 exclusions.
+Its closed facts give the exact selected count, fixed limit, clause kind and
+first crossing physical source line. Generated state cannot consume that budget.
+A fresh valid classification may help; genuine over-limit human scope still
+requires a reviewed supported protocol. Do not delete requirements, promote
+derived metadata or raise limits to get a passing result. The complete original
+body remains the freshness authority: even a state-only edit invalidates an
+in-flight assessment. No automatic semantic repair or extra model call is added.
 
 ## Completion after a PR merge
 
