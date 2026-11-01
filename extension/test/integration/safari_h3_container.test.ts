@@ -8,7 +8,7 @@ import { buildSafariContainer, type ContainerCommand } from '../../tooling/safar
 import { safariH3Build } from '../fixtures/safari_h3_build.ts';
 
 let root: string;
-beforeAll(async () => { root = await mkdtemp(path.join(tmpdir(), 'copilot-safari-h3-build-')); await buildDevelopmentSet(fileURLToPath(new URL('../../../', import.meta.url)), path.join(root, 'extension/dist')); });
+beforeAll(async () => { root = await mkdtemp(path.join(tmpdir(), 'copilot-safari-h3-build-')); await buildDevelopmentSet(fileURLToPath(new URL('../../../', import.meta.url)), path.join(root, 'extension/dist')); }, 120_000);
 afterAll(async () => { await rm(root, { recursive: true, force: true }); });
 async function fixture(format: 'jsonc' | 'pbx' = 'jsonc') {
     await rm(path.join(root, '.tmp/safari-h3'), { recursive: true, force: true }); return safariH3Build(root, format);

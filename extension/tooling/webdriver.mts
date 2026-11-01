@@ -106,12 +106,8 @@ export class NativeDriver implements BrowserDriver {
     async openRuntimeOptions(): Promise<string> {
         const route = `/session/${this.session}`;
         const before = await this.command<string[]>('GET', `${route}/window/handles`);
-        const reference = await this.command<Record<string, unknown>>('POST', `${route}/element`,
-            { using: 'css selector', value: '[data-copilot-open-settings]' });
-        const element = reference['element-6066-11e4-a52e-4f735466cecf'];
-        if (typeof element !== 'string' || !element || element.length > 512) throw new Error('assertion:runtime-options-element');
         let transitionFailure: unknown;
-        try { await this.command('POST', `${route}/element/${encodeURIComponent(element)}/click`, {}); }
+        try { await this.clickRuntimeSettings(route); }
         catch (error) {
             // Safari may replace the source context while opening the extension page.
             if (this.configuration.target !== 'safari' || !String(error).endsWith(':404:no such window')) throw error;
@@ -133,6 +129,22 @@ export class NativeDriver implements BrowserDriver {
             await this.pause(100);
         }
         throw new Error('assertion:runtime-options-load-incomplete');
+    }
+    private async clickRuntimeSettings(route: string): Promise<void> {
+        for (let attempt = 0; ; attempt++) {
+            const reference = await this.command<Record<string, unknown>>('POST', `${route}/element`,
+                { using: 'css selector', value: '[data-copilot-open-settings]' });
+            const element = reference['element-6066-11e4-a52e-4f735466cecf'];
+            if (typeof element !== 'string' || !element || element.length > 512) throw new Error('assertion:runtime-options-element');
+            const clickRoute = `${route}/element/${encodeURIComponent(element)}/click`;
+            try { await this.command('POST', clickRoute, {}); return; }
+            catch (error) {
+                // W3C stale-element rejection occurs before activation. Resolve this one control again,
+                // at most twice; never replay a click with an unknown outcome or another native failure.
+                const stale = `webdriver:${clickRoute.replace(this.session, 'session')}:404:stale element reference`;
+                if (attempt === 2 || !(error instanceof Error) || error.message !== stale) throw error;
+            }
+        }
     }
     evaluate<T>(script: string, args: unknown[] = []): Promise<T> { return this.command('POST', `/session/${this.session}/execute/sync`, { script, args }); }
     evaluateAsync<T>(script: string, args: unknown[] = []): Promise<T> { return this.command('POST', `/session/${this.session}/execute/async`, { script, args }); }

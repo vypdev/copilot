@@ -32,7 +32,9 @@ it.each(['issues-write', 'actions-write'] as const)('previously saved native gro
     h.localValues.set(SETTINGS_KEY, { previous: current, current: { ...current, revision: current.revision + 1, center: { ...current.center, workspaces: [{ id: 'retained', name: 'Retained group', members: [id] }] } } });
     for (const listener of h.changed.listeners) listener({ [SETTINGS_KEY]: {} }, 'local');
     for (const listener of h.app.browser.changed.listeners) listener({ [SETTINGS_KEY]: {} }, 'local'); await navigate('repositories/workspaces');
-    await ready(() => !!document.querySelector(`[data-workspace-reference="${id}"]`)); const row = document.querySelector(`[data-workspace-reference="${id}"]`)!;
+    const copy = workspaceCopy('en');
+    await ready(() => { const row = document.querySelector(`[data-workspace-reference="${id}"]`); return !!row && !row.textContent?.includes(copy.unavailable); });
+    const row = document.querySelector(`[data-workspace-reference="${id}"]`)!;
     expect(row.textContent).toContain(workspaceCopy('en').missing); expect(row.textContent).not.toContain('Optional account'); expect(row.querySelector('button')).toBeNull();
     expect(h.provider).not.toHaveBeenCalled(); expect(h.vault()!.entries.some(entry => entry.id === id)).toBe(true); expect(h.localArea.set).not.toHaveBeenCalled();
 });

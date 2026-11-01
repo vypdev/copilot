@@ -13,7 +13,7 @@ beforeAll(async () => {
     await buildDevelopmentSet(root, path.join(temporary, 'extension/dist')); app = path.join(temporary, 'CopilotH2.app');
     const resources = path.join(app, 'Contents/PlugIns/CopilotH2 Extension.appex/Contents/Resources'); await mkdir(resources, { recursive: true });
     for (const file of await readdir(path.join(temporary, 'extension/dist/safari'))) await copyFile(path.join(temporary, 'extension/dist/safari', file), path.join(resources, file));
-});
+}, 120_000);
 afterAll(async () => { await rm(temporary, { recursive: true, force: true }); });
 function commands(): ContainerCommand {
     return vi.fn(async (file, args) => {

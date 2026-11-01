@@ -10,7 +10,7 @@ let temporary: string;
 beforeAll(async () => {
     temporary = await mkdtemp(path.join(tmpdir(), 'copilot-safari-json-project-test-'));
     await buildDevelopmentSet(fileURLToPath(new URL('../../../', import.meta.url)), path.join(temporary, 'extension/dist'));
-});
+}, 120_000);
 afterAll(async () => { await rm(temporary, { recursive: true, force: true }); });
 it('Safari container preparation supports the actual modern converter JSONC layout instead of assuming a PBX project', async () => {
     const target = path.join(temporary, '.tmp/safari-h2/derived/Build/Products/Debug/CopilotH2.app');

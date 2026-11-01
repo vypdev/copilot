@@ -269,6 +269,20 @@ Firefox's `getManifest()` expands absolute extension paths and nullable defaults
 only the explicitly tested inert defaults are normalized. New grants/remote code
 or a foreign extension origin fail acceptance.
 
+The native Settings-entry harness re-queries its one exact button when WebDriver
+rejects a click with `404 stale element reference`, before activation. It allows
+at most three native attempts, each with a newly resolved reference. Transport,
+interception, malformed-reference and other failures still fail the journey;
+an uncertain click is never replayed or counted as a successful navigation.
+The separate Safari replaced-window handling still requires one new owned view.
+Cold three-target fixture setup in the package/receipt/Safari harness suites has
+an explicit 120-second hook budget; ordinary assertions keep their existing
+timeouts. Reference-composition assertions wait for native metadata inspection
+to finish before distinguishing a missing reference from unavailable inspection.
+The hosted Windows job allows 60 minutes for the complete root and extension
+coverage campaign; Linux/macOS keep 20 minutes. This job budget does not change
+test assertions, ordinary test timeouts, coverage or approval requirements.
+
 Safari prerequisites are macOS 27.0.1 build 26A434, Safari 27.0.1 build
 22625.1.29.11.28, Xcode 27.1 build 27A9275, enabled remote automation and local
 development-extension support. Build the actual containing app:

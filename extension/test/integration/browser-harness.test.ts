@@ -20,7 +20,7 @@ const root = fileURLToPath(new URL('../../../', import.meta.url)); let temporary
 beforeAll(async () => {
     temporary = await mkdtemp(path.join(tmpdir(), 'copilot-h2-harness-unit-'));
     const receipt = await buildDevelopmentSet(root, path.join(temporary, 'extension/dist')); sourceTree = receipt.sourceTreeSha256;
-});
+}, 120_000);
 afterAll(async () => { await rm(temporary, { recursive: true, force: true }); });
 function fakeDriver(target: HarnessTarget, missingAnchor = false): BrowserDriver {
     let protectedRoute = false;

@@ -16,7 +16,7 @@ beforeAll(async () => {
     output = path.join(temporary, 'output');
     await buildDevelopmentSet(root, output);
     receipt = await readFile(path.join(output, 'receipt.json'), 'utf8');
-});
+}, 120_000);
 afterAll(async () => { await rm(temporary, { recursive: true, force: true }); });
 
 async function rejectReceipt(value: unknown, reason: string): Promise<void> {
