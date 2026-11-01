@@ -31,6 +31,7 @@ import { CurrentOperationReader } from '../application/current_operation_reader.
 import { HelperSampleReader } from '../application/helper_sample_reader.ts';
 import { createCenterApiCache } from './center_api_cache.ts';
 import { subscribeCenterRecoveryFocus } from './center_recovery_focus.ts';
+import { createCenterReviewFocus } from './center_review_focus.ts';
 
 /** Native options-page composition. The UI receives preferences and callbacks, never reusable authority. */
 export function startCenter(api: BrowserApi, document: Document, nativeLanguage: string): () => void {
@@ -90,6 +91,7 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
         const value = frame(); document.documentElement.lang = value.copy.locale; document.title = value.copy.messages.title;
         for (const listener of listeners) listener(value);
     }
+    const reviewFocus = createCenterReviewFocus(document, () => stopped ? null : navigation.location);
     const actions: CenterActions = {
         cache: cache.actions,
         sessionPreferences: transient.actions,
@@ -101,7 +103,7 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
         pauses: { read: () => readPauses(), preview: (intent, revision) => { void pauses.reviews.preview(intent, revision); }, confirm: () => { void pauses.reviews.confirm(); },
             cancel: () => { void pauses.reviews.cancel(); }, inspect: () => { void pauses.reviews.inspect(); }, dismiss: () => { void pauses.reviews.dismiss(); } },
         preview: (intent, revision) => { if (!cache.client.held && !historyHeld() && !pauseHeld()) void client.preview(intent, revision); },
-        confirm: () => { void client.confirm(); }, cancel: () => { void client.cancel(); },
+        confirm: () => { void reviewFocus.complete(() => client.confirm()); }, cancel: () => { void reviewFocus.complete(() => client.cancel()); },
         dismiss: () => { void client.dismiss(); }, reload: () => { retireObservations(); readPauses(); void client.refresh().then(readObservations); },
         takeControl: () => { operation.clear(); void client.takeControl(); }, dirty: value => { navigation.dirty(value); publish(); },
         stay: () => navigation.stay(), leave: () => {
@@ -124,7 +126,6 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
         },
     };
     let operationRole: typeof client.view.role;
-    let priorSettingsReview = client.view.review;
     const unsubscribe = client.subscribe(view => {
         if (view.role !== operationRole) { operationRole = view.role; pauses.contextChanged(); readPauses(); transient.contextChanged(); cache.contextChanged(); if (view.role === 'editor' || view.role === 'observer') { void operation.read(); void helpers.read(); } }
         if (view.role === null || view.issue === 'incompatible') { operation.clear(); helpers.invalidate(); pauses.contextChanged(); transient.contextChanged(); cache.contextChanged(); history.reader.invalidate(); }
@@ -140,8 +141,7 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
             if (stopped || !connectionReadPending || client.view.phase !== 'ready' || client.view.review) return;
             connectionReadPending = false; readConnections();
         });
-        if (view.review?.state === 'preview' && view.review !== priorSettingsReview) focus('#settings-review-heading');
-        priorSettingsReview = view.review;
+        reviewFocus.observe(view.review);
     });
     let priorHistoryReview: HistoryReview | null = null; let refreshedHistory: HistoryReview | null = null; let priorExport = history.view.exportReview;
     const unhistory = history.subscribe(view => {

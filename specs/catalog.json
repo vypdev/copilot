@@ -3507,7 +3507,8 @@
         "extension/src/presentation/AttentionPage.svelte",
         "extension/src/presentation/DependencyPage.svelte",
         "extension/src/presentation/WorkPage.svelte",
-        "extension/src/infrastructure/center_recovery_focus.ts"
+        "extension/src/infrastructure/center_recovery_focus.ts",
+        "extension/src/infrastructure/center_review_focus.ts"
       ],
       "tests": [
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
@@ -3967,7 +3968,9 @@
         "extension/test/integration/local_navigation_runtime.test.ts",
         "extension/test/integration/center_migration_isolation.test.ts",
         "extension/test/integration/center_recovery_focus.test.ts",
-        "extension/test/integration/center_recovery_focus_dom.test.ts"
+        "extension/test/integration/center_recovery_focus_dom.test.ts",
+        "extension/test/integration/center_review_focus_dom.test.ts",
+        "extension/test/integration/center_review_completion_focus.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",

@@ -1,7 +1,7 @@
 # H3 — Complete local control center, profiles and accessible configuration
 
 - Status: Draft
-- Date: 2026-10-30
+- Date: 2026-11-01
 - Catalog capability ID: `github-browser-extension`
 - Last verified: not applicable; this is a prospective companion specification
 - Owners: Copilot maintainers
@@ -61,6 +61,28 @@ Extension users and maintainers need one understandable place to discover the pr
 ### 2.4 Retrospective classification (as-built baselines only)
 
 Not applicable: this is a prospective specification and does not reconstruct an implemented H3 baseline.
+
+### 2.5 Milestone acceptance and final human UI review
+
+Maintainer decision, 2026-11-01: run the complete manual VoiceOver and final
+visual/interaction acceptance when the **whole extension** has its final UI,
+under [H12 #713](https://github.com/vypdev/copilot/issues/713), rather than
+repeating that full human campaign before each intermediate milestone PR.
+This supersedes earlier wording in this SDD that makes the complete manual
+screen-reader/final-UI campaign a prerequisite for completing H3. It does not
+move automatic accessibility, keyboard/focus, locale, responsive or native
+functional checks out of the milestone that changes their behavior.
+
+Keep earlier human reports with their actual source and scope. Record untested
+or failed speech observations, including cancellation feedback and validation
+error announcements in C39, as **pending final human acceptance**; do not relabel
+them as passed on the strength of DOM/AX assertions or another browser's report.
+Fix known accessibility defects as they are found and retain meaningful automated
+regressions. Final H12 must test the resulting immutable complete-product UI on
+all required targets and close any remaining defects before product acceptance.
+The 150 capabilities, 803-case floor, 72 required human task observations and
+three-browser product scope remain unchanged. This sequencing grants no release,
+deployment or store authority.
 
 ## 3. Actors, surfaces, and terminology
 
@@ -1259,19 +1281,19 @@ establish the separate H3-R12 loaded-browser or human acceptance gate.
 4. Implement browser adapters and validate storage/session behavior on Chrome, Firefox and Safari harnesses.
 5. Build the packaged Svelte center, real routes and entrypoints; complete localization, accessibility and responsive evidence as routes land.
 6. Deliver import/export/reset/rollback safeguards, migration and recovery documentation with fixtures.
-7. Complete integrated browser receipts, coverage, human UX review, complete finding-free current-head review, catalog updates and docs validation.
+7. Complete integrated browser receipts, coverage, scoped UX evidence, complete finding-free current-head review, catalog updates and docs validation; carry the complete manual VoiceOver/final-UI campaign to H12 as required by section 2.5.
 
 H4–H12 remain separate required implementations. H10/H11 own shared setup extraction/broker/privileged Apply. This refinement does not advertise those future behaviors as implemented.
 
 ## 19. Definition of Done
 
-- [ ] All CENTER capabilities and their 56 existing catalog cases pass; relevant retained cross-boundary cases also pass.
+- [ ] All CENTER implementation contracts and automated portions of their 56 existing catalog cases pass; relevant retained cross-boundary cases pass, and the manual VoiceOver/final-UI portion is carried explicitly to H12 under section 2.5.
 - [ ] Every H3 requirement has an executable case and reciprocal traceability; additional risk cases are added as needed.
 - [ ] Architecture boundaries, route/inventory contracts and schema checks are automatically enforced.
 - [ ] Numeric budget and coverage thresholds pass; module/component limits are met or exception reviewed.
 - [ ] Options, storage, session and UX evidence is source-bound for Chrome, Firefox and real Safari containing-app execution.
 - [ ] Import/reset/rollback cancellation, quota, migration and future-schema recovery pass.
-- [ ] Accessibility, en/es/fr/pt localization, responsive, theme and reduced-motion requirements pass with human UX receipts.
+- [ ] Automated accessibility/focus, en/es/fr/pt localization, responsive, theme and reduced-motion checks pass; scoped human receipts and the pending H12 VoiceOver/final-UI acceptance are recorded honestly under section 2.5.
 - [ ] Privacy, permission, redaction, untrusted input, idempotency and cleanup requirements pass.
 - [ ] User, permission/privacy, configuration, troubleshooting and contributor documentation is complete and discoverable.
 - [ ] `specs/catalog.json` evidence and `specs/CATALOG.md` are current and `pnpm run validate:specifications` passes.
@@ -2538,4 +2560,48 @@ Minimum **31 distinct regressions**, with no matrix rerun counted as a new case:
 The configuration guide explains the handoff and explicit read. These cases
 support CENTER11-C02 and H3 C33/C39/C43; DOM/native-port fixtures do not certify
 actual screen-reader speech. Final-source Chrome, Firefox, Safari and independent
-human accessibility evidence must be repeated as applicable before H3 acceptance.
+human accessibility evidence follows the final-product sequencing in section 2.5.
+
+### Review completion focus and accessible result
+
+The current-source Chrome human task reported no spoken cancellation outcome,
+although native observation confirmed the visible cancelled status and unchanged
+preferences/revision. The user also reported the same symptom in Safari. The
+composition removes the focused confirmation/cancellation button while the
+operation is pending; a polite status alone did not establish the requested
+spoken result. The correction MUST preserve focus continuity after completion
+and leave actual speech acceptance pending under section 2.5.
+
+```text
+Focused Confirm/Cancel → pending native operation → settled result
+ → described next action receives focus → user closes review or reads recovery
+```
+
+Text equivalent: after the requested native operation settles and rendering
+finishes, hand a retired action's focus to the first enabled result action.
+For saved/cancelled outcomes this is Close review; uncertain or failed outcomes
+offer Read current settings first. Its accessible description references the
+localized visible status. This handoff does not activate that action. The
+existing polite status remains available independently of focus.
+
+The infrastructure review-focus owner also retains the existing one-focus-per-new-
+preview behavior. An unchanged review observation cannot rewind a confirmation.
+Cancelled data, unsaved drafts, one native operation, source/revision/ownership
+checks and replay semantics remain unchanged. A new focus choice, another route,
+teardown, hidden/unfocused document, missing/disabled next action or surviving
+enabled original control MUST prevent a completion handoff. There is no timer,
+speech API, browser permission, new setting or renderer-owned DOM authority.
+
+Minimum **27 distinct regressions**:24 DOM/composition-lifecycle cases for the
+handoff, foreground/visibility, newer focus, disposal/context and preview identity
+boundaries;3 whole foreground/native-port/background/storage cases for cancelled
+draft/data preservation, a single localized saved result and disposal while the
+actual native cancellation reply is pending. Existing component
+tests cover every terminal state and inert authored content. All modified runtime
+lines/branches remain fully covered. These tests establish focus/description and
+data contracts, not actual speech. Configuration docs explain the resulting next
+action. H12 owns the final human cancellation and invalid-file announcement task
+on all required browsers, against the final complete-product package.
+
+Primary guidance: [WAI button focus behavior](https://www.w3.org/WAI/ARIA/apg/patterns/button/)
+and [WCAG status messages](https://www.w3.org/WAI/WCAG22/Understanding/status-messages.html).

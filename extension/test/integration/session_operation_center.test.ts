@@ -63,6 +63,8 @@ it('session operation metadata remains inspectable when current local preference
 });
 it('operation-only refresh does not inspect the provider, reread history or reset the three permission observations', async () => {
     const f = await fixture(); await f.connect(); await navigate('privacy'); await ready(() => !!document.querySelector('[data-permission-status]'));
+    // Both serial initial collection reads must settle before measuring an independent operation-only refresh.
+    await ready(() => ['diagnostics', 'recents'].every(kind => document.querySelector(`[data-history="${kind}"] [data-history-consent]`) !== null));
     const provider = vi.mocked(f.sessions.reader.read).mock.calls.length; const history = f.app.port.send.mock.calls.filter(([m]) => m.method === 'center.history.read').length;
     await f.bridge({ version: 1, method: 'center.operation.invalidated' }); await ready(() => document.querySelector('[data-current-operation]')?.getAttribute('aria-busy') === 'false');
     expect(f.sessions.reader.read).toHaveBeenCalledTimes(provider); expect(f.app.port.send.mock.calls.filter(([m]) => m.method === 'center.history.read')).toHaveLength(history); expect(f.app.browser.api.permissions.contains).toHaveBeenCalledTimes(3);

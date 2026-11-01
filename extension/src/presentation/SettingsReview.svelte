@@ -6,7 +6,7 @@
 <section aria-labelledby="settings-review-heading" aria-busy={view.state === 'committing'}>
     <header>
         <h2 id="settings-review-heading" tabindex="-1">{view.title}</h2>
-        <p role="status" aria-live="polite" aria-atomic="true">{copy.states[view.state]}</p>
+        <p id="settings-review-status" role="status" aria-live="polite" aria-atomic="true">{copy.states[view.state]}</p>
         <p>{view.summary}</p>
     </header>
     {#if !view.editable && view.state === 'preview'}<p>{copy.observer}</p>{/if}
@@ -29,9 +29,9 @@
             {#if !view.editable}<button type="button" onclick={() => actions.dismiss()}>{copy.dismiss}</button>{/if}
         {:else if view.state !== 'committing'}
             {#if view.state === 'unknown' || view.state === 'conflict' || view.state === 'stale' || view.state === 'unavailable'}
-                <button type="button" onclick={() => actions.reload()}>{copy.reload}</button>
+                <button type="button" aria-describedby="settings-review-status" onclick={() => actions.reload()}>{copy.reload}</button>
             {/if}
-            <button type="button" onclick={() => actions.dismiss()}>{copy.dismiss}</button>
+            <button type="button" aria-describedby="settings-review-status" onclick={() => actions.dismiss()}>{copy.dismiss}</button>
         {/if}
     </div>
     <details>
