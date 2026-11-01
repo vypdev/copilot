@@ -79,6 +79,7 @@ export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'progress-binary-evidence-unavailable',
     'progress-inventory-incomplete',
     'progress-result-contract-invalid',
+    'progress-assessment-capacity-exceeded',
     'stored-configuration-schema-missing',
     'stored-configuration-schema-unsupported',
     'stored-configuration-invalid',
@@ -98,6 +99,7 @@ interface ApplicationErrorRecoveryVariables extends Readonly<Record<CopilotComma
     readonly 'progress-binary-evidence-unavailable': ProgressBinaryEvidenceFacts;
     readonly 'progress-inventory-incomplete': ProgressInventoryDiagnostic;
     readonly 'progress-result-contract-invalid': ProgressResponseDiagnosticFacts;
+    readonly 'progress-assessment-capacity-exceeded': ProgressResponseDiagnosticFacts;
 
     readonly 'pull-request-link-restored': Readonly<Record<string, never>>;
     readonly 'pull-request-link-base-retained': Readonly<Record<string, never>>;
@@ -414,6 +416,7 @@ const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readon
     'progress-binary-evidence-unavailable': Object.freeze(['paths', 'pathCount']),
     'progress-inventory-incomplete': Object.freeze(['profile', 'reason', 'observedCount', 'supportedLimit', 'countKind', 'paths']),
     'progress-result-contract-invalid': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
+    'progress-assessment-capacity-exceeded': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
     'deployment-publication-context-missing': Object.freeze([]),
     'workspace-changes-rejected': Object.freeze([]),
 });
@@ -491,6 +494,10 @@ function normalizeApplicationErrorRecovery(
             || !APPROVAL_EVIDENCE_REASONS.some(reason => reason === variables.reason)
             || APPROVAL_EVIDENCE_PERMISSIONS[variables.operation as keyof typeof APPROVAL_EVIDENCE_PERMISSIONS] !== variables.permission)) {
         throw new TypeError('Approval evidence diagnostic is invalid.');
+    }
+    if (recovery.id === 'progress-assessment-capacity-exceeded'
+        && (!isProgressResponseDiagnosticFacts(variables) || variables.phase !== 'assessment' || variables.reason !== 'assessment-text-limit')) {
+        throw new TypeError('Progress assessment capacity diagnostic is invalid.');
     }
     if (recovery.id === 'progress-result-contract-invalid' && !isProgressResponseDiagnosticFacts(variables)) throw new TypeError('Progress response diagnostic is invalid.');
     if (recovery.id === 'progress-inventory-incomplete' && !isProgressInventoryDiagnostic(variables)) throw new TypeError('Progress inventory diagnostic is invalid.');
