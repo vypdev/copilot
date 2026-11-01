@@ -14,7 +14,8 @@
         "specs/copilot-history.md",
         "specs/pull-request-title-compatibility.md",
         "specs/immutable-progress-content-recovery.md",
-        "specs/optional-check-run-diagnostics.md"
+        "specs/optional-check-run-diagnostics.md",
+        "specs/complete-progress-comparison-inventory.md"
       ],
       "workflows": [
         ".github/workflows/copilot_issue.yml",
