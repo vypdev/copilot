@@ -665,8 +665,6 @@ one successful correlated rejection and two 128-partition workloads exhausting
 shared traffic, with and without one transient primary retry. Every delegated
 request uses the actual native-envelope byte measurement, stays within the fixed
 aggregate bound, and overflow prevents completion without retrying the capacity
-failure. All 49 engine-suite cases pass. Earlier fixture diagnostics concerned a
-fragment tail without a literal witness and missing test-side telemetry setup;
-they do not establish a production failure. The query ledger, budgets and
-executable engine behavior are unchanged. Native finding resolution and the final
+failure. All 49 engine-suite cases pass. The query ledger, budgets and executable
+engine behavior are unchanged. Native finding resolution and the final
 head's remote checks/Codecov remain required.

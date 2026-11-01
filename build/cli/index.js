@@ -68338,7 +68338,7 @@ function bugbotFramedContextDigest(operation, context) {
         context.canonicalPullRequest, context.previousFindingsBlock, context.reviewConversationBlock ?? '',
         context.reviewRulesBlock ?? '', context.coverage, [...context.eligibleResolutionIds].sort().map(id => [id, context.existingByFindingId[id]])]);
 }
-/** All prompts preflight first. Frames retain no externally resumable or publishable partial state. */
+/** Preflight every planned primary prompt; admit retries and dependent queries through the shared traffic ledger. */
 async function analyzeBugbotFrames(operation, context, plan, dependencies) {
     (0, bugbot_framed_review_policy_1.validateBugbotFramedReviewPlan)(plan, operation.ignorePatterns);
     let promptBytes = 0;
