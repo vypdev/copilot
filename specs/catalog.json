@@ -2271,7 +2271,8 @@
         "docs/bugbot/programmatic-api.mdx",
         "docs/bugbot/configuration.mdx",
         "docs/pull-requests/workflow-setup.mdx",
-        "docs/issues/comment-commands.mdx"
+        "docs/issues/comment-commands.mdx",
+        "docs/security-operations/operations/error-reference.mdx"
       ]
     },
     {

@@ -212,4 +212,3 @@ export function completeTextPatch(patch: string, additions: number, deletions: n
     }
     return hunks > 0 && oldRemaining === 0 && newRemaining === 0 && added === additions && removed === deletions;
 }
-
