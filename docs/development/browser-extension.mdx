@@ -290,12 +290,20 @@ before distinguishing a missing reference from unavailable inspection.
 The hosted Windows job allows 90 minutes for the complete root and extension
 coverage campaign; Linux/macOS keep 20 minutes. This job budget does not change
 test assertions, ordinary test timeouts, coverage or approval requirements.
-The previous Windows campaign reached the enforced 60-minute job cap; that
-cancelled run is not evidence of a completed coverage campaign. Lazy Data
+The previous Windows campaign reached this workflow's configured 60-minute
+timeout, not a runner-wide 60-minute limit. GitHub-hosted jobs permit up to six
+hours ([Actions limits](https://docs.github.com/en/actions/reference/limits));
+the 90-minute budget stays within that ceiling. The cancelled run is not
+evidence of a completed coverage campaign. Lazy Data
 routes, session removal dialogs and updated favorite controls must be observed
 before tests interact with them. A successful connection fixture waits for the
 actual form reset that follows the completed connection promise, so a later
 settings-driven remount cannot erase a newly opened removal dialog.
+Retained collection assertions wait for the independent journal writer to drain
+and the explicit history-read control to become enabled before reading retained
+effects. Optional identity journeys observe enabled review/confirm/close/disable
+controls as well as returned focus. These are readiness conditions, with the
+existing five-second bound, rather than retries of a possibly submitted action.
 
 Both original Svelte script scopes pass through the same TypeScript architecture
 gate as ordinary presentation modules. It rejects direct `window`, `document`,
@@ -518,7 +526,11 @@ credential or private repository evidence belongs to this persistent record.
 Profiles cannot grant connections or permissions. Imported settings preserve
 current repository pauses even when the imported record omits that repository,
 and cannot remove an active selected profile pause by deleting or renaming the
-profile. A complete semantic preview includes removed overrides returning to
+profile, even if the current or incoming settings also have a global pause.
+Resuming the global pause later must leave the selected profile pause intact.
+An import that would discard that independent pause is rejected before a preview
+or write; explicitly resuming/resetting that profile remains a separate reviewed
+action. A complete semantic preview includes removed overrides returning to
 inheritance and explicit false values. Session overrides are bound to verified
 account/repository identity and credential epoch before applying them.
 

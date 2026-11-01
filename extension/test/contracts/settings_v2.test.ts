@@ -49,9 +49,9 @@ it('import cannot remove a selected scoped pause by deleting, renaming, moving o
     expect(importedSettings(withPause, { ...DEFAULT_SETTINGS, center: { ...DEFAULT_CENTER_SETTINGS,
         profiles: [renamed], selected: ['renamed'] } }).center.selected).toEqual(['renamed']);
 });
-it('global pause remains authoritative across import while unselected profiles do not create a pause guard', () => {
-    expect(importedSettings({ ...withPause, paused: true }, DEFAULT_SETTINGS).paused).toBe(true);
-    expect(importedSettings(withPause, { ...DEFAULT_SETTINGS, paused: true }).paused).toBe(true);
+it('global pause preserves its own value without replacing the independent selected profile pause guard', () => {
+    expect(() => importedSettings({ ...withPause, paused: true }, DEFAULT_SETTINGS)).toThrow('settings-import-releases-profile-pause');
+    expect(() => importedSettings(withPause, { ...DEFAULT_SETTINGS, paused: true })).toThrow('settings-import-releases-profile-pause');
     expect(importedSettings({ ...withPause, center: { ...withPause.center, selected: [] } }, DEFAULT_SETTINGS).paused).toBe(false);
     expect(importedSettings({ ...withPause, center: { ...withPause.center, profiles: [{ ...paused, preferences: {} }] } }, DEFAULT_SETTINGS).paused).toBe(false);
 });

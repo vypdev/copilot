@@ -25,11 +25,14 @@ it('a standalone options page can save an optional identity without ever creatin
     const h = await fixture(false); await h.add(); expect(h.sessionValues.has(SESSION_KEY)).toBe(false); expect(h.vault()?.selected).toBeNull(); expect(h.writes()).toHaveLength(1);
 });
 it.each(['es', 'fr', 'pt'] as const)('the complete %s optional-purpose journey verifies, saves, reviews and disables the same identity through the actual page and background', async locale => {
-    const h = await fixture(true, locale); await h.add(); expect(document.body.textContent).toContain(h.copy.availability); h.review();
-    await ready(() => document.activeElement?.id === 'connection-role-review-heading'); expect(h.reviewText()).toContain(h.copy.title); button(h.copy.confirm).click();
-    await ready(() => h.reviewText().includes(h.copy.saved)); expect(h.reviewText()).toContain(h.copy.grant); button(h.copy.close).click();
-    await ready(() => document.activeElement?.id === `connection-select-${h.id('issues-write')}`); button(h.copy.disable).click();
-    await ready(() => { const vault = h.vault(); return vault?.schemaVersion === 2 && vault.writeSelections['issues-write'] === null && h.writes().length === 3; });
+    const h = await fixture(true, locale); await h.add(); expect(document.body.textContent).toContain(h.copy.availability);
+    await ready(() => !(document.getElementById(`connection-select-${h.id('issues-write')}`) as HTMLButtonElement).disabled, 'optional identity review is enabled'); h.review();
+    await ready(() => document.activeElement?.id === 'connection-role-review-heading' && !button(h.copy.confirm).disabled, 'optional identity review is focused and ready');
+    expect(h.reviewText()).toContain(h.copy.title); button(h.copy.confirm).click();
+    await ready(() => h.reviewText().includes(h.copy.saved) && !button(h.copy.close).disabled, 'saved optional selection is ready to close');
+    expect(h.reviewText()).toContain(h.copy.grant); button(h.copy.close).click();
+    await ready(() => document.activeElement?.id === `connection-select-${h.id('issues-write')}` && !button(h.copy.disable).disabled, 'selection focus returned and optional disable is enabled'); button(h.copy.disable).click();
+    await ready(() => { const vault = h.vault(); return vault?.schemaVersion === 2 && vault.writeSelections['issues-write'] === null && h.writes().length === 3; }, 'optional selection is disabled in the native vault');
     expect(h.vault()!.entries).toHaveLength(2); expect(h.provider).toHaveBeenCalledTimes(4); expect(h.localArea.set).not.toHaveBeenCalled();
 });
 it('denied permission retains the nonsecret purpose/name draft while clearing its password and issuing no native change', async () => {

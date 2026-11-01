@@ -73,10 +73,11 @@ it('the original five-minute lifetime expires independently from retained compou
     expect(f.rows().some(row => row.fact.kind === 'collection-operation')).toBe(true);
 });
 it('actual retained compound history renders independent effects with nested headings and no target or mutation controls', async () => {
-    const f = await fixture('en', true); await f.begin('stop'); await f.confirm(); button(f.copy.text.close).click();
-    await ready(() => !document.querySelector('.history-review')); const reads = f.app.port.send.mock.calls.filter(([m]) => m.method === 'center.history.read').length;
+    const f = await fixture('en', true); await f.begin('stop'); await f.confirm(); await f.history.writer.flush(); button(f.copy.text.close).click();
+    await ready(() => !document.querySelector('.history-review') && !historyButton('diagnostics', f.copy.text.read).disabled, 'retained history read is enabled after secondary persistence');
+    const reads = f.app.port.send.mock.calls.filter(([m]) => m.method === 'center.history.read').length;
     historyButton('diagnostics', f.copy.text.read).click(); await ready(() => f.app.port.send.mock.calls.filter(([m]) => m.method === 'center.history.read').length > reads
-        && document.querySelector('[data-history=diagnostics]')?.getAttribute('aria-busy') === 'false' && !!document.querySelector('[data-history-entry] [data-collection-effects]'));
+        && document.querySelector('[data-history=diagnostics]')?.getAttribute('aria-busy') === 'false' && !!document.querySelector('[data-history-entry] [data-collection-effects]'), 'explicit history read observes the independently retained effects');
     const row = document.querySelector('[data-history-entry]')!; expect(row.querySelector('h3')?.textContent).toContain(f.compound.actions.stop);
     expect(row.querySelector('h4')?.textContent).toBe(f.copy.text.phasePreference); expect(row.querySelector('button')).toBeNull(); expect(row.querySelector('[data-operation-target]')).toBeNull();
 });

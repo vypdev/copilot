@@ -904,7 +904,16 @@ Errors follow impact → cause → action → retained state. They never claim a
   of authored preferences establishes success. A legacy rollback restores
   compatible preferences into the current schema rather than reinstalling an
   older schema. Import cannot remove a selected scoped profile pause, including
-  by changing IDs/scopes, and retains repository pauses omitted from an import.
+  by changing IDs/scopes, regardless of a current or incoming global pause, and
+  retains repository pauses omitted from an import. A global pause cannot stand
+  in for preserving a selected profile pause: resuming the global pause later
+  must still leave that independently authored profile restriction intact.
+  The import is rejected with `pause-protected` before preview/write if it would
+  remove the restriction. `settings_import_pauses.test.ts` adds ten distinct
+  cases: all four current/incoming global-pause combinations each reject a
+  removed profile pause and accept a retained one (eight cases), plus two actual
+  settings-owner journeys proving no import write and independent global
+  resumption with the selected profile pause retained.
   If these protections exceed capacity, the complete import fails without a
   partial write. Explicit scoped reset/resumption is a different reviewed action.
 - Migrate versioned center settings transactionally where possible; retain original data until the new schema is verified. Future-schema data is not downgraded or overwritten automatically.

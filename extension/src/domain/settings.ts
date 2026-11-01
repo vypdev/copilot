@@ -72,7 +72,7 @@ export function effectiveSettings(settings: Settings, repositoryId: string, tabP
 }
 /** Import preferences cannot grant connection or release a current pause. */
 export function importedSettings(current: Settings, incoming: Settings): Settings {
-    if (!current.paused && !incoming.paused && current.center.profiles.some(profile => current.center.selected.includes(profile.id)
+    if (current.center.profiles.some(profile => current.center.selected.includes(profile.id)
         && profile.preferences.paused === true && !incoming.center.profiles.some(candidate => incoming.center.selected.includes(candidate.id)
             && candidate.preferences.paused === true && profileScopeKey(candidate.scope) === profileScopeKey(profile.scope)))) {
         throw new Error('settings-import-releases-profile-pause');

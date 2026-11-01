@@ -16,12 +16,13 @@ it('bexh3-center-C05 rejects future, malformed and absent imports without modify
 });
 it('bexh3-center-C06 plans a supported legacy import while preserving current pause and connection boundaries', () => {
     const { center: _center, ...legacy } = DEFAULT_SETTINGS;
-    const result = planSettingsChange({ ...current, paused: true }, { type: 'import', settings: { ...legacy, schemaVersion: 1, density: 'compact' } });
+    const withoutSelectedPause = { ...current, paused: true, center: { ...current.center, selected: [] } };
+    const result = planSettingsChange(withoutSelectedPause, { type: 'import', settings: { ...legacy, schemaVersion: 1, density: 'compact' } });
     expect(result).toMatchObject({ state: 'ready', action: 'import', settings: { schemaVersion: 2, revision: 8, density: 'compact',
         paused: true, repositories: { '42': { paused: true, connected: true } } } });
     expect(planSettingsChange(current, { type: 'import', settings: DEFAULT_SETTINGS })).toEqual({ state: 'invalid', reason: 'pause-protected' });
     const full = { ...DEFAULT_SETTINGS, repositories: Object.fromEntries(Array.from({ length: 100 }, (_, index) => [String(index + 100), {}])) };
-    expect(planSettingsChange({ ...current, paused: true }, { type: 'import', settings: full })).toEqual({ state: 'invalid', reason: 'invalid-input' });
+    expect(planSettingsChange(withoutSelectedPause, { type: 'import', settings: full })).toEqual({ state: 'invalid', reason: 'invalid-input' });
 });
 it('rollback plans only known previous settings and cannot restore an old connection grant', () => {
     const previous = { ...DEFAULT_SETTINGS, repositories: { '42': { connected: true, density: 'compact' as const },

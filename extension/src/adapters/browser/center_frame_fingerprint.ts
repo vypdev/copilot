@@ -13,4 +13,3 @@ export const centerFrameFingerprint: CenterFrameFingerprint = async value => {
     } catch { return null; }
 };
 import { centerFrameText } from '../../domain/center_delivery.ts';
-
