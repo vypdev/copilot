@@ -1,3 +1,4 @@
+import { canonicalGitObjectId } from '../../../domain/git_object_id';
 import { logDebugInfo, logError } from "../../../utils/logger";
 import type { PullRequestDescriptionDetails } from '../../../application/ports/pull_request_description_ports';
 import type { PullRequestHeadShaPort } from '../../../application/ports/issue_management_ports';
@@ -61,6 +62,22 @@ export class PullRequestLifecycleRepository implements PullRequestHeadShaPort {
             logError(semanticError);
             throw semanticError;
         }
+    };
+
+    /** Large reviews additionally pin the current target branch, independently of cached PR base.sha. */
+    getBugbotSourceBoundPullRequestIdentity = async (
+        owner: string, repository: string, pullRequestNumber: number, token: string,
+    ): Promise<BugbotPullRequestIdentity> => {
+        const identity = await this.getBugbotPullRequestIdentity(owner, repository, pullRequestNumber, token);
+        if (!identity.baseRef) throw new ApplicationError('provider.contract-invalid', 'The canonical pull request has no verified base ref.');
+        const git = this.githubClient.getClient(token).rest.git;
+        if (!git) throw new ApplicationError('configuration.unsupported', 'The source-bound branch identity query is unavailable.');
+        const result = await git.getRef({ owner, repo: repository, ref: `heads/${identity.baseRef}` });
+        const sha = canonicalGitObjectId(result.data.object?.sha);
+        if (result.data.ref !== `refs/heads/${identity.baseRef}` || result.data.object?.type !== 'commit' || !sha) {
+            throw new ApplicationError('provider.contract-invalid', 'The live target branch identity could not be verified.');
+        }
+        return { ...identity, baseRefSha: sha };
     };
 
     findOpenBugbotPullRequestsByExactHead = async (
@@ -269,12 +286,15 @@ function toBugbotPullRequestIdentity(value: {
     number?: number;
     state?: string;
     draft?: boolean;
+    changed_files?: number;
     head?: {
         ref?: string | null;
         sha?: string | null;
         repo?: { name?: string | null; owner?: { login?: string | null } | null } | null;
     };
     base?: {
+        sha?: string | null;
+        ref?: string | null;
         repo?: {
             id?: number;
             name?: string | null;
@@ -299,6 +319,9 @@ function toBugbotPullRequestIdentity(value: {
     }
     const repositoryId = value.base?.repo?.id;
     return {
+        ...(typeof value.base?.sha === 'string' ? { baseSha: value.base.sha.trim().toLowerCase() } : {}),
+        ...(typeof value.base?.ref === 'string' ? { baseRef: value.base.ref.trim() } : {}),
+        ...(Number.isSafeInteger(value.changed_files) && Number(value.changed_files) >= 0 ? { changedFileCount: Number(value.changed_files) } : {}),
         number: Number(number),
         state,
         draft: value.draft,

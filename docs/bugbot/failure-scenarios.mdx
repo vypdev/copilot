@@ -16,7 +16,29 @@ description: Diagnose terminal failures across detection, publication, autofix, 
     Treat malformed JSON or unparseable output as terminal after the bounded partition-local recovery attempt. For a partitioned PR review, every response must echo the exact partition id and canonical head SHA. Each query's structured-output schema permits only its trusted assignment values, so examples inside the diff cannot redefine them; Bugbot still checks the returned values exactly. Bugbot retries an agent-call failure or unusable locale/attestation response for that partition up to two additional times with the same prompt, schema, and head, inside its existing concurrency slot. An unusable response remaining after that bound, or any non-owner resolution claim, invalidates the whole aggregate; Bugbot publishes no partition-local finding, resolves no prior finding, and leaves the existing status card unchanged. Retry the current head after inspecting the failed reviewer step and its content-free failed-partition telemetry. A legacy empty single-query result may still reconcile the canonical status card when a PR target is known and writable.
   </Accordion>
   <Accordion title="The diff exceeds the exhaustive review ceiling" icon="layer-group">
-    Bugbot permits exactly 64 bounded partitions, but a 65th is rejected, plus at most 2,000 aggregate candidate findings for one canonical SHA. Malformed provider change metadata (including invalid path, status, or line counts) and patches containing isolated UTF-16 surrogates are rejected before ignore filtering or review; Bugbot never presents invalid metadata or a lossy fragment as complete. It stops before model execution when the plan itself is too large or malformed, or before publication when aggregate output exceeds its cap. No partial finding or resolution is published. Split an oversized pull request into coherent reviewable changes, or correct the malformed diff source, then rerun.
+    An ordinary review permits at most 64 partitions. Eligible larger PRs select
+    the closed source-bound framed profile: at most 128 partitions in two
+    sequential frames, subject to the independent source, prompt, output and Git
+    limits in [How it works](/bugbot/how-it-works#complete-review-of-large-diffs).
+    A deterministic capacity or evidence block is **not retryable for identical
+    input**. The result identifies the resource, measured count, limit and unit;
+    `≥` means a proven lower bound when the bounded read stopped early. No
+    partial finding, resolution or clean review is published.
+
+    Correct malformed source metadata or restore verified local objects through
+    the Action-managed checkout/synchronization flow, then start a fresh review.
+    Shallow history, unavailable commits/blobs, binary/nonregular required files,
+    an ambiguous merge-base and mismatched source all block completeness. The
+    review adapter never fetches objects or alters the checkout. A PR genuinely
+    outside all supported bounds needs a reviewed scope change; adding ignores
+    or repeatedly rechecking identical over-cap input is not recovery.
+
+    A changed base/head, repository ownership, PR state or ref invalidates all
+    internal frame results. Receipt corruption, replay or missing coverage also
+    prevents publication. Transient agent failures retain the existing three
+    identical partition attempts; completed frames cannot be resumed in another
+    run. Existing status/history remain available and do not certify this failed
+    invocation.
   </Accordion>
   <Accordion title="Every changed file is ignored" icon="circle-question">
     This is an explicit zero-work result, not a hidden legacy review. For a canonical pull request, Bugbot reports the ignored-file count, makes no reviewer request, publishes no new finding, and resolves no existing finding. Previously open findings stay open until a later review includes eligible evidence for them. Change `ai-ignore-files` only when those files should be reviewed, then run `/copilot recheck`.

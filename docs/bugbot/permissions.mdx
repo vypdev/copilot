@@ -25,3 +25,25 @@ scope. Every partition remains credential-free and cannot publish or resolve
 findings. Only the existing trusted application path receives the configured
 GitHub credential, and it mutates provider state once after every partition for
 the same canonical head has validated and the final freshness guard passes.
+
+## Trusted local source verification
+
+Large framed reviews add no credential, write permission, capacity flag or
+network scope. A semantic source port runs in the trusted host, outside the
+credential-free reviewer process. It reads pinned commit/tree/blob objects with
+fixed Git argv, literal validated paths (at most 1,024 UTF-8 bytes), no optional
+locks, lazy fetch, replace objects, external diff or textconv. Git network,
+hooks, system/global attributes and inherited credentials/config overrides are
+disabled. Required symlinks, submodules, binary or unverifiable text fail closed.
+UTF-8 decoding and Git blob hashes must both verify; a BOM remains source data.
+
+The host compares the complete immutable changed-path inventory independently
+of native file-page counts, then verifies both regular text sides of every
+non-ignored change. Tree reads batch at most 16 paths / 12,000 argument characters;
+every command has a 30-second timeout and bounded stdout. Source/object budgets
+remain finite. Missing objects require preparation through the existing managed
+workflow; this adapter cannot fetch, modify refs/index/worktree, or execute
+consumer source, filters or hooks. Models receive only inert assignments and
+never authority to publish frame results. No manifest, source or model checkpoint
+is persisted for another run. Content-free metrics use the existing telemetry
+retention policy.

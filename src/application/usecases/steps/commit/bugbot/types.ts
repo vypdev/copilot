@@ -1,3 +1,5 @@
+import type { BugbotFramedReviewSource } from '../../../../../domain/bugbot/framed_review';
+import type { BugbotFramedReviewPlan } from '../../../../policies/bugbot_framed_review_policy';
 /**
  * Bugbot types: data structures used across detection, publishing, and autofix.
  * GitHub supplies the canonical PR diff and the configured agent can inspect
@@ -44,6 +46,8 @@ export interface UnresolvedFindingSummary {
 
 /** Full context for detection, mutation, publishing, and autofix intent. */
 export interface BugbotContext {
+  reviewFramedSource?: BugbotFramedReviewSource;
+  reviewFramedPlan?: BugbotFramedReviewPlan;
   existingByFindingId: ExistingByFindingId;
   /** Full issue-comment bodies reserved for read-modify-write operations. */
   issueComments: Array<{ id: number; body: string | null }>;

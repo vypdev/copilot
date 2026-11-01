@@ -1,3 +1,7 @@
+import type { BugbotReviewSourcePort } from '../../../../ports/bugbot_review_source_ports';
+import { BugbotReviewCompletenessError, type BugbotFramedReviewSource } from '../../../../../domain/bugbot/framed_review';
+import { sameBugbotFramedPullRequest, bugbotFramedSourceMatchesPullRequest } from '../../../../policies/bugbot_framed_identity_policy';
+import { projectBugbotFramedSnapshot } from '../../../../policies/bugbot_framed_snapshot_policy';
 import { ApplicationError } from "../../../../errors/application_error";
 import type { BoundBugbotContextReadPorts } from "../../../../ports/bugbot_context_ports";
 import type { PullRequestReviewComment } from "../../../../ports/pull_request_review_comment_ports";
@@ -20,7 +24,6 @@ import { buildPreviousFindingsContext } from "./bugbot_previous_findings_context
 import {
   BugbotDiffPlanLimitError,
   buildReviewDiffPlan,
-  MAX_REVIEW_DIFF_PARTITIONS,
 } from "../../../../policies/bugbot_diff_partition_policy";
 import { buildReviewConversationContext } from "./bugbot_review_context";
 import { fileMatchesIgnorePatterns } from "../../../../policies/file_ignore_policy";
@@ -62,9 +65,12 @@ export async function loadBugbotContext(
   request: BugbotContextRequest,
   ports: BoundBugbotContextReadPorts,
   resolvedPreflight?: BugbotContextPreflight,
+  reviewSource?: BugbotReviewSourcePort,
 ): Promise<BugbotContext> {
   const preflight = resolvedPreflight ?? await preflightBugbotContext(request, ports);
-  const { canonicalPullRequest, selectionCoverage, selectionReason } = preflight;
+  const { selectionCoverage, selectionReason } = preflight;
+  let canonicalPullRequest = preflight.canonicalPullRequest;
+  let framedCoverage: BugbotSourceCoverage | undefined;
   const tasks: Array<() => Promise<LoadedSource>> = [];
   if (request.target.issueNumber !== undefined) {
     tasks.push(async () => {
@@ -73,17 +79,18 @@ export async function loadBugbotContext(
     });
   }
   if (canonicalPullRequest) {
+    const selectedNumber = canonicalPullRequest.number;
     tasks.push(
       async () => {
-        const result = await ports.listPullRequestReviewComments(canonicalPullRequest.number);
+        const result = await ports.listPullRequestReviewComments(selectedNumber);
         return { kind: "comments", value: [...result.value], coverage: result.coverage };
       },
       async () => {
-        const result = await ports.listPullRequestReviewThreadStates(canonicalPullRequest.number);
+        const result = await ports.listPullRequestReviewThreadStates(selectedNumber);
         return { kind: "threads", value: result.value, coverage: result.coverage };
       },
       async () => {
-        const result = await ports.getReviewDiffSnapshot(canonicalPullRequest.number);
+        const result = await ports.getReviewDiffSnapshot(selectedNumber);
         return { kind: "diff", value: result.value, coverage: result.coverage };
       },
     );
@@ -111,21 +118,30 @@ export async function loadBugbotContext(
     parsedComments.prFindingIdToBody,
   );
   const previousContext = buildPreviousFindingsContext(previousFindings);
-  const prContext = canonicalPullRequest && diff ? toPrContext(canonicalPullRequest, diff) : null;
+  let prContext = canonicalPullRequest && diff ? toPrContext(canonicalPullRequest, diff) : null;
+  let framedSource: BugbotFramedReviewSource | undefined;
   let diffPlan: ReturnType<typeof buildReviewDiffPlan>;
   try {
     diffPlan = buildReviewDiffPlan(prContext, request.ignorePatterns);
   } catch (error) {
-    if (error instanceof BugbotDiffPlanLimitError) {
-      throw new ApplicationError(
-        'workflow.failed',
-        error.reason === 'malformed-input'
-          ? 'The canonical diff contains malformed provider data. Correct the provider source and retry; no partial review was started.'
-          : `The canonical diff exceeds the fixed ${MAX_REVIEW_DIFF_PARTITIONS}-partition or raw-input Bugbot planning limit. Split the pull request and retry; no partial review was started.`,
-        { cause: error },
-      );
+    if (error instanceof BugbotDiffPlanLimitError && error.reason === 'limit') {
+      if (!reviewSource || !ports.getSourceBoundPullRequest || !canonicalPullRequest || !diff) throw new BugbotReviewCompletenessError('capability');
+      const current = await ports.getSourceBoundPullRequest(canonicalPullRequest.number);
+      if (!sameBugbotFramedPullRequest(canonicalPullRequest, current)) throw new BugbotReviewCompletenessError('identity');
+      canonicalPullRequest = current;
+      const pinnedRead = await ports.getReviewDiffSnapshot(current.number);
+      framedCoverage = pinnedRead.coverage;
+      framedSource = await reviewSource.readCompleteSource(current, pinnedRead.value,
+        pinnedRead.coverage.status === 'complete', request.ignorePatterns);
+      if (!bugbotFramedSourceMatchesPullRequest(framedSource, canonicalPullRequest)) throw new BugbotReviewCompletenessError('identity');
+      prContext = toPrContext(canonicalPullRequest, projectBugbotFramedSnapshot(framedSource));
+      const retained = framedSource.changes.filter(change => !fileMatchesIgnorePatterns(change.filename, request.ignorePatterns)).length;
+      diffPlan = { partitions: [], retained, ignored: framedSource.changes.length - retained, fragments: 0 };
+    } else if (error instanceof BugbotDiffPlanLimitError) {
+      throw new BugbotReviewCompletenessError('source');
+    } else {
+      throw error;
     }
-    throw error;
   }
   const conversationContext = buildReviewConversationContext(
     issueComments,
@@ -144,6 +160,8 @@ export async function loadBugbotContext(
     ...loaded.map((source) => source.kind === "diff"
       ? {
           ...source.coverage,
+          ...(framedCoverage ? { ...framedCoverage, pagesFetched: framedCoverage.pagesFetched + source.coverage.pagesFetched,
+            itemsFetched: framedCoverage.itemsFetched + source.coverage.itemsFetched } : {}),
           itemsRetained: diffPlan.retained,
         }
       : source.coverage),
@@ -173,6 +191,7 @@ export async function loadBugbotContext(
     `LoadBugbotContext: selection=${selectionReason}, coverage=${coverage.status}, existing findings=${Object.keys(parsedComments.existingByFindingId).length}, retained previous findings=${previousContext.selected.length}, diff files=${prContext?.changes?.length ?? 0}, diff partitions=${diffPlan.partitions.length}.`,
   );
   return {
+    ...(framedSource ? { reviewFramedSource: framedSource } : {}),
     existingByFindingId: parsedComments.existingByFindingId,
     issueComments: parsedComments.issueComments,
     canonicalPullRequest,

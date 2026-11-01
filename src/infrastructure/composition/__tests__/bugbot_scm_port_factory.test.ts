@@ -20,6 +20,7 @@ describe('Bugbot SCM port factory', () => {
       updateComment: jest.fn().mockResolvedValue(undefined),
     };
     const lifecycle = {
+      getBugbotSourceBoundPullRequestIdentity: jest.fn().mockResolvedValue({ number: 7 }),
       getBugbotPullRequestIdentity: jest.fn().mockResolvedValue({ number: 7 }),
       findOpenBugbotPullRequestsByExactHead: jest.fn().mockResolvedValue([]),
     };
@@ -57,6 +58,7 @@ describe('Bugbot SCM port factory', () => {
     const ports = scm.context;
 
     await ports.getPullRequest(7);
+    await ports.getSourceBoundPullRequest!(7);
     await ports.findOpenPullRequestsByExactHead('fork-owner', 'feature');
     await ports.listIssueComments(11);
     await ports.listPullRequestReviewComments(7);
@@ -66,6 +68,7 @@ describe('Bugbot SCM port factory', () => {
     await ports.getPullRequestReviewCommentBody(7, 99);
     await ports.loadRules(['src/a.ts'], 'a'.repeat(40));
 
+    expect(lifecycle.getBugbotSourceBoundPullRequestIdentity).toHaveBeenCalledWith('base-owner', 'repo', 7, 'secret');
     expect(lifecycle.getBugbotPullRequestIdentity).toHaveBeenCalledWith('base-owner', 'repo', 7, 'secret');
     expect(lifecycle.findOpenBugbotPullRequestsByExactHead).toHaveBeenCalledWith('base-owner', 'repo', 'fork-owner', 'feature', 'secret');
     expect(boundedIssues.listBugbotIssueCommentsBounded).toHaveBeenCalledWith('base-owner', 'repo', 11, 'secret');

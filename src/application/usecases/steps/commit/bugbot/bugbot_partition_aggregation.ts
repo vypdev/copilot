@@ -1,3 +1,4 @@
+import { matchesBugbotFramedReceipt } from '../../../../policies/bugbot_framed_receipt_policy';
 import { ApplicationError } from '../../../../errors/application_error';
 import type { BugbotResponse } from './prepare_bugbot_findings_policy';
 import type { BugbotReviewDiffPartition } from './types';
@@ -27,7 +28,8 @@ export function aggregateBugbotPartitionResponses(
     const response = responses[index];
     if (response.partition_id !== partition.id
       || response.reviewed_head_sha !== partition.headSha
-      || observedIds.has(partition.id)) {
+      || observedIds.has(partition.id)
+      || (partition.framed && !matchesBugbotFramedReceipt(partition.framed, response))) {
       throw invalidAggregate('Bugbot partition identity is missing, duplicated, or stale.');
     }
     observedIds.add(partition.id);

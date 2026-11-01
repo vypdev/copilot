@@ -70,7 +70,7 @@ comments can also disagree after partial mutations.
 - Known debt and limitations: model quality is probabilistic; provider APIs can
   make surfaces temporarily unverifiable; comment update budget limits how many
   historical blocks are refreshed per run; non-diff/provider caps can intentionally
-  produce a partial review; plans above 64 partitions require PR splitting;
+  produce a partial review; ordinary plans stop at 64 partitions; eligible larger diffs use the source-bound framed companion;
   controlled live quality evidence is external.
 - Unknown rationale: earlier prompt wording is not treated as a permanent public contract.
 - Implemented hardening: canonical single-PR selection, bounded provider reads,
@@ -191,7 +191,7 @@ the existing mutation, authorization and freshness contracts remain in force.
 - Diff prompt overflow creates lossless partitions. An agent-call or response-
   validation failure may be retried twice for that same partition only; a
   missing/invalid partition after this fixed bound aborts the whole aggregate
-  before mutation. A plan over 64 partitions does not start.
+  before mutation. An ordinary plan over 64 partitions selects the source-bound framed companion when all of its independent proof and capacity bounds fit; unsupported workloads remain blocked.
 - A superseded independent post-autofix review permits exactly one fresh
   read-only review attempt (at most two complete review attempts). Failed,
   unexecuted, partial or malformed evidence does not activate that retry.
@@ -230,7 +230,7 @@ Confidence floor, schema validation, head guards, path safety, marker ownership,
 publication ordering, independent review, provider page limits/concurrency,
 lossless Unicode-safe fragmentation, prompt bounds (100 prior findings/48,000 characters, 50 logical conversation entries/
 24,000 rendered characters with 4,000-unit Unicode-safe payload fragments, 1,000 diff files, 12,000-character fragments, 64,000
-characters per partition, 64 partitions, and 2,000 aggregate candidates), retained-only
+characters per partition, 64 ordinary partitions or the separately bounded framed profile, and 2,000 aggregate candidates), retained-only
 resolution eligibility, and credential isolation are not configurable.
 The one-retry post-autofix bound is fixed and adds no user setting. Only the
 final attempt enters the returned canonical review evidence; the discarded
@@ -2371,3 +2371,17 @@ quality/observability, this owner and catalog/index together. Full normal hooks,
 package/build/types/lint, docs/specification/workflow checks, Graphify, exact-head
 CI, all three native cleanup footers and complete review with zero active
 findings remain merge requirements.
+
+### Complete source-bound framed review — #839 (2026-11-01)
+
+The companion [source-bound framed review](./bugbot-source-bound-framed-review.md)
+owns the closed large-diff protocol, immutable local source proof, live base-ref
+freshness, complete ordered receipts and finite invocation budgets. It extends
+ordinary analysis without changing its <=64 planner cap, public configuration,
+resolution eligibility, protected approval or single publication owner. Missing
+source, unsupported capacity or incomplete receipts are nonretryable completeness
+blocks, not clean or resumable partial reviews. The companion's 130-case inventory
+is additional to the 67 ordinary partition cases. Source/planner/application,
+adapter, presentation and integration tests plus current-head remote evidence
+are required before merge; independent application coverage is never proof that
+a live model reviewed every historical H3 file.

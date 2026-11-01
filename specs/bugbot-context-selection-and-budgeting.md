@@ -550,3 +550,12 @@ and catalog evidence in the implementation slice.
   `src/infrastructure/composition/bugbot_scm_port_factory.ts`, provider
   bounded-read repositories, Bugbot context tests, and the documentation named
   in section 15.
+
+## Large-diff source-bound extension — #839
+
+[Source-bound framed review](./bugbot-source-bound-framed-review.md) defines the
+separate closed profile beyond the ordinary envelope. Its complete immutable
+source inventory, two sequential frames, live target-ref fences and exact
+coverage receipts supersede the ordinary over-cap remediation for eligible
+workloads. Ordinary planning, conversation/history limits, resolution ownership,
+public configuration and approval controls retain their existing contracts.

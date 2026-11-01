@@ -1,3 +1,4 @@
+import { BUGBOT_REVIEW_DIAGNOSTIC_LABEL_KEYS, ENGLISH_REVIEW_DIAGNOSTIC_LABELS, SPANISH_REVIEW_DIAGNOSTIC_LABELS } from './bugbot_review_diagnostic_labels';
 import { ENGLISH_COMMAND_VALIDATION_CONTENT, SPANISH_COMMAND_VALIDATION_CONTENT } from './comment_command_validation_message_catalog';
 import type {
   ApplicationErrorCode,
@@ -22,6 +23,7 @@ import {
 } from './resolved_message_catalog_policy';
 
 const LABEL_KEYS = Object.freeze([
+  ...BUGBOT_REVIEW_DIAGNOSTIC_LABEL_KEYS,
   'impact', 'errorCode', 'action', 'retainedState', 'retryable', 'yes', 'no', 'reference',
 ] as const);
 const CONTENT_FIELDS = Object.freeze(['impact', 'action', 'retainedState'] as const);
@@ -51,6 +53,7 @@ export const APPLICATION_ERROR_MESSAGE_IDS: readonly ApplicationErrorMessageId[]
 ]);
 
 const ENGLISH_LABELS: Readonly<Record<LabelKey, string>> = Object.freeze({
+  ...ENGLISH_REVIEW_DIAGNOSTIC_LABELS,
   impact: 'Impact',
   errorCode: 'Error code',
   action: 'Action',
@@ -62,6 +65,7 @@ const ENGLISH_LABELS: Readonly<Record<LabelKey, string>> = Object.freeze({
 });
 
 const SPANISH_LABELS: Readonly<Record<LabelKey, string>> = Object.freeze({
+  ...SPANISH_REVIEW_DIAGNOSTIC_LABELS,
   impact: 'Impacto',
   errorCode: 'Código de error',
   action: 'Acción',
@@ -248,6 +252,11 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     action: 'Inspect the original requirement and response schema. Details: phase {phase}, reason {reason}, field {field}, requirement {requirementId}, original issue line {sourceLineId}. none means no verified identity is available. A fresh attempt may help when the provider can satisfy the unchanged contract; do not relax acceptance or verification.',
     retainedState: 'Existing progress labels and published assessments were preserved. An optional check-publication warning is a separate result.',
   }),
+  'bugbot-review-incomplete': Object.freeze({
+    impact: 'Complete Bugbot review is blocked: {resource} {countKind} {observed} {unit}; supported limit {limit} ({profile}).',
+    action: 'Inspect the exact resource and limit. Prepare missing immutable objects through the Action-managed workflow, correct the verified source, or review genuinely unrelated PR scope. Repeating identical unsupported input cannot complete the review. No partial review can authorize approval.',
+    retainedState: 'Existing findings and resolution state were retained. This run published no partial findings or clean review; a fresh run must validate the complete current source.',
+  }),
   'progress-inventory-incomplete': Object.freeze({
     impact: 'Complete progress evidence is unavailable ({profile}, {reason}); observed {countKind} {observedCount}, supported limit {supportedLimit}. Unreviewed path excerpt: {paths}.',
     action: 'Inspect the pinned comparison and named capacity or integrity boundary. An identical retry cannot repair unsupported evidence; repair its source or use a reviewed supported protocol. A zero limit denotes an integrity check, not a file allowance.',
@@ -427,6 +436,11 @@ const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     impact: 'El resultado de progreso devuelto incumplió su contrato; no se publicó el progreso.',
     action: 'Inspecciona el requisito original y el esquema de respuesta. Detalles: fase {phase}, motivo {reason}, campo {field}, requisito {requirementId}, línea original de la issue {sourceLineId}. none indica que no hay una identidad verificada. Un nuevo intento puede ayudar si el proveedor cumple el contrato sin cambiarlo; no relajes la aceptación ni la verificación.',
     retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas. Un aviso de publicación del check opcional corresponde a otro resultado.',
+  }),
+  'bugbot-review-incomplete': Object.freeze({
+    impact: 'La revisión completa de Bugbot está bloqueada: {resource} {countKind} {observed} {unit}; límite admitido {limit} ({profile}).',
+    action: 'Inspecciona el recurso y su límite. Prepara los objetos inmutables ausentes mediante el flujo gestionado por la Action, corrige la fuente verificada o revisa el alcance ajeno de la PR. Repetir la misma entrada no admitida no completará la revisión. Una revisión parcial no autoriza aprobación.',
+    retainedState: 'Se conservaron los findings y su estado de resolución. Este intento no publicó findings parciales ni una revisión limpia; un nuevo intento debe validar toda la fuente actual.',
   }),
   'progress-inventory-incomplete': Object.freeze({
     impact: 'La evidencia completa de progreso no está disponible ({profile}, {reason}); observado {countKind} {observedCount}, límite admitido {supportedLimit}. Extracto de rutas sin revisar: {paths}.',

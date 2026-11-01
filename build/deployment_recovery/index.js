@@ -32361,11 +32361,13 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.readEnglishApplicationErrorMessage = exports.APPLICATION_ERROR_CATALOG_DEFINITIONS = exports.SPANISH_APPLICATION_ERROR_DEFINITION = exports.ENGLISH_APPLICATION_ERROR_DEFINITION = exports.SPANISH_APPLICATION_ERROR_MESSAGES = exports.ENGLISH_APPLICATION_ERROR_MESSAGES = exports.APPLICATION_ERROR_MESSAGE_IDS = exports.APPLICATION_ERROR_CODES = void 0;
 exports.resolveStaticApplicationErrorCatalog = resolveStaticApplicationErrorCatalog;
 exports.resolveApplicationErrorCatalog = resolveApplicationErrorCatalog;
+const bugbot_review_diagnostic_labels_1 = __nccwpck_require__(351);
 const comment_command_validation_message_catalog_1 = __nccwpck_require__(2002);
 const application_error_1 = __nccwpck_require__(7790);
 const message_catalog_1 = __nccwpck_require__(7097);
 const resolved_message_catalog_policy_1 = __nccwpck_require__(5069);
 const LABEL_KEYS = Object.freeze([
+    ...bugbot_review_diagnostic_labels_1.BUGBOT_REVIEW_DIAGNOSTIC_LABEL_KEYS,
     'impact', 'errorCode', 'action', 'retainedState', 'retryable', 'yes', 'no', 'reference',
 ]);
 const CONTENT_FIELDS = Object.freeze(['impact', 'action', 'retainedState']);
@@ -32377,6 +32379,7 @@ exports.APPLICATION_ERROR_MESSAGE_IDS = Object.freeze([
         .map(field => `error.recovery.${id}.${field}`)),
 ]);
 const ENGLISH_LABELS = Object.freeze({
+    ...bugbot_review_diagnostic_labels_1.ENGLISH_REVIEW_DIAGNOSTIC_LABELS,
     impact: 'Impact',
     errorCode: 'Error code',
     action: 'Action',
@@ -32387,6 +32390,7 @@ const ENGLISH_LABELS = Object.freeze({
     reference: 'Reference',
 });
 const SPANISH_LABELS = Object.freeze({
+    ...bugbot_review_diagnostic_labels_1.SPANISH_REVIEW_DIAGNOSTIC_LABELS,
     impact: 'Impacto',
     errorCode: 'Código de error',
     action: 'Acción',
@@ -32560,6 +32564,11 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
         impact: 'The returned progress result violated its contract; progress was not published.',
         action: 'Inspect the original requirement and response schema. Details: phase {phase}, reason {reason}, field {field}, requirement {requirementId}, original issue line {sourceLineId}. none means no verified identity is available. A fresh attempt may help when the provider can satisfy the unchanged contract; do not relax acceptance or verification.',
         retainedState: 'Existing progress labels and published assessments were preserved. An optional check-publication warning is a separate result.',
+    }),
+    'bugbot-review-incomplete': Object.freeze({
+        impact: 'Complete Bugbot review is blocked: {resource} {countKind} {observed} {unit}; supported limit {limit} ({profile}).',
+        action: 'Inspect the exact resource and limit. Prepare missing immutable objects through the Action-managed workflow, correct the verified source, or review genuinely unrelated PR scope. Repeating identical unsupported input cannot complete the review. No partial review can authorize approval.',
+        retainedState: 'Existing findings and resolution state were retained. This run published no partial findings or clean review; a fresh run must validate the complete current source.',
     }),
     'progress-inventory-incomplete': Object.freeze({
         impact: 'Complete progress evidence is unavailable ({profile}, {reason}); observed {countKind} {observedCount}, supported limit {supportedLimit}. Unreviewed path excerpt: {paths}.',
@@ -32738,6 +32747,11 @@ const SPANISH_RECOVERY_CONTENT = Object.freeze({
         impact: 'El resultado de progreso devuelto incumplió su contrato; no se publicó el progreso.',
         action: 'Inspecciona el requisito original y el esquema de respuesta. Detalles: fase {phase}, motivo {reason}, campo {field}, requisito {requirementId}, línea original de la issue {sourceLineId}. none indica que no hay una identidad verificada. Un nuevo intento puede ayudar si el proveedor cumple el contrato sin cambiarlo; no relajes la aceptación ni la verificación.',
         retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas. Un aviso de publicación del check opcional corresponde a otro resultado.',
+    }),
+    'bugbot-review-incomplete': Object.freeze({
+        impact: 'La revisión completa de Bugbot está bloqueada: {resource} {countKind} {observed} {unit}; límite admitido {limit} ({profile}).',
+        action: 'Inspecciona el recurso y su límite. Prepara los objetos inmutables ausentes mediante el flujo gestionado por la Action, corrige la fuente verificada o revisa el alcance ajeno de la PR. Repetir la misma entrada no admitida no completará la revisión. Una revisión parcial no autoriza aprobación.',
+        retainedState: 'Se conservaron los findings y su estado de resolución. Este intento no publicó findings parciales ni una revisión limpia; un nuevo intento debe validar toda la fuente actual.',
     }),
     'progress-inventory-incomplete': Object.freeze({
         impact: 'La evidencia completa de progreso no está disponible ({profile}, {reason}); observado {countKind} {observedCount}, límite admitido {supportedLimit}. Extracto de rutas sin revisar: {paths}.',
@@ -32919,6 +32933,53 @@ function resolveApplicationErrorCatalog(locale, configuration, resolver) {
 }
 const readEnglishApplicationErrorMessage = (id, variables = {}) => (0, message_catalog_1.renderCatalogMessage)(exports.ENGLISH_APPLICATION_ERROR_MESSAGES[id], variables, 'en-US');
 exports.readEnglishApplicationErrorMessage = readEnglishApplicationErrorMessage;
+
+
+/***/ }),
+
+/***/ 351:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SPANISH_REVIEW_DIAGNOSTIC_LABELS = exports.ENGLISH_REVIEW_DIAGNOSTIC_LABELS = exports.BUGBOT_REVIEW_DIAGNOSTIC_LABEL_KEYS = exports.BUGBOT_REVIEW_UNIT_LABELS = exports.BUGBOT_REVIEW_RESOURCE_LABELS = void 0;
+exports.BUGBOT_REVIEW_RESOURCE_LABELS = {
+    files: 'reviewFiles', fragments: 'reviewFragments', rawUtf16: 'reviewRaw', normalizedUtf16: 'reviewNormalized',
+    fragmentUtf16: 'reviewFragmentSize', partitionUtf16: 'reviewPartitionSize', renderedUtf16: 'reviewRendered',
+    partitions: 'reviewPartitions', frames: 'reviewFrames', framePartitions: 'reviewFrameParts',
+    promptBytes: 'reviewPrompt', promptTotalBytes: 'reviewPromptTotal', responseBytes: 'reviewResponse',
+    resultBytes: 'reviewResult', findingsPerResponse: 'reviewResponseFindings', findings: 'reviewFindings', resolutions: 'reviewResolutions',
+    recoveredFiles: 'reviewRecoveredFiles', recoveredPatchBytes: 'reviewRecoveredPatch', recoveredPatchTotalBytes: 'reviewRecoveredTotal',
+    blobBytes: 'reviewBlob', blobTotalBytes: 'reviewBlobTotal', gitReads: 'reviewGitReads', source: 'reviewSource',
+    identity: 'reviewIdentity', manifest: 'reviewManifest', coverage: 'reviewCoverage', receipt: 'reviewReceipt', capability: 'reviewCapability',
+};
+exports.BUGBOT_REVIEW_UNIT_LABELS = {
+    'UTF-16 code units': 'reviewUtf16Unit', 'UTF-8 bytes': 'reviewUtf8Unit', items: 'reviewItemUnit', operations: 'reviewOperationUnit',
+};
+exports.BUGBOT_REVIEW_DIAGNOSTIC_LABEL_KEYS = [...Object.values(exports.BUGBOT_REVIEW_RESOURCE_LABELS), ...Object.values(exports.BUGBOT_REVIEW_UNIT_LABELS)];
+exports.ENGLISH_REVIEW_DIAGNOSTIC_LABELS = {
+    reviewFiles: 'Assigned files', reviewFragments: 'Assigned fragments', reviewRaw: 'Raw input', reviewNormalized: 'Normalized input',
+    reviewFragmentSize: 'Fragment size', reviewPartitionSize: 'Rendered partition size', reviewRendered: 'Complete rendered diff',
+    reviewPartitions: 'Review partitions', reviewFrames: 'Review frames', reviewFrameParts: 'Partitions in one frame',
+    reviewPrompt: 'Final prompt size', reviewPromptTotal: 'Total prompt size', reviewResponse: 'Response size', reviewResult: 'Retained results',
+    reviewResponseFindings: 'Findings in one response', reviewFindings: 'Global findings', reviewResolutions: 'Resolution claims',
+    reviewRecoveredFiles: 'Files requiring patch recovery', reviewRecoveredPatch: 'Recovered patch size', reviewRecoveredTotal: 'Total recovered patch size',
+    reviewBlob: 'Text blob size', reviewBlobTotal: 'Total verified text source', reviewGitReads: 'Local Git reads', reviewSource: 'Required source',
+    reviewIdentity: 'Canonical source identity', reviewManifest: 'Invocation manifest', reviewCoverage: 'Complete coverage', reviewReceipt: 'Review receipts',
+    reviewCapability: 'Source-read capability', reviewUtf16Unit: 'UTF-16 code units', reviewUtf8Unit: 'UTF-8 bytes', reviewItemUnit: 'items', reviewOperationUnit: 'operations',
+};
+exports.SPANISH_REVIEW_DIAGNOSTIC_LABELS = {
+    reviewFiles: 'Archivos asignados', reviewFragments: 'Fragmentos asignados', reviewRaw: 'Entrada original', reviewNormalized: 'Entrada normalizada',
+    reviewFragmentSize: 'Tamaño del fragmento', reviewPartitionSize: 'Tamaño de la partición renderizada', reviewRendered: 'Diff completo renderizado',
+    reviewPartitions: 'Particiones de revisión', reviewFrames: 'Marcos de revisión', reviewFrameParts: 'Particiones de un marco',
+    reviewPrompt: 'Tamaño del prompt final', reviewPromptTotal: 'Tamaño total de prompts', reviewResponse: 'Tamaño de la respuesta', reviewResult: 'Resultados retenidos',
+    reviewResponseFindings: 'Findings de una respuesta', reviewFindings: 'Findings globales', reviewResolutions: 'Resoluciones declaradas',
+    reviewRecoveredFiles: 'Archivos que necesitan recuperar el parche', reviewRecoveredPatch: 'Tamaño del parche recuperado', reviewRecoveredTotal: 'Tamaño total de parches recuperados',
+    reviewBlob: 'Tamaño del blob de texto', reviewBlobTotal: 'Fuente de texto verificada total', reviewGitReads: 'Lecturas locales de Git', reviewSource: 'Fuente requerida',
+    reviewIdentity: 'Identidad de la fuente canónica', reviewManifest: 'Manifiesto del intento', reviewCoverage: 'Cobertura completa', reviewReceipt: 'Recibos de revisión',
+    reviewCapability: 'Capacidad de lectura de fuente', reviewUtf16Unit: 'unidades de código UTF-16', reviewUtf8Unit: 'bytes UTF-8', reviewItemUnit: 'elementos', reviewOperationUnit: 'operaciones',
+};
 
 
 /***/ }),
@@ -33716,6 +33777,7 @@ var _ApplicationError_cause;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = exports.APPLICATION_ERROR_RECOVERY_IDS = void 0;
 exports.isApplicationErrorCorrelationId = isApplicationErrorCorrelationId;
+const framed_review_1 = __nccwpck_require__(3750);
 const progress_response_diagnostic_1 = __nccwpck_require__(6289);
 const progress_inventory_diagnostic_1 = __nccwpck_require__(4048);
 const progress_response_diagnostic_2 = __nccwpck_require__(6289);
@@ -33759,6 +33821,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'issue-workflow-admission-blocked',
     'progress-binary-evidence-unavailable',
     'progress-inventory-incomplete',
+    'bugbot-review-incomplete',
     'progress-result-contract-invalid',
     'progress-assessment-capacity-exceeded',
     'progress-scope-clause-limit',
@@ -34003,6 +34066,7 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'sdd-draft-repository-path-invalid': Object.freeze([]),
     'progress-binary-evidence-unavailable': Object.freeze(['paths', 'pathCount']),
     'progress-inventory-incomplete': Object.freeze(['profile', 'reason', 'observedCount', 'supportedLimit', 'countKind', 'paths']),
+    'bugbot-review-incomplete': Object.freeze(['profile', 'countKind', 'resource', 'observed', 'limit', 'unit']),
     'progress-result-contract-invalid': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
     'progress-assessment-capacity-exceeded': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
     'progress-scope-clause-limit': Object.freeze(['clauseKind', 'observed', 'limit', 'sourceLineId']),
@@ -34089,6 +34153,8 @@ function normalizeApplicationErrorRecovery(recovery) {
         throw new TypeError('Progress scope capacity diagnostic is invalid.');
     if (recovery.id === 'progress-result-contract-invalid' && !(0, progress_response_diagnostic_2.isProgressResponseDiagnosticFacts)(variables))
         throw new TypeError('Progress response diagnostic is invalid.');
+    if (recovery.id === 'bugbot-review-incomplete' && !(0, framed_review_1.isBugbotReviewBlockFacts)(variables))
+        throw new TypeError('Bugbot review diagnostic is invalid.');
     if (recovery.id === 'progress-inventory-incomplete' && !(0, progress_inventory_diagnostic_1.isProgressInventoryDiagnostic)(variables))
         throw new TypeError('Progress inventory diagnostic is invalid.');
     if (recovery.id === 'progress-binary-evidence-unavailable' && !(0, progress_binary_evidence_diagnostic_1.isProgressBinaryEvidenceFacts)(variables))
@@ -34926,6 +34992,62 @@ exports.BRANCH_SYNC_VALIDATION_CODES = Object.freeze([
 ]);
 function admittedBranchSyncValidationCode(value) {
     return exports.BRANCH_SYNC_VALIDATION_CODES.find(code => code === value) ?? 'unclassified';
+}
+
+
+/***/ }),
+
+/***/ 3750:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BugbotReviewCompletenessError = exports.BUGBOT_FRAMED_LIMITS = void 0;
+exports.enforceBugbotFramedBudget = enforceBugbotFramedBudget;
+exports.isBugbotReviewBlockFacts = isBugbotReviewBlockFacts;
+/** Closed invocation-only review capacity. No caller-supplied limit can expand it. */
+exports.BUGBOT_FRAMED_LIMITS = Object.freeze({
+    files: 1000, fragments: 4096, rawUtf16: 8192000, normalizedUtf16: 8192000,
+    fragmentUtf16: 12000, partitionUtf16: 64000, renderedUtf16: 8192000,
+    partitions: 128, frames: 2, framePartitions: 64, promptBytes: 512 * 1024,
+    promptTotalBytes: 32 * 1024 * 1024, responseBytes: 4 * 1024 * 1024,
+    resultBytes: 16 * 1024 * 1024, findingsPerResponse: 200, findings: 2000,
+    resolutions: 500, recoveredFiles: 64, recoveredPatchBytes: 2 * 1024 * 1024,
+    recoveredPatchTotalBytes: 8 * 1024 * 1024, blobBytes: 4 * 1024 * 1024,
+    blobTotalBytes: 32 * 1024 * 1024, gitReads: 256,
+});
+/** Content-free deterministic failure, mapped to localized semantic errors by the application. */
+class BugbotReviewCompletenessError extends Error {
+    constructor(resource, observed = 1, limit = 0, unit = bugbotReviewResourceUnit(resource), countKind = 'exact') {
+        super(`Complete Bugbot review blocked (${resource}: ${countKind === 'at-least' ? '≥' : '='} ${observed} ${unit}; limit ${limit}). No findings were published.`);
+        this.name = 'BugbotReviewCompletenessError';
+        this.facts = Object.freeze({ profile: 'framed-v1', countKind, resource, observed, limit, unit });
+    }
+}
+exports.BugbotReviewCompletenessError = BugbotReviewCompletenessError;
+function enforceBugbotFramedBudget(resource, observed) {
+    const unit = bugbotReviewResourceUnit(resource);
+    if (!Number.isSafeInteger(observed) || observed < 0)
+        throw new BugbotReviewCompletenessError('source');
+    if (observed > exports.BUGBOT_FRAMED_LIMITS[resource]) {
+        throw new BugbotReviewCompletenessError(resource, observed, exports.BUGBOT_FRAMED_LIMITS[resource], unit);
+    }
+}
+function isBugbotReviewBlockFacts(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return false;
+    const facts = value;
+    const reasons = [...Object.keys(exports.BUGBOT_FRAMED_LIMITS), 'source', 'identity', 'manifest', 'coverage', 'receipt', 'capability'];
+    return Object.keys(facts).sort().join(',') === 'countKind,limit,observed,profile,resource,unit'
+        && facts.profile === 'framed-v1' && ['exact', 'at-least'].includes(facts.countKind) && reasons.includes(facts.resource)
+        && [facts.observed, facts.limit].every(x => typeof x === 'number' && Number.isSafeInteger(x) && x >= 0)
+        && facts.unit === bugbotReviewResourceUnit(facts.resource)
+        && (!(facts.resource in exports.BUGBOT_FRAMED_LIMITS) || facts.limit <= exports.BUGBOT_FRAMED_LIMITS[facts.resource]);
+}
+function bugbotReviewResourceUnit(resource) {
+    return resource.endsWith('Utf16') ? 'UTF-16 code units'
+        : resource.endsWith('Bytes') ? 'UTF-8 bytes' : resource === 'gitReads' ? 'operations' : 'items';
 }
 
 

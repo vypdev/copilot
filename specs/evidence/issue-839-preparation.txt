@@ -1,0 +1,187 @@
+Issue #839 SDD admission preparation record
+
+Provenance: https://github.com/vypdev/copilot/issues/839#issuecomment-6555662770
+Canonical contract: specs/bugbot-source-bound-framed-review.md
+Purpose: preserve the complete preparation transcript after canonical admission.
+The transcript below is historical source data; the canonical SDD owns acceptance.
+
+The Action admitted the canonical companion SDD in commit `27911a8fffd20cabd0368f77829b96b359b078e8`. These complete preparation definitions are archived here after admission; the original report, all 15 requirements and all 130 acceptance cases remain normative. The issue body links this archive and the immutable SDD. No review, coverage or approval requirement changes.
+
+<details>
+<summary>Complete SDD preparation definitions</summary>
+
+### Resolved SDD decisions and canonical definitions
+
+Use companion specs/bugbot-source-bound-framed-review.md under existing capability bugbot-analysis-and-autofix; preserve baseline owners. The Action still owns validated publication and branch creation. A complete independent proposal with these exact15 requirement/130 case rows passes renderSddDerivedTables, validateSddMarkdown and validateSddDraftConsistency against all four immutable owner SDDs. This is syntax/traceability evidence, not runtime acceptance. Copy explicit rows unchanged; no ranges, wrapped rows or unqualified IDs. Trusted code derives budget/reverse links; existing67 cases stay separate.
+
+SDD Q1: Use the supported companion action, same existing capability bugbot-analysis-and-autofix, at the unregistered path specs/bugbot-source-bound-framed-review.md. The 46,285-byte owning SDD remains the baseline; the coherent new source/identity/frame/recovery contract belongs in this companion, linked from its owner/catalog/docs. Do not retry the 18,000-character update appendix, increase limits or drop requirements. Implement an opt-in-by-workload, closed internal framed-v1 complete-review profile, preserving the existing <=64-partition path and public configuration. The framed profile supports at most 2 sequential frames x64 partitions (128 globally), 1000 distinct assigned paths subject to complete native enumeration, 4096 fragments, 8,192,000 raw UTF-16 code units and independently 8,192,000 normalized UTF-16 code units. Keep each fragment <=12,000 UTF-16 units, each fully rendered partition <=64,000 UTF-16 units and the complete rendered diff <=8,192,000 units. Preflight
+every final prompt before the first model call: <=512 KiB UTF-8 each and <=32 MiB total; max model concurrency remains 2 across the whole invocation. Preserve 200 findings/response, 500 retained resolution claims only from the single global resolution owner, 2000 findings globally and additionally <=16 MiB serialized UTF-8 retained result payload across frames. Source acquisition/recovery has independent finite budgets described in Q3. Validate exact source/fragment/partition/frame coverage, not just counts or model assertions. Deterministic over-cap/invalid/incomplete evidence is a bounded nonretryable completeness-blocked outcome identifying resource, observed count, limit and units, without rejected content; zero partial publication/clean approval. The operator can correct the source identity or unavailable objects and rerun, remove only genuinely unrelated work through normal PR scope review, or use a separate future explicitly approved capacity profile; repeating identical
+unsupported input is not recovery. Reserve at least130 distinct new cases:48 planning/protocol,30 source adapters,24 frame execution,12 freshness,8 UX/errors,8 integration/compatibility; keep the existing67 separately. Test every independent exact/one-over bound.
+SDD Q2: Cross-run resume and durable checkpoints are not required for this bounded workload. Keep manifests, frame receipts and model outputs private and in memory for one invocation only; discard them on success, failure, interruption or supersession. Store no patches, finding prose, credentials or resumable model sessions in Actions artifacts, caches, repository comments or files. Ordinary redacted counts/IDs/timing telemetry remains under its existing retention policy. A later workflow run reconstructs and reviews the entire current source anew. Do not introduce new storage permissions, secrets, public capacity flags or deployment changes.
+SDD Q3: Missing required text patches must be recovered before any framed-profile reviewer call through a dedicated trusted-host, read-only local Git source port. Pin the canonical provider base/head SHAs and the unique merge-base, require the referenced commit/tree/blob objects to be available, verify literal safe paths, regular text object identity/content and exact change metadata, and derive diff hunks using fixed argv with external diff/textconv/filters/hooks/network disabled. Never delegate source completeness to model workspace inspection. Recovery is bounded to64 missing files, 2 MiB UTF-8 per recovered patch, 8 MiB recovered patch bytes globally, 4 MiB per regular text blob, 32 MiB total recovered old/new blob bytes and256 local Git read operations; all recovered text also counts against Q1 raw/normalized/fragment/rendered limits. Read-only workspace access for cross-file context remains, but it cannot attest an omitted required patch.
+Binary/nonregular/ambiguous-merge-base/unavailable/mismatched/over-cap evidence yields an explicit completeness-blocked terminal without partial findings or resolution updates. No unbounded provider fallback, silent placeholder-as-reviewed, hidden fetch or changed AI ignores. Existing Action-managed synchronization/object preparation is the recovery path when objects are absent.
+SDD Q4: Bind framed manifests and every assignment/receipt to the protocol/profile version, a fresh invocation nonce, repository identity, canonical open PR number and base/head repository ownership/ref identity, immutable base SHA, head SHA, unique merge-base SHA, ordered complete source manifest digest (including path/status/counts and source-content digests), ordered fragment coverage and relevant review context/configuration digest. Verify provider identity before source acquisition, after complete planning, between frames and immediately before reconciliation/publication; also preserve the existing post-publication head check. Changed/missing base or head, closed/reowned/retargeted PR, changed source/assignment/context digest, nonce or profile mismatch invalidates the entire in-memory result and prevents publication. Treat failed identity reads as unverified, never current. Extended-profile support cannot weaken existing ownership, dismissal, protected approval or source coverage gates.
+SDD Q5: Within one invocation only, preserve completed fully validated frame results while executing later frames under the identical source/context manifest; apply the existing bounded3 attempts only to the same failed partition assignment, without reusing an output that failed schema/identity validation. Do not resume after a whole-run provider/model interruption: discard and restart a fresh complete plan. Require exact ordered frame and partition identity/digest attestations, singleton schema bindings, one receipt per assigned fragment/partition, no duplicate/missing/corrupt/replayed/out-of-order substitutions, independent final global coverage and payload-budget reconciliation, and a final canonical identity re-read. A complete late frame may add findings and must participate in global normalization/deduplication/severity/comment-limit handling. Keep only the single global owner authorized to explicitly re-adjudicate retained prior finding IDs; omission is never resolution. No per-frame SCM writes, no intermediate clean result, no approval based on partial coverage, and no automatic reuse across invocations.
+
+#### Canonical section4 requirement definitions
+
+| Requirement | Behavior |
+|---|---|
+| BFR-R01 | Select the closed framed-v1 profile by workload, retaining the existing <=64-partition path and public configuration. |
+| BFR-R02 | Validate every provider value, then independently bound non-ignored raw and normalized UTF-16 input before rendering. |
+| BFR-R03 | Assign every required path and sanitized character exactly once with scalar-safe ordered fragments and explicit coverage. |
+| BFR-R04 | Require complete native enumeration and recover absent required text patches from verified immutable local Git objects before review. |
+| BFR-R05 | Bind manifest, assignments and receipts to immutable PR source identity, effective context, protocol and invocation nonce. |
+| BFR-R06 | Preflight all final prompts; execute at most two sequential64-part frames with global concurrency2. |
+| BFR-R07 | Accept only a complete ordered set of schema-valid source-bound receipts; publish one globally reconciled result. |
+| BFR-R08 | Enforce independent per-response and global output/count/byte limits before retaining results. |
+| BFR-R09 | Retry only the identical failed partition at most3 times; discard all work on whole-run failure or interruption. |
+| BFR-R10 | Fence source acquisition, planning, frames and publication with canonical identity; missing facts never establish freshness. |
+| BFR-R11 | Keep one global resolution owner, explicit retained eligible finding IDs, dismissal reverification and existing approval controls. |
+| BFR-R12 | Use a narrow trusted-host read-only source port; retain no durable source/model checkpoint or new credentials/permissions. |
+| BFR-R13 | Render bounded localized completeness-blocked diagnostics with resource, measured count, limit, unit and supported recovery. |
+| BFR-R14 | Keep owning SDDs, catalog, operator/user documentation, bundles and executable evidence aligned. |
+| BFR-R15 | Demonstrate realistic complete H3 review and adversarial late-frame failures; require current-head checks and full changed-line coverage. |
+
+#### Canonical section14 case definitions
+
+{{SDD_CASE_BUDGET}}
+
+| Case ID | Area | Requirements | Scenario |
+|---|---|---|---|
+| bugbot-framed-C001 | Planning/protocol | BFR-R01, BFR-R02 | Raw input at8192000 UTF-16 units is admitted when every other budget fits. |
+| bugbot-framed-C002 | Planning/protocol | BFR-R01, BFR-R02 | Raw input one unit over its cap blocks before normalization or model calls. |
+| bugbot-framed-C003 | Planning/protocol | BFR-R02 | Normalized input exactly at its independent cap is admitted. |
+| bugbot-framed-C004 | Planning/protocol | BFR-R02 | NFKC expansion one unit over normalized cap blocks before rendering. |
+| bugbot-framed-C005 | Planning/protocol | BFR-R02 | UTF-8 bytes and UTF-16 units are measured separately on astral text. |
+| bugbot-framed-C006 | Planning/protocol | BFR-R02 | Valid ignored paths consume no source-plan payload budget. |
+| bugbot-framed-C007 | Planning/protocol | BFR-R02 | Malformed ignored records fail before ignore filtering. |
+| bugbot-framed-C008 | Planning/protocol | BFR-R02 | Isolated high surrogate fails without forwarding source content. |
+| bugbot-framed-C009 | Planning/protocol | BFR-R02 | Isolated low surrogate fails without forwarding source content. |
+| bugbot-framed-C010 | Planning/protocol | BFR-R02 | Non-string patch, path or status fails as invalid source. |
+| bugbot-framed-C011 | Planning/protocol | BFR-R02 | Unsafe, negative or non-finite change counts fail as invalid source. |
+| bugbot-framed-C012 | Planning/protocol | BFR-R02, BFR-R03 | Duplicate native path records cannot satisfy distinct-file coverage. |
+| bugbot-framed-C013 | Planning/protocol | BFR-R03 | Empty or missing patch is never certified as a reviewed placeholder. |
+| bugbot-framed-C014 | Planning/protocol | BFR-R03 | Exact12000-unit fragment boundary preserves every sanitized character. |
+| bugbot-framed-C015 | Planning/protocol | BFR-R03 | A fragment hard boundary moves before an astral surrogate pair. |
+| bugbot-framed-C016 | Planning/protocol | BFR-R03 | Newline splitting preserves ordered concatenation without overlap. |
+| bugbot-framed-C017 | Planning/protocol | BFR-R03 | Delimiter-like patch content remains inert and verbatim after sanitization. |
+| bugbot-framed-C018 | Planning/protocol | BFR-R03 | Control removal and normalization have distinct raw/normalized accounting. |
+| bugbot-framed-C019 | Planning/protocol | BFR-R01, BFR-R03 | Exactly4096 fragments fit when all other profile bounds fit. |
+| bugbot-framed-C020 | Planning/protocol | BFR-R01, BFR-R03 | Fragment4097 blocks before any reviewer query. |
+| bugbot-framed-C021 | Planning/protocol | BFR-R01, BFR-R03 | Exactly1000 unique assigned paths fit only with complete native enumeration. |
+| bugbot-framed-C022 | Planning/protocol | BFR-R01, BFR-R03 | Assigned path1001 blocks without an omitted-path clean result. |
+| bugbot-framed-C023 | Planning/protocol | BFR-R01, BFR-R03 | Rendered partition at64000 units is admitted. |
+| bugbot-framed-C024 | Planning/protocol | BFR-R01, BFR-R03 | Rendered partition at64001 units blocks, including wrappers and headers. |
+| bugbot-framed-C025 | Planning/protocol | BFR-R01, BFR-R03 | Rendered diff aggregate at8192000 units is admitted. |
+| bugbot-framed-C026 | Planning/protocol | BFR-R01, BFR-R03 | Rendered diff aggregate one unit over its independent cap blocks. |
+| bugbot-framed-C027 | Planning/protocol | BFR-R01, BFR-R06 | Exactly64 ordinary partitions retain the established ordinary path. |
+| bugbot-framed-C028 | Planning/protocol | BFR-R01, BFR-R06 | Partition65 selects the framed profile instead of weakening the legacy cap. |
+| bugbot-framed-C029 | Planning/protocol | BFR-R01, BFR-R06 | Exactly128 framed partitions produce two64-part frames. |
+| bugbot-framed-C030 | Planning/protocol | BFR-R01, BFR-R06 | Partition129 blocks before a reviewer query. |
+| bugbot-framed-C031 | Planning/protocol | BFR-R01, BFR-R06 | A valid final partial frame preserves global ordinals and ownership. |
+| bugbot-framed-C032 | Planning/protocol | BFR-R01, BFR-R06 | A third frame is rejected independently of model output. |
+| bugbot-framed-C033 | Planning/protocol | BFR-R05 | Identical source in a new invocation has a different nonce-bound identity. |
+| bugbot-framed-C034 | Planning/protocol | BFR-R05 | Changing the base SHA changes manifest and assignment identity. |
+| bugbot-framed-C035 | Planning/protocol | BFR-R05 | Changing the head SHA changes manifest and assignment identity. |
+| bugbot-framed-C036 | Planning/protocol | BFR-R05 | Changing the merge-base changes manifest and assignment identity. |
+| bugbot-framed-C037 | Planning/protocol | BFR-R05 | Changing a source path/status/count/content digest invalidates the manifest. |
+| bugbot-framed-C038 | Planning/protocol | BFR-R05 | Changing the effective rules/configuration/context digest invalidates receipts. |
+| bugbot-framed-C039 | Planning/protocol | BFR-R05 | Changing repository or canonical PR identity invalidates receipts. |
+| bugbot-framed-C040 | Planning/protocol | BFR-R05 | Unknown protocol/profile is rejected before querying. |
+| bugbot-framed-C041 | Planning/protocol | BFR-R03, BFR-R05 | Mutated fragment offset, digest, order or body fails independent coverage validation. |
+| bugbot-framed-C042 | Planning/protocol | BFR-R03, BFR-R05 | A gap or overlap in one source path cannot pass whole-plan coverage. |
+| bugbot-framed-C043 | Planning/protocol | BFR-R06 | Final prompt exactly512KiB UTF-8 fits before any model call. |
+| bugbot-framed-C044 | Planning/protocol | BFR-R06 | One oversized late prompt blocks all reviewer calls during complete preflight. |
+| bugbot-framed-C045 | Planning/protocol | BFR-R06 | Total prepared prompts exactly32MiB UTF-8 fit. |
+| bugbot-framed-C046 | Planning/protocol | BFR-R06 | Total prepared prompts one byte over32MiB blocks all reviewer calls. |
+| bugbot-framed-C047 | Planning/protocol | BFR-R03, BFR-R07 | A deleted-file assignment retains LEFT-side changed locations. |
+| bugbot-framed-C048 | Planning/protocol | BFR-R01, BFR-R15 | The exact887-file source with recovered patches fits the chosen complete profile. |
+| bugbot-framed-C049 | Source adapters | BFR-R04 | All native file pages are retained in canonical provider order. |
+| bugbot-framed-C050 | Source adapters | BFR-R04 | A native enumeration cap remains incomplete even if observed counts fit. |
+| bugbot-framed-C051 | Source adapters | BFR-R04 | Missing required provider page fails rather than masquerading as empty diff. |
+| bugbot-framed-C052 | Source adapters | BFR-R04, BFR-R05 | Pinned base/head are verified before immutable object recovery. |
+| bugbot-framed-C053 | Source adapters | BFR-R04 | A unique merge-base is required and recorded. |
+| bugbot-framed-C054 | Source adapters | BFR-R04 | Ambiguous merge-bases block without choosing one by array order. |
+| bugbot-framed-C055 | Source adapters | BFR-R04 | Missing commit/tree/blob objects block with object-preparation recovery. |
+| bugbot-framed-C056 | Source adapters | BFR-R04, BFR-R12 | A promisor missing object cannot trigger a hidden network fetch. |
+| bugbot-framed-C057 | Source adapters | BFR-R04 | An absent added-text patch is recovered with exact change metadata. |
+| bugbot-framed-C058 | Source adapters | BFR-R04 | An absent modified-text patch is recovered with exact change metadata. |
+| bugbot-framed-C059 | Source adapters | BFR-R04 | An absent removed-text patch is recovered with exact change metadata. |
+| bugbot-framed-C060 | Source adapters | BFR-R04 | Recovered hunk metadata inconsistent with native change counts blocks. |
+| bugbot-framed-C061 | Source adapters | BFR-R04 | A nonregular or symlink object is rejected without following its target. |
+| bugbot-framed-C062 | Source adapters | BFR-R04 | Binary/NUL source is explicitly completeness-blocked. |
+| bugbot-framed-C063 | Source adapters | BFR-R04 | Invalid UTF-8 blob bytes are rejected without replacement decoding. |
+| bugbot-framed-C064 | Source adapters | BFR-R04 | A mismatched Git blob object hash invalidates recovery. |
+| bugbot-framed-C065 | Source adapters | BFR-R04, BFR-R12 | Literal path metacharacters cannot expand scope or execute a command. |
+| bugbot-framed-C066 | Source adapters | BFR-R04, BFR-R12 | External diff/textconv/filter/hook configuration is never executed. |
+| bugbot-framed-C067 | Source adapters | BFR-R04 | Exactly64 missing patch files fit the independent recovery count budget. |
+| bugbot-framed-C068 | Source adapters | BFR-R04 | Missing patch65 blocks before any model query. |
+| bugbot-framed-C069 | Source adapters | BFR-R04 | Recovered patch exactly2MiB UTF-8 fits. |
+| bugbot-framed-C070 | Source adapters | BFR-R04 | Recovered patch one byte over2MiB blocks. |
+| bugbot-framed-C071 | Source adapters | BFR-R04 | Recovered patch aggregate exactly8MiB UTF-8 fits. |
+| bugbot-framed-C072 | Source adapters | BFR-R04 | Recovered patch aggregate one byte over8MiB blocks. |
+| bugbot-framed-C073 | Source adapters | BFR-R04 | Regular text blob exactly4MiB fits its independent bound. |
+| bugbot-framed-C074 | Source adapters | BFR-R04 | Regular text blob one byte over4MiB blocks. |
+| bugbot-framed-C075 | Source adapters | BFR-R04 | Recovered old/new blob bytes exactly32MiB fit. |
+| bugbot-framed-C076 | Source adapters | BFR-R04 | Recovered blob bytes one byte over32MiB block. |
+| bugbot-framed-C077 | Source adapters | BFR-R04 | Local Git read operation256 fits the shared source ledger. |
+| bugbot-framed-C078 | Source adapters | BFR-R04 | Local Git read operation257 blocks without source or model publication. |
+| bugbot-framed-C079 | Frame execution | BFR-R06 | The first frame completes before any partition of the second frame starts. |
+| bugbot-framed-C080 | Frame execution | BFR-R06 | At most2 reviewer calls run globally, including retries. |
+| bugbot-framed-C081 | Frame execution | BFR-R07 | Out-of-order completion inside a frame preserves canonical ordered collection. |
+| bugbot-framed-C082 | Frame execution | BFR-R07 | A missing partition response blocks the entire result. |
+| bugbot-framed-C083 | Frame execution | BFR-R07 | A duplicate partition response blocks the entire result. |
+| bugbot-framed-C084 | Frame execution | BFR-R07 | A foreign frame receipt cannot substitute for the assigned frame. |
+| bugbot-framed-C085 | Frame execution | BFR-R05, BFR-R07 | A replayed prior-invocation receipt is rejected. |
+| bugbot-framed-C086 | Frame execution | BFR-R07 | A corrupt manifest or fragment-coverage attestation is rejected. |
+| bugbot-framed-C087 | Frame execution | BFR-R07 | Assignment singleton schemas reject hostile wrong-identity examples. |
+| bugbot-framed-C088 | Frame execution | BFR-R07 | A missing required attestation field fails closed. |
+| bugbot-framed-C089 | Frame execution | BFR-R08 | Exactly200 findings in one response are admitted under global bounds. |
+| bugbot-framed-C090 | Frame execution | BFR-R08 | Finding201 in one response blocks before retaining that response. |
+| bugbot-framed-C091 | Frame execution | BFR-R08 | Exactly2000 findings across frames fit the global cap. |
+| bugbot-framed-C092 | Frame execution | BFR-R08 | Finding2001 in the late frame blocks all publication. |
+| bugbot-framed-C093 | Frame execution | BFR-R08 | Retained result payload exactly16MiB UTF-8 fits. |
+| bugbot-framed-C094 | Frame execution | BFR-R08 | Retained result payload one byte over16MiB blocks all publication. |
+| bugbot-framed-C095 | Frame execution | BFR-R09 | A transient partition failure retries its identical prompt and schema. |
+| bugbot-framed-C096 | Frame execution | BFR-R09 | Invalid attestation retries only its identical assignment. |
+| bugbot-framed-C097 | Frame execution | BFR-R09 | A third unusable attempt exhausts without partial findings or resolution. |
+| bugbot-framed-C098 | Frame execution | BFR-R09 | A failed frame stops queued work and drains bounded in-flight calls. |
+| bugbot-framed-C099 | Frame execution | BFR-R09, BFR-R12 | A whole-run interruption retains no resumable source/model checkpoint. |
+| bugbot-framed-C100 | Frame execution | BFR-R11 | Only the global first partition may return retained resolution claims. |
+| bugbot-framed-C101 | Frame execution | BFR-R08, BFR-R11 | Exactly500 owner resolution claims fit; a501st claim blocks globally. |
+| bugbot-framed-C102 | Frame execution | BFR-R07, BFR-R11 | A non-owner resolution claim blocks even when its finding ID is real. |
+| bugbot-framed-C103 | Freshness | BFR-R10 | A base change after source acquisition invalidates the whole plan. |
+| bugbot-framed-C104 | Freshness | BFR-R10 | A head change after planning prevents first-frame execution. |
+| bugbot-framed-C105 | Freshness | BFR-R10 | A base change between frames prevents the later frame and publication. |
+| bugbot-framed-C106 | Freshness | BFR-R10 | A head change immediately before publication discards all output. |
+| bugbot-framed-C107 | Freshness | BFR-R10 | A PR closure before publication prevents reconciliation. |
+| bugbot-framed-C108 | Freshness | BFR-R10 | A changed base repository ownership prevents publication. |
+| bugbot-framed-C109 | Freshness | BFR-R10 | A changed head repository ownership prevents publication. |
+| bugbot-framed-C110 | Freshness | BFR-R10 | A retargeted base ref invalidates source identity. |
+| bugbot-framed-C111 | Freshness | BFR-R10 | A retargeted head ref invalidates source identity. |
+| bugbot-framed-C112 | Freshness | BFR-R10 | A missing or failed identity read never establishes freshness. |
+| bugbot-framed-C113 | Freshness | BFR-R05, BFR-R10 | Mutated source/context manifest between frames invalidates all receipts. |
+| bugbot-framed-C114 | Freshness | BFR-R10 | The established post-publication head fence remains in force. |
+| bugbot-framed-C115 | UX/errors | BFR-R13 | Capacity failure shows resource, measured count, limit and correct unit. |
+| bugbot-framed-C116 | UX/errors | BFR-R13 | Capacity exhaustion is nonretryable and does not suggest identical reruns. |
+| bugbot-framed-C117 | UX/errors | BFR-R13 | Missing objects explain Action-owned preparation and retained finding state. |
+| bugbot-framed-C118 | UX/errors | BFR-R13 | Malformed/incomplete evidence never renders a whole-PR clean result. |
+| bugbot-framed-C119 | UX/errors | BFR-R13 | Transient provider/model failure remains distinct from deterministic capacity. |
+| bugbot-framed-C120 | UX/errors | BFR-R12, BFR-R13 | Hostile rejected source and credential-like text never enter diagnostics. |
+| bugbot-framed-C121 | UX/errors | BFR-R13 | Locale fallback preserves truthful impact, action and retained-state content. |
+| bugbot-framed-C122 | UX/errors | BFR-R13 | Narrow Markdown views retain descriptive PR/run links and readable actions. |
+| bugbot-framed-C123 | Integration/compatibility | BFR-R07, BFR-R15 | A realistic887-file complete fixture reaches one atomic publication. |
+| bugbot-framed-C124 | Integration/compatibility | BFR-R07, BFR-R15 | A defect introduced only in the final frame reaches global normalization. |
+| bugbot-framed-C125 | Integration/compatibility | BFR-R07, BFR-R15 | Corrupting the final fragment prevents every SCM mutation. |
+| bugbot-framed-C126 | Integration/compatibility | BFR-R11, BFR-R15 | Omitted prior findings never resolve; protected renewed dismissals remain protected. |
+| bugbot-framed-C127 | Integration/compatibility | BFR-R01, BFR-R15 | Ordinary64-part and issue-only behavior remain compatible. |
+| bugbot-framed-C128 | Integration/compatibility | BFR-R07, BFR-R12 | Dry-run validates the whole framed review without SCM writes. |
+| bugbot-framed-C129 | Integration/compatibility | BFR-R14 | Catalog, companion, owning SDD links, docs and generated bundles validate together. |
+| bugbot-framed-C130 | Integration/compatibility | BFR-R11, BFR-R15 | Current-head complete review, checks, approval and100% modified-line coverage remain mandatory. |
+
+#### Canonical section17 projection
+
+{{SDD_REQUIREMENT_CASES}}
+
+</details>

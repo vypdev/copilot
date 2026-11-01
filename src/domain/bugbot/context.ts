@@ -49,6 +49,12 @@ export interface BugbotReviewTarget {
 }
 
 export interface BugbotPullRequestIdentity {
+  /** Required by source-bound framed reviews; supplied by canonical provider facts. */
+  readonly baseSha?: string;
+  /** Live target branch tip; PR base.sha may retain an earlier comparison revision. */
+  readonly baseRefSha?: string;
+  readonly baseRef?: string;
+  readonly changedFileCount?: number;
   readonly number: number;
   readonly state: "open" | "closed";
   readonly draft: boolean;

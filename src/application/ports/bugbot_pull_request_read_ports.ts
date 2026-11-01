@@ -9,6 +9,7 @@ export interface PullRequestDiffLocation {
 }
 
 export interface PullRequestReviewChange {
+  readonly previousFilename?: string;
   filename: string;
   status: string;
   additions: number;

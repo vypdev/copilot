@@ -1,3 +1,8 @@
+import { bugbotFramedSourceMatchesPullRequest } from '../../../../policies/bugbot_framed_identity_policy';
+import { randomBytes } from 'node:crypto';
+import { buildBugbotFramedReviewPlan } from '../../../../policies/bugbot_framed_review_policy';
+import { BugbotReviewCompletenessError } from '../../../../../domain/bugbot/framed_review';
+import { analyzeBugbotFrames, bugbotFramedContextDigest } from './analyze_bugbot_frames';
 import type { FindingsQueryPort } from '../../../../ports/agent_findings_ports';
 import { reconcileResolvedFindingIds } from '../../../../policies/bugbot_reconciliation_policy';
 import { logInfo } from '../../../../ports/logging_ports';
@@ -19,6 +24,7 @@ import {
 import { ApplicationError } from '../../../../errors/application_error';
 
 export interface AnalyzeBugbotRevisionDependencies {
+    readonly isSourceCurrent?: () => Promise<boolean>;
     readonly agent: FindingsQueryPort;
     readonly telemetry: BugbotReviewTelemetry;
 }
@@ -35,6 +41,13 @@ export async function analyzeBugbotRevision(
     const targetLocale = context.prContext && context.canonicalPullRequest
         ? execution.locale.pullRequest
         : execution.locale.issue ?? execution.locale.pullRequest;
+    if (context.reviewFramedSource) {
+        if (!context.canonicalPullRequest || !context.prContext || !bugbotFramedSourceMatchesPullRequest(context.reviewFramedSource, context.canonicalPullRequest)) throw new BugbotReviewCompletenessError('identity');
+        context.reviewFramedPlan = buildBugbotFramedReviewPlan(context.reviewFramedSource, bugbotFramedContextDigest(execution, context), randomBytes(16).toString('hex'), execution.ignorePatterns);
+        context.reviewDiffPartitions = context.reviewFramedPlan.partitions;
+        context.reviewDiffFragmentCount = context.reviewFramedPlan.fragments.length;
+        context.reviewDiffFileCount = context.reviewFramedPlan.retained;
+    }
     const partitions = context.reviewDiffPartitions ?? [];
     const ignoredFileCount = context.reviewDiffIgnoredFileCount ?? 0;
     const canonicalZeroWork = Boolean(
@@ -42,7 +55,10 @@ export async function analyzeBugbotRevision(
         && context.reviewDiffPartitions !== undefined
         && partitions.length === 0,
     );
-    const agentResponse = canonicalZeroWork
+    if (context.reviewFramedSource && !dependencies.isSourceCurrent) throw new BugbotReviewCompletenessError('capability');
+    const agentResponse = context.reviewFramedPlan && partitions.length > 0
+        ? await dependencies.telemetry.measure('analysis', () => analyzeBugbotFrames(execution, context, context.reviewFramedPlan!, { ...dependencies, isSourceCurrent: dependencies.isSourceCurrent! }))
+        : canonicalZeroWork
         ? await dependencies.telemetry.measure('analysis', () => {
             dependencies.telemetry.observePartitionPlan(0, 0, 0);
             const reason = ignoredFileCount > 0

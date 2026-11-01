@@ -107,3 +107,28 @@ it never grants authority to overwrite the dismissed reason. A thread that is
 resolved again is preserved. Keep the original finding/review identity and use
 the normal recheck after repairing adapter access. No approval policy setting
 or permission expansion is needed.
+
+### Source-bound large reviews
+
+Ordinary adapters retain their existing behavior. To support the large framed
+profile, a custom gateway additionally supplies `reviewSource.readCompleteSource`
+and `context.getSourceBoundPullRequest`. The latter returns the complete current
+PR identity, including the separately queried live target branch `baseRefSha`,
+base ref/comparison SHA, head repository/ref/SHA and native changed-file count.
+A missing or failed identity read never establishes freshness.
+
+The source port runs in the trusted host and returns complete immutable verified
+source for the pinned identity, not a model assertion or a workspace placeholder.
+It must prove full native/immutable path inventory, unique merge-base, regular
+UTF-8 object contents and patch binding under the closed limits in
+[How it works](/bugbot/how-it-works#complete-review-of-large-diffs).
+Keep credentials inside bound adapters and do not execute consumer source.
+The built-in GitHub composition supplies the canonical live-ref query and the
+bounded local read-only Git adapter.
+
+If either capability is absent, an over-envelope review returns
+`validation.evidence-unavailable` / `bugbot-review-incomplete` with resource
+`capability`, without reviewer calls or SCM publication. It never silently uses
+an incomplete ordinary result. Framed dry-run follows all source, receipt and
+freshness checks while preserving the no-write contract. No request field can
+increase profile limits or bypass the independent approval policy.

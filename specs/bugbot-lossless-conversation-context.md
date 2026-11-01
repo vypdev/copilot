@@ -459,3 +459,12 @@ UI, not successful execution of the candidate Action; that requires the new PR's
 checks. The truncated source on that run is a human comment of 4,466 characters.
 Both that comment and the 5,959-character Codecov User report reconstruct in
 full through the candidate source builder without increasing the 24,000-unit cap.
+
+## Large-diff source-bound extension — #839
+
+[Source-bound framed review](./bugbot-source-bound-framed-review.md) defines the
+separate closed profile beyond the ordinary envelope. Its complete immutable
+source inventory, two sequential frames, live target-ref fences and exact
+coverage receipts supersede the ordinary over-cap remediation for eligible
+workloads. Ordinary planning, conversation/history limits, resolution ownership,
+public configuration and approval controls retain their existing contracts.

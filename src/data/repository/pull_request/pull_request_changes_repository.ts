@@ -170,12 +170,13 @@ export class PullRequestChangesRepository {
     };
 
     private static toSnapshot(files: readonly GithubPullRequestFile[]): PullRequestReviewDiffSnapshot {
-        const changes: PullRequestReviewChange[] = files.map(({ filename, status, additions, deletions, patch }) => ({
+        const changes: PullRequestReviewChange[] = files.map(({ filename, status, additions, deletions, patch, previous_filename }) => ({
             filename,
             status,
             additions,
             deletions,
             patch: patch || '',
+            ...(previous_filename === undefined ? {} : { previousFilename: previous_filename }),
         }));
         const filesWithFirstDiffLine = files.flatMap((file) => {
             if (file.status === 'removed' || !file.patch) return [];

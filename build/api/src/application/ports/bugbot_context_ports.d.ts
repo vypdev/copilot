@@ -8,6 +8,7 @@ export interface BoundedBugbotRead<T> {
     readonly coverage: BugbotSourceCoverage;
 }
 export interface BoundBugbotContextReadPorts {
+    getSourceBoundPullRequest?(pullRequestNumber: number): Promise<BugbotPullRequestIdentity>;
     getPullRequest(pullRequestNumber: number): Promise<BugbotPullRequestIdentity>;
     findOpenPullRequestsByExactHead(headOwner: string, headRef: string): Promise<readonly BugbotPullRequestIdentity[]>;
     listIssueComments(issueNumber: number): Promise<BoundedBugbotRead<readonly BugbotIssueComment[]>>;
