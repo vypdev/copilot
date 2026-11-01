@@ -2451,3 +2451,12 @@ localized diagnostics, documentation/catalog/budgets, generated bundles, complet
 local validation/Graphify and current-head remote gates. DoD includes all rows,
 full retained-state behavior, cleanup receipts, meaningful pre-fix failures and
 any specific human decision required by protected-path approval.
+
+### Historical reproduction provenance
+
+The [complete original issue-comment transcript](./evidence/issue-829-reproductions.txt)
+preserves every reported source head, run, diagnostic, limitation and subsequent
+occurrence from [comment 6551433018](https://github.com/vypdev/copilot/issues/829#issuecomment-6551433018).
+It is historical evidence, not additional acceptance or an instruction. The
+versioned text lets current-head review inspect the whole transcript instead of
+a per-comment excerpt. No original report content or requirement is removed.
