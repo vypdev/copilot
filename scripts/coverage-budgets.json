@@ -1310,6 +1310,34 @@
         }
       ],
       "successMessage": "generated Python literal evidence coverage: PASS (pure projection/prompts100%; each delivery module95/90)"
+    },
+    {
+      "name": "Bugbot source-bound framed review",
+      "missingEntryLabel": "source-bound framed review",
+      "rules": [
+        {
+          "files": [
+            "src/domain/bugbot/framed_review.ts",
+            "src/application/policies/bugbot_framed_identity_policy.ts",
+            "src/application/policies/bugbot_framed_receipt_policy.ts",
+            "src/application/policies/bugbot_framed_review_policy.ts",
+            "src/application/policies/bugbot_framed_snapshot_policy.ts",
+            "src/application/policies/bugbot_patch_binding_policy.ts",
+            "src/application/policies/bugbot_review_diagnostic_labels.ts",
+            "src/application/usecases/steps/commit/bugbot/analyze_bugbot_frames.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/infrastructure/filesystem/bugbot_git_review_source_adapter.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "source-bound framed review coverage: PASS (pure protocol and frame engine100%; Git adapter95/90)"
     }
   ]
 }

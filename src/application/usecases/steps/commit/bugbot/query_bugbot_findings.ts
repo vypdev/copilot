@@ -1,3 +1,5 @@
+import { BugbotReviewCompletenessError, type BugbotFramedAssignment } from '../../../../../domain/bugbot/framed_review';
+import { matchesBugbotFramedReceipt } from '../../../../policies/bugbot_framed_receipt_policy';
 import type { AgentConfiguration } from '../../../../../domain/agent';
 import type { FindingsQueryPort } from '../../../../ports/agent_findings_ports';
 import { AGENT_PLAN } from '../../../../../application/policies/agent_task_policy';
@@ -51,6 +53,7 @@ export async function queryBugbotFindings(
 }
 
 export interface BugbotPartitionAttestation {
+    readonly framed?: BugbotFramedAssignment;
     readonly partitionId: string;
     readonly headSha: string;
 }
@@ -80,7 +83,9 @@ export async function queryBugbotPartitionFindings(
                 throw new ApplicationError('locale.output-invalid', agentOutputLocaleFailureMessage(validation));
             }
             if (validation.payload.partition_id !== expected.partitionId
-                || validation.payload.reviewed_head_sha !== expected.headSha) {
+                || validation.payload.reviewed_head_sha !== expected.headSha
+                || (expected.framed && !matchesBugbotFramedReceipt(expected.framed, validation.payload))) {
+                if (expected.framed) throw new BugbotReviewCompletenessError('receipt');
                 throw new ApplicationError(
                     'agent.failed',
                     `Configured agent returned an invalid Bugbot partition attestation for ${expected.partitionId}.`,
@@ -90,7 +95,7 @@ export async function queryBugbotPartitionFindings(
                 ? await verifyGeneratedLiteralFindings(repository, configuration, prompt, validation.payload, targetLocale, verification.observePrompt, verification.observeResponse) as Readonly<Record<string, unknown>>
                 : validation.payload;
         } catch (error) {
-            if (attempt === MAX_PARTITION_QUERY_ATTEMPTS) throw error;
+            if (attempt === MAX_PARTITION_QUERY_ATTEMPTS || (error instanceof BugbotReviewCompletenessError && error.facts.resource !== 'receipt')) throw error;
             logInfo(`Bugbot reviewer retrying one partition query (${attempt + 1}/${MAX_PARTITION_QUERY_ATTEMPTS}) after unusable agent output.`);
         }
     }

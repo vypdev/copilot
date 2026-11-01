@@ -343,8 +343,8 @@ describe('loadBugbotContext', () => {
     });
 
     await expect(loadBugbotContext(request(), reader)).rejects.toMatchObject({
-      code: 'workflow.failed',
-      message: expect.stringContaining('64-partition'),
+      name: 'BugbotReviewCompletenessError',
+      facts: { resource: 'capability', observed: 1, limit: 0 },
     });
     expect(reader.loadRules).not.toHaveBeenCalled();
   });
@@ -360,8 +360,8 @@ describe('loadBugbotContext', () => {
     });
 
     await expect(loadBugbotContext(request(), reader)).rejects.toMatchObject({
-      code: 'workflow.failed',
-      message: expect.stringContaining('raw-input'),
+      name: 'BugbotReviewCompletenessError',
+      facts: { resource: 'capability', observed: 1, limit: 0 },
     });
     expect(reader.loadRules).not.toHaveBeenCalled();
   });
@@ -377,8 +377,8 @@ describe('loadBugbotContext', () => {
     });
 
     await expect(loadBugbotContext(request(), reader)).rejects.toMatchObject({
-      code: 'workflow.failed',
-      message: expect.stringContaining('Correct the provider source'),
+      name: 'BugbotReviewCompletenessError',
+      facts: { resource: 'source', observed: 1, limit: 0 },
     });
     expect(reader.loadRules).not.toHaveBeenCalled();
   });
@@ -472,4 +472,17 @@ it('bugbot-analysis-and-autofix-C13 never repairs incomplete diff evidence by fu
   expect(result.coverage.status).toBe('partial');
   expect(result.coverage.sources.find(source => source.source === 'diff')?.status).toBe('partial');
   expect(result.coverage.sources.find(source => source.source === 'human-conversation')).toMatchObject({ status: 'complete', truncatedItems: 0 });
+});
+
+it.each(['identity', 'source'])('rejects framed %s mismatches before rules or reviewer execution', async stage => {
+    const current: BugbotPullRequestIdentity = { ...identity, baseSha: sha, baseRefSha: sha, baseRef: 'develop', headRepositoryName: 'repo', changedFileCount: 1 };
+    const changes = [{ filename: 'huge.ts', status: 'modified', additions: 1, deletions: 1, patch: 'x'.repeat(4096001) }];
+    const reader = ports({ getPullRequest: async () => current,
+        getSourceBoundPullRequest: async () => stage === 'identity' ? { ...current, baseSha: 'b'.repeat(40) } : current,
+        getReviewDiffSnapshot: async () => ({ value: { changes, filesWithFirstDiffLine: [], filesWithDiffLocations: [] }, coverage: coverage('diff', 1) }) });
+    const source = { readCompleteSource: jest.fn(async () => ({ identity: { owner: 'foreign', repository: 'repo', pullRequestNumber: 50,
+        baseRef: 'develop', baseSha: sha, headOwner: 'acme', headRepository: 'repo', headRef: 'feature/42', headSha: sha, mergeBaseSha: sha }, changes: [], complete: true })) };
+    await expect(loadBugbotContext(request(), reader, undefined, source)).rejects.toMatchObject({ facts: { resource: 'identity' } });
+    expect(reader.loadRules).not.toHaveBeenCalled();
+    if (stage === 'identity') expect(source.readCompleteSource).not.toHaveBeenCalled();
 });

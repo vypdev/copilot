@@ -20,6 +20,9 @@ const RECOVERY_CASES: readonly Readonly<{
     english: string;
     spanish: string;
 }>[] = [
+    { recovery: { id: 'bugbot-review-incomplete', variables: { profile: 'framed-v1', countKind: 'exact', resource: 'rawUtf16', observed: 8192001, limit: 8192000, unit: 'UTF-16 code units' } },
+      english: 'Existing findings and resolution state were retained. This run published no partial findings or clean review; a fresh run must validate the complete current source.',
+      spanish: 'Se conservaron los findings y su estado de resolución. Este intento no publicó findings parciales ni una revisión limpia; un nuevo intento debe validar toda la fuente actual.' },
     { recovery: { id: 'progress-inventory-incomplete', variables: { profile: 'immutable-tree-v1', reason: 'file-count', observedCount: 1025, supportedLimit: 1024, countKind: 'at-least', paths: '["src/a"]' } },
       english: 'Existing progress was retained. No partial assessment or progress publication was accepted. Build, review, coverage and approval remain independent gates.',
       spanish: 'Se conservó el progreso existente. No se aceptó ninguna evaluación parcial ni publicación del progreso. Build, revisión, cobertura y aprobación siguen siendo controles independientes.' },

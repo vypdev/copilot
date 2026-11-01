@@ -1,5 +1,6 @@
 import type { BugbotReviewOutcome, BugbotReviewTelemetrySnapshot } from '../../../../ports/bugbot_telemetry_ports';
 import type { BugbotContext } from './types';
+import { fileMatchesIgnorePatterns } from '../../../../policies/file_ignore_policy';
 import type { PreparedBugbotFindings } from './prepare_bugbot_findings';
 import { projectBugbotFindingStatuses } from '../../../../policies/bugbot_finding_status_policy';
 import type { BugbotReviewProjection } from '../../../../../domain/bugbot/review_projection';
@@ -21,6 +22,9 @@ export class BugbotReviewTelemetry {
     private readonly startedAt: string;
     private readonly stages: Record<string, number> = {};
     private promptCharacters = 0;
+    private promptBytes = 0;
+    private responseBytes = 0;
+    private completedFrames = 0;
     private responseCharacters = 0;
     private preflight?: BugbotContextPreflight;
     private context?: BugbotContext;
@@ -64,10 +68,13 @@ export class BugbotReviewTelemetry {
 
     observePrompt(prompt: string): void {
         this.promptCharacters += prompt.length;
+        this.promptBytes += Buffer.byteLength(prompt);
     }
 
     observeResponse(response: unknown): void {
-        this.responseCharacters += safeSerializedLength(response);
+        const serialized = safeSerializedText(response);
+        this.responseCharacters += serialized.length;
+        this.responseBytes += Buffer.byteLength(serialized);
     }
 
     observePartitionPlan(partitions: number, fragments: number, files: number): void {
@@ -76,6 +83,8 @@ export class BugbotReviewTelemetry {
         this.analysisDiffFragments = fragments;
         this.analysisAssignedFiles = files;
     }
+
+    completeFrame(): void { this.completedFrames += 1; }
 
     beginPartition(): void {
         this.activeAnalysisPartitions += 1;
@@ -214,6 +223,14 @@ export class BugbotReviewTelemetry {
                     failedAnalysisPartitionCategory: this.failedAnalysisPartitionCategory,
                 } : {}),
             } : {}),
+            ...(this.context?.reviewFramedPlan ? { framedReview: {
+                profile: 'framed-v1' as const, frames: this.context.reviewFramedPlan.frames.length,
+                completedFrames: this.completedFrames, manifestDigest: this.context.reviewFramedPlan.manifestDigest,
+                rawUtf16: this.context.reviewFramedPlan.source.changes.filter(change => !fileMatchesIgnorePatterns(change.filename, this.execution.ignorePatterns)).reduce((sum, change) => sum + change.patch.length, 0),
+                renderedUtf16: this.context.reviewFramedPlan.partitions.reduce((sum, partition) => sum + partition.block.length, 0),
+                promptBytes: this.promptBytes, responseBytes: this.responseBytes,
+                ...(this.context.reviewFramedSource?.metrics ? { source: this.context.reviewFramedSource.metrics } : {}),
+            } } : {}),
             candidateFindings: this.prepared?.activeFindings?.length ?? 0,
             publishedFindings: outcome === 'completed' || outcome === 'partial'
                 ? this.prepared?.toPublish.length ?? 0
@@ -231,14 +248,10 @@ function estimateTokens(characters: number): number {
     return Math.ceil(Math.max(0, characters) / 4);
 }
 
-function safeSerializedLength(value: unknown): number {
-    try {
-        return JSON.stringify(value)?.length ?? 0;
-    } catch {
-        return 0;
-    }
-}
-
 function sanitizeMetricName(value: string): string {
     return value.trim().toLowerCase().replace(/[^a-z0-9_.-]+/g, '_').slice(0, 80) || 'unknown';
+}
+
+function safeSerializedText(value: unknown): string {
+    try { return JSON.stringify(value) ?? ''; } catch { return ''; }
 }

@@ -443,3 +443,22 @@ Ktor fixture produced no runtime observations: compilation first hit an internal
 constructor, then public test-host dependency setup stopped at a parent-managed
 version. No dependency version was guessed or visibility restriction bypassed.
 This regression adds no JVM/Ktor requirement to mandatory Node CI.
+
+## Source-bound framed review evidence
+
+A framed review adds content-free `framedReview` telemetry: the closed profile,
+planned/completed frame counts, manifest digest, raw/rendered UTF-16 units,
+measured prompt/response UTF-8 bytes, and verified source counts (Git reads,
+unique blobs/bytes, recovered patches/bytes). Existing partition progress and
+maximum concurrency remain available. A completed frame never means a complete
+PR review. Failed work does not publish intermediate findings or resolutions.
+
+The #839 contract suite includes an owned 887-file Git repository with absent
+provider patches, a finding only in the final frame, foreign late receipts,
+corrupt immutable blobs and live-base races. Deterministic fake reviewers test
+orchestration, exact coverage and publication boundaries; they do not establish
+live model accuracy or certify the historical H3 run. Current-head remote review,
+checks and full changed-line coverage remain independent acceptance gates.
+The companion [framed review specification](https://github.com/vypdev/copilot/blob/develop/specs/bugbot-source-bound-framed-review.md)
+records the 130-case risk inventory and finite budgets. No threshold or ignore
+exclusion is added for this protocol.

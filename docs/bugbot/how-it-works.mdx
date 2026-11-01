@@ -39,7 +39,7 @@ This page describes the **internal flow** of Bugbot: how detection runs, how the
    verification before it can be considered clean. The action builds:
    - A map of **existing findings** (id → issue comment id, PR comment id, resolved).
    - A **previous findings block** (id, title, description) to send to the configured agent so it can report which are now **resolved**.
-   - For the target PR: one canonical GitHub diff snapshot containing the changed-file manifest, provider patches, and every addressable left/right diff location. All projections come from one paginated file traversal. Bugbot converts every non-ignored file into a deterministic, lossless partition plan: patches over 12,000 characters are split at line boundaries (or a hard character boundary for a single oversized line), and bounded fragments are packed into diff blocks of at most 64,000 characters. Both retained raw patches and their actual NFKC/control-sanitized prompt text have an independent 4,096,000-UTF-16-unit plan ceiling. Exceeding either ceiling fails before fragment/section construction or reviewer execution and asks the maintainer to split the PR; compatibility normalization can never expand a nominally valid diff into hidden extra partitions. A file whose provider patch is absent still receives an explicit assignment to inspect its exact local diff and current workspace.
+   - For the target PR: one canonical GitHub diff snapshot containing the changed-file manifest, provider patches, and every addressable left/right diff location. All projections come from one paginated file traversal. Bugbot converts every non-ignored file into a deterministic, lossless partition plan: patches over 12,000 characters are split at line boundaries (or a hard character boundary for a single oversized line), and bounded fragments are packed into diff blocks of at most 64,000 characters. Ordinary plans retain independent 4,096,000-UTF-16-unit raw and normalized ceilings and at most 64 partitions. An eligible workload beyond that envelope selects the closed source-bound framed profile described below; it does not raise the ordinary cap. A file whose provider patch is absent still receives an explicit assignment to inspect its exact local diff and current workspace.
    - A bounded block of human review discussion. It is treated as untrusted context and every claim must be verified against code.
    - Organization, repository, path-specific, and explicitly learned rules in stable precedence order.
 
@@ -82,9 +82,9 @@ This page describes the **internal flow** of Bugbot: how detection runs, how the
    duplicate partition responses also abort aggregation before any GitHub
    mutation. When no canonical
    PR diff exists, issue-only/push fallback reviews retain the established
-   single-query branch/base or current-commit scope. Plans are capped at 64
-   partitions; a larger diff fails before model execution and asks the maintainer
-   to split the PR instead of publishing a partial review. The agent is asked to:
+   single-query branch/base or current-commit scope. Ordinary plans are capped at 64
+   partitions; eligible larger workloads use the source-bound framed profile.
+   A workload outside that profile stops without partial publication. The agent is asked to:
    - **Task 1:** Return only actionable, changed-code defects with a causal explanation, evidence, category, severity, confidence, exact file/line or range, and a practical fix. Findings below 0.70 confidence, style comments, and speculative concerns are excluded.
    - **Task 2:** Return **resolved_findings**: exact retained finding ids paired with `fixed` or `obsolete`. The array is empty when nothing was resolved.
 
@@ -214,3 +214,53 @@ same maintained contract instead of carrying another implementation catalog.
 - **[Detection](/bugbot/detection)** — When detection runs and where findings appear.
 - **[Autofix](/bugbot/autofix)** — How to trigger and what happens after a fix.
 - **[Examples](/bugbot/examples)** — Workflow and comment examples.
+
+## Complete review of large diffs
+
+No setting is needed. When a canonical PR exceeds the ordinary planning envelope,
+Bugbot verifies its complete changed-file inventory and every required text side
+against immutable local Git objects. It pins both the current PR head and the
+**live target branch tip**, which can differ from GitHub's cached PR `base.sha`.
+A unique merge-base establishes the comparison. Missing, truncated, or
+content-mismatching provider patches are reconstructed only from those verified
+objects. Workspace inspection is not proof that an absent patch was reviewed.
+
+```mermaid
+flowchart LR
+    A[Verify current PR and immutable source] --> B[Preflight every prompt]
+    B --> C[Review sequential frames]
+    C --> D[Validate all receipts and current identity]
+    D --> E[Reconcile and publish once]
+```
+
+Text equivalent: verify all source, preflight all prompts, review each frame,
+validate complete coverage and freshness, then publish one global result.
+
+The internal `framed-v1` profile permits up to two sequential frames of 64
+partitions, with at most two reviewer calls at once. Every response must echo
+its exact base/head, invocation manifest, frame, partition and ordered fragment
+assignment. A frame's completion is progress only. Findings, resolutions and a
+clean review are withheld until every assignment validates and the current PR
+identity is rechecked immediately before publication. No cross-run resume is
+stored. One failed or interrupted frame discards the invocation's internal work.
+
+| Independent bound | Maximum |
+| --- | ---: |
+| Native changed files / source fragments | 1,000 / 4,096 |
+| Raw source / separately normalized source | 8,192,000 UTF-16 units each |
+| Fragment / rendered partition | 12,000 / 64,000 UTF-16 units |
+| Complete rendered diff | 8,192,000 UTF-16 units |
+| Final prompt / aggregate prompt traffic including retries | 512 KiB / 32 MiB UTF-8 |
+| Response / retained result payload | 4 MiB / 16 MiB UTF-8 |
+| Candidate findings per response / globally | 200 / 2,000 |
+| Resolution claims from the single global owner | 500 |
+| Recovered patches / per patch / total | 64 / 2 MiB / 8 MiB UTF-8 |
+| Verified regular text blob / total unique blob bytes | 4 MiB / 32 MiB |
+| Trusted local Git reads | 256 |
+
+All bounds apply together; a file count below 1,000 alone does not guarantee
+admission. Non-diff history and rule limits still apply, and partial context
+still prevents a clean result. Finding eligibility, human dismissals, severity,
+comment limits, dry-run and independent approval policy retain their existing
+meaning. See [Failure scenarios](/bugbot/failure-scenarios) for recovery and
+[Permissions](/bugbot/permissions) for the local source boundary.

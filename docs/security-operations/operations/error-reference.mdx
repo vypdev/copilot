@@ -176,3 +176,20 @@ with the same `single-action-operation-id` and `single-action-version`. Do not
 create a new operation, publish packages again, or bypass the stored ID, version,
 phase and accepted production SHA checks to clear this error. See
 [single-action configuration](/single-actions/configuration#internal-operation-identity).
+
+## Complete Bugbot review blocked
+
+`validation.evidence-unavailable` with recovery `bugbot-review-incomplete` means
+a complete source-bound Bugbot review could not be verified. It is nonretryable
+for identical unsupported input. The closed diagnostic reports the resource,
+measured count, supported limit and unit; `≥` is an explicit lower bound. A zero
+limit on an integrity diagnostic means no failures are acceptable, not a file
+quota. Existing findings and resolution state remain; no partial frame or clean
+review was published by this attempt.
+
+Restore unavailable immutable Git objects through the Action-managed checkout
+or synchronization flow, correct the source/identity evidence, or review the
+PR's intended scope when it exceeds the finite profile. Start a fresh complete
+review afterward. Do not add ignores, relax controls or treat a build/coverage
+report as review proof. See [Bugbot recovery](/bugbot/failure-scenarios) and
+[large-diff bounds](/bugbot/how-it-works#complete-review-of-large-diffs).

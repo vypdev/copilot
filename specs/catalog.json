@@ -2076,9 +2076,9 @@
       "id": "bugbot-analysis-and-autofix",
       "title": "Bugbot analysis, finding publication, and autofix",
       "status": "implemented",
-      "scope": "Select one canonical PR, exhaustively analyze bounded diff partitions with version-grounded dependency, policy-to-request transformation and source-bound assertion and generated-source coordinates with independent candidate verification, configuration-selected initial-session credential ownership, delegated test-path and external Action input-contract, host-aware self-repository references and Kotlin/Wasm lexical-binding and renderer-grounded Markdown path evidence, publish stable findings atomically, and apply authorized verified fixes with regression coverage for cwd/pattern-grounded indirect unittest discovery and source-bound module execution evidence, with active-instance Kotlin Json nullable-input policy grounding",
+      "scope": "Select one canonical PR, exhaustively analyze bounded diff partitions with version-grounded dependency, policy-to-request transformation and source-bound assertion and generated-source coordinates with independent candidate verification, configuration-selected initial-session credential ownership, delegated test-path and external Action input-contract, host-aware self-repository references and Kotlin/Wasm lexical-binding and renderer-grounded Markdown path evidence, publish stable findings atomically, and apply authorized verified fixes with regression coverage for cwd/pattern-grounded indirect unittest discovery and source-bound module execution evidence, with active-instance Kotlin Json nullable-input policy grounding; verify complete large diffs through a source-bound closed framed profile with immutable local Git proof, live-base freshness and atomic global publication",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-30",
+      "lastVerified": "2026-11-01",
       "specs": [
         "specs/bugbot-analysis-publication-and-autofix.md",
         "specs/bugbot-context-selection-and-budgeting.md",
@@ -2164,7 +2164,18 @@
         "src/application/policies/bugbot_python_literal_witness_policy.ts",
         "src/application/policies/bugbot_literal_verification_policy.ts",
         "src/application/usecases/steps/commit/bugbot/verify_generated_literal_findings.ts",
-        "src/application/policies/agent_output_locale_policy.ts"
+        "src/application/policies/agent_output_locale_policy.ts",
+        "src/domain/bugbot/framed_review.ts",
+        "src/application/policies/bugbot_framed_identity_policy.ts",
+        "src/application/policies/bugbot_framed_receipt_policy.ts",
+        "src/application/policies/bugbot_framed_snapshot_policy.ts",
+        "src/application/policies/bugbot_framed_review_policy.ts",
+        "src/application/policies/bugbot_patch_binding_policy.ts",
+        "src/application/policies/bugbot_review_diagnostic_labels.ts",
+        "src/application/ports/bugbot_review_source_ports.ts",
+        "src/application/ports/bugbot_telemetry_ports.ts",
+        "src/infrastructure/filesystem/bugbot_git_review_source_adapter.ts",
+        "src/application/usecases/steps/commit/bugbot/analyze_bugbot_frames.ts"
       ],
       "tests": [
         "src/application/usecases/steps/commit/__tests__/bugbot_review_lifecycle.e2e.test.ts",
@@ -2238,7 +2249,16 @@
         "quality/bugbot/evidence/issue-807.json",
         "src/tooling/__tests__/bugbot_ktor_routing.test.ts",
         "src/tooling/__tests__/fixtures/bugbot_ktor_routing_oracles.ts",
-        "quality/bugbot/evidence/issue-809.json"
+        "quality/bugbot/evidence/issue-809.json",
+        "src/domain/bugbot/__tests__/framed_review.test.ts",
+        "src/application/policies/__tests__/bugbot_framed_review_policy.test.ts",
+        "src/application/policies/__tests__/bugbot_framed_identity_policy.test.ts",
+        "src/application/policies/__tests__/bugbot_patch_binding_policy.test.ts",
+        "src/application/usecases/steps/commit/bugbot/__tests__/analyze_bugbot_frames.test.ts",
+        "src/infrastructure/filesystem/__tests__/bugbot_git_review_source_adapter.test.ts",
+        "src/data/repository/__tests__/bugbot_source_bound_identity_repository.test.ts",
+        "src/application/usecases/steps/commit/__tests__/bugbot_framed_complete_review.integration.test.ts",
+        "src/application/policies/__tests__/bugbot_framed_snapshot_policy.test.ts"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",

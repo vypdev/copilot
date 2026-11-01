@@ -1,6 +1,6 @@
 # Bugbot Source-Bound Framed Review
 
-- Status: Draft
+- Status: Ready for implementation
 - Date: 2026-11-01
 - Catalog capability ID: `bugbot-analysis-and-autofix`
 - Last verified: not applicable (prospective companion)
@@ -8,7 +8,7 @@
 - Scope: Define an opt-in-by-workload, bounded, source-bound framed-v1 protocol for complete Bugbot review when a valid PR diff exceeds the existing planning envelope.
 - Related issues/PRs: [Issue #839](https://github.com/vypdev/copilot/issues/839); [related issue #838](https://github.com/vypdev/copilot/issues/838); [issue #763](https://github.com/vypdev/copilot/issues/763); [reproduction PR #837](https://github.com/vypdev/copilot/pull/837); [review run](https://github.com/vypdev/copilot/actions/runs/41266073083)
 - Required review gates: product UX, architecture, testing, documentation, security/operations
-- Open decisions blocking readiness: none from the authorized product decisions; implementation and review gates remain open.
+- Open decisions blocking readiness: none from the authorized product decisions; implementation validation and remote merge gates remain open; this status records design readiness, not completed delivery.
 
 ## 1. Executive summary
 
@@ -33,7 +33,7 @@ A maintainer attempting a coherent complete extension milestone cannot receive t
 3. The reported remediation is to split the pull request and retry.
 4. The current error was classified as `workflow.failed` and retryable even though repeating the identical deterministic over-cap input cannot succeed.
 
-These are supplied issue facts. This companion proposes future behavior and does not claim the proposed protocol is implemented.
+These are supplied issue facts. These incident facts describe the pre-fix baseline. The following contract guides #839; the implementation receipt below distinguishes local observations from remote acceptance.
 
 ### 2.3 Evidence
 
@@ -207,9 +207,9 @@ Text equivalent: the workflow invokes an application use case; pure policies dec
 - Concurrency/idempotency strategy: at most two model calls globally, across retries; frames are sequential; only the identical failed partition assignment may retry, at most three attempts. Publication remains the existing atomic/idempotent owner and occurs only after global validation.
 - Trusted/untrusted inputs: issue, PR, comments, provider pages, patches, model output, and repository source are untrusted data. Validate provider records before filtering. Never use model assertions or workspace inspection as source completeness evidence.
 - Provider error mapping: deterministic capacity/invalid/incomplete evidence maps to nonretryable completeness-blocked with resource, observed count, limit, unit, supported action, and retained-state facts. Transient provider/model failures remain distinct workflow failures and cannot certify a review.
-- Local source recovery: a narrow trusted-host read-only Git port pins canonical base/head SHAs and requires a unique merge-base and available commit/tree/blob objects. It verifies literal safe paths, regular text object identity/content and exact change metadata, deriving hunks with fixed argv while external diff, textconv, filters, hooks, and network are disabled. Limits: 64 missing files; 2 MiB UTF-8 per recovered patch; 8 MiB recovered patch bytes globally; 4 MiB per regular text blob; 32 MiB total recovered old/new blob bytes; 256 local Git read operations. Recovered text also counts against every applicable source/rendering limit. Binary, nonregular, ambiguous merge-base, unavailable, mismatched, or over-cap evidence blocks. Existing Action-managed synchronization/object preparation is the path when objects are absent.
-- Framed profile bounds: at most 2 sequential frames x 64 partitions (128 global); 1,000 distinct assigned paths subject to complete native enumeration; 4,096 fragments; 8,192,000 raw UTF-16 code units; independently 8,192,000 normalized UTF-16 code units; each fragment <=12,000 UTF-16 units; each rendered partition <=64,000 UTF-16 units including wrappers/headers; complete rendered diff <=8,192,000 UTF-16 units; each final prompt <=512 KiB UTF-8 and aggregate prompts <=32 MiB UTF-8. Maximum model concurrency is 2. Per response: 200 findings. Retained resolution claims: 500, and only from the single global resolution owner. Global findings: 2,000. Serialized retained result payload across frames: <=16 MiB UTF-8.
-- Freshness binding: protocol/profile, fresh invocation nonce, repository identity, canonical open PR number and base/head repository ownership/ref identity, immutable base/head SHAs, unique merge-base SHA, ordered complete source manifest digest (path/status/counts and source-content digests), ordered fragment coverage, and effective review context/configuration digest. Verify provider identity before source acquisition, after planning, between frames, immediately before reconciliation/publication, and preserve existing post-publication head check. Failed identity reads are unverified. Any identity, source, assignment, context, nonce, or profile change invalidates the entire result.
+- Local source recovery: a narrow trusted-host read-only Git port pins canonical base/head SHAs and requires a unique merge-base and available commit/tree/blob objects. It verifies literal safe paths, regular text object identity/content and exact change metadata, deriving hunks with fixed argv while external diff, textconv, filters, hooks, and network are disabled. Every required side is verified, including complete provider patches: independent immutable changed-path enumeration closes page omissions/ABA mixes, regular modes and all unique old/new blobs are checked, UTF-8/BOM and object hashes are verified, and the native patch must reconstruct those exact texts. Absent, truncated or mismatching patches are recovered. Paths are at most 1,024 UTF-8 bytes. Tree reads batch at most 16 paths / 12,000 argument characters, commands time out at 30 seconds, and lazy fetch is disabled. Limits: 64 recovered files; 2 MiB UTF-8 per recovered patch; 8 MiB recovered patch bytes globally; 4 MiB per regular text blob; 32 MiB total unique verified old/new blob bytes; 256 local Git read operations. Recovered text also counts against every applicable source/rendering limit. Binary, nonregular, ambiguous merge-base, unavailable, mismatched, or over-cap evidence blocks. Existing Action-managed synchronization/object preparation is the path when objects are absent.
+- Framed profile bounds: at most 2 sequential frames x 64 partitions (128 global); 1,000 distinct assigned paths subject to complete native enumeration; 4,096 fragments; 8,192,000 raw UTF-16 code units; independently 8,192,000 normalized UTF-16 code units; each fragment <=12,000 UTF-16 units; each rendered partition <=64,000 UTF-16 units including wrappers/headers; complete rendered diff <=8,192,000 UTF-16 units; each final prompt <=512 KiB UTF-8 and aggregate prompt traffic including retries and auxiliary verification <=32 MiB UTF-8; each primary or auxiliary model response <=4 MiB UTF-8. Maximum model concurrency is 2. Per response: 200 findings. Retained resolution claims: 500, and only from the single global resolution owner. Global findings: 2,000. Serialized retained result payload across frames: <=16 MiB UTF-8.
+- Freshness binding: protocol/profile, fresh invocation nonce, repository identity, canonical open PR number and base/head repository ownership/ref identity, immutable base/head SHAs (including a separately read live base-ref tip rather than trusting cached PR base.sha), unique merge-base SHA, ordered complete source manifest digest (path/status/counts and source-content digests), ordered fragment coverage, and effective review context/configuration digest. Verify provider identity before source acquisition, after planning, between frames, immediately before reconciliation/publication, and recheck after any awaited localization immediately before mutation, and retain a post-publication identity check. The framed path has at most 41 canonical/context/freshness provider requests before ordinary transport retries; the ordinary context bound is unchanged. Failed identity reads are unverified. Any identity, source, assignment, context, nonce, or profile change invalidates the entire result.
 
 ### 8.3 Executable architecture constraints
 
@@ -481,6 +481,7 @@ Documentation is part of the implementation. Update the existing owning SDD link
 | `docs/bugbot/quality-observability.mdx` | update |
 | `docs/bugbot/permissions.mdx` | update |
 | `docs/bugbot/configuration.mdx` | update |
+| `docs/security-operations/operations/error-reference.mdx` | update |
 
 ## 16. Acceptance
 
@@ -549,3 +550,26 @@ These are planned, executable acceptance scenarios; none is represented as an ex
 - Decisions: use `specs/bugbot-source-bound-framed-review.md` as a companion under `bugbot-analysis-and-autofix`; retain the 46,285-byte owning SDD as baseline; select closed internal framed-v1 by eligible workload; do not change public configuration or legacy limit; use no durable cross-run checkpoint; recover missing patches only from verified immutable local Git objects; require complete source-bound receipts and freshness fences; publish only one complete globally reconciled result.
 - Rejected alternatives: remove the guard, increase a global constant, configure ignores to hide required work, rerun identical unsupported input, approve incomplete review, or treat model/workspace assertions as source evidence.
 - Follow-up explicitly outside this spec: #838's separate compare inventory ceiling, #763's SDD drafting behavior, any future capacity profile, release, deployment, or protected approval exemption.
+### Implementation receipt — #839
+
+Local code implements the closed domain profile, pure source/identity/receipt and
+manifest policies, semantic source port, trusted read-only Git adapter, canonical
+live-ref adapter, application frame engine and existing publication integration.
+Content-free telemetry exposes frame completion and measured source/byte work.
+New source/protocol tests are catalogued alongside unchanged legacy regressions.
+The real 887-file owned Git fixture covers a late-frame finding and zero-write
+failure/dry-run paths. It is a deterministic integration test, not a new model
+accuracy measurement or a completed historical H3 review.
+
+Remote checks, complete native review, Codecov against the current base and the
+head-specific protected-path decision remain pending. No delivery/merge gate is
+marked complete by the design-ready status or this local implementation note.
+
+Local verification on 2026-11-01: 835 Jest suites / 16,144 passed tests (35
+preexisting skips), all configured coverage budgets, 267 extension tests with
+100% measured coverage, and 504/504 changed executable lines with no partial
+branches against `4bde132daa964f0959eaf4584e6800669670e36c`. The pure framed
+protocol and frame engine have enforced 100% module metrics; the Git adapter
+retains the 95/90 module budget. Seven changed interface/type-only modules have
+no executable statements, verified with the TypeScript AST. Remote Codecov and
+review remain independent pending gates.

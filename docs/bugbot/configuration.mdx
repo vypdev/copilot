@@ -177,3 +177,15 @@ Do not expose provider credentials to fork code, untrusted pull requests, or `pu
 - [Autofix](/bugbot/autofix)
 - [Do user request](/bugbot/do-user-request)
 - [Agent CLI configuration](/agents/cli-configuration)
+
+## Large-review profile
+
+Keep existing configuration unchanged. Eligible canonical diffs beyond the
+ordinary envelope select the internal `framed-v1` profile automatically; ordinary
+reviews retain their existing limits. There is no public profile/capacity flag,
+extra secret or new permission. Safety limits, source proof, receipt coverage,
+frame sequencing and freshness cannot be relaxed by configuration. Existing
+ignore rules are snapshotted and bound to the invocation; do not add exclusions
+to work around capacity. Dry-run verifies all source and frames but performs no
+SCM writes. See [large-diff review](/bugbot/how-it-works#complete-review-of-large-diffs)
+and [capacity recovery](/bugbot/failure-scenarios).

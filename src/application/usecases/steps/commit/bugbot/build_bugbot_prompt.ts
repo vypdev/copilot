@@ -178,6 +178,14 @@ function buildChangeScopeInstruction(
 function buildPartitionInstruction(partition: BugbotReviewDiffPartition): string {
     return [
         '**Partition integrity contract:**',
+        ...(partition.framed ? [
+            `- Return reviewed_base_sha exactly as ${partition.framed.baseSha}.`,
+            `- Return review_manifest_digest exactly as ${partition.framed.manifestDigest}.`,
+            `- Return review_frame_id exactly as ${partition.framed.frameId}.`,
+            `- Return review_coverage_digest exactly as ${partition.framed.coverageDigest}.`,
+            `- Return reviewed_fragment_ids exactly as this ordered JSON array: ${JSON.stringify(partition.framed.fragmentIds)}.`,
+            '- Do not substitute a prior invocation, another frame or a partial fragment set.',
+        ] : []),
         `- Return partition_id exactly as \`${partition.id}\`.`,
         `- Return reviewed_head_sha exactly as \`${partition.headSha}\`.`,
         `- This is partition ${partition.ordinal}/${partition.total} with ${partition.fragmentCount} assigned ${partition.fragmentCount === 1 ? 'fragment' : 'fragments'}.`,
@@ -189,7 +197,7 @@ function buildPartitionInstruction(partition: BugbotReviewDiffPartition): string
 }
 
 function buildPartitionOutputContract(partition: BugbotReviewDiffPartition): string {
-    return `**Output:** Return a JSON object with "outputLocale", "partition_id" (exactly "${partition.id}"), "reviewed_head_sha" (exactly "${partition.headSha}"), "findings" (new/current problems from this assigned partition), and "resolved_findings" (objects containing an exact retained prior finding id and either "fixed" or "obsolete"). Always return both arrays.${partition.ownsResolution ? ' Never resolve an id that was not included in the previous-findings list.' : ' Return an empty resolved_findings array because this partition is not the resolution owner.'}`;
+    return `${partition.framed ? '**Framed output:** Include all five exact source/coverage fields required by the partition integrity contract. ' : ''}**Output:** Return a JSON object with "outputLocale", "partition_id" (exactly "${partition.id}"), "reviewed_head_sha" (exactly "${partition.headSha}"), "findings" (new/current problems from this assigned partition), and "resolved_findings" (objects containing an exact retained prior finding id and either "fixed" or "obsolete"). Always return both arrays.${partition.ownsResolution ? ' Never resolve an id that was not included in the previous-findings list.' : ' Return an empty resolved_findings array because this partition is not the resolution owner.'}`;
 }
 
 function normalizedObjectId(value: unknown): string | undefined {

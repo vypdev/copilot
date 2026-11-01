@@ -38,6 +38,17 @@ export interface BugbotReviewTelemetrySnapshot {
     readonly contextLogicalProviderReads: number;
     readonly contextRawProviderRequests: number;
     readonly contextConcurrencyLimit: 2;
+    readonly framedReview?: {
+        readonly profile: 'framed-v1';
+        readonly frames: number;
+        readonly completedFrames: number;
+        readonly manifestDigest: string;
+        readonly rawUtf16: number;
+        readonly renderedUtf16: number;
+        readonly promptBytes: number;
+        readonly responseBytes: number;
+        readonly source?: import('../../domain/bugbot/framed_review').BugbotFramedReviewSource['metrics'];
+    };
     readonly analysisPartitions?: number;
     readonly completedAnalysisPartitions?: number;
     readonly analysisDiffFragments?: number;
