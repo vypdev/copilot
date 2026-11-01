@@ -596,3 +596,18 @@ is retained as versioned source so the discussion can link it without exhausting
 human-conversation context. All 15 normative requirements and 130 acceptance
 cases remain in this canonical SDD. The transcript records preparation data and
 does not independently change the implementation contract.
+
+
+Integration verification after #829: the Action synchronized `develop` at
+`a032f500d67a91ea69f653d6fea08bec5e117fd6` into this managed branch as
+`44f0d396fe7f73b5ef4e127fa5f54130057aa196`. Its
+[configured verification run](https://github.com/vypdev/copilot/actions/runs/41302698244)
+passed build, typecheck, full coverage (838 Jest suites / 16,194 passed tests,
+35 preexisting skips; 267 extension tests at 100%), lint, documentation and
+specification checks before publishing. This records prepared-merge verification,
+not complete PR acceptance: bot-actor admission skipped the push/PR analysis
+workflows for that synchronization. A subsequent contributor update or supported
+explicit action must supply the applicable current-head assessment/review;
+Codecov must compare the final head against the live target base, and the
+protected approval decision remains independent. See the
+[post-synchronization checklist](../docs/issues/branch-synchronization.mdx#validate-the-synchronized-pull-request).

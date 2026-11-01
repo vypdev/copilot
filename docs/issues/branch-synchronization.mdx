@@ -271,6 +271,21 @@ adds a generic action summary to the conversation.
 
 Successful reports include the parent and working branches, verification count, and merge commit SHA in the structured run result. The subsequent push observer resolves the prior stale-branch card.
 
+### Validate the synchronized pull request
+
+The synchronization report confirms its configured verification commands and
+published merge commit. Review, issue progress, CI and Codecov remain separate
+results that must refer to the current PR head and target base before merge.
+
+If the repository's bot-actor admission rule skips Commit or PR analysis for the
+synchronization push, a skipped run does not certify those results. On the PR,
+`/copilot recheck` requests a read-only Bugbot review of the current revision; it
+does not calculate issue progress or replace CI and coverage checks. Progress
+assessment runs on the next ordinary contributor push or an explicitly
+configured `check_progress_action` single action. Inspect each applicable
+current-head result, including unresolved findings and any human approval gate;
+a clean synchronization is not merge approval.
+
 ## Why the normal commit workflow remains limited
 
 `copilot_commit.yml` is an issue-centric, agent-capable pipeline: it can
