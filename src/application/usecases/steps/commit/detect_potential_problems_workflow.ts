@@ -1,3 +1,4 @@
+import { BugbotReviewCompletenessError } from '../../../../domain/bugbot/framed_review';
 import { isAgentConfigurationReady } from '../../../../data/model/agent';
 import { Result } from '../../../../data/model/result';
 import type { FindingsQueryPort } from '../../../ports/agent_findings_ports';
@@ -109,12 +110,12 @@ export async function runDetectPotentialProblemsWorkflow(
             return await complete(skippedDraftResult(), 'skipped');
         }
         const context = await telemetry.measure('context', () =>
-            loadBugbotContext(contextRequest, dependencies.scm.context, preflight));
+            loadBugbotContext(contextRequest, dependencies.scm.context, preflight, dependencies.scm.reviewSource));
         const eventHeadSha = reviewContext.trigger.expectedHeadSha;
         if (isLoadedBugbotRevisionSuperseded(context, eventHeadSha)) {
             return await complete(supersededResult(context.prContext?.prHeadSha, eventHeadSha), 'superseded');
         }
-        const prepared = await analyzeBugbotRevision(reviewContext, context, { agent: dependencies.aiRepository, telemetry });
+        const prepared = await analyzeBugbotRevision(reviewContext, context, { agent: dependencies.aiRepository, telemetry, isSourceCurrent: async () => !await hasNewerBugbotRevision(context, dependencies.scm.context) });
         if (prepared === undefined) {
             const analysisError = new ApplicationError('agent.failed', 'The configured agent returned no potential-problem analysis.');
             const catalog = reviewContext.analysis.reviewConfiguration.publicationMode === 'publish'
@@ -149,6 +150,10 @@ export async function runDetectPotentialProblemsWorkflow(
         const catalog = presentsPullRequestStatus || mutatesFindingComments
             ? await resolvePublicationCatalog(reviewContext, dependencies, presentsPullRequestStatus)
             : undefined;
+        // Catalog localization may await a provider. Recheck after it, directly before SCM mutation.
+        if (context.reviewFramedSource && await hasNewerBugbotRevision(context, dependencies.scm.context)) {
+            return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
+        }
         const resolutionErrors = await telemetry.measure('publication', () => applyDetectedFindings(
             reviewContext,
             context,
@@ -185,7 +190,9 @@ export async function runDetectPotentialProblemsWorkflow(
         );
     } catch (error) {
         const resultError = toApplicationError(
-            error,
+            error instanceof BugbotReviewCompletenessError
+                ? new ApplicationError('validation.evidence-unavailable', 'Bugbot could not verify a complete source-bound review.', { retryable: false, recovery: { id: 'bugbot-review-incomplete', variables: error.facts } })
+                : error,
             'provider.unavailable',
             `Error in ${TASK_ID}: Unable to detect potential problems.`,
         );

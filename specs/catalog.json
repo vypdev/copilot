@@ -7,14 +7,16 @@
       "status": "implemented",
       "scope": "English-default, localized, semantic, bounded, and idempotent product messages across GitHub and repository-aware operator surfaces",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-30",
+      "lastVerified": "2026-11-01",
       "specs": [
         "specs/semantic-github-publication-and-notification.md",
         "specs/repository-locale-and-localization.md",
         "specs/copilot-history.md",
         "specs/pull-request-title-compatibility.md",
         "specs/immutable-progress-content-recovery.md",
-        "specs/optional-check-run-diagnostics.md"
+        "specs/optional-check-run-diagnostics.md",
+        "specs/complete-progress-comparison-inventory.md",
+        "specs/progress-scope-source-ownership.md"
       ],
       "workflows": [
         ".github/workflows/copilot_issue.yml",
@@ -199,7 +201,16 @@
         "src/domain/agent_response_schema_failure.ts",
         "src/data/repository/progress_agent_response_policy.ts",
         "src/application/policies/progress_response_rejection_policy.ts",
-        "src/application/usecases/actions/query_progress_result_workflow.ts"
+        "src/application/usecases/actions/query_progress_result_workflow.ts",
+        "src/application/policies/immutable_progress_tree_policy.ts",
+        "src/application/policies/progress_inventory_profile_policy.ts",
+        "src/application/policies/progress_inventory_error_policy.ts",
+        "src/application/policies/immutable_progress_units_policy.ts",
+        "src/data/repository/immutable_progress_inventory_repository.ts",
+        "src/data/repository/complete_progress_diff_repository.ts",
+        "src/domain/progress_inventory_diagnostic.ts",
+        "src/application/policies/progress_assessment_capacity_policy.ts",
+        "src/application/policies/progress_scope_source_policy.ts"
       ],
       "tests": [
         "src/domain/__tests__/implementation_plan.test.ts",
@@ -340,7 +351,22 @@
         "src/data/repository/__tests__/progress_agent_response_policy.test.ts",
         "src/application/usecases/actions/__tests__/progress_result_rejection.integration.test.ts",
         "src/application/policies/__tests__/progress_rejection_diagnostics.test.ts",
-        "src/application/policies/__tests__/progress_response_error_presentation.test.ts"
+        "src/application/policies/__tests__/progress_response_error_presentation.test.ts",
+        "src/application/policies/__tests__/immutable_progress_units_policy.test.ts",
+        "src/application/policies/__tests__/immutable_progress_tree_policy.test.ts",
+        "src/application/policies/__tests__/progress_inventory_profile_policy.test.ts",
+        "src/application/usecases/actions/__tests__/complete_progress_inventory.integration.test.ts",
+        "src/data/repository/__tests__/immutable_progress_inventory_repository.test.ts",
+        "src/data/repository/__tests__/complete_progress_diff_repository.test.ts",
+        "src/data/repository/__tests__/support/immutable_progress_inventory_fixture.ts",
+        "src/domain/__tests__/progress_inventory_diagnostic.test.ts",
+        "src/application/usecases/actions/__tests__/fixtures/complete_inventory_workflow_fixture.ts",
+        "src/data/repository/__tests__/support/large_complete_progress_fixture.ts",
+        "src/application/policies/__tests__/progress_assessment_capacity_policy.test.ts",
+        "src/application/usecases/actions/__tests__/progress_assessment_capacity.integration.test.ts",
+        "src/application/policies/__tests__/progress_scope_ownership.test.ts",
+        "src/application/policies/__tests__/progress_scope_capacity_diagnostic.test.ts",
+        "src/application/usecases/actions/__tests__/progress_scope_ownership.integration.test.ts"
       ],
       "documentation": [
         "docs/configuration.mdx",
@@ -761,7 +787,8 @@
         "src/application/policies/setup_runner_policy.ts",
         "src/manager/description/base/issue_content_interface.ts",
         "src/domain/agent_response_schema_failure.ts",
-        "src/data/repository/agent_json_schema_validator.ts"
+        "src/data/repository/agent_json_schema_validator.ts",
+        "src/domain/configuration_markers.ts"
       ],
       "tests": [
         "src/tooling/__tests__/coverage_budget_validator.test.ts",
@@ -822,7 +849,8 @@
         "src/utils/__tests__/setup_runner_installation.test.ts",
         "src/application/usecases/execution/__tests__/single_action_target_restore.integration.test.ts",
         "src/data/repository/__tests__/agent_json_schema_validator.test.ts",
-        "src/data/repository/__tests__/progress_agent_response_policy.test.ts"
+        "src/data/repository/__tests__/progress_agent_response_policy.test.ts",
+        "src/domain/__tests__/configuration_markers.test.ts"
       ],
       "documentation": [
         "docs/overview.mdx",
@@ -2058,14 +2086,15 @@
       "id": "bugbot-analysis-and-autofix",
       "title": "Bugbot analysis, finding publication, and autofix",
       "status": "implemented",
-      "scope": "Select one canonical PR, exhaustively analyze bounded diff partitions with version-grounded dependency, policy-to-request transformation and source-bound assertion and generated-source coordinates with independent candidate verification, configuration-selected initial-session credential ownership, delegated test-path and external Action input-contract, host-aware self-repository references and Kotlin/Wasm lexical-binding and renderer-grounded Markdown path evidence, publish stable findings atomically, and apply authorized verified fixes with regression coverage for cwd/pattern-grounded indirect unittest discovery and source-bound module execution evidence, with active-instance Kotlin Json nullable-input policy grounding",
+      "scope": "Select one canonical PR, exhaustively analyze bounded diff partitions with version-grounded dependency, policy-to-request transformation and source-bound assertion and generated-source coordinates with independent candidate verification, configuration-selected initial-session credential ownership, delegated test-path and external Action input-contract, host-aware self-repository references and Kotlin/Wasm lexical-binding and renderer-grounded Markdown path evidence, publish stable findings atomically, and apply authorized verified fixes with regression coverage for cwd/pattern-grounded indirect unittest discovery and source-bound module execution evidence, with active-instance Kotlin Json nullable-input policy grounding; verify complete large diffs through a source-bound closed framed profile with immutable local Git proof, live-base freshness and atomic global publication",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-30",
+      "lastVerified": "2026-11-01",
       "specs": [
         "specs/bugbot-analysis-publication-and-autofix.md",
         "specs/bugbot-context-selection-and-budgeting.md",
         "specs/bugbot-exhaustive-partitioned-analysis.md",
-        "specs/bugbot-lossless-conversation-context.md"
+        "specs/bugbot-lossless-conversation-context.md",
+        "specs/bugbot-source-bound-framed-review.md"
       ],
       "workflows": [
         ".github/workflows/copilot_commit.yml",
@@ -2145,7 +2174,19 @@
         "src/application/policies/bugbot_python_literal_witness_policy.ts",
         "src/application/policies/bugbot_literal_verification_policy.ts",
         "src/application/usecases/steps/commit/bugbot/verify_generated_literal_findings.ts",
-        "src/application/policies/agent_output_locale_policy.ts"
+        "src/application/policies/agent_output_locale_policy.ts",
+        "src/domain/bugbot/framed_review.ts",
+        "src/application/policies/bugbot_framed_identity_policy.ts",
+        "src/application/policies/bugbot_framed_receipt_policy.ts",
+        "src/application/policies/bugbot_framed_snapshot_policy.ts",
+        "src/application/policies/bugbot_framed_review_policy.ts",
+        "src/application/policies/bugbot_patch_binding_policy.ts",
+        "src/application/policies/bugbot_review_diagnostic_labels.ts",
+        "src/application/ports/bugbot_review_source_ports.ts",
+        "src/application/ports/bugbot_telemetry_ports.ts",
+        "src/infrastructure/filesystem/bugbot_git_review_source_adapter.ts",
+        "src/application/usecases/steps/commit/bugbot/analyze_bugbot_frames.ts",
+        "src/application/policies/bugbot_framed_prompt_policy.ts"
       ],
       "tests": [
         "src/application/usecases/steps/commit/__tests__/bugbot_review_lifecycle.e2e.test.ts",
@@ -2219,7 +2260,17 @@
         "quality/bugbot/evidence/issue-807.json",
         "src/tooling/__tests__/bugbot_ktor_routing.test.ts",
         "src/tooling/__tests__/fixtures/bugbot_ktor_routing_oracles.ts",
-        "quality/bugbot/evidence/issue-809.json"
+        "quality/bugbot/evidence/issue-809.json",
+        "src/domain/bugbot/__tests__/framed_review.test.ts",
+        "src/application/policies/__tests__/bugbot_framed_review_policy.test.ts",
+        "src/application/policies/__tests__/bugbot_framed_identity_policy.test.ts",
+        "src/application/policies/__tests__/bugbot_patch_binding_policy.test.ts",
+        "src/application/usecases/steps/commit/bugbot/__tests__/analyze_bugbot_frames.test.ts",
+        "src/infrastructure/filesystem/__tests__/bugbot_git_review_source_adapter.test.ts",
+        "src/data/repository/__tests__/bugbot_source_bound_identity_repository.test.ts",
+        "src/application/usecases/steps/commit/__tests__/bugbot_framed_complete_review.integration.test.ts",
+        "src/application/policies/__tests__/bugbot_framed_snapshot_policy.test.ts",
+        "src/application/policies/__tests__/bugbot_framed_prompt_policy.test.ts"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",
@@ -2232,7 +2283,8 @@
         "docs/bugbot/programmatic-api.mdx",
         "docs/bugbot/configuration.mdx",
         "docs/pull-requests/workflow-setup.mdx",
-        "docs/issues/comment-commands.mdx"
+        "docs/issues/comment-commands.mdx",
+        "docs/security-operations/operations/error-reference.mdx"
       ]
     },
     {

@@ -1,3 +1,5 @@
+import { progressInventoryError } from '../../application/policies/progress_inventory_error_policy';
+import { completeProgressDiff } from './complete_progress_diff_repository';
 import { ApplicationError } from '../../application/errors/application_error';
 import type { ProgressDiffEvidence } from '../../application/ports/progress_diff_query_ports';
 import type { GithubBranchComparisonClient } from '../../infrastructure/github/ports/github_branch_provider_ports';
@@ -21,7 +23,10 @@ export class ProgressDiffRepository {
         if (![baseSha, headSha].every(sha => /^[a-f0-9]{40}$/u.test(sha))) throw unavailable('workflow.stale');
         const { data } = await this.client.getClient(token).rest.repos.compareCommits({ owner, repo: repository, base: baseSha, head: headSha, per_page: 1, page: 1 });
         // GitHub supplies at most 300 comparison files. At that boundary, completeness is unknown.
-        if (!Array.isArray(data.files) || data.files.length >= MAX_COMPARISON_FILES) throw unavailable();
+        if (!Array.isArray(data.files)) throw unavailable();
+        if (data.files.length > MAX_COMPARISON_FILES) throw progressInventoryError('prefix', data.files.length, MAX_COMPARISON_FILES);
+        if (data.files.length === MAX_COMPARISON_FILES) return completeProgressDiff(this.objects?.getClient(token), data, baseSha, headSha, owner, repository,
+            async () => (await this.client.getClient(token).rest.repos.compareCommits({ owner, repo: repository, base: baseSha, head: headSha, per_page: 1, page: 1 })).data);
         const paths = new Set<string>();
         const changes = data.files.map(file => {
             const path = file.filename;

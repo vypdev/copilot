@@ -759,3 +759,12 @@ token scope, secret, or public input.
 - Follow-up outside scope: provider APIs that omit changed files beyond their
   enumeration limit require PR splitting or a separately specified local-diff
   authority contract.
+
+## Large-diff source-bound extension — #839
+
+[Source-bound framed review](./bugbot-source-bound-framed-review.md) defines the
+separate closed profile beyond the ordinary envelope. Its complete immutable
+source inventory, two sequential frames, live target-ref fences and exact
+coverage receipts supersede the ordinary over-cap remediation for eligible
+workloads. Ordinary planning, conversation/history limits, resolution ownership,
+public configuration and approval controls retain their existing contracts.

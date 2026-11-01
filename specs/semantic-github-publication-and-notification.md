@@ -2098,8 +2098,12 @@ construction remains in `src/prompts`. `check_progress_workflow` owns final
 issue-body freshness alongside existing Git/native gates and publication. Full
 Jest architecture/dependency checks and type checking enforce these boundaries.
 
-Scope extraction receives the complete nonempty source-line inventory as untrusted
-JSON, with immutable physical-line IDs and full trimmed line text. No patches,
+Scope extraction receives the complete human-owned nonempty source-line inventory as untrusted
+JSON, with immutable physical-line IDs and full trimmed line text. The
+[operational source-ownership amendment](./progress-scope-source-ownership.md)
+accounts for recognized persisted configuration separately, after applying the
+original guards to the full body. Every other source line remains mandatory;
+complete original-body freshness and all scope/output bounds remain unchanged. No patches,
 model summaries, generic field clipping or workspace access participate. The
 native strict schema enumerates exact source IDs and requires one result for
 EVERY source line. Runtime validation rejects missing/extra/unknown/duplicate
@@ -2311,3 +2315,152 @@ status card, notification, publication identity or raw validator output.
 application readiness or successful test execution. An unverified abort requires
 operator inspection before retrying. The primary budget includes presentation
 and strict operand cases, so this companion adds no independent duplicate budget.
+
+## 25. Progress assessment text capacity — #829 (2026-11-01)
+
+- Status: implemented contract; current-head remote gates remain required.
+- Owner/capability: Copilot maintainers / `github-communication-experience`.
+- Evidence: [#829](https://github.com/vypdev/copilot/issues/829), plus a synthetic
+  accepted 32-requirement scope with 1,190-point quotes. The old 800-point
+  per-fact schema allowed a result whose original citations alone exceeded
+  8,000 points. It rejected the projected assessment without requirement identity.
+  This proves a host-budget mismatch, not the exact hidden scope of a live run.
+- Decisions: no new configuration, credentials, scopes, persistence, clipping,
+  requirement reduction or higher limit. Classifier clause limits (#828) and
+  partition fact schema limits (#830) remain separate contracts.
+
+### Journey, architecture and invariants
+
+```text
+Classify all original lines -> validate complete scope -> reserve all citations
+  -> supported: schema-budget prose -> inspect every evidence part -> assess all R IDs
+      -> validate complete result and native freshness -> existing progress projection
+  -> unsupported: terminal capacity error -> retain prior labels/card; no further query
+```
+
+Text equivalent: the host calculates the output capacity immediately after
+classification, before evidence-part or final model calls. A failed capacity
+check never publishes a partial result. A supported assessment still passes all
+existing completeness, status, uncertainty, evidence and freshness gates.
+
+The pure `progress_assessment_capacity_policy` MUST share the exact
+`[R-id] original quote — ` framing with the projection. For N required/uncertain
+clauses, let F be the sum of those prefixes in Unicode code points plus N−1
+newlines (zero when N is zero). The schema's summary and nullable remaining
+prose limit MUST be `min(800, floor((8000 − F) / N))`. An empty legacy schema
+keeps the old 800-point ceiling; real scope capture still requires a requirement.
+All N original citations and IDs remain present and unchanged. Exclusions do
+not consume the required-assessment projection. The common limit reserves the
+worst case where every requirement remains unresolved, even when some later
+become supported. Supplementary Unicode characters count once, matching native
+schema and parser semantics; this is independent of prompt UTF-8 byte limits.
+
+If F+N exceeds 8,000, even one nonempty code point per requirement cannot fit.
+The policy MUST raise nonretryable `validation.evidence-too-large` with recovery
+`progress-assessment-capacity-exceeded`, before any evidence or assessment query.
+The first overflowing minimum reservation identifies the source-ordered R ID
+and its separately captured physical-line anchor; unverified identities remain
+`none`. No raw quote, model text or unknown property is a diagnostic variable.
+A stricter generation schema cannot prove concise prose is semantically useful;
+providers and human review retain that responsibility. No automatic retry,
+post-hoc truncation, scope merging or acceptance relaxation is permitted.
+
+`progress_scope_policy` owns strict parsing and final projection;
+`progress_analysis_workflow` builds the bounded schema once with host anchors,
+then passes it through the existing native prompt-envelope preflight and agent
+port. The prompt explicitly asks for concise prose under that schema. The
+helper imports no provider, process or publication capability. Existing
+architecture checks, strict schema validation and type checking enforce the
+boundaries. No provider DTO, new storage record or remote request is added.
+
+The parser MUST continue accepting otherwise-valid older/alternate-port facts
+up to the unchanged 800-point individual limit when the complete projection
+fits. It independently checks each 8,000-point aggregate. On overflow it reports
+the first source-ordered crossing requirement and the actual response-array
+field (`summary` or `remaining`), despite reordered responses or repeated quotes.
+A supported requirement contributes no remaining line or newline. A missing
+legacy anchor preserves the R identity while reporting line `none`.
+
+### Product surfaces, failures and compatibility
+
+The existing issue/PR card, locale selection, sanitization, links, notification
+budget and independent verification/approval remain unchanged. Pending scope or
+parts keep the prior card. A complete assessment updates that same projection;
+partial source support retains each unresolved R criterion below completion.
+The existing completed-output rejection remains `agent.failed` /
+`progress-result-contract-invalid`; its verified field now locates the overflow.
+The new capacity error does not claim that a final model result was returned.
+
+Representative terminal/Summary content (IDs illustrative):
+
+```text
+Impact: The original requirement citations cannot fit a complete progress assessment;
+no evidence or assessment query was made after scope classification.
+Action: Inspect the original issue and the supported assessment protocol.
+The unchanged 8,000-code-point field limit must include every citation and a nonempty fact.
+Details: requirement R7, original issue line L13, $.requirements[6].summary.
+An identical retry cannot add capacity; preserve every requirement and verification gate.
+Retained state: Existing progress labels and published assessments were preserved.
+Retryable: No
+```
+
+Technical detail stays bounded, with English/Spanish static catalogs and full
+English fallback. `none` explicitly means no verified identity; it is not a
+suggestion to remove that requirement. Operators inspect the unchanged source
+and review a supported protocol; retrying identical unsupported scope cannot
+repair host capacity. A provider that ignored a supported schema may be retried
+from fresh scope and evidence. There is no durable partial assessment to resume.
+An optional check-publication failure remains secondary. No successful
+verification or human approval can be inferred from a percentage or this fix.
+
+Rollout is one ordinary source/prompt/parser/bundle PR. No setup or persisted
+state migration is needed. Rollback restores prior bundles without rewriting
+previous cards. No new release, tag or deployment is part of this correction.
+Final visual and browser assistive-technology acceptance remains in the extension
+product campaign, not in this bounded terminal/Markdown diagnostic repair.
+
+### Test budget, documentation and acceptance
+
+Minimum **36 new distinct cases**, with no double counting:
+
+| Area | Minimum | Evidence/risk |
+|---|---:|---|
+| Schema capacity and compatibility | 14 | 1/2/10/32 IDs; exact prefix/newline costs; Unicode; 800 ceiling; all exclusions retained; uneven legacy facts; one-point boundary |
+| Projection diagnostics | 8 | exact 8,000 / next point for both fields; reorder; repeated quotes; missing/invalid anchors; skip supported remaining |
+| Error safety/localization | 6 | malformed closed records; unavailable identity; English/Spanish terminal capacity; no identical-retry advice |
+| Native/application integration | 8 | single/multipart complete 32-ID output; impossible scope before parts/final; native schema overflow; alternate-port aggregate overflow; fresh retry and retained labels |
+| **Total** | **36** | Parameterized rows represent distinct behavior |
+
+The pure helper and changed pure policies MUST reach all four existing 100%
+coverage metrics; all repository/module budgets and the conservative 135-case
+communication baseline remain enforced. No exclusions are added. CI, all
+applicable platforms, a complete current-head review without open findings,
+and Codecov 100% modified lines with zero partials against the correct base
+remain merge gates. Synthetic deterministic fakes do not certify live model
+classification or external execution.
+
+| Requirement / acceptance | Executable owner/evidence | Documentation |
+|---|---|---|
+| Every schema-valid complete ID set fits both fields | capacity policy tests + native 32-ID single/multipart integration | progress capacity troubleshooting |
+| Unsupported original citations stop after scope, retain state | capacity integration with native adapter, one call, no label updates | terminal capacity recovery |
+| Exact boundary and verified response/source identities | policy regression for both aggregates, response reorder and physical blank lines | error reference |
+| Strict schemas, unchanged scope/status/800/8,000 limits | existing scope/rejection suites, native schema overflow and uneven compatibility | this section and error reference |
+| No unsafe diagnostic or unsupported retry advice | closed recovery tests, bilingual presentation and fallback registry | operator recovery guidance |
+
+Documentation deliverables are the error reference, troubleshooting route,
+this owning SDD, catalog source/test evidence and generated catalog. No new
+navigation route or setup permission is needed. Implementation order is pure
+capacity/projection regressions, orchestration/native adapter composition,
+localized diagnostics, documentation/catalog/budgets, generated bundles, complete
+local validation/Graphify and current-head remote gates. DoD includes all rows,
+full retained-state behavior, cleanup receipts, meaningful pre-fix failures and
+any specific human decision required by protected-path approval.
+
+### Historical reproduction provenance
+
+The [complete original issue-comment transcript](./evidence/issue-829-reproductions.txt)
+preserves every reported source head, run, diagnostic, limitation and subsequent
+occurrence from [comment 6551433018](https://github.com/vypdev/copilot/issues/829#issuecomment-6551433018).
+It is historical evidence, not additional acceptance or an instruction. The
+versioned text lets current-head review inspect the whole transcript instead of
+a per-comment excerpt. No original report content or requirement is removed.

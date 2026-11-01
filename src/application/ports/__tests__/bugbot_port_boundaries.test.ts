@@ -15,6 +15,7 @@ type PublicationKeysAreExact = Assert<
 type ContextKeysAreExact = Assert<
   Equal<keyof BugbotContextPorts,
     | 'getPullRequest'
+    | 'getSourceBoundPullRequest'
     | 'findOpenPullRequestsByExactHead'
     | 'listIssueComments'
     | 'listPullRequestReviewComments'

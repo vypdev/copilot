@@ -6,7 +6,7 @@ jest.mock('../../../utils/logger', () => ({
   logError: jest.fn(),
 }));
 
-function createClient(pages: Array<Array<{ filename: string; status: string; additions: number; deletions: number; patch?: string }>>) {
+function createClient(pages: Array<Array<{ filename: string; status: string; additions: number; deletions: number; patch?: string; previous_filename?: string }>>) {
   const listFiles = jest.fn(async (parameters: Record<string, unknown>) => ({
     data: pages[Number(parameters.page ?? 1) - 1] ?? [],
   }));
@@ -157,4 +157,10 @@ describe('PullRequestChangesRepository', () => {
             'Unable to get the pull request head commit.',
         );
     });
+});
+
+it('preserves the provider-owned previous path for immutable rename verification', async () => {
+    const { provider } = createClient([[{ filename: 'new.ts', previous_filename: 'old.ts', status: 'renamed', additions: 1, deletions: 1, patch: '@@ -1 +1 @@\n-old\n+new' }]]);
+    const snapshot = await new PullRequestChangesRepository(provider).getReviewDiffSnapshot('owner', 'repo', 7, 'token');
+    expect(snapshot.changes[0].previousFilename).toBe('old.ts');
 });

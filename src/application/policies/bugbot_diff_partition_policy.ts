@@ -1,3 +1,4 @@
+import type { BugbotFramedAssignment } from '../../domain/bugbot/framed_review';
 import { createHash } from 'node:crypto';
 import { createUntrustedContent, renderUntrustedContentVerbatim, renderUntrustedField, type UntrustedContent } from '../../domain/security/untrusted_content';
 import { canonicalGitObjectId } from '../../domain/git_object_id';
@@ -34,6 +35,7 @@ interface PreparedBugbotDiffChange {
 }
 
 export interface BugbotReviewDiffPartition {
+  readonly framed?: BugbotFramedAssignment;
   readonly id: string;
   readonly ordinal: number;
   readonly total: number;

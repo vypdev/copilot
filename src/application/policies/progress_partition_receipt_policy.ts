@@ -29,7 +29,7 @@ export function framedProgressFactBudget(diff: Partitioned, budget: number): num
     return remaining;
 }
 export function framedProgressFactLimit(diff: Partitioned, budget: number): number {
-    return progressPartitionFactLimit(diff.baseSha, diff.headSha, diff.partitions, framedProgressFactBudget(diff, budget));
+    return progressPartitionFactLimit(diff.baseSha, diff.headSha, diff.partitions, framedProgressFactBudget(diff, budget), diff.protocol!.version);
 }
 
 /** A complete exact-once receipt set is required again at the final boundary. */
@@ -39,6 +39,6 @@ export function aggregateProgressReceipts(diff: Partitioned, receipts: readonly 
     for (const [index, part] of diff.partitions.entries()) {
         if (!receipts[index] || receipts[index].requestId !== part.id) throw progressProtocolRejected('response-identity');
     }
-    const analysis = aggregateProgressFacts(diff.baseSha, diff.headSha, diff.partitions, receipts.map(receipt => receipt.files), factBudget);
+    const analysis = aggregateProgressFacts(diff.baseSha, diff.headSha, diff.partitions, receipts.map(receipt => receipt.files), factBudget, diff.protocol!.version);
     return prefix(diff) + analysis + '}';
 }

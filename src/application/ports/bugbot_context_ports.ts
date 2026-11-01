@@ -13,6 +13,7 @@ export interface BoundedBugbotRead<T> {
 }
 
 export interface BoundBugbotContextReadPorts {
+    getSourceBoundPullRequest?(pullRequestNumber: number): Promise<BugbotPullRequestIdentity>;
     getPullRequest(pullRequestNumber: number): Promise<BugbotPullRequestIdentity>;
     findOpenPullRequestsByExactHead(
         headOwner: string,

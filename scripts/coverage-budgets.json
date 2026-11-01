@@ -839,6 +839,7 @@
             "src/application/policies/progress_diff_partition_policy.ts",
             "src/application/policies/progress_partition_response_policy.ts",
             "src/application/policies/progress_scope_policy.ts",
+            "src/application/policies/progress_assessment_capacity_policy.ts",
             "src/prompts/progress_scope.ts",
             "src/application/policies/progress_content_evidence_policy.ts",
             "src/application/policies/progress_patch_completeness_policy.ts",
@@ -852,7 +853,12 @@
             "src/application/policies/agent_prompt_envelope_policy.ts",
             "src/domain/progress_response_diagnostic.ts",
             "src/domain/agent_response_schema_failure.ts",
-            "src/application/policies/progress_response_rejection_policy.ts"
+            "src/application/policies/progress_response_rejection_policy.ts",
+            "src/application/policies/immutable_progress_tree_policy.ts",
+            "src/application/policies/immutable_progress_units_policy.ts",
+            "src/application/policies/progress_inventory_profile_policy.ts",
+            "src/application/policies/progress_inventory_error_policy.ts",
+            "src/domain/progress_inventory_diagnostic.ts"
           ],
           "mode": "each",
           "thresholdProfile": "exhaustive"
@@ -872,7 +878,9 @@
             "src/data/repository/immutable_progress_content_repository.ts",
             "src/data/repository/progress_comparison_source_repository.ts",
             "src/infrastructure/composition/check_progress_composition_root.ts",
-            "src/data/repository/progress_agent_response_policy.ts"
+            "src/data/repository/progress_agent_response_policy.ts",
+            "src/data/repository/complete_progress_diff_repository.ts",
+            "src/data/repository/immutable_progress_inventory_repository.ts"
           ],
           "mode": "each",
           "thresholdProfile": "exhaustive"
@@ -1303,6 +1311,50 @@
         }
       ],
       "successMessage": "generated Python literal evidence coverage: PASS (pure projection/prompts100%; each delivery module95/90)"
+    },
+    {
+      "name": "Bugbot source-bound framed review",
+      "missingEntryLabel": "source-bound framed review",
+      "rules": [
+        {
+          "files": [
+            "src/domain/bugbot/framed_review.ts",
+            "src/application/policies/bugbot_framed_identity_policy.ts",
+            "src/application/policies/bugbot_framed_receipt_policy.ts",
+            "src/application/policies/bugbot_framed_review_policy.ts",
+            "src/application/policies/bugbot_framed_snapshot_policy.ts",
+            "src/application/policies/bugbot_patch_binding_policy.ts",
+            "src/application/policies/bugbot_review_diagnostic_labels.ts",
+            "src/application/usecases/steps/commit/bugbot/analyze_bugbot_frames.ts",
+            "src/application/policies/bugbot_framed_prompt_policy.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/infrastructure/filesystem/bugbot_git_review_source_adapter.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "source-bound framed review coverage: PASS (pure protocol and frame engine100%; Git adapter95/90)"
+    },
+    {
+      "name": "Progress scope ownership",
+      "missingEntryLabel": "Progress scope ownership policy",
+      "rules": [
+        {
+          "files": [
+            "src/application/policies/progress_scope_source_policy.ts",
+            "src/domain/configuration_markers.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        }
+      ],
+      "successMessage": "Progress scope ownership policy: PASS (100% all metrics)"
     }
   ]
 }

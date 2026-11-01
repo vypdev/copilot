@@ -200,3 +200,26 @@ catalog without another model call. No conversation message or provider retry
 is added. A transport failure can follow a completed write: inspect checks at
 the exact head before replaying. See [workflow setup](/issues/workflow-setup) for
 the isolated credential route.
+
+### Complete immutable progress inventories
+
+At the compare API's 300-record boundary, the read-only progress adapter uses
+`immutable-tree-v1`: complete nonrecursive Git trees pinned to merge-base/head,
+recomputed directory hashes, and verified regular UTF-8 blobs. No consumer checkout,
+subprocess, provider-supplied URL or mutable PR-file page supplies runtime evidence.
+Native owning-PR selection and final ref/body fences remain independent requirements.
+
+The profile shares one invocation-local cache and monotonic ledger across inventory
+and content recovery, with 1,024 paths, 4,096 units, sixteen bounded epochs, 16 MiB
+represented side bytes, 2,048 object reads and 200,000 directory entries globally.
+The prior per-epoch, per-blob, 256,000-byte source/manifest, 64-part, 384,000-byte
+facts and 512 KiB complete-prompt limits are preserved. Complete compact manifests
+and validated unit tuples avoid repeating metadata in the final facts; every
+full source part retains its content and metadata and is checked again at aggregation.
+The fact budget reserves 16–600 Unicode code points per field before any model call.
+
+Identity-only compact references never replace returned request/unit/path validation
+or complete byte coverage and Git blob hashing. A missing side, omitted slice, stale
+attempt, crossed profile, late failure or exhausted capacity prevents partial
+publication. `progress-inventory-incomplete` exposes bounded localized diagnostics
+with exact or lower-bound counts. Existing framed-v1 wire behavior remains compatible.

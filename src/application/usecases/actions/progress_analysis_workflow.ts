@@ -1,3 +1,4 @@
+import { captureProgressScopeSource } from '../../policies/progress_scope_source_policy';
 import { queryProgressResult } from './query_progress_result_workflow';
 import type { BoundProgressComparisonSourceQueryPort, ProgressComparisonSource } from '../../ports/progress_comparison_source_ports';
 import { selectProgressComparisonSource } from '../../policies/progress_comparison_source_policy';
@@ -20,7 +21,7 @@ import { ApplicationError, type ApplicationErrorCode } from '../../errors/applic
 import { productFacingAgentQueryOptions } from '../../policies/agent_output_locale_policy';
 import type { BoundPublicationSourceQueryPort } from '../../ports/publication_freshness_ports';
 import { planProgressDiffPrompts, summarizeProgressDiff } from './summarize_progress_diff_workflow';
-import { MAX_PROGRESS_SCOPE_BYTES, MAX_PROGRESS_SCOPE_CLAUSES, progressScopeSourceLines, progressScopeResponseSchema, parseProgressScopeWithAnchors } from '../../policies/progress_scope_policy';
+import { MAX_PROGRESS_SCOPE_BYTES, MAX_PROGRESS_SCOPE_CLAUSES, progressScopeResponseSchema, parseProgressScopeWithAnchors } from '../../policies/progress_scope_policy';
 import { bindProgressEvidence, validateFramedProgressEvidence } from '../../policies/progress_evidence_protocol_policy';
 import { remainingProgressPromptBytes, progressAggregateBudget } from '../../policies/progress_prompt_capacity_policy';
 import { getProgressScopePrompt } from '../../../prompts/progress_scope';
@@ -131,7 +132,9 @@ export async function analyzeProgress(
         diffEvidence: '',
         acceptanceScope: ' '.repeat(MAX_PROGRESS_SCOPE_BYTES),
     };
-    const sourceLines = progressScopeSourceLines(issueDescription);
+    const capturedScopeSource = captureProgressScopeSource(issueDescription);
+    const sourceLines = capturedScopeSource.lines;
+    logInfo(`Progress scope source: ${sourceLines.length} human lines; ${capturedScopeSource.operationalLines} operational lines; ${capturedScopeSource.totalLines} original nonempty lines. Required/uncertain and excluded clause limits remain 32 each.`);
     const scopePrompt = getProgressScopePrompt(JSON.stringify(sourceLines), param.targetLocale);
     remainingProgressPromptBytes(scopePrompt, 'progress-scope', progressScopeResponseSchema(sourceLines), effort);
     const reservedScope = { requirements: Array.from({ length: MAX_PROGRESS_SCOPE_CLAUSES }, (_, index) =>
@@ -145,12 +148,13 @@ export async function analyzeProgress(
         configuration: param.agentConfiguration, agentId: AGENT_PLAN, prompt: scopePrompt,
         options: { ...productFacingAgentQueryOptions('progress-scope', progressScopeResponseSchema(sourceLines)), includeReasoning: param.includeReasoning },
     }, { phase: 'scope', sourceLineIds: sourceLines.map(line => line.id) }), issueDescription, param.targetLocale);
+    const assessmentSchema = progressResponseSchema(scope, anchors);
     const acceptanceScope = JSON.stringify(scope);
     const boundDiff = bindProgressEvidence(diff, issueDescription, acceptanceScope, param.targetLocale);
-    const actualBudget = progressAggregateBudget(getCheckProgressPrompt({ ...promptParameters, acceptanceScope }), progressResponseSchema(scope), effort);
+    const actualBudget = progressAggregateBudget(getCheckProgressPrompt({ ...promptParameters, acceptanceScope }), assessmentSchema, effort);
     const diffEvidence = await summarizeProgressDiff(boundDiff, param, issueDescription, dependencies.aiRepository, actualBudget, acceptanceScope);
     const prompt = getCheckProgressPrompt({ ...promptParameters, acceptanceScope, diffEvidence });
-    remainingProgressPromptBytes(prompt, 'progress', progressResponseSchema(scope), effort);
+    remainingProgressPromptBytes(prompt, 'progress', assessmentSchema, effort);
     logDebugInfo(
         `CheckProgress: prompt length=${prompt.length}, issue description length=${issueDescription.length}.`,
     );
@@ -161,7 +165,7 @@ export async function analyzeProgress(
             agentId: AGENT_PLAN,
             prompt,
             options: {
-                ...productFacingAgentQueryOptions('progress', progressResponseSchema(scope)),
+                ...productFacingAgentQueryOptions('progress', assessmentSchema),
                 includeReasoning: param.includeReasoning,
             },
         }, { phase: 'assessment', requirementIds: scope.requirements.map(requirement => requirement.id),

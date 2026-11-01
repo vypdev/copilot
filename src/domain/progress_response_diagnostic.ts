@@ -70,3 +70,19 @@ export class ProgressResponseContractFailure extends Error {
         this.facts = Object.freeze({ ...facts });
     }
 }
+
+/** Exact counts after complete host-validated source classification; never raw model prose. */
+export type ProgressScopeCapacityFacts = Readonly<{
+    clauseKind: 'required-or-uncertain' | 'excluded';
+    observed: number;
+    limit: 32;
+    sourceLineId: string;
+}>;
+export function isProgressScopeCapacityFacts(value: unknown): value is ProgressScopeCapacityFacts {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+    const facts = value as Record<string, unknown>;
+    return Object.keys(facts).sort().join(',') === 'clauseKind,limit,observed,sourceLineId'
+        && ['required-or-uncertain', 'excluded'].includes(facts.clauseKind as string)
+        && typeof facts.observed === 'number' && Number.isSafeInteger(facts.observed) && facts.observed > 32 && facts.observed <= 1024
+        && facts.limit === 32 && isProgressSourceLineId(facts.sourceLineId);
+}

@@ -150,3 +150,10 @@ describe('Bugbot review telemetry', () => {
         expect(legacy).not.toHaveProperty('completedAnalysisPartitions');
     });
 });
+
+it('discards unserializable response contents without retaining them in byte metrics', () => {
+    const telemetry = new BugbotReviewTelemetry(operationContext());
+    const circular: any = {}; circular.self = circular;
+    telemetry.observeResponse(circular); telemetry.observeResponse(undefined);
+    expect(telemetry.snapshot('failed').responseCharacters).toBe(0);
+});

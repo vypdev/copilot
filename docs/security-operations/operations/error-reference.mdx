@@ -122,6 +122,21 @@ Existing execution/transport classification and retryability remain unchanged.
 A later optional Check Run 403 is secondary and retains the primary failure and
 correlation reference.
 
+For `assessment-text-limit`, the host reports the first source-ordered aggregate
+overflow and its actual response-array summary/remaining field. Every full
+original citation, ID, separator and newline participates in the unchanged
+8,000-code-point limit; the per-fact ceiling remains 800. Generation derives a
+smaller fact schema limit when needed. Older uneven facts remain valid when
+the complete projection fits; no prose is clipped.
+
+`validation.evidence-too-large` with `progress-assessment-capacity-exceeded`
+means classification succeeded but the original citations leave insufficient
+space for one nonempty fact per requirement. No evidence or final assessment
+query follows. This is nonretryable for identical scope, preserves prior
+progress and cannot authorize a passing verification. Inspect the exact original
+scope and review a supported assessment protocol while preserving acceptance.
+See [progress text capacity](./troubleshooting#progress-assessment-text-capacity).
+
 ## Optional Check Run publication not confirmed
 
 This warning concerns an optional evidence projection. Required-stage success
@@ -176,3 +191,30 @@ with the same `single-action-operation-id` and `single-action-version`. Do not
 create a new operation, publish packages again, or bypass the stored ID, version,
 phase and accepted production SHA checks to clear this error. See
 [single-action configuration](/single-actions/configuration#internal-operation-identity).
+
+## Complete Bugbot review blocked
+
+`validation.evidence-unavailable` with recovery `bugbot-review-incomplete` means
+a complete source-bound Bugbot review could not be verified. It is nonretryable
+for identical unsupported input. The closed diagnostic reports the resource,
+measured count, supported limit and unit; `≥` is an explicit lower bound. A zero
+limit on an integrity diagnostic means no failures are acceptable, not a file
+quota. Existing findings and resolution state remain; no partial frame or clean
+review was published by this attempt.
+
+Restore unavailable immutable Git objects through the Action-managed checkout
+or synchronization flow, correct the source/identity evidence, or review the
+PR's intended scope when it exceeds the finite profile. Start a fresh complete
+review afterward. Do not add ignores, relax controls or treat a build/coverage
+report as review proof. See [Bugbot recovery](/bugbot/failure-scenarios) and
+[large-diff bounds](/bugbot/how-it-works#complete-review-of-large-diffs).
+
+## Progress scope clause capacity
+
+`progress-scope-clause-limit` reports the exact host-validated selected count,
+fixed limit 32, closed `required-or-uncertain` or `excluded` kind, and first
+crossing original line. Progress remains unchanged. Inspect the complete human
+scope and classifier result; do not remove acceptance or raise a bound to pass.
+Generated persisted state is operational context, not another requirement.
+Malformed state fails through the existing configuration-error family before
+model queries. Raw rejected output is never part of these diagnostics.

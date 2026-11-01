@@ -32361,11 +32361,13 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.readEnglishApplicationErrorMessage = exports.APPLICATION_ERROR_CATALOG_DEFINITIONS = exports.SPANISH_APPLICATION_ERROR_DEFINITION = exports.ENGLISH_APPLICATION_ERROR_DEFINITION = exports.SPANISH_APPLICATION_ERROR_MESSAGES = exports.ENGLISH_APPLICATION_ERROR_MESSAGES = exports.APPLICATION_ERROR_MESSAGE_IDS = exports.APPLICATION_ERROR_CODES = void 0;
 exports.resolveStaticApplicationErrorCatalog = resolveStaticApplicationErrorCatalog;
 exports.resolveApplicationErrorCatalog = resolveApplicationErrorCatalog;
+const bugbot_review_diagnostic_labels_1 = __nccwpck_require__(351);
 const comment_command_validation_message_catalog_1 = __nccwpck_require__(2002);
 const application_error_1 = __nccwpck_require__(7790);
 const message_catalog_1 = __nccwpck_require__(7097);
 const resolved_message_catalog_policy_1 = __nccwpck_require__(5069);
 const LABEL_KEYS = Object.freeze([
+    ...bugbot_review_diagnostic_labels_1.BUGBOT_REVIEW_DIAGNOSTIC_LABEL_KEYS,
     'impact', 'errorCode', 'action', 'retainedState', 'retryable', 'yes', 'no', 'reference',
 ]);
 const CONTENT_FIELDS = Object.freeze(['impact', 'action', 'retainedState']);
@@ -32377,6 +32379,7 @@ exports.APPLICATION_ERROR_MESSAGE_IDS = Object.freeze([
         .map(field => `error.recovery.${id}.${field}`)),
 ]);
 const ENGLISH_LABELS = Object.freeze({
+    ...bugbot_review_diagnostic_labels_1.ENGLISH_REVIEW_DIAGNOSTIC_LABELS,
     impact: 'Impact',
     errorCode: 'Error code',
     action: 'Action',
@@ -32387,6 +32390,7 @@ const ENGLISH_LABELS = Object.freeze({
     reference: 'Reference',
 });
 const SPANISH_LABELS = Object.freeze({
+    ...bugbot_review_diagnostic_labels_1.SPANISH_REVIEW_DIAGNOSTIC_LABELS,
     impact: 'Impacto',
     errorCode: 'Código de error',
     action: 'Acción',
@@ -32546,10 +32550,30 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
         action: 'Inspect the closed-issue or merged-PR run and current native state. Retry cleanup only if the issue is still closed with the intended reason; leave reopened work open. Resolve the named failure before retrying.',
         retainedState: 'Native state was preserved. Confirmed changes: {changed}; remaining required changes in the last verified plan: {remaining}. Unavailable reads do not establish completion.',
     }),
+    'progress-assessment-capacity-exceeded': Object.freeze({
+        impact: 'The original requirement citations cannot fit a complete progress assessment; no evidence or assessment query was made after scope classification.',
+        action: 'Inspect the original issue and the supported assessment protocol. The unchanged 8,000-code-point field limit must include every citation and a nonempty fact. Details: phase {phase}, reason {reason}, field {field}, requirement {requirementId}, original issue line {sourceLineId}. none means no verified identity is available. An identical retry cannot add capacity; preserve every requirement and verification gate when reviewing a supported protocol.',
+        retainedState: 'Existing progress labels and published assessments were preserved. No partial result or passing verification is authorized.',
+    }),
+    'progress-scope-clause-limit': Object.freeze({
+        impact: 'The complete human scope classification selected {observed} {clauseKind} lines; the supported limit is {limit}. Progress was not published.',
+        action: 'Inspect the original human scope and classifier result at source {sourceLineId}, phase scope. A fresh valid classification may help; do not remove requirements, promote generated state or raise limits to pass. Genuine over-limit human scope requires a reviewed supported protocol.',
+        retainedState: 'Existing progress labels and published assessments were preserved. No partial assessment or passing verification is authorized.',
+    }),
     'progress-result-contract-invalid': Object.freeze({
         impact: 'The returned progress result violated its contract; progress was not published.',
         action: 'Inspect the original requirement and response schema. Details: phase {phase}, reason {reason}, field {field}, requirement {requirementId}, original issue line {sourceLineId}. none means no verified identity is available. A fresh attempt may help when the provider can satisfy the unchanged contract; do not relax acceptance or verification.',
         retainedState: 'Existing progress labels and published assessments were preserved. An optional check-publication warning is a separate result.',
+    }),
+    'bugbot-review-incomplete': Object.freeze({
+        impact: 'Complete Bugbot review is blocked: {resource} {countKind} {observed} {unit}; supported limit {limit} ({profile}).',
+        action: 'Inspect the exact resource and limit. Prepare missing immutable objects through the Action-managed workflow, correct the verified source, or review genuinely unrelated PR scope. Repeating identical unsupported input cannot complete the review. No partial review can authorize approval.',
+        retainedState: 'Existing findings and resolution state were retained. This run published no partial findings or clean review; a fresh run must validate the complete current source.',
+    }),
+    'progress-inventory-incomplete': Object.freeze({
+        impact: 'Complete progress evidence is unavailable ({profile}, {reason}); observed {countKind} {observedCount}, supported limit {supportedLimit}. Unreviewed path excerpt: {paths}.',
+        action: 'Inspect the pinned comparison and named capacity or integrity boundary. An identical retry cannot repair unsupported evidence; repair its source or use a reviewed supported protocol. A zero limit denotes an integrity check, not a file allowance.',
+        retainedState: 'Existing progress was retained. No partial assessment or progress publication was accepted. Build, review, coverage and approval remain independent gates.',
     }),
     'progress-binary-evidence-unavailable': Object.freeze({
         impact: 'Progress was not assessed because required binary or non-text contents cannot be reviewed. Unreviewed paths ({pathCount} total; {shownCount} shown; complete inventory in run details): {paths}.',
@@ -32709,10 +32733,30 @@ const SPANISH_RECOVERY_CONTENT = Object.freeze({
         action: 'Revisa la ejecución de cierre o de la PR fusionada y el estado nativo actual. Reintenta la limpieza solo si la issue sigue cerrada con el motivo previsto; conserva abierto el trabajo reabierto. Resuelve el fallo indicado antes de reintentar.',
         retainedState: 'Se conservó el estado nativo. Cambios confirmados: {changed}; cambios pendientes en el último plan verificado: {remaining}. Una lectura no disponible no demuestra que haya finalizado.',
     }),
+    'progress-assessment-capacity-exceeded': Object.freeze({
+        impact: 'Las citas originales de los requisitos no caben en una evaluación de progreso completa; no se consultó evidencia ni evaluación después de clasificar el alcance.',
+        action: 'Inspecciona la issue original y el protocolo de evaluación admitido. El límite fijo de 8,000 puntos de código por campo debe incluir cada cita y un dato no vacío. Detalles: fase {phase}, motivo {reason}, campo {field}, requisito {requirementId}, línea original de la issue {sourceLineId}. none indica que no hay una identidad verificada. Repetir el intento no añade capacidad; conserva todos los requisitos y controles de verificación al revisar un protocolo compatible.',
+        retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas. No se autoriza un resultado parcial ni una verificación aprobada.',
+    }),
+    'progress-scope-clause-limit': Object.freeze({
+        impact: 'La clasificación completa del alcance humano seleccionó {observed} líneas de tipo {clauseKind}; el límite admitido es {limit}. No se publicó el progreso.',
+        action: 'Inspecciona el alcance humano original y la clasificación en la línea {sourceLineId}, fase scope. Una nueva clasificación válida puede ayudar; no elimines requisitos, conviertas estado generado en requisitos ni aumentes límites para aprobar. El alcance humano que excede el límite necesita un protocolo compatible revisado.',
+        retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas. No se autoriza ninguna evaluación parcial ni verificación aprobada.',
+    }),
     'progress-result-contract-invalid': Object.freeze({
         impact: 'El resultado de progreso devuelto incumplió su contrato; no se publicó el progreso.',
         action: 'Inspecciona el requisito original y el esquema de respuesta. Detalles: fase {phase}, motivo {reason}, campo {field}, requisito {requirementId}, línea original de la issue {sourceLineId}. none indica que no hay una identidad verificada. Un nuevo intento puede ayudar si el proveedor cumple el contrato sin cambiarlo; no relajes la aceptación ni la verificación.',
         retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas. Un aviso de publicación del check opcional corresponde a otro resultado.',
+    }),
+    'bugbot-review-incomplete': Object.freeze({
+        impact: 'La revisión completa de Bugbot está bloqueada: {resource} {countKind} {observed} {unit}; límite admitido {limit} ({profile}).',
+        action: 'Inspecciona el recurso y su límite. Prepara los objetos inmutables ausentes mediante el flujo gestionado por la Action, corrige la fuente verificada o revisa el alcance ajeno de la PR. Repetir la misma entrada no admitida no completará la revisión. Una revisión parcial no autoriza aprobación.',
+        retainedState: 'Se conservaron los findings y su estado de resolución. Este intento no publicó findings parciales ni una revisión limpia; un nuevo intento debe validar toda la fuente actual.',
+    }),
+    'progress-inventory-incomplete': Object.freeze({
+        impact: 'La evidencia completa de progreso no está disponible ({profile}, {reason}); observado {countKind} {observedCount}, límite admitido {supportedLimit}. Extracto de rutas sin revisar: {paths}.',
+        action: 'Inspecciona la comparación fijada y el límite de capacidad o integridad indicado. Repetir el intento no repara evidencia no admitida; corrige su origen o usa un protocolo revisado compatible. Un límite cero indica una comprobación de integridad, no un cupo de archivos.',
+        retainedState: 'Se conservó el progreso existente. No se aceptó ninguna evaluación parcial ni publicación del progreso. Build, revisión, cobertura y aprobación siguen siendo controles independientes.',
     }),
     'progress-binary-evidence-unavailable': Object.freeze({
         impact: 'No se evaluó el progreso porque no se pueden revisar los contenidos binarios o no textuales necesarios. Rutas sin revisar ({pathCount} en total; {shownCount} mostradas; inventario completo en los detalles de ejecución): {paths}.',
@@ -32889,6 +32933,53 @@ function resolveApplicationErrorCatalog(locale, configuration, resolver) {
 }
 const readEnglishApplicationErrorMessage = (id, variables = {}) => (0, message_catalog_1.renderCatalogMessage)(exports.ENGLISH_APPLICATION_ERROR_MESSAGES[id], variables, 'en-US');
 exports.readEnglishApplicationErrorMessage = readEnglishApplicationErrorMessage;
+
+
+/***/ }),
+
+/***/ 351:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SPANISH_REVIEW_DIAGNOSTIC_LABELS = exports.ENGLISH_REVIEW_DIAGNOSTIC_LABELS = exports.BUGBOT_REVIEW_DIAGNOSTIC_LABEL_KEYS = exports.BUGBOT_REVIEW_UNIT_LABELS = exports.BUGBOT_REVIEW_RESOURCE_LABELS = void 0;
+exports.BUGBOT_REVIEW_RESOURCE_LABELS = {
+    files: 'reviewFiles', fragments: 'reviewFragments', rawUtf16: 'reviewRaw', normalizedUtf16: 'reviewNormalized',
+    fragmentUtf16: 'reviewFragmentSize', partitionUtf16: 'reviewPartitionSize', renderedUtf16: 'reviewRendered',
+    partitions: 'reviewPartitions', frames: 'reviewFrames', framePartitions: 'reviewFrameParts',
+    promptBytes: 'reviewPrompt', promptTotalBytes: 'reviewPromptTotal', responseBytes: 'reviewResponse',
+    resultBytes: 'reviewResult', findingsPerResponse: 'reviewResponseFindings', findings: 'reviewFindings', resolutions: 'reviewResolutions',
+    recoveredFiles: 'reviewRecoveredFiles', recoveredPatchBytes: 'reviewRecoveredPatch', recoveredPatchTotalBytes: 'reviewRecoveredTotal',
+    blobBytes: 'reviewBlob', blobTotalBytes: 'reviewBlobTotal', gitReads: 'reviewGitReads', source: 'reviewSource',
+    identity: 'reviewIdentity', manifest: 'reviewManifest', coverage: 'reviewCoverage', receipt: 'reviewReceipt', capability: 'reviewCapability',
+};
+exports.BUGBOT_REVIEW_UNIT_LABELS = {
+    'UTF-16 code units': 'reviewUtf16Unit', 'UTF-8 bytes': 'reviewUtf8Unit', items: 'reviewItemUnit', operations: 'reviewOperationUnit',
+};
+exports.BUGBOT_REVIEW_DIAGNOSTIC_LABEL_KEYS = [...Object.values(exports.BUGBOT_REVIEW_RESOURCE_LABELS), ...Object.values(exports.BUGBOT_REVIEW_UNIT_LABELS)];
+exports.ENGLISH_REVIEW_DIAGNOSTIC_LABELS = {
+    reviewFiles: 'Assigned files', reviewFragments: 'Assigned fragments', reviewRaw: 'Raw input', reviewNormalized: 'Normalized input',
+    reviewFragmentSize: 'Fragment size', reviewPartitionSize: 'Rendered partition size', reviewRendered: 'Complete rendered diff',
+    reviewPartitions: 'Review partitions', reviewFrames: 'Review frames', reviewFrameParts: 'Partitions in one frame',
+    reviewPrompt: 'Final prompt size', reviewPromptTotal: 'Total prompt size', reviewResponse: 'Response size', reviewResult: 'Retained results',
+    reviewResponseFindings: 'Findings in one response', reviewFindings: 'Global findings', reviewResolutions: 'Resolution claims',
+    reviewRecoveredFiles: 'Files requiring patch recovery', reviewRecoveredPatch: 'Recovered patch size', reviewRecoveredTotal: 'Total recovered patch size',
+    reviewBlob: 'Text blob size', reviewBlobTotal: 'Total verified text source', reviewGitReads: 'Local Git reads', reviewSource: 'Required source',
+    reviewIdentity: 'Canonical source identity', reviewManifest: 'Invocation manifest', reviewCoverage: 'Complete coverage', reviewReceipt: 'Review receipts',
+    reviewCapability: 'Source-read capability', reviewUtf16Unit: 'UTF-16 code units', reviewUtf8Unit: 'UTF-8 bytes', reviewItemUnit: 'items', reviewOperationUnit: 'operations',
+};
+exports.SPANISH_REVIEW_DIAGNOSTIC_LABELS = {
+    reviewFiles: 'Archivos asignados', reviewFragments: 'Fragmentos asignados', reviewRaw: 'Entrada original', reviewNormalized: 'Entrada normalizada',
+    reviewFragmentSize: 'Tamaño del fragmento', reviewPartitionSize: 'Tamaño de la partición renderizada', reviewRendered: 'Diff completo renderizado',
+    reviewPartitions: 'Particiones de revisión', reviewFrames: 'Marcos de revisión', reviewFrameParts: 'Particiones de un marco',
+    reviewPrompt: 'Tamaño del prompt final', reviewPromptTotal: 'Tamaño total de prompts', reviewResponse: 'Tamaño de la respuesta', reviewResult: 'Resultados retenidos',
+    reviewResponseFindings: 'Findings de una respuesta', reviewFindings: 'Findings globales', reviewResolutions: 'Resoluciones declaradas',
+    reviewRecoveredFiles: 'Archivos que necesitan recuperar el parche', reviewRecoveredPatch: 'Tamaño del parche recuperado', reviewRecoveredTotal: 'Tamaño total de parches recuperados',
+    reviewBlob: 'Tamaño del blob de texto', reviewBlobTotal: 'Fuente de texto verificada total', reviewGitReads: 'Lecturas locales de Git', reviewSource: 'Fuente requerida',
+    reviewIdentity: 'Identidad de la fuente canónica', reviewManifest: 'Manifiesto del intento', reviewCoverage: 'Cobertura completa', reviewReceipt: 'Recibos de revisión',
+    reviewCapability: 'Capacidad de lectura de fuente', reviewUtf16Unit: 'unidades de código UTF-16', reviewUtf8Unit: 'bytes UTF-8', reviewItemUnit: 'elementos', reviewOperationUnit: 'operaciones',
+};
 
 
 /***/ }),
@@ -33686,7 +33777,10 @@ var _ApplicationError_cause;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = exports.APPLICATION_ERROR_RECOVERY_IDS = void 0;
 exports.isApplicationErrorCorrelationId = isApplicationErrorCorrelationId;
+const framed_review_1 = __nccwpck_require__(3750);
 const progress_response_diagnostic_1 = __nccwpck_require__(6289);
+const progress_inventory_diagnostic_1 = __nccwpck_require__(4048);
+const progress_response_diagnostic_2 = __nccwpck_require__(6289);
 const progress_binary_evidence_diagnostic_1 = __nccwpck_require__(364);
 const issue_workflow_diagnostic_1 = __nccwpck_require__(4347);
 const change_size_reconciliation_1 = __nccwpck_require__(5304);
@@ -33726,7 +33820,11 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'change-size-reconciliation-failed',
     'issue-workflow-admission-blocked',
     'progress-binary-evidence-unavailable',
+    'progress-inventory-incomplete',
+    'bugbot-review-incomplete',
     'progress-result-contract-invalid',
+    'progress-assessment-capacity-exceeded',
+    'progress-scope-clause-limit',
     'stored-configuration-schema-missing',
     'stored-configuration-schema-unsupported',
     'stored-configuration-invalid',
@@ -33967,7 +34065,11 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'sdd-draft-requirement-mapping-invalid': Object.freeze([]),
     'sdd-draft-repository-path-invalid': Object.freeze([]),
     'progress-binary-evidence-unavailable': Object.freeze(['paths', 'pathCount']),
+    'progress-inventory-incomplete': Object.freeze(['profile', 'reason', 'observedCount', 'supportedLimit', 'countKind', 'paths']),
+    'bugbot-review-incomplete': Object.freeze(['profile', 'countKind', 'resource', 'observed', 'limit', 'unit']),
     'progress-result-contract-invalid': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
+    'progress-assessment-capacity-exceeded': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
+    'progress-scope-clause-limit': Object.freeze(['clauseKind', 'observed', 'limit', 'sourceLineId']),
     'deployment-publication-context-missing': Object.freeze([]),
     'workspace-changes-rejected': Object.freeze([]),
 });
@@ -34043,8 +34145,18 @@ function normalizeApplicationErrorRecovery(recovery) {
             || approval_evidence_diagnostic_1.APPROVAL_EVIDENCE_PERMISSIONS[variables.operation] !== variables.permission)) {
         throw new TypeError('Approval evidence diagnostic is invalid.');
     }
-    if (recovery.id === 'progress-result-contract-invalid' && !(0, progress_response_diagnostic_1.isProgressResponseDiagnosticFacts)(variables))
+    if (recovery.id === 'progress-assessment-capacity-exceeded'
+        && (!(0, progress_response_diagnostic_2.isProgressResponseDiagnosticFacts)(variables) || variables.phase !== 'assessment' || variables.reason !== 'assessment-text-limit')) {
+        throw new TypeError('Progress assessment capacity diagnostic is invalid.');
+    }
+    if (recovery.id === 'progress-scope-clause-limit' && !(0, progress_response_diagnostic_1.isProgressScopeCapacityFacts)(variables))
+        throw new TypeError('Progress scope capacity diagnostic is invalid.');
+    if (recovery.id === 'progress-result-contract-invalid' && !(0, progress_response_diagnostic_2.isProgressResponseDiagnosticFacts)(variables))
         throw new TypeError('Progress response diagnostic is invalid.');
+    if (recovery.id === 'bugbot-review-incomplete' && !(0, framed_review_1.isBugbotReviewBlockFacts)(variables))
+        throw new TypeError('Bugbot review diagnostic is invalid.');
+    if (recovery.id === 'progress-inventory-incomplete' && !(0, progress_inventory_diagnostic_1.isProgressInventoryDiagnostic)(variables))
+        throw new TypeError('Progress inventory diagnostic is invalid.');
     if (recovery.id === 'progress-binary-evidence-unavailable' && !(0, progress_binary_evidence_diagnostic_1.isProgressBinaryEvidenceFacts)(variables))
         throw new TypeError('Progress binary evidence diagnostic is invalid.');
     if (recovery.id === 'issue-workflow-admission-blocked' && !(0, issue_workflow_diagnostic_1.isIssueWorkflowDiagnostic)(variables))
@@ -34095,13 +34207,14 @@ exports.BranchConfiguration = BranchConfiguration;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Config = exports.CONFIG_SCHEMA_VERSION = void 0;
 exports.requireCurrentConfigurationPayload = requireCurrentConfigurationPayload;
+const configuration_markers_1 = __nccwpck_require__(9318);
 const branch_configuration_1 = __nccwpck_require__(1934);
 const recommendation_state_1 = __nccwpck_require__(8514);
 const model_input_1 = __nccwpck_require__(4637);
 const deployment_operation_1 = __nccwpck_require__(2730);
 const issue_workflow_profile_1 = __nccwpck_require__(6744);
 /** Version of the durable configuration contract stored in issue/PR content. */
-exports.CONFIG_SCHEMA_VERSION = 3;
+exports.CONFIG_SCHEMA_VERSION = configuration_markers_1.CONFIGURATION_SCHEMA_VERSION;
 /** Accepts only the currently supported durable configuration contract. */
 function requireCurrentConfigurationPayload(value) {
     const input = (0, model_input_1.asModelInput)(value);
@@ -34884,6 +34997,62 @@ function admittedBranchSyncValidationCode(value) {
 
 /***/ }),
 
+/***/ 3750:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BugbotReviewCompletenessError = exports.BUGBOT_FRAMED_LIMITS = void 0;
+exports.enforceBugbotFramedBudget = enforceBugbotFramedBudget;
+exports.isBugbotReviewBlockFacts = isBugbotReviewBlockFacts;
+/** Closed invocation-only review capacity. No caller-supplied limit can expand it. */
+exports.BUGBOT_FRAMED_LIMITS = Object.freeze({
+    files: 1000, fragments: 4096, rawUtf16: 8192000, normalizedUtf16: 8192000,
+    fragmentUtf16: 12000, partitionUtf16: 64000, renderedUtf16: 8192000,
+    partitions: 128, frames: 2, framePartitions: 64, promptBytes: 512 * 1024,
+    promptTotalBytes: 32 * 1024 * 1024, responseBytes: 4 * 1024 * 1024,
+    resultBytes: 16 * 1024 * 1024, findingsPerResponse: 200, findings: 2000,
+    resolutions: 500, recoveredFiles: 64, recoveredPatchBytes: 2 * 1024 * 1024,
+    recoveredPatchTotalBytes: 8 * 1024 * 1024, blobBytes: 4 * 1024 * 1024,
+    blobTotalBytes: 32 * 1024 * 1024, gitReads: 256,
+});
+/** Content-free deterministic failure, mapped to localized semantic errors by the application. */
+class BugbotReviewCompletenessError extends Error {
+    constructor(resource, observed = 1, limit = 0, unit = bugbotReviewResourceUnit(resource), countKind = 'exact') {
+        super(`Complete Bugbot review blocked (${resource}: ${countKind === 'at-least' ? '≥' : '='} ${observed} ${unit}; limit ${limit}). No findings were published.`);
+        this.name = 'BugbotReviewCompletenessError';
+        this.facts = Object.freeze({ profile: 'framed-v1', countKind, resource, observed, limit, unit });
+    }
+}
+exports.BugbotReviewCompletenessError = BugbotReviewCompletenessError;
+function enforceBugbotFramedBudget(resource, observed) {
+    const unit = bugbotReviewResourceUnit(resource);
+    if (!Number.isSafeInteger(observed) || observed < 0)
+        throw new BugbotReviewCompletenessError('source');
+    if (observed > exports.BUGBOT_FRAMED_LIMITS[resource]) {
+        throw new BugbotReviewCompletenessError(resource, observed, exports.BUGBOT_FRAMED_LIMITS[resource], unit);
+    }
+}
+function isBugbotReviewBlockFacts(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return false;
+    const facts = value;
+    const reasons = [...Object.keys(exports.BUGBOT_FRAMED_LIMITS), 'source', 'identity', 'manifest', 'coverage', 'receipt', 'capability'];
+    return Object.keys(facts).sort().join(',') === 'countKind,limit,observed,profile,resource,unit'
+        && facts.profile === 'framed-v1' && ['exact', 'at-least'].includes(facts.countKind) && reasons.includes(facts.resource)
+        && [facts.observed, facts.limit].every(x => typeof x === 'number' && Number.isSafeInteger(x) && x >= 0)
+        && facts.unit === bugbotReviewResourceUnit(facts.resource)
+        && (!(facts.resource in exports.BUGBOT_FRAMED_LIMITS) || facts.limit <= exports.BUGBOT_FRAMED_LIMITS[facts.resource]);
+}
+function bugbotReviewResourceUnit(resource) {
+    return resource.endsWith('Utf16') ? 'UTF-16 code units'
+        : resource.endsWith('Bytes') ? 'UTF-8 bytes' : resource === 'gitReads' ? 'operations' : 'items';
+}
+
+
+/***/ }),
+
 /***/ 5304:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -34923,6 +35092,98 @@ exports.CLOSED_ISSUE_PHASES = Object.freeze([
     'card-inventory', 'card-freshness', 'card-update', 'card-verification',
 ]);
 exports.CLOSED_ISSUE_REASONS = Object.freeze(['completed', 'not_planned', 'duplicate', 'reopened', 'unknown', 'unavailable']);
+
+
+/***/ }),
+
+/***/ 9318:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CONFIGURATION_END = exports.CONFIGURATION_START = exports.CONFIGURATION_SCHEMA_VERSION = void 0;
+exports.readConfigurationBlock = readConfigurationBlock;
+exports.writeConfigurationBlock = writeConfigurationBlock;
+/** Shared durable state version; persisted model exports retain compatibility. */
+exports.CONFIGURATION_SCHEMA_VERSION = 3;
+exports.CONFIGURATION_START = '<!-- copilot-configuration-start';
+exports.CONFIGURATION_END = 'copilot-configuration-end -->';
+/** Owned delimiters begin a line; ordinary mentions are not state. Complete legacy fenced records remain readable. */
+function readConfigurationBlock(description) {
+    if (description === undefined)
+        return { kind: 'absent' };
+    let fence;
+    let fencedMarker = false;
+    let fencedStart;
+    let nestedFencedStart = false;
+    let start;
+    let contentStart = 0;
+    let block;
+    let offset = 0;
+    for (const line of description.match(/[^\n]*(?:\n|$)/gu)) {
+        const text = line.replace(/\r?\n$/u, '');
+        const starts = /^ {0,3}<!-- copilot-configuration-start(?:[ \t]|$)/u.test(text);
+        const ends = /^ {0,3}copilot-configuration-end -->[ \t]*$/u.test(text);
+        const boundary = /^ {0,3}(`{3,}|~{3,})(.*)$/u.exec(text);
+        if (fence) {
+            fencedMarker || (fencedMarker = starts || ends);
+            if (starts) {
+                if (fencedStart !== undefined)
+                    nestedFencedStart = true;
+                else
+                    fencedStart = offset + text.indexOf(exports.CONFIGURATION_START);
+            }
+            const end = text.indexOf(exports.CONFIGURATION_END);
+            if (fencedStart !== undefined && end >= 0 && !text.slice(end + exports.CONFIGURATION_END.length).trim()) {
+                if (block || nestedFencedStart)
+                    return { kind: 'invalid' };
+                block = { kind: 'present', start: fencedStart, end: offset + end + exports.CONFIGURATION_END.length,
+                    content: description.slice(fencedStart + exports.CONFIGURATION_START.length, offset + end) };
+                fencedStart = undefined;
+            }
+            if (boundary && boundary[1][0] === fence[0] && boundary[1].length >= fence.length && !boundary[2].trim()) {
+                fence = undefined;
+                fencedMarker = false;
+                fencedStart = undefined;
+                nestedFencedStart = false;
+            }
+        }
+        else if (start !== undefined || starts) {
+            if (starts) {
+                if (start !== undefined || block)
+                    return { kind: 'invalid' };
+                start = offset + text.indexOf(exports.CONFIGURATION_START);
+                contentStart = start + exports.CONFIGURATION_START.length;
+            }
+            const end = text.indexOf(exports.CONFIGURATION_END);
+            if (end >= 0 && !text.slice(end + exports.CONFIGURATION_END.length).trim()) {
+                block = { kind: 'present', start: start, end: offset + end + exports.CONFIGURATION_END.length,
+                    content: description.slice(contentStart, offset + end) };
+                start = undefined;
+            }
+        }
+        else if (ends)
+            return { kind: 'invalid' };
+        else if (boundary && (boundary[1][0] !== '`' || !boundary[2].includes('`')))
+            fence = boundary[1];
+        offset += line.length;
+    }
+    // A legacy block behind an unclosed fence is ambiguous: never silently discard its state.
+    if (start !== undefined || fence && fencedMarker)
+        return { kind: 'invalid' };
+    return block ?? { kind: 'absent', ...(fence ? { closingFence: fence } : {}) };
+}
+function writeConfigurationBlock(description, content) {
+    const block = readConfigurationBlock(description);
+    if (block.kind === 'invalid')
+        return undefined;
+    const replacement = `${exports.CONFIGURATION_START}\n${content}\n${exports.CONFIGURATION_END}`;
+    if (block.kind === 'present')
+        return description.slice(0, block.start) + replacement + description.slice(block.end);
+    // Closing an otherwise empty dangling example preserves its rendered text and keeps new state outside it.
+    return `${description}\n\n${block.closingFence ? `${block.closingFence}\n\n` : ''}${replacement}`;
+}
 
 
 /***/ }),
@@ -36622,6 +36883,55 @@ function renderProgressEvidencePath(path) {
 
 /***/ }),
 
+/***/ 4048:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PROGRESS_INVENTORY_REASONS = void 0;
+exports.progressInventoryDiagnostic = progressInventoryDiagnostic;
+exports.isProgressInventoryDiagnostic = isProgressInventoryDiagnostic;
+exports.progressInventoryPresentation = progressInventoryPresentation;
+const progress_evidence_path_1 = __nccwpck_require__(5887);
+exports.PROGRESS_INVENTORY_REASONS = Object.freeze([
+    'inventory', 'identity', 'capability', 'prefix', 'source-moved', 'binary', 'file-count', 'files', 'bytes', 'requests',
+    'treeEntries', 'frames', 'blob-size', 'units', 'partition', 'manifest', 'facts',
+]);
+function progressInventoryDiagnostic(reason, observedCount, supportedLimit, paths, countKind = 'exact') {
+    const named = [];
+    for (const path of [...new Set(paths)].slice(0, 8)) {
+        if (Buffer.byteLength(JSON.stringify([...named, path])) > 8192)
+            break;
+        named.push(path);
+    }
+    return Object.freeze({ profile: 'immutable-tree-v1', reason, observedCount, supportedLimit, countKind, paths: JSON.stringify(named) });
+}
+function isProgressInventoryDiagnostic(value) {
+    const facts = value;
+    if (Object.keys(facts).sort().join(',') !== 'countKind,observedCount,paths,profile,reason,supportedLimit'
+        || facts.profile !== 'immutable-tree-v1' || !exports.PROGRESS_INVENTORY_REASONS.includes(facts.reason)
+        || !['exact', 'at-least'].includes(facts.countKind)
+        || ![facts.observedCount, facts.supportedLimit].every(count => Number.isSafeInteger(count) && count >= 0)
+        || typeof facts.paths !== 'string' || Buffer.byteLength(facts.paths) > 8192)
+        return false;
+    let paths;
+    try {
+        paths = JSON.parse(facts.paths);
+    }
+    catch {
+        return false;
+    }
+    return Array.isArray(paths) && paths.length <= 8 && new Set(paths).size === paths.length
+        && paths.every(progress_evidence_path_1.isProgressEvidencePath) && JSON.stringify(paths) === facts.paths;
+}
+function progressInventoryPresentation(facts) {
+    return Object.freeze({ ...facts, countKind: facts.countKind === 'at-least' ? '≥' : '=', paths: JSON.parse(facts.paths).map(progress_evidence_path_1.renderProgressEvidencePath).join('; ') });
+}
+
+
+/***/ }),
+
 /***/ 6289:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -36632,6 +36942,7 @@ exports.ProgressResponseContractFailure = exports.isProgressSourceLineId = expor
 exports.isProgressResponseField = isProgressResponseField;
 exports.safeProgressResponseField = safeProgressResponseField;
 exports.isProgressResponseDiagnosticFacts = isProgressResponseDiagnosticFacts;
+exports.isProgressScopeCapacityFacts = isProgressScopeCapacityFacts;
 const agent_execution_plan_1 = __nccwpck_require__(2253);
 exports.PROGRESS_RESPONSE_PHASES = Object.freeze(['scope', 'partition', 'assessment']);
 const schemaReasons = ['json-invalid', 'schema-type', 'schema-enum', 'schema-string-short', 'schema-string-long', 'schema-number-finite',
@@ -36701,6 +37012,15 @@ class ProgressResponseContractFailure extends Error {
     }
 }
 exports.ProgressResponseContractFailure = ProgressResponseContractFailure;
+function isProgressScopeCapacityFacts(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return false;
+    const facts = value;
+    return Object.keys(facts).sort().join(',') === 'clauseKind,limit,observed,sourceLineId'
+        && ['required-or-uncertain', 'excluded'].includes(facts.clauseKind)
+        && typeof facts.observed === 'number' && Number.isSafeInteger(facts.observed) && facts.observed > 32 && facts.observed <= 1024
+        && facts.limit === 32 && (0, exports.isProgressSourceLineId)(facts.sourceLineId);
+}
 
 
 /***/ }),
@@ -36925,91 +37245,18 @@ exports.OctokitDeploymentClientAdapter = OctokitDeploymentClientAdapter;
 /***/ }),
 
 /***/ 4586:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.CONFIGURATION_END = exports.CONFIGURATION_START = void 0;
-exports.readConfigurationBlock = readConfigurationBlock;
-exports.writeConfigurationBlock = writeConfigurationBlock;
-exports.CONFIGURATION_START = '<!-- copilot-configuration-start';
-exports.CONFIGURATION_END = 'copilot-configuration-end -->';
-/** Owned delimiters begin a line; ordinary mentions are not state. Complete legacy fenced records remain readable. */
-function readConfigurationBlock(description) {
-    if (description === undefined)
-        return { kind: 'absent' };
-    let fence;
-    let fencedMarker = false;
-    let fencedStart;
-    let nestedFencedStart = false;
-    let start;
-    let contentStart = 0;
-    let block;
-    let offset = 0;
-    for (const line of description.match(/[^\n]*(?:\n|$)/gu) ?? []) {
-        const text = line.replace(/\r?\n$/u, '');
-        const starts = /^ {0,3}<!-- copilot-configuration-start(?:[ \t]|$)/u.test(text);
-        const ends = /^ {0,3}copilot-configuration-end -->[ \t]*$/u.test(text);
-        const boundary = /^ {0,3}(`{3,}|~{3,})(.*)$/u.exec(text);
-        if (fence) {
-            fencedMarker || (fencedMarker = starts || ends);
-            if (starts) {
-                if (fencedStart !== undefined)
-                    nestedFencedStart = true;
-                else
-                    fencedStart = offset + text.indexOf(exports.CONFIGURATION_START);
-            }
-            const end = text.indexOf(exports.CONFIGURATION_END);
-            if (fencedStart !== undefined && end >= 0 && !text.slice(end + exports.CONFIGURATION_END.length).trim()) {
-                if (block || nestedFencedStart)
-                    return { kind: 'invalid' };
-                block = { kind: 'present', start: fencedStart, end: offset + end + exports.CONFIGURATION_END.length,
-                    content: description.slice(fencedStart + exports.CONFIGURATION_START.length, offset + end) };
-                fencedStart = undefined;
-            }
-            if (boundary && boundary[1][0] === fence[0] && boundary[1].length >= fence.length && !boundary[2].trim()) {
-                fence = undefined;
-                fencedMarker = false;
-                fencedStart = undefined;
-                nestedFencedStart = false;
-            }
-        }
-        else if (start !== undefined || starts) {
-            if (starts) {
-                if (start !== undefined || block)
-                    return { kind: 'invalid' };
-                start = offset + text.indexOf(exports.CONFIGURATION_START);
-                contentStart = start + exports.CONFIGURATION_START.length;
-            }
-            const end = text.indexOf(exports.CONFIGURATION_END);
-            if (end >= 0 && !text.slice(end + exports.CONFIGURATION_END.length).trim()) {
-                block = { kind: 'present', start: start, end: offset + end + exports.CONFIGURATION_END.length,
-                    content: description.slice(contentStart, offset + end) };
-                start = undefined;
-            }
-        }
-        else if (ends)
-            return { kind: 'invalid' };
-        else if (boundary && (boundary[1][0] !== '`' || !boundary[2].includes('`')))
-            fence = boundary[1];
-        offset += line.length;
-    }
-    // A legacy block behind an unclosed fence is ambiguous: never silently discard its state.
-    if (start !== undefined || fence && fencedMarker)
-        return { kind: 'invalid' };
-    return block ?? { kind: 'absent', ...(fence ? { closingFence: fence } : {}) };
-}
-function writeConfigurationBlock(description, content) {
-    const block = readConfigurationBlock(description);
-    if (block.kind === 'invalid')
-        return undefined;
-    const replacement = `${exports.CONFIGURATION_START}\n${content}\n${exports.CONFIGURATION_END}`;
-    if (block.kind === 'present')
-        return description.slice(0, block.start) + replacement + description.slice(block.end);
-    // Closing an otherwise empty dangling example preserves its rendered text and keeps new state outside it.
-    return `${description}\n\n${block.closingFence ? `${block.closingFence}\n\n` : ''}${replacement}`;
-}
+exports.writeConfigurationBlock = exports.readConfigurationBlock = exports.CONFIGURATION_END = exports.CONFIGURATION_START = void 0;
+// Compatibility entrypoint: domain owns delimiter semantics for persistence and progress.
+var configuration_markers_1 = __nccwpck_require__(9318);
+Object.defineProperty(exports, "CONFIGURATION_START", ({ enumerable: true, get: function () { return configuration_markers_1.CONFIGURATION_START; } }));
+Object.defineProperty(exports, "CONFIGURATION_END", ({ enumerable: true, get: function () { return configuration_markers_1.CONFIGURATION_END; } }));
+Object.defineProperty(exports, "readConfigurationBlock", ({ enumerable: true, get: function () { return configuration_markers_1.readConfigurationBlock; } }));
+Object.defineProperty(exports, "writeConfigurationBlock", ({ enumerable: true, get: function () { return configuration_markers_1.writeConfigurationBlock; } }));
 
 
 /***/ }),

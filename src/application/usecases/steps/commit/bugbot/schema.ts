@@ -1,3 +1,4 @@
+import type { BugbotFramedAssignment } from '../../../../../domain/bugbot/framed_review';
 /**
  * JSON schemas for findings-agent responses. Used with the findings query so the agent returns
  * structured JSON we can parse.
@@ -96,12 +97,21 @@ export const BUGBOT_PARTITION_RESPONSE_SCHEMA = {
 
 /** Bind structured output to the trusted assignment, not examples in the diff. */
 export function buildBugbotPartitionResponseSchema(
-    expected: Readonly<{ partitionId: string; headSha: string }>,
+    expected: Readonly<{ partitionId: string; headSha: string; framed?: BugbotFramedAssignment }>,
 ): Readonly<Record<string, unknown>> {
+    const framed = expected.framed;
     return {
         ...BUGBOT_PARTITION_RESPONSE_SCHEMA,
+        required: [...BUGBOT_PARTITION_RESPONSE_SCHEMA.required, ...(framed ? ['reviewed_base_sha', 'review_manifest_digest', 'review_frame_id', 'review_coverage_digest', 'reviewed_fragment_ids'] : [])],
         properties: {
             ...BUGBOT_PARTITION_RESPONSE_SCHEMA.properties,
+            ...(framed ? {
+                reviewed_base_sha: { type: 'string', enum: [framed.baseSha] },
+                review_manifest_digest: { type: 'string', enum: [framed.manifestDigest] },
+                review_frame_id: { type: 'string', enum: [framed.frameId] },
+                review_coverage_digest: { type: 'string', enum: [framed.coverageDigest] },
+                reviewed_fragment_ids: { type: 'array', items: { type: 'string', enum: [...framed.fragmentIds] }, minItems: framed.fragmentIds.length, maxItems: framed.fragmentIds.length },
+            } : {}),
             partition_id: {
                 ...BUGBOT_PARTITION_RESPONSE_SCHEMA.properties.partition_id,
                 enum: [expected.partitionId],
