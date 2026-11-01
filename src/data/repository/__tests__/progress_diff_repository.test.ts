@@ -72,7 +72,7 @@ describe('pinned bounded progress diff', () => {
         const f = fixture(); Object.assign(f.file, { status: 'unchanged', additions: 0, deletions: 0, patch: undefined });
         expect(JSON.parse((await f.read()).evidence).changes[0].patch).toBe('');
     });
-    it('admits a proven 299-file inventory while keeping the 300-file ceiling', async () => {
+    it('admits a proven 299-file inventory without requiring immutable-tree recovery', async () => {
         const f = fixture(); f.data.files = Array.from({ length: 299 }, (_, n) => ({ ...f.file, filename: `src/${n}.ts` }));
         expect(JSON.parse((await f.read()).evidence).changes).toHaveLength(299);
     });
@@ -98,7 +98,7 @@ describe('pinned bounded progress diff', () => {
         if (scenario === 'empty path') f.file.filename = '';
         if (scenario === 'non-string path') f.file.filename = 42 as never;
         if (scenario === 'oversized filename') f.file.filename = 'x'.repeat(1025);
-        await expect(f.read(base, scenario === 'same-object nonempty diff' ? base : head)).rejects.toMatchObject({ code: scenario === 'same-object nonempty diff' ? 'workflow.stale' : scenario === 'missing source patch' ? 'validation.evidence-unavailable' : scenario.startsWith('oversized') && scenario !== 'oversized filename' ? 'validation.evidence-unavailable' : 'provider.unavailable' });
+        await expect(f.read(base, scenario === 'same-object nonempty diff' ? base : head)).rejects.toMatchObject({ code: scenario === 'same-object nonempty diff' ? 'workflow.stale' : ['missing source patch', 'provider file ceiling'].includes(scenario) ? 'validation.evidence-unavailable' : scenario.startsWith('oversized') && scenario !== 'oversized filename' ? 'validation.evidence-unavailable' : 'provider.unavailable' });
     });
     it.each([undefined, -1, 0.5])('rejects unproven numeric file facts %s', async additions => {
         const f = fixture(); Object.assign(f.file, { additions }); await expect(f.read()).rejects.toMatchObject({ code: 'provider.unavailable' });

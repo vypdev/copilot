@@ -1,3 +1,4 @@
+export type ProgressEvidenceProfile = 'framed-v1' | 'immutable-tree-v1';
 /** Immutable repository comparison supplied by trusted code; no workspace or mutation capabilities. */
 export interface ProgressRecoveryCounters {
     readonly files: number;
@@ -17,7 +18,7 @@ export interface ProgressPartSourceIdentity {
     readonly total: number;
 }
 export interface ProgressEvidenceProtocol {
-    readonly version: 'framed-v1';
+    readonly version: ProgressEvidenceProfile;
     readonly attemptId: string;
     readonly preimageSha: string;
     readonly sourcesDigest: string;
@@ -48,13 +49,17 @@ export interface BoundProgressDiffQueryPort {
     getDiff(baseSha: string, headSha: string): Promise<ProgressDiffEvidence>;
 }
 
-export interface ProgressDiffChange {
+interface ProgressDiffChangeContent {
     readonly path: string;
     readonly status: string;
-    readonly additions: number;
-    readonly deletions: number;
     readonly patch?: string;
     readonly evidence?: 'generated-metadata-only';
     readonly unitId?: string;
     readonly recoveredContent?: Readonly<Record<string, unknown>>;
 }
+
+/** Tree evidence has complete contents but no invented provider line statistics. */
+export type ProgressDiffChange = ProgressDiffChangeContent & (
+    | { readonly additions: number; readonly deletions: number; readonly statistics?: never }
+    | { readonly statistics: 'immutable-content-only'; readonly additions?: never; readonly deletions?: never }
+);

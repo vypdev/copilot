@@ -20,6 +20,9 @@ const RECOVERY_CASES: readonly Readonly<{
     english: string;
     spanish: string;
 }>[] = [
+    { recovery: { id: 'progress-inventory-incomplete', variables: { profile: 'immutable-tree-v1', reason: 'file-count', observedCount: 1025, supportedLimit: 1024, countKind: 'at-least', paths: '["src/a"]' } },
+      english: 'Existing progress was retained. No partial assessment or progress publication was accepted. Build, review, coverage and approval remain independent gates.',
+      spanish: 'Se conservó el progreso existente. No se aceptó ninguna evaluación parcial ni publicación del progreso. Build, revisión, cobertura y aprobación siguen siendo controles independientes.' },
     {
         recovery: { id: 'branch-sync-catalog-incompatible', variables: { phase: 'profile-compatibility', profile: 'legacy-evidence', field: 'workflows', capabilityNumber: 1, abort: 'completed' } },
         english: 'No synchronization commit or push was attempted; remote branches were preserved. Local abort: completed. completed means the abort call finished; unverified requires operator inspection. This result does not certify application readiness.',

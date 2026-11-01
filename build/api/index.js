@@ -2384,6 +2384,8 @@ exports.MAX_FRAMED_PROGRESS_PARTITIONS = exports.MAX_PROGRESS_PARTITIONS = expor
 exports.progressEvidenceTooLarge = progressEvidenceTooLarge;
 exports.serializeProgressDiff = serializeProgressDiff;
 exports.partitionProgressDiff = partitionProgressDiff;
+const progress_inventory_profile_policy_1 = __nccwpck_require__(6419);
+const progress_inventory_error_policy_1 = __nccwpck_require__(2675);
 const progress_content_evidence_policy_1 = __nccwpck_require__(6471);
 const application_error_1 = __nccwpck_require__(5999);
 exports.MAX_PROGRESS_EVIDENCE_BYTES = 256000;
@@ -2395,11 +2397,14 @@ function progressEvidenceTooLarge() {
 function serializeProgressDiff(baseSha, headSha, changes) {
     return JSON.stringify({ kind: 'pinned-branch-comparison', baseSha, headSha, changes });
 }
-/** Losslessly partitions complete, adapter-validated file facts. No source file is omitted. */
 function partitionProgressDiff(baseSha, headSha, changes, profile) {
     const serialize = (files) => serializeProgressDiff(baseSha, headSha, files);
     const unitMode = changes.some(change => change.unitId !== undefined);
-    if (unitMode && (changes.length > progress_content_evidence_policy_1.MAX_PROGRESS_EVIDENCE_UNITS || changes.some(change => !change.unitId)
+    if (profile === 'immutable-tree-v1' && (!unitMode || changes.some(change => !change.unitId)))
+        throw (0, progress_inventory_error_policy_1.progressInventoryError)('inventory', changes.length, 0, changes.map(change => change.path));
+    if (profile === 'immutable-tree-v1' && changes.length > (0, progress_inventory_profile_policy_1.progressUnitLimit)(profile))
+        throw (0, progress_inventory_error_policy_1.progressInventoryError)('units', changes.length, (0, progress_inventory_profile_policy_1.progressUnitLimit)(profile), changes.map(change => change.path));
+    if (unitMode && (changes.length > (0, progress_inventory_profile_policy_1.progressUnitLimit)(profile) || changes.some(change => !change.unitId)
         || new Set(changes.map(change => change.unitId)).size !== changes.length)) {
         throw (0, progress_content_evidence_policy_1.progressRecoveryError)('complete evidence unit inventory exceeds its budget or is ambiguous', changes.map(change => change.path), true);
     }
@@ -2408,9 +2413,9 @@ function partitionProgressDiff(baseSha, headSha, changes, profile) {
     for (const change of changes) {
         if (Buffer.byteLength(serialize([change]), 'utf8') > exports.MAX_PROGRESS_EVIDENCE_BYTES)
             throw progressEvidenceTooLarge();
-        if (Buffer.byteLength(serialize([...current, change]), 'utf8') > exports.MAX_PROGRESS_EVIDENCE_BYTES) {
+        if ((profile === 'immutable-tree-v1' && current.length === progress_inventory_profile_policy_1.IMMUTABLE_PROGRESS_PROFILE.partUnits) || Buffer.byteLength(serialize([...current, change]), 'utf8') > exports.MAX_PROGRESS_EVIDENCE_BYTES) {
             groups.push(current);
-            if (groups.length >= (profile === 'framed-v1' ? exports.MAX_FRAMED_PROGRESS_PARTITIONS : exports.MAX_PROGRESS_PARTITIONS))
+            if (groups.length >= (profile ? exports.MAX_FRAMED_PROGRESS_PARTITIONS : exports.MAX_PROGRESS_PARTITIONS))
                 throw progressEvidenceTooLarge();
             current = [];
         }
@@ -2431,10 +2436,45 @@ function partitionProgressDiff(baseSha, headSha, changes, profile) {
         evidence: serialize(files),
     })));
     const manifest = JSON.stringify({ kind: 'partitioned-branch-comparison', baseSha, headSha,
-        partitions: partitions.map(part => ({ id: part.id, paths: part.paths, ...(part.units ? { units: part.units } : {}) })) });
+        partitions: partitions.map(part => ({ id: part.id, paths: part.paths, ...(part.units ? { units: profile === 'immutable-tree-v1' ? part.units.map(unit => ({ id: unit.id, path: unit.path })) : part.units } : {}) })) });
     if (Buffer.byteLength(manifest, 'utf8') > exports.MAX_PROGRESS_EVIDENCE_BYTES)
         throw progressEvidenceTooLarge();
     return Object.freeze({ kind: 'partitioned', baseSha, headSha, evidence: manifest, partitions });
+}
+
+
+/***/ }),
+
+/***/ 2675:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.progressInventoryError = progressInventoryError;
+const application_error_1 = __nccwpck_require__(5999);
+const progress_inventory_diagnostic_1 = __nccwpck_require__(4048);
+function progressInventoryError(reason, observedCount, supportedLimit, paths = [], countKind = 'exact') {
+    return new application_error_1.ApplicationError(['file-count', 'files', 'bytes', 'requests', 'treeEntries', 'frames', 'blob-size', 'units', 'partition', 'manifest', 'facts'].includes(reason)
+        ? 'validation.evidence-too-large' : 'validation.evidence-unavailable', `Complete immutable progress collection stopped (${reason}: ${countKind} ${observedCount}, limit ${supportedLimit}). Existing progress was retained.`, { recovery: { id: 'progress-inventory-incomplete', variables: (0, progress_inventory_diagnostic_1.progressInventoryDiagnostic)(reason, observedCount, supportedLimit, paths, countKind) } });
+}
+
+
+/***/ }),
+
+/***/ 6419:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.IMMUTABLE_PROGRESS_PROFILE = void 0;
+exports.progressUnitLimit = progressUnitLimit;
+/** Closed host profile. Source capacity never grants model/prompt capacity. */
+exports.IMMUTABLE_PROGRESS_PROFILE = Object.freeze({
+    version: 'immutable-tree-v1', paths: 1024, units: 4096, partUnits: 512, frames: 16, minimumFactLength: 16,
+    total: Object.freeze({ files: 1024, bytes: 16777216, requests: 2048, treeEntries: 200000 }),
+});
+function progressUnitLimit(profile) {
+    return profile === 'immutable-tree-v1' ? exports.IMMUTABLE_PROGRESS_PROFILE.units : 512;
 }
 
 
@@ -6173,6 +6213,7 @@ var _ApplicationError_cause;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = exports.APPLICATION_ERROR_RECOVERY_IDS = void 0;
 exports.isApplicationErrorCorrelationId = isApplicationErrorCorrelationId;
+const progress_inventory_diagnostic_1 = __nccwpck_require__(4048);
 const progress_response_diagnostic_1 = __nccwpck_require__(6289);
 const progress_binary_evidence_diagnostic_1 = __nccwpck_require__(364);
 const issue_workflow_diagnostic_1 = __nccwpck_require__(4347);
@@ -6213,6 +6254,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'change-size-reconciliation-failed',
     'issue-workflow-admission-blocked',
     'progress-binary-evidence-unavailable',
+    'progress-inventory-incomplete',
     'progress-result-contract-invalid',
     'stored-configuration-schema-missing',
     'stored-configuration-schema-unsupported',
@@ -6454,6 +6496,7 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'sdd-draft-requirement-mapping-invalid': Object.freeze([]),
     'sdd-draft-repository-path-invalid': Object.freeze([]),
     'progress-binary-evidence-unavailable': Object.freeze(['paths', 'pathCount']),
+    'progress-inventory-incomplete': Object.freeze(['profile', 'reason', 'observedCount', 'supportedLimit', 'countKind', 'paths']),
     'progress-result-contract-invalid': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
     'deployment-publication-context-missing': Object.freeze([]),
     'workspace-changes-rejected': Object.freeze([]),
@@ -6532,6 +6575,8 @@ function normalizeApplicationErrorRecovery(recovery) {
     }
     if (recovery.id === 'progress-result-contract-invalid' && !(0, progress_response_diagnostic_1.isProgressResponseDiagnosticFacts)(variables))
         throw new TypeError('Progress response diagnostic is invalid.');
+    if (recovery.id === 'progress-inventory-incomplete' && !(0, progress_inventory_diagnostic_1.isProgressInventoryDiagnostic)(variables))
+        throw new TypeError('Progress inventory diagnostic is invalid.');
     if (recovery.id === 'progress-binary-evidence-unavailable' && !(0, progress_binary_evidence_diagnostic_1.isProgressBinaryEvidenceFacts)(variables))
         throw new TypeError('Progress binary evidence diagnostic is invalid.');
     if (recovery.id === 'issue-workflow-admission-blocked' && !(0, issue_workflow_diagnostic_1.isIssueWorkflowDiagnostic)(variables))
@@ -8168,6 +8213,54 @@ function renderProgressEvidencePath(path) {
     while (visible.includes(delimiter))
         delimiter += '`';
     return `${delimiter}${visible}${delimiter}`;
+}
+
+
+/***/ }),
+
+/***/ 4048:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PROGRESS_INVENTORY_REASONS = void 0;
+exports.progressInventoryDiagnostic = progressInventoryDiagnostic;
+exports.isProgressInventoryDiagnostic = isProgressInventoryDiagnostic;
+exports.progressInventoryPresentation = progressInventoryPresentation;
+const progress_evidence_path_1 = __nccwpck_require__(5887);
+exports.PROGRESS_INVENTORY_REASONS = Object.freeze([
+    'inventory', 'identity', 'capability', 'prefix', 'source-moved', 'binary', 'file-count', 'files', 'bytes', 'requests',
+    'treeEntries', 'frames', 'blob-size', 'units', 'partition', 'manifest', 'facts',
+]);
+function progressInventoryDiagnostic(reason, observedCount, supportedLimit, paths, countKind = 'exact') {
+    const named = [];
+    for (const path of [...new Set(paths)].slice(0, 8)) {
+        if (Buffer.byteLength(JSON.stringify([...named, path])) > 8192)
+            break;
+        named.push(path);
+    }
+    return Object.freeze({ profile: 'immutable-tree-v1', reason, observedCount, supportedLimit, countKind, paths: JSON.stringify(named) });
+}
+function isProgressInventoryDiagnostic(value) {
+    const facts = value;
+    if (Object.keys(facts).sort().join(',') !== 'countKind,observedCount,paths,profile,reason,supportedLimit'
+        || facts.profile !== 'immutable-tree-v1' || !exports.PROGRESS_INVENTORY_REASONS.includes(facts.reason)
+        || !['exact', 'at-least'].includes(facts.countKind)
+        || ![facts.observedCount, facts.supportedLimit].every(count => Number.isSafeInteger(count) && count >= 0)
+        || typeof facts.paths !== 'string' || Buffer.byteLength(facts.paths) > 8192)
+        return false;
+    let paths;
+    try {
+        paths = JSON.parse(facts.paths);
+    }
+    catch {
+        return false;
+    }
+    return Array.isArray(paths) && paths.length <= 8 && new Set(paths).size === paths.length
+        && paths.every(progress_evidence_path_1.isProgressEvidencePath) && JSON.stringify(paths) === facts.paths;
+}
+function progressInventoryPresentation(facts) {
+    return Object.freeze({ ...facts, countKind: facts.countKind === 'at-least' ? '≥' : '=', paths: JSON.parse(facts.paths).map(progress_evidence_path_1.renderProgressEvidencePath).join('; ') });
 }
 
 
