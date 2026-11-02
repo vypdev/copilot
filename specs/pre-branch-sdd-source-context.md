@@ -190,7 +190,7 @@ remaining preparation deadline. Abort is checked before and between operations.
 No timer resets or extra source network attempts are permitted.
 
 Repository-native CI wall-clock limits are separate from the SDK operation
-deadline: hosted Ubuntu retains 20 minutes, while macOS and Windows have 30.
+deadline: hosted Ubuntu retains 20 minutes, macOS has 30 and Windows has 50.
 The original PR #862 macOS job exhausted its 20-minute allocation during the
 full coverage suite after its eight source-context suites passed; the exact
 annotation and successful deferred cleanup are recorded in
@@ -198,6 +198,12 @@ annotation and successful deferred cleanup are recorded in
 The macOS adjustment retains every suite, coverage budget and cleanup check;
 it does not reset or expand any provider/source-preparation deadline. Completion
 on all three hosted platforms remains required evidence for the final head.
+Windows subsequently completed all 16,542 applicable Jest cases and the exhaustive
+source-context coverage budget, then exhausted its former 30-minute job allocation
+during extension coverage in
+[job 125524803069](https://github.com/vypdev/copilot/actions/runs/41517539110/job/125524803069).
+Its 50-minute allocation covers the whole pipeline, including extension checks,
+contract validators and deferred cleanup, with the same tests and thresholds.
 
 ## 8. Clean Architecture design
 

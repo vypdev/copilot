@@ -657,10 +657,14 @@ runtime identity and fixed-plan checks before spawn.
 ## 14. Testing strategy and numeric budget
 
 Hosted native acceptance budgets the complete build, isolated fixtures, full
-coverage and deferred cleanup: 20 minutes on Ubuntu and 30 on macOS/Windows.
+coverage and deferred cleanup: 20 minutes on Ubuntu, 30 on macOS and 50 on Windows.
 PR #862's original macOS job hit the former 20-minute job limit while its new
 source-context suites had passed. This CI allocation preserves the full test
 matrix and is independent of the bounded provider operation deadline in the execution plan.
+The subsequent Windows job passed all applicable Jest cases and the exhaustive
+source-context budget before reaching its former 30-minute limit during extension
+coverage. The Windows allocation covers that remaining work and deferred cleanup;
+it does not alter the SDK's operation deadlines or reduce verification scope.
 
 This SDD owns at least **48 distinct cases**; parameterized provider/role rows
 count separately only when authority/argv differs.
