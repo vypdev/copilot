@@ -1,7 +1,7 @@
 import type { AgentConfiguration } from '../../ports/agent_configuration_ports';
 import type { FindingsQueryPort } from '../../ports/agent_findings_ports';
 import { SddDraftPreparationFailure } from '../../errors/sdd_draft_preparation_failure';
-import type { SddValidationDiagnostic } from '../../../domain/sdd_validation_diagnostic';
+import { normalizeSddValidationDiagnostic, type SddValidationDiagnostic } from '../../../domain/sdd_validation_diagnostic';
 import {
   SDD_MIN_DRAFT_CHARACTERS, SDD_MAX_DRAFT_CHARACTERS, SDD_MAX_UPDATE_CHARACTERS,
   SddDraftFormatFailure,
@@ -36,7 +36,7 @@ export async function draftSddMarkdown(
     try {
       value = await agent.query({
       configuration, agentId: 'pre-branch-sdd-draft',
-        prompt: `${attempt === 0 ? contractPrompt : `${contractPrompt}\n\n${problem === 'size' ? `The previous response exceeded the ${maximum}-character draft limit.` : `The previous response failed the required SDD ${formatReason} contract.`} Regenerate a concise complete draft for this same owner and plan. Use the exact numbered canonical headings from the supplied template. Preserve all resolved requirements, architecture, documentation and acceptance. Do not change ownership or truncate a requirement.`}\n\n${SDD_CONSISTENCY_PROMPT}\n\n${SDD_DERIVED_TABLES_PROMPT}`,
+        prompt: `${attempt === 0 ? contractPrompt : `${contractPrompt}\n\n${problem === 'size' ? `The previous response exceeded the ${maximum}-character draft limit.` : `The previous response failed the required SDD ${formatReason} contract.`} Regenerate a concise complete draft for this same owner and plan. Use the exact numbered canonical headings from the supplied template. Preserve all resolved requirements, architecture, documentation and acceptance. Do not change ownership or truncate a requirement.\nPrevious host validation (closed structural coordinates only, not new requirements): ${JSON.stringify(normalizeSddValidationDiagnostic(diagnostic))}`}\n\n${SDD_CONSISTENCY_PROMPT}\n\n${SDD_DERIVED_TABLES_PROMPT}`,
       options: { expectJson: true, schemaName: 'pre_branch_sdd_draft', schema },
       });
     } catch (error) {
@@ -70,9 +70,15 @@ export async function draftSddMarkdown(
       return assembled;
     } catch (error) {
       if (!(error instanceof SddDraftFormatFailure)) throw error;
+      const normalized = normalizeSddValidationDiagnostic(error.diagnostic);
+      if (normalized.reason !== error.reason) {
+        const failure = new TypeError('SDD format reason disagrees with its bounded diagnostic.');
+        Object.defineProperty(failure, 'cause', { value: error });
+        throw failure;
+      }
       problem = 'format';
       formatReason = error.reason;
-      diagnostic = { ...error.diagnostic, phase: assembledCandidate ? 'validation' : 'assembly' };
+      diagnostic = { ...normalized, phase: assembledCandidate ? 'validation' : 'assembly' };
     }
   }
   throw new SddDraftPreparationFailure(diagnostic, 2);

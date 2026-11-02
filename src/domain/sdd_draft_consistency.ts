@@ -24,9 +24,15 @@ const TRACEABILITY_SLOT = '{{SDD_REQUIREMENT_CASES}}';
 /** The provider writes definitions once; trusted code renders their two redundant projections. */
 export const SDD_DERIVED_TABLES_PROMPT = `Draft assembly: the consistency contract above describes the final document. In your raw Markdown, write the complete Requirement | Behavior table in section 4 and Case ID | Area | Requirements | Scenario inventory in section 14. Preserve every resolved minimum, per-area allocation and observable case as actual inventory rows, never ranges or summaries. Instead of independently writing the budget table, put ${BUDGET_SLOT} once on its own visible line in section 14. Instead of writing the reverse Requirement | Cases table, put ${TRACEABILITY_SLOT} once on its own visible line in section 17. Do not include either derived table yourself or put these slots in examples, fences or comments. Trusted code derives exact counts, Total and reciprocal links from your unchanged definitions, then runs every publication check. The compact character target is advisory: use more space when required to preserve the full resolved inventory and scope. The hard limit applies after assembly too.`;
 
-function fail(reason: SddConsistencyReason, fact: SddValidationFact = { detail: 'validation-contract', section: 0 }): never {
+function fail(reason: SddConsistencyReason, fact: SddValidationFact = { detail: 'validation-contract', section: 0 }, additional: readonly SddValidationFact[] = []): never {
   // Closed diagnostics: rejected Markdown and repository text never become repair instructions.
-  throw new SddDraftFormatFailure(reason, `The SDD draft violates its ${reason} consistency contract.`, { reason, phase: 'validation', facts: [fact] });
+  throw new SddDraftFormatFailure(reason, `The SDD draft violates its ${reason} consistency contract.`, { reason, phase: 'validation', facts: [fact, ...additional] });
+}
+
+function assertRequirementsCovered(counts: readonly number[]): void {
+  const missing = counts.filter(count => count === 0).length;
+  if (missing) fail('requirement-mapping', { detail: 'requirement-coverage', section: 17, expected: 0, observed: missing },
+    [{ detail: 'requirement-coverage', section: 4, row: counts.indexOf(0) + 1, expected: 1, observed: 0 }]);
 }
 
 /** Excludes examples and hidden records from the contract. */
@@ -103,8 +109,10 @@ export function renderSddDerivedTables(markdown: string): string {
   for (const [slot, number, reason] of [
     [BUDGET_SLOT, 14, 'case-budget'], [TRACEABILITY_SLOT, 17, 'requirement-mapping'],
   ] as const) {
-    if (markdown.split(slot).length !== 2
-      || section(source, number, reason).split('\n').filter(line => line.trim() === slot).length !== 1) fail(reason);
+    const occurrences = markdown.split(slot).length - 1;
+    if (occurrences !== 1) fail(reason, { detail: 'derived-slot-count', section: number, expected: 1, observed: occurrences });
+    const placed = section(source, number, reason).split('\n').filter(line => line.trim() === slot).length;
+    if (placed !== 1) fail(reason, { detail: 'derived-slot-placement', section: number, expected: 1, observed: placed });
   }
   const requirements = table(source, 4, ['Requirement', 'Behavior'], 'requirement-mapping').map(row => row[0]);
   uniqueIdentifiers(requirements, REQUIREMENT_ID, 'requirement-mapping', 4);
@@ -113,16 +121,16 @@ export function renderSddDerivedTables(markdown: string): string {
   uniqueIdentifiers(caseIds, CASE_ID, 'case-identity', 14);
   const counts = new Map<string, number>();
   const edges = new Map(requirements.map(id => [id, [] as string[]]));
-  for (const [id, area, links] of cases) {
+  for (const [index, [id, area, links]] of cases.entries()) {
     if (area === 'Total') fail('case-budget', { detail: 'budget-area', section: 14 });
     counts.set(area, (counts.get(area) ?? 0) + 1);
     for (const requirement of ids(links, REQUIREMENT_ID, 'requirement-mapping', 14)) {
       const linked = edges.get(requirement);
-      if (!linked) fail('requirement-mapping', { detail: 'requirement-reference', section: 14, expected: 0, observed: 1 });
+      if (!linked) fail('requirement-mapping', { detail: 'requirement-reference', section: 14, row: index + 1, expected: 0, observed: 1 });
       linked.push(id);
     }
   }
-  if ([...edges.values()].some(links => links.length === 0)) fail('requirement-mapping', { detail: 'requirement-coverage', section: 17, expected: 0, observed: [...edges.values()].filter(links => links.length === 0).length });
+  assertRequirementsCovered([...edges.values()].map(links => links.length));
   const budget = ['| Area | Minimum distinct cases | Behaviors/risks covered |', '|---|---:|---|',
     ...[...counts].map(([area, count]) => `| ${area} | ${count} | Observable scenarios in the case inventory. |`),
     `| Total | ${cases.length} | Distinct inventory cases; repeated executions do not add cases. |`].join('\n');
@@ -196,14 +204,14 @@ export function validateSddDraftConsistency(
   for (const [area, count] of counts) if (cases.filter(row => row[1] === area).length !== count) fail('case-budget', { detail: 'budget-distribution', section: 14, expected: count, observed: cases.filter(row => row[1] === area).length });
 
   const edges = new Map(requirementIds.map(id => [id, new Set<string>()]));
-  for (const [id, , links] of cases) {
+  for (const [index, [id, , links]] of cases.entries()) {
     for (const requirement of ids(links, REQUIREMENT_ID, 'requirement-mapping', 14)) {
       const linked = edges.get(requirement);
-      if (!linked) fail('requirement-mapping', { detail: 'requirement-reference', section: 14, expected: 0, observed: 1 });
+      if (!linked) fail('requirement-mapping', { detail: 'requirement-reference', section: 14, row: index + 1, expected: 0, observed: 1 });
       linked.add(id);
     }
   }
-  if ([...edges.values()].some(links => links.size === 0)) fail('requirement-mapping', { detail: 'requirement-coverage', section: 17, expected: 0, observed: [...edges.values()].filter(links => links.size === 0).length });
+  assertRequirementsCovered([...edges.values()].map(links => links.size));
   const traceability = table(source, 17, ['Requirement', 'Cases'], 'requirement-mapping');
   const seen = new Set<string>();
   for (const [requirement, links] of traceability) {

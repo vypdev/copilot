@@ -3,7 +3,7 @@
 - Status: Implemented — automated verification complete; live provider UX review pending
 - Date: 2026-09-17
 - Catalog capability ID: `issue-start-and-sdd-readiness`
-- Last verified: 2026-10-31 (literal accepted catalog titles, #820; missing trusted-catalog prerequisite, #808; complete no-follow specification discovery, #804; navigable accepted catalog filenames, #782; truthful proposed SDK bootstrap, #777; safe portable catalog publication, #771; nested catalog links, #768; actionable blocked preparation and safe diagnostics, #714)
+- Last verified: 2026-11-02 (bounded structural repair feedback, #833; literal accepted catalog titles, #820; missing trusted-catalog prerequisite, #808; complete no-follow specification discovery, #804; navigable accepted catalog filenames, #782; truthful proposed SDK bootstrap, #777; safe portable catalog publication, #771; nested catalog links, #768; actionable blocked preparation and safe diagnostics, #714)
 - Owners: Copilot maintainers
 - Scope: clarify, update, validate, and publish the owning SDD before eligible branch-based work
 - Related issues/PRs: none; local design work; companion SDD `issue-start-and-branch-readiness.md`
@@ -928,8 +928,9 @@ new cases belong only to this gate budget.
 A generated draft missing required canonical headings or a numeric test budget
 MUST be rejected by the existing writer validation. A typed domain content
 failure permits one concise regeneration, sharing the same two-attempt ceiling
-with size repair. Feedback contains only closed failure categories and the
-original requirements; it never echoes rejected Markdown or diagnostics. Every
+with size repair. Feedback contains closed failure categories, normalized host structural
+coordinates and the original requirements; it never echoes rejected Markdown
+or raw diagnostics. Every
 regenerated candidate passes full owner, catalog, workspace and freshness
 validation. Provider, malformed-output, authority and unrelated writer failures
 do not trigger a content regeneration. A second invalid format publishes nothing
@@ -2471,3 +2472,91 @@ Four additional existing branch-sync suites pass all 83 compatibility cases.
 Together with the eight renderer/SDK suites, this is 277 directed cases;
 only the 20 title cases are new. No repository coverage configuration or
 threshold was changed.
+
+## Bounded structural repair feedback — #833 (2026-11-02)
+
+**Status: implementation candidate; local validation passes, remote gates pending.** The existing
+single format regeneration receives only a category. Live #853 attempts
+41424962386, 41427304366 and 41430714761 exhausted it with one uncovered
+requirement; 41428776516 failed derived-slot assembly. Rejected candidates are
+unavailable: these observations do not identify their actual rows or prove a
+particular model error. A complete supplied forty-case planning fixture passes
+the unchanged parser; this is input-consistency evidence, not generated-output
+or runtime acceptance.
+
+sdd-feedback-R01: the existing sole size/format replacement MUST receive only
+freshly normalized host validation facts: closed reason, host-owned phase,
+closed check, numbered section, data-row ordinal and bounded numeric counts.
+The original owner, issue decisions, immutable evidence, query/schema and limits
+remain. Diagnostic facts describe a rejected candidate; they MUST NOT become
+new requirements or authorize acceptance. Rejected Markdown, case/requirement
+IDs, paths, raw messages and provider output remain excluded. Normalize again
+at the repair boundary; malformed facts or reason disagreement fail closed.
+
+sdd-feedback-R02: undefined requirement links MUST identify the first rejected
+case row in section14. Uncovered goals MUST retain the existing section17
+aggregate count and additionally identify the first uncovered section4 goal row
+with expected1/observed0; do not invent an edge or expose its ID. Raw derived
+slots MUST distinguish global occurrence count from visible standalone placement
+in the required section using two closed checks. The same validator applies
+before and after repair. Report a proven first failure, never an exhaustive
+review. Every accepted candidate still passes the independent writer, native
+freshness, exact linked-branch and verified-commit fences.
+
+```text
+candidate -> host structural rejection -> normalized ordinal/count feedback
+ -> one complete same-owner replacement -> full assembly/writer validation
+ -> unchanged publication fences, or retained answers and blocked status
+```
+
+Text equivalent: a valid first candidate bypasses repair. An eligible structural
+failure supplies safe feedback to the existing one replacement; a repeated
+failure publishes nothing. Provider/cancellation/workspace/catalog failures keep
+existing identity and do not allocate a format replacement. Size and format
+still share at most two total drafts. No new setting, permission, state schema,
+model, timeout, prompt limit, retry budget or external API is introduced.
+Domain code owns coordinates and normalization; application code owns the
+bounded request; existing locale catalogs/renderers own technical presentation.
+Existing architecture/import/raw-error guards remain mandatory. Only the closed
+normalized metadata is new repair input; the earlier raw-diagnostic prohibition
+continues to apply. Old complete drafts without slots retain their bytes.
+
+Representative technical detail: “requirement-mapping; assembly; section14;
+data row2; expected0; observed1.” For an uncovered goal, the aggregate remains
+“section17; expected0; observed1” and the additional location is “section4;
+data row2; expected1; observed0.” The current blocked card, impact/action/retained
+state, run/correlation, EN/ES and locale fallback remain; new slot copy explains
+count or visibility without disclosing candidate content. Existing pending,
+partial publication, recovery/replay and complete states are unchanged.
+
+Reserve **21 additional distinct cases before implementation**:
+
+| Area | Minimum | Observable cases |
+|---|---:|---|
+| Pure coordinates | 8 | sdd-feedback-C01 and sdd-feedback-C02 undefined row in assembly/writer; sdd-feedback-C03 and sdd-feedback-C04 uncovered goal in both; sdd-feedback-C05 absent slot; sdd-feedback-C06 hidden duplicate; sdd-feedback-C07 wrong section; sdd-feedback-C08 fenced slot |
+| Repair and security | 9 | sdd-feedback-C09 closed writer feedback/exact request; sdd-feedback-C10 native adapter and assembly feedback; sdd-feedback-C11 repeated failure; sdd-feedback-C12 extra outer data; sdd-feedback-C13 extra fact data; sdd-feedback-C14 reason mismatch; sdd-feedback-C15 mixed size/format ceiling; sdd-feedback-C16 provider identity; sdd-feedback-C17 cancellation identity |
+| Publication compatibility | 4 | sdd-feedback-C18 and sdd-feedback-C19 validated assembly/writer repairs publish only through existing fences; sdd-feedback-C20 and sdd-feedback-C21 repeated assembly/writer failures never publish or add readiness |
+| **Total** | **21** | Parameter rows count once per distinct behavior; no runtime proof is claimed yet. |
+
+The repair/security cases map to sdd-feedback-R01; pure-coordinate and
+publication-compatibility cases map to sdd-feedback-R02. Existing consistency, diagnostic,
+locale, real-Git, replay, freshness and publication suites remain required.
+Update this owner, catalog evidence/index, pre-branch SDD operator guide and error
+reference together. The existing validators, full hooks, coverage budgets,
+Graphify, build/package and documentation checks remain. Merge requires all
+exact-head applicable technical checks, complete review without active findings,
+correct live-base Codecov100% modified coverable lines with zero misses/partials,
+and a specific final-SHA human protected-path decision if required. No release,
+tag, deployment or browser permission change. Rollback removes additional repair
+feedback/coordinates together; retained answers and published commits need no
+migration. Live successful drafting is separate evidence, never inferred from
+these deterministic tests. No material design decision remains open.
+
+Local #833 execution: all 21 added cases pass; the unchanged source failed18
+of them before the correction, while three compatibility controls already passed.
+Full coverage passes844 suites/16,320 tests plus267 baseline extension tests
+(all four extension metrics100%). Existing coverage budgets and the setup
+ledger pass with14 previously open human acceptances. Local LCOV reports20/20
+modified coverable lines hit and no unhit branches on those lines against
+9d391572. These are local observations; official correct-base Codecov, live
+provider recovery and the complete exact-head remote review remain separate.

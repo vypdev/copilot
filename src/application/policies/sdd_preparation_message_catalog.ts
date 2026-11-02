@@ -51,6 +51,8 @@ const FACTS = Object.freeze({
   "numeric-budget": ["No valid numeric test budget was found.", "No se encontró un presupuesto numérico de pruebas válido."] as const,
   "section-count": ["The required section is missing or repeated.", "La sección obligatoria falta o está repetida."] as const,
   "table-count": ["Exactly one canonical table is required in this section.", "Esta sección requiere exactamente una tabla canónica."] as const,
+  "derived-slot-count": ["A derived-table slot must occur exactly once in the raw draft.", "El marcador de una tabla derivada debe aparecer exactamente una vez en el borrador original."] as const,
+  "derived-slot-placement": ["A derived-table slot must stand alone on a visible line in its required section.", "El marcador de una tabla derivada debe estar solo en una línea visible de su sección obligatoria."] as const,
   "table-separator": ["The table header separator has invalid columns or formatting.", "El separador de la cabecera tiene columnas o formato no válidos."] as const,
   "table-columns": ["A data row has the wrong number of columns.", "Una fila de datos tiene un número incorrecto de columnas."] as const,
   "table-empty-cell": ["A required table cell is empty.", "Una celda obligatoria de la tabla está vacía."] as const,
