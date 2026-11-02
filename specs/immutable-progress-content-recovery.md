@@ -9,6 +9,12 @@
 - Review gates: UX, architecture, security, tests, documentation and operations.
 - Open decisions blocking readiness: none.
 
+The focused [progress part response recovery specification](./progress-partition-response-recovery.md)
+defines the narrow #830 amendment: one preflighted replacement for a verified
+overlong per-file fact, preserving the complete immutable part and every
+existing validation and publication fence. Its additional risk budget does not
+replace this specification's existing cases.
+
 ## 1. Executive summary
 
 Progress MUST use every required file from one pinned comparison. When a source
@@ -831,8 +837,10 @@ Optional evidence publication cannot erase or replace the primary diagnostic.
 - Every existing locale, exact-ID/path/unit, evidence/status, uncertainty,
   cardinality, percentage/remaining, Unicode and size rule MUST remain enforced.
 - No invalid result becomes accepted; no source or scope is shortened or changed.
-- There is no automatic result-repair loop, retry, threshold change, new runtime
-  permission, credential, command or repository configuration.
+- There is no general result-repair loop, threshold change, new runtime
+  permission, credential, command or repository configuration. The focused #830
+  amendment permits exactly one replacement for a host-bound per-file length
+  failure; all other invalid results retain this rejection path.
 - Existing execution/provider errors and retry rules remain authoritative.
   `agent.failed` remains eligible for a fresh attempt after a provider returns
   an invalid result; same input is not promised to produce a valid result.

@@ -1355,6 +1355,23 @@
         }
       ],
       "successMessage": "Progress scope ownership policy: PASS (100% all metrics)"
+    },
+    {
+      "name": "Bounded progress part response recovery",
+      "missingEntryLabel": "progress part response recovery",
+      "rules": [
+        {
+          "files": [
+            "src/domain/progress_partition_length_failure.ts",
+            "src/application/policies/progress_partition_length_policy.ts",
+            "src/data/repository/progress_partition_length_failure.ts",
+            "src/application/usecases/actions/query_progress_partition_workflow.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        }
+      ],
+      "successMessage": "progress part response recovery: PASS (each policy, mapping and bounded workflow100% all metrics)"
     }
   ]
 }

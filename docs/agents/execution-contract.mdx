@@ -177,12 +177,25 @@ The application binds the details to its current host inventory, retaining a
 separate immutable source-anchor map without changing scope/model JSON.
 
 Execution/provider errors remain distinct. A missing result does not become
-proof of completed output, and no automatic repair/retry loop is added. A fresh
-attempt can help when the provider returns a result conforming to the unchanged
-contract; it cannot enlarge fixed budgets or authorize a scope change. All
+proof of completed output. Only an overlong `implemented` or `remaining` file
+fact, verified against its current immutable part, exact path/unit, locale and
+selected schema limit, permits one replacement response for that entire part.
+Both the original and replacement envelopes for every part must fit before any
+part is queried. The replacement preserves all source, schema and uncertainty;
+it never includes the rejected prose. No other validation or execution failure
+starts this recovery. A fresh attempt can help when the provider returns a
+result conforming to the unchanged contract; it cannot enlarge fixed budgets or
+authorize a scope change. All
 invalid, canceled, incomplete or stale outcomes retain previous progress.
 The same correlation reference and localized semantic view reach CLI, Check
 and Job Summary; optional native evidence publication is a separate result.
+
+If the replacement still exceeds the fact limit,
+`progress-partition-length-invalid` identifies the verified part, path, source
+unit (`none` for legacy parts), response field, maximum and observed Unicode
+code-point count. Filenames are inert, reversible JSON code spans. The response
+body never enters diagnostics. There is no third part query or partial progress
+publication; inspect the named fact and unchanged contract.
 
 ## Optional native Check Run evidence
 

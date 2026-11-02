@@ -1,4 +1,5 @@
-import { queryProgressResult } from './query_progress_result_workflow';
+import { queryProgressPartition } from './query_progress_partition_workflow';
+import { progressPartitionRepairPrompt } from '../../policies/progress_partition_length_policy';
 import type { ProgressDiffEvidence } from '../../ports/progress_diff_query_ports';
 import type { FindingsQueryPort } from '../../ports/agent_findings_ports';
 import type { ProgressContext } from '../push_single_action_contexts';
@@ -34,7 +35,9 @@ acceptanceScope: ${renderProgressPromptData(acceptanceScope, 'progress.acceptanc
 immutableComparison: ${renderProgressPromptData(partition.evidence, 'progress.comparison', AGENT_PROMPT_MAX_BYTES)}`);
     const reserve = reserveDynamicFraming ? PROGRESS_PROMPT_FRAMING_RESERVE_BYTES : 0;
     prompts.forEach((prompt, index) => {
-        if (remainingProgressPromptBytes(prompt, 'progress-partition', progressPartitionResponseSchema(diff.partitions[index], factLimit), context.agentConfiguration?.effort) < reserve) throw progressEvidenceTooLarge();
+        for (const candidate of [prompt, progressPartitionRepairPrompt(prompt)]) {
+            if (remainingProgressPromptBytes(candidate, 'progress-partition', progressPartitionResponseSchema(diff.partitions[index], factLimit), context.agentConfiguration?.effort) < reserve) throw progressEvidenceTooLarge();
+        }
     });
     return { prompts, factLimit };
 }
@@ -48,9 +51,9 @@ export async function summarizeProgressDiff(diff: ProgressDiffEvidence, context:
     logInfo(`Progress comparison requires ${diff.partitions.length} complete bounded parts; no percentage is published until all parts and final assessment finish.`);
     for (const [index, partition] of diff.partitions.entries()) {
         logInfo(`Assessing progress evidence part ${index + 1} of ${diff.partitions.length}, round ${Math.floor(index / MAX_PROGRESS_PARTITIONS) + 1} of ${Math.ceil(diff.partitions.length / MAX_PROGRESS_PARTITIONS)}.`);
-        const response = await queryProgressResult(agent, { configuration: context.agentConfiguration, agentId: AGENT_PLAN, prompt: prompts[index],
+        const response = await queryProgressPartition(agent, { configuration: context.agentConfiguration, agentId: AGENT_PLAN, prompt: prompts[index],
             options: { ...productFacingAgentQueryOptions('progress-partition', progressPartitionResponseSchema(partition, factLimit)),
-                includeReasoning: context.includeReasoning } }, { phase: 'partition' });
+                includeReasoning: context.includeReasoning } }, partition, factLimit, context.targetLocale);
         if (diff.protocol) receipts.push(parseProgressPartitionReceipt(response, partition, context.targetLocale, factLimit));
         else facts.push(parseProgressPartitionFacts(response, partition, context.targetLocale, factLimit));
     }

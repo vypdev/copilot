@@ -129,6 +129,23 @@ original citation, ID, separator and newline participates in the unchanged
 smaller fact schema limit when needed. Older uneven facts remain valid when
 the complete projection fits; no prose is clipped.
 
+### Progress part response length
+
+An overlong file fact with a verified current part/path/unit, locale and schema
+limit receives one replacement for the same complete immutable part. Every
+original and replacement request is capacity-checked before the first part
+query. Source evidence, identities, uncertainty and strict validation remain
+unchanged. Provider, cancellation, locale and other schema failures retain their
+own classifications and do not start this recovery.
+
+Persistent overflow reports `agent.failed` with
+`progress-partition-length-invalid`: part, path, unit, response field, maximum
+and observed Unicode code-point count. `none` means the legacy part has no unit
+identity. Paths are inert reversible JSON code spans; raw model output is never
+shown. Inspect that fact in the linked run. There is no third part query, no
+clipping, and no partial update to labels or the previous assessment. A later
+optional Check Run warning remains a separate outcome.
+
 `validation.evidence-too-large` with `progress-assessment-capacity-exceeded`
 means classification succeeded but the original citations leave insufficient
 space for one nonempty fact per requirement. No evidence or final assessment

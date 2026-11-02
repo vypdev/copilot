@@ -6881,6 +6881,7 @@ const framed_review_1 = __nccwpck_require__(3750);
 const progress_response_diagnostic_1 = __nccwpck_require__(6289);
 const progress_inventory_diagnostic_1 = __nccwpck_require__(4048);
 const progress_response_diagnostic_2 = __nccwpck_require__(6289);
+const progress_partition_length_failure_1 = __nccwpck_require__(9292);
 const progress_binary_evidence_diagnostic_1 = __nccwpck_require__(364);
 const issue_workflow_diagnostic_1 = __nccwpck_require__(4347);
 const change_size_reconciliation_1 = __nccwpck_require__(5304);
@@ -6923,6 +6924,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'progress-inventory-incomplete',
     'bugbot-review-incomplete',
     'progress-result-contract-invalid',
+    'progress-partition-length-invalid',
     'progress-assessment-capacity-exceeded',
     'progress-scope-clause-limit',
     'stored-configuration-schema-missing',
@@ -7168,6 +7170,7 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'progress-inventory-incomplete': Object.freeze(['profile', 'reason', 'observedCount', 'supportedLimit', 'countKind', 'paths']),
     'bugbot-review-incomplete': Object.freeze(['profile', 'countKind', 'resource', 'observed', 'limit', 'unit']),
     'progress-result-contract-invalid': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
+    'progress-partition-length-invalid': Object.freeze(['partitionId', 'filePath', 'unitId', 'field', 'maximum', 'observed']),
     'progress-assessment-capacity-exceeded': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
     'progress-scope-clause-limit': Object.freeze(['clauseKind', 'observed', 'limit', 'sourceLineId']),
     'deployment-publication-context-missing': Object.freeze([]),
@@ -7253,6 +7256,8 @@ function normalizeApplicationErrorRecovery(recovery) {
         throw new TypeError('Progress scope capacity diagnostic is invalid.');
     if (recovery.id === 'progress-result-contract-invalid' && !(0, progress_response_diagnostic_2.isProgressResponseDiagnosticFacts)(variables))
         throw new TypeError('Progress response diagnostic is invalid.');
+    if (recovery.id === 'progress-partition-length-invalid' && !(0, progress_partition_length_failure_1.isProgressPartitionLengthDiagnostic)(variables))
+        throw new TypeError('Progress part length diagnostic is invalid.');
     if (recovery.id === 'bugbot-review-incomplete' && !(0, framed_review_1.isBugbotReviewBlockFacts)(variables))
         throw new TypeError('Bugbot review diagnostic is invalid.');
     if (recovery.id === 'progress-inventory-incomplete' && !(0, progress_inventory_diagnostic_1.isProgressInventoryDiagnostic)(variables))
@@ -9087,6 +9092,46 @@ function isProgressInventoryDiagnostic(value) {
 }
 function progressInventoryPresentation(facts) {
     return Object.freeze({ ...facts, countKind: facts.countKind === 'at-least' ? '≥' : '=', paths: JSON.parse(facts.paths).map(progress_evidence_path_1.renderProgressEvidencePath).join('; ') });
+}
+
+
+/***/ }),
+
+/***/ 9292:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ProgressPartitionLengthFailure = void 0;
+exports.isProgressPartitionLengthDiagnostic = isProgressPartitionLengthDiagnostic;
+exports.progressPartitionLengthPresentation = progressPartitionLengthPresentation;
+const progress_response_diagnostic_1 = __nccwpck_require__(6289);
+const progress_evidence_path_1 = __nccwpck_require__(5887);
+/** Completed output supplied these bounded scalars; application must still bind the identity. */
+class ProgressPartitionLengthFailure extends progress_response_diagnostic_1.ProgressResponseContractFailure {
+    constructor(facts, details) {
+        super(facts);
+        this.details = Object.freeze({ ...details });
+    }
+}
+exports.ProgressPartitionLengthFailure = ProgressPartitionLengthFailure;
+function text(value, maximum) {
+    return typeof value === 'string' && value.length > 0 && value.length <= maximum && !/[\p{Cc}\p{Cf}]/u.test(value);
+}
+/** Closed operator facts; string counts are code points, never raw prose or body bytes. */
+function isProgressPartitionLengthDiagnostic(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return false;
+    const v = value;
+    return Object.keys(v).sort().join(',') === 'field,filePath,maximum,observed,partitionId,unitId'
+        && text(v.partitionId, 256) && (0, progress_evidence_path_1.isProgressEvidencePath)(v.filePath) && text(v.unitId, 256)
+        && (0, progress_response_diagnostic_1.isProgressResponseField)('partition', v.field) && /\.(?:implemented|remaining)$/u.test(v.field)
+        && typeof v.maximum === 'number' && Number.isSafeInteger(v.maximum) && v.maximum >= 1 && v.maximum <= 600
+        && typeof v.observed === 'number' && Number.isSafeInteger(v.observed) && v.observed > v.maximum;
+}
+function progressPartitionLengthPresentation(facts) {
+    return Object.freeze({ ...facts, partitionId: (0, progress_evidence_path_1.renderProgressEvidencePath)(facts.partitionId), filePath: (0, progress_evidence_path_1.renderProgressEvidencePath)(facts.filePath),
+        unitId: (0, progress_evidence_path_1.renderProgressEvidencePath)(facts.unitId), field: (0, progress_evidence_path_1.renderProgressEvidencePath)(facts.field) });
 }
 
 

@@ -20,6 +20,9 @@ const RECOVERY_CASES: readonly Readonly<{
     english: string;
     spanish: string;
 }>[] = [
+    { recovery: { id: 'progress-partition-length-invalid', variables: { partitionId: 'part-7', filePath: 'src/example.ts', unitId: 'unit-21', field: '$.files[0].implemented', maximum: 600, observed: 618 } },
+      english: 'Existing progress labels and assessments were preserved. No partial percentage or passing verification was published; execution and optional check-publication failures remain separate.',
+      spanish: 'Se conservaron las etiquetas y evaluaciones de progreso. No se publicó ningún porcentaje parcial ni verificación aprobada; los fallos de ejecución y de publicación del check opcional siguen siendo independientes.' },
     { recovery: { id: 'bugbot-review-incomplete', variables: { profile: 'framed-v1', countKind: 'exact', resource: 'rawUtf16', observed: 8192001, limit: 8192000, unit: 'UTF-16 code units' } },
       english: 'Existing findings and resolution state were retained. This run published no partial findings or clean review; a fresh run must validate the complete current source.',
       spanish: 'Se conservaron los findings y su estado de resolución. Este intento no publicó findings parciales ni una revisión limpia; un nuevo intento debe validar toda la fuente actual.' },

@@ -220,6 +220,16 @@ record needing attention. Response order does not determine the requirement;
 repeated issue quotes do not determine the source line. `none` means that an
 identity was not verified, so no anchor is guessed.
 
+For an overlong file fact, Copilot verifies the current immutable part, path and
+source unit, locale and schema limit before requesting one replacement for that
+complete part. Every original and replacement envelope is checked before the
+first part query. A valid replacement continues the complete comparison without
+recollecting or omitting source. Persistent overflow identifies
+`progress-partition-length-invalid`, the verified part/path/unit and response
+field, and the maximum and observed Unicode code-point counts. Legacy parts use
+unit `none`. No rejected prose is copied, clipped or accepted; no third query or
+partial progress update follows. Other invalid output retains its usual error.
+
 The line refers to the original issue body supplied to that attempt. Blank lines
 retain their physical numbering. These diagnostics contain no raw model output,
 unknown returned property names or values. Strict JSON, exact scope, evidence,
