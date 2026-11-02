@@ -15,6 +15,7 @@ import { APPROVAL_EVIDENCE_PERMISSIONS, APPROVAL_EVIDENCE_REASONS, type Approval
 import { BRANCH_SYNC_VALIDATION_CODES, type BranchSyncValidationCode } from '../../domain/branch_sync_validation';
 import { isBranchSyncVerificationFailure, type BranchSyncVerificationFailure } from '../../domain/verification_failure';
 import { isBranchSyncCatalogDiagnostic, type BranchSyncCatalogDiagnostic } from '../../domain/branch_sync_catalog_diagnostic';
+import { isSddSourceContextDiagnostic, type SddSourceContextDiagnostic } from '../../domain/agent_source_snapshot';
 
 export type ApplicationErrorKind =
     | 'configuration'
@@ -68,6 +69,7 @@ export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'sdd-catalog-unsupported-profile',
     'sdd-catalog-format-invalid',
     'sdd-catalog-missing-trusted-source',
+    'sdd-source-context-unavailable',
     'sdd-draft-format-invalid',
     'sdd-draft-case-identity-invalid',
     'sdd-draft-case-budget-invalid',
@@ -129,6 +131,7 @@ interface ApplicationErrorRecoveryVariables extends Readonly<Record<CopilotComma
     readonly 'sdd-catalog-unsupported-profile': Readonly<Record<string, never>>;
     readonly 'sdd-catalog-format-invalid': Readonly<Record<string, never>>;
     readonly 'sdd-catalog-missing-trusted-source': Readonly<Record<string, never>>;
+    readonly 'sdd-source-context-unavailable': SddSourceContextDiagnostic;
     readonly 'sdd-draft-format-invalid': Readonly<Record<string, never>>;
     readonly 'sdd-draft-case-identity-invalid': Readonly<Record<string, never>>;
     readonly 'sdd-draft-case-budget-invalid': Readonly<Record<string, never>>;
@@ -419,6 +422,7 @@ const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readon
     'sdd-catalog-unsupported-profile': Object.freeze([]),
     'sdd-catalog-format-invalid': Object.freeze([]),
     'sdd-catalog-missing-trusted-source': Object.freeze([]),
+    'sdd-source-context-unavailable': Object.freeze(['sourceCommit', 'phase', 'reason']),
     'sdd-draft-format-invalid': Object.freeze([]),
     'sdd-draft-case-identity-invalid': Object.freeze([]),
     'sdd-draft-case-budget-invalid': Object.freeze([]),
@@ -453,6 +457,9 @@ function normalizeApplicationErrorRecovery(
     }
     if (recovery.id === 'progress-completion-recovery-exhausted') {
         return Object.freeze({ id: recovery.id, variables: normalizeProgressCompletionDiagnostic(variables) });
+    }
+    if (recovery.id === 'sdd-source-context-unavailable' && !isSddSourceContextDiagnostic(variables)) {
+        throw new TypeError('SDD source context diagnostic is invalid.');
     }
     if (isCopilotCommandValidationReason(recovery.id)
         && !isValidCopilotCommandValidation(recovery.id, variables.command)) {

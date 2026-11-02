@@ -1389,6 +1389,24 @@
         }
       ],
       "successMessage": "progress part response recovery: PASS (each policy, mapping and bounded workflow100% all metrics)"
+    },
+    {
+      "name": "Immutable SDD source context",
+      "missingEntryLabel": "immutable SDD source context",
+      "rules": [
+        {
+          "files": [
+            "src/domain/agent_source_snapshot.ts",
+            "src/application/policies/agent_source_snapshot_policy.ts",
+            "src/infrastructure/agents/agent_source_snapshot_git.ts",
+            "src/infrastructure/agents/agent_source_snapshot_workspace.ts",
+            "src/infrastructure/agents/agent_source_snapshot_integrity.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        }
+      ],
+      "successMessage": "immutable SDD source context coverage: PASS (100% lines/statements/branches/functions)"
     }
   ]
 }

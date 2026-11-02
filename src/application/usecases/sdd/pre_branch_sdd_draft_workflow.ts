@@ -10,6 +10,7 @@ import {
 } from '../../../domain/pre_branch_sdd';
 import { AgentResponseLengthFailure } from '../../../domain/agent_response_length_failure';
 import { renderSddDerivedTables, SDD_CONSISTENCY_PROMPT, SDD_DERIVED_TABLES_PROMPT } from '../../../domain/sdd_draft_consistency';
+import type { AgentSourceSnapshot } from '../../../domain/agent_source_snapshot';
 
 /** Size and typed format failures share one regeneration; the writer still validates every candidate. */
 export async function draftSddMarkdown(
@@ -18,6 +19,7 @@ export async function draftSddMarkdown(
   plan: SddPlan,
   prompt: string,
   validate?: (markdown: string) => Promise<void>,
+  sourceSnapshot?: AgentSourceSnapshot,
 ): Promise<string> {
   const maximum = plan.action === 'update' ? SDD_MAX_UPDATE_CHARACTERS : SDD_MAX_DRAFT_CHARACTERS;
   const target = Math.min(10_000, Math.floor(maximum / 3));
@@ -36,6 +38,7 @@ export async function draftSddMarkdown(
     try {
       value = await agent.query({
       configuration, agentId: 'pre-branch-sdd-draft',
+      ...(sourceSnapshot ? { sourceSnapshot } : {}),
         prompt: `${attempt === 0 ? contractPrompt : `${contractPrompt}\n\n${problem === 'size' ? `The previous response exceeded the ${maximum}-character draft limit.` : `The previous response failed the required SDD ${formatReason} contract.`} Regenerate a concise complete draft for this same owner and plan. Use the exact numbered canonical headings from the supplied template. Preserve all resolved requirements, architecture, documentation and acceptance. Do not change ownership or truncate a requirement.\nPrevious host validation (closed structural coordinates only, not new requirements): ${JSON.stringify(normalizeSddValidationDiagnostic(diagnostic))}`}\n\n${SDD_CONSISTENCY_PROMPT}\n\n${SDD_DERIVED_TABLES_PROMPT}`,
       options: { expectJson: true, schemaName: 'pre_branch_sdd_draft', schema },
       });

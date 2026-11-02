@@ -1,5 +1,6 @@
 import { allowsEmptySddCatalogPathField, SddCatalogCompatibilityFailure } from '../../../domain/sdd_catalog_compatibility';
 import { SddTrustedCatalogMissingFailure } from '../../../domain/sdd_trusted_catalog_failure';
+import { SddSourceContextFailure } from '../../../domain/agent_source_snapshot';
 import { SddDraftPreparationFailure } from '../../errors/sdd_draft_preparation_failure';
 import { renderSddPreparationFailure, renderSddPreparationRecovered, type SddWorkflowRunFacts } from '../../policies/sdd_preparation_status_policy';
 import { resolveSddPreparationCatalog, resolveStaticSddPreparationCatalog } from '../../policies/sdd_preparation_message_catalog';
@@ -187,6 +188,7 @@ export class PreBranchSddGateUseCase {
       const analysis = publicationRetry ? { ...card.record.plan, newCapability: null } : await this.agent.query({
         configuration: context.agentConfiguration,
         agentId: 'pre-branch-sdd-analysis',
+        sourceSnapshot: { kind: 'pre-branch-sdd', phase: 'analysis', baseSha: snapshot.baseSha },
         prompt: buildAnalysisPrompt(context, snapshot, answers, card?.record.branchName ? card.record.plan : undefined),
         options: { expectJson: true, schemaName: 'pre_branch_sdd_analysis', schema: ANALYSIS_SCHEMA as unknown as Record<string, unknown> },
       });
@@ -238,7 +240,7 @@ export class PreBranchSddGateUseCase {
       await draftSddMarkdown(this.agent, context.agentConfiguration, plan,
         `${buildDraftPrompt(context, snapshot, plan, answers, currentSdd)}\n\nCase IDs reserved across every owning SDD at ${snapshot.baseSha}:\n${reservedCases}`, async markdown => {
           prepared = await this.workspace.validateDraft(snapshot, plan, markdown, newCapability);
-        });
+        }, { kind: 'pre-branch-sdd', phase: 'draft', baseSha: snapshot.baseSha });
       if (!prepared) throw new Error('The SDD writer returned no validated draft.');
       await this.assertFresh(context, snapshot.baseSha, sourceBranch);
       return { status: 'drafted', prepared, record, ...(card ? { cardId: card.id } : {}), results: [this.result(true, true, `Validated ${plan.path} before branch publication.`)] };
@@ -246,7 +248,7 @@ export class PreBranchSddGateUseCase {
       if ((error instanceof SddCatalogCompatibilityFailure || error instanceof SddTrustedCatalogMissingFailure) && error.sourceCommit) {
         failureSource = { branch: failureBranch, sha: error.sourceCommit };
       }
-      const failure = this.failure(error);
+      const failure = this.failure(error, failureSource?.sha);
       if (!ownershipStatusWritten && failure.errors[0].code !== 'workflow.stale') {
         try { await this.writePreparationFailure(context, failure.errors[0], error, false, failureSource); }
         catch (publicationError) { return { status: 'blocked', results: [failure, this.failure(publicationError)] }; }
@@ -347,7 +349,8 @@ export class PreBranchSddGateUseCase {
   private async writePreparationFailure(context: PreBranchSddContext, error: ApplicationError, cause: unknown,
     publicationPending: boolean, source?: Readonly<{ branch: string; sha: string }>): Promise<void> {
     if (!context.tokenUser.trim()) throw new ApplicationError('configuration.unsupported', 'The SDD diagnostic card requires a trusted bot identity.');
-    if ((cause instanceof SddCatalogCompatibilityFailure || cause instanceof SddTrustedCatalogMissingFailure) && !source) throw new ApplicationError('configuration.unsupported', 'The catalog diagnostic requires a verified source revision.');
+    if ((cause instanceof SddCatalogCompatibilityFailure || cause instanceof SddTrustedCatalogMissingFailure
+      || cause instanceof SddSourceContextFailure) && !source) throw new ApplicationError('configuration.unsupported', 'The SDD diagnostic requires a verified source revision.');
     const comments = await this.comments.listIssueComments(context.issueNumber);
     const [catalog, errorCatalog] = await Promise.all([
       resolveSddPreparationCatalog(context.issueLocale ?? 'en-US', context.agentConfiguration, this.presentation.catalogResolver),
@@ -411,10 +414,15 @@ export class PreBranchSddGateUseCase {
     return new Result({ id: this.taskId, success, executed, steps: [step] });
   }
 
-  private failure(error: unknown): Result {
+  private failure(error: unknown, expectedSourceSha?: string): Result {
     // The runtime logger redacts credentials and makes workflow-command text inert.
     logError(`Pre-branch SDD gate failed: ${error instanceof Error ? error.message : 'unknown failure'}`);
-    const semanticError = error instanceof SddTrustedCatalogMissingFailure
+    const source = error instanceof SddSourceContextFailure && error.source?.baseSha === expectedSourceSha ? error.source : undefined;
+    const semanticError = error instanceof SddSourceContextFailure
+      ? new ApplicationError('validation.evidence-unavailable', error.message, { recovery: {
+        id: 'sdd-source-context-unavailable', variables: { sourceCommit: source?.baseSha ?? 'none',
+          phase: source?.phase ?? 'unknown', reason: source ? error.reason : 'binding-invalid' },
+      } }) : error instanceof SddTrustedCatalogMissingFailure
       ? new ApplicationError('configuration.unsupported', error.message, { recovery: {
         id: 'sdd-catalog-missing-trusted-source', variables: {},
       } }) : error instanceof SddCatalogCompatibilityFailure

@@ -1,4 +1,5 @@
 import { SDD_CATALOG_COMPATIBILITY_REASONS, type SddCatalogCompatibilityReason } from '../../domain/sdd_catalog_compatibility';
+import { isSddSourceContextDiagnostic } from '../../domain/agent_source_snapshot';
 import { APPLICATION_ERROR_METADATA, APPLICATION_ERROR_RECOVERY_IDS, isApplicationErrorCorrelationId } from '../../data/model/application_error';
 import { normalizeSddValidationDiagnostic, type SddValidationDiagnostic } from '../../domain/sdd_validation_diagnostic';
 import { resolveStaticApplicationErrorCatalog, type ApplicationErrorMessageReader } from './application_error_message_catalog';
@@ -55,9 +56,11 @@ export function renderSddPreparationFailure(options: Readonly<{
   if (options.attempts !== undefined && options.attempts !== 1 && options.attempts !== 2) throw new TypeError('Invalid SDD diagnostic attempt count.');
   const message = (key: SddPreparationMessageId) => catalog.message(key);
   const recovery = options.error.recovery;
+  const sourceRecovery = recovery?.id === 'sdd-source-context-unavailable' && isSddSourceContextDiagnostic(recovery.variables);
   const source = { code: options.error.code, retryable: options.error.retryable, correlationId: options.error.correlationId,
-    ...(recovery && APPLICATION_ERROR_RECOVERY_IDS.includes(recovery.id) && (recovery.id.startsWith('sdd-draft-') || recovery.id.startsWith('sdd-catalog-'))
-      && recovery.variables && Object.keys(recovery.variables).length === 0 ? { recovery } : {}) };
+    ...(recovery && (sourceRecovery || (APPLICATION_ERROR_RECOVERY_IDS.includes(recovery.id)
+      && (recovery.id.startsWith('sdd-draft-') || recovery.id.startsWith('sdd-catalog-'))
+      && recovery.variables && Object.keys(recovery.variables).length === 0)) ? { recovery } : {}) };
   const view = buildApplicationErrorPresentation(source, errorMessage ?? resolveStaticApplicationErrorCatalog(catalog.locale).message);
   const runUrl = sddWorkflowRunUrl(options.run);
   const lines = [
@@ -66,13 +69,16 @@ export function renderSddPreparationFailure(options: Readonly<{
     options.publicationPending ? message('sddPreparation.publicationRetained') : message('sddPreparation.noPublication'),
     '', `**${message('sddPreparation.impact')}:** ${view.impact}`,
     '', `**${message('sddPreparation.actionLabel')}:** ${diagnostic ? message('sddPreparation.action') + ' ' : ''}${view.action}`,
-    '', `**${message('sddPreparation.retainedLabel')}:** ${message('sddPreparation.retained')}`,
+    '', `**${message('sddPreparation.retainedLabel')}:** ${sourceRecovery ? view.retainedState : message('sddPreparation.retained')}`,
     '', runUrl ? `[${message('sddPreparation.workflow')}](${runUrl})` : message('sddPreparation.runUnavailable'),
     '', '<details>', `<summary>${message('sddPreparation.diagnostics')}</summary>`, '',
     `**${message('sddPreparation.code')}:** \`${view.code}\``,
     `**${message('sddPreparation.reference')}:** \`${view.reference}\``,
   ];
-  if (missingCatalogSource) {
+  if (sourceRecovery) {
+    lines.push(`**${message('sddPreparation.phase')}:** \`${recovery.variables.phase}\``,
+      `**${message('sddPreparation.reason')}:** \`${recovery.variables.reason}\``);
+  } else if (missingCatalogSource) {
     lines.push(`**${message('sddPreparation.missingCatalogSource')}:** \`${missingCatalogSource}\``,
       '', message('sddPreparation.missingCatalogFact'));
   } else if (options.catalogReason) {

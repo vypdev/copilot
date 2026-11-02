@@ -1,5 +1,6 @@
 import { SddCatalogCompatibilityFailure, SDD_CATALOG_COMPATIBILITY_REASONS } from '../../../../../domain/sdd_catalog_compatibility';
 import { SddTrustedCatalogMissingFailure } from '../../../../../domain/sdd_trusted_catalog_failure';
+import { SddSourceContextFailure } from '../../../../../domain/agent_source_snapshot';
 import { readSddGateRecord, SddDraftFormatFailure } from '../../../../../domain/pre_branch_sdd';
 import { PreBranchSddGateUseCase, type PreBranchSddContext } from '../../../sdd/pre_branch_sdd_gate_use_case';
 import type { SddCatalogSnapshot, SddPreparedDraft } from '../../../../ports/pre_branch_sdd_ports';
@@ -69,6 +70,55 @@ function harness(presentation?: ConstructorParameters<typeof PreBranchSddGateUse
 }
 
 describe('PreBranchSddGateUseCase', () => {
+  it('source-context-C39/source-context-C40/source-context-C41: pins analysis, owner evidence and both drafting attempts to one loaded source', async () => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValue({ markdown: '# Correctable draft' });
+    h.validateDraft.mockRejectedValueOnce(new SddDraftFormatFailure('required-heading', 'Missing required heading')).mockResolvedValueOnce(prepared);
+    expect((await h.useCase.begin(context())).status).toBe('drafted');
+    expect(h.query.mock.calls.map(([request]) => request.sourceSnapshot)).toEqual([
+      { kind: 'pre-branch-sdd', phase: 'analysis', baseSha }, { kind: 'pre-branch-sdd', phase: 'draft', baseSha },
+      { kind: 'pre-branch-sdd', phase: 'draft', baseSha },
+    ]);
+    expect(h.readSdd.mock.calls.every(([sha]) => sha === baseSha)).toBe(true);
+    expect(h.publish).not.toHaveBeenCalled();
+  });
+  it.each(['analysis', 'draft'] as const)('source-context-C45: %s source preparation failure spends no regeneration and publishes only bounded status', async phase => {
+    const h = harness();
+    if (phase === 'draft') h.query.mockResolvedValueOnce({ ...plan, newCapability: null });
+    h.query.mockRejectedValueOnce(new SddSourceContextFailure('object-unavailable', { kind: 'pre-branch-sdd', phase, baseSha }));
+    const result = await h.useCase.begin(context());
+    expect(result.status).toBe('blocked'); expect(h.query).toHaveBeenCalledTimes(phase === 'analysis' ? 1 : 2);
+    expect(result.results[0].errors[0]).toMatchObject({ code: 'validation.evidence-unavailable', recovery: {
+      id: 'sdd-source-context-unavailable', variables: { sourceCommit: baseSha, phase, reason: 'object-unavailable' },
+    } });
+    expect(h.publish).not.toHaveBeenCalled(); expect(h.validateDraft).not.toHaveBeenCalled();
+    expect(h.comments).toHaveLength(1); expect(h.comments[0].body).toContain(baseSha); expect(h.comments[0].body).toContain('object-unavailable');
+  });
+  it.each(['base', 'body', 'title'] as const)('source-context-C43/source-context-C44: a changed %s withholds stale source failure card', async changed => {
+    const h = harness(undefined, true);
+    h.query.mockImplementationOnce(async () => {
+      if (changed === 'base') h.readSourceRevision.mockResolvedValue(commitSha);
+      else if (changed === 'body') h.getDescription.mockResolvedValue('Changed human requirement');
+      else h.getTitle.mockResolvedValue('Changed human title');
+      throw new SddSourceContextFailure('object-unavailable', { kind: 'pre-branch-sdd', phase: 'analysis', baseSha });
+    });
+    const result = await h.useCase.begin(context());
+    expect(result.status).toBe('blocked'); expect(h.addComment).not.toHaveBeenCalled(); expect(h.updateComment).not.toHaveBeenCalled();
+    expect(h.publish).not.toHaveBeenCalled(); expect(result.results.some(item => item.errors.some(error => error.code === 'workflow.stale'))).toBe(true);
+  });
+  it('source-context-C51: a foreign source claim is never attributed to the selected source', async () => {
+    const h = harness(); h.query.mockRejectedValueOnce(new SddSourceContextFailure('object-unavailable', { kind: 'pre-branch-sdd', phase: 'analysis', baseSha: commitSha }));
+    const result = await h.useCase.begin(context());
+    expect(result.results[0].errors[0].recovery).toEqual({ id: 'sdd-source-context-unavailable', variables: {
+      sourceCommit: 'none', phase: 'unknown', reason: 'binding-invalid',
+    } });
+    expect(h.comments[0].body).not.toContain(commitSha); expect(h.comments[0].body).toContain('binding-invalid');
+  });
+  it('source-context-C52: current diagnostic replay reuses its bot-owned card', async () => {
+    const h = harness(); h.query.mockRejectedValue(new SddSourceContextFailure('object-unavailable', { kind: 'pre-branch-sdd', phase: 'analysis', baseSha }));
+    await h.useCase.begin(context()); await h.useCase.begin(context());
+    expect(h.comments).toHaveLength(1); expect(h.addComment).toHaveBeenCalledTimes(1); expect(h.publish).not.toHaveBeenCalled();
+  });
   it.each([
     ['assembly', true], ['validation', true], ['assembly', false], ['validation', false],
   ] as const)('sdd-feedback-C18/C19/C20/C21: retains publication fences after %s, corrected=%s', async (phase, corrected) => {
@@ -658,7 +708,7 @@ describe('PreBranchSddGateUseCase', () => {
     expect((await h.useCase.publish(context(), draft, 'feature/42-change')).status).toBe('blocked');
   });
 
-  it('revises the owning SDD on the retained branch after a material issue change', async () => {
+  it('source-context-C42: revises the owning SDD on the retained branch after a material issue change', async () => {
     const h = harness();
     h.query.mockResolvedValueOnce({ ...plan, questions: [], newCapability: null });
     h.query.mockResolvedValueOnce({ markdown: '# First contract' });
@@ -677,6 +727,10 @@ describe('PreBranchSddGateUseCase', () => {
     h.query.mockResolvedValueOnce({ markdown: '# Revised contract' });
     const revision = await h.useCase.begin(revisedContext);
     expect(revision.status).toBe('drafted');
+    expect(h.query.mock.calls.slice(-2).map(([request]) => request.sourceSnapshot)).toEqual([
+      { kind: 'pre-branch-sdd', phase: 'analysis', baseSha: commitSha },
+      { kind: 'pre-branch-sdd', phase: 'draft', baseSha: commitSha },
+    ]);
     if (revision.status !== 'drafted') throw new Error('expected revision draft');
     expect(revision.record).toMatchObject({ branchName: 'feature/42-change', commitSha });
     const revisionSha = 'c'.repeat(40);

@@ -38,7 +38,8 @@ it('sdd-feedback-C10: native response assembly forwards host phase and coordinat
   const validate = jest.fn(async (markdown: string) => validateSddDraftConsistency(markdown, [], {
     files: new Set(['docs/payments.mdx']), directories: new Set(['docs']), blocked: new Set(),
   }, 'specs/change.md'));
-  await draftSddMarkdown(adapter, configuration, plan, prompt, validate);
+  await draftSddMarkdown(adapter, configuration, plan, prompt, validate,
+    { kind: 'pre-branch-sdd', phase: 'draft', baseSha: 'a'.repeat(40) });
   const repair = execute.mock.calls[1][0];
   expect(repair.prompt).toContain(JSON.stringify({ ...facts, phase: 'assembly' }));
   expect(repair.outputSchema).toEqual(execute.mock.calls[0][0].outputSchema);

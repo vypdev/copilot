@@ -1737,14 +1737,15 @@
       "id": "issue-start-and-sdd-readiness",
       "title": "Uniform issue start and pre-branch SDD readiness",
       "status": "implemented",
-      "scope": "Start every admitted issue with one explicit signal and publish a validated SDD before eligible Action-managed branch work; inspect verified SDD status and bounded structural publication comparisons and preserve complete navigable catalog links for accepted repository filenames and safely publish generated catalogs without following destination links; bootstrap truthful proposed SDK capabilities before implementation without changing readiness; reject incomplete specification discovery explicitly without following unregistered symbolic links; report confirmed missing trusted catalogs with immutable source provenance and prerequisite recovery before model or publication",
+      "scope": "Start every admitted issue with one explicit signal and publish a validated SDD before eligible Action-managed branch work; inspect verified SDD status and bounded structural publication comparisons and preserve complete navigable catalog links for accepted repository filenames and safely publish generated catalogs without following destination links; bootstrap truthful proposed SDK capabilities before implementation without changing readiness; reject incomplete specification discovery explicitly without following unregistered symbolic links; report confirmed missing trusted catalogs with immutable source provenance and prerequisite recovery before model or publication; bind pre-branch analysis and drafting to a verified independent read-only view of the selected immutable source without changing the canonical checkout",
       "owner": "Copilot maintainers",
       "lastVerified": "2026-11-02",
       "specs": [
         "specs/issue-start-and-branch-readiness.md",
         "specs/pre-branch-sdd-gate.md",
         "specs/pre-branch-sdd-diff.md",
-        "specs/pre-branch-sdd-status-readiness.md"
+        "specs/pre-branch-sdd-status-readiness.md",
+        "specs/pre-branch-sdd-source-context.md"
       ],
       "workflows": [
         ".github/workflows/copilot_issue.yml",
@@ -1825,7 +1826,12 @@
         "src/domain/sdd_catalog_compatibility.ts",
         "src/infrastructure/specification_catalog_publication.cjs",
         "jest.config.js",
-        "src/domain/sdd_trusted_catalog_failure.ts"
+        "src/domain/sdd_trusted_catalog_failure.ts",
+        "src/domain/agent_source_snapshot.ts",
+        "src/application/policies/agent_source_snapshot_policy.ts",
+        "src/infrastructure/agents/agent_source_snapshot_git.ts",
+        "src/infrastructure/agents/agent_source_snapshot_workspace.ts",
+        "src/infrastructure/agents/agent_source_snapshot_integrity.ts"
       ],
       "tests": [
         "src/domain/__tests__/issue_workflow_runtime_policy.test.ts",
@@ -1885,7 +1891,16 @@
         "src/domain/__tests__/sdd_trusted_catalog_failure.test.ts",
         "src/tooling/__tests__/specification_catalog_title_text.test.ts",
         "src/domain/__tests__/sdd_repair_coordinates.test.ts",
-        "src/application/usecases/sdd/sdd_repair_feedback.test.ts"
+        "src/application/usecases/sdd/sdd_repair_feedback.test.ts",
+        "src/application/policies/__tests__/agent_source_snapshot_policy.test.ts",
+        "src/infrastructure/agents/__tests__/agent_source_snapshot_inventory.test.ts",
+        "src/infrastructure/agents/__tests__/agent_source_snapshot_workspace.test.ts",
+        "src/infrastructure/agents/__tests__/agent_source_snapshot_regression.test.ts",
+        "src/infrastructure/agents/__tests__/agent_source_snapshot_git.test.ts",
+        "src/infrastructure/agents/__tests__/agent_source_snapshot_integrity.test.ts",
+        "src/infrastructure/agents/__tests__/agent_source_snapshot_gate.integration.test.ts",
+        "src/application/policies/__tests__/sdd_source_context_presentation.test.ts",
+        "src/infrastructure/agents/__tests__/agent_source_snapshot_admission.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-management.mdx",
@@ -2611,7 +2626,7 @@
       "status": "implemented",
       "scope": "Resolve, provision, authenticate, authorize, and execute only the agent roles reachable by a run",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-29",
+      "lastVerified": "2026-11-02",
       "specs": [
         "specs/agent-runtime-provider-and-model-routing.md",
         "specs/agent-execution-policy-hardening.md"
@@ -2673,7 +2688,12 @@
         "scripts/diagnose-windows-sandbox-prerequisites.cjs",
         "src/infrastructure/logging/logger_agent_execution_observer_adapter.ts",
         "scripts/coverage-budgets.json",
-        "src/infrastructure/private_jvm_environment.ts"
+        "src/infrastructure/private_jvm_environment.ts",
+        "src/domain/agent_source_snapshot.ts",
+        "src/application/policies/agent_source_snapshot_policy.ts",
+        "src/infrastructure/agents/agent_source_snapshot_git.ts",
+        "src/infrastructure/agents/agent_source_snapshot_workspace.ts",
+        "src/infrastructure/agents/agent_source_snapshot_integrity.ts"
       ],
       "tests": [
         "src/actions/__tests__/agent_configuration_builder.test.ts",
@@ -2705,7 +2725,16 @@
         "src/infrastructure/__tests__/untrusted_command_environment.test.ts",
         "src/infrastructure/agents/__tests__/windows_acl_probe_contract.test.ts",
         "src/infrastructure/logging/__tests__/logger_agent_execution_observer_adapter.test.ts",
-        "src/infrastructure/__tests__/private_jvm_environment.test.ts"
+        "src/infrastructure/__tests__/private_jvm_environment.test.ts",
+        "src/application/policies/__tests__/agent_source_snapshot_policy.test.ts",
+        "src/infrastructure/agents/__tests__/agent_source_snapshot_inventory.test.ts",
+        "src/infrastructure/agents/__tests__/agent_source_snapshot_workspace.test.ts",
+        "src/infrastructure/agents/__tests__/agent_source_snapshot_regression.test.ts",
+        "src/infrastructure/agents/__tests__/agent_source_snapshot_git.test.ts",
+        "src/infrastructure/agents/__tests__/agent_source_snapshot_integrity.test.ts",
+        "src/infrastructure/agents/__tests__/agent_source_snapshot_gate.integration.test.ts",
+        "src/application/policies/__tests__/sdd_source_context_presentation.test.ts",
+        "src/infrastructure/agents/__tests__/agent_source_snapshot_admission.test.ts"
       ],
       "documentation": [
         "docs/configuration-checklist.mdx",

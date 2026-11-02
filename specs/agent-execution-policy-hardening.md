@@ -248,7 +248,7 @@ AgentExecutionPlan {
   argv: readonly reconstructed tokens
   promptMode: stdin | final-argv
   outputProtocol: plain-text | json-lines-text-events
-  workspace: canonical real path
+  workspace: canonical effective real path
   workspaceMode: read-only | workspace-write
   childNetwork: deny
   approval: never
@@ -260,13 +260,20 @@ AgentExecutionPlan {
   environment: readonly allowlisted key/value map
   artifacts: readonly path/hash/purpose records
   runtimeContract: provider/version/manifest revision
+  sourceSnapshot?: SDK-only pre-branch SDD kind/phase/baseSha
+  sourceDeadlineMs?: original same-process monotonic deadline for that snapshot
 }
 ```
 
 The dispatcher switch has no default and uses a `never` exhaustiveness check.
-All fields are required. `fixer` alone receives `workspace-write`; all other
-roles receive `read-only`. `cwd` must realpath to the repository root; symlink
-escape and extra writable roots reject the plan.
+Fields are required except the explicitly optional source binding/deadline.
+`fixer` alone receives `workspace-write`; all other roles receive `read-only`.
+Requested `cwd` must realpath to the repository root; symlink escape and extra
+writable roots reject the plan. Only the SDK-owned pre-branch SDD binding may
+select a separately admitted immutable read-only source view **after** that
+canonical anchor check. Its complete-tree, no-fetch, integrity, deadline and
+cleanup contract is [immutable SDD source context](pre-branch-sdd-source-context.md).
+It is not a public cwd override and adds no provider authority.
 
 ### 6.2 Structured configuration and executable selection
 
@@ -604,6 +611,11 @@ GitHub UI. Existing locale/fallback and narrow Markdown rules apply.
    `--show-prefix` result (portable across Git for Windows path formats). In GitHub
    Actions, it must also equal the canonical `GITHUB_WORKSPACE` checkout path,
    so a nested repository cannot silently replace the intended checkout.
+   Pre-branch SDD analysis/drafting then uses the SDK-owned independent source
+   repository bound to the loaded snapshot SHA. The original requested anchor
+   remains checked exactly as above; never rewrite `GITHUB_WORKSPACE` to admit
+   this view. Its manifest, full bytes and private Git metadata are reverified
+   before spawn, under the same read-only policy and original timeout.
    A nested-repository fixture must fail before any agent process starts.
    Windows runtime fixtures that intentionally execute in a temporary Git
    checkout set `GITHUB_WORKSPACE` to that checkout for the planning call and

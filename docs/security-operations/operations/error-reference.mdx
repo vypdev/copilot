@@ -78,6 +78,17 @@ is not proof that the candidate or validator is correct. Existing specifications
 answers remain; see [blocked preparation recovery](/issues/pre-branch-sdds#when-specification-preparation-is-blocked).
 
 
+SDD source-view failures use `validation.evidence-unavailable` with
+`sdd-source-context-unavailable`. The only recovery facts are the immutable
+`sourceCommit`, `phase` and closed `reason`; unverified identity is `none` /
+`unknown`. Check the linked run, local selected Git objects, `--no-lazy-fetch`
+support, portable regular source paths and the fixed SDK limits. Correct the
+prerequisite and retry the same issue workflow. The canonical checkout, answers,
+published SDDs and linked branch remain; no model repair or publication is
+attempted. Do not restore files into the default checkout or create a branch
+manually. See [source selection](/issues/pre-branch-sdds#source-used-by-analysis-and-drafting)
+and [execution limits](/agents/execution-contract#immutable-sdd-source-views).
+
 Catalog profile failures use `configuration.unsupported` with the closed
 `sdd-catalog-unsupported-profile` or `sdd-catalog-format-invalid` recovery.
 Review [SDD publication profiles](/issues/pre-branch-sdds#catalog-publication-profiles)
