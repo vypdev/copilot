@@ -16,7 +16,8 @@
         "specs/immutable-progress-content-recovery.md",
         "specs/optional-check-run-diagnostics.md",
         "specs/complete-progress-comparison-inventory.md",
-        "specs/progress-scope-source-ownership.md"
+        "specs/progress-scope-source-ownership.md",
+        "specs/final-progress-completion-recovery.md"
       ],
       "workflows": [
         ".github/workflows/copilot_issue.yml",
