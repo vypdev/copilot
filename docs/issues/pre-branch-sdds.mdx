@@ -99,6 +99,18 @@ An illustrative failure view is:
 > **Validation diagnostics:** requirement-mapping; section 17; data row 1;
 > expected count 2; observed count 1. The card also includes its run and reference.
 
+The existing single format regeneration also receives these normalized host
+checks and numeric coordinates. They describe the rejected candidate; they do
+not change the requirements or make it acceptable. An undefined requirement
+link identifies its first case data row in section 14. For an uncovered goal,
+the section-17 aggregate is retained and an additional section-4 data-row fact
+locates the first goal without a case. The goal identifier and rejected text
+are withheld. Derived-slot failures distinguish the number of raw occurrences
+from a unique slot that is not alone on a visible line in its required section.
+The repair still regenerates a complete candidate for the same owner and
+answers, and every publication check runs again. A second failure remains
+blocked; provider or cancellation failures do not enter content repair.
+
 The diagnostic feature retains only fixed checks and bounded numeric facts.
 It does not publish the rejected Markdown, case/requirement identifiers,
 repository paths, scenario prose, source, credentials or raw validator messages.

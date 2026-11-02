@@ -53,6 +53,11 @@ const RECOVERY_CASES: readonly Readonly<{
         spanish: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas. Un aviso de publicación del check opcional corresponde a otro resultado.',
     },
     {
+        recovery: { id: 'progress-completion-recovery-exhausted', variables: { reportedProgress: 70, requirementCount: 2, supportedCount: 2, missingCount: 0, unknownCount: 0 } },
+        english: 'Existing progress labels and published assessments were preserved. Verification, review, coverage and approval remain independent gates.',
+        spanish: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas. Verificación, revisión, cobertura y aprobación siguen siendo controles independientes.',
+    },
+    {
         recovery: { id: 'progress-assessment-capacity-exceeded', variables: { phase: 'assessment', reason: 'assessment-text-limit', field: '$.requirements[1].summary', requirementId: 'R2', sourceLineId: 'L7' } },
         english: 'Existing progress labels and published assessments were preserved. No partial result or passing verification is authorized.',
         spanish: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas. No se autoriza un resultado parcial ni una verificación aprobada.',

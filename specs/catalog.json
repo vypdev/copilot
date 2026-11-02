@@ -17,7 +17,8 @@
         "specs/optional-check-run-diagnostics.md",
         "specs/complete-progress-comparison-inventory.md",
         "specs/progress-scope-source-ownership.md",
-        "specs/progress-partition-response-recovery.md"
+        "specs/progress-partition-response-recovery.md",
+"specs/final-progress-completion-recovery.md"
       ],
       "workflows": [
         ".github/workflows/copilot_issue.yml",
@@ -215,7 +216,11 @@
         "src/domain/progress_partition_length_failure.ts",
         "src/data/repository/progress_partition_length_failure.ts",
         "src/application/policies/progress_partition_length_policy.ts",
-        "src/application/usecases/actions/query_progress_partition_workflow.ts"
+        "src/application/usecases/actions/query_progress_partition_workflow.ts",
+"src/domain/progress_completion_diagnostic.ts",
+        "src/application/errors/progress_completion_mismatch.ts",
+        "src/application/policies/progress_completion_recovery_policy.ts",
+        "src/application/usecases/actions/query_progress_assessment_workflow.ts"
       ],
       "tests": [
         "src/domain/__tests__/implementation_plan.test.ts",
@@ -378,7 +383,12 @@
         "src/application/usecases/actions/__tests__/progress_partition_length.integration.test.ts",
         "src/application/usecases/actions/__tests__/query_progress_partition_workflow.test.ts",
         "src/application/usecases/actions/__tests__/progress_partition_length_publication.integration.test.ts",
-        "src/application/usecases/actions/__tests__/progress_partition_repair_preflight.test.ts"
+        "src/application/usecases/actions/__tests__/progress_partition_repair_preflight.test.ts",
+"src/domain/__tests__/progress_completion_diagnostic.test.ts",
+        "src/application/policies/__tests__/progress_completion_recovery_policy.test.ts",
+        "src/application/usecases/actions/__tests__/query_progress_assessment_workflow.test.ts",
+        "src/application/usecases/actions/__tests__/progress_completion_recovery.integration.test.ts",
+        "src/application/policies/__tests__/progress_completion_recovery_presentation.test.ts"
       ],
       "documentation": [
         "docs/configuration.mdx",
@@ -1728,7 +1738,7 @@
       "status": "implemented",
       "scope": "Start every admitted issue with one explicit signal and publish a validated SDD before eligible Action-managed branch work; inspect verified SDD status and bounded structural publication comparisons and preserve complete navigable catalog links for accepted repository filenames and safely publish generated catalogs without following destination links; bootstrap truthful proposed SDK capabilities before implementation without changing readiness; reject incomplete specification discovery explicitly without following unregistered symbolic links; report confirmed missing trusted catalogs with immutable source provenance and prerequisite recovery before model or publication",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-31",
+      "lastVerified": "2026-11-02",
       "specs": [
         "specs/issue-start-and-branch-readiness.md",
         "specs/pre-branch-sdd-gate.md",
@@ -1872,7 +1882,9 @@
         "src/tooling/__tests__/specification_catalog_markdown_links.test.ts",
         "src/tooling/__tests__/specification_catalog_discovery.test.ts",
         "src/domain/__tests__/sdd_trusted_catalog_failure.test.ts",
-        "src/tooling/__tests__/specification_catalog_title_text.test.ts"
+        "src/tooling/__tests__/specification_catalog_title_text.test.ts",
+        "src/domain/__tests__/sdd_repair_coordinates.test.ts",
+        "src/application/usecases/sdd/sdd_repair_feedback.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-management.mdx",

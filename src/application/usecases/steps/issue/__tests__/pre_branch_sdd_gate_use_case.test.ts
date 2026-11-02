@@ -3,6 +3,8 @@ import { SddTrustedCatalogMissingFailure } from '../../../../../domain/sdd_trust
 import { readSddGateRecord, SddDraftFormatFailure } from '../../../../../domain/pre_branch_sdd';
 import { PreBranchSddGateUseCase, type PreBranchSddContext } from '../../../sdd/pre_branch_sdd_gate_use_case';
 import type { SddCatalogSnapshot, SddPreparedDraft } from '../../../../ports/pre_branch_sdd_ports';
+import { sddConsistencyFixture } from '../../../../../testing/sdd_consistency_fixture';
+import { validateSddDraftConsistency } from '../../../../../domain/sdd_draft_consistency';
 
 const baseSha = 'a'.repeat(40);
 const commitSha = 'b'.repeat(40);
@@ -67,6 +69,40 @@ function harness(presentation?: ConstructorParameters<typeof PreBranchSddGateUse
 }
 
 describe('PreBranchSddGateUseCase', () => {
+  it.each([
+    ['assembly', true], ['validation', true], ['assembly', false], ['validation', false],
+  ] as const)('sdd-feedback-C18/C19/C20/C21: retains publication fences after %s, corrected=%s', async (phase, corrected) => {
+    const h = harness();
+    const valid = sddConsistencyFixture('payments-change', 'specs/payments.md', 'update');
+    const source = phase === 'assembly' ? valid
+      .replace(/\| Area \| Minimum distinct cases[\s\S]*?(?=\| Case ID)/u, '{{SDD_CASE_BUDGET}}\n\n')
+      .replace(/\| Requirement \| Cases \|[\s\S]*$/u, '{{SDD_REQUIREMENT_CASES}}\n') : valid;
+    const invalid = source.replace('C02 | Policy | G-01 |', 'C02 | Policy | G-99 |');
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null })
+      .mockResolvedValueOnce({ markdown: invalid }).mockResolvedValueOnce({ markdown: corrected ? source : invalid });
+    h.validateDraft.mockImplementation(async (_snapshot, _plan, markdown: string) => {
+      validateSddDraftConsistency(markdown, [], { files: new Set(['docs/payments.mdx', 'specs/payments.md']),
+        directories: new Set(['docs', 'specs']), blocked: new Set() }, 'specs/payments.md');
+      return { ...prepared, markdown };
+    });
+    const result = await h.useCase.begin(context());
+    expect(h.query).toHaveBeenCalledTimes(3);
+    expect(h.query.mock.calls[2][0].prompt).toContain(JSON.stringify({ reason: 'requirement-mapping', phase,
+      facts: [{ detail: 'requirement-reference', section: 14, row: 2, expected: 0, observed: 1 }] }));
+    expect(h.publish).not.toHaveBeenCalled();
+    if (corrected) {
+      expect(result.status).toBe('drafted');
+      if (result.status !== 'drafted') throw new Error('Expected validated draft');
+      expect((await h.useCase.publish(context(), result, 'feature/42-change')).status).toBe('published');
+      expect(h.publish).toHaveBeenCalledTimes(1);
+      expect(h.verifyPublication).toHaveBeenCalled();
+    } else {
+      expect(result.status).toBe('blocked');
+      expect(h.labels()).not.toContain('branched');
+      expect(JSON.stringify(h.comments)).not.toContain('G-99');
+    }
+  });
+
   it('supplies reserved identities from every immutable owner document when drafting a companion', async () => {
     const h = harness();
     h.loadSnapshot.mockResolvedValue({ ...snapshot, capabilities: [{ ...snapshot.capabilities[0], specs: ['specs/payments.md', 'specs/session.md'] }] });

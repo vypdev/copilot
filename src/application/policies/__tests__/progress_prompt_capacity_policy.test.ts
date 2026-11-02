@@ -1,4 +1,4 @@
-import { progressAggregateBudget, remainingProgressPromptBytes } from '../progress_prompt_capacity_policy';
+import { progressAggregateBudget, remainingProgressPromptBytes, remainingProgressAssessmentPromptBytes } from '../progress_prompt_capacity_policy';
 import { buildAgentPrompt } from '../agent_prompt_envelope_policy';
 import { AGENT_PROMPT_MAX_BYTES } from '../../../domain/agent_execution_plan';
 import { progressScopeResponseSchema, progressScopeSourceLines } from '../progress_scope_policy';
@@ -22,7 +22,7 @@ it('keeps the unchanged aggregate ceiling for small prompts', () => {
     expect(progressAggregateBudget('Small task.', schema)).toBe(MAX_PROGRESS_AGGREGATE_BYTES);
 });
 it('reserves dynamic framing in addition to the exact final response envelope', () => {
-    const prompt = 'a'.repeat(200_000), remaining = remainingProgressPromptBytes(prompt, 'progress', schema);
+    const prompt = 'a'.repeat(200_000), remaining = remainingProgressAssessmentPromptBytes(prompt, schema);
     expect(progressAggregateBudget(prompt, schema)).toBe(remaining - 1_024);
 });
 it('rejects an envelope with no room for dynamic framing and aggregate facts', () => {

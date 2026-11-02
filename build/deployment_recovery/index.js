@@ -32570,6 +32570,11 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
         action: 'Inspect part {partitionId}, file {filePath}, unit {unitId}, field {field}: observed {observed} Unicode code points; maximum {maximum}. The replacement must satisfy the unchanged schema. Do not remove files, truncate facts, relax acceptance or bypass verification.',
         retainedState: 'Existing progress labels and assessments were preserved. No partial percentage or passing verification was published; execution and optional check-publication failures remain separate.',
     }),
+    'progress-completion-recovery-exhausted': Object.freeze({
+        impact: 'The final progress result still contradicted completion after one complete reassessment; progress was not published.',
+        action: 'Inspect the complete pinned comparison and final facts: phase assessment, field $.progress, reported {reportedProgress}%, requirements {requirementCount}, supported {supportedCount}, missing {missingCount}, unknown {unknownCount}. Start a fresh complete assessment when the provider can satisfy the unchanged contract. These are model observations, not independent execution or approval evidence.',
+        retainedState: 'Existing progress labels and published assessments were preserved. Verification, review, coverage and approval remain independent gates.',
+    }),
     'bugbot-review-incomplete': Object.freeze({
         impact: 'Complete Bugbot review is blocked: {resource} {countKind} {observed} {unit}; supported limit {limit} ({profile}).',
         action: 'Inspect the exact resource and limit. Prepare missing immutable objects through the Action-managed workflow, correct the verified source, or review genuinely unrelated PR scope. Repeating identical unsupported input cannot complete the review. No partial review can authorize approval.',
@@ -32757,6 +32762,11 @@ const SPANISH_RECOVERY_CONTENT = Object.freeze({
         impact: 'Una parte del progreso sigue superando el límite de respuesta tras una sustitución acotada; no se publicó el progreso.',
         action: 'Inspecciona la parte {partitionId}, archivo {filePath}, unidad {unitId}, campo {field}: observado {observed} puntos de código Unicode; máximo {maximum}. La sustitución debe cumplir el mismo esquema. No elimines archivos, recortes los hechos, relajes la aceptación ni eludas la verificación.',
         retainedState: 'Se conservaron las etiquetas y evaluaciones de progreso. No se publicó ningún porcentaje parcial ni verificación aprobada; los fallos de ejecución y de publicación del check opcional siguen siendo independientes.',
+    }),
+    'progress-completion-recovery-exhausted': Object.freeze({
+        impact: 'El resultado final siguió contradiciendo la completitud después de una reevaluación completa; no se publicó el progreso.',
+        action: 'Inspecciona la comparación completa fijada y los datos finales: fase assessment, campo $.progress, porcentaje {reportedProgress}%, requisitos {requirementCount}, respaldados {supportedCount}, pendientes {missingCount}, desconocidos {unknownCount}. Inicia una evaluación completa nueva cuando el proveedor pueda cumplir el contrato sin cambiarlo. Son observaciones del modelo, no evidencia independiente de ejecución ni aprobación.',
+        retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas. Verificación, revisión, cobertura y aprobación siguen siendo controles independientes.',
     }),
     'bugbot-review-incomplete': Object.freeze({
         impact: 'La revisión completa de Bugbot está bloqueada: {resource} {countKind} {observed} {unit}; límite admitido {limit} ({profile}).',
@@ -33789,6 +33799,7 @@ exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = exports.APPLICAT
 exports.isApplicationErrorCorrelationId = isApplicationErrorCorrelationId;
 const framed_review_1 = __nccwpck_require__(3750);
 const progress_response_diagnostic_1 = __nccwpck_require__(6289);
+const progress_completion_diagnostic_1 = __nccwpck_require__(5095);
 const progress_inventory_diagnostic_1 = __nccwpck_require__(4048);
 const progress_response_diagnostic_2 = __nccwpck_require__(6289);
 const progress_partition_length_failure_1 = __nccwpck_require__(9292);
@@ -33837,6 +33848,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'progress-partition-length-invalid',
     'progress-assessment-capacity-exceeded',
     'progress-scope-clause-limit',
+    'progress-completion-recovery-exhausted',
     'stored-configuration-schema-missing',
     'stored-configuration-schema-unsupported',
     'stored-configuration-invalid',
@@ -34083,6 +34095,7 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'progress-partition-length-invalid': Object.freeze(['partitionId', 'filePath', 'unitId', 'field', 'maximum', 'observed']),
     'progress-assessment-capacity-exceeded': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
     'progress-scope-clause-limit': Object.freeze(['clauseKind', 'observed', 'limit', 'sourceLineId']),
+    'progress-completion-recovery-exhausted': Object.freeze(['reportedProgress', 'requirementCount', 'supportedCount', 'missingCount', 'unknownCount']),
     'deployment-publication-context-missing': Object.freeze([]),
     'workspace-changes-rejected': Object.freeze([]),
 });
@@ -34098,6 +34111,9 @@ function normalizeApplicationErrorRecovery(recovery) {
     if (actualKeys.length !== expectedKeys.length
         || actualKeys.some((key, index) => key !== expectedKeys[index])) {
         throw new TypeError(`Application error recovery variables are invalid for ${recovery.id}.`);
+    }
+    if (recovery.id === 'progress-completion-recovery-exhausted') {
+        return Object.freeze({ id: recovery.id, variables: (0, progress_completion_diagnostic_1.normalizeProgressCompletionDiagnostic)(variables) });
     }
     if ((0, copilot_command_validation_1.isCopilotCommandValidationReason)(recovery.id)
         && !(0, copilot_command_validation_1.isValidCopilotCommandValidation)(recovery.id, variables.command)) {
@@ -36867,6 +36883,36 @@ function isProgressBinaryEvidenceFacts(value) {
 function progressBinaryEvidencePresentation(facts) {
     const paths = JSON.parse(facts.paths).map(progress_evidence_path_1.renderProgressEvidencePath);
     return Object.freeze({ paths: paths.join('; '), pathCount: facts.pathCount, shownCount: paths.length });
+}
+
+
+/***/ }),
+
+/***/ 5095:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.normalizeProgressCompletionDiagnostic = normalizeProgressCompletionDiagnostic;
+const KEYS = ['reportedProgress', 'requirementCount', 'supportedCount', 'missingCount', 'unknownCount'].sort();
+function normalizeProgressCompletionDiagnostic(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        throw new TypeError('Invalid closed progress completion diagnostic.');
+    }
+    const keys = Reflect.ownKeys(value);
+    if (keys.length !== KEYS.length || keys.some(key => typeof key !== 'string' || !KEYS.includes(key))) {
+        throw new TypeError('Invalid closed progress completion diagnostic.');
+    }
+    const { reportedProgress, requirementCount, supportedCount, missingCount, unknownCount } = value;
+    const count = (input) => typeof input === 'number' && Number.isSafeInteger(input) && input >= 0 && input <= 32;
+    if (typeof reportedProgress !== 'number' || !Number.isFinite(reportedProgress) || reportedProgress < 0 || reportedProgress > 100
+        || !count(requirementCount) || requirementCount < 1 || !count(supportedCount) || !count(missingCount) || !count(unknownCount)
+        || supportedCount + missingCount + unknownCount !== requirementCount
+        || (reportedProgress === 100) === (missingCount + unknownCount === 0)) {
+        throw new TypeError('Invalid progress completion percentage or counts.');
+    }
+    return Object.freeze({ reportedProgress, requirementCount, supportedCount, missingCount, unknownCount });
 }
 
 
