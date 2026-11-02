@@ -38481,6 +38481,47 @@ exports.DeploymentMergeEffectError = DeploymentMergeEffectError;
 
 /***/ }),
 
+/***/ 6519:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (receiver, state, value, kind, f) {
+    if (kind === "m") throw new TypeError("Private method is not writable");
+    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a setter");
+    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot write private member to an object whose class did not declare it");
+    return (kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value)), value;
+};
+var __classPrivateFieldGet = (this && this.__classPrivateFieldGet) || function (receiver, state, kind, f) {
+    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a getter");
+    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot read private member from an object whose class did not declare it");
+    return kind === "m" ? f : kind === "a" ? f.call(receiver) : f ? f.value : state.get(receiver);
+};
+var _ProgressCompletionMismatch_facts, _ProgressCompletionMismatch_scope;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ProgressCompletionMismatch = void 0;
+const progress_completion_diagnostic_1 = __nccwpck_require__(75095);
+const application_error_1 = __nccwpck_require__(75999);
+/** The public direct-parser record stays unchanged; only the creating scope can use these private facts. */
+class ProgressCompletionMismatch extends application_error_1.ApplicationError {
+    constructor(original, facts, scope) {
+        super(original.code, original.message, { correlationId: original.correlationId,
+            retryable: original.retryable, recovery: original.recovery });
+        _ProgressCompletionMismatch_facts.set(this, void 0);
+        _ProgressCompletionMismatch_scope.set(this, void 0);
+        __classPrivateFieldSet(this, _ProgressCompletionMismatch_facts, (0, progress_completion_diagnostic_1.normalizeProgressCompletionDiagnostic)(facts), "f");
+        __classPrivateFieldSet(this, _ProgressCompletionMismatch_scope, scope, "f");
+    }
+    factsFor(scope) {
+        return scope === __classPrivateFieldGet(this, _ProgressCompletionMismatch_scope, "f") ? __classPrivateFieldGet(this, _ProgressCompletionMismatch_facts, "f") : undefined;
+    }
+}
+exports.ProgressCompletionMismatch = ProgressCompletionMismatch;
+_ProgressCompletionMismatch_facts = new WeakMap(), _ProgressCompletionMismatch_scope = new WeakMap();
+
+
+/***/ }),
+
 /***/ 12321:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -39752,6 +39793,11 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
         action: 'Inspect the original requirement and response schema. Details: phase {phase}, reason {reason}, field {field}, requirement {requirementId}, original issue line {sourceLineId}. none means no verified identity is available. A fresh attempt may help when the provider can satisfy the unchanged contract; do not relax acceptance or verification.',
         retainedState: 'Existing progress labels and published assessments were preserved. An optional check-publication warning is a separate result.',
     }),
+    'progress-completion-recovery-exhausted': Object.freeze({
+        impact: 'The final progress result still contradicted completion after one complete reassessment; progress was not published.',
+        action: 'Inspect the complete pinned comparison and final facts: phase assessment, field $.progress, reported {reportedProgress}%, requirements {requirementCount}, supported {supportedCount}, missing {missingCount}, unknown {unknownCount}. Start a fresh complete assessment when the provider can satisfy the unchanged contract. These are model observations, not independent execution or approval evidence.',
+        retainedState: 'Existing progress labels and published assessments were preserved. Verification, review, coverage and approval remain independent gates.',
+    }),
     'bugbot-review-incomplete': Object.freeze({
         impact: 'Complete Bugbot review is blocked: {resource} {countKind} {observed} {unit}; supported limit {limit} ({profile}).',
         action: 'Inspect the exact resource and limit. Prepare missing immutable objects through the Action-managed workflow, correct the verified source, or review genuinely unrelated PR scope. Repeating identical unsupported input cannot complete the review. No partial review can authorize approval.',
@@ -39934,6 +39980,11 @@ const SPANISH_RECOVERY_CONTENT = Object.freeze({
         impact: 'El resultado de progreso devuelto incumplió su contrato; no se publicó el progreso.',
         action: 'Inspecciona el requisito original y el esquema de respuesta. Detalles: fase {phase}, motivo {reason}, campo {field}, requisito {requirementId}, línea original de la issue {sourceLineId}. none indica que no hay una identidad verificada. Un nuevo intento puede ayudar si el proveedor cumple el contrato sin cambiarlo; no relajes la aceptación ni la verificación.',
         retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas. Un aviso de publicación del check opcional corresponde a otro resultado.',
+    }),
+    'progress-completion-recovery-exhausted': Object.freeze({
+        impact: 'El resultado final siguió contradiciendo la completitud después de una reevaluación completa; no se publicó el progreso.',
+        action: 'Inspecciona la comparación completa fijada y los datos finales: fase assessment, campo $.progress, porcentaje {reportedProgress}%, requisitos {requirementCount}, respaldados {supportedCount}, pendientes {missingCount}, desconocidos {unknownCount}. Inicia una evaluación completa nueva cuando el proveedor pueda cumplir el contrato sin cambiarlo. Son observaciones del modelo, no evidencia independiente de ejecución ni aprobación.',
+        retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas. Verificación, revisión, cobertura y aprobación siguen siendo controles independientes.',
     }),
     'bugbot-review-incomplete': Object.freeze({
         impact: 'La revisión completa de Bugbot está bloqueada: {resource} {countKind} {observed} {unit}; límite admitido {limit} ({profile}).',
@@ -46386,6 +46437,39 @@ function sameProgressComparisonSource(left, right) {
 
 /***/ }),
 
+/***/ 93325:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PROGRESS_COMPLETION_HINT_MAX_BYTES = void 0;
+exports.progressCompletionCountsMatchScope = progressCompletionCountsMatchScope;
+exports.reservedProgressCompletionPrompt = reservedProgressCompletionPrompt;
+exports.progressCompletionRepairPrompt = progressCompletionRepairPrompt;
+const progress_completion_diagnostic_1 = __nccwpck_require__(75095);
+exports.PROGRESS_COMPLETION_HINT_MAX_BYTES = 256;
+const PREFIX = '\n\nThe previous completed final response passed response validation except completion equivalence. Reassess the SAME complete immutable evidence and scope. Return one complete response using the unchanged schema. Preserve genuinely missing or uncertain requirements; never force completion from previous statuses or counts. The following numeric data are observations of the rejected model response, not implementation, execution, verification, review or approval evidence.\n[BEGIN_PREVIOUS_MODEL_NUMERIC_FACTS]\n';
+const SUFFIX = '\n[END_PREVIOUS_MODEL_NUMERIC_FACTS]';
+function progressCompletionCountsMatchScope(facts, requirementCount, uncertainCount) {
+    const safe = (0, progress_completion_diagnostic_1.normalizeProgressCompletionDiagnostic)(facts);
+    return Number.isSafeInteger(requirementCount) && requirementCount >= 1 && requirementCount <= 32
+        && Number.isSafeInteger(uncertainCount) && uncertainCount >= 0 && uncertainCount <= requirementCount
+        && safe.requirementCount === requirementCount && safe.unknownCount >= uncertainCount;
+}
+/** Padding accounts for the worst complete envelope; this string must never be queried. */
+function reservedProgressCompletionPrompt(prompt) {
+    return prompt + PREFIX + ' '.repeat(exports.PROGRESS_COMPLETION_HINT_MAX_BYTES) + SUFFIX;
+}
+function progressCompletionRepairPrompt(prompt, facts) {
+    const hint = JSON.stringify((0, progress_completion_diagnostic_1.normalizeProgressCompletionDiagnostic)(facts));
+    // Normalization closes all keys/scalars; their algebraic maximum fits the tested 256-byte reservation.
+    return prompt + PREFIX + hint + SUFFIX;
+}
+
+
+/***/ }),
+
 /***/ 66471:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -46996,11 +47080,13 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PROGRESS_PROMPT_FRAMING_RESERVE_BYTES = void 0;
 exports.remainingProgressPromptBytes = remainingProgressPromptBytes;
 exports.progressAggregateBudget = progressAggregateBudget;
+exports.remainingProgressAssessmentPromptBytes = remainingProgressAssessmentPromptBytes;
 const agent_execution_plan_1 = __nccwpck_require__(12253);
 const agent_prompt_envelope_policy_1 = __nccwpck_require__(82923);
 const agent_output_locale_policy_1 = __nccwpck_require__(30601);
 const progress_diff_partition_policy_1 = __nccwpck_require__(70628);
 const progress_partition_response_policy_1 = __nccwpck_require__(30025);
+const progress_completion_recovery_policy_1 = __nccwpck_require__(93325);
 exports.PROGRESS_PROMPT_FRAMING_RESERVE_BYTES = 1024;
 /** Counts exactly the security/schema/task envelope used by the native adapter. */
 function remainingProgressPromptBytes(prompt, task, schema, effort) {
@@ -47012,10 +47098,15 @@ function remainingProgressPromptBytes(prompt, task, schema, effort) {
 }
 /** Dynamic untrusted-data framing is reserved before the first model request. */
 function progressAggregateBudget(promptWithoutEvidence, schema, effort) {
-    const budget = Math.min(progress_partition_response_policy_1.MAX_PROGRESS_AGGREGATE_BYTES, remainingProgressPromptBytes(promptWithoutEvidence, 'progress', schema, effort) - exports.PROGRESS_PROMPT_FRAMING_RESERVE_BYTES);
+    const budget = Math.min(progress_partition_response_policy_1.MAX_PROGRESS_AGGREGATE_BYTES, remainingProgressAssessmentPromptBytes(promptWithoutEvidence, schema, effort) - exports.PROGRESS_PROMPT_FRAMING_RESERVE_BYTES);
     if (budget < 1)
         throw (0, progress_diff_partition_policy_1.progressEvidenceTooLarge)();
     return budget;
+}
+/** Both original and worst complete final replacement fit before any scope request is admitted. */
+function remainingProgressAssessmentPromptBytes(prompt, schema, effort) {
+    remainingProgressPromptBytes(prompt, 'progress', schema, effort);
+    return remainingProgressPromptBytes((0, progress_completion_recovery_policy_1.reservedProgressCompletionPrompt)(prompt), 'progress', schema, effort);
 }
 
 
@@ -47131,6 +47222,7 @@ const progress_response_rejection_policy_1 = __nccwpck_require__(43023);
 const progress_response_diagnostic_1 = __nccwpck_require__(56289);
 const progress_assessment_capacity_policy_1 = __nccwpck_require__(67329);
 const agent_output_locale_policy_1 = __nccwpck_require__(30601);
+const progress_completion_mismatch_1 = __nccwpck_require__(6519);
 exports.MAX_PROGRESS_SCOPE_BYTES = 64000;
 exports.MAX_PROGRESS_SCOPE_CLAUSES = 32;
 const MAX_FACT = progress_assessment_capacity_policy_1.MAX_PROGRESS_FACT_POINTS;
@@ -47272,7 +47364,7 @@ function parseScopedProgressResponse(response, locale, scope, anchors = {}) {
         }
         else if (!text(fact.remaining))
             reject('requirement-remaining-invalid', `${field}.remaining`, id);
-        return { id, summary: fact.summary, remaining: fact.remaining };
+        return { id, status: fact.status, summary: fact.summary, remaining: fact.remaining };
     });
     const ordered = scope.requirements.map(requirement => ({ requirement, fact: entries.find(entry => entry.id === requirement.id) }));
     function render(field) {
@@ -47291,8 +47383,16 @@ function parseScopedProgressResponse(response, locale, scope, anchors = {}) {
     const remaining = render('remaining');
     // Never round an uncertain 99.9 to completion. A percentage cannot authorize approval/merge.
     const progress = payload.progress === 100 ? 100 : Math.min(99, Math.round(payload.progress));
-    if ((progress === 100) === Boolean(remaining))
-        reject('progress-completion-mismatch', '$.progress');
+    if ((progress === 100) === Boolean(remaining)) {
+        const original = (0, progress_response_rejection_policy_1.progressResponseRejected)({ phase: 'assessment', reason: 'progress-completion-mismatch', field: '$.progress',
+            requirementId: 'none', sourceLineId: 'none' });
+        if (scope.requirements.length < 1 || scope.requirements.length > exports.MAX_PROGRESS_SCOPE_CLAUSES)
+            throw original;
+        throw new progress_completion_mismatch_1.ProgressCompletionMismatch(original, { reportedProgress: payload.progress, requirementCount: scope.requirements.length,
+            supportedCount: entries.filter(entry => entry.status === 'supported').length,
+            missingCount: entries.filter(entry => entry.status === 'missing').length,
+            unknownCount: entries.filter(entry => entry.status === 'verification-unknown').length }, scope);
+    }
     return { progress, summary, remaining, reasoning: '' };
 }
 
@@ -59379,6 +59479,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.analyzeProgress = analyzeProgress;
 const progress_scope_source_policy_1 = __nccwpck_require__(49565);
 const query_progress_result_workflow_1 = __nccwpck_require__(33658);
+const query_progress_assessment_workflow_1 = __nccwpck_require__(62704);
 const progress_comparison_source_policy_1 = __nccwpck_require__(33167);
 const agent_1 = __nccwpck_require__(79937);
 const result_1 = __nccwpck_require__(73817);
@@ -59473,7 +59574,7 @@ async function analyzeProgress(param, taskId, dependencies) {
     const reservedDiff = (0, progress_evidence_protocol_policy_1.bindProgressEvidence)(diff, issueDescription, promptParameters.acceptanceScope, param.targetLocale);
     (0, summarize_progress_diff_workflow_1.planProgressDiffPrompts)(reservedDiff, param, issueDescription, aggregateBudget, promptParameters.acceptanceScope);
     if (diff.kind !== 'partitioned')
-        (0, progress_prompt_capacity_policy_1.remainingProgressPromptBytes)((0, prompts_1.getCheckProgressPrompt)({ ...promptParameters, diffEvidence: diff.evidence }), 'progress', reservedSchema, effort);
+        (0, progress_prompt_capacity_policy_1.remainingProgressAssessmentPromptBytes)((0, prompts_1.getCheckProgressPrompt)({ ...promptParameters, diffEvidence: diff.evidence }), reservedSchema, effort);
     const { scope, anchors } = (0, progress_scope_policy_1.parseProgressScopeWithAnchors)(await (0, query_progress_result_workflow_1.queryProgressResult)(dependencies.aiRepository, {
         configuration: param.agentConfiguration, agentId: agent_task_policy_1.AGENT_PLAN, prompt: scopePrompt,
         options: { ...(0, agent_output_locale_policy_1.productFacingAgentQueryOptions)('progress-scope', (0, progress_scope_policy_1.progressScopeResponseSchema)(sourceLines)), includeReasoning: param.includeReasoning },
@@ -59484,10 +59585,10 @@ async function analyzeProgress(param, taskId, dependencies) {
     const actualBudget = (0, progress_prompt_capacity_policy_1.progressAggregateBudget)((0, prompts_1.getCheckProgressPrompt)({ ...promptParameters, acceptanceScope }), assessmentSchema, effort);
     const diffEvidence = await (0, summarize_progress_diff_workflow_1.summarizeProgressDiff)(boundDiff, param, issueDescription, dependencies.aiRepository, actualBudget, acceptanceScope);
     const prompt = (0, prompts_1.getCheckProgressPrompt)({ ...promptParameters, acceptanceScope, diffEvidence });
-    (0, progress_prompt_capacity_policy_1.remainingProgressPromptBytes)(prompt, 'progress', assessmentSchema, effort);
+    (0, progress_prompt_capacity_policy_1.remainingProgressAssessmentPromptBytes)(prompt, assessmentSchema, effort);
     (0, logging_ports_1.logDebugInfo)(`CheckProgress: prompt length=${prompt.length}, issue description length=${issueDescription.length}.`);
     (0, logging_ports_1.logInfo)('🤖 Analyzing progress using the configured agent...');
-    const attemptResult = (0, progress_response_1.parseProgressResponse)(await (0, query_progress_result_workflow_1.queryProgressResult)(dependencies.aiRepository, {
+    const attemptResult = await (0, query_progress_assessment_workflow_1.queryProgressAssessment)(dependencies.aiRepository, {
         configuration: param.agentConfiguration,
         agentId: agent_task_policy_1.AGENT_PLAN,
         prompt,
@@ -59495,8 +59596,7 @@ async function analyzeProgress(param, taskId, dependencies) {
             ...(0, agent_output_locale_policy_1.productFacingAgentQueryOptions)('progress', assessmentSchema),
             includeReasoning: param.includeReasoning,
         },
-    }, { phase: 'assessment', requirementIds: scope.requirements.map(requirement => requirement.id),
-        sourceLineIds: sourceLines.map(line => line.id), anchors }), param.targetLocale, scope, anchors);
+    }, { scope, anchors, targetLocale: param.targetLocale, sourceLineIds: sourceLines.map(line => line.id) });
     return {
         kind: 'ready',
         issueNumber,
@@ -59757,6 +59857,65 @@ async function runPublishIssueComment(param, taskId, issueCommentPort) {
 function appendCommentContent(previous, addition) {
     const existing = previous ?? '';
     return existing.length > 0 ? `${existing}\n\n${addition}` : addition;
+}
+
+
+/***/ }),
+
+/***/ 62704:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.queryProgressAssessment = queryProgressAssessment;
+const application_error_1 = __nccwpck_require__(75999);
+const progress_completion_mismatch_1 = __nccwpck_require__(6519);
+const progress_completion_recovery_policy_1 = __nccwpck_require__(93325);
+const progress_prompt_capacity_policy_1 = __nccwpck_require__(19337);
+const logging_ports_1 = __nccwpck_require__(6152);
+const progress_response_1 = __nccwpck_require__(64264);
+const query_progress_result_workflow_1 = __nccwpck_require__(33658);
+function freezeSnapshot(value) {
+    if (value && typeof value === 'object' && !Object.isFrozen(value)) {
+        Object.freeze(value);
+        Object.values(value).forEach(freezeSnapshot);
+    }
+    return value;
+}
+/** Query failures never enter the parse-only catch; rejected prose stays inside this ended call. */
+async function evaluate(agent, request, context) {
+    const response = await (0, query_progress_result_workflow_1.queryProgressResult)(agent, request, { phase: 'assessment',
+        requirementIds: context.scope.requirements.map(requirement => requirement.id),
+        sourceLineIds: context.sourceLineIds, anchors: context.anchors });
+    try {
+        return { kind: 'valid', result: (0, progress_response_1.parseProgressResponse)(response, context.targetLocale, context.scope, context.anchors) };
+    }
+    catch (error) {
+        if (!(error instanceof progress_completion_mismatch_1.ProgressCompletionMismatch))
+            throw error;
+        const facts = error.factsFor(context.scope);
+        if (!facts || !(0, progress_completion_recovery_policy_1.progressCompletionCountsMatchScope)(facts, context.scope.requirements.length, context.scope.requirements.filter(requirement => requirement.uncertain).length))
+            throw error;
+        return { kind: 'mismatch', facts, correlationId: error.correlationId };
+    }
+}
+/** One complete read-only replacement; this owner has no publication capability. */
+async function queryProgressAssessment(agent, request, context) {
+    const captured = freezeSnapshot(globalThis.structuredClone({ request, context }));
+    if (!captured.request.options?.schema || captured.request.options.expectJson !== true) {
+        throw new application_error_1.ApplicationError('configuration.unsupported', 'Final progress assessment requires its complete response schema. Existing progress was retained.');
+    }
+    (0, progress_prompt_capacity_policy_1.remainingProgressAssessmentPromptBytes)(captured.request.prompt, captured.request.options.schema, captured.request.configuration?.effort);
+    const first = await evaluate(agent, captured.request, captured.context);
+    if (first.kind === 'valid')
+        return first.result;
+    (0, logging_ports_1.logInfo)('Reassessing one inconsistent completed progress estimate using the same complete pinned evidence. Previous progress is retained.');
+    const replacement = { ...captured.request, prompt: (0, progress_completion_recovery_policy_1.progressCompletionRepairPrompt)(captured.request.prompt, first.facts) };
+    const second = await evaluate(agent, replacement, captured.context);
+    if (second.kind === 'valid')
+        return second.result;
+    throw new application_error_1.ApplicationError('agent.failed', 'Progress completion remained inconsistent after one complete reassessment. Existing progress was retained.', { correlationId: second.correlationId, recovery: { id: 'progress-completion-recovery-exhausted', variables: second.facts } });
 }
 
 
@@ -82810,6 +82969,7 @@ exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = exports.APPLICAT
 exports.isApplicationErrorCorrelationId = isApplicationErrorCorrelationId;
 const framed_review_1 = __nccwpck_require__(43750);
 const progress_response_diagnostic_1 = __nccwpck_require__(56289);
+const progress_completion_diagnostic_1 = __nccwpck_require__(75095);
 const progress_inventory_diagnostic_1 = __nccwpck_require__(44048);
 const progress_response_diagnostic_2 = __nccwpck_require__(56289);
 const progress_binary_evidence_diagnostic_1 = __nccwpck_require__(90364);
@@ -82856,6 +83016,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'progress-result-contract-invalid',
     'progress-assessment-capacity-exceeded',
     'progress-scope-clause-limit',
+    'progress-completion-recovery-exhausted',
     'stored-configuration-schema-missing',
     'stored-configuration-schema-unsupported',
     'stored-configuration-invalid',
@@ -83101,6 +83262,7 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'progress-result-contract-invalid': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
     'progress-assessment-capacity-exceeded': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
     'progress-scope-clause-limit': Object.freeze(['clauseKind', 'observed', 'limit', 'sourceLineId']),
+    'progress-completion-recovery-exhausted': Object.freeze(['reportedProgress', 'requirementCount', 'supportedCount', 'missingCount', 'unknownCount']),
     'deployment-publication-context-missing': Object.freeze([]),
     'workspace-changes-rejected': Object.freeze([]),
 });
@@ -83116,6 +83278,9 @@ function normalizeApplicationErrorRecovery(recovery) {
     if (actualKeys.length !== expectedKeys.length
         || actualKeys.some((key, index) => key !== expectedKeys[index])) {
         throw new TypeError(`Application error recovery variables are invalid for ${recovery.id}.`);
+    }
+    if (recovery.id === 'progress-completion-recovery-exhausted') {
+        return Object.freeze({ id: recovery.id, variables: (0, progress_completion_diagnostic_1.normalizeProgressCompletionDiagnostic)(variables) });
     }
     if ((0, copilot_command_validation_1.isCopilotCommandValidationReason)(recovery.id)
         && !(0, copilot_command_validation_1.isValidCopilotCommandValidation)(recovery.id, variables.command)) {
@@ -99197,6 +99362,36 @@ function isProgressBinaryEvidenceFacts(value) {
 function progressBinaryEvidencePresentation(facts) {
     const paths = JSON.parse(facts.paths).map(progress_evidence_path_1.renderProgressEvidencePath);
     return Object.freeze({ paths: paths.join('; '), pathCount: facts.pathCount, shownCount: paths.length });
+}
+
+
+/***/ }),
+
+/***/ 75095:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.normalizeProgressCompletionDiagnostic = normalizeProgressCompletionDiagnostic;
+const KEYS = ['reportedProgress', 'requirementCount', 'supportedCount', 'missingCount', 'unknownCount'].sort();
+function normalizeProgressCompletionDiagnostic(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        throw new TypeError('Invalid closed progress completion diagnostic.');
+    }
+    const keys = Reflect.ownKeys(value);
+    if (keys.length !== KEYS.length || keys.some(key => typeof key !== 'string' || !KEYS.includes(key))) {
+        throw new TypeError('Invalid closed progress completion diagnostic.');
+    }
+    const { reportedProgress, requirementCount, supportedCount, missingCount, unknownCount } = value;
+    const count = (input) => typeof input === 'number' && Number.isSafeInteger(input) && input >= 0 && input <= 32;
+    if (typeof reportedProgress !== 'number' || !Number.isFinite(reportedProgress) || reportedProgress < 0 || reportedProgress > 100
+        || !count(requirementCount) || requirementCount < 1 || !count(supportedCount) || !count(missingCount) || !count(unknownCount)
+        || supportedCount + missingCount + unknownCount !== requirementCount
+        || (reportedProgress === 100) === (missingCount + unknownCount === 0)) {
+        throw new TypeError('Invalid progress completion percentage or counts.');
+    }
+    return Object.freeze({ reportedProgress, requirementCount, supportedCount, missingCount, unknownCount });
 }
 
 

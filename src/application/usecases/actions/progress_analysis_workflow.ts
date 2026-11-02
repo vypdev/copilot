@@ -1,5 +1,6 @@
 import { captureProgressScopeSource } from '../../policies/progress_scope_source_policy';
 import { queryProgressResult } from './query_progress_result_workflow';
+import { queryProgressAssessment } from './query_progress_assessment_workflow';
 import type { BoundProgressComparisonSourceQueryPort, ProgressComparisonSource } from '../../ports/progress_comparison_source_ports';
 import { selectProgressComparisonSource } from '../../policies/progress_comparison_source_policy';
 import { isAgentConfigurationReady } from '../../../data/model/agent';
@@ -15,7 +16,7 @@ import type { BoundProgressDiffQueryPort } from '../../ports/progress_diff_query
 import { findIssueBranch } from './find_issue_branch';
 import { validateProgressPrerequisites } from './progress_prerequisite_policy';
 import {
-    parseProgressResponse, progressResponseSchema, type ProgressAttemptResult,
+    progressResponseSchema, type ProgressAttemptResult,
 } from './progress_response';
 import { ApplicationError, type ApplicationErrorCode } from '../../errors/application_error';
 import { productFacingAgentQueryOptions } from '../../policies/agent_output_locale_policy';
@@ -23,7 +24,7 @@ import type { BoundPublicationSourceQueryPort } from '../../ports/publication_fr
 import { planProgressDiffPrompts, summarizeProgressDiff } from './summarize_progress_diff_workflow';
 import { MAX_PROGRESS_SCOPE_BYTES, MAX_PROGRESS_SCOPE_CLAUSES, progressScopeResponseSchema, parseProgressScopeWithAnchors } from '../../policies/progress_scope_policy';
 import { bindProgressEvidence, validateFramedProgressEvidence } from '../../policies/progress_evidence_protocol_policy';
-import { remainingProgressPromptBytes, progressAggregateBudget } from '../../policies/progress_prompt_capacity_policy';
+import { remainingProgressPromptBytes, remainingProgressAssessmentPromptBytes, progressAggregateBudget } from '../../policies/progress_prompt_capacity_policy';
 import { getProgressScopePrompt } from '../../../prompts/progress_scope';
 
 export interface ProgressAnalysisDependencies {
@@ -143,7 +144,7 @@ export async function analyzeProgress(
     const aggregateBudget = progressAggregateBudget(getCheckProgressPrompt(promptParameters), reservedSchema, effort);
     const reservedDiff = bindProgressEvidence(diff, issueDescription, promptParameters.acceptanceScope, param.targetLocale);
     planProgressDiffPrompts(reservedDiff, param, issueDescription, aggregateBudget, promptParameters.acceptanceScope);
-    if (diff.kind !== 'partitioned') remainingProgressPromptBytes(getCheckProgressPrompt({ ...promptParameters, diffEvidence: diff.evidence }), 'progress', reservedSchema, effort);
+    if (diff.kind !== 'partitioned') remainingProgressAssessmentPromptBytes(getCheckProgressPrompt({ ...promptParameters, diffEvidence: diff.evidence }), reservedSchema, effort);
     const { scope, anchors } = parseProgressScopeWithAnchors(await queryProgressResult(dependencies.aiRepository, {
         configuration: param.agentConfiguration, agentId: AGENT_PLAN, prompt: scopePrompt,
         options: { ...productFacingAgentQueryOptions('progress-scope', progressScopeResponseSchema(sourceLines)), includeReasoning: param.includeReasoning },
@@ -154,13 +155,12 @@ export async function analyzeProgress(
     const actualBudget = progressAggregateBudget(getCheckProgressPrompt({ ...promptParameters, acceptanceScope }), assessmentSchema, effort);
     const diffEvidence = await summarizeProgressDiff(boundDiff, param, issueDescription, dependencies.aiRepository, actualBudget, acceptanceScope);
     const prompt = getCheckProgressPrompt({ ...promptParameters, acceptanceScope, diffEvidence });
-    remainingProgressPromptBytes(prompt, 'progress', assessmentSchema, effort);
+    remainingProgressAssessmentPromptBytes(prompt, assessmentSchema, effort);
     logDebugInfo(
         `CheckProgress: prompt length=${prompt.length}, issue description length=${issueDescription.length}.`,
     );
     logInfo('🤖 Analyzing progress using the configured agent...');
-    const attemptResult = parseProgressResponse(
-        await queryProgressResult(dependencies.aiRepository, {
+    const attemptResult = await queryProgressAssessment(dependencies.aiRepository, {
             configuration: param.agentConfiguration,
             agentId: AGENT_PLAN,
             prompt,
@@ -168,12 +168,7 @@ export async function analyzeProgress(
                 ...productFacingAgentQueryOptions('progress', assessmentSchema),
                 includeReasoning: param.includeReasoning,
             },
-        }, { phase: 'assessment', requirementIds: scope.requirements.map(requirement => requirement.id),
-            sourceLineIds: sourceLines.map(line => line.id), anchors }),
-        param.targetLocale,
-        scope,
-        anchors,
-    );
+        }, { scope, anchors, targetLocale: param.targetLocale, sourceLineIds: sourceLines.map(line => line.id) });
 
     return {
         kind: 'ready',

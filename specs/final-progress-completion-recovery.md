@@ -1,16 +1,16 @@
 # Final Progress Completion Recovery
 
-- Status: Draft
+- Status: Implementation under validation; remote acceptance pending
 - Date: 2026-11-02
 - Catalog capability ID: github-communication-experience
-- Last verified: not applicable
+- Last verified: 2026-11-02 (local targeted assertions; remote acceptance pending)
 - Owners: Copilot maintainers
 - Scope: Define one bounded complete replacement for a narrowly validated contradiction in a final progress assessment.
 - Related issues/PRs: https://github.com/vypdev/copilot/issues/853
 - Required review gates: product UX, architecture, testing, documentation, security/operations
-- Open decisions blocking readiness: none; first SDD publication, Action execution, and its review gates remain pending.
+- Open decisions blocking design: none. The Action verified first SDD commit 828a68284f4687acf7350950f553ba501926454b on the linked issue branch. Implementation is undergoing local validation; independent remote acceptance and protected-path review remain pending.
 
-> This companion is proposed Action input. It is not a published SDD, implementation, or executed acceptance. Its owning capability already has the specifications `specs/immutable-progress-content-recovery.md`, `specs/complete-progress-comparison-inventory.md`, and `specs/progress-scope-source-ownership.md`. The proposed companion does not already own itself.
+> The Action published and verified this companion before implementation. Publication establishes the branch prerequisite, not implemented behavior or executed acceptance. Its owning capability already has the specifications `specs/immutable-progress-content-recovery.md`, `specs/complete-progress-comparison-inventory.md`, and `specs/progress-scope-source-ownership.md`. The listed contracts retain their baseline ownership; this companion specifies the bounded final-assessment correction.
 
 ## 1. Executive summary
 
@@ -45,7 +45,7 @@ These are the supplied current-behavior facts. The proposed recovery is prospect
 - Code/workflow/documentation references: the immutable catalog at `9abb7882652bbc680781a22fd8bb397eb6169731` lists the current scope parser, final progress workflow, assessment/capacity policies, response diagnostics, and related tests. The catalog lists owning specifications `specs/immutable-progress-content-recovery.md`, `specs/complete-progress-comparison-inventory.md`, and `specs/progress-scope-source-ownership.md`.
 - Incidents or concrete examples: issue #853 reports Commit runs 41414634366 (two attempts) and 41418428579, PR #852, heads `3ecade3154f25a11bb3a8107dc1cd3d4185dfd3c` and `dca6114af8cf92eadf35e2a217479c90e61347ef`, and base `9d3915729c96ec93c6e064d3321ba54c790170eb`. Reported error: `progress-completion-mismatch` at `$.progress`; prior state retained; `agent.failed`.
 - External primary sources: not applicable; this is a repository workflow change.
-- Unknowns: exact rejected counts and percentages; action-time base and branch; execution results; first publication status. These must be verified by the Action and its gates.
+- Unknowns: exact rejected counts and percentages, and implementation/acceptance results. The Action selected base 9abb7882652bbc680781a22fd8bb397eb6169731 and verified first SDD commit 828a68284f4687acf7350950f553ba501926454b on bugfix/853-final-progress-completion-mismatch-repeatedly-blocks-valid-fixes-without-bounded-recovery.
 
 ### 2.4 Retrospective classification (as-built baselines only)
 
@@ -185,6 +185,14 @@ flowchart LR
 
 Snapshot a structured clone of original options/schema/configuration and freeze only that clone. Preserve the exact prompt, evidence identities, and pinned scope. Replacement changes only a fixed reviewed footer and validated numeric data. Preserve existing per-query timeout/cancellation and native outer deadline; add no deadline field or budget reset.
 
+### 8.2.1 Complete capacity and numeric contract
+
+Before the first scope/model query, reserve the complete fixed recovery footer plus a worst-case 256-byte closed numeric hint in the reserved-scope, single and final request envelopes and aggregate budget. Closed key/scalar normalization and the executable maximum-hint test establish that bound; reserve padding is capacity accounting only and MUST NOT be sent to the provider. Preflight every late part and both complete final envelopes before admitting the first request. Preserve the existing 512 KiB runtime prompt limit, 384000-byte aggregate ceiling, 64000-byte scope limit, 32 required/uncertain and 32 excluded clauses, 1024-byte dynamic framing reserve, adaptive per-fact maximum of 800 Unicode points, and both complete 8000-point published projections including citations/separators. Preserve the immutable profile limits: 1024 paths, 4096 units, 512 units per part, 16 recovery frames, 16 MiB total recovered source, 2048 reads and 200000 tree entries. Unsupported whole input fails before queries; never clip, omit units, recollect source or raise capacities.
+
+The five facts are reportedProgress, requirementCount, supportedCount, missingCount and unknownCount. Counts come from exact current-scope entries only after all entry and full-projection checks pass. A typed mismatch preserves the existing safe direct-parser rejection and privately freezes those facts; a per-parse scope identity can prevent cross-scope reuse. Only a genuine completion contradiction may be recovered. Query execution remains outside the parse-only catch, including replacement queries. A second contradiction reports its own counts and correlation, without retaining either rejected payload across awaits.
+
+AgentQueryOptions has no absolute assessment deadline. Keep existing per-admitted-query timeout/cancellation and the native outer workflow deadline unchanged; no invented deadline port, override or native budget reset. At most one additional bounded read is admitted.
+
 ### 8.3 Executable architecture constraints
 
 Automated architecture and contract checks MUST ensure the recovery helper has no publication capability, domain/policy imports no provider/framework modules, and only the host parser can create the eligible mismatch outcome. Existing module, port, dependency, raw-error logging, schema, and workflow guards remain required.
@@ -221,12 +229,12 @@ The replacement uses the same pinned comparison and all existing publication che
 
 ## Links
 
-[Inspect the Commit run](RUN_LINK) · [Inspect the comparison](COMPARISON_LINK)
+[Inspect the Commit run](https://github.com/vypdev/copilot/actions/runs/41418428579) · [Inspect the comparison](https://github.com/vypdev/copilot/compare/9d3915729c96ec93c6e064d3321ba54c790170eb...dca6114af8cf92eadf35e2a217479c90e61347ef)
 
 <details>
 <summary>Technical details</summary>
 
-Field `$.progress`; reported 70%; requirements: 2 total, 2 supported, 0 missing, 0 unknown. Correlation: TERMINAL_CORRELATION.
+Field `$.progress`; reported 70%; requirements: 2 total, 2 supported, 0 missing, 0 unknown. Illustrative correlation: 11111111-1111-4111-8111-111111111111.
 </details>
 ```
 
@@ -260,7 +268,7 @@ Use existing locale precedence, en-US default, es-ES support, and whole-message 
 | Stale source during replacement | No obsolete estimate publishes | Prior progress and freshness facts | No | Rerun complete assessment | Discard provisional work |
 | Publication failure after validation | Possible existing partial effects | Actual observed publication state | No automatic write replay | Inspect current progress and run | Existing publication cleanup only |
 
-Errors follow impact, cause, action, retained-state order. A terminal exhaustion diagnostic has code `progress-completion-recovery-exhausted`; direct parser callers retain `progress-result-contract-invalid` and its current five-field recovery shape.
+Errors follow impact, cause, action, retained-state order. A terminal exhaustion error keeps code `agent.failed` and uses recovery ID `progress-completion-recovery-exhausted`, with exactly the five numeric fields in section 11. Direct parser callers retain `progress-result-contract-invalid` and its current five-field recovery shape.
 
 ## 11. Security, permissions, and privacy
 
@@ -276,7 +284,7 @@ Retain existing progress state and emit at most one fixed recovery log message. 
 
 ## 13. Compatibility, migration, rollout, and rollback
 
-Valid complete and partial responses remain accepted identically. Direct parser rejection and unrelated errors preserve current codes and recovery shapes. Add only the closed exhaustion identifier. No stored-state or in-flight comparison migration is required. Adopt a reviewed runtime only through its supported path; merging `develop` alone does not change the currently observed master-pinned issue-comment runtime. This proposal authorizes no release, deployment, or implementation. Rollback restores immediate rejection and retains previous progress; remove helper, diagnostic, and localized copy together without rewriting published state.
+Valid complete and partial responses remain accepted identically. Direct parser rejection and unrelated errors preserve current codes and recovery shapes. Add only the closed exhaustion identifier. No stored-state or in-flight comparison migration is required. Adopt a reviewed runtime only through its supported path; merging `develop` alone does not change the currently observed master-pinned issue-comment runtime. Release and deployment are outside this correction. Implementation starts only after the Action-verified first SDD and linked branch, now recorded above. Rollback restores immediate rejection and retains previous progress; remove helper, diagnostic, and localized copy together without rewriting published state.
 
 ## 14. Testing strategy
 
@@ -356,7 +364,7 @@ Documentation is part of delivery. The existing execution contract must explain 
 | `src/application/usecases/actions/progress_analysis_workflow.ts` | update |
 | `src/data/model/application_error.ts` | update |
 | `src/application/policies/application_error_message_catalog.ts` | update |
-| `src/application/policies/application_error_presentation_policy.ts` | update |
+| `src/application/policies/application_error_presentation_policy.ts` | reference |
 | `src/application/usecases/actions/__tests__/progress_result_rejection.integration.test.ts` | update |
 | `scripts/coverage-budgets.json` | update |
 | `specs/catalog.json` | update |
@@ -380,7 +388,7 @@ Documentation is part of delivery. The existing execution contract must explain 
 10. Given English, Spanish, or unsupported locale output, when diagnostics render, then the same numeric facts, correlation, retained-state meaning, and safe action are available without raw rejected prose.
 11. Given the exhaustion documentation example, when checked through the real normalizer and renderer, then it matches the closed catalog contract.
 
-These are planned acceptance scenarios, not executed tests. Publication, coverage, CI, human review, and approval remain independent evidence.
+The 40 case identities are implemented in the five new test modules in section 15. Full local verification passed 849 suites / 16,368 tests, with 35 pre-existing skips, plus 267 extension tests at 100% of all metrics. All coverage budgets and the setup ledger passed, with its 14 pre-existing human acceptance items still explicitly open. The four new runtime modules measured 100% statements, branches, functions and lines. Four genuine native-adapter contradiction/publication regressions failed before the runtime change and passed afterward. Typecheck, lint, specifications, guidance, documentation assets/contracts and workflow contracts also passed. Remote CI, full review, official correct-base Codecov and protected-path approval remain independent pending gates.
 
 ## 17. Requirements traceability
 
@@ -406,18 +414,18 @@ These are planned acceptance scenarios, not executed tests. Publication, coverag
 
 ## 19. Definition of Done
 
-- [ ] Every FPR requirement has acceptance and reciprocal case traceability.
-- [ ] All 40 planned cases have executed assertions and meaningful RED evidence; this draft does not claim they have run.
-- [ ] Architecture boundaries and parser-only recovery authority are implemented and automatically enforced.
-- [ ] Original and replacement envelope preflight, numeric bounds, freshness, complete-source receipts, and existing publication gates pass without truncation or omitted evidence.
-- [ ] Valid responses and direct parser rejection remain compatible; unrelated failures retain their identity.
+- [x] Every FPR requirement has acceptance and reciprocal case traceability.
+- [x] All 40 case identities have executed assertions; the four incident regressions have native-adapter RED evidence. Additional preservation, security and capacity cases passed without a claim that every such case failed on the baseline.
+- [x] Architecture boundaries and parser-only recovery authority are implemented and automatically enforced.
+- [x] Original and replacement envelope preflight, numeric bounds, freshness, complete-source receipts, and existing publication gates pass without truncation or omitted evidence.
+- [x] Valid responses and direct parser rejection remain compatible; unrelated failures retain their identity.
 - [ ] English, Spanish, fallback, pending, blocked, exhausted, partial-publication, and completed surfaces meet content and accessibility requirements; required human UX evidence is recorded.
 - [ ] New pure-policy coverage is 100%; modified coverable lines have official correct-base Codecov 100% with zero misses or partials; existing repository thresholds also pass.
-- [ ] User, operator, contributor, recovery, compatibility, and rollback documentation is discoverable and contract-checked.
+- [x] User, operator, contributor, recovery, compatibility, and rollback documentation is discoverable and contract-checked.
 - [ ] Required type, lint, full root/extension coverage, budget/ledger, specification/catalog generation and validation, documentation/routes/workflow, build/package smoke, Graphify, and normal hook checks pass.
-- [ ] `specs/catalog.json` and `specs/CATALOG.md` contain truthful evidence, and `pnpm run validate:specifications` passes.
+- [x] `specs/catalog.json` and `specs/CATALOG.md` contain truthful evidence, and `pnpm run validate:specifications` passes.
 - [ ] Current head/base, applicable CI/platform/Commit controls, complete semantic review, and any required specific human decision are verified independently.
-- [ ] No release, tag, deployment, extra permission, or unauthorized write is part of acceptance.
+- [x] No release, tag, deployment, extra permission, or unauthorized write is part of acceptance.
 - [ ] No readiness-blocking decision remains unresolved. First publication, structural consistency, planned cases, a build, or model claims do not establish implementation or readiness.
 
 ## 20. References and decisions
@@ -425,4 +433,4 @@ These are planned acceptance scenarios, not executed tests. Publication, coverag
 - Primary sources: https://github.com/vypdev/copilot/issues/853; immutable catalog evidence at `9abb7882652bbc680781a22fd8bb397eb6169731`.
 - Related specs/ADRs/issues/PRs: `specs/immutable-progress-content-recovery.md`, `specs/complete-progress-comparison-inventory.md`, and `specs/progress-scope-source-ownership.md`; prerequisite #833/#830 and extension H3 #704 remain separate.
 - Decisions and rejected alternatives: exactly one replacement rather than a general retry; closed counts rather than raw output; retain strict parsing rather than normalize percentages; unchanged model/configuration/limits/permissions; no new absolute deadline port; no automatic write replay. Reject forcing 100 from previous statuses, dropping uncertain requirements or sources, accepting provider errors as completed output, increasing capacities, adding a third query, caching partial evidence, weakening approval, or treating model claims as execution proof.
-- Follow-up work explicitly outside this spec: Action-owned first publication and execution; implementation, remote CI/coverage/review evidence, runtime adoption, release, and deployment. The reported parser/graph consistency at `3e7ceea` and catalog snapshot `9abb7882` establishes planning consistency only, not implementation or acceptance.
+- Follow-up work explicitly outside this spec: broader progress-planning improvements, #830 partition-length recovery, extension implementation, release and deployment. This spec includes implementation and its full CI/coverage/review acceptance; adoption into the master-pinned runtime is a separately reviewed operator transition. The reported parser/graph consistency at `3e7ceea` and catalog snapshot `9abb7882` establishes planning consistency only, not implementation or acceptance.

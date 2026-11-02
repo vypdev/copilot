@@ -126,6 +126,40 @@ Existing execution/transport classification and retryability remain unchanged.
 A later optional Check Run 403 is secondary and retains the primary failure and
 correlation reference.
 
+For a final completion contradiction only, the host makes one complete read-only
+reassessment after all other checks pass. Both full prompt envelopes are admitted
+before the first model request. No third query, source recollection, partial
+assessment publication or write retry is allowed. If the second final response
+still contradicts completion, `agent.failed` has recovery
+`progress-completion-recovery-exhausted`, with exactly five numeric observations
+of that response. For example:
+
+{/* progress-completion-example */}
+```json
+{
+  "code": "agent.failed",
+  "correlationId": "11111111-1111-4111-8111-111111111111",
+  "recovery": {
+    "id": "progress-completion-recovery-exhausted",
+    "variables": {
+      "reportedProgress": 100,
+      "requirementCount": 32,
+      "supportedCount": 29,
+      "missingCount": 2,
+      "unknownCount": 1
+    }
+  }
+}
+```
+
+These illustrative counts are not independent execution evidence. CLI, API,
+Check and Summary retain the same error code and correlation reference. Inspect
+the complete pinned comparison and final facts at `assessment / $.progress`;
+start a fresh complete assessment when the provider can satisfy the unchanged
+contract. Existing labels and assessments remain. Verification, review, coverage
+and approval are independent gates. Malformed output, provider interruption and
+other semantic failures retain their own error and do not receive this recovery.
+
 For `assessment-text-limit`, the host reports the first source-ordered aggregate
 overflow and its actual response-array summary/remaining field. Every full
 original citation, ID, separator and newline participates in the unchanged
