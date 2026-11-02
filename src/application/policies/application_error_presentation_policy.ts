@@ -18,6 +18,8 @@ import {
 const STORED_CONFIGURATION_RECOVERY_URL = 'https://docs.page/vypdev/copilot/security-operations/operations/troubleshooting#unsupported-stored-configuration';
 const BRANCH_SYNC_CATALOG_RECOVERY_URL = 'https://docs.page/vypdev/copilot/security-operations/operations/troubleshooting#branch-sync-catalog-compatibility';
 
+import { sourceContextDiagnostic } from '../../domain/agent_source_snapshot';
+
 export interface ApplicationErrorPresentation {
     readonly impact: string;
     readonly code: string;
@@ -42,7 +44,9 @@ export function buildApplicationErrorPresentation(
     const descriptor = error.recovery
         ? `error.recovery.${error.recovery.id}` as const
         : `error.${error.code}` as const;
-    const variables = error.recovery?.id === 'progress-partition-length-invalid'
+    const variables = error.recovery?.id === 'sdd-source-context-unavailable'
+        ? { ...sourceContextDiagnostic(error.recovery.variables) }
+        : error.recovery?.id === 'progress-partition-length-invalid'
         ? progressPartitionLengthPresentation(error.recovery.variables)
         : error.recovery?.id === 'bugbot-review-incomplete'
         ? { ...error.recovery.variables, countKind: error.recovery.variables.countKind === 'at-least' ? '≥' : '=',

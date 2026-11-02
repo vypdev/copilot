@@ -32635,6 +32635,11 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
         action: 'Review the safe validation diagnostics in the issue status card; correct existing paths or explicitly declare intended new files. Retry the same issue workflow.',
         retainedState: 'Existing answers and published SDDs were preserved; no draft was published. Publication checks do not establish runtime acceptance.',
     }),
+    'sdd-source-context-unavailable': Object.freeze({
+        impact: 'SDD {phase} stopped because its selected immutable source view is unavailable. Source: {sourceCommit}. Reason: {reason}.',
+        action: 'Inspect the source-context reason and the linked run. Verify local availability of the selected objects, Git support for --no-lazy-fetch, portable regular source paths and the fixed SDK limits. Correct the prerequisite and retry the same issue workflow; do not restore files into the default checkout or create a branch manually.',
+        retainedState: 'The canonical checkout, existing answers, published SDDs and linked branch were retained; this attempt published no specification or branch.',
+    }),
     'sdd-catalog-unsupported-profile': Object.freeze({
         impact: 'SDD preparation stopped before model analysis because the repository selected a catalog profile unsupported by the installed publication adapter.',
         action: 'Review catalog profile support in the SDD guide. Preserve the native schema, readiness, requirements, evidence and blockers; have a maintainer provide a reviewed compatible adapter, then retry this same issue.',
@@ -32827,6 +32832,11 @@ const SPANISH_RECOVERY_CONTENT = Object.freeze({
         impact: 'La publicación del SDD se detuvo tras un intento automático de corrección: no se pueden verificar las rutas citadas en la revisión base inmutable.',
         action: 'Revisa los diagnósticos seguros de validación de la tarjeta de estado; corrige las rutas existentes o declara explícitamente los archivos nuevos previstos. Reintenta el workflow de la misma incidencia.',
         retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador. Estas comprobaciones no demuestran la aceptación en ejecución.',
+    }),
+    'sdd-source-context-unavailable': Object.freeze({
+        impact: 'Se detuvo la fase {phase} del SDD porque no está disponible la vista del origen inmutable seleccionado. Origen: {sourceCommit}. Motivo: {reason}.',
+        action: 'Revisa el motivo del contexto de origen y la ejecución enlazada. Verifica los objetos locales seleccionados, que Git admita --no-lazy-fetch, las rutas portables de archivos regulares y los límites fijos del SDK. Corrige el requisito y reintenta el workflow de la misma incidencia; no restaures archivos en el checkout predeterminado ni crees una rama manualmente.',
+        retainedState: 'Se conservaron el checkout canónico, las respuestas, los SDD publicados y la rama enlazada; este intento no publicó ninguna especificación ni rama.',
     }),
     'sdd-catalog-unsupported-profile': Object.freeze({
         impact: 'La preparación del SDD se detuvo antes del análisis del modelo porque el repositorio seleccionó un perfil de catálogo que el adaptador de publicación instalado no admite.',
@@ -33812,6 +33822,7 @@ const approval_evidence_diagnostic_1 = __nccwpck_require__(8205);
 const branch_sync_validation_1 = __nccwpck_require__(981);
 const verification_failure_1 = __nccwpck_require__(177);
 const branch_sync_catalog_diagnostic_1 = __nccwpck_require__(5677);
+const agent_source_snapshot_1 = __nccwpck_require__(9205);
 exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     ...copilot_command_validation_1.COPILOT_COMMAND_VALIDATION_REASONS,
     'pull-request-link-restored',
@@ -33830,6 +33841,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'sdd-catalog-unsupported-profile',
     'sdd-catalog-format-invalid',
     'sdd-catalog-missing-trusted-source',
+    'sdd-source-context-unavailable',
     'sdd-draft-format-invalid',
     'sdd-draft-case-identity-invalid',
     'sdd-draft-case-budget-invalid',
@@ -34083,6 +34095,7 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'sdd-catalog-unsupported-profile': Object.freeze([]),
     'sdd-catalog-format-invalid': Object.freeze([]),
     'sdd-catalog-missing-trusted-source': Object.freeze([]),
+    'sdd-source-context-unavailable': Object.freeze(['sourceCommit', 'phase', 'reason']),
     'sdd-draft-format-invalid': Object.freeze([]),
     'sdd-draft-case-identity-invalid': Object.freeze([]),
     'sdd-draft-case-budget-invalid': Object.freeze([]),
@@ -34114,6 +34127,9 @@ function normalizeApplicationErrorRecovery(recovery) {
     }
     if (recovery.id === 'progress-completion-recovery-exhausted') {
         return Object.freeze({ id: recovery.id, variables: (0, progress_completion_diagnostic_1.normalizeProgressCompletionDiagnostic)(variables) });
+    }
+    if (recovery.id === 'sdd-source-context-unavailable' && !(0, agent_source_snapshot_1.isSddSourceContextDiagnostic)(variables)) {
+        throw new TypeError('SDD source context diagnostic is invalid.');
     }
     if ((0, copilot_command_validation_1.isCopilotCommandValidationReason)(recovery.id)
         && !(0, copilot_command_validation_1.isValidCopilotCommandValidation)(recovery.id, variables.command)) {
@@ -34849,6 +34865,66 @@ exports.AGENT_OUTPUT_MAX_BYTES = 4 * 1024 * 1024;
 function workspaceModeForCapability(capability) {
     return capability === 'fixer' ? 'workspace-write' : 'read-only';
 }
+
+
+/***/ }),
+
+/***/ 9205:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SddSourceContextFailure = exports.SDD_SOURCE_CONTEXT_REASONS = void 0;
+exports.isSddSourceContextDiagnostic = isSddSourceContextDiagnostic;
+exports.sourceContextDiagnostic = sourceContextDiagnostic;
+exports.isSddSourceContextReason = isSddSourceContextReason;
+exports.readAgentSourceSnapshot = readAgentSourceSnapshot;
+exports.SDD_SOURCE_CONTEXT_REASONS = [
+    'binding-invalid', 'git-unavailable', 'object-unavailable', 'unsafe-entry', 'entry-limit',
+    'file-limit', 'blob-limit', 'byte-limit', 'metadata-limit',
+    'materialization-failed', 'view-integrity',
+];
+function isSddSourceContextDiagnostic(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return false;
+    const record = value;
+    return Object.keys(record).sort().join(',') === 'phase,reason,sourceCommit'
+        && isSddSourceContextReason(record.reason)
+        && ((record.sourceCommit === 'none' && record.phase === 'unknown')
+            || (typeof record.sourceCommit === 'string' && /^[a-f0-9]{40}$/u.test(record.sourceCommit)
+                && (record.phase === 'analysis' || record.phase === 'draft')));
+}
+/** Also protects renderers called with untyped external records. */
+function sourceContextDiagnostic(value) {
+    return Object.freeze(isSddSourceContextDiagnostic(value)
+        ? { sourceCommit: value.sourceCommit, phase: value.phase, reason: value.reason }
+        : { sourceCommit: 'none', phase: 'unknown', reason: 'binding-invalid' });
+}
+function isSddSourceContextReason(value) {
+    return typeof value === 'string' && exports.SDD_SOURCE_CONTEXT_REASONS.includes(value);
+}
+function readAgentSourceSnapshot(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return;
+    const record = value;
+    if (Object.keys(record).sort().join(',') !== 'baseSha,kind,phase'
+        || record.kind !== 'pre-branch-sdd' || !['analysis', 'draft'].includes(record.phase)
+        || typeof record.baseSha !== 'string' || !/^[a-f0-9]{40}$/u.test(record.baseSha))
+        return;
+    return Object.freeze({ kind: 'pre-branch-sdd', phase: record.phase, baseSha: record.baseSha });
+}
+/** Closed host facts only. Git output, paths, credentials and producer text are discarded. */
+class SddSourceContextFailure extends Error {
+    constructor(reason, source) {
+        super('The selected immutable source view could not be prepared; existing SDD and branch state was retained.');
+        this.name = 'SddSourceContextFailure';
+        this.reason = isSddSourceContextReason(reason) ? reason : 'binding-invalid';
+        this.source = readAgentSourceSnapshot(source);
+        Object.freeze(this);
+    }
+}
+exports.SddSourceContextFailure = SddSourceContextFailure;
 
 
 /***/ }),

@@ -1,3 +1,4 @@
+const sourceSnapshot = { kind: 'pre-branch-sdd', phase: 'draft', baseSha: 'a'.repeat(40) } as const;
 import { draftSddMarkdown } from './pre_branch_sdd_draft_workflow';
 import { SddDraftFormatFailure, validateSddMarkdown, type SddPlan } from '../../../domain/pre_branch_sdd';
 import { AgentResponseLengthFailure } from '../../../domain/agent_response_length_failure';
@@ -33,7 +34,7 @@ describe('draftSddMarkdown', () => {
       }, 'specs/change.md');
     });
     const markdown = await draftSddMarkdown(adapter, { provider: 'codex', modelProvider: 'openai', model: 'gpt-5' },
-      { ...plan, action: 'new' }, 'Preserve all three distinct cases and both requirements.', validate);
+      { ...plan, action: 'new' }, 'Preserve all three distinct cases and both requirements.', validate, sourceSnapshot);
     expect(markdown).toContain('| Policy | 2 |');
     expect(markdown).toContain('| Total | 3 |');
     expect(markdown).toContain('| G-01 | payments-change-C01, payments-change-C02 |');
@@ -104,7 +105,7 @@ describe('draftSddMarkdown', () => {
     const execute = jest.fn().mockResolvedValue(JSON.stringify({ markdown }));
     const adapter = new FindingsAgentAdapter({ cli: { execute } });
     await expect(draftSddMarkdown(adapter, { provider: 'codex', modelProvider: 'openai', model: 'gpt-5' }, plan, 'Resolved requirements',
-      async candidate => validateSddMarkdown(candidate))).resolves.toBe(markdown);
+      async candidate => validateSddMarkdown(candidate), sourceSnapshot)).resolves.toBe(markdown);
     expect(execute).toHaveBeenCalledTimes(1);
     expect(execute.mock.calls[0][0].prompt).toContain('Total must equal the sum');
   });
@@ -114,7 +115,7 @@ describe('draftSddMarkdown', () => {
     const validate = jest.fn().mockResolvedValue(undefined);
     const adapter = new FindingsAgentAdapter({ cli: { execute } });
     await expect(draftSddMarkdown(adapter, { provider: 'codex', modelProvider: 'openai', model: 'gpt-5' },
-      { ...plan, action: 'companion' }, 'Original resolved requirements', validate)).resolves.toContain('Accepted draft');
+      { ...plan, action: 'companion' }, 'Original resolved requirements', validate, sourceSnapshot)).resolves.toContain('Accepted draft');
     expect(execute).toHaveBeenCalledTimes(2);
     expect(validate).toHaveBeenCalledTimes(1);
     expect(execute.mock.calls[1][0].prompt).not.toContain('untrusted secret');
@@ -145,7 +146,7 @@ describe('draftSddMarkdown', () => {
   it('does not classify an adapter minimum-length violation as a maximum-length repair', async () => {
     const execute = jest.fn().mockResolvedValue(JSON.stringify({ markdown: 'short' }));
     const adapter = new FindingsAgentAdapter({ cli: { execute } });
-    await expect(draftSddMarkdown(adapter, { provider: 'codex', modelProvider: 'openai', model: 'gpt-5' }, plan, 'Original'))
+    await expect(draftSddMarkdown(adapter, { provider: 'codex', modelProvider: 'openai', model: 'gpt-5' }, plan, 'Original', undefined, sourceSnapshot))
       .rejects.toThrow('too short');
     expect(execute).toHaveBeenCalledTimes(1);
   });

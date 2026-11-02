@@ -14,6 +14,13 @@
 
 ## 1. Executive summary
 
+Pre-branch SDD analysis and drafting additionally bind their effective read-only
+source to the host-selected immutable snapshot, after the canonical anchor check.
+See [source-context admission](pre-branch-sdd-source-context.md) for the private
+Git view, fixed limits, original deadline, closed failure and cleanup contract.
+This internal binding adds no public runtime option or provider authority.
+
+
 Copilot resolves one complete runtime/model tuple for each reachable agent role:
 provider runtime, model provider, model, optional effort, and optional validated
 executable selection.

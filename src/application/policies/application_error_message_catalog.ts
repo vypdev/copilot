@@ -323,6 +323,11 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     action: 'Review the safe validation diagnostics in the issue status card; correct existing paths or explicitly declare intended new files. Retry the same issue workflow.',
     retainedState: 'Existing answers and published SDDs were preserved; no draft was published. Publication checks do not establish runtime acceptance.',
   }),
+  'sdd-source-context-unavailable': Object.freeze({
+    impact: 'SDD {phase} stopped because its selected immutable source view is unavailable. Source: {sourceCommit}. Reason: {reason}.',
+    action: 'Inspect the source-context reason and the linked run. Verify local availability of the selected objects, Git support for --no-lazy-fetch, portable regular source paths and the fixed SDK limits. Correct the prerequisite and retry the same issue workflow; do not restore files into the default checkout or create a branch manually.',
+    retainedState: 'The canonical checkout, existing answers, published SDDs and linked branch were retained; this attempt published no specification or branch.',
+  }),
   'sdd-catalog-unsupported-profile': Object.freeze({
     impact: 'SDD preparation stopped before model analysis because the repository selected a catalog profile unsupported by the installed publication adapter.',
     action: 'Review catalog profile support in the SDD guide. Preserve the native schema, readiness, requirements, evidence and blockers; have a maintainer provide a reviewed compatible adapter, then retry this same issue.',
@@ -517,6 +522,11 @@ const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     impact: 'La publicación del SDD se detuvo tras un intento automático de corrección: no se pueden verificar las rutas citadas en la revisión base inmutable.',
     action: 'Revisa los diagnósticos seguros de validación de la tarjeta de estado; corrige las rutas existentes o declara explícitamente los archivos nuevos previstos. Reintenta el workflow de la misma incidencia.',
     retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador. Estas comprobaciones no demuestran la aceptación en ejecución.',
+  }),
+  'sdd-source-context-unavailable': Object.freeze({
+    impact: 'Se detuvo la fase {phase} del SDD porque no está disponible la vista del origen inmutable seleccionado. Origen: {sourceCommit}. Motivo: {reason}.',
+    action: 'Revisa el motivo del contexto de origen y la ejecución enlazada. Verifica los objetos locales seleccionados, que Git admita --no-lazy-fetch, las rutas portables de archivos regulares y los límites fijos del SDK. Corrige el requisito y reintenta el workflow de la misma incidencia; no restaures archivos en el checkout predeterminado ni crees una rama manualmente.',
+    retainedState: 'Se conservaron el checkout canónico, las respuestas, los SDD publicados y la rama enlazada; este intento no publicó ninguna especificación ni rama.',
   }),
   'sdd-catalog-unsupported-profile': Object.freeze({
     impact: 'La preparación del SDD se detuvo antes del análisis del modelo porque el repositorio seleccionó un perfil de catálogo que el adaptador de publicación instalado no admite.',

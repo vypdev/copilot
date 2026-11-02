@@ -10,6 +10,7 @@ import type {
 } from '../../application/ports/agent_execution_observation_ports';
 import { AgentCliError } from './agent_cli_contracts';
 import { agentExecutionFailureCode } from '../../application/policies/agent_execution_failure_policy';
+import { SddSourceContextFailure } from '../../domain/agent_source_snapshot';
 
 export type { AgentCliRequest, AgentCliError } from './agent_cli_contracts';
 
@@ -82,6 +83,7 @@ function failureObservation(
         failureCategory: category,
         ...(phase === 'preflight' && error instanceof AgentCliError && error.preflightStage
             ? { preflightStage: error.preflightStage } : {}),
+        ...(phase === 'preflight' && error instanceof SddSourceContextFailure ? { preflightStage: 'workspace' as const } : {}),
         ...(phase === 'preflight' && error instanceof AgentCliError && error.preflightDiagnostic
             ? { preflightDiagnostic: error.preflightDiagnostic } : {}),
         semanticCode: agentExecutionFailureCode(category),

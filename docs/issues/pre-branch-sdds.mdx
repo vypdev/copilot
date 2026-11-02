@@ -5,6 +5,24 @@ description: Clarify and publish a specification before implementation starts.
 
 # Pre-branch SDDs
 
+## Source used by analysis and drafting
+
+The selected development commit owns the catalogue, source facts, analysis and
+draft, including its existing automatic repair. Copilot prepares an independent
+read-only view with that exact commit and tracked file bytes. The workflow's
+canonical checkout remains unchanged, even if its default branch differs from
+the selected source. Untracked and uncommitted files are not source evidence.
+
+If that complete view cannot be prepared or verified, the existing preparation
+card reports `sdd-source-context-unavailable` with a source commit, phase and
+closed reason. Inspect the linked run: check local object availability, Git
+support for `--no-lazy-fetch`, portable regular paths and the fixed
+[execution limits](/agents/execution-contract#immutable-sdd-source-views).
+Correct the prerequisite and retry the same issue workflow. Do not restore
+already tracked files into the default checkout or create a branch manually.
+No model repair, specification or branch publication follows this failure.
+An actually absent trusted catalogue retains its separate prerequisite recovery.
+
 When an existing SDD owns the change, automated drafting adds a proposed change
 appendix while preserving the previous contract verbatim. Each appendix is
 limited to 18,000 characters and the complete SDD to 70,000. If the document

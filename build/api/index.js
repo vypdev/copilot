@@ -6941,6 +6941,7 @@ const approval_evidence_diagnostic_1 = __nccwpck_require__(8205);
 const branch_sync_validation_1 = __nccwpck_require__(981);
 const verification_failure_1 = __nccwpck_require__(177);
 const branch_sync_catalog_diagnostic_1 = __nccwpck_require__(5677);
+const agent_source_snapshot_1 = __nccwpck_require__(9205);
 exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     ...copilot_command_validation_1.COPILOT_COMMAND_VALIDATION_REASONS,
     'pull-request-link-restored',
@@ -6959,6 +6960,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'sdd-catalog-unsupported-profile',
     'sdd-catalog-format-invalid',
     'sdd-catalog-missing-trusted-source',
+    'sdd-source-context-unavailable',
     'sdd-draft-format-invalid',
     'sdd-draft-case-identity-invalid',
     'sdd-draft-case-budget-invalid',
@@ -7212,6 +7214,7 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'sdd-catalog-unsupported-profile': Object.freeze([]),
     'sdd-catalog-format-invalid': Object.freeze([]),
     'sdd-catalog-missing-trusted-source': Object.freeze([]),
+    'sdd-source-context-unavailable': Object.freeze(['sourceCommit', 'phase', 'reason']),
     'sdd-draft-format-invalid': Object.freeze([]),
     'sdd-draft-case-identity-invalid': Object.freeze([]),
     'sdd-draft-case-budget-invalid': Object.freeze([]),
@@ -7243,6 +7246,9 @@ function normalizeApplicationErrorRecovery(recovery) {
     }
     if (recovery.id === 'progress-completion-recovery-exhausted') {
         return Object.freeze({ id: recovery.id, variables: (0, progress_completion_diagnostic_1.normalizeProgressCompletionDiagnostic)(variables) });
+    }
+    if (recovery.id === 'sdd-source-context-unavailable' && !(0, agent_source_snapshot_1.isSddSourceContextDiagnostic)(variables)) {
+        throw new TypeError('SDD source context diagnostic is invalid.');
     }
     if ((0, copilot_command_validation_1.isCopilotCommandValidationReason)(recovery.id)
         && !(0, copilot_command_validation_1.isValidCopilotCommandValidation)(recovery.id, variables.command)) {
@@ -7397,6 +7403,65 @@ exports.AGENT_OUTPUT_MAX_BYTES = 4 * 1024 * 1024;
 function workspaceModeForCapability(capability) {
     return capability === 'fixer' ? 'workspace-write' : 'read-only';
 }
+
+
+/***/ }),
+
+/***/ 9205:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SddSourceContextFailure = exports.SDD_SOURCE_CONTEXT_REASONS = void 0;
+exports.isSddSourceContextDiagnostic = isSddSourceContextDiagnostic;
+exports.sourceContextDiagnostic = sourceContextDiagnostic;
+exports.isSddSourceContextReason = isSddSourceContextReason;
+exports.readAgentSourceSnapshot = readAgentSourceSnapshot;
+exports.SDD_SOURCE_CONTEXT_REASONS = [
+    'binding-invalid', 'git-unavailable', 'object-unavailable', 'unsafe-entry', 'entry-limit',
+    'file-limit', 'blob-limit', 'byte-limit', 'metadata-limit',
+    'materialization-failed', 'view-integrity',
+];
+function isSddSourceContextDiagnostic(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return false;
+    const record = value;
+    return Object.keys(record).sort().join(',') === 'phase,reason,sourceCommit'
+        && isSddSourceContextReason(record.reason)
+        && ((record.sourceCommit === 'none' && record.phase === 'unknown')
+            || (typeof record.sourceCommit === 'string' && /^[a-f0-9]{40}$/u.test(record.sourceCommit)
+                && (record.phase === 'analysis' || record.phase === 'draft')));
+}
+/** Also protects renderers called with untyped external records. */
+function sourceContextDiagnostic(value) {
+    return Object.freeze(isSddSourceContextDiagnostic(value)
+        ? { sourceCommit: value.sourceCommit, phase: value.phase, reason: value.reason }
+        : { sourceCommit: 'none', phase: 'unknown', reason: 'binding-invalid' });
+}
+function isSddSourceContextReason(value) {
+    return typeof value === 'string' && exports.SDD_SOURCE_CONTEXT_REASONS.includes(value);
+}
+function readAgentSourceSnapshot(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return;
+    const record = value;
+    if (Object.keys(record).sort().join(',') !== 'baseSha,kind,phase'
+        || record.kind !== 'pre-branch-sdd' || !['analysis', 'draft'].includes(record.phase)
+        || typeof record.baseSha !== 'string' || !/^[a-f0-9]{40}$/u.test(record.baseSha))
+        return;
+    return Object.freeze({ kind: 'pre-branch-sdd', phase: record.phase, baseSha: record.baseSha });
+}
+/** Closed host facts only. Git output, paths, credentials and producer text are discarded. */
+class SddSourceContextFailure extends Error {
+    constructor(reason, source) {
+        super('The selected immutable source view could not be prepared; existing SDD and branch state was retained.');
+        this.name = 'SddSourceContextFailure';
+        this.reason = isSddSourceContextReason(reason) ? reason : 'binding-invalid';
+        this.source = readAgentSourceSnapshot(source);
+        Object.freeze(this);
+    }
+}
+exports.SddSourceContextFailure = SddSourceContextFailure;
 
 
 /***/ }),

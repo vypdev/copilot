@@ -28,6 +28,9 @@ import { buildAgentCliEnvironment } from '../../data/repository/agent_authentica
 import { getAgentRuntimeManifest, getAgentRuntimeManifestEntry, readAgentRuntimeVersion } from './agent_runtime_manifest';
 import { readAgentExecutableVersion, resolveAgentExecutablePath, validateResolvedAgentInvocation } from './agent_executable_invocation';
 import { makeWindowsRuntimePathPrivate } from './windows_runtime_acl';
+import { admitAgentSourceSnapshot } from '../../application/policies/agent_source_snapshot_policy';
+import { SddSourceContextFailure, type AgentSourceSnapshot } from '../../domain/agent_source_snapshot';
+import { prepareSourceSnapshotWorkspace } from './agent_source_snapshot_workspace';
 
 export interface AgentExecutionPlanningRequest {
     readonly configuration: AgentConfiguration;
@@ -39,6 +42,8 @@ export interface AgentExecutionPlanningRequest {
     readonly maxOutputBytes?: number;
     readonly maxPromptBytes?: number;
     readonly outputSchema?: Record<string, unknown>;
+    readonly sourceSnapshot?: AgentSourceSnapshot;
+    readonly signal?: AbortSignal;
 }
 
 export interface AgentExecutionPlanningSystem {
@@ -81,12 +86,14 @@ export class AgentExecutionPlanner {
     constructor(private readonly system: AgentExecutionPlanningSystem = DEFAULT_SYSTEM) {}
 
     prepare(request: AgentExecutionPlanningRequest): AgentExecutionPlan {
+        const startedAt = performance.now();
         const limits = validateLimits(request);
         const sourceEnvironment = request.environment ?? process.env;
         let runtimeDirectory: string | undefined;
         let stage: AgentExecutionPreflightStage = 'workspace';
         try {
-            const workspace = this.system.resolveWorkspace(request.cwd ?? process.cwd());
+            const sourceSnapshot = admitAgentSourceSnapshot(request.sourceSnapshot, request.capability);
+            let workspace = this.system.resolveWorkspace(request.cwd ?? process.cwd());
             stage = 'ambient-configuration';
             rejectAmbientProviderConfiguration(request.configuration.provider, workspace);
             stage = 'manifest';
@@ -124,6 +131,17 @@ export class AgentExecutionPlanner {
                 }
             }
             const gitConfigPath = join(runtimeDirectory, 'gitconfig');
+            let sourceArtifact: AgentArtifactTemplate | undefined;
+            if (sourceSnapshot) {
+                stage = 'workspace';
+                const prepared = prepareSourceSnapshotWorkspace(workspace, sourceSnapshot, runtimeDirectory,
+                    startedAt + limits.timeoutMs, request.signal);
+                workspace = prepared.workspace;
+                sourceArtifact = { path: join(runtimeDirectory, 'source-snapshot.json'),
+                    contents: JSON.stringify(prepared.manifest), purpose: 'source-snapshot' };
+                stage = 'ambient-configuration';
+                rejectAmbientProviderConfiguration(request.configuration.provider, workspace);
+            }
             stage = 'policy';
             const providerPolicy = buildProviderExecutionPolicy({
                 configuration: request.configuration,
@@ -135,6 +153,7 @@ export class AgentExecutionPlanner {
             stage = 'artifacts';
             const artifacts = materializeArtifacts([
                 { path: gitConfigPath, contents: '', purpose: 'git-config' },
+                ...(sourceArtifact ? [sourceArtifact] : []),
                 ...providerPolicy.artifacts,
             ]);
             const environment = definedEnvironment({
@@ -161,12 +180,13 @@ export class AgentExecutionPlanner {
                 approval: 'never',
                 sessionPersistence: false,
                 output: providerPolicy.output,
-                timeoutMs: limits.timeoutMs,
+                timeoutMs: remainingSourceTimeout(sourceSnapshot, startedAt, limits.timeoutMs),
                 maxPromptBytes: limits.maxPromptBytes,
                 maxOutputBytes: limits.maxOutputBytes,
                 environment,
                 artifacts,
                 runtimeDirectory,
+                ...(sourceSnapshot ? { sourceSnapshot, sourceDeadlineMs: startedAt + limits.timeoutMs } : {}),
                 runtimeContract: {
                     provider: request.configuration.provider,
                     version,
@@ -175,6 +195,7 @@ export class AgentExecutionPlanner {
             };
         } catch (error) {
             if (runtimeDirectory) rmSync(runtimeDirectory, { recursive: true, force: true });
+            if (error instanceof SddSourceContextFailure) throw error;
             if (error instanceof AgentCliError) {
                 error.preflightStage = stage;
                 throw error;
@@ -187,6 +208,13 @@ export class AgentExecutionPlanner {
             throw rejected;
         }
     }
+}
+
+function remainingSourceTimeout(source: AgentSourceSnapshot | undefined, startedAt: number, timeout: number): number {
+    if (!source) return timeout;
+    const remaining = Math.floor(startedAt + timeout - performance.now());
+    if (remaining <= 0) throw new AgentCliError('The read-only source preparation exhausted its operation deadline.', 'timeout', true);
+    return remaining;
 }
 
 function validateLimits(request: AgentExecutionPlanningRequest) {

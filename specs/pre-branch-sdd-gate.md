@@ -14,6 +14,12 @@ Live dogfooding on 2026-10-10 (#454) exposed a runner checkout hook that require
 
 ## 1. Executive summary
 
+The [immutable source-context companion](pre-branch-sdd-source-context.md) binds
+analysis, drafting and its existing repair to this gate's loaded snapshot SHA.
+It preserves the canonical checkout, lifecycle and freshness guards while
+providing an independently verified SDK-owned read-only source view.
+
+
 A repository can enable a pre-branch SDD gate for feature issues and other
 branch-bearing issues explicitly marked as behavior changes. After an authorized
 `in-progress` start, the Action finds the owning SDD, analyzes the issue, and

@@ -20,6 +20,9 @@ const RECOVERY_CASES: readonly Readonly<{
     english: string;
     spanish: string;
 }>[] = [
+    { recovery: { id: 'sdd-source-context-unavailable', variables: { sourceCommit: 'a'.repeat(40), phase: 'analysis', reason: 'object-unavailable' } },
+      english: 'The canonical checkout, existing answers, published SDDs and linked branch were retained; this attempt published no specification or branch.',
+      spanish: 'Se conservaron el checkout canónico, las respuestas, los SDD publicados y la rama enlazada; este intento no publicó ninguna especificación ni rama.' },
     { recovery: { id: 'progress-partition-length-invalid', variables: { partitionId: 'part-7', filePath: 'src/example.ts', unitId: 'unit-21', field: '$.files[0].implemented', maximum: 600, observed: 618 } },
       english: 'Existing progress labels and assessments were preserved. No partial percentage or passing verification was published; execution and optional check-publication failures remain separate.',
       spanish: 'Se conservaron las etiquetas y evaluaciones de progreso. No se publicó ningún porcentaje parcial ni verificación aprobada; los fallos de ejecución y de publicación del check opcional siguen siendo independientes.' },

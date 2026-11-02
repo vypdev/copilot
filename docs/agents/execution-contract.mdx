@@ -31,6 +31,35 @@ The runtime creates one complete `AgentExecutionPlan`. A compile-time exhaustive
 
 All roles deny agent-tool network, approval escalation, MCP, plugins, subagents, session persistence, Git credentials, and ambient repository/user provider configuration. Only `fixer` receives workspace write access; trusted Copilot code remains responsible for validation, commit, push, publication, and GitHub mutation.
 
+## Immutable SDD source views
+
+Pre-branch SDD analysis and drafting carry an internal binding to the exact
+loaded source commit. The canonical repository root and `GITHUB_WORKSPACE`
+checks still validate the requested anchor first. Only then does the SDK create
+an independent private Git view for the same read-only provider policy. There is
+no public workspace selector, extra writable root or permission. Ordinary agent
+operations keep their existing workspace behavior.
+
+Git must support `--no-lazy-fetch`; unsupported Git fails before source object
+reads. Preparation never downloads missing promisor objects. It imports only the
+selected commit/tree/blobs, without parent history, remotes, source Git config,
+credentials, alternates or shared worktree administration. Raw blob bytes avoid
+checkout/archive transformations. A sealed inventory and private metadata hashes
+are checked before launch; missing, unsafe or changed content blocks the full view.
+
+Fixed ceilings are 10,000 regular files, 20,000 total recursive entries, 32 MiB per
+blob, 256 MiB of regular source, 1 MiB per commit, 48 MiB of inventory and 288 MiB
+of packed objects. Portable UTF-8 paths have 1,024-byte full and 255-byte segment
+limits. Symlinks, gitlinks, reserved names and case/Unicode aliases are rejected.
+Preparation has at most 60 seconds **within** the original operation timeout;
+final admission also consumes that timeout. No source is truncated to fit.
+
+The owned view/profile/manifest are removed on success, failure, cancellation and
+timeout. A source-context failure uses the existing SDD preparation card with
+closed source/phase/reason facts; it does not consume a draft repair or publish a
+branch. Native fake-child tests establish local host behavior, not a live model
+request, a Windows Codex service sandbox or a released consumer fix.
+
 Codex child commands retain only a fixed list of system variables: `PATH`,
 `SystemRoot`, `WINDIR`, `PATHEXT`, `TMPDIR`, `TEMP`, `TMP`, `LANG`, and `LC_ALL`.
 These let the sandbox locate its system tools on Linux and Windows. Model,
