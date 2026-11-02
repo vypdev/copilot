@@ -3,6 +3,7 @@ import { buildAgentPrompt, applyAgentEffortInstruction } from './agent_prompt_en
 import { productFacingAgentQueryOptions } from './agent_output_locale_policy';
 import { progressEvidenceTooLarge } from './progress_diff_partition_policy';
 import { MAX_PROGRESS_AGGREGATE_BYTES } from './progress_partition_response_policy';
+import { reservedProgressCompletionPrompt } from './progress_completion_recovery_policy';
 
 export const PROGRESS_PROMPT_FRAMING_RESERVE_BYTES = 1_024;
 
@@ -19,7 +20,13 @@ export function remainingProgressPromptBytes(prompt: string, task: Task, schema:
 
 /** Dynamic untrusted-data framing is reserved before the first model request. */
 export function progressAggregateBudget(promptWithoutEvidence: string, schema: Schema, effort?: string): number {
-    const budget = Math.min(MAX_PROGRESS_AGGREGATE_BYTES, remainingProgressPromptBytes(promptWithoutEvidence, 'progress', schema, effort) - PROGRESS_PROMPT_FRAMING_RESERVE_BYTES);
+    const budget = Math.min(MAX_PROGRESS_AGGREGATE_BYTES, remainingProgressAssessmentPromptBytes(promptWithoutEvidence, schema, effort) - PROGRESS_PROMPT_FRAMING_RESERVE_BYTES);
     if (budget < 1) throw progressEvidenceTooLarge();
     return budget;
+}
+
+/** Both original and worst complete final replacement fit before any scope request is admitted. */
+export function remainingProgressAssessmentPromptBytes(prompt: string, schema: Schema, effort?: string): number {
+    remainingProgressPromptBytes(prompt, 'progress', schema, effort);
+    return remainingProgressPromptBytes(reservedProgressCompletionPrompt(prompt), 'progress', schema, effort);
 }

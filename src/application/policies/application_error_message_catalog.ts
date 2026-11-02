@@ -252,6 +252,11 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     action: 'Inspect the original requirement and response schema. Details: phase {phase}, reason {reason}, field {field}, requirement {requirementId}, original issue line {sourceLineId}. none means no verified identity is available. A fresh attempt may help when the provider can satisfy the unchanged contract; do not relax acceptance or verification.',
     retainedState: 'Existing progress labels and published assessments were preserved. An optional check-publication warning is a separate result.',
   }),
+  'progress-completion-recovery-exhausted': Object.freeze({
+    impact: 'The final progress result still contradicted completion after one complete reassessment; progress was not published.',
+    action: 'Inspect the complete pinned comparison and final facts: phase assessment, field $.progress, reported {reportedProgress}%, requirements {requirementCount}, supported {supportedCount}, missing {missingCount}, unknown {unknownCount}. Start a fresh complete assessment when the provider can satisfy the unchanged contract. These are model observations, not independent execution or approval evidence.',
+    retainedState: 'Existing progress labels and published assessments were preserved. Verification, review, coverage and approval remain independent gates.',
+  }),
   'bugbot-review-incomplete': Object.freeze({
     impact: 'Complete Bugbot review is blocked: {resource} {countKind} {observed} {unit}; supported limit {limit} ({profile}).',
     action: 'Inspect the exact resource and limit. Prepare missing immutable objects through the Action-managed workflow, correct the verified source, or review genuinely unrelated PR scope. Repeating identical unsupported input cannot complete the review. No partial review can authorize approval.',
@@ -436,6 +441,11 @@ const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     impact: 'El resultado de progreso devuelto incumplió su contrato; no se publicó el progreso.',
     action: 'Inspecciona el requisito original y el esquema de respuesta. Detalles: fase {phase}, motivo {reason}, campo {field}, requisito {requirementId}, línea original de la issue {sourceLineId}. none indica que no hay una identidad verificada. Un nuevo intento puede ayudar si el proveedor cumple el contrato sin cambiarlo; no relajes la aceptación ni la verificación.',
     retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas. Un aviso de publicación del check opcional corresponde a otro resultado.',
+  }),
+  'progress-completion-recovery-exhausted': Object.freeze({
+    impact: 'El resultado final siguió contradiciendo la completitud después de una reevaluación completa; no se publicó el progreso.',
+    action: 'Inspecciona la comparación completa fijada y los datos finales: fase assessment, campo $.progress, porcentaje {reportedProgress}%, requisitos {requirementCount}, respaldados {supportedCount}, pendientes {missingCount}, desconocidos {unknownCount}. Inicia una evaluación completa nueva cuando el proveedor pueda cumplir el contrato sin cambiarlo. Son observaciones del modelo, no evidencia independiente de ejecución ni aprobación.',
+    retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas. Verificación, revisión, cobertura y aprobación siguen siendo controles independientes.',
   }),
   'bugbot-review-incomplete': Object.freeze({
     impact: 'La revisión completa de Bugbot está bloqueada: {resource} {countKind} {observed} {unit}; límite admitido {limit} ({profile}).',

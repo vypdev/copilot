@@ -1,0 +1,302 @@
+### Is there an existing issue for this?
+
+- [x] I have searched the existing issues.
+
+### Which actions are affected?
+
+Commits
+
+### Which platforms are affected?
+
+Linux
+
+### Description
+
+Completed final progress contradictions block #852/#830 and H3 #704/#837. Preserve strict rejection, prior progress, all seven outcomes, forty cases and independent gates in the proposed companion below. It is author input, not published or executed acceptance.
+
+### Reproducing the issue
+
+Runs41414634366 attempts1/2 and41418428579; exact heads/base are in section2 below. References6d55b31a-d713-401c-a6cd-c2b534618540,3ef19d94-d981-40e7-a6af-5c3d6b0490d3,d7c7cfb1-f838-4acd-bb63-2dd594963995. Prompt clarification alone failed. Actual rejected counts are unknown.
+
+### copilot Version
+
+3.10.7; codex-cli0.166.0; openai/gpt-6-luna, unchanged.
+
+### Relevant Log Output
+
+progress-completion-mismatch; $.progress; previous state retained; agent.failed.
+
+### Additional context and comments
+
+Complete proposed input follows. The unchanged production parser at3e7ceea accepts its40-case graph against all8 immutable owners at9abb7882. This proves planning consistency only; the Action must generate, validate and publish its own first SDD normally. No branch override, implementation or deployment is authorized by this proposal.
+
+# Final progress completion recovery
+
+- Status: Draft proposal for Action input; not a published SDD or implementation acceptance
+- Date: 2026-11-02
+- Catalog capability ID: github-communication-experience
+- Owners: Copilot maintainers
+- Scope: one bounded complete replacement for final completion contradiction
+- Related issue: https://github.com/vypdev/copilot/issues/853
+- Required review gates: UX, architecture, tests, documentation, security/operations
+- Open decisions blocking design: none; Action publication and execution gates remain pending
+
+## 1. Executive summary
+
+A completed final estimate sometimes contradicts its own otherwise valid requirement statuses. Preserve rejection and existing progress, but allow one complete read-only replacement with the same immutable evidence, scope, schema and model settings. Never repair source evidence, normalize a percentage into completion, or infer that verification/approval passed.
+
+```text
+complete pinned evidence -> strict final assessment -> valid result -> existing publication fences
+                                | only completion contradiction
+                                v
+                     one complete same-source replacement
+                          | valid -> same fences
+                          | invalid -> retain previous progress and report safe facts
+```
+Text equivalent: only a narrowly classified completed contradiction reaches one replacement; every accepted result still passes the original publication owner.
+
+## 2. Problem, current behavior, and evidence
+
+Observed: PR #852 failed Commit at heads 3ecade3154f25a11bb3a8107dc1cd3d4185dfd3c and dca6114af8cf92eadf35e2a217479c90e61347ef, comparison base9d3915729c96ec93c6e064d3321ba54c790170eb. Runs41414634366 (two attempts) and41418428579 reported progress-completion-mismatch at $.progress after CLI completion. The prompt clarification alone did not resolve the incident. The actual rejected percentage/counts are unavailable; neither contradictory direction is alleged for those runs.
+
+Current host parsing rejects both directions, preserves progress and provides a compatible five-field rejection. The final assessment has no automatic replacement. #830 addresses a separate per-part length failure and must remain separate. This is a prospective correction, not an as-built claim or executed acceptance. Existing evidence: the progress scope parser, final analysis workflow and immutable comparison SDDs in section20.
+
+## 3. Actors, surfaces, and terminology
+
+Actors: the issue author supplies scope; maintainers inspect Commit/errors; the configured model produces untrusted estimates; the host validates facts; the existing publication owner controls labels and cards. Surfaces: CLI, API error JSON, Check and Job Summary, existing progress card and operator documentation. A completed contradiction means a completed, fully validated response whose percentage alone violates completion equivalence. Counts are host-computed facts about that model response, not independent implementation or execution evidence. A replacement is a new complete final query, never a partial replay.
+
+## 4. Goals, non-goals, and fixed invariants
+
+| Requirement | Behavior |
+|---|---|
+| FPR-01 | Preserve strict scope, response, uncertainty, evidence and publication acceptance. |
+| FPR-02 | One same-source complete final replacement for an otherwise valid completion contradiction. |
+| FPR-03 | Bind recovery to host-validated facts; preserve provider and unrelated error categories. |
+| FPR-04 | Preflight both complete final envelopes before any query without larger capacities. |
+| FPR-05 | Expose only closed numeric terminal facts with compatible direct-parser rejection. |
+| FPR-06 | Deliver meaningful complete-workload regression and independent coverage proof. |
+| FPR-07 | Keep documentation, authority and independent delivery gates executable and explicit. |
+
+Fixed invariants: exact scope/IDs/locale/evidence/uncertainty, all parts and receipts, existing capacity and freshness, independent verification/review/approval and prior progress retention. No generic repair loop, third final query, source recollection, requirement omission, cached rejected prose, new permission, public retry setting, browser change, release, tag or deploy. Delivery outcomes FPR-06/FPR-07 retain their independent DoD evidence; structural case links cannot certify CI, Codecov or human approval.
+
+## 5. Current versus proposed product journey
+
+Current: scope extraction and all parts succeed, then one final contradiction blocks without actionable counts. Proposed: preflight both final envelopes before any scope query; collect the same scope/parts once; query and parse final; replace only a host-created eligible mismatch; publish only after complete validation and native freshness. A persistent contradiction stops and exposes closed numeric facts. Ordinary valid input stays one final request. Cancellation and unrelated validation failures keep existing behavior.
+
+## 6. Functional behavior and state model
+
+States: preflight -> collecting -> final -> accepted, or eligible-mismatch -> replacing -> accepted/exhausted. Preflight failure makes zero model calls. No state publishes provisional percentages.
+
+Eligibility requires complete adapter output, strict JSON/native and local schema, locale, exact keys/cardinality/unique in-scope IDs, status/evidence and uncertainty rules, nonempty summaries, supported/null equivalence, finite percentage0..100, every fact limit and both complete citation projections. Only the final completion equivalence may fail. Both all-supported with70 and any unfinished requirement with100 remain invalid;99.9 is never rounded into completion. A second contradiction is terminal. An unrelated replacement failure retains its category. Each new invocation starts fresh; no rejected state or allowance is replayed.
+
+## 7. User-facing configuration
+
+No new configuration. Keep the configured provider/model/effort and all existing repository/operation locale precedence. Recommended en-US and alternative es-ES use the same rules; unsupported locale follows existing whole-message fallback. Snapshot the original final request; optional undefined fields remain absent/undefined rather than being invented. No persistent migration. One eligible replacement, count bounds, complete evidence, capacities and all approval gates are intentionally not configurable.
+
+## 8. Clean Architecture design
+
+Domain owns closed numeric validation and immutable facts. The existing parser creates an application-only ProgressCompletionMismatch after all earlier checks. Its safe message/code/recovery and correlation preserve direct-parser compatibility; frozen numeric facts stay private. A narrow query_progress_assessment_workflow owns orchestration through the existing FindingsQueryPort and queryProgressResult. Query awaits execute outside a parse-only catch; provider-thrown typed lookalikes cannot allocate recovery. An evaluate-once owner returns either the normalized valid result or a closed mismatch outcome; raw rejected payload is not carried into the next await or prompt.
+
+Capture a structured clone of original configuration/options/schema and recursively freeze only that clone. Keep the original prompt string, host-frozen scope/anchors and exact source identities. Replacement changes only a fixed reviewed footer plus validated previous-result numeric data. Those observations are untrusted model facts, never execution attestation; reassess complete evidence and preserve genuine uncertainty.
+
+Pure binding validates total against the same current scope. Adapters retain process, DTO and credential concerns; presentation has no mutation authority. Existing module/port/dependency and raw-error logging guards remain unchanged. The helper has no publication capability.
+
+AgentQueryOptions has no absolute assessment deadline: preserve existing per-admitted-query runtime timeout/cancellation and the native outer workflow deadline; do not invent a deadline field, reset the workflow budget or add timeout overrides. Disclose at most one additional bounded query. An observed timeout/cancellation cannot enter recovery.
+
+## 9. UI/UX and content contract
+
+Use existing surfaces and information order: current state, completed facts, next action, impact/retained state, technical details. Recovery adds one fixed log message, no separate comment/card/check or notification. Existing progress remains visible while the whole estimate is provisional.
+
+Representative existing-surface content:
+
+> Assessing the complete pinned comparison. Previous progress is retained until final validation.
+>
+> Reassessing one inconsistent completed estimate using the same evidence. No action is needed while this read-only query runs.
+>
+> Progress was not published after one replacement. Inspect the final percentage and requirement counts, then rerun the complete assessment when a conforming result can be produced. Previous progress is retained.
+>
+> Technical detail: phase assessment; field $.progress; reported70; total2; supported2; missing0; unknown0; agent.failed and the terminal correlation reference.
+
+These numeric values are illustrative, not claims about the observed incident. A successful replacement uses the existing completion card and native links. Publication failures preserve observed partial effects. EN/ES and existing regional/unsupported-locale fallback expose identical facts. Textual headings and short stacked facts remain readable in narrow, light/dark and screen-reader views; no color-only meaning, raw model prose, commands or arbitrary markup. Browser UI and the deferred H12 manual VoiceOver campaign are outside this Action correction.
+
+## 10. Failure, recovery, and cleanup
+
+Initial unrelated schema, locale, capacity, provider, process, timeout and cancellation failures retain their original identity and make no replacement. A valid replacement returns once to the existing publication owner. A second fully validated contradiction emits agent.failed with closed recovery progress-completion-recovery-exhausted and its own five numeric facts; no third request or partial progress. Correlation comes from the terminal rejection and is reused by every surface. Direct parser callers retain progress-result-contract-invalid and its original five-field recovery.
+
+Do not claim a GitHub multi-call transaction: acceptance is atomic before publication, while an actual publication failure preserves existing provider/partial-effect classification. Never repeat writes automatically or claim no effect when one may have committed. Remove ephemeral failed outcomes; preserve prior durable progress, native state and necessary safe evidence. Fresh replay repeats complete scope/evidence collection under existing fences, not a cached partial result.
+
+## 11. Security, permissions, and privacy
+
+The diagnostic has exactly reportedProgress (finite0..100), requirementCount (integer1..32), and supportedCount/missingCount/unknownCount (integers0..32), summing exactly to total and genuinely contradicting completion. Extra/missing properties and foreign scope totals fail closed. No raw response, IDs, path, private prose, stack, provider output or arbitrary key reaches feedback or public output. Fixed phase/field stay in reviewed templates. Intermediate logging is fixed constant text only; do not log a caught or derived error value. No credential, network authority or write capability is added. Model approval, review, test or Codecov claims cannot establish any host gate.
+
+## 12. Observability and operational UX
+
+Keep existing progress state and one fixed recovery log. Public terminal JSON and localized CLI/Check/Summary use the existing closed error registry, retained state and same correlation. Numeric facts describe a model observation, not a success metric. Queue delay is separate from typed completed-output failure. No timer loop, new telemetry payload, retained rejected output, extra comments or hidden provider retry. Run links and the current base/head remain inspectable through existing workflow surfaces.
+
+## 13. Compatibility, migration, rollout, and rollback
+
+Valid old complete/partial responses remain accepted identically. Direct parser rejection and unrelated errors keep current codes/recovery shapes. Add only a new closed terminal exhaustion ID after the sole eligible replacement. Existing labels, stored state and in-flight comparisons need no migration. Adopt only a reviewed runtime through its supported path; merging develop alone does not change the currently observed master-pinned issue-comment runtime. No release or deployment is authorized here. Rollback restores immediate rejection and retains previous progress; remove the helper, diagnostic and localized copy together without rewriting published state.
+
+## 14. Testing strategy and numeric budget
+
+Minimum40 distinct new executable cases, distributed11 pure binding,8 workflow,3 provider,8 publication/security,4 capacity and6 presentation. Parameter rows count separately only for distinct behavior. All old budgets, platform/extension cases, module/port/architecture guards and real publication fixtures remain mandatory. New pure-policy statements/branches/functions/lines require100%; modified coverable lines require official correct-base Codecov100% with zero misses or partials. Use deterministic fakes/clocks and native adapter fixtures, not real sleeps, live credentials or mirrored implementation assertions. Every new case below is planned, not executed.
+
+Preflight original and complete worst-case replacement before any scope/model query. Reserve a fixed256-byte numeric hint plus the complete fixed footer in reserved-scope, single, final and aggregate calculations. Actual validated hints must fit; reserved padding never reaches a query. Preserve512KiB runtime envelope,384000-byte aggregate ceiling,64000-byte scope,32 required/uncertain and32 excluded clauses,1024-byte framing reserve, adaptive fact cap800 Unicode points and full summary/remaining projections8000 points including citations. Preserve immutable path/unit/frame/source/read budgets; no clipping, increased limits, omitted unit or recollection.
+
+{{SDD_CASE_BUDGET}}
+
+| Case ID | Area | Requirements | Scenario |
+|---|---|---|---|
+| final-progress-recovery-C01 | Pure binding | FPR-01, FPR-03, FPR-05 | All-supported facts with reported70 produce only closed current mismatch counts. |
+| final-progress-recovery-C02 | Pure binding | FPR-01, FPR-03, FPR-05 | Reported100 with a missing requirement yields exact mismatched counts. |
+| final-progress-recovery-C03 | Pure binding | FPR-01, FPR-03 | Reported100 with host-uncertain requirements preserves unknown status and cannot promote it. |
+| final-progress-recovery-C04 | Pure binding | FPR-03, FPR-05 | Reported99.9 with all supported retains the original decimal; it is not rounded into completion. |
+| final-progress-recovery-C05 | Pure binding | FPR-03 | Valid count boundaries1 and32 bind to the current nonempty scope. |
+| final-progress-recovery-C06 | Pure binding | FPR-03, FPR-05 | Nonfinite or out-of-range reported percentages cannot create a diagnostic or authorize replacement. |
+| final-progress-recovery-C07 | Pure binding | FPR-03, FPR-05 | Negative, fractional or excessive count fields are rejected without echoing data. |
+| final-progress-recovery-C08 | Pure binding | FPR-03 | Counts that do not sum exactly to requirementCount are rejected. |
+| final-progress-recovery-C09 | Pure binding | FPR-03 | A count total from another scope cannot authorize recovery for the current assessment. |
+| final-progress-recovery-C10 | Pure binding | FPR-03, FPR-05 | Extra or missing diagnostic properties fail closed and never reach public output. |
+| final-progress-recovery-C11 | Pure binding | FPR-01, FPR-03 | Consistent complete and incomplete results are never classified as completion mismatches. |
+| final-progress-recovery-C12 | Workflow state | FPR-01, FPR-02 | An initially valid final assessment uses one final query and no replacement. |
+| final-progress-recovery-C13 | Workflow state | FPR-02, FPR-03 | A contradictory incomplete estimate recovers through one complete same-schema replacement. |
+| final-progress-recovery-C14 | Workflow state | FPR-01, FPR-02 | A false100 recovers to a valid partial estimate while required uncertainty remains unknown. |
+| final-progress-recovery-C15 | Workflow state | FPR-02, FPR-05 | A second contradiction reports its own counts; no third request or partial progress follows. |
+| final-progress-recovery-C16 | Workflow state | FPR-02, FPR-03 | Captured schema, configuration and options cannot mutate across the awaited replacement. |
+| final-progress-recovery-C17 | Workflow state | FPR-02 | A fresh same-head invocation starts fresh; no rejected payload or retry allowance is replayed. |
+| final-progress-recovery-C18 | Workflow state | FPR-03 | A replacement provider failure keeps its original category without a third call. |
+| final-progress-recovery-C19 | Workflow state | FPR-03 | Replacement cancellation keeps its classification and leaves progress unchanged. |
+| final-progress-recovery-C20 | Provider mapping | FPR-03 | A provider-thrown typed lookalike bypasses the parse-only recovery catch. |
+| final-progress-recovery-C21 | Provider mapping | FPR-01, FPR-03 | Incomplete JSON and native schema failures keep their existing rejection and do not start recovery. |
+| final-progress-recovery-C22 | Provider mapping | FPR-01, FPR-03 | Locale and status/evidence failures cannot masquerade as otherwise validated completion mismatch. |
+| final-progress-recovery-C23 | Publication and security | FPR-01, FPR-02 | A recovered final result publishes once only after every complete part and receipt validates. |
+| final-progress-recovery-C24 | Publication and security | FPR-01, FPR-02 | A moved source head during replacement prevents any progress publication. |
+| final-progress-recovery-C25 | Publication and security | FPR-01, FPR-02 | A changed base or native PR target during replacement prevents publication. |
+| final-progress-recovery-C26 | Publication and security | FPR-01, FPR-02 | A changed issue body or closed source during replacement preserves old progress. |
+| final-progress-recovery-C27 | Publication and security | FPR-01, FPR-02 | Late recovery failure after earlier parts succeeded discards provisional work and retains old labels. |
+| final-progress-recovery-C28 | Publication and security | FPR-01 | Publication failure keeps actual partial-effect classification and never automatically repeats writes. |
+| final-progress-recovery-C29 | Publication and security | FPR-02, FPR-06 | The real887-path952-unit fixture retains every receipt and source read count through final replacement. |
+| final-progress-recovery-C30 | Publication and security | FPR-01, FPR-07 | Extra model approval, verification or Codecov claims are rejected by the exact schema without mutation. |
+| final-progress-recovery-C31 | Prompt capacity | FPR-04 | An original envelope that fits but whose worst replacement does not fit causes zero model calls. |
+| final-progress-recovery-C32 | Prompt capacity | FPR-04 | All complete final and late-part envelopes are checked before the first scope request. |
+| final-progress-recovery-C33 | Prompt capacity | FPR-04 | The bounded numeric hint fits its reserved envelope; reserve padding is never sent to a provider. |
+| final-progress-recovery-C34 | Prompt capacity | FPR-01, FPR-04 | Existing aggregate, scope, fact and citation limits remain enforced without truncation or omitted units. |
+| final-progress-recovery-C35 | Localized presentation | FPR-05 | Terminal English output gives exact numeric facts, action and retained progress without rejected prose. |
+| final-progress-recovery-C36 | Localized presentation | FPR-05 | API JSON preserves the closed numeric facts and rejects malformed metadata without data echo. |
+| final-progress-recovery-C37 | Localized presentation | FPR-05 | Terminal, API, Check and Summary reuse the terminal correlation reference and error code. |
+| final-progress-recovery-C38 | Localized presentation | FPR-05 | Spanish regional reuse and unsupported-locale fallback preserve the same semantic facts. |
+| final-progress-recovery-C39 | Localized presentation | FPR-02, FPR-05 | Intermediate recovery logs are fixed and bounded, with no caught values or extra comments. |
+| final-progress-recovery-C40 | Localized presentation | FPR-05, FPR-07 | The documented exhaustion example round-trips through the real normalizer, renderer and catalog owner. |
+
+## 15. Documentation and discoverability
+
+Update user/maintainer execution guidance at /agents/execution-contract, recovery at /issues/branch-management#progress-evidence, and /security-operations/operations/error-reference. Explain normal path, bounded reassessment, uncertainty, exhaustion, retained/partial effects, correlation, compatibility, limits and operator replay. Check the documented terminal JSON through the actual normalizer/renderer/catalog owner. Update the selected companion, catalog evidence/generated index, implementation and regressions together. There is no new setup option, permission or migration.
+
+The complete planned path inventory follows. Existing references must be verified at the Action-selected base before implementation; proposed files are intentionally absent.
+
+| Path | Change |
+|---|---|
+| specs/final-progress-completion-recovery.md | create |
+| src/domain/progress_completion_diagnostic.ts | create |
+| src/application/errors/progress_completion_mismatch.ts | create |
+| src/application/policies/progress_completion_recovery_policy.ts | create |
+| src/application/usecases/actions/query_progress_assessment_workflow.ts | create |
+| src/domain/__tests__/progress_completion_diagnostic.test.ts | create |
+| src/application/policies/__tests__/progress_completion_recovery_policy.test.ts | create |
+| src/application/usecases/actions/__tests__/query_progress_assessment_workflow.test.ts | create |
+| src/application/usecases/actions/__tests__/progress_completion_recovery.integration.test.ts | create |
+| src/application/policies/__tests__/progress_completion_recovery_presentation.test.ts | create |
+| src/application/policies/progress_scope_policy.ts | update |
+| src/application/policies/progress_prompt_capacity_policy.ts | update |
+| src/application/usecases/actions/progress_analysis_workflow.ts | update |
+| src/data/model/application_error.ts | update |
+| src/application/policies/application_error_message_catalog.ts | update |
+| src/application/policies/application_error_presentation_policy.ts | update |
+| src/application/usecases/actions/__tests__/fixtures/complete_inventory_workflow_fixture.ts | reference |
+| src/application/usecases/actions/__tests__/progress_result_rejection.integration.test.ts | update |
+| scripts/coverage-budgets.json | update |
+| specs/catalog.json | update |
+| specs/CATALOG.md | update |
+| docs/agents/execution-contract.mdx | update |
+| docs/issues/branch-management.mdx | update |
+| docs/security-operations/operations/error-reference.mdx | update |
+
+## 16. Acceptance scenarios
+
+Given an initially valid final response, one final query produces the unchanged accepted estimate after all publication fences. Given either otherwise valid contradiction, exactly one complete same-source request may replace it; it can produce valid complete or partial progress without promoting uncertainty. Given another contradiction, previous progress remains and only its closed numeric facts/correlation render. Given malformed output, locale/evidence failure, provider lookalike or cancellation, no completion recovery is allocated. Given capacity shortfall, no scope query occurs. Given a moved head/base/native target/body or closed issue during replacement, no obsolete estimate publishes. Given a publication failure, preserve actual partial-effect classification and do not repeat writes. A fresh same-head invocation starts a complete new assessment. The forty cases provide detailed executable controls; external coverage/review/approval are separate evidence.
+
+## 17. Requirements traceability
+
+{{SDD_REQUIREMENT_CASES}}
+
+The host scope parser and pure binding implement FPR-01/FPR-03; the final query owner implements FPR-02; existing envelope accounting plus complete replacement reserve implements FPR-04; the closed registry and localized presentation implement FPR-05. The complete887-path952-unit workload fixture supports FPR-06; model authority rejection and the documented example round-trip support FPR-07. All seven delivery outcomes remain mandatory. No case can self-declare CI, official Codecov or human approval passed: those require independent DoD evidence. Documentation routes in section15 explain every outcome.
+
+## 18. Implementation sequence
+
+After the Action verifies its exact linked branch and first SDD commit: add native workflow regressions through existing ports and demonstrate genuine RED failures; implement closed domain facts and typed safe mismatch; introduce parse-only orchestration and complete capacity accounting; add provider/freshness/publication/security tests and localized terminal output; synchronize docs/catalog/bundles; run full verification and Graphify; prepare the linked PR, review every current-head finding and verify official coverage against the current base. Wait for the specific human protected-path decision when required. #830 and H3 resume separately, through Action-owned synchronization and their own fresh gates.
+
+## 19. Definition of Done
+
+Every requirement and all40 cases must have executed assertions, meaningful RED evidence and traceability. Preserve architecture, exact request/freshness, complete sources, numeric capacities and absence of unauthorized writes. Required local gates: types, lint, full root/extension coverage and existing budgets/ledgers, specification/catalog generation+validation, documentation/routes/agent/workflow contracts, build/package smoke, Graphify and normal hooks. Existing human setup debt must be identified separately, never silently certified.
+
+Before merge require the exact current head and live base, all applicable CI/platform/Commit controls passing, complete semantic review/context with zero open native findings, and official Codecov100% of every modified coverable line with zero misses/partials. A neutral protected-path gate requires a separate specific human decision for that final SHA; earlier decisions do not transfer. No release/tag/deploy or extra permissions. First SDD publication, structural consistency, planned cases, successful build or the estimate itself cannot establish implementation, native browser, verification, coverage, review or merge acceptance. Clean only owned disposable outputs, preserving current rollback, registered Safari packages and necessary evidence.
+
+## 20. References and decisions
+
+Follow the canonical [specification standard](./README.md) and [template](./_template.md). Existing owning contracts: specs/immutable-progress-content-recovery.md, specs/complete-progress-comparison-inventory.md and specs/progress-scope-source-ownership.md under github-communication-experience. Related issue: https://github.com/vypdev/copilot/issues/853 ; prerequisite fixes #833/#830 and extension H3 #704 remain separate.
+
+Decisions: exactly one replacement rather than a general retry; closed counts rather than raw output; retain strict parsing rather than normalize inconsistent percentages; unchanged model/configuration/limits/permissions; no new absolute deadline port; no automatic write replay. Rejected alternatives: forcing100 from previous statuses, dropping uncertain requirements or sources, accepting provider errors as completed output, larger capacities, third queries, cached partial evidence, weakening approval or treating model claims as execution proof. The action-time base, first publication, live runtime adoption and all execution/remote evidence remain future verified facts, not assertions in this proposed input.
+
+<!-- copilot-configuration-start
+{
+    "schemaVersion": 3,
+    "branchType": "bugfix",
+    "workingBranch": "bugfix/853-final-progress-completion-mismatch-repeatedly-blocks-valid-fixes-without-bounded-recovery",
+    "parentBranch": "develop",
+    "recommendationState": {
+        "issueDescriptionFingerprint": "955dfb192ddb636b05a89be79846fb4c00e739a7e864f5c907afe1314de070d2",
+        "recommendationFingerprint": "3f095fda807ffb73f1ca12d200a785394a08f1293050f824bc74951343fbcd0d",
+        "implementationPlan": {
+            "steps": [
+                {
+                    "title": "Update the capability contract",
+                    "details": [
+                        "Review the owning SDD, catalog evidence, progress parser, and final assessment workflow; specify the single eligible completion mismatch and its recovery facts.",
+                        "Keep strict validation, prior progress, evidence, capacity, freshness, and publication gates unchanged; document that recovery uses one complete same-source query."
+                    ]
+                },
+                {
+                    "title": "Add bounded recovery orchestration",
+                    "details": [
+                        "Preflight both final request envelopes before querying, then allow one replacement only for a host-created completion mismatch after all other checks pass.",
+                        "Reuse the existing provider, scope, evidence, options, and publication owner; keep rejected prose out of the replacement query and preserve unrelated failures."
+                    ]
+                },
+                {
+                    "title": "Preserve errors and user-facing behavior",
+                    "details": [
+                        "Keep direct-parser rejection compatibility and expose only closed numeric facts on exhaustion across existing error, Check, Job Summary, and progress surfaces.",
+                        "Retain correlation, cancellation, timeout, and partial-publication behavior; add no configuration or publication capability to the recovery helper."
+                    ]
+                },
+                {
+                    "title": "Add regression and gate coverage",
+                    "details": [
+                        "Cover both contradiction directions, valid completion, malformed or unrelated failures, replacement exhaustion, immutable inputs, and no premature publication, including the specified forty cases and eight owners.",
+                        "Keep independent delivery and coverage evidence separate from structural case links; update tests without reducing existing budgets or thresholds."
+                    ]
+                },
+                {
+                    "title": "Update documentation and verify evidence",
+                    "details": [
+                        "Update the owning SDD, catalog evidence, and user/operator documentation; distinguish proposed behavior from incident facts and pending delivery gates.",
+                        "Run the required specification and documentation validators and record independent UX, architecture, test, documentation, and security/operations gate evidence."
+                    ]
+                }
+            ],
+            "acceptance": "The regression suite proves that only an otherwise valid completion mismatch triggers at most one complete same-source replacement, that invalid or exhausted recovery retains prior progress and emits only the closed numeric facts, and that no result reaches existing publication gates before full validation; the forty-case graph, eight-owner coverage, specification/catalog evidence, documentation, and required independent gates are accounted for."
+        },
+        "implementationPlanLocale": "en-US"
+    }
+}
+copilot-configuration-end -->

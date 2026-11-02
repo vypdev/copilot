@@ -831,6 +831,23 @@
       "successMessage": "organization reuse and batch planning coverage: PASS (pure policies 100%; each batch use case, provider and composition adapter 95% lines/statements, 90% branches/functions)"
     },
     {
+      "name": "Final progress completion recovery",
+      "missingEntryLabel": "final progress completion recovery",
+      "rules": [
+        {
+          "files": [
+            "src/domain/progress_completion_diagnostic.ts",
+            "src/application/errors/progress_completion_mismatch.ts",
+            "src/application/policies/progress_completion_recovery_policy.ts",
+            "src/application/usecases/actions/query_progress_assessment_workflow.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        }
+      ],
+      "successMessage": "final progress completion recovery: PASS (100% all metrics)"
+    },
+    {
       "name": "Complete multipart progress",
       "missingEntryLabel": "complete multipart progress",
       "rules": [

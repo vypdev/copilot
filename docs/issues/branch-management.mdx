@@ -230,6 +230,25 @@ acceptance or dropping verification. Process/transport failures retain their
 own status and retry guidance. A later optional check-publication warning remains
 a separate outcome and cannot replace the primary rejection.
 
+One narrow exception allows a read-only replacement of the final response when
+all other validation succeeds but its percentage contradicts completion. Copilot
+uses the same complete pinned evidence, schema, settings and acceptance scope;
+it adds only the previous reported percentage and supported/missing/unknown
+counts. These are model observations, not test, review, coverage or approval
+evidence. Missing and uncertain requirements are not promoted to supported.
+Scope extraction and multipart source analysis run once. The existing capacities
+also reserve the entire replacement before the first model query; source and
+fact budgets never grow, and no source units are dropped.
+
+There are at most two final queries. If the replacement is still inconsistent,
+`progress-completion-recovery-exhausted` reports its five numeric facts while
+retaining published progress. Inspect the linked run and complete comparison;
+start a fresh full assessment only when the provider can meet the same contract.
+Provider failures and invalid JSON, schema, locale or evidence do not enter this
+recovery. Issue-body/open-state, native owning PR/target, base and head checks
+still run before publication. Publication failures retain their actual completed
+effects and error classification; writes are never automatically replayed.
+
 `progress-scope-clause-limit` reports a completely validated human classification
 that selected more than 32 required/uncertain lines or more than 32 exclusions.
 Its closed facts give the exact selected count, fixed limit, clause kind and

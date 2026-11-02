@@ -177,8 +177,23 @@ The application binds the details to its current host inventory, retaining a
 separate immutable source-anchor map without changing scope/model JSON.
 
 Execution/provider errors remain distinct. A missing result does not become
-proof of completed output, and no automatic repair/retry loop is added. A fresh
-attempt can help when the provider returns a result conforming to the unchanged
+proof of completed output. The sole automatic recovery is one complete final
+reassessment after the host has validated every field, locale, scope identity,
+status/evidence relation and full cited projection and found only a completion
+contradiction: 100% requires every requirement to be supported, and every
+requirement supported requires 100%. Direct parser callers retain their existing
+rejection record. The workflow snapshots the complete prompt, schema, options,
+configuration and host scope; the replacement adds only a closed five-number
+observation of the rejected model response. It does not carry rejected prose,
+recollect source, repeat parts or attest execution. Host uncertainty stays unknown.
+
+Before any model request, the whole original and worst replacement envelopes
+must fit existing budgets, including the fixed footer and a 256-byte numeric
+hint reservation. Padding is never sent. A second contradiction terminates with
+`agent.failed` and `progress-completion-recovery-exhausted`; other failures retain
+their original classification. No third query or publication retry follows.
+Existing admission timeouts, cancellation and outer deadlines still apply.
+A fresh attempt can help when the provider returns a result conforming to the unchanged
 contract; it cannot enlarge fixed budgets or authorize a scope change. All
 invalid, canceled, incomplete or stale outcomes retain previous progress.
 The same correlation reference and localized semantic view reach CLI, Check

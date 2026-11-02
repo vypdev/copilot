@@ -7,7 +7,7 @@
       "status": "implemented",
       "scope": "English-default, localized, semantic, bounded, and idempotent product messages across GitHub and repository-aware operator surfaces",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-11-01",
+      "lastVerified": "2026-11-02",
       "specs": [
         "specs/semantic-github-publication-and-notification.md",
         "specs/repository-locale-and-localization.md",
@@ -16,7 +16,8 @@
         "specs/immutable-progress-content-recovery.md",
         "specs/optional-check-run-diagnostics.md",
         "specs/complete-progress-comparison-inventory.md",
-        "specs/progress-scope-source-ownership.md"
+        "specs/progress-scope-source-ownership.md",
+        "specs/final-progress-completion-recovery.md"
       ],
       "workflows": [
         ".github/workflows/copilot_issue.yml",
@@ -210,7 +211,11 @@
         "src/data/repository/complete_progress_diff_repository.ts",
         "src/domain/progress_inventory_diagnostic.ts",
         "src/application/policies/progress_assessment_capacity_policy.ts",
-        "src/application/policies/progress_scope_source_policy.ts"
+        "src/application/policies/progress_scope_source_policy.ts",
+        "src/domain/progress_completion_diagnostic.ts",
+        "src/application/errors/progress_completion_mismatch.ts",
+        "src/application/policies/progress_completion_recovery_policy.ts",
+        "src/application/usecases/actions/query_progress_assessment_workflow.ts"
       ],
       "tests": [
         "src/domain/__tests__/implementation_plan.test.ts",
@@ -366,7 +371,12 @@
         "src/application/usecases/actions/__tests__/progress_assessment_capacity.integration.test.ts",
         "src/application/policies/__tests__/progress_scope_ownership.test.ts",
         "src/application/policies/__tests__/progress_scope_capacity_diagnostic.test.ts",
-        "src/application/usecases/actions/__tests__/progress_scope_ownership.integration.test.ts"
+        "src/application/usecases/actions/__tests__/progress_scope_ownership.integration.test.ts",
+        "src/domain/__tests__/progress_completion_diagnostic.test.ts",
+        "src/application/policies/__tests__/progress_completion_recovery_policy.test.ts",
+        "src/application/usecases/actions/__tests__/query_progress_assessment_workflow.test.ts",
+        "src/application/usecases/actions/__tests__/progress_completion_recovery.integration.test.ts",
+        "src/application/policies/__tests__/progress_completion_recovery_presentation.test.ts"
       ],
       "documentation": [
         "docs/configuration.mdx",
