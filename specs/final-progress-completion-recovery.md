@@ -42,6 +42,9 @@ These are the supplied current-behavior facts. The proposed recovery is prospect
 
 ### 2.3 Evidence
 
+- Historical authoring inputs are preserved verbatim in `specs/evidence/issue-853-authoring-body.txt` and `specs/evidence/issue-853-clarification-6574242311.txt`. `specs/evidence/issue-853-authoring-inputs.json` records their native origins, timestamps, SHA-256 hashes and original-to-published case IDs. The published seven requirements and forty cases remain normative. Concise issue/comment links replace duplicated drafting input; they do not remove acceptance or increase any processing bound.
+- At candidate `256bffac6`, native Commit classified 101 required/uncertain lines from the duplicated authoring body, exceeding the unchanged 32-clause limit. Review completed all three source partitions with zero findings but omitted one of four human conversation entries under the unchanged 24,000-character budget. The production packing policy confirms that replacing only the archived historical clarification with its linked summary retains 4/4 entries, without omissions or truncation; the concise issue has 24 nonempty human lines, preserving all seven requirements and every case through the canonical SDD.
+
 - Code/workflow/documentation references: the immutable catalog at `9abb7882652bbc680781a22fd8bb397eb6169731` lists the current scope parser, final progress workflow, assessment/capacity policies, response diagnostics, and related tests. The catalog lists owning specifications `specs/immutable-progress-content-recovery.md`, `specs/complete-progress-comparison-inventory.md`, and `specs/progress-scope-source-ownership.md`.
 - Incidents or concrete examples: issue #853 reports Commit runs 41414634366 (two attempts) and 41418428579, PR #852, heads `3ecade3154f25a11bb3a8107dc1cd3d4185dfd3c` and `dca6114af8cf92eadf35e2a217479c90e61347ef`, and base `9d3915729c96ec93c6e064d3321ba54c790170eb`. Reported error: `progress-completion-mismatch` at `$.progress`; prior state retained; `agent.failed`.
 - External primary sources: not applicable; this is a repository workflow change.
@@ -350,6 +353,9 @@ Documentation is part of delivery. The existing execution contract must explain 
 | Path | Change |
 |---|---|
 | `specs/final-progress-completion-recovery.md` | create |
+| `specs/evidence/issue-853-authoring-body.txt` | create |
+| `specs/evidence/issue-853-clarification-6574242311.txt` | create |
+| `specs/evidence/issue-853-authoring-inputs.json` | create |
 | `src/domain/progress_completion_diagnostic.ts` | create |
 | `src/application/errors/progress_completion_mismatch.ts` | create |
 | `src/application/policies/progress_completion_recovery_policy.ts` | create |
