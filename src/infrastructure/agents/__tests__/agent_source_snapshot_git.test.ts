@@ -12,12 +12,14 @@ let runtime: string;
 beforeEach(() => { runtime = mkdtempSync(join(tmpdir(), 'copilot-source-git-fault-')); });
 afterEach(() => { jest.restoreAllMocks(); rmSync(runtime, { recursive: true, force: true }); });
 const make = (deadline = performance.now() + 30_000, signal?: AbortSignal) => new SourceSnapshotGit(source, runtime, deadline, signal);
-it('retains only fixed system keys from a mixed-case Windows environment', () => {
+it.each(['linux', 'win32'] as const)('retains only fixed system keys from the %s environment on every host', observedPlatform => {
     const platform = process.platform, environment = process.env;
     const spy = jest.spyOn(childProcess, 'execFileSync').mockReturnValue(Buffer.from('git version fixture\n'));
     try {
-        Object.defineProperty(process, 'platform', { value: 'win32' });
-        process.env = { Path: 'native-tools', SystemRoot: 'native-system', ComSpec: 'native-shell', GITHUB_TOKEN: 'private-token', GIT_SSH_COMMAND: 'unsafe' };
+        Object.defineProperty(process, 'platform', { value: observedPlatform });
+        process.env = observedPlatform === 'win32'
+            ? { Path: 'native-tools', SystemRoot: 'native-system', ComSpec: 'native-shell', GITHUB_TOKEN: 'private-token', GIT_SSH_COMMAND: 'unsafe' }
+            : { PATH: 'native-tools', SYSTEMROOT: 'native-system', COMSPEC: 'native-shell', GITHUB_TOKEN: 'private-token', GIT_SSH_COMMAND: 'unsafe' };
         make();
         const options = spy.mock.calls[0][2] as { env: NodeJS.ProcessEnv };
         expect(options.env).toMatchObject({ PATH: 'native-tools', SYSTEMROOT: 'native-system', COMSPEC: 'native-shell', GIT_NO_LAZY_FETCH: '1' });

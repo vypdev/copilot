@@ -189,6 +189,16 @@ only the remaining original timeout. Git subprocesses are bounded by the same
 remaining preparation deadline. Abort is checked before and between operations.
 No timer resets or extra source network attempts are permitted.
 
+Repository-native CI wall-clock limits are separate from the SDK operation
+deadline: hosted Ubuntu retains 20 minutes, while macOS and Windows have 30.
+The original PR #862 macOS job exhausted its 20-minute allocation during the
+full coverage suite after its eight source-context suites passed; the exact
+annotation and successful deferred cleanup are recorded in
+[job 125504684077](https://github.com/vypdev/copilot/actions/runs/41511643587/job/125504684077).
+The macOS adjustment retains every suite, coverage budget and cleanup check;
+it does not reset or expand any provider/source-preparation deadline. Completion
+on all three hosted platforms remains required evidence for the final head.
+
 ## 8. Clean Architecture design
 
 ### 8.1 Responsibilities and dependency direction

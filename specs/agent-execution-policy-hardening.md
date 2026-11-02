@@ -656,6 +656,12 @@ runtime identity and fixed-plan checks before spawn.
 
 ## 14. Testing strategy and numeric budget
 
+Hosted native acceptance budgets the complete build, isolated fixtures, full
+coverage and deferred cleanup: 20 minutes on Ubuntu and 30 on macOS/Windows.
+PR #862's original macOS job hit the former 20-minute job limit while its new
+source-context suites had passed. This CI allocation preserves the full test
+matrix and is independent of the bounded provider operation deadline in the execution plan.
+
 This SDD owns at least **48 distinct cases**; parameterized provider/role rows
 count separately only when authority/argv differs.
 
