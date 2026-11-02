@@ -1,5 +1,6 @@
 import { BUGBOT_REVIEW_RESOURCE_LABELS, BUGBOT_REVIEW_UNIT_LABELS } from './bugbot_review_diagnostic_labels';
 import { progressInventoryPresentation } from '../../domain/progress_inventory_diagnostic';
+import { progressPartitionLengthPresentation } from '../../domain/progress_partition_length_failure';
 import { progressBinaryEvidencePresentation } from '../../domain/progress_binary_evidence_diagnostic';
 import { issueWorkflowDiagnosticPresentation } from '../../domain/issue_workflow_diagnostic';
 import { isCopilotCommandValidationReason } from '../../domain/copilot_command_validation';
@@ -41,7 +42,9 @@ export function buildApplicationErrorPresentation(
     const descriptor = error.recovery
         ? `error.recovery.${error.recovery.id}` as const
         : `error.${error.code}` as const;
-    const variables = error.recovery?.id === 'bugbot-review-incomplete'
+    const variables = error.recovery?.id === 'progress-partition-length-invalid'
+        ? progressPartitionLengthPresentation(error.recovery.variables)
+        : error.recovery?.id === 'bugbot-review-incomplete'
         ? { ...error.recovery.variables, countKind: error.recovery.variables.countKind === 'at-least' ? '≥' : '=',
             resource: message(`error.label.${BUGBOT_REVIEW_RESOURCE_LABELS[error.recovery.variables.resource]}`),
             unit: message(`error.label.${BUGBOT_REVIEW_UNIT_LABELS[error.recovery.variables.unit]}`) }

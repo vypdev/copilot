@@ -17,6 +17,7 @@
         "specs/optional-check-run-diagnostics.md",
         "specs/complete-progress-comparison-inventory.md",
         "specs/progress-scope-source-ownership.md",
+        "specs/progress-partition-response-recovery.md",
         "specs/final-progress-completion-recovery.md"
       ],
       "workflows": [
@@ -212,6 +213,10 @@
         "src/domain/progress_inventory_diagnostic.ts",
         "src/application/policies/progress_assessment_capacity_policy.ts",
         "src/application/policies/progress_scope_source_policy.ts",
+        "src/domain/progress_partition_length_failure.ts",
+        "src/data/repository/progress_partition_length_failure.ts",
+        "src/application/policies/progress_partition_length_policy.ts",
+        "src/application/usecases/actions/query_progress_partition_workflow.ts",
         "src/domain/progress_completion_diagnostic.ts",
         "src/application/errors/progress_completion_mismatch.ts",
         "src/application/policies/progress_completion_recovery_policy.ts",
@@ -372,11 +377,19 @@
         "src/application/policies/__tests__/progress_scope_ownership.test.ts",
         "src/application/policies/__tests__/progress_scope_capacity_diagnostic.test.ts",
         "src/application/usecases/actions/__tests__/progress_scope_ownership.integration.test.ts",
+        "src/application/policies/__tests__/progress_partition_length_policy.test.ts",
+        "src/application/policies/__tests__/progress_partition_length_presentation.test.ts",
+        "src/data/repository/__tests__/progress_partition_length_failure.test.ts",
+        "src/application/usecases/actions/__tests__/progress_partition_length.integration.test.ts",
+        "src/application/usecases/actions/__tests__/query_progress_partition_workflow.test.ts",
+        "src/application/usecases/actions/__tests__/progress_partition_length_publication.integration.test.ts",
+        "src/application/usecases/actions/__tests__/progress_partition_repair_preflight.test.ts",
         "src/domain/__tests__/progress_completion_diagnostic.test.ts",
         "src/application/policies/__tests__/progress_completion_recovery_policy.test.ts",
         "src/application/usecases/actions/__tests__/query_progress_assessment_workflow.test.ts",
         "src/application/usecases/actions/__tests__/progress_completion_recovery.integration.test.ts",
-        "src/application/policies/__tests__/progress_completion_recovery_presentation.test.ts"
+        "src/application/policies/__tests__/progress_completion_recovery_presentation.test.ts",
+        "src/application/usecases/actions/__tests__/progress_recovery_composition.integration.test.ts"
       ],
       "documentation": [
         "docs/configuration.mdx",

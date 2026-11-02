@@ -230,13 +230,26 @@ acceptance or dropping verification. Process/transport failures retain their
 own status and retry guidance. A later optional check-publication warning remains
 a separate outcome and cannot replace the primary rejection.
 
-One narrow exception allows a read-only replacement of the final response when
+For an overlong file fact, Copilot verifies the current immutable part, path and
+source unit, locale and schema limit before requesting one replacement for that
+complete part. Every original and replacement envelope is checked before the
+first part query. A valid replacement continues the complete comparison without
+recollecting or omitting source. Persistent overflow identifies
+`progress-partition-length-invalid`, the verified part/path/unit and response
+field, and the maximum and observed Unicode code-point counts. Legacy parts use
+unit `none`. No rejected prose is copied, clipped or accepted; no third query or
+partial progress update follows. Other invalid output retains its usual error.
+
+A separate final-stage recovery allows a read-only replacement of the final response when
 all other validation succeeds but its percentage contradicts completion. Copilot
 uses the same complete pinned evidence, schema, settings and acceptance scope;
 it adds only the previous reported percentage and supported/missing/unknown
 counts. These are model observations, not test, review, coverage or approval
 evidence. Missing and uncertain requirements are not promoted to supported.
-Scope extraction and multipart source analysis run once. The existing capacities
+Scope extraction and complete source collection run once; a final reassessment
+does not repeat multipart queries. Each eligible part retains its own single
+replacement independently of the one final-response allowance. A persistent
+part failure stops before any final query. The existing capacities
 also reserve the entire replacement before the first model query; source and
 fact budgets never grow, and no source units are dropped.
 

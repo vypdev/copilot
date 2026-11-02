@@ -4,6 +4,7 @@ import { ProgressResponseContractFailure, safeProgressResponseField, isProgressR
     type ProgressResponsePhase, type ProgressResponseReason } from '../../domain/progress_response_diagnostic';
 import { parseStrictJsonFromAgentText } from './agent_json_parser';
 import { assertAgentResponseSchema } from './agent_json_schema_validator';
+import { partitionLengthFailure } from './progress_partition_length_failure';
 
 /** Existing application-owned schema names, never names read from model output. */
 export function progressResponsePhaseForSchema(name: string): ProgressResponsePhase | undefined {
@@ -46,9 +47,11 @@ export function interpretProgressAgentOutput(text: string, phase: ProgressRespon
         if (!(error instanceof AgentResponseSchemaFailure) && !(error instanceof AgentResponseLengthFailure)) throw error;
         const field = safeProgressResponseField(phase, error.path);
         const id = verifiedEntryId(phase, field, parsed, schema);
-        throw new ProgressResponseContractFailure({ phase,
+        const facts = { phase,
             reason: error instanceof AgentResponseLengthFailure ? 'schema-string-long' : `schema-${error.reason}` as ProgressResponseReason,
-            field, requirementId: phase === 'assessment' ? id : 'none', sourceLineId: phase === 'scope' ? id : 'none' });
+            field, requirementId: phase === 'assessment' ? id : 'none', sourceLineId: phase === 'scope' ? id : 'none' };
+        const length = error instanceof AgentResponseLengthFailure ? partitionLengthFailure(error, facts, parsed, schema) : undefined;
+        throw length ?? new ProgressResponseContractFailure(facts);
     }
     return parsed;
 }

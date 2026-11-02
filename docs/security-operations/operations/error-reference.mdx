@@ -175,6 +175,23 @@ progress and cannot authorize a passing verification. Inspect the exact original
 scope and review a supported assessment protocol while preserving acceptance.
 See [progress text capacity](./troubleshooting#progress-assessment-text-capacity).
 
+### Progress part response length
+
+An overlong file fact with a verified current part/path/unit, locale and schema
+limit receives one replacement for the same complete immutable part. Every
+original and replacement request is capacity-checked before the first part
+query. Source evidence, identities, uncertainty and strict validation remain
+unchanged. Provider, cancellation, locale and other schema failures retain their
+own classifications and do not start this recovery.
+
+Persistent overflow reports `agent.failed` with
+`progress-partition-length-invalid`: part, path, unit, response field, maximum
+and observed Unicode code-point count. `none` means the legacy part has no unit
+identity. Paths are inert reversible JSON code spans; raw model output is never
+shown. Inspect that fact in the linked run. There is no third part query, no
+clipping, and no partial update to labels or the previous assessment. A later
+optional Check Run warning remains a separate outcome.
+
 ## Optional Check Run publication not confirmed
 
 This warning concerns an optional evidence projection. Required-stage success

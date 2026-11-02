@@ -3,6 +3,7 @@ import { isProgressScopeCapacityFacts, type ProgressScopeCapacityFacts } from '.
 import { normalizeProgressCompletionDiagnostic, type ProgressCompletionDiagnostic } from '../../domain/progress_completion_diagnostic';
 import { isProgressInventoryDiagnostic, type ProgressInventoryDiagnostic } from '../../domain/progress_inventory_diagnostic';
 import { isProgressResponseDiagnosticFacts, type ProgressResponseDiagnosticFacts } from '../../domain/progress_response_diagnostic';
+import { isProgressPartitionLengthDiagnostic, type ProgressPartitionLengthDiagnostic } from '../../domain/progress_partition_length_failure';
 import { isProgressBinaryEvidenceFacts, type ProgressBinaryEvidenceFacts } from '../../domain/progress_binary_evidence_diagnostic';
 import { isIssueWorkflowDiagnostic, type IssueWorkflowDiagnosticFacts } from '../../domain/issue_workflow_diagnostic';
 import { isChangeSizeReconciliationFacts, type ChangeSizeReconciliationFacts } from '../../domain/change_size_reconciliation';
@@ -83,6 +84,7 @@ export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'progress-inventory-incomplete',
     'bugbot-review-incomplete',
     'progress-result-contract-invalid',
+    'progress-partition-length-invalid',
     'progress-assessment-capacity-exceeded',
     'progress-scope-clause-limit',
     'progress-completion-recovery-exhausted',
@@ -106,6 +108,7 @@ interface ApplicationErrorRecoveryVariables extends Readonly<Record<CopilotComma
     readonly 'progress-inventory-incomplete': ProgressInventoryDiagnostic;
     readonly 'bugbot-review-incomplete': BugbotReviewBlockFacts;
     readonly 'progress-result-contract-invalid': ProgressResponseDiagnosticFacts;
+    readonly 'progress-partition-length-invalid': ProgressPartitionLengthDiagnostic;
     readonly 'progress-assessment-capacity-exceeded': ProgressResponseDiagnosticFacts;
     readonly 'progress-scope-clause-limit': ProgressScopeCapacityFacts;
     readonly 'progress-completion-recovery-exhausted': ProgressCompletionDiagnostic;
@@ -426,6 +429,7 @@ const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readon
     'progress-inventory-incomplete': Object.freeze(['profile', 'reason', 'observedCount', 'supportedLimit', 'countKind', 'paths']),
     'bugbot-review-incomplete': Object.freeze(['profile', 'countKind', 'resource', 'observed', 'limit', 'unit']),
     'progress-result-contract-invalid': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
+    'progress-partition-length-invalid': Object.freeze(['partitionId', 'filePath', 'unitId', 'field', 'maximum', 'observed']),
     'progress-assessment-capacity-exceeded': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
     'progress-scope-clause-limit': Object.freeze(['clauseKind', 'observed', 'limit', 'sourceLineId']),
     'progress-completion-recovery-exhausted': Object.freeze(['reportedProgress', 'requirementCount', 'supportedCount', 'missingCount', 'unknownCount']),
@@ -516,6 +520,7 @@ function normalizeApplicationErrorRecovery(
     }
     if (recovery.id === 'progress-scope-clause-limit' && !isProgressScopeCapacityFacts(variables)) throw new TypeError('Progress scope capacity diagnostic is invalid.');
     if (recovery.id === 'progress-result-contract-invalid' && !isProgressResponseDiagnosticFacts(variables)) throw new TypeError('Progress response diagnostic is invalid.');
+    if (recovery.id === 'progress-partition-length-invalid' && !isProgressPartitionLengthDiagnostic(variables)) throw new TypeError('Progress part length diagnostic is invalid.');
     if (recovery.id === 'bugbot-review-incomplete' && !isBugbotReviewBlockFacts(variables)) throw new TypeError('Bugbot review diagnostic is invalid.');
     if (recovery.id === 'progress-inventory-incomplete' && !isProgressInventoryDiagnostic(variables)) throw new TypeError('Progress inventory diagnostic is invalid.');
     if (recovery.id === 'progress-binary-evidence-unavailable' && !isProgressBinaryEvidenceFacts(variables)) throw new TypeError('Progress binary evidence diagnostic is invalid.');

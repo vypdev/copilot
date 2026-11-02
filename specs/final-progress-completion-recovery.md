@@ -288,6 +288,13 @@ Retain existing progress state and emit at most one fixed recovery log message. 
 
 ## 13. Compatibility, migration, rollout, and rollback
 
+The companion [part-response recovery contract](./progress-partition-response-recovery.md)
+owns a separate single replacement for each attributable overlong part. Those
+queries finish before this final controller starts. A final reassessment never
+repeats accepted part queries or source reads; an exhausted part never enters
+the final stage. Three additional composition cases belong to that companion's
+budget and do not replace this specification's 40 cases.
+
 Valid complete and partial responses remain accepted identically. Direct parser rejection and unrelated errors preserve current codes and recovery shapes. Add only the closed exhaustion identifier. No stored-state or in-flight comparison migration is required. Adopt a reviewed runtime only through its supported path; merging `develop` alone does not change the currently observed master-pinned issue-comment runtime. Release and deployment are outside this correction. Implementation starts only after the Action-verified first SDD and linked branch, now recorded above. Rollback restores immediate rejection and retains previous progress; remove helper, diagnostic, and localized copy together without rewriting published state.
 
 ## 14. Testing strategy
