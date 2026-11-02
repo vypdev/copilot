@@ -69,8 +69,6 @@ it.each([
     ['outside', 'schema-enum', '$.requirements[0].id', 'none', 'none'],
     ['evidence', 'requirement-evidence-mismatch', '$.requirements[0].evidence', 'R2', 'L3'],
     ['remaining', 'requirement-remaining-invalid', '$.requirements[0].remaining', 'R2', 'L3'],
-    ['percentage', 'progress-completion-mismatch', '$.progress', 'none', 'none'],
-    ['false-completion', 'progress-completion-mismatch', '$.progress', 'none', 'none'],
     ['unknown-field', 'schema-additional', '$.requirements[0]', 'R2', 'L3'],
 ])('rejects completed %s results with relevant verified detail and no progress mutation', async (mode, reason, field, requirementId, sourceLineId) => {
     const f = scenario(output => {
@@ -80,14 +78,45 @@ it.each([
         if (mode === 'outside') output.requirements[0].id = 'PRIVATE_UNKNOWN_REQUIREMENT';
         if (mode === 'evidence') output.requirements[0].evidence = 'external-unverified';
         if (mode === 'remaining') output.requirements[0].remaining = 'PRIVATE_RETURNED_REMAINING';
-        if (mode === 'percentage') output.progress = 70;
-        if (mode === 'false-completion') Object.assign(output.requirements[0], { status: 'verification-unknown', evidence: 'external-unverified', remaining: 'Required execution remains unverified.' });
         if (mode === 'unknown-field') Object.assign(output.requirements[0], { 'PRIVATE_FIELD@all': 'PRIVATE_VALUE' });
         return output;
     });
     const result = (await f.invoke())[0]; expect(result.success).toBe(false);
     expect(result.errors[0]).toMatchObject({ recovery: { id: 'progress-result-contract-invalid', variables: { reason, field, requirementId, sourceLineId } } });
     expect(JSON.stringify(result)).not.toMatch(/PRIVATE_|@all/u); expect(f.execute).toHaveBeenCalledTimes(2); unchanged(f);
+});
+
+function contradictoryCompletion(mode: 'supported-incomplete' | 'unknown-complete'): Output {
+    const output = finalOutput(); output.requirements[0].summary = 'PRIVATE_COMPLETION_RESPONSE @all';
+    if (mode === 'supported-incomplete') output.progress = 70;
+    else Object.assign(output.requirements[0], { status: 'verification-unknown', evidence: 'external-unverified', remaining: 'Required execution remains unverified.' });
+    return output;
+}
+const directCompletionRecovery = { id: 'progress-result-contract-invalid', variables: {
+    phase: 'assessment', reason: 'progress-completion-mismatch', field: '$.progress', requirementId: 'none', sourceLineId: 'none',
+} };
+it.each(['supported-incomplete', 'unknown-complete'] as const)('keeps the direct parser rejection compatible for %s', mode => {
+    const scope = parseProgressScope(scopeOutput(), issue, 'en-US');
+    expect(() => parseScopedProgressResponse(contradictoryCompletion(mode), 'en-US', scope))
+        .toThrow(expect.objectContaining({ code: 'agent.failed', recovery: directCompletionRecovery }));
+});
+it.each(['supported-incomplete', 'unknown-complete'] as const)('retains progress and exact stage-owned diagnostics for %s', async mode => {
+    const f = scenario(() => contradictoryCompletion(mode)); const result = (await f.invoke())[0];
+    expect(result).toMatchObject({ success: false, errors: [{ code: 'agent.failed' }] });
+    const recovery = result.errors[0].recovery; expect(recovery).toBeDefined();
+    // This compatibility fixture owns rejection/publication. The final controller's
+    // dedicated suite owns whether one complete reassessment is installed.
+    if (String(recovery!.id) === 'progress-result-contract-invalid') {
+        expect(recovery).toEqual(directCompletionRecovery); expect(f.outputs).toHaveLength(1);
+    } else {
+        expect(recovery).toEqual({ id: 'progress-completion-recovery-exhausted', variables: {
+            reportedProgress: mode === 'supported-incomplete' ? 70 : 100, requirementCount: 2,
+            supportedCount: mode === 'supported-incomplete' ? 2 : 1, missingCount: 0, unknownCount: mode === 'supported-incomplete' ? 0 : 1,
+        } });
+        expect(f.outputs).toHaveLength(2);
+    }
+    expect(f.execute).toHaveBeenCalledTimes(f.outputs.length + 1);
+    expect(JSON.stringify(result)).not.toMatch(/PRIVATE_|@all/u); unchanged(f);
 });
 it('rejects malformed completed task text without a fabricated requirement/anchor', async () => {
     const f = scenario(() => 'PRIVATE_MALFORMED_RESULT'); const result = (await f.invoke())[0];

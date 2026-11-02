@@ -126,10 +126,21 @@ once, validate all provisional results, then use normal publication or stop.
 The final assessment prompt MUST state the existing completion equivalence in
 both directions: all requirements supported with null remaining means exactly
 100; any missing/unknown requirement with nonempty remaining means below 100.
-Choose statuses before the estimate. The host validator MUST remain unchanged:
-neither contradictory result may be normalized, accepted or automatically
-repaired. Source-visible implementation and independently required execution
-retain their existing distinct evidence/status rules and approval gates.
+Choose statuses before the estimate. The direct host parser MUST keep rejecting
+both contradictions with its existing public diagnostic; neither returned result
+may be normalized or accepted. This companion grants no final-response recovery.
+The separately owned [final-assessment recovery contract](https://github.com/vypdev/copilot/blob/f085fb906afdda89b5b1b1537cde5725dd0d7d77/specs/final-progress-completion-recovery.md)
+may install one complete final reassessment after all other checks pass. Its
+allowance and terminal diagnostic belong to that controller, independently of
+each part's single replacement. Source-visible implementation and independently
+required execution retain their distinct evidence/status rules and approval gates.
+
+Parser compatibility and workflow publication must be tested separately: exact
+direct-parser diagnostics remain stable, while each installed final controller
+must expose the diagnostic matching its actual terminal stage. Unrelated schema
+failures still receive no automatic replacement. No contradictory response may
+publish progress, and the dedicated final-controller suite enforces its precise
+query allowance and exhaustion facts when that controller is present.
 
 | State | Meaning | Next |
 |---|---|---|
