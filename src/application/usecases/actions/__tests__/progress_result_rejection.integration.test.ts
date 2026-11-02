@@ -82,11 +82,8 @@ it.each([
         return output;
     });
     const result = (await f.invoke())[0]; expect(result.success).toBe(false);
-    if (mode === 'percentage') expect(result.errors[0]).toMatchObject({ recovery: { id: 'progress-completion-recovery-exhausted', variables: {
-        reportedProgress: 70, requirementCount: 2, supportedCount: 2, missingCount: 0, unknownCount: 0,
-    } } });
-    else expect(result.errors[0]).toMatchObject({ recovery: { id: 'progress-result-contract-invalid', variables: { reason, field, requirementId, sourceLineId } } });
-    expect(JSON.stringify(result)).not.toMatch(/PRIVATE_|@all/u); expect(f.execute).toHaveBeenCalledTimes(mode === 'percentage' ? 3 : 2); unchanged(f);
+    expect(result.errors[0]).toMatchObject({ recovery: { id: 'progress-result-contract-invalid', variables: { reason, field, requirementId, sourceLineId } } });
+    expect(JSON.stringify(result)).not.toMatch(/PRIVATE_|@all/u); expect(f.execute).toHaveBeenCalledTimes(2); unchanged(f);
 });
 
 function contradictoryCompletion(mode: 'supported-incomplete' | 'unknown-complete'): Output {
@@ -106,19 +103,11 @@ it.each(['supported-incomplete', 'unknown-complete'] as const)('keeps the direct
 it.each(['supported-incomplete', 'unknown-complete'] as const)('retains progress and exact stage-owned diagnostics for %s', async mode => {
     const f = scenario(() => contradictoryCompletion(mode)); const result = (await f.invoke())[0];
     expect(result).toMatchObject({ success: false, errors: [{ code: 'agent.failed' }] });
-    const recovery = result.errors[0].recovery; expect(recovery).toBeDefined();
-    // This compatibility fixture owns rejection/publication. The final controller's
-    // dedicated suite owns whether one complete reassessment is installed.
-    if (String(recovery!.id) === 'progress-result-contract-invalid') {
-        expect(recovery).toEqual(directCompletionRecovery); expect(f.outputs).toHaveLength(1);
-    } else {
-        expect(recovery).toEqual({ id: 'progress-completion-recovery-exhausted', variables: {
-            reportedProgress: mode === 'supported-incomplete' ? 70 : 100, requirementCount: 2,
-            supportedCount: mode === 'supported-incomplete' ? 2 : 1, missingCount: 0, unknownCount: mode === 'supported-incomplete' ? 0 : 1,
-        } });
-        expect(f.outputs).toHaveLength(2);
-    }
-    expect(f.execute).toHaveBeenCalledTimes(f.outputs.length + 1);
+    expect(result.errors[0].recovery).toEqual({ id: 'progress-completion-recovery-exhausted', variables: {
+        reportedProgress: mode === 'supported-incomplete' ? 70 : 100, requirementCount: 2,
+        supportedCount: mode === 'supported-incomplete' ? 2 : 1, missingCount: 0, unknownCount: mode === 'supported-incomplete' ? 0 : 1,
+    } });
+    expect(f.outputs).toHaveLength(2); expect(f.execute).toHaveBeenCalledTimes(3);
     expect(JSON.stringify(result)).not.toMatch(/PRIVATE_|@all/u); unchanged(f);
 });
 it('rejects malformed completed task text without a fabricated requirement/anchor', async () => {

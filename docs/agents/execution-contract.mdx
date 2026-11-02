@@ -182,13 +182,11 @@ fact, verified against its current immutable part, exact path/unit, locale and
 selected schema limit, permits one replacement response for that entire part.
 Both the original and replacement envelopes for every part must fit before any
 part is queried. The replacement preserves all source, schema and uncertainty;
-it never includes the rejected prose. No other validation or execution failure
-starts this recovery. A fresh attempt can help when the provider returns a
-result conforming to the unchanged contract; it cannot enlarge fixed budgets or
-authorize a scope change. All
+it never includes the rejected prose. No other part-validation or execution
+failure starts this recovery.
 
-proof of completed output. The sole automatic recovery is one complete final
-reassessment after the host has validated every field, locale, scope identity,
+A separate final-response recovery allows one complete final reassessment after
+the host has validated every field, locale, scope identity,
 status/evidence relation and full cited projection and found only a completion
 contradiction: 100% requires every requirement to be supported, and every
 requirement supported requires 100%. Direct parser callers retain their existing
@@ -209,7 +207,12 @@ invalid, canceled, incomplete or stale outcomes retain previous progress.
 The same correlation reference and localized semantic view reach CLI, Check
 and Job Summary; optional native evidence publication is a separate result.
 
-If the replacement still exceeds the fact limit,
+Part and final-response allowances are independent: each eligible part may be
+replaced once, and the validated complete aggregate may receive one final
+reassessment. A persistent part failure never enters the final stage. A final
+failure cannot restart accepted parts or recollect the comparison.
+
+If a part replacement still exceeds the fact limit,
 `progress-partition-length-invalid` identifies the verified part, path, source
 unit (`none` for legacy parts), response field, maximum and observed Unicode
 code-point count. Filenames are inert, reversible JSON code spans. The response

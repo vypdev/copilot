@@ -257,7 +257,7 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     action: 'Inspect part {partitionId}, file {filePath}, unit {unitId}, field {field}: observed {observed} Unicode code points; maximum {maximum}. The replacement must satisfy the unchanged schema. Do not remove files, truncate facts, relax acceptance or bypass verification.',
     retainedState: 'Existing progress labels and assessments were preserved. No partial percentage or passing verification was published; execution and optional check-publication failures remain separate.',
   }),
-'progress-completion-recovery-exhausted': Object.freeze({
+  'progress-completion-recovery-exhausted': Object.freeze({
     impact: 'The final progress result still contradicted completion after one complete reassessment; progress was not published.',
     action: 'Inspect the complete pinned comparison and final facts: phase assessment, field $.progress, reported {reportedProgress}%, requirements {requirementCount}, supported {supportedCount}, missing {missingCount}, unknown {unknownCount}. Start a fresh complete assessment when the provider can satisfy the unchanged contract. These are model observations, not independent execution or approval evidence.',
     retainedState: 'Existing progress labels and published assessments were preserved. Verification, review, coverage and approval remain independent gates.',
@@ -452,7 +452,7 @@ const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     action: 'Inspecciona la parte {partitionId}, archivo {filePath}, unidad {unitId}, campo {field}: observado {observed} puntos de código Unicode; máximo {maximum}. La sustitución debe cumplir el mismo esquema. No elimines archivos, recortes los hechos, relajes la aceptación ni eludas la verificación.',
     retainedState: 'Se conservaron las etiquetas y evaluaciones de progreso. No se publicó ningún porcentaje parcial ni verificación aprobada; los fallos de ejecución y de publicación del check opcional siguen siendo independientes.',
   }),
-'progress-completion-recovery-exhausted': Object.freeze({
+  'progress-completion-recovery-exhausted': Object.freeze({
     impact: 'El resultado final siguió contradiciendo la completitud después de una reevaluación completa; no se publicó el progreso.',
     action: 'Inspecciona la comparación completa fijada y los datos finales: fase assessment, campo $.progress, porcentaje {reportedProgress}%, requisitos {requirementCount}, respaldados {supportedCount}, pendientes {missingCount}, desconocidos {unknownCount}. Inicia una evaluación completa nueva cuando el proveedor pueda cumplir el contrato sin cambiarlo. Son observaciones del modelo, no evidencia independiente de ejecución ni aprobación.',
     retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas. Verificación, revisión, cobertura y aprobación siguen siendo controles independientes.',

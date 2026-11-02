@@ -6,7 +6,7 @@
 - Last verified: 2026-11-02 local full validation; remote acceptance pending
 - Owners: Copilot maintainers
 - Scope: One bounded replacement for a completed, attributable over-length file fact, preserving the complete immutable comparison and all output limits.
-- Related issues/PRs: [#830](https://github.com/vypdev/copilot/issues/830), [#837](https://github.com/vypdev/copilot/pull/837)
+- Related issues/PRs: [#830](https://github.com/vypdev/copilot/issues/830), [#852](https://github.com/vypdev/copilot/pull/852), [#837](https://github.com/vypdev/copilot/pull/837)
 - Required review gates: product UX, architecture, testing, documentation, security/operations
 - Open decisions blocking readiness: none
 
@@ -129,18 +129,22 @@ both directions: all requirements supported with null remaining means exactly
 Choose statuses before the estimate. The direct host parser MUST keep rejecting
 both contradictions with its existing public diagnostic; neither returned result
 may be normalized or accepted. This companion grants no final-response recovery.
-The separately owned [final-assessment recovery contract](https://github.com/vypdev/copilot/blob/f085fb906afdda89b5b1b1537cde5725dd0d7d77/specs/final-progress-completion-recovery.md)
-may install one complete final reassessment after all other checks pass. Its
+The separately owned [final-assessment recovery contract](./final-progress-completion-recovery.md),
+merged in `f085fb906afdda89b5b1b1537cde5725dd0d7d77`, installs one complete final
+reassessment after all other checks pass. Its
 allowance and terminal diagnostic belong to that controller, independently of
 each part's single replacement. Source-visible implementation and independently
 required execution retain their distinct evidence/status rules and approval gates.
 
 Parser compatibility and workflow publication must be tested separately: exact
-direct-parser diagnostics remain stable, while each installed final controller
-must expose the diagnostic matching its actual terminal stage. Unrelated schema
+direct-parser diagnostics remain stable, while the integrated final controller
+MUST expose its exact exhaustion diagnostic after a second contradiction. Unrelated schema
 failures still receive no automatic replacement. No contradictory response may
 publish progress, and the dedicated final-controller suite enforces its precise
-query allowance and exhaustion facts when that controller is present.
+query allowance and exhaustion facts. A persistent part failure MUST stop before
+any final assessment. A final failure MUST NOT repeat accepted parts, reread the
+source or reset a part's replacement allowance. Both successful replacements
+MUST still lead to exactly one normal progress publication.
 
 | State | Meaning | Next |
 |---|---|---|
@@ -261,7 +265,20 @@ rejection while preserving prior progress; no credentials or data need repair.
 | Whole-prompt capacity | 4 | Original/replacement reserve, later-part preflight, zero calls on overflow, single-part compatibility |
 | Product presentation | 4 | English/Spanish facts, no raw output, closed variables and escaped text |
 | Complete publication integration | 3 | Successful complete aggregation, failure retains labels, stale result never publishes |
-| **Total** | **36** | Distinct cases, beyond existing budgets; no matrix/replay double counting |
+| Part/final recovery composition | 3 | Independent single allowances, complete immutable inventory through late failure, no final query after exhausted part |
+| **Total** | **39** | Original 36 cases plus 3 composed-stage cases; no matrix/replay double counting |
+
+The three additional cases live in
+`src/application/usecases/actions/__tests__/progress_recovery_composition.integration.test.ts`:
+
+| Case ID | Requirements | Observable contract |
+|---|---|---|
+| progress-partition-composition-C01 | PL-02, PL-04, PL-06 | A legacy multipart response uses one part replacement and one final reassessment, preserves both independent allowances and publishes once after all six queries finish. |
+| progress-partition-composition-C02 | PL-02, PL-04, PL-06 | The 887-path, 952-unit, 6,503,131-byte immutable fixture repairs its last part, then rejects two contradictory final estimates with exact exhaustion counts, unchanged source-read counts and no publication. |
+| progress-partition-composition-C03 | PL-02, PL-04, PL-06 | A second attributable part overflow terminates after two part queries; no final query or publication occurs. |
+
+These integration cases add to this companion's budget; they do not double-count
+or replace the final controller's separately owned 40-case acceptance inventory.
 
 Require 100% new pure-policy branches and every modified coverable line with no
 partials in Codecov against the correct live base. Preserve repository-wide
@@ -292,17 +309,20 @@ weaken their requirements.
    retain their original category, and a moved source prevents publication.
 6. Localized operator output contains the exact safe facts and retained-state
    action without returned prose, unsafe markup or configuration changes.
+7. A repaired part followed by a repaired final assessment publishes once; a
+   persistent part failure never enters the final stage, while final exhaustion
+   retains all complete source facts without rereading or repeating parts.
 
 ## 17. Requirements traceability
 
 | Requirement | Owner | Evidence | Documentation |
 |---|---|---|---|
 | PL-01 | Adapter/domain/binding policy | Length mapping and policy tests | Error reference |
-| PL-02 | Partition query workflow | Native-adapter integration and execution-failure cases | Execution contract |
+| PL-02 | Partition query workflow | Native-adapter integration, execution-failure cases and composition-C01/C02/C03 | Execution contract |
 | PL-03 | Complete prompt planner | Capacity and zero-query fixtures | Contributor/recovery guide |
-| PL-04 | Existing aggregate/freshness/publication | Complete CheckProgress integration | Progress guide |
+| PL-04 | Existing aggregate/freshness/publication | Complete CheckProgress integration and composition-C01/C02/C03 | Progress guide |
 | PL-05 | Recovery normalizer and existing catalogs | English/Spanish semantic output and sanitization | Error reference |
-| PL-06 | Existing protocol and architecture owners | Legacy/framed/immutable, full suites, bundles and Codecov | This companion and original recovery owner |
+| PL-06 | Existing protocol and architecture owners | Legacy/framed/immutable, composition-C01/C02/C03, full suites, bundles and Codecov | This companion and original recovery owner |
 
 ## 18. Implementation sequence
 
@@ -313,7 +333,7 @@ Graphify, normal bundles/hooks and current-head remote review.
 
 ## 19. Definition of Done
 
-- [ ] Every requirement has executable acceptance and all 36 risk cases pass.
+- [ ] Every requirement has executable acceptance and all 39 risk cases pass.
 - [ ] Inward dependencies, semantic ports and module budgets pass.
 - [ ] Source, response, prompt, configuration, deadline and publication gates remain.
 - [ ] Localized primary states, exact diagnostics and sanitization pass.
