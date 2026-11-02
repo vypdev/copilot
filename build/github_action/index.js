@@ -51453,6 +51453,8 @@ const FACTS = Object.freeze({
     "numeric-budget": ["No valid numeric test budget was found.", "No se encontró un presupuesto numérico de pruebas válido."],
     "section-count": ["The required section is missing or repeated.", "La sección obligatoria falta o está repetida."],
     "table-count": ["Exactly one canonical table is required in this section.", "Esta sección requiere exactamente una tabla canónica."],
+    "derived-slot-count": ["A derived-table slot must occur exactly once in the raw draft.", "El marcador de una tabla derivada debe aparecer exactamente una vez en el borrador original."],
+    "derived-slot-placement": ["A derived-table slot must stand alone on a visible line in its required section.", "El marcador de una tabla derivada debe estar solo en una línea visible de su sección obligatoria."],
     "table-separator": ["The table header separator has invalid columns or formatting.", "El separador de la cabecera tiene columnas o formato no válidos."],
     "table-columns": ["A data row has the wrong number of columns.", "Una fila de datos tiene un número incorrecto de columnas."],
     "table-empty-cell": ["A required table cell is empty.", "Una celda obligatoria de la tabla está vacía."],
@@ -62789,6 +62791,7 @@ async function readPullRequestStatusReadiness(param, taskId, ports) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.draftSddMarkdown = draftSddMarkdown;
 const sdd_draft_preparation_failure_1 = __nccwpck_require__(12321);
+const sdd_validation_diagnostic_1 = __nccwpck_require__(34211);
 const pre_branch_sdd_1 = __nccwpck_require__(34730);
 const agent_response_length_failure_1 = __nccwpck_require__(28528);
 const sdd_draft_consistency_1 = __nccwpck_require__(27910);
@@ -62811,7 +62814,7 @@ async function draftSddMarkdown(agent, configuration, plan, prompt, validate) {
         try {
             value = await agent.query({
                 configuration, agentId: 'pre-branch-sdd-draft',
-                prompt: `${attempt === 0 ? contractPrompt : `${contractPrompt}\n\n${problem === 'size' ? `The previous response exceeded the ${maximum}-character draft limit.` : `The previous response failed the required SDD ${formatReason} contract.`} Regenerate a concise complete draft for this same owner and plan. Use the exact numbered canonical headings from the supplied template. Preserve all resolved requirements, architecture, documentation and acceptance. Do not change ownership or truncate a requirement.`}\n\n${sdd_draft_consistency_1.SDD_CONSISTENCY_PROMPT}\n\n${sdd_draft_consistency_1.SDD_DERIVED_TABLES_PROMPT}`,
+                prompt: `${attempt === 0 ? contractPrompt : `${contractPrompt}\n\n${problem === 'size' ? `The previous response exceeded the ${maximum}-character draft limit.` : `The previous response failed the required SDD ${formatReason} contract.`} Regenerate a concise complete draft for this same owner and plan. Use the exact numbered canonical headings from the supplied template. Preserve all resolved requirements, architecture, documentation and acceptance. Do not change ownership or truncate a requirement.\nPrevious host validation (closed structural coordinates only, not new requirements): ${JSON.stringify((0, sdd_validation_diagnostic_1.normalizeSddValidationDiagnostic)(diagnostic))}`}\n\n${sdd_draft_consistency_1.SDD_CONSISTENCY_PROMPT}\n\n${sdd_draft_consistency_1.SDD_DERIVED_TABLES_PROMPT}`,
                 options: { expectJson: true, schemaName: 'pre_branch_sdd_draft', schema },
             });
         }
@@ -62849,9 +62852,15 @@ async function draftSddMarkdown(agent, configuration, plan, prompt, validate) {
         catch (error) {
             if (!(error instanceof pre_branch_sdd_1.SddDraftFormatFailure))
                 throw error;
+            const normalized = (0, sdd_validation_diagnostic_1.normalizeSddValidationDiagnostic)(error.diagnostic);
+            if (normalized.reason !== error.reason) {
+                const failure = new TypeError('SDD format reason disagrees with its bounded diagnostic.');
+                Object.defineProperty(failure, 'cause', { value: error });
+                throw failure;
+            }
             problem = 'format';
             formatReason = error.reason;
-            diagnostic = { ...error.diagnostic, phase: assembledCandidate ? 'validation' : 'assembly' };
+            diagnostic = { ...normalized, phase: assembledCandidate ? 'validation' : 'assembly' };
         }
     }
     throw new sdd_draft_preparation_failure_1.SddDraftPreparationFailure(diagnostic, 2);
@@ -91195,9 +91204,14 @@ const BUDGET_SLOT = '{{SDD_CASE_BUDGET}}';
 const TRACEABILITY_SLOT = '{{SDD_REQUIREMENT_CASES}}';
 /** The provider writes definitions once; trusted code renders their two redundant projections. */
 exports.SDD_DERIVED_TABLES_PROMPT = `Draft assembly: the consistency contract above describes the final document. In your raw Markdown, write the complete Requirement | Behavior table in section 4 and Case ID | Area | Requirements | Scenario inventory in section 14. Preserve every resolved minimum, per-area allocation and observable case as actual inventory rows, never ranges or summaries. Instead of independently writing the budget table, put ${BUDGET_SLOT} once on its own visible line in section 14. Instead of writing the reverse Requirement | Cases table, put ${TRACEABILITY_SLOT} once on its own visible line in section 17. Do not include either derived table yourself or put these slots in examples, fences or comments. Trusted code derives exact counts, Total and reciprocal links from your unchanged definitions, then runs every publication check. The compact character target is advisory: use more space when required to preserve the full resolved inventory and scope. The hard limit applies after assembly too.`;
-function fail(reason, fact = { detail: 'validation-contract', section: 0 }) {
+function fail(reason, fact, additional = []) {
     // Closed diagnostics: rejected Markdown and repository text never become repair instructions.
-    throw new pre_branch_sdd_1.SddDraftFormatFailure(reason, `The SDD draft violates its ${reason} consistency contract.`, { reason, phase: 'validation', facts: [fact] });
+    throw new pre_branch_sdd_1.SddDraftFormatFailure(reason, `The SDD draft violates its ${reason} consistency contract.`, { reason, phase: 'validation', facts: [fact, ...additional] });
+}
+function assertRequirementsCovered(counts) {
+    const missing = counts.filter(count => count === 0).length;
+    if (missing)
+        fail('requirement-mapping', { detail: 'requirement-coverage', section: 17, expected: 0, observed: missing }, [{ detail: 'requirement-coverage', section: 4, row: counts.indexOf(0) + 1, expected: 1, observed: 0 }]);
 }
 /** Excludes examples and hidden records from the contract. */
 function visible(source) {
@@ -91283,9 +91297,12 @@ function renderSddDerivedTables(markdown) {
     for (const [slot, number, reason] of [
         [BUDGET_SLOT, 14, 'case-budget'], [TRACEABILITY_SLOT, 17, 'requirement-mapping'],
     ]) {
-        if (markdown.split(slot).length !== 2
-            || section(source, number, reason).split('\n').filter(line => line.trim() === slot).length !== 1)
-            fail(reason);
+        const occurrences = markdown.split(slot).length - 1;
+        if (occurrences !== 1)
+            fail(reason, { detail: 'derived-slot-count', section: number, expected: 1, observed: occurrences });
+        const placed = section(source, number, reason).split('\n').filter(line => line.trim() === slot).length;
+        if (placed !== 1)
+            fail(reason, { detail: 'derived-slot-placement', section: number, expected: 1, observed: placed });
     }
     const requirements = table(source, 4, ['Requirement', 'Behavior'], 'requirement-mapping').map(row => row[0]);
     uniqueIdentifiers(requirements, REQUIREMENT_ID, 'requirement-mapping', 4);
@@ -91294,19 +91311,18 @@ function renderSddDerivedTables(markdown) {
     uniqueIdentifiers(caseIds, CASE_ID, 'case-identity', 14);
     const counts = new Map();
     const edges = new Map(requirements.map(id => [id, []]));
-    for (const [id, area, links] of cases) {
+    for (const [index, [id, area, links]] of cases.entries()) {
         if (area === 'Total')
             fail('case-budget', { detail: 'budget-area', section: 14 });
         counts.set(area, (counts.get(area) ?? 0) + 1);
         for (const requirement of ids(links, REQUIREMENT_ID, 'requirement-mapping', 14)) {
             const linked = edges.get(requirement);
             if (!linked)
-                fail('requirement-mapping', { detail: 'requirement-reference', section: 14, expected: 0, observed: 1 });
+                fail('requirement-mapping', { detail: 'requirement-reference', section: 14, row: index + 1, expected: 0, observed: 1 });
             linked.push(id);
         }
     }
-    if ([...edges.values()].some(links => links.length === 0))
-        fail('requirement-mapping', { detail: 'requirement-coverage', section: 17, expected: 0, observed: [...edges.values()].filter(links => links.length === 0).length });
+    assertRequirementsCovered([...edges.values()].map(links => links.length));
     const budget = ['| Area | Minimum distinct cases | Behaviors/risks covered |', '|---|---:|---|',
         ...[...counts].map(([area, count]) => `| ${area} | ${count} | Observable scenarios in the case inventory. |`),
         `| Total | ${cases.length} | Distinct inventory cases; repeated executions do not add cases. |`].join('\n');
@@ -91387,16 +91403,15 @@ function validateSddDraftConsistency(markdown, owners, inventory, sddPath) {
         if (cases.filter(row => row[1] === area).length !== count)
             fail('case-budget', { detail: 'budget-distribution', section: 14, expected: count, observed: cases.filter(row => row[1] === area).length });
     const edges = new Map(requirementIds.map(id => [id, new Set()]));
-    for (const [id, , links] of cases) {
+    for (const [index, [id, , links]] of cases.entries()) {
         for (const requirement of ids(links, REQUIREMENT_ID, 'requirement-mapping', 14)) {
             const linked = edges.get(requirement);
             if (!linked)
-                fail('requirement-mapping', { detail: 'requirement-reference', section: 14, expected: 0, observed: 1 });
+                fail('requirement-mapping', { detail: 'requirement-reference', section: 14, row: index + 1, expected: 0, observed: 1 });
             linked.add(id);
         }
     }
-    if ([...edges.values()].some(links => links.size === 0))
-        fail('requirement-mapping', { detail: 'requirement-coverage', section: 17, expected: 0, observed: [...edges.values()].filter(links => links.size === 0).length });
+    assertRequirementsCovered([...edges.values()].map(links => links.size));
     const traceability = table(source, 17, ['Requirement', 'Cases'], 'requirement-mapping');
     const seen = new Set();
     for (const [requirement, links] of traceability) {
@@ -91531,6 +91546,7 @@ exports.SDD_DRAFT_FORMAT_REASONS = Object.freeze([
 exports.SDD_VALIDATION_DETAILS = Object.freeze([
     'validation-contract', 'size-limit', 'response-shape', 'required-heading', 'numeric-budget',
     'section-count', 'table-count', 'table-separator', 'table-columns', 'table-empty-cell', 'table-empty',
+    'derived-slot-count', 'derived-slot-placement',
     'identifier-list', 'requirement-identity', 'case-identity', 'case-reserved', 'case-reference', 'case-shorthand',
     'budget-area', 'budget-integer', 'budget-order', 'budget-total', 'budget-distribution',
     'requirement-reference', 'requirement-coverage', 'traceability-links', 'traceability-membership', 'traceability-requirement',
