@@ -2556,7 +2556,10 @@ Local #833 execution: all 21 added cases pass; the unchanged source failed18
 of them before the correction, while three compatibility controls already passed.
 Full coverage passes844 suites/16,320 tests plus267 baseline extension tests
 (all four extension metrics100%). Existing coverage budgets and the setup
-ledger pass with14 previously open human acceptances. Local LCOV reports20/20
-modified coverable lines hit and no unhit branches on those lines against
-9d391572. These are local observations; official correct-base Codecov, live
-provider recovery and the complete exact-head remote review remain separate.
+ledger pass with14 previously open human acceptances. Every private consistency
+helper call supplies explicit facts; the helper requires that fact rather than
+an obsolete generic default. Current local LCOV includes branch-only mapped
+lines and reports22/22 modified coverable lines fully hit against9d391572,
+with zero misses/partials. All four changed runtime modules reach100% of
+statements, branches, functions and lines. Official exact-head Codecov and
+complete remote gates remain required. Live provider recovery remains separate.
