@@ -360,6 +360,84 @@
         "confidence": 1
       }
     ],
-    "ktor-routing-unavailable-implementation": []
+    "ktor-routing-unavailable-implementation": [],
+    "py-pep758-314-two": [],
+    "py-pep758-314-three": [],
+    "py-pep758-314-group": [],
+    "py-pep758-314-parenthesized-as": [],
+    "py-pep758-313-list": [
+      {
+        "id": "py-pep758-313-list",
+        "title": "The changed exception handler fails under a supported execution path",
+        "file": "backend/owned_handlers.py",
+        "line": 4,
+        "severity": "medium",
+        "category": "reliability",
+        "codeSnippet": "    except ValueError, TypeError:",
+        "confidence": 1
+      }
+    ],
+    "py-pep758-313-group": [
+      {
+        "id": "py-pep758-313-group",
+        "title": "The changed exception handler fails under a supported execution path",
+        "file": "backend/owned_handlers.py",
+        "line": 4,
+        "severity": "medium",
+        "category": "reliability",
+        "codeSnippet": "    except* ValueError, TypeError:",
+        "confidence": 1
+      }
+    ],
+    "py-pep758-314-list-as": [
+      {
+        "id": "py-pep758-314-list-as",
+        "title": "The changed exception handler fails under a supported execution path",
+        "file": "backend/owned_handlers.py",
+        "line": 4,
+        "severity": "medium",
+        "category": "reliability",
+        "codeSnippet": "    except ValueError, TypeError as error:",
+        "confidence": 1
+      }
+    ],
+    "py-pep758-314-group-as": [
+      {
+        "id": "py-pep758-314-group-as",
+        "title": "The changed exception handler fails under a supported execution path",
+        "file": "backend/owned_handlers.py",
+        "line": 4,
+        "severity": "medium",
+        "category": "reliability",
+        "codeSnippet": "    except* ValueError, TypeError as error:",
+        "confidence": 1
+      }
+    ],
+    "py-pep758-mixed-range": [
+      {
+        "id": "py-pep758-mixed-range",
+        "title": "The changed exception handler fails under a supported execution path",
+        "file": "backend/owned_handlers.py",
+        "line": 4,
+        "severity": "medium",
+        "category": "reliability",
+        "codeSnippet": "    except ValueError, TypeError:",
+        "confidence": 1
+      }
+    ],
+    "py-pep758-unknown-range": [],
+    "py-pep758-stale-parser": [],
+    "py-pep758-unbound-handler": [
+      {
+        "id": "py-pep758-unbound-handler",
+        "title": "The changed exception handler fails under a supported execution path",
+        "file": "backend/owned_handlers.py",
+        "line": 4,
+        "severity": "medium",
+        "category": "correctness",
+        "codeSnippet": "    except ValueError, MissingError:",
+        "confidence": 1
+      }
+    ]
   }
 }

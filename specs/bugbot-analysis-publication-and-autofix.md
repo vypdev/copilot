@@ -2,15 +2,131 @@
 
 - Status: As-built baseline
 - Date: 2026-09-11
-- Last updated: 2026-10-30
+- Last updated: 2026-11-02
 - Catalog capability ID: `bugbot-analysis-and-autofix`
-- Last verified: 2026-10-30; versioned Ktor routing-root regression #809, active Kotlin Json policy #807, indirect unittest discovery regression #806, generated-source coordinate evidence #796, dependency-generated request/assertion evidence #784, renderer-grounded Markdown links #772, host-aware self-repository Action references #770, Kotlin/Wasm binding guidance #764, resolved-type grounding #736, delegated test-path evidence #738, versioned Action input contracts #739 and exact validation witnesses #749 alongside the dated package/framework evidence in #720, #721 and #722
+- Last verified: 2026-11-02; Python exception grammar regression #831; versioned Ktor routing-root regression #809, active Kotlin Json policy #807, indirect unittest discovery regression #806, generated-source coordinate evidence #796, dependency-generated request/assertion evidence #784, renderer-grounded Markdown links #772, host-aware self-repository Action references #770, Kotlin/Wasm binding guidance #764, resolved-type grounding #736, delegated test-path evidence #738, versioned Action input contracts #739 and exact validation witnesses #749 alongside the dated package/framework evidence in #720, #721 and #722
 - Owners: Copilot maintainers
 - Scope: bounded change analysis, finding identity/publication, authorized autofix, and independent verification
 - Related issues/PRs: Bugbot review-state reconciliation SDD; architecture
   quality and scalability hardening SDD
 - Required review gates: product UX, architecture, testing, documentation, security/operations
 - Open decisions blocking readiness: none for the baseline
+
+### Python exception grammar correction — #831 (2026-11-02)
+
+This bounded amendment applies the baseline architecture, publication, security,
+recovery and documentation contracts below. The original report and its added
+Domus PR #14 report both misclassify a Python 3.14 exception list as a collection
+or startup SyntaxError. The latter review completed every partition and context
+source; missing context alone does not explain the wrong language rule. Those
+consumer parser/import/CI results are reporter evidence, not executions performed
+by this implementation. Do not rewrite valid consumer handlers to hide a review
+defect. Earlier SDK releases and the current branch are separate measurements.
+
+**Intentional contract, syntax-R01:** ordinary, partitioned and framed review with assigned/canonical Python files,
+the real-agent benchmark, and independent generated-source candidate verification
+MUST use supported interpreter grammar. Python 3.14 / PEP 758 accepts an
+unparenthesized multiple-exception list without `as`, for both `except` and
+`except*`; parentheses remain required for a multiple-exception expression with
+`as`. The semantics do not revert to Python 2 capture behavior. Preserve a proved
+failure on any actually supported older interpreter, a missing binding or another
+independent exception-handling defect. Parsing-only failures follow the existing
+medium-severity reliability contract; do not confuse them with a runtime handling
+fault. A successful 3.14 parse cannot certify a
+declared 3.13 compatibility target.
+
+**Evidence, syntax-R02:** inspect effective root/nearest project requirements,
+version pins and applicable CI matrix; Ruff's target is corroboration, not the
+supported runtime range. Reconcile exact-source, same-head parser/collection
+evidence and contrary observations with their actual interpreter. Different-head,
+cached, skipped or unrelated green jobs do not disprove a fault. Parsing proves
+neither import success nor runtime behavior. Unknown versions cannot justify a
+universal Python 3 SyntaxError claim; omit that unsupported premise while
+retaining supported independent findings. Never invent tools, runs or results.
+
+```text
+changed clause -> effective supported versions -> version-matched grammar
+ -> applicable source/execution counterevidence -> proved finding or omission
+```
+
+Text equivalent: identify the clause and actual compatibility contract before
+evaluating evidence; publish only a supported causal defect. The existing review
+completeness and approval gates still apply independently of the verdict.
+
+**Architecture/configuration, syntax-R03:** one shared pure instruction is used
+by actual review with a retained canonical or assigned `.py` path, the benchmark
+and the independent verifier. Non-Python and unknown-file legacy scopes keep
+the generic source/version grounding; no language is inferred from prose. No parser, range
+interpreter, process executor, repository scan, semantic port or persistent state
+is added to production. No automatic regex suppression, new language dependency,
+permission, config/override, public schema, retry or threshold change is allowed.
+The verifier retains its existing trigger, identity/batching/size checks and
+historical-state separation; this amendment does not claim every Python handler
+receives a second query. The existing 15,000-character compatibility prompt test,
+source-bound framing receipts, locale and untrusted-input boundaries stay in force.
+
+**UX/operations, syntax-R04:** existing pending/complete/partial/failed review
+cards remain authoritative. Example pending: “Reviewing changed code — no action
+required.” Complete safe case: no inline syntax finding; completion does not mean
+other quality gates passed. A supported older-runtime defect is anchored to the
+changed clause, e.g. “This handler cannot parse on the supported Python 3.13
+target,” with concrete version evidence and a practical fix. Partial context
+remains partial, failed verification remains failed; do not turn omission into a
+clean review or resolve a historical thread without the normal explicit process.
+Existing accessible text, locales, sanitization, durable markers and comment
+budgets need no new surface. Inspect the existing review/run links and recheck
+after upgrading the SDK; rollback reverts instruction/tests/docs together without
+rewriting review history. Merge to develop alone does not update consumer runtime.
+
+Reserve **32 distinct deterministic cases before changing production guidance**:
+
+| Area | Minimum cases | Risk/observable result |
+|---|---:|---|
+| Frozen corpus inventory | 1 | Twelve inputs, six real defects and six safe/unknown cases |
+| Scorer counter-controls | 12 | Penalize false syntax claims and missed actual defects with unchanged floors |
+| Exact inputs/anchors | 12 | Runtime/evidence retained; true defects anchor the actual changed clause |
+| Real delivery | 5 | Ordinary, resolution owner/non-owner, benchmark and independent verifier retain guidance |
+| Label privacy | 1 | Expected verdict and suggested replacement cannot leak into model input |
+| Prior corpus preservation | 1 | All prior inputs/references preserved as decoded data |
+| **Total** | **32** | Each test counted once; native/model observations are separate |
+
+Optional fixed owned probes MUST distinguish 18 actual native parser observations
+(nine each under CPython 3.13 and 3.14) from separately authored 3.14 ordinary,
+group, capture and missing-binding runtime checks. They never execute corpus or
+consumer source, read no external input and introduce no mandatory Python CI
+requirement. Freeze the 12 synthetic inputs/verdicts before measuring current
+baseline and candidate with identical model/runtime/effort and unchanged scorer
+floors. Record all samples and failures; neither a passing baseline nor deterministic
+schema/prompt tests establish historical reproduction or statistical improvement.
+
+Acceptance: the two/three-type and group clauses are not condemned merely for
+missing parentheses on 3.14; invalid `as` clauses and genuinely supported older
+targets remain reportable; stale evidence, unknown requirements and parser-only
+proof cannot be inflated. Update detection/observability documentation, catalog
+evidence and generated index with the implementation. Require fully hit modified
+runtime lines, existing global/module coverage, build/types/lint, specs/docs/workflow
+checks, Graphify, exact-head CI/platform verification, complete review without
+findings and official Codecov with zero missed/partial modified lines against the
+actual base. Manual browser/VoiceOver work is inapplicable to this backend prompt
+change. No readiness decision is left open for the contract; measured candidate
+quality and all implementation gates remain to be established.
+
+Campaign provenance: the first authored expectations incorrectly labeled five
+parsing-only failures as correctness. Preserve that entire initial input and
+both failing samples. A separately frozen taxonomy correction changes only those
+five expected categories to reliability, as already required by the product;
+source, causal verdicts, anchors, severity and thresholds remain unchanged. Fresh
+paired samples are required after that recorded correction. The first candidate
+then gets every causal verdict right but fails three category matches; retain
+and reject that candidate as final. Clarify the existing parsing-only category
+in the shared instruction and measure that distinct candidate against the same
+corrected frozen inputs. Never relabel a measured prediction to hide a failure.
+The final distinct candidate passes all twelve cases and every unchanged score
+floor: precision/recall/F1/location/severity/category 1.0, zero false positives
+or negatives. This is bounded campaign evidence, not a statistical guarantee.
+
+Primary sources: [PEP 758](https://peps.python.org/pep-0758/) and
+[Python 3.14 language changes](https://docs.python.org/3.14/whatsnew/3.14.html#pep-758-allow-except-and-except-expressions-without-brackets).
 
 ## 1. Executive summary
 

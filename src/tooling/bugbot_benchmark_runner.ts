@@ -5,7 +5,7 @@ import type { BugbotBenchmarkCorpus, BugbotBenchmarkPredictions, BugbotBenchmark
 import type { BugbotEvalFinding } from './bugbot_quality_eval';
 import { renderUntrustedField, UNTRUSTED_CONTENT_POLICY } from '../domain/security/untrusted_content';
 import { normalizeBugbotResponse } from '../application/usecases/steps/commit/bugbot/prepare_bugbot_findings_policy';
-import { BUGBOT_MARKDOWN_LINKS_INSTRUCTION, BUGBOT_WASM_BINDINGS_INSTRUCTION, BUGBOT_ACTION_CONTRACTS_INSTRUCTION, BUGBOT_TEST_PATHS_INSTRUCTION, BUGBOT_DEPENDENCY_TYPES_INSTRUCTION, BUGBOT_EXTERNAL_FACTS_INSTRUCTION, BUGBOT_FINDING_GROUNDING_INSTRUCTION } from '../prompts/bugbot';
+import { BUGBOT_PYTHON_SYNTAX_INSTRUCTION, BUGBOT_MARKDOWN_LINKS_INSTRUCTION, BUGBOT_WASM_BINDINGS_INSTRUCTION, BUGBOT_ACTION_CONTRACTS_INSTRUCTION, BUGBOT_TEST_PATHS_INSTRUCTION, BUGBOT_DEPENDENCY_TYPES_INSTRUCTION, BUGBOT_EXTERNAL_FACTS_INSTRUCTION, BUGBOT_FINDING_GROUNDING_INSTRUCTION } from '../prompts/bugbot';
 import { renderPythonLiteralWitnesses, projectPythonLiteralWitnesses } from '../application/policies/bugbot_python_literal_witness_policy';
 
 import { verifyGeneratedLiteralFindings } from '../application/usecases/steps/commit/bugbot/verify_generated_literal_findings';
@@ -61,6 +61,8 @@ ${BUGBOT_ACTION_CONTRACTS_INSTRUCTION}
 ${BUGBOT_WASM_BINDINGS_INSTRUCTION}
 
 ${BUGBOT_MARKDOWN_LINKS_INSTRUCTION}
+
+${BUGBOT_PYTHON_SYNTAX_INSTRUCTION}
 
 Language: ${testCase.language}
 Repository-relative file: ${testCase.file}

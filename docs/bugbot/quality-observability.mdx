@@ -201,6 +201,37 @@ reliability claim. Existing exact-source consumer CI and
 read-only source provenance remain separate evidence. All 114 earlier corpus
 inputs/verdicts and quality thresholds remain unchanged.
 
+## Python exception syntax evidence
+
+The #831 family contains twelve frozen synthetic inputs: six safe or unknown
+cases and six actual older-target, invalid `as` or missing-binding controls.
+The reference predictions check the scorer; they are separate from measured
+agent output in
+[the evidence record](https://github.com/vypdev/copilot/blob/master/quality/bugbot/evidence/issue-831.json).
+Native owned probes separately check nine grammar forms on each CPython 3.13
+and 3.14 interpreter, plus actual 3.14 ordinary/group catches, capture and a
+missing-binding failure. These probes execute no consumer or corpus source and
+do not add Python to mandatory Node CI.
+
+The current baseline fails the unchanged model gate. Its scoring failures include
+both an incorrect grammar judgment and category mismatches; do not interpret
+every unmatched prediction as a distinct causal syntax mistake. Preserve the
+frozen cases, all predictions and failed scores when comparing a candidate.
+Prompt/schema tests establish delivery and protocol correctness; they do not
+establish model accuracy, exact consumer execution or automatic historical-thread
+resolution. Candidate measurements and their limits are recorded with the change.
+
+The final measured candidate passes all twelve cases: precision, recall, F1,
+exact location, severity and category accuracy are 1.0, with no false positives
+or false negatives. Earlier failed samples remain published. The first authored
+five parser-failure category labels were corrected in a separately frozen
+campaign before fresh paired runs; no source example, causal verdict, anchor,
+severity or threshold changed. The first version-aware instruction then got the
+causal verdicts right but failed three category matches. Its successor explicitly
+retains the existing medium reliability classification for parsing-only failures
+and passes the same corrected inputs. This bounded sample is not a statistical
+accuracy guarantee or an execution of the consumer's application.
+
 ## Quality gates
 
 ```bash

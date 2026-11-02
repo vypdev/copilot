@@ -64,6 +64,7 @@ export function buildBugbotReviewInput(
 
     const literalEvidence = assignment ? undefined : legacyPythonWitnesses(changes);
     const prompt = getBugbotPrompt({
+        pythonSyntaxProfile: [...changes.map(change => change.filename), ...(assignment?.partition.files ?? [])].some(path => /\.py$/iu.test(path)) ? 'python' : '',
         projectContextInstruction: 'Read code (respect ignores), README/docs and rules/conventions (.cursor/rules, CONTRIBUTING, guidelines).',
         owner: param.repository.owner,
         repo: param.repository.name,
