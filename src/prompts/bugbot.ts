@@ -17,6 +17,8 @@ export const BUGBOT_WASM_BINDINGS_INSTRUCTION = 'For Kotlin/Wasm package-level =
 
 export const BUGBOT_MARKDOWN_LINKS_INSTRUCTION = "For Markdown links, normalize its literal href from the source file's directory under the actual renderer. Verify exact-head target and fragment separately (query/percent-decoding, case, heading/custom anchors). If both exist, emit no finding, including info. specs/a.md + ../specs/a.md = specs/a.md; ./specs/a.md differs. Cite source, href, normalized target and missing file/anchor. Check nested primary/companion renderer output and destination symlinks independently. Prior confidence is not evidence: recheck source; use normal eligible resolution for a disproved premise. Without evidence, omit unsupported claims and retain unresolved state. Invent no lookup/execution or permissions. Navigation-only doc faults: low-severity correctness.";
 
+export const BUGBOT_PYTHON_SYNTAX_INSTRUCTION = 'Python 3.14 / PEP 758 accepts except A, B: and except* A, B: without as; with as, parenthesize multiple types. Check requires-python/pins/CI; Ruff target alone proves no runtime range. Preserve supported older interpreter faults despite a 3.14 parse. Reconcile same-head exact-source evidence; unknown versions prove no SyntaxError. Parsing-only failures are medium reliability findings. Parsing is not import/runtime proof; keep binding faults; never invent parser/CI execution.';
+
 const TEMPLATE = `Review changed code.
 Use {{targetLocale}} for human text; keep identifiers/code/symbols/paths/refs/commands/URLs verbatim. Echo \`outputLocale\` exactly as \`{{targetLocale}}\`.
 {{projectContextInstruction}}
@@ -51,6 +53,8 @@ ${BUGBOT_WASM_BINDINGS_INSTRUCTION}
 
 ${BUGBOT_MARKDOWN_LINKS_INSTRUCTION}
 
+{{pythonSyntaxInstruction}}
+
 Use null for inapplicable file/line/endLine/severity/confidence/category/evidence/suggestion/symbol/codeSnippet/suggestedCode. Exclude ignored files.
 {{previousBlock}}
 
@@ -74,11 +78,13 @@ export type BugbotParams = {
     partitionBlock?: string;
     outputContractBlock?: string;
     targetLocale: string;
+    pythonSyntaxProfile?: string;
 };
 
 export function getBugbotPrompt(params: BugbotParams): string {
     return fillTemplate(TEMPLATE, {
         ...params,
+        pythonSyntaxInstruction: params.pythonSyntaxProfile === 'python' ? BUGBOT_PYTHON_SYNTAX_INSTRUCTION : '',
         diffBlock: params.diffBlock ?? '',
         reviewConversationBlock: params.reviewConversationBlock ?? '',
         rulesBlock: params.rulesBlock ?? '',

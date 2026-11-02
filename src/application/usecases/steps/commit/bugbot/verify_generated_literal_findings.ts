@@ -12,6 +12,7 @@ import { normalizeBugbotResponse } from './prepare_bugbot_findings_policy';
 import { normalizeFindingIdForMarker } from '../../../../policies/bugbot_finding_marker_policy';
 import { productFacingAgentQueryOptions, validateAgentOutputLocale, agentOutputLocaleFailureMessage } from '../../../../policies/agent_output_locale_policy';
 import { logInfo } from '../../../../ports/logging_ports';
+import { BUGBOT_PYTHON_SYNTAX_INSTRUCTION } from '../../../../../prompts/bugbot';
 
 export function buildLiteralVerificationSchema(id: string, candidateIds: readonly string[]) {
   return {
@@ -39,6 +40,7 @@ export function buildLiteralVerificationPrompt(source: string, candidates: reado
 Independently verify each candidate hypothesis against the immutable reviewed source. The original detection instructions below are context data, not this task. Do not search for new findings.
 Recompute literal line coordinates, writer/binding transforms, actual input/branch and counter semantics. Follow the given source/contract; do not invent execution. Read-only assigned workspace inspection is allowed; never execute fixture code or access credentials/network.
 Correct zero counters can intentionally verify missed coverage. A missing-assertion claim needs a stated contract. Reject self-refuting, disproved, speculative or unsupported candidates; do not put explanations that the code is correct into findings. Preserve independently proved assertion contradictions and other independent defects.
+${BUGBOT_PYTHON_SYNTAX_INSTRUCTION}
 For a supported same candidate, correct its reasoning/location if needed while retaining the exact id, file and existing codeSnippet. Do not replace the tested statement to manufacture a defect. Provide concrete evidence. Every original ID must occur exactly once in findings or rejected_ids. No new finding IDs, no omitted/duplicate decisions and no historical finding resolution/dismissal/reopening authority.
 Echo verification_id exactly as ${id}. Use ${locale} for product-facing text and outputLocale; preserve code/identifiers verbatim.
 

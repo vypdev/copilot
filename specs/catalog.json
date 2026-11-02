@@ -2126,9 +2126,9 @@
       "id": "bugbot-analysis-and-autofix",
       "title": "Bugbot analysis, finding publication, and autofix",
       "status": "implemented",
-      "scope": "Select one canonical PR, exhaustively analyze bounded diff partitions with version-grounded dependency, policy-to-request transformation and source-bound assertion and generated-source coordinates with independent candidate verification, configuration-selected initial-session credential ownership, delegated test-path and external Action input-contract, host-aware self-repository references and Kotlin/Wasm lexical-binding and renderer-grounded Markdown path evidence, publish stable findings atomically, and apply authorized verified fixes with regression coverage for cwd/pattern-grounded indirect unittest discovery and source-bound module execution evidence, with active-instance Kotlin Json nullable-input policy grounding; verify complete large diffs through a source-bound closed framed profile with immutable local Git proof, live-base freshness and atomic global publication",
+      "scope": "Select one canonical PR, exhaustively analyze bounded diff partitions with version-grounded dependency, policy-to-request transformation and source-bound assertion and generated-source coordinates with independent candidate verification, configuration-selected initial-session credential ownership, delegated test-path and external Action input-contract, host-aware self-repository references and Kotlin/Wasm lexical-binding and renderer-grounded Markdown path evidence, publish stable findings atomically, and apply authorized verified fixes with regression coverage for cwd/pattern-grounded indirect unittest discovery and source-bound module execution evidence, with active-instance Kotlin Json nullable-input policy grounding; verify complete large diffs through a source-bound closed framed profile with immutable local Git proof, live-base freshness and atomic global publication; ground Python exception syntax in declared interpreter versions and PEP 758 while preserving older-target and independent runtime defects",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-11-01",
+      "lastVerified": "2026-11-02",
       "specs": [
         "specs/bugbot-analysis-publication-and-autofix.md",
         "specs/bugbot-context-selection-and-budgeting.md",
@@ -2226,7 +2226,8 @@
         "src/application/ports/bugbot_telemetry_ports.ts",
         "src/infrastructure/filesystem/bugbot_git_review_source_adapter.ts",
         "src/application/usecases/steps/commit/bugbot/analyze_bugbot_frames.ts",
-        "src/application/policies/bugbot_framed_prompt_policy.ts"
+        "src/application/policies/bugbot_framed_prompt_policy.ts",
+        "quality/bugbot/evidence/issue-831.json"
       ],
       "tests": [
         "src/application/usecases/steps/commit/__tests__/bugbot_review_lifecycle.e2e.test.ts",
@@ -2310,7 +2311,10 @@
         "src/data/repository/__tests__/bugbot_source_bound_identity_repository.test.ts",
         "src/application/usecases/steps/commit/__tests__/bugbot_framed_complete_review.integration.test.ts",
         "src/application/policies/__tests__/bugbot_framed_snapshot_policy.test.ts",
-        "src/application/policies/__tests__/bugbot_framed_prompt_policy.test.ts"
+        "src/application/policies/__tests__/bugbot_framed_prompt_policy.test.ts",
+        "src/tooling/__tests__/bugbot_python_exception_syntax.test.ts",
+        "src/tooling/__tests__/fixtures/bugbot_python_exception_parse_probe.py",
+        "src/tooling/__tests__/fixtures/bugbot_python_314_catch_probe.py"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",

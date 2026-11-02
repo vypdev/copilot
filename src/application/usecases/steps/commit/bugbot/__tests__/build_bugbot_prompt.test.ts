@@ -58,6 +58,22 @@ function mockContext(overrides: Partial<BugbotContext> = {}): BugbotContext {
 }
 
 describe("buildBugbotPrompt", () => {
+    it.each(['ordinary', 'owner', 'non-owner'])('delivers version-grounded exception grammar in %s review', mode => {
+        const source = '+    except ValueError, TypeError:';
+        const context = mockContext({ reviewDiffBlock: source, prContext: {
+            changes: [{ filename: 'owned.py', status: 'modified', additions: 1, deletions: 1, patch: source }],
+        } as BugbotContext['prContext'] });
+        const prompt = buildBugbotPrompt(mockExecution(), context, mode === 'ordinary' ? undefined : { partition: {
+            id: 'python-grammar', ordinal: 1, total: 2, headSha: 'a'.repeat(40), block: source,
+            fragmentCount: 1, files: ['owned.py'], ownsResolution: mode === 'owner',
+        } });
+        expect(prompt).toContain(source);
+        expect(prompt).toContain('Python 3.14 / PEP 758');
+        expect(prompt).toContain('supported older interpreter');
+        expect(prompt).toContain('Ruff target alone');
+        expect(prompt).toContain('Parsing is not import/runtime proof');
+        expect(prompt).toContain('never invent parser/CI execution');
+    });
     it("includes repo context and task instructions", () => {
         const prompt = buildBugbotPrompt(mockExecution(), mockContext());
         expect(prompt).toContain("o");

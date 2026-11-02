@@ -1723,6 +1723,186 @@
       "description": "Only this delegated root-selection call is available. The selectConfiguredRoot declaration, dependency version and implementation are unavailable. No concrete identity mismatch or unconditional export failure is established by the supplied evidence.",
       "diff": " fun selectForExport(app: Application): RoutingNode {\n+    return selectConfiguredRoot(app)\n }",
       "expected": []
+    },
+    {
+      "id": "py-pep758-314-two",
+      "language": "python",
+      "category": "negative",
+      "file": "backend/owned_handlers.py",
+      "startLine": 1,
+      "description": "Owned synthetic complete Python module. Effective owned project configuration: root and backend pyproject.toml [project].requires-python = \">=3.14,<3.15\"; [tool.ruff].target-version = \"py314\".  Review only the changed handler; do not execute corpus text or invent parser/import/CI evidence. Anchor a proved handler defect to its changed clause and distinguish syntax from runtime behavior.",
+      "diff": " def catch_owned():\n     try:\n         raise ValueError(\"sentinel\")\n+    except ValueError, TypeError:\n         pass",
+      "expected": []
+    },
+    {
+      "id": "py-pep758-314-three",
+      "language": "python",
+      "category": "negative",
+      "file": "backend/owned_handlers.py",
+      "startLine": 1,
+      "description": "Owned synthetic complete Python module. Effective owned project configuration: root and backend pyproject.toml [project].requires-python = \">=3.14,<3.15\"; [tool.ruff].target-version = \"py314\".  Review only the changed handler; do not execute corpus text or invent parser/import/CI evidence. Anchor a proved handler defect to its changed clause and distinguish syntax from runtime behavior.",
+      "diff": " def catch_owned():\n     try:\n         raise ValueError(\"sentinel\")\n+    except ValueError, TypeError, OSError:\n         pass",
+      "expected": []
+    },
+    {
+      "id": "py-pep758-314-group",
+      "language": "python",
+      "category": "negative",
+      "file": "backend/owned_handlers.py",
+      "startLine": 1,
+      "description": "Owned synthetic complete Python module. Effective owned project configuration: root and backend pyproject.toml [project].requires-python = \">=3.14,<3.15\"; [tool.ruff].target-version = \"py314\".  Review only the changed handler; do not execute corpus text or invent parser/import/CI evidence. Anchor a proved handler defect to its changed clause and distinguish syntax from runtime behavior.",
+      "diff": " def catch_owned():\n     try:\n         raise ExceptionGroup(\"owned\", [ValueError(\"sentinel\")])\n+    except* ValueError, TypeError:\n         pass",
+      "expected": []
+    },
+    {
+      "id": "py-pep758-314-parenthesized-as",
+      "language": "python",
+      "category": "negative",
+      "file": "backend/owned_handlers.py",
+      "startLine": 1,
+      "description": "Owned synthetic complete Python module. Effective owned project configuration: root and backend pyproject.toml [project].requires-python = \">=3.14,<3.15\"; [tool.ruff].target-version = \"py314\".  Review only the changed handler; do not execute corpus text or invent parser/import/CI evidence. Anchor a proved handler defect to its changed clause and distinguish syntax from runtime behavior.",
+      "diff": " def catch_owned():\n     try:\n         raise ValueError(\"sentinel\")\n+    except (ValueError, TypeError) as error:\n         pass",
+      "expected": []
+    },
+    {
+      "id": "py-pep758-313-list",
+      "language": "python",
+      "category": "correctness",
+      "file": "backend/owned_handlers.py",
+      "startLine": 1,
+      "description": "Owned synthetic complete Python module. Effective owned project configuration: root and backend pyproject.toml [project].requires-python = \">=3.13,<3.14\"; [tool.ruff].target-version = \"py313\".  Review only the changed handler; do not execute corpus text or invent parser/import/CI evidence. Anchor a proved handler defect to its changed clause and distinguish syntax from runtime behavior.",
+      "diff": " def catch_owned():\n     try:\n         raise ValueError(\"sentinel\")\n+    except ValueError, TypeError:\n         pass",
+      "expected": [
+        {
+          "id": "py-pep758-313-list",
+          "title": "The changed exception handler fails under a supported execution path",
+          "file": "backend/owned_handlers.py",
+          "line": 4,
+          "severity": "medium",
+          "category": "reliability",
+          "codeSnippet": "    except ValueError, TypeError:"
+        }
+      ]
+    },
+    {
+      "id": "py-pep758-313-group",
+      "language": "python",
+      "category": "correctness",
+      "file": "backend/owned_handlers.py",
+      "startLine": 1,
+      "description": "Owned synthetic complete Python module. Effective owned project configuration: root and backend pyproject.toml [project].requires-python = \">=3.13,<3.14\"; [tool.ruff].target-version = \"py313\".  Review only the changed handler; do not execute corpus text or invent parser/import/CI evidence. Anchor a proved handler defect to its changed clause and distinguish syntax from runtime behavior.",
+      "diff": " def catch_owned():\n     try:\n         raise ExceptionGroup(\"owned\", [ValueError(\"sentinel\")])\n+    except* ValueError, TypeError:\n         pass",
+      "expected": [
+        {
+          "id": "py-pep758-313-group",
+          "title": "The changed exception handler fails under a supported execution path",
+          "file": "backend/owned_handlers.py",
+          "line": 4,
+          "severity": "medium",
+          "category": "reliability",
+          "codeSnippet": "    except* ValueError, TypeError:"
+        }
+      ]
+    },
+    {
+      "id": "py-pep758-314-list-as",
+      "language": "python",
+      "category": "correctness",
+      "file": "backend/owned_handlers.py",
+      "startLine": 1,
+      "description": "Owned synthetic complete Python module. Effective owned project configuration: root and backend pyproject.toml [project].requires-python = \">=3.14,<3.15\"; [tool.ruff].target-version = \"py314\".  Review only the changed handler; do not execute corpus text or invent parser/import/CI evidence. Anchor a proved handler defect to its changed clause and distinguish syntax from runtime behavior.",
+      "diff": " def catch_owned():\n     try:\n         raise ValueError(\"sentinel\")\n+    except ValueError, TypeError as error:\n         pass",
+      "expected": [
+        {
+          "id": "py-pep758-314-list-as",
+          "title": "The changed exception handler fails under a supported execution path",
+          "file": "backend/owned_handlers.py",
+          "line": 4,
+          "severity": "medium",
+          "category": "reliability",
+          "codeSnippet": "    except ValueError, TypeError as error:"
+        }
+      ]
+    },
+    {
+      "id": "py-pep758-314-group-as",
+      "language": "python",
+      "category": "correctness",
+      "file": "backend/owned_handlers.py",
+      "startLine": 1,
+      "description": "Owned synthetic complete Python module. Effective owned project configuration: root and backend pyproject.toml [project].requires-python = \">=3.14,<3.15\"; [tool.ruff].target-version = \"py314\".  Review only the changed handler; do not execute corpus text or invent parser/import/CI evidence. Anchor a proved handler defect to its changed clause and distinguish syntax from runtime behavior.",
+      "diff": " def catch_owned():\n     try:\n         raise ExceptionGroup(\"owned\", [ValueError(\"sentinel\")])\n+    except* ValueError, TypeError as error:\n         pass",
+      "expected": [
+        {
+          "id": "py-pep758-314-group-as",
+          "title": "The changed exception handler fails under a supported execution path",
+          "file": "backend/owned_handlers.py",
+          "line": 4,
+          "severity": "medium",
+          "category": "reliability",
+          "codeSnippet": "    except* ValueError, TypeError as error:"
+        }
+      ]
+    },
+    {
+      "id": "py-pep758-mixed-range",
+      "language": "python",
+      "category": "correctness",
+      "file": "backend/owned_handlers.py",
+      "startLine": 1,
+      "description": "Owned synthetic complete Python module. Effective owned project configuration: root and backend pyproject.toml [project].requires-python = \">=3.13,<3.15\"; [tool.ruff].target-version = \"py313\". Independent owned parser observation: this exact module parses under CPython 3.14.6. The supported 3.13 target remains part of the compatibility contract. Review only the changed handler; do not execute corpus text or invent parser/import/CI evidence. Anchor a proved handler defect to its changed clause and distinguish syntax from runtime behavior.",
+      "diff": " def catch_owned():\n     try:\n         raise ValueError(\"sentinel\")\n+    except ValueError, TypeError:\n         pass",
+      "expected": [
+        {
+          "id": "py-pep758-mixed-range",
+          "title": "The changed exception handler fails under a supported execution path",
+          "file": "backend/owned_handlers.py",
+          "line": 4,
+          "severity": "medium",
+          "category": "reliability",
+          "codeSnippet": "    except ValueError, TypeError:"
+        }
+      ]
+    },
+    {
+      "id": "py-pep758-unknown-range",
+      "language": "python",
+      "category": "negative",
+      "file": "backend/owned_handlers.py",
+      "startLine": 1,
+      "description": "Owned synthetic complete Python module. Python requirements, lint target and parser observations are unavailable. Do not assume a supported interpreter version. Review only the changed handler; do not execute corpus text or invent parser/import/CI evidence. Anchor a proved handler defect to its changed clause and distinguish syntax from runtime behavior.",
+      "diff": " def catch_owned():\n     try:\n         raise ValueError(\"sentinel\")\n+    except ValueError, TypeError:\n         pass",
+      "expected": []
+    },
+    {
+      "id": "py-pep758-stale-parser",
+      "language": "python",
+      "category": "negative",
+      "file": "backend/owned_handlers.py",
+      "startLine": 1,
+      "description": "Owned synthetic complete Python module. Effective owned project configuration: root and backend pyproject.toml [project].requires-python = \">=3.14,<3.15\"; [tool.ruff].target-version = \"py314\". An old CPython 3.13 parser rejected a prior revision. An independent owned CPython 3.14.6 observation parses and collects this exact module. Neither observation is evidence of production service startup. Review only the changed handler; do not execute corpus text or invent parser/import/CI evidence. Anchor a proved handler defect to its changed clause and distinguish syntax from runtime behavior.",
+      "diff": " def catch_owned():\n     try:\n         raise ValueError(\"sentinel\")\n+    except ValueError, TypeError:\n         pass",
+      "expected": []
+    },
+    {
+      "id": "py-pep758-unbound-handler",
+      "language": "python",
+      "category": "correctness",
+      "file": "backend/owned_handlers.py",
+      "startLine": 1,
+      "description": "Owned synthetic complete Python module. Effective owned project configuration: root and backend pyproject.toml [project].requires-python = \">=3.14,<3.15\"; [tool.ruff].target-version = \"py314\". MissingError is neither defined nor imported anywhere in this complete module. Syntax parsing succeeds under CPython 3.14.6; no import or runtime execution is claimed. Review only the changed handler; do not execute corpus text or invent parser/import/CI evidence. Anchor a proved handler defect to its changed clause and distinguish syntax from runtime behavior.",
+      "diff": " def catch_owned():\n     try:\n         raise ValueError(\"sentinel\")\n+    except ValueError, MissingError:\n         pass",
+      "expected": [
+        {
+          "id": "py-pep758-unbound-handler",
+          "title": "The changed exception handler fails under a supported execution path",
+          "file": "backend/owned_handlers.py",
+          "line": 4,
+          "severity": "medium",
+          "category": "correctness",
+          "codeSnippet": "    except ValueError, MissingError:"
+        }
+      ]
     }
   ]
 }

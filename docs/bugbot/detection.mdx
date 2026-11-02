@@ -445,6 +445,30 @@ calling that review complete. Approval and protected-path requirements remain
 unchanged; retaining a report does not authorize a merge.
 
 
+## Python interpreter versions and exception syntax
+
+Reviews with a retained canonical or assigned Python file receive version-aware
+syntax guidance. Read the effective `requires-python`, interpreter pins and CI
+matrix; Ruff's target does not define the supported runtime range.
+[PEP 758](https://peps.python.org/pep-0758/) permits unparenthesized lists such as
+`except ValueError, TypeError:` and `except* ValueError, TypeError:` in Python
+3.14 when there is no `as` clause. Multiple types with `as` still need parentheses.
+
+A supported Python 3.13 target can therefore expose a genuine compatibility
+failure even when Python 3.14 parses the same file. An undefined exception name
+can also fail at runtime after successful parsing. Reviewers must reconcile
+exact-source parser and collection evidence with its actual interpreter and head;
+cached, skipped, unrelated or older-revision success does not certify the change.
+Parsing alone proves neither import nor runtime success. Unknown versions do not
+justify a universal Python 3 SyntaxError claim.
+
+This guidance adds no Python installation, parser execution or setting to the
+Action. The existing independent generated-source verifier receives the same
+rule when its normal trigger applies; there is no blanket suppression or new
+second-query trigger for every Python handler. Existing completeness, finding
+identity, resolution and approval checks remain independent. Upgrade the SDK to
+adopt this behavior; merging its source to develop does not update a consumer.
+
 ## Dependency types and error handlers
 
 Before claiming that a dependency exception escapes a typed catch, Bugbot checks
