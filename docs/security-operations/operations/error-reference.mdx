@@ -129,6 +129,14 @@ original citation, ID, separator and newline participates in the unchanged
 smaller fact schema limit when needed. Older uneven facts remain valid when
 the complete projection fits; no prose is clipped.
 
+`validation.evidence-too-large` with `progress-assessment-capacity-exceeded`
+means classification succeeded but the original citations leave insufficient
+space for one nonempty fact per requirement. No evidence or final assessment
+query follows. This is nonretryable for identical scope, preserves prior
+progress and cannot authorize a passing verification. Inspect the exact original
+scope and review a supported assessment protocol while preserving acceptance.
+See [progress text capacity](./troubleshooting#progress-assessment-text-capacity).
+
 ### Progress part response length
 
 An overlong file fact with a verified current part/path/unit, locale and schema
@@ -145,14 +153,6 @@ identity. Paths are inert reversible JSON code spans; raw model output is never
 shown. Inspect that fact in the linked run. There is no third part query, no
 clipping, and no partial update to labels or the previous assessment. A later
 optional Check Run warning remains a separate outcome.
-
-`validation.evidence-too-large` with `progress-assessment-capacity-exceeded`
-means classification succeeded but the original citations leave insufficient
-space for one nonempty fact per requirement. No evidence or final assessment
-query follows. This is nonretryable for identical scope, preserves prior
-progress and cannot authorize a passing verification. Inspect the exact original
-scope and review a supported assessment protocol while preserving acceptance.
-See [progress text capacity](./troubleshooting#progress-assessment-text-capacity).
 
 ## Optional Check Run publication not confirmed
 

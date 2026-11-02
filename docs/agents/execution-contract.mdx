@@ -197,6 +197,11 @@ code-point count. Filenames are inert, reversible JSON code spans. The response
 body never enters diagnostics. There is no third part query or partial progress
 publication; inspect the named fact and unchanged contract.
 
+Final progress must match its requirement states in both directions: all
+supported with null remaining means 100; any missing or verification-unknown
+requirement means below 100. The host rejects either contradiction and never
+normalizes it into completion. Progress cannot authorize approval or merge.
+
 ## Optional native Check Run evidence
 
 Required results and their Job Summary remain authoritative when optional native

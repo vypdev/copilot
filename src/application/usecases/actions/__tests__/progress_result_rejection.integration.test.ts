@@ -70,6 +70,7 @@ it.each([
     ['evidence', 'requirement-evidence-mismatch', '$.requirements[0].evidence', 'R2', 'L3'],
     ['remaining', 'requirement-remaining-invalid', '$.requirements[0].remaining', 'R2', 'L3'],
     ['percentage', 'progress-completion-mismatch', '$.progress', 'none', 'none'],
+    ['false-completion', 'progress-completion-mismatch', '$.progress', 'none', 'none'],
     ['unknown-field', 'schema-additional', '$.requirements[0]', 'R2', 'L3'],
 ])('rejects completed %s results with relevant verified detail and no progress mutation', async (mode, reason, field, requirementId, sourceLineId) => {
     const f = scenario(output => {
@@ -80,6 +81,7 @@ it.each([
         if (mode === 'evidence') output.requirements[0].evidence = 'external-unverified';
         if (mode === 'remaining') output.requirements[0].remaining = 'PRIVATE_RETURNED_REMAINING';
         if (mode === 'percentage') output.progress = 70;
+        if (mode === 'false-completion') Object.assign(output.requirements[0], { status: 'verification-unknown', evidence: 'external-unverified', remaining: 'Required execution remains unverified.' });
         if (mode === 'unknown-field') Object.assign(output.requirements[0], { 'PRIVATE_FIELD@all': 'PRIVATE_VALUE' });
         return output;
     });

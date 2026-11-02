@@ -44,6 +44,11 @@ remain intact; no percentage is published.
   failure in two attempts of run 41359130890.
 - At `15830271cae1975771ccc5c6fa8f96767f314f28`, run 41362598129 obtained
   895 complete paths in 31 source parts, then rejected a remaining fact.
+- Candidate `3ecade315` passed complete review without findings. Both attempts
+  of run 41414634366 then rejected a separate final assessment with
+  `progress-completion-mismatch`. Raw output was correctly unavailable; the
+  exact contradictory direction is not established. The existing prompt stated
+  the completion condition in one direction while the host enforces both.
 - Owners: `src/data/repository/progress_agent_response_policy.ts`,
   `src/application/policies/progress_partition_response_policy.ts`, `src/application/usecases/actions/summarize_progress_diff_workflow.ts`.
 - No external API or protocol change is proposed. The actual rejected prose
@@ -117,6 +122,14 @@ once, validate all provisional results, then use normal publication or stop.
    protocol/source receipts. Earlier accepted parts stay provisional in memory.
 6. A second attributable overflow reports its own actual file and counts. An
    unrelated schema, locale, execution or cancellation failure keeps its category.
+
+The final assessment prompt MUST state the existing completion equivalence in
+both directions: all requirements supported with null remaining means exactly
+100; any missing/unknown requirement with nonempty remaining means below 100.
+Choose statuses before the estimate. The host validator MUST remain unchanged:
+neither contradictory result may be normalized, accepted or automatically
+repaired. Source-visible implementation and independently required execution
+retain their existing distinct evidence/status rules and approval gates.
 
 | State | Meaning | Next |
 |---|---|---|
