@@ -100932,6 +100932,109 @@ function replyRequestBodyDigest(body) {
 
 /***/ }),
 
+/***/ 28518:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.countSddShorthandCaseReferences = countSddShorthandCaseReferences;
+const sdd_visible_references_1 = __nccwpck_require__(71766);
+// Full namespaces retain their established meaning; a bare technical token has no role by itself.
+const TOKEN = /(?<![\p{L}\p{M}\p{N}_-])(?:(?!C\d+-)((?:[A-Za-z][A-Za-z0-9]*-)+))?C\d+(?:(?=[-\u2013\u2014]\s*C?\d+(?:[-\u2013\u2014]\s*C?\d+)*(?![\p{L}\p{M}\p{N}_-]))|(?![\p{L}\p{M}\p{N}_-]))/gu;
+const EXPLICIT_REFERENCE = /(?<![\p{L}\p{M}\p{N}_-])(?:cases?|test(?: cases?)?|tests|scenarios?|casos?(?: de prueba)?|pruebas?|escenarios?|references?|referencias?|see|refer to|v\u00e9ase|ver|covered by|covered in)(?![\p{L}\p{M}\p{N}_-])(?:\s+[*_`]*(?:ids?|nos?|numbers?|references?|identificadores|n\u00fameros?)\.?[*_`]*)?(?:\s+(?:include|includes|including|are|such as|son|incluyen|como|por ejemplo))?[\s:*_`[(>#=+\-\u2013\u2014]*$/iu;
+const CONTINUATION = /^[\s,;.…\-\u2013\u2014*_`()[\]#]*(?:(?:and|or|to|through|y|o|a|hasta|e)\b[\s,;.…\-\u2013\u2014*_`()[\]#]*)*$/iu;
+const CASE_COLUMN = /^(?:cases?(?:[ _-]?ids?| references?)?|test cases?(?: ids?)?|casos?(?: de prueba)?|ids? de casos?|identificadores de casos?)$/iu;
+/** Unescaped pipes delimit cells, including when the pipe occurs in an inline code span. */
+function row(text, offset) {
+    const cells = [];
+    let start = 0, escaped = false, hasPipe = false;
+    for (let index = 0; index < text.length; index++) {
+        const character = text[index];
+        if (character === '|' && !escaped) {
+            cells.push({ text: text.slice(start, index), start: offset + start, end: offset + index });
+            start = index + 1;
+            hasPipe = true;
+        }
+        escaped = character === '\\' && !escaped;
+    }
+    cells.push({ text: text.slice(start), start: offset + start, end: offset + text.length });
+    if (hasPipe && cells[0].text.trim() === '')
+        cells.shift();
+    if (hasPipe && cells.length && cells[cells.length - 1].text.trim() === '')
+        cells.pop();
+    return { cells, hasPipe };
+}
+function caseColumn(value) {
+    const label = (0, sdd_visible_references_1.readSddVisibleReferences)(value).parts.map(part => part.value).join('').trim().replace(/\s+/gu, ' ');
+    return CASE_COLUMN.test(label);
+}
+/** CommonMark paragraphs bound the GFM table projection, including nested quote/list blocks. */
+function tableCellRoles(source) {
+    const lines = source.split('\n');
+    const offsets = [];
+    let offset = 0;
+    for (const line of lines) {
+        offsets.push(offset);
+        offset += line.length + 1;
+    }
+    const roles = [];
+    for (const block of (0, sdd_visible_references_1.readSddTextBlockLocations)(source)) {
+        const rows = [];
+        for (let line = block.startLine - 1; line < block.endLine; line++) {
+            const raw = lines[line];
+            const prefix = line === block.startLine - 1 ? block.startColumn - 1
+                : (/^ {0,3}(?:>[ \t]?)+/u.exec(raw)?.[0].length ?? 0);
+            rows.push(row(raw.slice(prefix), offsets[line] + prefix));
+        }
+        let columns;
+        for (let index = 0; index < rows.length; index++) {
+            const header = rows[index], separator = rows[index + 1];
+            if (separator && (header.hasPipe || separator.hasPipe) && header.cells.length > 0
+                && separator.cells.length === header.cells.length && separator.cells.every(cell => /^:?-+:?$/u.test(cell.text.trim()))) {
+                columns = header.cells.map(cell => caseColumn(cell.text));
+                roles.push(...header.cells.map(cell => ({ start: cell.start, end: cell.end, caseRole: false })));
+                index++;
+            }
+            else if (columns) {
+                // GFM permits missing cells and body rows without outer pipes. Extra cells cannot gain a role.
+                const activeColumns = columns;
+                roles.push(...header.cells.map((cell, column) => ({ start: cell.start, end: cell.end, caseRole: activeColumns[column] === true })));
+            }
+        }
+    }
+    return roles;
+}
+/** Rendered inline labels/code retain references; link destinations are not case IDs. */
+function countReferences(source, caseRole) {
+    const text = (0, sdd_visible_references_1.readSddVisibleReferences)(source).parts.map(part => part.value).join('');
+    let previousEnd = 0, previousWasCase = false, count = 0;
+    for (const match of text.matchAll(TOKEN)) {
+        const gap = text.slice(previousEnd, match.index);
+        const reference = caseRole || EXPLICIT_REFERENCE.test(gap)
+            || (previousWasCase && CONTINUATION.test(gap));
+        if (!match[1] && reference)
+            count++;
+        previousWasCase = Boolean(match[1]) || reference;
+        previousEnd = match.index + match[0].length;
+    }
+    return count;
+}
+/** Receives the owner's existing hidden/fenced-text projection; never rewrites caller Markdown. */
+function countSddShorthandCaseReferences(visibleSource) {
+    const source = visibleSource.replace(/\r\n?/gu, '\n');
+    let previousEnd = 0, count = 0;
+    for (const cell of tableCellRoles(source)) {
+        count += countReferences(source.slice(previousEnd, cell.start), false);
+        count += countReferences(source.slice(cell.start, cell.end), cell.caseRole);
+        previousEnd = cell.end;
+    }
+    return count + countReferences(source.slice(previousEnd), false);
+}
+
+
+/***/ }),
+
 /***/ 95312:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -101067,6 +101170,7 @@ exports.validateSddDraftConsistency = validateSddDraftConsistency;
 const pre_branch_sdd_1 = __nccwpck_require__(34730);
 const sdd_repository_reference_1 = __nccwpck_require__(17791);
 const sdd_visible_references_1 = __nccwpck_require__(71766);
+const sdd_case_reference_1 = __nccwpck_require__(28518);
 const CASE = /\b(?:[A-Za-z][A-Za-z0-9]*-)+C\d+\b/gu;
 const CASE_ID = /^(?:[A-Za-z][A-Za-z0-9]*-)+C\d+$/u;
 const REQUIREMENT_ID = /^[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)+$/u;
@@ -101075,7 +101179,7 @@ exports.SDD_CONSISTENCY_PROMPT = `Consistency contract for the proposed draft/ap
 In section 4 include one table: Requirement | Behavior. Give every goal a stable requirement ID.
 In section 14 include one budget table: Area | Minimum distinct cases | Behaviors/risks covered; positive integers and one Total.
 Also in section 14 include one inventory table: Case ID | Area | Requirements | Scenario.
-Each row is one distinct executable case with a fully qualified ID such as capability-change-C01, one exact budget area, comma-separated requirement IDs and an observable scenario. Never use shorthand C01, ranges or redefine an ID found in any owning SDD. Reference retained baseline cases in prose using their full IDs; count only the new inventory.
+Each row is one distinct executable case with a fully qualified ID such as capability-change-C01, one exact budget area, comma-separated requirement IDs and an observable scenario. Never use shorthand C01, ranges or redefine an ID found in any owning SDD. Reference retained baseline cases in prose using their full IDs; count only the new inventory. Ordinary technical designators in prose, scenario text or non-case columns are not acceptance-case references solely because they resemble short IDs; preserve their original terminology. Case-reference fields, explicit references and adjacent case-ID lists still require full identities.
 In section 17 include one table: Requirement | Cases. List comma-separated full case IDs for every requirement. Its links must exactly match the case inventory in both directions, with no undefined or generic documentation checks.
 In section 15 include one table: Path | Change. Change is update, reference or create. Include the selected SDD path itself with update for an existing SDD or create for a new/companion SDD. Use existing immutable-base files for update/reference. Only explicitly proposed new files may use create; never mark a missing current document as an existing artifact. Cite repository files as full repository-relative paths in backticks with a File or Path label when ambiguous, or relative Markdown file links. Put every planned new file in this table; a proposed parent directory is valid only as an ancestor of a declared new file, never as a file declaration. HTTP endpoints, media types, mode alternatives and module names are protocol notation, not file-existence claims. Label file-shaped relative asset addresses with URL or URI; do not relabel a repository citation to evade validation. Explicit Path/Change rows and relative Markdown destinations always receive strict repository checks. These tables are publication consistency checks, not runtime/security acceptance.`;
 const BUDGET_SLOT = '{{SDD_CASE_BUDGET}}';
@@ -101246,9 +101350,9 @@ function validateSddDraftConsistency(markdown, owners, inventory, sddPath) {
     const caseIds = cases.map(row => row[0]);
     const reserved = new Set(reservedSddCaseIds(owners));
     uniqueIdentifiers(caseIds, CASE_ID, 'case-identity', 14);
-    const shorthand = [...source.matchAll(/(?<![\w-])C\d+\b/gu)];
-    if (shorthand.length)
-        fail('case-identity', { detail: 'case-shorthand', section: 0, expected: 0, observed: shorthand.length });
+    const shorthand = (0, sdd_case_reference_1.countSddShorthandCaseReferences)(source);
+    if (shorthand)
+        fail('case-identity', { detail: 'case-shorthand', section: 0, expected: 0, observed: shorthand });
     if (caseIds.some(id => reserved.has(id)))
         fail('case-identity', { detail: 'case-reserved', section: 14, expected: 0, observed: caseIds.filter(id => reserved.has(id)).length });
     // References to existing owner cases are allowed, but cannot count as newly defined cases.
@@ -101624,9 +101728,25 @@ function boundedInteger(value, minimum) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.readSddTextBlockLocations = readSddTextBlockLocations;
 exports.readSddVisibleReferences = readSddVisibleReferences;
 exports.isSddMarkdownLinkExample = isSddMarkdownLinkExample;
 const commonmark_1 = __nccwpck_require__(86076);
+/** CommonMark supplies block boundaries; callers retain raw table-cell escapes. */
+function readSddTextBlockLocations(source) {
+    const blocks = [];
+    const walker = new commonmark_1.Parser().parse(source).walker();
+    let event;
+    while ((event = walker.next())) {
+        const { node, entering } = event;
+        if (entering && ['paragraph', 'heading'].includes(node.type)) {
+            // These concrete block nodes always have source positions in CommonMark.
+            const [start, end] = node.sourcepos;
+            blocks.push({ startLine: start[0], startColumn: start[1], endLine: end[0] });
+        }
+    }
+    return blocks;
+}
 /** Pure syntax projection; callers first remove the gate's hidden comments/fences. */
 function readSddVisibleReferences(source) {
     const destinations = [];
