@@ -19,6 +19,11 @@ analysis, drafting and its existing repair to this gate's loaded snapshot SHA.
 It preserves the canonical checkout, lifecycle and freshness guards while
 providing an independently verified SDK-owned read-only source view.
 
+The [repository-reference companion](sdd-reference-classification.md) distinguishes
+protocol notation from file citations, defines constructive future directories
+and adds private-safe reference occurrence diagnostics. Explicit file declarations
+and relative Markdown destinations retain strict immutable-inventory checks.
+
 
 A repository can enable a pre-branch SDD gate for feature issues and other
 branch-bearing issues explicitly marked as behavior changes. After an authorized

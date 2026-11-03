@@ -12,6 +12,8 @@ export const SDD_VALIDATION_DETAILS = Object.freeze([
   'requirement-reference', 'requirement-coverage', 'traceability-links', 'traceability-membership', 'traceability-requirement',
   'owner-path', 'path-identity', 'create-existing-path', 'create-path-overlap', 'create-path-parent',
   'path-operation', 'path-reference', 'path-link',
+  'path-inline-reference', 'path-prose-reference', 'path-link-reference',
+  'path-reference-unsafe', 'path-reference-blocked', 'path-reference-missing', 'path-reference-directory',
 ] as const);
 export type SddValidationDetail = typeof SDD_VALIDATION_DETAILS[number];
 export interface SddValidationFact {
