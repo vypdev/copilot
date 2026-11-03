@@ -7090,6 +7090,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'approval-evidence-read-failed',
     'change-size-reconciliation-failed',
     'issue-assignment-failed',
+    'issue-assignment-count-invalid',
     'issue-workflow-admission-blocked',
     'progress-binary-evidence-unavailable',
     'progress-inventory-incomplete',
@@ -7274,9 +7275,11 @@ class ApplicationError extends Error {
             ? 'Completed effects were retained; the failed and later size operations remain unverified.'
             : options.recovery?.id === 'issue-assignment-failed'
                 ? 'Verified assignments and independently completed effects were retained; the failed assignment operation remains unverified.'
-                : options.recovery?.id === 'deployment-publication-context-missing'
-                    ? PRESERVED_STATE
-                    : metadata.retainedState;
+                : options.recovery?.id === 'issue-assignment-count-invalid'
+                    ? 'No assignment operation was attempted; independently completed lifecycle effects were retained.'
+                    : options.recovery?.id === 'deployment-publication-context-missing'
+                        ? PRESERVED_STATE
+                        : metadata.retainedState;
         this.correlationId = correlationId;
         this.recovery = normalizeApplicationErrorRecovery(options.recovery);
         __classPrivateFieldSet(this, _ApplicationError_cause, options.cause, "f");
@@ -7320,6 +7323,7 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'issue-workflow-admission-blocked': Object.freeze(['kind', 'reason', 'fields']),
     'change-size-reconciliation-failed': Object.freeze(['operation', 'issueNumber', 'targetNumber', 'projectIndex', 'verifiedOperations', 'pendingProjectSizes', 'providerStatus', 'providerReference']),
     'issue-assignment-failed': Object.freeze(['targetNumber', 'desiredCount', 'stage', 'operation', 'providerStatus', 'assigneeRead', 'observedAssignees', 'confirmedAssignments', 'remainingAssignments', 'mutation']),
+    'issue-assignment-count-invalid': Object.freeze([]),
     'pull-request-link-restored': Object.freeze([]),
     'pull-request-link-base-retained': Object.freeze([]),
     'pull-request-link-reference-retained': Object.freeze([]),

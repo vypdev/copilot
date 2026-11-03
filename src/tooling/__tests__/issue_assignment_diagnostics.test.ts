@@ -21,6 +21,27 @@ function failingMembership(cause: unknown) {
 }
 
 describe('issue assignment failure evidence', () => {
+    it('accepts ten existing assignees at the configured upper boundary', async () => {
+        const read = jest.fn(async () => Array.from({ length: 10 }, (_, index) => `member${index}`));
+        const write = jest.fn(), lookup = jest.fn();
+        const result = await new AssignMemberToIssueUseCase({ getCurrentAssignees: read, assignMembersToIssue: write },
+            { getAllMembers: lookup, getRandomMembers: jest.fn() }).invoke({ ...request, desiredAssigneesCount: 10 });
+        expect(result).toEqual([expect.objectContaining({ success: true })]);
+        expect(read).toHaveBeenCalledTimes(1); expect(write).not.toHaveBeenCalled(); expect(lookup).not.toHaveBeenCalled();
+    });
+
+    it.each([11, -1, 0.5, NaN, Infinity, -Infinity, '1', undefined])('rejects invalid configured count %s before any provider access', async count => {
+        const read = jest.fn(async () => { throw new Error('private-token'); });
+        const write = jest.fn(), lookup = jest.fn(), select = jest.fn();
+        const result = await new AssignMemberToIssueUseCase({ getCurrentAssignees: read, assignMembersToIssue: write },
+            { getAllMembers: lookup, getRandomMembers: select }).invoke({ ...request, desiredAssigneesCount: count as number });
+        expect(result).toEqual([expect.objectContaining({ success: false, errors: [expect.objectContaining({
+            code: 'configuration.invalid', retryable: false, recovery: { id: 'issue-assignment-count-invalid', variables: {} },
+        })] })]);
+        for (const operation of [read, write, lookup, select]) expect(operation).not.toHaveBeenCalled();
+        expect(JSON.stringify(result)).not.toContain('private-token');
+    });
+
     it('normalizes unknown failures into closed facts without retaining their text', () => {
         const error = issueAssignmentFailure(new Error('private-token'), { targetNumber: 17, desiredCount: 1, stage: 'lookup-members',
             assigneeRead: 'verified', observedAssignees: 0, confirmedAssignments: 0, remainingAssignments: 1, mutation: 'not-attempted' });

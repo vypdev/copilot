@@ -5,6 +5,7 @@ import { logDebugInfo, logError, logInfo } from '../../../ports/logging_ports';
 import { getTaskEmoji } from '../../../../utils/task_emoji';
 import {
     calculateRemainingAssignees,
+    isValidAssigneeCount,
     resolveAssigneeTarget,
     resolveCreatorAssignment,
     selectConfirmedAssignees,
@@ -28,6 +29,12 @@ export async function runAssignMembersWorkflow(
 ): Promise<Result[]> {
     logInfo(`${getTaskEmoji(TASK_ID)} Executing ${TASK_ID}.`);
     const target = resolveAssigneeTarget(param);
+    if (!isValidAssigneeCount(target.desiredCount)) {
+        return [new Result({ id: TASK_ID, success: false, executed: false,
+            errors: [new ApplicationError('configuration.invalid', 'The desired-assignees-count must be an integer from 0 to 10.', {
+                recovery: { id: 'issue-assignment-count-invalid', variables: {} },
+            })] })];
+    }
     const results: Result[] = [];
     let stage: IssueAssignmentDiagnostic['stage'] = 'read-assignees';
     let assigneeRead: IssueAssignmentDiagnostic['assigneeRead'] = 'unavailable';

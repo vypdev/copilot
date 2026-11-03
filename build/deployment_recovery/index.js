@@ -33543,6 +33543,11 @@ exports.SPANISH_ASSIGNMENT_LABELS = {
     assignmentWriteVerified: 'confirmada', assignmentAccess: 'Comprueba la credencial configurada, el acceso documentado y el recurso antes de reintentar. Un 404 por sí solo no demuestra que un recurso privado no exista.',
 };
 exports.ENGLISH_ASSIGNMENT_CONTENT = {
+    'issue-assignment-count-invalid': {
+        impact: 'Automatic assignment did not start because desired-assignees-count is invalid.',
+        action: 'Set desired-assignees-count to an integer from 0 to 10 (0 disables assignment), then rerun the same issue workflow.',
+        retainedState: 'No assignment operation was attempted. Independent completed lifecycle effects are retained in their own results.',
+    },
     'issue-assignment-failed': {
         impact: 'Automatic assignment for #{targetNumber} stopped during {stage}. Provider operation: {operation}; status: {providerStatus}.',
         action: '{guidance} Rerun the same issue workflow after addressing the cause; it rereads assignees before adding missing members.',
@@ -33550,6 +33555,11 @@ exports.ENGLISH_ASSIGNMENT_CONTENT = {
     },
 };
 exports.SPANISH_ASSIGNMENT_CONTENT = {
+    'issue-assignment-count-invalid': {
+        impact: 'La asignación automática no empezó porque desired-assignees-count no es válido.',
+        action: 'Configura desired-assignees-count como un entero de 0 a 10 (0 desactiva la asignación) y repite el mismo workflow.',
+        retainedState: 'No se intentó ninguna operación de asignación. Los efectos independientes completados se conservan en sus propios resultados.',
+    },
     'issue-assignment-failed': {
         impact: 'La asignación automática de #{targetNumber} se detuvo al {stage}. Operación del proveedor: {operation}; estado: {providerStatus}.',
         action: '{guidance} Repite el mismo workflow tras resolver la causa; volverá a leer las personas asignadas antes de añadir las pendientes.',
@@ -33961,6 +33971,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'approval-evidence-read-failed',
     'change-size-reconciliation-failed',
     'issue-assignment-failed',
+    'issue-assignment-count-invalid',
     'issue-workflow-admission-blocked',
     'progress-binary-evidence-unavailable',
     'progress-inventory-incomplete',
@@ -34145,9 +34156,11 @@ class ApplicationError extends Error {
             ? 'Completed effects were retained; the failed and later size operations remain unverified.'
             : options.recovery?.id === 'issue-assignment-failed'
                 ? 'Verified assignments and independently completed effects were retained; the failed assignment operation remains unverified.'
-                : options.recovery?.id === 'deployment-publication-context-missing'
-                    ? PRESERVED_STATE
-                    : metadata.retainedState;
+                : options.recovery?.id === 'issue-assignment-count-invalid'
+                    ? 'No assignment operation was attempted; independently completed lifecycle effects were retained.'
+                    : options.recovery?.id === 'deployment-publication-context-missing'
+                        ? PRESERVED_STATE
+                        : metadata.retainedState;
         this.correlationId = correlationId;
         this.recovery = normalizeApplicationErrorRecovery(options.recovery);
         __classPrivateFieldSet(this, _ApplicationError_cause, options.cause, "f");
@@ -34191,6 +34204,7 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'issue-workflow-admission-blocked': Object.freeze(['kind', 'reason', 'fields']),
     'change-size-reconciliation-failed': Object.freeze(['operation', 'issueNumber', 'targetNumber', 'projectIndex', 'verifiedOperations', 'pendingProjectSizes', 'providerStatus', 'providerReference']),
     'issue-assignment-failed': Object.freeze(['targetNumber', 'desiredCount', 'stage', 'operation', 'providerStatus', 'assigneeRead', 'observedAssignees', 'confirmedAssignments', 'remainingAssignments', 'mutation']),
+    'issue-assignment-count-invalid': Object.freeze([]),
     'pull-request-link-restored': Object.freeze([]),
     'pull-request-link-base-retained': Object.freeze([]),
     'pull-request-link-reference-retained': Object.freeze([]),

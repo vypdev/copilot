@@ -17,6 +17,11 @@ export const SPANISH_ASSIGNMENT_LABELS: Record<keyof typeof ENGLISH_ASSIGNMENT_L
 };
 
 export const ENGLISH_ASSIGNMENT_CONTENT = {
+    'issue-assignment-count-invalid': {
+        impact: 'Automatic assignment did not start because desired-assignees-count is invalid.',
+        action: 'Set desired-assignees-count to an integer from 0 to 10 (0 disables assignment), then rerun the same issue workflow.',
+        retainedState: 'No assignment operation was attempted. Independent completed lifecycle effects are retained in their own results.',
+    },
     'issue-assignment-failed': {
         impact: 'Automatic assignment for #{targetNumber} stopped during {stage}. Provider operation: {operation}; status: {providerStatus}.',
         action: '{guidance} Rerun the same issue workflow after addressing the cause; it rereads assignees before adding missing members.',
@@ -24,6 +29,11 @@ export const ENGLISH_ASSIGNMENT_CONTENT = {
     },
 };
 export const SPANISH_ASSIGNMENT_CONTENT = {
+    'issue-assignment-count-invalid': {
+        impact: 'La asignación automática no empezó porque desired-assignees-count no es válido.',
+        action: 'Configura desired-assignees-count como un entero de 0 a 10 (0 desactiva la asignación) y repite el mismo workflow.',
+        retainedState: 'No se intentó ninguna operación de asignación. Los efectos independientes completados se conservan en sus propios resultados.',
+    },
     'issue-assignment-failed': {
         impact: 'La asignación automática de #{targetNumber} se detuvo al {stage}. Operación del proveedor: {operation}; estado: {providerStatus}.',
         action: '{guidance} Repite el mismo workflow tras resolver la causa; volverá a leer las personas asignadas antes de añadir las pendientes.',

@@ -287,6 +287,12 @@ model queries. Raw rejected output is never part of these diagnostics.
 
 ## Assignment failures
 
+`issue-assignment-count-invalid` uses nonretryable `configuration.invalid` when
+the shared workflow receives a count outside its integer `0`–`10` contract.
+Correct `desired-assignees-count` and rerun the same issue workflow. No assignment
+operation was attempted; independent completed effects retain their own results.
+The descriptor has no parameters and never echoes the supplied invalid value.
+
 `issue-assignment-failed` identifies the assignment stage and safe provider
 operation, target number, bounded HTTP status (or unavailable), current-read
 certainty, observed/confirmed/remaining counts, and assignment-write certainty.

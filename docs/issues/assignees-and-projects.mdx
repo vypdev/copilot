@@ -34,6 +34,10 @@ Set the number of assignees in the workflow:
 ```
 
 Use a higher value to assign more people (e.g. `2` or `3`), up to the configured maximum.
+The shared assignment workflow rejects invalid counts before contacting GitHub.
+`configuration.invalid` with `issue-assignment-count-invalid` asks you to set an
+integer from `0` to `10`; the supplied invalid value is not echoed. Other issue
+steps continue and retain their own completed effects.
 
 ### Recover an assignment failure
 

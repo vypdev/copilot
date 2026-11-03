@@ -25,7 +25,7 @@ jest.mock('../../utils/logger', () => ({ logInfo: jest.fn(), logDebugInfo: jest.
 describe('assignment failure through issue completion and replay', () => {
     beforeEach(() => jest.clearAllMocks());
 
-    it.each([503, 403])('retains type, Project and persisted configuration after HTTP %s, then safely retries the same issue', async status => {
+    it.each([{ status: 503, count: 1 }, { status: 403, count: 1 }, { status: 503, count: 11 }])('retains type, Project and persisted configuration after HTTP $status with count $count, then safely retries the same issue', async ({ status, count }) => {
         const events: string[] = [];
         const assignees: string[] = [];
         let lookupStatus: number | undefined = status;
@@ -84,7 +84,7 @@ describe('assignment failure through issue completion and replay', () => {
         const query = { owner: 'acme', repository: 'repo', issueNumber: 17, token: 'product-pat' };
         const summary = { publish: jest.fn(async (_text: string) => undefined) };
         const ports = { sharedContexts: { permissions: {}, title: { kind: 'issue', labelFacts: {} }, projectLink: {}, steps: {
-            assignment: { target: 'issue', number: 17, desiredAssigneesCount: 1, creator: 'alice' },
+            assignment: { target: 'issue', number: 17, desiredAssigneesCount: count, creator: 'alice' },
             issueType: { issueNumber: 17, issueType: { name: 'Bug', description: 'A bug', color: 'red' } }, priority: {},
         } }, workflowSteps: { checkPermissions: { invoke: async () => [new Result({ id: 'permissions', success: true, executed: false })] },
             assignMemberToIssue: assignment, updateIssueType: typeStep, linkIssueProject: projectStep,
@@ -106,7 +106,8 @@ describe('assignment failure through issue completion and replay', () => {
 
         const first = await run(new Config({ branchType: 'bugfix', workingBranch: 'bugfix/17-work', parentBranch: 'develop' }));
         const failure = first.flatMap(result => [...result.errors])[0];
-        expect(failure).toMatchObject({ code: status === 503 ? 'provider.unavailable' : 'authorization.denied', retryable: status === 503 });
+        const recovers = status === 503 && count === 1;
+        expect(failure).toMatchObject({ code: count > 10 ? 'configuration.invalid' : status === 503 ? 'provider.unavailable' : 'authorization.denied', retryable: recovers });
         expect(events).toEqual(['type', 'project', 'configuration', 'failed']);
         expect(first.some(result => result.id === 'LinkIssueProjectUseCase' && result.success)).toBe(true);
         expect(selectedType).toBe('IT_bug'); expect(linkedItemId).toBe('PVTI17');
@@ -119,9 +120,9 @@ describe('assignment failure through issue completion and replay', () => {
         // A fresh ordinary run observes native state. Only the transient source recovers.
         if (status === 503) lookupStatus = undefined;
         const second = await run(stored as Config);
-        expect(second.flatMap(result => [...result.errors])).toHaveLength(status === 503 ? 0 : 1);
-        expect(assignees).toEqual(status === 503 ? ['alice'] : []);
-        expect(assignmentClient.rest.issues.addAssignees).toHaveBeenCalledTimes(status === 503 ? 1 : 0);
+        expect(second.flatMap(result => [...result.errors])).toHaveLength(recovers ? 0 : 1);
+        expect(assignees).toEqual(recovers ? ['alice'] : []);
+        expect(assignmentClient.rest.issues.addAssignees).toHaveBeenCalledTimes(recovers ? 1 : 0);
         expect(nativeTypes).toEqual([{ id: 'IT_bug', name: 'Bug' }]);
         // Existing type assignment is an idempotent field set, not another type entity.
         expect(typeAssignments).toEqual(['IT_bug', 'IT_bug']);
@@ -131,7 +132,7 @@ describe('assignment failure through issue completion and replay', () => {
         expect(body.match(/<!-- copilot-configuration-start/gu)).toHaveLength(1);
         expect(readConfigurationBlock(body).kind).toBe('present');
         expect(summary.publish).toHaveBeenCalledTimes(2);
-        expect(core.setFailed).toHaveBeenCalledTimes(status === 503 ? 1 : 2);
+        expect(core.setFailed).toHaveBeenCalledTimes(recovers ? 1 : 2);
         expect(JSON.stringify(summary.publish.mock.calls)).not.toMatch(/private-token|private-member|product-pat/);
     });
 });

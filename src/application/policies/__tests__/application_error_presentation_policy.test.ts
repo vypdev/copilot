@@ -20,6 +20,9 @@ const RECOVERY_CASES: readonly Readonly<{
     english: string;
     spanish: string;
 }>[] = [
+    { recovery: { id: 'issue-assignment-count-invalid', variables: {} },
+      english: 'No assignment operation was attempted. Independent completed lifecycle effects are retained in their own results.',
+      spanish: 'No se intentó ninguna operación de asignación. Los efectos independientes completados se conservan en sus propios resultados.' },
     { recovery: { id: 'issue-assignment-failed', variables: { targetNumber: 17, desiredCount: 2, stage: 'lookup-members', operation: 'list-teams', providerStatus: 'http-503', assigneeRead: 'verified', observedAssignees: 0, confirmedAssignments: 0, remainingAssignments: 2, mutation: 'not-attempted' } },
       english: 'Verified new assignments: 0. Remaining target count: 2. Current assignee read: verified. Assignment write: not attempted. Independent completed lifecycle effects are retained in their own results.',
       spanish: 'Asignaciones nuevas verificadas: 0. Objetivo pendiente: 2. Lectura de personas asignadas: verificada. Escritura de asignaciones: no intentada. Los efectos independientes completados se conservan en sus propios resultados.' },

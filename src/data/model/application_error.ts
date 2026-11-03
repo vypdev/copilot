@@ -86,6 +86,7 @@ export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'approval-evidence-read-failed',
     'change-size-reconciliation-failed',
     'issue-assignment-failed',
+    'issue-assignment-count-invalid',
     'issue-workflow-admission-blocked',
     'progress-binary-evidence-unavailable',
     'progress-inventory-incomplete',
@@ -111,6 +112,7 @@ interface ApplicationErrorRecoveryVariables extends Readonly<Record<CopilotComma
     readonly 'approval-evidence-read-failed': ApprovalEvidenceDiagnostic;
     readonly 'change-size-reconciliation-failed': ChangeSizeReconciliationFacts;
     readonly 'issue-assignment-failed': IssueAssignmentDiagnostic;
+    readonly 'issue-assignment-count-invalid': Readonly<Record<string, never>>;
     readonly 'issue-workflow-admission-blocked': IssueWorkflowDiagnosticFacts;
     readonly 'progress-binary-evidence-unavailable': ProgressBinaryEvidenceFacts;
     readonly 'progress-inventory-incomplete': ProgressInventoryDiagnostic;
@@ -370,6 +372,8 @@ export class ApplicationError extends Error {
             ? 'Completed effects were retained; the failed and later size operations remain unverified.'
             : options.recovery?.id === 'issue-assignment-failed'
             ? 'Verified assignments and independently completed effects were retained; the failed assignment operation remains unverified.'
+            : options.recovery?.id === 'issue-assignment-count-invalid'
+            ? 'No assignment operation was attempted; independently completed lifecycle effects were retained.'
             : options.recovery?.id === 'deployment-publication-context-missing'
             ? PRESERVED_STATE
             : metadata.retainedState;
@@ -416,6 +420,7 @@ const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readon
     'issue-workflow-admission-blocked': Object.freeze(['kind', 'reason', 'fields']),
     'change-size-reconciliation-failed': Object.freeze(['operation', 'issueNumber', 'targetNumber', 'projectIndex', 'verifiedOperations', 'pendingProjectSizes', 'providerStatus', 'providerReference']),
     'issue-assignment-failed': Object.freeze(['targetNumber', 'desiredCount', 'stage', 'operation', 'providerStatus', 'assigneeRead', 'observedAssignees', 'confirmedAssignments', 'remainingAssignments', 'mutation']),
+    'issue-assignment-count-invalid': Object.freeze([]),
 
     'pull-request-link-restored': Object.freeze([]),
     'pull-request-link-base-retained': Object.freeze([]),

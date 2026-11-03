@@ -19,6 +19,10 @@ export function resolveAssigneeTarget(context: AssigneeAssignmentContext): Assig
     return { number: context.number, desiredCount: context.desiredAssigneesCount };
 }
 
+export function isValidAssigneeCount(value: unknown): value is number {
+    return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 10;
+}
+
 function isEligibleCreator(creator: string, projectMembers: readonly string[], currentMembers: readonly string[]): boolean {
     if (!creator) return false;
     const identity = creator.toLowerCase();

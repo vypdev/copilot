@@ -42,6 +42,14 @@ reported without checking the assignment response. Five SDK-owned functional
 regressions fail before the fix. These observations do not reconstruct the
 unavailable original exception. Historic motivation is unknown.
 
+Review of candidate `c62a0fb4a` additionally verified that integer input parsing
+did not enforce the documented upper count bound. A value above 10 could make
+the assignment-error diagnostic reject its own facts and throw from the catch
+handler. Nine new regression cases fail before this correction, including the
+real completion path. This does not establish that the original consumer used
+an invalid count. Count validation now belongs to the shared assignment
+workflow before any provider access.
+
 ## 3. Actors, surfaces and terminology
 
 The maintainer reads the existing workflow result/Job Summary and retries the same
@@ -57,7 +65,7 @@ applied remotely. Independent results are not inferred from assignment counts.
 |---|---|
 | R1 | Adapter failures MUST preserve a closed operation, bounded HTTP status when known and truthful semantic category; unknown failures MUST NOT be invented as transient. |
 | R2 | Raw messages, response bodies, credentials and membership lists MUST NOT cross the failure boundary. Existing semantic correlation and narrowed retryability MUST survive wrapping. |
-| R3 | The application MUST read current assignees first, skip satisfied targets, confirm requested assignments and retain confirmed partial results without claiming failed writes had no effect. |
+| R3 | The application MUST validate the configured count before provider access, then read current assignees first, skip satisfied targets, confirm requested assignments and retain confirmed partial results without claiming failed writes had no effect. |
 | R4 | Retry MUST reread assignees, exclude the confirmed creator from additional selection and avoid repeating already-satisfied writes. Independent lifecycle results MUST remain intact. |
 | R5 | Validated public diagnostics and English/Spanish presentation MUST name impact, stage/operation, recovery and retained/remaining facts; an unread count MUST be shown unavailable. |
 | R6 | Documentation, catalog, architecture checks, generated bundles and current-head technical/review/coverage gates MUST accompany the correction. |
@@ -98,12 +106,17 @@ list. Later selection failure after creator confirmation retains that success.
 
 ## 7. Configuration
 
-`desired-assignees-count` stays a validated integer 0–10, default 1, from the
+`desired-assignees-count` is an integer 0–10, default 1, from the
 existing execution configuration snapshot. Zero remains a no-op before target
 validation or provider/client access. Recommended: `1`; alternative: `2` for two
 owners or `0` to disable. No new precedence, storage or migration is introduced.
 Diagnostic allowlists, redaction, confirmation and retry classification are not
 configurable. No raw provider text can become a setting or recovery template.
+The shared workflow MUST reject out-of-range, fractional, nonfinite or nonnumeric
+runtime counts without coercion or provider access. It MUST return a nonretryable
+`configuration.invalid` result with the closed, parameter-free
+`issue-assignment-count-invalid` recovery; an invalid raw value MUST NOT become
+assignment facts or public diagnostic content. Independent steps MUST continue.
 
 ## 8. Clean Architecture
 
@@ -158,6 +171,7 @@ diagnostic content. Existing workflow/run links and result ordering are retained
 
 | Failure | Retry guidance | Retained facts |
 |---|---|---|
+| invalid desired count | correct desired-assignees-count to an integer 0–10 | no assignment call attempted; independent effects retain their own results |
 | 401/403 denial | inspect configured authentication/access before retry | verified assignees and independent completed effects |
 | 404 | verify resource and access; do not infer private absence | same |
 | 403/429 limited | wait for provider limit recovery | same; no in-process retry storm |
@@ -223,17 +237,17 @@ confirmation/replay/partial-state cases; 8 localized presentation cases; 4 issue
 route integration cases; and 4 semantic identity/serialization/architecture
 compatibility cases. Cases count once; repeated runs do not count as new cases.
 
-Local acceptance on 2026-11-04 passes **887 suites / 17,321 Jest tests**
+Local acceptance on 2026-11-04 passes **887 suites / 17,346 Jest tests**
 (35 pre-existing skips) and **267 extension tests** at 100% in all four metrics.
-There are **137 new distinct cases**: 29 pure validation, 69 provider/adapter,
-14 application, 14 localized presentation, six issue-route/completion integration and five
+There are **162 new distinct cases**: 41 pure validation, 69 provider/adapter,
+23 application, 16 localized presentation, seven issue-route/completion integration and six
 semantic/serialization cases (four allocated from the 33 domain cases plus the
-new exhaustive recovery-inventory case). No case is counted twice. All eleven
+two new exhaustive recovery-inventory cases). No case is counted twice. All eleven
 affected assignment modules reach 100% lines/statements/functions/branches.
-The two completion cases retain type, Project and persisted configuration
-together after HTTP 503 and HTTP 403 lookup failures and verify fresh retries
+The three completion cases retain type, Project and persisted configuration
+together after HTTP 503/403 lookup failures or invalid configuration and verify fresh retries
 through real completion/storage logic with deterministic provider transports.
-Full-suite LCOV hits **150/150 modified coverable lines**, with zero misses or
+Full-suite LCOV hits **155/155 modified coverable lines**, with zero misses or
 partials against `7d1e8d3b`. This is local evidence; official Codecov and remote
 current-head checks remain PR delivery gates.
 
@@ -293,6 +307,7 @@ closure and retire owned disposable outputs while retaining evidence/rollback.
 - [GitHub API troubleshooting](https://docs.github.com/en/rest/using-the-rest-api/troubleshooting-the-rest-api)
 - [List teams](https://docs.github.com/en/rest/teams/teams#list-teams)
 - [List team members](https://docs.github.com/en/rest/teams/members#list-team-members)
+- [Add assignees](https://docs.github.com/en/rest/issues/assignees#add-assignees-to-an-issue)
 - [Managed lifecycle](./managed-issue-and-branch-lifecycle.md)
 - [Semantic errors](./execution-error-and-context-hardening.md)
 

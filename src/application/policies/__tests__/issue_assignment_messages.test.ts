@@ -9,6 +9,18 @@ const facts: IssueAssignmentDiagnostic = { targetNumber: 17, desiredCount: 2, st
 
 describe.each(['en', 'es'])('assignment diagnostic presentation (%s)', locale => {
     const message = resolveStaticApplicationErrorCatalog(locale).message;
+    it('names invalid configuration and retained independent effects without retaining the supplied count', () => {
+        const error = new ApplicationError('configuration.invalid', 'Safe.', { recovery: { id: 'issue-assignment-count-invalid', variables: {} } });
+        const view = buildApplicationErrorPresentation(error, message);
+        expect(view.impact).toContain('desired-assignees-count');
+        expect(view.action).toContain('0'); expect(view.action).toContain('10');
+        expect(view.retainedState).toContain(locale === 'en' ? 'Independent completed' : 'efectos independientes completados');
+        expect(view.retryable).toBe(message('error.label.no'));
+        expect(renderApplicationErrorText(error, message)).toContain(view.action);
+        expect(error.toJSON().retainedState).toContain('independently completed');
+        expect(error.toJSON().recovery).toEqual({ id: 'issue-assignment-count-invalid', variables: {} });
+        expect(() => new ApplicationError('configuration.invalid', 'Safe.', { recovery: { id: 'issue-assignment-count-invalid', variables: { supplied: 'private-token' } } as never })).toThrow();
+    });
     it.each([
         { code: 'authorization.denied', override: {} },
         { code: 'provider.not-found', override: { providerStatus: 'http-404' } },
