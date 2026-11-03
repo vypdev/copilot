@@ -181,6 +181,12 @@ target identity, known stages/operations, HTTP 100–599 or unavailable, and bou
 counts or explicit `unavailable` markers for unread current/remaining values. No token, organization/team/member list, raw cause or response is retained
 in the error. SDK fault tests use fixed fakes and no service credentials.
 
+Rate-limit classification MAY inspect the provider's response-body message
+transiently, including when the top-level exception message is absent or only
+`Forbidden`. The response body MUST NOT be retained in the semantic error, log,
+Result or recovery descriptor. The two additional boundary regressions verify
+both classification and redaction; they are part of the R1/R2 adapter budget.
+
 ## 12. Observability and operational UX
 
 One assignment failure reaches its existing Result and log, with the same
@@ -210,9 +216,9 @@ confirmation/replay/partial-state cases; 8 localized presentation cases; 4 issue
 route integration cases; and 4 semantic identity/serialization/architecture
 compatibility cases. Cases count once; repeated runs do not count as new cases.
 
-Local acceptance on 2026-11-03 passes **886 suites / 17,317 Jest tests**
+Local acceptance on 2026-11-03 passes **886 suites / 17,319 Jest tests**
 (35 pre-existing skips) and **267 extension tests** at 100% in all four metrics.
-There are **133 new distinct cases**: 29 pure validation, 67 provider/adapter,
+There are **135 new distinct cases**: 29 pure validation, 69 provider/adapter,
 14 application, 14 localized presentation, four issue-route integration and five
 semantic/serialization cases (four allocated from the 33 domain cases plus the
 new exhaustive recovery-inventory case). No case is counted twice. All eleven

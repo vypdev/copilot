@@ -42,6 +42,13 @@ describe('assignment provider failure boundary', () => {
             .rejects.toMatchObject({ code: 'provider.unavailable', providerStatus: 'http-504' });
     });
 
+    it.each([undefined, 'Forbidden'])('recognizes a secondary limit only present in the private response body (top-level %s)', async message => {
+        const cause = { status: 403, message, response: { data: { message: 'You have exceeded a secondary rate limit. private-token', members: ['private-member'] } } };
+        const error = await withAssignmentProviderFailure('list-teams', async () => { throw cause; }).catch(value => value);
+        expect(error).toMatchObject({ code: 'provider.rate-limited', retryable: true, operation: 'list-teams', providerStatus: 'http-403' });
+        expect(JSON.stringify(error)).not.toMatch(/private-token|private-member|"data":|"response":|"cause":/);
+    });
+
     it('preserves an existing semantic category, narrowed retryability and correlation', async () => {
         const original = new ApplicationError('provider.unavailable', 'Safe diagnostic.', { retryable: false, cause: 'private-token' });
         const error = await withAssignmentProviderFailure('initialize-client', async () => { throw original; }).catch(value => value);

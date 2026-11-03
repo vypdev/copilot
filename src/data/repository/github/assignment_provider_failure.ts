@@ -11,7 +11,7 @@ export async function withAssignmentProviderFailure<T>(operation: AssignmentOper
         const status = [error.status, response.status].find(value => typeof value === 'number'
             && Number.isInteger(value) && value >= 100 && value <= 599) as number | undefined;
         const code: ApplicationErrorCode = cause instanceof ApplicationError ? cause.code
-            : isGithubRateLimited({ status, response: { headers: response.headers ?? error.headers }, message: error.message }) ? 'provider.rate-limited'
+            : isGithubRateLimited({ status, response: { headers: response.headers ?? error.headers, data: response.data }, message: error.message }) ? 'provider.rate-limited'
                 : status === 401 ? 'authorization.credential-invalid'
                     : status === 403 ? 'authorization.denied'
                         : status === 404 ? 'provider.not-found'

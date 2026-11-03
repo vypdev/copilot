@@ -80295,7 +80295,7 @@ async function withAssignmentProviderFailure(operation, perform) {
         const status = [error.status, response.status].find(value => typeof value === 'number'
             && Number.isInteger(value) && value >= 100 && value <= 599);
         const code = cause instanceof application_error_1.ApplicationError ? cause.code
-            : (0, github_error_policy_1.isGithubRateLimited)({ status, response: { headers: response.headers ?? error.headers }, message: error.message }) ? 'provider.rate-limited'
+            : (0, github_error_policy_1.isGithubRateLimited)({ status, response: { headers: response.headers ?? error.headers, data: response.data }, message: error.message }) ? 'provider.rate-limited'
                 : status === 401 ? 'authorization.credential-invalid'
                     : status === 403 ? 'authorization.denied'
                         : status === 404 ? 'provider.not-found'
