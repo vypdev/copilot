@@ -1,3 +1,5 @@
+import { admittedGitPushDenial } from '../domain/git_push_failure';
+import { admittedBranchSyncObjectId, isBranchSyncObjectId, BranchSyncPublicationFailure, type BranchSyncPublicationDiagnostic } from '../domain/branch_sync_publication';
 import { COMMUNICATION_BUDGET_PATH, refreshBranchSyncCommunicationBudget } from './branch_sync_communication_budget';
 import type {
   BranchMergePreparation,
@@ -199,11 +201,35 @@ export class BranchSyncWorkspaceAdapter implements BranchSyncWorkspacePort {
     await this.git.configureAuthor(author.name, author.email);
     await this.git.stageAll();
     await this.git.commit(message);
-    const sha = await this.read("git", ["rev-parse", "HEAD"]);
-    await this.git.push(workingBranch, token);
+    const originalSha = admittedBranchSyncObjectId(this.snapshot.childSha);
+    // Commit succeeded: never abort/reset this candidate, even if identity/read/push now fails.
     this.snapshot = undefined;
     this.mergeInProgress = false;
-    return sha;
+    this.resolutionValidated = false;
+    let candidateSha = 'unavailable';
+    let pushAttempted = false;
+    try {
+      candidateSha = admittedBranchSyncObjectId(await this.read('git', ['rev-parse', 'HEAD']));
+      if (!isBranchSyncObjectId(candidateSha) || !isBranchSyncObjectId(originalSha) || candidateSha === originalSha) {
+        candidateSha = 'unavailable';
+        throw new Error('Candidate identity is unavailable.');
+      }
+      pushAttempted = true;
+      await this.git.push(workingBranch, token);
+      return candidateSha;
+    } catch (error) {
+      let observedSha = 'unavailable';
+      try {
+        await this.git.fetch(workingBranch, token);
+        observedSha = admittedBranchSyncObjectId(await this.read('git', ['rev-parse', 'FETCH_HEAD']));
+      } catch { /* Missing observation never proves non-publication. */ }
+      const remoteState = isBranchSyncObjectId(candidateSha) && observedSha === candidateSha ? 'published'
+        : isBranchSyncObjectId(originalSha) && observedSha === originalSha ? 'unchanged'
+        : isBranchSyncObjectId(originalSha) && isBranchSyncObjectId(observedSha) ? 'changed' : 'unverified';
+      const reason: BranchSyncPublicationDiagnostic['reason'] = !pushAttempted ? 'candidate-unverified'
+        : admittedGitPushDenial(error) === 'workflow-write-required' ? 'workflow-write-required' : 'push-failed';
+      throw new BranchSyncPublicationFailure({ reason, remoteState, originalSha, candidateSha, observedSha, pushAttempted });
+    }
   }
 
   async abort(): Promise<void> {
@@ -290,7 +316,9 @@ export class BranchSyncWorkspaceAdapter implements BranchSyncWorkspacePort {
 
   private async readRaw(program: string, args: string[]): Promise<string> {
     const chunks: Buffer[] = [];
-    await this.git.execute(program, args, { stdout: (data) => chunks.push(data) });
+    if (await this.git.execute(program, args, { stdout: (data) => chunks.push(data) }) !== 0) {
+      throw new Error('Git workspace observation did not complete successfully.');
+    }
     return Buffer.concat(chunks).toString("utf8");
   }
 }

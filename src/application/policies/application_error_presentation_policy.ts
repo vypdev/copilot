@@ -17,6 +17,7 @@ import {
 // This trusted destination is inserted after localization, never supplied by a body or translation.
 const STORED_CONFIGURATION_RECOVERY_URL = 'https://docs.page/vypdev/copilot/security-operations/operations/troubleshooting#unsupported-stored-configuration';
 const BRANCH_SYNC_CATALOG_RECOVERY_URL = 'https://docs.page/vypdev/copilot/security-operations/operations/troubleshooting#branch-sync-catalog-compatibility';
+const BRANCH_SYNC_PUBLICATION_RECOVERY_URL = 'https://docs.page/vypdev/copilot/security-operations/operations/troubleshooting#branch-sync-workflow-write-recovery';
 
 import { sourceContextDiagnostic } from '../../domain/agent_source_snapshot';
 
@@ -62,6 +63,15 @@ export function buildApplicationErrorPresentation(
         ? commandValidationPresentationVariables(error.recovery.id, (error.recovery.variables as Readonly<Record<string, unknown>>).command)
         : error.recovery?.id === 'branch-sync-verification-failed'
         ? { ...error.recovery.variables, syncCommand: '/copilot sync-branch' }
+        : error.recovery?.id === 'branch-sync-workflow-write-required' || error.recovery?.id === 'branch-sync-publication-failed'
+        ? {
+            reason: error.recovery.variables.reason, originalSha: error.recovery.variables.originalSha,
+            candidateSha: error.recovery.variables.candidateSha, observedSha: error.recovery.variables.observedSha,
+            pushStatus: message(error.recovery.variables.pushAttempted ? 'error.label.syncPushAttempted' : 'error.label.syncPushNotAttempted'),
+            remoteStatus: message(error.recovery.variables.remoteState === 'unchanged' ? 'error.label.syncRemoteUnchanged'
+                : error.recovery.variables.remoteState === 'changed' ? 'error.label.syncRemoteChanged' : 'error.label.syncRemoteUnverified'),
+            publicationGuide: BRANCH_SYNC_PUBLICATION_RECOVERY_URL, syncCommand: '/copilot sync-branch',
+        }
         : error.recovery?.id === 'branch-sync-catalog-incompatible'
         ? { ...error.recovery.variables, syncCommand: '/copilot sync-branch', catalogGuide: BRANCH_SYNC_CATALOG_RECOVERY_URL }
         : error.recovery?.id.startsWith('stored-configuration-')

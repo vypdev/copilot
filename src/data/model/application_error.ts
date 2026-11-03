@@ -1,3 +1,4 @@
+import { isBranchSyncPublicationDiagnostic, type BranchSyncPublicationDiagnostic } from '../../domain/branch_sync_publication';
 import { isBugbotReviewBlockFacts, type BugbotReviewBlockFacts } from '../../domain/bugbot/framed_review';
 import { isProgressScopeCapacityFacts, type ProgressScopeCapacityFacts } from '../../domain/progress_response_diagnostic';
 import { normalizeProgressCompletionDiagnostic, type ProgressCompletionDiagnostic } from '../../domain/progress_completion_diagnostic';
@@ -65,6 +66,8 @@ export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'branch-sync-resolution-invalid',
     'branch-sync-verification-failed',
     'branch-sync-catalog-incompatible',
+    'branch-sync-workflow-write-required',
+    'branch-sync-publication-failed',
     'sdd-draft-size-exceeded',
     'sdd-catalog-unsupported-profile',
     'sdd-catalog-format-invalid',
@@ -127,6 +130,8 @@ interface ApplicationErrorRecoveryVariables extends Readonly<Record<CopilotComma
     readonly 'branch-sync-resolution-invalid': Readonly<{ validationCode: BranchSyncValidationCode; command: '/copilot sync-branch' }>;
     readonly 'branch-sync-verification-failed': BranchSyncVerificationFailure;
     readonly 'branch-sync-catalog-incompatible': BranchSyncCatalogDiagnostic & Readonly<{ abort: 'completed' | 'unverified' }>;
+    readonly 'branch-sync-workflow-write-required': BranchSyncPublicationDiagnostic;
+    readonly 'branch-sync-publication-failed': BranchSyncPublicationDiagnostic;
     readonly 'sdd-draft-size-exceeded': Readonly<Record<string, never>>;
     readonly 'sdd-catalog-unsupported-profile': Readonly<Record<string, never>>;
     readonly 'sdd-catalog-format-invalid': Readonly<Record<string, never>>;
@@ -418,6 +423,8 @@ const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readon
     'branch-sync-resolution-invalid': Object.freeze(['validationCode', 'command']),
     'branch-sync-verification-failed': Object.freeze(['stage', 'reason', 'command', 'commandIndex', 'childSha', 'restoration']),
     'branch-sync-catalog-incompatible': Object.freeze(['phase', 'profile', 'field', 'capabilityNumber', 'abort']),
+    'branch-sync-workflow-write-required': Object.freeze(['reason', 'remoteState', 'originalSha', 'candidateSha', 'observedSha', 'pushAttempted']),
+    'branch-sync-publication-failed': Object.freeze(['reason', 'remoteState', 'originalSha', 'candidateSha', 'observedSha', 'pushAttempted']),
     'sdd-draft-size-exceeded': Object.freeze([]),
     'sdd-catalog-unsupported-profile': Object.freeze([]),
     'sdd-catalog-format-invalid': Object.freeze([]),
@@ -500,6 +507,12 @@ function normalizeApplicationErrorRecovery(
     }
     if (recovery.id === 'branch-sync-verification-failed' && !isBranchSyncVerificationFailure(variables)) {
         throw new TypeError('Branch synchronization verification diagnostic is invalid.');
+    }
+    if (recovery.id === 'branch-sync-workflow-write-required' || recovery.id === 'branch-sync-publication-failed') {
+        if (!isBranchSyncPublicationDiagnostic(variables) || variables.remoteState === 'published'
+            || (recovery.id === 'branch-sync-workflow-write-required') !== (variables.reason === 'workflow-write-required')) {
+            throw new TypeError('Branch synchronization publication diagnostic is invalid.');
+        }
     }
     if (recovery.id === 'branch-sync-catalog-incompatible') {
         const { abort, ...diagnostic } = variables;

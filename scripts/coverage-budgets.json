@@ -1407,6 +1407,23 @@
         }
       ],
       "successMessage": "immutable SDD source context coverage: PASS (100% lines/statements/branches/functions)"
+    },
+    {
+      "name": "Branch sync publication recovery",
+      "missingEntryLabel": "branch sync publication recovery",
+      "rules": [
+        {
+          "files": [
+            "src/domain/branch_sync_publication.ts",
+            "src/domain/git_push_failure.ts",
+            "src/infrastructure/git_push_diagnostic.ts",
+            "src/application/policies/branch_sync_publication_messages.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        }
+      ],
+      "successMessage": "branch sync publication recovery: PASS (closed facts, bounded classification and locale content100%)"
     }
   ]
 }

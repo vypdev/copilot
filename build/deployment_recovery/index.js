@@ -32361,6 +32361,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.readEnglishApplicationErrorMessage = exports.APPLICATION_ERROR_CATALOG_DEFINITIONS = exports.SPANISH_APPLICATION_ERROR_DEFINITION = exports.ENGLISH_APPLICATION_ERROR_DEFINITION = exports.SPANISH_APPLICATION_ERROR_MESSAGES = exports.ENGLISH_APPLICATION_ERROR_MESSAGES = exports.APPLICATION_ERROR_MESSAGE_IDS = exports.APPLICATION_ERROR_CODES = void 0;
 exports.resolveStaticApplicationErrorCatalog = resolveStaticApplicationErrorCatalog;
 exports.resolveApplicationErrorCatalog = resolveApplicationErrorCatalog;
+const branch_sync_publication_messages_1 = __nccwpck_require__(3948);
 const bugbot_review_diagnostic_labels_1 = __nccwpck_require__(351);
 const comment_command_validation_message_catalog_1 = __nccwpck_require__(2002);
 const application_error_1 = __nccwpck_require__(7790);
@@ -32368,6 +32369,7 @@ const message_catalog_1 = __nccwpck_require__(7097);
 const resolved_message_catalog_policy_1 = __nccwpck_require__(5069);
 const LABEL_KEYS = Object.freeze([
     ...bugbot_review_diagnostic_labels_1.BUGBOT_REVIEW_DIAGNOSTIC_LABEL_KEYS,
+    ...branch_sync_publication_messages_1.BRANCH_SYNC_PUBLICATION_LABEL_KEYS,
     'impact', 'errorCode', 'action', 'retainedState', 'retryable', 'yes', 'no', 'reference',
 ]);
 const CONTENT_FIELDS = Object.freeze(['impact', 'action', 'retainedState']);
@@ -32380,6 +32382,7 @@ exports.APPLICATION_ERROR_MESSAGE_IDS = Object.freeze([
 ]);
 const ENGLISH_LABELS = Object.freeze({
     ...bugbot_review_diagnostic_labels_1.ENGLISH_REVIEW_DIAGNOSTIC_LABELS,
+    ...branch_sync_publication_messages_1.ENGLISH_BRANCH_SYNC_PUBLICATION_LABELS,
     impact: 'Impact',
     errorCode: 'Error code',
     action: 'Action',
@@ -32391,6 +32394,7 @@ const ENGLISH_LABELS = Object.freeze({
 });
 const SPANISH_LABELS = Object.freeze({
     ...bugbot_review_diagnostic_labels_1.SPANISH_REVIEW_DIAGNOSTIC_LABELS,
+    ...branch_sync_publication_messages_1.SPANISH_BRANCH_SYNC_PUBLICATION_LABELS,
     impact: 'Impacto',
     errorCode: 'Código de error',
     action: 'Acción',
@@ -32530,6 +32534,7 @@ const STORED_CONFIGURATION_RETAINED_EN = 'The issue/PR description and stored co
 const STORED_CONFIGURATION_RETAINED_ES = 'Esta lectura no modificó la descripción de la issue/PR ni su configuración almacenada.';
 const ENGLISH_RECOVERY_CONTENT = Object.freeze({
     ...comment_command_validation_message_catalog_1.ENGLISH_COMMAND_VALIDATION_CONTENT,
+    ...branch_sync_publication_messages_1.ENGLISH_BRANCH_SYNC_PUBLICATION_CONTENT,
     'stored-configuration-schema-missing': Object.freeze({
         impact: 'Automation stopped for issue/PR #{issueNumber}: the stored configuration has no schema version; version {expectedVersion} is required.',
         action: STORED_CONFIGURATION_ACTION_EN,
@@ -32728,6 +32733,7 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
 });
 const SPANISH_RECOVERY_CONTENT = Object.freeze({
     ...comment_command_validation_message_catalog_1.SPANISH_COMMAND_VALIDATION_CONTENT,
+    ...branch_sync_publication_messages_1.SPANISH_BRANCH_SYNC_PUBLICATION_CONTENT,
     'stored-configuration-schema-missing': Object.freeze({
         impact: 'La automatización se detuvo para la issue/PR #{issueNumber}: la configuración almacenada no tiene versión de esquema; se requiere la versión {expectedVersion}.',
         action: STORED_CONFIGURATION_ACTION_ES,
@@ -32963,6 +32969,56 @@ function resolveApplicationErrorCatalog(locale, configuration, resolver) {
 }
 const readEnglishApplicationErrorMessage = (id, variables = {}) => (0, message_catalog_1.renderCatalogMessage)(exports.ENGLISH_APPLICATION_ERROR_MESSAGES[id], variables, 'en-US');
 exports.readEnglishApplicationErrorMessage = readEnglishApplicationErrorMessage;
+
+
+/***/ }),
+
+/***/ 3948:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SPANISH_BRANCH_SYNC_PUBLICATION_CONTENT = exports.ENGLISH_BRANCH_SYNC_PUBLICATION_CONTENT = exports.SPANISH_BRANCH_SYNC_PUBLICATION_LABELS = exports.ENGLISH_BRANCH_SYNC_PUBLICATION_LABELS = exports.BRANCH_SYNC_PUBLICATION_LABEL_KEYS = void 0;
+exports.BRANCH_SYNC_PUBLICATION_LABEL_KEYS = ['syncRemoteUnchanged', 'syncRemoteChanged', 'syncRemoteUnverified', 'syncPushAttempted', 'syncPushNotAttempted'];
+exports.ENGLISH_BRANCH_SYNC_PUBLICATION_LABELS = {
+    syncRemoteUnchanged: 'The observed remote still points to the original head; the candidate was not observed as published.',
+    syncRemoteChanged: 'The remote has a different head; this observation does not establish whether it includes the candidate.',
+    syncRemoteUnverified: 'The remote head could not be established; publication remains unknown.',
+    syncPushAttempted: 'A normal push was attempted.', syncPushNotAttempted: 'No push was attempted.',
+};
+exports.SPANISH_BRANCH_SYNC_PUBLICATION_LABELS = {
+    syncRemoteUnchanged: 'El remoto observado conserva el head original; no se observó la publicación del candidato.',
+    syncRemoteChanged: 'El remoto tiene otro head; esta observación no determina si incluye el candidato.',
+    syncRemoteUnverified: 'No se pudo establecer el head remoto; la publicación sigue sin verificarse.',
+    syncPushAttempted: 'Se intentó un push normal.', syncPushNotAttempted: 'No se intentó ningún push.',
+};
+const retained = 'The local merge commit step finished; candidate identity: {candidateSha}. {pushStatus} {remoteStatus} Original head: {originalSha}; observed head: {observedSha}. Recovery did not reset or abort the committed workspace; runner-local storage is temporary.';
+const retainedSpanish = 'Terminó el paso de commit del merge local; identidad del candidato: {candidateSha}. {pushStatus} {remoteStatus} Head original: {originalSha}; head observado: {observedSha}. La recuperación no restableció ni abortó el espacio de trabajo confirmado; el almacenamiento del runner es temporal.';
+exports.ENGLISH_BRANCH_SYNC_PUBLICATION_CONTENT = {
+    'branch-sync-workflow-write-required': {
+        impact: 'The remote rejected workflow-file publication by the configured publisher.',
+        action: 'A maintainer must review the publisher credential and grant the appropriate workflow-write capability through its normal configuration, then rerun {syncCommand} from the current managed PR. Do not retry unchanged credentials or bypass the managed branch. Recovery guide: {publicationGuide}.',
+        retainedState: retained,
+    },
+    'branch-sync-publication-failed': {
+        impact: 'Branch synchronization did not reach a verified remote publication ({reason}).',
+        action: 'Inspect the current native remote head and the retained candidate before a fresh Action-managed synchronization. An unavailable observation is not proof that nothing was published. Recovery guide: {publicationGuide}.',
+        retainedState: retained,
+    },
+};
+exports.SPANISH_BRANCH_SYNC_PUBLICATION_CONTENT = {
+    'branch-sync-workflow-write-required': {
+        impact: 'El remoto rechazó la publicación de archivos de workflow mediante la credencial configurada.',
+        action: 'Un mantenedor debe revisar la credencial y conceder la capacidad de escritura de workflows adecuada mediante su configuración habitual; después, debe ejecutar {syncCommand} desde la PR gestionada actual. No repitas la misma credencial ni eludas la rama gestionada. Guía: {publicationGuide}.',
+        retainedState: retainedSpanish,
+    },
+    'branch-sync-publication-failed': {
+        impact: 'La sincronización no alcanzó una publicación remota verificada ({reason}).',
+        action: 'Inspecciona el head remoto nativo actual y el candidato conservado antes de una nueva sincronización gestionada por la Action. No disponer de una observación no demuestra que no se publicara nada. Guía: {publicationGuide}.',
+        retainedState: retainedSpanish,
+    },
+};
 
 
 /***/ }),
@@ -33807,6 +33863,7 @@ var _ApplicationError_cause;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = exports.APPLICATION_ERROR_RECOVERY_IDS = void 0;
 exports.isApplicationErrorCorrelationId = isApplicationErrorCorrelationId;
+const branch_sync_publication_1 = __nccwpck_require__(7857);
 const framed_review_1 = __nccwpck_require__(3750);
 const progress_response_diagnostic_1 = __nccwpck_require__(6289);
 const progress_completion_diagnostic_1 = __nccwpck_require__(5095);
@@ -33837,6 +33894,8 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'branch-sync-resolution-invalid',
     'branch-sync-verification-failed',
     'branch-sync-catalog-incompatible',
+    'branch-sync-workflow-write-required',
+    'branch-sync-publication-failed',
     'sdd-draft-size-exceeded',
     'sdd-catalog-unsupported-profile',
     'sdd-catalog-format-invalid',
@@ -34091,6 +34150,8 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'branch-sync-resolution-invalid': Object.freeze(['validationCode', 'command']),
     'branch-sync-verification-failed': Object.freeze(['stage', 'reason', 'command', 'commandIndex', 'childSha', 'restoration']),
     'branch-sync-catalog-incompatible': Object.freeze(['phase', 'profile', 'field', 'capabilityNumber', 'abort']),
+    'branch-sync-workflow-write-required': Object.freeze(['reason', 'remoteState', 'originalSha', 'candidateSha', 'observedSha', 'pushAttempted']),
+    'branch-sync-publication-failed': Object.freeze(['reason', 'remoteState', 'originalSha', 'candidateSha', 'observedSha', 'pushAttempted']),
     'sdd-draft-size-exceeded': Object.freeze([]),
     'sdd-catalog-unsupported-profile': Object.freeze([]),
     'sdd-catalog-format-invalid': Object.freeze([]),
@@ -34169,6 +34230,12 @@ function normalizeApplicationErrorRecovery(recovery) {
     }
     if (recovery.id === 'branch-sync-verification-failed' && !(0, verification_failure_1.isBranchSyncVerificationFailure)(variables)) {
         throw new TypeError('Branch synchronization verification diagnostic is invalid.');
+    }
+    if (recovery.id === 'branch-sync-workflow-write-required' || recovery.id === 'branch-sync-publication-failed') {
+        if (!(0, branch_sync_publication_1.isBranchSyncPublicationDiagnostic)(variables) || variables.remoteState === 'published'
+            || (recovery.id === 'branch-sync-workflow-write-required') !== (variables.reason === 'workflow-write-required')) {
+            throw new TypeError('Branch synchronization publication diagnostic is invalid.');
+        }
     }
     if (recovery.id === 'branch-sync-catalog-incompatible') {
         const { abort, ...diagnostic } = variables;
@@ -35077,6 +35144,63 @@ function classifyBranchSyncCatalog(value) {
     }
     return catalogDiagnostic('profile-compatibility', 'sdk-v1');
 }
+
+
+/***/ }),
+
+/***/ 7857:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BranchSyncPublicationFailure = exports.BRANCH_SYNC_REMOTE_STATES = exports.BRANCH_SYNC_PUBLICATION_REASONS = void 0;
+exports.isBranchSyncObjectId = isBranchSyncObjectId;
+exports.admittedBranchSyncObjectId = admittedBranchSyncObjectId;
+exports.isBranchSyncPublicationDiagnostic = isBranchSyncPublicationDiagnostic;
+exports.BRANCH_SYNC_PUBLICATION_REASONS = Object.freeze(['workflow-write-required', 'push-failed', 'candidate-unverified']);
+exports.BRANCH_SYNC_REMOTE_STATES = Object.freeze(['unchanged', 'published', 'changed', 'unverified']);
+function isBranchSyncObjectId(value) {
+    return typeof value === 'string' && /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u.test(value) && !/^0+$/u.test(value);
+}
+function admittedBranchSyncObjectId(value) {
+    return isBranchSyncObjectId(value) ? value : 'unavailable';
+}
+function isBranchSyncPublicationDiagnostic(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return false;
+    const d = value;
+    if (Object.keys(d).sort().join(',') !== 'candidateSha,observedSha,originalSha,pushAttempted,reason,remoteState'
+        || !exports.BRANCH_SYNC_PUBLICATION_REASONS.includes(d.reason) || !exports.BRANCH_SYNC_REMOTE_STATES.includes(d.remoteState)
+        || typeof d.pushAttempted !== 'boolean'
+        || ![d.originalSha, d.candidateSha, d.observedSha].every(x => x === 'unavailable' || isBranchSyncObjectId(x)))
+        return false;
+    if (d.reason === 'candidate-unverified' && (d.pushAttempted || d.candidateSha !== 'unavailable'))
+        return false;
+    if (d.reason !== 'candidate-unverified' && (!d.pushAttempted || !isBranchSyncObjectId(d.candidateSha) || d.candidateSha === d.originalSha))
+        return false;
+    if (d.remoteState === 'published')
+        return isBranchSyncObjectId(d.candidateSha) && d.observedSha === d.candidateSha;
+    if (d.remoteState === 'unchanged')
+        return isBranchSyncObjectId(d.originalSha) && d.observedSha === d.originalSha && d.observedSha !== d.candidateSha;
+    if (d.remoteState === 'changed')
+        return isBranchSyncObjectId(d.originalSha) && isBranchSyncObjectId(d.observedSha)
+            && d.observedSha !== d.originalSha && d.observedSha !== d.candidateSha;
+    return (d.observedSha === 'unavailable' || d.originalSha === 'unavailable')
+        && !(isBranchSyncObjectId(d.candidateSha) && d.observedSha === d.candidateSha);
+}
+/** A committed candidate is no longer an in-progress Git merge. */
+class BranchSyncPublicationFailure extends Error {
+    constructor(diagnostic) {
+        super('Branch synchronization candidate publication requires reconciliation.');
+        if (!isBranchSyncPublicationDiagnostic(diagnostic))
+            throw new TypeError('Invalid branch synchronization publication facts.');
+        this.name = 'BranchSyncPublicationFailure';
+        this.diagnostic = Object.freeze({ ...diagnostic });
+        Object.freeze(this);
+    }
+}
+exports.BranchSyncPublicationFailure = BranchSyncPublicationFailure;
 
 
 /***/ }),
