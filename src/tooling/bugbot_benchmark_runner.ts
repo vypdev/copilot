@@ -8,6 +8,7 @@ import { normalizeBugbotResponse } from '../application/usecases/steps/commit/bu
 import { BUGBOT_FIXTURE_VALUES_INSTRUCTION, BUGBOT_RECOVERY_CONTRACT_INSTRUCTION, BUGBOT_PYTHON_SYNTAX_INSTRUCTION, BUGBOT_MARKDOWN_LINKS_INSTRUCTION, BUGBOT_WASM_BINDINGS_INSTRUCTION, BUGBOT_ACTION_CONTRACTS_INSTRUCTION, BUGBOT_TEST_PATHS_INSTRUCTION, BUGBOT_DEPENDENCY_TYPES_INSTRUCTION, BUGBOT_EXTERNAL_FACTS_INSTRUCTION, BUGBOT_FINDING_GROUNDING_INSTRUCTION } from '../prompts/bugbot';
 import { renderPythonLiteralWitnesses } from '../application/policies/bugbot_python_literal_witness_policy';
 import { BUGBOT_RESOURCE_AUTHORITY_INSTRUCTION } from '../prompts/bugbot_resource_authority';
+import { BUGBOT_ASYNC_STATEMENT_INSTRUCTION } from '../prompts/bugbot_async_statement_evidence';
 
 import { verifyGeneratedLiteralFindings } from '../application/usecases/steps/commit/bugbot/verify_generated_literal_findings';
 
@@ -57,6 +58,8 @@ ${BUGBOT_RECOVERY_CONTRACT_INSTRUCTION}
 ${BUGBOT_FIXTURE_VALUES_INSTRUCTION}
 
 ${BUGBOT_RESOURCE_AUTHORITY_INSTRUCTION}
+
+${BUGBOT_ASYNC_STATEMENT_INSTRUCTION}
 
 ${BUGBOT_EXTERNAL_FACTS_INSTRUCTION}
 
