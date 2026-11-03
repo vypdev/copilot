@@ -161,6 +161,20 @@ it('counts Markdown destinations including external links before the rejected de
   expect(result.facts).toContainEqual({ detail: 'path-link-reference', section: 0, row: 3 });
 });
 
+it.each([
+  ['HTML comment', '<!-- [hidden](../HIDDEN.md) -->', '', 1],
+  ['backtick example', '```md\n[hidden](../HIDDEN.md)\n```', '', 1],
+  ['tilde example', '~~~md\n[hidden](../HIDDEN.md)\n~~~', '', 1],
+  ['mixed hidden regions and visible predecessors', '<!--\n[hidden](../HIDDEN.md)\n-->\n```md\n[hidden](../HIDDEN.md)\n```',
+    '[external](https://example.test/x) [valid](../docs/guide.md)', 3],
+] as const)('excludes %s at the public validator boundary before counting link occurrences', (_name, hidden, visiblePredecessors, ordinal) => {
+  const result = diagnostic(hidden + '\n' + visiblePredecessors + '\n[missing](../frontend/PRIVATE.ts)');
+  expect(result.reason).toBe('repository-path');
+  expect(result.facts).toContainEqual({ detail: 'path-link-reference', section: 0, row: ordinal });
+  expect(result.facts).toContainEqual({ detail: 'path-reference-missing', section: 0 });
+  expect(JSON.stringify(result)).not.toMatch(/HIDDEN|PRIVATE|frontend/u);
+});
+
 it('identifies unsafe spelling without retaining its value', () => {
   const result = diagnostic('`frontend/../PRIVATE`');
   expect(result.facts).toContainEqual({ detail: 'path-reference-unsafe', section: 0 });

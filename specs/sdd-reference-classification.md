@@ -234,7 +234,7 @@ rewriting issue history or disabling strict publication checks.
 
 ## 14. Testing strategy
 
-Reserve **90 distinct new deterministic cases**, excluding existing suites and
+Reserve **94 distinct new deterministic cases**, excluding existing suites and
 dynamic localization matrices. Each row is a disjoint risk allocation:
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
@@ -247,9 +247,10 @@ dynamic localization matrices. Each row is a disjoint risk allocation:
 | Safe origin diagnostics | 3 | Inline/prose/link missing evidence without candidate text |
 | Label/index boundaries | 3 | No cross-line URL inheritance, immutable ancestry and bounded suffix |
 | Additional diagnostics/security | 14 | Ordinals, causes, blocked precedence, decoding/escape, exact facts, Unicode/control spelling, incomplete media type and deeply segmented untrusted citation |
+| Public link-visibility boundary | 4 | HTML, backtick, tilde and mixed hidden destinations before a visible failure; existing filtering must precede counting |
 | Real Git integration | 8 | Update/companion notation, future parents, missing files and strict declarations; owner/worktree/remote intact |
 | Localized product diagnostics | 4 | Inline/link origins × English/Spanish from actual validator failures |
-| **Total** | **90** | No double counting |
+| **Total** | **94** | No double counting |
 
 Run existing format/consistency/diagnostic, draft-repair/publication/freshness and
 architecture tests too. Keep global/module budgets and **100% modified executable
