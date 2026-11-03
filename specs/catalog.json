@@ -2126,15 +2126,16 @@
       "id": "bugbot-analysis-and-autofix",
       "title": "Bugbot analysis, finding publication, and autofix",
       "status": "implemented",
-      "scope": "Select one canonical PR, exhaustively analyze bounded diff partitions with version-grounded dependency, policy-to-request transformation and source-bound assertion and generated-source coordinates with independent candidate verification, configuration-selected initial-session credential ownership, delegated test-path and external Action input-contract, host-aware self-repository references and Kotlin/Wasm lexical-binding and renderer-grounded Markdown path evidence, publish stable findings atomically, and apply authorized verified fixes with regression coverage for cwd/pattern-grounded indirect unittest discovery and source-bound module execution evidence, with active-instance Kotlin Json nullable-input policy grounding; verify complete large diffs through a source-bound closed framed profile with immutable local Git proof, live-base freshness and atomic global publication; ground Python exception syntax in declared interpreter versions and PEP 758 while preserving older-target and independent runtime defects",
+      "scope": "Select one canonical PR, exhaustively analyze bounded diff partitions with version-grounded dependency, policy-to-request transformation and source-bound assertion and generated-source coordinates with independent candidate verification, configuration-selected initial-session credential ownership, delegated test-path and external Action input-contract, host-aware self-repository references and Kotlin/Wasm lexical-binding and renderer-grounded Markdown path evidence, publish stable findings atomically, and apply authorized verified fixes with regression coverage for cwd/pattern-grounded indirect unittest discovery and source-bound module execution evidence, with active-instance Kotlin Json nullable-input policy grounding; verify complete large diffs through a source-bound closed framed profile with immutable local Git proof, live-base freshness and atomic global publication; ground Python exception syntax in declared interpreter versions and PEP 758 while preserving older-target and independent runtime defects; ground filesystem recovery findings in retention/no-overwrite, ownership and publication contracts while preserving required disposable cleanup and data-loss defects; independently adjudicate candidates for supplied Python source, retaining existing bounded source, identity and history controls",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-11-02",
+      "lastVerified": "2026-11-03",
       "specs": [
         "specs/bugbot-analysis-publication-and-autofix.md",
         "specs/bugbot-context-selection-and-budgeting.md",
         "specs/bugbot-exhaustive-partitioned-analysis.md",
         "specs/bugbot-lossless-conversation-context.md",
-        "specs/bugbot-source-bound-framed-review.md"
+        "specs/bugbot-source-bound-framed-review.md",
+        "specs/bugbot-recovery-contract-grounding.md"
       ],
       "workflows": [
         ".github/workflows/copilot_commit.yml",
@@ -2227,7 +2228,8 @@
         "src/infrastructure/filesystem/bugbot_git_review_source_adapter.ts",
         "src/application/usecases/steps/commit/bugbot/analyze_bugbot_frames.ts",
         "src/application/policies/bugbot_framed_prompt_policy.ts",
-        "quality/bugbot/evidence/issue-831.json"
+        "quality/bugbot/evidence/issue-831.json",
+        "quality/bugbot/evidence/issue-832.json"
       ],
       "tests": [
         "src/application/usecases/steps/commit/__tests__/bugbot_review_lifecycle.e2e.test.ts",
@@ -2314,7 +2316,9 @@
         "src/application/policies/__tests__/bugbot_framed_prompt_policy.test.ts",
         "src/tooling/__tests__/bugbot_python_exception_syntax.test.ts",
         "src/tooling/__tests__/fixtures/bugbot_python_exception_parse_probe.py",
-        "src/tooling/__tests__/fixtures/bugbot_python_314_catch_probe.py"
+        "src/tooling/__tests__/fixtures/bugbot_python_314_catch_probe.py",
+        "src/tooling/__tests__/bugbot_recovery_contract.test.ts",
+        "src/tooling/__tests__/fixtures/bugbot_recovery_contract_probe.py"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",

@@ -61,7 +61,7 @@ export async function analyzeBugbotFrames(operation: BugbotReviewOperationContex
             try {
                 const response = await queryBugbotPartitionFindings(boundedAgent, operation.analysis.agentConfiguration,
                     input.prompt, targetLocale, { partitionId: partition.id, headSha: partition.headSha, framed: partition.framed },
-                    { enabled: input.hasLiteralWitnesses });
+                    { enabled: input.requiresCandidateVerification });
                 const serialized = JSON.stringify(response);
                 enforceBugbotFramedBudget('responseBytes', Buffer.byteLength(serialized));
                 const admitted: Readonly<Record<string, unknown>> = JSON.parse(serialized);
