@@ -1,7 +1,8 @@
 import { SddDraftFormatFailure, validateSddMarkdown } from '../pre_branch_sdd';
 import { validateSddDraftConsistency, type SddRepositoryInventory } from '../sdd_draft_consistency';
 import { sddReferenceFixture } from '../../testing/sdd_reference_fixture';
-import { buildSddReferenceIndex, hasBlockedSddAncestor, isSddNonFileNotation, sddReferencePrefix } from '../sdd_repository_reference';
+import { appendSddReferenceContext, buildSddReferenceIndex, hasBlockedSddAncestor, isSddNonFileNotation, sddReferencePrefix } from '../sdd_repository_reference';
+import { isSddMarkdownLinkExample } from '../sdd_visible_references';
 
 const inventory: SddRepositoryInventory = {
   files: new Set(['README.md', 'frontend/package.json', 'docs/guide.md']),
@@ -136,6 +137,9 @@ it('bounds the retained label suffix while preserving arbitrary indentation of a
   const prefix = sddReferencePrefix(source, source.length);
   expect(prefix.length).toBeLessThanOrEqual(16);
   expect(isSddNonFileNotation('assets/main.js', prefix, buildSddReferenceIndex(inventory, new Set()))).toBe(true);
+  const streaming = appendSddReferenceContext('Prior prose ', '**URL**:' + ' '.repeat(4000));
+  expect(streaming.length).toBeLessThanOrEqual(17);
+  expect(isSddNonFileNotation('assets/main.js', streaming, buildSddReferenceIndex(inventory, new Set()))).toBe(true);
 });
 
 function diagnostic(notation: string) {
@@ -196,7 +200,7 @@ it('locates an escaping Markdown destination without accepting traversal', () =>
 });
 
 it('locates an undecodable Markdown destination without echoing its bytes', () => {
-  const result = diagnostic('[broken](%PRIVATE)');
+  const result = diagnostic('[broken](%FFPRIVATE)');
   expect(result.facts).toContainEqual({ detail: 'path-link', section: 0 });
   expect(result.facts).toContainEqual({ detail: 'path-link-reference', section: 0, row: 1 });
   expect(JSON.stringify(result)).not.toContain('PRIVATE');
@@ -233,4 +237,139 @@ it('checks a deeply segmented untrusted citation without reconstructing every pr
   const deep = 'frontend/' + 'nested/'.repeat(20_000) + 'missing.ts';
   expect(hasBlockedSddAncestor(deep, index)).toBe(false);
   expect(isSddNonFileNotation(deep, '', index)).toBe(false);
+});
+
+it.each([
+  '`[example](../missing.md)`', '``[example](../missing.md)``', '```[example](../missing.md)```',
+  '`![example](../missing.svg)`', '\\``[example](../missing.md)`',
+])('treats whole inline Markdown examples as notation without granting file evidence: %s', notation => {
+  expect(() => validate('Example: ' + notation)).not.toThrow();
+});
+
+it('rejects the exact unknown-root trailing-slash control cited by review', () => {
+  expect(diagnostic('`missing/dir/`').facts).toContainEqual({ detail: 'path-reference-directory', section: 0 });
+});
+
+it('does not count a code example of an existing destination before an actual broken link', () => {
+  const result = diagnostic('`[example](../docs/guide.md)` [actual](../frontend/PRIVATE.ts)');
+  expect(result.facts).toContainEqual({ detail: 'path-link-reference', section: 0, row: 1 });
+});
+
+it('accepts a literal missing-link example alongside a genuine existing Markdown destination', () => {
+  expect(() => validate('`[example](../missing.md)` [actual](../docs/guide.md)')).not.toThrow();
+});
+
+it('keeps an explicit File role strict even when its value resembles inline Markdown', () => {
+  expect(() => validate('File: `[example](missing/file.md)`')).toThrow(expect.objectContaining({ reason: 'repository-path' }));
+});
+
+it('keeps a real missing file citation strict inside a longer backtick delimiter', () => {
+  expect(diagnostic('``frontend/PRIVATE.ts``').facts).toContainEqual({ detail: 'path-inline-reference', section: 0, row: 1 });
+});
+
+it('does not let unmatched different delimiters hide an actual Markdown destination', () => {
+  const result = diagnostic('`[first](../docs/guide.md) `` [missing](../frontend/PRIVATE.ts)');
+  expect(result.facts).toContainEqual({ detail: 'path-link-reference', section: 0, row: 2 });
+});
+
+it('does not let an escaped single opener hide an actual Markdown destination', () => {
+  const result = diagnostic('\\`[first](../docs/guide.md) [missing](../frontend/PRIVATE.ts)');
+  expect(result.facts).toContainEqual({ detail: 'path-link-reference', section: 0, row: 2 });
+});
+
+it('recognizes the display value of a space-padded inline example', () => {
+  expect(() => validate('` [example](../missing.md) `')).not.toThrow();
+});
+
+it('masks both independent inline examples without losing an actual destination after them', () => {
+  expect(() => validate('`[one](../missing.md)` `[two](../missing.md)` [actual](../docs/guide.md)')).not.toThrow();
+});
+
+it('supports a multiline inline example using the rendered Markdown code value', () => {
+  expect(() => validate('`[multi\nline](../missing.md)`')).not.toThrow();
+});
+
+it('checks a used reference-style destination through the same strict repository guard', () => {
+  const result = diagnostic('[actual][ref]\n\n[ref]: ../frontend/PRIVATE.ts');
+  expect(result.facts).toContainEqual({ detail: 'path-link-reference', section: 0, row: 1 });
+});
+
+it('keeps actual image destinations strict', () => {
+  expect(diagnostic('![actual](../frontend/PRIVATE.svg)').facts).toContainEqual({ detail: 'path-link-reference', section: 0, row: 1 });
+});
+
+it('recognizes a whole inline link example with a title', () => {
+  expect(() => validate('`[example](../missing.md "Example title")`')).not.toThrow();
+});
+
+it('does not interpret backticks inside a real destination as additional code references', () => {
+  const result = diagnostic('[actual](../docs/guide.md?x=`tag`) `frontend/PRIVATE.ts`');
+  expect(result.facts).toContainEqual({ detail: 'path-inline-reference', section: 0, row: 1 });
+});
+
+it('preserves checking of file-shaped evidence inside visible HTML attributes', () => {
+  expect(diagnostic('<span data-file="frontend/PRIVATE.ts">Text</span>').facts).toContainEqual({ detail: 'path-prose-reference', section: 0, row: 1 });
+});
+
+it('rejects NUL before Markdown normalization could alias an existing replacement-character filename', () => {
+  const populated = { ...inventory, files: new Set([...inventory.files, 'frontend/\uFFFD.ts']) };
+  expect(() => validateSddDraftConsistency(sddReferenceFixture('`frontend/\0.ts`'), [], populated, 'specs/reference-control.md'))
+    .toThrow(expect.objectContaining({ diagnostic: { reason: 'repository-path', phase: 'validation', facts: expect.arrayContaining([
+      { detail: 'path-reference-unsafe', section: 0 },
+    ]) } }));
+});
+
+it('matches a literal-percent Markdown destination only to its actual immutable filename', () => {
+  const populated = { ...inventory, files: new Set([...inventory.files, 'frontend/percent%ZZ.ts']) };
+  expect(() => validateSddDraftConsistency(sddReferenceFixture('[actual](../frontend/percent%ZZ.ts)'), [], populated, 'specs/reference-control.md')).not.toThrow();
+});
+
+it('counts an empty same-document link before an actual broken destination', () => {
+  expect(diagnostic('[same]() [missing](../frontend/PRIVATE.ts)').facts).toContainEqual({ detail: 'path-link-reference', section: 0, row: 2 });
+});
+
+it('does not exempt a non-whole Markdown example containing a real file citation', () => {
+  expect(diagnostic('`[label] then inspect frontend/PRIVATE.ts`').facts).toContainEqual({ detail: 'path-prose-reference', section: 0, row: 1 });
+});
+
+it('recognizes a whole inline reference-definition example without validating its illustrative target', () => {
+  expect(() => validate('`[example]: ../missing.md`')).not.toThrow();
+});
+
+it('keeps an explicit File value with spaces strict', () => {
+  expect(diagnostic('File: `frontend/private file.ts`').facts).toContainEqual({ detail: 'path-inline-reference', section: 0, row: 1 });
+});
+
+it('accepts an exact immutable file with spaces inside code', () => {
+  const populated = { ...inventory, files: new Set([...inventory.files, 'frontend/real file.ts']) };
+  expect(() => validateSddDraftConsistency(sddReferenceFixture('`frontend/real file.ts`'), [], populated, 'specs/reference-control.md')).not.toThrow();
+});
+
+it('keeps a blocked ancestor with spaces strict instead of reducing it to prose fragments', () => {
+  const populated = { ...inventory, blocked: new Set([...inventory.blocked, 'linked directory']) };
+  expect(() => validateSddDraftConsistency(sddReferenceFixture('`linked directory/PRIVATE.ts`'), [], populated, 'specs/reference-control.md'))
+    .toThrow(expect.objectContaining({ diagnostic: { reason: 'repository-path', phase: 'validation', facts: expect.arrayContaining([
+      { detail: 'path-reference-blocked', section: 0 },
+    ]) } }));
+});
+
+it('derives a future directory with spaces only from a validated exact new file', () => {
+  expect(() => validate('`frontend/new directory/`', [
+    ['specs/reference-control.md', 'create'], ['README.md', 'reference'], ['frontend/new directory/entry.ts', 'create'],
+  ])).not.toThrow();
+});
+
+it('does not carry a URL role across an explicit Markdown hard line break', () => {
+  expect(diagnostic('URL:  \n`frontend/PRIVATE.ts`').facts).toContainEqual({ detail: 'path-reference-missing', section: 0 });
+});
+
+it.each([
+  '[example](../file.md)\n\nSecond paragraph.',
+  '[example](../file.md)\n====',
+])('does not grant a whole-example role to a different Markdown block: %s', value => {
+  expect(isSddMarkdownLinkExample(value)).toBe(false);
+});
+
+it('does not exempt a real citation after a first literal link in the same code span', () => {
+  expect(diagnostic('`[label](/) then inspect frontend/PRIVATE.ts`').facts).toContainEqual({ detail: 'path-prose-reference', section: 0, row: 1 });
 });

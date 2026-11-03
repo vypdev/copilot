@@ -1,3 +1,5 @@
+import { isSddMarkdownLinkExample } from './sdd_visible_references';
+
 /** Immutable Git facts, never filesystem queries or model-provided existence. */
 export interface SddRepositoryInventory {
   readonly files: ReadonlySet<string>;
@@ -61,17 +63,26 @@ function urlRole(prefix: string): boolean {
   return /\b(?:(?:URL|URI)(?:[ \t]+path)?|HTTP(?:[ \t]+(?:endpoint|route))?)\s*[:=]?\s*$/iu.test(prefix.replace(/[*_]/gu, ''));
 }
 
+export function isSddFileRole(prefix: string): boolean {
+  return /\b(?:file|path|archivo|ruta)\s*[:=]?\s*$/iu.test(prefix.replace(/[*_]/gu, ''));
+}
+
+export function isKnownSddRepositoryReference(value: string, index: SddReferenceIndex): boolean {
+  const path = value.replace(/\/$/u, '');
+  return index.inventory.files.has(path) || index.inventory.directories.has(path) || index.proposed.has(path)
+    || index.futureDirectories.has(path) || hasBlockedSddAncestor(path, index);
+}
+
 /**
  * Not a protocol validator or an existence grant. Explicit Markdown destinations
  * and Path/Change rows bypass this heuristic and always receive strict checks.
  */
 export function isSddNonFileNotation(value: string, prefix: string, index: SddReferenceIndex): boolean {
   if (/^(?:[a-z][a-z0-9+.-]*:|\/)/iu.test(value)) return true;
-  const path = value.replace(/\/$/u, '');
-  if (index.inventory.files.has(path) || index.inventory.directories.has(path) || index.proposed.has(path)
-    || index.futureDirectories.has(path) || hasBlockedSddAncestor(path, index)) return false;
+  if (isKnownSddRepositoryReference(value, index)) return false;
   if (!/\s|[\p{Cc}]/u.test(value) && urlRole(prefix)) return true;
-  if (/\b(?:file|path|archivo|ruta)\s*[:=]?\s*$/iu.test(prefix.replace(/[*_]/gu, ''))) return false;
+  if (isSddFileRole(prefix)) return false;
+  if (isSddMarkdownLinkExample(value)) return true;
   if (mediaNotation(value)) return true;
   if (/^(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|TRACE|CONNECT)\s+\S+$/u.test(value)) return true;
   if (/^@[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._-]*(?:\/[a-z0-9_][a-z0-9._-]*)*$/iu.test(value)
@@ -88,4 +99,10 @@ export function sddReferencePrefix(source: string, offset: number): string {
   while (end > 0 && /[ \t*_: =]/u.test(source[end - 1])) end--;
   const tail = source.slice(Math.max(0, end - 16), end);
   return tail.slice(tail.lastIndexOf('\n') + 1);
+}
+
+/** Keep streaming label context bounded, including a separator across formatted text leaves. */
+export function appendSddReferenceContext(previous: string, value: string): string {
+  const combined = previous + value;
+  return sddReferencePrefix(combined, combined.length) + (/[ \t*_: =]$/u.test(combined) ? ' ' : '');
 }

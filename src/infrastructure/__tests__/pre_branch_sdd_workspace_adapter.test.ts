@@ -80,7 +80,7 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
     const snapshot = await workspace.loadSnapshot('develop');
     const selected = { ...plan, action, path: action === 'update' ? plan.path : 'specs/companion.md' };
     const before = fs.readFileSync(path.join(repo, plan.path), 'utf8');
-    const notation = '\nHTTP endpoint: `api/v1/session`\nMedia type: `application/json`\nURL: `assets/main.js`\nDeployment alternatives: `native/standalone`\n';
+    const notation = '\nHTTP endpoint: `api/v1/session`\nMedia type: `application/json`\nURL: `assets/main.js`\nDeployment alternatives: `native/standalone`\nExample: `[illustrative](../missing.md)`\n[Actual guide](../docs/payments.mdx)\n';
     const prepared = await workspace.validateDraft(snapshot, selected, draft(selected.path, action) + notation);
     expect(prepared.markdown).toContain(notation.trim());
     expect(fs.readFileSync(path.join(repo, plan.path), 'utf8')).toBe(before);

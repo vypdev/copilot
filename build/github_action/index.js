@@ -51706,9 +51706,9 @@ const FACTS = Object.freeze({
     "path-operation": ["The path operation is unsupported or targets a missing existing file.", "La operación de ruta no es compatible o apunta a un archivo existente que falta."],
     "path-reference": ["A repository reference cannot be verified as an existing or explicitly proposed path.", "No se puede verificar una referencia como ruta existente o explícitamente propuesta."],
     "path-link": ["A relative file link is invalid or escapes its repository boundary.", "Un enlace relativo no es válido o sale de los límites del repositorio."],
-    'path-inline-reference': ['The rejected reference is in an inline code span. Its position counts visible code spans in document order, excluding fenced examples and hidden comments.', 'La referencia rechazada está en un fragmento de código en línea. Su posición cuenta los fragmentos visibles en orden, excluyendo ejemplos delimitados y comentarios ocultos.'],
-    'path-prose-reference': ['The rejected reference is a file-shaped prose citation. Its position counts visible file-shaped prose references, excluding links and already classified code spans.', 'La referencia rechazada es una cita con forma de archivo en el texto. Su posición cuenta las citas visibles con forma de archivo, excluyendo enlaces y fragmentos ya clasificados.'],
-    'path-link-reference': ['The rejected reference is a relative Markdown file destination. Its position counts visible Markdown destinations in document order.', 'La referencia rechazada es un destino relativo de archivo en Markdown. Su posición cuenta los destinos visibles en orden.'],
+    'path-inline-reference': ['The rejected reference is in an inline code span. Its position counts visible code spans outside already validated Path / Change rows, excluding fenced examples and hidden comments.', 'La referencia rechazada está en un fragmento de código en línea. Su posición cuenta los fragmentos visibles fuera de las filas ya validadas de Path / Change, excluyendo ejemplos delimitados y comentarios ocultos.'],
+    'path-prose-reference': ['The rejected reference is a file-shaped prose citation. Its position counts visible file-shaped prose references outside validated Path / Change rows, excluding link destinations and already classified code spans.', 'La referencia rechazada es una cita con forma de archivo en el texto. Su posición cuenta las citas visibles fuera de las filas validadas de Path / Change, excluyendo destinos de enlaces y fragmentos ya clasificados.'],
+    'path-link-reference': ['The rejected reference is a relative Markdown file destination. Its position counts actual Markdown destinations outside already validated Path / Change rows.', 'La referencia rechazada es un destino relativo de archivo en Markdown. Su posición cuenta los destinos reales fuera de las filas ya validadas de Path / Change.'],
     'path-reference-unsafe': ['The reference violates the existing normalized repository-path spelling rules.', 'La referencia incumple las reglas existentes de escritura normalizada de rutas del repositorio.'],
     'path-reference-blocked': ['The immutable inventory blocks this reference or one of its ancestors; symbolic links and submodules cannot prove regular repository content.', 'El inventario inmutable bloquea la referencia o uno de sus antecesores; los enlaces simbólicos y submódulos no demuestran contenido regular del repositorio.'],
     'path-reference-missing': ['The reference is absent from the immutable inventory and exact proposed-file declarations. Cite a real artifact or declare the intended new file in Path / Change.', 'La referencia no está en el inventario inmutable ni en las declaraciones exactas de archivos propuestos. Cita un artefacto real o declara el nuevo archivo previsto en Path / Change.'],
@@ -91783,6 +91783,7 @@ exports.reservedSddCaseIds = reservedSddCaseIds;
 exports.validateSddDraftConsistency = validateSddDraftConsistency;
 const pre_branch_sdd_1 = __nccwpck_require__(34730);
 const sdd_repository_reference_1 = __nccwpck_require__(17791);
+const sdd_visible_references_1 = __nccwpck_require__(71766);
 const CASE = /\b(?:[A-Za-z][A-Za-z0-9]*-)+C\d+\b/gu;
 const CASE_ID = /^(?:[A-Za-z][A-Za-z0-9]*-)+C\d+$/u;
 const REQUIREMENT_ID = /^[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)+$/u;
@@ -91849,7 +91850,7 @@ function section(source, number, reason) {
     const end = sections.find(heading => heading.index > start.index)?.index ?? source.length;
     return source.slice(start.index + start[0].length, end);
 }
-function table(source, number, headers, reason) {
+function table(source, number, headers, reason, rowSources) {
     const lines = section(source, number, reason).split('\n');
     const found = [];
     for (let index = 0; index < lines.length; index++) {
@@ -91870,6 +91871,7 @@ function table(source, number, headers, reason) {
             if (row.some(cell => !cell))
                 return fail(reason, { detail: 'table-empty-cell', section: number, row: rows.length + 1 });
             rows.push(row);
+            rowSources?.add(lines[index]);
         }
         if (!rows.length)
             return fail(reason, { detail: 'table-empty', section: number, observed: 0 });
@@ -92025,7 +92027,8 @@ function validateSddDraftConsistency(markdown, owners, inventory, sddPath) {
     validatePaths(source, inventory, sddPath);
 }
 function validatePaths(source, inventory, sddPath) {
-    const rows = table(source, 15, ['Path', 'Change'], 'repository-path');
+    const declarationRows = new Set();
+    const rows = table(source, 15, ['Path', 'Change'], 'repository-path', declarationRows);
     const expectedChange = inventory.files.has(sddPath) ? 'update' : 'create';
     if (!rows.some(([file, change]) => file === sddPath && change === expectedChange))
         fail('repository-path', { detail: 'owner-path', section: 15 });
@@ -92049,6 +92052,14 @@ function validatePaths(source, inventory, sddPath) {
             fail('repository-path', { detail: 'path-operation', section: 15, row: seen.size });
     }
     const referenceIndex = (0, sdd_repository_reference_1.buildSddReferenceIndex)(inventory, proposed);
+    // CommonMark replaces NUL with U+FFFD. Never let that normalization establish
+    // another repository identity from unsafe visible source spelling.
+    if (source.includes('\0'))
+        fail('repository-path', { detail: 'path-reference', section: 0 }, [{ detail: 'path-reference-unsafe', section: 0 }]);
+    // These exact two-cell rows have already received strict declaration checks.
+    // Do not reinterpret their file identities as prose suffixes or Markdown links.
+    const referenceSource = source.split('\n').map(line => declarationRows.has(line) ? ' '.repeat(line.length) : line).join('\n');
+    const references = (0, sdd_visible_references_1.readSddVisibleReferences)(referenceSource);
     const reject = (origin, ordinal, detail) => fail('repository-path', { detail: 'path-reference', section: 0 }, [{ detail: origin, section: 0, row: ordinal }, { detail, section: 0 }]);
     const check = (file, origin, ordinal, directory = false) => {
         if (!(0, sdd_repository_reference_1.isSafeSddRepositoryPath)(file))
@@ -92063,9 +92074,9 @@ function validatePaths(source, inventory, sddPath) {
     };
     // Relative Markdown file links resolve against the selected SDD, never the current checkout.
     let linkOrdinal = 0;
-    for (const match of source.matchAll(/\]\(([^\s)]+)\)/gu)) {
+    for (const destination of references.destinations) {
         linkOrdinal++;
-        const href = match[1].split(/[?#]/u)[0];
+        const href = destination.split(/[?#]/u)[0];
         if (!href || /^(?:[a-z][a-z0-9+.-]*:|\/)/iu.test(href))
             continue;
         let decoded;
@@ -92091,18 +92102,29 @@ function validatePaths(source, inventory, sddPath) {
         check(parts.join('/'), 'path-link-reference', linkOrdinal, directory);
     }
     let inlineOrdinal = 0;
-    const prose = source.replace(/`([^`\n]+)`/gu, (span, value, offset) => {
-        inlineOrdinal++;
-        if (!value.includes('/'))
-            return span;
-        if ((0, sdd_repository_reference_1.isSddNonFileNotation)(value, (0, sdd_repository_reference_1.sddReferencePrefix)(source, offset), referenceIndex))
-            return ' '.repeat(span.length);
-        if (!/\s/u.test(value)) {
-            check(value.replace(/\/$/u, ''), 'path-inline-reference', inlineOrdinal, value.endsWith('/'));
-            return ' '.repeat(span.length);
+    let text = '';
+    let context = '';
+    for (const part of references.parts) {
+        if (part.kind === 'text') {
+            text += part.value;
+            context = (0, sdd_repository_reference_1.appendSddReferenceContext)(context, part.value);
+            continue;
         }
-        return span;
-    }).replace(/\]\([^\s)]+\)/gu, ']()').replace(/[a-z][a-z0-9+.-]*:\/\/[^\s)>]+/giu, '');
+        inlineOrdinal++;
+        const value = part.value;
+        const prefix = (0, sdd_repository_reference_1.sddReferencePrefix)(context, context.length);
+        context = '`'; // A prior code span cannot become the next value's URL/File label.
+        if (!value.includes('/') || (0, sdd_repository_reference_1.isSddNonFileNotation)(value, prefix, referenceIndex)) {
+            text += ' '.repeat(value.length + 2);
+        }
+        else if (!/\s/u.test(value) || (0, sdd_repository_reference_1.isSddFileRole)(prefix) || (0, sdd_repository_reference_1.isKnownSddRepositoryReference)(value, referenceIndex)) {
+            check(value.replace(/\/$/u, ''), 'path-inline-reference', inlineOrdinal, value.endsWith('/'));
+            text += ' '.repeat(value.length + 2);
+        }
+        else
+            text += '`' + value + '`';
+    }
+    const prose = text.replace(/[a-z][a-z0-9+.-]*:\/\/[^\s)>]+/giu, '');
     let proseOrdinal = 0;
     for (const match of prose.matchAll(/(?<![\w./:@-])(@?[A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)+\.[A-Za-z0-9]+)(?![\w/-])/gu)) {
         proseOrdinal++;
@@ -92124,7 +92146,7 @@ function uniqueIdentifiers(values, pattern, reason, section) {
 /***/ }),
 
 /***/ 17791:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
@@ -92132,8 +92154,12 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.isSafeSddRepositoryPath = isSafeSddRepositoryPath;
 exports.buildSddReferenceIndex = buildSddReferenceIndex;
 exports.hasBlockedSddAncestor = hasBlockedSddAncestor;
+exports.isSddFileRole = isSddFileRole;
+exports.isKnownSddRepositoryReference = isKnownSddRepositoryReference;
 exports.isSddNonFileNotation = isSddNonFileNotation;
 exports.sddReferencePrefix = sddReferencePrefix;
+exports.appendSddReferenceContext = appendSddReferenceContext;
+const sdd_visible_references_1 = __nccwpck_require__(71766);
 /** Keep the existing repository spelling contract; protocol recognition never rewrites it. */
 function isSafeSddRepositoryPath(value) {
     return value.length > 0 && !/[\\:*?"<>|\p{Cc}]/u.test(value)
@@ -92179,6 +92205,14 @@ function mediaNotation(value) {
 function urlRole(prefix) {
     return /\b(?:(?:URL|URI)(?:[ \t]+path)?|HTTP(?:[ \t]+(?:endpoint|route))?)\s*[:=]?\s*$/iu.test(prefix.replace(/[*_]/gu, ''));
 }
+function isSddFileRole(prefix) {
+    return /\b(?:file|path|archivo|ruta)\s*[:=]?\s*$/iu.test(prefix.replace(/[*_]/gu, ''));
+}
+function isKnownSddRepositoryReference(value, index) {
+    const path = value.replace(/\/$/u, '');
+    return index.inventory.files.has(path) || index.inventory.directories.has(path) || index.proposed.has(path)
+        || index.futureDirectories.has(path) || hasBlockedSddAncestor(path, index);
+}
 /**
  * Not a protocol validator or an existence grant. Explicit Markdown destinations
  * and Path/Change rows bypass this heuristic and always receive strict checks.
@@ -92186,14 +92220,14 @@ function urlRole(prefix) {
 function isSddNonFileNotation(value, prefix, index) {
     if (/^(?:[a-z][a-z0-9+.-]*:|\/)/iu.test(value))
         return true;
-    const path = value.replace(/\/$/u, '');
-    if (index.inventory.files.has(path) || index.inventory.directories.has(path) || index.proposed.has(path)
-        || index.futureDirectories.has(path) || hasBlockedSddAncestor(path, index))
+    if (isKnownSddRepositoryReference(value, index))
         return false;
     if (!/\s|[\p{Cc}]/u.test(value) && urlRole(prefix))
         return true;
-    if (/\b(?:file|path|archivo|ruta)\s*[:=]?\s*$/iu.test(prefix.replace(/[*_]/gu, '')))
+    if (isSddFileRole(prefix))
         return false;
+    if ((0, sdd_visible_references_1.isSddMarkdownLinkExample)(value))
+        return true;
     if (mediaNotation(value))
         return true;
     if (/^(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|TRACE|CONNECT)\s+\S+$/u.test(value))
@@ -92213,6 +92247,11 @@ function sddReferencePrefix(source, offset) {
         end--;
     const tail = source.slice(Math.max(0, end - 16), end);
     return tail.slice(tail.lastIndexOf('\n') + 1);
+}
+/** Keep streaming label context bounded, including a separator across formatted text leaves. */
+function appendSddReferenceContext(previous, value) {
+    const combined = previous + value;
+    return sddReferencePrefix(combined, combined.length) + (/[ \t*_: =]$/u.test(combined) ? ' ' : '');
 }
 
 
@@ -92291,6 +92330,54 @@ function normalizeSddValidationDiagnostic(input) {
 }
 function boundedInteger(value, minimum) {
     return typeof value === 'number' && Number.isSafeInteger(value) && value >= minimum && value <= 100000;
+}
+
+
+/***/ }),
+
+/***/ 71766:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.readSddVisibleReferences = readSddVisibleReferences;
+exports.isSddMarkdownLinkExample = isSddMarkdownLinkExample;
+const commonmark_1 = __nccwpck_require__(86076);
+/** Pure syntax projection; callers first remove the gate's hidden comments/fences. */
+function readSddVisibleReferences(source) {
+    const destinations = [];
+    const parts = [];
+    const walker = new commonmark_1.Parser().parse(source).walker();
+    let event;
+    while ((event = walker.next())) {
+        const { node, entering } = event;
+        if (entering) {
+            if (node.type === 'link' || node.type === 'image')
+                destinations.push(node.destination);
+            if (node.type === 'code')
+                parts.push({ kind: 'code', value: node.literal });
+            if (['text', 'html_inline', 'html_block'].includes(node.type))
+                parts.push({ kind: 'text', value: node.literal });
+            if (node.type === 'softbreak' || node.type === 'linebreak')
+                parts.push({ kind: 'text', value: '\n' });
+        }
+        else if (['paragraph', 'heading', 'item'].includes(node.type))
+            parts.push({ kind: 'text', value: '\n' });
+    }
+    return { destinations, parts };
+}
+/** A whole literal link/image/reference definition is illustrative syntax, never an existence grant. */
+function isSddMarkdownLinkExample(value) {
+    if (!/^!?\[/u.test(value))
+        return false;
+    const document = new commonmark_1.Parser().parse(value);
+    const paragraph = document.firstChild;
+    if (!paragraph)
+        return true; // Valid reference definitions have no rendered block.
+    const child = paragraph.firstChild; // A rendered CommonMark paragraph is nonempty.
+    return paragraph.type === 'paragraph' && paragraph === document.lastChild
+        && (child.type === 'link' || child.type === 'image') && child === paragraph.lastChild;
 }
 
 

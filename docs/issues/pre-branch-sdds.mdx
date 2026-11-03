@@ -87,6 +87,17 @@ a relative Markdown link or an explicit Path/Change row. Relative Markdown
 destinations and Path/Change rows always receive strict repository checks,
 regardless of whether their spelling resembles protocol notation.
 
+A whole link, image or reference-definition example inside code is illustrative
+Markdown, rather than a real destination. For example, writing the literal
+`` `[example](../missing.md)` `` does not claim that its example target exists.
+Actual links, image destinations and used reference-style links remain strict.
+Reference structure uses the existing Markdown parser, including longer backtick
+delimiters and multiline code. It checks the operative URI against immutable
+files/directories or exact proposed artifacts; normalization cannot establish
+existence. Visible NUL is rejected before it can alias a replacement-character
+filename. A file label or exact known/blocked path retains repository checking,
+including space-bearing names.
+
 A future directory can be cited only when it is an exact ancestor of a validated
 new-file `create` row. For example, declaring a new `frontend/src/domain/entry.ts`
 allows a citation of `frontend/src/domain/`. It does not create that directory,
@@ -125,11 +136,15 @@ or a relative Markdown destination, with a **Visible reference occurrence**.
 This is a 1-based ordinal within that category, not a source line or table row.
 Inline positions count visible code spans; prose positions count file-shaped
 matches after classified spans and links are removed; link positions count
-visible Markdown destinations, including external ones. Hidden comments and
+actual parsed destinations, including external and empty same-document links.
+Unused reference definitions add no visible destination. Hidden comments and
 fenced examples are excluded. A separate fixed explanation distinguishes unsafe
 spelling, blocked ancestry, missing evidence or a file used as a directory.
 The rejected path/text remains private; these facts locate the first rejection
 without retaining or exposing the failed draft.
+Reference ordinals also exclude the already validated Path/Change data rows;
+those declarations have their own table-row diagnostics. They are not parsed a
+second time as prose fragments or link syntax, including space-bearing file names.
 
 An illustrative failure view is:
 

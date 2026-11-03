@@ -1,8 +1,9 @@
 import type { SddValidationFact } from './sdd_validation_diagnostic';
 import { SddDraftFormatFailure } from './pre_branch_sdd';
-import { buildSddReferenceIndex, hasBlockedSddAncestor, isSafeSddRepositoryPath as safePath,
+import { appendSddReferenceContext, buildSddReferenceIndex, hasBlockedSddAncestor, isKnownSddRepositoryReference, isSddFileRole, isSafeSddRepositoryPath as safePath,
   isSddNonFileNotation, sddReferencePrefix, type SddRepositoryInventory } from './sdd_repository_reference';
 export type { SddRepositoryInventory } from './sdd_repository_reference';
+import { readSddVisibleReferences } from './sdd_visible_references';
 
 export type SddConsistencyReason = 'case-identity' | 'case-budget' | 'requirement-mapping' | 'repository-path';
 export interface SddOwnerDocument { readonly path: string; readonly markdown: string }
@@ -75,7 +76,7 @@ function section(source: string, number: Exclude<SddValidationFact['section'], 0
   return source.slice(start.index + start[0].length, end);
 }
 
-function table(source: string, number: Exclude<SddValidationFact['section'], 0>, headers: readonly string[], reason: SddConsistencyReason): string[][] {
+function table(source: string, number: Exclude<SddValidationFact['section'], 0>, headers: readonly string[], reason: SddConsistencyReason, rowSources?: Set<string>): string[][] {
   const lines = section(source, number, reason).split('\n');
   const found: string[][][] = [];
   for (let index = 0; index < lines.length; index++) {
@@ -91,6 +92,7 @@ function table(source: string, number: Exclude<SddValidationFact['section'], 0>,
       if (row.length !== headers.length) return fail(reason, { detail: 'table-columns', section: number, row: rows.length + 1, expected: headers.length, observed: row.length });
       if (row.some(cell => !cell)) return fail(reason, { detail: 'table-empty-cell', section: number, row: rows.length + 1 });
       rows.push(row);
+      rowSources?.add(lines[index]);
     }
     if (!rows.length) return fail(reason, { detail: 'table-empty', section: number, observed: 0 });
     found.push(rows);
@@ -230,7 +232,8 @@ export function validateSddDraftConsistency(
 }
 
 function validatePaths(source: string, inventory: SddRepositoryInventory, sddPath: string): void {
-  const rows = table(source, 15, ['Path', 'Change'], 'repository-path');
+  const declarationRows = new Set<string>();
+  const rows = table(source, 15, ['Path', 'Change'], 'repository-path', declarationRows);
   const expectedChange = inventory.files.has(sddPath) ? 'update' : 'create';
   if (!rows.some(([file, change]) => file === sddPath && change === expectedChange)) fail('repository-path', { detail: 'owner-path', section: 15 });
   const proposed = new Set<string>();
@@ -247,6 +250,13 @@ function validatePaths(source: string, inventory: SddRepositoryInventory, sddPat
     } else if (!['update', 'reference'].includes(change) || !inventory.files.has(file)) fail('repository-path', { detail: 'path-operation', section: 15, row: seen.size });
   }
   const referenceIndex = buildSddReferenceIndex(inventory, proposed);
+  // CommonMark replaces NUL with U+FFFD. Never let that normalization establish
+  // another repository identity from unsafe visible source spelling.
+  if (source.includes('\0')) fail('repository-path', { detail: 'path-reference', section: 0 }, [{ detail: 'path-reference-unsafe', section: 0 }]);
+  // These exact two-cell rows have already received strict declaration checks.
+  // Do not reinterpret their file identities as prose suffixes or Markdown links.
+  const referenceSource = source.split('\n').map(line => declarationRows.has(line) ? ' '.repeat(line.length) : line).join('\n');
+  const references = readSddVisibleReferences(referenceSource);
   type Origin = 'path-inline-reference' | 'path-prose-reference' | 'path-link-reference';
   const reject = (origin: Origin, ordinal: number, detail: 'path-reference-unsafe' | 'path-reference-blocked' | 'path-reference-missing' | 'path-reference-directory') =>
     fail('repository-path', { detail: 'path-reference', section: 0 },
@@ -260,9 +270,9 @@ function validatePaths(source: string, inventory: SddRepositoryInventory, sddPat
   };
   // Relative Markdown file links resolve against the selected SDD, never the current checkout.
   let linkOrdinal = 0;
-  for (const match of source.matchAll(/\]\(([^\s)]+)\)/gu)) {
+  for (const destination of references.destinations) {
     linkOrdinal++;
-    const href = match[1].split(/[?#]/u)[0];
+    const href = destination.split(/[?#]/u)[0];
     if (!href || /^(?:[a-z][a-z0-9+.-]*:|\/)/iu.test(href)) continue;
     let decoded: string;
     try { decoded = decodeURIComponent(href); } catch {
@@ -281,16 +291,22 @@ function validatePaths(source: string, inventory: SddRepositoryInventory, sddPat
     check(parts.join('/'), 'path-link-reference', linkOrdinal, directory);
   }
   let inlineOrdinal = 0;
-  const prose = source.replace(/`([^`\n]+)`/gu, (span: string, value: string, offset: number) => {
+  let text = '';
+  let context = '';
+  for (const part of references.parts) {
+    if (part.kind === 'text') { text += part.value; context = appendSddReferenceContext(context, part.value); continue; }
     inlineOrdinal++;
-    if (!value.includes('/')) return span;
-    if (isSddNonFileNotation(value, sddReferencePrefix(source, offset), referenceIndex)) return ' '.repeat(span.length);
-    if (!/\s/u.test(value)) {
+    const value = part.value;
+    const prefix = sddReferencePrefix(context, context.length);
+    context = '`'; // A prior code span cannot become the next value's URL/File label.
+    if (!value.includes('/') || isSddNonFileNotation(value, prefix, referenceIndex)) {
+      text += ' '.repeat(value.length + 2);
+    } else if (!/\s/u.test(value) || isSddFileRole(prefix) || isKnownSddRepositoryReference(value, referenceIndex)) {
       check(value.replace(/\/$/u, ''), 'path-inline-reference', inlineOrdinal, value.endsWith('/'));
-      return ' '.repeat(span.length);
-    }
-    return span;
-  }).replace(/\]\([^\s)]+\)/gu, ']()').replace(/[a-z][a-z0-9+.-]*:\/\/[^\s)>]+/giu, '');
+      text += ' '.repeat(value.length + 2);
+    } else text += '`' + value + '`';
+  }
+  const prose = text.replace(/[a-z][a-z0-9+.-]*:\/\/[^\s)>]+/giu, '');
   let proseOrdinal = 0;
   for (const match of prose.matchAll(/(?<![\w./:@-])(@?[A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)+\.[A-Za-z0-9]+)(?![\w/-])/gu)) {
     proseOrdinal++;

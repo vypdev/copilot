@@ -1,6 +1,6 @@
 # SDD Repository References and Protocol Notation
 
-- Status: Implemented contract — remote acceptance and release adoption pending
+- Status: Implemented contract — release adoption pending
 - Date: 2026-11-03
 - Catalog capability ID: `issue-start-and-sdd-readiness`
 - Owners: Copilot maintainers
@@ -48,6 +48,8 @@ Primary references: [RFC 3986 relative references](https://www.rfc-editor.org/rf
 [RFC 6838 media names](https://www.rfc-editor.org/rfc/rfc6838#section-4.2),
 [IANA top-level media types](https://www.iana.org/assignments/top-level-media-types)
 and [Node 24 package subpaths](https://nodejs.org/docs/latest-v24.x/api/packages.html#subpath-exports).
+Reference structure follows the project's existing [CommonMark 0.31.2 parser](https://spec.commonmark.org/0.31.2/#code-spans),
+including code-span precedence over link syntax.
 The classifier does not validate complete protocols or query those registries.
 Historic rationale is unknown; this is a bounded correction, not an as-built
 justification. An initially malformed local fixture was discarded before scoring
@@ -73,7 +75,7 @@ wildcard, directory declaration or grant to write application source.
 | SREF-05 | MUST preserve immutable evidence, owner bytes, publication/freshness and bounded repair. |
 | SREF-06 | MUST document ambiguity and prove positive/negative controls across native platforms. |
 
-No new parser for all Markdown syntax, URL resolver, source executor, filesystem
+No custom Markdown parser, URL resolver, source executor, filesystem
 mutation, consumer framework dependency or model-specific workaround is added.
 Existing case identity, reciprocal mappings, per-area budgets, reserved owner IDs,
 safe path spelling, catalogue ownership and selected-SDD declarations remain
@@ -98,6 +100,11 @@ Validate section 15 before building reference facts. Its `update`/`reference`
 rows MUST identify immutable regular files; `create` MUST remain an exact safe
 new leaf without existing/blocked parents or overlap. No notation exemption is
 applied to these rows or to relative Markdown destinations.
+After declaration checks, mask only those exact validated two-cell data rows from
+reference parsing. Their files have already been checked; do not reinterpret a
+space-bearing filename as a shorter prose suffix or embedded link syntax. Other
+section-15 prose and all other reference content remain checked. Declaration
+failures retain their own table data-row coordinates.
 
 For visible inline spans and the existing file-shaped prose scan, use this
 precedence after existing scheme/absolute-address handling:
@@ -107,11 +114,13 @@ precedence after existing scheme/absolute-address handling:
 2. An immediate same-line URL/URI label (optionally `path`), or HTTP label
    (optionally `endpoint`/`route`), gives a single value a non-file role.
 3. An explicit File/Path/Archivo/Ruta label retains repository interpretation.
-4. Recognize the reviewed eleven IANA media top-level names, including haptics,
+4. Whole literal link/image/reference-definition examples inside code are syntax,
+   not actual destinations. A file label or exact known/blocked identity still wins.
+5. Recognize the reviewed eleven IANA media top-level names, including haptics,
    with restricted subtype spelling, structured suffixes, parameters or ranges;
    known uppercase HTTP methods followed by one address; scoped module/subpath
    syntax; and extensionless slash alternatives under an unknown repository root.
-5. Otherwise retain strict checking for file-shaped paths, known-root references
+6. Otherwise retain strict checking for file-shaped paths, known-root references
    and explicit trailing-slash directories. Do not normalize unsafe file spelling.
 
 This is a role heuristic, not universal inference: identical relative-URL and file
@@ -121,16 +130,28 @@ extensionless/MIME/module-shaped file citations SHOULD use an explicit file labe
 a relative Markdown destination or Path/Change row. Those explicit origins always
 receive repository checks. A URL label does not certify a missing file exists.
 
-Visible spans exclude hidden comments and fenced examples. Validated/classified
-spans are masked from the prose scan to prevent reclassification; command spans
-can still contain actual file citations. Existing scheme/absolute-address behavior
-is preserved. This is not a claim that the legacy scan parses all Markdown.
+Keep the existing host comment/fence visibility filter and strict table parser.
+Then project reference structure with the existing pure CommonMark dependency,
+without a second hand-written delimiter parser. Real links, images and used
+reference-style destinations are checked; code-span examples are not links.
+Code values follow Markdown's delimiter, space and newline semantics. Validated/
+classified spans are masked from the prose scan; unclassified command spans and
+visible HTML literals can still contain actual file citations. Exact known paths
+and explicit file labels remain strict even when the value contains spaces.
+Keep label context bounded across formatted text leaves, preserve a separator,
+and reset it after code or line breaks so an earlier URL role cannot leak forward.
+Existing scheme/absolute-address behavior is preserved. This does not replace
+the complete gate's visibility/table grammar with a new Markdown acceptance gate.
 
 Future directories are the exact nonempty ancestor paths of validated `create`
 leaves. Existing directories also qualify. Siblings and arbitrary future roots do
 not. A trailing slash requires a directory, not a regular/proposed file. Relative
-Markdown destinations keep existing source-directory resolution, query/fragment
-handling and percent decoding; traversal escaping the repository stays blocked.
+Markdown destinations use their operative CommonMark URI, source-directory
+resolution, query/fragment handling and percent decoding; traversal escaping the
+repository stays blocked. A literal percent spelling can resolve only to its
+actual immutable filename; invalid UTF-8 escapes remain rejected. Reject visible
+NUL before the parser can replace it and alias another filename. No parser
+normalization establishes source existence or bypasses blocked ancestry.
 
 ## 7. User-facing configuration
 
@@ -143,6 +164,9 @@ snapshot remains operation-owned; no current-checkout or model existence fallbac
 ## 8. Clean Architecture design
 
 The pure domain reference module owns spelling, notation and constructive ancestry.
+Its syntax projection reuses the CommonMark dependency already used in the domain;
+it returns only destinations and ordered text/code parts, without rendering HTML,
+fetching links, inspecting files or mutating a document/provider.
 The consistency validator composes it after strict declarations. Existing
 application orchestration passes normalized diagnostics to the bounded repair and
 localized renderer. Infrastructure still loads immutable Git evidence and verifies
@@ -185,8 +209,11 @@ The reference is absent from the immutable inventory and proposed declarations.
 Three origin codes distinguish inline code, file-shaped prose and Markdown link
 destinations. Their bounded `row` fact is rendered as **Visible reference occurrence**,
 not a table-row or raw line coordinate. Inline counts all visible code spans;
-prose counts file-shaped matches after masking classified spans/links; links count
-all visible Markdown destinations, including external ones. Positions are 1-based
+prose counts file-shaped matches after masking classified spans/destinations; links
+count actual parsed destinations, including external and empty same-document links.
+Unused reference definitions do not create a rendered destination. All three
+reference ordinals exclude the already validated Path/Change data rows, which
+have their own strict diagnostics. Positions are 1-based
 within that origin, not interchangeable across origins or source lines. Separate
 closed causes identify unsafe spelling, blocked ancestry, absent evidence or a
 file incorrectly used as a directory. Unchanged legacy path facts remain present.
@@ -234,7 +261,7 @@ rewriting issue history or disabling strict publication checks.
 
 ## 14. Testing strategy
 
-Reserve **94 distinct new deterministic cases**, excluding existing suites and
+Reserve **127 distinct new deterministic cases**, excluding existing suites and
 dynamic localization matrices. Each row is a disjoint risk allocation:
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
@@ -248,9 +275,11 @@ dynamic localization matrices. Each row is a disjoint risk allocation:
 | Label/index boundaries | 3 | No cross-line URL inheritance, immutable ancestry and bounded suffix |
 | Additional diagnostics/security | 14 | Ordinals, causes, blocked precedence, decoding/escape, exact facts, Unicode/control spelling, incomplete media type and deeply segmented untrusted citation |
 | Public link-visibility boundary | 4 | HTML, backtick, tilde and mixed hidden destinations before a visible failure; existing filtering must precede counting |
+| Literal inline-link boundaries | 14 | Delimiter lengths/escapes, image examples, actual link ordinals, explicit file roles, unknown-directory rejection, spacing and adjacent examples |
+| Parsed-reference safety and context | 19 | Multiline code, reference/image links, titles, URI-contained backticks, HTML evidence, NUL alias prevention, percent filenames, empty destinations, non-whole examples, definitions, space-bearing paths, hard breaks and different Markdown blocks |
 | Real Git integration | 8 | Update/companion notation, future parents, missing files and strict declarations; owner/worktree/remote intact |
 | Localized product diagnostics | 4 | Inline/link origins × English/Spanish from actual validator failures |
-| **Total** | **94** | No double counting |
+| **Total** | **127** | No double counting |
 
 Run existing format/consistency/diagnostic, draft-repair/publication/freshness and
 architecture tests too. Keep global/module budgets and **100% modified executable
@@ -262,7 +291,8 @@ No new LLM quality corpus is needed for this deterministic validator correction.
 ## 15. Documentation work
 
 Update the pre-branch SDD guide with notation examples, ambiguous file guidance,
-strict origins, constructive-directory semantics and safe occurrence diagnostics.
+strict origins, literal link examples versus actual destinations, constructive-
+directory semantics and safe occurrence diagnostics.
 Link this companion from the owning gate; update catalog evidence and generated
 index. Existing setup, permission, retry and migration instructions remain valid
 because their inputs/state do not change. Do not advise root-absolute URL rewrites

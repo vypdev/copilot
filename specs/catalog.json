@@ -1833,7 +1833,8 @@
         "src/infrastructure/agents/agent_source_snapshot_git.ts",
         "src/infrastructure/agents/agent_source_snapshot_workspace.ts",
         "src/infrastructure/agents/agent_source_snapshot_integrity.ts",
-        "src/domain/sdd_repository_reference.ts"
+        "src/domain/sdd_repository_reference.ts",
+        "src/domain/sdd_visible_references.ts"
       ],
       "tests": [
         "src/domain/__tests__/issue_workflow_runtime_policy.test.ts",
