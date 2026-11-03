@@ -2523,3 +2523,19 @@ is additional to the 67 ordinary partition cases. Source/planner/application,
 adapter, presentation and integration tests plus current-head remote evidence
 are required before merge; independent application coverage is never proof that
 a live model reviewed every historical H3 file.
+
+### Resource classification and authority evidence — #847 (2026-11-03)
+
+The [resource/authority companion](./bugbot-resource-authority-evidence.md) requires
+verified content/effects and separate source-binding and human-proof reasoning.
+Nonpersonal entry availability does not authorize personal APIs or waive source
+access controls. The ordinary/framed prompt, benchmark and existing Python
+candidate verifier share one pure instruction; identity, history, finite source/
+traffic limits, freshness and publication remain unchanged. Its 18 distinct cases
+include 12 resource/scorer controls and six composition/identity contracts; native
+and model repetitions are separate evidence, not additional unique tests.
+
+The scoped corpus keeps the existing 174-case corpus and its references unchanged,
+with the 200-case per-invocation bound intact. The evidence retains actual baseline
+and candidate samples, failed gates and authored fixture corrections. Historical
+consumer root cause and release adoption remain separate claims.
