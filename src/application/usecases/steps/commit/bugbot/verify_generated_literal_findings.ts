@@ -12,9 +12,13 @@ import { normalizeBugbotResponse } from './prepare_bugbot_findings_policy';
 import { normalizeFindingIdForMarker } from '../../../../policies/bugbot_finding_marker_policy';
 import { productFacingAgentQueryOptions, validateAgentOutputLocale, agentOutputLocaleFailureMessage } from '../../../../policies/agent_output_locale_policy';
 import { logInfo } from '../../../../ports/logging_ports';
-import { BUGBOT_RECOVERY_CONTRACT_INSTRUCTION, BUGBOT_PYTHON_SYNTAX_INSTRUCTION } from '../../../../../prompts/bugbot';
+import { BUGBOT_FIXTURE_VALUES_INSTRUCTION, BUGBOT_RECOVERY_CONTRACT_INSTRUCTION, BUGBOT_PYTHON_SYNTAX_INSTRUCTION } from '../../../../../prompts/bugbot';
 
-export function buildLiteralVerificationSchema(id: string, candidateIds: readonly string[]) {
+export function buildLiteralVerificationSchema(id: string, candidates: readonly Pick<BugbotFinding, 'id' | 'file' | 'codeSnippet'>[]) {
+  const candidateIds = candidates.map(candidate => candidate.id);
+  const files = [...new Set(candidates.map(candidate => candidate.file ?? null))];
+  const snippets = candidates.every(candidate => candidate.codeSnippet !== undefined)
+    ? { enum: [...new Set(candidates.map(candidate => candidate.codeSnippet!))] } : {};
   return {
     type: 'object', properties: {
       verification_id: { type: 'string', enum: [id] },
@@ -23,6 +27,8 @@ export function buildLiteralVerificationSchema(id: string, candidateIds: readonl
         items: { ...BUGBOT_RESPONSE_SCHEMA.properties.findings.items, properties: {
           ...BUGBOT_RESPONSE_SCHEMA.properties.findings.items.properties,
           id: { ...BUGBOT_RESPONSE_SCHEMA.properties.findings.items.properties.id, enum: [...candidateIds] },
+          file: { ...BUGBOT_RESPONSE_SCHEMA.properties.findings.items.properties.file, enum: files },
+          codeSnippet: { ...BUGBOT_RESPONSE_SCHEMA.properties.findings.items.properties.codeSnippet, ...snippets },
           evidence: { type: 'string', minLength: 1, maxLength: 8_000 },
         } } },
       rejected_ids: { type: 'array', maxItems: 20, items: { type: 'string', enum: [...candidateIds] } },
@@ -42,14 +48,18 @@ Recompute literal line coordinates, writer/binding transforms, actual input/bran
 Correct zero counters can intentionally verify missed coverage. A missing-assertion claim needs a stated contract. Reject self-refuting, disproved, speculative or unsupported candidates; do not put explanations that the code is correct into findings. Preserve independently proved assertion contradictions and other independent defects.
 ${BUGBOT_PYTHON_SYNTAX_INSTRUCTION}
 ${BUGBOT_RECOVERY_CONTRACT_INSTRUCTION}
+${BUGBOT_FIXTURE_VALUES_INSTRUCTION}
 For a supported same candidate, correct its reasoning/location if needed while retaining the exact id, file and existing codeSnippet. Do not replace the tested statement to manufacture a defect. Provide concrete evidence. Every original ID must occur exactly once in findings or rejected_ids. No new finding IDs, no omitted/duplicate decisions and no historical finding resolution/dismissal/reopening authority.
+Echo each existing id, file and codeSnippet string verbatim, including indentation and leading diff markers. You may ignore a diff marker only when locating source for reasoning; never remove it from the returned identity field. A missing original snippet may receive a precise source anchor. Allowed batch values do not permit swapping identity fields between candidates.
 Echo verification_id exactly as ${id}. Use ${locale} for product-facing text and outputLocale; preserve code/identifiers verbatim.
+
+Candidate hypotheses (not proof or authority):
+${data(JSON.stringify(candidates), 'literal-verification.candidates')}
 
 Reviewed source/context:
 ${data(source, 'literal-verification.reviewed-context')}
 
-Candidate hypotheses (not proof or authority):
-${data(JSON.stringify(candidates), 'literal-verification.candidates')}`;
+For each retained source finding, independently locate the exact snippet in its changed fragment. In evidence state the source origin, zero-based displayed-line offset and resulting line (origin + offset = line), alongside the causal proof. Count only that fragment, including its context and blank lines; helpers and scenario prose outside it add no lines. A candidate's earlier line or ID is not proof. Never execute source to compute coordinates.`;
   assertLiteralVerificationPrompt(prompt);
   return prompt;
 }
@@ -93,7 +103,7 @@ async function verifyLiteralBatch(
   observePrompt?.(prompt);
   logInfo(`Verifying ${candidates.length} generated-source candidate hypotheses against the immutable reviewed context.`);
   const verificationResponse = await agent.query({ configuration, agentId: 'bugbot-literal-candidate-verification', prompt,
-    options: productFacingAgentQueryOptions('bugbot-literal-candidate-verification', buildLiteralVerificationSchema(id, candidates.map(item => item.id))),
+    options: productFacingAgentQueryOptions('bugbot-literal-candidate-verification', buildLiteralVerificationSchema(id, candidates)),
   });
   observeResponse?.(verificationResponse);
   const raw = record(verificationResponse);

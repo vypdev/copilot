@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { evaluateBugbotBenchmark, type BugbotBenchmarkCorpus } from '../bugbot_benchmark';
 import { buildBugbotBenchmarkPrompt } from '../bugbot_benchmark_runner';
 import { buildLiteralVerificationPrompt } from '../../application/usecases/steps/commit/bugbot/verify_generated_literal_findings';
-import { BUGBOT_RECOVERY_CONTRACT_INSTRUCTION, getBugbotPrompt } from '../../prompts/bugbot';
+import { BUGBOT_FIXTURE_VALUES_INSTRUCTION, BUGBOT_RECOVERY_CONTRACT_INSTRUCTION, getBugbotPrompt } from '../../prompts/bugbot';
 import { renderUntrustedField, UNTRUSTED_CONTENT_POLICY } from '../../domain/security/untrusted_content';
 
 const read = (path: string) => readFileSync(join(__dirname, '../../..', path), 'utf8');
@@ -19,6 +19,7 @@ it.each([undefined, '', ' \n\t', '\u0000\u0001'])('derives source-bound guidance
     projectContextInstruction: '', changeScopeInstruction: 'Review assigned code.', targetLocale: 'en-US',
     ignoreBlock: '', previousBlock: '', coverageBlock: '', diffBlock });
   expect(prompt.includes(BUGBOT_RECOVERY_CONTRACT_INSTRUCTION)).toBe((diffBlock ?? '').length > 0);
+  expect(prompt.includes(BUGBOT_FIXTURE_VALUES_INSTRUCTION)).toBe((diffBlock ?? '').length > 0);
   expect(prompt).toContain(renderUntrustedField(diffBlock ?? '', 'prompt.diffBlock', 70_000));
   expect(prompt.startsWith(UNTRUSTED_CONTENT_POLICY)).toBe(true);
   expect(prompt).toContain('withdraw the finding entirely, including low/info');
@@ -111,12 +112,13 @@ it('keeps private verdicts and replacements out of actual agent inputs', () => {
 });
 
 it('preserves all 152 prior corpus inputs and reference predictions', () => {
-  const previous = corpus.cases.filter(item => !item.id.startsWith('snapshot-recovery-'));
+  const previous = corpus.cases.slice(0, evidence.priorCorpus.cases);
+  const previousIds = new Set(previous.map(item => item.id));
   const references = JSON.parse(read('quality/bugbot/reference-predictions.v1.json'));
   expect(previous).toHaveLength(evidence.priorCorpus.cases);
   expect(hash(JSON.stringify(previous))).toBe(evidence.priorCorpus.decodedCasesSha256);
   expect(hash(JSON.stringify(Object.fromEntries(Object.entries(references.predictions)
-    .filter(([id]) => !id.startsWith('snapshot-recovery-')))))).toBe(evidence.priorCorpus.decodedReferencesSha256);
+    .filter(([id]) => previousIds.has(id)))))).toBe(evidence.priorCorpus.decodedReferencesSha256);
 });
 
 it('binds native observations to the independently authored fixed probe identity', () => {

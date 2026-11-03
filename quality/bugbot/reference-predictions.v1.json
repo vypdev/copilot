@@ -496,6 +496,84 @@
         "codeSnippet": "        shutil.rmtree(destination)",
         "confidence": 0.98
       }
+    ],
+    "fixture-values-db-file-parent": [],
+    "fixture-values-db-file-peer": [
+      {
+        "title": "New assertion contradicts the actual fixture result",
+        "file": "owned/test_fixture_values.py",
+        "line": 89,
+        "severity": "medium",
+        "category": "correctness",
+        "symbol": "test_file_source_peer",
+        "codeSnippet": "assert rejected is False",
+        "confidence": 0.98
+      }
+    ],
+    "fixture-values-db-directory-peer": [],
+    "fixture-values-db-directory-child": [
+      {
+        "title": "New assertion contradicts the actual fixture result",
+        "file": "owned/test_fixture_values.py",
+        "line": 105,
+        "severity": "medium",
+        "category": "correctness",
+        "symbol": "test_directory_source_child",
+        "codeSnippet": "assert rejected is False",
+        "confidence": 0.98
+      }
+    ],
+    "fixture-values-ids-default-asc": [],
+    "fixture-values-ids-default-inverted": [
+      {
+        "title": "New assertion contradicts the actual fixture result",
+        "file": "owned/test_fixture_values.py",
+        "line": 128,
+        "severity": "medium",
+        "category": "correctness",
+        "symbol": "test_default_id_alternate_order",
+        "codeSnippet": "assert result == (a.request_id, b.request_id)",
+        "confidence": 0.98
+      }
+    ],
+    "fixture-values-ids-override-asc": [],
+    "fixture-values-ids-override-inverted": [
+      {
+        "title": "New assertion contradicts the actual fixture result",
+        "file": "owned/test_fixture_values.py",
+        "line": 150,
+        "severity": "medium",
+        "category": "correctness",
+        "symbol": "test_overridden_id_alternate_order",
+        "codeSnippet": "assert result == (b.request_id, a.request_id)",
+        "confidence": 0.98
+      }
+    ],
+    "fixture-values-ids-default-desc": [],
+    "fixture-values-ids-desc-inverted": [
+      {
+        "title": "New assertion contradicts the actual fixture result",
+        "file": "owned/test_fixture_values.py",
+        "line": 172,
+        "severity": "medium",
+        "category": "correctness",
+        "symbol": "test_descending_alternate_order",
+        "codeSnippet": "assert result == (b.request_id, a.request_id)",
+        "confidence": 0.98
+      }
+    ],
+    "fixture-values-ids-filtered": [],
+    "fixture-values-ids-unfiltered": [
+      {
+        "title": "New assertion contradicts the actual fixture result",
+        "file": "owned/test_fixture_values.py",
+        "line": 196,
+        "severity": "medium",
+        "category": "correctness",
+        "symbol": "test_pending_alternate_query",
+        "codeSnippet": "assert result == (active.request_id,)",
+        "confidence": 0.98
+      }
     ]
   }
 }

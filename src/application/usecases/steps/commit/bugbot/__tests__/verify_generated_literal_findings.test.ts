@@ -17,7 +17,7 @@ function reply(request: FindingsQueryRequest, overrides: Record<string, unknown>
 }
 
 it('uses a closed, correlated schema without historical resolution authority', () => {
-  const schema = buildLiteralVerificationSchema('a'.repeat(64), ['one', 'two']);
+  const schema = buildLiteralVerificationSchema('a'.repeat(64), [candidate({ id: 'one' }), candidate({ id: 'two' })]);
   expect(schema.additionalProperties).toBe(false);
   expect(schema.required).toEqual(['verification_id', 'outputLocale', 'findings', 'rejected_ids']);
   expect(schema.properties.rejected_ids.items.enum).toEqual(['one', 'two']);
