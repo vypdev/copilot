@@ -2358,11 +2358,12 @@
       "status": "implemented",
       "scope": "Observe parent drift with one localized status card and transition-only notifications, then safely merge a parent branch into a linked working branch",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-30",
+      "lastVerified": "2026-11-03",
       "specs": [
         "specs/branch-synchronization-and-conflict-recovery.md",
         "specs/repository-verification-runtime-prerequisites.md",
-        "specs/repository-verification-setup-hooks.md"
+        "specs/repository-verification-setup-hooks.md",
+        "specs/branch-sync-publication-recovery.md"
       ],
       "workflows": [
         ".github/workflows/copilot_branch_sync.yml",
@@ -2455,7 +2456,11 @@
         "src/tooling/__tests__/fixtures/verification_python_probe.cjs",
         "src/tooling/__tests__/fixtures/verification_native_setup_action.ts",
         "src/domain/branch_sync_catalog_diagnostic.ts",
-        "src/application/policies/application_error_presentation_policy.ts"
+        "src/application/policies/application_error_presentation_policy.ts",
+        "src/domain/branch_sync_publication.ts",
+        "src/domain/git_push_failure.ts",
+        "src/infrastructure/git_push_diagnostic.ts",
+        "src/application/policies/branch_sync_publication_messages.ts"
       ],
       "tests": [
         "src/application/policies/__tests__/branch_sync_notification_policy.test.ts",
@@ -2514,7 +2519,11 @@
         "src/domain/__tests__/branch_sync_catalog_diagnostic.test.ts",
         "src/infrastructure/__tests__/branch_sync_catalog_profiles.test.ts",
         "src/infrastructure/__tests__/branch_sync_catalog_compatibility_git.test.ts",
-        "src/infrastructure/__tests__/branch_sync_catalog_json_only.test.ts"
+        "src/infrastructure/__tests__/branch_sync_catalog_json_only.test.ts",
+        "src/domain/__tests__/branch_sync_publication.test.ts",
+        "src/infrastructure/__tests__/git_push_diagnostic.test.ts",
+        "src/application/policies/__tests__/branch_sync_publication_presentation.test.ts",
+        "src/tooling/__tests__/branch_sync_publication_integration.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-synchronization.mdx",

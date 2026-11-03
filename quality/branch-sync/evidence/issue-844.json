@@ -1,0 +1,167 @@
+{
+  "schemaVersion": 1,
+  "issue": 844,
+  "gitBase": "c1d593dc72637e31e3dba0785e846b5548b9a4b0",
+  "kind": "Controlled real local Git regression using actual SDK source and use case",
+  "limitations": [
+    "A local bare Git hook models the reported denial text; it does not validate real GitHub credential capability.",
+    "No real credential, provider write, consumer execution or historical consumer branch state is claimed.",
+    "The after result is bound to the listed working-tree source hashes; its Git base is not presented as an immutable after commit."
+  ],
+  "before": {
+    "remoteBefore": "38e159a7c7261a4acf3c5c2b0c11b84636c77d5f",
+    "remoteAfter": "38e159a7c7261a4acf3c5c2b0c11b84636c77d5f",
+    "candidate": "c541b4d9d879d387edaee1b2caaec2ec368c38a7",
+    "parent": "68a652ae52c0cf101f0a818ea5c13d70fd425af7",
+    "candidateParents": [
+      "38e159a7c7261a4acf3c5c2b0c11b84636c77d5f",
+      "68a652ae52c0cf101f0a818ea5c13d70fd425af7"
+    ],
+    "abortCalls": 1,
+    "controls": {
+      "remoteUnchanged": true,
+      "userWorktreeUnchanged": true,
+      "candidateCommitted": true,
+      "candidateParentsMatch": true,
+      "noForcePush": true,
+      "fixerUnused": true
+    },
+    "expected": {
+      "actionableWorkflowAuthorization": false,
+      "nonretryable": false,
+      "structuredRecovery": false,
+      "noPostCommitMergeAbort": false
+    },
+    "result": {
+      "success": false,
+      "steps": [
+        "Branch synchronization failed safely; no push was completed."
+      ],
+      "errors": [
+        {
+          "code": "workflow.failed",
+          "retryable": true,
+          "message": "Branch synchronization failed safely; no push was completed."
+        }
+      ]
+    }
+  },
+  "after": {
+    "remoteBefore": "38e159a7c7261a4acf3c5c2b0c11b84636c77d5f",
+    "remoteAfter": "38e159a7c7261a4acf3c5c2b0c11b84636c77d5f",
+    "candidate": "c541b4d9d879d387edaee1b2caaec2ec368c38a7",
+    "parent": "68a652ae52c0cf101f0a818ea5c13d70fd425af7",
+    "candidateParents": [
+      "38e159a7c7261a4acf3c5c2b0c11b84636c77d5f",
+      "68a652ae52c0cf101f0a818ea5c13d70fd425af7"
+    ],
+    "abortCalls": 0,
+    "controls": {
+      "remoteUnchanged": true,
+      "userWorktreeUnchanged": true,
+      "candidateCommitted": true,
+      "candidateParentsMatch": true,
+      "noForcePush": true,
+      "fixerUnused": true
+    },
+    "expected": {
+      "actionableWorkflowAuthorization": true,
+      "nonretryable": true,
+      "structuredRecovery": true,
+      "noPostCommitMergeAbort": true
+    },
+    "result": {
+      "success": false,
+      "steps": [
+        "The local merge commit step finished; inspect the publication facts before retrying."
+      ],
+      "errors": [
+        {
+          "code": "authorization.denied",
+          "retryable": false,
+          "recovery": {
+            "id": "branch-sync-workflow-write-required",
+            "variables": {
+              "reason": "workflow-write-required",
+              "remoteState": "unchanged",
+              "originalSha": "38e159a7c7261a4acf3c5c2b0c11b84636c77d5f",
+              "candidateSha": "c541b4d9d879d387edaee1b2caaec2ec368c38a7",
+              "observedSha": "38e159a7c7261a4acf3c5c2b0c11b84636c77d5f",
+              "pushAttempted": true
+            }
+          },
+          "message": "Branch synchronization candidate publication requires maintainer review."
+        }
+      ]
+    }
+  },
+  "afterRuntimeSourceSha256": {
+    "src/infrastructure/git_commit_adapter.ts": "a4b7822e061763fbeb869b08b5f2dce53f2f4e8147b3d968cf12d44f3aa2824b",
+    "src/domain/git_push_failure.ts": "1866cae812fb0b8c2ceb9c90ce451a267d5e1219cf41ebdab32fa7d9233ab06b",
+    "src/infrastructure/git_push_diagnostic.ts": "4f344291f5bc28f4114d2e2c5b1daeeac46749676b12241adfad7fbe3563ca8c",
+    "src/infrastructure/verification_executable.ts": "8aebfe8ea68733006502b330fb0442725b68d020834505d025ba766c5314d2b2",
+    "src/infrastructure/native_verification_profiles.ts": "0f738257a6761f681c9746c2fc38f423a8694e14dbb96f288c060034056abfa8",
+    "src/application/policies/verification_setup_policy.ts": "007b9e14ba01bb336774c122f68ac153e259f762b987741ff42c78768d329fbe",
+    "src/infrastructure/native_verification_protocol.ts": "fae03f50993c75c1aaa8e55fd7e2c9264207a93ca6ecfae0ada9037d0c35c990",
+    "src/infrastructure/git_authentication_environment.ts": "a27b333ff8fe5a8e1fdb648a82f93ea06b09c1e0f62064494d90a28e30f25b06",
+    "src/infrastructure/untrusted_command_environment.ts": "a061ce69f191419313d9909206579e94ad02631187df8ca46ac7185d4beda343",
+    "src/infrastructure/agents/agent_private_install_root.ts": "2286574605d0664994209d1dac6a4f0a2922d4febd9dd87dd4b6d8b6defe8dee",
+    "src/infrastructure/agents/windows_runtime_acl.ts": "b904b8b40e6d953dd1b55be2eef1ac36cd6a280e3604ec0ac2bdbbf040be465c",
+    "src/infrastructure/private_jvm_environment.ts": "9d109d2fbf51c4f5dfe99cd71cb445707a3072c449af78c2e6a79c79f178fa38",
+    "src/infrastructure/git_hook_isolation.ts": "bafe75ce72f6ff4f2cc25bc04b3f615f1aef837808f8125374a35b33ad884bd6",
+    "src/infrastructure/verification_runtime_preflight.ts": "fffc8dd2cdb09aba1068a385912e7976cb16d0efa4e0df2edda3804fe10c3406",
+    "src/infrastructure/verification_runtime_manifest.ts": "aa1c6dcdf2d4a641afbd0d82db1a11757a3357886cd7051871acdb80881d465a",
+    "src/application/policies/verification_runtime_policy.ts": "e404d7f4e80565765fc268dee0d7e21af4c9bde87588d9a4f05f296f9be7005a",
+    "src/application/ports/verification_setup_ports.ts": "789ead2f66cccaf859a5214c5acc87d267bccea10df8fa3bd6f939b265d7858c",
+    "src/infrastructure/verification_setup_runner.ts": "42dc18b085cebcae4f7dc59de589fd1619a784291d80ca1825611b41bbd86f7f",
+    "src/infrastructure/verification_setup_snapshot.ts": "f0bef2064e008b644e27b54929ad2e17d15a9fc86f6bae9c8edda14e5480c69a",
+    "src/infrastructure/verification_setup_result.ts": "e5ed349fed4f190c0b7ffbef76c498a986ba0efac4e56993270010f293d0f96a",
+    "src/application/ports/logging_ports.ts": "0882fe9b4f118d27d0f6a6fb4a2f2d8ea60fd442e1d219fab1f7f1765ccbff86",
+    "src/infrastructure/native_verification_staging.ts": "fc980657994249456546b189f7b2b735d64997eafebd22a7535b98e4030b0a34",
+    "src/infrastructure/native_verification_candidate.ts": "5de354e229df9fd0f9eb38e45e87c45d0a1301e8dee58e789812c1f4ed6a83cc",
+    "src/infrastructure/source_verification_dependencies.ts": "c146de0e2f05970aa3d1f3c40effb21d2049e4e97bed42bc12c53441ef37623b",
+    "src/application/policies/source_verification_dependency_policy.ts": "71c53dd24a67b5e405e15cad4c27c4e75dfc514e277c42256085dc82cb55508b",
+    "src/infrastructure/verification_python_library_environment.ts": "bdd54af57fea1eaef531099f2a632f15c68ce42d9a86af13ed294e74a634e251",
+    "src/infrastructure/branch_sync_workspace_adapter.ts": "4453b9389252a0efc52bfa379266011b2f6805c5b5d7b075cbb53cef069e6bdd",
+    "src/domain/branch_sync_publication.ts": "0688ba7783dac5b1f9c2ed5365bf73d1354b8c883d61fa39eca141d4bc18ae4c",
+    "src/infrastructure/branch_sync_communication_budget.ts": "dd1473a176e61a8cf459438e5549d715a882d972400450cba386ea8f5fba8bb4",
+    "src/application/usecases/steps/commit/bugbot/workspace_changes.ts": "cefe549380bcf5b1b97d69dc3122ef21a2dacd5d42303bce4ed727bd97caa683",
+    "src/infrastructure/branch_sync_sdd_catalog.ts": "f31f06cfe57db02f9dcd4c00142d35b546c1226661fbccadeae1d76f5cfd15a3",
+    "src/domain/sdd_catalog_compatibility.ts": "150d56f78b12133d61c60d3321abbde254b23be8d55144f865bddae2b53b5d11",
+    "src/domain/branch_sync_catalog_diagnostic.ts": "128594113af2b19bd986b672fbe3f75bef06c14e783b96199e27efd3c544ccfb",
+    "src/application/usecases/branch_sync/sync_branch_use_case.ts": "223426b53fd3b82a93f6dbaa51ed65a8778fb13e06a395f78ab1378630c39cea",
+    "src/domain/branch_sync_validation.ts": "946db4814e7a3ac6a7b9aca650a68d7deb524388ace03b45874767cad76e2f96",
+    "src/prompts/branch_sync_conflicts.ts": "bc3ee190d4c14c5dde1664bd417ff37638639ae82b61dfdaa8c80148eee2aba3",
+    "src/prompts/fill.ts": "89b15cac94d39076b0fd61d795d844071e05458b2389e06eddccf41c45c29661",
+    "src/domain/security/untrusted_content.ts": "e3fdf13bb529c24501530c906c1210869e59caa9831544af8044d8c2a3ee3432",
+    "src/domain/bugbot/framed_review.ts": "dae4c15635e32b64a214fbe86473238c677fe4448afef888e55582352657e622",
+    "src/application/usecases/steps/commit/bugbot/verify_command_policy.ts": "1381b3578e760db92bc7f00bc02bac4b9d430f4b49792e6747da75179bb79207",
+    "src/application/usecases/steps/commit/bugbot/verify_command_runner.ts": "ef757e2fb434f1b9ff60270431845b47735764d72e34fcbe1a738ab538eb1258",
+    "src/domain/verification_failure.ts": "d54b2ab90c3ae10ebda1f963e2a7ac16f46b6c3c52dd8f2ddd669391039df0b8",
+    "src/application/usecases/branch_sync/branch_sync_execution_policy.ts": "00a6caaa4ed7f1d5347fb7f52a6f8ac6b22bea80cced37a274e6fdee5e0b1c28",
+    "src/data/model/agent.ts": "ddcd59e03470b294f2cab96c3e94f98de5fdee4b1d1e4fafb2e282aa38369d98",
+    "src/domain/agent.ts": "da7db9ecfa47be01d8d5967434fcd83d368ec47db1d709477bbafdd1b0bc4c46",
+    "src/data/model/result.ts": "42c86823bf0feb2f75d2a258a2a08e208d6aa6435e7e5d5c48b87ed8e4505148",
+    "src/application/errors/application_error.ts": "3354b677a12fb53219acc10982520eebcbde13101579dba5e4b36ec9c93ebedf",
+    "src/data/model/application_error.ts": "f2dd4c5bcf67ddaec7b0ffb1af1c9d1a32336776e6f6a61018d6593ca14d0070",
+    "src/domain/progress_response_diagnostic.ts": "0bec7679f13fb285d6bdbdff334aa29a3639e33d24015c4b79ce3ee8aeece1e6",
+    "src/domain/agent_execution_plan.ts": "3054a0ab72a0ec21b02497c106a3b6bc39fe603ff4d5e71911c25a12c0875db8",
+    "src/domain/progress_completion_diagnostic.ts": "ffede5fe9246d29c64c303380851980e002955bd517249bee932742bf17050dd",
+    "src/domain/progress_inventory_diagnostic.ts": "366677dcea6f39b4459213083081a7271aa5b3d08eeeed7b039b3bacf0b2f2f3",
+    "src/domain/progress_evidence_path.ts": "ed26c13a1f533fecbff2dcf6ba0d4fe4d6a895498e2e32396fe2532e3f326731",
+    "src/domain/progress_partition_length_failure.ts": "750927b2dca1505521f9a76291b4efbd8182524ab16f35adcf152dfee81c3c11",
+    "src/domain/progress_binary_evidence_diagnostic.ts": "67edba4c77c99407a27899efe4b825072f8bd2d8fbce60cd8698ee4881f20523",
+    "src/domain/issue_workflow_diagnostic.ts": "222678371aa820b2233a64988c3ce08699cf602825df1f7b4c37bc2c6edc7a7d",
+    "src/domain/issue_workflow_profile.ts": "d9d91f05c27357471e1be4be3c701b753638d21f7ca302fd6a830186dc91703d",
+    "src/domain/issue_workflow_body.ts": "c2ca92310b50b5d2ca9c523a7805f61258534c4dcef42c6a3a10038807cd6dbb",
+    "src/domain/issue_workflow_field_mapping.ts": "b73d69454eaacde0f8d317fbdea543897e5ae7874d0c1ba4fb5a7e02992a789a",
+    "src/domain/strict_json_keys.ts": "74508d6153f5a5daf6edfd61c698c878a65b43b637c0eedec9273c5cb77ef92a",
+    "src/domain/change_size_reconciliation.ts": "dc7e0e328c48900a55a252b75faa5297caba9a1ab35feaef3528f1a6687cffc7",
+    "src/domain/copilot_command_validation.ts": "4ce738fb6b0546ab22fd8a4934402e677164ddd50a79a5a2fe81f1f2332c838e",
+    "src/domain/closed_issue_reconciliation.ts": "500facde07d6d9b5d6689f5834403972915b89cecc10bae1cb22056d94f66420",
+    "src/domain/approval_evidence_diagnostic.ts": "0202e5fade44191ef5341d987d2f3d95bace9f7ffdc2ef5d9d5331088d07a0e8",
+    "src/domain/agent_source_snapshot.ts": "0ae2e7f6b445f67ade3cedf755f7652e04b95b5611161f49225db7b25fb81e86",
+    "src/application/errors/application_error_context.ts": "1deff1c70f8913c378347a3e65075d615204d7932ee0c372a42ec546a4f32a73"
+  },
+  "executableRegressions": "src/tooling/__tests__/branch_sync_publication_integration.test.ts"
+}

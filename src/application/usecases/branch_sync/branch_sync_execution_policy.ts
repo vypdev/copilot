@@ -1,3 +1,4 @@
+import type { BranchSyncPublicationDiagnostic } from '../../../domain/branch_sync_publication';
 import { isAgentConfigurationReady } from "../../../data/model/agent";
 import type { AgentConfiguration } from '../../../domain/agent';
 import { Result } from "../../../data/model/result";
@@ -13,7 +14,8 @@ export type BranchSyncOutcome =
   | "dry-run-clean"
   | "dry-run-conflicted"
   | "merged-cleanly"
-  | "merged-with-agent";
+  | "merged-with-agent"
+  | "merged-verified-remotely";
 
 export interface BranchSyncConflictFailure {
   readonly reason: string;
@@ -59,6 +61,7 @@ export function completedBranchSyncResult(input: {
     "dry-run-conflicted": `Dry run complete: the merge has ${preparation.kind === "conflicted" ? preparation.conflictPaths.length : 0} conflict(s). Nothing was pushed and no agent was invoked.`,
     "merged-cleanly": `Merged \`${parentBranch}\` into \`${workingBranch}\` cleanly and pushed the result.`,
     "merged-with-agent": `Merged \`${parentBranch}\` into \`${workingBranch}\`, used the fixer agent to resolve conflicts, verified the workspace, and pushed the result.`,
+    "merged-verified-remotely": `The merge candidate \`${input.commitSha}\` was independently confirmed on remote branch \`${workingBranch}\` after a failed push response. No second push was attempted.`,
   };
   return new Result({
     id: BRANCH_SYNC_TASK_ID,
@@ -97,4 +100,16 @@ export function failedBranchSyncResult(reason: string, cause?: unknown, recovery
         ...(catalogCode || recovery?.id === 'branch-sync-verification-failed' ? { retryable: false } : {}) })
       : toApplicationError(cause, 'workflow.failed', reason, { recovery })],
   });
+}
+
+/** Publication facts come only from the trusted workspace's bounded remote observation. */
+export function failedBranchSyncPublicationResult(diagnostic: BranchSyncPublicationDiagnostic): Result {
+  const workflow = diagnostic.reason === 'workflow-write-required';
+  const error = new ApplicationError(workflow ? 'authorization.denied' : 'provider.unavailable',
+    'Branch synchronization candidate publication requires maintainer review.', {
+      retryable: false,
+      recovery: { id: workflow ? 'branch-sync-workflow-write-required' : 'branch-sync-publication-failed', variables: diagnostic },
+    });
+  return new Result({ id: BRANCH_SYNC_TASK_ID, success: false, executed: true,
+    steps: ['The local merge commit step finished; inspect the publication facts before retrying.'], errors: [error] });
 }

@@ -7038,6 +7038,7 @@ var _ApplicationError_cause;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = exports.APPLICATION_ERROR_RECOVERY_IDS = void 0;
 exports.isApplicationErrorCorrelationId = isApplicationErrorCorrelationId;
+const branch_sync_publication_1 = __nccwpck_require__(7857);
 const framed_review_1 = __nccwpck_require__(3750);
 const progress_response_diagnostic_1 = __nccwpck_require__(6289);
 const progress_completion_diagnostic_1 = __nccwpck_require__(5095);
@@ -7068,6 +7069,8 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'branch-sync-resolution-invalid',
     'branch-sync-verification-failed',
     'branch-sync-catalog-incompatible',
+    'branch-sync-workflow-write-required',
+    'branch-sync-publication-failed',
     'sdd-draft-size-exceeded',
     'sdd-catalog-unsupported-profile',
     'sdd-catalog-format-invalid',
@@ -7322,6 +7325,8 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'branch-sync-resolution-invalid': Object.freeze(['validationCode', 'command']),
     'branch-sync-verification-failed': Object.freeze(['stage', 'reason', 'command', 'commandIndex', 'childSha', 'restoration']),
     'branch-sync-catalog-incompatible': Object.freeze(['phase', 'profile', 'field', 'capabilityNumber', 'abort']),
+    'branch-sync-workflow-write-required': Object.freeze(['reason', 'remoteState', 'originalSha', 'candidateSha', 'observedSha', 'pushAttempted']),
+    'branch-sync-publication-failed': Object.freeze(['reason', 'remoteState', 'originalSha', 'candidateSha', 'observedSha', 'pushAttempted']),
     'sdd-draft-size-exceeded': Object.freeze([]),
     'sdd-catalog-unsupported-profile': Object.freeze([]),
     'sdd-catalog-format-invalid': Object.freeze([]),
@@ -7400,6 +7405,12 @@ function normalizeApplicationErrorRecovery(recovery) {
     }
     if (recovery.id === 'branch-sync-verification-failed' && !(0, verification_failure_1.isBranchSyncVerificationFailure)(variables)) {
         throw new TypeError('Branch synchronization verification diagnostic is invalid.');
+    }
+    if (recovery.id === 'branch-sync-workflow-write-required' || recovery.id === 'branch-sync-publication-failed') {
+        if (!(0, branch_sync_publication_1.isBranchSyncPublicationDiagnostic)(variables) || variables.remoteState === 'published'
+            || (recovery.id === 'branch-sync-workflow-write-required') !== (variables.reason === 'workflow-write-required')) {
+            throw new TypeError('Branch synchronization publication diagnostic is invalid.');
+        }
     }
     if (recovery.id === 'branch-sync-catalog-incompatible') {
         const { abort, ...diagnostic } = variables;
@@ -7724,6 +7735,62 @@ function classifyBranchSyncCatalog(value) {
     }
     return catalogDiagnostic('profile-compatibility', 'sdk-v1');
 }
+
+
+/***/ }),
+
+/***/ 7857:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BranchSyncPublicationFailure = exports.BRANCH_SYNC_REMOTE_STATES = exports.BRANCH_SYNC_PUBLICATION_REASONS = void 0;
+exports.isBranchSyncObjectId = isBranchSyncObjectId;
+exports.admittedBranchSyncObjectId = admittedBranchSyncObjectId;
+exports.isBranchSyncPublicationDiagnostic = isBranchSyncPublicationDiagnostic;
+exports.BRANCH_SYNC_PUBLICATION_REASONS = Object.freeze(['workflow-write-required', 'push-failed', 'candidate-unverified']);
+exports.BRANCH_SYNC_REMOTE_STATES = Object.freeze(['unchanged', 'published', 'changed', 'unverified']);
+function isBranchSyncObjectId(value) {
+    return typeof value === 'string' && /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u.test(value) && !/^0+$/u.test(value);
+}
+function admittedBranchSyncObjectId(value) {
+    return isBranchSyncObjectId(value) ? value : 'unavailable';
+}
+function isBranchSyncPublicationDiagnostic(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return false;
+    const d = value;
+    if (Object.keys(d).sort().join(',') !== 'candidateSha,observedSha,originalSha,pushAttempted,reason,remoteState'
+        || !exports.BRANCH_SYNC_PUBLICATION_REASONS.includes(d.reason) || !exports.BRANCH_SYNC_REMOTE_STATES.includes(d.remoteState)
+        || typeof d.pushAttempted !== 'boolean'
+        || ![d.originalSha, d.candidateSha, d.observedSha].every(x => x === 'unavailable' || isBranchSyncObjectId(x)))
+        return false;
+    if (d.reason === 'candidate-unverified' && (d.pushAttempted || d.candidateSha !== 'unavailable'))
+        return false;
+    if (d.reason !== 'candidate-unverified' && (!d.pushAttempted || !isBranchSyncObjectId(d.candidateSha) || d.candidateSha === d.originalSha))
+        return false;
+    if (d.remoteState === 'published')
+        return isBranchSyncObjectId(d.candidateSha) && d.observedSha === d.candidateSha;
+    if (d.remoteState === 'unchanged')
+        return isBranchSyncObjectId(d.originalSha) && d.observedSha === d.originalSha && d.observedSha !== d.candidateSha;
+    if (d.remoteState === 'changed')
+        return isBranchSyncObjectId(d.originalSha) && isBranchSyncObjectId(d.observedSha)
+            && d.observedSha !== d.originalSha && d.observedSha !== d.candidateSha;
+    return (d.observedSha === 'unavailable' || d.originalSha === 'unavailable')
+        && !(isBranchSyncObjectId(d.candidateSha) && d.observedSha === d.candidateSha);
+}
+/** A committed candidate is no longer an in-progress Git merge. */
+class BranchSyncPublicationFailure extends Error {
+    constructor(diagnostic) {
+        super('Branch synchronization candidate publication requires reconciliation.');
+        if (!isBranchSyncPublicationDiagnostic(diagnostic))
+            throw new TypeError('Invalid branch synchronization publication facts.');
+        this.name = 'BranchSyncPublicationFailure';
+        this.diagnostic = Object.freeze({ ...diagnostic });
+        Object.freeze(this);
+    }
+}
+exports.BranchSyncPublicationFailure = BranchSyncPublicationFailure;
 
 
 /***/ }),
