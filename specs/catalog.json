@@ -2030,6 +2030,7 @@
         "src/data/repository/__tests__/assignment_provider_contract.test.ts",
         "src/application/policies/__tests__/issue_assignment_messages.test.ts",
         "src/tooling/__tests__/issue_assignment_diagnostics.test.ts",
+        "src/tooling/__tests__/issue_assignment_completion.integration.test.ts",
         "src/application/policies/__tests__/assignee_assignment_policy.test.ts",
         "src/application/usecases/steps/issue/__tests__/assign_members_to_issue_use_case.test.ts",
         "src/data/repository/__tests__/organization_members_repository.test.ts",

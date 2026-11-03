@@ -172,6 +172,13 @@ No durable assignment cache is introduced, so cancellation leaves native effects
 for the next ordinary event to reread. Other steps keep their existing read/no-op
 contracts. No new scratch runtime or production cleanup is needed.
 
+Completion/replay integration MUST verify these effects together through the
+actual completion and configuration persistence path: an assignment failure does
+not undo the selected issue type, Project link or stored branch configuration.
+A fresh run MUST retain one Project item and one configuration block. The
+existing type setter may repeat an idempotent assignment of the same type ID;
+this MUST NOT be represented as creating another type entity or as zero writes.
+
 ## 11. Security and privacy
 
 Existing credential-bound ports and permissions remain. No failed diagnostic
@@ -216,13 +223,16 @@ confirmation/replay/partial-state cases; 8 localized presentation cases; 4 issue
 route integration cases; and 4 semantic identity/serialization/architecture
 compatibility cases. Cases count once; repeated runs do not count as new cases.
 
-Local acceptance on 2026-11-03 passes **886 suites / 17,319 Jest tests**
+Local acceptance on 2026-11-04 passes **887 suites / 17,321 Jest tests**
 (35 pre-existing skips) and **267 extension tests** at 100% in all four metrics.
-There are **135 new distinct cases**: 29 pure validation, 69 provider/adapter,
-14 application, 14 localized presentation, four issue-route integration and five
+There are **137 new distinct cases**: 29 pure validation, 69 provider/adapter,
+14 application, 14 localized presentation, six issue-route/completion integration and five
 semantic/serialization cases (four allocated from the 33 domain cases plus the
 new exhaustive recovery-inventory case). No case is counted twice. All eleven
 affected assignment modules reach 100% lines/statements/functions/branches.
+The two completion cases retain type, Project and persisted configuration
+together after HTTP 503 and HTTP 403 lookup failures and verify fresh retries
+through real completion/storage logic with deterministic provider transports.
 Full-suite LCOV hits **150/150 modified coverable lines**, with zero misses or
 partials against `7d1e8d3b`. This is local evidence; official Codecov and remote
 current-head checks remain PR delivery gates.
@@ -258,7 +268,7 @@ failure. API JSON and English/Spanish text preserve safe recovery/correlation.
 | Requirements | Verification | Documentation |
 |---|---|---|
 | R1–R2 | `src/data/repository/github/__tests__/assignment_provider_failure.test.ts` and `src/data/repository/__tests__/assignment_provider_contract.test.ts` | error reference |
-| R3–R4 | `src/tooling/__tests__/issue_assignment_diagnostics.test.ts`, including four real issue-route cases, and `src/application/policies/__tests__/assignee_assignment_policy.test.ts` | assignees and projects |
+| R3–R4 | `src/tooling/__tests__/issue_assignment_diagnostics.test.ts`, including four real issue-route cases; `src/tooling/__tests__/issue_assignment_completion.integration.test.ts`, covering completion, actual configuration persistence and replay after transient and persistent failures; and `src/application/policies/__tests__/assignee_assignment_policy.test.ts` | assignees and projects |
 | R5 | `src/domain/__tests__/issue_assignment_diagnostic.test.ts`, `src/application/policies/__tests__/issue_assignment_messages.test.ts`, exhaustive `application_error_presentation_policy.test.ts` recovery inventory | both pages |
 | R6 | architecture/types/docs/catalog/package/bundles and current-head CI/review/Codecov | this SDD/catalog |
 
