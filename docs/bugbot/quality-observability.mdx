@@ -362,8 +362,24 @@ Conversation retained/omitted/truncated counts describe logical source comments,
 not their internal prompt fragments. A fully reconstructed multi-fragment comment
 is one retained item with zero truncation. Complete diff analysis and partial
 conversation coverage remain independent facts. Metadata/wrapper/separator costs
-and omission notices count toward the unchanged 24,000-character section budget;
-no raw comment body or fragment payload enters telemetry.
+and omission notices count toward the ordinary 24,000-unit section budget.
+Eligible canonical reviews with a bound immutable-source adapter can instead
+co-deliver bounded complete discussion pages under `framed-v1`. Every code
+partition receives every page; the final native envelope and the actual retry/
+verification traffic obey the existing per-request and invocation byte limits.
+No raw comment body, attribution or fragment payload enters telemetry.
+
+`human-conversation` is a compatibility source key, not an assertion of personal
+authorship. Its counts describe fetched logical comments, while issue/review
+provider enumeration has separate coverage. Complete delivery of fetched text
+does not repair provider omissions or prove a clean review. The framed source
+`rawUtf16`/`renderedUtf16` counters retain their code-diff meaning; exact native
+`promptBytes` includes discussion, code, security, schema and effort together.
+Inspect all completed partition receipts and overall context status before
+accepting completeness. A missing source capability preserves legacy partial
+behavior; an unsupported complete-context request reports a measured block.
+Preserve discussion history; unchanged retries do not enlarge the supported
+profile. See [complete conversation review](https://github.com/vypdev/copilot/blob/develop/specs/bugbot-complete-conversation-review.md).
 
 
 The six #749 validation cases preserve the exact U+200B witness and supported

@@ -42,14 +42,14 @@ function renderSelection(newestFirst: readonly Entry[], omitted: number): string
 function prepare(source: ConversationSource): Entry | null {
   const normalized = source.body?.normalize('NFKC').replace(/\r\n?/g, '\n').trim();
   if (!normalized) return null;
-  assertUnicode(normalized);
+  assertReviewConversationUnicode(normalized);
   const origin = `github.review.${source.providerId}`;
   const content = createUntrustedContent(normalized, origin, REVIEW_CONVERSATION_LIMIT);
   const attribution = `- ${source.author?.trim() || 'unknown'} (${source.kind}):`;
-  assertUnicode(attribution);
+  assertReviewConversationUnicode(attribution);
   const metadata = createUntrustedContent(attribution, `${origin}.metadata`, REVIEW_CONVERSATION_FRAGMENT);
   const render = (text: string, truncated: boolean) => [renderUntrustedContentVerbatim(metadata),
-    ...split(text).map((part, index, parts) => `Discussion fragment ${index + 1}/${parts.length}\n${renderUntrustedContentVerbatim({
+    ...splitReviewConversationText(text).map((part, index, parts) => `Discussion fragment ${index + 1}/${parts.length}\n${renderUntrustedContentVerbatim({
       ...content, origin: `${content.origin}.part.${index + 1}`, text: part, originalLength: part.length, truncated,
     })}`)].join('\n');
   let truncated = content.truncated || metadata.truncated;
@@ -62,7 +62,7 @@ function prepare(source: ConversationSource): Entry | null {
   const createdAt = source.createdAt ? Date.parse(source.createdAt) : Number.NaN;
   return { rendered, truncated, providerId: source.providerId, createdAt: Number.isFinite(createdAt) ? createdAt : 0 };
 }
-function split(text: string): string[] {
+export function splitReviewConversationText(text: string): string[] {
   const parts: string[] = [];
   for (let offset = 0; offset < text.length;) {
     const end = safeEnd(text, Math.min(offset + REVIEW_CONVERSATION_FRAGMENT, text.length));
@@ -74,7 +74,7 @@ function safeEnd(text: string, end: number): number {
   const previous = text.charCodeAt(end - 1); const next = text.charCodeAt(end);
   return previous >= 0xD800 && previous <= 0xDBFF && next >= 0xDC00 && next <= 0xDFFF ? end - 1 : end;
 }
-function assertUnicode(text: string): void {
+export function assertReviewConversationUnicode(text: string): void {
   for (let index = 0; index < text.length; index++) {
     const code = text.charCodeAt(index);
     if (code >= 0xD800 && code <= 0xDBFF) {
