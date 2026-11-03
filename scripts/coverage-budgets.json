@@ -1452,6 +1452,20 @@
         }
       ],
       "successMessage": "Bugbot resource authority guidance: PASS (100% lines/statements/functions/branches)"
+    },
+    {
+      "name": "Bugbot asynchronous statement guidance",
+      "missingEntryLabel": "Bugbot asynchronous statement guidance",
+      "rules": [
+        {
+          "files": [
+            "src/prompts/bugbot_async_statement_evidence.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        }
+      ],
+      "successMessage": "Bugbot asynchronous statement guidance: PASS (100% lines/statements/functions/branches)"
     }
   ]
 }

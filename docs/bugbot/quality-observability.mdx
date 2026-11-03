@@ -7,6 +7,46 @@ description: Measure Bugbot accuracy, latency, outcomes, feedback, and regressio
 
 Bugbot separates deterministic evaluator checks from optional, cost-bearing model benchmarks. The versioned corpus at `quality/bugbot/corpus.v1.json` contains 174 positive and negative synthetic cases across TypeScript/TSX, Python, Go, SQL, Java, Rust, YAML workflows, shell, Terraform, C#, Kotlin, and Markdown. Ground truth is never included in the model prompt.
 
+## Asynchronous statement regression
+
+The separate `quality/bugbot/async-statement-corpus.v1.json` group contains twelve
+source-bound controls. Six preserve the intermediate closed cycle using a same-line
+or expanded await, a receiver alias, an awaited helper, a synchronous update or an
+applicable animation frame. Six contrast a missing boundary, another instance,
+a pre-write promise, a helper/then chain not awaited before the next write, and a
+delayed descendant that outlives its parent's update. Actual scheduler behavior
+matters; these forms are not blanket safe/unsafe classifications.
+
+The fixed authored browser probe runs those operations with Lit 3.3.3,
+LitElement 4.2.2, ReactiveElement 2.1.2 and real Chromium 156.0.8078.4, checking rendered
+frames and final values. It never executes corpus strings. Mandatory Node tests
+bind its exact LF source and each changed fragment to the separately recorded
+observations, and enforce opposite-verdict scorer controls, prompt privacy,
+ordinary/framed delivery and unchanged JavaScript query accounting. The optional
+browser qualification introduces no mandatory browser or Lit dependency to the
+Action. The existing 174-case corpus, reference predictions, earlier resource
+group and 200-case invocation bound are unchanged.
+
+Separately, fresh execution of the unchanged original consumer test passes one
+selected case, with 54 not selected; a fresh complete frontend run passes565 cases
+and all four coverage metrics at 100%. The historical native gate was inspected
+independently and its merge checkout has the reported head's exact tree. These
+are distinct executions, not a replay of the original complete model review.
+The versioned `quality/bugbot/evidence/issue-848.json` preserves source/toolchain
+identities, actual observations, all planned model trials and failed scores.
+The three current-baseline trials detect all 18 positive observations but add10
+false positives and miss 8 exact anchors. Both initial distinct candidates remove safe-case alerts but fail the unchanged
+aggregate location floor; all their source snapshots and observations remain
+recorded. The final third revision uses existing read-only static coordinate
+evidence. Its full three-trial aggregate passes every unchanged default floor:
+precision 1, recall 17/18, exact locations 14/17 and severity/category 1. There
+are zero false positives, one omitted delayed-descendant defect and three
+imprecise anchors. The first individual trial fails location, the second fails
+recall and the third passes. No result is replaced by the best trial or a
+reference prediction. No historical internal cause or general accuracy guarantee follows.
+
+## Earlier controlled cases
+
 The #655 cases cover branch coverage enabled through repository configuration,
 inherited HTTP/1.0 connection behavior, correct arithmetic, short-circuit guards,
 validation through helpers, and mutually exclusive render paths. Positive

@@ -12,6 +12,17 @@
 - Required review gates: product UX, architecture, testing, documentation, security/operations
 - Open decisions blocking readiness: none for the baseline
 
+### Complete statements and asynchronous ordering — #848 (2026-11-03)
+
+The [statement-order companion](./bugbot-async-statement-evidence.md) owns reading
+semicolon-separated awaits, actual receiver/cycle/helper ownership and reached
+lifecycle writes before claiming missing synchronization. Its twelve independently
+executed Lit controls and 18 deterministic SDK regressions preserve real unfinished
+update defects and separate private verdicts from observed facts. Ordinary/framed
+source review and the benchmark share guidance; existing Python verifier activation,
+traffic, publication, history and authorization remain unchanged. Qualification
+retains every fixed-input baseline/candidate sample and its actual limitations.
+
 ### Fixture-value grounding — #834 (2026-11-03)
 
 The [fixture-value companion](./bugbot-fixture-value-grounding.md) owns tracing
