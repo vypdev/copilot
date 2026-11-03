@@ -3,6 +3,7 @@ import type { PullRequestReviewComment } from '../../../../ports/pull_request_re
 import type { BugbotComment } from './bugbot_finding_context';
 import type { BugbotPrContext } from './types';
 import { packReviewConversation, type ConversationSource } from '../../../../policies/bugbot_conversation_packing_policy';
+import { packCompleteReviewConversation } from '../../../../policies/bugbot_complete_conversation_policy';
 import { buildReviewDiffPlan } from '../../../../policies/bugbot_diff_partition_policy';
 
 export function buildReviewDiffBlock(
@@ -45,6 +46,7 @@ export function buildReviewConversationContext(
   issueComments: readonly BugbotComment[],
   commentsByPullRequest: ReadonlyMap<number, PullRequestReviewComment[]>,
   botLogin?: string,
+  complete: boolean = false,
 ): BuiltBugbotPromptContext {
   const entries: ConversationSource[] = [];
   for (const comment of issueComments) {
@@ -74,7 +76,7 @@ export function buildReviewConversationContext(
       );
     }
   }
-  return packReviewConversation(entries);
+  return complete ? packCompleteReviewConversation(entries) : packReviewConversation(entries);
 }
 
 function appendConversationEntry(

@@ -120,34 +120,44 @@ export async function loadBugbotContext(
   const previousContext = buildPreviousFindingsContext(previousFindings);
   let prContext = canonicalPullRequest && diff ? toPrContext(canonicalPullRequest, diff) : null;
   let framedSource: BugbotFramedReviewSource | undefined;
+  let requiresFramedSource = false;
   let diffPlan: ReturnType<typeof buildReviewDiffPlan>;
   try {
     diffPlan = buildReviewDiffPlan(prContext, request.ignorePatterns);
   } catch (error) {
     if (error instanceof BugbotDiffPlanLimitError && error.reason === 'limit') {
-      if (!reviewSource || !ports.getSourceBoundPullRequest || !canonicalPullRequest || !diff) throw new BugbotReviewCompletenessError('capability');
-      const current = await ports.getSourceBoundPullRequest(canonicalPullRequest.number);
-      if (!sameBugbotFramedPullRequest(canonicalPullRequest, current)) throw new BugbotReviewCompletenessError('identity');
-      canonicalPullRequest = current;
-      const pinnedRead = await ports.getReviewDiffSnapshot(current.number);
-      framedCoverage = pinnedRead.coverage;
-      framedSource = await reviewSource.readCompleteSource(current, pinnedRead.value,
-        pinnedRead.coverage.status === 'complete', request.ignorePatterns);
-      if (!bugbotFramedSourceMatchesPullRequest(framedSource, canonicalPullRequest)) throw new BugbotReviewCompletenessError('identity');
-      prContext = toPrContext(canonicalPullRequest, projectBugbotFramedSnapshot(framedSource));
-      const retained = framedSource.changes.filter(change => !fileMatchesIgnorePatterns(change.filename, request.ignorePatterns)).length;
-      diffPlan = { partitions: [], retained, ignored: framedSource.changes.length - retained, fragments: 0 };
+      requiresFramedSource = true;
+      diffPlan = { partitions: [], retained: 0, ignored: 0, fragments: 0 };
     } else if (error instanceof BugbotDiffPlanLimitError) {
       throw new BugbotReviewCompletenessError('source');
     } else {
       throw error;
     }
   }
-  const conversationContext = buildReviewConversationContext(
+  let conversationContext = buildReviewConversationContext(
     issueComments,
     pullRequestCommentsByNumber,
     request.trustedAuthorLogin,
   );
+  // Only review callers with the read-only source capability can use its bounded traffic/receipt protocol.
+  // Intent, dismiss and autofix callers keep their existing truthful bounded context without acquiring it.
+  const completeConversation = Boolean(reviewSource && canonicalPullRequest && (conversationContext.omitted || conversationContext.truncated));
+  if (requiresFramedSource || completeConversation) {
+    if (!reviewSource || !ports.getSourceBoundPullRequest || !canonicalPullRequest || !diff) throw new BugbotReviewCompletenessError('capability');
+    const current = await ports.getSourceBoundPullRequest(canonicalPullRequest.number);
+    if (!sameBugbotFramedPullRequest(canonicalPullRequest, current)) throw new BugbotReviewCompletenessError('identity');
+    canonicalPullRequest = current;
+    const pinnedRead = await ports.getReviewDiffSnapshot(current.number);
+    framedCoverage = pinnedRead.coverage;
+    framedSource = await reviewSource.readCompleteSource(current, pinnedRead.value,
+      pinnedRead.coverage.status === 'complete', request.ignorePatterns);
+    if (!bugbotFramedSourceMatchesPullRequest(framedSource, canonicalPullRequest)) throw new BugbotReviewCompletenessError('identity');
+    prContext = toPrContext(canonicalPullRequest, projectBugbotFramedSnapshot(framedSource));
+    const retained = framedSource.changes.filter(change => !fileMatchesIgnorePatterns(change.filename, request.ignorePatterns)).length;
+    diffPlan = { partitions: [], retained, ignored: framedSource.changes.length - retained, fragments: 0 };
+  }
+  if (completeConversation) conversationContext = buildReviewConversationContext(issueComments,
+    pullRequestCommentsByNumber, request.trustedAuthorLogin, true);
   const repositoryRules = await ports.loadRules(
     prContext?.prFiles
       .map((file) => file.filename)

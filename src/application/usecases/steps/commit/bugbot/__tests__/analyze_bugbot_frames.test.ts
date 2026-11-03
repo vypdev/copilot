@@ -404,3 +404,20 @@ it.each([false, true])('bounds dependent verification and actual retries with on
     expect([...primaryAttempts.values()].every(attempts => attempts <= 2)).toBe(true);
     expect(f.telemetry.snapshot('failed').framedReview!.completedFrames).toBeLessThan(f.plan.frames.length);
 });
+
+it('binds every complete-conversation page into the manifest and rejects a changed clarification after analysis', async () => {
+    const f = setup(); f.context.reviewConversationBlock = 'Long untrusted clarification\n'.repeat(2000);
+    const plan = buildBugbotFramedReviewPlan(f.source, bugbotFramedContextDigest(f.operation, f.context), FRAME_NONCE, []);
+    const query = jest.fn(async (request: FindingsQueryRequest) => {
+        f.context.reviewConversationBlock += '\nEdited clarification'; return reply(request);
+    });
+    await expect(run(f, query, undefined, plan)).rejects.toMatchObject({ facts: { resource: 'identity' } });
+    expect(query).toHaveBeenCalledTimes(1);
+});
+it('preflights cumulative native traffic for complete discussion repeated across all source partitions', async () => {
+    const f = setup(framedFiles(128)); f.context.reviewConversationBlock = 'x'.repeat(360000);
+    const plan = buildBugbotFramedReviewPlan(f.source, bugbotFramedContextDigest(f.operation, f.context), FRAME_NONCE, []);
+    const query = jest.fn(async (request: FindingsQueryRequest) => reply(request));
+    await expect(run(f, query, undefined, plan)).rejects.toMatchObject({ facts: { resource: 'promptTotalBytes', limit: 33554432 } });
+    expect(query).not.toHaveBeenCalled();
+});

@@ -85,11 +85,13 @@ export type BugbotParams = {
     outputContractBlock?: string;
     targetLocale: string;
     pythonSyntaxProfile?: string;
+    reviewContextProfile?: 'framed-v1';
 };
 
 export function getBugbotPrompt(params: BugbotParams): string {
+    const { reviewContextProfile, ...templateParams } = params;
     return fillTemplate(TEMPLATE, {
-        ...params,
+        ...templateParams,
         sourceGroundingInstruction: (params.diffBlock ?? '').length > 0
             ? `${BUGBOT_RECOVERY_CONTRACT_INSTRUCTION}\n${BUGBOT_FIXTURE_VALUES_INSTRUCTION}` : '',
         pythonSyntaxInstruction: params.pythonSyntaxProfile === 'python' ? BUGBOT_PYTHON_SYNTAX_INSTRUCTION : '',
@@ -100,5 +102,5 @@ export function getBugbotPrompt(params: BugbotParams): string {
         partitionBlock: params.partitionBlock ?? '',
         outputContractBlock: params.outputContractBlock ?? '**Output:** JSON: "outputLocale", "findings", "resolved_findings" (exact prior id, "fixed"/"obsolete"). Return both arrays, empty if none. Resolve only ids in previous-findings list.',
         issueNumber: String(params.issueNumber),
-    });
+    }, reviewContextProfile);
 }

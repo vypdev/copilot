@@ -68,6 +68,7 @@ export function buildBugbotReviewInput(
     const hasLiteralWitnesses = assignment ? assignment.partition.hasPythonLiteralWitnesses === true : literalEvidence!.hasWitnesses;
     const requiresCandidateVerification = hasLiteralWitnesses || (diffBlock.length > 0 && reviewedFiles.some(path => /\.py$/iu.test(path)));
     const prompt = getBugbotPrompt({
+        reviewContextProfile: assignment?.partition.framed ? 'framed-v1' : undefined,
         pythonSyntaxProfile: [...changes.map(change => change.filename), ...(assignment?.partition.files ?? [])].some(path => /\.py$/iu.test(path)) ? 'python' : '',
         projectContextInstruction: 'Read code (respect ignores), README/docs and rules/conventions (.cursor/rules, CONTRIBUTING, guidelines).',
         owner: param.repository.owner,

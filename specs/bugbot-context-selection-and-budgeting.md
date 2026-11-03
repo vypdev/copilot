@@ -559,3 +559,17 @@ source inventory, two sequential frames, live target-ref fences and exact
 coverage receipts supersede the ordinary over-cap remediation for eligible
 workloads. Ordinary planning, conversation/history limits, resolution ownership,
 public configuration and approval controls retain their existing contracts.
+
+
+## Complete discussion admission (#843, 2026-11-03)
+
+The [complete-conversation companion](./bugbot-complete-conversation-review.md)
+extends eligible canonical reviews with an existing read-only immutable-source
+capability. When legacy discussion packing would lose context, every bounded
+discussion page accompanies every source-bound partition, through the final
+outer envelope. The same closed native request/traffic limits, receipt binding,
+sole resolution owner, freshness and global reconciliation remain required.
+This explicitly extends legacy section capacity through that protocol; it does
+not relabel missing provider evidence as complete, enlarge public settings or
+grant comment authors instruction/approval authority. Other context callers
+retain their existing truthful partial behavior.

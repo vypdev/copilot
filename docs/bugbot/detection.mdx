@@ -434,15 +434,34 @@ head, close the obsolete PR or invoke the review from the intended PR event.
 A generated report from a User account and an ordinary human comment follow the
 same untrusted conversation rules. A 5,959-character report can be retained in
 full as ordered fragments without granting trust to its heading or author name.
-The fixed budget is 50 logical comments and 24,000 rendered characters, with at
-most 4,000 UTF-16 units per payload fragment. Source attribution is bounded
-untrusted metadata too. No fragment creates a separate source or notification.
+Ordinary packing retains up to 50 logical comments and 24,000 rendered UTF-16
+units, with at most 4,000 units per payload fragment. If this would omit or
+truncate discussion in a canonical PR review with the bound read-only source
+capability, Bugbot automatically selects the existing `framed-v1` protocol.
+It divides all fetched eligible discussion into bounded pages and delivers
+**every page in every code-partition request**, including the final outer
+security envelope. It does not summarize the history or review independent
+context windows. Attribution stays untrusted: an agent-authored technical
+proposal under a maintainer account is not personal authorization.
 
-Only fully retained comments have zero truncation. Genuine source/provider or
-section exhaustion still makes the overall review partial, even when the diff
-analysis completed with no findings. Inspect **Incomplete coverage** before
-calling that review complete. Approval and protected-path requirements remain
-unchanged; retaining a report does not authorize a merge.
+The complete request must still fit the fixed 524,288-byte native envelope;
+the invocation must fit 33,554,432 bytes including retries and dependent
+verification. Source, rendering, fragment, code and response limits also remain
+finite. Unsupported capacity blocks the run before partial findings or clean
+approval can be published; inspect the measured resource in the run details.
+Preserve discussion history. Repeating unchanged unsupported input cannot help;
+a workload beyond the profile requires a reviewed complete-context protocol.
+
+Only fully delivered comments have zero truncation. Provider omissions and all
+other incomplete dimensions remain partial even when every fetched discussion
+body fits. API/context callers without the bound immutable-source capability
+retain the existing truthful partial behavior; intent, autofix and dismissal do
+not acquire new host capabilities. Inspect **Incomplete coverage** before
+calling a review complete. Approval remains independent; retained text cannot
+authorize a merge.
+
+See the [complete-conversation review specification](https://github.com/vypdev/copilot/blob/develop/specs/bugbot-complete-conversation-review.md)
+for source identity, page bounds, native traffic and failure contracts.
 
 
 ## Python interpreter versions and exception syntax
