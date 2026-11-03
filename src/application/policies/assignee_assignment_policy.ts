@@ -47,5 +47,6 @@ export function calculateRemainingAssignees(
 
 export function selectConfirmedAssignees(requestedMembers: readonly string[], assignedMembers: readonly string[]): string[] {
     const requestedIdentities = new Set(requestedMembers.map((member) => member.toLowerCase()));
-    return assignedMembers.filter((member) => requestedIdentities.has(member.toLowerCase()));
+    return [...new Map(assignedMembers.filter((member) => requestedIdentities.has(member.toLowerCase()))
+        .map(member => [member.toLowerCase(), member])).values()];
 }

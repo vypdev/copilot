@@ -38481,6 +38481,30 @@ exports.DeploymentMergeEffectError = DeploymentMergeEffectError;
 
 /***/ }),
 
+/***/ 95252:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.issueAssignmentFailure = issueAssignmentFailure;
+const application_error_1 = __nccwpck_require__(75999);
+const assignment_provider_error_1 = __nccwpck_require__(62823);
+/** Add application-owned progress without losing the originating safe category or correlation. */
+function issueAssignmentFailure(cause, facts) {
+    return new application_error_1.ApplicationError(cause instanceof application_error_1.ApplicationError ? cause.code : 'unexpected', 'Automatic member assignment stopped.', {
+        ...(cause instanceof application_error_1.ApplicationError ? { retryable: cause.retryable, correlationId: cause.correlationId } : {}),
+        recovery: { id: 'issue-assignment-failed', variables: { ...facts,
+                operation: cause instanceof assignment_provider_error_1.AssignmentProviderError ? cause.operation
+                    : facts.stage === 'assign-creator' || facts.stage === 'assign-members' ? 'add-assignees'
+                        : facts.stage === 'read-assignees' ? 'read-assignees' : 'unavailable',
+                providerStatus: cause instanceof assignment_provider_error_1.AssignmentProviderError ? cause.providerStatus : 'http-unavailable' } },
+    });
+}
+
+
+/***/ }),
+
 /***/ 6519:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -39651,6 +39675,7 @@ exports.readEnglishApplicationErrorMessage = exports.APPLICATION_ERROR_CATALOG_D
 exports.resolveStaticApplicationErrorCatalog = resolveStaticApplicationErrorCatalog;
 exports.resolveApplicationErrorCatalog = resolveApplicationErrorCatalog;
 const branch_sync_publication_messages_1 = __nccwpck_require__(3948);
+const issue_assignment_messages_1 = __nccwpck_require__(71737);
 const bugbot_review_diagnostic_labels_1 = __nccwpck_require__(20351);
 const comment_command_validation_message_catalog_1 = __nccwpck_require__(62002);
 const application_error_1 = __nccwpck_require__(97790);
@@ -39659,6 +39684,7 @@ const resolved_message_catalog_policy_1 = __nccwpck_require__(55069);
 const LABEL_KEYS = Object.freeze([
     ...bugbot_review_diagnostic_labels_1.BUGBOT_REVIEW_DIAGNOSTIC_LABEL_KEYS,
     ...branch_sync_publication_messages_1.BRANCH_SYNC_PUBLICATION_LABEL_KEYS,
+    ...issue_assignment_messages_1.ASSIGNMENT_DIAGNOSTIC_LABEL_KEYS,
     'impact', 'errorCode', 'action', 'retainedState', 'retryable', 'yes', 'no', 'reference',
 ]);
 const CONTENT_FIELDS = Object.freeze(['impact', 'action', 'retainedState']);
@@ -39672,6 +39698,7 @@ exports.APPLICATION_ERROR_MESSAGE_IDS = Object.freeze([
 const ENGLISH_LABELS = Object.freeze({
     ...bugbot_review_diagnostic_labels_1.ENGLISH_REVIEW_DIAGNOSTIC_LABELS,
     ...branch_sync_publication_messages_1.ENGLISH_BRANCH_SYNC_PUBLICATION_LABELS,
+    ...issue_assignment_messages_1.ENGLISH_ASSIGNMENT_LABELS,
     impact: 'Impact',
     errorCode: 'Error code',
     action: 'Action',
@@ -39684,6 +39711,7 @@ const ENGLISH_LABELS = Object.freeze({
 const SPANISH_LABELS = Object.freeze({
     ...bugbot_review_diagnostic_labels_1.SPANISH_REVIEW_DIAGNOSTIC_LABELS,
     ...branch_sync_publication_messages_1.SPANISH_BRANCH_SYNC_PUBLICATION_LABELS,
+    ...issue_assignment_messages_1.SPANISH_ASSIGNMENT_LABELS,
     impact: 'Impacto',
     errorCode: 'Código de error',
     action: 'Acción',
@@ -39822,6 +39850,7 @@ const STORED_CONFIGURATION_ACTION_ES = 'Un mantenedor debe revisar {recoveryGuid
 const STORED_CONFIGURATION_RETAINED_EN = 'The issue/PR description and stored configuration were not changed by this read.';
 const STORED_CONFIGURATION_RETAINED_ES = 'Esta lectura no modificó la descripción de la issue/PR ni su configuración almacenada.';
 const ENGLISH_RECOVERY_CONTENT = Object.freeze({
+    ...issue_assignment_messages_1.ENGLISH_ASSIGNMENT_CONTENT,
     ...comment_command_validation_message_catalog_1.ENGLISH_COMMAND_VALIDATION_CONTENT,
     ...branch_sync_publication_messages_1.ENGLISH_BRANCH_SYNC_PUBLICATION_CONTENT,
     'stored-configuration-schema-missing': Object.freeze({
@@ -40021,6 +40050,7 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
     }),
 });
 const SPANISH_RECOVERY_CONTENT = Object.freeze({
+    ...issue_assignment_messages_1.SPANISH_ASSIGNMENT_CONTENT,
     ...comment_command_validation_message_catalog_1.SPANISH_COMMAND_VALIDATION_CONTENT,
     ...branch_sync_publication_messages_1.SPANISH_BRANCH_SYNC_PUBLICATION_CONTENT,
     'stored-configuration-schema-missing': Object.freeze({
@@ -40284,43 +40314,46 @@ const STORED_CONFIGURATION_RECOVERY_URL = 'https://docs.page/vypdev/copilot/secu
 const BRANCH_SYNC_CATALOG_RECOVERY_URL = 'https://docs.page/vypdev/copilot/security-operations/operations/troubleshooting#branch-sync-catalog-compatibility';
 const BRANCH_SYNC_PUBLICATION_RECOVERY_URL = 'https://docs.page/vypdev/copilot/security-operations/operations/troubleshooting#branch-sync-workflow-write-recovery';
 const agent_source_snapshot_1 = __nccwpck_require__(59205);
+const issue_assignment_diagnostic_presentation_1 = __nccwpck_require__(99446);
 /** Shared semantic view model for terminal, GitHub, and API presentation. */
 function buildApplicationErrorPresentation(error, message = application_error_message_catalog_1.readEnglishApplicationErrorMessage) {
     const descriptor = error.recovery
         ? `error.recovery.${error.recovery.id}`
         : `error.${error.code}`;
-    const variables = error.recovery?.id === 'sdd-source-context-unavailable'
-        ? { ...(0, agent_source_snapshot_1.sourceContextDiagnostic)(error.recovery.variables) }
-        : error.recovery?.id === 'progress-partition-length-invalid'
-            ? (0, progress_partition_length_failure_1.progressPartitionLengthPresentation)(error.recovery.variables)
-            : error.recovery?.id === 'bugbot-review-incomplete'
-                ? { ...error.recovery.variables, countKind: error.recovery.variables.countKind === 'at-least' ? '≥' : '=',
-                    resource: message(`error.label.${bugbot_review_diagnostic_labels_1.BUGBOT_REVIEW_RESOURCE_LABELS[error.recovery.variables.resource]}`),
-                    unit: message(`error.label.${bugbot_review_diagnostic_labels_1.BUGBOT_REVIEW_UNIT_LABELS[error.recovery.variables.unit]}`) }
-                : error.recovery?.id === 'progress-inventory-incomplete'
-                    ? (0, progress_inventory_diagnostic_1.progressInventoryPresentation)(error.recovery.variables)
-                    : error.recovery?.id === 'progress-binary-evidence-unavailable'
-                        ? (0, progress_binary_evidence_diagnostic_1.progressBinaryEvidencePresentation)(error.recovery.variables)
-                        : error.recovery?.id === 'issue-workflow-admission-blocked'
-                            ? (0, issue_workflow_diagnostic_1.issueWorkflowDiagnosticPresentation)(error.recovery.variables)
-                            : error.recovery && (0, copilot_command_validation_1.isCopilotCommandValidationReason)(error.recovery.id)
-                                ? (0, comment_command_validation_presentation_policy_1.commandValidationPresentationVariables)(error.recovery.id, error.recovery.variables.command)
-                                : error.recovery?.id === 'branch-sync-verification-failed'
-                                    ? { ...error.recovery.variables, syncCommand: '/copilot sync-branch' }
-                                    : error.recovery?.id === 'branch-sync-workflow-write-required' || error.recovery?.id === 'branch-sync-publication-failed'
-                                        ? {
-                                            reason: error.recovery.variables.reason, originalSha: error.recovery.variables.originalSha,
-                                            candidateSha: error.recovery.variables.candidateSha, observedSha: error.recovery.variables.observedSha,
-                                            pushStatus: message(error.recovery.variables.pushAttempted ? 'error.label.syncPushAttempted' : 'error.label.syncPushNotAttempted'),
-                                            remoteStatus: message(error.recovery.variables.remoteState === 'unchanged' ? 'error.label.syncRemoteUnchanged'
-                                                : error.recovery.variables.remoteState === 'changed' ? 'error.label.syncRemoteChanged' : 'error.label.syncRemoteUnverified'),
-                                            publicationGuide: BRANCH_SYNC_PUBLICATION_RECOVERY_URL, syncCommand: '/copilot sync-branch',
-                                        }
-                                        : error.recovery?.id === 'branch-sync-catalog-incompatible'
-                                            ? { ...error.recovery.variables, syncCommand: '/copilot sync-branch', catalogGuide: BRANCH_SYNC_CATALOG_RECOVERY_URL }
-                                            : error.recovery?.id.startsWith('stored-configuration-')
-                                                ? { ...error.recovery.variables, recoveryGuide: STORED_CONFIGURATION_RECOVERY_URL }
-                                                : error.recovery?.variables;
+    const variables = error.recovery?.id === 'issue-assignment-failed'
+        ? (0, issue_assignment_diagnostic_presentation_1.assignmentDiagnosticPresentation)(error.recovery.variables, error.code, message)
+        : error.recovery?.id === 'sdd-source-context-unavailable'
+            ? { ...(0, agent_source_snapshot_1.sourceContextDiagnostic)(error.recovery.variables) }
+            : error.recovery?.id === 'progress-partition-length-invalid'
+                ? (0, progress_partition_length_failure_1.progressPartitionLengthPresentation)(error.recovery.variables)
+                : error.recovery?.id === 'bugbot-review-incomplete'
+                    ? { ...error.recovery.variables, countKind: error.recovery.variables.countKind === 'at-least' ? '≥' : '=',
+                        resource: message(`error.label.${bugbot_review_diagnostic_labels_1.BUGBOT_REVIEW_RESOURCE_LABELS[error.recovery.variables.resource]}`),
+                        unit: message(`error.label.${bugbot_review_diagnostic_labels_1.BUGBOT_REVIEW_UNIT_LABELS[error.recovery.variables.unit]}`) }
+                    : error.recovery?.id === 'progress-inventory-incomplete'
+                        ? (0, progress_inventory_diagnostic_1.progressInventoryPresentation)(error.recovery.variables)
+                        : error.recovery?.id === 'progress-binary-evidence-unavailable'
+                            ? (0, progress_binary_evidence_diagnostic_1.progressBinaryEvidencePresentation)(error.recovery.variables)
+                            : error.recovery?.id === 'issue-workflow-admission-blocked'
+                                ? (0, issue_workflow_diagnostic_1.issueWorkflowDiagnosticPresentation)(error.recovery.variables)
+                                : error.recovery && (0, copilot_command_validation_1.isCopilotCommandValidationReason)(error.recovery.id)
+                                    ? (0, comment_command_validation_presentation_policy_1.commandValidationPresentationVariables)(error.recovery.id, error.recovery.variables.command)
+                                    : error.recovery?.id === 'branch-sync-verification-failed'
+                                        ? { ...error.recovery.variables, syncCommand: '/copilot sync-branch' }
+                                        : error.recovery?.id === 'branch-sync-workflow-write-required' || error.recovery?.id === 'branch-sync-publication-failed'
+                                            ? {
+                                                reason: error.recovery.variables.reason, originalSha: error.recovery.variables.originalSha,
+                                                candidateSha: error.recovery.variables.candidateSha, observedSha: error.recovery.variables.observedSha,
+                                                pushStatus: message(error.recovery.variables.pushAttempted ? 'error.label.syncPushAttempted' : 'error.label.syncPushNotAttempted'),
+                                                remoteStatus: message(error.recovery.variables.remoteState === 'unchanged' ? 'error.label.syncRemoteUnchanged'
+                                                    : error.recovery.variables.remoteState === 'changed' ? 'error.label.syncRemoteChanged' : 'error.label.syncRemoteUnverified'),
+                                                publicationGuide: BRANCH_SYNC_PUBLICATION_RECOVERY_URL, syncCommand: '/copilot sync-branch',
+                                            }
+                                            : error.recovery?.id === 'branch-sync-catalog-incompatible'
+                                                ? { ...error.recovery.variables, syncCommand: '/copilot sync-branch', catalogGuide: BRANCH_SYNC_CATALOG_RECOVERY_URL }
+                                                : error.recovery?.id.startsWith('stored-configuration-')
+                                                    ? { ...error.recovery.variables, recoveryGuide: STORED_CONFIGURATION_RECOVERY_URL }
+                                                    : error.recovery?.variables;
     return {
         impact: message(`${descriptor}.impact`, variables),
         code: error.code,
@@ -40500,7 +40533,8 @@ function calculateRemainingAssignees(desiredCount, currentCount, creatorAssigned
 }
 function selectConfirmedAssignees(requestedMembers, assignedMembers) {
     const requestedIdentities = new Set(requestedMembers.map((member) => member.toLowerCase()));
-    return assignedMembers.filter((member) => requestedIdentities.has(member.toLowerCase()));
+    return [...new Map(assignedMembers.filter((member) => requestedIdentities.has(member.toLowerCase()))
+            .map(member => [member.toLowerCase(), member])).values()];
 }
 
 
@@ -46120,6 +46154,79 @@ function buildInitialLabelProvisioningPlan(labels, existingLabelNames) {
         progress: planGroup(progressLabelDefinitions()),
     };
 }
+
+
+/***/ }),
+
+/***/ 99446:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.assignmentDiagnosticPresentation = assignmentDiagnosticPresentation;
+const STAGES = {
+    'read-assignees': 'assignmentRead', 'lookup-members': 'assignmentLookup', 'select-members': 'assignmentSelect',
+    'assign-creator': 'assignmentCreator', 'assign-members': 'assignmentMembers',
+};
+const OPERATIONS = {
+    'read-assignees': 'assignmentReadOperation', 'list-teams': 'assignmentTeams', 'list-team-members': 'assignmentTeamMembers',
+    'add-assignees': 'assignmentAdd', 'initialize-client': 'assignmentClient', unavailable: 'assignmentUnavailable',
+};
+function assignmentDiagnosticPresentation(facts, code, message) {
+    return { ...facts,
+        stage: message(`error.label.${STAGES[facts.stage]}`), operation: message(`error.label.${OPERATIONS[facts.operation]}`),
+        providerStatus: facts.providerStatus === 'http-unavailable' ? message('error.label.assignmentUnavailable') : facts.providerStatus,
+        assigneeRead: message(facts.assigneeRead === 'verified' ? 'error.label.assignmentReadVerified' : 'error.label.assignmentUnavailable'),
+        remainingAssignments: facts.assigneeRead === 'verified' ? facts.remainingAssignments : message('error.label.assignmentUnavailable'),
+        mutation: message(facts.mutation === 'not-attempted' ? 'error.label.assignmentWriteNone'
+            : facts.mutation === 'unverified' ? 'error.label.assignmentWriteUnverified' : 'error.label.assignmentWriteVerified'),
+        guidance: code.startsWith('authorization.') || code === 'provider.not-found'
+            ? message('error.label.assignmentAccess') : message(`error.${code}.action`),
+    };
+}
+
+
+/***/ }),
+
+/***/ 71737:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SPANISH_ASSIGNMENT_CONTENT = exports.ENGLISH_ASSIGNMENT_CONTENT = exports.SPANISH_ASSIGNMENT_LABELS = exports.ASSIGNMENT_DIAGNOSTIC_LABEL_KEYS = exports.ENGLISH_ASSIGNMENT_LABELS = void 0;
+exports.ENGLISH_ASSIGNMENT_LABELS = {
+    assignmentRead: 'reading current assignees', assignmentLookup: 'checking organization membership',
+    assignmentSelect: 'selecting additional members', assignmentCreator: 'assigning the creator', assignmentMembers: 'assigning additional members',
+    assignmentReadOperation: 'issue assignees', assignmentTeams: 'organization teams', assignmentTeamMembers: 'organization team members',
+    assignmentAdd: 'add issue assignees', assignmentClient: 'provider client initialization', assignmentUnavailable: 'unavailable',
+    assignmentReadVerified: 'verified', assignmentWriteNone: 'not attempted', assignmentWriteUnverified: 'outcome unverified; it may have applied',
+    assignmentWriteVerified: 'confirmed', assignmentAccess: 'Check the configured credential, documented access and target resource before retrying. A 404 alone does not establish that a private resource is absent.',
+};
+exports.ASSIGNMENT_DIAGNOSTIC_LABEL_KEYS = Object.keys(exports.ENGLISH_ASSIGNMENT_LABELS);
+exports.SPANISH_ASSIGNMENT_LABELS = {
+    assignmentRead: 'leer las personas asignadas', assignmentLookup: 'consultar los miembros de la organización',
+    assignmentSelect: 'seleccionar miembros adicionales', assignmentCreator: 'asignar al autor', assignmentMembers: 'asignar miembros adicionales',
+    assignmentReadOperation: 'personas asignadas a la issue', assignmentTeams: 'equipos de la organización', assignmentTeamMembers: 'miembros de los equipos',
+    assignmentAdd: 'añadir personas asignadas', assignmentClient: 'inicialización del cliente', assignmentUnavailable: 'no disponible',
+    assignmentReadVerified: 'verificada', assignmentWriteNone: 'no intentada', assignmentWriteUnverified: 'resultado sin verificar; pudo aplicarse',
+    assignmentWriteVerified: 'confirmada', assignmentAccess: 'Comprueba la credencial configurada, el acceso documentado y el recurso antes de reintentar. Un 404 por sí solo no demuestra que un recurso privado no exista.',
+};
+exports.ENGLISH_ASSIGNMENT_CONTENT = {
+    'issue-assignment-failed': {
+        impact: 'Automatic assignment for #{targetNumber} stopped during {stage}. Provider operation: {operation}; status: {providerStatus}.',
+        action: '{guidance} Rerun the same issue workflow after addressing the cause; it rereads assignees before adding missing members.',
+        retainedState: 'Verified new assignments: {confirmedAssignments}. Remaining target count: {remainingAssignments}. Current assignee read: {assigneeRead}. Assignment write: {mutation}. Independent completed lifecycle effects are retained in their own results.',
+    },
+};
+exports.SPANISH_ASSIGNMENT_CONTENT = {
+    'issue-assignment-failed': {
+        impact: 'La asignación automática de #{targetNumber} se detuvo al {stage}. Operación del proveedor: {operation}; estado: {providerStatus}.',
+        action: '{guidance} Repite el mismo workflow tras resolver la causa; volverá a leer las personas asignadas antes de añadir las pendientes.',
+        retainedState: 'Asignaciones nuevas verificadas: {confirmedAssignments}. Objetivo pendiente: {remainingAssignments}. Lectura de personas asignadas: {assigneeRead}. Escritura de asignaciones: {mutation}. Los efectos independientes completados se conservan en sus propios resultados.',
+    },
+};
 
 
 /***/ }),
@@ -56973,6 +57080,31 @@ exports.AGENT_EXECUTION_TOOL_DIAGNOSTICS = ['reported-sandbox-setup-mutex'];
 exports.AGENT_EXECUTION_OUTPUT_DIAGNOSTICS = [
     'output-limit', 'empty-output', 'malformed-json-event', 'invalid-json-event', 'missing-text-events', 'unclassified',
 ];
+
+
+/***/ }),
+
+/***/ 62823:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AssignmentProviderError = void 0;
+const application_error_1 = __nccwpck_require__(75999);
+const issue_assignment_diagnostic_1 = __nccwpck_require__(52616);
+/** Sanitized adapter evidence. Provider messages, bodies, member lists and credentials are discarded. */
+class AssignmentProviderError extends application_error_1.ApplicationError {
+    constructor(code, operation, providerStatus, options = {}) {
+        super(code, 'The assignment provider operation failed.', options);
+        this.operation = operation;
+        this.providerStatus = providerStatus;
+        if (!issue_assignment_diagnostic_1.ASSIGNMENT_OPERATIONS.includes(operation) || !(0, issue_assignment_diagnostic_1.isAssignmentProviderStatus)(providerStatus)) {
+            throw new TypeError('Assignment provider evidence is invalid.');
+        }
+    }
+}
+exports.AssignmentProviderError = AssignmentProviderError;
 
 
 /***/ }),
@@ -75630,45 +75762,74 @@ const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 const assignee_assignment_policy_1 = __nccwpck_require__(85918);
 const application_error_1 = __nccwpck_require__(75999);
+const issue_assignment_failure_1 = __nccwpck_require__(95252);
 const TASK_ID = 'AssignMemberToIssueUseCase';
 /** Assigns the creator and remaining project members according to the pure assignment policy. */
 async function runAssignMembersWorkflow(param, dependencies) {
     (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(TASK_ID)} Executing ${TASK_ID}.`);
     const target = (0, assignee_assignment_policy_1.resolveAssigneeTarget)(param);
     const results = [];
+    let stage = 'read-assignees';
+    let assigneeRead = 'unavailable';
+    let mutation = 'not-attempted';
+    let observedAssignees = 0;
+    const confirmed = [];
     try {
         (0, logging_ports_1.logDebugInfo)(`#${target.number} needs ${target.desiredCount} assignees.`);
         if (target.desiredCount <= 0)
             return [new result_1.Result({ id: TASK_ID, success: true, executed: false })];
         if (target.number <= 0)
             return [assignmentResult(false, 'Issue or pull request number is not available.')];
-        const [currentProjectMembers, currentMembers] = await Promise.all([
-            dependencies.projectRepository.getAllMembers(),
-            dependencies.issueRepository.getCurrentAssignees(target.number),
-        ]);
+        const currentMembers = await dependencies.issueRepository.getCurrentAssignees(target.number);
+        observedAssignees = new Set(currentMembers.map(member => member.toLowerCase())).size;
+        assigneeRead = 'verified';
+        if (observedAssignees >= target.desiredCount)
+            return [new result_1.Result({ id: TASK_ID, success: true, executed: true })];
+        stage = 'lookup-members';
+        const currentProjectMembers = await dependencies.projectRepository.getAllMembers();
         const creatorAssignment = (0, assignee_assignment_policy_1.resolveCreatorAssignment)(param, currentProjectMembers, currentMembers);
         if (creatorAssignment) {
             const { login: creator, source } = creatorAssignment;
-            await dependencies.issueRepository.assignMembersToIssue(target.number, [creator]);
+            stage = 'assign-creator';
+            mutation = 'unverified';
+            const added = await dependencies.issueRepository.assignMembersToIssue(target.number, [creator]);
+            if ((0, assignee_assignment_policy_1.selectConfirmedAssignees)([creator], added).length === 0) {
+                throw new application_error_1.ApplicationError('provider.contract-invalid', 'The creator assignment was not confirmed.');
+            }
+            confirmed.push(creator);
+            mutation = 'verified';
             (0, logging_ports_1.logDebugInfo)(`Assigned ${source} creator @${creator} to #${target.number}.`);
             results.push(assignmentResult(true, `The ${source} was assigned to @${creator} (creator).`));
         }
-        const remainingAssignees = (0, assignee_assignment_policy_1.calculateRemainingAssignees)(target.desiredCount, currentMembers.length, creatorAssignment !== undefined);
+        const remainingAssignees = (0, assignee_assignment_policy_1.calculateRemainingAssignees)(target.desiredCount, observedAssignees, creatorAssignment !== undefined);
         if (remainingAssignees <= 0) {
             results.push(new result_1.Result({ id: TASK_ID, success: true, executed: true }));
             return results;
         }
-        const members = await dependencies.projectRepository.getRandomMembers(remainingAssignees, currentMembers);
+        stage = 'select-members';
+        const members = await dependencies.projectRepository.getRandomMembers(remainingAssignees, [...currentMembers, ...confirmed]);
         if (members.length === 0) {
             results.push(assignmentResult(false, 'Tried to assign members to issue, but no one was found.'));
             return results;
         }
+        stage = 'assign-members';
+        mutation = 'unverified';
         const membersAdded = await dependencies.issueRepository.assignMembersToIssue(target.number, members);
-        results.push(...(0, assignee_assignment_policy_1.selectConfirmedAssignees)(members, membersAdded).map((member) => assignmentResult(true, `The ${param.target} was assigned to @${member}.`)));
+        const verifiedMembers = (0, assignee_assignment_policy_1.selectConfirmedAssignees)(members, membersAdded);
+        confirmed.push(...verifiedMembers);
+        results.push(...verifiedMembers.map((member) => assignmentResult(true, `The ${param.target} was assigned to @${member}.`)));
+        if (verifiedMembers.length !== members.length) {
+            throw new application_error_1.ApplicationError('provider.contract-invalid', 'Some requested assignments were not confirmed.');
+        }
+        mutation = 'verified';
         return results;
     }
     catch (error) {
-        const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to assign members.');
+        const semanticError = (0, issue_assignment_failure_1.issueAssignmentFailure)((0, application_error_1.toApplicationError)(error, 'unexpected', 'Automatic member assignment stopped.'), {
+            targetNumber: target.number, desiredCount: target.desiredCount, stage, assigneeRead, mutation,
+            observedAssignees: assigneeRead === 'verified' ? observedAssignees : 'unavailable', confirmedAssignments: confirmed.length,
+            remainingAssignments: assigneeRead === 'verified' ? Math.max(0, target.desiredCount - observedAssignees - confirmed.length) : 'unavailable',
+        });
         (0, logging_ports_1.logError)(semanticError);
         results.push(new result_1.Result({
             id: TASK_ID,
@@ -75685,7 +75846,7 @@ function assignmentResult(success, step) {
         id: TASK_ID,
         success,
         executed: true,
-        steps: step ? [step] : [],
+        steps: [step],
     });
 }
 
@@ -83379,6 +83540,7 @@ const progress_partition_length_failure_1 = __nccwpck_require__(59292);
 const progress_binary_evidence_diagnostic_1 = __nccwpck_require__(90364);
 const issue_workflow_diagnostic_1 = __nccwpck_require__(14347);
 const change_size_reconciliation_1 = __nccwpck_require__(25304);
+const issue_assignment_diagnostic_1 = __nccwpck_require__(52616);
 const copilot_command_validation_1 = __nccwpck_require__(44237);
 const closed_issue_reconciliation_1 = __nccwpck_require__(21565);
 const approval_evidence_diagnostic_1 = __nccwpck_require__(98205);
@@ -83417,6 +83579,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'closed-issue-reconciliation-failed',
     'approval-evidence-read-failed',
     'change-size-reconciliation-failed',
+    'issue-assignment-failed',
     'issue-workflow-admission-blocked',
     'progress-binary-evidence-unavailable',
     'progress-inventory-incomplete',
@@ -83599,9 +83762,11 @@ class ApplicationError extends Error {
         this.action = metadata.action;
         this.retainedState = options.recovery?.id === 'change-size-reconciliation-failed'
             ? 'Completed effects were retained; the failed and later size operations remain unverified.'
-            : options.recovery?.id === 'deployment-publication-context-missing'
-                ? PRESERVED_STATE
-                : metadata.retainedState;
+            : options.recovery?.id === 'issue-assignment-failed'
+                ? 'Verified assignments and independently completed effects were retained; the failed assignment operation remains unverified.'
+                : options.recovery?.id === 'deployment-publication-context-missing'
+                    ? PRESERVED_STATE
+                    : metadata.retainedState;
         this.correlationId = correlationId;
         this.recovery = normalizeApplicationErrorRecovery(options.recovery);
         __classPrivateFieldSet(this, _ApplicationError_cause, options.cause, "f");
@@ -83644,6 +83809,7 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'approval-evidence-read-failed': Object.freeze(['operation', 'reason', 'permission']),
     'issue-workflow-admission-blocked': Object.freeze(['kind', 'reason', 'fields']),
     'change-size-reconciliation-failed': Object.freeze(['operation', 'issueNumber', 'targetNumber', 'projectIndex', 'verifiedOperations', 'pendingProjectSizes', 'providerStatus', 'providerReference']),
+    'issue-assignment-failed': Object.freeze(['targetNumber', 'desiredCount', 'stage', 'operation', 'providerStatus', 'assigneeRead', 'observedAssignees', 'confirmedAssignments', 'remainingAssignments', 'mutation']),
     'pull-request-link-restored': Object.freeze([]),
     'pull-request-link-base-retained': Object.freeze([]),
     'pull-request-link-reference-retained': Object.freeze([]),
@@ -83783,6 +83949,9 @@ function normalizeApplicationErrorRecovery(recovery) {
         throw new TypeError('Issue admission diagnostic is invalid.');
     if (recovery.id === 'change-size-reconciliation-failed' && !(0, change_size_reconciliation_1.isChangeSizeReconciliationFacts)(variables)) {
         throw new TypeError('Change size reconciliation diagnostic is invalid.');
+    }
+    if (recovery.id === 'issue-assignment-failed' && !(0, issue_assignment_diagnostic_1.isIssueAssignmentDiagnostic)(variables)) {
+        throw new TypeError('Issue assignment diagnostic is invalid.');
     }
     return Object.freeze({
         id: recovery.id,
@@ -89179,6 +89348,47 @@ exports.GitCliRepository = GitCliRepository;
 
 /***/ }),
 
+/***/ 86172:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.withAssignmentProviderFailure = withAssignmentProviderFailure;
+const application_error_1 = __nccwpck_require__(75999);
+const assignment_provider_error_1 = __nccwpck_require__(62823);
+const github_error_policy_1 = __nccwpck_require__(58791);
+/** Terminate untrusted REST/transport failures at the adapter boundary, without retaining the cause. */
+async function withAssignmentProviderFailure(operation, perform) {
+    try {
+        return await perform();
+    }
+    catch (cause) {
+        if (cause instanceof assignment_provider_error_1.AssignmentProviderError)
+            throw cause;
+        const error = record(cause), response = record(error.response);
+        const status = [error.status, response.status].find(value => typeof value === 'number'
+            && Number.isInteger(value) && value >= 100 && value <= 599);
+        const code = cause instanceof application_error_1.ApplicationError ? cause.code
+            : (0, github_error_policy_1.isGithubRateLimited)({ status, response: { headers: response.headers ?? error.headers }, message: error.message }) ? 'provider.rate-limited'
+                : status === 401 ? 'authorization.credential-invalid'
+                    : status === 403 ? 'authorization.denied'
+                        : status === 404 ? 'provider.not-found'
+                            : status === 409 || status === 412 ? 'provider.conflict'
+                                : status === 400 || status === 422 ? 'provider.contract-invalid'
+                                    : status === 408 || typeof status === 'number' && status >= 500
+                                        || ['ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT', 'ENOTFOUND', 'EAI_AGAIN'].includes(error.code)
+                                        ? 'provider.unavailable' : 'unexpected';
+        throw new assignment_provider_error_1.AssignmentProviderError(code, operation, status === undefined ? 'http-unavailable' : `http-${status}`, cause instanceof application_error_1.ApplicationError ? { retryable: cause.retryable, correlationId: cause.correlationId } : {});
+    }
+}
+function record(value) {
+    return typeof value === 'object' && value !== null && !Array.isArray(value) ? value : {};
+}
+
+
+/***/ }),
+
 /***/ 5299:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -90457,40 +90667,48 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IssueAssignmentRepository = void 0;
 const logger_1 = __nccwpck_require__(91151);
 const application_error_1 = __nccwpck_require__(75999);
+const assignment_provider_failure_1 = __nccwpck_require__(86172);
 class IssueAssignmentRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
         this.getCurrentAssignees = async (owner, repository, issueNumber, token) => {
-            const octokit = this.githubClient.getClient(token);
-            try {
-                const { data: issue } = await octokit.rest.issues.get({ owner, repo: repository, issue_number: issueNumber });
-                return (issue.assignees ?? []).map(assignee => assignee.login);
-            }
-            catch (error) {
-                (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to get issue assignees.'));
-                throw error;
-            }
+            const octokit = await (0, assignment_provider_failure_1.withAssignmentProviderFailure)('initialize-client', async () => this.githubClient.getClient(token));
+            return (0, assignment_provider_failure_1.withAssignmentProviderFailure)('read-assignees', async () => {
+                const response = await octokit.rest.issues.get({ owner, repo: repository, issue_number: issueNumber });
+                return assigneesFromIssue(response?.data);
+            });
         };
         this.assignMembersToIssue = async (owner, repository, issueNumber, members, token) => {
-            const octokit = this.githubClient.getClient(token);
-            try {
-                if (members.length === 0) {
-                    (0, logger_1.logDebugInfo)('No members provided for assignment. Skipping operation.');
-                    return [];
-                }
-                const { data: updatedIssue } = await octokit.rest.issues.addAssignees({
+            if (members.length === 0) {
+                (0, logger_1.logDebugInfo)('No members provided for assignment. Skipping operation.');
+                return [];
+            }
+            const octokit = await (0, assignment_provider_failure_1.withAssignmentProviderFailure)('initialize-client', async () => this.githubClient.getClient(token));
+            return (0, assignment_provider_failure_1.withAssignmentProviderFailure)('add-assignees', async () => {
+                const response = await octokit.rest.issues.addAssignees({
                     owner, repo: repository, issue_number: issueNumber, assignees: members,
                 });
-                return (updatedIssue.assignees ?? []).map(assignee => assignee.login);
-            }
-            catch (error) {
-                (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to assign issue members.'));
-                throw error;
-            }
+                return assigneesFromIssue(response?.data);
+            });
         };
     }
 }
 exports.IssueAssignmentRepository = IssueAssignmentRepository;
+function assigneesFromIssue(value) {
+    if (typeof value !== 'object' || value === null || Array.isArray(value))
+        throw malformedAssignees();
+    const assignees = value.assignees ?? [];
+    if (!Array.isArray(assignees) || assignees.length > 10)
+        throw malformedAssignees();
+    return assignees.map(assignee => {
+        if (typeof assignee !== 'object' || assignee === null || typeof assignee.login !== 'string' || assignee.login.trim().length === 0)
+            throw malformedAssignees();
+        return assignee.login;
+    });
+}
+function malformedAssignees() {
+    return new application_error_1.ApplicationError('provider.contract-invalid', 'Issue assignee response is malformed.');
+}
 
 
 /***/ }),
@@ -91770,38 +91988,50 @@ exports.AuthenticatedUserRepository = AuthenticatedUserRepository;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.listOrganizationTeams = listOrganizationTeams;
 exports.listOrganizationTeamMembers = listOrganizationTeamMembers;
-const github_pagination_policy_1 = __nccwpck_require__(44812);
+const application_error_1 = __nccwpck_require__(75999);
+const assignment_provider_failure_1 = __nccwpck_require__(86172);
 async function listOrganizationTeams(client, organization) {
-    const teams = [];
-    for await (const response of client.paginate.iterator(client.rest.teams.list, {
-        org: organization,
-        per_page: 100,
-    })) {
-        const page = (0, github_pagination_policy_1.requireArrayPage)(response.data, 'organization teams');
-        teams.push(...page.flatMap((team) => isTeam(team) ? [team] : []));
-    }
-    return teams;
+    return (0, assignment_provider_failure_1.withAssignmentProviderFailure)('list-teams', async () => {
+        const teams = [];
+        for await (const response of client.paginate.iterator(client.rest.teams.list, {
+            org: organization,
+            per_page: 100,
+        })) {
+            const page = response?.data;
+            if (!Array.isArray(page) || !page.every(isTeam))
+                throw malformedMembers();
+            teams.push(...page);
+        }
+        return teams;
+    });
 }
 async function listOrganizationTeamMembers(client, organization, teamSlug) {
-    const members = [];
-    for await (const response of client.paginate.iterator(client.rest.teams.listMembersInOrg, {
-        org: organization,
-        team_slug: teamSlug,
-        per_page: 100,
-    })) {
-        const page = (0, github_pagination_policy_1.requireArrayPage)(response.data, 'organization team members');
-        members.push(...page.flatMap((member) => isMember(member) ? [member] : []));
-    }
-    return members;
+    return (0, assignment_provider_failure_1.withAssignmentProviderFailure)('list-team-members', async () => {
+        const members = [];
+        for await (const response of client.paginate.iterator(client.rest.teams.listMembersInOrg, {
+            org: organization,
+            team_slug: teamSlug,
+            per_page: 100,
+        })) {
+            const page = response?.data;
+            if (!Array.isArray(page) || !page.every(isMember))
+                throw malformedMembers();
+            members.push(...page);
+        }
+        return members;
+    });
 }
 function isTeam(value) {
-    return isRecord(value) && typeof value.slug === 'string';
+    return isRecord(value) && typeof value.slug === 'string' && value.slug.trim().length > 0;
 }
 function isMember(value) {
-    return isRecord(value) && typeof value.login === 'string';
+    return isRecord(value) && typeof value.login === 'string' && value.login.trim().length > 0;
 }
 function isRecord(value) {
-    return typeof value === 'object' && value !== null;
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+function malformedMembers() {
+    return new application_error_1.ApplicationError('provider.contract-invalid', 'Organization membership response is malformed.');
 }
 
 
@@ -91817,14 +92047,14 @@ exports.OrganizationMembersRepository = void 0;
 const logger_1 = __nccwpck_require__(91151);
 const project_members_policy_1 = __nccwpck_require__(41370);
 const organization_members_query_1 = __nccwpck_require__(84916);
-const application_error_1 = __nccwpck_require__(75999);
+const assignment_provider_failure_1 = __nccwpck_require__(86172);
 class OrganizationMembersRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
         this.getRandomMembers = async (organization, membersToAdd, currentMembers, token) => {
             if (membersToAdd === 0)
                 return [];
-            try {
+            return (0, assignment_provider_failure_1.withAssignmentProviderFailure)('initialize-client', async () => {
                 const client = this.githubClient.getClient(token);
                 const teams = await (0, organization_members_query_1.listOrganizationTeams)(client, organization);
                 if (teams.length === 0) {
@@ -91837,26 +92067,18 @@ class OrganizationMembersRepository {
                     (0, logger_1.logDebugInfo)(`No available members to assign for organization ${organization}.`);
                 }
                 return selectedMembers;
-            }
-            catch (error) {
-                (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to select organization members.'));
-                throw error;
-            }
+            });
         };
         this.getAllMembers = async (organization, token) => {
-            try {
+            return (0, assignment_provider_failure_1.withAssignmentProviderFailure)('initialize-client', async () => {
                 const client = this.githubClient.getClient(token);
                 const teams = await (0, organization_members_query_1.listOrganizationTeams)(client, organization);
                 if (teams.length === 0) {
                     (0, logger_1.logDebugInfo)(`${organization} doesn't have any team.`);
                     return [];
                 }
-                return (0, project_members_policy_1.collectOrganizationMembers)(teams, (teamSlug) => (0, organization_members_query_1.listOrganizationTeamMembers)(client, organization, teamSlug));
-            }
-            catch (error) {
-                (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to list organization members.'));
-                throw error;
-            }
+                return await (0, project_members_policy_1.collectOrganizationMembers)(teams, (teamSlug) => (0, organization_members_query_1.listOrganizationTeamMembers)(client, organization, teamSlug));
+            });
         };
     }
 }
@@ -98258,6 +98480,44 @@ function parseDelimitedValues(value) {
         .split(',')
         .map(item => item.trim())
         .filter(item => item.length > 0);
+}
+
+
+/***/ }),
+
+/***/ 52616:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ASSIGNMENT_OPERATIONS = exports.ASSIGNMENT_STAGES = void 0;
+exports.isAssignmentProviderStatus = isAssignmentProviderStatus;
+exports.isIssueAssignmentDiagnostic = isIssueAssignmentDiagnostic;
+exports.ASSIGNMENT_STAGES = Object.freeze(['read-assignees', 'lookup-members', 'select-members', 'assign-creator', 'assign-members']);
+exports.ASSIGNMENT_OPERATIONS = Object.freeze(['read-assignees', 'list-teams', 'list-team-members', 'add-assignees', 'initialize-client', 'unavailable']);
+function isAssignmentProviderStatus(value) {
+    return typeof value === 'string' && (value === 'http-unavailable' || /^http-[1-5][0-9]{2}$/u.test(value));
+}
+function isIssueAssignmentDiagnostic(value) {
+    return Number.isSafeInteger(value.targetNumber) && Number(value.targetNumber) > 0
+        && Number.isInteger(value.desiredCount) && Number(value.desiredCount) >= 1 && Number(value.desiredCount) <= 10
+        && exports.ASSIGNMENT_STAGES.includes(value.stage)
+        && exports.ASSIGNMENT_OPERATIONS.includes(value.operation)
+        && isAssignmentProviderStatus(value.providerStatus)
+        && ['verified', 'unavailable'].includes(value.assigneeRead)
+        && ['not-attempted', 'unverified', 'verified'].includes(value.mutation)
+        && validCount(value.confirmedAssignments) && Number(value.confirmedAssignments) <= Number(value.desiredCount)
+        && (value.mutation !== 'not-attempted' || value.confirmedAssignments === 0)
+        && (value.mutation !== 'verified' || Number(value.confirmedAssignments) > 0)
+        && (value.assigneeRead === 'unavailable'
+            ? value.observedAssignees === 'unavailable' && value.remainingAssignments === 'unavailable'
+                && value.confirmedAssignments === 0 && value.mutation === 'not-attempted' && value.stage === 'read-assignees'
+            : validCount(value.observedAssignees) && validCount(value.remainingAssignments)
+                && value.remainingAssignments === Math.max(0, Number(value.desiredCount) - Number(value.observedAssignees) - Number(value.confirmedAssignments)));
+}
+function validCount(value) {
+    return Number.isInteger(value) && Number(value) >= 0 && Number(value) <= 10;
 }
 
 

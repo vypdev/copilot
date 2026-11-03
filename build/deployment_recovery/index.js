@@ -32362,6 +32362,7 @@ exports.readEnglishApplicationErrorMessage = exports.APPLICATION_ERROR_CATALOG_D
 exports.resolveStaticApplicationErrorCatalog = resolveStaticApplicationErrorCatalog;
 exports.resolveApplicationErrorCatalog = resolveApplicationErrorCatalog;
 const branch_sync_publication_messages_1 = __nccwpck_require__(3948);
+const issue_assignment_messages_1 = __nccwpck_require__(1737);
 const bugbot_review_diagnostic_labels_1 = __nccwpck_require__(351);
 const comment_command_validation_message_catalog_1 = __nccwpck_require__(2002);
 const application_error_1 = __nccwpck_require__(7790);
@@ -32370,6 +32371,7 @@ const resolved_message_catalog_policy_1 = __nccwpck_require__(5069);
 const LABEL_KEYS = Object.freeze([
     ...bugbot_review_diagnostic_labels_1.BUGBOT_REVIEW_DIAGNOSTIC_LABEL_KEYS,
     ...branch_sync_publication_messages_1.BRANCH_SYNC_PUBLICATION_LABEL_KEYS,
+    ...issue_assignment_messages_1.ASSIGNMENT_DIAGNOSTIC_LABEL_KEYS,
     'impact', 'errorCode', 'action', 'retainedState', 'retryable', 'yes', 'no', 'reference',
 ]);
 const CONTENT_FIELDS = Object.freeze(['impact', 'action', 'retainedState']);
@@ -32383,6 +32385,7 @@ exports.APPLICATION_ERROR_MESSAGE_IDS = Object.freeze([
 const ENGLISH_LABELS = Object.freeze({
     ...bugbot_review_diagnostic_labels_1.ENGLISH_REVIEW_DIAGNOSTIC_LABELS,
     ...branch_sync_publication_messages_1.ENGLISH_BRANCH_SYNC_PUBLICATION_LABELS,
+    ...issue_assignment_messages_1.ENGLISH_ASSIGNMENT_LABELS,
     impact: 'Impact',
     errorCode: 'Error code',
     action: 'Action',
@@ -32395,6 +32398,7 @@ const ENGLISH_LABELS = Object.freeze({
 const SPANISH_LABELS = Object.freeze({
     ...bugbot_review_diagnostic_labels_1.SPANISH_REVIEW_DIAGNOSTIC_LABELS,
     ...branch_sync_publication_messages_1.SPANISH_BRANCH_SYNC_PUBLICATION_LABELS,
+    ...issue_assignment_messages_1.SPANISH_ASSIGNMENT_LABELS,
     impact: 'Impacto',
     errorCode: 'Código de error',
     action: 'Acción',
@@ -32533,6 +32537,7 @@ const STORED_CONFIGURATION_ACTION_ES = 'Un mantenedor debe revisar {recoveryGuid
 const STORED_CONFIGURATION_RETAINED_EN = 'The issue/PR description and stored configuration were not changed by this read.';
 const STORED_CONFIGURATION_RETAINED_ES = 'Esta lectura no modificó la descripción de la issue/PR ni su configuración almacenada.';
 const ENGLISH_RECOVERY_CONTENT = Object.freeze({
+    ...issue_assignment_messages_1.ENGLISH_ASSIGNMENT_CONTENT,
     ...comment_command_validation_message_catalog_1.ENGLISH_COMMAND_VALIDATION_CONTENT,
     ...branch_sync_publication_messages_1.ENGLISH_BRANCH_SYNC_PUBLICATION_CONTENT,
     'stored-configuration-schema-missing': Object.freeze({
@@ -32732,6 +32737,7 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
     }),
 });
 const SPANISH_RECOVERY_CONTENT = Object.freeze({
+    ...issue_assignment_messages_1.SPANISH_ASSIGNMENT_CONTENT,
     ...comment_command_validation_message_catalog_1.SPANISH_COMMAND_VALIDATION_CONTENT,
     ...branch_sync_publication_messages_1.SPANISH_BRANCH_SYNC_PUBLICATION_CONTENT,
     'stored-configuration-schema-missing': Object.freeze({
@@ -33512,6 +33518,48 @@ function deploymentCopy(catalog) {
 
 /***/ }),
 
+/***/ 1737:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SPANISH_ASSIGNMENT_CONTENT = exports.ENGLISH_ASSIGNMENT_CONTENT = exports.SPANISH_ASSIGNMENT_LABELS = exports.ASSIGNMENT_DIAGNOSTIC_LABEL_KEYS = exports.ENGLISH_ASSIGNMENT_LABELS = void 0;
+exports.ENGLISH_ASSIGNMENT_LABELS = {
+    assignmentRead: 'reading current assignees', assignmentLookup: 'checking organization membership',
+    assignmentSelect: 'selecting additional members', assignmentCreator: 'assigning the creator', assignmentMembers: 'assigning additional members',
+    assignmentReadOperation: 'issue assignees', assignmentTeams: 'organization teams', assignmentTeamMembers: 'organization team members',
+    assignmentAdd: 'add issue assignees', assignmentClient: 'provider client initialization', assignmentUnavailable: 'unavailable',
+    assignmentReadVerified: 'verified', assignmentWriteNone: 'not attempted', assignmentWriteUnverified: 'outcome unverified; it may have applied',
+    assignmentWriteVerified: 'confirmed', assignmentAccess: 'Check the configured credential, documented access and target resource before retrying. A 404 alone does not establish that a private resource is absent.',
+};
+exports.ASSIGNMENT_DIAGNOSTIC_LABEL_KEYS = Object.keys(exports.ENGLISH_ASSIGNMENT_LABELS);
+exports.SPANISH_ASSIGNMENT_LABELS = {
+    assignmentRead: 'leer las personas asignadas', assignmentLookup: 'consultar los miembros de la organización',
+    assignmentSelect: 'seleccionar miembros adicionales', assignmentCreator: 'asignar al autor', assignmentMembers: 'asignar miembros adicionales',
+    assignmentReadOperation: 'personas asignadas a la issue', assignmentTeams: 'equipos de la organización', assignmentTeamMembers: 'miembros de los equipos',
+    assignmentAdd: 'añadir personas asignadas', assignmentClient: 'inicialización del cliente', assignmentUnavailable: 'no disponible',
+    assignmentReadVerified: 'verificada', assignmentWriteNone: 'no intentada', assignmentWriteUnverified: 'resultado sin verificar; pudo aplicarse',
+    assignmentWriteVerified: 'confirmada', assignmentAccess: 'Comprueba la credencial configurada, el acceso documentado y el recurso antes de reintentar. Un 404 por sí solo no demuestra que un recurso privado no exista.',
+};
+exports.ENGLISH_ASSIGNMENT_CONTENT = {
+    'issue-assignment-failed': {
+        impact: 'Automatic assignment for #{targetNumber} stopped during {stage}. Provider operation: {operation}; status: {providerStatus}.',
+        action: '{guidance} Rerun the same issue workflow after addressing the cause; it rereads assignees before adding missing members.',
+        retainedState: 'Verified new assignments: {confirmedAssignments}. Remaining target count: {remainingAssignments}. Current assignee read: {assigneeRead}. Assignment write: {mutation}. Independent completed lifecycle effects are retained in their own results.',
+    },
+};
+exports.SPANISH_ASSIGNMENT_CONTENT = {
+    'issue-assignment-failed': {
+        impact: 'La asignación automática de #{targetNumber} se detuvo al {stage}. Operación del proveedor: {operation}; estado: {providerStatus}.',
+        action: '{guidance} Repite el mismo workflow tras resolver la causa; volverá a leer las personas asignadas antes de añadir las pendientes.',
+        retainedState: 'Asignaciones nuevas verificadas: {confirmedAssignments}. Objetivo pendiente: {remainingAssignments}. Lectura de personas asignadas: {assigneeRead}. Escritura de asignaciones: {mutation}. Los efectos independientes completados se conservan en sus propios resultados.',
+    },
+};
+
+
+/***/ }),
+
 /***/ 6033:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -33873,6 +33921,7 @@ const progress_partition_length_failure_1 = __nccwpck_require__(9292);
 const progress_binary_evidence_diagnostic_1 = __nccwpck_require__(364);
 const issue_workflow_diagnostic_1 = __nccwpck_require__(4347);
 const change_size_reconciliation_1 = __nccwpck_require__(5304);
+const issue_assignment_diagnostic_1 = __nccwpck_require__(2616);
 const copilot_command_validation_1 = __nccwpck_require__(4237);
 const closed_issue_reconciliation_1 = __nccwpck_require__(1565);
 const approval_evidence_diagnostic_1 = __nccwpck_require__(8205);
@@ -33911,6 +33960,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'closed-issue-reconciliation-failed',
     'approval-evidence-read-failed',
     'change-size-reconciliation-failed',
+    'issue-assignment-failed',
     'issue-workflow-admission-blocked',
     'progress-binary-evidence-unavailable',
     'progress-inventory-incomplete',
@@ -34093,9 +34143,11 @@ class ApplicationError extends Error {
         this.action = metadata.action;
         this.retainedState = options.recovery?.id === 'change-size-reconciliation-failed'
             ? 'Completed effects were retained; the failed and later size operations remain unverified.'
-            : options.recovery?.id === 'deployment-publication-context-missing'
-                ? PRESERVED_STATE
-                : metadata.retainedState;
+            : options.recovery?.id === 'issue-assignment-failed'
+                ? 'Verified assignments and independently completed effects were retained; the failed assignment operation remains unverified.'
+                : options.recovery?.id === 'deployment-publication-context-missing'
+                    ? PRESERVED_STATE
+                    : metadata.retainedState;
         this.correlationId = correlationId;
         this.recovery = normalizeApplicationErrorRecovery(options.recovery);
         __classPrivateFieldSet(this, _ApplicationError_cause, options.cause, "f");
@@ -34138,6 +34190,7 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'approval-evidence-read-failed': Object.freeze(['operation', 'reason', 'permission']),
     'issue-workflow-admission-blocked': Object.freeze(['kind', 'reason', 'fields']),
     'change-size-reconciliation-failed': Object.freeze(['operation', 'issueNumber', 'targetNumber', 'projectIndex', 'verifiedOperations', 'pendingProjectSizes', 'providerStatus', 'providerReference']),
+    'issue-assignment-failed': Object.freeze(['targetNumber', 'desiredCount', 'stage', 'operation', 'providerStatus', 'assigneeRead', 'observedAssignees', 'confirmedAssignments', 'remainingAssignments', 'mutation']),
     'pull-request-link-restored': Object.freeze([]),
     'pull-request-link-base-retained': Object.freeze([]),
     'pull-request-link-reference-retained': Object.freeze([]),
@@ -34277,6 +34330,9 @@ function normalizeApplicationErrorRecovery(recovery) {
         throw new TypeError('Issue admission diagnostic is invalid.');
     if (recovery.id === 'change-size-reconciliation-failed' && !(0, change_size_reconciliation_1.isChangeSizeReconciliationFacts)(variables)) {
         throw new TypeError('Change size reconciliation diagnostic is invalid.');
+    }
+    if (recovery.id === 'issue-assignment-failed' && !(0, issue_assignment_diagnostic_1.isIssueAssignmentDiagnostic)(variables)) {
+        throw new TypeError('Issue assignment diagnostic is invalid.');
     }
     return Object.freeze({
         id: recovery.id,
@@ -36169,6 +36225,44 @@ function isRecord(value) {
 }
 function hasOnlyKeys(value, allowed) {
     return Object.keys(value).every(key => allowed.includes(key));
+}
+
+
+/***/ }),
+
+/***/ 2616:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ASSIGNMENT_OPERATIONS = exports.ASSIGNMENT_STAGES = void 0;
+exports.isAssignmentProviderStatus = isAssignmentProviderStatus;
+exports.isIssueAssignmentDiagnostic = isIssueAssignmentDiagnostic;
+exports.ASSIGNMENT_STAGES = Object.freeze(['read-assignees', 'lookup-members', 'select-members', 'assign-creator', 'assign-members']);
+exports.ASSIGNMENT_OPERATIONS = Object.freeze(['read-assignees', 'list-teams', 'list-team-members', 'add-assignees', 'initialize-client', 'unavailable']);
+function isAssignmentProviderStatus(value) {
+    return typeof value === 'string' && (value === 'http-unavailable' || /^http-[1-5][0-9]{2}$/u.test(value));
+}
+function isIssueAssignmentDiagnostic(value) {
+    return Number.isSafeInteger(value.targetNumber) && Number(value.targetNumber) > 0
+        && Number.isInteger(value.desiredCount) && Number(value.desiredCount) >= 1 && Number(value.desiredCount) <= 10
+        && exports.ASSIGNMENT_STAGES.includes(value.stage)
+        && exports.ASSIGNMENT_OPERATIONS.includes(value.operation)
+        && isAssignmentProviderStatus(value.providerStatus)
+        && ['verified', 'unavailable'].includes(value.assigneeRead)
+        && ['not-attempted', 'unverified', 'verified'].includes(value.mutation)
+        && validCount(value.confirmedAssignments) && Number(value.confirmedAssignments) <= Number(value.desiredCount)
+        && (value.mutation !== 'not-attempted' || value.confirmedAssignments === 0)
+        && (value.mutation !== 'verified' || Number(value.confirmedAssignments) > 0)
+        && (value.assigneeRead === 'unavailable'
+            ? value.observedAssignees === 'unavailable' && value.remainingAssignments === 'unavailable'
+                && value.confirmedAssignments === 0 && value.mutation === 'not-attempted' && value.stage === 'read-assignees'
+            : validCount(value.observedAssignees) && validCount(value.remainingAssignments)
+                && value.remainingAssignments === Math.max(0, Number(value.desiredCount) - Number(value.observedAssignees) - Number(value.confirmedAssignments)));
+}
+function validCount(value) {
+    return Number.isInteger(value) && Number(value) >= 0 && Number(value) <= 10;
 }
 
 

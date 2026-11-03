@@ -20,6 +20,9 @@ const RECOVERY_CASES: readonly Readonly<{
     english: string;
     spanish: string;
 }>[] = [
+    { recovery: { id: 'issue-assignment-failed', variables: { targetNumber: 17, desiredCount: 2, stage: 'lookup-members', operation: 'list-teams', providerStatus: 'http-503', assigneeRead: 'verified', observedAssignees: 0, confirmedAssignments: 0, remainingAssignments: 2, mutation: 'not-attempted' } },
+      english: 'Verified new assignments: 0. Remaining target count: 2. Current assignee read: verified. Assignment write: not attempted. Independent completed lifecycle effects are retained in their own results.',
+      spanish: 'Asignaciones nuevas verificadas: 0. Objetivo pendiente: 2. Lectura de personas asignadas: verificada. Escritura de asignaciones: no intentada. Los efectos independientes completados se conservan en sus propios resultados.' },
     { recovery: { id: 'branch-sync-workflow-write-required', variables: { reason: 'workflow-write-required', remoteState: 'unchanged', originalSha: 'a'.repeat(40), candidateSha: 'b'.repeat(40), observedSha: 'a'.repeat(40), pushAttempted: true } },
       english: `The local merge commit step finished; candidate identity: ${'b'.repeat(40)}. A normal push was attempted. The observed remote still points to the original head; the candidate was not observed as published. Original head: ${'a'.repeat(40)}; observed head: ${'a'.repeat(40)}. Recovery did not reset or abort the committed workspace; runner-local storage is temporary.`,
       spanish: `Terminó el paso de commit del merge local; identidad del candidato: ${'b'.repeat(40)}. Se intentó un push normal. El remoto observado conserva el head original; no se observó la publicación del candidato. Head original: ${'a'.repeat(40)}; head observado: ${'a'.repeat(40)}. La recuperación no restableció ni abortó el espacio de trabajo confirmado; el almacenamiento del runner es temporal.` },

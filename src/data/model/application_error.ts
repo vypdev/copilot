@@ -8,6 +8,7 @@ import { isProgressPartitionLengthDiagnostic, type ProgressPartitionLengthDiagno
 import { isProgressBinaryEvidenceFacts, type ProgressBinaryEvidenceFacts } from '../../domain/progress_binary_evidence_diagnostic';
 import { isIssueWorkflowDiagnostic, type IssueWorkflowDiagnosticFacts } from '../../domain/issue_workflow_diagnostic';
 import { isChangeSizeReconciliationFacts, type ChangeSizeReconciliationFacts } from '../../domain/change_size_reconciliation';
+import { isIssueAssignmentDiagnostic, type IssueAssignmentDiagnostic } from '../../domain/issue_assignment_diagnostic';
 import { COPILOT_COMMAND_VALIDATION_REASONS, isCopilotCommandValidationReason, isValidCopilotCommandValidation, type CopilotCommandValidationReason } from '../../domain/copilot_command_validation';
 import type { CopilotCommandName } from '../../domain/copilot_command';
 import { CLOSED_ISSUE_RESULTS, CLOSED_ISSUE_PHASES, CLOSED_ISSUE_REASONS, type ClosedIssueReconciliationFacts } from '../../domain/closed_issue_reconciliation';
@@ -84,6 +85,7 @@ export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'closed-issue-reconciliation-failed',
     'approval-evidence-read-failed',
     'change-size-reconciliation-failed',
+    'issue-assignment-failed',
     'issue-workflow-admission-blocked',
     'progress-binary-evidence-unavailable',
     'progress-inventory-incomplete',
@@ -108,6 +110,7 @@ interface ApplicationErrorRecoveryVariables extends Readonly<Record<CopilotComma
     readonly 'closed-issue-reconciliation-failed': ClosedIssueReconciliationFacts;
     readonly 'approval-evidence-read-failed': ApprovalEvidenceDiagnostic;
     readonly 'change-size-reconciliation-failed': ChangeSizeReconciliationFacts;
+    readonly 'issue-assignment-failed': IssueAssignmentDiagnostic;
     readonly 'issue-workflow-admission-blocked': IssueWorkflowDiagnosticFacts;
     readonly 'progress-binary-evidence-unavailable': ProgressBinaryEvidenceFacts;
     readonly 'progress-inventory-incomplete': ProgressInventoryDiagnostic;
@@ -365,6 +368,8 @@ export class ApplicationError extends Error {
         this.action = metadata.action;
         this.retainedState = options.recovery?.id === 'change-size-reconciliation-failed'
             ? 'Completed effects were retained; the failed and later size operations remain unverified.'
+            : options.recovery?.id === 'issue-assignment-failed'
+            ? 'Verified assignments and independently completed effects were retained; the failed assignment operation remains unverified.'
             : options.recovery?.id === 'deployment-publication-context-missing'
             ? PRESERVED_STATE
             : metadata.retainedState;
@@ -410,6 +415,7 @@ const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readon
     'approval-evidence-read-failed': Object.freeze(['operation', 'reason', 'permission']),
     'issue-workflow-admission-blocked': Object.freeze(['kind', 'reason', 'fields']),
     'change-size-reconciliation-failed': Object.freeze(['operation', 'issueNumber', 'targetNumber', 'projectIndex', 'verifiedOperations', 'pendingProjectSizes', 'providerStatus', 'providerReference']),
+    'issue-assignment-failed': Object.freeze(['targetNumber', 'desiredCount', 'stage', 'operation', 'providerStatus', 'assigneeRead', 'observedAssignees', 'confirmedAssignments', 'remainingAssignments', 'mutation']),
 
     'pull-request-link-restored': Object.freeze([]),
     'pull-request-link-base-retained': Object.freeze([]),
@@ -547,6 +553,9 @@ function normalizeApplicationErrorRecovery(
     if (recovery.id === 'issue-workflow-admission-blocked' && !isIssueWorkflowDiagnostic(variables)) throw new TypeError('Issue admission diagnostic is invalid.');
     if (recovery.id === 'change-size-reconciliation-failed' && !isChangeSizeReconciliationFacts(variables)) {
         throw new TypeError('Change size reconciliation diagnostic is invalid.');
+    }
+    if (recovery.id === 'issue-assignment-failed' && !isIssueAssignmentDiagnostic(variables)) {
+        throw new TypeError('Issue assignment diagnostic is invalid.');
     }
     return Object.freeze({
         id: recovery.id,

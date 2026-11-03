@@ -1,4 +1,5 @@
 import { BRANCH_SYNC_PUBLICATION_LABEL_KEYS, ENGLISH_BRANCH_SYNC_PUBLICATION_LABELS, SPANISH_BRANCH_SYNC_PUBLICATION_LABELS, ENGLISH_BRANCH_SYNC_PUBLICATION_CONTENT, SPANISH_BRANCH_SYNC_PUBLICATION_CONTENT } from './branch_sync_publication_messages';
+import { ASSIGNMENT_DIAGNOSTIC_LABEL_KEYS, ENGLISH_ASSIGNMENT_LABELS, SPANISH_ASSIGNMENT_LABELS, ENGLISH_ASSIGNMENT_CONTENT, SPANISH_ASSIGNMENT_CONTENT } from './issue_assignment_messages';
 import { BUGBOT_REVIEW_DIAGNOSTIC_LABEL_KEYS, ENGLISH_REVIEW_DIAGNOSTIC_LABELS, SPANISH_REVIEW_DIAGNOSTIC_LABELS } from './bugbot_review_diagnostic_labels';
 import { ENGLISH_COMMAND_VALIDATION_CONTENT, SPANISH_COMMAND_VALIDATION_CONTENT } from './comment_command_validation_message_catalog';
 import type {
@@ -26,6 +27,7 @@ import {
 const LABEL_KEYS = Object.freeze([
   ...BUGBOT_REVIEW_DIAGNOSTIC_LABEL_KEYS,
   ...BRANCH_SYNC_PUBLICATION_LABEL_KEYS,
+  ...ASSIGNMENT_DIAGNOSTIC_LABEL_KEYS,
   'impact', 'errorCode', 'action', 'retainedState', 'retryable', 'yes', 'no', 'reference',
 ] as const);
 const CONTENT_FIELDS = Object.freeze(['impact', 'action', 'retainedState'] as const);
@@ -57,6 +59,7 @@ export const APPLICATION_ERROR_MESSAGE_IDS: readonly ApplicationErrorMessageId[]
 const ENGLISH_LABELS: Readonly<Record<LabelKey, string>> = Object.freeze({
   ...ENGLISH_REVIEW_DIAGNOSTIC_LABELS,
   ...ENGLISH_BRANCH_SYNC_PUBLICATION_LABELS,
+  ...ENGLISH_ASSIGNMENT_LABELS,
   impact: 'Impact',
   errorCode: 'Error code',
   action: 'Action',
@@ -70,6 +73,7 @@ const ENGLISH_LABELS: Readonly<Record<LabelKey, string>> = Object.freeze({
 const SPANISH_LABELS: Readonly<Record<LabelKey, string>> = Object.freeze({
   ...SPANISH_REVIEW_DIAGNOSTIC_LABELS,
   ...SPANISH_BRANCH_SYNC_PUBLICATION_LABELS,
+  ...SPANISH_ASSIGNMENT_LABELS,
   impact: 'Impacto',
   errorCode: 'Código de error',
   action: 'Acción',
@@ -220,6 +224,7 @@ const STORED_CONFIGURATION_RETAINED_EN = 'The issue/PR description and stored co
 const STORED_CONFIGURATION_RETAINED_ES = 'Esta lectura no modificó la descripción de la issue/PR ni su configuración almacenada.';
 
 const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
+  ...ENGLISH_ASSIGNMENT_CONTENT,
   ...ENGLISH_COMMAND_VALIDATION_CONTENT,
   ...ENGLISH_BRANCH_SYNC_PUBLICATION_CONTENT,
   'stored-configuration-schema-missing': Object.freeze({
@@ -421,6 +426,7 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
 });
 
 const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
+  ...SPANISH_ASSIGNMENT_CONTENT,
   ...SPANISH_COMMAND_VALIDATION_CONTENT,
   ...SPANISH_BRANCH_SYNC_PUBLICATION_CONTENT,
   'stored-configuration-schema-missing': Object.freeze({

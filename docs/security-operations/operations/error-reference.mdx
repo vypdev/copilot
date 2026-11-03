@@ -284,3 +284,22 @@ scope and classifier result; do not remove acceptance or raise a bound to pass.
 Generated persisted state is operational context, not another requirement.
 Malformed state fails through the existing configuration-error family before
 model queries. Raw rejected output is never part of these diagnostics.
+
+## Assignment failures
+
+`issue-assignment-failed` identifies the assignment stage and safe provider
+operation, target number, bounded HTTP status (or unavailable), current-read
+certainty, observed/confirmed/remaining counts, and assignment-write certainty.
+An unverified write may already have applied; do not treat zero confirmed new
+assignments as proof of zero external changes. The same workflow rereads current
+assignees before retrying missing work. Independent completed lifecycle effects
+are retained in their own results.
+
+Known denied/authentication failures are not retryable outages. A 403 with
+rate-limit evidence or a 429 uses `provider.rate-limited`; recognized transport,
+408 and 5xx failures use `provider.unavailable`. Unknown exceptions are
+`unexpected`, with no invented transient cause. Malformed lists/rows use
+`provider.contract-invalid`, rather than becoming an empty membership list.
+For 404, check access and target; private-resource absence cannot be inferred.
+Raw assignment-provider exceptions are discarded after their safe classification.
+See [assignment recovery](/issues/assignees-and-projects#recover-an-assignment-failure).

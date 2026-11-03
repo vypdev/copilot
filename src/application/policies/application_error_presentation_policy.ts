@@ -20,6 +20,7 @@ const BRANCH_SYNC_CATALOG_RECOVERY_URL = 'https://docs.page/vypdev/copilot/secur
 const BRANCH_SYNC_PUBLICATION_RECOVERY_URL = 'https://docs.page/vypdev/copilot/security-operations/operations/troubleshooting#branch-sync-workflow-write-recovery';
 
 import { sourceContextDiagnostic } from '../../domain/agent_source_snapshot';
+import { assignmentDiagnosticPresentation } from './issue_assignment_diagnostic_presentation';
 
 export interface ApplicationErrorPresentation {
     readonly impact: string;
@@ -45,7 +46,9 @@ export function buildApplicationErrorPresentation(
     const descriptor = error.recovery
         ? `error.recovery.${error.recovery.id}` as const
         : `error.${error.code}` as const;
-    const variables = error.recovery?.id === 'sdd-source-context-unavailable'
+    const variables = error.recovery?.id === 'issue-assignment-failed'
+        ? assignmentDiagnosticPresentation(error.recovery.variables, error.code, message)
+        : error.recovery?.id === 'sdd-source-context-unavailable'
         ? { ...sourceContextDiagnostic(error.recovery.variables) }
         : error.recovery?.id === 'progress-partition-length-invalid'
         ? progressPartitionLengthPresentation(error.recovery.variables)

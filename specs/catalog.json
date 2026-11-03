@@ -1930,9 +1930,10 @@
       "status": "as-built-baseline",
       "scope": "Convert typed issues into traceable work branches, project state, and lifecycle state",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-30",
+      "lastVerified": "2026-11-03",
       "specs": [
-        "specs/managed-issue-and-branch-lifecycle.md"
+        "specs/managed-issue-and-branch-lifecycle.md",
+        "specs/issue-assignment-failure-recovery.md"
       ],
       "workflows": [
         ".github/workflows/copilot_issue.yml",
@@ -1980,7 +1981,21 @@
         "src/application/usecases/actions/verify_closed_issue_card_retirement.ts",
         "src/application/policies/closed_issue_reconciliation_outcome_policy.ts",
         "src/domain/deployment_issue_completion.ts",
-        "src/application/usecases/actions/deferred_deployment_completion.ts"
+        "src/application/usecases/actions/deferred_deployment_completion.ts",
+        "src/domain/issue_assignment_diagnostic.ts",
+        "src/application/ports/assignment_provider_error.ts",
+        "src/application/errors/issue_assignment_failure.ts",
+        "src/application/usecases/steps/issue/assign_members_workflow.ts",
+        "src/application/policies/assignee_assignment_policy.ts",
+        "src/application/policies/issue_assignment_messages.ts",
+        "src/data/repository/github/assignment_provider_failure.ts",
+        "src/data/repository/organization/organization_members_query.ts",
+        "src/data/repository/organization/organization_members_repository.ts",
+        "src/data/repository/issue/issue_assignment_repository.ts",
+        "src/data/model/application_error.ts",
+        "src/application/policies/application_error_message_catalog.ts",
+        "src/application/policies/application_error_presentation_policy.ts",
+        "src/application/policies/issue_assignment_diagnostic_presentation.ts"
       ],
       "tests": [
         "src/application/usecases/__tests__/issue_pull_request_context_projection.test.ts",
@@ -2009,7 +2024,17 @@
         "src/application/errors/__tests__/closed_issue_reconciliation_error.test.ts",
         "src/application/policies/__tests__/closed_issue_reconciliation_summary.test.ts",
         "src/domain/__tests__/deployment_issue_completion.test.ts",
-        "src/application/usecases/actions/__tests__/deployment_issue_completion.integration.test.ts"
+        "src/application/usecases/actions/__tests__/deployment_issue_completion.integration.test.ts",
+        "src/domain/__tests__/issue_assignment_diagnostic.test.ts",
+        "src/data/repository/github/__tests__/assignment_provider_failure.test.ts",
+        "src/data/repository/__tests__/assignment_provider_contract.test.ts",
+        "src/application/policies/__tests__/issue_assignment_messages.test.ts",
+        "src/tooling/__tests__/issue_assignment_diagnostics.test.ts",
+        "src/application/policies/__tests__/assignee_assignment_policy.test.ts",
+        "src/application/usecases/steps/issue/__tests__/assign_members_to_issue_use_case.test.ts",
+        "src/data/repository/__tests__/organization_members_repository.test.ts",
+        "src/data/repository/__tests__/issue_assignment_repository.test.ts",
+        "src/application/policies/__tests__/application_error_presentation_policy.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-management.mdx",
@@ -2017,7 +2042,8 @@
         "docs/issues/assignees-and-projects.mdx",
         "docs/issues/notifications-and-auto-close.mdx",
         "docs/issues/index.mdx",
-        "docs/issues/comment-commands.mdx"
+        "docs/issues/comment-commands.mdx",
+        "docs/security-operations/operations/error-reference.mdx"
       ]
     },
     {
