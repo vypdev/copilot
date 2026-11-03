@@ -2,15 +2,24 @@
 
 - Status: As-built baseline
 - Date: 2026-09-11
-- Last updated: 2026-11-02
+- Last updated: 2026-11-03
 - Catalog capability ID: `bugbot-analysis-and-autofix`
-- Last verified: 2026-11-02; Python exception grammar regression #831; versioned Ktor routing-root regression #809, active Kotlin Json policy #807, indirect unittest discovery regression #806, generated-source coordinate evidence #796, dependency-generated request/assertion evidence #784, renderer-grounded Markdown links #772, host-aware self-repository Action references #770, Kotlin/Wasm binding guidance #764, resolved-type grounding #736, delegated test-path evidence #738, versioned Action input contracts #739 and exact validation witnesses #749 alongside the dated package/framework evidence in #720, #721 and #722
+- Last verified: 2026-11-03; recovery-contract grounding #832; Python exception grammar regression #831; versioned Ktor routing-root regression #809, active Kotlin Json policy #807, indirect unittest discovery regression #806, generated-source coordinate evidence #796, dependency-generated request/assertion evidence #784, renderer-grounded Markdown links #772, host-aware self-repository Action references #770, Kotlin/Wasm binding guidance #764, resolved-type grounding #736, delegated test-path evidence #738, versioned Action input contracts #739 and exact validation witnesses #749 alongside the dated package/framework evidence in #720, #721 and #722
 - Owners: Copilot maintainers
 - Scope: bounded change analysis, finding identity/publication, authorized autofix, and independent verification
 - Related issues/PRs: Bugbot review-state reconciliation SDD; architecture
   quality and scalability hardening SDD
 - Required review gates: product UX, architecture, testing, documentation, security/operations
 - Open decisions blocking readiness: none for the baseline
+
+### Recovery-contract grounding — #832 (2026-11-03)
+
+The [recovery-contract companion](./bugbot-recovery-contract-grounding.md) owns
+retention/no-overwrite, safely owned disposable staging, changed ownership and
+after-publication failure requirements. Its ten frozen controls, 56 deterministic
+regressions and separately recorded native/model evidence preserve real cleanup
+and data-loss findings. Existing publication, historical resolution, trust,
+coverage and approval contracts below remain applicable.
 
 ### Python exception grammar correction — #831 (2026-11-02)
 

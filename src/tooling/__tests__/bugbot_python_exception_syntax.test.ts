@@ -55,10 +55,10 @@ describe('version-grounded Python exception syntax', () => {
     const evidence = JSON.parse(readFileSync(join(__dirname, '../../../quality/bugbot/evidence/issue-831.json'), 'utf8'));
     const references = JSON.parse(readFileSync(join(__dirname, '../../../quality/bugbot/reference-predictions.v1.json'), 'utf8'));
     const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
-    const previous = corpus.cases.filter(item => !item.id.startsWith('py-pep758-'));
+    const previous = corpus.cases.slice(0, evidence.priorCorpus.cases);
     expect(previous).toHaveLength(evidence.priorCorpus.cases);
     expect(hash(previous)).toBe(evidence.priorCorpus.decodedCasesSha256);
-    expect(hash(Object.fromEntries(Object.entries(references.predictions).filter(([id]) => !id.startsWith('py-pep758-')))))
+    expect(hash(Object.fromEntries(Object.entries(references.predictions).filter(([id]) => previous.some(item => item.id === id)))))
       .toBe(evidence.priorCorpus.decodedReferencesSha256);
     expect(cases).toEqual(evidence.frozenCorpus.cases);
   });

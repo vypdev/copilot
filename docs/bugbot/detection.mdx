@@ -629,3 +629,49 @@ companion directories, or that its output writer handles symlinks safely. Those
 remain independent checks. Prior findings are rechecked against current source;
 missing evidence keeps their state unresolved instead of inventing a failure or
 resolution.
+
+
+## Retained output and recovery contracts
+
+Before suggesting filesystem cleanup, Bugbot reads the effective recovery
+contract and tests, then traces the selected failure through ownership guards
+and the actual publication boundary.
+
+```text
+selected error path -> retention or disposable-staging contract
+ -> actual ownership/publication guards -> proved violation or claim omitted
+```
+
+Partial diagnostic evidence may deliberately remain for inspection while a
+manifest-last bundle is invalid and retries refuse to overwrite it. That is not
+by itself a missing-cleanup defect. Likewise, a typed reporting failure after
+publication does not mean publication had no effect. Retained evidence and
+published output must not be deleted merely to make an error path look clean.
+
+A genuine failure to remove safely owned disposable staging remains reportable,
+as does deletion of retained or published output. An unknown or changed owner
+requires inspection, not an invented cleanup mandate. Reconcile exact-source
+observations and the selected case; a different configured fault or unrelated
+green test does not prove the reported path.
+
+This language-independent guidance changes review reasoning only. It adds no
+filesystem executor, cleanup permission, configuration or historical-finding
+resolution shortcut. The existing complete/partial status and independent
+approval rules still apply. Adoption requires the normal SDK upgrade; merging
+an SDK change to develop alone does not update installed consumers.
+
+
+For supplied source assigned to a retained `.py` path (case-insensitive), every
+proposed candidate set also passes the
+existing independent source-bound verifier, including files without generated
+literals. It explicitly retains or rejects each candidate, keeps IDs/file/snippet
+identity and can correct a supported candidate's reasoning/location. It cannot
+create findings or resolve historical threads. An empty candidate set uses no
+extra model query. Non-Python and empty legacy input keep their prior verifier
+applicability.
+
+This extra adjudication has a bounded provider/latency cost. Existing candidate,
+source, response, batch and framed-traffic limits remain fixed. Incomplete or
+oversized verification fails closed; inspect the run, split the review scope and
+recheck. An informational explanation of correct code is not a valid finding,
+and a malformed verification response is not evidence of a clean review.

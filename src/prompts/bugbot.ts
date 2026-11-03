@@ -19,6 +19,8 @@ export const BUGBOT_MARKDOWN_LINKS_INSTRUCTION = "For Markdown links, normalize 
 
 export const BUGBOT_PYTHON_SYNTAX_INSTRUCTION = 'Python 3.14 / PEP 758 accepts except A, B: and except* A, B: without as; with as, parenthesize multiple types. Check requires-python/pins/CI; Ruff target alone proves no runtime range. Preserve supported older interpreter faults despite a 3.14 parse. Reconcile same-head exact-source evidence; unknown versions prove no SyntaxError. Parsing-only failures are medium reliability findings. Parsing is not import/runtime proof; keep binding faults; never invent parser/CI execution.';
 
+export const BUGBOT_RECOVERY_CONTRACT_INSTRUCTION = "Filesystem recovery contract:\nOwnership does NOT imply disposability. An owned, incomplete destination that blocks retry is correct when the selected contract requires retained diagnostic evidence and no overwrite. Missing a valid manifest does not choose a deletion policy. Do not turn general cleanup advice into a defect.\nBefore a cleanup finding, identify the positive selected requirement that the changed operation violates: required retention/inspection/no-overwrite, or required removal of disposable staging. Without that contract and a reachable violation, emit no cleanup finding, even info. Explain the violated requirement in evidence. Still report a real required-cleanup omission; retention is not universally correct either.\nTrace the actual selected fault through the exact try/catch, ownership and publication boundaries. A reporting call outside a catch cannot reach that catch. Publication followed by a typed reporting failure is partial success, not unpublished staging or rollback permission. Do not borrow another configured fault/actor. Reconcile exact-source observations with the actual guard; if it protects the selected path, withdraw the hypothesis completely, not an informational explanation of working code. Unknown/changed ownership authorizes no destructive cleanup. Never invent execution or mutation/approval authority.\nMissing required cleanup of safely owned disposable pre-publication staging is medium reliability. Destruction of retained or published data is high correctness when data loss is proved, including deleting an existing destination before a failed replacement or deleting published output in a reporting-error handler.\nAnchor the exact changed operation violating the contract, not its if/except guard or another helper. Count displayed physical lines from their stated first line, including context/blanks; remove only diff markers for the exact codeSnippet and verify that its file/line names that statement. For an excerpt starting at N, line = N + the zero-based displayed-line index of that exact operation. Count context and blank lines too; dependency bodies in separate context add zero lines to the excerpt. Recheck this arithmetic before emitting.";
+
 const TEMPLATE = `Review changed code.
 Use {{targetLocale}} for human text; keep identifiers/code/symbols/paths/refs/commands/URLs verbatim. Echo \`outputLocale\` exactly as \`{{targetLocale}}\`.
 {{projectContextInstruction}}
@@ -40,6 +42,8 @@ Prove change-caused/exposed correctness/security/reliability/performance/maintai
 Require \`evidence\` (causal path/impact), minimal inclusive changed lines, stable semantic root-cause id, practical fix, nearest stable \`symbol\` and exact minimal \`codeSnippet\` across rebase/move/rename; \`confidence\` 0..1 (omit <0.70). Severity: high security/data loss/outage; medium functional failure; low limited edge; info concrete nonblocking. \`suggestedCode\`: safe exact-range replacement or omit.
 
 ${BUGBOT_FINDING_GROUNDING_INSTRUCTION}
+
+{{recoveryContractInstruction}}
 
 ${BUGBOT_EXTERNAL_FACTS_INSTRUCTION}
 
@@ -84,6 +88,7 @@ export type BugbotParams = {
 export function getBugbotPrompt(params: BugbotParams): string {
     return fillTemplate(TEMPLATE, {
         ...params,
+        recoveryContractInstruction: (params.diffBlock ?? '').length > 0 ? BUGBOT_RECOVERY_CONTRACT_INSTRUCTION : '',
         pythonSyntaxInstruction: params.pythonSyntaxProfile === 'python' ? BUGBOT_PYTHON_SYNTAX_INSTRUCTION : '',
         diffBlock: params.diffBlock ?? '',
         reviewConversationBlock: params.reviewConversationBlock ?? '',

@@ -92,6 +92,28 @@ function attestedResponse(prompt: string, ordinal: number, resolved: unknown[] =
 }
 
 describe('analyzeBugbotRevision partition execution', () => {
+  it.each([false, true])('independently rejects a nonliteral Python cleanup hypothesis; partitioned=%s', async partitioned => {
+    const assigned = { ...partition(1, 1), files: ['owned.py'], block: '+raise' };
+    const loaded = context(partitioned ? [assigned] : []);
+    if (!partitioned) loaded.reviewDiffPartitions = undefined;
+    loaded.reviewDiffBlock = '+raise';
+    loaded.prContext!.changes = [{ filename: 'owned.py', status: 'modified', additions: 1, deletions: 0, patch: '+raise' }];
+    const hypothesis = { id: 'cleanup', file: 'owned.py', line: 1, title: 'Missing cleanup',
+      description: 'Unverified retention hypothesis', codeSnippet: 'raise', severity: 'medium', confidence: .9 };
+    const query = jest.fn(async (request: FindingsQueryRequest) => {
+      if (request.agentId === 'bugbot-literal-candidate-verification') {
+        const properties = (request.options!.schema as any).properties;
+        return { outputLocale: 'en-US', verification_id: properties.verification_id.enum[0],
+          findings: [], rejected_ids: properties.rejected_ids.items.enum };
+      }
+      return { ...attestedResponse(request.prompt, 1), findings: [hypothesis] };
+    });
+    const prepared = await analyzeBugbotRevision(operation(), loaded, { agent: { query }, telemetry: new BugbotReviewTelemetry(operation()) });
+    expect(prepared?.activeFindings).toEqual([]);
+    expect(query).toHaveBeenCalledTimes(2);
+    expect(query.mock.calls[1][0].prompt).toContain('Ownership does NOT imply disposability');
+    expect(query.mock.calls[1][0].prompt).toContain('no historical finding resolution/dismissal/reopening authority');
+  });
   it('folds partition reports for one retained identity before applying the comment limit', async () => {
     const partitions = [partition(1, 2), partition(2, 2)];
     const reports = [1, 2].map((ordinal) => ({ id: `new-${ordinal}`, title: `Changed title ${ordinal}`,

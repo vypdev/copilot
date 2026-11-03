@@ -232,6 +232,39 @@ retains the existing medium reliability classification for parsing-only failures
 and passes the same corrected inputs. This bounded sample is not a statistical
 accuracy guarantee or an execution of the consumer's application.
 
+## Recovery-contract evidence
+
+The #832 family adds ten frozen source-bound scenarios: six safe or unknown
+contracts and four genuine required-cleanup/data-loss controls. A fixed optional
+Python probe performs real file writes, inspection, injected failures and retries
+inside fresh owned temporary directories. Its observations are distinct from
+model output and consumer CI. Mandatory Node CI checks source hashes, exact
+excerpts, recorded states, actual prompt delivery and opposite-verdict scoring;
+it adds no Python runtime requirement.
+
+The current baseline fails the unchanged quality gate. It also produces two
+unsupported ownership/path hypotheses; category mismatches are separately
+recorded. The first candidate removes those hypotheses but still fails on a
+publication-boundary premise and an off-by-one deletion anchor. Retain all
+samples and scores when evaluating a successor; do not replace expected labels
+to fit model output. The initial authored optional-lease fixture really was
+faulty and was corrected before the accepted cohort was frozen. A separate
+completed-destination control independently verifies data loss and its severity.
+
+See the [source-bound evidence record](https://github.com/vypdev/copilot/blob/master/quality/bugbot/evidence/issue-832.json)
+and [recovery-contract specification](https://github.com/vypdev/copilot/blob/master/specs/bugbot-recovery-contract-grounding.md).
+Bounded measurements do not establish statistical accuracy, crash durability,
+SQLite backup correctness or an atomic ownership race guarantee. A model claim
+of execution is never substituted for captured native observations. Six
+instruction-only candidates failed an unchanged gate; their complete outputs
+remain in the record. Acceptance now tests the complete detection plus existing
+independent source-bound verification pipeline for Python, with a fixed five-trial CLI repeatability cohort. It includes the two initial
+failed trials and three additional trials predefined before they execute. All 50
+source cases/20 positive controls retain the original thresholds and expectations;
+individual failures remain visible, and the instrumented diagnostic is excluded
+from acceptance scoring. This is a pipeline comparison, not a claim that wording alone
+solved the defect.
+
 ## Quality gates
 
 ```bash
@@ -493,3 +526,16 @@ checks and full changed-line coverage remain independent acceptance gates.
 The companion [framed review specification](https://github.com/vypdev/copilot/blob/develop/specs/bugbot-source-bound-framed-review.md)
 records the 130-case risk inventory and finite budgets. No threshold or ignore
 exclusion is added for this protocol.
+
+
+### Recorded repeatability outcome
+
+The fixed five-trial CLI cohort completes all 50 source cases, with zero false
+positives and 19/20 real defects detected. Aggregate precision is 1.0, recall 0.95,
+F1 0.9744 and exact location 17/19 (0.8947); severity/category accuracy is 1.0.
+The original unchanged aggregate gate passes. The first two trials remain
+individually failed (location and one omission); all three additional predefined
+trials pass individually. This is neither 50/50 perfect decisions nor a guarantee
+for every model draw. The separately observed diagnostic is not pooled into the
+acceptance score. All raw predictions and failed experiments remain in the
+source-bound evidence record.

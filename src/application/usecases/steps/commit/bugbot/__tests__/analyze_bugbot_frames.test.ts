@@ -342,6 +342,23 @@ function rejectLiteralHypotheses(request: FindingsQueryRequest) {
         rejected_ids: properties.rejected_ids.items.enum };
 }
 
+it.each([false, true])('verifies a source-bound Python recovery candidate without generated literals; retain=%s', async retain => {
+    const f = setup(framedSource([framedChange({ filename: 'src/recovery.py',
+        patch: '@@ -1 +1,2 @@\n-old\n+def fail():\n+    raise', additions: 2, deletions: 1 })]));
+    expect(f.plan.partitions[0].hasPythonLiteralWitnesses).toBeUndefined();
+    const candidate = { id: 'recovery', file: 'src/recovery.py', line: 2, codeSnippet: 'raise',
+        title: 'Recovery contract violation', description: 'Check a retained-output requirement.',
+        evidence: 'Selected contract and source prove this candidate.', severity: 'medium', confidence: .9 };
+    const query = jest.fn(async (request: FindingsQueryRequest) => request.agentId === 'bugbot-literal-candidate-verification'
+        ? { ...rejectLiteralHypotheses(request), findings: retain ? [candidate] : [], rejected_ids: retain ? [] : ['recovery'] }
+        : reply(request, { findings: [candidate] }));
+    const result = await run(f, query);
+    expect(result.findings).toHaveLength(Number(retain));
+    if (retain) expect(result.findings?.[0]).toMatchObject({ id: 'recovery', file: 'src/recovery.py', line: 2 });
+    expect(query).toHaveBeenCalledTimes(2);
+    expect(query.mock.calls[1][0].prompt).toContain('Ownership does NOT imply disposability');
+});
+
 it('admits a response-dependent generated verification request through the actual framed query port', async () => {
     const f = literalFrameFixture();
     expect(f.plan.partitions[0].hasPythonLiteralWitnesses).toBe(true);

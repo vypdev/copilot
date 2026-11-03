@@ -34,7 +34,7 @@ export function buildBugbotReviewInput(
     param: BugbotReviewOperationContext,
     context: BugbotContext,
     assignment?: BugbotPromptPartitionAssignment,
-): { readonly prompt: string; readonly hasLiteralWitnesses: boolean } {
+): { readonly prompt: string; readonly hasLiteralWitnesses: boolean; readonly requiresCandidateVerification: boolean } {
     const headBranch = param.target.headBranch || 'unknown';
     const baseBranch = param.target.baseBranch;
     const previousBlock = !assignment || assignment.partition.ownsResolution
@@ -63,6 +63,10 @@ export function buildBugbotReviewInput(
     });
 
     const literalEvidence = assignment ? undefined : legacyPythonWitnesses(changes);
+    const diffBlock = assignment?.partition.block ?? [context.reviewDiffBlock, literalEvidence?.block].filter(Boolean).join('\n\n');
+    const reviewedFiles = assignment?.partition.files ?? changes.map(change => change.filename);
+    const hasLiteralWitnesses = assignment ? assignment.partition.hasPythonLiteralWitnesses === true : literalEvidence!.hasWitnesses;
+    const requiresCandidateVerification = hasLiteralWitnesses || (diffBlock.length > 0 && reviewedFiles.some(path => /\.py$/iu.test(path)));
     const prompt = getBugbotPrompt({
         pythonSyntaxProfile: [...changes.map(change => change.filename), ...(assignment?.partition.files ?? [])].some(path => /\.py$/iu.test(path)) ? 'python' : '',
         projectContextInstruction: 'Read code (respect ignores), README/docs and rules/conventions (.cursor/rules, CONTRIBUTING, guidelines).',
@@ -81,7 +85,7 @@ export function buildBugbotReviewInput(
         ignoreBlock,
         coverageBlock: buildCoverageBlock(context, assignment?.partition),
         previousBlock,
-        diffBlock: assignment?.partition.block ?? [context.reviewDiffBlock, literalEvidence?.block].filter(Boolean).join('\n\n'),
+        diffBlock,
         reviewConversationBlock: context.reviewConversationBlock,
         rulesBlock: context.reviewRulesBlock,
         effortBlock: `**Review effort:** ${resolvedEffort}. ${resolvedEffort === 'high' ? 'Perform deeper cross-file and adversarial analysis.' : resolvedEffort === 'low' ? 'Prioritize high-signal changed-code defects and avoid speculative breadth.' : 'Balance depth/latency; limit false positives.'}`,
@@ -91,7 +95,7 @@ export function buildBugbotReviewInput(
             ? param.locale.pullRequest
             : param.locale.issue ?? param.locale.pullRequest,
     });
-    return { prompt, hasLiteralWitnesses: assignment ? assignment.partition.hasPythonLiteralWitnesses === true : literalEvidence!.hasWitnesses };
+    return { prompt, hasLiteralWitnesses, requiresCandidateVerification };
 }
 
 function legacyPythonWitnesses(changes: readonly { readonly filename: string; readonly patch?: string | null }[]): { readonly block: string; readonly hasWitnesses: boolean } {

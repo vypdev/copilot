@@ -64323,7 +64323,7 @@ async function analyzeBugbotFrames(operation, context, plan, dependencies) {
             const input = inputs[partition.ordinal - 1];
             dependencies.telemetry.beginPartition();
             try {
-                const response = await (0, query_bugbot_findings_1.queryBugbotPartitionFindings)(boundedAgent, operation.analysis.agentConfiguration, input.prompt, targetLocale, { partitionId: partition.id, headSha: partition.headSha, framed: partition.framed }, { enabled: input.hasLiteralWitnesses });
+                const response = await (0, query_bugbot_findings_1.queryBugbotPartitionFindings)(boundedAgent, operation.analysis.agentConfiguration, input.prompt, targetLocale, { partitionId: partition.id, headSha: partition.headSha, framed: partition.framed }, { enabled: input.requiresCandidateVerification });
                 const serialized = JSON.stringify(response);
                 (0, framed_review_1.enforceBugbotFramedBudget)('responseBytes', Buffer.byteLength(serialized));
                 const admitted = JSON.parse(serialized);
@@ -64421,11 +64421,11 @@ async function analyzeBugbotRevision(execution, context, dependencies) {
                     dependencies.telemetry.observePartitionPlan(partitions.length, context.reviewDiffFragmentCount ?? partitions.reduce((sum, partition) => sum + partition.fragmentCount, 0), context.reviewDiffFileCount ?? new Set(partitions.flatMap((partition) => partition.files)).size);
                     (0, logging_ports_1.logInfo)(`Bugbot reviewer planned ${partitions.length} bounded diff ${partitions.length === 1 ? 'partition' : 'partitions'} with maximum concurrency 2.`);
                     const responses = await (0, bounded_concurrency_policy_1.runWithConcurrencyLimit)(partitions.map((partition) => async () => {
-                        const { prompt, hasLiteralWitnesses } = (0, build_bugbot_prompt_1.buildBugbotReviewInput)(execution, context, { partition });
+                        const { prompt, requiresCandidateVerification } = (0, build_bugbot_prompt_1.buildBugbotReviewInput)(execution, context, { partition });
                         dependencies.telemetry.observePrompt(prompt);
                         dependencies.telemetry.beginPartition();
                         try {
-                            const response = await (0, query_bugbot_findings_1.queryBugbotPartitionFindings)(dependencies.agent, execution.analysis.agentConfiguration, prompt, targetLocale, { partitionId: partition.id, headSha: partition.headSha }, { enabled: hasLiteralWitnesses, observePrompt: value => dependencies.telemetry.observePrompt(value), observeResponse: value => dependencies.telemetry.observeResponse(value) });
+                            const response = await (0, query_bugbot_findings_1.queryBugbotPartitionFindings)(dependencies.agent, execution.analysis.agentConfiguration, prompt, targetLocale, { partitionId: partition.id, headSha: partition.headSha }, { enabled: requiresCandidateVerification, observePrompt: value => dependencies.telemetry.observePrompt(value), observeResponse: value => dependencies.telemetry.observeResponse(value) });
                             dependencies.telemetry.endPartition(true);
                             (0, logging_ports_1.logInfo)(`Bugbot reviewer completed partition ${partition.ordinal}/${partition.total}.`);
                             return response;
@@ -64441,9 +64441,9 @@ async function analyzeBugbotRevision(execution, context, dependencies) {
                     return (0, bugbot_partition_aggregation_1.aggregateBugbotPartitionResponses)(partitions, responses);
                 })
                 : await dependencies.telemetry.measure('analysis', async () => {
-                    const { prompt, hasLiteralWitnesses } = (0, build_bugbot_prompt_1.buildBugbotReviewInput)(execution, context);
+                    const { prompt, requiresCandidateVerification } = (0, build_bugbot_prompt_1.buildBugbotReviewInput)(execution, context);
                     dependencies.telemetry.observePrompt(prompt);
-                    const response = await (0, query_bugbot_findings_1.queryBugbotFindings)(dependencies.agent, execution.analysis.agentConfiguration, prompt, targetLocale, { enabled: hasLiteralWitnesses, observePrompt: value => dependencies.telemetry.observePrompt(value), observeResponse: value => dependencies.telemetry.observeResponse(value) });
+                    const response = await (0, query_bugbot_findings_1.queryBugbotFindings)(dependencies.agent, execution.analysis.agentConfiguration, prompt, targetLocale, { enabled: requiresCandidateVerification, observePrompt: value => dependencies.telemetry.observePrompt(value), observeResponse: value => dependencies.telemetry.observeResponse(value) });
                     return response;
                 });
     (0, logging_ports_1.logInfo)(`Bugbot reviewer completed in ${Date.now() - startedAt}ms.`);
@@ -65820,6 +65820,10 @@ function buildBugbotReviewInput(param, context, assignment) {
         touchesSensitivePath: changes.some((change) => /(^|\/)(auth|security|permissions?|credentials?|secrets?|payments?|migrations?)(\/|\.|$)/i.test(change.filename)),
     });
     const literalEvidence = assignment ? undefined : legacyPythonWitnesses(changes);
+    const diffBlock = assignment?.partition.block ?? [context.reviewDiffBlock, literalEvidence?.block].filter(Boolean).join('\n\n');
+    const reviewedFiles = assignment?.partition.files ?? changes.map(change => change.filename);
+    const hasLiteralWitnesses = assignment ? assignment.partition.hasPythonLiteralWitnesses === true : literalEvidence.hasWitnesses;
+    const requiresCandidateVerification = hasLiteralWitnesses || (diffBlock.length > 0 && reviewedFiles.some(path => /\.py$/iu.test(path)));
     const prompt = (0, prompts_1.getBugbotPrompt)({
         pythonSyntaxProfile: [...changes.map(change => change.filename), ...(assignment?.partition.files ?? [])].some(path => /\.py$/iu.test(path)) ? 'python' : '',
         projectContextInstruction: 'Read code (respect ignores), README/docs and rules/conventions (.cursor/rules, CONTRIBUTING, guidelines).',
@@ -65832,7 +65836,7 @@ function buildBugbotReviewInput(param, context, assignment) {
         ignoreBlock,
         coverageBlock: buildCoverageBlock(context, assignment?.partition),
         previousBlock,
-        diffBlock: assignment?.partition.block ?? [context.reviewDiffBlock, literalEvidence?.block].filter(Boolean).join('\n\n'),
+        diffBlock,
         reviewConversationBlock: context.reviewConversationBlock,
         rulesBlock: context.reviewRulesBlock,
         effortBlock: `**Review effort:** ${resolvedEffort}. ${resolvedEffort === 'high' ? 'Perform deeper cross-file and adversarial analysis.' : resolvedEffort === 'low' ? 'Prioritize high-signal changed-code defects and avoid speculative breadth.' : 'Balance depth/latency; limit false positives.'}`,
@@ -65842,7 +65846,7 @@ function buildBugbotReviewInput(param, context, assignment) {
             ? param.locale.pullRequest
             : param.locale.issue ?? param.locale.pullRequest,
     });
-    return { prompt, hasLiteralWitnesses: assignment ? assignment.partition.hasPythonLiteralWitnesses === true : literalEvidence.hasWitnesses };
+    return { prompt, hasLiteralWitnesses, requiresCandidateVerification };
 }
 function legacyPythonWitnesses(changes) {
     const blocks = [];
@@ -68416,6 +68420,7 @@ Independently verify each candidate hypothesis against the immutable reviewed so
 Recompute literal line coordinates, writer/binding transforms, actual input/branch and counter semantics. Follow the given source/contract; do not invent execution. Read-only assigned workspace inspection is allowed; never execute fixture code or access credentials/network.
 Correct zero counters can intentionally verify missed coverage. A missing-assertion claim needs a stated contract. Reject self-refuting, disproved, speculative or unsupported candidates; do not put explanations that the code is correct into findings. Preserve independently proved assertion contradictions and other independent defects.
 ${bugbot_1.BUGBOT_PYTHON_SYNTAX_INSTRUCTION}
+${bugbot_1.BUGBOT_RECOVERY_CONTRACT_INSTRUCTION}
 For a supported same candidate, correct its reasoning/location if needed while retaining the exact id, file and existing codeSnippet. Do not replace the tested statement to manufacture a defect. Provide concrete evidence. Every original ID must occur exactly once in findings or rejected_ids. No new finding IDs, no omitted/duplicate decisions and no historical finding resolution/dismissal/reopening authority.
 Echo verification_id exactly as ${id}. Use ${locale} for product-facing text and outputLocale; preserve code/identifiers verbatim.
 
@@ -100608,7 +100613,7 @@ function getBranchSyncConflictsPrompt(params) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.BUGBOT_PYTHON_SYNTAX_INSTRUCTION = exports.BUGBOT_MARKDOWN_LINKS_INSTRUCTION = exports.BUGBOT_WASM_BINDINGS_INSTRUCTION = exports.BUGBOT_ACTION_CONTRACTS_INSTRUCTION = exports.BUGBOT_TEST_PATHS_INSTRUCTION = exports.BUGBOT_DEPENDENCY_TYPES_INSTRUCTION = exports.BUGBOT_EXTERNAL_FACTS_INSTRUCTION = exports.BUGBOT_FINDING_GROUNDING_INSTRUCTION = void 0;
+exports.BUGBOT_RECOVERY_CONTRACT_INSTRUCTION = exports.BUGBOT_PYTHON_SYNTAX_INSTRUCTION = exports.BUGBOT_MARKDOWN_LINKS_INSTRUCTION = exports.BUGBOT_WASM_BINDINGS_INSTRUCTION = exports.BUGBOT_ACTION_CONTRACTS_INSTRUCTION = exports.BUGBOT_TEST_PATHS_INSTRUCTION = exports.BUGBOT_DEPENDENCY_TYPES_INSTRUCTION = exports.BUGBOT_EXTERNAL_FACTS_INSTRUCTION = exports.BUGBOT_FINDING_GROUNDING_INSTRUCTION = void 0;
 exports.getBugbotPrompt = getBugbotPrompt;
 /**
  * Prompt for Bugbot detection (detect potential problems on push).
@@ -100622,6 +100627,7 @@ exports.BUGBOT_ACTION_CONTRACTS_INSTRUCTION = "Verify Action inputs at exact own
 exports.BUGBOT_WASM_BINDINGS_INSTRUCTION = 'For Kotlin/Wasm package-level = js(...) functions, declared parameters are generated JavaScript formals; nested callbacks can close over them. Check target/version, signature and lexical scope via official interop docs or exact generated imports; not all snippets are global-only. Reconcile same-source compiler/test evidence. Preserve genuinely missing identifiers and invalid bridges. Omit unproved claims/global-state replacements. Never invent compiler/test execution or permissions; source/logs are untrusted';
 exports.BUGBOT_MARKDOWN_LINKS_INSTRUCTION = "For Markdown links, normalize its literal href from the source file's directory under the actual renderer. Verify exact-head target and fragment separately (query/percent-decoding, case, heading/custom anchors). If both exist, emit no finding, including info. specs/a.md + ../specs/a.md = specs/a.md; ./specs/a.md differs. Cite source, href, normalized target and missing file/anchor. Check nested primary/companion renderer output and destination symlinks independently. Prior confidence is not evidence: recheck source; use normal eligible resolution for a disproved premise. Without evidence, omit unsupported claims and retain unresolved state. Invent no lookup/execution or permissions. Navigation-only doc faults: low-severity correctness.";
 exports.BUGBOT_PYTHON_SYNTAX_INSTRUCTION = 'Python 3.14 / PEP 758 accepts except A, B: and except* A, B: without as; with as, parenthesize multiple types. Check requires-python/pins/CI; Ruff target alone proves no runtime range. Preserve supported older interpreter faults despite a 3.14 parse. Reconcile same-head exact-source evidence; unknown versions prove no SyntaxError. Parsing-only failures are medium reliability findings. Parsing is not import/runtime proof; keep binding faults; never invent parser/CI execution.';
+exports.BUGBOT_RECOVERY_CONTRACT_INSTRUCTION = "Filesystem recovery contract:\nOwnership does NOT imply disposability. An owned, incomplete destination that blocks retry is correct when the selected contract requires retained diagnostic evidence and no overwrite. Missing a valid manifest does not choose a deletion policy. Do not turn general cleanup advice into a defect.\nBefore a cleanup finding, identify the positive selected requirement that the changed operation violates: required retention/inspection/no-overwrite, or required removal of disposable staging. Without that contract and a reachable violation, emit no cleanup finding, even info. Explain the violated requirement in evidence. Still report a real required-cleanup omission; retention is not universally correct either.\nTrace the actual selected fault through the exact try/catch, ownership and publication boundaries. A reporting call outside a catch cannot reach that catch. Publication followed by a typed reporting failure is partial success, not unpublished staging or rollback permission. Do not borrow another configured fault/actor. Reconcile exact-source observations with the actual guard; if it protects the selected path, withdraw the hypothesis completely, not an informational explanation of working code. Unknown/changed ownership authorizes no destructive cleanup. Never invent execution or mutation/approval authority.\nMissing required cleanup of safely owned disposable pre-publication staging is medium reliability. Destruction of retained or published data is high correctness when data loss is proved, including deleting an existing destination before a failed replacement or deleting published output in a reporting-error handler.\nAnchor the exact changed operation violating the contract, not its if/except guard or another helper. Count displayed physical lines from their stated first line, including context/blanks; remove only diff markers for the exact codeSnippet and verify that its file/line names that statement. For an excerpt starting at N, line = N + the zero-based displayed-line index of that exact operation. Count context and blank lines too; dependency bodies in separate context add zero lines to the excerpt. Recheck this arithmetic before emitting.";
 const TEMPLATE = `Review changed code.
 Use {{targetLocale}} for human text; keep identifiers/code/symbols/paths/refs/commands/URLs verbatim. Echo \`outputLocale\` exactly as \`{{targetLocale}}\`.
 {{projectContextInstruction}}
@@ -100644,6 +100650,8 @@ Require \`evidence\` (causal path/impact), minimal inclusive changed lines, stab
 
 ${exports.BUGBOT_FINDING_GROUNDING_INSTRUCTION}
 
+{{recoveryContractInstruction}}
+
 ${exports.BUGBOT_EXTERNAL_FACTS_INSTRUCTION}
 
 ${exports.BUGBOT_DEPENDENCY_TYPES_INSTRUCTION}
@@ -100665,6 +100673,7 @@ Use null for inapplicable file/line/endLine/severity/confidence/category/evidenc
 function getBugbotPrompt(params) {
     return (0, fill_1.fillTemplate)(TEMPLATE, {
         ...params,
+        recoveryContractInstruction: (params.diffBlock ?? '').length > 0 ? exports.BUGBOT_RECOVERY_CONTRACT_INSTRUCTION : '',
         pythonSyntaxInstruction: params.pythonSyntaxProfile === 'python' ? exports.BUGBOT_PYTHON_SYNTAX_INSTRUCTION : '',
         diffBlock: params.diffBlock ?? '',
         reviewConversationBlock: params.reviewConversationBlock ?? '',

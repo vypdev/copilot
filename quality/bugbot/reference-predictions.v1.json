@@ -438,6 +438,64 @@
         "codeSnippet": "    except ValueError, MissingError:",
         "confidence": 1
       }
+    ],
+    "snapshot-recovery-explicit-retain": [],
+    "snapshot-recovery-disposable-retain": [
+      {
+        "id": "snapshot-recovery-disposable-retain",
+        "title": "The changed handler violates the selected recovery contract",
+        "file": "owned/snapshot_contract.py",
+        "line": 62,
+        "severity": "medium",
+        "category": "reliability",
+        "symbol": "retained_snapshot",
+        "codeSnippet": "        raise",
+        "confidence": 0.98
+      }
+    ],
+    "snapshot-recovery-disposable-clean": [],
+    "snapshot-recovery-published-report": [],
+    "snapshot-recovery-published-cleanup": [
+      {
+        "id": "snapshot-recovery-published-cleanup",
+        "title": "The changed handler violates the selected recovery contract",
+        "file": "owned/snapshot_contract.py",
+        "line": 84,
+        "severity": "high",
+        "category": "correctness",
+        "symbol": "published_snapshot_deleted",
+        "codeSnippet": "        shutil.rmtree(destination)",
+        "confidence": 0.98
+      }
+    ],
+    "snapshot-recovery-existing-destination": [
+      {
+        "id": "snapshot-recovery-existing-destination",
+        "title": "The changed handler violates the selected recovery contract",
+        "file": "owned/snapshot_contract.py",
+        "line": 90,
+        "severity": "high",
+        "category": "correctness",
+        "symbol": "overwrite_existing_snapshot",
+        "codeSnippet": "        shutil.rmtree(destination)",
+        "confidence": 0.98
+      }
+    ],
+    "snapshot-recovery-changed-ownership": [],
+    "snapshot-recovery-policy-unavailable": [],
+    "snapshot-recovery-incomplete-manifest": [],
+    "snapshot-recovery-completed-destination": [
+      {
+        "id": "snapshot-recovery-completed-destination",
+        "title": "The changed handler violates the selected recovery contract",
+        "file": "owned/snapshot_contract.py",
+        "line": 90,
+        "severity": "high",
+        "category": "correctness",
+        "symbol": "overwrite_existing_snapshot",
+        "codeSnippet": "        shutil.rmtree(destination)",
+        "confidence": 0.98
+      }
     ]
   }
 }
