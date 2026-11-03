@@ -6,6 +6,28 @@ export interface SddVisibleReferences {
   readonly parts: readonly SddReferencePart[];
 }
 
+export interface SddTextBlockLocation {
+  readonly startLine: number;
+  readonly startColumn: number;
+  readonly endLine: number;
+}
+
+/** CommonMark supplies block boundaries; callers retain raw table-cell escapes. */
+export function readSddTextBlockLocations(source: string): readonly SddTextBlockLocation[] {
+  const blocks: SddTextBlockLocation[] = [];
+  const walker = new Parser().parse(source).walker();
+  let event;
+  while ((event = walker.next())) {
+    const { node, entering } = event;
+    if (entering && ['paragraph', 'heading'].includes(node.type)) {
+      // These concrete block nodes always have source positions in CommonMark.
+      const [start, end] = node.sourcepos!;
+      blocks.push({ startLine: start[0], startColumn: start[1], endLine: end[0] });
+    }
+  }
+  return blocks;
+}
+
 /** Pure syntax projection; callers first remove the gate's hidden comments/fences. */
 export function readSddVisibleReferences(source: string): SddVisibleReferences {
   const destinations: string[] = [];

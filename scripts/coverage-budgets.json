@@ -1424,6 +1424,20 @@
         }
       ],
       "successMessage": "branch sync publication recovery: PASS (closed facts, bounded classification and locale content100%)"
+    },
+    {
+      "name": "SDD case-reference classification",
+      "missingEntryLabel": "SDD case-reference classification",
+      "rules": [
+        {
+          "files": [
+            "src/domain/sdd_case_reference.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        }
+      ],
+      "successMessage": "SDD case-reference classification: PASS (100% lines/statements/functions/branches)"
     }
   ]
 }

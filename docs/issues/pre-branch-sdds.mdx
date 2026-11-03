@@ -63,6 +63,16 @@ and ranges do not establish new cases. Each case belongs to one budget area.
 Equal grand totals cannot hide an over-allocation in one area and a shortage in
 another. Generic documentation checks cannot replace defined acceptance cases.
 
+Technical designators such as `DEL/C1`, Unicode `C1`, or connector `C1` are
+ordinary prose operands. They do not become case references simply because
+of their spelling, including in scenario/behavior or non-case table cells.
+Keep full IDs in case-ID/reference columns and explicit case references or
+case-ID lists; shorthand and abbreviated ranges there remain invalid. Link
+labels can refer to cases, while a technical value inside the destination URI
+does not itself declare a case. Fenced examples and comments retain their
+existing visibility rules. Accepting technical prose does not create a case,
+change a budget, relax an owner reservation or prove a test executed.
+
 Cite repository files with full repository-relative paths in backticks or
 relative Markdown file links. Existing paths are checked against the selected
 Git commit, including files outside the catalog evidence arrays. Relative links

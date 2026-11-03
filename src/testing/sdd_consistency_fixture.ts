@@ -46,3 +46,18 @@ The three cases above are observable product outcomes; runtime and security revi
 | G-02 | ${prefix}-C03 |
 `;
 }
+
+/** Forty-eight hypothetical input rows; these are not forty-eight executed SDK regressions. */
+export function sddCaseReferenceFixture(prose: string, sddPath = 'specs/change.md', change: 'create' | 'update' = 'create'): string {
+  const prefix = 'entry-prose';
+  const cases = Array.from({ length: 48 }, (_, index) => `${prefix}-C${String(index + 1).padStart(2, '0')}`);
+  const budget = '| Area | Minimum distinct cases | Behaviors/risks covered |\n|---|---:|---|\n| Policy | 24 | First fixture group |\n| Adapter | 24 | Second fixture group |\n| Total | 48 | No double counting |\n\n';
+  const inventory = '| Case ID | Area | Requirements | Scenario |\n|---|---|---|---|\n'
+    + cases.map((id, index) => `| ${id} | ${index < 24 ? 'Policy | G-01' : 'Adapter | G-02'} | Independent fixture outcome ${index + 1}. |`).join('\n') + '\n\n';
+  const reverse = '| Requirement | Cases |\n|---|---|\n| G-01 | ' + cases.slice(0, 24).join(', ') + ' |\n| G-02 | ' + cases.slice(24).join(', ') + ' |\n';
+  return sddConsistencyFixture(prefix, sddPath, change)
+    .replace('## 8.', '## 6. Functional behavior\n' + prose + '\n\n## 8.')
+    .replace(/\| Area \| Minimum distinct cases[\s\S]*?(?=\| Case ID)/u, () => budget)
+    .replace(/\| Case ID \| Area[\s\S]*?(?=## 15\.)/u, () => inventory)
+    .replace(/\| Requirement \| Cases \|[\s\S]*$/u, () => reverse);
+}

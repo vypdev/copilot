@@ -1746,7 +1746,8 @@
         "specs/pre-branch-sdd-diff.md",
         "specs/pre-branch-sdd-status-readiness.md",
         "specs/pre-branch-sdd-source-context.md",
-        "specs/sdd-reference-classification.md"
+        "specs/sdd-reference-classification.md",
+        "specs/sdd-case-reference-classification.md"
       ],
       "workflows": [
         ".github/workflows/copilot_issue.yml",
@@ -1834,7 +1835,8 @@
         "src/infrastructure/agents/agent_source_snapshot_workspace.ts",
         "src/infrastructure/agents/agent_source_snapshot_integrity.ts",
         "src/domain/sdd_repository_reference.ts",
-        "src/domain/sdd_visible_references.ts"
+        "src/domain/sdd_visible_references.ts",
+        "src/domain/sdd_case_reference.ts"
       ],
       "tests": [
         "src/domain/__tests__/issue_workflow_runtime_policy.test.ts",
@@ -1904,7 +1906,8 @@
         "src/infrastructure/agents/__tests__/agent_source_snapshot_gate.integration.test.ts",
         "src/application/policies/__tests__/sdd_source_context_presentation.test.ts",
         "src/infrastructure/agents/__tests__/agent_source_snapshot_admission.test.ts",
-        "src/domain/__tests__/sdd_repository_reference.test.ts"
+        "src/domain/__tests__/sdd_repository_reference.test.ts",
+        "src/domain/__tests__/sdd_case_reference.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-management.mdx",

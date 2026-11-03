@@ -9,6 +9,7 @@ import { validateCatalogDefinition } from '../../../domain/message_catalog';
 import { ResolveMessageCatalogUseCase } from '../../usecases/localization/resolve_message_catalog_use_case';
 import { validateSddDraftConsistency } from '../../../domain/sdd_draft_consistency';
 import { SddDraftFormatFailure } from '../../../domain/pre_branch_sdd';
+import { sddCaseReferenceFixture } from '../../../testing/sdd_consistency_fixture';
 import { sddReferenceFixture } from '../../../testing/sdd_reference_fixture';
 
 const configuration = { provider: 'codex' as const, model: 'model' };
@@ -243,5 +244,23 @@ describe('missing trusted catalog presentation (#808)', () => {
     const body = renderSddPreparationFailure({ issueNumber: 42, error, missingCatalogSource: 'a'.repeat(40) });
     expect(body).not.toContain('PRIVATE');
     expect(body).toContain('a'.repeat(40));
+  });
+});
+
+
+describe('Real shorthand recovery remains separate from technical prose', () => {
+  it.each([{id:'sdd-case-ref-C39',locale:'en-US'},{id:'sdd-case-ref-C40',locale:'es-ES'}])('$id renders safe $locale recovery for a genuine reference violation', ({locale}) => {
+    let evidence: SddValidationDiagnostic | undefined;
+    try { validateSddDraftConsistency(sddCaseReferenceFixture('Cases C01 and C02 establish acceptance. PRIVATE_PROSE'), [], {
+      files: new Set(['docs/payments.mdx']), directories: new Set(['docs']), blocked: new Set(),
+    }, 'specs/change.md'); } catch (error) {
+      expect(error).toBeInstanceOf(SddDraftFormatFailure); evidence=(error as SddDraftFormatFailure).diagnostic;
+    }
+    expect(evidence).toMatchObject({ reason:'case-identity', phase:'validation', facts:[{ detail:'case-shorthand', expected:0, observed:2 }] });
+    const body=renderSddPreparationFailure({ issueNumber:42, locale, error:new SddDraftPreparationFailure(evidence!,2), diagnostic:evidence, attempts:2 });
+    expect(body).toContain(locale==='es-ES'?'Hay referencias abreviadas a casos':'Unqualified shorthand case references are present');
+    expect(body).toContain(locale==='es-ES'?'Cantidad observada: 2':'Observed count: 2');
+    expect(body).toContain(locale==='es-ES'?'Se conservan las respuestas':'Existing answers and published specifications are retained');
+    expect(body).not.toMatch(/PRIVATE_PROSE|entry-prose|Cases C01/);
   });
 });

@@ -4,7 +4,7 @@ import { SddDraftFormatFailure, validateSddMarkdown, type SddPlan } from '../../
 import { AgentResponseLengthFailure } from '../../../domain/agent_response_length_failure';
 import { FindingsAgentAdapter } from '../../../data/repository/ai/findings_agent_adapter';
 import { validateSddDraftConsistency } from '../../../domain/sdd_draft_consistency';
-import { sddConsistencyFixture } from '../../../testing/sdd_consistency_fixture';
+import { sddCaseReferenceFixture, sddConsistencyFixture } from '../../../testing/sdd_consistency_fixture';
 
 const configuration = { provider: 'codex', model: 'model' } as never;
 const plan = { action: 'update', path: 'specs/payments.md', capabilityId: 'payments', reason: 'A bounded contract change.', questions: [] } as const;
@@ -276,4 +276,28 @@ describe('draftSddMarkdown', () => {
       expect(query.mock.calls[1][0].prompt).toContain('same owner and plan');
     },
   );
+});
+
+
+describe('Case-role validation through the bounded draft workflow', () => {
+  const technical='Existing household DEL/C1 read compatibility remains separate from stronger new-setup input validation.';
+  const validate=async (markdown:string) => {
+    validateSddMarkdown(markdown); validateSddDraftConsistency(markdown,[],{files:new Set(['docs/payments.mdx']),directories:new Set(['docs']),blocked:new Set()},'specs/change.md');
+  };
+  it('accepts technical prose on the first generation without requesting a wording workaround', async () => {
+    const query=jest.fn().mockResolvedValue({markdown:sddCaseReferenceFixture(technical)});
+    await expect(draftSddMarkdown({query},configuration,{...plan,action:'new'},'Preserve technical compatibility.',validate)).resolves.toContain(technical);
+    expect(query).toHaveBeenCalledTimes(1);
+  });
+  it('still spends only the existing repair for a genuine shorthand violation', async () => {
+    const invalid=sddCaseReferenceFixture('Cases C01 and C02. PRIVATE_DRAFT');
+    const query=jest.fn().mockResolvedValueOnce({markdown:invalid}).mockResolvedValueOnce({markdown:sddCaseReferenceFixture(technical)});
+    await expect(draftSddMarkdown({query},configuration,{...plan,action:'new'},'Preserve literal identities.',validate)).resolves.toContain(technical);
+    expect(query).toHaveBeenCalledTimes(2); expect(query.mock.calls[1][0].prompt).not.toContain('PRIVATE_DRAFT');
+  });
+  it('cannot publish or spend a third generation after repeated genuine violations', async () => {
+    const query=jest.fn().mockResolvedValue({markdown:sddCaseReferenceFixture('Cases C01 and C02.')});
+    await expect(draftSddMarkdown({query},configuration,{...plan,action:'new'},'Preserve literal identities.',validate)).rejects.toMatchObject({attempts:2,recovery:{id:'sdd-draft-case-identity-invalid'}});
+    expect(query).toHaveBeenCalledTimes(2);
+  });
 });

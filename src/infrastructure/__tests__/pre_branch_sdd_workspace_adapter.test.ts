@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import { SddTrustedCatalogMissingFailure } from '../../domain/sdd_trusted_catalog_failure';
-import { sddConsistencyFixture } from '../../testing/sdd_consistency_fixture';
+import { sddCaseReferenceFixture, sddConsistencyFixture } from '../../testing/sdd_consistency_fixture';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -74,6 +74,33 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
 
   beforeEach(() => { ({ temp, repo } = fixture()); });
   afterEach(() => fs.rmSync(temp, { recursive: true, force: true }));
+
+
+  it.each([['sdd-case-ref-C35','technical'],['sdd-case-ref-C36','shorthand'],['sdd-case-ref-C37','identity'],['sdd-case-ref-C38','replay']])('%s preserves real Git publication boundaries for %s', async (_id, scenario) => {
+    const workspace = new PreBranchSddWorkspaceAdapter(repo);
+    const snapshot = await workspace.loadSnapshot('develop');
+    const selected: SddPlan = { ...plan, action: 'companion', path: 'specs/case-reference.md' };
+    const prose = scenario === 'shorthand' ? 'Cases C01 and C02 establish acceptance.'
+      : 'Existing household DEL/C1 read compatibility remains separate from stronger new-setup input validation.';
+    const candidate = sddCaseReferenceFixture(prose, selected.path);
+    const markdown = scenario === 'identity' ? candidate.replace(/entry-prose-C01/gu, 'C01') : candidate;
+    const before = fs.readFileSync(path.join(repo, plan.path), 'utf8');
+    if (scenario === 'shorthand' || scenario === 'identity') {
+      await expect(workspace.validateDraft(snapshot, selected, markdown)).rejects.toMatchObject({ reason: 'case-identity' });
+      expect(git(repo, 'ls-remote', '--heads', 'origin', 'feature/42-change')).toBe('');
+    } else {
+      const prepared = await workspace.validateDraft(snapshot, selected, markdown);
+      expect(prepared.markdown).toContain(prose); expect(prepared.markdown.match(/^\| entry-prose-C\d+ \|/gm)).toHaveLength(48);
+      git(repo, 'push', 'origin', 'develop:refs/heads/feature/42-change');
+      const sha = await workspace.publish('feature/42-change', prepared);
+      expect(await workspace.verifyPublication('feature/42-change', snapshot.baseSha, sha, selected.path)).toBe(true);
+      if (scenario === 'replay') expect(await workspace.recoverPublished('feature/42-change', prepared)).toBe(sha);
+      expect(git(repo, 'show', sha + ':' + selected.path)).toContain(prose);
+    }
+    expect(fs.readFileSync(path.join(repo, plan.path), 'utf8')).toBe(before);
+    expect(git(repo, 'status', '--porcelain')).toBe('');
+    expect(git(repo, 'worktree', 'list', '--porcelain').match(/^worktree /gm)).toHaveLength(1);
+  });
 
   it.each(['update', 'companion'] as const)('accepts protocol notation in a complete %s against immutable Git evidence', async action => {
     const workspace = new PreBranchSddWorkspaceAdapter(repo);

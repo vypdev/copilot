@@ -4,6 +4,7 @@ import { appendSddReferenceContext, buildSddReferenceIndex, hasBlockedSddAncesto
   isSddNonFileNotation, sddReferencePrefix, type SddRepositoryInventory } from './sdd_repository_reference';
 export type { SddRepositoryInventory } from './sdd_repository_reference';
 import { readSddVisibleReferences } from './sdd_visible_references';
+import { countSddShorthandCaseReferences } from './sdd_case_reference';
 
 export type SddConsistencyReason = 'case-identity' | 'case-budget' | 'requirement-mapping' | 'repository-path';
 export interface SddOwnerDocument { readonly path: string; readonly markdown: string }
@@ -17,7 +18,7 @@ export const SDD_CONSISTENCY_PROMPT = `Consistency contract for the proposed dra
 In section 4 include one table: Requirement | Behavior. Give every goal a stable requirement ID.
 In section 14 include one budget table: Area | Minimum distinct cases | Behaviors/risks covered; positive integers and one Total.
 Also in section 14 include one inventory table: Case ID | Area | Requirements | Scenario.
-Each row is one distinct executable case with a fully qualified ID such as capability-change-C01, one exact budget area, comma-separated requirement IDs and an observable scenario. Never use shorthand C01, ranges or redefine an ID found in any owning SDD. Reference retained baseline cases in prose using their full IDs; count only the new inventory.
+Each row is one distinct executable case with a fully qualified ID such as capability-change-C01, one exact budget area, comma-separated requirement IDs and an observable scenario. Never use shorthand C01, ranges or redefine an ID found in any owning SDD. Reference retained baseline cases in prose using their full IDs; count only the new inventory. Ordinary technical designators in prose, scenario text or non-case columns are not acceptance-case references solely because they resemble short IDs; preserve their original terminology. Case-reference fields, explicit references and adjacent case-ID lists still require full identities.
 In section 17 include one table: Requirement | Cases. List comma-separated full case IDs for every requirement. Its links must exactly match the case inventory in both directions, with no undefined or generic documentation checks.
 In section 15 include one table: Path | Change. Change is update, reference or create. Include the selected SDD path itself with update for an existing SDD or create for a new/companion SDD. Use existing immutable-base files for update/reference. Only explicitly proposed new files may use create; never mark a missing current document as an existing artifact. Cite repository files as full repository-relative paths in backticks with a File or Path label when ambiguous, or relative Markdown file links. Put every planned new file in this table; a proposed parent directory is valid only as an ancestor of a declared new file, never as a file declaration. HTTP endpoints, media types, mode alternatives and module names are protocol notation, not file-existence claims. Label file-shaped relative asset addresses with URL or URI; do not relabel a repository citation to evade validation. Explicit Path/Change rows and relative Markdown destinations always receive strict repository checks. These tables are publication consistency checks, not runtime/security acceptance.`;
 
@@ -183,8 +184,8 @@ export function validateSddDraftConsistency(
   const caseIds = cases.map(row => row[0]);
   const reserved = new Set(reservedSddCaseIds(owners));
   uniqueIdentifiers(caseIds, CASE_ID, 'case-identity', 14);
-  const shorthand = [...source.matchAll(/(?<![\w-])C\d+\b/gu)];
-  if (shorthand.length) fail('case-identity', { detail: 'case-shorthand', section: 0, expected: 0, observed: shorthand.length });
+  const shorthand = countSddShorthandCaseReferences(source);
+  if (shorthand) fail('case-identity', { detail: 'case-shorthand', section: 0, expected: 0, observed: shorthand });
   if (caseIds.some(id => reserved.has(id))) fail('case-identity', { detail: 'case-reserved', section: 14, expected: 0, observed: caseIds.filter(id => reserved.has(id)).length });
   // References to existing owner cases are allowed, but cannot count as newly defined cases.
   if ([...source.matchAll(CASE)].some(([id]) => !caseIds.includes(id) && !reserved.has(id))) fail('case-identity', { detail: 'case-reference', section: 0 });

@@ -1,5 +1,5 @@
-import { reservedSddCaseIds, validateSddDraftConsistency, type SddConsistencyReason } from '../sdd_draft_consistency';
-import { sddConsistencyFixture } from '../../testing/sdd_consistency_fixture';
+import { renderSddDerivedTables, reservedSddCaseIds, validateSddDraftConsistency, type SddConsistencyReason } from '../sdd_draft_consistency';
+import { sddCaseReferenceFixture, sddConsistencyFixture } from '../../testing/sdd_consistency_fixture';
 
 const inventory = {
   files: new Set(['docs/payments.mdx', 'docs/my_guide.mdx', 'backend/app.kt']),
@@ -210,5 +210,46 @@ describe('generated SDD consistency', () => {
 
   it('blocks an unreconcilable owner range rather than truncating its reservation', () => {
     expect(() => reservedSddCaseIds([{ path: 'specs/legacy.md', markdown: 'identity-access-C01; C02–C99999.' }])).toThrow('review the baseline');
+  });
+});
+
+
+describe('Technical prose with literal48-case consistency', () => {
+  const original = 'Existing household DEL/C1 read compatibility remains separate from stronger new-setup input validation.';
+  it('sdd-case-ref-C25 accepts the reported fragment through the full consistency policy', () => {
+    const markdown = sddCaseReferenceFixture(original);
+    expect(markdown.match(/^\| entry-prose-C\d+ \|/gm)).toHaveLength(48);
+    expect(() => validate(markdown)).not.toThrow();
+  });
+  it('sdd-case-ref-C26 retains byte-identical case rows and reverse mappings across technical wording', () => {
+    const a = sddCaseReferenceFixture(original), b = sddCaseReferenceFixture(original.replace('DEL/C1', 'DEL and U+0080–U+009F'));
+    expect(a.match(/^\| entry-prose-C\d+ \|.*$/gm)).toEqual(b.match(/^\| entry-prose-C\d+ \|.*$/gm));
+    expect(a.split('## 17.')[1]).toBe(b.split('## 17.')[1]);
+    expect(() => validate(a)).not.toThrow(); expect(() => validate(b)).not.toThrow();
+  });
+  it.each([
+    ['sdd-case-ref-C27', 'case-identity', (s: string) => s.replace(/entry-prose-C01/gu, 'C01')],
+    ['sdd-case-ref-C28', 'case-identity', (s: string) => s.replace(/entry-prose-C01/gu, 'payments-C01')],
+    ['sdd-case-ref-C29', 'case-identity', (s: string) => s + '\nSee entry-unknown-C99.'],
+    ['sdd-case-ref-C30', 'case-identity', (s: string) => s.replace('| G-01 | entry-prose-C01, ', '| G-01 | C01, ')],
+    ['sdd-case-ref-C31', 'requirement-mapping', (s: string) => s.replace('| G-01 | entry-prose-C01, ', '| G-01 | ')],
+    ['sdd-case-ref-C32', 'case-budget', (s: string) => s.replace('| Total | 48 |', '| Total | 47 |')],
+  ])('%s retains its independent %s rejection', (_id, reason, mutate) => {
+    expect(() => validate(mutate(sddCaseReferenceFixture(original)))).toThrow(expect.objectContaining({ reason }));
+  });
+  it('sdd-case-ref-C33 retains legacy shorthand and range reservations unchanged', () => {
+    expect(reservedSddCaseIds([{ path: 'specs/legacy.md', markdown: 'retained-C01; C02–C05.' }]))
+      .toEqual(['retained-C01','retained-C02','retained-C03','retained-C04','retained-C05']);
+  });
+  it('sdd-case-ref-C34 independently revalidates derived tables without rewriting technical prose', () => {
+    const source = sddCaseReferenceFixture(original)
+      .replace(/\| Area \| Minimum distinct cases[\s\S]*?(?=\| Case ID)/u, '{{SDD_CASE_BUDGET}}\n\n')
+      .replace(/\| Requirement \| Cases \|[\s\S]*$/u, '{{SDD_REQUIREMENT_CASES}}\n');
+    const assembled = renderSddDerivedTables(source);
+    expect(assembled).toContain(original); expect(assembled.match(/^\| entry-prose-C\d+ \|/gm)).toHaveLength(48);
+    expect(() => validate(assembled)).not.toThrow();
+  });
+  it.each(['<!-- Case C01 -->', '```md\nCase C01\n```'])('retains the owner visibility projection for a negative example: %s', example => {
+    expect(() => validate(sddCaseReferenceFixture(original) + '\n' + example)).not.toThrow();
   });
 });

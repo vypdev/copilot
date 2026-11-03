@@ -1156,6 +1156,16 @@ messages; tests do not claim a live consumer recovery.
 
 ### Generated draft consistency (2026-10-21, #653)
 
+The [case-reference classification companion](./sdd-case-reference-classification.md)
+refines shorthand detection for #845: ordinary technical operands retain their
+original wording, while typed case fields, explicit references and case-ID list
+continuations still require full identities. Its existing parser projection
+preserves inline labels and table roles without treating destination URIs as
+case declarations. Canonical tables, budgets, reciprocal links, qualified
+references, conservative legacy owner reservations and publication gates below
+remain independent and unchanged.
+
+
 Issue [#653](https://github.com/vypdev/copilot/issues/653) documented a published
 companion that reused a baseline case ID for the opposite authentication
 behavior, had offsetting area-allocation errors and one-sided requirement links,
