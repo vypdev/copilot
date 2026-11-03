@@ -675,3 +675,30 @@ source, response, batch and framed-traffic limits remain fixed. Incomplete or
 oversized verification fails closed; inspect the run, split the review scope and
 recheck. An informational explanation of correct code is not a valid finding,
 and a malformed verification response is not evidence of a clean review.
+
+## Fixture values and test assertions
+
+Before claiming that a test always fails, trace the actual fixture and helper
+values through the operation and assertion. A path named `database` can be a
+SQLite file: its parent, rather than its filename, may be the guarded source
+root. Likewise, a variable named `a` can contain a record whose ID is `request`.
+Evaluate stored values under the actual query's ordering, direction, limit,
+expiry boundary and state filter. Do not infer IDs or containment from names.
+
+Applicable execution on the reviewed source and runtime is counterevidence to
+reconcile; an unrelated or skipped green test is not proof. Preserve a genuine
+wrong nesting or query assertion. Anchor a supported finding at the changed
+statement using that fragment's stated line origin; separate helper excerpts
+do not shift its coordinates. Missing helper evidence does not justify an
+invented failure, test edit or execution claim.
+
+These rules add no setting or execution permission. Existing candidate
+verification, historical-resolution controls and complete-review requirements
+remain in effect. See the [fixture-value specification](https://github.com/vypdev/copilot/blob/master/specs/bugbot-fixture-value-grounding.md).
+
+Independent verification keeps the existing finding's file and known code
+fragment literally, including any indentation or diff marker already supplied.
+The structured response constrains those values to the original batch, and the
+application still checks their binding to each ID. A missing original snippet
+can receive a more precise anchor. Invalid identity changes fail closed; they
+never certify a clean review or silently change the tested statement.
