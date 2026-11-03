@@ -2809,5 +2809,24 @@
     },
     "notOfficialCodecov": true,
     "baseCI": 41549469979
+  },
+  "ownedEolCorroboration": {
+    "kind": "owned Git checkout proof; no consumer or shared repo modified",
+    "root": "/private/tmp/copilot-832-owned-eol-rzrw55tp",
+    "file": "src/tooling/__tests__/fixtures/bugbot_recovery_contract_probe.py",
+    "beforeExistingAttributes": {
+      "sourceSha256": "ed919a23a33b7e0563a2d01affe0bfca9c80e5c665302f3d9945bf315d25d7bd",
+      "checkoutSha256": "b816a94ab93021af28a35ba92a7992a1f5c9986cdaa8fe761e75dde24adab9a9",
+      "matchesMeasuredBytes": false,
+      "crlf": 187,
+      "lf": 187
+    },
+    "afterExactFixtureLFAttribute": {
+      "checkoutSha256": "ed919a23a33b7e0563a2d01affe0bfca9c80e5c665302f3d9945bf315d25d7bd",
+      "matchesMeasuredBytes": true,
+      "crlf": 0
+    },
+    "impact": "Byte-bound fixture hash and physical source checks fail with CRLF under supported Windows-style Git autocrlf; the exact per-fixture LF attribute preserves the measured source without weakening hashing.",
+    "cleanup": "Owned EOL sandbox retained until its evidence is recorded; no active source/SDK consumer."
   }
 }

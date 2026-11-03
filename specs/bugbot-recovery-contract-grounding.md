@@ -214,6 +214,11 @@ Reserve **56 distinct deterministic cases**, derived from the selected risks:
 | Exact benchmark locale | 1 | Require the same en-US metadata as existing adjudication; never bypass validation |
 | **Total** | **56** | Each parameter row is a distinct behavioral case |
 
+Git MUST preserve LF for the byte-bound owned probe through its exact
+`.gitattributes` entry. A separately executed owned Git checkout with
+`core.autocrlf=true` reproduces CRLF/hash mismatch before that entry and retains
+the original measured bytes afterward; the hash check is not normalized or weakened.
+
 Optional CPython3.14 fixed owned executions are separately recorded; mandatory
 Node CI adds no Python requirement. Publish no claim that reference predictions
 are real model output. Keep global/module coverage, all modified lines hit,
