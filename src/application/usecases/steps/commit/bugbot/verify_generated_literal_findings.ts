@@ -13,6 +13,7 @@ import { normalizeFindingIdForMarker } from '../../../../policies/bugbot_finding
 import { productFacingAgentQueryOptions, validateAgentOutputLocale, agentOutputLocaleFailureMessage } from '../../../../policies/agent_output_locale_policy';
 import { logInfo } from '../../../../ports/logging_ports';
 import { BUGBOT_FIXTURE_VALUES_INSTRUCTION, BUGBOT_RECOVERY_CONTRACT_INSTRUCTION, BUGBOT_PYTHON_SYNTAX_INSTRUCTION } from '../../../../../prompts/bugbot';
+import { BUGBOT_RESOURCE_AUTHORITY_INSTRUCTION } from '../../../../../prompts/bugbot_resource_authority';
 
 export function buildLiteralVerificationSchema(id: string, candidates: readonly Pick<BugbotFinding, 'id' | 'file' | 'codeSnippet'>[]) {
   const candidateIds = candidates.map(candidate => candidate.id);
@@ -49,6 +50,7 @@ Correct zero counters can intentionally verify missed coverage. A missing-assert
 ${BUGBOT_PYTHON_SYNTAX_INSTRUCTION}
 ${BUGBOT_RECOVERY_CONTRACT_INSTRUCTION}
 ${BUGBOT_FIXTURE_VALUES_INSTRUCTION}
+${BUGBOT_RESOURCE_AUTHORITY_INSTRUCTION}
 For a supported same candidate, correct its reasoning/location if needed while retaining the exact id, file and existing codeSnippet. Do not replace the tested statement to manufacture a defect. Provide concrete evidence. Every original ID must occur exactly once in findings or rejected_ids. No new finding IDs, no omitted/duplicate decisions and no historical finding resolution/dismissal/reopening authority.
 Echo each existing id, file and codeSnippet string verbatim, including indentation and leading diff markers. You may ignore a diff marker only when locating source for reasoning; never remove it from the returned identity field. A missing original snippet may receive a precise source anchor. Allowed batch values do not permit swapping identity fields between candidates.
 Echo verification_id exactly as ${id}. Use ${locale} for product-facing text and outputLocale; preserve code/identifiers verbatim.

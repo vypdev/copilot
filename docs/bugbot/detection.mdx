@@ -7,6 +7,34 @@ description: When Bugbot runs, where findings appear, severity, comment limit, a
 
 This page describes **when** Bugbot runs, **where** findings are published, and how **severity**, **comment limit**, and **resolved findings** work.
 
+## Resource classification and proof boundaries
+
+Before calling a missing authentication step a bypass, verify what the resource
+returns and changes. Check bootstrap fields, headers/cookies, personal facts,
+principals, grants and credentials against its actual contract. A static label
+alone proves nothing.
+
+Source/peer/session/prefix binding and current human identity are separate gates.
+A verified nonpersonal document or asset can intentionally load before sign-in or
+without a live identity provider so it can display access or availability guidance.
+Personal APIs still need their own current proof. Preserve every mandatory source
+restriction: static content does not authorize an untrusted source.
+
+Keep findings for demonstrated protected disclosure, effective authority issuance,
+personal or privileged writes that violate the actual proof contract, and missing
+source-access controls. Preserve permitted nonpersonal bookkeeping; a state write
+or a value named token does not alone establish a protected effect.
+Trace an added proof prerequisite
+through intended entry availability before recommending it for every asset. An
+old personal preview can have a different contract. Rendered failure claims need
+the actual response/initialization/error path and matching observations; unrelated
+green tests establish neither safety nor a failure.
+
+This shared guidance reaches source review and existing candidate verification.
+It adds no whitelist, automatic dismissal, execution capability or permission.
+Historical findings still require normal current-source adjudication. See
+[controlled evidence and limitations](/bugbot/quality-observability#resource-and-authority-regression).
+
 ## Exact validation witnesses
 
 Before reporting that a validator accepts an invalid value, Bugbot must trace

@@ -1438,6 +1438,20 @@
         }
       ],
       "successMessage": "SDD case-reference classification: PASS (100% lines/statements/functions/branches)"
+    },
+    {
+      "name": "Bugbot resource authority guidance",
+      "missingEntryLabel": "Bugbot resource authority guidance",
+      "rules": [
+        {
+          "files": [
+            "src/prompts/bugbot_resource_authority.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        }
+      ],
+      "successMessage": "Bugbot resource authority guidance: PASS (100% lines/statements/functions/branches)"
     }
   ]
 }
