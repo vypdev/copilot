@@ -1737,15 +1737,16 @@
       "id": "issue-start-and-sdd-readiness",
       "title": "Uniform issue start and pre-branch SDD readiness",
       "status": "implemented",
-      "scope": "Start every admitted issue with one explicit signal and publish a validated SDD before eligible Action-managed branch work; inspect verified SDD status and bounded structural publication comparisons and preserve complete navigable catalog links for accepted repository filenames and safely publish generated catalogs without following destination links; bootstrap truthful proposed SDK capabilities before implementation without changing readiness; reject incomplete specification discovery explicitly without following unregistered symbolic links; report confirmed missing trusted catalogs with immutable source provenance and prerequisite recovery before model or publication; bind pre-branch analysis and drafting to a verified independent read-only view of the selected immutable source without changing the canonical checkout",
+      "scope": "Start every admitted issue with one explicit signal and publish a validated SDD before eligible Action-managed branch work; inspect verified SDD status and bounded structural publication comparisons and preserve complete navigable catalog links for accepted repository filenames and safely publish generated catalogs without following destination links; bootstrap truthful proposed SDK capabilities before implementation without changing readiness; reject incomplete specification discovery explicitly without following unregistered symbolic links; report confirmed missing trusted catalogs with immutable source provenance and prerequisite recovery before model or publication; bind pre-branch analysis and drafting to a verified independent read-only view of the selected immutable source without changing the canonical checkout; distinguish visible protocol notation from repository citations, allow only constructive proposed-file directory ancestry and expose bounded private-safe origin diagnostics",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-11-02",
+      "lastVerified": "2026-11-03",
       "specs": [
         "specs/issue-start-and-branch-readiness.md",
         "specs/pre-branch-sdd-gate.md",
         "specs/pre-branch-sdd-diff.md",
         "specs/pre-branch-sdd-status-readiness.md",
-        "specs/pre-branch-sdd-source-context.md"
+        "specs/pre-branch-sdd-source-context.md",
+        "specs/sdd-reference-classification.md"
       ],
       "workflows": [
         ".github/workflows/copilot_issue.yml",
@@ -1831,7 +1832,8 @@
         "src/application/policies/agent_source_snapshot_policy.ts",
         "src/infrastructure/agents/agent_source_snapshot_git.ts",
         "src/infrastructure/agents/agent_source_snapshot_workspace.ts",
-        "src/infrastructure/agents/agent_source_snapshot_integrity.ts"
+        "src/infrastructure/agents/agent_source_snapshot_integrity.ts",
+        "src/domain/sdd_repository_reference.ts"
       ],
       "tests": [
         "src/domain/__tests__/issue_workflow_runtime_policy.test.ts",
@@ -1900,7 +1902,8 @@
         "src/infrastructure/agents/__tests__/agent_source_snapshot_integrity.test.ts",
         "src/infrastructure/agents/__tests__/agent_source_snapshot_gate.integration.test.ts",
         "src/application/policies/__tests__/sdd_source_context_presentation.test.ts",
-        "src/infrastructure/agents/__tests__/agent_source_snapshot_admission.test.ts"
+        "src/infrastructure/agents/__tests__/agent_source_snapshot_admission.test.ts",
+        "src/domain/__tests__/sdd_repository_reference.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-management.mdx",

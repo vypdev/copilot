@@ -49802,6 +49802,7 @@ const UI = Object.freeze({
     "attempts": ["Draft attempts", "Intentos de borrador"],
     "section": ["Section", "Sección"],
     "row": ["Data row", "Fila de datos"],
+    referenceOrdinal: ['Visible reference occurrence', 'Aparición de referencia visible'],
     "expected": ["Expected count", "Cantidad esperada"],
     "observed": ["Observed count", "Cantidad observada"],
     "recoveredHeading": ["SDD preparation status", "Estado de preparación del SDD"],
@@ -49846,6 +49847,13 @@ const FACTS = Object.freeze({
     "path-operation": ["The path operation is unsupported or targets a missing existing file.", "La operación de ruta no es compatible o apunta a un archivo existente que falta."],
     "path-reference": ["A repository reference cannot be verified as an existing or explicitly proposed path.", "No se puede verificar una referencia como ruta existente o explícitamente propuesta."],
     "path-link": ["A relative file link is invalid or escapes its repository boundary.", "Un enlace relativo no es válido o sale de los límites del repositorio."],
+    'path-inline-reference': ['The rejected reference is in an inline code span. Its position counts visible code spans in document order, excluding fenced examples and hidden comments.', 'La referencia rechazada está en un fragmento de código en línea. Su posición cuenta los fragmentos visibles en orden, excluyendo ejemplos delimitados y comentarios ocultos.'],
+    'path-prose-reference': ['The rejected reference is a file-shaped prose citation. Its position counts visible file-shaped prose references, excluding links and already classified code spans.', 'La referencia rechazada es una cita con forma de archivo en el texto. Su posición cuenta las citas visibles con forma de archivo, excluyendo enlaces y fragmentos ya clasificados.'],
+    'path-link-reference': ['The rejected reference is a relative Markdown file destination. Its position counts visible Markdown destinations in document order.', 'La referencia rechazada es un destino relativo de archivo en Markdown. Su posición cuenta los destinos visibles en orden.'],
+    'path-reference-unsafe': ['The reference violates the existing normalized repository-path spelling rules.', 'La referencia incumple las reglas existentes de escritura normalizada de rutas del repositorio.'],
+    'path-reference-blocked': ['The immutable inventory blocks this reference or one of its ancestors; symbolic links and submodules cannot prove regular repository content.', 'El inventario inmutable bloquea la referencia o uno de sus antecesores; los enlaces simbólicos y submódulos no demuestran contenido regular del repositorio.'],
+    'path-reference-missing': ['The reference is absent from the immutable inventory and exact proposed-file declarations. Cite a real artifact or declare the intended new file in Path / Change.', 'La referencia no está en el inventario inmutable ni en las declaraciones exactas de archivos propuestos. Cita un artefacto real o declara el nuevo archivo previsto en Path / Change.'],
+    'path-reference-directory': ['A directory reference requires an existing directory or a safe ancestor of an explicitly proposed new file; a regular file does not establish a directory.', 'Una referencia de directorio requiere un directorio existente o un antecesor seguro de un archivo nuevo declarado; un archivo regular no demuestra un directorio.'],
 });
 exports.SDD_PREPARATION_MESSAGE_IDS = Object.freeze([
     ...Object.keys(UI).map(key => `sddPreparation.${key}`),
@@ -49960,7 +49968,9 @@ function renderSddPreparationFailure(options, catalog = (0, sdd_preparation_mess
             lines.push('', `- ${message(`sddPreparation.fact.${fact.detail}`)}`);
             for (const key of ['section', 'row', 'expected', 'observed']) {
                 if (fact[key] !== undefined && (key !== 'section' || fact.section !== 0)) {
-                    lines.push(`  - ${message(`sddPreparation.${key}`)}: ${fact[key]}`);
+                    const label = key === 'row' && ['path-inline-reference', 'path-prose-reference', 'path-link-reference'].includes(fact.detail)
+                        ? 'referenceOrdinal' : key;
+                    lines.push(`  - ${message(`sddPreparation.${label}`)}: ${fact[key]}`);
                 }
             }
         }
@@ -100772,6 +100782,7 @@ exports.renderSddDerivedTables = renderSddDerivedTables;
 exports.reservedSddCaseIds = reservedSddCaseIds;
 exports.validateSddDraftConsistency = validateSddDraftConsistency;
 const pre_branch_sdd_1 = __nccwpck_require__(34730);
+const sdd_repository_reference_1 = __nccwpck_require__(17791);
 const CASE = /\b(?:[A-Za-z][A-Za-z0-9]*-)+C\d+\b/gu;
 const CASE_ID = /^(?:[A-Za-z][A-Za-z0-9]*-)+C\d+$/u;
 const REQUIREMENT_ID = /^[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)+$/u;
@@ -100782,7 +100793,7 @@ In section 14 include one budget table: Area | Minimum distinct cases | Behavior
 Also in section 14 include one inventory table: Case ID | Area | Requirements | Scenario.
 Each row is one distinct executable case with a fully qualified ID such as capability-change-C01, one exact budget area, comma-separated requirement IDs and an observable scenario. Never use shorthand C01, ranges or redefine an ID found in any owning SDD. Reference retained baseline cases in prose using their full IDs; count only the new inventory.
 In section 17 include one table: Requirement | Cases. List comma-separated full case IDs for every requirement. Its links must exactly match the case inventory in both directions, with no undefined or generic documentation checks.
-In section 15 include one table: Path | Change. Change is update, reference or create. Include the selected SDD path itself with update for an existing SDD or create for a new/companion SDD. Use existing immutable-base files for update/reference. Only explicitly proposed new files may use create; never mark a missing current document as an existing artifact. Cite repository files as full repository-relative paths in backticks, or relative Markdown file links. Put every planned new file in this table. These tables are publication consistency checks, not runtime/security acceptance.`;
+In section 15 include one table: Path | Change. Change is update, reference or create. Include the selected SDD path itself with update for an existing SDD or create for a new/companion SDD. Use existing immutable-base files for update/reference. Only explicitly proposed new files may use create; never mark a missing current document as an existing artifact. Cite repository files as full repository-relative paths in backticks with a File or Path label when ambiguous, or relative Markdown file links. Put every planned new file in this table; a proposed parent directory is valid only as an ancestor of a declared new file, never as a file declaration. HTTP endpoints, media types, mode alternatives and module names are protocol notation, not file-existence claims. Label file-shaped relative asset addresses with URL or URI; do not relabel a repository citation to evade validation. Explicit Path/Change rows and relative Markdown destinations always receive strict repository checks. These tables are publication consistency checks, not runtime/security acceptance.`;
 const BUDGET_SLOT = '{{SDD_CASE_BUDGET}}';
 const TRACEABILITY_SLOT = '{{SDD_REQUIREMENT_CASES}}';
 /** The provider writes definitions once; trusted code renders their two redundant projections. */
@@ -101013,10 +101024,6 @@ function validateSddDraftConsistency(markdown, owners, inventory, sddPath) {
         fail('requirement-mapping', { detail: 'requirement-coverage', section: 17, expected: edges.size, observed: seen.size });
     validatePaths(source, inventory, sddPath);
 }
-function safePath(value) {
-    return value.length > 0 && !/[\\:*?"<>|\p{Cc}]/u.test(value)
-        && value.split('/').every(segment => segment && segment !== '.' && segment !== '..' && segment.toLowerCase() !== '.git');
-}
 function validatePaths(source, inventory, sddPath) {
     const rows = table(source, 15, ['Path', 'Change'], 'repository-path');
     const expectedChange = inventory.files.has(sddPath) ? 'update' : 'create';
@@ -101025,7 +101032,7 @@ function validatePaths(source, inventory, sddPath) {
     const proposed = new Set();
     const seen = new Set();
     for (const [file, change] of rows) {
-        if (!safePath(file) || seen.has(file) || inventory.blocked.has(file))
+        if (!(0, sdd_repository_reference_1.isSafeSddRepositoryPath)(file) || seen.has(file) || inventory.blocked.has(file))
             fail('repository-path', { detail: 'path-identity', section: 15, row: seen.size + 1 });
         seen.add(file);
         if (change === 'create') {
@@ -101041,12 +101048,23 @@ function validatePaths(source, inventory, sddPath) {
         else if (!['update', 'reference'].includes(change) || !inventory.files.has(file))
             fail('repository-path', { detail: 'path-operation', section: 15, row: seen.size });
     }
-    const check = (file) => {
-        if (!safePath(file) || (!inventory.files.has(file) && !inventory.directories.has(file) && !proposed.has(file)))
-            fail('repository-path', { detail: 'path-reference', section: 0 });
+    const referenceIndex = (0, sdd_repository_reference_1.buildSddReferenceIndex)(inventory, proposed);
+    const reject = (origin, ordinal, detail) => fail('repository-path', { detail: 'path-reference', section: 0 }, [{ detail: origin, section: 0, row: ordinal }, { detail, section: 0 }]);
+    const check = (file, origin, ordinal, directory = false) => {
+        if (!(0, sdd_repository_reference_1.isSafeSddRepositoryPath)(file))
+            reject(origin, ordinal, 'path-reference-unsafe');
+        if ((0, sdd_repository_reference_1.hasBlockedSddAncestor)(file, referenceIndex))
+            reject(origin, ordinal, 'path-reference-blocked');
+        const isDirectory = inventory.directories.has(file) || referenceIndex.futureDirectories.has(file);
+        if (directory && !isDirectory)
+            reject(origin, ordinal, 'path-reference-directory');
+        if (!inventory.files.has(file) && !isDirectory && !proposed.has(file))
+            reject(origin, ordinal, 'path-reference-missing');
     };
     // Relative Markdown file links resolve against the selected SDD, never the current checkout.
+    let linkOrdinal = 0;
     for (const match of source.matchAll(/\]\(([^\s)]+)\)/gu)) {
+        linkOrdinal++;
         const href = match[1].split(/[?#]/u)[0];
         if (!href || /^(?:[a-z][a-z0-9+.-]*:|\/)/iu.test(href))
             continue;
@@ -101055,28 +101073,43 @@ function validatePaths(source, inventory, sddPath) {
             decoded = decodeURIComponent(href);
         }
         catch {
-            return fail('repository-path', { detail: 'path-link', section: 0 });
+            return fail('repository-path', { detail: 'path-link', section: 0 }, [{ detail: 'path-link-reference', section: 0, row: linkOrdinal }]);
         }
+        const directory = decoded.endsWith('/');
+        if (directory)
+            decoded = decoded.slice(0, -1);
         const parts = sddPath.split('/').slice(0, -1);
         for (const part of decoded.split('/')) {
             if (part === '..') {
                 if (!parts.length)
-                    fail('repository-path', { detail: 'path-link', section: 0 });
+                    fail('repository-path', { detail: 'path-link', section: 0 }, [{ detail: 'path-link-reference', section: 0, row: linkOrdinal }]);
                 parts.pop();
             }
             else if (part !== '.')
                 parts.push(part);
         }
-        check(parts.join('/'));
+        check(parts.join('/'), 'path-link-reference', linkOrdinal, directory);
     }
-    for (const match of source.matchAll(/`([^`\n]+)`/gu)) {
-        const value = match[1];
-        if (value.includes('/') && !/^(?:[a-z][a-z0-9+.-]*:|\/)/iu.test(value) && !/\s/u.test(value))
-            check(value.replace(/\/$/u, ''));
+    let inlineOrdinal = 0;
+    const prose = source.replace(/`([^`\n]+)`/gu, (span, value, offset) => {
+        inlineOrdinal++;
+        if (!value.includes('/'))
+            return span;
+        if ((0, sdd_repository_reference_1.isSddNonFileNotation)(value, (0, sdd_repository_reference_1.sddReferencePrefix)(source, offset), referenceIndex))
+            return ' '.repeat(span.length);
+        if (!/\s/u.test(value)) {
+            check(value.replace(/\/$/u, ''), 'path-inline-reference', inlineOrdinal, value.endsWith('/'));
+            return ' '.repeat(span.length);
+        }
+        return span;
+    }).replace(/\]\([^\s)]+\)/gu, ']()').replace(/[a-z][a-z0-9+.-]*:\/\/[^\s)>]+/giu, '');
+    let proseOrdinal = 0;
+    for (const match of prose.matchAll(/(?<![\w./:@-])(@?[A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)+\.[A-Za-z0-9]+)(?![\w/-])/gu)) {
+        proseOrdinal++;
+        if (!(0, sdd_repository_reference_1.isSddNonFileNotation)(match[1], (0, sdd_repository_reference_1.sddReferencePrefix)(prose, match.index), referenceIndex)) {
+            check(match[1], 'path-prose-reference', proseOrdinal);
+        }
     }
-    const prose = source.replace(/\]\([^\s)]+\)/gu, ']()').replace(/[a-z][a-z0-9+.-]*:\/\/[^\s)>]+/giu, '');
-    for (const match of prose.matchAll(/(?<![\w./:-])([A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)+\.[A-Za-z0-9]+)(?![\w/-])/gu))
-        check(match[1]);
 }
 function uniqueIdentifiers(values, pattern, reason, section) {
     const distinct = new Set(values).size;
@@ -101085,6 +101118,101 @@ function uniqueIdentifiers(values, pattern, reason, section) {
     const invalid = values.findIndex(value => !pattern.test(value));
     if (invalid >= 0)
         fail(reason, { detail: 'identifier-list', section, row: invalid + 1, expected: 0, observed: values.filter(value => !pattern.test(value)).length });
+}
+
+
+/***/ }),
+
+/***/ 17791:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.isSafeSddRepositoryPath = isSafeSddRepositoryPath;
+exports.buildSddReferenceIndex = buildSddReferenceIndex;
+exports.hasBlockedSddAncestor = hasBlockedSddAncestor;
+exports.isSddNonFileNotation = isSddNonFileNotation;
+exports.sddReferencePrefix = sddReferencePrefix;
+/** Keep the existing repository spelling contract; protocol recognition never rewrites it. */
+function isSafeSddRepositoryPath(value) {
+    return value.length > 0 && !/[\\:*?"<>|\p{Cc}]/u.test(value)
+        && value.split('/').every(segment => segment && segment !== '.' && segment !== '..' && segment.toLowerCase() !== '.git');
+}
+/** Call only after strict Path/Change validation; directories are constructive ancestry, not declarations. */
+function buildSddReferenceIndex(inventory, proposed) {
+    const roots = new Set();
+    for (const paths of [inventory.files, inventory.directories, inventory.blocked]) {
+        for (const path of paths)
+            roots.add(path.split('/')[0]);
+    }
+    const futureDirectories = new Set();
+    for (const file of proposed) {
+        for (let end = file.lastIndexOf('/'); end > 0; end = file.lastIndexOf('/', end - 1)) {
+            futureDirectories.add(file.slice(0, end));
+        }
+    }
+    return { inventory, proposed, roots, futureDirectories };
+}
+function hasBlockedSddAncestor(value, index) {
+    // Check immutable blocked entries rather than repeatedly joining an untrusted
+    // value's prefixes: a long slash-bearing span must not cause quadratic work.
+    for (const blocked of index.inventory.blocked) {
+        if (value === blocked || value.startsWith(`${blocked}/`))
+            return true;
+    }
+    return false;
+}
+// IANA Top-Level Media Types, reviewed 2026-11-03; no runtime registry/network access.
+// https://www.iana.org/assignments/top-level-media-types
+const MEDIA_TYPES = new Set([
+    'application', 'audio', 'example', 'font', 'haptics', 'image', 'message', 'model', 'multipart', 'text', 'video',
+]);
+const MEDIA_NAME = /^[a-z0-9][a-z0-9!#$&^_.+-]{0,126}$/iu;
+function mediaNotation(value) {
+    const essence = value.split(';', 1)[0];
+    const [type, subtype, extra] = essence.split('/');
+    return extra === undefined && ((type === '*' && subtype === '*')
+        || (MEDIA_TYPES.has(type.toLowerCase()) && (subtype === '*' || MEDIA_NAME.test(subtype ?? ''))));
+}
+/** URL/URI labels describe a non-file role, including file-shaped emitted assets. */
+function urlRole(prefix) {
+    return /\b(?:(?:URL|URI)(?:[ \t]+path)?|HTTP(?:[ \t]+(?:endpoint|route))?)\s*[:=]?\s*$/iu.test(prefix.replace(/[*_]/gu, ''));
+}
+/**
+ * Not a protocol validator or an existence grant. Explicit Markdown destinations
+ * and Path/Change rows bypass this heuristic and always receive strict checks.
+ */
+function isSddNonFileNotation(value, prefix, index) {
+    if (/^(?:[a-z][a-z0-9+.-]*:|\/)/iu.test(value))
+        return true;
+    const path = value.replace(/\/$/u, '');
+    if (index.inventory.files.has(path) || index.inventory.directories.has(path) || index.proposed.has(path)
+        || index.futureDirectories.has(path) || hasBlockedSddAncestor(path, index))
+        return false;
+    if (!/\s|[\p{Cc}]/u.test(value) && urlRole(prefix))
+        return true;
+    if (/\b(?:file|path|archivo|ruta)\s*[:=]?\s*$/iu.test(prefix.replace(/[*_]/gu, '')))
+        return false;
+    if (mediaNotation(value))
+        return true;
+    if (/^(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|TRACE|CONNECT)\s+\S+$/u.test(value))
+        return true;
+    if (/^@[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._-]*(?:\/[a-z0-9_][a-z0-9._-]*)*$/iu.test(value)
+        && isSafeSddRepositoryPath(value))
+        return true;
+    // Extensionless unknown namespaces are not evidence of a repository citation.
+    // Known roots, file-shaped names and explicit directory spellings remain checked.
+    const parts = value.split('/');
+    return parts.length > 1 && !index.roots.has(parts[0])
+        && parts.every(part => /^[a-z0-9_][a-z0-9_-]*$/iu.test(part));
+}
+function sddReferencePrefix(source, offset) {
+    let end = offset;
+    while (end > 0 && /[ \t*_: =]/u.test(source[end - 1]))
+        end--;
+    const tail = source.slice(Math.max(0, end - 16), end);
+    return tail.slice(tail.lastIndexOf('\n') + 1);
 }
 
 
@@ -101135,6 +101263,8 @@ exports.SDD_VALIDATION_DETAILS = Object.freeze([
     'requirement-reference', 'requirement-coverage', 'traceability-links', 'traceability-membership', 'traceability-requirement',
     'owner-path', 'path-identity', 'create-existing-path', 'create-path-overlap', 'create-path-parent',
     'path-operation', 'path-reference', 'path-link',
+    'path-inline-reference', 'path-prose-reference', 'path-link-reference',
+    'path-reference-unsafe', 'path-reference-blocked', 'path-reference-missing', 'path-reference-directory',
 ]);
 const REASONS = [...exports.SDD_DRAFT_FORMAT_REASONS, 'size', 'response-shape'];
 const PHASES = ['response', 'assembly', 'validation'];

@@ -92,7 +92,9 @@ export function renderSddPreparationFailure(options: Readonly<{
       lines.push('', `- ${message(`sddPreparation.fact.${fact.detail}`)}`);
       for (const key of ['section', 'row', 'expected', 'observed'] as const) {
         if (fact[key] !== undefined && (key !== 'section' || fact.section !== 0)) {
-          lines.push(`  - ${message(`sddPreparation.${key}`)}: ${fact[key]}`);
+          const label = key === 'row' && ['path-inline-reference', 'path-prose-reference', 'path-link-reference'].includes(fact.detail)
+            ? 'referenceOrdinal' : key;
+          lines.push(`  - ${message(`sddPreparation.${label}`)}: ${fact[key]}`);
         }
       }
     }

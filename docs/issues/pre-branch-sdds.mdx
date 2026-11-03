@@ -76,6 +76,23 @@ The selected SDD must appear in this table too: use `create` for a new or
 companion SDD, and `update` for an existing one. A self-link or a `reference`
 row cannot replace that declaration.
 
+HTTP endpoints such as `api/v1/session`, media types such as `application/json`,
+mode alternatives such as `native/standalone` and scoped module identifiers are
+notation rather than file-existence claims. Label a file-shaped relative asset
+address explicitly, for example **URL:** `assets/main.js`. Without that role,
+a file-shaped reference remains a repository citation. A known exact file or a
+blocked symlink/submodule path retains repository checking even under a URL label.
+For ambiguous file names, use **File:** or **Path:** before the backticked path,
+a relative Markdown link or an explicit Path/Change row. Relative Markdown
+destinations and Path/Change rows always receive strict repository checks,
+regardless of whether their spelling resembles protocol notation.
+
+A future directory can be cited only when it is an exact ancestor of a validated
+new-file `create` row. For example, declaring a new `frontend/src/domain/entry.ts`
+allows a citation of `frontend/src/domain/`. It does not create that directory,
+authorize application writes, permit a sibling directory or turn a regular file
+into a directory. Declare the new file, not a directory placeholder.
+
 The new tables apply to generated candidates. Existing owner documents remain
 verbatim and do not require a table migration to receive an appendix. These
 checks establish internal consistency for draft publication. Product,
@@ -102,6 +119,17 @@ check and collision count. The card reports the first proven rejection, not an e
 mapping sets can still disagree on their members; that check reports mismatched
 links rather than implying equal counts prove correctness. These are observations from the actual validator;
 missing evidence is reported as unavailable rather than guessed.
+
+A repository-reference failure also identifies inline code, file-shaped prose
+or a relative Markdown destination, with a **Visible reference occurrence**.
+This is a 1-based ordinal within that category, not a source line or table row.
+Inline positions count visible code spans; prose positions count file-shaped
+matches after classified spans and links are removed; link positions count
+visible Markdown destinations, including external ones. Hidden comments and
+fenced examples are excluded. A separate fixed explanation distinguishes unsafe
+spelling, blocked ancestry, missing evidence or a file used as a directory.
+The rejected path/text remains private; these facts locate the first rejection
+without retaining or exposing the failed draft.
 
 An illustrative failure view is:
 

@@ -1,9 +1,11 @@
 import type { SddValidationFact } from './sdd_validation_diagnostic';
 import { SddDraftFormatFailure } from './pre_branch_sdd';
+import { buildSddReferenceIndex, hasBlockedSddAncestor, isSafeSddRepositoryPath as safePath,
+  isSddNonFileNotation, sddReferencePrefix, type SddRepositoryInventory } from './sdd_repository_reference';
+export type { SddRepositoryInventory } from './sdd_repository_reference';
 
 export type SddConsistencyReason = 'case-identity' | 'case-budget' | 'requirement-mapping' | 'repository-path';
 export interface SddOwnerDocument { readonly path: string; readonly markdown: string }
-export interface SddRepositoryInventory { readonly files: ReadonlySet<string>; readonly directories: ReadonlySet<string>; readonly blocked: ReadonlySet<string> }
 
 const CASE = /\b(?:[A-Za-z][A-Za-z0-9]*-)+C\d+\b/gu;
 const CASE_ID = /^(?:[A-Za-z][A-Za-z0-9]*-)+C\d+$/u;
@@ -16,7 +18,7 @@ In section 14 include one budget table: Area | Minimum distinct cases | Behavior
 Also in section 14 include one inventory table: Case ID | Area | Requirements | Scenario.
 Each row is one distinct executable case with a fully qualified ID such as capability-change-C01, one exact budget area, comma-separated requirement IDs and an observable scenario. Never use shorthand C01, ranges or redefine an ID found in any owning SDD. Reference retained baseline cases in prose using their full IDs; count only the new inventory.
 In section 17 include one table: Requirement | Cases. List comma-separated full case IDs for every requirement. Its links must exactly match the case inventory in both directions, with no undefined or generic documentation checks.
-In section 15 include one table: Path | Change. Change is update, reference or create. Include the selected SDD path itself with update for an existing SDD or create for a new/companion SDD. Use existing immutable-base files for update/reference. Only explicitly proposed new files may use create; never mark a missing current document as an existing artifact. Cite repository files as full repository-relative paths in backticks, or relative Markdown file links. Put every planned new file in this table. These tables are publication consistency checks, not runtime/security acceptance.`;
+In section 15 include one table: Path | Change. Change is update, reference or create. Include the selected SDD path itself with update for an existing SDD or create for a new/companion SDD. Use existing immutable-base files for update/reference. Only explicitly proposed new files may use create; never mark a missing current document as an existing artifact. Cite repository files as full repository-relative paths in backticks with a File or Path label when ambiguous, or relative Markdown file links. Put every planned new file in this table; a proposed parent directory is valid only as an ancestor of a declared new file, never as a file declaration. HTTP endpoints, media types, mode alternatives and module names are protocol notation, not file-existence claims. Label file-shaped relative asset addresses with URL or URI; do not relabel a repository citation to evade validation. Explicit Path/Change rows and relative Markdown destinations always receive strict repository checks. These tables are publication consistency checks, not runtime/security acceptance.`;
 
 const BUDGET_SLOT = '{{SDD_CASE_BUDGET}}';
 const TRACEABILITY_SLOT = '{{SDD_REQUIREMENT_CASES}}';
@@ -227,11 +229,6 @@ export function validateSddDraftConsistency(
   validatePaths(source, inventory, sddPath);
 }
 
-function safePath(value: string): boolean {
-  return value.length > 0 && !/[\\:*?"<>|\p{Cc}]/u.test(value)
-    && value.split('/').every(segment => segment && segment !== '.' && segment !== '..' && segment.toLowerCase() !== '.git');
-}
-
 function validatePaths(source: string, inventory: SddRepositoryInventory, sddPath: string): void {
   const rows = table(source, 15, ['Path', 'Change'], 'repository-path');
   const expectedChange = inventory.files.has(sddPath) ? 'update' : 'create';
@@ -249,28 +246,58 @@ function validatePaths(source: string, inventory: SddRepositoryInventory, sddPat
       proposed.add(file);
     } else if (!['update', 'reference'].includes(change) || !inventory.files.has(file)) fail('repository-path', { detail: 'path-operation', section: 15, row: seen.size });
   }
-  const check = (file: string) => {
-    if (!safePath(file) || (!inventory.files.has(file) && !inventory.directories.has(file) && !proposed.has(file))) fail('repository-path', { detail: 'path-reference', section: 0 });
+  const referenceIndex = buildSddReferenceIndex(inventory, proposed);
+  type Origin = 'path-inline-reference' | 'path-prose-reference' | 'path-link-reference';
+  const reject = (origin: Origin, ordinal: number, detail: 'path-reference-unsafe' | 'path-reference-blocked' | 'path-reference-missing' | 'path-reference-directory') =>
+    fail('repository-path', { detail: 'path-reference', section: 0 },
+      [{ detail: origin, section: 0, row: ordinal }, { detail, section: 0 }]);
+  const check = (file: string, origin: Origin, ordinal: number, directory = false) => {
+    if (!safePath(file)) reject(origin, ordinal, 'path-reference-unsafe');
+    if (hasBlockedSddAncestor(file, referenceIndex)) reject(origin, ordinal, 'path-reference-blocked');
+    const isDirectory = inventory.directories.has(file) || referenceIndex.futureDirectories.has(file);
+    if (directory && !isDirectory) reject(origin, ordinal, 'path-reference-directory');
+    if (!inventory.files.has(file) && !isDirectory && !proposed.has(file)) reject(origin, ordinal, 'path-reference-missing');
   };
   // Relative Markdown file links resolve against the selected SDD, never the current checkout.
+  let linkOrdinal = 0;
   for (const match of source.matchAll(/\]\(([^\s)]+)\)/gu)) {
+    linkOrdinal++;
     const href = match[1].split(/[?#]/u)[0];
     if (!href || /^(?:[a-z][a-z0-9+.-]*:|\/)/iu.test(href)) continue;
     let decoded: string;
-    try { decoded = decodeURIComponent(href); } catch { return fail('repository-path', { detail: 'path-link', section: 0 }); }
+    try { decoded = decodeURIComponent(href); } catch {
+      return fail('repository-path', { detail: 'path-link', section: 0 }, [{ detail: 'path-link-reference', section: 0, row: linkOrdinal }]);
+    }
+    const directory = decoded.endsWith('/');
+    if (directory) decoded = decoded.slice(0, -1);
     const parts = sddPath.split('/').slice(0, -1);
     for (const part of decoded.split('/')) {
-      if (part === '..') { if (!parts.length) fail('repository-path', { detail: 'path-link', section: 0 }); parts.pop(); }
+      if (part === '..') {
+        if (!parts.length) fail('repository-path', { detail: 'path-link', section: 0 }, [{ detail: 'path-link-reference', section: 0, row: linkOrdinal }]);
+        parts.pop();
+      }
       else if (part !== '.') parts.push(part);
     }
-    check(parts.join('/'));
+    check(parts.join('/'), 'path-link-reference', linkOrdinal, directory);
   }
-  for (const match of source.matchAll(/`([^`\n]+)`/gu)) {
-    const value = match[1];
-    if (value.includes('/') && !/^(?:[a-z][a-z0-9+.-]*:|\/)/iu.test(value) && !/\s/u.test(value)) check(value.replace(/\/$/u, ''));
+  let inlineOrdinal = 0;
+  const prose = source.replace(/`([^`\n]+)`/gu, (span: string, value: string, offset: number) => {
+    inlineOrdinal++;
+    if (!value.includes('/')) return span;
+    if (isSddNonFileNotation(value, sddReferencePrefix(source, offset), referenceIndex)) return ' '.repeat(span.length);
+    if (!/\s/u.test(value)) {
+      check(value.replace(/\/$/u, ''), 'path-inline-reference', inlineOrdinal, value.endsWith('/'));
+      return ' '.repeat(span.length);
+    }
+    return span;
+  }).replace(/\]\([^\s)]+\)/gu, ']()').replace(/[a-z][a-z0-9+.-]*:\/\/[^\s)>]+/giu, '');
+  let proseOrdinal = 0;
+  for (const match of prose.matchAll(/(?<![\w./:@-])(@?[A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)+\.[A-Za-z0-9]+)(?![\w/-])/gu)) {
+    proseOrdinal++;
+    if (!isSddNonFileNotation(match[1], sddReferencePrefix(prose, match.index), referenceIndex)) {
+      check(match[1], 'path-prose-reference', proseOrdinal);
+    }
   }
-  const prose = source.replace(/\]\([^\s)]+\)/gu, ']()').replace(/[a-z][a-z0-9+.-]*:\/\/[^\s)>]+/giu, '');
-  for (const match of prose.matchAll(/(?<![\w./:-])([A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)+\.[A-Za-z0-9]+)(?![\w/-])/gu)) check(match[1]);
 }
 
 function uniqueIdentifiers(values: readonly string[], pattern: RegExp, reason: 'case-identity' | 'requirement-mapping', section: 4 | 14): void {
