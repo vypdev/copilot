@@ -296,7 +296,199 @@
     ],
     "litHtmlVersions": [
       "3.3.3"
-    ]
+    ],
+    "originalProducerSha256": "2fb8fd767273434a6278731fc7bd64b7232810ba7b087cb9d09031df8aef0711",
+    "currentReverification": {
+      "verification": {
+        "at": "2026-11-03T20:26:56.592946+00:00",
+        "runner": "src/tooling/__tests__/fixtures/bugbot_async_statement_runner.mjs",
+        "runnerSha256": "31822604fa2cd16a73584e45c37ac959ff5a000008f4a2281115a847bbbfb201",
+        "probeSha256": "85f561461add40bbc16e0d83c7049513bee4881827308f701b9cacaef0087721",
+        "all12ObservationsEqualOriginal": true,
+        "actualBrowser": "156.0.8078.4",
+        "packagePins": {
+          "node": "v24.20.0",
+          "lit": "3.3.3",
+          "playwright": "1.64.1",
+          "vitest": "5.0.5"
+        },
+        "guards": [
+          {
+            "case": "runner-relative-sdk",
+            "exitCode": 1,
+            "diagnostic": "owned temporary SDK root",
+            "logSha256": "96fead32c4107e346dd6bab40531384dcaa2b6b35fcc9cad3b8b5faf35780a37"
+          },
+          {
+            "case": "runner-wrong-pin",
+            "exitCode": 1,
+            "diagnostic": "requires lit@3.3.3",
+            "logSha256": "bc5e0b6ebb905c72a7748f5a0b53bf1227368f22a325345ee0a21c5004e49394"
+          },
+          {
+            "case": "runner-existing-output",
+            "exitCode": 1,
+            "diagnostic": "EEXIST",
+            "logSha256": "e89022405871c9d78452733932f22aaf5cecd61087358512dfdca979da263fb7"
+          }
+        ],
+        "existingOutputUnchanged": true,
+        "scope": "Fresh rerun through the versioned optional helper; not retroactive attribution to original19:17execution or new model measurements. Fixedprobe/corpus/modelruntime unchanged."
+      },
+      "rawObservation": {
+        "at": "2026-11-03T20:26:55.890Z",
+        "node": "v24.20.0",
+        "lit": "3.3.3",
+        "playwright": "1.64.1",
+        "vitest": "5.0.5",
+        "browser": "156.0.8078.4",
+        "probe": "bugbot_async_statement_probe.mjs",
+        "runner": "bugbot_async_statement_runner.mjs",
+        "runnerSha256": "31822604fa2cd16a73584e45c37ac959ff5a000008f4a2281115a847bbbfb201",
+        "probeSha256": "85f561461add40bbc16e0d83c7049513bee4881827308f701b9cacaef0087721",
+        "network": "Only isolated loopback origin allowed in fresh browser context",
+        "blockedOrigins": [],
+        "scope": "Actual pinned Lit on real Chromium; fixed authored probe, no corpus/consumer source evaluation. Not the original consumer test.",
+        "observations": [
+          {
+            "id": "sameLine",
+            "frames": [
+              "editing",
+              "closed",
+              "editing"
+            ],
+            "phase": "editing",
+            "draft": "",
+            "input": ""
+          },
+          {
+            "id": "expandedLines",
+            "frames": [
+              "editing",
+              "closed",
+              "editing"
+            ],
+            "phase": "editing",
+            "draft": "",
+            "input": ""
+          },
+          {
+            "id": "receiverAlias",
+            "frames": [
+              "editing",
+              "closed",
+              "editing"
+            ],
+            "phase": "editing",
+            "draft": "",
+            "input": ""
+          },
+          {
+            "id": "awaitedHelper",
+            "frames": [
+              "editing",
+              "closed",
+              "editing"
+            ],
+            "phase": "editing",
+            "draft": "",
+            "input": ""
+          },
+          {
+            "id": "synchronousUpdate",
+            "frames": [
+              "editing",
+              "closed",
+              "editing"
+            ],
+            "phase": "editing",
+            "draft": "",
+            "input": ""
+          },
+          {
+            "id": "animationFrame",
+            "frames": [
+              "editing",
+              "closed",
+              "editing"
+            ],
+            "phase": "editing",
+            "draft": "",
+            "input": ""
+          },
+          {
+            "id": "missingBoundary",
+            "frames": [
+              "editing",
+              "editing"
+            ],
+            "phase": "editing",
+            "draft": "owned-draft",
+            "input": "owned-draft"
+          },
+          {
+            "id": "wrongReceiver",
+            "frames": [
+              "editing",
+              "editing"
+            ],
+            "phase": "editing",
+            "draft": "owned-draft",
+            "input": "owned-draft"
+          },
+          {
+            "id": "stalePromise",
+            "frames": [
+              "editing",
+              "editing"
+            ],
+            "phase": "editing",
+            "draft": "owned-draft",
+            "input": "owned-draft"
+          },
+          {
+            "id": "unawaitedHelper",
+            "frames": [
+              "editing",
+              "editing"
+            ],
+            "phase": "editing",
+            "draft": "owned-draft",
+            "input": "owned-draft"
+          },
+          {
+            "id": "unawaitedThen",
+            "frames": [
+              "editing",
+              "editing"
+            ],
+            "phase": "editing",
+            "draft": "owned-draft",
+            "input": "owned-draft"
+          },
+          {
+            "id": "parentBeforeChild",
+            "frames": [
+              "editing",
+              "editing"
+            ],
+            "phase": "editing",
+            "draft": "owned-draft",
+            "input": "owned-draft"
+          }
+        ],
+        "litElementVersions": [
+          "4.2.2"
+        ],
+        "reactiveElementVersions": [
+          "2.1.2"
+        ],
+        "litHtmlVersions": [
+          "3.3.3"
+        ]
+      },
+      "scope": "Fresh execution through the versioned optional helper; original observation and all frozen model input/predictions stay unchanged. The helper is contributor test infrastructure, not a production executor."
+    }
   },
   "qualification": {
     "modelInputSha256": "05311cd6c8675554cf3892b4a183f35f79dc0e221482c7e7f731a58d825326ef",
@@ -3550,6 +3742,16 @@
       "result": "pass",
       "scope": "Jest evaluator/corpus/reference contracts, not model observations."
     },
-    "graphify": "AST updatepass;38 preexistingSvelteparserwarnings,noAPIlabelcalls"
+    "graphify": "AST updatepass;38 preexistingSvelteparserwarnings,noAPIlabelcalls",
+    "normalSourceCommitHooks": {
+      "commit": "f92f4a7d39ff856e137535b8a538e0d520051b67",
+      "build": "pass",
+      "jestSuites": 881,
+      "jestPassed": 17184,
+      "preexistingSkipped": 35,
+      "lint": "pass",
+      "preparedHashesUnchanged": 19,
+      "scope": "First normal source commit; reproducibility-helper/docs follow-up must pass its own normal hooks and remote finalhead gates."
+    }
   }
 }

@@ -66,6 +66,10 @@ export default defineConfig(
       },
     },
   },
+  {
+    files: ['src/tooling/__tests__/fixtures/bugbot_async_statement_runner.mjs'],
+    languageOptions: { globals: { process: 'readonly', console: 'readonly' } },
+  },
   // Tests: allow any, unused vars, and require() for mocks/isolation
   {
     files: ['src/**/*.test.ts', 'src/**/__tests__/**/*.ts'],

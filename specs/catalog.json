@@ -2352,7 +2352,8 @@
         "src/tooling/__tests__/bugbot_resource_authority.test.ts",
         "src/tooling/__tests__/fixtures/bugbot_resource_boundary_probe.py",
         "src/tooling/__tests__/bugbot_async_statements.test.ts",
-        "src/tooling/__tests__/fixtures/bugbot_async_statement_probe.mjs"
+        "src/tooling/__tests__/fixtures/bugbot_async_statement_probe.mjs",
+        "src/tooling/__tests__/fixtures/bugbot_async_statement_runner.mjs"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",

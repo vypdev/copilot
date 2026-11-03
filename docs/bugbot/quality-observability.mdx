@@ -45,6 +45,40 @@ imprecise anchors. The first individual trial fails location, the second fails
 recall and the third passes. No result is replaced by the best trial or a
 reference prediction. No historical internal cause or general accuracy guarantee follows.
 
+### Repeat the owned Lit controls
+
+The optional runner is versioned at
+`src/tooling/__tests__/fixtures/bugbot_async_statement_runner.mjs`. It imports its
+fixed sibling probe, and never evaluates corpus strings. Prepare a fresh owned
+system-temporary directory whose basename starts with `copilot-848-consumer-`.
+Its `frontend/node_modules` needs exactly Lit 3.3.3, Vite 8.3.5, Vitest 5.0.5
+and Playwright 1.64.1. The measured Lit dependencies are LitElement 4.2.2,
+ReactiveElement 2.1.2 and lit-html 3.3.3; preserve the locked dependency tree.
+The immutable consumer head linked in #848 supplies the original frontend lock
+and the separately documented original-test commands. Review that external source
+before executing its tests; the owned probe itself needs none of its application code.
+
+With Node 24.20.0 and that isolated SDK prepared, use its pinned Playwright CLI
+to install Chromium headless into its private browser directory, then run:
+
+```bash
+PLAYWRIGHT_BROWSERS_PATH="$qualification_sdk/.qualification/browsers" \
+  "$qualification_sdk/frontend/node_modules/.bin/playwright" install chromium --only-shell
+PLAYWRIGHT_BROWSERS_PATH="$qualification_sdk/.qualification/browsers" \
+  node src/tooling/__tests__/fixtures/bugbot_async_statement_runner.mjs \
+  "$qualification_sdk" "$qualification_sdk/observations.json"
+```
+
+Here `qualification_sdk` is the absolute path of that fresh owned SDK. Use an
+environment without account credential variables and empty npm configuration when
+preparing it; no HOME override is needed. The runner checks direct package pins,
+uses a fresh browser context and restricts requests to its isolated loopback origin.
+It records actual versions, runner/probe hashes and all twelve observations.
+Choose a new output filename on each run: the output write never overwrites an
+existing file. Errors close the browser/server; inspect the diagnostic and correct
+the SDK or destination before retrying. A rerun is a new observation, not a
+retroactive replacement of the recorded consumer execution or model inputs.
+
 ## Earlier controlled cases
 
 The #655 cases cover branch coverage enabled through repository configuration,

@@ -12,3 +12,4 @@ src/tooling/__tests__/fixtures/bugbot_recovery_contract_probe.py text eol=lf
 src/tooling/__tests__/fixtures/bugbot_fixture_values_probe.py text eol=lf
 src/tooling/__tests__/fixtures/bugbot_resource_boundary_probe.py text eol=lf
 src/tooling/__tests__/fixtures/bugbot_async_statement_probe.mjs text eol=lf
+src/tooling/__tests__/fixtures/bugbot_async_statement_runner.mjs text eol=lf

@@ -157,6 +157,11 @@ mutation authority. Source presence keeps the legacy empty prompt unchanged.
 Type/dependency/port checks, actual normal/framed delivery tests, benchmark-port
 call counts, input privacy tests and full coverage enforce these boundaries.
 Optional Lit/browser qualification is test infrastructure, not an Action dependency.
+The versioned optional runner imports only its fixed sibling probe from an owned
+temporary SDK with pinned direct packages. It uses a fresh browser context,
+loopback-only requests and exclusive creation of a new evidence output. It is
+not imported by production or mandatory Node tests. Detection's existing source
+inspection authority is unchanged.
 
 ## 9. UI/UX and content
 
@@ -251,6 +256,8 @@ platforms remain required independently of qualification scores.
 
 Update detection with complete-statement and synchronization reasoning, and quality
 observability with the separate corpus, actual executions/trials and limitations.
+Include the optional runner's exact SDK prerequisites, command, output identity,
+failure/retry and non-overwrite behavior so contributors can repeat the controls.
 Register this companion, instruction, fixed probe, tests and evidence in the owning
 catalog entry and regenerate CATALOG. Existing setup/config/recovery pages remain
 the route for installation and recheck; no new setup workflow. Validate specs,
