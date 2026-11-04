@@ -12,6 +12,17 @@
 - Required review gates: product UX, architecture, testing, documentation, security/operations
 - Open decisions blocking readiness: none for the baseline
 
+### JSON value and reader-contract grounding — #855 (2026-11-04)
+
+The [JSON value companion](./bugbot-json-value-grounding.md) owns tracing actual
+producer/decoder/transform/reader values before alleging extra encoding or
+proposing a cast. Twelve source-bound controls and 22 deterministic regressions
+contrast working codecs with real JSON boundary failures. Original primitive,
+reporter product tests, authored runtime probes and model measurements remain
+separate evidence. One shared pure rule reaches ordinary/framed review, existing
+Python candidate verification and the benchmark; identity, bounds, historical
+state, permissions and approval controls remain unchanged.
+
 ### Complete statements and asynchronous ordering — #848 (2026-11-03)
 
 The [statement-order companion](./bugbot-async-statement-evidence.md) owns reading

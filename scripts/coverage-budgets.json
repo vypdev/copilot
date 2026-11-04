@@ -1482,6 +1482,20 @@
         }
       ],
       "successMessage": "Issue assignment diagnostics: PASS (pure validation and presentation 100% lines/statements/functions/branches)"
+    },
+    {
+      "name": "Bugbot JSON value guidance",
+      "missingEntryLabel": "Bugbot JSON value guidance",
+      "rules": [
+        {
+          "files": [
+            "src/prompts/bugbot_json_value_evidence.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        }
+      ],
+      "successMessage": "Bugbot JSON value guidance: PASS (100% lines/statements/functions/branches)"
     }
   ]
 }

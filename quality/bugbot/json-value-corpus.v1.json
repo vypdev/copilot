@@ -1,0 +1,185 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "id": "json-values-decoded_object",
+      "language": "python",
+      "category": "correctness",
+      "description": "Python 3.14. A reader must receive JSON text representing one object and return the same nested object values. Review only the displayed changed function. These helpers are unchanged source context and contribute no fragment lines:\n\"\"\"Authored JSON boundary controls; imported only by the fixed optional runner.\"\"\"\nimport json\nfrom typing import cast\n\n\nclass ObjectFrame:\n    def __init__(self, text: str):\n        self.text = text\n        value = json.loads(text)\n        if not isinstance(value, dict):\n            raise ValueError(\"object-required\")\n\n    def decode(self) -> dict:\n        return json.loads(self.text)\n\n\nclass TextFrame:\n    def __init__(self, text: str):\n        self.text = text\n\n    def decode(self) -> str:\n        return self.text\n\n\ndef payload():\n    return {\"revision\": 1, \"tags\": [\"雪\", None, True], \"quoted\": '\"hi\"'}\n\n\ndef object_frame():\n    return ObjectFrame(json.dumps(payload()))\n\n\ndef read_object(text: str) -> dict:\n    # This boundary accepts JSON text representing one object, never a dict/string value.\n    if not isinstance(text, str):\n        raise TypeError(\"json-text-required\")\n    return ObjectFrame(text).decode()\n\n\ndef annotated_text() -> str:\n    # Python annotations do not convert values.\n    return object_frame().decode()\nIndependent fixed-source runtime observation (not a review verdict): {\"id\": \"decoded_object\", \"startLine\": 45, \"endLine\": 47, \"valueType\": \"dict\", \"value\": {\"revision\": 1, \"tags\": [\"雪\", null, true], \"quoted\": \"\\\"hi\\\"\"}}",
+      "file": "owned/json_value_probe.py",
+      "startLine": 45,
+      "diff": "+def decoded_object():\n+    row = {\"entry\": object_frame().decode()}\n+    return read_object(json.dumps(row[\"entry\"]))",
+      "expected": []
+    },
+    {
+      "id": "json-values-nested_outer_object",
+      "language": "python",
+      "category": "correctness",
+      "description": "Python 3.14. A reader must receive JSON text representing one object and return the same nested object values. Review only the displayed changed function. These helpers are unchanged source context and contribute no fragment lines:\n\"\"\"Authored JSON boundary controls; imported only by the fixed optional runner.\"\"\"\nimport json\nfrom typing import cast\n\n\nclass ObjectFrame:\n    def __init__(self, text: str):\n        self.text = text\n        value = json.loads(text)\n        if not isinstance(value, dict):\n            raise ValueError(\"object-required\")\n\n    def decode(self) -> dict:\n        return json.loads(self.text)\n\n\nclass TextFrame:\n    def __init__(self, text: str):\n        self.text = text\n\n    def decode(self) -> str:\n        return self.text\n\n\ndef payload():\n    return {\"revision\": 1, \"tags\": [\"雪\", None, True], \"quoted\": '\"hi\"'}\n\n\ndef object_frame():\n    return ObjectFrame(json.dumps(payload()))\n\n\ndef read_object(text: str) -> dict:\n    # This boundary accepts JSON text representing one object, never a dict/string value.\n    if not isinstance(text, str):\n        raise TypeError(\"json-text-required\")\n    return ObjectFrame(text).decode()\n\n\ndef annotated_text() -> str:\n    # Python annotations do not convert values.\n    return object_frame().decode()\nIndependent fixed-source runtime observation (not a review verdict): {\"id\": \"nested_outer_object\", \"startLine\": 50, \"endLine\": 53, \"valueType\": \"dict\", \"value\": {\"revision\": 1, \"tags\": [\"雪\", null, true], \"quoted\": \"\\\"hi\\\"\"}}",
+      "file": "owned/json_value_probe.py",
+      "startLine": 50,
+      "diff": "+def nested_outer_object():\n+    stored = json.dumps({\"entry\": object_frame().decode()})\n+    row = ObjectFrame(stored).decode()\n+    return read_object(json.dumps(row[\"entry\"]))",
+      "expected": []
+    },
+    {
+      "id": "json-values-text_decoder",
+      "language": "python",
+      "category": "correctness",
+      "description": "Python 3.14. A reader must receive JSON text representing one object and return the same nested object values. Review only the displayed changed function. These helpers are unchanged source context and contribute no fragment lines:\n\"\"\"Authored JSON boundary controls; imported only by the fixed optional runner.\"\"\"\nimport json\nfrom typing import cast\n\n\nclass ObjectFrame:\n    def __init__(self, text: str):\n        self.text = text\n        value = json.loads(text)\n        if not isinstance(value, dict):\n            raise ValueError(\"object-required\")\n\n    def decode(self) -> dict:\n        return json.loads(self.text)\n\n\nclass TextFrame:\n    def __init__(self, text: str):\n        self.text = text\n\n    def decode(self) -> str:\n        return self.text\n\n\ndef payload():\n    return {\"revision\": 1, \"tags\": [\"雪\", None, True], \"quoted\": '\"hi\"'}\n\n\ndef object_frame():\n    return ObjectFrame(json.dumps(payload()))\n\n\ndef read_object(text: str) -> dict:\n    # This boundary accepts JSON text representing one object, never a dict/string value.\n    if not isinstance(text, str):\n        raise TypeError(\"json-text-required\")\n    return ObjectFrame(text).decode()\n\n\ndef annotated_text() -> str:\n    # Python annotations do not convert values.\n    return object_frame().decode()\nIndependent fixed-source runtime observation (not a review verdict): {\"id\": \"text_decoder\", \"startLine\": 56, \"endLine\": 58, \"valueType\": \"dict\", \"value\": {\"revision\": 1, \"tags\": [\"雪\", null, true], \"quoted\": \"\\\"hi\\\"\"}}",
+      "file": "owned/json_value_probe.py",
+      "startLine": 56,
+      "diff": "+def text_decoder():\n+    row = {\"entry\": TextFrame(json.dumps(payload())).decode()}\n+    return read_object(cast(str, row[\"entry\"]))",
+      "expected": []
+    },
+    {
+      "id": "json-values-guarded_text_cast",
+      "language": "python",
+      "category": "correctness",
+      "description": "Python 3.14. A reader must receive JSON text representing one object and return the same nested object values. Review only the displayed changed function. These helpers are unchanged source context and contribute no fragment lines:\n\"\"\"Authored JSON boundary controls; imported only by the fixed optional runner.\"\"\"\nimport json\nfrom typing import cast\n\n\nclass ObjectFrame:\n    def __init__(self, text: str):\n        self.text = text\n        value = json.loads(text)\n        if not isinstance(value, dict):\n            raise ValueError(\"object-required\")\n\n    def decode(self) -> dict:\n        return json.loads(self.text)\n\n\nclass TextFrame:\n    def __init__(self, text: str):\n        self.text = text\n\n    def decode(self) -> str:\n        return self.text\n\n\ndef payload():\n    return {\"revision\": 1, \"tags\": [\"雪\", None, True], \"quoted\": '\"hi\"'}\n\n\ndef object_frame():\n    return ObjectFrame(json.dumps(payload()))\n\n\ndef read_object(text: str) -> dict:\n    # This boundary accepts JSON text representing one object, never a dict/string value.\n    if not isinstance(text, str):\n        raise TypeError(\"json-text-required\")\n    return ObjectFrame(text).decode()\n\n\ndef annotated_text() -> str:\n    # Python annotations do not convert values.\n    return object_frame().decode()\nIndependent fixed-source runtime observation (not a review verdict): {\"id\": \"guarded_text_cast\", \"startLine\": 61, \"endLine\": 65, \"valueType\": \"dict\", \"value\": {\"revision\": 1, \"tags\": [\"雪\", null, true], \"quoted\": \"\\\"hi\\\"\"}}",
+      "file": "owned/json_value_probe.py",
+      "startLine": 61,
+      "diff": "+def guarded_text_cast():\n+    row = {\"entry\": json.dumps(payload())}\n+    if not isinstance(row[\"entry\"], str):\n+        raise TypeError(\"text-required\")\n+    return read_object(cast(str, row[\"entry\"]))",
+      "expected": []
+    },
+    {
+      "id": "json-values-unicode_nested_value",
+      "language": "python",
+      "category": "correctness",
+      "description": "Python 3.14. A reader must receive JSON text representing one object and return the same nested object values. Review only the displayed changed function. These helpers are unchanged source context and contribute no fragment lines:\n\"\"\"Authored JSON boundary controls; imported only by the fixed optional runner.\"\"\"\nimport json\nfrom typing import cast\n\n\nclass ObjectFrame:\n    def __init__(self, text: str):\n        self.text = text\n        value = json.loads(text)\n        if not isinstance(value, dict):\n            raise ValueError(\"object-required\")\n\n    def decode(self) -> dict:\n        return json.loads(self.text)\n\n\nclass TextFrame:\n    def __init__(self, text: str):\n        self.text = text\n\n    def decode(self) -> str:\n        return self.text\n\n\ndef payload():\n    return {\"revision\": 1, \"tags\": [\"雪\", None, True], \"quoted\": '\"hi\"'}\n\n\ndef object_frame():\n    return ObjectFrame(json.dumps(payload()))\n\n\ndef read_object(text: str) -> dict:\n    # This boundary accepts JSON text representing one object, never a dict/string value.\n    if not isinstance(text, str):\n        raise TypeError(\"json-text-required\")\n    return ObjectFrame(text).decode()\n\n\ndef annotated_text() -> str:\n    # Python annotations do not convert values.\n    return object_frame().decode()\nIndependent fixed-source runtime observation (not a review verdict): {\"id\": \"unicode_nested_value\", \"startLine\": 68, \"endLine\": 70, \"valueType\": \"dict\", \"value\": {\"revision\": 1, \"tags\": [\"雪\", null, true], \"quoted\": \"\\\"hi\\\"\"}}",
+      "file": "owned/json_value_probe.py",
+      "startLine": 68,
+      "diff": "+def unicode_nested_value():\n+    row = json.loads(json.dumps({\"entry\": payload()}, ensure_ascii=False))\n+    return read_object(json.dumps(row[\"entry\"], ensure_ascii=False))",
+      "expected": []
+    },
+    {
+      "id": "json-values-separate_serialization_levels",
+      "language": "python",
+      "category": "correctness",
+      "description": "Python 3.14. A reader must receive JSON text representing one object and return the same nested object values. Review only the displayed changed function. These helpers are unchanged source context and contribute no fragment lines:\n\"\"\"Authored JSON boundary controls; imported only by the fixed optional runner.\"\"\"\nimport json\nfrom typing import cast\n\n\nclass ObjectFrame:\n    def __init__(self, text: str):\n        self.text = text\n        value = json.loads(text)\n        if not isinstance(value, dict):\n            raise ValueError(\"object-required\")\n\n    def decode(self) -> dict:\n        return json.loads(self.text)\n\n\nclass TextFrame:\n    def __init__(self, text: str):\n        self.text = text\n\n    def decode(self) -> str:\n        return self.text\n\n\ndef payload():\n    return {\"revision\": 1, \"tags\": [\"雪\", None, True], \"quoted\": '\"hi\"'}\n\n\ndef object_frame():\n    return ObjectFrame(json.dumps(payload()))\n\n\ndef read_object(text: str) -> dict:\n    # This boundary accepts JSON text representing one object, never a dict/string value.\n    if not isinstance(text, str):\n        raise TypeError(\"json-text-required\")\n    return ObjectFrame(text).decode()\n\n\ndef annotated_text() -> str:\n    # Python annotations do not convert values.\n    return object_frame().decode()\nIndependent fixed-source runtime observation (not a review verdict): {\"id\": \"separate_serialization_levels\", \"startLine\": 73, \"endLine\": 76, \"valueType\": \"dict\", \"value\": {\"revision\": 1, \"tags\": [\"雪\", null, true], \"quoted\": \"\\\"hi\\\"\"}}",
+      "file": "owned/json_value_probe.py",
+      "startLine": 73,
+      "diff": "+def separate_serialization_levels():\n+    inner = json.dumps(payload())\n+    row = json.loads(json.dumps({\"entry\": inner}))\n+    return read_object(row[\"entry\"])",
+      "expected": []
+    },
+    {
+      "id": "json-values-object_cast_into_text_reader",
+      "language": "python",
+      "category": "correctness",
+      "description": "Python 3.14. A reader must receive JSON text representing one object and return the same nested object values. Review only the displayed changed function. These helpers are unchanged source context and contribute no fragment lines:\n\"\"\"Authored JSON boundary controls; imported only by the fixed optional runner.\"\"\"\nimport json\nfrom typing import cast\n\n\nclass ObjectFrame:\n    def __init__(self, text: str):\n        self.text = text\n        value = json.loads(text)\n        if not isinstance(value, dict):\n            raise ValueError(\"object-required\")\n\n    def decode(self) -> dict:\n        return json.loads(self.text)\n\n\nclass TextFrame:\n    def __init__(self, text: str):\n        self.text = text\n\n    def decode(self) -> str:\n        return self.text\n\n\ndef payload():\n    return {\"revision\": 1, \"tags\": [\"雪\", None, True], \"quoted\": '\"hi\"'}\n\n\ndef object_frame():\n    return ObjectFrame(json.dumps(payload()))\n\n\ndef read_object(text: str) -> dict:\n    # This boundary accepts JSON text representing one object, never a dict/string value.\n    if not isinstance(text, str):\n        raise TypeError(\"json-text-required\")\n    return ObjectFrame(text).decode()\n\n\ndef annotated_text() -> str:\n    # Python annotations do not convert values.\n    return object_frame().decode()\nIndependent fixed-source runtime observation (not a review verdict): {\"id\": \"object_cast_into_text_reader\", \"startLine\": 79, \"endLine\": 81, \"exception\": \"TypeError\", \"message\": \"json-text-required\"}",
+      "file": "owned/json_value_probe.py",
+      "startLine": 79,
+      "diff": "+def object_cast_into_text_reader():\n+    row = {\"entry\": object_frame().decode()}\n+    return read_object(cast(str, row[\"entry\"]))",
+      "expected": [
+        {
+          "title": "JSON object/text boundary is violated",
+          "file": "owned/json_value_probe.py",
+          "line": 81,
+          "symbol": "object_cast_into_text_reader",
+          "codeSnippet": "return read_object(cast(str, row[\"entry\"]))",
+          "category": "correctness",
+          "severity": "medium"
+        }
+      ]
+    },
+    {
+      "id": "json-values-text_encoded_twice",
+      "language": "python",
+      "category": "correctness",
+      "description": "Python 3.14. A reader must receive JSON text representing one object and return the same nested object values. Review only the displayed changed function. These helpers are unchanged source context and contribute no fragment lines:\n\"\"\"Authored JSON boundary controls; imported only by the fixed optional runner.\"\"\"\nimport json\nfrom typing import cast\n\n\nclass ObjectFrame:\n    def __init__(self, text: str):\n        self.text = text\n        value = json.loads(text)\n        if not isinstance(value, dict):\n            raise ValueError(\"object-required\")\n\n    def decode(self) -> dict:\n        return json.loads(self.text)\n\n\nclass TextFrame:\n    def __init__(self, text: str):\n        self.text = text\n\n    def decode(self) -> str:\n        return self.text\n\n\ndef payload():\n    return {\"revision\": 1, \"tags\": [\"雪\", None, True], \"quoted\": '\"hi\"'}\n\n\ndef object_frame():\n    return ObjectFrame(json.dumps(payload()))\n\n\ndef read_object(text: str) -> dict:\n    # This boundary accepts JSON text representing one object, never a dict/string value.\n    if not isinstance(text, str):\n        raise TypeError(\"json-text-required\")\n    return ObjectFrame(text).decode()\n\n\ndef annotated_text() -> str:\n    # Python annotations do not convert values.\n    return object_frame().decode()\nIndependent fixed-source runtime observation (not a review verdict): {\"id\": \"text_encoded_twice\", \"startLine\": 84, \"endLine\": 86, \"exception\": \"ValueError\", \"message\": \"object-required\"}",
+      "file": "owned/json_value_probe.py",
+      "startLine": 84,
+      "diff": "+def text_encoded_twice():\n+    row = {\"entry\": json.dumps(payload())}\n+    return read_object(json.dumps(row[\"entry\"]))",
+      "expected": [
+        {
+          "title": "JSON object/text boundary is violated",
+          "file": "owned/json_value_probe.py",
+          "line": 86,
+          "symbol": "text_encoded_twice",
+          "codeSnippet": "return read_object(json.dumps(row[\"entry\"]))",
+          "category": "correctness",
+          "severity": "medium"
+        }
+      ]
+    },
+    {
+      "id": "json-values-raw_object_into_text_reader",
+      "language": "python",
+      "category": "correctness",
+      "description": "Python 3.14. A reader must receive JSON text representing one object and return the same nested object values. Review only the displayed changed function. These helpers are unchanged source context and contribute no fragment lines:\n\"\"\"Authored JSON boundary controls; imported only by the fixed optional runner.\"\"\"\nimport json\nfrom typing import cast\n\n\nclass ObjectFrame:\n    def __init__(self, text: str):\n        self.text = text\n        value = json.loads(text)\n        if not isinstance(value, dict):\n            raise ValueError(\"object-required\")\n\n    def decode(self) -> dict:\n        return json.loads(self.text)\n\n\nclass TextFrame:\n    def __init__(self, text: str):\n        self.text = text\n\n    def decode(self) -> str:\n        return self.text\n\n\ndef payload():\n    return {\"revision\": 1, \"tags\": [\"雪\", None, True], \"quoted\": '\"hi\"'}\n\n\ndef object_frame():\n    return ObjectFrame(json.dumps(payload()))\n\n\ndef read_object(text: str) -> dict:\n    # This boundary accepts JSON text representing one object, never a dict/string value.\n    if not isinstance(text, str):\n        raise TypeError(\"json-text-required\")\n    return ObjectFrame(text).decode()\n\n\ndef annotated_text() -> str:\n    # Python annotations do not convert values.\n    return object_frame().decode()\nIndependent fixed-source runtime observation (not a review verdict): {\"id\": \"raw_object_into_text_reader\", \"startLine\": 89, \"endLine\": 91, \"exception\": \"TypeError\", \"message\": \"json-text-required\"}",
+      "file": "owned/json_value_probe.py",
+      "startLine": 89,
+      "diff": "+def raw_object_into_text_reader():\n+    row = json.loads(json.dumps({\"entry\": payload()}))\n+    return read_object(row[\"entry\"])",
+      "expected": [
+        {
+          "title": "JSON object/text boundary is violated",
+          "file": "owned/json_value_probe.py",
+          "line": 91,
+          "symbol": "raw_object_into_text_reader",
+          "codeSnippet": "return read_object(row[\"entry\"])",
+          "category": "correctness",
+          "severity": "medium"
+        }
+      ]
+    },
+    {
+      "id": "json-values-python_repr_as_json",
+      "language": "python",
+      "category": "correctness",
+      "description": "Python 3.14. A reader must receive JSON text representing one object and return the same nested object values. Review only the displayed changed function. These helpers are unchanged source context and contribute no fragment lines:\n\"\"\"Authored JSON boundary controls; imported only by the fixed optional runner.\"\"\"\nimport json\nfrom typing import cast\n\n\nclass ObjectFrame:\n    def __init__(self, text: str):\n        self.text = text\n        value = json.loads(text)\n        if not isinstance(value, dict):\n            raise ValueError(\"object-required\")\n\n    def decode(self) -> dict:\n        return json.loads(self.text)\n\n\nclass TextFrame:\n    def __init__(self, text: str):\n        self.text = text\n\n    def decode(self) -> str:\n        return self.text\n\n\ndef payload():\n    return {\"revision\": 1, \"tags\": [\"雪\", None, True], \"quoted\": '\"hi\"'}\n\n\ndef object_frame():\n    return ObjectFrame(json.dumps(payload()))\n\n\ndef read_object(text: str) -> dict:\n    # This boundary accepts JSON text representing one object, never a dict/string value.\n    if not isinstance(text, str):\n        raise TypeError(\"json-text-required\")\n    return ObjectFrame(text).decode()\n\n\ndef annotated_text() -> str:\n    # Python annotations do not convert values.\n    return object_frame().decode()\nIndependent fixed-source runtime observation (not a review verdict): {\"id\": \"python_repr_as_json\", \"startLine\": 94, \"endLine\": 96, \"exception\": \"JSONDecodeError\", \"message\": \"Expecting property name enclosed in double quotes: line 1 column 2 (char 1)\"}",
+      "file": "owned/json_value_probe.py",
+      "startLine": 94,
+      "diff": "+def python_repr_as_json():\n+    row = {\"entry\": object_frame().decode()}\n+    return read_object(str(row[\"entry\"]))",
+      "expected": [
+        {
+          "title": "JSON object/text boundary is violated",
+          "file": "owned/json_value_probe.py",
+          "line": 96,
+          "symbol": "python_repr_as_json",
+          "codeSnippet": "return read_object(str(row[\"entry\"]))",
+          "category": "correctness",
+          "severity": "medium"
+        }
+      ]
+    },
+    {
+      "id": "json-values-missing_inner_decode",
+      "language": "python",
+      "category": "correctness",
+      "description": "Python 3.14. A reader must receive JSON text representing one object and return the same nested object values. Review only the displayed changed function. These helpers are unchanged source context and contribute no fragment lines:\n\"\"\"Authored JSON boundary controls; imported only by the fixed optional runner.\"\"\"\nimport json\nfrom typing import cast\n\n\nclass ObjectFrame:\n    def __init__(self, text: str):\n        self.text = text\n        value = json.loads(text)\n        if not isinstance(value, dict):\n            raise ValueError(\"object-required\")\n\n    def decode(self) -> dict:\n        return json.loads(self.text)\n\n\nclass TextFrame:\n    def __init__(self, text: str):\n        self.text = text\n\n    def decode(self) -> str:\n        return self.text\n\n\ndef payload():\n    return {\"revision\": 1, \"tags\": [\"雪\", None, True], \"quoted\": '\"hi\"'}\n\n\ndef object_frame():\n    return ObjectFrame(json.dumps(payload()))\n\n\ndef read_object(text: str) -> dict:\n    # This boundary accepts JSON text representing one object, never a dict/string value.\n    if not isinstance(text, str):\n        raise TypeError(\"json-text-required\")\n    return ObjectFrame(text).decode()\n\n\ndef annotated_text() -> str:\n    # Python annotations do not convert values.\n    return object_frame().decode()\nIndependent fixed-source runtime observation (not a review verdict): {\"id\": \"missing_inner_decode\", \"startLine\": 99, \"endLine\": 101, \"exception\": \"ValueError\", \"message\": \"object-required\"}",
+      "file": "owned/json_value_probe.py",
+      "startLine": 99,
+      "diff": "+def missing_inner_decode():\n+    row = {\"entry\": object_frame().text}\n+    return read_object(json.dumps(row[\"entry\"]))",
+      "expected": [
+        {
+          "title": "JSON object/text boundary is violated",
+          "file": "owned/json_value_probe.py",
+          "line": 101,
+          "symbol": "missing_inner_decode",
+          "codeSnippet": "return read_object(json.dumps(row[\"entry\"]))",
+          "category": "correctness",
+          "severity": "medium"
+        }
+      ]
+    },
+    {
+      "id": "json-values-annotation_is_not_conversion",
+      "language": "python",
+      "category": "correctness",
+      "description": "Python 3.14. A reader must receive JSON text representing one object and return the same nested object values. Review only the displayed changed function. These helpers are unchanged source context and contribute no fragment lines:\n\"\"\"Authored JSON boundary controls; imported only by the fixed optional runner.\"\"\"\nimport json\nfrom typing import cast\n\n\nclass ObjectFrame:\n    def __init__(self, text: str):\n        self.text = text\n        value = json.loads(text)\n        if not isinstance(value, dict):\n            raise ValueError(\"object-required\")\n\n    def decode(self) -> dict:\n        return json.loads(self.text)\n\n\nclass TextFrame:\n    def __init__(self, text: str):\n        self.text = text\n\n    def decode(self) -> str:\n        return self.text\n\n\ndef payload():\n    return {\"revision\": 1, \"tags\": [\"雪\", None, True], \"quoted\": '\"hi\"'}\n\n\ndef object_frame():\n    return ObjectFrame(json.dumps(payload()))\n\n\ndef read_object(text: str) -> dict:\n    # This boundary accepts JSON text representing one object, never a dict/string value.\n    if not isinstance(text, str):\n        raise TypeError(\"json-text-required\")\n    return ObjectFrame(text).decode()\n\n\ndef annotated_text() -> str:\n    # Python annotations do not convert values.\n    return object_frame().decode()\nIndependent fixed-source runtime observation (not a review verdict): {\"id\": \"annotation_is_not_conversion\", \"startLine\": 104, \"endLine\": 106, \"exception\": \"TypeError\", \"message\": \"json-text-required\"}",
+      "file": "owned/json_value_probe.py",
+      "startLine": 104,
+      "diff": "+def annotation_is_not_conversion():\n+    row = {\"entry\": annotated_text()}\n+    return read_object(row[\"entry\"])",
+      "expected": [
+        {
+          "title": "JSON object/text boundary is violated",
+          "file": "owned/json_value_probe.py",
+          "line": 106,
+          "symbol": "annotation_is_not_conversion",
+          "codeSnippet": "return read_object(row[\"entry\"])",
+          "category": "correctness",
+          "severity": "medium"
+        }
+      ]
+    }
+  ]
+}
