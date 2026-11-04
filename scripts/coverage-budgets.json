@@ -1496,6 +1496,20 @@
         }
       ],
       "successMessage": "Bugbot JSON value guidance: PASS (100% lines/statements/functions/branches)"
+    },
+    {
+      "name": "SDD ownership planning context",
+      "missingEntryLabel": "SDD ownership planning context",
+      "rules": [
+        {
+          "files": [
+            "src/application/policies/sdd_ownership_prompt_policy.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        }
+      ],
+      "successMessage": "SDD ownership planning context: PASS (100% lines/statements/functions/branches)"
     }
   ]
 }

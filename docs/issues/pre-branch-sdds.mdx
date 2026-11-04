@@ -450,7 +450,20 @@ category without exposing the model's proposed values or raw response.
 Clarify the existing capability ID and intended SDD path in the same issue, then
 rerun the original workflow. Updates use a path registered to that owner;
 companions use an existing owner and a new path; new capabilities use a new ID
-and path. Each invocation makes one analysis attempt with no automatic repair.
+and path. Updating a registered companion document is still an **update**; the
+document's role does not request another companion. An independently owned new
+package can use **new** even when its topic overlaps an application capability.
+
+After authorized answers resolve the current questions, analysis receives the
+preceding unpublished proposal and its round together with the retained answers.
+That proposal is planning context: an authorized clarification can change its
+route before publication. If the owner or path remains ambiguous, Copilot asks a
+focused question with a valid provisional target and keeps drafting blocked.
+Unanswered, unauthorized or stale answers cannot authorize proposal reuse. Once
+a linked publication owns the work, its existing owner and path remain locked
+for updates. Each response numbers its current questions from **Q1** again.
+
+Each invocation makes one analysis attempt with no automatic repair.
 Existing answers, SDDs, branches and commits remain intact. A later valid analysis
 updates the diagnostic; normal publication checks still determine readiness.
 The diagnostic is separate from the validated question/publication record and

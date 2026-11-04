@@ -1752,7 +1752,7 @@
       "id": "issue-start-and-sdd-readiness",
       "title": "Uniform issue start and pre-branch SDD readiness",
       "status": "implemented",
-      "scope": "Start every admitted issue with one explicit signal and publish a validated SDD before eligible Action-managed branch work; inspect verified SDD status and bounded structural publication comparisons and preserve complete navigable catalog links for accepted repository filenames and safely publish generated catalogs without following destination links; bootstrap truthful proposed SDK capabilities before implementation without changing readiness; reject incomplete specification discovery explicitly without following unregistered symbolic links; report confirmed missing trusted catalogs with immutable source provenance and prerequisite recovery before model or publication; bind pre-branch analysis and drafting to a verified independent read-only view of the selected immutable source without changing the canonical checkout; distinguish visible protocol notation from repository citations, allow only constructive proposed-file directory ancestry and expose bounded private-safe origin diagnostics",
+      "scope": "Start every admitted issue with one explicit signal and publish a validated SDD before eligible Action-managed branch work; inspect verified SDD status and bounded structural publication comparisons and preserve complete navigable catalog links for accepted repository filenames and safely publish generated catalogs without following destination links; bootstrap truthful proposed SDK capabilities before implementation without changing readiness; reject incomplete specification discovery explicitly without following unregistered symbolic links; report confirmed missing trusted catalogs with immutable source provenance and prerequisite recovery before model or publication; bind pre-branch analysis and drafting to a verified independent read-only view of the selected immutable source without changing the canonical checkout; distinguish visible protocol notation from repository citations, allow only constructive proposed-file directory ancestry and expose bounded private-safe origin diagnostics; distinguish registered-document updates from new companion and independent capability publication, carrying fresh authorized unpublished ownership context across clarification without changing published ownership fences",
       "owner": "Copilot maintainers",
       "lastVerified": "2026-11-04",
       "specs": [
@@ -1852,7 +1852,8 @@
         "src/infrastructure/agents/agent_source_snapshot_integrity.ts",
         "src/domain/sdd_repository_reference.ts",
         "src/domain/sdd_visible_references.ts",
-        "src/domain/sdd_case_reference.ts"
+        "src/domain/sdd_case_reference.ts",
+        "src/application/policies/sdd_ownership_prompt_policy.ts"
       ],
       "tests": [
         "src/domain/__tests__/issue_workflow_runtime_policy.test.ts",
@@ -1927,7 +1928,9 @@
         "src/application/policies/__tests__/sdd_source_context_presentation.test.ts",
         "src/infrastructure/agents/__tests__/agent_source_snapshot_admission.test.ts",
         "src/domain/__tests__/sdd_repository_reference.test.ts",
-        "src/domain/__tests__/sdd_case_reference.test.ts"
+        "src/domain/__tests__/sdd_case_reference.test.ts",
+        "quality/sdd/ownership-qualification.cjs",
+        "quality/sdd/evidence/issue-856.json"
       ],
       "documentation": [
         "docs/issues/branch-management.mdx",
@@ -1941,7 +1944,8 @@
         "docs/configuration.mdx",
         "docs/single-actions/workflow-and-cli.mdx",
         "docs/security-operations/operations/error-reference.mdx",
-        "specs/README.md"
+        "specs/README.md",
+        "quality/sdd/README.md"
       ]
     },
     {
