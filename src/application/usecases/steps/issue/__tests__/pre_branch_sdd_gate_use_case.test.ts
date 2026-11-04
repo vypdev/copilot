@@ -87,6 +87,7 @@ describe('PreBranchSddGateUseCase', () => {
     expect((await h.useCase.begin(context())).status).toBe('waiting');
     const request = h.query.mock.calls[1][0];
     expect(request.prompt).toContain('Unpublished ownership proposal (round 1)');
+    expect(request.prompt).toContain(`Recorded operation meaning (${pending.action})`);
     expect(request.prompt).toContain('"action":' + JSON.stringify(pending.action));
     expect(request.prompt).toContain('"capabilityId":' + JSON.stringify(pending.capabilityId));
     expect(request.prompt).toContain('"path":' + JSON.stringify(pending.path));
@@ -96,6 +97,137 @@ describe('PreBranchSddGateUseCase', () => {
     expect(h.readSdd).not.toHaveBeenCalled();
     expect(h.publish).not.toHaveBeenCalled();
     expect(h.validateDraft).not.toHaveBeenCalled();
+  });
+
+  const workingProposals = [
+    { ...plan },
+    { ...plan, action: 'companion', path: 'specs/payment-reconciliation.md' },
+    { ...newPlan },
+  ];
+  const workingBranch = 'feature/42-change';
+
+  it.each(workingProposals)('856: a working branch introduced after the question card preserves the unpublished $action proposal', async pending => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...pending, questions: [question], newCapability: null });
+    expect((await h.useCase.begin(context())).status).toBe('waiting');
+    h.comments.push({ id: 101, body: 'SDD Q1: Keep the exact proposed owner and publication target.', user: { login: 'maintainer' } });
+    h.query.mockResolvedValueOnce({ ...pending, questions: [{ ...question, text: 'Who maintains this publication?' }], newCapability: null });
+    expect((await h.useCase.begin({ ...context(), workingBranch })).status).toBe('waiting');
+    expect(h.query.mock.calls[1][0].prompt).toContain('Unpublished ownership proposal (round 1)');
+    expect(h.query.mock.calls[1][0].prompt).toContain('"path":' + JSON.stringify(pending.path));
+    expect(h.query.mock.calls[1][0].prompt).not.toContain('The Action has retained a linked branch');
+    expect(readSddGateRecord(h.comments[0].body, 42)!.branchName).toBeUndefined();
+    expect(h.loadSnapshot).toHaveBeenCalledWith(workingBranch);
+    expect(h.publish).not.toHaveBeenCalled();
+  });
+
+  it.each(workingProposals)('856: a pre-existing working branch is not recorded as a linked SDD for $action clarification', async pending => {
+    const h = harness();
+    const ctx = { ...context(), workingBranch };
+    h.query.mockResolvedValueOnce({ ...pending, questions: [question], newCapability: null });
+    expect((await h.useCase.begin(ctx)).status).toBe('waiting');
+    expect(readSddGateRecord(h.comments[0].body, 42)!.branchName).toBeUndefined();
+    h.comments.push({ id: 101, body: 'SDD Q1: Keep the exact proposed owner and target.', user: { login: 'maintainer' } });
+    h.query.mockResolvedValueOnce({ ...pending, questions: [{ ...question, text: 'Who maintains this publication?' }], newCapability: null });
+    expect((await h.useCase.begin(ctx)).status).toBe('waiting');
+    const prompt = h.query.mock.calls[1][0].prompt;
+    expect(prompt).toContain('Unpublished ownership proposal (round 1)');
+    expect(prompt).not.toContain('Return action update with exactly path');
+    expect(readSddGateRecord(h.comments[0].body, 42)!.branchName).toBeUndefined();
+    expect(h.verifyPublication).not.toHaveBeenCalled();
+    expect(h.publish).not.toHaveBeenCalled();
+  });
+
+  it.each(workingProposals)('856: a generic working branch preserves the $action proposal through the third clarification round', async pending => {
+    const h = harness();
+    const ctx = { ...context(), workingBranch };
+    h.query.mockResolvedValueOnce({ ...pending, questions: [question], newCapability: null });
+    expect((await h.useCase.begin(ctx)).status).toBe('waiting');
+    for (let round = 1; round <= 2; round++) {
+      h.comments.push({ id: 100 + round, body: `SDD Q1: Decision ${round} resolved; keep the proposed owner and target.`, user: { login: 'maintainer' } });
+      h.query.mockResolvedValueOnce({ ...pending, questions: [{ ...question, text: `Remaining decision ${round}.` }], newCapability: null });
+      expect((await h.useCase.begin(ctx)).status).toBe('waiting');
+    }
+    const prompt = h.query.mock.calls[2][0].prompt;
+    expect(prompt).toContain('Unpublished ownership proposal (round 2)');
+    expect(prompt).toContain('Decision 1 resolved');
+    expect(prompt).toContain('Decision 2 resolved');
+    expect(prompt).not.toContain('The Action has retained a linked branch');
+    expect(readSddGateRecord(h.comments[0].body, 42)!.round).toBe(3);
+    expect(readSddGateRecord(h.comments[0].body, 42)!.branchName).toBeUndefined();
+  });
+
+  it.each([
+    [{ ...newPlan }, { ...plan, action: 'companion', path: 'specs/payment-reconciliation.md' }],
+    [{ ...plan, action: 'companion', path: 'specs/payment-reconciliation.md' }, { ...plan }],
+    [{ ...plan }, { ...newPlan }],
+  ])('856: authorized clarification can reroute an unpublished proposal on a generic working branch', async (before, after) => {
+    const h = harness();
+    const ctx = { ...context(), workingBranch };
+    h.query.mockResolvedValueOnce({ ...before, questions: [question], newCapability: null });
+    expect((await h.useCase.begin(ctx)).status).toBe('waiting');
+    h.comments.push({ id: 101, body: `SDD Q1: Change the unpublished proposal to ${after.action}, owner ${after.capabilityId}, path ${after.path}.`, user: { login: 'maintainer' } });
+    h.query.mockResolvedValueOnce({ ...after, questions: [{ ...question, text: 'Who maintains the clarified publication?' }], newCapability: null });
+    expect((await h.useCase.begin(ctx)).status).toBe('waiting');
+    expect(readSddGateRecord(h.comments[0].body, 42)!.plan).toMatchObject({ action: after.action, capabilityId: after.capabilityId, path: after.path });
+    expect(readSddGateRecord(h.comments[0].body, 42)!.branchName).toBeUndefined();
+    expect(h.query.mock.calls[1][0].prompt).toContain('Change the unpublished proposal');
+    expect(h.query.mock.calls[1][0].prompt).not.toContain('Return action update with exactly path');
+    expect(h.publish).not.toHaveBeenCalled();
+  });
+
+  it('856: a changed working-branch source cannot reuse a stale unpublished proposal', async () => {
+    const h = harness();
+    const ctx = { ...context(), workingBranch };
+    h.query.mockResolvedValueOnce({ ...plan, reason: 'PRIOR_ONLY_WORKING_WITNESS', questions: [question], newCapability: null });
+    expect((await h.useCase.begin(ctx)).status).toBe('waiting');
+    const changed = 'c'.repeat(40);
+    h.loadSnapshot.mockResolvedValue({ ...snapshot, baseSha: changed });
+    h.getLinkedBranch.mockResolvedValue({ name: workingBranch, headSha: changed });
+    h.comments.push({ id: 101, body: 'SDD Q1: Keep the old proposal.', user: { login: 'maintainer' } });
+    h.query.mockResolvedValueOnce({ ...plan, questions: [question], newCapability: null });
+    expect((await h.useCase.begin(ctx)).status).toBe('waiting');
+    const request = h.query.mock.calls[1][0];
+    expect(request.sourceSnapshot.baseSha).toBe(changed);
+    expect(request.prompt).not.toContain('PRIOR_ONLY_WORKING_WITNESS');
+    expect(request.prompt).not.toContain('Unpublished ownership proposal (round');
+    expect(h.recoverPublished).not.toHaveBeenCalled();
+  });
+
+  it('856: a published SDD owner keeps precedence over another configured working branch', async () => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: writerDraft('# Accepted draft') });
+    const first = await h.useCase.begin(context());
+    if (first.status !== 'drafted') throw new Error('Expected draft');
+    expect((await h.useCase.publish(context(), first, workingBranch)).status).toBe('published');
+    h.loadSnapshot.mockResolvedValue({ ...snapshot, baseSha: commitSha });
+    h.getLinkedBranch.mockResolvedValue({ name: workingBranch, headSha: commitSha });
+    const next = { ...context(), workingBranch: 'feature/42-another', issueBody: 'Add published-owner acceptance evidence.' };
+    h.getDescription.mockResolvedValue(next.issueBody);
+    h.query.mockResolvedValueOnce({ ...plan, questions: [question], newCapability: null });
+    expect((await h.useCase.begin(next)).status).toBe('waiting');
+    expect(h.query.mock.calls[2][0].prompt).toContain('Return action update with exactly path "specs/payments.md"');
+    expect(h.query.mock.calls[2][0].prompt).not.toContain('Unpublished ownership proposal (round');
+    expect(h.loadSnapshot).not.toHaveBeenCalledWith(next.workingBranch);
+    expect(h.publish).toHaveBeenCalledTimes(1);
+  });
+
+  it('856: a validated draft retains its existing working branch for routing and source freshness', async () => {
+    const h = harness();
+    const ctx = { ...context(), workingBranch };
+    const parentSha = 'd'.repeat(40);
+    let workingSha = baseSha;
+    h.loadSnapshot.mockImplementation(async branch => ({ ...snapshot, baseSha: branch === workingBranch ? workingSha : parentSha }));
+    h.getLinkedBranch.mockImplementation(async () => ({ name: workingBranch, headSha: workingSha }));
+    h.publish.mockImplementation(async () => { workingSha = commitSha; return commitSha; });
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: writerDraft('# Accepted draft') });
+    const draft = await h.useCase.begin(ctx);
+    if (draft.status !== 'drafted') throw new Error('Expected validated draft on the existing issue branch');
+    expect(draft.record.branchName).toBe(workingBranch);
+    expect(draft.prepared.baseSha).toBe(baseSha);
+    expect(h.isAncestor).toHaveBeenCalledWith(baseSha, parentSha);
+    expect((await h.useCase.publish(ctx, draft, workingBranch)).status).toBe('published');
+    expect(h.verifyPublication).toHaveBeenCalledWith(workingBranch, baseSha, commitSha, plan.path);
   });
 
   it('856: distinguishes an existing companion publication from the companion creation action in initial analysis', async () => {
@@ -108,6 +240,8 @@ describe('PreBranchSddGateUseCase', () => {
     expect(prompt).toContain('new requires both an unregistered capability and an unregistered path');
     expect(prompt).toContain('update is valid ONLY when that exact path is already registered to that capability');
     expect(prompt).toContain('Ensure the action field agrees with the reason and authorized answers');
+    expect(prompt).toContain('registered capability + new unregistered path -> companion');
+    expect(prompt).toContain('Registration of a path under another capability is an ownership conflict');
     expect(prompt).toContain('ask a focused ownership question');
     expect(h.publish).not.toHaveBeenCalled();
   });
@@ -639,14 +773,19 @@ describe('PreBranchSddGateUseCase', () => {
     expect(h.publish).toHaveBeenCalledTimes(1);
   });
 
-  it('reuses a pending branch question card without dropping ownership on replay', async () => {
+  it('replays questions on the configured working branch without claiming an SDD publication link', async () => {
     const h = harness();
     h.query.mockResolvedValueOnce({ ...plan, questions: [question], newCapability: null });
     const retainedContext = { ...context(), workingBranch: 'feature/42-change' };
     await h.useCase.begin(retainedContext);
     expect((await h.useCase.begin(retainedContext)).status).toBe('waiting');
     expect(h.query).toHaveBeenCalledTimes(1);
-    expect(readSddGateRecord(h.comments[0].body, 42)?.branchName).toBe('feature/42-change');
+    const record = readSddGateRecord(h.comments[0].body, 42)!;
+    expect(record.branchName).toBeUndefined();
+    expect(record.plan).toMatchObject({ ...plan, questions: [question] });
+    expect(h.loadSnapshot).toHaveBeenCalledWith(retainedContext.workingBranch);
+    expect(h.getLinkedBranch).toHaveBeenCalledWith(42, retainedContext.workingBranch);
+    expect(h.publish).not.toHaveBeenCalled();
   });
 
   it('adds the SDD label and asks blocking questions before any draft or branch', async () => {

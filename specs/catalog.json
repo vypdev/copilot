@@ -1934,7 +1934,9 @@
         "quality/sdd/evidence/issue-856.json",
         "src/tooling/__tests__/sdd_ownership_question_scoring.test.ts",
         "quality/sdd/evidence/issue-856-ownership-assessments.json",
-        "src/tooling/__tests__/sdd_ownership_prediction_assessment.test.ts"
+        "src/tooling/__tests__/sdd_ownership_prediction_assessment.test.ts",
+        "quality/sdd/evidence/issue-856-working-branch.json",
+        "quality/sdd/evidence/issue-856-working-branch-driver.cjs.txt"
       ],
       "documentation": [
         "docs/issues/branch-management.mdx",

@@ -262,6 +262,19 @@ unauthorized answers and incomplete current answers cannot authorize reuse.
 Preserve the existing reset/wait/failure paths, round/answer bounds and source
 freshness checks. Do not resurrect an omitted or stale proposal as a default.
 
+
+**OI-R5:** an existing configured issue working branch is a source/routing fact,
+not proof that an SDD publication owns the proposal. When a current question card
+has no SDD-linked branch, retain its unpublished proposal even if a working branch
+was configured later. A generic working branch MUST NOT be promoted into the
+waiting card's SDD-linked branch while questions remain. Preserve ancestry,
+linkage, source freshness and authorized-answer checks. Once a validated draft is
+ready, retain the existing working branch in its draft record for exact routing
+and freshness; do not prepare another branch or accidentally verify the moving
+development branch instead. Existing card-linked publication reservations and
+verified published-owner constraints keep their prior semantics; no legacy
+provenance is guessed and no existing publication is reassigned.
+
 ```text
 issue + immutable catalog -> initial ownership proposal -> numbered questions
   -> authorized answers + matching unpublished proposal -> renewed analysis
@@ -648,7 +661,7 @@ authority is explicit; placeholder repository links and self-owned new companion
 are not supported evidence. Authorized retained answers resolve their decisions
 across rounds. These inputs remain data and grant no model or workspace authority.
 
-The following **244 distinct cases** are a floor derived from eligibility,
+The following **259 distinct cases** are a floor derived from eligibility,
 clarification, source freshness, publication races, partial writes, and SDD
 ownership/validation.
 
@@ -676,15 +689,55 @@ ownership/validation.
 | Ownership intent and proposal delivery (#856) | 28 | Six route/continuation delivery, eight freshness/authority, four published/clarified transition, four original-catalog guard and six prompt/safety/compatibility cases |
 | Ownership qualification assessment (#856 review) | 29 | Unrelated date/path questions, absent/malformed/blank assessments, exact trial/response/case/question binding, negative verdict and explicit conflict assessment |
 | Qualification response failure handling (#856 review) | 11 | Actual probe assessor: absent/null/primitive/malformed responses, explicit tuple object/string controls, pending and explicitly assessed ownership questions |
-| **Total** | **244** | No case counted twice |
+| Generic working branch versus SDD publication (#856 review) | 15 | Three late/initial/third-round/reroute route families plus stale source, published-owner precedence and validated-draft source/routing |
+| **Total** | **259** | No case counted twice |
 
-The #856 correction reserves **68 new distinct deterministic cases**: 28 route/
-continuation cases, 29 qualification-assessment cases and 11 actual probe
-response-handling cases. The older rows sum to
-176; this amendment reconciles the previously stale prose/total and adds 68
+The #856 correction reserves **83 new distinct deterministic cases**: 28 original route/
+continuation cases, 29 qualification-assessment cases, 11 actual probe
+response-handling cases and 15 working-branch/publication cases. The older rows sum to
+176; this amendment reconciles the previously stale prose/total and adds 83
 without counting existing assertions or model repetitions as new cases.
 The floor is a requirement, not a claim that every historical case was rerun by
 the optional qualification probe.
+
+
+The subsequent working-branch review expands a separate prospectively frozen
+cohort to fifteen SDK scenarios: the unchanged original twelve plus three
+continuations where a generic issue branch becomes configured after the first
+question card. Declare three complete baseline and three complete fixed trials
+before changing production. Require 15/15 correct, focused ownership questions
+for ambiguity/conflict, and zero invalid plans in every trial and cohort. The
+original descriptor, all earlier trials and floors remain immutable. The owned
+fictional Git fixture receives a same-commit local branch alias only; its file
+tree and selected immutable SHA remain unchanged. Capture actual SDK requests,
+retain every prediction, and use explicit agent assessments for the two question
+scenarios in each trial. Additional request-equivalence captures cover branches
+present from initial clarification without claiming a historical provider replay.
+
+The completed supplement retains baseline scores 14/15 in each trial, first
+working-fix scores 14/15,15/15,15/15 and global-example revision scores 15/15,15/15,
+13/15. Those cohorts fail the unchanged per-trial floor. Contextual explanations
+of the actual recorded update/companion/new operation then pass 15/15 in all three
+trials, zero invalid plans. All ownership-question verdicts use explicit agent
+assessments. Initial-branch and late-branch captures have equal serialized
+application requests after correction; full provider stdin is not claimed equal.
+All 15 non-prompt fields and issue/answer/catalog/standard prompt tails remain
+unchanged across guidance revisions. The new semantics describe prior data only,
+never execution authority; current authorized changes retain precedence.
+
+The fifteen new deterministic cases reproduce 13 failures before the correction
+and preserve two successful publication/routing controls. All 170 cases in that
+route/source suite pass after correction. One older replay test is reconciled to
+check actual source/link/idempotence without falsely treating a generic branch as
+SDD publication; explicit first-publication failure/recovery tests retain their
+previous semantics. Complete evidence and the exact campaign-specific audit
+coordinator are registered under `quality/sdd/evidence/issue-856-working-branch*`.
+The full stable-catalog run passes 902 suites/17,704 tests with 35 pre-existing
+skips and 267 extension tests. All 31 changed coverable runtime lines are hit
+without partials locally; new-head review, technical checks and official Codecov
+remain required before merge. A prior catalog-equivalence failure came from
+updating evidence metadata during the run; the complete rerun held all 19 inputs
+byte-stable and passed without changing the validator or test.
 
 Before production changes, freeze twelve authored classification scenarios and
 exactly three baseline trials plus three trials for each distinct candidate.

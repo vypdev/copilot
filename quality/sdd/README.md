@@ -67,3 +67,16 @@ question access or response hashing. The module exports its actual assessor for
 side-effect-free regression tests; importing it never starts a campaign. The
 source-bound tests exercise missing/null/primitive/malformed responses and valid
 object/string controls separately from the historical model observations.
+
+
+The separate working-branch supplement is documented in
+`evidence/issue-856-working-branch.json`, including all fifteen frozen scenarios,
+all baseline and candidate cohorts, exact source/request identities, explicit
+question assessments and limits. Its exact campaign coordinator is preserved as
+`evidence/issue-856-working-branch-driver.cjs.txt` for audit. It used the previously
+prepared fictional Git fixture plus a same-commit local branch alias and its own
+artifact namespace; it did not invoke the inherited historical preparation path.
+The twelve-case CLI above remains the original campaign, not a claim that its
+unmodified setup reproduces this additional SCM/state history. The executable
+public regression suite for that state flow is
+`src/application/usecases/steps/issue/__tests__/pre_branch_sdd_gate_use_case.test.ts`.

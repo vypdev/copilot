@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "issue": 856,
   "date": "2026-11-04",
-  "status": "Both native findings are addressed locally; the first was explicitly verified fixed at42db2726. Full current qualification passes902 suites/17,689 tests,68 new regressions,267 extension tests,27/27 changed coverable lines with zero partials. Normal hooks and new-head technical/review/official coverage gates remain required.",
+  "status": "Local qualification passes 902 Jest suites and 17,704 tests (35 pre-existing skips), 267 extension tests at 100%, 31/31 modified coverable lines without partials, and 45/45 final model cases. All earlier cohorts and failures remain. Rebuilt bundles and the 99-file package smoke pass; normal hooks and fresh current-head native controls remain required.",
   "sourceBase": "c0e7a130e06f2105034b149c0b479dc4eebc70ac",
   "reportedCases": {
     "existingUpdate": {
@@ -141,7 +141,7 @@
     "scope": "Actual SDK use case and in-memory ports. No real provider execution, Git source snapshot preparation or native response replay."
   },
   "deterministicTests": {
-    "newDistinct": 68,
+    "newDistinct": 83,
     "existing": 127,
     "mapping": "src/application/usecases/steps/issue/__tests__/pre_branch_sdd_gate_use_case.test.ts: tests prefixed 856:",
     "baselineFirstFourNewFailures": 4,
@@ -151,7 +151,10 @@
     "routeSuitePassing": 155,
     "qualificationScorerPassing": 29,
     "responseHandlingNewDistinct": 11,
-    "responseHandlingPassing": 11
+    "responseHandlingPassing": 11,
+    "workingBranchNewDistinct": 15,
+    "existingReplayTestSemanticsReconciled": "An old replay test equated generic workingBranch with SDD publication. Its updated assertion preserves actual source/link/idempotence and the saved plan without claiming publication. Explicit first-publication failure/recovery tests keep their previous semantics.",
+    "workingBranchPassing": 15
   },
   "modelQualification": {
     "fixture": {
@@ -2622,6 +2625,96 @@
       "providerQueries": 0,
       "missingResponsesObservedInHistoricalTrials": 0,
       "method": "Actual exported qualification assessor with the unchanged real SDK domain parser and explicit question policy; every retained prediction replayed. Missing/invalid new input behavior tested separately in eleven regressions."
+    },
+    "workingBranchCohortDeclaration": {
+      "at": "2026-11-04T09:46:20.754994+00:00",
+      "beforeProductionEdit": true,
+      "finding": 4465844736,
+      "source": {
+        "src/application/usecases/sdd/pre_branch_sdd_gate_use_case.ts": "40428f01885c6227862a2c6474a96c5520f6f002448159dfd2e036b5d77d8604",
+        "src/domain/pre_branch_sdd.ts": "636db20b18cd7b694c2d68e2d5fc53f5387daae90bcb231c98c2c2534d6125c3",
+        "src/data/repository/ai/findings_agent_adapter.ts": "2bdbcc4a104fa3898d8906139ba7b543df2c07dca69cc199708b89261a574509",
+        "src/infrastructure/composition/agent_capability_composition_root.ts": "501ff73a38aa8cb6c78bc21b34f679538df4104f3c3eaea9578648830f82a889",
+        "src/application/policies/sdd_ownership_prompt_policy.ts": "5ce9c76dd2114b7f2067c0324964eb28e94fb6e7545b43ee7dd9d59c3c70b60a"
+      },
+      "plan": {
+        "baselineTrials": [
+          "baseline-1",
+          "baseline-2",
+          "baseline-3"
+        ],
+        "fixedTrials": [
+          "candidate-1",
+          "candidate-2",
+          "candidate-3"
+        ],
+        "cases": 15,
+        "thresholds": "Every resolved tuple correct, focused ownership decision for ambiguity/conflict, zero schema/semantic-invalid plans in EACH trial and cohort; explicit agent assessments required. No sample selection, reference changes or lowered floors.",
+        "unchangedOriginalCases": 12,
+        "newWorkingCases": 3,
+        "newWorkingTiming": "Existing issue branch becomes configured after the first unpublished question card.",
+        "configuration": {
+          "provider": "codex",
+          "model": "gpt-6-luna",
+          "effort": "medium"
+        },
+        "firstPresentVariants": "Unit regressions cover branch present from initial analysis and later rounds; after fixing, capture request equivalence for those histories without claiming their baseline model was replayed."
+      },
+      "driverSha256": "e0b666e086127f58bc06ce3d01024c7a2ad983823b464b978c399d9e1b0778da",
+      "driverAdaptations": [
+        "Separate artifact namespace and fifteen-case frozen descriptor",
+        "Existing branch in in-memory SCM/ancestry ports, validated against the owned Git alias",
+        "Working branch introduced after first question card",
+        "Scoring cardinality equals frozen descriptor length; explicit semantic policy and reference tuples unchanged"
+      ],
+      "originalDescriptorUnchanged": "5f06dfedc06ef1bf9ae355306f53aec9e6a6ab596117a6b36cd284f6d590b4e4"
+    },
+    "workingBranchBaselineCaptureEquivalence": {
+      "originalTwelveRequestsIdentical": true,
+      "newWorkingRequests": 3,
+      "newWorkingRequestsHaveProposal": false,
+      "sourceHashes": {
+        "src/application/usecases/sdd/pre_branch_sdd_gate_use_case.ts": "40428f01885c6227862a2c6474a96c5520f6f002448159dfd2e036b5d77d8604",
+        "src/domain/pre_branch_sdd.ts": "636db20b18cd7b694c2d68e2d5fc53f5387daae90bcb231c98c2c2534d6125c3",
+        "src/data/repository/ai/findings_agent_adapter.ts": "2bdbcc4a104fa3898d8906139ba7b543df2c07dca69cc199708b89261a574509",
+        "src/infrastructure/composition/agent_capability_composition_root.ts": "501ff73a38aa8cb6c78bc21b34f679538df4104f3c3eaea9578648830f82a889",
+        "src/application/policies/sdd_ownership_prompt_policy.ts": "5ce9c76dd2114b7f2067c0324964eb28e94fb6e7545b43ee7dd9d59c3c70b60a"
+      }
+    },
+    "workingBranchEvidence": "quality/sdd/evidence/issue-856-working-branch.json",
+    "workingBranchFinal": {
+      "finalScores": [
+        {
+          "cases": 15,
+          "correct": 15,
+          "invalid": 0,
+          "passed": true
+        },
+        {
+          "cases": 15,
+          "correct": 15,
+          "invalid": 0,
+          "passed": true
+        },
+        {
+          "cases": 15,
+          "correct": 15,
+          "invalid": 0,
+          "passed": true
+        }
+      ],
+      "finalTotalCorrect": 45,
+      "finalCases": 45,
+      "invalid": 0,
+      "allSourcesUnchanged": {
+        "src/application/usecases/sdd/pre_branch_sdd_gate_use_case.ts": "9a92e7d0edf33f22c6bf86710d96045185b868bbcdb242bda63f5789eab662e2",
+        "src/domain/pre_branch_sdd.ts": "636db20b18cd7b694c2d68e2d5fc53f5387daae90bcb231c98c2c2534d6125c3",
+        "src/data/repository/ai/findings_agent_adapter.ts": "2bdbcc4a104fa3898d8906139ba7b543df2c07dca69cc199708b89261a574509",
+        "src/infrastructure/composition/agent_capability_composition_root.ts": "501ff73a38aa8cb6c78bc21b34f679538df4104f3c3eaea9578648830f82a889",
+        "src/application/policies/sdd_ownership_prompt_policy.ts": "29549b47fe6a97e4df801725d493ee9fe5073cc9bbeac8d267fa755da7c1c200"
+      },
+      "allPreviousCohortsRetained": true,
+      "floorsUnchanged": true
     }
   },
   "initialLocalSuite": {
@@ -2745,7 +2838,7 @@
       }
     }
   },
-  "localSuite": {
+  "previousLocalSuiteAt4d": {
     "numPassedTestSuites": 902,
     "numFailedTestSuites": 0,
     "numPassedTests": 17689,
@@ -2799,6 +2892,67 @@
         "branches": 100,
         "functions": 100
       }
+    }
+  },
+  "localSuite": {
+    "numPassedTestSuites": 902,
+    "numFailedTestSuites": 0,
+    "numPassedTests": 17704,
+    "numFailedTests": 0,
+    "numPendingTests": 35,
+    "success": true,
+    "coverage": {
+      "lines": {
+        "total": 34962,
+        "covered": 34361,
+        "skipped": 0,
+        "pct": 98.28
+      },
+      "statements": {
+        "total": 40837,
+        "covered": 39863,
+        "skipped": 0,
+        "pct": 97.61
+      },
+      "functions": {
+        "total": 7292,
+        "covered": 7156,
+        "skipped": 0,
+        "pct": 98.13
+      },
+      "branches": {
+        "total": 34478,
+        "covered": 33008,
+        "skipped": 0,
+        "pct": 95.73
+      },
+      "branchesTrue": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "changedRuntime": {
+      "coverable": 31,
+      "hit": 31,
+      "miss": 0,
+      "partial": 0
+    },
+    "extension": {
+      "tests": 267,
+      "files": 30,
+      "coveragePercent": {
+        "lines": 100,
+        "statements": 100,
+        "branches": 100,
+        "functions": 100
+      }
+    },
+    "stableFullRun": {
+      "files": 19,
+      "hashesUnchanged": true,
+      "manifestSha256": "ed4ddbfd04b5875c121df4c453a4a48749906da76038afd1a776c7c81fbaeab6"
     }
   }
 }

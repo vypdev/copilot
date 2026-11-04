@@ -182,7 +182,7 @@ export class PreBranchSddGateUseCase {
           return { status: 'waiting', results: [this.result(true, true, 'Waiting for the numbered SDD answers; no draft or branch was created.')] };
         }
         answers = retainSddAnswers(card.record.answers ?? [], currentAnswers);
-        if (!retainedBranch) {
+        if (!card.record.branchName) {
           clarificationOwnership = { kind: 'unpublished-proposal', plan: card.record.plan, round: card.record.round };
         }
       }
@@ -219,10 +219,12 @@ export class PreBranchSddGateUseCase {
         : card?.record.phase === 'awaiting-answer' && card.record.issueDigest === digest && !staleAwaiting
           ? card.record.round + (plan.questions.length > 0 ? 1 : 0) : 1;
       if (round > 3) throw new Error('The SDD clarification exceeded three rounds; a maintainer must resolve the remaining questions.');
+      const publicationBranch = card?.record.branchName
+        ?? (plan.questions.length === 0 ? retainedBranch : undefined);
       const record: SddGateRecord = {
         version: 1, issueNumber: context.issueNumber, phase: 'awaiting-answer', issueDigest: digest,
         baseSha: card?.record.branchName ? card.record.baseSha : snapshot.baseSha, round, plan, answers,
-        ...(retainedBranch ? { branchName: retainedBranch,
+        ...(publicationBranch ? { branchName: publicationBranch,
           ...(card?.record.commitSha ? { commitSha: card.record.commitSha, revisionBaseSha: snapshot.baseSha } : {}),
           ...(card?.record.revisionSha ? { revisionSha: card.record.revisionSha } : {}) } : {}),
       };

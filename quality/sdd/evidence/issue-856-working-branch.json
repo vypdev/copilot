@@ -1,0 +1,3168 @@
+{
+  "schemaVersion": 1,
+  "issue": 856,
+  "pr": 885,
+  "date": "2026-11-04",
+  "nativeFinding": 4465844736,
+  "status": "Local qualification passes 902 Jest suites and 17,704 tests (35 pre-existing skips), 267 extension tests at 100%, 31/31 modified coverable lines without partials, and 45/45 final model cases. All earlier cohorts and failures remain. Rebuilt bundles and the 99-file package smoke pass; normal hooks and fresh current-head native controls remain required.",
+  "baselineHead": "4d0810f5b4b40a5225e3013531a9b96369244846",
+  "comparisonBase": "c0e7a130e06f2105034b149c0b479dc4eebc70ac",
+  "diagnosis": "Generic workingBranch was mistaken for an SDD publication constraint: authorized continuation omitted the saved proposal, and waiting cards promoted that generic branch into an SDD branch. A validated draft must still retain it for exact routing and source freshness.",
+  "changes": [
+    "Use card.record.branchName to distinguish unpublished context from an SDD-linked owner.",
+    "Do not persist a generic working branch as an SDD publication link while questions remain.",
+    "Keep the existing working branch in the validated ready-draft record; preserve first-commit recovery, linkage and freshness.",
+    "Explain the recorded operation as context, never execution authority; authorized ownership changes still require reconciliation."
+  ],
+  "deterministicEvidence": {
+    "newDistinct": 15,
+    "before": {
+      "passed": 157,
+      "failed": 13,
+      "newPreservationControlsPassed": 2
+    },
+    "afterRouteSuite": {
+      "passed": 170,
+      "failed": 0
+    },
+    "existingTestReconciled": "An old replay test equated generic workingBranch with SDD publication. Its updated assertion preserves actual source/link/idempotence and the saved plan without claiming publication. Explicit first-publication failure/recovery tests keep their previous semantics.",
+    "legacyProvenance": "No guessing or reclassification of pre-existing card-linked publication reservations; no schema or configuration changes."
+  },
+  "freeze": {
+    "at": "2026-11-04T09:46:20.754994+00:00",
+    "base": "4d0810f5b4b40a5225e3013531a9b96369244846",
+    "descriptorSha256": "44e675c4da3fbf09b70efbc4e0d177e163707be92309bef8a9e86d54f6f232db",
+    "fixtureCommit": "76c0b6a95776b094290cfb9be66dfa449261aed1",
+    "sourceHashes": {
+      "src/application/usecases/sdd/pre_branch_sdd_gate_use_case.ts": "40428f01885c6227862a2c6474a96c5520f6f002448159dfd2e036b5d77d8604",
+      "src/domain/pre_branch_sdd.ts": "636db20b18cd7b694c2d68e2d5fc53f5387daae90bcb231c98c2c2534d6125c3",
+      "src/data/repository/ai/findings_agent_adapter.ts": "2bdbcc4a104fa3898d8906139ba7b543df2c07dca69cc199708b89261a574509",
+      "src/infrastructure/composition/agent_capability_composition_root.ts": "501ff73a38aa8cb6c78bc21b34f679538df4104f3c3eaea9578648830f82a889",
+      "src/application/policies/sdd_ownership_prompt_policy.ts": "5ce9c76dd2114b7f2067c0324964eb28e94fb6e7545b43ee7dd9d59c3c70b60a"
+    },
+    "plan": {
+      "baselineTrials": [
+        "baseline-1",
+        "baseline-2",
+        "baseline-3"
+      ],
+      "fixedTrials": [
+        "candidate-1",
+        "candidate-2",
+        "candidate-3"
+      ],
+      "cases": 15,
+      "thresholds": "Every resolved tuple correct, focused ownership decision for ambiguity/conflict, zero schema/semantic-invalid plans in EACH trial and cohort; explicit agent assessments required. No sample selection, reference changes or lowered floors.",
+      "unchangedOriginalCases": 12,
+      "newWorkingCases": 3,
+      "newWorkingTiming": "Existing issue branch becomes configured after the first unpublished question card.",
+      "configuration": {
+        "provider": "codex",
+        "model": "gpt-6-luna",
+        "effort": "medium"
+      },
+      "firstPresentVariants": "Unit regressions cover branch present from initial analysis and later rounds; after fixing, capture request equivalence for those histories without claiming their baseline model was replayed."
+    }
+  },
+  "fixture": {
+    "baseSha": "76c0b6a95776b094290cfb9be66dfa449261aed1",
+    "tree": "5276a1fd4a1f98578d9c48492de5fc92512d2497",
+    "capabilities": [
+      {
+        "id": "household-identity",
+        "title": "household-identity",
+        "status": "implemented",
+        "scope": "Fictional household-identity source and specification responsibilities.",
+        "owner": "Maintainer",
+        "lastVerified": "2026-11-04",
+        "specs": [
+          "specs/household-identity.md",
+          "specs/household-administration.md"
+        ],
+        "workflows": [],
+        "entrypoints": [
+          "app/core.py"
+        ],
+        "code": [
+          "app/core.py"
+        ],
+        "tests": [
+          "checks/test_core.py"
+        ],
+        "documentation": [
+          "docs/fixture.md"
+        ]
+      },
+      {
+        "id": "application-experience",
+        "title": "application-experience",
+        "status": "implemented",
+        "scope": "Fictional application-experience source and specification responsibilities.",
+        "owner": "Maintainer",
+        "lastVerified": "2026-11-04",
+        "specs": [
+          "specs/application-experience.md"
+        ],
+        "workflows": [],
+        "entrypoints": [
+          "app/core.py"
+        ],
+        "code": [
+          "app/core.py"
+        ],
+        "tests": [
+          "checks/test_core.py"
+        ],
+        "documentation": [
+          "docs/fixture.md"
+        ]
+      },
+      {
+        "id": "delivery",
+        "title": "delivery",
+        "status": "implemented",
+        "scope": "Fictional delivery source and specification responsibilities.",
+        "owner": "Maintainer",
+        "lastVerified": "2026-11-04",
+        "specs": [
+          "specs/delivery.md"
+        ],
+        "workflows": [],
+        "entrypoints": [
+          "app/core.py"
+        ],
+        "code": [
+          "app/core.py"
+        ],
+        "tests": [
+          "checks/test_core.py"
+        ],
+        "documentation": [
+          "docs/fixture.md"
+        ]
+      }
+    ],
+    "source": "Authored minimal Git source, not a consumer clone; no reference verdicts/driver copied into it.",
+    "consumerEvidence": "Original consumer catalogs and original parser controls remain separate.",
+    "cleanup": "Retain until all trials and review qualification finish; no source mutation or hooks of the product repository bypassed.",
+    "additionalLocalAlias": {
+      "branch": "feature/owned-existing",
+      "head": "76c0b6a95776b094290cfb9be66dfa449261aed1",
+      "scope": "Owned fictional Git metadata only; immutable file tree and commit unchanged."
+    }
+  },
+  "scenarios": [
+    {
+      "id": "existing-companion-update",
+      "input": {
+        "body": "Update the existing registered companion publication. The required action is update, capabilityId household-identity, path specs/household-administration.md. Preserve every other registered owner and publication. This changes specification acceptance only. Maintainer owns the review; no runtime permissions, compatibility or data-retention policy changes are requested."
+      },
+      "expected": {
+        "tuple": {
+          "action": "update",
+          "capabilityId": "household-identity",
+          "path": "specs/household-administration.md"
+        }
+      }
+    },
+    {
+      "id": "independent-new-package",
+      "input": {
+        "body": "Introduce a genuinely independent shared presentation package with its own source/version/verification, preserving application-experience. The required action is new, capabilityId shared-presentation-package, path specs/shared-presentation-package.md. Preserve every other registered owner and publication. This changes specification acceptance only. Maintainer owns the review; no runtime permissions, compatibility or data-retention policy changes are requested."
+      },
+      "expected": {
+        "tuple": {
+          "action": "new",
+          "capabilityId": "shared-presentation-package",
+          "path": "specs/shared-presentation-package.md"
+        }
+      }
+    },
+    {
+      "id": "genuine-new-companion",
+      "input": {
+        "body": "Add one new bounded audit publication under the existing household owner. The required action is companion, capabilityId household-identity, path specs/household-audit.md. Preserve every other registered owner and publication. This changes specification acceptance only. Maintainer owns the review; no runtime permissions, compatibility or data-retention policy changes are requested."
+      },
+      "expected": {
+        "tuple": {
+          "action": "companion",
+          "capabilityId": "household-identity",
+          "path": "specs/household-audit.md"
+        }
+      }
+    },
+    {
+      "id": "existing-primary-update",
+      "input": {
+        "body": "Extend the existing primary publication with acceptance examples. The required action is update, capabilityId household-identity, path specs/household-identity.md. Preserve every other registered owner and publication. This changes specification acceptance only. Maintainer owns the review; no runtime permissions, compatibility or data-retention policy changes are requested."
+      },
+      "expected": {
+        "tuple": {
+          "action": "update",
+          "capabilityId": "household-identity",
+          "path": "specs/household-identity.md"
+        }
+      }
+    },
+    {
+      "id": "resumed-existing-update",
+      "input": {
+        "body": "Extend the existing registered companion without duplicating its inventory or changing any owner.",
+        "proposal": {
+          "action": "update",
+          "capabilityId": "household-identity",
+          "path": "specs/household-administration.md",
+          "reason": "The source and package publication responsibilities require this selected owning target."
+        },
+        "answers": [
+          "Confirmed. Keep that exact proposed action, capability and publication target. Maintainer owns delivery."
+        ]
+      },
+      "expected": {
+        "tuple": {
+          "action": "update",
+          "capabilityId": "household-identity",
+          "path": "specs/household-administration.md"
+        }
+      }
+    },
+    {
+      "id": "resumed-new-package",
+      "input": {
+        "body": "Create an independent reusable presentation package; keep the application owner. Its previously proposed publication must remain separate.",
+        "proposal": {
+          "action": "new",
+          "capabilityId": "shared-presentation-package",
+          "path": "specs/shared-presentation-package.md",
+          "reason": "The source and package publication responsibilities require this selected owning target."
+        },
+        "answers": [
+          "Confirmed. Keep that exact proposed action, capability and publication target. Maintainer owns delivery."
+        ]
+      },
+      "expected": {
+        "tuple": {
+          "action": "new",
+          "capabilityId": "shared-presentation-package",
+          "path": "specs/shared-presentation-package.md"
+        }
+      }
+    },
+    {
+      "id": "resumed-new-companion",
+      "input": {
+        "body": "Add a bounded audit publication under the household owner without changing its existing documents.",
+        "proposal": {
+          "action": "companion",
+          "capabilityId": "household-identity",
+          "path": "specs/household-audit.md",
+          "reason": "The source and package publication responsibilities require this selected owning target."
+        },
+        "answers": [
+          "Confirmed. Keep that exact proposed action, capability and publication target. Maintainer owns delivery."
+        ]
+      },
+      "expected": {
+        "tuple": {
+          "action": "companion",
+          "capabilityId": "household-identity",
+          "path": "specs/household-audit.md"
+        }
+      }
+    },
+    {
+      "id": "third-round-new-package",
+      "input": {
+        "body": "Create an independent reusable presentation package; retain the already proposed owner and publication target.",
+        "proposal": {
+          "action": "new",
+          "capabilityId": "shared-presentation-package",
+          "path": "specs/shared-presentation-package.md",
+          "reason": "The source and package publication responsibilities require this selected owning target."
+        },
+        "answers": [
+          "Confirmed. Keep that exact proposed owner and target. Maintainer owns delivery.",
+          "The second decision is resolved: retain the proposed independent package and its specification. No scope or ownership change."
+        ]
+      },
+      "expected": {
+        "tuple": {
+          "action": "new",
+          "capabilityId": "shared-presentation-package",
+          "path": "specs/shared-presentation-package.md"
+        }
+      }
+    },
+    {
+      "id": "authorized-new-to-companion",
+      "input": {
+        "body": "A separate audit package was proposed; the maintainer may refine ownership before publication.",
+        "proposal": {
+          "action": "new",
+          "capabilityId": "shared-presentation-package",
+          "path": "specs/shared-presentation-package.md",
+          "reason": "The source and package publication responsibilities require this selected owning target."
+        },
+        "answers": [
+          "Change the unpublished proposal: The required action is companion, capabilityId household-identity, path specs/household-audit.md. Preserve every other registered owner and publication. This changes specification acceptance only. Maintainer owns the review; no runtime permissions, compatibility or data-retention policy changes are requested. Do not retain the independent package proposal."
+        ]
+      },
+      "expected": {
+        "tuple": {
+          "action": "companion",
+          "capabilityId": "household-identity",
+          "path": "specs/household-audit.md"
+        }
+      }
+    },
+    {
+      "id": "authorized-companion-to-update",
+      "input": {
+        "body": "An audit companion was proposed; the maintainer may refine ownership before publication.",
+        "proposal": {
+          "action": "companion",
+          "capabilityId": "household-identity",
+          "path": "specs/household-audit.md",
+          "reason": "The source and package publication responsibilities require this selected owning target."
+        },
+        "answers": [
+          "Change the unpublished proposal: The required action is update, capabilityId household-identity, path specs/household-administration.md. Preserve every other registered owner and publication. This changes specification acceptance only. Maintainer owns the review; no runtime permissions, compatibility or data-retention policy changes are requested. Update that registered companion instead of creating another document."
+        ]
+      },
+      "expected": {
+        "tuple": {
+          "action": "update",
+          "capabilityId": "household-identity",
+          "path": "specs/household-administration.md"
+        }
+      }
+    },
+    {
+      "id": "ambiguous-existing-owner",
+      "input": {
+        "body": "Add acceptance criteria to an existing publication, but household-identity or application-experience could own them. No owner or target has been selected. Ask the maintainer to choose the publication before drafting."
+      },
+      "expected": {
+        "ownershipQuestion": true
+      }
+    },
+    {
+      "id": "contradictory-owner-path",
+      "input": {
+        "body": "Update specs/household-administration.md under delivery, although that path may belong to another catalog owner. Do not silently override either value: ask the maintainer to resolve this ownership conflict before drafting."
+      },
+      "expected": {
+        "ownershipQuestion": true
+      }
+    },
+    {
+      "id": "working-branch-resumed-existing-update",
+      "input": {
+        "body": "Extend the existing registered companion without duplicating its inventory or changing any owner.",
+        "proposal": {
+          "action": "update",
+          "capabilityId": "household-identity",
+          "path": "specs/household-administration.md",
+          "reason": "The source and package publication responsibilities require this selected owning target."
+        },
+        "answers": [
+          "Confirmed. Keep that exact proposed action, capability and publication target. Maintainer owns delivery."
+        ],
+        "workingBranch": "feature/owned-existing",
+        "workingBranchAfterFirstCard": true
+      },
+      "expected": {
+        "tuple": {
+          "action": "update",
+          "capabilityId": "household-identity",
+          "path": "specs/household-administration.md"
+        }
+      }
+    },
+    {
+      "id": "working-branch-resumed-new-package",
+      "input": {
+        "body": "Create an independent reusable presentation package; keep the application owner. Its previously proposed publication must remain separate.",
+        "proposal": {
+          "action": "new",
+          "capabilityId": "shared-presentation-package",
+          "path": "specs/shared-presentation-package.md",
+          "reason": "The source and package publication responsibilities require this selected owning target."
+        },
+        "answers": [
+          "Confirmed. Keep that exact proposed action, capability and publication target. Maintainer owns delivery."
+        ],
+        "workingBranch": "feature/owned-existing",
+        "workingBranchAfterFirstCard": true
+      },
+      "expected": {
+        "tuple": {
+          "action": "new",
+          "capabilityId": "shared-presentation-package",
+          "path": "specs/shared-presentation-package.md"
+        }
+      }
+    },
+    {
+      "id": "working-branch-resumed-new-companion",
+      "input": {
+        "body": "Add a bounded audit publication under the household owner without changing its existing documents.",
+        "proposal": {
+          "action": "companion",
+          "capabilityId": "household-identity",
+          "path": "specs/household-audit.md",
+          "reason": "The source and package publication responsibilities require this selected owning target."
+        },
+        "answers": [
+          "Confirmed. Keep that exact proposed action, capability and publication target. Maintainer owns delivery."
+        ],
+        "workingBranch": "feature/owned-existing",
+        "workingBranchAfterFirstCard": true
+      },
+      "expected": {
+        "tuple": {
+          "action": "companion",
+          "capabilityId": "household-identity",
+          "path": "specs/household-audit.md"
+        }
+      }
+    }
+  ],
+  "cohorts": [
+    {
+      "name": "baseline",
+      "captureSha256": "64ac62548a47fe1001ab7a79bc5c6752e22eee5b39650940f6fec40a38ee6e09",
+      "sourceHashes": {
+        "src/application/usecases/sdd/pre_branch_sdd_gate_use_case.ts": "40428f01885c6227862a2c6474a96c5520f6f002448159dfd2e036b5d77d8604",
+        "src/domain/pre_branch_sdd.ts": "636db20b18cd7b694c2d68e2d5fc53f5387daae90bcb231c98c2c2534d6125c3",
+        "src/data/repository/ai/findings_agent_adapter.ts": "2bdbcc4a104fa3898d8906139ba7b543df2c07dca69cc199708b89261a574509",
+        "src/infrastructure/composition/agent_capability_composition_root.ts": "501ff73a38aa8cb6c78bc21b34f679538df4104f3c3eaea9578648830f82a889",
+        "src/application/policies/sdd_ownership_prompt_policy.ts": "5ce9c76dd2114b7f2067c0324964eb28e94fb6e7545b43ee7dd9d59c3c70b60a"
+      },
+      "trials": [
+        {
+          "id": "baseline-1",
+          "score": {
+            "cases": 15,
+            "correct": 14,
+            "invalid": 0,
+            "passed": false
+          },
+          "predictionSha256": "2c1add25e6a1bdba9db64728194ad8c0d2531b091f62ba993d33e2f7251c09e2",
+          "semanticScoreSha256": "ff5cea5303b4dc3882a3d2a1f829c80c6651be357d18b24634f94c38c2dad788",
+          "observations": [
+            {
+              "id": "existing-companion-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "independent-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "genuine-new-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "existing-primary-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-identity.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "resumed-existing-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "resumed-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "resumed-new-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "third-round-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "authorized-new-to-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "authorized-companion-to-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "ambiguous-existing-owner",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "application-experience",
+                "path": "specs/application-experience.md"
+              },
+              "ownershipAssessment": {
+                "trialId": "baseline-1",
+                "caseId": "ambiguous-existing-owner",
+                "responseSha256": "ea0dc806bb44851234e7c7c5706047f193b780a717176a0ef1eecd4dc4019c1c",
+                "questionId": "Q1",
+                "questionText": "Which registered publication should receive the acceptance criteria: specs/household-identity.md, specs/household-administration.md, or specs/application-experience.md?",
+                "intent": "select-existing-owner",
+                "reviewer": "Codex repository contributor (agent)",
+                "rationale": "Read explicitly: Q1 asks which of the registered household/application publications should receive the criteria, selecting the publication/owner rather than a date or unrelated path.",
+                "verdict": "resolves-required-ownership"
+              }
+            },
+            {
+              "id": "contradictory-owner-path",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": {
+                "trialId": "baseline-1",
+                "caseId": "contradictory-owner-path",
+                "responseSha256": "25731c0cfd91549a0e6725be7b003b78b77d255fd2088279ba9df53ba081f65c",
+                "questionId": "Q1",
+                "questionText": "Which capability should own specs/household-administration.md: household-identity, as currently registered, or delivery?",
+                "intent": "resolve-owner-path-conflict",
+                "reviewer": "Codex repository contributor (agent)",
+                "rationale": "Read explicitly: Q1 contrasts the registered household-identity owner of the named administration path with requested delivery and asks which ownership route governs before drafting.",
+                "verdict": "resolves-required-ownership",
+                "conflictIdentified": true
+              }
+            },
+            {
+              "id": "working-branch-resumed-existing-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "working-branch-resumed-new-package",
+              "correct": false,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "presentation-package",
+                "path": "specs/presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "working-branch-resumed-new-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            }
+          ]
+        },
+        {
+          "id": "baseline-2",
+          "score": {
+            "cases": 15,
+            "correct": 14,
+            "invalid": 0,
+            "passed": false
+          },
+          "predictionSha256": "d6280a970f882d44cd9d4e61531b91a48f37740d7343c1b984c53d80b7314969",
+          "semanticScoreSha256": "c02d32186810c41fef4ef97157bb2de0343a13d8fedfb1963bc8732b641f0c14",
+          "observations": [
+            {
+              "id": "existing-companion-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "independent-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "genuine-new-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "existing-primary-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-identity.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "resumed-existing-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "resumed-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "resumed-new-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "third-round-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "authorized-new-to-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "authorized-companion-to-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "ambiguous-existing-owner",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-identity.md"
+              },
+              "ownershipAssessment": {
+                "trialId": "baseline-2",
+                "caseId": "ambiguous-existing-owner",
+                "responseSha256": "953769a766d35d3c14f460791f50fa079ab24c3af3388682eb87c702275f8dcc",
+                "questionId": "Q1",
+                "questionText": "Which existing publication should receive the acceptance criteria: household identity (specs/household-identity.md) or application experience (specs/application-experience.md)?",
+                "intent": "select-existing-owner",
+                "reviewer": "Codex repository contributor (agent)",
+                "rationale": "Read explicitly: Q1 asks which of the registered household/application publications should receive the criteria, selecting the publication/owner rather than a date or unrelated path.",
+                "verdict": "resolves-required-ownership"
+              }
+            },
+            {
+              "id": "contradictory-owner-path",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": {
+                "trialId": "baseline-2",
+                "caseId": "contradictory-owner-path",
+                "responseSha256": "42b394644afcf2d98c5e5de0c7bf7de2d4143c0f28d9af3afcfa3691a38dbfdb",
+                "questionId": "Q1",
+                "questionText": "Which ownership route should this request use: update specs/household-administration.md under household-identity as currently cataloged, or route the work to delivery and identify its intended registered or new specification path?",
+                "intent": "resolve-owner-path-conflict",
+                "reviewer": "Codex repository contributor (agent)",
+                "rationale": "Read explicitly: Q1 contrasts the registered household-identity owner of the named administration path with requested delivery and asks which ownership route governs before drafting.",
+                "verdict": "resolves-required-ownership",
+                "conflictIdentified": true
+              }
+            },
+            {
+              "id": "working-branch-resumed-existing-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "working-branch-resumed-new-package",
+              "correct": false,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "presentation-package",
+                "path": "specs/presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "working-branch-resumed-new-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            }
+          ]
+        },
+        {
+          "id": "baseline-3",
+          "score": {
+            "cases": 15,
+            "correct": 14,
+            "invalid": 0,
+            "passed": false
+          },
+          "predictionSha256": "3afd7756b7bef751a37940f06dff13479aba92ae2561d7ecf536f7c5452b72a9",
+          "semanticScoreSha256": "abf75ce6e09e8e30f305c0f9fa037bbe2c929f1c201ad74a366cf15db07b55c8",
+          "observations": [
+            {
+              "id": "existing-companion-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "independent-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "genuine-new-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "existing-primary-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-identity.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "resumed-existing-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "resumed-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "resumed-new-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "third-round-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "authorized-new-to-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "authorized-companion-to-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "ambiguous-existing-owner",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-identity.md"
+              },
+              "ownershipAssessment": {
+                "trialId": "baseline-3",
+                "caseId": "ambiguous-existing-owner",
+                "responseSha256": "17c0ece70f0360a3bf55ed7e35d4b9c42c5ec3f46aee27946795a5c60e0ec6d8",
+                "questionId": "Q1",
+                "questionText": "Which existing publication should receive the acceptance criteria: specs/household-identity.md, specs/household-administration.md, or specs/application-experience.md?",
+                "intent": "select-existing-owner",
+                "reviewer": "Codex repository contributor (agent)",
+                "rationale": "Read explicitly: Q1 asks which of the registered household/application publications should receive the criteria, selecting the publication/owner rather than a date or unrelated path.",
+                "verdict": "resolves-required-ownership"
+              }
+            },
+            {
+              "id": "contradictory-owner-path",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": {
+                "trialId": "baseline-3",
+                "caseId": "contradictory-owner-path",
+                "responseSha256": "945573c56a8fb70749c23a3eccfe4602a10bd3c3aa517f0e2be18108150577fe",
+                "questionId": "Q1",
+                "questionText": "Should specs/household-administration.md remain owned by household-identity, or should it be reassigned to delivery?",
+                "intent": "resolve-owner-path-conflict",
+                "reviewer": "Codex repository contributor (agent)",
+                "rationale": "Read explicitly: Q1 contrasts the registered household-identity owner of the named administration path with requested delivery and asks which ownership route governs before drafting.",
+                "verdict": "resolves-required-ownership",
+                "conflictIdentified": true
+              }
+            },
+            {
+              "id": "working-branch-resumed-existing-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "working-branch-resumed-new-package",
+              "correct": false,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "application-experience",
+                "path": "specs/presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "working-branch-resumed-new-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "candidate",
+      "captureSha256": "2ac0ff0510d45c78cfe840025b839e91dc180e38a8d068f8d1eb22133ed3ca2e",
+      "sourceHashes": {
+        "src/application/usecases/sdd/pre_branch_sdd_gate_use_case.ts": "9a92e7d0edf33f22c6bf86710d96045185b868bbcdb242bda63f5789eab662e2",
+        "src/domain/pre_branch_sdd.ts": "636db20b18cd7b694c2d68e2d5fc53f5387daae90bcb231c98c2c2534d6125c3",
+        "src/data/repository/ai/findings_agent_adapter.ts": "2bdbcc4a104fa3898d8906139ba7b543df2c07dca69cc199708b89261a574509",
+        "src/infrastructure/composition/agent_capability_composition_root.ts": "501ff73a38aa8cb6c78bc21b34f679538df4104f3c3eaea9578648830f82a889",
+        "src/application/policies/sdd_ownership_prompt_policy.ts": "5ce9c76dd2114b7f2067c0324964eb28e94fb6e7545b43ee7dd9d59c3c70b60a"
+      },
+      "trials": [
+        {
+          "id": "candidate-1",
+          "score": {
+            "cases": 15,
+            "correct": 14,
+            "invalid": 0,
+            "passed": false
+          },
+          "predictionSha256": "052cffaf4ce21c9471e5dbb65bd24f75f684736c0170fa58d7ed9d64cf5b71ae",
+          "semanticScoreSha256": "00f0beafe738aaee9f3d65154e05297b58653e13bf28daa0b6e66597a39783da",
+          "observations": [
+            {
+              "id": "existing-companion-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "independent-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "genuine-new-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "existing-primary-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-identity.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "resumed-existing-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "resumed-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "resumed-new-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "third-round-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "authorized-new-to-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "authorized-companion-to-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "ambiguous-existing-owner",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-identity.md"
+              },
+              "ownershipAssessment": {
+                "trialId": "candidate-1",
+                "caseId": "ambiguous-existing-owner",
+                "responseSha256": "ceef753853aa4c6b75a5d771fba8a20649cbacbcb1195931fa512a06b991d7e1",
+                "questionId": "Q1",
+                "questionText": "Which existing publication should receive the acceptance criteria: `specs/household-identity.md` (household-identity) or `specs/application-experience.md` (application-experience)?",
+                "intent": "select-existing-owner",
+                "reviewer": "Codex repository contributor (agent)",
+                "rationale": "Explicit inspection: Q1 asks which registered household/application publication should receive the criteria, selecting the owning publication rather than a date or unrelated path.",
+                "verdict": "resolves-required-ownership"
+              }
+            },
+            {
+              "id": "contradictory-owner-path",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": {
+                "trialId": "candidate-1",
+                "caseId": "contradictory-owner-path",
+                "responseSha256": "dac45e5d0e75d84ac1f0562e43b72885325cd3f89efa60e0e4f8f15c6e4c98c5",
+                "questionId": "Q1",
+                "questionText": "Should this update remain under the registered household-identity capability, or should the catalog ownership be changed to delivery before drafting?",
+                "intent": "resolve-owner-path-conflict",
+                "reviewer": "Codex repository contributor (agent)",
+                "rationale": "Explicit inspection: Q1 contrasts registered household-identity with requested delivery for this administration-file update and asks which ownership should govern before drafting. The named path is in the question or its fixed request referent.",
+                "verdict": "resolves-required-ownership",
+                "conflictIdentified": true
+              }
+            },
+            {
+              "id": "working-branch-resumed-existing-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "working-branch-resumed-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "working-branch-resumed-new-companion",
+              "correct": false,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-identity.md"
+              },
+              "ownershipAssessment": null
+            }
+          ]
+        },
+        {
+          "id": "candidate-2",
+          "score": {
+            "cases": 15,
+            "correct": 15,
+            "invalid": 0,
+            "passed": true
+          },
+          "predictionSha256": "c252ab0d8e93b6545619dbd0aebf696fedaa6e8e9219fff46137f827d12d887b",
+          "semanticScoreSha256": "01008406c08c04b4fcdee867e1d336679e10450c81bcae58c55b08304c372aa2",
+          "observations": [
+            {
+              "id": "existing-companion-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "independent-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "genuine-new-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "existing-primary-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-identity.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "resumed-existing-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "resumed-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "resumed-new-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "third-round-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "authorized-new-to-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "authorized-companion-to-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "ambiguous-existing-owner",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "application-experience",
+                "path": "specs/application-experience.md"
+              },
+              "ownershipAssessment": {
+                "trialId": "candidate-2",
+                "caseId": "ambiguous-existing-owner",
+                "responseSha256": "1d1f39d76d20939e8667967e2474f1709f911a288df1fd14148889af049c33fb",
+                "questionId": "Q1",
+                "questionText": "Which existing publication should receive the acceptance criteria: `specs/household-identity.md`, `specs/household-administration.md`, or `specs/application-experience.md`?",
+                "intent": "select-existing-owner",
+                "reviewer": "Codex repository contributor (agent)",
+                "rationale": "Explicit inspection: Q1 asks which registered household/application publication should receive the criteria, selecting the owning publication rather than a date or unrelated path.",
+                "verdict": "resolves-required-ownership"
+              }
+            },
+            {
+              "id": "contradictory-owner-path",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": {
+                "trialId": "candidate-2",
+                "caseId": "contradictory-owner-path",
+                "responseSha256": "29f5bc155c66cb305bc6a5b95dc9d1fcf425959f032fd5a68085e8515875918d",
+                "questionId": "Q1",
+                "questionText": "Should this update remain owned by household-identity, which currently registers specs/household-administration.md, or should the catalog ownership be changed to delivery first?",
+                "intent": "resolve-owner-path-conflict",
+                "reviewer": "Codex repository contributor (agent)",
+                "rationale": "Explicit inspection: Q1 contrasts registered household-identity with requested delivery for this administration-file update and asks which ownership should govern before drafting. The named path is in the question or its fixed request referent.",
+                "verdict": "resolves-required-ownership",
+                "conflictIdentified": true
+              }
+            },
+            {
+              "id": "working-branch-resumed-existing-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "working-branch-resumed-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "working-branch-resumed-new-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            }
+          ]
+        },
+        {
+          "id": "candidate-3",
+          "score": {
+            "cases": 15,
+            "correct": 15,
+            "invalid": 0,
+            "passed": true
+          },
+          "predictionSha256": "be7551f85c2eccfaec9b63a50e56b43c8f4318c4311a2f01d2494cc688dd7fd9",
+          "semanticScoreSha256": "46dd996a97305b5e112390920b3148ccab6826ae490c3812d727a7a7ccc8da09",
+          "observations": [
+            {
+              "id": "existing-companion-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "independent-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "genuine-new-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "existing-primary-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-identity.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "resumed-existing-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "resumed-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "resumed-new-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "third-round-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "authorized-new-to-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "authorized-companion-to-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "ambiguous-existing-owner",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "application-experience",
+                "path": "specs/application-experience.md"
+              },
+              "ownershipAssessment": {
+                "trialId": "candidate-3",
+                "caseId": "ambiguous-existing-owner",
+                "responseSha256": "c3f51c33446387156e685b2dc69066a8ba2cf745c5da153e28a4d560967a2b74",
+                "questionId": "Q1",
+                "questionText": "Which existing publication should receive the acceptance criteria: specs/household-identity.md, specs/household-administration.md, or specs/application-experience.md?",
+                "intent": "select-existing-owner",
+                "reviewer": "Codex repository contributor (agent)",
+                "rationale": "Explicit inspection: Q1 asks which registered household/application publication should receive the criteria, selecting the owning publication rather than a date or unrelated path.",
+                "verdict": "resolves-required-ownership"
+              }
+            },
+            {
+              "id": "contradictory-owner-path",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": {
+                "trialId": "candidate-3",
+                "caseId": "contradictory-owner-path",
+                "responseSha256": "d61cc649ef9dd85478e9172d378690ca474031810e1cabe18af2f75f91fbdf37",
+                "questionId": "Q1",
+                "questionText": "Which capability should own specs/household-administration.md: household-identity, as currently registered, or delivery?",
+                "intent": "resolve-owner-path-conflict",
+                "reviewer": "Codex repository contributor (agent)",
+                "rationale": "Explicit inspection: Q1 contrasts registered household-identity with requested delivery for this administration-file update and asks which ownership should govern before drafting. The named path is in the question or its fixed request referent.",
+                "verdict": "resolves-required-ownership",
+                "conflictIdentified": true
+              }
+            },
+            {
+              "id": "working-branch-resumed-existing-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "working-branch-resumed-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "working-branch-resumed-new-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "revised",
+      "captureSha256": "87402ef5d3761620f05ee0a2ad3408c2063f1a6354073f1eab13d0167ef831c7",
+      "sourceHashes": {
+        "src/application/usecases/sdd/pre_branch_sdd_gate_use_case.ts": "9a92e7d0edf33f22c6bf86710d96045185b868bbcdb242bda63f5789eab662e2",
+        "src/domain/pre_branch_sdd.ts": "636db20b18cd7b694c2d68e2d5fc53f5387daae90bcb231c98c2c2534d6125c3",
+        "src/data/repository/ai/findings_agent_adapter.ts": "2bdbcc4a104fa3898d8906139ba7b543df2c07dca69cc199708b89261a574509",
+        "src/infrastructure/composition/agent_capability_composition_root.ts": "501ff73a38aa8cb6c78bc21b34f679538df4104f3c3eaea9578648830f82a889",
+        "src/application/policies/sdd_ownership_prompt_policy.ts": "9f35efef9cf9d6032218d689640d6281f11f90ed4373343b263376f1a35337d9"
+      },
+      "trials": [
+        {
+          "id": "revised-1",
+          "score": {
+            "cases": 15,
+            "correct": 15,
+            "invalid": 0,
+            "passed": true
+          },
+          "predictionSha256": "dc057eaa280e5c339dc5026efd06879a343e5ef07a0e26c53bdb4e6ee601e7a8",
+          "semanticScoreSha256": "4fa7d3ae5288a5f82506e1c690cae8fbd27c77ae7b7944b36e10091031a18c7f",
+          "observations": [
+            {
+              "id": "existing-companion-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "independent-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "genuine-new-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "existing-primary-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-identity.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "resumed-existing-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "resumed-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "resumed-new-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "third-round-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "authorized-new-to-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "authorized-companion-to-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "ambiguous-existing-owner",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-identity.md"
+              },
+              "ownershipAssessment": {
+                "trialId": "revised-1",
+                "caseId": "ambiguous-existing-owner",
+                "responseSha256": "a8670c9123097792de5aa5823279b8f85b97a0356c7a6e1d6b94decdb3248530",
+                "questionId": "Q1",
+                "questionText": "Which existing publication should receive the acceptance criteria: household-identity or application-experience?",
+                "intent": "select-existing-owner",
+                "reviewer": "Codex repository contributor (agent)",
+                "rationale": "Explicit inspection: Q1 asks which existing household/application publication should own or receive the criteria; it is an ownership choice, not an unrelated date or path.",
+                "verdict": "resolves-required-ownership"
+              }
+            },
+            {
+              "id": "contradictory-owner-path",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": {
+                "trialId": "revised-1",
+                "caseId": "contradictory-owner-path",
+                "responseSha256": "81e61a06b24cb42f7d21a9af582ff694c7b5279bc1b8ff2ec5cba0a54cb7e93e",
+                "questionId": "Q1",
+                "questionText": "Which ownership target should this request use: keep specs/household-administration.md under household-identity, or use delivery's registered specs/delivery.md path?",
+                "intent": "resolve-owner-path-conflict",
+                "reviewer": "Codex repository contributor (agent)",
+                "rationale": "Explicit inspection: Q1 identifies the administration path and contrasts household-identity ownership with routing to delivery, asking the maintainer to resolve that ownership conflict before drafting.",
+                "verdict": "resolves-required-ownership",
+                "conflictIdentified": true
+              }
+            },
+            {
+              "id": "working-branch-resumed-existing-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "working-branch-resumed-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "working-branch-resumed-new-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            }
+          ]
+        },
+        {
+          "id": "revised-2",
+          "score": {
+            "cases": 15,
+            "correct": 15,
+            "invalid": 0,
+            "passed": true
+          },
+          "predictionSha256": "772740eedb96f0d6891ed26fd6027770fe31edc8f023d2fab06c10e4ecfebd0c",
+          "semanticScoreSha256": "1904ccb1ae5bf0561b6f54ee92df20f6aada2501f6773c68bce3dfa38d7cc469",
+          "observations": [
+            {
+              "id": "existing-companion-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "independent-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "genuine-new-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "existing-primary-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-identity.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "resumed-existing-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "resumed-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "resumed-new-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "third-round-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "authorized-new-to-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "authorized-companion-to-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "ambiguous-existing-owner",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-identity.md"
+              },
+              "ownershipAssessment": {
+                "trialId": "revised-2",
+                "caseId": "ambiguous-existing-owner",
+                "responseSha256": "54e966643f353fd874213b1d443a68845018e6fa682e8048ef48efc71cc97829",
+                "questionId": "Q1",
+                "questionText": "Which existing publication should receive the acceptance criteria: household identity (specs/household-identity.md or specs/household-administration.md) or application experience (specs/application-experience.md)?",
+                "intent": "select-existing-owner",
+                "reviewer": "Codex repository contributor (agent)",
+                "rationale": "Explicit inspection: Q1 asks which existing household/application publication should own or receive the criteria; it is an ownership choice, not an unrelated date or path.",
+                "verdict": "resolves-required-ownership"
+              }
+            },
+            {
+              "id": "contradictory-owner-path",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": {
+                "trialId": "revised-2",
+                "caseId": "contradictory-owner-path",
+                "responseSha256": "9df5c60903f456f8bcb736a7f98ac6b565ddeaab306515b13ee503e84f855a86",
+                "questionId": "Q1",
+                "questionText": "Should this change remain under household-identity at specs/household-administration.md, or should it be routed to delivery at specs/delivery.md?",
+                "intent": "resolve-owner-path-conflict",
+                "reviewer": "Codex repository contributor (agent)",
+                "rationale": "Explicit inspection: Q1 identifies the administration path and contrasts household-identity ownership with routing to delivery, asking the maintainer to resolve that ownership conflict before drafting.",
+                "verdict": "resolves-required-ownership",
+                "conflictIdentified": true
+              }
+            },
+            {
+              "id": "working-branch-resumed-existing-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "working-branch-resumed-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "working-branch-resumed-new-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            }
+          ]
+        },
+        {
+          "id": "revised-3",
+          "score": {
+            "cases": 15,
+            "correct": 13,
+            "invalid": 0,
+            "passed": false
+          },
+          "predictionSha256": "c63e0fad786db90d60438cabae9e1f93878e5876b49a2d946d7e767b4f39b8d2",
+          "semanticScoreSha256": "c9c7f59eac1e9b4115d40556e5cb7ae2428aab532aa89d38e9c69d0ceb024b4b",
+          "observations": [
+            {
+              "id": "existing-companion-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "independent-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "genuine-new-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "existing-primary-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-identity.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "resumed-existing-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "resumed-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "resumed-new-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "third-round-new-package",
+              "correct": false,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "application-experience",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "authorized-new-to-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "authorized-companion-to-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "ambiguous-existing-owner",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-identity.md"
+              },
+              "ownershipAssessment": {
+                "trialId": "revised-3",
+                "caseId": "ambiguous-existing-owner",
+                "responseSha256": "e706f8d028f24fde15cc8288f331a5df5b8577f4f14f4002c996a54e5d8f56d4",
+                "questionId": "Q1",
+                "questionText": "Which existing publication should receive the acceptance criteria: specs/household-identity.md, specs/household-administration.md, or specs/application-experience.md?",
+                "intent": "select-existing-owner",
+                "reviewer": "Codex repository contributor (agent)",
+                "rationale": "Explicit inspection: Q1 asks which existing household/application publication should own or receive the criteria; it is an ownership choice, not an unrelated date or path.",
+                "verdict": "resolves-required-ownership"
+              }
+            },
+            {
+              "id": "contradictory-owner-path",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": {
+                "trialId": "revised-3",
+                "caseId": "contradictory-owner-path",
+                "responseSha256": "91e18b305972ec83030dcfe5a842026abe336f33c0f16478e9d075508909e681",
+                "questionId": "Q1",
+                "questionText": "Please resolve the ownership conflict for specs/household-administration.md: should this update remain under household-identity, as the catalog currently registers it, or should it be routed to delivery?",
+                "intent": "resolve-owner-path-conflict",
+                "reviewer": "Codex repository contributor (agent)",
+                "rationale": "Explicit inspection: Q1 identifies the administration path and contrasts household-identity ownership with routing to delivery, asking the maintainer to resolve that ownership conflict before drafting.",
+                "verdict": "resolves-required-ownership",
+                "conflictIdentified": true
+              }
+            },
+            {
+              "id": "working-branch-resumed-existing-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "working-branch-resumed-new-package",
+              "correct": false,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "application-experience",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "working-branch-resumed-new-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "anchored",
+      "captureSha256": "845b0f5b0b50d248eb0bd34dda1046bdeb3a8ef83ebecf53284b00e2294ef861",
+      "sourceHashes": {
+        "src/application/usecases/sdd/pre_branch_sdd_gate_use_case.ts": "9a92e7d0edf33f22c6bf86710d96045185b868bbcdb242bda63f5789eab662e2",
+        "src/domain/pre_branch_sdd.ts": "636db20b18cd7b694c2d68e2d5fc53f5387daae90bcb231c98c2c2534d6125c3",
+        "src/data/repository/ai/findings_agent_adapter.ts": "2bdbcc4a104fa3898d8906139ba7b543df2c07dca69cc199708b89261a574509",
+        "src/infrastructure/composition/agent_capability_composition_root.ts": "501ff73a38aa8cb6c78bc21b34f679538df4104f3c3eaea9578648830f82a889",
+        "src/application/policies/sdd_ownership_prompt_policy.ts": "29549b47fe6a97e4df801725d493ee9fe5073cc9bbeac8d267fa755da7c1c200"
+      },
+      "trials": [
+        {
+          "id": "anchored-1",
+          "score": {
+            "cases": 15,
+            "correct": 15,
+            "invalid": 0,
+            "passed": true
+          },
+          "predictionSha256": "992117f17ec4cec015cc5c1af2b718a85439d2a53cfa74113206e4d1d1fb73d3",
+          "semanticScoreSha256": "49e065081697081e7ba26e0f747c107b6087bc6c5a7b4ab8225de7b36537e0d4",
+          "observations": [
+            {
+              "id": "existing-companion-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "independent-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "genuine-new-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "existing-primary-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-identity.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "resumed-existing-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "resumed-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "resumed-new-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "third-round-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "authorized-new-to-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "authorized-companion-to-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "ambiguous-existing-owner",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-identity.md"
+              },
+              "ownershipAssessment": {
+                "trialId": "anchored-1",
+                "caseId": "ambiguous-existing-owner",
+                "responseSha256": "af191e5d128afd7363f094bae2d57ce63d74ef3806be5b342cc153f3b4372a77",
+                "questionId": "Q1",
+                "questionText": "Which existing publication should receive the acceptance criteria: household-identity (specs/household-identity.md), household-administration (specs/household-administration.md), application-experience (specs/application-experience.md), or delivery (specs/delivery.md)?",
+                "intent": "select-existing-owner",
+                "reviewer": "Codex repository contributor (agent)",
+                "rationale": "Read explicitly: Q1 asks which registered publication should receive or own the acceptance criteria, presenting the household/application publications for an ownership decision rather than a date or unrelated file.",
+                "verdict": "resolves-required-ownership"
+              }
+            },
+            {
+              "id": "contradictory-owner-path",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": {
+                "trialId": "anchored-1",
+                "caseId": "contradictory-owner-path",
+                "responseSha256": "c4861cda65b71784b976e0b3aacec60a33023b72b370596247081aa02e055e76",
+                "questionId": "Q1",
+                "questionText": "Should this change update specs/household-administration.md under its registered owner household-identity, or should the catalog ownership be changed to delivery first?",
+                "intent": "resolve-owner-path-conflict",
+                "reviewer": "Codex repository contributor (agent)",
+                "rationale": "Read explicitly: Q1 names the administration path, contrasts registered household-identity with requested delivery ownership, and asks which should govern before drafting. It identifies the owner/path conflict rather than an unrelated path.",
+                "verdict": "resolves-required-ownership",
+                "conflictIdentified": true
+              }
+            },
+            {
+              "id": "working-branch-resumed-existing-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "working-branch-resumed-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "working-branch-resumed-new-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            }
+          ]
+        },
+        {
+          "id": "anchored-2",
+          "score": {
+            "cases": 15,
+            "correct": 15,
+            "invalid": 0,
+            "passed": true
+          },
+          "predictionSha256": "db6bc03dcac82bd9da05a07fad9466563fbcb6907537170e8eb903927f2d18f8",
+          "semanticScoreSha256": "e46c392c24ec1dc043a9e10d5ac380080c722864c09b0038fa542c760853b5bf",
+          "observations": [
+            {
+              "id": "existing-companion-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "independent-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "genuine-new-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "existing-primary-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-identity.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "resumed-existing-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "resumed-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "resumed-new-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "third-round-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "authorized-new-to-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "authorized-companion-to-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "ambiguous-existing-owner",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "application-experience",
+                "path": "specs/application-experience.md"
+              },
+              "ownershipAssessment": {
+                "trialId": "anchored-2",
+                "caseId": "ambiguous-existing-owner",
+                "responseSha256": "df2f83927abb2f329be7803cad5acdf04b9c0b4a3e5158be14742b52e4d24586",
+                "questionId": "Q1",
+                "questionText": "Which registered publication should receive the acceptance criteria: application-experience (specs/application-experience.md), household-identity (specs/household-identity.md), or household-identity (specs/household-administration.md)?",
+                "intent": "select-existing-owner",
+                "reviewer": "Codex repository contributor (agent)",
+                "rationale": "Read explicitly: Q1 asks which registered publication should receive or own the acceptance criteria, presenting the household/application publications for an ownership decision rather than a date or unrelated file.",
+                "verdict": "resolves-required-ownership"
+              }
+            },
+            {
+              "id": "contradictory-owner-path",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": {
+                "trialId": "anchored-2",
+                "caseId": "contradictory-owner-path",
+                "responseSha256": "eb915f82d3bab3e36ae0c8d42a56df41809617d719dd7739f8dc755cea1f08a2",
+                "questionId": "Q1",
+                "questionText": "Which capability should own specs/household-administration.md: household-identity, as currently registered, or delivery?",
+                "intent": "resolve-owner-path-conflict",
+                "reviewer": "Codex repository contributor (agent)",
+                "rationale": "Read explicitly: Q1 names the administration path, contrasts registered household-identity with requested delivery ownership, and asks which should govern before drafting. It identifies the owner/path conflict rather than an unrelated path.",
+                "verdict": "resolves-required-ownership",
+                "conflictIdentified": true
+              }
+            },
+            {
+              "id": "working-branch-resumed-existing-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "working-branch-resumed-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "working-branch-resumed-new-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            }
+          ]
+        },
+        {
+          "id": "anchored-3",
+          "score": {
+            "cases": 15,
+            "correct": 15,
+            "invalid": 0,
+            "passed": true
+          },
+          "predictionSha256": "4bb0f8602c0cc642c4bfdf944d4f5318781f6f8752f59f56d07a75992adaa3b4",
+          "semanticScoreSha256": "16816c03459cd8a5d2bc686feef0eb28284b48c9adda46e6290157b57e6cc964",
+          "observations": [
+            {
+              "id": "existing-companion-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "independent-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "genuine-new-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "existing-primary-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-identity.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "resumed-existing-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "resumed-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "resumed-new-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "third-round-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "authorized-new-to-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "authorized-companion-to-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "ambiguous-existing-owner",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-identity.md"
+              },
+              "ownershipAssessment": {
+                "trialId": "anchored-3",
+                "caseId": "ambiguous-existing-owner",
+                "responseSha256": "bc712622b3ce7162ebcefd82df2a82987327ac9fbe201c7af53237c35ebb3baf",
+                "questionId": "Q1",
+                "questionText": "Which existing publication should receive the acceptance criteria: specs/household-identity.md, specs/household-administration.md, or specs/application-experience.md?",
+                "intent": "select-existing-owner",
+                "reviewer": "Codex repository contributor (agent)",
+                "rationale": "Read explicitly: Q1 asks which registered publication should receive or own the acceptance criteria, presenting the household/application publications for an ownership decision rather than a date or unrelated file.",
+                "verdict": "resolves-required-ownership"
+              }
+            },
+            {
+              "id": "contradictory-owner-path",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": {
+                "trialId": "anchored-3",
+                "caseId": "contradictory-owner-path",
+                "responseSha256": "c1de1cd6fa51824591d17d0759a12c6b1913e3fbebd8b4db3b894313a1d5f1c7",
+                "questionId": "Q1",
+                "questionText": "Should specs/household-administration.md remain owned by household-identity, or should its ownership move to delivery?",
+                "intent": "resolve-owner-path-conflict",
+                "reviewer": "Codex repository contributor (agent)",
+                "rationale": "Read explicitly: Q1 names the administration path, contrasts registered household-identity with requested delivery ownership, and asks which should govern before drafting. It identifies the owner/path conflict rather than an unrelated path.",
+                "verdict": "resolves-required-ownership",
+                "conflictIdentified": true
+              }
+            },
+            {
+              "id": "working-branch-resumed-existing-update",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "update",
+                "capabilityId": "household-identity",
+                "path": "specs/household-administration.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "working-branch-resumed-new-package",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "new",
+                "capabilityId": "shared-presentation-package",
+                "path": "specs/shared-presentation-package.md"
+              },
+              "ownershipAssessment": null
+            },
+            {
+              "id": "working-branch-resumed-new-companion",
+              "correct": true,
+              "error": null,
+              "tuple": {
+                "action": "companion",
+                "capabilityId": "household-identity",
+                "path": "specs/household-audit.md"
+              },
+              "ownershipAssessment": null
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "runtimeRevisions": [
+    {
+      "at": "2026-11-04T10:20:26.272489+00:00",
+      "priorCandidateScores": [
+        {
+          "cases": 15,
+          "correct": 14,
+          "invalid": 0,
+          "passed": false
+        },
+        {
+          "cases": 15,
+          "correct": 15,
+          "invalid": 0,
+          "passed": true
+        },
+        {
+          "cases": 15,
+          "correct": 15,
+          "invalid": 0,
+          "passed": true
+        }
+      ],
+      "declaredTrials": [
+        "revised-1",
+        "revised-2",
+        "revised-3"
+      ],
+      "change": "General catalog tuple decision table and explicit explanation that an authorized confirmed companion at a new path is already valid; do not reclassify it as an invalid update or reask resolved ownership. No consumer-specific IDs/paths.",
+      "unchanged": [
+        "15 frozen scenarios and expected decisions",
+        "source Git commit/tree",
+        "model/provider/effort",
+        "explicit semantic question assessment",
+        "per-trial15/15 and zero-invalid floors",
+        "all previous outputs and source snapshots"
+      ],
+      "reason": "First working-branch candidate misread an explicitly confirmed companion as update once and switched to the registered primary; whole cohort failed despite two passing trials."
+    },
+    {
+      "at": "2026-11-04T10:40:16.610063+00:00",
+      "priorScores": [
+        {
+          "cases": 15,
+          "correct": 15,
+          "invalid": 0,
+          "passed": true
+        },
+        {
+          "cases": 15,
+          "correct": 15,
+          "invalid": 0,
+          "passed": true
+        },
+        {
+          "cases": 15,
+          "correct": 13,
+          "invalid": 0,
+          "passed": false
+        }
+      ],
+      "declaredTrials": [
+        "anchored-1",
+        "anchored-2",
+        "anchored-3"
+      ],
+      "change": "Replace global companion-only confirmation example with per-recorded-action semantics for update/companion/new. Explain that new capability absence is intentional; contextual data never becomes publication authority. Clarify registered path must belong to selected capability. Latest authorized changes still take precedence.",
+      "unchanged": [
+        "15 descriptor scenarios and reference decisions",
+        "source commit/tree",
+        "Codex/gpt-6-luna/medium",
+        "explicit semantic question assessment",
+        "15/15 and zero invalid per trial/cohort",
+        "all previous predictions/scores/source snapshots"
+      ],
+      "reason": "One revised trial collapsed two confirmed new-capability proposals into companions under the application owner; the entire cohort fails.",
+      "driverExtension": "Only admits separately declared anchored capture/trial names; cases, capture, query, parser and scoring logic unchanged."
+    },
+    {
+      "at": "2026-11-04T10:40:16.610063+00:00",
+      "priorScores": [
+        {
+          "cases": 15,
+          "correct": 15,
+          "invalid": 0,
+          "passed": true
+        },
+        {
+          "cases": 15,
+          "correct": 15,
+          "invalid": 0,
+          "passed": true
+        },
+        {
+          "cases": 15,
+          "correct": 13,
+          "invalid": 0,
+          "passed": false
+        }
+      ],
+      "declaredTrials": [
+        "anchored-1",
+        "anchored-2",
+        "anchored-3"
+      ],
+      "change": "Replace global companion-only confirmation example with per-recorded-action semantics for update/companion/new. Explain that new capability absence is intentional; contextual data never becomes publication authority. Clarify registered path must belong to selected capability. Latest authorized changes still take precedence.",
+      "unchanged": [
+        "15 descriptor scenarios and reference decisions",
+        "source commit/tree",
+        "Codex/gpt-6-luna/medium",
+        "explicit semantic question assessment",
+        "15/15 and zero invalid per trial/cohort",
+        "all previous predictions/scores/source snapshots"
+      ],
+      "reason": "One revised trial collapsed two confirmed new-capability proposals into companions under the application owner; the entire cohort fails.",
+      "driverExtension": "Only admits separately declared anchored capture/trial names; cases, capture, query, parser and scoring logic unchanged."
+    }
+  ],
+  "requestEquivalence": {
+    "baselineOriginalTwelve": {
+      "originalTwelveRequestsIdentical": true,
+      "newWorkingRequests": 3,
+      "newWorkingRequestsHaveProposal": false,
+      "sourceHashes": {
+        "src/application/usecases/sdd/pre_branch_sdd_gate_use_case.ts": "40428f01885c6227862a2c6474a96c5520f6f002448159dfd2e036b5d77d8604",
+        "src/domain/pre_branch_sdd.ts": "636db20b18cd7b694c2d68e2d5fc53f5387daae90bcb231c98c2c2534d6125c3",
+        "src/data/repository/ai/findings_agent_adapter.ts": "2bdbcc4a104fa3898d8906139ba7b543df2c07dca69cc199708b89261a574509",
+        "src/infrastructure/composition/agent_capability_composition_root.ts": "501ff73a38aa8cb6c78bc21b34f679538df4104f3c3eaea9578648830f82a889",
+        "src/application/policies/sdd_ownership_prompt_policy.ts": "5ce9c76dd2114b7f2067c0324964eb28e94fb6e7545b43ee7dd9d59c3c70b60a"
+      }
+    },
+    "workingFixOriginalTwelve": {
+      "originalTwelveRequestsIdentical": true,
+      "workingContinuationsMatchTheirCanonicalRequests": 3,
+      "newWorkingRequestsHaveProposal": true,
+      "newWorkingRequestsClaimPublicationLock": false,
+      "sourceHashes": {
+        "src/application/usecases/sdd/pre_branch_sdd_gate_use_case.ts": "9a92e7d0edf33f22c6bf86710d96045185b868bbcdb242bda63f5789eab662e2",
+        "src/domain/pre_branch_sdd.ts": "636db20b18cd7b694c2d68e2d5fc53f5387daae90bcb231c98c2c2534d6125c3",
+        "src/data/repository/ai/findings_agent_adapter.ts": "2bdbcc4a104fa3898d8906139ba7b543df2c07dca69cc199708b89261a574509",
+        "src/infrastructure/composition/agent_capability_composition_root.ts": "501ff73a38aa8cb6c78bc21b34f679538df4104f3c3eaea9578648830f82a889",
+        "src/application/policies/sdd_ownership_prompt_policy.ts": "5ce9c76dd2114b7f2067c0324964eb28e94fb6e7545b43ee7dd9d59c3c70b60a"
+      }
+    },
+    "workingFixInitialVersusLate": {
+      "initialWorkingBranchScenarios": 3,
+      "exactlyEqualToLateWorkingBranchRequests": true,
+      "sourceHashes": {
+        "src/application/usecases/sdd/pre_branch_sdd_gate_use_case.ts": "9a92e7d0edf33f22c6bf86710d96045185b868bbcdb242bda63f5789eab662e2",
+        "src/domain/pre_branch_sdd.ts": "636db20b18cd7b694c2d68e2d5fc53f5387daae90bcb231c98c2c2534d6125c3",
+        "src/data/repository/ai/findings_agent_adapter.ts": "2bdbcc4a104fa3898d8906139ba7b543df2c07dca69cc199708b89261a574509",
+        "src/infrastructure/composition/agent_capability_composition_root.ts": "501ff73a38aa8cb6c78bc21b34f679538df4104f3c3eaea9578648830f82a889",
+        "src/application/policies/sdd_ownership_prompt_policy.ts": "5ce9c76dd2114b7f2067c0324964eb28e94fb6e7545b43ee7dd9d59c3c70b60a"
+      },
+      "providerQueries": 0,
+      "scope": "Actual SDK use-case request captures with in-memory SCM/state ports; whole provider stdin and consumer execution are not claimed. Both histories use the same existing owned Git alias/source commit."
+    },
+    "revisedGuidance": {
+      "initialBranchHistoriesEqualLateBranchHistories": true,
+      "serialization": "Exact UTF-8 JSON.stringify application-request bytes, not whole provider stdin",
+      "initialBranchRequestSha256": {
+        "working-branch-resumed-existing-update": "0ca6d658d98d49f05f2390287a8f5eb8f85c73ec88b246c7b676ebd243728dcd",
+        "working-branch-resumed-new-package": "a182ffb3a9f5076589e164019264413dcb1eb9d1001f232a3a55eb861bf8f5c9",
+        "working-branch-resumed-new-companion": "da8ef5165f68830adbeb49cc2f497fa6865aa8b7b2f4bea0d8ae3ae2b29169ae"
+      },
+      "all15NonPromptFieldsUnchanged": true,
+      "all15IssueAnswerCatalogStandardTailsUnchanged": true,
+      "change": "General operation guidance only; tuple decision grid and confirmed companion explanation",
+      "providerQueries": 0
+    },
+    "finalContextualOperation": {
+      "initialBranchHistoriesEqualLateBranchHistories": true,
+      "serialization": "Exact UTF-8 JSON.stringify application-request bytes; whole provider stdin not captured",
+      "initialBranchRequestSha256": {
+        "working-branch-resumed-existing-update": "e02558b11eb1a72e0d3bd1ca1853434afe7776bb1de88f9be068bed077294c3f",
+        "working-branch-resumed-new-package": "1d65331802c7135e2173f049c02e9054f3f741b18cdf9f274b47c5521b567ec2",
+        "working-branch-resumed-new-companion": "2cc789a843c1a6ae297daa05fab16d17de55ac2e0fcfc2a60bd04f6e04bbd9dd"
+      },
+      "all15NonPromptFieldsUnchanged": true,
+      "all15IssueAnswerCatalogStandardTailsUnchanged": true,
+      "change": "General catalog tuple guidance and recorded-operation meaning only",
+      "providerQueries": 0
+    }
+  },
+  "limits": [
+    "Actual SDK use-case capture with in-memory SCM/comment/authorization ports; real findings query composition and immutable SourceSnapshot execution.",
+    "Scripted stop responses only create history for request capture; never scored as model predictions. Expected verdicts remain outside requests and the owned source tree.",
+    "Fictional Git source and a same-commit local branch alias, no consumer implementation, remote issue branch mutation, SDD drafting or publication.",
+    "Full provider stdin not captured. Request equality claims refer to serialized application-request bytes only.",
+    "Explicit semantic question assessments are by the Codex contributor agent, not human review or native approval.",
+    "All attempted cohorts and their failures retained; no case, reference, model, source tree or acceptance floor retuned.",
+    "Classification evidence is not a general accuracy guarantee or whole-consumer acceptance."
+  ],
+  "conclusion": {
+    "baseline": [
+      14,
+      14,
+      14
+    ],
+    "firstWorkingFix": [
+      14,
+      15,
+      15
+    ],
+    "globalExampleRevision": [
+      15,
+      15,
+      13
+    ],
+    "contextualOperationMeaning": [
+      15,
+      15,
+      15
+    ],
+    "floor": "15/15 and zero invalid in EACH trial; no sample selection or reference/model/source/floor retuning",
+    "scope": "Authored SDK ownership classification scenarios only; no general accuracy or consumer acceptance guarantee."
+  },
+  "coordinatorAudit": {
+    "path": "quality/sdd/evidence/issue-856-working-branch-driver.cjs.txt",
+    "sha256": "e4558a061637a264535e7c0b90068627abc145f33d64bf12d3de85f620b0672b",
+    "kind": "Exact campaign-specific coordinator source as an audit text artifact, not an installed product CLI. SDK source/fixture/case identities are recorded separately.",
+    "bootstrap": "The same owned fictional Git fixture was prepared by the original campaign, then one same-commit local branch alias and the separate fifteen-case descriptor/receipt were installed before trials. This supplement did not invoke the inherited prepare command, whose historical c0e7 guard remains in the audit source.",
+    "execution": "capture baseline; baseline1..3; explicit assessments and offline scores; capture candidate then revised then anchored, each with three trials and explicit scores. Never overwrite attempted files. All query calls use the real SDK source/query composition; source snapshots and proxy method limits are stated above."
+  },
+  "localSuite": {
+    "numPassedTestSuites": 902,
+    "numFailedTestSuites": 0,
+    "numPassedTests": 17704,
+    "numFailedTests": 0,
+    "numPendingTests": 35,
+    "success": true,
+    "coverage": {
+      "lines": {
+        "total": 34962,
+        "covered": 34361,
+        "skipped": 0,
+        "pct": 98.28
+      },
+      "statements": {
+        "total": 40837,
+        "covered": 39863,
+        "skipped": 0,
+        "pct": 97.61
+      },
+      "functions": {
+        "total": 7292,
+        "covered": 7156,
+        "skipped": 0,
+        "pct": 98.13
+      },
+      "branches": {
+        "total": 34478,
+        "covered": 33008,
+        "skipped": 0,
+        "pct": 95.73
+      },
+      "branchesTrue": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "changedRuntime": {
+      "coverable": 31,
+      "hit": 31,
+      "miss": 0,
+      "partial": 0
+    },
+    "extension": {
+      "tests": 267,
+      "files": 30,
+      "coveragePercent": {
+        "lines": 100,
+        "statements": 100,
+        "branches": 100,
+        "functions": 100
+      }
+    },
+    "stableFullRun": {
+      "files": 19,
+      "hashesUnchanged": true,
+      "manifestSha256": "ed4ddbfd04b5875c121df4c453a4a48749906da76038afd1a776c7c81fbaeab6"
+    }
+  },
+  "immutability": {
+    "sourceCommit": "76c0b6a95776b094290cfb9be66dfa449261aed1",
+    "sourceTree": "5276a1fd4a1f98578d9c48492de5fc92512d2497",
+    "sourceWorktreeClean": true,
+    "localAliasSameCommit": true,
+    "originalPredictionAndScoreFilesUnchanged": 18,
+    "finalSdkRuntimeFilesUnchanged": 5,
+    "scope": "Read-only post-query verification; no source/root/branch mutations."
+  },
+  "verificationRace": "A prior full run overlapped adding the new evidence path to catalog metadata and failed the catalog-equivalence test. No test/validator was relaxed. Catalog regenerated, thirteen catalog tests passed, then the complete suite passed with hashes of all19 inputs held stable."
+}
