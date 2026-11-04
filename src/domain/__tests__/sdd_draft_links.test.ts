@@ -1,4 +1,5 @@
-import { renderSddFileLinks, validateSddDraftConsistency } from '../sdd_draft_consistency';
+import { Parser } from 'commonmark';
+import { renderSddFileLinks, renderSddNavigation, validateSddDraftConsistency } from '../sdd_draft_consistency';
 import { sddConsistencyFixture } from '../../testing/sdd_consistency_fixture';
 
 const slot = (target: string) => '`{{SDD_FILE_LINK:' + target + '}}`';
@@ -115,5 +116,66 @@ describe('source-grounded draft file navigation', () => {
       expect(() => render(input)).toThrow(expect.objectContaining(invalid));
     }
     expect(render(slot('package.json'), publication, ['package.json'])).toBe('`package.json`');
+  });
+});
+
+
+describe('single-inventory SDD navigation', () => {
+  const navigation = '{{SDD_FILE_NAVIGATION}}';
+  const withNavigation = (source: string, slot = navigation) => source.replace('## 16.', slot + '\n\n## 16.');
+  const native = (source: string, files = inventory.files) => validateSddDraftConsistency(
+    renderSddNavigation(source, publication), [], { ...inventory, files }, publication);
+
+  it('sdd-source-grounding-C47: projects every literal declaration into native-valid links without repeating or inferring targets', () => {
+    const target = 'docs/Café & [draft]`cost$_.md';
+    const source = withNavigation(sddConsistencyFixture().replace('| docs/payments.mdx | update |',
+      '| docs/payments.mdx | update |\n| ' + target + ' | reference |'), 'Navigation: `' + navigation + '` for review.');
+    const output = renderSddNavigation(source, publication);
+    expect(output).toContain('| ' + target + ' | reference |');
+    expect(output).not.toContain(navigation);
+    const links: { destination: string; label: string }[] = [];
+    const walker = new Parser().parse(output).walker();
+    let event;
+    while ((event = walker.next())) {
+      if (event.entering && event.node.type === 'link') {
+        let label = '', inner;
+        const children = event.node.walker();
+        while ((inner = children.next())) if (inner.entering && inner.node.type === 'text') label += inner.node.literal;
+        links.push({ destination: event.node.destination!, label });
+      }
+    }
+    expect(links.map(item => item.label)).toEqual(['docs/payments.mdx', target, 'specs/change.md']);
+    expect(links.map(item => item.destination)).toContain('../docs/Caf%C3%A9%20%26%20%5Bdraft%5D%60cost%24_.md');
+    expect(() => native(source, new Set([...inventory.files, target]))).not.toThrow();
+    const future = 'docs/proposed/new.md';
+    expect(() => native(withNavigation(sddConsistencyFixture().replace('| docs/payments.mdx | update |',
+      '| docs/payments.mdx | update |\n| ' + future + ' | create |')))).not.toThrow();
+    expect(() => native(withNavigation(sddConsistencyFixture().replace('docs/payments.mdx', 'docs/missing.md'))))
+      .toThrow(expect.objectContaining(invalid));
+    expect(renderSddNavigation(sddConsistencyFixture(), publication)).toBe(sddConsistencyFixture());
+  });
+
+  it('sdd-source-grounding-C48: rejects hidden, duplicate, malformed and nested slots without creating target authority', () => {
+    for (const slot of ['<!-- ' + navigation + ' -->', '```md\n' + navigation + '\n```',
+      navigation + '\n' + navigation, '[Nested](' + navigation + ')', '``' + navigation + '``',
+      '`' + navigation, navigation.toLowerCase(), '{{SDD_FILE_NAVIGATION:unknown}}',
+      navigation + '\n{{sdd_file_navigation}}']) {
+      expect(() => renderSddNavigation(withNavigation(sddConsistencyFixture(), slot), publication))
+        .toThrow(expect.objectContaining(invalid));
+    }
+    expect(() => renderSddNavigation(sddConsistencyFixture() + '\n' + navigation, publication))
+      .toThrow(expect.objectContaining(invalid));
+    for (const owner of ['', '../specs/change.md']) {
+      expect(() => renderSddNavigation(withNavigation(sddConsistencyFixture()), owner)).toThrow(expect.objectContaining(invalid));
+    }
+    for (const target of ['../PRIVATE_TARGET.md', 'docs/PRIVATE_\ud800.md']) {
+      try {
+        renderSddNavigation(withNavigation(sddConsistencyFixture().replace('docs/payments.mdx', target)), publication);
+        throw new Error('Expected rejection');
+      } catch (error) {
+        expect(error).toMatchObject(invalid);
+        expect(String(error)).not.toContain('PRIVATE');
+      }
+    }
   });
 });

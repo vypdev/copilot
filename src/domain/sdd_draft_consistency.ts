@@ -28,7 +28,7 @@ const TRACEABILITY_SLOT = '{{SDD_REQUIREMENT_CASES}}';
 /** The provider writes definitions once; trusted code renders their two redundant projections. */
 export const SDD_DERIVED_TABLES_PROMPT = `Draft assembly: the consistency contract above describes the final document. In your raw Markdown, write the complete Requirement | Behavior table in section 4 and Case ID | Area | Requirements | Scenario inventory in section 14. Preserve every resolved minimum, per-area allocation and observable case as actual inventory rows, never ranges or summaries. Instead of independently writing the budget table, put ${BUDGET_SLOT} once on its own visible line in section 14. Instead of writing the reverse Requirement | Cases table, put ${TRACEABILITY_SLOT} once on its own visible line in section 17. One pair of inline-code backticks around an entire visible slot line is tolerated; bare slot lines are preferred. Do not include either derived table yourself or put these slots in examples, fences or comments. Trusted code derives exact counts, Total and reciprocal links from your unchanged definitions, then runs every publication check. The compact character target is advisory: use more space when required to preserve the full resolved inventory and scope. The hard limit applies after assembly too.`;
 
-export const SDD_FILE_LINKS_PROMPT = 'For each newly authored repository-file navigation link use [Descriptive label]({{SDD_FILE_LINK:PATH}}), replacing PATH with the exact full repository-relative target. The marker occupies the entire inline destination; paired backticks around it are tolerated. Use angle-bracket destinations for filenames with spaces. Trusted code computes and encodes the relative destination from the selected publication directory, so do not guess parent traversal. Every marker target, including those in representative UI examples, MUST also have its literal full path and verified operation in the operative section-15 Path | Change table. This explicit declaration is checked against immutable source or proposed creates by the unchanged native validator. Path cells themselves remain literal paths, never markers. Markers in prose, labels, comments or code examples become literal full-path citations and grant no existence or publication authority. Never invent a target to satisfy this format. Targets are single-line paths without braces or backticks. Remove template authoring notes. Ordinary valid Markdown and fragment links remain supported. The same final size bound and single shared repair apply.';
+export const SDD_FILE_LINKS_PROMPT = 'Repository navigation is a trusted projection of your operative section-15 Path | Change inventory. In raw Markdown put {{SDD_FILE_NAVIGATION}} once in visible prose in section 15; a separate line is recommended, and one paired inline-code wrapper is tolerated. The host renders file links for every declared row, with exact targets and relative destinations derived from the publication path. Do not separately repeat file targets in navigation markers or guess repository-relative Markdown URLs. Keep Path cells as literal full repository-relative paths, never links or placeholders. Preserve all planned create rows; navigation cannot authorize a new target or infer a create/update operation. Cite files elsewhere using their exact full paths in ordinary prose/code. Representative UI examples may use the supplied canonical issue URL or document anchors without inventing run links. Remove authoring notes. Existing valid Markdown and legacy explicit file markers remain supported and strictly validated, but use the inventory projection for newly authored navigation. The original final size bound, schema and single shared repair apply.';
 
 function fail(reason: SddConsistencyReason, fact: SddValidationFact, additional: readonly SddValidationFact[] = []): never {
   // Closed diagnostics: rejected Markdown and repository text never become repair instructions.
@@ -107,6 +107,33 @@ function ids(value: string, pattern: RegExp, reason: SddConsistencyReason, secti
   const values = value.split(/\s*,\s*/u);
   if (!values.every(id => pattern.test(id)) || new Set(values).size !== values.length) return fail(reason, { detail: 'identifier-list', section, observed: values.length });
   return values;
+}
+
+/** File links are a projection of the unchanged path inventory, never a second target list. */
+export function renderSddNavigation(markdown: string, publicationPath: string): string {
+  const slot = '{{SDD_FILE_NAVIGATION}}';
+  const prefix = /\{\{\s*SDD_FILE_NAVIGATION\b/iu;
+  if (!prefix.test(markdown)) return markdown;
+  if (!safePath(publicationPath) || markdown.split(slot).length !== 2) fail('repository-path', { detail: 'path-link', section: 0 });
+  const source = visible(markdown);
+  const placed = section(source, 15, 'repository-path').split('\n').filter(line => {
+    const index = line.indexOf(slot);
+    if (index < 0) return false;
+    let before = line.slice(0, index), after = line.slice(index + slot.length);
+    if (before.endsWith('`') && after.startsWith('`')) { before = before.slice(0, -1); after = after.slice(1); }
+    return !/[`[\](){}<>|]/u.test(before + after);
+  }).length;
+  if (placed !== 1) fail('repository-path', { detail: 'path-link', section: 0 });
+  const rows = table(source, 15, ['Path', 'Change'], 'repository-path');
+  const links = rows.map(([target]) => {
+    const destination = sddFileDestination(target, publicationPath);
+    const label = target.replace(/&/gu, '&amp;').replace(/[`*_[\]~$]/gu, '\\$&');
+    return `[${label}](${destination})`;
+  }).join(' · ');
+  const wrapped = '`' + slot + '`';
+  const result = markdown.replace(markdown.includes(wrapped) ? wrapped : slot, () => links);
+  if (prefix.test(result)) fail('repository-path', { detail: 'path-link', section: 0 });
+  return result;
 }
 
 /** Derive navigation only from explicit targets; the workspace still proves existence. */

@@ -96,7 +96,7 @@ tooling, a valid command-free SDK outcome, exact provenance, and retention of
 eighteen supplied assertions and ninety-five prospective file operations. Those
 assertions/files are input data, not 113 distinct SDK tests. Thirteen pure
 identity-policy cases and six application repair/authorization/boundary cases
-complement the two portable native CLI regressions. Twelve pure link-assembly cases and four workflow/boundary cases cover host-derived navigation, literal filename identity, native existence checks, closed failures and the unchanged final size/repair limits. One derived-table representation case checks single code wrappers while preserving hidden/duplicate-slot rejection. See the 46-case inventory
+complement the two portable native CLI regressions. Twelve pure link-assembly cases and five workflow/boundary cases cover host-derived navigation, literal filename identity, native existence checks, closed failures and the unchanged final size/repair limits. One derived-table representation case checks single code wrappers while preserving hidden/duplicate-slot rejection. Two inventory-navigation projection cases derive exact links from the sole literal path table and reject malformed/hidden slots. See the 49-case inventory
 and traceability in [the grounding SDD](../../specs/sdd-draft-source-grounding.md).
 
 Assessment is explicit contributor review against each frozen case's intent,
@@ -147,3 +147,5 @@ The final three whole trials must pass independently; no successful case from
 those earlier cohorts can be substituted into them.
 
 Every file-marker target has a literal operative Path/Change declaration. UI examples can therefore render navigation without supplying existence authority; native source/declaration validation remains the acceptance boundary.
+
+New authoring uses the inventory-navigation slot rather than a second list of file targets. Reconstruct its output after derived tables and legacy file-marker assembly using the recorded navigation projection. The same Path/Change rows remain authoritative and receive unchanged native validation; the projection cannot infer targets or operations.

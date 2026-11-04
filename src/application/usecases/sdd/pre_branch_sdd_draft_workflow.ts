@@ -10,7 +10,7 @@ import {
 } from '../../../domain/pre_branch_sdd';
 import { AgentResponseLengthFailure } from '../../../domain/agent_response_length_failure';
 import { AgentResponseSchemaFailure } from '../../../domain/agent_response_schema_failure';
-import { renderSddDerivedTables, renderSddFileLinks, SDD_CONSISTENCY_PROMPT, SDD_DERIVED_TABLES_PROMPT, SDD_FILE_LINKS_PROMPT } from '../../../domain/sdd_draft_consistency';
+import { renderSddDerivedTables, renderSddFileLinks, renderSddNavigation, SDD_CONSISTENCY_PROMPT, SDD_DERIVED_TABLES_PROMPT, SDD_FILE_LINKS_PROMPT } from '../../../domain/sdd_draft_consistency';
 import type { AgentSourceSnapshot } from '../../../domain/agent_source_snapshot';
 import { SDD_DRAFT_GROUNDING_PROMPT } from '../../policies/sdd_draft_grounding_policy';
 
@@ -69,7 +69,7 @@ export async function draftSddMarkdown(
     if (observedLength < SDD_MIN_DRAFT_CHARACTERS) throw minimumFailure(attempt, observedLength);
     let assembledCandidate = false;
     try {
-      const assembled = renderSddFileLinks(renderSddDerivedTables(markdown), plan.path);
+      const assembled = renderSddNavigation(renderSddFileLinks(renderSddDerivedTables(markdown), plan.path), plan.path);
       if (assembled.length > maximum) {
         problem = 'size';
         diagnostic = { reason: 'size', phase: 'assembly', facts: [{ detail: 'size-limit', section: 0, expected: maximum }] };
