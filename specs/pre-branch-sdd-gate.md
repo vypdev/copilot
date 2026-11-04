@@ -3,7 +3,7 @@
 - Status: Implemented — automated verification complete; live provider UX review pending
 - Date: 2026-09-17
 - Catalog capability ID: `issue-start-and-sdd-readiness`
-- Last verified: 2026-11-02 (bounded structural repair feedback, #833; literal accepted catalog titles, #820; missing trusted-catalog prerequisite, #808; complete no-follow specification discovery, #804; navigable accepted catalog filenames, #782; truthful proposed SDK bootstrap, #777; safe portable catalog publication, #771; nested catalog links, #768; actionable blocked preparation and safe diagnostics, #714)
+- Last verified: 2026-11-04 (ownership intent and authorized unpublished proposal context, #856; bounded structural repair feedback, #833; literal accepted catalog titles, #820; missing trusted-catalog prerequisite, #808; complete no-follow specification discovery, #804; navigable accepted catalog filenames, #782; truthful proposed SDK bootstrap, #777; safe portable catalog publication, #771; nested catalog links, #768; actionable blocked preparation and safe diagnostics, #714)
 - Owners: Copilot maintainers
 - Scope: clarify, update, validate, and publish the owning SDD before eligible branch-based work
 - Related issues/PRs: none; local design work; companion SDD `issue-start-and-branch-readiness.md`
@@ -216,6 +216,81 @@ and applies `branched`.
   retries and remains until the issue completes or the requirement is
   deliberately reclassified by an authorized maintainer.
 
+#### 6.1.1 Ownership intent and unpublished proposals — #856
+
+This correction preserves the existing gate and semantic ownership
+validator. Two reported failures require separate treatment: an explicit update
+of a registered companion publication, and a later genuinely new package request.
+Both native runs expose `companion-path-registered`, but their rejected payloads
+and complete prompts are unavailable. Do not infer an exact rejected owner/path,
+a common internal cause or a regression against the current development SDK.
+
+Independent current-SDK execution demonstrates a narrower delivery defect:
+answers reach resumed analysis, while the valid preceding proposal is supplied
+only when a linked branch already exists. Four new regression cases fail against
+that implementation; the original 127 cases in that suite pass. Independent
+original-pin controls on both immutable consumer catalogs accept the intended
+`update` and `new` tuples and reject registered-path `companion` controls. The
+semantic guard is correct and MUST remain unchanged. One rejected contrast is
+explicitly authored; it is not represented as a hidden native response.
+
+| Request and catalog facts | Analysis action | Required behavior |
+|---|---|---|
+| Registered path owned by the selected capability, including a companion document | `update` | Preserve the owner/path and existing publication |
+| Existing capability, new unregistered publication path | `companion` | Justify a new document without duplicating ownership |
+| Unregistered capability and unregistered publication path | `new` | Provide complete proposed metadata; preserve other owners |
+| Conflicting or ambiguous intent/ownership | Valid provisional proposal plus blocking questions | Ask a focused ownership question before drafting/readiness |
+
+**OI-R1:** a document's role as a companion does not mean the requested operation
+is companion creation. Honor explicit existing-update and independent-new-package
+intent against the selected immutable catalog. Never relabel an invalid response
+automatically or weaken `companion-path-registered` to make it pass.
+
+**OI-R2:** after all current questions are answered by authorized actors, deliver
+the preceding unpublished proposal and its round alongside cumulative authorized
+answers when issue/profile identity and selected source still match. Include the
+actual proposed action, capability and path. Label it as unpublished context,
+never as a linked branch, existing publication or new execution authority.
+
+**OI-R3:** an unpublished proposal remains negotiable: preserve resolved intent,
+but allow an authorized clarification to require another valid route. Ask a
+focused question when that change is ambiguous. Once a linked publication owns
+the work, the existing same-owner/same-path update lock remains authoritative.
+
+**OI-R4:** stale body/title/profile/base, foreign cards, wrong issue identity,
+unauthorized answers and incomplete current answers cannot authorize reuse.
+Preserve the existing reset/wait/failure paths, round/answer bounds and source
+freshness checks. Do not resurrect an omitted or stale proposal as a default.
+
+
+**OI-R5:** an existing configured issue working branch is a source/routing fact,
+not proof that an SDD publication owns the proposal. When a current question card
+has no SDD-linked branch, retain its unpublished proposal even if a working branch
+was configured later. A generic working branch MUST NOT be promoted into the
+waiting card's SDD-linked branch while questions remain. Preserve ancestry,
+linkage, source freshness and authorized-answer checks. Once a validated draft is
+ready, retain the existing working branch in its draft record for exact routing
+and freshness; do not prepare another branch or accidentally verify the moving
+development branch instead. Existing card-linked publication reservations and
+verified published-owner constraints keep their prior semantics; no legacy
+provenance is guessed and no existing publication is reassigned.
+
+```text
+issue + immutable catalog -> initial ownership proposal -> numbered questions
+  -> authorized answers + matching unpublished proposal -> renewed analysis
+  -> more questions OR validated draft -> existing Action publication fence
+linked owning publication -> same-owner/same-path update only
+```
+
+Text equivalent: retain valid unpublished planning context across authorized
+clarification without claiming publication; published ownership stays locked.
+Existing pending, waiting, blocked, retry and published cards remain the user
+surface. Example question: “This publication is already registered under the
+existing capability. Confirm an update there or identify the new publication.”
+Use the effective issue locale and retain existing descriptive source/run links.
+A rejected model tuple still produces the current safe ownership diagnostic and
+same-issue recovery; it never becomes a draft or branch-ready result.
+
 ### 6.2 Happy path
 
 1. An admitted eligible issue receives `in-progress` from an authorized actor.
@@ -381,6 +456,23 @@ the outcome independently of mutation.
   executable scripts, or any unselected file.
 - Contract tests parse issue forms, setup profile, Action input, question IDs,
   status markers, catalog output, and staged paths structurally.
+
+### 8.1 Ownership-context correction boundaries — #856
+
+One pure application policy renders the fixed route definitions and distinguishes
+unpublished clarification context from the existing linked-owner constraint. The
+use case selects context only after its current source/identity/answer checks;
+the model still proposes and the existing pure domain parser decides semantic
+validity. Treat proposal reasons, questions, issue text and answers as untrusted
+data. Add no repository-specific route, parser coercion, model retry, source
+executor, semantic port or publication authority.
+
+No public configuration, schema fields, durable state or migration is added.
+Reuse the existing recorded plan/round and cumulative answer provenance. Keep
+all current body/catalog/answer/prompt/response limits, three-round/eight-question
+ceilings, source snapshot preparation and no-partial-publication controls.
+A bounded catalog prefix cannot establish absence: use the admitted immutable
+source for missing facts or ask; never invent ownership from a truncated view.
 
 ## 9. UI/UX and content contract
 
@@ -569,7 +661,7 @@ authority is explicit; placeholder repository links and self-owned new companion
 are not supported evidence. Authorized retained answers resolve their decisions
 across rounds. These inputs remain data and grant no model or workspace authority.
 
-The following **151 distinct cases** are a floor derived from eligibility,
+The following **259 distinct cases** are a floor derived from eligibility,
 clarification, source freshness, publication races, partial writes, and SDD
 ownership/validation.
 
@@ -594,7 +686,130 @@ ownership/validation.
 | Canonical numeric table budgets | 20 | Three valid table/owner routes, twelve invalid or misplaced table cases, unsafe integer rejection, positive/zero prose compatibility, immutable owner failure identity, actual findings acceptance and real scratch-worktree owner preservation |
 | Compact generation targets | 2 | Update and companion target size, unchanged hard schema bounds, original resolved requirements and shared two-attempt ceiling |
 | Blocked preparation and safe diagnostics (#714) | 25 | Fourteen cause/recovery, publication/idempotency, privacy/ownership and retention cases, seven publication-freshness cases and four existing-question recovery/race cases; locale and diagnostic boundary matrices are additional |
-| **Total** | **165** | No case counted twice |
+| Ownership intent and proposal delivery (#856) | 28 | Six route/continuation delivery, eight freshness/authority, four published/clarified transition, four original-catalog guard and six prompt/safety/compatibility cases |
+| Ownership qualification assessment (#856 review) | 29 | Unrelated date/path questions, absent/malformed/blank assessments, exact trial/response/case/question binding, negative verdict and explicit conflict assessment |
+| Qualification response failure handling (#856 review) | 11 | Actual probe assessor: absent/null/primitive/malformed responses, explicit tuple object/string controls, pending and explicitly assessed ownership questions |
+| Generic working branch versus SDD publication (#856 review) | 15 | Three late/initial/third-round/reroute route families plus stale source, published-owner precedence and validated-draft source/routing |
+| **Total** | **259** | No case counted twice |
+
+The #856 correction reserves **83 new distinct deterministic cases**: 28 original route/
+continuation cases, 29 qualification-assessment cases, 11 actual probe
+response-handling cases and 15 working-branch/publication cases. The older rows sum to
+176; this amendment reconciles the previously stale prose/total and adds 83
+without counting existing assertions or model repetitions as new cases.
+The floor is a requirement, not a claim that every historical case was rerun by
+the optional qualification probe.
+
+
+The subsequent working-branch review expands a separate prospectively frozen
+cohort to fifteen SDK scenarios: the unchanged original twelve plus three
+continuations where a generic issue branch becomes configured after the first
+question card. Declare three complete baseline and three complete fixed trials
+before changing production. Require 15/15 correct, focused ownership questions
+for ambiguity/conflict, and zero invalid plans in every trial and cohort. The
+original descriptor, all earlier trials and floors remain immutable. The owned
+fictional Git fixture receives a same-commit local branch alias only; its file
+tree and selected immutable SHA remain unchanged. Capture actual SDK requests,
+retain every prediction, and use explicit agent assessments for the two question
+scenarios in each trial. Additional request-equivalence captures cover branches
+present from initial clarification without claiming a historical provider replay.
+
+The completed supplement retains baseline scores 14/15 in each trial, first
+working-fix scores 14/15,15/15,15/15 and global-example revision scores 15/15,15/15,
+13/15. Those cohorts fail the unchanged per-trial floor. Contextual explanations
+of the actual recorded update/companion/new operation then pass 15/15 in all three
+trials, zero invalid plans. All ownership-question verdicts use explicit agent
+assessments. Initial-branch and late-branch captures have equal serialized
+application requests after correction; full provider stdin is not claimed equal.
+All 15 non-prompt fields and issue/answer/catalog/standard prompt tails remain
+unchanged across guidance revisions. The new semantics describe prior data only,
+never execution authority; current authorized changes retain precedence.
+
+The fifteen new deterministic cases reproduce 13 failures before the correction
+and preserve two successful publication/routing controls. All 170 cases in that
+route/source suite pass after correction. One older replay test is reconciled to
+check actual source/link/idempotence without falsely treating a generic branch as
+SDD publication; explicit first-publication failure/recovery tests retain their
+previous semantics. Complete evidence and the exact campaign-specific audit
+coordinator are registered under `quality/sdd/evidence/issue-856-working-branch*`.
+The full stable-catalog run passes 902 suites/17,704 tests with 35 pre-existing
+skips and 267 extension tests. All 31 changed coverable runtime lines are hit
+without partials locally; new-head review, technical checks and official Codecov
+remain required before merge. A prior catalog-equivalence failure came from
+updating evidence metadata during the run; the complete rerun held all 19 inputs
+byte-stable and passed without changing the validator or test.
+
+Before production changes, freeze twelve authored classification scenarios and
+exactly three baseline trials plus three trials for each distinct candidate.
+Capture actual use-case analysis requests and execute them through the real
+findings port in a matching immutable, owned Git fixture. Keep reference verdicts
+outside input. Codex/gpt-6-luna/medium stays fixed. Require every resolved tuple
+to match, every ambiguous/conflicting request to ask ownership clarification,
+and zero schema/semantic-invalid plans in each trial and the complete cohort.
+Retain all outputs/aborts; do not replace failures, tune references or lower
+floors after measuring. Product questions unrelated to resolved ownership may
+remain; classification success is not draft/publication or whole consumer
+acceptance. No hidden historical prompt replay or population guarantee follows.
+
+
+Initial #856 qualification on 2026-11-04 at `19396c58`: all 28 route cases and the
+127 existing cases in that suite pass; the full run passes 900 suites/17,649
+tests with 35 pre-existing skips. The 267 extension tests retain 100% coverage.
+All 14 modified coverable runtime lines are covered without partials locally;
+remote Codecov and current-head native review/CI remain required for merge.
+
+| Measured runtime | Correct per twelve-case trial | Invalid plans per trial | Cohort acceptance |
+|---|---|---|---|
+| Unchanged baseline | 6, 6, 7 | 4, 3, 2 | Failed |
+| First context/guidance candidate | 12, 11, 12 | 0, 1, 0 | Failed; retained |
+| Revised action/owner/path consistency guidance | 12, 12, 12 | 0, 0, 0 | Passed all 36 |
+
+The first candidate's rejected route used `update` for a new, unregistered
+publication despite its reason requesting a companion. A general pre-response
+consistency check addresses that contradiction without coercing parser output.
+The revised cohort was declared before that runtime change; fixtures, reference
+verdicts, model/effort and acceptance floors stayed fixed. Complete compact
+observations, source identities, limits and hashes for every raw prediction are
+in `quality/sdd/evidence/issue-856.json`; optional reproduction is documented in
+`quality/sdd/README.md`. This does not prove the unknown historical payload or
+consumer publication now succeeds. The original selected consumer catalogs and
+four original-parser controls are separate from the fictional model fixture.
+
+
+PR #885 review found that the original question scorer checked broad words rather
+than the declared focused-ownership criterion. Those legacy scores remain
+immutable historical observations and are not sufficient acceptance evidence.
+The correction requires an explicit semantic assessment bound to the exact trial,
+case, whole response digest, question ID/text and expected decision. Missing or
+invalid assessment blocks acceptance; conflict cases additionally require an
+explicit conflict assessment. A date or unrelated path cannot pass automatically.
+This assessment is offline agent evidence, not human review or native approval;
+the Action question schema and public runtime contract do not change.
+
+All eighteen actual ownership questions were read against the unchanged criterion,
+including the conflicting registered/requested owner and path. All nine retained
+trials were re-scored without new model queries or changed raw responses; counts
+in the table remain unchanged. An acceptable question never rescues an invalid
+plan. Exact questions, assessor rationales and original file identities are in
+`quality/sdd/evidence/issue-856-ownership-assessments.json`. The new scorer's 29
+regressions pass with 100% lines/statements/branches/functions; post-finding full qualification passes 901 suites/17,678 tests with 35
+pre-existing skips plus 267 extension tests. All 27 modified coverable lines
+are covered without partials locally. New-head remote controls and official
+Codecov remain required before merge.
+
+
+A subsequent low-severity review identified an absent provider response reaching
+question access and response hashing after parsing had failed. The actual probe
+assessor now records invalid plans before attempting either operation. Its module
+can be imported for regression tests without executing a campaign. Eleven tests
+exercise undefined, null, primitive, malformed and array responses plus valid
+object/string tuples and the explicit semantic assessment path. A replay of all
+nine retained trials preserves every earlier metric and raw file without new
+model calls. No missing response occurred in those historical trials; this is
+separate failure-handling evidence. Full validation of this correction passes 902 suites/17,689 tests with 35
+pre-existing skips and 267 extension tests. All 27 modified coverable runtime
+lines remain covered without partials locally. New-head native controls and
+official Codecov remain required.
 
 The Windows adapter fixture MUST inject a destination creation immediately
 before the no-replace operation, assert that the operation fails with the

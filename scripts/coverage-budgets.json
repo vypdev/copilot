@@ -1496,6 +1496,34 @@
         }
       ],
       "successMessage": "Bugbot JSON value guidance: PASS (100% lines/statements/functions/branches)"
+    },
+    {
+      "name": "SDD ownership planning context",
+      "missingEntryLabel": "SDD ownership planning context",
+      "rules": [
+        {
+          "files": [
+            "src/application/policies/sdd_ownership_prompt_policy.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        }
+      ],
+      "successMessage": "SDD ownership planning context: PASS (100% lines/statements/functions/branches)"
+    },
+    {
+      "name": "SDD ownership question assessment",
+      "missingEntryLabel": "SDD ownership question assessment",
+      "rules": [
+        {
+          "files": [
+            "src/tooling/sdd_ownership_question_scoring.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        }
+      ],
+      "successMessage": "SDD ownership question assessment: PASS (100% lines/statements/functions/branches)"
     }
   ]
 }
