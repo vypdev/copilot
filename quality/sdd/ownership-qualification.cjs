@@ -5,6 +5,7 @@
 // Historical results and all cohort outcomes: quality/sdd/evidence/issue-856.json.
 const fs=require('node:fs'),path=require('node:path'),cp=require('node:child_process'),os=require('node:os'),crypto=require('node:crypto'),ts=require('typescript');
 const SDK=process.cwd(),OUT=path.join(SDK,'.tmp/bug-fix-evidence/856');const command=process.argv[2],variant=process.argv[3];
+const scoringSource=path.resolve(__dirname,'../../src/tooling/sdd_ownership_question_scoring.ts');
 const digest=v=>crypto.createHash('sha256').update(v).digest('hex');const read=p=>JSON.parse(fs.readFileSync(p,'utf8'));const write=(p,v)=>fs.writeFileSync(p,JSON.stringify(v,null,2)+'\n');
 const executable='/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex';
 const configuration={provider:'codex',model:'gpt-6-luna',effort:'medium',executable};
@@ -29,7 +30,7 @@ const cases=[
  {id:'ambiguous-existing-owner',input:{body:'Add acceptance criteria to an existing publication, but household-identity or application-experience could own them. No owner or target has been selected. Ask the maintainer to choose the publication before drafting.'},expected:{ownershipQuestion:true}},
  {id:'contradictory-owner-path',input:{body:'Update specs/household-administration.md under delivery, although that path may belong to another catalog owner. Do not silently override either value: ask the maintainer to resolve this ownership conflict before drafting.'},expected:{ownershipQuestion:true}},
 ];
-function installSdkLoader(){require.extensions['.ts']=(module,filename)=>{if(!filename.startsWith(SDK+path.sep+'src'+path.sep))throw Error('Only reviewed SDK source may be compiled');module._compile(ts.transpileModule(fs.readFileSync(filename,'utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS,esModuleInterop:true}}).outputText,filename);};}
+function installSdkLoader(){require.extensions['.ts']=(module,filename)=>{if(!filename.startsWith(SDK+path.sep+'src'+path.sep)&&filename!==scoringSource)throw Error('Only reviewed SDK source and the exact qualification policy may be compiled');module._compile(ts.transpileModule(fs.readFileSync(filename,'utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS,esModuleInterop:true}}).outputText,filename);};}
 function prepare(){
  const expectedBase='c0e7a130e06f2105034b149c0b479dc4eebc70ac';
  const baselineFiles=['src/application/usecases/sdd/pre_branch_sdd_gate_use_case.ts','src/domain/pre_branch_sdd.ts','src/data/repository/ai/findings_agent_adapter.ts','src/infrastructure/composition/agent_capability_composition_root.ts'];
@@ -73,16 +74,32 @@ async function run(){
   if(variant==='baseline')for(const [file,hash] of Object.entries(freeze.sourceHashes))if(digest(fs.readFileSync(path.join(SDK,file)))!==hash)throw Error('Production changed before baseline');
   const sourceFiles=[...Object.keys(freeze.sourceHashes),...(variant!=='baseline'?['src/application/policies/sdd_ownership_prompt_policy.ts']:[])];const requests={};for(const scenario of descriptor.cases)requests[scenario.id]=await capture(scenario.input,fixture);write(dest,{at:new Date().toISOString(),requests,sourceHashes:Object.fromEntries(sourceFiles.map(p=>[p,digest(fs.readFileSync(path.join(SDK,p)))])),scope:'Actual SDK use-case requests captured through in-memory ports; neither scripted stop responses nor reference verdicts are actual model predictions.'});console.log({captured:variant,cases:Object.keys(requests).length});return;
  }
- if(command!=='run'||!/^(baseline|candidate|revised)-[123]$/.test(variant))throw Error('Expected declared trial');const cohort=variant.split('-')[0],identity=path.join(OUT,variant+'-sdd-identity.json');if(fs.existsSync(identity))throw Error('Never replace an attempted trial');
- const captured=read(path.join(OUT,cohort+'-analysis-requests.json'));for(const [file,hash] of Object.entries(captured.sourceHashes))if(digest(fs.readFileSync(path.join(SDK,file)))!==hash)throw Error('Measured source changed');
- const {createFindingsQueryPort}=require(path.join(SDK,'src/infrastructure/composition/agent_capability_composition_root.ts'));const {parseSddPlan}=require(path.join(SDK,'src/domain/pre_branch_sdd.ts'));const agent=createFindingsQueryPort();
+ if(!['run','score'].includes(command)||!/^(baseline|candidate|revised)-[123]$/.test(variant))throw Error('Expected declared trial');const cohort=variant.split('-')[0],identity=path.join(OUT,variant+'-sdd-identity.json');if(command==='run'&&fs.existsSync(identity))throw Error('Never replace an attempted trial');
+ const captured=read(path.join(OUT,cohort+'-analysis-requests.json'));for(const [file,hash] of Object.entries(captured.sourceHashes))if((command==='run'||file==='src/domain/pre_branch_sdd.ts')&&digest(fs.readFileSync(path.join(SDK,file)))!==hash)throw Error('Measured source changed');
+ const {parseSddPlan}=require(path.join(SDK,'src/domain/pre_branch_sdd.ts'));
+ const {scoreOwnershipQuestion}=require(scoringSource);
+ const assessmentPath=path.join(OUT,variant+'-sdd-assessments.json');const assessments=fs.existsSync(assessmentPath)?read(assessmentPath):{};
+ function assess(scenario,response){
+  let plan,error;try{let value=response;if(typeof value==='string')value=JSON.parse(value);plan=parseSddPlan(value,new Map(fixture.capabilities.map(c=>[c.id,c.specs])));}catch(e){error=e.reason||e.message;}
+  const expect=scenario.expected;let ownershipQuestionScore;
+  if(expect.ownershipQuestion)ownershipQuestionScore=scoreOwnershipQuestion({trialId:variant,caseId:scenario.id,responseSha256:digest(JSON.stringify(response)),expectedIntent:scenario.id==='contradictory-owner-path'?'resolve-owner-path-conflict':'select-existing-owner',questions:plan?plan.questions:(response.questions||[])},assessments[scenario.id]);
+  const correct=!!plan&&(expect.tuple?Object.entries(expect.tuple).every(([k,v])=>plan[k]===v):ownershipQuestionScore==='accepted');
+  return {id:scenario.id,response,plan,error,correct,ownershipQuestionScore};
+ }
+ if(command==='score'){
+  const file=path.join(OUT,variant+'-sdd-semantic-score.json');if(fs.existsSync(file))throw Error('Never overwrite completed semantic assessment');
+  const prior=read(path.join(OUT,variant+'-sdd-predictions.json'));if(prior.variant!==variant)throw Error('Wrong retained trial');
+  const results=descriptor.cases.map(scenario=>{const matches=prior.results.filter(r=>r.id===scenario.id);if(matches.length!==1)throw Error('Missing or duplicate retained prediction');return assess(scenario,matches[0].response);});
+  if(results.some(r=>r.ownershipQuestionScore&&r.ownershipQuestionScore!=='accepted'&&r.ownershipQuestionScore!=='rejected'))throw Error('Explicit semantic assessments are incomplete or invalid; no qualified score written');
+  const score={cases:results.length,correct:results.filter(r=>r.correct).length,invalid:results.filter(r=>r.error).length,passed:results.length===12&&results.every(r=>r.correct)&&results.every(r=>!r.error)};
+  write(file,{variant,score,assessmentSha256:digest(fs.readFileSync(assessmentPath)),predictionsSha256:digest(fs.readFileSync(path.join(OUT,variant+'-sdd-predictions.json'))),scoringSourceSha256:digest(fs.readFileSync(scoringSource)),method:'Explicit Codex contributor semantic assessments, not automatic keyword matching, human review or native approval. All original scores and raw predictions retained.',results});console.log({variant,...score});return;
+ }
+ const {createFindingsQueryPort}=require(path.join(SDK,'src/infrastructure/composition/agent_capability_composition_root.ts'));const agent=createFindingsQueryPort();
  write(identity,{at:new Date().toISOString(),variant,fixtureCommit:fixture.baseSha,fixture:fixture.root,sourceHashes:captured.sourceHashes,requestsSha256:digest(fs.readFileSync(path.join(OUT,cohort+'-analysis-requests.json'))),descriptorSha256:freeze.descriptorSha256,node:process.version,typescript:ts.version,configuration,fullProviderStdinCaptured:false});
  process.chdir(fixture.root);const results=[];
  for(const scenario of descriptor.cases){
   const request=captured.requests[scenario.id];const response=await agent.query(request);write(path.join(OUT,variant+'-sdd-progress.json'),{completed:results.length,lastCase:scenario.id,response});
-  let plan,error;try{let value=response;if(typeof value==='string')value=JSON.parse(value);plan=parseSddPlan(value,new Map(fixture.capabilities.map(c=>[c.id,c.specs])));}catch(e){error=e.reason||e.message;}
-  const expect=scenario.expected;const correct=!!plan&&(expect.tuple?Object.entries(expect.tuple).every(([k,v])=>plan[k]===v):plan.questions.some(q=>/own|capabilit|publication|document|path/i.test(q.text)));
-  results.push({id:scenario.id,response,plan,error,correct});write(path.join(OUT,variant+'-sdd-predictions.json'),{variant,results});
+  results.push(assess(scenario,response));write(path.join(OUT,variant+'-sdd-predictions.json'),{variant,results});
  }
  const score={cases:results.length,correct:results.filter(r=>r.correct).length,invalid:results.filter(r=>r.error).length,passed:results.length===12&&results.every(r=>r.correct)&&results.every(r=>!r.error)};write(path.join(OUT,variant+'-sdd-score.json'),score);console.log({variant,...score});
 }

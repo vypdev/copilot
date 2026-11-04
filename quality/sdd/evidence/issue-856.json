@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "issue": 856,
   "date": "2026-11-04",
-  "status": "All three revised model trials, full Jest/extension coverage and static documentation/type/lint gates pass locally. Native current-head CI/review and official Codecov remain required after publication.",
+  "status": "Post-finding local qualification passes: 901 Jest suites/17,678 tests, 57 new regressions, 267 extension tests, exhaustive policy coverage, all 27 changed coverable lines hit with zero partials. Normal hooks and new-head native review/CI/official Codecov remain required.",
   "sourceBase": "c0e7a130e06f2105034b149c0b479dc4eebc70ac",
   "reportedCases": {
     "existingUpdate": {
@@ -141,12 +141,15 @@
     "scope": "Actual SDK use case and in-memory ports. No real provider execution, Git source snapshot preparation or native response replay."
   },
   "deterministicTests": {
-    "newDistinct": 28,
+    "newDistinct": 57,
     "existing": 127,
-    "targetedPassing": 155,
     "mapping": "src/application/usecases/steps/issue/__tests__/pre_branch_sdd_gate_use_case.test.ts: tests prefixed 856:",
     "baselineFirstFourNewFailures": 4,
-    "assertionCorrection": "Three additional route-change assertions incorrectly demanded an empty questions array despite deliberately returning a blocking question. Corrected to check the selected tuple/reason and one current question; no runtime, model case, scorer or floor changed."
+    "assertionCorrection": "Three additional route-change assertions incorrectly demanded an empty questions array despite deliberately returning a blocking question. Corrected to check the selected tuple/reason and one current question; no runtime, model case, scorer or floor changed.",
+    "qualificationScorerNewDistinct": 29,
+    "routeCases": 28,
+    "routeSuitePassing": 155,
+    "qualificationScorerPassing": 29
   },
   "modelQualification": {
     "fixture": {
@@ -503,12 +506,6 @@
     "trials": [
       {
         "id": "baseline-1",
-        "score": {
-          "cases": 12,
-          "correct": 6,
-          "invalid": 4,
-          "passed": false
-        },
         "predictionsSha256": "41c5d72c3fdf1736219ed5d40ff0c477a9a93287caf34e108885a87c54dcf90e",
         "identity": {
           "at": "2026-11-04T07:10:29.770Z",
@@ -699,16 +696,24 @@
               "Q2"
             ]
           }
-        ]
+        ],
+        "legacyKeywordScore": {
+          "cases": 12,
+          "correct": 6,
+          "invalid": 4,
+          "passed": false
+        },
+        "semanticScore": {
+          "cases": 12,
+          "correct": 6,
+          "invalid": 4,
+          "passed": false
+        },
+        "semanticAssessmentSha256": "3319eb275d4283fc29d74cc9a3ad9cd1a75e00c0d75b3f819e57c5a2e36d32ca",
+        "semanticScoringSourceSha256": "b8bea9b1ab82d48e4e5d06234c5d9ac60e371201132bf00dbecae3da85beca70"
       },
       {
         "id": "baseline-2",
-        "score": {
-          "cases": 12,
-          "correct": 6,
-          "invalid": 3,
-          "passed": false
-        },
         "predictionsSha256": "3c38249e3ba571d1850249821bdbbac71f57af9cce05f755c3301c2220423bd4",
         "identity": {
           "at": "2026-11-04T07:13:40.627Z",
@@ -910,16 +915,24 @@
               "Q8"
             ]
           }
-        ]
+        ],
+        "legacyKeywordScore": {
+          "cases": 12,
+          "correct": 6,
+          "invalid": 3,
+          "passed": false
+        },
+        "semanticScore": {
+          "cases": 12,
+          "correct": 6,
+          "invalid": 3,
+          "passed": false
+        },
+        "semanticAssessmentSha256": "edfbc4005fb4b5b778237a9f8f043ca298a2aa346f45301e8561297006668f98",
+        "semanticScoringSourceSha256": "b8bea9b1ab82d48e4e5d06234c5d9ac60e371201132bf00dbecae3da85beca70"
       },
       {
         "id": "baseline-3",
-        "score": {
-          "cases": 12,
-          "correct": 7,
-          "invalid": 2,
-          "passed": false
-        },
         "predictionsSha256": "5284798a1a8624b67783bfa99357aec7c0f504692eafbf7f9411524b8cfe298a",
         "identity": {
           "at": "2026-11-04T07:16:44.822Z",
@@ -1110,16 +1123,24 @@
               "Q2"
             ]
           }
-        ]
+        ],
+        "legacyKeywordScore": {
+          "cases": 12,
+          "correct": 7,
+          "invalid": 2,
+          "passed": false
+        },
+        "semanticScore": {
+          "cases": 12,
+          "correct": 7,
+          "invalid": 2,
+          "passed": false
+        },
+        "semanticAssessmentSha256": "e15377156f03dc2d8561b7a04e84145348f71822063c27a011a75161e9f67f1e",
+        "semanticScoringSourceSha256": "b8bea9b1ab82d48e4e5d06234c5d9ac60e371201132bf00dbecae3da85beca70"
       },
       {
         "id": "candidate-1",
-        "score": {
-          "cases": 12,
-          "correct": 12,
-          "invalid": 0,
-          "passed": true
-        },
         "predictionsSha256": "fc329479c5f171f03922311b96a675c7afd2a267d2a62d9479d53b17804817eb",
         "identity": {
           "at": "2026-11-04T07:32:37.194Z",
@@ -1329,16 +1350,24 @@
               "Q1"
             ]
           }
-        ]
+        ],
+        "legacyKeywordScore": {
+          "cases": 12,
+          "correct": 12,
+          "invalid": 0,
+          "passed": true
+        },
+        "semanticScore": {
+          "cases": 12,
+          "correct": 12,
+          "invalid": 0,
+          "passed": true
+        },
+        "semanticAssessmentSha256": "bd0bbd0609ce1fc295cbb6b125e04ed3b7a1f1c0903a6e834b73d17d7cb933ce",
+        "semanticScoringSourceSha256": "b8bea9b1ab82d48e4e5d06234c5d9ac60e371201132bf00dbecae3da85beca70"
       },
       {
         "id": "candidate-2",
-        "score": {
-          "cases": 12,
-          "correct": 11,
-          "invalid": 1,
-          "passed": false
-        },
         "predictionsSha256": "d4d4cdecde6a894c442b3a600ebd740d41a398846120208dae3f0ba7e1194794",
         "identity": {
           "at": "2026-11-04T07:36:01.269Z",
@@ -1524,16 +1553,24 @@
               "Q1"
             ]
           }
-        ]
+        ],
+        "legacyKeywordScore": {
+          "cases": 12,
+          "correct": 11,
+          "invalid": 1,
+          "passed": false
+        },
+        "semanticScore": {
+          "cases": 12,
+          "correct": 11,
+          "invalid": 1,
+          "passed": false
+        },
+        "semanticAssessmentSha256": "263c6b073b55eca648d21f1ddabeb6139587396c016f2f855b9a2fbf27715165",
+        "semanticScoringSourceSha256": "b8bea9b1ab82d48e4e5d06234c5d9ac60e371201132bf00dbecae3da85beca70"
       },
       {
         "id": "candidate-3",
-        "score": {
-          "cases": 12,
-          "correct": 12,
-          "invalid": 0,
-          "passed": true
-        },
         "predictionsSha256": "ae41e8f9a70368c5ccd0cb65e7c267bec25b6cf524a57e53276c11967bf896e3",
         "identity": {
           "at": "2026-11-04T07:39:02.848Z",
@@ -1736,16 +1773,24 @@
               "Q1"
             ]
           }
-        ]
-      },
-      {
-        "id": "revised-1",
-        "score": {
+        ],
+        "legacyKeywordScore": {
           "cases": 12,
           "correct": 12,
           "invalid": 0,
           "passed": true
         },
+        "semanticScore": {
+          "cases": 12,
+          "correct": 12,
+          "invalid": 0,
+          "passed": true
+        },
+        "semanticAssessmentSha256": "390b75cad44d075b3ca6f65221febaad5735a25b3ea80f4a26dd4766c619b7bf",
+        "semanticScoringSourceSha256": "b8bea9b1ab82d48e4e5d06234c5d9ac60e371201132bf00dbecae3da85beca70"
+      },
+      {
+        "id": "revised-1",
         "predictionsSha256": "2713a4c79d47fef62a9c32862a6702dc131aefd68fcb802607a68475b96a0c69",
         "identity": {
           "at": "2026-11-04T07:45:36.642Z",
@@ -1961,16 +2006,24 @@
               "Q1"
             ]
           }
-        ]
-      },
-      {
-        "id": "revised-2",
-        "score": {
+        ],
+        "legacyKeywordScore": {
           "cases": 12,
           "correct": 12,
           "invalid": 0,
           "passed": true
         },
+        "semanticScore": {
+          "cases": 12,
+          "correct": 12,
+          "invalid": 0,
+          "passed": true
+        },
+        "semanticAssessmentSha256": "e55ea7494b8ba1019ef3a201f9c9e965ca135e47a36a00eb4fc215d11d042574",
+        "semanticScoringSourceSha256": "b8bea9b1ab82d48e4e5d06234c5d9ac60e371201132bf00dbecae3da85beca70"
+      },
+      {
+        "id": "revised-2",
         "predictionsSha256": "47d1b646dfba0b86bf906323e18268272c72742c8118a898f0d4115d174e0f09",
         "identity": {
           "at": "2026-11-04T07:48:28.616Z",
@@ -2184,16 +2237,24 @@
               "Q1"
             ]
           }
-        ]
-      },
-      {
-        "id": "revised-3",
-        "score": {
+        ],
+        "legacyKeywordScore": {
           "cases": 12,
           "correct": 12,
           "invalid": 0,
           "passed": true
         },
+        "semanticScore": {
+          "cases": 12,
+          "correct": 12,
+          "invalid": 0,
+          "passed": true
+        },
+        "semanticAssessmentSha256": "e3dc9d42758ae1396bdb2640a549a3ac183868ca48e6c3e0cc6d4440ea7cca3f",
+        "semanticScoringSourceSha256": "b8bea9b1ab82d48e4e5d06234c5d9ac60e371201132bf00dbecae3da85beca70"
+      },
+      {
+        "id": "revised-3",
         "predictionsSha256": "b1c92dcf6c6cdd478b03f713f2d31db97cdf4445dddb95ea50f3fec8db9cd1cf",
         "identity": {
           "at": "2026-11-04T07:52:02.983Z",
@@ -2386,7 +2447,21 @@
               "Q1"
             ]
           }
-        ]
+        ],
+        "legacyKeywordScore": {
+          "cases": 12,
+          "correct": 12,
+          "invalid": 0,
+          "passed": true
+        },
+        "semanticScore": {
+          "cases": 12,
+          "correct": 12,
+          "invalid": 0,
+          "passed": true
+        },
+        "semanticAssessmentSha256": "3002e9c49508885f8b415b698e1655b64001df746a61407e815cf3c17bc2291a",
+        "semanticScoringSourceSha256": "b8bea9b1ab82d48e4e5d06234c5d9ac60e371201132bf00dbecae3da85beca70"
       }
     ],
     "artifactIdentities": {
@@ -2449,9 +2524,34 @@
       },
       "scope": "Frozen authored classification acceptance only; no hidden native payload replay or consumer publication."
     },
-    "versionedDriverSafetyGuards": "The versioned driver adds preparation checks for the exact clean baseline source. Measured capture/query/cases/scoring are unchanged; archived original driver and hashes are retained."
+    "versionedDriverSafetyGuards": "Exact clean baseline preparation guard; explicit offline assessment replaces broad keyword auto-acceptance. Source/runtime/fixture/request capture unchanged; no new model queries during rescoring.",
+    "semanticAssessmentEvidence": "quality/sdd/evidence/issue-856-ownership-assessments.json",
+    "legacyScorerLimitation": "The original broad-keyword check was insufficient. Legacy scores alone are not proof of focused questions; explicit agent semantic assessments now bind every retained ownership question and all nine trials are re-scored. Model runtime, reference decisions and raw responses unchanged.",
+    "legacyScorerNegativeControls": {
+      "sourceHead": "19396c58d4dd3604bb893d688a80b9be091fd20d",
+      "file": "quality/sdd/ownership-qualification.cjs",
+      "expressionSha256": "c30e8ec80c057cfa4483433469af31f767348dfd8a518402b86389f1d7dd4f85",
+      "observations": [
+        {
+          "text": "What publication date is planned?",
+          "legacyAccepted": true
+        },
+        {
+          "text": "Which path should hold the screenshots?",
+          "legacyAccepted": true
+        }
+      ],
+      "scope": "Actual retained scoring expression with two authored unrelated questions. No model/provider, consumer or publication execution. These are the same two new unit-regression scenarios, not added model cases."
+    },
+    "modelSourceHashesUnchangedAfterFinding": {
+      "src/application/usecases/sdd/pre_branch_sdd_gate_use_case.ts": "40428f01885c6227862a2c6474a96c5520f6f002448159dfd2e036b5d77d8604",
+      "src/domain/pre_branch_sdd.ts": "636db20b18cd7b694c2d68e2d5fc53f5387daae90bcb231c98c2c2534d6125c3",
+      "src/data/repository/ai/findings_agent_adapter.ts": "2bdbcc4a104fa3898d8906139ba7b543df2c07dca69cc199708b89261a574509",
+      "src/infrastructure/composition/agent_capability_composition_root.ts": "501ff73a38aa8cb6c78bc21b34f679538df4104f3c3eaea9578648830f82a889",
+      "src/application/policies/sdd_ownership_prompt_policy.ts": "5ce9c76dd2114b7f2067c0324964eb28e94fb6e7545b43ee7dd9d59c3c70b60a"
+    }
   },
-  "localSuite": {
+  "initialLocalSuite": {
     "numPassedTestSuites": 900,
     "numFailedTestSuites": 0,
     "numPassedTests": 17649,
@@ -2506,6 +2606,64 @@
         "functions": 100
       }
     },
-    "newPurePolicy": "100% lines/statements/branches/functions; exhaustive coverage budget added without lowering any threshold."
+    "newPurePolicy": "100% lines/statements/branches/functions; exhaustive coverage budget added without lowering any threshold.",
+    "sourceHead": "19396c58d4dd3604bb893d688a80b9be091fd20d",
+    "scope": "Initial full qualification before scorer remediation; post-finding full suite pending."
+  },
+  "localSuite": {
+    "numPassedTestSuites": 901,
+    "numFailedTestSuites": 0,
+    "numPassedTests": 17678,
+    "numFailedTests": 0,
+    "numPendingTests": 35,
+    "success": true,
+    "coverage": {
+      "lines": {
+        "total": 34960,
+        "covered": 34359,
+        "skipped": 0,
+        "pct": 98.28
+      },
+      "statements": {
+        "total": 40835,
+        "covered": 39860,
+        "skipped": 0,
+        "pct": 97.61
+      },
+      "functions": {
+        "total": 7292,
+        "covered": 7156,
+        "skipped": 0,
+        "pct": 98.13
+      },
+      "branches": {
+        "total": 34474,
+        "covered": 33003,
+        "skipped": 0,
+        "pct": 95.73
+      },
+      "branchesTrue": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "changedRuntime": {
+      "coverable": 27,
+      "hit": 27,
+      "miss": 0,
+      "partial": 0
+    },
+    "extension": {
+      "tests": 267,
+      "files": 30,
+      "coveragePercent": {
+        "lines": 100,
+        "statements": 100,
+        "branches": 100,
+        "functions": 100
+      }
+    }
   }
 }

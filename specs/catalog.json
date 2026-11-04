@@ -1853,7 +1853,8 @@
         "src/domain/sdd_repository_reference.ts",
         "src/domain/sdd_visible_references.ts",
         "src/domain/sdd_case_reference.ts",
-        "src/application/policies/sdd_ownership_prompt_policy.ts"
+        "src/application/policies/sdd_ownership_prompt_policy.ts",
+        "src/tooling/sdd_ownership_question_scoring.ts"
       ],
       "tests": [
         "src/domain/__tests__/issue_workflow_runtime_policy.test.ts",
@@ -1930,7 +1931,9 @@
         "src/domain/__tests__/sdd_repository_reference.test.ts",
         "src/domain/__tests__/sdd_case_reference.test.ts",
         "quality/sdd/ownership-qualification.cjs",
-        "quality/sdd/evidence/issue-856.json"
+        "quality/sdd/evidence/issue-856.json",
+        "src/tooling/__tests__/sdd_ownership_question_scoring.test.ts",
+        "quality/sdd/evidence/issue-856-ownership-assessments.json"
       ],
       "documentation": [
         "docs/issues/branch-management.mdx",

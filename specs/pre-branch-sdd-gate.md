@@ -648,7 +648,7 @@ authority is explicit; placeholder repository links and self-owned new companion
 are not supported evidence. Authorized retained answers resolve their decisions
 across rounds. These inputs remain data and grant no model or workspace authority.
 
-The following **204 distinct cases** are a floor derived from eligibility,
+The following **233 distinct cases** are a floor derived from eligibility,
 clarification, source freshness, publication races, partial writes, and SDD
 ownership/validation.
 
@@ -674,11 +674,13 @@ ownership/validation.
 | Compact generation targets | 2 | Update and companion target size, unchanged hard schema bounds, original resolved requirements and shared two-attempt ceiling |
 | Blocked preparation and safe diagnostics (#714) | 25 | Fourteen cause/recovery, publication/idempotency, privacy/ownership and retention cases, seven publication-freshness cases and four existing-question recovery/race cases; locale and diagnostic boundary matrices are additional |
 | Ownership intent and proposal delivery (#856) | 28 | Six route/continuation delivery, eight freshness/authority, four published/clarified transition, four original-catalog guard and six prompt/safety/compatibility cases |
-| **Total** | **204** | No case counted twice |
+| Ownership qualification assessment (#856 review) | 29 | Unrelated date/path questions, absent/malformed/blank assessments, exact trial/response/case/question binding, negative verdict and explicit conflict assessment |
+| **Total** | **233** | No case counted twice |
 
-The #856 correction reserves **28 new distinct deterministic cases**. The older
-rows sum to 176; this amendment reconciles the previously stale prose/total and
-adds 28 without counting existing assertions or model repetitions as new cases.
+The #856 correction reserves **57 new distinct deterministic cases**: 28 route/
+continuation cases and 29 qualification-assessment cases. The older rows sum to
+176; this amendment reconciles the previously stale prose/total and adds 57
+without counting existing assertions or model repetitions as new cases.
 The floor is a requirement, not a claim that every historical case was rerun by
 the optional qualification probe.
 
@@ -695,7 +697,7 @@ remain; classification success is not draft/publication or whole consumer
 acceptance. No hidden historical prompt replay or population guarantee follows.
 
 
-Local #856 qualification on 2026-11-04: all 28 new deterministic cases and the
+Initial #856 qualification on 2026-11-04 at `19396c58`: all 28 route cases and the
 127 existing cases in that suite pass; the full run passes 900 suites/17,649
 tests with 35 pre-existing skips. The 267 extension tests retain 100% coverage.
 All 14 modified coverable runtime lines are covered without partials locally;
@@ -717,6 +719,28 @@ in `quality/sdd/evidence/issue-856.json`; optional reproduction is documented in
 `quality/sdd/README.md`. This does not prove the unknown historical payload or
 consumer publication now succeeds. The original selected consumer catalogs and
 four original-parser controls are separate from the fictional model fixture.
+
+
+PR #885 review found that the original question scorer checked broad words rather
+than the declared focused-ownership criterion. Those legacy scores remain
+immutable historical observations and are not sufficient acceptance evidence.
+The correction requires an explicit semantic assessment bound to the exact trial,
+case, whole response digest, question ID/text and expected decision. Missing or
+invalid assessment blocks acceptance; conflict cases additionally require an
+explicit conflict assessment. A date or unrelated path cannot pass automatically.
+This assessment is offline agent evidence, not human review or native approval;
+the Action question schema and public runtime contract do not change.
+
+All eighteen actual ownership questions were read against the unchanged criterion,
+including the conflicting registered/requested owner and path. All nine retained
+trials were re-scored without new model queries or changed raw responses; counts
+in the table remain unchanged. An acceptable question never rescues an invalid
+plan. Exact questions, assessor rationales and original file identities are in
+`quality/sdd/evidence/issue-856-ownership-assessments.json`. The new scorer's 29
+regressions pass with 100% lines/statements/branches/functions; post-finding full qualification passes 901 suites/17,678 tests with 35
+pre-existing skips plus 267 extension tests. All 27 modified coverable lines
+are covered without partials locally. New-head remote controls and official
+Codecov remain required before merge.
 
 The Windows adapter fixture MUST inject a destination creation immediately
 before the no-replace operation, assert that the operation fails with the
