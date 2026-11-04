@@ -7,6 +7,28 @@ description: When Bugbot runs, where findings appear, severity, comment limit, a
 
 This page describes **when** Bugbot runs, **where** findings are published, and how **severity**, **comment limit**, and **resolved findings** work.
 
+## JSON values and reader contracts
+
+Before reporting double encoding, Bugbot traces the producer, actual decoder
+implementation, nested value and reader input contract. A decoded object can need
+serialization before a text-only reader. Encoding an outer envelope and serializing
+its nested object for another reader are different boundaries.
+
+Python `typing.cast` returns the same runtime value; it does not serialize a dict.
+A method named `decode` or a return annotation alone does not prove the result's
+shape. A decoder that actually returns JSON text can legitimately feed a text
+reader directly. Review must preserve genuine double encoding, raw objects passed
+to text readers, Python representation used as JSON and missing decode operations.
+
+A suggested replacement needs the same value/reader proof as the finding. If the
+defect is established but its replacement is not, retain the finding and omit
+unverified replacement code. Reconcile exact-source runtime counterevidence;
+unrelated or stale green checks prove neither correctness nor failure. A disproved
+premise is omitted, including informational alerts about correct code.
+
+This shared rule adds no automatic suppression, consumer exception, executor or
+historical dismissal authority. See [controlled JSON evidence and limits](/bugbot/quality-observability#json-value-regression).
+
 ## Complete statements and asynchronous updates
 
 Bugbot reads every statement before reporting a missing wait. For example,

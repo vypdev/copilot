@@ -9,6 +9,7 @@ import { BUGBOT_FIXTURE_VALUES_INSTRUCTION, BUGBOT_RECOVERY_CONTRACT_INSTRUCTION
 import { renderPythonLiteralWitnesses } from '../application/policies/bugbot_python_literal_witness_policy';
 import { BUGBOT_RESOURCE_AUTHORITY_INSTRUCTION } from '../prompts/bugbot_resource_authority';
 import { BUGBOT_ASYNC_STATEMENT_INSTRUCTION } from '../prompts/bugbot_async_statement_evidence';
+import { BUGBOT_JSON_VALUE_INSTRUCTION } from '../prompts/bugbot_json_value_evidence';
 
 import { verifyGeneratedLiteralFindings } from '../application/usecases/steps/commit/bugbot/verify_generated_literal_findings';
 
@@ -60,6 +61,8 @@ ${BUGBOT_FIXTURE_VALUES_INSTRUCTION}
 ${BUGBOT_RESOURCE_AUTHORITY_INSTRUCTION}
 
 ${BUGBOT_ASYNC_STATEMENT_INSTRUCTION}
+
+${BUGBOT_JSON_VALUE_INSTRUCTION}
 
 ${BUGBOT_EXTERNAL_FACTS_INSTRUCTION}
 

@@ -13,3 +13,7 @@ src/tooling/__tests__/fixtures/bugbot_fixture_values_probe.py text eol=lf
 src/tooling/__tests__/fixtures/bugbot_resource_boundary_probe.py text eol=lf
 src/tooling/__tests__/fixtures/bugbot_async_statement_probe.mjs text eol=lf
 src/tooling/__tests__/fixtures/bugbot_async_statement_runner.mjs text eol=lf
+
+# Fixed Python JSON boundary observations bind exact LF source bytes.
+src/tooling/__tests__/fixtures/bugbot_json_value_probe.py text eol=lf
+src/tooling/__tests__/fixtures/bugbot_json_value_runner.py text eol=lf

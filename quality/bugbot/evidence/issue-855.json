@@ -1,0 +1,1524 @@
+{
+  "schemaVersion": 1,
+  "issue": 855,
+  "date": "2026-11-04",
+  "status": "Local implementation, all three candidate trials, full coverage, package and static gates pass. Normal full hooks and current-head native CI/review/official Codecov still required after publication.",
+  "sourceBase": "d546c370231c83a8681499c9eddee66f9c555d62",
+  "ownedProbe": {
+    "path": "src/tooling/__tests__/fixtures/bugbot_json_value_probe.py",
+    "python": "3.14.6",
+    "probeSha256": "98089d60448c515c66a52da5c0dfdaa1eb642e4523f552f132554ba95c3a0adf",
+    "castIdentityObserved": true,
+    "observations": [
+      {
+        "id": "decoded_object",
+        "startLine": 45,
+        "endLine": 47,
+        "valueType": "dict",
+        "value": {
+          "revision": 1,
+          "tags": [
+            "雪",
+            null,
+            true
+          ],
+          "quoted": "\"hi\""
+        }
+      },
+      {
+        "id": "nested_outer_object",
+        "startLine": 50,
+        "endLine": 53,
+        "valueType": "dict",
+        "value": {
+          "revision": 1,
+          "tags": [
+            "雪",
+            null,
+            true
+          ],
+          "quoted": "\"hi\""
+        }
+      },
+      {
+        "id": "text_decoder",
+        "startLine": 56,
+        "endLine": 58,
+        "valueType": "dict",
+        "value": {
+          "revision": 1,
+          "tags": [
+            "雪",
+            null,
+            true
+          ],
+          "quoted": "\"hi\""
+        }
+      },
+      {
+        "id": "guarded_text_cast",
+        "startLine": 61,
+        "endLine": 65,
+        "valueType": "dict",
+        "value": {
+          "revision": 1,
+          "tags": [
+            "雪",
+            null,
+            true
+          ],
+          "quoted": "\"hi\""
+        }
+      },
+      {
+        "id": "unicode_nested_value",
+        "startLine": 68,
+        "endLine": 70,
+        "valueType": "dict",
+        "value": {
+          "revision": 1,
+          "tags": [
+            "雪",
+            null,
+            true
+          ],
+          "quoted": "\"hi\""
+        }
+      },
+      {
+        "id": "separate_serialization_levels",
+        "startLine": 73,
+        "endLine": 76,
+        "valueType": "dict",
+        "value": {
+          "revision": 1,
+          "tags": [
+            "雪",
+            null,
+            true
+          ],
+          "quoted": "\"hi\""
+        }
+      },
+      {
+        "id": "object_cast_into_text_reader",
+        "startLine": 79,
+        "endLine": 81,
+        "exception": "TypeError",
+        "message": "json-text-required"
+      },
+      {
+        "id": "text_encoded_twice",
+        "startLine": 84,
+        "endLine": 86,
+        "exception": "ValueError",
+        "message": "object-required"
+      },
+      {
+        "id": "raw_object_into_text_reader",
+        "startLine": 89,
+        "endLine": 91,
+        "exception": "TypeError",
+        "message": "json-text-required"
+      },
+      {
+        "id": "python_repr_as_json",
+        "startLine": 94,
+        "endLine": 96,
+        "exception": "JSONDecodeError",
+        "message": "Expecting property name enclosed in double quotes: line 1 column 2 (char 1)"
+      },
+      {
+        "id": "missing_inner_decode",
+        "startLine": 99,
+        "endLine": 101,
+        "exception": "ValueError",
+        "message": "object-required"
+      },
+      {
+        "id": "annotation_is_not_conversion",
+        "startLine": 104,
+        "endLine": 106,
+        "exception": "TypeError",
+        "message": "json-text-required"
+      }
+    ],
+    "runnerPath": "src/tooling/__tests__/fixtures/bugbot_json_value_runner.py",
+    "runnerSha256": "e3adb1b19f85a7c83a027760da206c7cd1c84782e4ef63188007303b02185f5b"
+  },
+  "qualification": {
+    "modelInputSha256": "2c4d319dbdd1ac9d30e8245bc5245be31b04b5b2016f0b656555f2ca13a67c4b",
+    "plan": {
+      "baselineTrials": 3,
+      "candidateTrialsPerDistinctRuntime": 3,
+      "model": "gpt-6-luna",
+      "provider": "codex",
+      "effort": "medium",
+      "aggregate": "Namespace all case IDs by trial; evaluate every completed prediction with unchanged default scorer/floors. Retain all individual failures/aborts; no replacement best sample or post-hoc reference editing.",
+      "limits": "Previous released guidance can already pass these controls. Original smart-effort incident is not reproduced by these medium-effort trials. No accuracy-population guarantee."
+    },
+    "baseline": [
+      {
+        "name": "baseline-1",
+        "identity": {
+          "startedAt": "2026-11-04T05:02:34.157906+00:00",
+          "sourceBase": "d546c370231c83a8681499c9eddee66f9c555d62",
+          "uncommittedProductionChanges": false,
+          "runtime": {
+            "provider": "codex",
+            "model": "gpt-6-luna",
+            "effort": "medium",
+            "node": "v24.20.0",
+            "cli": "codex-cli 0.164.0-alpha.11.1"
+          },
+          "workspace": "/private/tmp/copilot-855-baseline-1-459mtvyu",
+          "workspaceState": "Fresh empty owned Git root; no source/corpus/verdicts/rules copied.",
+          "cliSha256": "3fa4361ace73edc0ece68b06df2265a7ccf81b629ceee6184714358a60f7b078",
+          "sourceHashes": {
+            "src/prompts/bugbot.ts": "267e659ea9635f8b0d396856cf98cdc11d02b34ecf10f7bf8cca5b2e40595f12",
+            "src/tooling/bugbot_benchmark_runner.ts": "4f1b8a9e12924b5ba1a79600b53eb169b2b752d2719402e5d0e7524637fe402b",
+            "src/application/usecases/steps/commit/bugbot/build_bugbot_prompt.ts": "8923fb557a52e87598a9252c602f74cd0597200a4b6e61c44120847ffd5c82cb",
+            "src/application/usecases/steps/commit/bugbot/verify_generated_literal_findings.ts": "aa496a3c518e2b82fc3af842c943a902306a409a32e56c625e613b6916664474",
+            "src/application/usecases/steps/commit/bugbot/analyze_bugbot_revision_use_case.ts": "3ad7e83d0fcacc694e954e5fa9aaceb9e7a8658bd25fe521aa83850d5a5bfc64",
+            "src/application/usecases/steps/commit/bugbot/analyze_bugbot_frames.ts": "4d9f8c9df0495247483a0e89e4c19ba3e600a40816a99e751f9c05c95398b870",
+            "src/prompts/bugbot_resource_authority.ts": "6d36da57c418bbe14c77bc59da056eb94e32bd12dbe332736f68c2da267a0fa5",
+            "src/prompts/bugbot_async_statement_evidence.ts": "f6583e987d80c0935caef27f7c0fe634e47ed3e8dd3e4dfa2a6e1caafc031dba"
+          },
+          "corpusSha256": "2c4d319dbdd1ac9d30e8245bc5245be31b04b5b2016f0b656555f2ca13a67c4b",
+          "probeSha256": "98089d60448c515c66a52da5c0dfdaa1eb642e4523f552f132554ba95c3a0adf",
+          "input": "corpus.json",
+          "producerSha256": "82c0d07df6abd8cfa77a9fa635a7cdf02f548e269019e07c6e2b761295f4bf83",
+          "freeze": "freeze.json",
+          "predictions": "baseline-1-predictions.json",
+          "log": "baseline-1-benchmark.log",
+          "fullProviderStdinCaptured": false
+        },
+        "score": {
+          "metrics": {
+            "expected": 6,
+            "actual": 6,
+            "matched": 6,
+            "precision": 1,
+            "recall": 1,
+            "locationAccuracy": 1,
+            "severityAccuracy": 1,
+            "categoryAccuracy": 1,
+            "f1": 1,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "meanLineDistance": 0,
+            "confidenceBrierScore": 0
+          },
+          "violations": [],
+          "missingCases": []
+        },
+        "predictions": {
+          "schemaVersion": 1,
+          "predictions": {
+            "json-values-decoded_object": [],
+            "json-values-nested_outer_object": [],
+            "json-values-text_decoder": [],
+            "json-values-guarded_text_cast": [],
+            "json-values-unicode_nested_value": [],
+            "json-values-separate_serialization_levels": [],
+            "json-values-object_cast_into_text_reader": [
+              {
+                "id": "owned/json_value_probe.py:81:object-passed-as-json-text",
+                "title": "Pass JSON text to the object reader",
+                "description": "`object_frame().decode()` returns a dictionary, and `cast(str, ...)` only changes the type-checker view; it does not serialize or convert the value. `read_object` therefore receives a dictionary and raises `TypeError` instead of returning the nested object.",
+                "file": "owned/json_value_probe.py",
+                "line": 81,
+                "endLine": 81,
+                "severity": "medium",
+                "confidence": 1,
+                "category": "correctness",
+                "evidence": "The supplied reader rejects non-string inputs with `TypeError(\"json-text-required\")`, and the independent fixed-source observation reports that error for this function. The changed fragment starts at line 79; the return statement is at zero-based displayed-line offset 2, so 79 + 2 = 81.",
+                "suggestion": "Serialize the dictionary to JSON text before passing it to `read_object`.",
+                "symbol": "object_cast_into_text_reader",
+                "codeSnippet": "return read_object(cast(str, row[\"entry\"]))",
+                "suggestedCode": "return read_object(json.dumps(row[\"entry\"]))",
+                "fingerprint": "fp-8952ef2a",
+                "semanticFingerprint": "sf-5d43d6d6"
+              }
+            ],
+            "json-values-text_encoded_twice": [
+              {
+                "id": "owned/json_value_probe.py:86:text-encoded-twice",
+                "title": "JSON text is encoded a second time",
+                "description": "The row entry already contains JSON text for the object. Encoding that string again produces JSON text representing a string, so `read_object` rejects the top-level value instead of returning the nested object.",
+                "file": "owned/json_value_probe.py",
+                "line": 86,
+                "endLine": 86,
+                "severity": "medium",
+                "confidence": 1,
+                "category": "correctness",
+                "evidence": "The changed fragment starts at line 84. The return statement is displayed at zero-based offset 2, so 84 + 2 = line 86. `row[\"entry\"]` is JSON text for the object; `json.dumps(row[\"entry\"])` encodes it as a JSON string. `ObjectFrame` requires the parsed top-level value to be a dict and raises `ValueError(\"object-required\")` for this input, consistent with the supplied fixed-source observation.",
+                "suggestion": "Pass the existing object JSON text directly to `read_object`.",
+                "symbol": "text_encoded_twice",
+                "codeSnippet": "return read_object(json.dumps(row[\"entry\"]))",
+                "suggestedCode": "return read_object(row[\"entry\"])",
+                "fingerprint": "fp-f64de1f2",
+                "semanticFingerprint": "sf-cacfb79f"
+              }
+            ],
+            "json-values-raw_object_into_text_reader": [
+              {
+                "id": "owned/json_value_probe.py:91:passes-object-to-json-text-reader",
+                "title": "Passes a decoded object to a JSON-text reader",
+                "description": "`json.loads` turns the serialized payload into a dictionary, so `row[\"entry\"]` is a Python dictionary. `read_object` requires JSON text and raises `TypeError` for non-string input, so this call does not return the nested object.",
+                "file": "owned/json_value_probe.py",
+                "line": 91,
+                "endLine": 91,
+                "severity": "medium",
+                "confidence": 1,
+                "category": "correctness",
+                "evidence": "The changed fragment starts at line 89. The function declaration is offset 0, the assignment is offset 1, and the return is offset 2; 89 + 2 = 91. `read_object` explicitly rejects non-strings, and `row[\"entry\"]` is a dictionary produced by `json.loads`.",
+                "suggestion": "Serialize the nested dictionary to JSON text before passing it to `read_object`.",
+                "symbol": "raw_object_into_text_reader",
+                "codeSnippet": "return read_object(row[\"entry\"])",
+                "suggestedCode": "return read_object(json.dumps(row[\"entry\"]))",
+                "fingerprint": "fp-de1481e8",
+                "semanticFingerprint": "sf-8c476fc7"
+              }
+            ],
+            "json-values-python_repr_as_json": [
+              {
+                "id": "owned/json_value_probe.py:96:python-repr-passed-as-json",
+                "title": "Python representation is passed to the JSON reader",
+                "description": "`str(row[\"entry\"])` produces Python dictionary syntax, which is not valid JSON for this value. `read_object` expects JSON text, so the call raises `JSONDecodeError` instead of returning the nested object.",
+                "file": "owned/json_value_probe.py",
+                "line": 96,
+                "endLine": 96,
+                "severity": "medium",
+                "confidence": 1,
+                "category": "correctness",
+                "evidence": "The changed fragment starts at line 94. The return statement is at zero-based displayed-line offset 2, so 94 + 2 = 96. `row[\"entry\"]` is a decoded dictionary; converting it with `str` yields Python representation syntax, and the supplied fixed-source observation reports `JSONDecodeError` at line 96.",
+                "suggestion": "Serialize the dictionary as JSON before passing it to `read_object`.",
+                "symbol": "python_repr_as_json",
+                "codeSnippet": "return read_object(str(row[\"entry\"]))",
+                "suggestedCode": "return read_object(json.dumps(row[\"entry\"]))",
+                "fingerprint": "fp-c27d450b",
+                "semanticFingerprint": "sf-df03e3cf"
+              }
+            ],
+            "json-values-missing_inner_decode": [
+              {
+                "id": "owned/json_value_probe.py:101:double-encoded-inner-json",
+                "title": "Double-encoded JSON is rejected at the object boundary",
+                "description": "`object_frame().text` already contains JSON text representing an object. `json.dumps` encodes that text as a JSON string, so `read_object` receives text whose top-level JSON value is a string. `ObjectFrame` rejects that value with `ValueError(\"object-required\")` instead of returning the nested object values.",
+                "file": "owned/json_value_probe.py",
+                "line": 101,
+                "endLine": 101,
+                "severity": "medium",
+                "confidence": 1,
+                "category": "correctness",
+                "evidence": "The changed fragment starts at line 99. Its displayed lines are: offset 0 `def missing_inner_decode():`, offset 1 `row = {\"entry\": object_frame().text}`, and offset 2 `return read_object(json.dumps(row[\"entry\"]))`. Thus 99 + 2 = 101. The supplied fixed-source observation confirms this call raises `ValueError(\"object-required\")`.",
+                "suggestion": "Pass the existing JSON object text directly to `read_object`.",
+                "symbol": "missing_inner_decode",
+                "codeSnippet": "return read_object(json.dumps(row[\"entry\"]))",
+                "suggestedCode": "return read_object(row[\"entry\"] )",
+                "fingerprint": "fp-b4892550",
+                "semanticFingerprint": "sf-cacfb79f"
+              }
+            ],
+            "json-values-annotation_is_not_conversion": [
+              {
+                "id": "owned/json_value_probe.py:106:passes-dict-instead-of-json-text",
+                "title": "Passes a decoded object where JSON text is required",
+                "description": "`annotated_text()` returns the dictionary produced by `object_frame().decode()`; its `str` annotation does not convert that value. The dictionary is stored in `row[\"entry\"]` and passed to `read_object()`, whose type guard raises `TypeError(\"json-text-required\")`.",
+                "file": "owned/json_value_probe.py",
+                "line": 106,
+                "endLine": 106,
+                "severity": "medium",
+                "confidence": 1,
+                "category": "correctness",
+                "evidence": "The displayed changed fragment starts at line 104. The exact return statement is at zero-based offset 2, so 104 + 2 = 106. The supplied fixed-source observation confirms the `TypeError: json-text-required` path.",
+                "suggestion": "Serialize the decoded object to JSON text before passing it to `read_object()`.",
+                "symbol": "annotation_is_not_conversion",
+                "codeSnippet": "return read_object(row[\"entry\"])",
+                "fingerprint": "fp-744f60c4",
+                "semanticFingerprint": "sf-8c476fc7"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "baseline-2",
+        "identity": {
+          "startedAt": "2026-11-04T05:04:49.441402+00:00",
+          "sourceBase": "d546c370231c83a8681499c9eddee66f9c555d62",
+          "uncommittedProductionChanges": false,
+          "runtime": {
+            "provider": "codex",
+            "model": "gpt-6-luna",
+            "effort": "medium",
+            "node": "v24.20.0",
+            "cli": "codex-cli 0.164.0-alpha.11.1"
+          },
+          "workspace": "/private/tmp/copilot-855-baseline-2-3ozpdq2v",
+          "workspaceState": "Fresh empty owned Git root; no source/corpus/verdicts/rules copied.",
+          "cliSha256": "3fa4361ace73edc0ece68b06df2265a7ccf81b629ceee6184714358a60f7b078",
+          "sourceHashes": {
+            "src/prompts/bugbot.ts": "267e659ea9635f8b0d396856cf98cdc11d02b34ecf10f7bf8cca5b2e40595f12",
+            "src/tooling/bugbot_benchmark_runner.ts": "4f1b8a9e12924b5ba1a79600b53eb169b2b752d2719402e5d0e7524637fe402b",
+            "src/application/usecases/steps/commit/bugbot/build_bugbot_prompt.ts": "8923fb557a52e87598a9252c602f74cd0597200a4b6e61c44120847ffd5c82cb",
+            "src/application/usecases/steps/commit/bugbot/verify_generated_literal_findings.ts": "aa496a3c518e2b82fc3af842c943a902306a409a32e56c625e613b6916664474",
+            "src/application/usecases/steps/commit/bugbot/analyze_bugbot_revision_use_case.ts": "3ad7e83d0fcacc694e954e5fa9aaceb9e7a8658bd25fe521aa83850d5a5bfc64",
+            "src/application/usecases/steps/commit/bugbot/analyze_bugbot_frames.ts": "4d9f8c9df0495247483a0e89e4c19ba3e600a40816a99e751f9c05c95398b870",
+            "src/prompts/bugbot_resource_authority.ts": "6d36da57c418bbe14c77bc59da056eb94e32bd12dbe332736f68c2da267a0fa5",
+            "src/prompts/bugbot_async_statement_evidence.ts": "f6583e987d80c0935caef27f7c0fe634e47ed3e8dd3e4dfa2a6e1caafc031dba"
+          },
+          "corpusSha256": "2c4d319dbdd1ac9d30e8245bc5245be31b04b5b2016f0b656555f2ca13a67c4b",
+          "probeSha256": "98089d60448c515c66a52da5c0dfdaa1eb642e4523f552f132554ba95c3a0adf",
+          "input": "corpus.json",
+          "producerSha256": "82c0d07df6abd8cfa77a9fa635a7cdf02f548e269019e07c6e2b761295f4bf83",
+          "freeze": "freeze.json",
+          "predictions": "baseline-2-predictions.json",
+          "log": "baseline-2-benchmark.log",
+          "fullProviderStdinCaptured": false
+        },
+        "score": {
+          "metrics": {
+            "expected": 6,
+            "actual": 4,
+            "matched": 4,
+            "precision": 1,
+            "recall": 0.6666666666666666,
+            "locationAccuracy": 1,
+            "severityAccuracy": 1,
+            "categoryAccuracy": 1,
+            "f1": 0.8,
+            "falsePositives": 0,
+            "falseNegatives": 2,
+            "meanLineDistance": 0,
+            "confidenceBrierScore": 0
+          },
+          "violations": [
+            "recall 0.667 is below 0.850",
+            "f1 0.800 is below 0.870"
+          ],
+          "missingCases": []
+        },
+        "predictions": {
+          "schemaVersion": 1,
+          "predictions": {
+            "json-values-decoded_object": [],
+            "json-values-nested_outer_object": [],
+            "json-values-text_decoder": [],
+            "json-values-guarded_text_cast": [],
+            "json-values-unicode_nested_value": [],
+            "json-values-separate_serialization_levels": [],
+            "json-values-object_cast_into_text_reader": [
+              {
+                "id": "owned/json_value_probe.py:81:object-cast-into-text-reader",
+                "title": "Pass JSON text to the object reader",
+                "description": "`object_frame().decode()` returns a dictionary, but `cast(str, ...)` changes only the static type; it does not serialize that dictionary. The call therefore reaches `read_object` with a non-string and raises `TypeError` instead of returning the nested object.",
+                "file": "owned/json_value_probe.py",
+                "line": 81,
+                "endLine": 81,
+                "severity": "medium",
+                "confidence": 1,
+                "category": "correctness",
+                "evidence": "In the changed fragment, `entry` is assigned `object_frame().decode()`, which returns a dict, and the cast performs no runtime conversion. `read_object` rejects non-strings with `TypeError(\"json-text-required\")`. The fragment starts at line 79; the return statement is at zero-based offset 2, so 79 + 2 = 81.",
+                "suggestion": "Serialize the dictionary as JSON text before passing it to `read_object`.",
+                "symbol": "object_cast_into_text_reader",
+                "codeSnippet": "return read_object(cast(str, row[\"entry\"]))",
+                "suggestedCode": "return read_object(json.dumps(row[\"entry\"]))",
+                "fingerprint": "fp-8952ef2a",
+                "semanticFingerprint": "sf-5d43d6d6"
+              }
+            ],
+            "json-values-text_encoded_twice": [],
+            "json-values-raw_object_into_text_reader": [
+              {
+                "id": "owned/json_value_probe.py:91:passes-object-to-json-text-reader",
+                "title": "Pass JSON text to the reader",
+                "description": "`row[\"entry\"]` is a Python dictionary after `json.loads`, but `read_object` requires a string containing JSON text and raises `TypeError` for other values. The call therefore fails instead of returning the nested object.",
+                "file": "owned/json_value_probe.py",
+                "line": 91,
+                "endLine": 91,
+                "severity": "medium",
+                "confidence": 1,
+                "category": "correctness",
+                "evidence": "The changed fragment starts at line 89. The return statement is at zero-based displayed-line offset 2, so 89 + 2 = 91. `payload()` returns a dictionary; the outer `json.loads` preserves that dictionary as `row[\"entry\"]`. `read_object` rejects non-strings with `TypeError(\"json-text-required\")`, consistent with the supplied fixed-source observation.",
+                "suggestion": "Serialize `row[\"entry\"]` to JSON text before passing it to `read_object`.",
+                "symbol": "raw_object_into_text_reader",
+                "codeSnippet": "return read_object(row[\"entry\"])",
+                "suggestedCode": "return read_object(json.dumps(row[\"entry\"]))",
+                "fingerprint": "fp-e7b264c5",
+                "semanticFingerprint": "sf-8c476fc7"
+              }
+            ],
+            "json-values-python_repr_as_json": [
+              {
+                "id": "owned/json_value_probe.py:96:python-repr-is-not-json",
+                "title": "Python repr is passed to the JSON reader",
+                "description": "`object_frame().decode()` returns a dictionary. Converting it with `str` produces Python representation syntax, which uses single quotes for string keys and is not valid JSON. `read_object` requires JSON text, so this call raises `JSONDecodeError` instead of returning the nested object.",
+                "file": "owned/json_value_probe.py",
+                "line": 96,
+                "endLine": 96,
+                "severity": "medium",
+                "confidence": 1,
+                "category": "correctness",
+                "evidence": "The changed fragment starts at line 94. The exact `return` statement is at zero-based displayed-line offset 2, so 94 + 2 = 96. `row[\"entry\"]` is a decoded dictionary, and `str(row[\"entry\"])` yields Python repr text; the supplied fixed-source observation reports `JSONDecodeError` at this call.",
+                "suggestion": "Serialize the dictionary as JSON text before passing it to `read_object`.",
+                "symbol": "python_repr_as_json",
+                "codeSnippet": "return read_object(str(row[\"entry\"]))",
+                "suggestedCode": "return read_object(json.dumps(row[\"entry\"]))",
+                "fingerprint": "fp-8ee13fe1",
+                "semanticFingerprint": "sf-df03e3cf"
+              }
+            ],
+            "json-values-missing_inner_decode": [
+              {
+                "id": "owned/json_value_probe.py:101:double-encoded-input",
+                "title": "Double-encoded JSON is rejected",
+                "description": "The function passes a JSON string value to `read_object` by serializing the already-serialized object text. That produces JSON representing a string, so `ObjectFrame` raises `ValueError` instead of returning the nested object.",
+                "file": "owned/json_value_probe.py",
+                "line": 101,
+                "endLine": 101,
+                "severity": "medium",
+                "confidence": 1,
+                "category": "correctness",
+                "evidence": "The changed fragment starts at line 99. The exact return statement is at zero-based displayed-line offset 2, so 99 + 2 = 101. `object_frame().text` is JSON text for an object; `json.dumps` wraps it as a JSON string, which the reader rejects. The supplied fixed-source observation confirms `ValueError: object-required`.",
+                "suggestion": "Pass `row[\"entry\"]` directly to `read_object` without serializing it again.",
+                "symbol": "missing_inner_decode",
+                "codeSnippet": "return read_object(json.dumps(row[\"entry\"]))",
+                "suggestedCode": "return read_object(row[\"entry\"])",
+                "fingerprint": "fp-89b1d7e1",
+                "semanticFingerprint": "sf-cacfb79f"
+              }
+            ],
+            "json-values-annotation_is_not_conversion": []
+          }
+        }
+      },
+      {
+        "name": "baseline-3",
+        "identity": {
+          "startedAt": "2026-11-04T05:06:37.233358+00:00",
+          "sourceBase": "d546c370231c83a8681499c9eddee66f9c555d62",
+          "uncommittedProductionChanges": false,
+          "runtime": {
+            "provider": "codex",
+            "model": "gpt-6-luna",
+            "effort": "medium",
+            "node": "v24.20.0",
+            "cli": "codex-cli 0.164.0-alpha.11.1"
+          },
+          "workspace": "/private/tmp/copilot-855-baseline-3-w3qw0aed",
+          "workspaceState": "Fresh empty owned Git root; no source/corpus/verdicts/rules copied.",
+          "cliSha256": "3fa4361ace73edc0ece68b06df2265a7ccf81b629ceee6184714358a60f7b078",
+          "sourceHashes": {
+            "src/prompts/bugbot.ts": "267e659ea9635f8b0d396856cf98cdc11d02b34ecf10f7bf8cca5b2e40595f12",
+            "src/tooling/bugbot_benchmark_runner.ts": "4f1b8a9e12924b5ba1a79600b53eb169b2b752d2719402e5d0e7524637fe402b",
+            "src/application/usecases/steps/commit/bugbot/build_bugbot_prompt.ts": "8923fb557a52e87598a9252c602f74cd0597200a4b6e61c44120847ffd5c82cb",
+            "src/application/usecases/steps/commit/bugbot/verify_generated_literal_findings.ts": "aa496a3c518e2b82fc3af842c943a902306a409a32e56c625e613b6916664474",
+            "src/application/usecases/steps/commit/bugbot/analyze_bugbot_revision_use_case.ts": "3ad7e83d0fcacc694e954e5fa9aaceb9e7a8658bd25fe521aa83850d5a5bfc64",
+            "src/application/usecases/steps/commit/bugbot/analyze_bugbot_frames.ts": "4d9f8c9df0495247483a0e89e4c19ba3e600a40816a99e751f9c05c95398b870",
+            "src/prompts/bugbot_resource_authority.ts": "6d36da57c418bbe14c77bc59da056eb94e32bd12dbe332736f68c2da267a0fa5",
+            "src/prompts/bugbot_async_statement_evidence.ts": "f6583e987d80c0935caef27f7c0fe634e47ed3e8dd3e4dfa2a6e1caafc031dba"
+          },
+          "corpusSha256": "2c4d319dbdd1ac9d30e8245bc5245be31b04b5b2016f0b656555f2ca13a67c4b",
+          "probeSha256": "98089d60448c515c66a52da5c0dfdaa1eb642e4523f552f132554ba95c3a0adf",
+          "input": "corpus.json",
+          "producerSha256": "82c0d07df6abd8cfa77a9fa635a7cdf02f548e269019e07c6e2b761295f4bf83",
+          "freeze": "freeze.json",
+          "predictions": "baseline-3-predictions.json",
+          "log": "baseline-3-benchmark.log",
+          "fullProviderStdinCaptured": false
+        },
+        "score": {
+          "metrics": {
+            "expected": 6,
+            "actual": 6,
+            "matched": 6,
+            "precision": 1,
+            "recall": 1,
+            "locationAccuracy": 1,
+            "severityAccuracy": 1,
+            "categoryAccuracy": 1,
+            "f1": 1,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "meanLineDistance": 0,
+            "confidenceBrierScore": 0
+          },
+          "violations": [],
+          "missingCases": []
+        },
+        "predictions": {
+          "schemaVersion": 1,
+          "predictions": {
+            "json-values-decoded_object": [],
+            "json-values-nested_outer_object": [],
+            "json-values-text_decoder": [],
+            "json-values-guarded_text_cast": [],
+            "json-values-unicode_nested_value": [],
+            "json-values-separate_serialization_levels": [],
+            "json-values-object_cast_into_text_reader": [
+              {
+                "id": "owned/json_value_probe.py:81:object-passed-as-json-text",
+                "title": "Decoded object is passed where JSON text is required",
+                "description": "`object_frame().decode()` returns a dictionary. `cast(str, ...)` only affects the type checker and does not convert that value, so `read_object` raises `TypeError(\"json-text-required\")` instead of returning the nested object values.",
+                "file": "owned/json_value_probe.py",
+                "line": 81,
+                "endLine": 81,
+                "severity": "medium",
+                "confidence": 1,
+                "category": "correctness",
+                "evidence": "The changed fragment starts at line 79. The return statement is at zero-based displayed-line offset 2 (function declaration offset 0, row assignment offset 1), so 79 + 2 = line 81. The unchanged `read_object` helper rejects non-string inputs, and the supplied fixed-source observation confirms this call raises `TypeError: json-text-required`.",
+                "suggestion": "Pass JSON text to `read_object`, or use a reader that accepts an already-decoded dictionary.",
+                "symbol": "object_cast_into_text_reader",
+                "codeSnippet": "return read_object(cast(str, row[\"entry\"]))",
+                "fingerprint": "fp-a9b481c6",
+                "semanticFingerprint": "sf-5d43d6d6"
+              }
+            ],
+            "json-values-text_encoded_twice": [
+              {
+                "id": "owned/json_value_probe.py:86:double-encoded-object-text",
+                "title": "Double-encoded JSON text is rejected",
+                "description": "`row[\"entry\"]` already contains JSON text representing an object. Encoding that string again makes the input JSON represent a string, so `read_object` raises `ValueError(\"object-required\")` instead of returning the nested object values.",
+                "file": "owned/json_value_probe.py",
+                "line": 86,
+                "endLine": 86,
+                "severity": "medium",
+                "confidence": 1,
+                "category": "correctness",
+                "evidence": "In the displayed changed fragment starting at line 84, the `return` is at zero-based offset 2, so 84 + 2 = 86. The supplied fixed-source runtime observation reports `ValueError` with message `object-required` for this path.",
+                "suggestion": "Pass the existing JSON text directly to `read_object`.",
+                "symbol": "text_encoded_twice",
+                "codeSnippet": "return read_object(json.dumps(row[\"entry\"]))",
+                "suggestedCode": "return read_object(row[\"entry\"] )",
+                "fingerprint": "fp-3f2f09e8",
+                "semanticFingerprint": "sf-cacfb79f"
+              }
+            ],
+            "json-values-raw_object_into_text_reader": [
+              {
+                "id": "owned/json_value_probe.py:91:passes-object-to-json-text-reader",
+                "title": "Passes a decoded object to a JSON-text reader",
+                "description": "`row[\"entry\"]` is a Python dictionary, but `read_object` accepts only JSON text and raises `TypeError(\"json-text-required\")`. This prevents the function from returning the nested object values.",
+                "file": "owned/json_value_probe.py",
+                "line": 91,
+                "endLine": 91,
+                "severity": "medium",
+                "confidence": 1,
+                "category": "correctness",
+                "evidence": "The changed fragment starts at line 89. The exact statement is at zero-based displayed-line offset 2, so 89 + 2 = line 91. `json.loads` decodes the row into a dictionary, and `payload()` returns a dictionary; therefore `row[\"entry\"]` is not JSON text. The supplied fixed-source observation confirms the resulting `TypeError(\"json-text-required\")` for lines 89–91.",
+                "suggestion": "Return the already-decoded dictionary directly.",
+                "symbol": "raw_object_into_text_reader",
+                "codeSnippet": "return read_object(row[\"entry\"])",
+                "suggestedCode": "return row[\"entry\"]",
+                "fingerprint": "fp-de1481e8",
+                "semanticFingerprint": "sf-8c476fc7"
+              }
+            ],
+            "json-values-python_repr_as_json": [
+              {
+                "id": "owned/json_value_probe.py:97:python-repr-passed-as-json",
+                "title": "Python representation is passed as JSON text",
+                "description": "`str(row[\"entry\"])` produces a Python dictionary representation, which is not valid JSON. `read_object` passes that text to `json.loads`, so this call raises `JSONDecodeError` instead of returning the nested object values.",
+                "file": "owned/json_value_probe.py",
+                "line": 96,
+                "endLine": 96,
+                "severity": "medium",
+                "confidence": 1,
+                "category": "correctness",
+                "evidence": "In the changed fragment starting at line 94, the return statement is at zero-based displayed-line offset 2, so 94 + 2 = 96. The value comes from `object_frame().decode()` and is a dict; converting it with `str` yields Python representation syntax, while `read_object` requires JSON text and calls `json.loads`. The supplied fixed-source observation reports `JSONDecodeError` for this call.",
+                "suggestion": "Serialize the dict as JSON before passing it to `read_object`.",
+                "symbol": "python_repr_as_json",
+                "codeSnippet": "return read_object(str(row[\"entry\"]))",
+                "suggestedCode": "return read_object(json.dumps(row[\"entry\"]))",
+                "fingerprint": "fp-86ae4da5",
+                "semanticFingerprint": "sf-df03e3cf"
+              }
+            ],
+            "json-values-missing_inner_decode": [
+              {
+                "id": "owned/json_value_probe.py:101:double-encoded-json",
+                "title": "Double-encoded input is rejected",
+                "description": "`object_frame().text` already contains JSON text representing an object. `json.dumps` encodes that text as a JSON string, so `read_object` parses a string instead of an object and raises `ValueError(\"object-required\")`.",
+                "file": "owned/json_value_probe.py",
+                "line": 101,
+                "endLine": 101,
+                "severity": "medium",
+                "confidence": 1,
+                "category": "correctness",
+                "evidence": "The displayed changed function starts at line 99. The exact return statement is at zero-based offset 2, so 99 + 2 = line 101. The provided fixed-source observation reports `ValueError` with message `object-required`, consistent with the input being a JSON string rather than an object.",
+                "suggestion": "Pass the existing JSON text directly to `read_object`.",
+                "symbol": "missing_inner_decode",
+                "codeSnippet": "return read_object(json.dumps(row[\"entry\"]))",
+                "suggestedCode": "return read_object(row[\"entry\"] )",
+                "fingerprint": "fp-a1dd6279",
+                "semanticFingerprint": "sf-cacfb79f"
+              }
+            ],
+            "json-values-annotation_is_not_conversion": [
+              {
+                "id": "owned/json_value_probe.py:106:passes-decoded-object-as-json-text",
+                "title": "Passes a decoded object to a JSON-text reader",
+                "description": "`annotated_text()` returns the decoded dictionary from `object_frame().decode()`. The annotation does not convert it to text. `read_object()` requires a string and raises `TypeError` for this dictionary, so the function does not return the nested values.",
+                "file": "owned/json_value_probe.py",
+                "line": 106,
+                "endLine": 106,
+                "severity": "medium",
+                "confidence": 1,
+                "category": "correctness",
+                "evidence": "The supplied fixed-source observation reports `TypeError: json-text-required`. In the displayed changed fragment, the source origin is line 104 and the exact return statement is at zero-based offset 2, giving 104 + 2 = 106.",
+                "suggestion": "Return the decoded object directly, or pass JSON text to `read_object()`.",
+                "symbol": "annotation_is_not_conversion",
+                "codeSnippet": "return read_object(row[\"entry\"])",
+                "suggestedCode": "return row[\"entry\"]",
+                "fingerprint": "fp-e71b4bd8",
+                "semanticFingerprint": "sf-8c476fc7"
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "candidate": [
+      {
+        "name": "candidate-1",
+        "identity": {
+          "startedAt": "2026-11-04T05:11:24.873924+00:00",
+          "sourceBase": "d546c370231c83a8681499c9eddee66f9c555d62",
+          "uncommittedProductionChanges": true,
+          "runtime": {
+            "provider": "codex",
+            "model": "gpt-6-luna",
+            "effort": "medium",
+            "node": "v24.20.0",
+            "cli": "codex-cli 0.164.0-alpha.11.1"
+          },
+          "workspace": "/private/tmp/copilot-855-candidate-1-hhonismj",
+          "workspaceState": "Fresh empty owned Git root; no source/corpus/verdicts/rules copied.",
+          "cliSha256": "128f848da2ad96a1907cbc63b1d53d187097199286aa1aa0acccb18e395fc574",
+          "sourceHashes": {
+            "src/prompts/bugbot.ts": "234b2049c2cd12a399198843deeba3366733193d3c2896db94caee9ca3238068",
+            "src/tooling/bugbot_benchmark_runner.ts": "a65a8b0a1acdb9fda5fc490c6d7044da67b97c68891af1b267f20b373cbcf348",
+            "src/application/usecases/steps/commit/bugbot/build_bugbot_prompt.ts": "8923fb557a52e87598a9252c602f74cd0597200a4b6e61c44120847ffd5c82cb",
+            "src/application/usecases/steps/commit/bugbot/verify_generated_literal_findings.ts": "6ccf26c52e2c6f9871b99ba7d03a0a8f8c0e2d17a2ebbe5c406749dbdf85df74",
+            "src/application/usecases/steps/commit/bugbot/analyze_bugbot_revision_use_case.ts": "3ad7e83d0fcacc694e954e5fa9aaceb9e7a8658bd25fe521aa83850d5a5bfc64",
+            "src/application/usecases/steps/commit/bugbot/analyze_bugbot_frames.ts": "4d9f8c9df0495247483a0e89e4c19ba3e600a40816a99e751f9c05c95398b870",
+            "src/prompts/bugbot_resource_authority.ts": "6d36da57c418bbe14c77bc59da056eb94e32bd12dbe332736f68c2da267a0fa5",
+            "src/prompts/bugbot_async_statement_evidence.ts": "f6583e987d80c0935caef27f7c0fe634e47ed3e8dd3e4dfa2a6e1caafc031dba",
+            "src/prompts/bugbot_json_value_evidence.ts": "f603af8cfc2dedc1604522fa74f4f5d371c3ac2b924afe040007a0dab78df2b5"
+          },
+          "corpusSha256": "2c4d319dbdd1ac9d30e8245bc5245be31b04b5b2016f0b656555f2ca13a67c4b",
+          "probeSha256": "98089d60448c515c66a52da5c0dfdaa1eb642e4523f552f132554ba95c3a0adf",
+          "input": "corpus.json",
+          "producerSha256": "82c0d07df6abd8cfa77a9fa635a7cdf02f548e269019e07c6e2b761295f4bf83",
+          "freeze": "freeze.json",
+          "predictions": "candidate-1-predictions.json",
+          "log": "candidate-1-benchmark.log",
+          "fullProviderStdinCaptured": false
+        },
+        "score": {
+          "metrics": {
+            "expected": 6,
+            "actual": 6,
+            "matched": 6,
+            "precision": 1,
+            "recall": 1,
+            "locationAccuracy": 1,
+            "severityAccuracy": 1,
+            "categoryAccuracy": 1,
+            "f1": 1,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "meanLineDistance": 0,
+            "confidenceBrierScore": 0
+          },
+          "violations": [],
+          "missingCases": []
+        },
+        "predictions": {
+          "schemaVersion": 1,
+          "predictions": {
+            "json-values-decoded_object": [],
+            "json-values-nested_outer_object": [],
+            "json-values-text_decoder": [],
+            "json-values-guarded_text_cast": [],
+            "json-values-unicode_nested_value": [],
+            "json-values-separate_serialization_levels": [],
+            "json-values-object_cast_into_text_reader": [
+              {
+                "id": "owned/json_value_probe.py:81:object-value-passed-as-json-text",
+                "title": "Decoded object is passed to a JSON-text reader",
+                "description": "`object_frame().decode()` returns a Python dictionary. `cast(str, ...)` leaves that value unchanged, so `read_object` rejects it instead of returning the nested object.",
+                "file": "owned/json_value_probe.py",
+                "line": 81,
+                "endLine": 81,
+                "severity": "medium",
+                "confidence": 1,
+                "category": "correctness",
+                "evidence": "The fixed-source observation reports `TypeError: json-text-required`. In the displayed fragment starting at line 79, the function declaration is offset 0, the assignment is offset 1, and the failing return is offset 2; 79 + 2 = line 81. The reader requires JSON text, while the nested value is already a dictionary.",
+                "suggestion": "Serialize the nested object to JSON text before passing it to `read_object`.",
+                "symbol": "object_cast_into_text_reader",
+                "codeSnippet": "return read_object(cast(str, row[\"entry\"]))",
+                "suggestedCode": "return read_object(json.dumps(row[\"entry\"]))",
+                "fingerprint": "fp-32ebaab2",
+                "semanticFingerprint": "sf-5d43d6d6"
+              }
+            ],
+            "json-values-text_encoded_twice": [
+              {
+                "id": "owned/json_value_probe.py:86:encoded-string-rejected-as-object",
+                "title": "Double-encoded JSON text is rejected as an object",
+                "description": "`row[\"entry\"]` already contains JSON text representing the payload object. Serializing that string again makes `read_object` decode it as a string, which `ObjectFrame` rejects instead of returning the nested object.",
+                "file": "owned/json_value_probe.py",
+                "line": 86,
+                "endLine": 86,
+                "severity": "medium",
+                "confidence": 1,
+                "category": "correctness",
+                "evidence": "The changed fragment starts at line 84. The return statement is at zero-based displayed-line offset 2, so 84 + 2 = 86. `json.dumps(row[\"entry\"])` encodes the existing JSON text as a JSON string; `read_object` passes that text to `ObjectFrame`, whose `json.loads` result is not a dict and raises `ValueError(\"object-required\")`. The supplied fixed-source observation confirms that exception for lines 84–86.",
+                "suggestion": "Pass the existing JSON text in `row[\"entry\"]` directly to `read_object`.",
+                "symbol": "text_encoded_twice",
+                "codeSnippet": "return read_object(json.dumps(row[\"entry\"]))",
+                "suggestedCode": "return read_object(row[\"entry\"])",
+                "fingerprint": "fp-63fa8a1a",
+                "semanticFingerprint": "sf-cacfb79f"
+              }
+            ],
+            "json-values-raw_object_into_text_reader": [
+              {
+                "id": "owned/json_value_probe.py:91:raw-object-passed-to-text-reader",
+                "title": "Pass JSON text to the text-only reader",
+                "description": "The outer `json.loads` produces a dict whose `entry` value is the dict returned by `payload()`. `read_object` accepts only JSON text and raises `TypeError(\"json-text-required\")` for a dict, so this call fails instead of returning the nested object values.",
+                "file": "owned/json_value_probe.py",
+                "line": 91,
+                "endLine": 91,
+                "severity": "medium",
+                "confidence": 1,
+                "category": "correctness",
+                "evidence": "The supplied runtime observation confirms the `json-text-required` TypeError. In the changed fragment starting at line 89, the return statement has zero-based displayed-line offset 2; 89 + 2 = 91.",
+                "suggestion": "Serialize `row[\"entry\"]` as JSON text before passing it to `read_object`.",
+                "symbol": "raw_object_into_text_reader",
+                "codeSnippet": "return read_object(row[\"entry\"])",
+                "suggestedCode": "return read_object(json.dumps(row[\"entry\"]))",
+                "fingerprint": "fp-5f9533c1",
+                "semanticFingerprint": "sf-8c476fc7"
+              }
+            ],
+            "json-values-python_repr_as_json": [
+              {
+                "id": "owned/json_value_probe.py:96:python-repr-is-not-json",
+                "title": "Python representation is passed to the JSON reader",
+                "description": "`object_frame().decode()` returns a dict. Calling `str()` produces Python representation syntax, which is not JSON text, so `read_object` raises `JSONDecodeError` instead of returning the nested object values.",
+                "file": "owned/json_value_probe.py",
+                "line": 96,
+                "endLine": 96,
+                "severity": "medium",
+                "confidence": 1,
+                "category": "correctness",
+                "evidence": "The changed fragment starts at line 94. The return statement is at zero-based displayed-line offset 2, so 94 + 2 = line 96. The value flow is dict → `str()` Python representation → `read_object`, which requires JSON text; the supplied fixed-source observation confirms a `JSONDecodeError` on this path.",
+                "suggestion": "Serialize the dict as JSON before passing it to `read_object`.",
+                "symbol": "python_repr_as_json",
+                "codeSnippet": "return read_object(str(row[\"entry\"]))",
+                "suggestedCode": "return read_object(json.dumps(row[\"entry\"]))",
+                "fingerprint": "fp-c27d450b",
+                "semanticFingerprint": "sf-df03e3cf"
+              }
+            ],
+            "json-values-missing_inner_decode": [
+              {
+                "id": "owned/json_value_probe.py:101:double-encoded-json-text",
+                "title": "Double-encodes JSON text before the object reader",
+                "description": "`object_frame().text` contains JSON text for an object. `json.dumps` serializes that text as a JSON string literal, so `read_object` decodes a string and `ObjectFrame` rejects it instead of returning the nested object.",
+                "file": "owned/json_value_probe.py",
+                "line": 101,
+                "endLine": 101,
+                "severity": "medium",
+                "confidence": 1,
+                "category": "correctness",
+                "evidence": "The changed fragment starts at line 99. The return statement is at zero-based displayed-line offset 2, so 99 + 2 = 101. `object_frame().text` is JSON text representing the payload dict; `json.dumps(row[\"entry\"])` encodes that text as a JSON string. The reader requires JSON text whose decoded value is a dict, and the supplied fixed-source observation confirms this path raises `ValueError: object-required`.",
+                "suggestion": "Pass the existing JSON text directly to `read_object`.",
+                "symbol": "missing_inner_decode",
+                "codeSnippet": "return read_object(json.dumps(row[\"entry\"]))",
+                "suggestedCode": "return read_object(row[\"entry\"] )",
+                "fingerprint": "fp-0bbaa4ef",
+                "semanticFingerprint": "sf-cacfb79f"
+              }
+            ],
+            "json-values-annotation_is_not_conversion": [
+              {
+                "id": "owned/json_value_probe.py:104:dict passed to JSON-text reader",
+                "title": "A dictionary is passed to the JSON-text reader",
+                "description": "`annotated_text()` returns the decoded dictionary unchanged, so the call to `read_object()` receives a dict and raises `TypeError` instead of returning the nested object values.",
+                "file": "owned/json_value_probe.py",
+                "line": 106,
+                "endLine": 106,
+                "severity": "medium",
+                "confidence": 1,
+                "category": "correctness",
+                "evidence": "In the displayed fragment, the source origin is line 104 and the failing call is at zero-based offset 2, yielding line 106 (104 + 2 = 106). `object_frame().decode()` returns `json.loads(self.text)`, which is the decoded payload dict. The `str` annotation does not convert it. `read_object()` explicitly rejects non-strings, and the supplied fixed-source observation confirms this call raises `TypeError: json-text-required`.",
+                "suggestion": "Serialize the dictionary as JSON text before passing it to `read_object()`.",
+                "symbol": "annotation_is_not_conversion",
+                "codeSnippet": "+def annotation_is_not_conversion():\n+    row = {\"entry\": annotated_text()}\n+    return read_object(row[\"entry\"])",
+                "fingerprint": "fp-25d86978",
+                "semanticFingerprint": "sf-c9a0163b"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "candidate-2",
+        "identity": {
+          "startedAt": "2026-11-04T05:13:32.663465+00:00",
+          "sourceBase": "d546c370231c83a8681499c9eddee66f9c555d62",
+          "uncommittedProductionChanges": true,
+          "runtime": {
+            "provider": "codex",
+            "model": "gpt-6-luna",
+            "effort": "medium",
+            "node": "v24.20.0",
+            "cli": "codex-cli 0.164.0-alpha.11.1"
+          },
+          "workspace": "/private/tmp/copilot-855-candidate-2-icm45oop",
+          "workspaceState": "Fresh empty owned Git root; no source/corpus/verdicts/rules copied.",
+          "cliSha256": "128f848da2ad96a1907cbc63b1d53d187097199286aa1aa0acccb18e395fc574",
+          "sourceHashes": {
+            "src/prompts/bugbot.ts": "234b2049c2cd12a399198843deeba3366733193d3c2896db94caee9ca3238068",
+            "src/tooling/bugbot_benchmark_runner.ts": "a65a8b0a1acdb9fda5fc490c6d7044da67b97c68891af1b267f20b373cbcf348",
+            "src/application/usecases/steps/commit/bugbot/build_bugbot_prompt.ts": "8923fb557a52e87598a9252c602f74cd0597200a4b6e61c44120847ffd5c82cb",
+            "src/application/usecases/steps/commit/bugbot/verify_generated_literal_findings.ts": "6ccf26c52e2c6f9871b99ba7d03a0a8f8c0e2d17a2ebbe5c406749dbdf85df74",
+            "src/application/usecases/steps/commit/bugbot/analyze_bugbot_revision_use_case.ts": "3ad7e83d0fcacc694e954e5fa9aaceb9e7a8658bd25fe521aa83850d5a5bfc64",
+            "src/application/usecases/steps/commit/bugbot/analyze_bugbot_frames.ts": "4d9f8c9df0495247483a0e89e4c19ba3e600a40816a99e751f9c05c95398b870",
+            "src/prompts/bugbot_resource_authority.ts": "6d36da57c418bbe14c77bc59da056eb94e32bd12dbe332736f68c2da267a0fa5",
+            "src/prompts/bugbot_async_statement_evidence.ts": "f6583e987d80c0935caef27f7c0fe634e47ed3e8dd3e4dfa2a6e1caafc031dba",
+            "src/prompts/bugbot_json_value_evidence.ts": "f603af8cfc2dedc1604522fa74f4f5d371c3ac2b924afe040007a0dab78df2b5"
+          },
+          "corpusSha256": "2c4d319dbdd1ac9d30e8245bc5245be31b04b5b2016f0b656555f2ca13a67c4b",
+          "probeSha256": "98089d60448c515c66a52da5c0dfdaa1eb642e4523f552f132554ba95c3a0adf",
+          "input": "corpus.json",
+          "producerSha256": "82c0d07df6abd8cfa77a9fa635a7cdf02f548e269019e07c6e2b761295f4bf83",
+          "freeze": "freeze.json",
+          "predictions": "candidate-2-predictions.json",
+          "log": "candidate-2-benchmark.log",
+          "fullProviderStdinCaptured": false
+        },
+        "score": {
+          "metrics": {
+            "expected": 6,
+            "actual": 6,
+            "matched": 6,
+            "precision": 1,
+            "recall": 1,
+            "locationAccuracy": 1,
+            "severityAccuracy": 1,
+            "categoryAccuracy": 1,
+            "f1": 1,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "meanLineDistance": 0,
+            "confidenceBrierScore": 0
+          },
+          "violations": [],
+          "missingCases": []
+        },
+        "predictions": {
+          "schemaVersion": 1,
+          "predictions": {
+            "json-values-decoded_object": [],
+            "json-values-nested_outer_object": [],
+            "json-values-text_decoder": [],
+            "json-values-guarded_text_cast": [],
+            "json-values-unicode_nested_value": [],
+            "json-values-separate_serialization_levels": [],
+            "json-values-object_cast_into_text_reader": [
+              {
+                "id": "owned/json_value_probe.py:81:dict-passed-as-json-text",
+                "title": "A dictionary reaches the JSON text reader",
+                "description": "`object_frame().decode()` returns the nested object as a dictionary. `cast(str, ...)` does not convert it, and `read_object` rejects non-string inputs, so this call raises `TypeError` instead of returning the nested object.",
+                "file": "owned/json_value_probe.py",
+                "line": 81,
+                "endLine": 81,
+                "severity": "medium",
+                "confidence": 1,
+                "category": "correctness",
+                "evidence": "The helper constructs an object frame from JSON text, whose `decode()` returns `json.loads(self.text)`, a dictionary for this payload. Python `cast` preserves that value, while `read_object` explicitly raises `TypeError` for non-strings; the supplied fixed-source observation confirms `json-text-required`. The changed fragment starts at line 79; the return is at zero-based offset 2, so 79 + 2 = 81.",
+                "suggestion": "Serialize the nested dictionary to JSON text before passing it to `read_object`.",
+                "symbol": "object_cast_into_text_reader",
+                "codeSnippet": "return read_object(cast(str, row[\"entry\"]))",
+                "suggestedCode": "return read_object(json.dumps(row[\"entry\"]))",
+                "fingerprint": "fp-b8e3f0db",
+                "semanticFingerprint": "sf-5d43d6d6"
+              }
+            ],
+            "json-values-text_encoded_twice": [
+              {
+                "id": "owned/json_value_probe.py:86:text-encoded-twice",
+                "title": "Passes JSON text for a string instead of the nested object",
+                "description": "`row[\"entry\"]` already contains JSON text representing the payload object. The outer `json.dumps` encodes that text as a JSON string, so `read_object` parses a string and raises `ValueError(\"object-required\")`. Passing the existing JSON text directly lets the reader return the nested object values.",
+                "file": "owned/json_value_probe.py",
+                "line": 86,
+                "endLine": 86,
+                "severity": "medium",
+                "confidence": 1,
+                "category": "correctness",
+                "evidence": "The changed fragment starts at line 84. The exact return statement is at zero-based displayed-line offset 2, so 84 + 2 = 86. `row[\"entry\"]` is `json.dumps(payload())`, which is JSON text for an object; wrapping it again makes `json.loads` produce a string at the object-only boundary. The supplied fixed-source observation confirms `ValueError: object-required`.",
+                "suggestion": "Pass the existing JSON text directly to `read_object`.",
+                "symbol": "text_encoded_twice",
+                "codeSnippet": "return read_object(json.dumps(row[\"entry\"]))",
+                "suggestedCode": "return read_object(row[\"entry\"])",
+                "fingerprint": "fp-f0a8d5bc",
+                "semanticFingerprint": "sf-cacfb79f"
+              }
+            ],
+            "json-values-raw_object_into_text_reader": [
+              {
+                "id": "owned/json_value_probe.py:91:raw-object-passed-to-json-text-reader",
+                "title": "Pass JSON text to the object reader",
+                "description": "The outer `json.loads` returns a dictionary, so `row[\"entry\"]` is the nested payload dictionary. `read_object` accepts only JSON text and raises `TypeError` for this value, preventing the function from returning the nested object. Serializing the nested dictionary to JSON text before calling the reader preserves its values.",
+                "file": "owned/json_value_probe.py",
+                "line": 91,
+                "endLine": 91,
+                "severity": "medium",
+                "confidence": 1,
+                "category": "correctness",
+                "evidence": "The changed fragment starts at line 89. The `def` line is offset 0, the assignment is offset 1, and the return is offset 2, so 89 + 2 = line 91. The fixed-source observation confirms this path raises `TypeError: json-text-required`; the reader also explicitly rejects non-string inputs.",
+                "suggestion": "Serialize the nested dictionary to JSON text before calling `read_object`.",
+                "symbol": "raw_object_into_text_reader",
+                "codeSnippet": "return read_object(row[\"entry\"])",
+                "suggestedCode": "return read_object(json.dumps(row[\"entry\"]))",
+                "fingerprint": "fp-7b52d920",
+                "semanticFingerprint": "sf-8c476fc7"
+              }
+            ],
+            "json-values-python_repr_as_json": [
+              {
+                "id": "owned/json_value_probe.py:96:python-repr-used-as-json",
+                "title": "Python dict representation is passed where JSON text is required",
+                "description": "`object_frame().decode()` returns a dict. Converting it with `str()` produces Python representation syntax, which is not valid JSON for the text-only `read_object` boundary, so the call raises `JSONDecodeError` instead of returning the nested values.",
+                "file": "owned/json_value_probe.py",
+                "line": 96,
+                "endLine": 96,
+                "severity": "medium",
+                "confidence": 1,
+                "category": "correctness",
+                "evidence": "The fragment starts at line 94. The exact return statement is at zero-based displayed-line offset 2, so 94 + 2 = 96. The constructor and decode helper establish that `row[\"entry\"]` is a dict, and `read_object` requires JSON text; the supplied fixed-source observation reports `JSONDecodeError` on this path.",
+                "suggestion": "Serialize the dict as JSON text before passing it to `read_object`.",
+                "symbol": "python_repr_as_json",
+                "codeSnippet": "return read_object(str(row[\"entry\"]))",
+                "suggestedCode": "return read_object(json.dumps(row[\"entry\"]))",
+                "fingerprint": "fp-81270489",
+                "semanticFingerprint": "sf-df03e3cf"
+              }
+            ],
+            "json-values-missing_inner_decode": [
+              {
+                "id": "owned/json_value_probe.py:101:double-encoded-json-text",
+                "title": "Double-encodes JSON text before the object reader",
+                "description": "`object_frame().text` already contains JSON text representing an object. `json.dumps` encodes that text as a JSON string value, so `read_object` receives text that decodes to a string and raises `ValueError: object-required`. Pass the existing JSON text directly to the reader.",
+                "file": "owned/json_value_probe.py",
+                "line": 101,
+                "endLine": 101,
+                "severity": "medium",
+                "confidence": 1,
+                "category": "correctness",
+                "evidence": "The fragment starts at line 99. The exact return statement is at zero-based displayed-line offset 2, giving 99 + 2 = line 101. `object_frame().text` contains the serialized object; `json.dumps(row[\"entry\"])` serializes that text again, making the reader's top-level decoded value a string. The supplied fixed-source observation reports `ValueError: object-required` on this path.",
+                "suggestion": "Pass `row[\"entry\"]` directly to `read_object`.",
+                "symbol": "missing_inner_decode",
+                "codeSnippet": "return read_object(json.dumps(row[\"entry\"]))",
+                "suggestedCode": "return read_object(row[\"entry\"])",
+                "fingerprint": "fp-0bbaa4ef",
+                "semanticFingerprint": "sf-cacfb79f"
+              }
+            ],
+            "json-values-annotation_is_not_conversion": [
+              {
+                "id": "owned/json_value_probe.py:106:dict passed to JSON text reader",
+                "title": "Pass JSON text to the reader",
+                "description": "`annotated_text()` returns the dict produced by `object_frame().decode()`. The annotation does not convert it to text. That dict is stored in `row[\"entry\"]` and passed to `read_object`, which requires a string and raises `TypeError` for this value.",
+                "file": "owned/json_value_probe.py",
+                "line": 106,
+                "endLine": 106,
+                "severity": "medium",
+                "confidence": 1,
+                "category": "correctness",
+                "evidence": "The changed fragment starts at line 104. Its displayed lines are offset 0: the function declaration, offset 1: the `row` assignment, and offset 2: `return read_object(row[\"entry\"])`; therefore 104 + 2 = line 106. The unchanged helpers establish that `annotated_text()` returns a dict and `read_object()` rejects non-strings. The supplied fixed-source observation confirms `TypeError: json-text-required` on this path.",
+                "suggestion": "Serialize the dict as JSON text before passing it to `read_object`; `json.dumps(row[\"entry\"])` preserves the nested object values when the reader decodes it.",
+                "symbol": "annotation_is_not_conversion",
+                "codeSnippet": "return read_object(row[\"entry\"])",
+                "suggestedCode": "return read_object(json.dumps(row[\"entry\"]))",
+                "fingerprint": "fp-56b55219",
+                "semanticFingerprint": "sf-8c476fc7"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "candidate-3",
+        "identity": {
+          "startedAt": "2026-11-04T05:15:50.597009+00:00",
+          "sourceBase": "d546c370231c83a8681499c9eddee66f9c555d62",
+          "uncommittedProductionChanges": true,
+          "runtime": {
+            "provider": "codex",
+            "model": "gpt-6-luna",
+            "effort": "medium",
+            "node": "v24.20.0",
+            "cli": "codex-cli 0.164.0-alpha.11.1"
+          },
+          "workspace": "/private/tmp/copilot-855-candidate-3-k3_ns2ms",
+          "workspaceState": "Fresh empty owned Git root; no source/corpus/verdicts/rules copied.",
+          "cliSha256": "128f848da2ad96a1907cbc63b1d53d187097199286aa1aa0acccb18e395fc574",
+          "sourceHashes": {
+            "src/prompts/bugbot.ts": "234b2049c2cd12a399198843deeba3366733193d3c2896db94caee9ca3238068",
+            "src/tooling/bugbot_benchmark_runner.ts": "a65a8b0a1acdb9fda5fc490c6d7044da67b97c68891af1b267f20b373cbcf348",
+            "src/application/usecases/steps/commit/bugbot/build_bugbot_prompt.ts": "8923fb557a52e87598a9252c602f74cd0597200a4b6e61c44120847ffd5c82cb",
+            "src/application/usecases/steps/commit/bugbot/verify_generated_literal_findings.ts": "6ccf26c52e2c6f9871b99ba7d03a0a8f8c0e2d17a2ebbe5c406749dbdf85df74",
+            "src/application/usecases/steps/commit/bugbot/analyze_bugbot_revision_use_case.ts": "3ad7e83d0fcacc694e954e5fa9aaceb9e7a8658bd25fe521aa83850d5a5bfc64",
+            "src/application/usecases/steps/commit/bugbot/analyze_bugbot_frames.ts": "4d9f8c9df0495247483a0e89e4c19ba3e600a40816a99e751f9c05c95398b870",
+            "src/prompts/bugbot_resource_authority.ts": "6d36da57c418bbe14c77bc59da056eb94e32bd12dbe332736f68c2da267a0fa5",
+            "src/prompts/bugbot_async_statement_evidence.ts": "f6583e987d80c0935caef27f7c0fe634e47ed3e8dd3e4dfa2a6e1caafc031dba",
+            "src/prompts/bugbot_json_value_evidence.ts": "f603af8cfc2dedc1604522fa74f4f5d371c3ac2b924afe040007a0dab78df2b5"
+          },
+          "corpusSha256": "2c4d319dbdd1ac9d30e8245bc5245be31b04b5b2016f0b656555f2ca13a67c4b",
+          "probeSha256": "98089d60448c515c66a52da5c0dfdaa1eb642e4523f552f132554ba95c3a0adf",
+          "input": "corpus.json",
+          "producerSha256": "82c0d07df6abd8cfa77a9fa635a7cdf02f548e269019e07c6e2b761295f4bf83",
+          "freeze": "freeze.json",
+          "predictions": "candidate-3-predictions.json",
+          "log": "candidate-3-benchmark.log",
+          "fullProviderStdinCaptured": false
+        },
+        "score": {
+          "metrics": {
+            "expected": 6,
+            "actual": 6,
+            "matched": 6,
+            "precision": 1,
+            "recall": 1,
+            "locationAccuracy": 1,
+            "severityAccuracy": 1,
+            "categoryAccuracy": 1,
+            "f1": 1,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "meanLineDistance": 0,
+            "confidenceBrierScore": 0
+          },
+          "violations": [],
+          "missingCases": []
+        },
+        "predictions": {
+          "schemaVersion": 1,
+          "predictions": {
+            "json-values-decoded_object": [],
+            "json-values-nested_outer_object": [],
+            "json-values-text_decoder": [],
+            "json-values-guarded_text_cast": [],
+            "json-values-unicode_nested_value": [],
+            "json-values-separate_serialization_levels": [],
+            "json-values-object_cast_into_text_reader": [
+              {
+                "id": "owned/json_value_probe.py:81:dict-passed-to-json-text-reader",
+                "title": "A dictionary is passed to a JSON text reader",
+                "description": "`object_frame().decode()` returns a dictionary. `cast(str, ...)` leaves that value unchanged, so `read_object` receives a dictionary and raises `TypeError` instead of returning the nested object values.",
+                "file": "owned/json_value_probe.py",
+                "line": 81,
+                "endLine": 81,
+                "severity": "medium",
+                "confidence": 1,
+                "category": "correctness",
+                "evidence": "The changed fragment starts at line 79. The return statement is at zero-based displayed-line offset 2, so 79 + 2 = 81. The helper contract requires JSON text, `read_object` rejects non-strings, and the supplied fixed-source observation records `TypeError: json-text-required` for lines 79–81.",
+                "suggestion": "Serialize `row[\"entry\"]` as JSON text before passing it to `read_object`.",
+                "symbol": "object_cast_into_text_reader",
+                "codeSnippet": "return read_object(cast(str, row[\"entry\"]))",
+                "fingerprint": "fp-f53bdef5",
+                "semanticFingerprint": "sf-5d43d6d6"
+              }
+            ],
+            "json-values-text_encoded_twice": [
+              {
+                "id": "owned/json_value_probe.py:86:text-encoded-as-json-string",
+                "title": "Pass the nested JSON text directly to the object reader",
+                "description": "`row[\"entry\"]` already contains JSON text for the payload. `json.dumps` serializes that text as a JSON string, so `read_object` rejects the decoded top-level string instead of returning the nested object.",
+                "file": "owned/json_value_probe.py",
+                "line": 86,
+                "endLine": 86,
+                "severity": "medium",
+                "confidence": 1,
+                "category": "correctness",
+                "evidence": "The changed fragment starts at line 84. The return statement is at zero-based displayed-line offset 2, so 84 + 2 = 86. The fixture sets `row[\"entry\"]` to `json.dumps(payload())`; serializing that string again makes `ObjectFrame` raise `ValueError(\"object-required\")`, matching the supplied fixed-source observation.",
+                "suggestion": "Pass the existing JSON text directly to `read_object`.",
+                "symbol": "text_encoded_twice",
+                "codeSnippet": "return read_object(json.dumps(row[\"entry\"]))",
+                "suggestedCode": "return read_object(row[\"entry\"])",
+                "fingerprint": "fp-e2c757f7",
+                "semanticFingerprint": "sf-cacfb79f"
+              }
+            ],
+            "json-values-raw_object_into_text_reader": [
+              {
+                "id": "owned/json_value_probe.py:91:raw-object-passed-to-text-reader",
+                "title": "Pass JSON text to the object reader",
+                "description": "`json.loads` makes `row[\"entry\"]` a dictionary because the encoded input contains the object returned by `payload()`. `read_object` requires a string and raises `TypeError` for this dictionary, so the function fails instead of returning the nested object values. Serializing the nested dictionary to JSON text before calling the reader preserves those values.",
+                "file": "owned/json_value_probe.py",
+                "line": 91,
+                "endLine": 91,
+                "severity": "medium",
+                "confidence": 1,
+                "category": "correctness",
+                "evidence": "The changed fragment starts at line 89. The exact statement `return read_object(row[\"entry\"])` is at zero-based displayed-line offset 2, so 89 + 2 = line 91. The supplied fixed-source observation reports `TypeError: json-text-required` for this path, consistent with `read_object`'s explicit non-string check.",
+                "suggestion": "Serialize `row[\"entry\"]` with `json.dumps` before passing it to `read_object`.",
+                "symbol": "raw_object_into_text_reader",
+                "codeSnippet": "return read_object(row[\"entry\"])",
+                "suggestedCode": "return read_object(json.dumps(row[\"entry\"]))",
+                "fingerprint": "fp-7b52d920",
+                "semanticFingerprint": "sf-8c476fc7"
+              }
+            ],
+            "json-values-python_repr_as_json": [
+              {
+                "id": "owned/json_value_probe.py:96:python-repr-as-json",
+                "title": "Python representation is passed where JSON text is required",
+                "description": "`object_frame().decode()` returns a dictionary. Converting it with `str()` produces Python representation, which is not valid JSON for this object. `read_object` requires JSON text and passes it to `json.loads`, so this call raises `JSONDecodeError` instead of returning the nested object values.",
+                "file": "owned/json_value_probe.py",
+                "line": 96,
+                "endLine": 96,
+                "severity": "medium",
+                "confidence": 1,
+                "category": "correctness",
+                "evidence": "The changed fragment starts at line 94. The function declaration is offset 0, the `row` assignment is offset 1, and the return statement is offset 2; therefore 94 + 2 = line 96. `ObjectFrame.decode()` returns the dictionary produced by `json.loads`; `str()` renders its string keys with Python single-quote syntax, while `read_object` requires JSON text. The supplied fixed-source observation reports `JSONDecodeError` because a property name is not enclosed in double quotes.",
+                "suggestion": "Serialize the dictionary with `json.dumps` before passing it to `read_object`.",
+                "symbol": "python_repr_as_json",
+                "codeSnippet": "return read_object(str(row[\"entry\"]))",
+                "suggestedCode": "return read_object(json.dumps(row[\"entry\"]))",
+                "fingerprint": "fp-83be064f",
+                "semanticFingerprint": "sf-df03e3cf"
+              }
+            ],
+            "json-values-missing_inner_decode": [
+              {
+                "id": "owned/json_value_probe.py:101:extra-json-encoding",
+                "title": "Extra JSON encoding passes a scalar to the object reader",
+                "description": "`object_frame().text` is JSON text representing an object. The `json.dumps` call encodes that text as a JSON string, so `read_object` receives text whose decoded value is a string; `ObjectFrame` rejects it because it requires an object.",
+                "file": "owned/json_value_probe.py",
+                "line": 101,
+                "endLine": 101,
+                "severity": "medium",
+                "confidence": 1,
+                "category": "correctness",
+                "evidence": "The fixed-source observation reports `ValueError: object-required` on this function. The displayed fragment starts at line 99; the exact `return` statement is at zero-based offset 2, so 99 + 2 = 101.",
+                "suggestion": "Pass the JSON text in `row[\"entry\"]` directly to `read_object`.",
+                "symbol": "missing_inner_decode",
+                "codeSnippet": "return read_object(json.dumps(row[\"entry\"]))",
+                "suggestedCode": "return read_object(row[\"entry\"])",
+                "fingerprint": "fp-24add6d2",
+                "semanticFingerprint": "sf-cacfb79f"
+              }
+            ],
+            "json-values-annotation_is_not_conversion": [
+              {
+                "id": "owned/json_value_probe.py:106:dict-passed-to-json-text-reader",
+                "title": "Pass JSON text to the reader",
+                "description": "`annotated_text()` returns the dictionary produced by `object_frame().decode()`; its `str` annotation does not convert that value. `read_object` requires JSON text and raises `TypeError` for the dictionary, so this call fails instead of returning the nested object values.",
+                "file": "owned/json_value_probe.py",
+                "line": 106,
+                "endLine": 106,
+                "severity": "medium",
+                "confidence": 1,
+                "category": "correctness",
+                "evidence": "The changed fragment starts at line 104. The exact call is at zero-based displayed-line offset 2, so 104 + 2 = 106. The supplied fixed-source observation reports `TypeError: json-text-required` on this path, consistent with `read_object`'s text-type guard and `annotated_text()`'s dictionary return.",
+                "suggestion": "Serialize the nested dictionary as JSON text before passing it to `read_object`.",
+                "symbol": "annotation_is_not_conversion",
+                "codeSnippet": "return read_object(row[\"entry\"])",
+                "fingerprint": "fp-56b55219",
+                "semanticFingerprint": "sf-8c476fc7"
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "baselineAggregate": {
+      "method": "All three prospectively declared trials namespaced; no cross-trial matching; unchanged default floors",
+      "score": {
+        "metrics": {
+          "expected": 18,
+          "actual": 16,
+          "matched": 16,
+          "precision": 1,
+          "recall": 0.8888888888888888,
+          "locationAccuracy": 1,
+          "severityAccuracy": 1,
+          "categoryAccuracy": 1,
+          "f1": 0.9411764705882353,
+          "falsePositives": 0,
+          "falseNegatives": 2,
+          "meanLineDistance": 0,
+          "confidenceBrierScore": 0
+        },
+        "violations": [],
+        "missingCases": []
+      },
+      "evaluationExit": 0
+    },
+    "candidateAggregate": {
+      "method": "All three prospectively declared trials namespaced; no cross-trial matching; unchanged default floors",
+      "score": {
+        "metrics": {
+          "expected": 18,
+          "actual": 18,
+          "matched": 18,
+          "precision": 1,
+          "recall": 1,
+          "locationAccuracy": 1,
+          "severityAccuracy": 1,
+          "categoryAccuracy": 1,
+          "f1": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "meanLineDistance": 0,
+          "confidenceBrierScore": 0
+        },
+        "violations": [],
+        "missingCases": []
+      },
+      "evaluationExit": 0
+    }
+  },
+  "preservedInputs": {
+    "quality/bugbot/async-statement-corpus.v1.json": "05311cd6c8675554cf3892b4a183f35f79dc0e221482c7e7f731a58d825326ef",
+    "quality/bugbot/resource-authority-corpus.v1.json": "651d5ff016b2797799d63f06cb162ebf7e58467ace0a43f5edc740a03c687d50",
+    "quality/bugbot/corpus.v1.json": "640c3355aeb65c1b15454bd7f9242fa36acc12b8b3f5ef284ee06af8af36c6c6",
+    "quality/bugbot/reference-predictions.v1.json": "3597876433bdce6f89f8467d97bf338bffed9f7d755fe8e447ba130c323cf43e"
+  },
+  "testBudget": {
+    "minimumDistinct": 22,
+    "scenarioSourceRuntimeAndOppositeVerdict": 12,
+    "delivery": 3,
+    "legacy": 1,
+    "privacy": 1,
+    "actualBenchmarkPort": 1,
+    "inventory": 1,
+    "priorInputs": 1,
+    "verificationBounds": 1,
+    "languageSpecificCast": 1
+  },
+  "limits": "No private consumer implementation is copied into SDK fixtures. Fresh original-head six tests/full-codec counterfactual, four-payload primitive probe, authored controls, reporter full-backend evidence and real model trials are separate measurements. Reference verdicts are not provider predictions.",
+  "originalConsumer": {
+    "head": "19ff35cb2cb2ceb4a0397901341f1089001cc619",
+    "codecSha256": "adf60c10b464451f05c0f36fd6ae915fd0c773578f4b99908fa15baae43e5e54",
+    "runtime": "Python 3.14.6",
+    "executedScope": "Actual immutable JsonDocument primitive on four fictional payloads. Not the reported six product tests, normalized source variants, whole backend or native model review.",
+    "observations": [
+      {
+        "payload": 1,
+        "decodedType": "dict",
+        "serializeObjectOnceRoundTrips": true,
+        "castPreservesObjectIdentity": true,
+        "castObjectRejectedAtTextBoundary": true,
+        "alreadyTextCastRoundTrips": true,
+        "alreadyTextObjectSerializationRejected": true
+      },
+      {
+        "payload": 2,
+        "decodedType": "dict",
+        "serializeObjectOnceRoundTrips": true,
+        "castPreservesObjectIdentity": true,
+        "castObjectRejectedAtTextBoundary": true,
+        "alreadyTextCastRoundTrips": true,
+        "alreadyTextObjectSerializationRejected": true
+      },
+      {
+        "payload": 3,
+        "decodedType": "dict",
+        "serializeObjectOnceRoundTrips": true,
+        "castPreservesObjectIdentity": true,
+        "castObjectRejectedAtTextBoundary": true,
+        "alreadyTextCastRoundTrips": true,
+        "alreadyTextObjectSerializationRejected": true
+      },
+      {
+        "payload": 4,
+        "decodedType": "dict",
+        "serializeObjectOnceRoundTrips": true,
+        "castPreservesObjectIdentity": true,
+        "castObjectRejectedAtTextBoundary": true,
+        "alreadyTextCastRoundTrips": true,
+        "alreadyTextObjectSerializationRejected": true
+      }
+    ],
+    "historicalTests": "Fresh original-head selected six regressions and full-codec counterfactual are now independently executed below. Whole backend/frontend/historical full model review and consumer feature acceptance are not rerun.",
+    "followupHead": "ed7cd14190d750846833cf1bb822988b628560da",
+    "followupMeaning": "Three production files and one test unchanged; manual false-positive dismissal is not a code fix or SDK correction.",
+    "targetedExecution": {
+      "at": "2026-11-04T05:45:32.911344+00:00",
+      "startedAt": "2026-11-04T05:45:27.600987+00:00",
+      "head": "19ff35cb2cb2ceb4a0397901341f1089001cc619",
+      "python": "Python 3.14.6",
+      "uv": "uv 0.11.29 (Homebrew 2026-07-15 aarch64-apple-darwin)",
+      "lockSha256": "a69e94841c266e4a086f659de78e0733d6bf25c453d314c9556b5c7227839dc3",
+      "sourceFilesUnchanged": 517,
+      "cases": [
+        {
+          "name": "test_relative_records_preserve_full_original_initial_and_successor_facts[False-False]",
+          "class": "tests.backend.test_sqlite_relative_recurrence_records",
+          "seconds": "0.005"
+        },
+        {
+          "name": "test_relative_records_preserve_full_original_initial_and_successor_facts[False-True]",
+          "class": "tests.backend.test_sqlite_relative_recurrence_records",
+          "seconds": "0.003"
+        },
+        {
+          "name": "test_relative_records_preserve_full_original_initial_and_successor_facts[True-False]",
+          "class": "tests.backend.test_sqlite_relative_recurrence_records",
+          "seconds": "0.002"
+        },
+        {
+          "name": "test_relative_records_preserve_full_original_initial_and_successor_facts[True-True]",
+          "class": "tests.backend.test_sqlite_relative_recurrence_records",
+          "seconds": "0.003"
+        },
+        {
+          "name": "test_actual_source_cycle_survives_approval_and_closure_without_rewriting_slot_facts",
+          "class": "tests.backend.test_sqlite_relative_integrity",
+          "seconds": "0.071"
+        },
+        {
+          "name": "test_real_restore_retains_a_generated_successor_proof_without_recreating_its_task",
+          "class": "tests.backend.test_sqlite_relative_integrity",
+          "seconds": "0.245"
+        }
+      ],
+      "passed": 6,
+      "errors": 0,
+      "skipped": 0,
+      "logSha256": "046c751ab2cc78e96575e27e0ae1186784e7188fb1295b0beeaa25f721cd764d",
+      "scope": "Fresh selected six consumer regressions on immutable original source and locked dependencies. Not whole backend/frontend/full model review or complete consumer feature acceptance.",
+      "isolation": "One owned temporary archive SDK; no-config UV, fresh project env/cache/TMPDIR, allowlisted credential-free environment, no HOME override; source517files unchanged.",
+      "command": "uv run --no-sync --locked pytest tests/backend/test_sqlite_relative_recurrence_records.py::test_relative_records_preserve_full_original_initial_and_successor_facts tests/backend/test_sqlite_relative_integrity.py::test_actual_source_cycle_survives_approval_and_closure_without_rewriting_slot_facts tests/backend/test_sqlite_relative_integrity.py::test_real_restore_retains_a_generated_successor_proof_without_recreating_its_task --no-cov",
+      "runtime": {
+        "packages": {
+          "PyYAML": "6.0.3",
+          "Pygments": "2.21.0",
+          "annotated-doc": "0.0.5",
+          "annotated-types": "0.8.0",
+          "anyio": "4.15.1",
+          "ast_serialize": "0.13.1",
+          "certifi": "2026.10.23",
+          "click": "8.5.0",
+          "coverage": "7.17.0",
+          "domus-server": "0.0.0",
+          "domus-tooling": "0.0.0",
+          "fastapi": "0.162.0",
+          "grimp": "3.18",
+          "h11": "0.16.0",
+          "hatchling": "1.33.0",
+          "httpcore": "1.0.9",
+          "httpcore2": "2.16.0",
+          "httpx": "0.28.1",
+          "httpx2": "2.16.0",
+          "idna": "3.20",
+          "import-linter": "2.15",
+          "iniconfig": "2.3.1",
+          "librt": "0.16.0",
+          "markdown-it-py": "4.2.0",
+          "mdurl": "0.1.2",
+          "mypy": "2.4.1",
+          "mypy_extensions": "1.1.0",
+          "opentelemetry-api": "1.45.2",
+          "packaging": "26.3",
+          "pathspec": "1.1.1",
+          "pluggy": "1.7.0",
+          "pydantic": "2.14.2",
+          "pydantic_core": "2.50.2",
+          "pytest": "9.2.0",
+          "pytest-cov": "7.1.0",
+          "rich": "15.0.0",
+          "ruff": "0.17.3",
+          "starlette": "1.10.0",
+          "tomlkit": "0.15.2",
+          "trove-classifiers": "2026.9.21.13",
+          "truststore": "0.10.5",
+          "typing-inspection": "0.4.4",
+          "typing_extensions": "4.16.0",
+          "tzdata": "2026.6",
+          "uvicorn": "0.54.0",
+          "websockets": "17.4"
+        },
+        "python": "3.14.6",
+        "sqlite": "3.53.3"
+      }
+    },
+    "counterfactualExecution": {
+      "sourceSha256": "adf60c10b464451f05c0f36fd6ae915fd0c773578f4b99908fa15baae43e5e54",
+      "mutations": 1,
+      "mode": "Isolated in-memory module; no consumer source changed. Not a whole historical model replay.",
+      "observations": [
+        {
+          "timed": false,
+          "restricted": false,
+          "nestedCycleType": "dict",
+          "originalRoundTrip": true,
+          "counterfactualError": "invalid_recurrence_record"
+        },
+        {
+          "timed": false,
+          "restricted": true,
+          "nestedCycleType": "dict",
+          "originalRoundTrip": true,
+          "counterfactualError": "invalid_recurrence_record"
+        },
+        {
+          "timed": true,
+          "restricted": false,
+          "nestedCycleType": "dict",
+          "originalRoundTrip": true,
+          "counterfactualError": "invalid_recurrence_record"
+        },
+        {
+          "timed": true,
+          "restricted": true,
+          "nestedCycleType": "dict",
+          "originalRoundTrip": true,
+          "counterfactualError": "invalid_recurrence_record"
+        }
+      ],
+      "at": "2026-11-04T05:46:14.751361+00:00",
+      "head": "19ff35cb2cb2ceb4a0397901341f1089001cc619",
+      "sourceFilesUnchanged": 517,
+      "driverSha256": "ea2d884c58187ca1f44b8220316d804e35d05549d86a45b60815c25fa78cfa1c",
+      "scope": "Actual original complete codec across all4date/instant and ordinary/restricted source variants;4unchanged roundtrips and4matching harmful-suggestion failures. No production patch or full feature acceptance.",
+      "replacementSemantics": "Replace only the nested object serialization with the reported Python identity cast, in an isolated in-memory module."
+    }
+  },
+  "validation": {
+    "jest": {
+      "suites": 900,
+      "passed": 17621,
+      "existingSkips": 35
+    },
+    "extension": {
+      "passed": 267,
+      "allFourMetrics": 100
+    },
+    "newCases": 22,
+    "localDiff": {
+      "coverable": 4,
+      "hit": 4,
+      "miss": 0,
+      "partial": 0
+    },
+    "budgets": "Global budgets and new exhaustive JSON module budget pass; setup ledger336/350 with14preexisting explicitlyopen",
+    "static": "typecheck/lint/specs/catalog/docs/routes/agentdocs/workflows pass",
+    "package": "99-file standard CLI/API/web package validation passes; no publication",
+    "graphify": {
+      "mode": "AST only",
+      "nodes": 18695,
+      "edges": 48800
+    },
+    "limits": "No mandatory Python executor. Four local modified coverable lines is not yet official remote Codecov."
+  }
+}

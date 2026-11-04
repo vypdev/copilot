@@ -7,6 +7,57 @@ description: Measure Bugbot accuracy, latency, outcomes, feedback, and regressio
 
 Bugbot separates deterministic evaluator checks from optional, cost-bearing model benchmarks. The versioned corpus at `quality/bugbot/corpus.v1.json` contains 174 positive and negative synthetic cases across TypeScript/TSX, Python, Go, SQL, Java, Rust, YAML workflows, shell, Terraform, C#, Kotlin, and Markdown. Ground truth is never included in the model prompt.
 
+## JSON value regression
+
+The separate `quality/bugbot/json-value-corpus.v1.json` group has twelve frozen
+Python controls: six working object/text/reader paths and six genuine failures.
+It includes an object-valued decode, nested outer decode, an actual text decoder,
+a legitimate identity cast after a type guard, Unicode nested values and distinct
+serialization levels. Counterexamples include casting an object into a text
+reader, real extra encoding, a raw object at the reader, Python representation
+used as JSON, a missing inner decode and a misleading return annotation.
+
+The fixed authored optional probe runs only its sibling module with stdlib-only
+Python. The recorded run uses Python 3.14.6. Repeat it with an available reviewed
+Python 3 interpreter; retain the actual version and output as a new observation:
+
+```bash
+python3 -I -B -S src/tooling/__tests__/fixtures/bugbot_json_value_runner.py
+```
+
+The runner imports no consumer source and never evaluates corpus strings.
+Mandatory Node CI binds exact LF probe/runner bytes, measured line origins and
+observations to the corpus, checks opposite-verdict scoring and prompt privacy,
+and verifies all existing delivery/query/history/size contracts. It introduces
+no Python dependency in the Action. Actual runtime observations, deterministic
+reference controls and real model predictions remain separate evidence.
+
+`quality/bugbot/evidence/issue-855.json` records qualification identities and every
+prospectively declared model trial. Three baseline and three trials per distinct
+candidate use identical inputs and unchanged default evaluator floors. Individual
+failures and aborts remain visible; the predefined aggregate namespaces every
+trial's cases instead of selecting a best run. These medium-effort authored-case
+measurements do not replay the reported smart-effort historical consumer review.
+The original primitive was separately exercised on four fictional payloads.
+Fresh execution of the exact original head with its immutable lock and Python
+3.14.6 also passes the six requested consumer regressions. All four complete-codec
+variants round-trip unchanged; the reported expression replacement in memory
+makes all four raise the reported storage error. All 517 original files remain
+unchanged. This does not rerun the whole backend suite or historical full model
+review, and does not certify complete consumer feature acceptance.
+
+The current-baseline cohort has zero false positives and finds 16/18 defects;
+one individual trial misses two and fails recall/F1, while the predefined full
+aggregate passes unchanged floors. Each of the three candidate trials passes;
+the complete cohort finds 18/18 defects with zero false positives and exact
+location/severity/category all 1. These results preserve real faults without
+claiming the historical false positive was reproduced by the current baseline.
+
+The 174-case main corpus, earlier groups and their references remain unchanged.
+This group preserves the 200-case invocation ceiling and adds no production query,
+executor, permission or automatic finding disposition. A bounded sample cannot
+certify population accuracy or explain the historical model's internal cause.
+
 ## Asynchronous statement regression
 
 The separate `quality/bugbot/async-statement-corpus.v1.json` group contains twelve
