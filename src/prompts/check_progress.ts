@@ -55,11 +55,11 @@ export function getCheckProgressPrompt(params: CheckProgressParams): string {
     return fillTemplate(TEMPLATE, {
         projectContextInstruction: params.projectContextInstruction,
         issueNumber: String(params.issueNumber),
-        branchIdentity: renderProgressPromptData(JSON.stringify({ baseBranch: params.baseBranch, currentBranch: params.currentBranch }), 'progress.branch-identity', 4_096),
-        issueDescriptionJson: renderProgressPromptData(JSON.stringify(params.issueDescription), 'progress.issue-description', AGENT_PROMPT_MAX_BYTES),
+        branchIdentity: renderProgressPromptData(JSON.stringify({ baseBranch: params.baseBranch, currentBranch: params.currentBranch }), 'progress.branch-identity', 4_096, 'assessment'),
+        issueDescriptionJson: renderProgressPromptData(JSON.stringify(params.issueDescription), 'progress.issue-description', AGENT_PROMPT_MAX_BYTES, 'assessment'),
         scopeInstructions: PROGRESS_SCOPE_INSTRUCTIONS,
-        acceptanceScope: renderProgressPromptData(params.acceptanceScope ?? '{}', 'progress.acceptance-scope', MAX_PROGRESS_SCOPE_BYTES),
+        acceptanceScope: renderProgressPromptData(params.acceptanceScope ?? '{}', 'progress.acceptance-scope', MAX_PROGRESS_SCOPE_BYTES, 'scope'),
         targetLocale: params.targetLocale,
-        diffEvidence: renderProgressPromptData(params.diffEvidence, 'progress.comparison', AGENT_PROMPT_MAX_BYTES),
+        diffEvidence: renderProgressPromptData(params.diffEvidence, 'progress.comparison', AGENT_PROMPT_MAX_BYTES, 'assessment'),
     });
 }

@@ -21,6 +21,7 @@ const BRANCH_SYNC_PUBLICATION_RECOVERY_URL = 'https://docs.page/vypdev/copilot/s
 
 import { sourceContextDiagnostic } from '../../domain/agent_source_snapshot';
 import { assignmentDiagnosticPresentation } from './issue_assignment_diagnostic_presentation';
+import { progressCapacityPresentation } from './progress_capacity_presentation_policy';
 
 export interface ApplicationErrorPresentation {
     readonly impact: string;
@@ -46,7 +47,9 @@ export function buildApplicationErrorPresentation(
     const descriptor = error.recovery
         ? `error.recovery.${error.recovery.id}` as const
         : `error.${error.code}` as const;
-    const variables = error.recovery?.id === 'sdd-draft-response-too-short'
+    const variables = error.recovery?.id === 'progress-evidence-capacity-exceeded'
+        ? progressCapacityPresentation(error.recovery.variables, message)
+        : error.recovery?.id === 'sdd-draft-response-too-short'
         ? { ...error.recovery.variables, observed: error.recovery.variables.observed === 'unavailable'
             ? message('error.label.draftLengthUnavailable') : error.recovery.variables.observed }
         : error.recovery?.id === 'issue-assignment-failed'

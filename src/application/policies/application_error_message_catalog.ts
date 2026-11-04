@@ -1,5 +1,6 @@
 import { BRANCH_SYNC_PUBLICATION_LABEL_KEYS, ENGLISH_BRANCH_SYNC_PUBLICATION_LABELS, SPANISH_BRANCH_SYNC_PUBLICATION_LABELS, ENGLISH_BRANCH_SYNC_PUBLICATION_CONTENT, SPANISH_BRANCH_SYNC_PUBLICATION_CONTENT } from './branch_sync_publication_messages';
 import { ASSIGNMENT_DIAGNOSTIC_LABEL_KEYS, ENGLISH_ASSIGNMENT_LABELS, SPANISH_ASSIGNMENT_LABELS, ENGLISH_ASSIGNMENT_CONTENT, SPANISH_ASSIGNMENT_CONTENT } from './issue_assignment_messages';
+import { PROGRESS_CAPACITY_LABEL_KEYS, ENGLISH_PROGRESS_CAPACITY_LABELS, SPANISH_PROGRESS_CAPACITY_LABELS, ENGLISH_PROGRESS_CAPACITY_CONTENT, SPANISH_PROGRESS_CAPACITY_CONTENT } from './progress_capacity_messages';
 import { BUGBOT_REVIEW_DIAGNOSTIC_LABEL_KEYS, ENGLISH_REVIEW_DIAGNOSTIC_LABELS, SPANISH_REVIEW_DIAGNOSTIC_LABELS } from './bugbot_review_diagnostic_labels';
 import { ENGLISH_COMMAND_VALIDATION_CONTENT, SPANISH_COMMAND_VALIDATION_CONTENT } from './comment_command_validation_message_catalog';
 import type {
@@ -28,6 +29,7 @@ const LABEL_KEYS = Object.freeze([
   ...BUGBOT_REVIEW_DIAGNOSTIC_LABEL_KEYS,
   ...BRANCH_SYNC_PUBLICATION_LABEL_KEYS,
   ...ASSIGNMENT_DIAGNOSTIC_LABEL_KEYS,
+  ...PROGRESS_CAPACITY_LABEL_KEYS,
   'impact', 'errorCode', 'action', 'retainedState', 'retryable', 'yes', 'no', 'reference', 'draftLengthUnavailable',
 ] as const);
 const CONTENT_FIELDS = Object.freeze(['impact', 'action', 'retainedState'] as const);
@@ -60,6 +62,7 @@ const ENGLISH_LABELS: Readonly<Record<LabelKey, string>> = Object.freeze({
   ...ENGLISH_REVIEW_DIAGNOSTIC_LABELS,
   ...ENGLISH_BRANCH_SYNC_PUBLICATION_LABELS,
   ...ENGLISH_ASSIGNMENT_LABELS,
+  ...ENGLISH_PROGRESS_CAPACITY_LABELS,
   impact: 'Impact',
   errorCode: 'Error code',
   action: 'Action',
@@ -75,6 +78,7 @@ const SPANISH_LABELS: Readonly<Record<LabelKey, string>> = Object.freeze({
   ...SPANISH_REVIEW_DIAGNOSTIC_LABELS,
   ...SPANISH_BRANCH_SYNC_PUBLICATION_LABELS,
   ...SPANISH_ASSIGNMENT_LABELS,
+  ...SPANISH_PROGRESS_CAPACITY_LABELS,
   impact: 'Impacto',
   errorCode: 'Código de error',
   action: 'Acción',
@@ -180,7 +184,7 @@ const SPANISH_CONTENT: ErrorContent = Object.freeze({
   }),
   'validation.evidence-too-large': Object.freeze({
     impact: 'No se pudo evaluar el progreso dentro de los límites fijos de evidencia.',
-    action: 'Inspecciona la comparación completa y la capacidad indicada. La recuperación por partes continúa automáticamente cuando es compatible. Si se interrumpe, vuelve a ejecutar la fuente gestionada actual; una comparación idéntica que excede el límite no obtiene más capacidad.',
+    action: 'Inspecciona la comparación completa y los datos de capacidad disponibles. La continuación por partes acotada pertenece a una sola ejecución; este fallo de capacidad detiene el intento. Reintentar evidencia idéntica que supera el límite no aumenta la capacidad. Conserva toda la aceptación y evidencia, y reporta las cargas no compatibles con el enlace de ejecución.',
     retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas.',
   }),
   'workflow.invalid-event': Object.freeze({
@@ -227,6 +231,7 @@ const STORED_CONFIGURATION_RETAINED_ES = 'Esta lectura no modificó la descripci
 
 const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
   ...ENGLISH_ASSIGNMENT_CONTENT,
+  ...ENGLISH_PROGRESS_CAPACITY_CONTENT,
   ...ENGLISH_COMMAND_VALIDATION_CONTENT,
   ...ENGLISH_BRANCH_SYNC_PUBLICATION_CONTENT,
   'stored-configuration-schema-missing': Object.freeze({
@@ -434,6 +439,7 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
 
 const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
   ...SPANISH_ASSIGNMENT_CONTENT,
+  ...SPANISH_PROGRESS_CAPACITY_CONTENT,
   ...SPANISH_COMMAND_VALIDATION_CONTENT,
   ...SPANISH_BRANCH_SYNC_PUBLICATION_CONTENT,
   'stored-configuration-schema-missing': Object.freeze({

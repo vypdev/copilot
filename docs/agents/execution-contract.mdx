@@ -172,6 +172,21 @@ complete invocation against current native source; partial facts are never
 persisted or reused as a checkpoint. The read-only source adapter receives no
 checkout, command, mutable-ref or new credential capability.
 
+Deterministic capacity failures use `validation.evidence-too-large` with the
+closed `progress-evidence-capacity-exceeded` recovery. Its eight variables are
+`phase`, `dimension`, `unit`, `bound`, `observedCount`, `supportedLimit`,
+`countKind` and `context`. Host guards distinguish exact serialized/request
+bytes, required worst-case reservations, minimum counts and stopped-scan lower
+bounds. Known integer allocations outside their range retain exact usage and
+limit; unrepresentable allocations remain unavailable. Only host planning and
+aggregation can add independently validated source coverage; provider errors
+retain their identity. The comparison context keeps base/head, an available
+manifest digest, three ordered path-inventory digests, reconciled totals and
+bounded inert uncovered names, plus a known original line anchor. It never
+certifies execution or review. No budget, recovery allowance or query count is
+increased. Capacity failure is terminal for the invocation and retains prior
+progress and independent completed workflow results.
+
 Inherited production binaries may be absent from the complete actual PR delta
 even when they differ from development; this is a comparison-source correction,
 not a binary metadata exemption. Actually changed binary/non-text contents remain

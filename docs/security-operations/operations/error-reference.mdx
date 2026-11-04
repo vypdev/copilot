@@ -125,6 +125,34 @@ retarget a legitimate PR or split production binaries just to obtain text patche
 
 
 
+## Complete progress evidence capacity
+
+`validation.evidence-too-large` may carry
+`progress-evidence-capacity-exceeded`. Its public variables are exactly
+`phase`, `dimension`, `unit`, `bound`, `observedCount`, `supportedLimit`,
+`countKind` and `context`. `maximum` compares measured or required usage with
+available capacity; `minimum` reports a missing minimum. `exact`, `at-least`
+and `unavailable` distinguish a completed measurement, a stopped scan and
+missing facts. Out-of-range integer allocations retain known bounds; unknown
+or unrepresentable allocations never become negative or invented counts.
+
+Source, original scope, part prompts, reserved replacement prompts, receipt
+envelopes and aggregate facts are separate dimensions. Known comparison context
+contains actual base/head, source-manifest digest when available, separate
+required/accepted/uncovered path-inventory digests and reconciled counts, plus
+up to eight inert uncovered path excerpts within 8,192 serialized bytes. A
+known original physical source line remains attached. `none` means that the
+manifest or line identity is unavailable at this boundary; verified zero
+coverage remains distinct from unavailable context. Model receipt acceptance
+does not certify CI, tests or review.
+
+Existing progress is retained. Supported parts continue within one invocation;
+this nonretryable capacity error stops it. Preserve complete evidence and
+requirements when reporting the diagnostic and run link. Identical input
+cannot gain capacity, and partial receipts are not a durable checkpoint.
+Existing inventory, source, scope and model-response recoveries retain their
+own contracts. See [capacity troubleshooting](./troubleshooting#complete-progress-evidence-capacity).
+
 ## Invalid completed progress result
 
 `agent.failed` can describe a process failure or an invalid returned assessment.

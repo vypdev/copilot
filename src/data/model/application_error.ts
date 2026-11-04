@@ -3,6 +3,7 @@ import { isBugbotReviewBlockFacts, type BugbotReviewBlockFacts } from '../../dom
 import { isProgressScopeCapacityFacts, type ProgressScopeCapacityFacts } from '../../domain/progress_response_diagnostic';
 import { normalizeProgressCompletionDiagnostic, type ProgressCompletionDiagnostic } from '../../domain/progress_completion_diagnostic';
 import { isProgressInventoryDiagnostic, type ProgressInventoryDiagnostic } from '../../domain/progress_inventory_diagnostic';
+import { normalizeProgressCapacityDiagnostic, type ProgressCapacityDiagnostic } from '../../domain/progress_capacity_diagnostic';
 import { isProgressResponseDiagnosticFacts, type ProgressResponseDiagnosticFacts } from '../../domain/progress_response_diagnostic';
 import { isProgressPartitionLengthDiagnostic, type ProgressPartitionLengthDiagnostic } from '../../domain/progress_partition_length_failure';
 import { isProgressBinaryEvidenceFacts, type ProgressBinaryEvidenceFacts } from '../../domain/progress_binary_evidence_diagnostic';
@@ -92,6 +93,7 @@ export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'issue-workflow-admission-blocked',
     'progress-binary-evidence-unavailable',
     'progress-inventory-incomplete',
+    'progress-evidence-capacity-exceeded',
     'bugbot-review-incomplete',
     'progress-result-contract-invalid',
     'progress-partition-length-invalid',
@@ -118,6 +120,7 @@ interface ApplicationErrorRecoveryVariables extends Readonly<Record<CopilotComma
     readonly 'issue-workflow-admission-blocked': IssueWorkflowDiagnosticFacts;
     readonly 'progress-binary-evidence-unavailable': ProgressBinaryEvidenceFacts;
     readonly 'progress-inventory-incomplete': ProgressInventoryDiagnostic;
+    readonly 'progress-evidence-capacity-exceeded': ProgressCapacityDiagnostic;
     readonly 'bugbot-review-incomplete': BugbotReviewBlockFacts;
     readonly 'progress-result-contract-invalid': ProgressResponseDiagnosticFacts;
     readonly 'progress-partition-length-invalid': ProgressPartitionLengthDiagnostic;
@@ -267,7 +270,7 @@ export const APPLICATION_ERROR_METADATA: Readonly<Record<ApplicationErrorCode, A
     'validation.evidence-too-large': {
         kind: 'validation', retryable: false,
         impact: 'Progress could not be assessed within the fixed evidence limits.',
-        action: 'Inspect the complete comparison and reported capacity. Supported multipart recovery continues automatically. If interrupted, rerun the current managed source; an identical over-limit comparison cannot gain capacity.',
+        action: 'Inspect the complete comparison and available capacity facts. Bounded multipart continuation is invocation-local; this capacity failure stops the attempt. Retrying unchanged over-limit evidence cannot increase capacity. Preserve complete acceptance and evidence, and report unsupported workloads with the run link.',
         retainedState: 'Existing progress labels and published assessments were preserved.',
     },
     'workflow.invalid-event': {
@@ -379,6 +382,8 @@ export class ApplicationError extends Error {
             ? 'No assignment operation was attempted; independently completed lifecycle effects were retained.'
             : options.recovery?.id === 'sdd-draft-response-too-short'
             ? 'Existing answers, selected ownership and published specifications were retained; this attempt published no specification or branch.'
+            : options.recovery?.id === 'progress-evidence-capacity-exceeded'
+            ? 'Existing progress labels and assessments were preserved. No partial progress was published; independent completed workflow effects remain in their own results.'
             : options.recovery?.id === 'deployment-publication-context-missing'
             ? PRESERVED_STATE
             : metadata.retainedState;
@@ -455,6 +460,7 @@ const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readon
 
     'progress-binary-evidence-unavailable': Object.freeze(['paths', 'pathCount']),
     'progress-inventory-incomplete': Object.freeze(['profile', 'reason', 'observedCount', 'supportedLimit', 'countKind', 'paths']),
+    'progress-evidence-capacity-exceeded': Object.freeze(['phase', 'dimension', 'unit', 'bound', 'observedCount', 'supportedLimit', 'countKind', 'context']),
     'bugbot-review-incomplete': Object.freeze(['profile', 'countKind', 'resource', 'observed', 'limit', 'unit']),
     'progress-result-contract-invalid': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
     'progress-partition-length-invalid': Object.freeze(['partitionId', 'filePath', 'unitId', 'field', 'maximum', 'observed']),
@@ -481,6 +487,9 @@ function normalizeApplicationErrorRecovery(
     }
     if (recovery.id === 'progress-completion-recovery-exhausted') {
         return Object.freeze({ id: recovery.id, variables: normalizeProgressCompletionDiagnostic(variables) });
+    }
+    if (recovery.id === 'progress-evidence-capacity-exceeded') {
+        return Object.freeze({ id: recovery.id, variables: normalizeProgressCapacityDiagnostic(variables) });
     }
     if (recovery.id === 'sdd-source-context-unavailable' && !isSddSourceContextDiagnostic(variables)) {
         throw new TypeError('SDD source context diagnostic is invalid.');

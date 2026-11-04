@@ -4,7 +4,7 @@ import type { ProgressDiffPartition, ProgressEvidenceProfile } from '../ports/pr
 import { progressResponseRejected, progressResponsePayload } from './progress_response_rejection_policy';
 import type { ProgressResponseReason } from '../../domain/progress_response_diagnostic';
 import { AGENT_OUTPUT_LOCALE_SCHEMA_PROPERTY } from './agent_output_locale_policy';
-import { progressEvidenceTooLarge } from './progress_diff_partition_policy';
+import { progressEvidenceTooLarge, invalidProgressCapacityAllocation } from './progress_diff_partition_policy';
 
 // Leaves space inside the unchanged 512 KiB runtime prompt ceiling. The caller
 // further subtracts the exact issue/prompt envelope before requesting facts.
@@ -90,16 +90,22 @@ export function progressPartitionFactLimit(baseSha: string, headSha: string, par
         ? partition.units.map(unit => ({ path: unit.path, unitId: unit.id, implemented: '', remaining: '' }))
         : partition.paths.map(path => ({ path, implemented: '', remaining: '' })));
     const count = empty.reduce((sum, files) => sum + files.length, 0);
-    const remaining = budget - Buffer.byteLength(serializeProgressFacts(baseSha, headSha, partitions, empty, profile), 'utf8');
+    const envelopeBytes = Buffer.byteLength(serializeProgressFacts(baseSha, headSha, partitions, empty, profile), 'utf8');
+    const remaining = budget - envelopeBytes;
     const limit = Math.min(600, Math.floor(remaining / (count * 12)));
-    if (!Number.isSafeInteger(budget) || budget < 1 || budget > MAX_PROGRESS_AGGREGATE_BYTES || count === 0 || limit < (profile === 'immutable-tree-v1' ? IMMUTABLE_PROGRESS_PROFILE.minimumFactLength : 1)) throw progressEvidenceTooLarge();
+    if (!Number.isSafeInteger(budget) || budget < 1 || budget > MAX_PROGRESS_AGGREGATE_BYTES) throw invalidProgressCapacityAllocation('aggregate', budget, MAX_PROGRESS_AGGREGATE_BYTES);
+    if (count === 0) throw progressEvidenceTooLarge({ phase: 'aggregate', dimension: 'evidence-unit-count', observedCount: 0, supportedLimit: 1, bound: 'minimum' });
+    const minimum = profile === 'immutable-tree-v1' ? IMMUTABLE_PROGRESS_PROFILE.minimumFactLength : 1;
+    if (limit < minimum) throw progressEvidenceTooLarge({ phase: 'aggregate', dimension: 'minimum-fact-bytes',
+        observedCount: envelopeBytes + count * 12 * minimum, supportedLimit: budget });
     return limit;
 }
 
 export function aggregateProgressFacts(baseSha: string, headSha: string, partitions: readonly ProgressDiffPartition[], facts: readonly (readonly ProgressFileFacts[])[], budget = MAX_PROGRESS_AGGREGATE_BYTES, profile?: ProgressEvidenceProfile): string {
     const evidence = serializeProgressFacts(baseSha, headSha, partitions, facts, profile);
-    if (!Number.isSafeInteger(budget) || budget < 1 || budget > MAX_PROGRESS_AGGREGATE_BYTES
-        || Buffer.byteLength(evidence, 'utf8') > budget) throw progressEvidenceTooLarge();
+    if (!Number.isSafeInteger(budget) || budget < 1 || budget > MAX_PROGRESS_AGGREGATE_BYTES) throw invalidProgressCapacityAllocation('aggregate', budget, MAX_PROGRESS_AGGREGATE_BYTES);
+    const observedCount = Buffer.byteLength(evidence, 'utf8');
+    if (observedCount > budget) throw progressEvidenceTooLarge({ phase: 'aggregate', dimension: 'aggregate-fact-bytes', observedCount, supportedLimit: budget });
     if (facts.length !== partitions.length) throw invalid();
     for (const [index, partition] of partitions.entries()) {
         // Revalidate exact assignments at the aggregation boundary too; no caller can attest a partial inventory.

@@ -6,6 +6,7 @@ import type { ProgressEvidenceProfile, ProgressDiffChange, ProgressDiffEvidence,
 import { isProgressEvidencePath } from '../../domain/progress_evidence_path';
 import { MAX_PROGRESS_EVIDENCE_BYTES, MAX_FRAMED_PROGRESS_PARTITIONS, progressEvidenceTooLarge } from './progress_diff_partition_policy';
 import { MAX_PROGRESS_RECOVERY_FRAMES, PROGRESS_RECOVERY_FRAME_LIMITS, PROGRESS_RECOVERY_TOTAL_LIMITS } from './progress_recovery_capacity_policy';
+import { progressComparisonCapacityContext } from './progress_capacity_context_policy';
 
 type Partitioned = Extract<ProgressDiffEvidence, { kind: 'partitioned' }>;
 const hash = (value: unknown): string => createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -84,7 +85,9 @@ export function validateFramedProgressEvidence(diff: Partitioned, bound = false)
     const all: ProgressDiffChange[] = [];
     for (const [index, part] of diff.partitions.entries()) {
         if (part === null || typeof part !== 'object' || typeof part.evidence !== 'string') invalid('source-part-shape');
-        if (Buffer.byteLength(part.evidence) > MAX_PROGRESS_EVIDENCE_BYTES) throw progressEvidenceTooLarge();
+        const partBytes = Buffer.byteLength(part.evidence, 'utf8');
+        if (partBytes > MAX_PROGRESS_EVIDENCE_BYTES) throw progressEvidenceTooLarge({ phase: 'source', dimension: 'source-part-bytes',
+            observedCount: partBytes, supportedLimit: MAX_PROGRESS_EVIDENCE_BYTES });
         const identity = part.sourceIdentity;
         const expected = partDigest(diff.baseSha, diff.headSha, protocol.preimageSha, part, index + 1, diff.partitions.length, protocol.version);
         const sourceId = `progress-source-${index + 1}-of-${diff.partitions.length}-${expected}`;
@@ -103,7 +106,11 @@ export function validateFramedProgressEvidence(diff: Partitioned, bound = false)
     if (protocol.version === 'immutable-tree-v1' && !validImmutableProgressUnits(all, protocol)) invalid('source-coverage');
     const body = manifestBody(diff, protocol);
     if (hash(body) !== protocol.manifestDigest || diff.evidence !== JSON.stringify({ ...body, manifestDigest: protocol.manifestDigest })) invalid('source-manifest-digest');
-    if (Buffer.byteLength(diff.evidence) > MAX_PROGRESS_EVIDENCE_BYTES) throw progressEvidenceTooLarge();
+    const manifestBytes = Buffer.byteLength(diff.evidence, 'utf8');
+    if (manifestBytes > MAX_PROGRESS_EVIDENCE_BYTES) throw progressEvidenceTooLarge({ phase: 'source', dimension: 'source-manifest-bytes',
+        observedCount: manifestBytes, supportedLimit: MAX_PROGRESS_EVIDENCE_BYTES,
+        context: progressComparisonCapacityContext({ baseSha: diff.baseSha, headSha: diff.headSha,
+            requiredPaths: protocol.requiredPaths, manifestDigest: protocol.manifestDigest }) });
 }
 
 /** The data adapter supplies the complete independent inventory and fresh host UUID. */
