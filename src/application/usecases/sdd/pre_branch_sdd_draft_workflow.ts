@@ -9,6 +9,7 @@ import {
   type SddPlan,
 } from '../../../domain/pre_branch_sdd';
 import { AgentResponseLengthFailure } from '../../../domain/agent_response_length_failure';
+import { AgentResponseSchemaFailure } from '../../../domain/agent_response_schema_failure';
 import { renderSddDerivedTables, SDD_CONSISTENCY_PROMPT, SDD_DERIVED_TABLES_PROMPT } from '../../../domain/sdd_draft_consistency';
 import type { AgentSourceSnapshot } from '../../../domain/agent_source_snapshot';
 
@@ -43,6 +44,9 @@ export async function draftSddMarkdown(
       options: { expectJson: true, schemaName: 'pre_branch_sdd_draft', schema },
       });
     } catch (error) {
+      if (error instanceof AgentResponseSchemaFailure && error.reason === 'string-short' && error.path === '$.markdown') {
+        throw minimumFailure(attempt);
+      }
       // Only the exact local schema's maximum-length rejection is recoverable.
       // Provider failures and other schema violations retain their original identity.
       if (!(error instanceof AgentResponseLengthFailure) || error.path !== '$.markdown' || error.maximum !== maximum) throw error;
@@ -60,6 +64,8 @@ export async function draftSddMarkdown(
       diagnostic = { reason: 'size', phase: 'response', facts: [{ detail: 'size-limit', section: 0, expected: maximum }] };
       continue;
     }
+    const observedLength = [...markdown].length;
+    if (observedLength < SDD_MIN_DRAFT_CHARACTERS) throw minimumFailure(attempt, observedLength);
     let assembledCandidate = false;
     try {
       const assembled = renderSddDerivedTables(markdown);
@@ -85,4 +91,10 @@ export async function draftSddMarkdown(
     }
   }
   throw new SddDraftPreparationFailure(diagnostic, 2);
+}
+
+function minimumFailure(attempt: number, observed?: number): SddDraftPreparationFailure {
+  return new SddDraftPreparationFailure({ reason: 'response-minimum', phase: 'response',
+    facts: [{ detail: 'minimum-length', section: 0, expected: SDD_MIN_DRAFT_CHARACTERS,
+      ...(observed === undefined ? {} : { observed }) }] }, attempt === 0 ? 1 : 2);
 }

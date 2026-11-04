@@ -18,6 +18,7 @@ import { BRANCH_SYNC_VALIDATION_CODES, type BranchSyncValidationCode } from '../
 import { isBranchSyncVerificationFailure, type BranchSyncVerificationFailure } from '../../domain/verification_failure';
 import { isBranchSyncCatalogDiagnostic, type BranchSyncCatalogDiagnostic } from '../../domain/branch_sync_catalog_diagnostic';
 import { isSddSourceContextDiagnostic, type SddSourceContextDiagnostic } from '../../domain/agent_source_snapshot';
+import { isSddDraftMinimumDiagnostic, type SddDraftMinimumDiagnostic } from '../../domain/sdd_validation_diagnostic';
 
 export type ApplicationErrorKind =
     | 'configuration'
@@ -70,6 +71,7 @@ export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'branch-sync-workflow-write-required',
     'branch-sync-publication-failed',
     'sdd-draft-size-exceeded',
+    'sdd-draft-response-too-short',
     'sdd-catalog-unsupported-profile',
     'sdd-catalog-format-invalid',
     'sdd-catalog-missing-trusted-source',
@@ -138,6 +140,7 @@ interface ApplicationErrorRecoveryVariables extends Readonly<Record<CopilotComma
     readonly 'branch-sync-workflow-write-required': BranchSyncPublicationDiagnostic;
     readonly 'branch-sync-publication-failed': BranchSyncPublicationDiagnostic;
     readonly 'sdd-draft-size-exceeded': Readonly<Record<string, never>>;
+    readonly 'sdd-draft-response-too-short': SddDraftMinimumDiagnostic;
     readonly 'sdd-catalog-unsupported-profile': Readonly<Record<string, never>>;
     readonly 'sdd-catalog-format-invalid': Readonly<Record<string, never>>;
     readonly 'sdd-catalog-missing-trusted-source': Readonly<Record<string, never>>;
@@ -374,6 +377,8 @@ export class ApplicationError extends Error {
             ? 'Verified assignments and independently completed effects were retained; the failed assignment operation remains unverified.'
             : options.recovery?.id === 'issue-assignment-count-invalid'
             ? 'No assignment operation was attempted; independently completed lifecycle effects were retained.'
+            : options.recovery?.id === 'sdd-draft-response-too-short'
+            ? 'Existing answers, selected ownership and published specifications were retained; this attempt published no specification or branch.'
             : options.recovery?.id === 'deployment-publication-context-missing'
             ? PRESERVED_STATE
             : metadata.retainedState;
@@ -437,6 +442,7 @@ const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readon
     'branch-sync-workflow-write-required': Object.freeze(['reason', 'remoteState', 'originalSha', 'candidateSha', 'observedSha', 'pushAttempted']),
     'branch-sync-publication-failed': Object.freeze(['reason', 'remoteState', 'originalSha', 'candidateSha', 'observedSha', 'pushAttempted']),
     'sdd-draft-size-exceeded': Object.freeze([]),
+    'sdd-draft-response-too-short': Object.freeze(['minimum', 'observed', 'attempts']),
     'sdd-catalog-unsupported-profile': Object.freeze([]),
     'sdd-catalog-format-invalid': Object.freeze([]),
     'sdd-catalog-missing-trusted-source': Object.freeze([]),
@@ -478,6 +484,9 @@ function normalizeApplicationErrorRecovery(
     }
     if (recovery.id === 'sdd-source-context-unavailable' && !isSddSourceContextDiagnostic(variables)) {
         throw new TypeError('SDD source context diagnostic is invalid.');
+    }
+    if (recovery.id === 'sdd-draft-response-too-short' && !isSddDraftMinimumDiagnostic(variables)) {
+        throw new TypeError('SDD minimum response diagnostic is invalid.');
     }
     if (isCopilotCommandValidationReason(recovery.id)
         && !isValidCopilotCommandValidation(recovery.id, variables.command)) {

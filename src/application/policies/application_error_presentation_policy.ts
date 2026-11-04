@@ -46,7 +46,10 @@ export function buildApplicationErrorPresentation(
     const descriptor = error.recovery
         ? `error.recovery.${error.recovery.id}` as const
         : `error.${error.code}` as const;
-    const variables = error.recovery?.id === 'issue-assignment-failed'
+    const variables = error.recovery?.id === 'sdd-draft-response-too-short'
+        ? { ...error.recovery.variables, observed: error.recovery.variables.observed === 'unavailable'
+            ? message('error.label.draftLengthUnavailable') : error.recovery.variables.observed }
+        : error.recovery?.id === 'issue-assignment-failed'
         ? assignmentDiagnosticPresentation(error.recovery.variables, error.code, message)
         : error.recovery?.id === 'sdd-source-context-unavailable'
         ? { ...sourceContextDiagnostic(error.recovery.variables) }

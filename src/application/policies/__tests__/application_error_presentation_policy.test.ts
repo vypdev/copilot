@@ -20,6 +20,9 @@ const RECOVERY_CASES: readonly Readonly<{
     english: string;
     spanish: string;
 }>[] = [
+    { recovery: { id: 'sdd-draft-response-too-short', variables: { minimum: 1800, observed: 'unavailable', attempts: 1 } },
+      english: 'Existing answers, selected ownership and published specifications were retained; this attempt published no specification or branch.',
+      spanish: 'Se conservaron las respuestas, la propiedad seleccionada y las especificaciones publicadas; este intento no publicó ninguna especificación ni rama.' },
     { recovery: { id: 'issue-assignment-count-invalid', variables: {} },
       english: 'No assignment operation was attempted. Independent completed lifecycle effects are retained in their own results.',
       spanish: 'No se intentó ninguna operación de asignación. Los efectos independientes completados se conservan en sus propios resultados.' },

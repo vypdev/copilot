@@ -465,6 +465,32 @@ requirements or change the acceptance limits below. Codex receives a compatible
 closed JSON shape; Copilot enforces the complete original string-length schema
 locally before any document reaches the writer.
 
+#### Undersized draft response
+
+The Markdown response must contain at least **1,800 Unicode code points**.
+`validation.invalid-input` with `sdd-draft-response-too-short` identifies a
+drafting response below that minimum. The card and final error show the minimum
+and draft attempt, plus a measured count when available. A local adapter
+rejection that retained no response length says **unavailable**, rather than
+guessing zero or using the length of the proposal you supplied. Unicode code
+points count an astral character, such as an emoji, once rather than as two
+UTF-16 code units.
+
+Clarify in the **issue description** that Copilot must return the complete
+proposed Markdown document, preserving the resolved requirements and selected
+owner, then retry the same issue workflow. Existing answers and published SDDs
+remain; publication still requires every validation and freshness check. This
+diagnosis does not establish why the model returned a short response or promise
+that an unchanged retry will succeed.
+
+A minimum failure starts no automatic regeneration. It can occur on draft
+attempt 1, or on attempt 2 after the existing size/format repair; no third
+query is added. Oversized responses keep their existing bounded repair below.
+Malformed JSON, missing/nonstring Markdown and actual provider failures retain
+their own identities; no rejected candidate is published or downloadable.
+
+#### Size and format repair
+
 The provider writes the requirements and explicit case inventory once. Copilot
 calculates the final area counts, total and reciprocal requirement links before
 validating the document. Every resolved acceptance minimum and scenario must
