@@ -7058,6 +7058,7 @@ const branch_sync_validation_1 = __nccwpck_require__(981);
 const verification_failure_1 = __nccwpck_require__(177);
 const branch_sync_catalog_diagnostic_1 = __nccwpck_require__(5677);
 const agent_source_snapshot_1 = __nccwpck_require__(9205);
+const sdd_validation_diagnostic_1 = __nccwpck_require__(4211);
 exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     ...copilot_command_validation_1.COPILOT_COMMAND_VALIDATION_REASONS,
     'pull-request-link-restored',
@@ -7075,6 +7076,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'branch-sync-workflow-write-required',
     'branch-sync-publication-failed',
     'sdd-draft-size-exceeded',
+    'sdd-draft-response-too-short',
     'sdd-catalog-unsupported-profile',
     'sdd-catalog-format-invalid',
     'sdd-catalog-missing-trusted-source',
@@ -7277,9 +7279,11 @@ class ApplicationError extends Error {
                 ? 'Verified assignments and independently completed effects were retained; the failed assignment operation remains unverified.'
                 : options.recovery?.id === 'issue-assignment-count-invalid'
                     ? 'No assignment operation was attempted; independently completed lifecycle effects were retained.'
-                    : options.recovery?.id === 'deployment-publication-context-missing'
-                        ? PRESERVED_STATE
-                        : metadata.retainedState;
+                    : options.recovery?.id === 'sdd-draft-response-too-short'
+                        ? 'Existing answers, selected ownership and published specifications were retained; this attempt published no specification or branch.'
+                        : options.recovery?.id === 'deployment-publication-context-missing'
+                            ? PRESERVED_STATE
+                            : metadata.retainedState;
         this.correlationId = correlationId;
         this.recovery = normalizeApplicationErrorRecovery(options.recovery);
         __classPrivateFieldSet(this, _ApplicationError_cause, options.cause, "f");
@@ -7339,6 +7343,7 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'branch-sync-workflow-write-required': Object.freeze(['reason', 'remoteState', 'originalSha', 'candidateSha', 'observedSha', 'pushAttempted']),
     'branch-sync-publication-failed': Object.freeze(['reason', 'remoteState', 'originalSha', 'candidateSha', 'observedSha', 'pushAttempted']),
     'sdd-draft-size-exceeded': Object.freeze([]),
+    'sdd-draft-response-too-short': Object.freeze(['minimum', 'observed', 'attempts']),
     'sdd-catalog-unsupported-profile': Object.freeze([]),
     'sdd-catalog-format-invalid': Object.freeze([]),
     'sdd-catalog-missing-trusted-source': Object.freeze([]),
@@ -7377,6 +7382,9 @@ function normalizeApplicationErrorRecovery(recovery) {
     }
     if (recovery.id === 'sdd-source-context-unavailable' && !(0, agent_source_snapshot_1.isSddSourceContextDiagnostic)(variables)) {
         throw new TypeError('SDD source context diagnostic is invalid.');
+    }
+    if (recovery.id === 'sdd-draft-response-too-short' && !(0, sdd_validation_diagnostic_1.isSddDraftMinimumDiagnostic)(variables)) {
+        throw new TypeError('SDD minimum response diagnostic is invalid.');
     }
     if ((0, copilot_command_validation_1.isCopilotCommandValidationReason)(recovery.id)
         && !(0, copilot_command_validation_1.isValidCopilotCommandValidation)(recovery.id, variables.command)) {
@@ -9603,6 +9611,75 @@ function isProgressScopeCapacityFacts(value) {
         && ['required-or-uncertain', 'excluded'].includes(facts.clauseKind)
         && typeof facts.observed === 'number' && Number.isSafeInteger(facts.observed) && facts.observed > 32 && facts.observed <= 1024
         && facts.limit === 32 && (0, exports.isProgressSourceLineId)(facts.sourceLineId);
+}
+
+
+/***/ }),
+
+/***/ 4211:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SDD_VALIDATION_DETAILS = exports.SDD_DRAFT_FORMAT_REASONS = void 0;
+exports.isSddDraftMinimumDiagnostic = isSddDraftMinimumDiagnostic;
+exports.normalizeSddValidationDiagnostic = normalizeSddValidationDiagnostic;
+/** Public diagnostics contain only closed checks and bounded ordinal/count facts. */
+exports.SDD_DRAFT_FORMAT_REASONS = Object.freeze([
+    'required-heading', 'test-budget', 'case-identity', 'case-budget', 'requirement-mapping', 'repository-path',
+]);
+exports.SDD_VALIDATION_DETAILS = Object.freeze([
+    'validation-contract', 'size-limit', 'response-shape', 'minimum-length', 'required-heading', 'numeric-budget',
+    'section-count', 'table-count', 'table-separator', 'table-columns', 'table-empty-cell', 'table-empty',
+    'derived-slot-count', 'derived-slot-placement',
+    'identifier-list', 'requirement-identity', 'case-identity', 'case-reserved', 'case-reference', 'case-shorthand',
+    'budget-area', 'budget-integer', 'budget-order', 'budget-total', 'budget-distribution',
+    'requirement-reference', 'requirement-coverage', 'traceability-links', 'traceability-membership', 'traceability-requirement',
+    'owner-path', 'path-identity', 'create-existing-path', 'create-path-overlap', 'create-path-parent',
+    'path-operation', 'path-reference', 'path-link',
+    'path-inline-reference', 'path-prose-reference', 'path-link-reference',
+    'path-reference-unsafe', 'path-reference-blocked', 'path-reference-missing', 'path-reference-directory',
+]);
+const REASONS = [...exports.SDD_DRAFT_FORMAT_REASONS, 'size', 'response-shape', 'response-minimum'];
+const PHASES = ['response', 'assembly', 'validation'];
+/** Counts authorize no publication and never carry the rejected response. */
+function isSddDraftMinimumDiagnostic(input) {
+    if (!input || typeof input !== 'object' || Array.isArray(input)
+        || Object.keys(input).sort().join(',') !== 'attempts,minimum,observed')
+        return false;
+    const value = input;
+    return boundedInteger(value.minimum, 1)
+        && (value.observed === 'unavailable' || (boundedInteger(value.observed, 0) && Number(value.observed) < Number(value.minimum)))
+        && (value.attempts === 1 || value.attempts === 2);
+}
+/** Fail closed on extra fields, arbitrary text, unbounded facts or invalid coordinates. */
+function normalizeSddValidationDiagnostic(input) {
+    if (!input || typeof input !== 'object' || Array.isArray(input)
+        || Object.keys(input).sort().join(',') !== 'facts,phase,reason'
+        || !REASONS.includes(input.reason) || !PHASES.includes(input.phase)
+        || !Array.isArray(input.facts) || input.facts.length < 1 || input.facts.length > 8) {
+        throw new TypeError('Invalid bounded SDD validation diagnostic.');
+    }
+    const facts = input.facts.map(fact => {
+        if (!fact || typeof fact !== 'object' || Array.isArray(fact)
+            || Object.keys(fact).some(key => !['detail', 'section', 'row', 'expected', 'observed'].includes(key))
+            || !exports.SDD_VALIDATION_DETAILS.includes(fact.detail) || ![0, 4, 14, 15, 17].includes(fact.section)
+            || (fact.row !== undefined && !boundedInteger(fact.row, 1))
+            || (fact.expected !== undefined && !boundedInteger(fact.expected, 0))
+            || (fact.observed !== undefined && !boundedInteger(fact.observed, 0))) {
+            throw new TypeError('Invalid bounded SDD validation fact.');
+        }
+        return Object.freeze({ ...fact });
+    });
+    if (input.reason === 'response-minimum' && (input.phase !== 'response' || facts.length !== 1
+        || facts[0].detail !== 'minimum-length' || facts[0].section !== 0 || facts[0].row !== undefined
+        || !isSddDraftMinimumDiagnostic({ minimum: facts[0].expected, observed: facts[0].observed ?? 'unavailable', attempts: 1 }))) {
+        throw new TypeError('Invalid bounded SDD minimum diagnostic.');
+    }
+    return Object.freeze({ reason: input.reason, phase: input.phase, facts: Object.freeze(facts) });
+}
+function boundedInteger(value, minimum) {
+    return typeof value === 'number' && Number.isSafeInteger(value) && value >= minimum && value <= 100000;
 }
 
 

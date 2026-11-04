@@ -39470,20 +39470,25 @@ const RECOVERY = Object.freeze({
     'required-heading': 'sdd-draft-format-invalid', 'test-budget': 'sdd-draft-format-invalid',
     'case-identity': 'sdd-draft-case-identity-invalid', 'case-budget': 'sdd-draft-case-budget-invalid',
     'requirement-mapping': 'sdd-draft-requirement-mapping-invalid', 'repository-path': 'sdd-draft-repository-path-invalid',
-    size: 'sdd-draft-size-exceeded', 'response-shape': undefined,
+    size: 'sdd-draft-size-exceeded', 'response-shape': undefined, 'response-minimum': undefined,
 });
 /** Carries safe evidence to the feature-owned card without serializing candidate content. */
 class SddDraftPreparationFailure extends application_error_1.ApplicationError {
     constructor(diagnostic, attempts) {
         const normalized = (0, sdd_validation_diagnostic_1.normalizeSddValidationDiagnostic)(diagnostic);
-        if ((attempts !== 1 && attempts !== 2) || (attempts === 1 && normalized.reason !== 'response-shape')) {
+        if ((attempts !== 1 && attempts !== 2) || (attempts === 1 && normalized.reason !== 'response-shape' && normalized.reason !== 'response-minimum')) {
             throw new TypeError('Invalid bounded SDD attempt count.');
         }
         const id = RECOVERY[normalized.reason];
+        const recovery = normalized.reason === 'response-minimum'
+            ? { id: 'sdd-draft-response-too-short', variables: { minimum: normalized.facts[0].expected,
+                    observed: normalized.facts[0].observed ?? 'unavailable', attempts } }
+            : id ? { id, variables: {} } : undefined;
         const message = normalized.reason === 'response-shape' ? 'The drafting agent returned no SDD Markdown.'
-            : normalized.reason === 'size' ? 'The SDD draft exceeded its size limit after one bounded repair.'
-                : `The SDD draft still violates its ${normalized.reason} format contract after one bounded repair.`;
-        super('validation.invalid-input', message, id ? { recovery: { id, variables: {} } } : {});
+            : normalized.reason === 'response-minimum' ? 'The SDD drafting response is shorter than the required minimum.'
+                : normalized.reason === 'size' ? 'The SDD draft exceeded its size limit after one bounded repair.'
+                    : `The SDD draft still violates its ${normalized.reason} format contract after one bounded repair.`;
+        super('validation.invalid-input', message, recovery ? { recovery } : {});
         this.attempts = attempts;
         this.diagnostic = normalized;
     }
@@ -41262,7 +41267,7 @@ const LABEL_KEYS = Object.freeze([
     ...bugbot_review_diagnostic_labels_1.BUGBOT_REVIEW_DIAGNOSTIC_LABEL_KEYS,
     ...branch_sync_publication_messages_1.BRANCH_SYNC_PUBLICATION_LABEL_KEYS,
     ...issue_assignment_messages_1.ASSIGNMENT_DIAGNOSTIC_LABEL_KEYS,
-    'impact', 'errorCode', 'action', 'retainedState', 'retryable', 'yes', 'no', 'reference',
+    'impact', 'errorCode', 'action', 'retainedState', 'retryable', 'yes', 'no', 'reference', 'draftLengthUnavailable',
 ]);
 const CONTENT_FIELDS = Object.freeze(['impact', 'action', 'retainedState']);
 exports.APPLICATION_ERROR_CODES = Object.freeze(Object.keys(application_error_1.APPLICATION_ERROR_METADATA));
@@ -41284,6 +41289,7 @@ const ENGLISH_LABELS = Object.freeze({
     yes: 'Yes',
     no: 'No',
     reference: 'Reference',
+    draftLengthUnavailable: 'unavailable',
 });
 const SPANISH_LABELS = Object.freeze({
     ...bugbot_review_diagnostic_labels_1.SPANISH_REVIEW_DIAGNOSTIC_LABELS,
@@ -41297,6 +41303,7 @@ const SPANISH_LABELS = Object.freeze({
     yes: 'Sí',
     no: 'No',
     reference: 'Referencia',
+    draftLengthUnavailable: 'no disponible',
 });
 const ENGLISH_CONTENT = Object.freeze(Object.fromEntries(exports.APPLICATION_ERROR_CODES.map(code => [code, Object.freeze({
         impact: application_error_1.APPLICATION_ERROR_METADATA[code].impact,
@@ -41560,6 +41567,11 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
         action: 'Retry SDD preparation with the canonical specification template and the explicit acceptance requirements.',
         retainedState: 'Existing answers and published SDDs were preserved; no draft was published.',
     }),
+    'sdd-draft-response-too-short': Object.freeze({
+        impact: 'The SDD drafting response was below its {minimum} Unicode code-point minimum (observed: {observed}; draft attempt: {attempts}).',
+        action: 'Clarify in the issue description that a complete proposed Markdown document is required, preserving resolved requirements and ownership, then retry the same issue workflow. This failure does not start an automatic regeneration.',
+        retainedState: 'Existing answers, selected ownership and published specifications were retained; this attempt published no specification or branch.',
+    }),
     'sdd-draft-size-exceeded': Object.freeze({
         impact: 'SDD preparation stopped because the draft remained too large after one automatic size repair.',
         action: 'Retry SDD preparation with a proportional appendix or an approved companion specification.',
@@ -41760,6 +41772,11 @@ const SPANISH_RECOVERY_CONTENT = Object.freeze({
         action: 'Reintenta la preparación del SDD con la plantilla canónica y los criterios de aceptación explícitos.',
         retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador.',
     }),
+    'sdd-draft-response-too-short': Object.freeze({
+        impact: 'La respuesta de redacción del SDD no alcanzó el mínimo de {minimum} puntos de código Unicode (cantidad observada: {observed}; intento de borrador: {attempts}).',
+        action: 'Aclara en la descripción de esta incidencia que se requiere una propuesta Markdown completa, conservando los requisitos resueltos y su propietario, y repite el mismo workflow. Este fallo no inicia una regeneración automática.',
+        retainedState: 'Se conservaron las respuestas, la propiedad seleccionada y las especificaciones publicadas; este intento no publicó ninguna especificación ni rama.',
+    }),
     'sdd-draft-size-exceeded': Object.freeze({
         impact: 'La preparación del SDD se detuvo porque el borrador seguía siendo demasiado largo tras un intento automático de reducción.',
         action: 'Reintenta la preparación del SDD con un apéndice proporcional o una especificación complementaria aprobada.',
@@ -41897,40 +41914,43 @@ function buildApplicationErrorPresentation(error, message = application_error_me
     const descriptor = error.recovery
         ? `error.recovery.${error.recovery.id}`
         : `error.${error.code}`;
-    const variables = error.recovery?.id === 'issue-assignment-failed'
-        ? (0, issue_assignment_diagnostic_presentation_1.assignmentDiagnosticPresentation)(error.recovery.variables, error.code, message)
-        : error.recovery?.id === 'sdd-source-context-unavailable'
-            ? { ...(0, agent_source_snapshot_1.sourceContextDiagnostic)(error.recovery.variables) }
-            : error.recovery?.id === 'progress-partition-length-invalid'
-                ? (0, progress_partition_length_failure_1.progressPartitionLengthPresentation)(error.recovery.variables)
-                : error.recovery?.id === 'bugbot-review-incomplete'
-                    ? { ...error.recovery.variables, countKind: error.recovery.variables.countKind === 'at-least' ? '≥' : '=',
-                        resource: message(`error.label.${bugbot_review_diagnostic_labels_1.BUGBOT_REVIEW_RESOURCE_LABELS[error.recovery.variables.resource]}`),
-                        unit: message(`error.label.${bugbot_review_diagnostic_labels_1.BUGBOT_REVIEW_UNIT_LABELS[error.recovery.variables.unit]}`) }
-                    : error.recovery?.id === 'progress-inventory-incomplete'
-                        ? (0, progress_inventory_diagnostic_1.progressInventoryPresentation)(error.recovery.variables)
-                        : error.recovery?.id === 'progress-binary-evidence-unavailable'
-                            ? (0, progress_binary_evidence_diagnostic_1.progressBinaryEvidencePresentation)(error.recovery.variables)
-                            : error.recovery?.id === 'issue-workflow-admission-blocked'
-                                ? (0, issue_workflow_diagnostic_1.issueWorkflowDiagnosticPresentation)(error.recovery.variables)
-                                : error.recovery && (0, copilot_command_validation_1.isCopilotCommandValidationReason)(error.recovery.id)
-                                    ? (0, comment_command_validation_presentation_policy_1.commandValidationPresentationVariables)(error.recovery.id, error.recovery.variables.command)
-                                    : error.recovery?.id === 'branch-sync-verification-failed'
-                                        ? { ...error.recovery.variables, syncCommand: '/copilot sync-branch' }
-                                        : error.recovery?.id === 'branch-sync-workflow-write-required' || error.recovery?.id === 'branch-sync-publication-failed'
-                                            ? {
-                                                reason: error.recovery.variables.reason, originalSha: error.recovery.variables.originalSha,
-                                                candidateSha: error.recovery.variables.candidateSha, observedSha: error.recovery.variables.observedSha,
-                                                pushStatus: message(error.recovery.variables.pushAttempted ? 'error.label.syncPushAttempted' : 'error.label.syncPushNotAttempted'),
-                                                remoteStatus: message(error.recovery.variables.remoteState === 'unchanged' ? 'error.label.syncRemoteUnchanged'
-                                                    : error.recovery.variables.remoteState === 'changed' ? 'error.label.syncRemoteChanged' : 'error.label.syncRemoteUnverified'),
-                                                publicationGuide: BRANCH_SYNC_PUBLICATION_RECOVERY_URL, syncCommand: '/copilot sync-branch',
-                                            }
-                                            : error.recovery?.id === 'branch-sync-catalog-incompatible'
-                                                ? { ...error.recovery.variables, syncCommand: '/copilot sync-branch', catalogGuide: BRANCH_SYNC_CATALOG_RECOVERY_URL }
-                                                : error.recovery?.id.startsWith('stored-configuration-')
-                                                    ? { ...error.recovery.variables, recoveryGuide: STORED_CONFIGURATION_RECOVERY_URL }
-                                                    : error.recovery?.variables;
+    const variables = error.recovery?.id === 'sdd-draft-response-too-short'
+        ? { ...error.recovery.variables, observed: error.recovery.variables.observed === 'unavailable'
+                ? message('error.label.draftLengthUnavailable') : error.recovery.variables.observed }
+        : error.recovery?.id === 'issue-assignment-failed'
+            ? (0, issue_assignment_diagnostic_presentation_1.assignmentDiagnosticPresentation)(error.recovery.variables, error.code, message)
+            : error.recovery?.id === 'sdd-source-context-unavailable'
+                ? { ...(0, agent_source_snapshot_1.sourceContextDiagnostic)(error.recovery.variables) }
+                : error.recovery?.id === 'progress-partition-length-invalid'
+                    ? (0, progress_partition_length_failure_1.progressPartitionLengthPresentation)(error.recovery.variables)
+                    : error.recovery?.id === 'bugbot-review-incomplete'
+                        ? { ...error.recovery.variables, countKind: error.recovery.variables.countKind === 'at-least' ? '≥' : '=',
+                            resource: message(`error.label.${bugbot_review_diagnostic_labels_1.BUGBOT_REVIEW_RESOURCE_LABELS[error.recovery.variables.resource]}`),
+                            unit: message(`error.label.${bugbot_review_diagnostic_labels_1.BUGBOT_REVIEW_UNIT_LABELS[error.recovery.variables.unit]}`) }
+                        : error.recovery?.id === 'progress-inventory-incomplete'
+                            ? (0, progress_inventory_diagnostic_1.progressInventoryPresentation)(error.recovery.variables)
+                            : error.recovery?.id === 'progress-binary-evidence-unavailable'
+                                ? (0, progress_binary_evidence_diagnostic_1.progressBinaryEvidencePresentation)(error.recovery.variables)
+                                : error.recovery?.id === 'issue-workflow-admission-blocked'
+                                    ? (0, issue_workflow_diagnostic_1.issueWorkflowDiagnosticPresentation)(error.recovery.variables)
+                                    : error.recovery && (0, copilot_command_validation_1.isCopilotCommandValidationReason)(error.recovery.id)
+                                        ? (0, comment_command_validation_presentation_policy_1.commandValidationPresentationVariables)(error.recovery.id, error.recovery.variables.command)
+                                        : error.recovery?.id === 'branch-sync-verification-failed'
+                                            ? { ...error.recovery.variables, syncCommand: '/copilot sync-branch' }
+                                            : error.recovery?.id === 'branch-sync-workflow-write-required' || error.recovery?.id === 'branch-sync-publication-failed'
+                                                ? {
+                                                    reason: error.recovery.variables.reason, originalSha: error.recovery.variables.originalSha,
+                                                    candidateSha: error.recovery.variables.candidateSha, observedSha: error.recovery.variables.observedSha,
+                                                    pushStatus: message(error.recovery.variables.pushAttempted ? 'error.label.syncPushAttempted' : 'error.label.syncPushNotAttempted'),
+                                                    remoteStatus: message(error.recovery.variables.remoteState === 'unchanged' ? 'error.label.syncRemoteUnchanged'
+                                                        : error.recovery.variables.remoteState === 'changed' ? 'error.label.syncRemoteChanged' : 'error.label.syncRemoteUnverified'),
+                                                    publicationGuide: BRANCH_SYNC_PUBLICATION_RECOVERY_URL, syncCommand: '/copilot sync-branch',
+                                                }
+                                                : error.recovery?.id === 'branch-sync-catalog-incompatible'
+                                                    ? { ...error.recovery.variables, syncCommand: '/copilot sync-branch', catalogGuide: BRANCH_SYNC_CATALOG_RECOVERY_URL }
+                                                    : error.recovery?.id.startsWith('stored-configuration-')
+                                                        ? { ...error.recovery.variables, recoveryGuide: STORED_CONFIGURATION_RECOVERY_URL }
+                                                        : error.recovery?.variables;
     return {
         impact: message(`${descriptor}.impact`, variables),
         code: error.code,
@@ -51934,6 +51954,7 @@ const UI = Object.freeze({
     referenceOrdinal: ['Visible reference occurrence', 'Aparición de referencia visible'],
     "expected": ["Expected count", "Cantidad esperada"],
     "observed": ["Observed count", "Cantidad observada"],
+    lengthUnavailable: ['unavailable; the rejected response length was not retained', 'no disponible; no se conservó la longitud de la respuesta rechazada'],
     "recoveredHeading": ["SDD preparation status", "Estado de preparación del SDD"],
     "published": ["The specification publication was verified on the linked branch. Branch readiness remains subject to its separate checks.", "Se verificó la publicación de la especificación en la rama enlazada. La preparación de la rama sigue sujeta a comprobaciones independientes."],
     "waiting": ["Waiting for the numbered answers in the specification question card. No new specification was published.", "Se esperan las respuestas numeradas de la tarjeta de preguntas. No se publicó ninguna especificación nueva."],
@@ -51945,6 +51966,7 @@ const FACTS = Object.freeze({
     "validation-contract": ["A content contract was rejected; this validator supplied no more specific table facts.", "Se rechazó un contrato de contenido; este validador no proporcionó datos más concretos de tablas."],
     "size-limit": ["The candidate exceeded the complete draft size limit.", "El candidato superó el límite de tamaño del borrador completo."],
     "response-shape": ["The drafting response did not contain the required Markdown string.", "La respuesta de redacción no contenía la cadena Markdown obligatoria."],
+    'minimum-length': ['The drafting Markdown response was below its declared minimum, measured in Unicode code points.', 'La respuesta Markdown de redacción no alcanzó su mínimo declarado, medido en puntos de código Unicode.'],
     "required-heading": ["A canonical heading is missing; the row identifies its position in the required-heading list.", "Falta una sección canónica; la fila indica su posición en la lista de secciones obligatorias."],
     "numeric-budget": ["No valid numeric test budget was found.", "No se encontró un presupuesto numérico de pruebas válido."],
     "section-count": ["The required section is missing or repeated.", "La sección obligatoria falta o está repetida."],
@@ -52056,14 +52078,32 @@ function renderSddPreparationFailure(options, catalog = (0, sdd_preparation_mess
     if (options.catalogReason !== undefined && (!sdd_catalog_compatibility_1.SDD_CATALOG_COMPATIBILITY_REASONS.includes(options.catalogReason) || options.diagnostic)) {
         throw new TypeError('Invalid exclusive catalog compatibility facts.');
     }
-    const diagnostic = options.diagnostic ? (0, sdd_validation_diagnostic_1.normalizeSddValidationDiagnostic)(options.diagnostic) : undefined;
+    const recovery = options.error.recovery;
+    const minimum = recovery?.id === 'sdd-draft-response-too-short' && (0, sdd_validation_diagnostic_1.isSddDraftMinimumDiagnostic)(recovery.variables) ? recovery.variables : undefined;
+    if (recovery?.id === 'sdd-draft-response-too-short' && !minimum)
+        throw new TypeError('Invalid SDD minimum recovery facts.');
+    let diagnostic = options.diagnostic ? (0, sdd_validation_diagnostic_1.normalizeSddValidationDiagnostic)(options.diagnostic) : undefined;
+    if (minimum) {
+        if (options.catalogReason !== undefined || missingCatalogSource !== undefined || options.publicationPending) {
+            throw new TypeError('SDD minimum response facts cannot describe another failure phase.');
+        }
+        const observed = minimum.observed === 'unavailable' ? undefined : minimum.observed;
+        if (diagnostic && (diagnostic.reason !== 'response-minimum' || diagnostic.facts[0].expected !== minimum.minimum
+            || diagnostic.facts[0].observed !== observed))
+            throw new TypeError('SDD minimum projections disagree.');
+        if (options.attempts !== undefined && options.attempts !== minimum.attempts)
+            throw new TypeError('SDD minimum attempts disagree.');
+        diagnostic = (0, sdd_validation_diagnostic_1.normalizeSddValidationDiagnostic)({ reason: 'response-minimum', phase: 'response',
+            facts: [{ detail: 'minimum-length', section: 0, expected: minimum.minimum, ...(observed === undefined ? {} : { observed }) }] });
+    }
+    if (diagnostic?.reason === 'response-minimum' && !minimum)
+        throw new TypeError('SDD minimum response requires its semantic recovery.');
     if (options.attempts !== undefined && options.attempts !== 1 && options.attempts !== 2)
         throw new TypeError('Invalid SDD diagnostic attempt count.');
     const message = (key) => catalog.message(key);
-    const recovery = options.error.recovery;
     const sourceRecovery = recovery?.id === 'sdd-source-context-unavailable' && (0, agent_source_snapshot_1.isSddSourceContextDiagnostic)(recovery.variables);
     const source = { code: options.error.code, retryable: options.error.retryable, correlationId: options.error.correlationId,
-        ...(recovery && (sourceRecovery || (application_error_1.APPLICATION_ERROR_RECOVERY_IDS.includes(recovery.id)
+        ...(recovery && (sourceRecovery || minimum || (application_error_1.APPLICATION_ERROR_RECOVERY_IDS.includes(recovery.id)
             && (recovery.id.startsWith('sdd-draft-') || recovery.id.startsWith('sdd-catalog-'))
             && recovery.variables && Object.keys(recovery.variables).length === 0)) ? { recovery } : {}) };
     const view = (0, application_error_presentation_policy_1.buildApplicationErrorPresentation)(source, errorMessage ?? (0, application_error_message_catalog_1.resolveStaticApplicationErrorCatalog)(catalog.locale).message);
@@ -52073,8 +52113,8 @@ function renderSddPreparationFailure(options, catalog = (0, sdd_preparation_mess
         '',
         options.publicationPending ? message('sddPreparation.publicationRetained') : message('sddPreparation.noPublication'),
         '', `**${message('sddPreparation.impact')}:** ${view.impact}`,
-        '', `**${message('sddPreparation.actionLabel')}:** ${diagnostic ? message('sddPreparation.action') + ' ' : ''}${view.action}`,
-        '', `**${message('sddPreparation.retainedLabel')}:** ${sourceRecovery ? view.retainedState : message('sddPreparation.retained')}`,
+        '', `**${message('sddPreparation.actionLabel')}:** ${diagnostic && !minimum ? message('sddPreparation.action') + ' ' : ''}${view.action}`,
+        '', `**${message('sddPreparation.retainedLabel')}:** ${sourceRecovery || minimum ? view.retainedState : message('sddPreparation.retained')}`,
         '', runUrl ? `[${message('sddPreparation.workflow')}](${runUrl})` : message('sddPreparation.runUnavailable'),
         '', '<details>', `<summary>${message('sddPreparation.diagnostics')}</summary>`, '',
         `**${message('sddPreparation.code')}:** \`${view.code}\``,
@@ -52091,8 +52131,9 @@ function renderSddPreparationFailure(options, catalog = (0, sdd_preparation_mess
     }
     else if (diagnostic) {
         lines.push(`**${message('sddPreparation.reason')}:** \`${diagnostic.reason}\``, `**${message('sddPreparation.phase')}:** \`${diagnostic.phase}\``);
-        if (options.attempts !== undefined)
-            lines.push(`**${message('sddPreparation.attempts')}:** ${options.attempts}`);
+        const attempts = minimum?.attempts ?? options.attempts;
+        if (attempts !== undefined)
+            lines.push(`**${message('sddPreparation.attempts')}:** ${attempts}`);
         for (const fact of diagnostic.facts) {
             lines.push('', `- ${message(`sddPreparation.fact.${fact.detail}`)}`);
             for (const key of ['section', 'row', 'expected', 'observed']) {
@@ -52101,6 +52142,9 @@ function renderSddPreparationFailure(options, catalog = (0, sdd_preparation_mess
                         ? 'referenceOrdinal' : key;
                     lines.push(`  - ${message(`sddPreparation.${label}`)}: ${fact[key]}`);
                 }
+            }
+            if (fact.detail === 'minimum-length' && fact.observed === undefined) {
+                lines.push(`  - ${message('sddPreparation.observed')}: ${message('sddPreparation.lengthUnavailable')}`);
             }
         }
     }
@@ -63460,6 +63504,7 @@ const sdd_draft_preparation_failure_1 = __nccwpck_require__(12321);
 const sdd_validation_diagnostic_1 = __nccwpck_require__(34211);
 const pre_branch_sdd_1 = __nccwpck_require__(34730);
 const agent_response_length_failure_1 = __nccwpck_require__(28528);
+const agent_response_schema_failure_1 = __nccwpck_require__(70809);
 const sdd_draft_consistency_1 = __nccwpck_require__(27910);
 /** Size and typed format failures share one regeneration; the writer still validates every candidate. */
 async function draftSddMarkdown(agent, configuration, plan, prompt, validate, sourceSnapshot) {
@@ -63486,6 +63531,9 @@ async function draftSddMarkdown(agent, configuration, plan, prompt, validate, so
             });
         }
         catch (error) {
+            if (error instanceof agent_response_schema_failure_1.AgentResponseSchemaFailure && error.reason === 'string-short' && error.path === '$.markdown') {
+                throw minimumFailure(attempt);
+            }
             // Only the exact local schema's maximum-length rejection is recoverable.
             // Provider failures and other schema violations retain their original identity.
             if (!(error instanceof agent_response_length_failure_1.AgentResponseLengthFailure) || error.path !== '$.markdown' || error.maximum !== maximum)
@@ -63504,6 +63552,9 @@ async function draftSddMarkdown(agent, configuration, plan, prompt, validate, so
             diagnostic = { reason: 'size', phase: 'response', facts: [{ detail: 'size-limit', section: 0, expected: maximum }] };
             continue;
         }
+        const observedLength = [...markdown].length;
+        if (observedLength < pre_branch_sdd_1.SDD_MIN_DRAFT_CHARACTERS)
+            throw minimumFailure(attempt, observedLength);
         let assembledCandidate = false;
         try {
             const assembled = (0, sdd_draft_consistency_1.renderSddDerivedTables)(markdown);
@@ -63531,6 +63582,11 @@ async function draftSddMarkdown(agent, configuration, plan, prompt, validate, so
         }
     }
     throw new sdd_draft_preparation_failure_1.SddDraftPreparationFailure(diagnostic, 2);
+}
+function minimumFailure(attempt, observed) {
+    return new sdd_draft_preparation_failure_1.SddDraftPreparationFailure({ reason: 'response-minimum', phase: 'response',
+        facts: [{ detail: 'minimum-length', section: 0, expected: pre_branch_sdd_1.SDD_MIN_DRAFT_CHARACTERS,
+                ...(observed === undefined ? {} : { observed }) }] }, attempt === 0 ? 1 : 2);
 }
 
 
@@ -74349,6 +74405,7 @@ const branch_sync_validation_1 = __nccwpck_require__(90981);
 const verification_failure_1 = __nccwpck_require__(60177);
 const branch_sync_catalog_diagnostic_1 = __nccwpck_require__(15677);
 const agent_source_snapshot_1 = __nccwpck_require__(59205);
+const sdd_validation_diagnostic_1 = __nccwpck_require__(34211);
 exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     ...copilot_command_validation_1.COPILOT_COMMAND_VALIDATION_REASONS,
     'pull-request-link-restored',
@@ -74366,6 +74423,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'branch-sync-workflow-write-required',
     'branch-sync-publication-failed',
     'sdd-draft-size-exceeded',
+    'sdd-draft-response-too-short',
     'sdd-catalog-unsupported-profile',
     'sdd-catalog-format-invalid',
     'sdd-catalog-missing-trusted-source',
@@ -74568,9 +74626,11 @@ class ApplicationError extends Error {
                 ? 'Verified assignments and independently completed effects were retained; the failed assignment operation remains unverified.'
                 : options.recovery?.id === 'issue-assignment-count-invalid'
                     ? 'No assignment operation was attempted; independently completed lifecycle effects were retained.'
-                    : options.recovery?.id === 'deployment-publication-context-missing'
-                        ? PRESERVED_STATE
-                        : metadata.retainedState;
+                    : options.recovery?.id === 'sdd-draft-response-too-short'
+                        ? 'Existing answers, selected ownership and published specifications were retained; this attempt published no specification or branch.'
+                        : options.recovery?.id === 'deployment-publication-context-missing'
+                            ? PRESERVED_STATE
+                            : metadata.retainedState;
         this.correlationId = correlationId;
         this.recovery = normalizeApplicationErrorRecovery(options.recovery);
         __classPrivateFieldSet(this, _ApplicationError_cause, options.cause, "f");
@@ -74630,6 +74690,7 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'branch-sync-workflow-write-required': Object.freeze(['reason', 'remoteState', 'originalSha', 'candidateSha', 'observedSha', 'pushAttempted']),
     'branch-sync-publication-failed': Object.freeze(['reason', 'remoteState', 'originalSha', 'candidateSha', 'observedSha', 'pushAttempted']),
     'sdd-draft-size-exceeded': Object.freeze([]),
+    'sdd-draft-response-too-short': Object.freeze(['minimum', 'observed', 'attempts']),
     'sdd-catalog-unsupported-profile': Object.freeze([]),
     'sdd-catalog-format-invalid': Object.freeze([]),
     'sdd-catalog-missing-trusted-source': Object.freeze([]),
@@ -74668,6 +74729,9 @@ function normalizeApplicationErrorRecovery(recovery) {
     }
     if (recovery.id === 'sdd-source-context-unavailable' && !(0, agent_source_snapshot_1.isSddSourceContextDiagnostic)(variables)) {
         throw new TypeError('SDD source context diagnostic is invalid.');
+    }
+    if (recovery.id === 'sdd-draft-response-too-short' && !(0, sdd_validation_diagnostic_1.isSddDraftMinimumDiagnostic)(variables)) {
+        throw new TypeError('SDD minimum response diagnostic is invalid.');
     }
     if ((0, copilot_command_validation_1.isCopilotCommandValidationReason)(recovery.id)
         && !(0, copilot_command_validation_1.isValidCopilotCommandValidation)(recovery.id, variables.command)) {
@@ -92961,13 +93025,14 @@ exports.SddTrustedCatalogMissingFailure = SddTrustedCatalogMissingFailure;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SDD_VALIDATION_DETAILS = exports.SDD_DRAFT_FORMAT_REASONS = void 0;
+exports.isSddDraftMinimumDiagnostic = isSddDraftMinimumDiagnostic;
 exports.normalizeSddValidationDiagnostic = normalizeSddValidationDiagnostic;
 /** Public diagnostics contain only closed checks and bounded ordinal/count facts. */
 exports.SDD_DRAFT_FORMAT_REASONS = Object.freeze([
     'required-heading', 'test-budget', 'case-identity', 'case-budget', 'requirement-mapping', 'repository-path',
 ]);
 exports.SDD_VALIDATION_DETAILS = Object.freeze([
-    'validation-contract', 'size-limit', 'response-shape', 'required-heading', 'numeric-budget',
+    'validation-contract', 'size-limit', 'response-shape', 'minimum-length', 'required-heading', 'numeric-budget',
     'section-count', 'table-count', 'table-separator', 'table-columns', 'table-empty-cell', 'table-empty',
     'derived-slot-count', 'derived-slot-placement',
     'identifier-list', 'requirement-identity', 'case-identity', 'case-reserved', 'case-reference', 'case-shorthand',
@@ -92978,8 +93043,18 @@ exports.SDD_VALIDATION_DETAILS = Object.freeze([
     'path-inline-reference', 'path-prose-reference', 'path-link-reference',
     'path-reference-unsafe', 'path-reference-blocked', 'path-reference-missing', 'path-reference-directory',
 ]);
-const REASONS = [...exports.SDD_DRAFT_FORMAT_REASONS, 'size', 'response-shape'];
+const REASONS = [...exports.SDD_DRAFT_FORMAT_REASONS, 'size', 'response-shape', 'response-minimum'];
 const PHASES = ['response', 'assembly', 'validation'];
+/** Counts authorize no publication and never carry the rejected response. */
+function isSddDraftMinimumDiagnostic(input) {
+    if (!input || typeof input !== 'object' || Array.isArray(input)
+        || Object.keys(input).sort().join(',') !== 'attempts,minimum,observed')
+        return false;
+    const value = input;
+    return boundedInteger(value.minimum, 1)
+        && (value.observed === 'unavailable' || (boundedInteger(value.observed, 0) && Number(value.observed) < Number(value.minimum)))
+        && (value.attempts === 1 || value.attempts === 2);
+}
 /** Fail closed on extra fields, arbitrary text, unbounded facts or invalid coordinates. */
 function normalizeSddValidationDiagnostic(input) {
     if (!input || typeof input !== 'object' || Array.isArray(input)
@@ -92999,6 +93074,11 @@ function normalizeSddValidationDiagnostic(input) {
         }
         return Object.freeze({ ...fact });
     });
+    if (input.reason === 'response-minimum' && (input.phase !== 'response' || facts.length !== 1
+        || facts[0].detail !== 'minimum-length' || facts[0].section !== 0 || facts[0].row !== undefined
+        || !isSddDraftMinimumDiagnostic({ minimum: facts[0].expected, observed: facts[0].observed ?? 'unavailable', attempts: 1 }))) {
+        throw new TypeError('Invalid bounded SDD minimum diagnostic.');
+    }
     return Object.freeze({ reason: input.reason, phase: input.phase, facts: Object.freeze(facts) });
 }
 function boundedInteger(value, minimum) {

@@ -28,7 +28,7 @@ const LABEL_KEYS = Object.freeze([
   ...BUGBOT_REVIEW_DIAGNOSTIC_LABEL_KEYS,
   ...BRANCH_SYNC_PUBLICATION_LABEL_KEYS,
   ...ASSIGNMENT_DIAGNOSTIC_LABEL_KEYS,
-  'impact', 'errorCode', 'action', 'retainedState', 'retryable', 'yes', 'no', 'reference',
+  'impact', 'errorCode', 'action', 'retainedState', 'retryable', 'yes', 'no', 'reference', 'draftLengthUnavailable',
 ] as const);
 const CONTENT_FIELDS = Object.freeze(['impact', 'action', 'retainedState'] as const);
 
@@ -68,6 +68,7 @@ const ENGLISH_LABELS: Readonly<Record<LabelKey, string>> = Object.freeze({
   yes: 'Yes',
   no: 'No',
   reference: 'Reference',
+  draftLengthUnavailable: 'unavailable',
 });
 
 const SPANISH_LABELS: Readonly<Record<LabelKey, string>> = Object.freeze({
@@ -82,6 +83,7 @@ const SPANISH_LABELS: Readonly<Record<LabelKey, string>> = Object.freeze({
   yes: 'Sí',
   no: 'No',
   reference: 'Referencia',
+  draftLengthUnavailable: 'no disponible',
 });
 
 type ErrorContent = Readonly<Record<ApplicationErrorCode, Readonly<Record<ContentField, string>>>>;
@@ -358,6 +360,11 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     action: 'Retry SDD preparation with the canonical specification template and the explicit acceptance requirements.',
     retainedState: 'Existing answers and published SDDs were preserved; no draft was published.',
   }),
+  'sdd-draft-response-too-short': Object.freeze({
+    impact: 'The SDD drafting response was below its {minimum} Unicode code-point minimum (observed: {observed}; draft attempt: {attempts}).',
+    action: 'Clarify in the issue description that a complete proposed Markdown document is required, preserving resolved requirements and ownership, then retry the same issue workflow. This failure does not start an automatic regeneration.',
+    retainedState: 'Existing answers, selected ownership and published specifications were retained; this attempt published no specification or branch.',
+  }),
   'sdd-draft-size-exceeded': Object.freeze({
     impact: 'SDD preparation stopped because the draft remained too large after one automatic size repair.',
     action: 'Retry SDD preparation with a proportional appendix or an approved companion specification.',
@@ -559,6 +566,11 @@ const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     impact: 'La preparación del SDD se detuvo porque seguían faltando secciones obligatorias o un presupuesto numérico de pruebas tras un intento automático de corrección.',
     action: 'Reintenta la preparación del SDD con la plantilla canónica y los criterios de aceptación explícitos.',
     retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador.',
+  }),
+  'sdd-draft-response-too-short': Object.freeze({
+    impact: 'La respuesta de redacción del SDD no alcanzó el mínimo de {minimum} puntos de código Unicode (cantidad observada: {observed}; intento de borrador: {attempts}).',
+    action: 'Aclara en la descripción de esta incidencia que se requiere una propuesta Markdown completa, conservando los requisitos resueltos y su propietario, y repite el mismo workflow. Este fallo no inicia una regeneración automática.',
+    retainedState: 'Se conservaron las respuestas, la propiedad seleccionada y las especificaciones publicadas; este intento no publicó ninguna especificación ni rama.',
   }),
   'sdd-draft-size-exceeded': Object.freeze({
     impact: 'La preparación del SDD se detuvo porque el borrador seguía siendo demasiado largo tras un intento automático de reducción.',

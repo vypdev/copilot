@@ -1,11 +1,14 @@
 import { SddCatalogCompatibilityFailure, SDD_CATALOG_COMPATIBILITY_REASONS } from '../../../../../domain/sdd_catalog_compatibility';
 import { SddTrustedCatalogMissingFailure } from '../../../../../domain/sdd_trusted_catalog_failure';
 import { SddSourceContextFailure } from '../../../../../domain/agent_source_snapshot';
-import { readSddGateRecord, SddDraftFormatFailure } from '../../../../../domain/pre_branch_sdd';
+import { readSddGateRecord, SddDraftFormatFailure, SDD_MIN_DRAFT_CHARACTERS } from '../../../../../domain/pre_branch_sdd';
 import { PreBranchSddGateUseCase, type PreBranchSddContext } from '../../../sdd/pre_branch_sdd_gate_use_case';
 import type { SddCatalogSnapshot, SddPreparedDraft } from '../../../../ports/pre_branch_sdd_ports';
 import { sddConsistencyFixture } from '../../../../../testing/sdd_consistency_fixture';
 import { validateSddDraftConsistency } from '../../../../../domain/sdd_draft_consistency';
+
+// Synthetic writer fixtures satisfy the response minimum so these cases exercise later gates.
+const writerDraft = (markdown: string): string => markdown.padEnd(SDD_MIN_DRAFT_CHARACTERS, ' ');
 
 const baseSha = 'a'.repeat(40);
 const commitSha = 'b'.repeat(40);
@@ -22,7 +25,7 @@ const snapshot: SddCatalogSnapshot = {
     specs: ['specs/payments.md'], workflows: [], entrypoints: ['src/index.ts'], code: ['src/index.ts'], tests: ['src/index.test.ts'], documentation: ['docs/payments.mdx'],
   }],
 };
-const prepared: SddPreparedDraft = { plan, baseSha, markdown: '# Draft', changedPaths: ['specs/payments.md'] };
+const prepared: SddPreparedDraft = { plan, baseSha, markdown: writerDraft('# Draft'), changedPaths: ['specs/payments.md'] };
 
 function context(): PreBranchSddContext {
   return {
@@ -72,7 +75,7 @@ function harness(presentation?: ConstructorParameters<typeof PreBranchSddGateUse
 describe('PreBranchSddGateUseCase', () => {
   it('source-context-C39/source-context-C40/source-context-C41: pins analysis, owner evidence and both drafting attempts to one loaded source', async () => {
     const h = harness();
-    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValue({ markdown: '# Correctable draft' });
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValue({ markdown: writerDraft('# Correctable draft') });
     h.validateDraft.mockRejectedValueOnce(new SddDraftFormatFailure('required-heading', 'Missing required heading')).mockResolvedValueOnce(prepared);
     expect((await h.useCase.begin(context())).status).toBe('drafted');
     expect(h.query.mock.calls.map(([request]) => request.sourceSnapshot)).toEqual([
@@ -157,7 +160,7 @@ describe('PreBranchSddGateUseCase', () => {
     const h = harness();
     h.loadSnapshot.mockResolvedValue({ ...snapshot, capabilities: [{ ...snapshot.capabilities[0], specs: ['specs/payments.md', 'specs/session.md'] }] });
     h.readSdd.mockImplementation(async (_sha, path) => path === 'specs/payments.md' ? 'payments-C01 missing bearer' : 'payments-session-C01 valid session');
-    h.query.mockResolvedValueOnce({ ...plan, action: 'companion', path: 'specs/change.md', newCapability: null }).mockResolvedValueOnce({ markdown: '# Draft' });
+    h.query.mockResolvedValueOnce({ ...plan, action: 'companion', path: 'specs/change.md', newCapability: null }).mockResolvedValueOnce({ markdown: writerDraft('# Draft') });
     expect((await h.useCase.begin(context())).status).toBe('drafted');
     expect(h.readSdd.mock.calls).toEqual([[baseSha, 'specs/payments.md'], [baseSha, 'specs/session.md']]);
     expect(h.query.mock.calls[1][0].prompt).toContain('["payments-C01","payments-session-C01"]');
@@ -183,7 +186,7 @@ describe('PreBranchSddGateUseCase', () => {
 
   it('keeps publication blocked after repeated case inconsistencies', async () => {
     const h = harness();
-    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValue({ markdown: '# Contradictory draft' });
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValue({ markdown: writerDraft('# Contradictory draft') });
     h.validateDraft.mockRejectedValue(new SddDraftFormatFailure('requirement-mapping', 'Mismatch'));
     const result = await h.useCase.begin(context());
     expect(result.status).toBe('blocked');
@@ -198,7 +201,7 @@ describe('PreBranchSddGateUseCase', () => {
       code: Array.from({ length: 1500 }, (_, index) => `packages/billing/src/Module${index}.kt`),
     }] };
     h.loadSnapshot.mockResolvedValue(large);
-    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: '# Draft' });
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: writerDraft('# Draft') });
     const result = await h.useCase.begin(context());
     expect(result.status).toBe('drafted');
     const prompt = h.query.mock.calls[1][0].prompt;
@@ -211,7 +214,7 @@ describe('PreBranchSddGateUseCase', () => {
   it('supplies a canonical issue URL and the validated immutable owner evidence when drafting a companion', async () => {
     const h = harness();
     h.query.mockResolvedValueOnce({ ...plan, action: 'companion', path: 'specs/payment-status.md', newCapability: null })
-      .mockResolvedValueOnce({ markdown: '# Draft companion' });
+      .mockResolvedValueOnce({ markdown: writerDraft('# Draft companion') });
     await h.useCase.begin({ ...context(), issueUrl: 'https://github.com/vypdev/copilot/issues/42' });
     expect(h.query.mock.calls[0][0].prompt).toContain('Canonical issue URL: https://github.com/vypdev/copilot/issues/42');
     expect(h.query.mock.calls[0][0].prompt).toContain('consumer repository layout and language conventions');
@@ -225,7 +228,7 @@ describe('PreBranchSddGateUseCase', () => {
   it.each(['https://github.com/vypdev/copilot/issues/99', 'https://user:password@github.com/vypdev/copilot/issues/42?token=secret'])(
     'does not inject an unverified or credential-bearing issue URL: %s', async issueUrl => {
       const h = harness();
-      h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: '# Draft' });
+      h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: writerDraft('# Draft') });
       await h.useCase.begin({ ...context(), issueUrl });
       for (const [request] of h.query.mock.calls) {
         expect(request.prompt).toContain('Canonical issue URL: (unavailable; do not invent');
@@ -253,7 +256,7 @@ describe('PreBranchSddGateUseCase', () => {
 
   it('allows publication preparation after the third question round is fully answered', async () => {
     const h = await thirdClarificationRound();
-    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: '# Accepted draft' });
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: writerDraft('# Accepted draft') });
     const outcome = await h.useCase.begin(context());
     expect(outcome.status).toBe('drafted');
     if (outcome.status === 'drafted') {
@@ -276,18 +279,18 @@ describe('PreBranchSddGateUseCase', () => {
   it('revalidates a repaired format with the same owner before the final freshness fence', async () => {
     const h = harness();
     h.query.mockResolvedValueOnce({ ...plan, newCapability: null })
-      .mockResolvedValueOnce({ markdown: '# Invalid draft' }).mockResolvedValueOnce({ markdown: '# Accepted draft' });
+      .mockResolvedValueOnce({ markdown: writerDraft('# Invalid draft') }).mockResolvedValueOnce({ markdown: writerDraft('# Accepted draft') });
     h.validateDraft.mockRejectedValueOnce(new SddDraftFormatFailure('required-heading', 'Missing heading'));
     const outcome = await h.useCase.begin(context());
     expect(outcome.status).toBe('drafted');
-    expect(h.validateDraft.mock.calls.map(call => call.slice(1, 3))).toEqual([[plan, '# Invalid draft'], [plan, '# Accepted draft']]);
+    expect(h.validateDraft.mock.calls.map(call => call.slice(1, 3))).toEqual([[plan, writerDraft('# Invalid draft')], [plan, writerDraft('# Accepted draft')]]);
     expect(h.loadSnapshot).toHaveBeenCalledTimes(2);
     expect(h.publish).not.toHaveBeenCalled();
   });
 
   it('refuses a writer that returns no validated draft', async () => {
     const h = harness();
-    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: '# Candidate draft' });
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: writerDraft('# Candidate draft') });
     h.validateDraft.mockResolvedValue(undefined);
     expect((await h.useCase.begin(context())).status).toBe('blocked');
     expect(h.publish).not.toHaveBeenCalled();
@@ -296,7 +299,7 @@ describe('PreBranchSddGateUseCase', () => {
   it('retains earlier decisions with their round and question when Q IDs are reused', async () => {
     const h = await twoClarificationRounds();
     h.comments.push({ id: 102, body: 'SDD Q1: Show newest operations first', user: { login: 'alice' } });
-    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: '# Complete draft' });
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: writerDraft('# Complete draft') });
     const outcome = await h.useCase.begin(context());
     expect(outcome.status).toBe('drafted');
     if (outcome.status !== 'drafted') throw new Error('Expected draft');
@@ -342,12 +345,12 @@ describe('PreBranchSddGateUseCase', () => {
     const h = harness();
     h.query.mockResolvedValueOnce({ ...plan, newCapability: null })
       .mockResolvedValueOnce({ markdown: 'x'.repeat(18001) })
-      .mockResolvedValueOnce({ markdown: '# Regenerated draft' });
+      .mockResolvedValueOnce({ markdown: writerDraft('# Regenerated draft') });
     const outcome = await h.useCase.begin(context());
     expect(outcome.status).toBe('drafted');
     expect(h.query).toHaveBeenCalledTimes(3);
     expect(h.validateDraft).toHaveBeenCalledTimes(1);
-    expect(h.validateDraft).toHaveBeenCalledWith(snapshot, plan, '# Regenerated draft', undefined);
+    expect(h.validateDraft).toHaveBeenCalledWith(snapshot, plan, writerDraft('# Regenerated draft'), undefined);
     expect(h.publish).not.toHaveBeenCalled();
   });
 
@@ -355,7 +358,7 @@ describe('PreBranchSddGateUseCase', () => {
     const h = harness();
     h.query.mockResolvedValueOnce({ ...plan, newCapability: null })
       .mockResolvedValueOnce({ markdown: 'x'.repeat(18001) })
-      .mockResolvedValueOnce({ markdown: '# Regenerated draft' });
+      .mockResolvedValueOnce({ markdown: writerDraft('# Regenerated draft') });
     h.loadSnapshot.mockResolvedValueOnce(snapshot).mockResolvedValueOnce({ ...snapshot, baseSha: 'c'.repeat(40) });
     expect((await h.useCase.begin(context())).status).toBe('blocked');
     expect(h.validateDraft).toHaveBeenCalledTimes(1);
@@ -365,13 +368,13 @@ describe('PreBranchSddGateUseCase', () => {
 
   it('retries a pending publication without consuming another clarification round or changing the owner', async () => {
     const h = harness();
-    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: '# Draft' });
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: writerDraft('# Draft') });
     const first = await h.useCase.begin(context());
     if (first.status !== 'drafted') throw new Error('Expected draft');
     h.publish.mockRejectedValueOnce(new Error('Hook failure'));
     await h.useCase.publish(context(), { ...first, record: { ...first.record, round: 3 } }, 'feature/42-change');
     h.query.mockClear();
-    h.query.mockResolvedValueOnce({ markdown: '# Retried appendix' });
+    h.query.mockResolvedValueOnce({ markdown: writerDraft('# Retried appendix') });
 
     const retry = await h.useCase.begin(context());
 
@@ -385,7 +388,7 @@ describe('PreBranchSddGateUseCase', () => {
     const h = harness();
     const parentSha = 'c'.repeat(40);
     h.loadSnapshot.mockResolvedValueOnce(snapshot).mockResolvedValueOnce({ ...snapshot, baseSha: parentSha });
-    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: '# Draft' });
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: writerDraft('# Draft') });
     const outcome = await h.useCase.begin({ ...context(), workingBranch: 'feature/42-change' });
     expect(outcome.status).toBe('drafted');
     expect(h.loadSnapshot).toHaveBeenCalledWith('feature/42-change');
@@ -403,13 +406,13 @@ describe('PreBranchSddGateUseCase', () => {
   it('ignores Action-owned configuration changes when checking issue freshness', async () => {
     const h = harness();
     h.getDescription.mockResolvedValue(context().issueBody + '\n\n<!-- copilot-configuration-start\n{"workingBranch":"feature/42-change"}\ncopilot-configuration-end -->');
-    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: '# Draft' });
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: writerDraft('# Draft') });
     expect((await h.useCase.begin(context())).status).toBe('drafted');
   });
 
   it('persists a bot-owned pending branch record after a publication failure', async () => {
     const h = harness();
-    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: '# Draft' });
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: writerDraft('# Draft') });
     const draft = await h.useCase.begin(context());
     if (draft.status !== 'drafted') throw new Error('Expected validated draft');
     h.publish.mockRejectedValue(new Error('push unavailable'));
@@ -420,7 +423,7 @@ describe('PreBranchSddGateUseCase', () => {
 
   it('recovers a verified first SDD commit after its card publication was interrupted', async () => {
     const h = harness();
-    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: '# Draft' });
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: writerDraft('# Draft') });
     const draft = await h.useCase.begin(context());
     if (draft.status !== 'drafted') throw new Error('Expected validated draft');
     h.publish.mockRejectedValueOnce(new Error('transport failed after push'));
@@ -486,7 +489,7 @@ describe('PreBranchSddGateUseCase', () => {
     expect((await h.useCase.begin(context())).status).toBe('waiting');
     h.comments.push({ id: 102, body: 'SDD Q1: Keep old callers working', user: { login: 'alice' } });
     h.query.mockResolvedValueOnce({ ...plan, questions: [], newCapability: null });
-    h.query.mockResolvedValueOnce({ markdown: '# New SDD content' });
+    h.query.mockResolvedValueOnce({ markdown: writerDraft('# New SDD content') });
     expect((await h.useCase.begin(context())).status).toBe('drafted');
     expect(h.isActorAllowedToModifyFiles).not.toHaveBeenCalled();
   });
@@ -497,13 +500,13 @@ describe('PreBranchSddGateUseCase', () => {
     await h.useCase.begin(context());
     h.comments.push({ id: 101, body: 'SDD Q1: Preserve the existing API', user: { login: 'maintainer' } });
     h.query.mockResolvedValueOnce({ ...plan, questions: [], newCapability: null });
-    h.query.mockResolvedValueOnce({ markdown: '# New SDD content' });
+    h.query.mockResolvedValueOnce({ markdown: writerDraft('# New SDD content') });
     const outcome = await h.useCase.begin(context());
     expect(outcome.status).toBe('drafted');
     expect(h.query.mock.calls.map(call => call[0].agentId)).toEqual([
       'pre-branch-sdd-analysis', 'pre-branch-sdd-analysis', 'pre-branch-sdd-draft',
     ]);
-    expect(h.validateDraft).toHaveBeenCalledWith(snapshot, expect.objectContaining({ path: plan.path }), '# New SDD content', undefined);
+    expect(h.validateDraft).toHaveBeenCalledWith(snapshot, expect.objectContaining({ path: plan.path }), writerDraft('# New SDD content'), undefined);
     expect(h.publish).not.toHaveBeenCalled();
   });
 
@@ -514,18 +517,18 @@ describe('PreBranchSddGateUseCase', () => {
       scope: 'Invoice behavior', specs: [newPlan.path],
     };
     h.query.mockResolvedValueOnce({ ...newPlan, newCapability });
-    h.query.mockResolvedValueOnce({ markdown: '# Invoice contract' });
+    h.query.mockResolvedValueOnce({ markdown: writerDraft('# Invoice contract') });
     expect((await h.useCase.begin(context())).status).toBe('drafted');
-    expect(h.validateDraft).toHaveBeenCalledWith(snapshot, newPlan, '# Invoice contract', newCapability);
+    expect(h.validateDraft).toHaveBeenCalledWith(snapshot, newPlan, writerDraft('# Invoice contract'), newCapability);
   });
 
   it('accepts a new proposed capability with truthful absent implementation arrays', async () => {
     const h = harness();
     const newCapability = { ...snapshot.capabilities[0], id: 'invoicing', title: 'Invoicing', status: 'proposed',
       specs: [newPlan.path], entrypoints: [], code: [], tests: [] };
-    h.query.mockResolvedValueOnce({ ...newPlan, newCapability }).mockResolvedValueOnce({ markdown: '# Prospective invoice contract' });
+    h.query.mockResolvedValueOnce({ ...newPlan, newCapability }).mockResolvedValueOnce({ markdown: writerDraft('# Prospective invoice contract') });
     expect((await h.useCase.begin(context())).status).toBe('drafted');
-    expect(h.validateDraft).toHaveBeenCalledWith(snapshot, newPlan, '# Prospective invoice contract', newCapability);
+    expect(h.validateDraft).toHaveBeenCalledWith(snapshot, newPlan, writerDraft('# Prospective invoice contract'), newCapability);
     expect(h.query.mock.calls[0][0].prompt).toContain('Every path field must be an array');
     expect(h.query.mock.calls[0][0].prompt).toContain('never fabricate source, wrapper tests or documentation-as-code');
     expect(h.publish).not.toHaveBeenCalled();
@@ -545,7 +548,7 @@ describe('PreBranchSddGateUseCase', () => {
     const prospective = { ...snapshot, capabilities: [{ ...snapshot.capabilities[0],
       status: 'proposed', entrypoints: [], code: [], tests: [] }] };
     h.loadSnapshot.mockResolvedValue(prospective);
-    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: '# Proposed update' });
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: writerDraft('# Proposed update') });
     expect((await h.useCase.begin(context())).status).toBe('drafted');
     expect(h.query.mock.calls[1][0].prompt).toContain('absent implementation evidence');
     expect(h.query.mock.calls[1][0].prompt).toContain('preserve Draft/readiness blockers');
@@ -561,7 +564,7 @@ describe('PreBranchSddGateUseCase', () => {
   ])('blocks a new capability with %s', async (_reason, newCapability) => {
     const h = harness();
     h.query.mockResolvedValueOnce({ ...newPlan, newCapability });
-    h.query.mockResolvedValueOnce({ markdown: '# Invoice contract' });
+    h.query.mockResolvedValueOnce({ markdown: writerDraft('# Invoice contract') });
     expect((await h.useCase.begin(context())).status).toBe('blocked');
     expect(h.validateDraft).not.toHaveBeenCalled();
   });
@@ -582,7 +585,7 @@ describe('PreBranchSddGateUseCase', () => {
   it('publishes on the exact branch, verifies the remote SHA and updates one owned card', async () => {
     const h = harness();
     h.query.mockResolvedValueOnce({ ...plan, questions: [], newCapability: null });
-    h.query.mockResolvedValueOnce({ markdown: '# New SDD content' });
+    h.query.mockResolvedValueOnce({ markdown: writerDraft('# New SDD content') });
     const draft = await h.useCase.begin(context());
     expect(draft.status).toBe('drafted');
     if (draft.status !== 'drafted') throw new Error('expected draft');
@@ -598,7 +601,7 @@ describe('PreBranchSddGateUseCase', () => {
   it('recovers a pushed first commit after a failed status update without another commit', async () => {
     const h = harness();
     h.query.mockResolvedValueOnce({ ...plan, questions: [], newCapability: null });
-    h.query.mockResolvedValueOnce({ markdown: '# New SDD content' });
+    h.query.mockResolvedValueOnce({ markdown: writerDraft('# New SDD content') });
     const draft = await h.useCase.begin(context());
     if (draft.status !== 'drafted') throw new Error('expected draft');
     h.recoverPublished.mockResolvedValue(commitSha);
@@ -610,7 +613,7 @@ describe('PreBranchSddGateUseCase', () => {
   it('reuses a verified published SDD without another agent call or timeline card', async () => {
     const h = harness();
     h.query.mockResolvedValueOnce({ ...plan, questions: [], newCapability: null });
-    h.query.mockResolvedValueOnce({ markdown: '# New SDD content' });
+    h.query.mockResolvedValueOnce({ markdown: writerDraft('# New SDD content') });
     const first = await h.useCase.begin(context());
     if (first.status !== 'drafted') throw new Error('expected draft');
     await h.useCase.publish(context(), first, 'feature/42-change');
@@ -625,7 +628,7 @@ describe('PreBranchSddGateUseCase', () => {
   it('blocks replay when the published SDD commit is no longer on the linked remote branch', async () => {
     const h = harness();
     h.query.mockResolvedValueOnce({ ...plan, questions: [], newCapability: null });
-    h.query.mockResolvedValueOnce({ markdown: '# New SDD content' });
+    h.query.mockResolvedValueOnce({ markdown: writerDraft('# New SDD content') });
     const first = await h.useCase.begin(context());
     if (first.status !== 'drafted') throw new Error('expected draft');
     await h.useCase.publish(context(), first, 'feature/42-change');
@@ -638,7 +641,7 @@ describe('PreBranchSddGateUseCase', () => {
   it('refuses to publish on a matching remote name that is not linked to this issue', async () => {
     const h = harness();
     h.query.mockResolvedValueOnce({ ...plan, questions: [], newCapability: null });
-    h.query.mockResolvedValueOnce({ markdown: '# New SDD content' });
+    h.query.mockResolvedValueOnce({ markdown: writerDraft('# New SDD content') });
     const draft = await h.useCase.begin(context());
     if (draft.status !== 'drafted') throw new Error('expected draft');
     h.getLinkedBranch.mockResolvedValue(undefined);
@@ -650,7 +653,7 @@ describe('PreBranchSddGateUseCase', () => {
   it('blocks a changed branch head before publishing and keeps the first commit untouched', async () => {
     const h = harness();
     h.query.mockResolvedValueOnce({ ...plan, questions: [], newCapability: null });
-    h.query.mockResolvedValueOnce({ markdown: '# New SDD content' });
+    h.query.mockResolvedValueOnce({ markdown: writerDraft('# New SDD content') });
     const first = await h.useCase.begin(context());
     if (first.status !== 'drafted') throw new Error('expected draft');
     h.getLinkedBranch.mockResolvedValue({ name: 'feature/42-change', headSha: 'd'.repeat(40) });
@@ -662,7 +665,7 @@ describe('PreBranchSddGateUseCase', () => {
   it('blocks a stale issue body before publication', async () => {
     const h = harness();
     h.query.mockResolvedValueOnce({ ...plan, questions: [], newCapability: null });
-    h.query.mockResolvedValueOnce({ markdown: '# New SDD content' });
+    h.query.mockResolvedValueOnce({ markdown: writerDraft('# New SDD content') });
     const first = await h.useCase.begin(context());
     if (first.status !== 'drafted') throw new Error('expected draft');
     h.getDescription.mockResolvedValue('The payment flow changed again.');
@@ -674,7 +677,7 @@ describe('PreBranchSddGateUseCase', () => {
   it('blocks when remote verification fails after a pushed commit', async () => {
     const h = harness();
     h.query.mockResolvedValueOnce({ ...plan, questions: [], newCapability: null });
-    h.query.mockResolvedValueOnce({ markdown: '# New SDD content' });
+    h.query.mockResolvedValueOnce({ markdown: writerDraft('# New SDD content') });
     const first = await h.useCase.begin(context());
     if (first.status !== 'drafted') throw new Error('expected draft');
     h.verifyPublication.mockResolvedValue(false);
@@ -686,7 +689,7 @@ describe('PreBranchSddGateUseCase', () => {
   it('blocks when branch linkage disappears after the SDD commit is pushed', async () => {
     const h = harness();
     h.query.mockResolvedValueOnce({ ...plan, questions: [], newCapability: null });
-    h.query.mockResolvedValueOnce({ markdown: '# New SDD content' });
+    h.query.mockResolvedValueOnce({ markdown: writerDraft('# New SDD content') });
     const first = await h.useCase.begin(context());
     if (first.status !== 'drafted') throw new Error('expected draft');
     h.getLinkedBranch.mockResolvedValueOnce({ name: 'feature/42-change', headSha: baseSha });
@@ -699,7 +702,7 @@ describe('PreBranchSddGateUseCase', () => {
   it('blocks publication after a human title edit but ignores the generated emoji prefix', async () => {
     const h = harness();
     h.query.mockResolvedValueOnce({ ...plan, questions: [], newCapability: null });
-    h.query.mockResolvedValueOnce({ markdown: '# New SDD content' });
+    h.query.mockResolvedValueOnce({ markdown: writerDraft('# New SDD content') });
     const draft = await h.useCase.begin(context());
     if (draft.status !== 'drafted') throw new Error('expected draft');
     h.getTitle.mockResolvedValue('🧑‍💻 - Change payments');
@@ -711,7 +714,7 @@ describe('PreBranchSddGateUseCase', () => {
   it('source-context-C42: revises the owning SDD on the retained branch after a material issue change', async () => {
     const h = harness();
     h.query.mockResolvedValueOnce({ ...plan, questions: [], newCapability: null });
-    h.query.mockResolvedValueOnce({ markdown: '# First contract' });
+    h.query.mockResolvedValueOnce({ markdown: writerDraft('# First contract') });
     const first = await h.useCase.begin(context());
     if (first.status !== 'drafted') throw new Error('expected first draft');
     await h.useCase.publish(context(), first, 'feature/42-change');
@@ -722,9 +725,9 @@ describe('PreBranchSddGateUseCase', () => {
       : snapshot);
     h.getLinkedBranch.mockResolvedValue({ name: 'feature/42-change', headSha: commitSha });
     h.getDescription.mockResolvedValue(revisedContext.issueBody);
-    h.validateDraft.mockResolvedValue({ ...prepared, baseSha: commitSha, markdown: '# Revised contract' });
+    h.validateDraft.mockResolvedValue({ ...prepared, baseSha: commitSha, markdown: writerDraft('# Revised contract') });
     h.query.mockResolvedValueOnce({ ...plan, questions: [], newCapability: null });
-    h.query.mockResolvedValueOnce({ markdown: '# Revised contract' });
+    h.query.mockResolvedValueOnce({ markdown: writerDraft('# Revised contract') });
     const revision = await h.useCase.begin(revisedContext);
     expect(revision.status).toBe('drafted');
     expect(h.query.mock.calls.slice(-2).map(([request]) => request.sourceSnapshot)).toEqual([
@@ -805,7 +808,7 @@ describe('safe ownership diagnostics (#636)', () => {
     await h.useCase.begin(context());
     expect(h.addComment).toHaveBeenCalledTimes(1);
     expect(h.updateComment).toHaveBeenCalledTimes(1);
-    h.query.mockResolvedValueOnce(plan).mockResolvedValueOnce({ markdown: '# Valid' });
+    h.query.mockResolvedValueOnce(plan).mockResolvedValueOnce({ markdown: writerDraft('# Valid') });
     expect((await h.useCase.begin(context())).status).toBe('drafted');
     expect(h.comments[0].body).toContain('validated ownership');
     expect(h.labels()).not.toContain('branched');
@@ -851,7 +854,7 @@ it('reports a later valid ownership analysis in Spanish without a readiness reco
   const h = harness();
   h.query.mockResolvedValueOnce({ ...plan, action: 'companion', capabilityId: 'unknown' });
   await h.useCase.begin({ ...context(), issueLocale: 'es-ES' });
-  h.query.mockResolvedValueOnce(plan).mockResolvedValueOnce({ markdown: '# Valid' });
+  h.query.mockResolvedValueOnce(plan).mockResolvedValueOnce({ markdown: writerDraft('# Valid') });
   await h.useCase.begin({ ...context(), issueLocale: 'es-ES' });
   expect(h.comments[0].body).toContain('ha validado la propiedad');
   expect(readSddGateRecord(h.comments[0].body, 42)).toBeUndefined();
@@ -873,7 +876,7 @@ it('keeps malformed analysis outside ownership recovery and publishes only a saf
 describe('blocked SDD diagnostics regression (#714)', () => {
   it('publishes a safe actionable failure card after the single repair is exhausted', async () => {
     const h = harness();
-    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValue({ markdown: '# PRIVATE_CANDIDATE' });
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValue({ markdown: writerDraft('# PRIVATE_CANDIDATE') });
     h.validateDraft.mockRejectedValue(new SddDraftFormatFailure('requirement-mapping', 'PRIVATE_VALIDATION_TEXT'));
     const outcome = await h.useCase.begin(context());
     expect(outcome.status).toBe('blocked');
@@ -890,7 +893,7 @@ describe('blocked SDD diagnostics regression (#714)', () => {
   it('updates one owned blocked card on a retry instead of leaving only operator logs', async () => {
     const h = harness();
     h.query.mockImplementation(async request => request.agentId === 'pre-branch-sdd-analysis'
-      ? { ...plan, newCapability: null } : { markdown: '# PRIVATE_CANDIDATE' });
+      ? { ...plan, newCapability: null } : { markdown: writerDraft('# PRIVATE_CANDIDATE') });
     h.validateDraft.mockRejectedValue(new SddDraftFormatFailure('case-identity', 'PRIVATE_VALIDATION_TEXT'));
     await h.useCase.begin(context());
     await h.useCase.begin(context());
@@ -905,7 +908,7 @@ describe('blocked SDD diagnostics regression (#714)', () => {
 describe('SDD diagnostic retention and recovery (#714)', () => {
   const failDraft = (h: ReturnType<typeof harness>) => {
     h.query.mockImplementation(async request => request.agentId === 'pre-branch-sdd-analysis'
-      ? { ...plan, newCapability: null } : { markdown: '# PRIVATE_CANDIDATE' });
+      ? { ...plan, newCapability: null } : { markdown: writerDraft('# PRIVATE_CANDIDATE') });
     h.validateDraft.mockRejectedValue(new SddDraftFormatFailure('case-identity', 'PRIVATE_VALIDATION_TEXT', {
       reason: 'case-identity', phase: 'validation', facts: [{ detail: 'case-reserved', section: 14, expected: 0, observed: 1 }],
     }));
@@ -947,7 +950,7 @@ describe('SDD diagnostic retention and recovery (#714)', () => {
 
   it('reports a partial publication without claiming the linked branch disappeared', async () => {
     const h = harness();
-    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValue({ markdown: '# Draft' });
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValue({ markdown: writerDraft('# Draft') });
     const draft = await h.useCase.begin(context());
     if (draft.status !== 'drafted') throw new Error('Expected validated draft');
     h.publish.mockRejectedValue(new Error('PRIVATE_PROVIDER_ERROR'));
@@ -1009,7 +1012,7 @@ describe('SDD diagnostic retention and recovery (#714)', () => {
 
   it.each(['body', 'title', 'base'] as const)('preserves the current cards when publication starts from a stale %s', async changed => {
     const h = harness();
-    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValue({ markdown: '# Draft' });
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValue({ markdown: writerDraft('# Draft') });
     const draft = await h.useCase.begin(context());
     if (draft.status !== 'drafted') throw new Error('Expected validated draft');
     const current = '<!-- copilot:sdd-analysis-status:v1 issue="42" --> Current run';
@@ -1029,7 +1032,7 @@ describe('SDD diagnostic retention and recovery (#714)', () => {
 
   it('rechecks the source before writing either recovery card after a publication failure', async () => {
     const h = harness();
-    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValue({ markdown: '# Draft' });
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValue({ markdown: writerDraft('# Draft') });
     const draft = await h.useCase.begin(context());
     if (draft.status !== 'drafted') throw new Error('Expected validated draft');
     const current = '<!-- copilot:sdd-analysis-status:v1 issue="42" --> Current run';
@@ -1055,7 +1058,7 @@ describe('SDD diagnostic retention and recovery (#714)', () => {
       return { requestedLocale: 'fr-FR', resolvedLocale: 'en-US', source: 'fallback',
         fallbackReason: 'dynamic-response-invalid', messages: request.sourceCatalog.messages };
     });
-    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValue({ markdown: '# Draft' });
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValue({ markdown: writerDraft('# Draft') });
     const draft = await h.useCase.begin(context());
     if (draft.status !== 'drafted') throw new Error('Expected validated draft');
     const current = '<!-- copilot:sdd-analysis-status:v1 issue="42" --> Current run';
@@ -1071,7 +1074,7 @@ describe('SDD diagnostic retention and recovery (#714)', () => {
 
   it.each([false, true])('guards revision recovery against the actual returned commit (foreign advance: %s)', async foreignAdvance => {
     const h = harness();
-    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValue({ markdown: '# Draft' });
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValue({ markdown: writerDraft('# Draft') });
     const draft = await h.useCase.begin(context());
     if (draft.status !== 'drafted') throw new Error('Expected validated draft');
     const revision = { ...draft, record: { ...draft.record, branchName: 'feature/42-change', commitSha: baseSha } };
@@ -1235,7 +1238,7 @@ describe('catalog profile preflight and recovery (#716)', () => {
     const h = harness(undefined, true); h.readSourceRevision.mockResolvedValue(baseSha);
     h.loadSnapshot.mockRejectedValueOnce(new SddCatalogCompatibilityFailure('unsupported-profile', baseSha));
     expect((await h.useCase.begin(context())).status).toBe('blocked'); expect(h.query).not.toHaveBeenCalled();
-    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValue({ markdown: '# Draft' });
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValue({ markdown: writerDraft('# Draft') });
     const draft = await h.useCase.begin(context()); expect(draft.status).toBe('drafted');
     if (draft.status !== 'drafted') throw new Error('Expected validated SDK draft');
     expect((await h.useCase.publish(context(), draft, 'feature/42-change')).status).toBe('published');
@@ -1257,7 +1260,7 @@ describe('catalog profile preflight and recovery (#716)', () => {
 
   it('checks the retained linked branch rather than develop when catalog compatibility changes', async () => {
     const h = harness(undefined, true); h.readSourceRevision.mockResolvedValue(baseSha);
-    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValue({ markdown: '# Draft' });
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValue({ markdown: writerDraft('# Draft') });
     const draft = await h.useCase.begin(context()); if (draft.status !== 'drafted') throw new Error('Expected draft');
     await h.useCase.publish(context(), draft, 'feature/42-change');
     const record = h.comments.find(comment => readSddGateRecord(comment.body, 42))!.body;
@@ -1297,7 +1300,7 @@ describe('confirmed missing trusted catalog recovery (#808)', () => {
   });
   it('checks a retained linked branch and preserves its published record', async () => {
     const h = harness(undefined, true); h.readSourceRevision.mockResolvedValue(baseSha);
-    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValue({ markdown: '# Draft' });
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValue({ markdown: writerDraft('# Draft') });
     const draft = await h.useCase.begin(context()); if (draft.status !== 'drafted') throw new Error('Expected draft');
     await h.useCase.publish(context(), draft, 'feature/42-change');
     const record = h.comments.find(comment => readSddGateRecord(comment.body, 42))!.body;
@@ -1332,7 +1335,7 @@ describe('confirmed missing trusted catalog recovery (#808)', () => {
     expect((await h.useCase.begin(context())).status).toBe('blocked'); expect(h.query).not.toHaveBeenCalled();
     h.loadSnapshot.mockResolvedValue({ ...snapshot, baseSha: commitSha }); h.readSourceRevision.mockResolvedValue(commitSha);
     h.validateDraft.mockResolvedValue({ ...prepared, baseSha: commitSha });
-    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValue({ markdown: '# Draft' });
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValue({ markdown: writerDraft('# Draft') });
     expect((await h.useCase.begin(context())).status).toBe('drafted'); expect(h.validateDraft).toHaveBeenCalledTimes(1);
     expect(h.comments.filter(comment => comment.body.includes('copilot:sdd-analysis-status:v1'))).toHaveLength(1);
   });

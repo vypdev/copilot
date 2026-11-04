@@ -19,6 +19,10 @@ analysis, drafting and its existing repair to this gate's loaded snapshot SHA.
 It preserves the canonical checkout, lifecycle and freshness guards while
 providing an independently verified SDK-owned read-only source view.
 
+The [draft minimum diagnostic companion](sdd-draft-response-minimum.md) specifies
+safe response-stage/minimum/attempt facts for undersized Markdown, preserving
+the existing minimum, shared repair ceiling and publication fences.
+
 The [repository-reference companion](sdd-reference-classification.md) distinguishes
 protocol notation from file citations, defines constructive future directories
 and adds private-safe reference occurrence diagnostics. Explicit file declarations

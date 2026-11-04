@@ -78,6 +78,16 @@ is not proof that the candidate or validator is correct. Existing specifications
 answers remain; see [blocked preparation recovery](/issues/pre-branch-sdds#when-specification-preparation-is-blocked).
 
 
+Undersized draft responses use nonretryable `validation.invalid-input` with
+`sdd-draft-response-too-short`. The validated recovery contains only `minimum`,
+`observed` and `attempts`; its phase is draft response. The minimum remains
+1,800 Unicode code points. An unretained observed length is `unavailable`, not
+zero. Clarify the complete proposed Markdown requirement in the issue description,
+preserving resolved requirements and ownership, then retry its normal workflow.
+Existing answers, owner and specifications remain. This cause adds no generation
+attempt, relaxes no acceptance bound and is separate from provider unavailability.
+See [undersized draft recovery](/issues/pre-branch-sdds#undersized-draft-response).
+
 SDD source-view failures use `validation.evidence-unavailable` with
 `sdd-source-context-unavailable`. The only recovery facts are the immutable
 `sourceCommit`, `phase` and closed `reason`; unverified identity is `none` /

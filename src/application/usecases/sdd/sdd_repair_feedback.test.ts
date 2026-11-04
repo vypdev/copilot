@@ -1,5 +1,5 @@
 import { draftSddMarkdown } from './pre_branch_sdd_draft_workflow';
-import { SddDraftFormatFailure } from '../../../domain/pre_branch_sdd';
+import { SddDraftFormatFailure, SDD_MIN_DRAFT_CHARACTERS } from '../../../domain/pre_branch_sdd';
 import { AgentResponseLengthFailure } from '../../../domain/agent_response_length_failure';
 import { ApplicationError } from '../../errors/application_error';
 import type { SddValidationDiagnostic } from '../../../domain/sdd_validation_diagnostic';
@@ -13,7 +13,8 @@ const facts: SddValidationDiagnostic = { reason: 'requirement-mapping', phase: '
   { detail: 'requirement-reference', section: 14, row: 2, expected: 0, observed: 1 },
 ] };
 const failure = () => new SddDraftFormatFailure('requirement-mapping', 'PRIVATE_ERROR @actor /command', facts);
-const query = () => jest.fn().mockResolvedValue({ markdown: 'PRIVATE_REJECTED_DRAFT' });
+// Meet the response minimum before exercising writer-validation feedback.
+const query = () => jest.fn().mockResolvedValue({ markdown: 'PRIVATE_REJECTED_DRAFT'.padEnd(SDD_MIN_DRAFT_CHARACTERS, ' ') });
 const prompt = 'Preserve the complete resolved requirements and existing owner.';
 
 it('sdd-feedback-C09: forwards only closed writer-validation facts on the sole repair with the original request', async () => {

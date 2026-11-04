@@ -1,7 +1,7 @@
 import { SDD_CATALOG_COMPATIBILITY_REASONS, type SddCatalogCompatibilityReason } from '../../domain/sdd_catalog_compatibility';
 import { isSddSourceContextDiagnostic } from '../../domain/agent_source_snapshot';
 import { APPLICATION_ERROR_METADATA, APPLICATION_ERROR_RECOVERY_IDS, isApplicationErrorCorrelationId } from '../../data/model/application_error';
-import { normalizeSddValidationDiagnostic, type SddValidationDiagnostic } from '../../domain/sdd_validation_diagnostic';
+import { isSddDraftMinimumDiagnostic, normalizeSddValidationDiagnostic, type SddValidationDiagnostic } from '../../domain/sdd_validation_diagnostic';
 import { resolveStaticApplicationErrorCatalog, type ApplicationErrorMessageReader } from './application_error_message_catalog';
 import { buildApplicationErrorPresentation, type ApplicationErrorPresentationSource } from './application_error_presentation_policy';
 import { sddAnalysisStatusMarker } from './sdd_analysis_status_policy';
@@ -52,13 +52,27 @@ export function renderSddPreparationFailure(options: Readonly<{
   if (options.catalogReason !== undefined && (!SDD_CATALOG_COMPATIBILITY_REASONS.includes(options.catalogReason) || options.diagnostic)) {
     throw new TypeError('Invalid exclusive catalog compatibility facts.');
   }
-  const diagnostic = options.diagnostic ? normalizeSddValidationDiagnostic(options.diagnostic) : undefined;
+  const recovery = options.error.recovery;
+  const minimum = recovery?.id === 'sdd-draft-response-too-short' && isSddDraftMinimumDiagnostic(recovery.variables) ? recovery.variables : undefined;
+  if (recovery?.id === 'sdd-draft-response-too-short' && !minimum) throw new TypeError('Invalid SDD minimum recovery facts.');
+  let diagnostic = options.diagnostic ? normalizeSddValidationDiagnostic(options.diagnostic) : undefined;
+  if (minimum) {
+    if (options.catalogReason !== undefined || missingCatalogSource !== undefined || options.publicationPending) {
+      throw new TypeError('SDD minimum response facts cannot describe another failure phase.');
+    }
+    const observed = minimum.observed === 'unavailable' ? undefined : minimum.observed;
+    if (diagnostic && (diagnostic.reason !== 'response-minimum' || diagnostic.facts[0].expected !== minimum.minimum
+      || diagnostic.facts[0].observed !== observed)) throw new TypeError('SDD minimum projections disagree.');
+    if (options.attempts !== undefined && options.attempts !== minimum.attempts) throw new TypeError('SDD minimum attempts disagree.');
+    diagnostic = normalizeSddValidationDiagnostic({ reason: 'response-minimum', phase: 'response',
+      facts: [{ detail: 'minimum-length', section: 0, expected: minimum.minimum, ...(observed === undefined ? {} : { observed }) }] });
+  }
+  if (diagnostic?.reason === 'response-minimum' && !minimum) throw new TypeError('SDD minimum response requires its semantic recovery.');
   if (options.attempts !== undefined && options.attempts !== 1 && options.attempts !== 2) throw new TypeError('Invalid SDD diagnostic attempt count.');
   const message = (key: SddPreparationMessageId) => catalog.message(key);
-  const recovery = options.error.recovery;
   const sourceRecovery = recovery?.id === 'sdd-source-context-unavailable' && isSddSourceContextDiagnostic(recovery.variables);
   const source = { code: options.error.code, retryable: options.error.retryable, correlationId: options.error.correlationId,
-    ...(recovery && (sourceRecovery || (APPLICATION_ERROR_RECOVERY_IDS.includes(recovery.id)
+    ...(recovery && (sourceRecovery || minimum || (APPLICATION_ERROR_RECOVERY_IDS.includes(recovery.id)
       && (recovery.id.startsWith('sdd-draft-') || recovery.id.startsWith('sdd-catalog-'))
       && recovery.variables && Object.keys(recovery.variables).length === 0)) ? { recovery } : {}) };
   const view = buildApplicationErrorPresentation(source, errorMessage ?? resolveStaticApplicationErrorCatalog(catalog.locale).message);
@@ -68,8 +82,8 @@ export function renderSddPreparationFailure(options: Readonly<{
     '',
     options.publicationPending ? message('sddPreparation.publicationRetained') : message('sddPreparation.noPublication'),
     '', `**${message('sddPreparation.impact')}:** ${view.impact}`,
-    '', `**${message('sddPreparation.actionLabel')}:** ${diagnostic ? message('sddPreparation.action') + ' ' : ''}${view.action}`,
-    '', `**${message('sddPreparation.retainedLabel')}:** ${sourceRecovery ? view.retainedState : message('sddPreparation.retained')}`,
+    '', `**${message('sddPreparation.actionLabel')}:** ${diagnostic && !minimum ? message('sddPreparation.action') + ' ' : ''}${view.action}`,
+    '', `**${message('sddPreparation.retainedLabel')}:** ${sourceRecovery || minimum ? view.retainedState : message('sddPreparation.retained')}`,
     '', runUrl ? `[${message('sddPreparation.workflow')}](${runUrl})` : message('sddPreparation.runUnavailable'),
     '', '<details>', `<summary>${message('sddPreparation.diagnostics')}</summary>`, '',
     `**${message('sddPreparation.code')}:** \`${view.code}\``,
@@ -87,7 +101,8 @@ export function renderSddPreparationFailure(options: Readonly<{
   } else if (diagnostic) {
     lines.push(`**${message('sddPreparation.reason')}:** \`${diagnostic.reason}\``,
       `**${message('sddPreparation.phase')}:** \`${diagnostic.phase}\``);
-    if (options.attempts !== undefined) lines.push(`**${message('sddPreparation.attempts')}:** ${options.attempts}`);
+    const attempts = minimum?.attempts ?? options.attempts;
+    if (attempts !== undefined) lines.push(`**${message('sddPreparation.attempts')}:** ${attempts}`);
     for (const fact of diagnostic.facts) {
       lines.push('', `- ${message(`sddPreparation.fact.${fact.detail}`)}`);
       for (const key of ['section', 'row', 'expected', 'observed'] as const) {
@@ -96,6 +111,9 @@ export function renderSddPreparationFailure(options: Readonly<{
             ? 'referenceOrdinal' : key;
           lines.push(`  - ${message(`sddPreparation.${label}`)}: ${fact[key]}`);
         }
+      }
+      if (fact.detail === 'minimum-length' && fact.observed === undefined) {
+        lines.push(`  - ${message('sddPreparation.observed')}: ${message('sddPreparation.lengthUnavailable')}`);
       }
     }
   } else lines.push('', message('sddPreparation.noEvidence'));

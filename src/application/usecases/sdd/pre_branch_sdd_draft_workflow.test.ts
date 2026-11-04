@@ -1,6 +1,6 @@
 const sourceSnapshot = { kind: 'pre-branch-sdd', phase: 'draft', baseSha: 'a'.repeat(40) } as const;
 import { draftSddMarkdown } from './pre_branch_sdd_draft_workflow';
-import { SddDraftFormatFailure, validateSddMarkdown, type SddPlan } from '../../../domain/pre_branch_sdd';
+import { SDD_MIN_DRAFT_CHARACTERS, SddDraftFormatFailure, validateSddMarkdown, type SddPlan } from '../../../domain/pre_branch_sdd';
 import { AgentResponseLengthFailure } from '../../../domain/agent_response_length_failure';
 import { FindingsAgentAdapter } from '../../../data/repository/ai/findings_agent_adapter';
 import { validateSddDraftConsistency } from '../../../domain/sdd_draft_consistency';
@@ -8,6 +8,9 @@ import { sddCaseReferenceFixture, sddConsistencyFixture } from '../../../testing
 
 const configuration = { provider: 'codex', model: 'model' } as never;
 const plan = { action: 'update', path: 'specs/payments.md', capabilityId: 'payments', reason: 'A bounded contract change.', questions: [] } as const;
+
+// Mocked writer constraints receive strings satisfying the independent response minimum.
+const writerDraft = (text: string) => text.padEnd(SDD_MIN_DRAFT_CHARACTERS, ' ');
 
 describe('draftSddMarkdown', () => {
   const assemblyDraft = () => sddConsistencyFixture()
@@ -79,7 +82,7 @@ describe('draftSddMarkdown', () => {
 
   it.each(['case-identity', 'case-budget', 'requirement-mapping', 'repository-path'] as const)(
     'repairs %s once with closed feedback and returns a specific non-ready recovery on repeated failure', async reason => {
-      const query = jest.fn().mockResolvedValue({ markdown: 'Untrusted invalid document' });
+      const query = jest.fn().mockResolvedValue({ markdown: writerDraft('Untrusted invalid document') });
       const validate = jest.fn().mockRejectedValue(new SddDraftFormatFailure(reason, 'untrusted diagnostic @actor /command'));
       await expect(draftSddMarkdown({ query }, configuration, plan, 'Resolved requirements', validate)).rejects.toMatchObject({
         recovery: { id: `sdd-draft-${reason}-invalid`, variables: {} },
@@ -93,10 +96,10 @@ describe('draftSddMarkdown', () => {
   );
 
   it('revalidates a corrected semantic draft without spending a third generation', async () => {
-    const query = jest.fn().mockResolvedValueOnce({ markdown: 'Invalid cases' }).mockResolvedValueOnce({ markdown: 'Corrected cases' });
+    const query = jest.fn().mockResolvedValueOnce({ markdown: writerDraft('Invalid cases') }).mockResolvedValueOnce({ markdown: writerDraft('Corrected cases') });
     const validate = jest.fn().mockRejectedValueOnce(new SddDraftFormatFailure('case-budget', 'Rejected')).mockResolvedValueOnce(undefined);
-    await expect(draftSddMarkdown({ query }, configuration, plan, 'Resolved requirements', validate)).resolves.toBe('Corrected cases');
-    expect(validate.mock.calls.map(call => call[0])).toEqual(['Invalid cases', 'Corrected cases']);
+    await expect(draftSddMarkdown({ query }, configuration, plan, 'Resolved requirements', validate)).resolves.toBe(writerDraft('Corrected cases'));
+    expect(validate.mock.calls.map(call => call[0])).toEqual(['Invalid cases', 'Corrected cases'].map(writerDraft));
     expect(query).toHaveBeenCalledTimes(2);
   });
 
@@ -147,13 +150,13 @@ describe('draftSddMarkdown', () => {
     const execute = jest.fn().mockResolvedValue(JSON.stringify({ markdown: 'short' }));
     const adapter = new FindingsAgentAdapter({ cli: { execute } });
     await expect(draftSddMarkdown(adapter, { provider: 'codex', modelProvider: 'openai', model: 'gpt-5' }, plan, 'Original', undefined, sourceSnapshot))
-      .rejects.toThrow('too short');
+      .rejects.toMatchObject({ code: 'validation.invalid-input', attempts: 1, recovery: { id: 'sdd-draft-response-too-short' } });
     expect(execute).toHaveBeenCalledTimes(1);
   });
 
   it('shares the repair ceiling between a schema length rejection and a writer format rejection', async () => {
     const query = jest.fn().mockRejectedValueOnce(new AgentResponseLengthFailure('$.markdown', 18000))
-      .mockResolvedValueOnce({ markdown: 'Invalid format' });
+      .mockResolvedValueOnce({ markdown: writerDraft('Invalid format') });
     const validate = jest.fn().mockRejectedValue(new SddDraftFormatFailure('test-budget', 'Missing budget'));
     await expect(draftSddMarkdown({ query }, configuration, plan, 'Original', validate))
       .rejects.toMatchObject({ recovery: { id: 'sdd-draft-format-invalid' } });
@@ -162,7 +165,7 @@ describe('draftSddMarkdown', () => {
   });
 
   it('shares the repair ceiling between a writer format rejection and a schema length rejection', async () => {
-    const query = jest.fn().mockResolvedValueOnce({ markdown: 'Invalid format' })
+    const query = jest.fn().mockResolvedValueOnce({ markdown: writerDraft('Invalid format') })
       .mockRejectedValueOnce(new AgentResponseLengthFailure('$.markdown', 18000));
     const validate = jest.fn().mockRejectedValue(new SddDraftFormatFailure('required-heading', 'Missing heading'));
     await expect(draftSddMarkdown({ query }, configuration, plan, 'Original', validate))
@@ -171,18 +174,18 @@ describe('draftSddMarkdown', () => {
     expect(validate).toHaveBeenCalledTimes(1);
   });
   it.each(['required-heading', 'test-budget'] as const)('repairs typed %s validation once without echoing the rejected draft or diagnostic', async reason => {
-    const query = jest.fn().mockResolvedValueOnce({ markdown: 'untrusted rejected draft' }).mockResolvedValueOnce({ markdown: 'Accepted draft' });
+    const query = jest.fn().mockResolvedValueOnce({ markdown: writerDraft('untrusted rejected draft') }).mockResolvedValueOnce({ markdown: writerDraft('Accepted draft') });
     const validate = jest.fn().mockRejectedValueOnce(new SddDraftFormatFailure(reason, 'untrusted provider diagnostic')).mockResolvedValue(undefined);
-    await expect(draftSddMarkdown({ query }, configuration, plan, 'Original requirements', validate)).resolves.toBe('Accepted draft');
+    await expect(draftSddMarkdown({ query }, configuration, plan, 'Original requirements', validate)).resolves.toBe(writerDraft('Accepted draft'));
     expect(query).toHaveBeenCalledTimes(2);
-    expect(validate.mock.calls.map(call => call[0])).toEqual(['untrusted rejected draft', 'Accepted draft']);
+    expect(validate.mock.calls.map(call => call[0])).toEqual(['untrusted rejected draft', 'Accepted draft'].map(writerDraft));
     expect(query.mock.calls[1][0].prompt).toContain('exact numbered canonical headings');
     expect(query.mock.calls[1][0].prompt).toContain('same owner and plan');
     expect(query.mock.calls[1][0].prompt).not.toMatch(/untrusted rejected draft|untrusted provider diagnostic/);
   });
 
   it('stops after repeated typed format failures with closed recovery and no accepted draft', async () => {
-    const query = jest.fn().mockResolvedValue({ markdown: 'Invalid draft' });
+    const query = jest.fn().mockResolvedValue({ markdown: writerDraft('Invalid draft') });
     const validate = jest.fn().mockRejectedValue(new SddDraftFormatFailure('required-heading', 'Missing heading'));
     await expect(draftSddMarkdown({ query }, configuration, plan, 'Original requirements', validate)).rejects.toMatchObject({
       recovery: { id: 'sdd-draft-format-invalid', variables: {} },
@@ -193,14 +196,14 @@ describe('draftSddMarkdown', () => {
 
   it('does not retry catalog, authority or workspace failures as format errors', async () => {
     const error = new Error('Owner changed');
-    const query = jest.fn().mockResolvedValue({ markdown: 'Candidate draft' });
+    const query = jest.fn().mockResolvedValue({ markdown: writerDraft('Candidate draft') });
     const validate = jest.fn().mockRejectedValue(error);
     await expect(draftSddMarkdown({ query }, configuration, plan, 'Original requirements', validate)).rejects.toBe(error);
     expect(query).toHaveBeenCalledTimes(1);
   });
 
   it('shares the one repair between an oversized first draft and a malformed second draft', async () => {
-    const query = jest.fn().mockResolvedValueOnce({ markdown: 'x'.repeat(18001) }).mockResolvedValueOnce({ markdown: 'Invalid format' });
+    const query = jest.fn().mockResolvedValueOnce({ markdown: 'x'.repeat(18001) }).mockResolvedValueOnce({ markdown: writerDraft('Invalid format') });
     const validate = jest.fn().mockRejectedValue(new SddDraftFormatFailure('test-budget', 'Missing budget'));
     await expect(draftSddMarkdown({ query }, configuration, plan, 'Original requirements', validate)).rejects.toMatchObject({ recovery: { id: 'sdd-draft-format-invalid' } });
     expect(query).toHaveBeenCalledTimes(2);
@@ -208,7 +211,7 @@ describe('draftSddMarkdown', () => {
   });
 
   it('shares the one repair between a malformed first draft and an oversized second draft', async () => {
-    const query = jest.fn().mockResolvedValueOnce({ markdown: 'Invalid format' }).mockResolvedValueOnce({ markdown: 'x'.repeat(18001) });
+    const query = jest.fn().mockResolvedValueOnce({ markdown: writerDraft('Invalid format') }).mockResolvedValueOnce({ markdown: 'x'.repeat(18001) });
     const validate = jest.fn().mockRejectedValue(new SddDraftFormatFailure('required-heading', 'Missing heading'));
     await expect(draftSddMarkdown({ query }, configuration, plan, 'Original requirements', validate)).rejects.toMatchObject({ recovery: { id: 'sdd-draft-size-exceeded' } });
     expect(query).toHaveBeenCalledTimes(2);
@@ -227,9 +230,9 @@ describe('draftSddMarkdown', () => {
 
   it('regenerates an oversized response once without echoing its untrusted content or changing the owner', async () => {
     const query = jest.fn().mockResolvedValueOnce({ markdown: 'untrusted previous draft '.repeat(1000) })
-      .mockResolvedValueOnce({ markdown: 'Valid regenerated content' });
+      .mockResolvedValueOnce({ markdown: writerDraft('Valid regenerated content') });
     await expect(draftSddMarkdown({ query }, configuration, plan, 'Original prompt'))
-      .resolves.toBe('Valid regenerated content');
+      .resolves.toBe(writerDraft('Valid regenerated content'));
     expect(query).toHaveBeenCalledTimes(2);
     expect(query.mock.calls[1][0].prompt).toContain('same owner and plan');
     expect(query.mock.calls[1][0].prompt).toContain('6000 characters');
@@ -262,10 +265,10 @@ describe('draftSddMarkdown', () => {
   it.each([['update', 18000, 6000], ['companion', 70000, 10000]] as const)(
     'uses a compact %s draft target while preserving the hard bound, resolved requirements and repair ceiling', async (action, maximum, target) => {
       const query = jest.fn().mockResolvedValueOnce({ markdown: 'x'.repeat(maximum + 1) })
-        .mockResolvedValueOnce({ markdown: 'Accepted compact complete draft' });
+        .mockResolvedValueOnce({ markdown: writerDraft('Accepted compact complete draft') });
       const requirements = 'Resolved R1: preserve existing secrets. R2: exact reviewed repositories. R3: numeric tests and recovery.';
       await expect(draftSddMarkdown({ query }, configuration, { ...plan, action } as SddPlan, requirements))
-        .resolves.toBe('Accepted compact complete draft');
+        .resolves.toBe(writerDraft('Accepted compact complete draft'));
       expect(query).toHaveBeenCalledTimes(2);
       for (const [request] of query.mock.calls) {
         expect(request.prompt).toContain(`aim for ${target} characters`);
