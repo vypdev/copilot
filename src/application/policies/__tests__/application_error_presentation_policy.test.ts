@@ -20,6 +20,9 @@ const RECOVERY_CASES: readonly Readonly<{
     english: string;
     spanish: string;
 }>[] = [
+    { recovery: { id: 'progress-evidence-capacity-exceeded', variables: { phase: 'source', dimension: 'source-unit-bytes', unit: 'bytes', bound: 'maximum', observedCount: 256001, supportedLimit: 256000, countKind: 'exact', context: { kind: 'unavailable' } } },
+      english: 'Existing progress labels and assessments were preserved. No partial progress was published; independent completed workflow effects remain in their own results.',
+      spanish: 'Se conservaron las etiquetas de progreso y las evaluaciones. No se publicó progreso parcial; los efectos independientes completados conservan sus propios resultados.' },
     { recovery: { id: 'sdd-draft-response-too-short', variables: { minimum: 1800, observed: 'unavailable', attempts: 1 } },
       english: 'Existing answers, selected ownership and published specifications were retained; this attempt published no specification or branch.',
       spanish: 'Se conservaron las respuestas, la propiedad seleccionada y las especificaciones publicadas; este intento no publicó ninguna especificación ni rama.' },

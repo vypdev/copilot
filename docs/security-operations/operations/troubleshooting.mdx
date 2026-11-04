@@ -805,6 +805,31 @@ Keep required failures, review findings and coverage results unchanged. No
 check deletion, permission expansion, token replacement, workflow rerun or
 blanket error suppression is needed for this read-only collection route.
 
+## Complete progress evidence capacity
+
+For `progress-evidence-capacity-exceeded`, inspect the dimension and phase
+before inferring a cause from file count. A source part and manifest each allow
+256,000 UTF-8 bytes; native requests allow 524,288 bytes including security,
+schema, task and effort framing. Both original and reserved replacement
+requests must fit. The complete aggregate allows at most 384,000 bytes, less
+when the final request leaves less room. Original issue limits remain 1,024
+nonempty lines and 1,200 code points per line. These are independent bounds.
+
+Read the actual count, applicable limit, unit and exact/lower-bound/unavailable
+label. Required reservations are not measured provider output. Check the
+pinned base/head and, when proven, the source manifest and three path-inventory
+digests with required/accepted/uncovered counts. The displayed names are only
+a bounded excerpt. Missing facts remain unavailable; a provider failure or
+malformed source must not be mistaken for a capacity measurement.
+
+Complete supported sources continue through bounded parts within the same
+invocation. A capacity failure stops before publishing partial progress.
+Retrying unchanged over-limit evidence cannot increase capacity. Keep every
+acceptance requirement and source path, and report the unsupported complete
+workload with its correlation, diagnostic and native run link. A larger bound
+requires a reviewed protocol change. After interruption, use a fresh normal
+invocation against current source; no old partial receipt is reusable.
+
 ## Progress assessment text capacity
 
 If a completed assessment reports `assessment-text-limit`, inspect the named

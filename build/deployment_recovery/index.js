@@ -32363,6 +32363,7 @@ exports.resolveStaticApplicationErrorCatalog = resolveStaticApplicationErrorCata
 exports.resolveApplicationErrorCatalog = resolveApplicationErrorCatalog;
 const branch_sync_publication_messages_1 = __nccwpck_require__(3948);
 const issue_assignment_messages_1 = __nccwpck_require__(1737);
+const progress_capacity_messages_1 = __nccwpck_require__(2818);
 const bugbot_review_diagnostic_labels_1 = __nccwpck_require__(351);
 const comment_command_validation_message_catalog_1 = __nccwpck_require__(2002);
 const application_error_1 = __nccwpck_require__(7790);
@@ -32372,6 +32373,7 @@ const LABEL_KEYS = Object.freeze([
     ...bugbot_review_diagnostic_labels_1.BUGBOT_REVIEW_DIAGNOSTIC_LABEL_KEYS,
     ...branch_sync_publication_messages_1.BRANCH_SYNC_PUBLICATION_LABEL_KEYS,
     ...issue_assignment_messages_1.ASSIGNMENT_DIAGNOSTIC_LABEL_KEYS,
+    ...progress_capacity_messages_1.PROGRESS_CAPACITY_LABEL_KEYS,
     'impact', 'errorCode', 'action', 'retainedState', 'retryable', 'yes', 'no', 'reference', 'draftLengthUnavailable',
 ]);
 const CONTENT_FIELDS = Object.freeze(['impact', 'action', 'retainedState']);
@@ -32386,6 +32388,7 @@ const ENGLISH_LABELS = Object.freeze({
     ...bugbot_review_diagnostic_labels_1.ENGLISH_REVIEW_DIAGNOSTIC_LABELS,
     ...branch_sync_publication_messages_1.ENGLISH_BRANCH_SYNC_PUBLICATION_LABELS,
     ...issue_assignment_messages_1.ENGLISH_ASSIGNMENT_LABELS,
+    ...progress_capacity_messages_1.ENGLISH_PROGRESS_CAPACITY_LABELS,
     impact: 'Impact',
     errorCode: 'Error code',
     action: 'Action',
@@ -32400,6 +32403,7 @@ const SPANISH_LABELS = Object.freeze({
     ...bugbot_review_diagnostic_labels_1.SPANISH_REVIEW_DIAGNOSTIC_LABELS,
     ...branch_sync_publication_messages_1.SPANISH_BRANCH_SYNC_PUBLICATION_LABELS,
     ...issue_assignment_messages_1.SPANISH_ASSIGNMENT_LABELS,
+    ...progress_capacity_messages_1.SPANISH_PROGRESS_CAPACITY_LABELS,
     impact: 'Impacto',
     errorCode: 'Código de error',
     action: 'Acción',
@@ -32495,7 +32499,7 @@ const SPANISH_CONTENT = Object.freeze({
     }),
     'validation.evidence-too-large': Object.freeze({
         impact: 'No se pudo evaluar el progreso dentro de los límites fijos de evidencia.',
-        action: 'Inspecciona la comparación completa y la capacidad indicada. La recuperación por partes continúa automáticamente cuando es compatible. Si se interrumpe, vuelve a ejecutar la fuente gestionada actual; una comparación idéntica que excede el límite no obtiene más capacidad.',
+        action: 'Inspecciona la comparación completa y los datos de capacidad disponibles. La continuación por partes acotada pertenece a una sola ejecución; este fallo de capacidad detiene el intento. Reintentar evidencia idéntica que supera el límite no aumenta la capacidad. Conserva toda la aceptación y evidencia, y reporta las cargas no compatibles con el enlace de ejecución.',
         retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas.',
     }),
     'workflow.invalid-event': Object.freeze({
@@ -32540,6 +32544,7 @@ const STORED_CONFIGURATION_RETAINED_EN = 'The issue/PR description and stored co
 const STORED_CONFIGURATION_RETAINED_ES = 'Esta lectura no modificó la descripción de la issue/PR ni su configuración almacenada.';
 const ENGLISH_RECOVERY_CONTENT = Object.freeze({
     ...issue_assignment_messages_1.ENGLISH_ASSIGNMENT_CONTENT,
+    ...progress_capacity_messages_1.ENGLISH_PROGRESS_CAPACITY_CONTENT,
     ...comment_command_validation_message_catalog_1.ENGLISH_COMMAND_VALIDATION_CONTENT,
     ...branch_sync_publication_messages_1.ENGLISH_BRANCH_SYNC_PUBLICATION_CONTENT,
     'stored-configuration-schema-missing': Object.freeze({
@@ -32745,6 +32750,7 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
 });
 const SPANISH_RECOVERY_CONTENT = Object.freeze({
     ...issue_assignment_messages_1.SPANISH_ASSIGNMENT_CONTENT,
+    ...progress_capacity_messages_1.SPANISH_PROGRESS_CAPACITY_CONTENT,
     ...comment_command_validation_message_catalog_1.SPANISH_COMMAND_VALIDATION_CONTENT,
     ...branch_sync_publication_messages_1.SPANISH_BRANCH_SYNC_PUBLICATION_CONTENT,
     'stored-configuration-schema-missing': Object.freeze({
@@ -33715,6 +33721,72 @@ function boundedMergeQueueDiagnostic(value) {
 
 /***/ }),
 
+/***/ 2818:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SPANISH_PROGRESS_CAPACITY_CONTENT = exports.ENGLISH_PROGRESS_CAPACITY_CONTENT = exports.SPANISH_PROGRESS_CAPACITY_LABELS = exports.PROGRESS_CAPACITY_LABEL_KEYS = exports.ENGLISH_PROGRESS_CAPACITY_LABELS = void 0;
+exports.ENGLISH_PROGRESS_CAPACITY_LABELS = {
+    capacityUnavailable: 'unavailable', capacityExact: 'exact', capacityAtLeast: 'at least',
+    capacityInput: 'input framing', capacitySource: 'source planning', capacityScope: 'acceptance-scope planning',
+    capacityPartition: 'partition planning', capacityAggregate: 'aggregate planning', capacityAssessment: 'final-assessment planning',
+    capacityBytes: 'bytes', capacityParts: 'parts', capacityLines: 'lines', capacityPoints: 'Unicode code points', capacityUnits: 'evidence units',
+    capacitySourceUnit: 'source-unit serialization', capacitySourcePart: 'source-part serialization', capacityPartCount: 'source-part count',
+    capacityManifest: 'source-manifest serialization', capacityLineCount: 'original nonempty-line count', capacityLinePoints: 'original source-line length',
+    capacityInputText: 'untrusted input text', capacityNativePrompt: 'complete native request', capacityNativeReserve: 'reserved complete native request',
+    capacityAggregateReserve: 'minimum aggregate and framing reservation', capacityAllocation: 'aggregate allocation',
+    capacityAggregateEnvelope: 'receipt envelope and minimum payload reservation', capacityMinimumFacts: 'minimum complete fact reservation',
+    capacityUnitCount: 'evidence-unit count', capacityAggregateFacts: 'complete aggregate facts', capacityInvalidAllocation: 'invalid capacity allocation',
+    capacitySourceUnitCount: 'source-unit count',
+    capacityMaximumMeasurement: 'Measured or required: {observedCount} {unit}; maximum available: {supportedLimit} {unit} ({countKind}).',
+    capacityMinimumMeasurement: 'Measured: {observedCount} {unit}; minimum required: {supportedLimit} {unit} ({countKind}).',
+    capacityUnavailableMeasurement: 'Usage and applicable allocation are unavailable.',
+    capacityContextUnavailable: 'Source and path-coverage context are unavailable.',
+    capacitySourceLine: 'Original physical source line: {sourceLineId}.',
+    capacityManifestUnavailable: 'not available at this boundary', capacityNoPaths: 'no uncovered paths',
+    capacityComparison: 'Pinned comparison: {baseSha} → {headSha}. Required-path inventory: {requiredPathsDigest}; source manifest: {manifestDigest}. Accepted progress path receipts: {reviewedPathCount}/{requiredPathCount}; uncovered: {uncoveredPathCount}. Receipt-path inventory: {reviewedPathsDigest}; uncovered-path inventory: {uncoveredPathsDigest}. Paths: {paths}.',
+};
+exports.PROGRESS_CAPACITY_LABEL_KEYS = Object.keys(exports.ENGLISH_PROGRESS_CAPACITY_LABELS);
+exports.SPANISH_PROGRESS_CAPACITY_LABELS = {
+    capacityUnavailable: 'no disponible', capacityExact: 'exacto', capacityAtLeast: 'como mínimo',
+    capacityInput: 'preparación de la entrada', capacitySource: 'planificación de la fuente', capacityScope: 'planificación del alcance de aceptación',
+    capacityPartition: 'planificación de la parte', capacityAggregate: 'planificación del agregado', capacityAssessment: 'planificación de la evaluación final',
+    capacityBytes: 'bytes', capacityParts: 'partes', capacityLines: 'líneas', capacityPoints: 'puntos de código Unicode', capacityUnits: 'unidades de evidencia',
+    capacitySourceUnit: 'serialización de la unidad de origen', capacitySourcePart: 'serialización de la parte de origen', capacityPartCount: 'cantidad de partes de origen',
+    capacityManifest: 'serialización del manifiesto de origen', capacityLineCount: 'cantidad original de líneas no vacías', capacityLinePoints: 'longitud de la línea original',
+    capacityInputText: 'texto de entrada no confiable', capacityNativePrompt: 'petición nativa completa', capacityNativeReserve: 'petición nativa completa reservada',
+    capacityAggregateReserve: 'reserva mínima del agregado y su formato', capacityAllocation: 'asignación del agregado',
+    capacityAggregateEnvelope: 'envoltura de recibos y reserva mínima de contenido', capacityMinimumFacts: 'reserva mínima de hechos completos',
+    capacityUnitCount: 'cantidad de unidades de evidencia', capacityAggregateFacts: 'hechos completos del agregado', capacityInvalidAllocation: 'asignación de capacidad no válida',
+    capacitySourceUnitCount: 'cantidad de unidades de origen',
+    capacityMaximumMeasurement: 'Medido o requerido: {observedCount} {unit}; máximo disponible: {supportedLimit} {unit} ({countKind}).',
+    capacityMinimumMeasurement: 'Medido: {observedCount} {unit}; mínimo requerido: {supportedLimit} {unit} ({countKind}).',
+    capacityUnavailableMeasurement: 'El uso y la asignación aplicable no están disponibles.',
+    capacityContextUnavailable: 'El contexto de origen y cobertura de rutas no está disponible.',
+    capacitySourceLine: 'Línea física de origen: {sourceLineId}.',
+    capacityManifestUnavailable: 'no disponible en este límite', capacityNoPaths: 'ninguna ruta sin cubrir',
+    capacityComparison: 'Comparación fijada: {baseSha} → {headSha}. Inventario de rutas requeridas: {requiredPathsDigest}; manifiesto de origen: {manifestDigest}. Recibos de rutas de progreso aceptados: {reviewedPathCount}/{requiredPathCount}; sin cubrir: {uncoveredPathCount}. Inventario de rutas con recibo: {reviewedPathsDigest}; inventario de rutas sin cubrir: {uncoveredPathsDigest}. Rutas: {paths}.',
+};
+exports.ENGLISH_PROGRESS_CAPACITY_CONTENT = {
+    'progress-evidence-capacity-exceeded': {
+        impact: 'Progress was not assessed: {dimension} during {phase}. {measurement} {context}',
+        action: 'Inspect the boundary and pinned source. Bounded parts continue only within the same invocation; this capacity failure stops the attempt. Retrying unchanged over-limit evidence cannot increase capacity. Preserve all requirements and evidence. Report unsupported complete workloads with these facts and the run link; a larger bound requires a normally reviewed runtime change.',
+        retainedState: 'Existing progress labels and assessments were preserved. No partial progress was published; independent completed workflow effects remain in their own results.',
+    },
+};
+exports.SPANISH_PROGRESS_CAPACITY_CONTENT = {
+    'progress-evidence-capacity-exceeded': {
+        impact: 'No se evaluó el progreso: {dimension} durante {phase}. {measurement} {context}',
+        action: 'Inspecciona el límite y la fuente fijada. Las partes acotadas continúan solo dentro de la misma ejecución; este fallo de capacidad detiene el intento. Reintentar evidencia idéntica que supera el límite no aumenta la capacidad. Conserva todos los requisitos y evidencias. Reporta las cargas completas no compatibles con estos datos y el enlace de ejecución; un límite mayor requiere un cambio de runtime con su revisión normal.',
+        retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones. No se publicó progreso parcial; los efectos independientes completados conservan sus propios resultados.',
+    },
+};
+
+
+/***/ }),
+
 /***/ 5069:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -33938,6 +34010,7 @@ const framed_review_1 = __nccwpck_require__(3750);
 const progress_response_diagnostic_1 = __nccwpck_require__(6289);
 const progress_completion_diagnostic_1 = __nccwpck_require__(5095);
 const progress_inventory_diagnostic_1 = __nccwpck_require__(4048);
+const progress_capacity_diagnostic_1 = __nccwpck_require__(3919);
 const progress_response_diagnostic_2 = __nccwpck_require__(6289);
 const progress_partition_length_failure_1 = __nccwpck_require__(9292);
 const progress_binary_evidence_diagnostic_1 = __nccwpck_require__(364);
@@ -33989,6 +34062,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'issue-workflow-admission-blocked',
     'progress-binary-evidence-unavailable',
     'progress-inventory-incomplete',
+    'progress-evidence-capacity-exceeded',
     'bugbot-review-incomplete',
     'progress-result-contract-invalid',
     'progress-partition-length-invalid',
@@ -34095,7 +34169,7 @@ exports.APPLICATION_ERROR_METADATA = {
     'validation.evidence-too-large': {
         kind: 'validation', retryable: false,
         impact: 'Progress could not be assessed within the fixed evidence limits.',
-        action: 'Inspect the complete comparison and reported capacity. Supported multipart recovery continues automatically. If interrupted, rerun the current managed source; an identical over-limit comparison cannot gain capacity.',
+        action: 'Inspect the complete comparison and available capacity facts. Bounded multipart continuation is invocation-local; this capacity failure stops the attempt. Retrying unchanged over-limit evidence cannot increase capacity. Preserve complete acceptance and evidence, and report unsupported workloads with the run link.',
         retainedState: 'Existing progress labels and published assessments were preserved.',
     },
     'workflow.invalid-event': {
@@ -34174,9 +34248,11 @@ class ApplicationError extends Error {
                     ? 'No assignment operation was attempted; independently completed lifecycle effects were retained.'
                     : options.recovery?.id === 'sdd-draft-response-too-short'
                         ? 'Existing answers, selected ownership and published specifications were retained; this attempt published no specification or branch.'
-                        : options.recovery?.id === 'deployment-publication-context-missing'
-                            ? PRESERVED_STATE
-                            : metadata.retainedState;
+                        : options.recovery?.id === 'progress-evidence-capacity-exceeded'
+                            ? 'Existing progress labels and assessments were preserved. No partial progress was published; independent completed workflow effects remain in their own results.'
+                            : options.recovery?.id === 'deployment-publication-context-missing'
+                                ? PRESERVED_STATE
+                                : metadata.retainedState;
         this.correlationId = correlationId;
         this.recovery = normalizeApplicationErrorRecovery(options.recovery);
         __classPrivateFieldSet(this, _ApplicationError_cause, options.cause, "f");
@@ -34248,6 +34324,7 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'sdd-draft-repository-path-invalid': Object.freeze([]),
     'progress-binary-evidence-unavailable': Object.freeze(['paths', 'pathCount']),
     'progress-inventory-incomplete': Object.freeze(['profile', 'reason', 'observedCount', 'supportedLimit', 'countKind', 'paths']),
+    'progress-evidence-capacity-exceeded': Object.freeze(['phase', 'dimension', 'unit', 'bound', 'observedCount', 'supportedLimit', 'countKind', 'context']),
     'bugbot-review-incomplete': Object.freeze(['profile', 'countKind', 'resource', 'observed', 'limit', 'unit']),
     'progress-result-contract-invalid': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
     'progress-partition-length-invalid': Object.freeze(['partitionId', 'filePath', 'unitId', 'field', 'maximum', 'observed']),
@@ -34272,6 +34349,9 @@ function normalizeApplicationErrorRecovery(recovery) {
     }
     if (recovery.id === 'progress-completion-recovery-exhausted') {
         return Object.freeze({ id: recovery.id, variables: (0, progress_completion_diagnostic_1.normalizeProgressCompletionDiagnostic)(variables) });
+    }
+    if (recovery.id === 'progress-evidence-capacity-exceeded') {
+        return Object.freeze({ id: recovery.id, variables: (0, progress_capacity_diagnostic_1.normalizeProgressCapacityDiagnostic)(variables) });
     }
     if (recovery.id === 'sdd-source-context-unavailable' && !(0, agent_source_snapshot_1.isSddSourceContextDiagnostic)(variables)) {
         throw new TypeError('SDD source context diagnostic is invalid.');
@@ -37211,6 +37291,120 @@ function isProgressBinaryEvidenceFacts(value) {
 function progressBinaryEvidencePresentation(facts) {
     const paths = JSON.parse(facts.paths).map(progress_evidence_path_1.renderProgressEvidencePath);
     return Object.freeze({ paths: paths.join('; '), pathCount: facts.pathCount, shownCount: paths.length });
+}
+
+
+/***/ }),
+
+/***/ 3919:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PROGRESS_CAPACITY_DIMENSIONS = void 0;
+exports.normalizeProgressCapacityContext = normalizeProgressCapacityContext;
+exports.normalizeProgressCapacityDiagnostic = normalizeProgressCapacityDiagnostic;
+exports.progressCapacityDiagnostic = progressCapacityDiagnostic;
+const progress_evidence_path_1 = __nccwpck_require__(5887);
+const progress_response_diagnostic_1 = __nccwpck_require__(6289);
+const rule = (phases, unit, bounds = ['maximum']) => Object.freeze({ phases: Object.freeze([...phases]), unit, bounds: Object.freeze([...bounds]) });
+exports.PROGRESS_CAPACITY_DIMENSIONS = Object.freeze({
+    'source-unit-bytes': rule(['source'], 'bytes'),
+    'source-part-bytes': rule(['source'], 'bytes'),
+    'source-part-count': rule(['source'], 'parts'),
+    'source-unit-count': rule(['source'], 'units'),
+    'source-manifest-bytes': rule(['source'], 'bytes'),
+    'source-line-count': rule(['scope'], 'lines', ['minimum', 'maximum']),
+    'source-line-points': rule(['scope'], 'code-points'),
+    'input-text-bytes': rule(['input', 'scope', 'partition', 'assessment'], 'bytes'),
+    'native-prompt-bytes': rule(['input', 'scope', 'partition', 'assessment'], 'bytes'),
+    'native-prompt-reserve-bytes': rule(['partition', 'assessment'], 'bytes'),
+    'aggregate-reserve-bytes': rule(['aggregate'], 'bytes'),
+    'aggregate-allocation-bytes': rule(['aggregate'], 'bytes', ['minimum', 'maximum']),
+    'aggregate-envelope-bytes': rule(['aggregate'], 'bytes'),
+    'minimum-fact-bytes': rule(['aggregate'], 'bytes'),
+    'evidence-unit-count': rule(['aggregate'], 'units', ['minimum']),
+    'aggregate-fact-bytes': rule(['aggregate'], 'bytes'),
+    'invalid-allocation': rule(['input', 'source', 'scope', 'partition', 'aggregate', 'assessment'], 'bytes', ['unavailable']),
+});
+const record = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+const exact = (value, keys) => Object.keys(value).sort().join(',') === [...keys].sort().join(',');
+const own = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
+const count = (value) => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
+const measured = (value) => value === 'unavailable' || count(value);
+const oid = (value) => typeof value === 'string' && /^[a-f0-9]{40}$(?![\s\S])/u.test(value);
+const digest = (value) => typeof value === 'string' && /^[a-f0-9]{64}$(?![\s\S])/u.test(value);
+function invalid() { throw new TypeError('Invalid closed progress capacity diagnostic.'); }
+/** Shape validation does not certify a source; host call sites own attribution. */
+function normalizeProgressCapacityContext(value) {
+    if (!record(value))
+        return invalid();
+    if (value.kind === 'unavailable') {
+        if (!exact(value, ['kind']))
+            return invalid();
+        return Object.freeze({ kind: 'unavailable' });
+    }
+    if (value.kind === 'source-line') {
+        if (!exact(value, ['kind', 'sourceLineId']) || !(0, progress_response_diagnostic_1.isProgressSourceLineId)(value.sourceLineId))
+            return invalid();
+        return Object.freeze({ kind: 'source-line', sourceLineId: value.sourceLineId });
+    }
+    if (value.kind !== 'comparison' || !exact(value, ['kind', 'baseSha', 'headSha', 'manifestDigest', 'requiredPathsDigest',
+        'reviewedPathsDigest', 'uncoveredPathsDigest', 'requiredPathCount', 'reviewedPathCount', 'uncoveredPathCount', 'paths', 'sourceLineId'])
+        || !oid(value.baseSha) || !oid(value.headSha) || !(value.manifestDigest === 'none' || digest(value.manifestDigest))
+        || !digest(value.requiredPathsDigest) || !digest(value.reviewedPathsDigest) || !digest(value.uncoveredPathsDigest)
+        || !(value.sourceLineId === 'none' || (0, progress_response_diagnostic_1.isProgressSourceLineId)(value.sourceLineId))
+        || !count(value.requiredPathCount) || !count(value.reviewedPathCount)
+        || !count(value.uncoveredPathCount) || value.reviewedPathCount > value.requiredPathCount
+        || value.uncoveredPathCount !== value.requiredPathCount - value.reviewedPathCount
+        || !Array.isArray(value.paths) || value.paths.length > Math.min(8, value.uncoveredPathCount)
+        || (value.uncoveredPathCount > 0 && value.paths.length === 0)
+        || !value.paths.every(progress_evidence_path_1.isProgressEvidencePath) || new Set(value.paths).size !== value.paths.length
+        || Buffer.byteLength(JSON.stringify(value.paths), 'utf8') > 8192)
+        return invalid();
+    return Object.freeze({ kind: 'comparison', baseSha: value.baseSha, headSha: value.headSha,
+        manifestDigest: value.manifestDigest, sourceLineId: value.sourceLineId, requiredPathsDigest: value.requiredPathsDigest,
+        reviewedPathsDigest: value.reviewedPathsDigest, uncoveredPathsDigest: value.uncoveredPathsDigest,
+        requiredPathCount: value.requiredPathCount, reviewedPathCount: value.reviewedPathCount,
+        uncoveredPathCount: value.uncoveredPathCount, paths: Object.freeze([...value.paths]) });
+}
+/** Reject incoherent or arbitrary metadata and copy/freeze the complete public value. */
+function normalizeProgressCapacityDiagnostic(value) {
+    if (!record(value) || !exact(value, ['phase', 'dimension', 'unit', 'bound', 'observedCount', 'supportedLimit', 'countKind', 'context'])
+        || typeof value.dimension !== 'string' || !own(exports.PROGRESS_CAPACITY_DIMENSIONS, value.dimension))
+        return invalid();
+    const dimension = value.dimension;
+    const policy = exports.PROGRESS_CAPACITY_DIMENSIONS[dimension];
+    if (!policy.phases.includes(value.phase) || value.unit !== policy.unit
+        || !policy.bounds.includes(value.bound)
+        || !measured(value.observedCount) || !measured(value.supportedLimit)
+        || !['exact', 'at-least', 'unavailable'].includes(value.countKind)
+        || (value.observedCount === 'unavailable') !== (value.countKind === 'unavailable')
+        || (value.bound === 'unavailable' && (value.observedCount !== 'unavailable' || value.supportedLimit !== 'unavailable'))
+        || (value.bound === 'minimum' && value.countKind === 'at-least'))
+        return invalid();
+    if (typeof value.observedCount === 'number' && typeof value.supportedLimit === 'number'
+        && (value.bound === 'minimum' ? value.observedCount >= value.supportedLimit : value.observedCount <= value.supportedLimit))
+        return invalid();
+    const context = normalizeProgressCapacityContext(value.context);
+    const sourceLineId = context.kind === 'source-line' || context.kind === 'comparison' ? context.sourceLineId : 'none';
+    if (sourceLineId !== 'none' && (value.phase !== 'scope'
+        || !['source-line-count', 'source-line-points'].includes(dimension)))
+        return invalid();
+    return Object.freeze({ phase: value.phase, dimension, unit: policy.unit,
+        bound: value.bound, observedCount: value.observedCount, supportedLimit: value.supportedLimit,
+        countKind: value.countKind, context });
+}
+/** Unit/bound defaults are host policy, never text supplied by a model. */
+function progressCapacityDiagnostic(input) {
+    if (!record(input) || !['phase', 'dimension', 'observedCount', 'supportedLimit'].every(key => own(input, key))
+        || Object.keys(input).some(key => !['phase', 'dimension', 'observedCount', 'supportedLimit', 'bound', 'countKind', 'context'].includes(key)))
+        return invalid();
+    const policy = exports.PROGRESS_CAPACITY_DIMENSIONS[input.dimension];
+    return normalizeProgressCapacityDiagnostic({ phase: input.phase, dimension: input.dimension, unit: policy?.unit,
+        bound: input.bound ?? 'maximum', observedCount: input.observedCount, supportedLimit: input.supportedLimit,
+        countKind: input.countKind ?? 'exact', context: input.context ?? { kind: 'unavailable' } });
 }
 
 

@@ -57,7 +57,9 @@ describe('getCheckProgressPrompt', () => {
         const params = { projectContextInstruction: '', issueNumber: '717', baseBranch: 'develop', currentBranch: 'bugfix/717-scope',
             issueDescription: 'Compile only.', targetLocale: 'en-US', diffEvidence: '{}' };
         expect(getCheckProgressPrompt({ ...params, acceptanceScope: ' '.repeat(MAX_PROGRESS_SCOPE_BYTES) })).not.toContain('[untrusted content truncated]');
-        expect(() => getCheckProgressPrompt({ ...params, acceptanceScope: ' '.repeat(MAX_PROGRESS_SCOPE_BYTES + 1) })).toThrow('Progress evidence exceeds');
+        expect(() => getCheckProgressPrompt({ ...params, acceptanceScope: ' '.repeat(MAX_PROGRESS_SCOPE_BYTES + 1) })).toThrow(expect.objectContaining({ code: 'validation.evidence-too-large', recovery: {
+            id: 'progress-evidence-capacity-exceeded', variables: expect.objectContaining({ phase: 'scope', dimension: 'input-text-bytes', observedCount: MAX_PROGRESS_SCOPE_BYTES + 1, supportedLimit: MAX_PROGRESS_SCOPE_BYTES }),
+        } }));
     });
 
 });

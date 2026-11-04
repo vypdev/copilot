@@ -8,6 +8,7 @@ import { progressContentUnits } from '../../application/policies/progress_conten
 import { progressInventoryError } from '../../application/policies/progress_inventory_error_policy';
 import { partitionProgressDiff } from '../../application/policies/progress_diff_partition_policy';
 import { frameProgressEvidence } from '../../application/policies/progress_evidence_protocol_policy';
+import { progressComparisonCapacityContext, withProgressCapacityContext } from '../../application/policies/progress_capacity_context_policy';
 
 type Comparison = Awaited<ReturnType<GithubBranchComparisonClient['rest']['repos']['compareCommits']>>['data'];
 const statuses = new Set(['added', 'removed', 'modified', 'renamed', 'copied', 'changed', 'unchanged']);
@@ -46,6 +47,8 @@ export async function completeProgressDiff(client: GithubProgressObjectClient | 
         || !Array.isArray(current.files) || current.files.length !== 300
         || current.files.some((file, index) => !file || file.filename !== prefix[index].filename || file.status !== prefix[index].status || file.previous_filename !== prefix[index].previous_filename
             || file.additions !== prefix[index].additions || file.deletions !== prefix[index].deletions)) throw progressInventoryError('source-moved', inventory.length, 0, paths);
-    const plan = partitionProgressDiff(baseSha, headSha, units, 'immutable-tree-v1');
-    return frameProgressEvidence(plan, preimage, units, paths, recovery.usage, randomUUID(), 'immutable-tree-v1');
+    return withProgressCapacityContext(() => {
+        const plan = partitionProgressDiff(baseSha, headSha, units, 'immutable-tree-v1');
+        return frameProgressEvidence(plan, preimage, units, paths, recovery.usage, randomUUID(), 'immutable-tree-v1');
+    }, () => progressComparisonCapacityContext({ baseSha, headSha, requiredPaths: paths }));
 }

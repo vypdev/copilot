@@ -14,6 +14,8 @@ import { remainingProgressPromptBytes, PROGRESS_PROMPT_FRAMING_RESERVE_BYTES } f
 import { framedProgressFactLimit, parseProgressPartitionReceipt, aggregateProgressReceipts, type ProgressPartitionReceipt } from '../../policies/progress_partition_receipt_policy';
 import { MAX_PROGRESS_PARTITIONS, progressEvidenceTooLarge } from '../../policies/progress_diff_partition_policy';
 import { logInfo } from '../../ports/logging_ports';
+import { withProgressCapacityContext } from '../../policies/progress_capacity_context_policy';
+import { progressCapacityDiffContext } from '../../policies/progress_capacity_source_context_policy';
 
 /** Preflight all complete prompts before any request, including the reserved scope envelope. */
 export function planProgressDiffPrompts(diff: ProgressDiffEvidence, context: ProgressContext, issueDescription: string, aggregateBudget: number, acceptanceScope: string, reserveDynamicFraming = true): { readonly prompts: readonly string[]; readonly factLimit: number } {
@@ -30,13 +32,16 @@ Return the exact partitionId, exact target outputLocale and one file entry per a
 Preserve uncertainty and explain missing verification only for in-scope requirements. Recovered content slices have explicit sides, offsets and blob identities. Each slice is only part of that file; never infer that other slices were reviewed. Account for additions, deletions and verified identical renames from both pinned snapshots. Generated metadata cannot establish implementation, build or test success. Return only the requested schema.
 targetLocale: ${JSON.stringify(context.targetLocale)}
 partitionId: ${JSON.stringify(partition.id)}
-issueRequirements: ${renderProgressPromptData(JSON.stringify(issueDescription), 'progress.issue-description', AGENT_PROMPT_MAX_BYTES)}
-acceptanceScope: ${renderProgressPromptData(acceptanceScope, 'progress.acceptance-scope', MAX_PROGRESS_SCOPE_BYTES)}
-immutableComparison: ${renderProgressPromptData(partition.evidence, 'progress.comparison', AGENT_PROMPT_MAX_BYTES)}`);
+issueRequirements: ${renderProgressPromptData(JSON.stringify(issueDescription), 'progress.issue-description', AGENT_PROMPT_MAX_BYTES, 'partition')}
+acceptanceScope: ${renderProgressPromptData(acceptanceScope, 'progress.acceptance-scope', MAX_PROGRESS_SCOPE_BYTES, 'scope')}
+immutableComparison: ${renderProgressPromptData(partition.evidence, 'progress.comparison', AGENT_PROMPT_MAX_BYTES, 'partition')}`);
     const reserve = reserveDynamicFraming ? PROGRESS_PROMPT_FRAMING_RESERVE_BYTES : 0;
     prompts.forEach((prompt, index) => {
-        for (const candidate of [prompt, progressPartitionRepairPrompt(prompt)]) {
-            if (remainingProgressPromptBytes(candidate, 'progress-partition', progressPartitionResponseSchema(diff.partitions[index], factLimit), context.agentConfiguration?.effort) < reserve) throw progressEvidenceTooLarge();
+        for (const [ordinal, candidate] of [prompt, progressPartitionRepairPrompt(prompt)].entries()) {
+            const remaining = remainingProgressPromptBytes(candidate, 'progress-partition', progressPartitionResponseSchema(diff.partitions[index], factLimit),
+                context.agentConfiguration?.effort, ordinal === 0 ? 'native-prompt-bytes' : 'native-prompt-reserve-bytes');
+            if (remaining < reserve) throw progressEvidenceTooLarge({ phase: 'partition', dimension: 'native-prompt-reserve-bytes',
+                observedCount: AGENT_PROMPT_MAX_BYTES - remaining + reserve, supportedLimit: AGENT_PROMPT_MAX_BYTES });
         }
     });
     return { prompts, factLimit };
@@ -45,7 +50,8 @@ immutableComparison: ${renderProgressPromptData(partition.evidence, 'progress.co
 /** Collects every part before exposing one aggregate to the final assessment. No mutation capability. */
 export async function summarizeProgressDiff(diff: ProgressDiffEvidence, context: ProgressContext, issueDescription: string, agent: FindingsQueryPort, aggregateBudget: number, acceptanceScope: string): Promise<string> {
     if (diff.kind !== 'partitioned') return diff.evidence;
-    const { prompts, factLimit } = planProgressDiffPrompts(diff, context, issueDescription, aggregateBudget, acceptanceScope, false);
+    const { prompts, factLimit } = withProgressCapacityContext(() => planProgressDiffPrompts(diff, context, issueDescription, aggregateBudget, acceptanceScope, false),
+        () => progressCapacityDiffContext(diff));
     const facts: (readonly ProgressFileFacts[])[] = [];
     const receipts: ProgressPartitionReceipt[] = [];
     logInfo(`Progress comparison requires ${diff.partitions.length} complete bounded parts; no percentage is published until all parts and final assessment finish.`);
@@ -57,6 +63,6 @@ export async function summarizeProgressDiff(diff: ProgressDiffEvidence, context:
         if (diff.protocol) receipts.push(parseProgressPartitionReceipt(response, partition, context.targetLocale, factLimit));
         else facts.push(parseProgressPartitionFacts(response, partition, context.targetLocale, factLimit));
     }
-    if (diff.protocol) return aggregateProgressReceipts(diff, receipts, aggregateBudget);
-    return aggregateProgressFacts(diff.baseSha, diff.headSha, diff.partitions, facts, aggregateBudget);
+    return withProgressCapacityContext(() => diff.protocol ? aggregateProgressReceipts(diff, receipts, aggregateBudget)
+        : aggregateProgressFacts(diff.baseSha, diff.headSha, diff.partitions, facts, aggregateBudget), () => progressCapacityDiffContext(diff, true));
 }

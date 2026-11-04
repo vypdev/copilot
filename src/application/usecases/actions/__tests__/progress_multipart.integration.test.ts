@@ -147,18 +147,18 @@ describe('atomic complete multipart progress', () => {
         const result = (await f.invoke())[0]; expect(result.payload).not.toHaveProperty('progress'); expect(f.setProgressLabel).not.toHaveBeenCalled();
     });
     it('reports deterministic oversize as terminal before model or publication', async () => {
-        const f = fixture(); f.getDiff.mockRejectedValue(progressEvidenceTooLarge()); const result = (await f.invoke())[0];
+        const f = fixture(); f.getDiff.mockRejectedValue(progressEvidenceTooLarge({ phase: 'source', dimension: 'source-unit-bytes', observedCount: 256001, supportedLimit: 256000 })); const result = (await f.invoke())[0];
         expect(result.errors[0]).toMatchObject({ code: 'validation.evidence-too-large', retryable: false });
         expect(f.query).not.toHaveBeenCalled(); expect(f.setProgressLabel).not.toHaveBeenCalled();
     });
     it('provides a concrete terminal action and retained progress in English', () => {
         const catalog = resolveStaticApplicationErrorCatalog('en-US');
-        expect(catalog.message('error.validation.evidence-too-large.action')).toContain('continues automatically');
+        expect(catalog.message('error.validation.evidence-too-large.action')).toContain('capacity failure stops the attempt');
         expect(catalog.message('error.validation.evidence-too-large.retainedState')).toContain('progress labels');
     });
     it('provides the corresponding retained-state and recovery content in Spanish', () => {
         const catalog = resolveStaticApplicationErrorCatalog('es-ES');
-        expect(catalog.message('error.validation.evidence-too-large.action')).toContain('continúa automáticamente');
+        expect(catalog.message('error.validation.evidence-too-large.action')).toContain('fallo de capacidad detiene el intento');
         expect(catalog.message('error.validation.evidence-too-large.retainedState')).toContain('etiquetas de progreso');
     });
 });
