@@ -1,5 +1,6 @@
 import {
   calculateRemainingAssignees,
+  isValidAssigneeCount,
   resolveAssigneeTarget,
   resolveCreatorAssignment,
   selectConfirmedAssignees,
@@ -13,6 +14,9 @@ const context = {
 };
 
 describe('assignee assignment policy', () => {
+  it.each([0, 1, 10, 11, -1, 0.5, NaN, Infinity, -Infinity, '1', undefined, null])('validates the bounded count %s without coercion', count => {
+    expect(isValidAssigneeCount(count)).toBe(count === 0 || count === 1 || count === 10);
+  });
   it('resolves the issue target when the event is an issue', () => {
     expect(resolveAssigneeTarget(context)).toEqual({ number: 42, desiredCount: 2 });
     expect(resolveAssigneeTarget({ ...context, number: 99, desiredAssigneesCount: 1 })).toEqual({ number: 99, desiredCount: 1 });

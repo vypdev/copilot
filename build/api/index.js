@@ -7050,6 +7050,7 @@ const progress_partition_length_failure_1 = __nccwpck_require__(9292);
 const progress_binary_evidence_diagnostic_1 = __nccwpck_require__(364);
 const issue_workflow_diagnostic_1 = __nccwpck_require__(4347);
 const change_size_reconciliation_1 = __nccwpck_require__(5304);
+const issue_assignment_diagnostic_1 = __nccwpck_require__(2616);
 const copilot_command_validation_1 = __nccwpck_require__(4237);
 const closed_issue_reconciliation_1 = __nccwpck_require__(1565);
 const approval_evidence_diagnostic_1 = __nccwpck_require__(8205);
@@ -7088,6 +7089,8 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'closed-issue-reconciliation-failed',
     'approval-evidence-read-failed',
     'change-size-reconciliation-failed',
+    'issue-assignment-failed',
+    'issue-assignment-count-invalid',
     'issue-workflow-admission-blocked',
     'progress-binary-evidence-unavailable',
     'progress-inventory-incomplete',
@@ -7270,9 +7273,13 @@ class ApplicationError extends Error {
         this.action = metadata.action;
         this.retainedState = options.recovery?.id === 'change-size-reconciliation-failed'
             ? 'Completed effects were retained; the failed and later size operations remain unverified.'
-            : options.recovery?.id === 'deployment-publication-context-missing'
-                ? PRESERVED_STATE
-                : metadata.retainedState;
+            : options.recovery?.id === 'issue-assignment-failed'
+                ? 'Verified assignments and independently completed effects were retained; the failed assignment operation remains unverified.'
+                : options.recovery?.id === 'issue-assignment-count-invalid'
+                    ? 'No assignment operation was attempted; independently completed lifecycle effects were retained.'
+                    : options.recovery?.id === 'deployment-publication-context-missing'
+                        ? PRESERVED_STATE
+                        : metadata.retainedState;
         this.correlationId = correlationId;
         this.recovery = normalizeApplicationErrorRecovery(options.recovery);
         __classPrivateFieldSet(this, _ApplicationError_cause, options.cause, "f");
@@ -7315,6 +7322,8 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'approval-evidence-read-failed': Object.freeze(['operation', 'reason', 'permission']),
     'issue-workflow-admission-blocked': Object.freeze(['kind', 'reason', 'fields']),
     'change-size-reconciliation-failed': Object.freeze(['operation', 'issueNumber', 'targetNumber', 'projectIndex', 'verifiedOperations', 'pendingProjectSizes', 'providerStatus', 'providerReference']),
+    'issue-assignment-failed': Object.freeze(['targetNumber', 'desiredCount', 'stage', 'operation', 'providerStatus', 'assigneeRead', 'observedAssignees', 'confirmedAssignments', 'remainingAssignments', 'mutation']),
+    'issue-assignment-count-invalid': Object.freeze([]),
     'pull-request-link-restored': Object.freeze([]),
     'pull-request-link-base-retained': Object.freeze([]),
     'pull-request-link-reference-retained': Object.freeze([]),
@@ -7454,6 +7463,9 @@ function normalizeApplicationErrorRecovery(recovery) {
         throw new TypeError('Issue admission diagnostic is invalid.');
     if (recovery.id === 'change-size-reconciliation-failed' && !(0, change_size_reconciliation_1.isChangeSizeReconciliationFacts)(variables)) {
         throw new TypeError('Change size reconciliation diagnostic is invalid.');
+    }
+    if (recovery.id === 'issue-assignment-failed' && !(0, issue_assignment_diagnostic_1.isIssueAssignmentDiagnostic)(variables)) {
+        throw new TypeError('Issue assignment diagnostic is invalid.');
     }
     return Object.freeze({
         id: recovery.id,
@@ -8583,6 +8595,43 @@ function githubUsersMatch(left, right) {
     const normalizedLeft = left.trim().toLocaleLowerCase('en-US');
     const normalizedRight = right.trim().toLocaleLowerCase('en-US');
     return normalizedLeft.length > 0 && normalizedLeft === normalizedRight;
+}
+
+
+/***/ }),
+
+/***/ 2616:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ASSIGNMENT_OPERATIONS = exports.ASSIGNMENT_STAGES = void 0;
+exports.isAssignmentProviderStatus = isAssignmentProviderStatus;
+exports.isIssueAssignmentDiagnostic = isIssueAssignmentDiagnostic;
+exports.ASSIGNMENT_STAGES = Object.freeze(['read-assignees', 'lookup-members', 'select-members', 'assign-creator', 'assign-members']);
+exports.ASSIGNMENT_OPERATIONS = Object.freeze(['read-assignees', 'list-teams', 'list-team-members', 'add-assignees', 'initialize-client', 'unavailable']);
+function isAssignmentProviderStatus(value) {
+    return typeof value === 'string' && (value === 'http-unavailable' || /^http-[1-5][0-9]{2}$/u.test(value));
+}
+function isIssueAssignmentDiagnostic(value) {
+    return Number.isSafeInteger(value.targetNumber) && Number(value.targetNumber) > 0
+        && Number.isInteger(value.desiredCount) && Number(value.desiredCount) >= 1 && Number(value.desiredCount) <= 10
+        && exports.ASSIGNMENT_STAGES.includes(value.stage)
+        && exports.ASSIGNMENT_OPERATIONS.includes(value.operation)
+        && isAssignmentProviderStatus(value.providerStatus)
+        && ['verified', 'unavailable'].includes(value.assigneeRead)
+        && ['not-attempted', 'unverified', 'verified'].includes(value.mutation)
+        && validCount(value.confirmedAssignments) && Number(value.confirmedAssignments) <= Number(value.desiredCount)
+        && (value.mutation !== 'not-attempted' || value.confirmedAssignments === 0)
+        && (value.mutation !== 'verified' || Number(value.confirmedAssignments) > 0)
+        && (value.assigneeRead === 'unavailable'
+            ? value.observedAssignees === 'unavailable' && value.remainingAssignments === 'unavailable'
+                && value.confirmedAssignments === 0 && value.mutation === 'not-attempted' && value.stage === 'read-assignees'
+            : validCount(value.observedAssignees) && validCount(value.remainingAssignments)
+                && value.remainingAssignments === Math.max(0, Number(value.desiredCount) - Number(value.observedAssignees) - Number(value.confirmedAssignments)));
+}
+function validCount(value) {
+    return Number.isInteger(value) && Number(value) >= 0 && Number(value) <= 10;
 }
 
 

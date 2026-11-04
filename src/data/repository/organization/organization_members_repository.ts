@@ -1,10 +1,10 @@
-import { logDebugInfo, logError } from "../../../utils/logger";
+import { logDebugInfo } from "../../../utils/logger";
 import { collectOrganizationMembers, selectAvailableMembers } from "../project_members_policy";
 import type { OrganizationMembersPort } from "../../../application/ports/organization_members_ports";
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
 import type { GithubOrganizationMembersClient } from "../../../infrastructure/github/ports/github_identity_provider_ports";
 import { listOrganizationTeamMembers, listOrganizationTeams } from "./organization_members_query";
-import { toApplicationError } from '../../../application/errors/application_error';
+import { withAssignmentProviderFailure } from '../github/assignment_provider_failure';
 
 export class OrganizationMembersRepository implements OrganizationMembersPort {
   constructor(private readonly githubClient: GithubClientPort<GithubOrganizationMembersClient>) {}
@@ -16,7 +16,7 @@ export class OrganizationMembersRepository implements OrganizationMembersPort {
     token: string,
   ): Promise<string[]> => {
     if (membersToAdd === 0) return [];
-    try {
+    return withAssignmentProviderFailure('initialize-client', async () => {
       const client = this.githubClient.getClient(token);
       const teams = await listOrganizationTeams(client, organization);
       if (teams.length === 0) {
@@ -32,27 +32,21 @@ export class OrganizationMembersRepository implements OrganizationMembersPort {
         logDebugInfo(`No available members to assign for organization ${organization}.`);
       }
       return selectedMembers;
-    } catch (error) {
-      logError(toApplicationError(error, 'provider.unavailable', 'Unable to select organization members.'));
-      throw error;
-    }
+    });
   };
 
   getAllMembers = async (organization: string, token: string): Promise<string[]> => {
-    try {
+    return withAssignmentProviderFailure('initialize-client', async () => {
       const client = this.githubClient.getClient(token);
       const teams = await listOrganizationTeams(client, organization);
       if (teams.length === 0) {
         logDebugInfo(`${organization} doesn't have any team.`);
         return [];
       }
-      return collectOrganizationMembers(
+      return await collectOrganizationMembers(
         teams,
         (teamSlug) => listOrganizationTeamMembers(client, organization, teamSlug),
       );
-    } catch (error) {
-      logError(toApplicationError(error, 'provider.unavailable', 'Unable to list organization members.'));
-      throw error;
-    }
+    });
   };
 }

@@ -1466,6 +1466,22 @@
         }
       ],
       "successMessage": "Bugbot asynchronous statement guidance: PASS (100% lines/statements/functions/branches)"
+    },
+    {
+      "name": "Issue assignment diagnostics",
+      "missingEntryLabel": "issue assignment diagnostics",
+      "rules": [
+        {
+          "files": [
+            "src/domain/issue_assignment_diagnostic.ts",
+            "src/application/policies/issue_assignment_messages.ts",
+            "src/application/policies/issue_assignment_diagnostic_presentation.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        }
+      ],
+      "successMessage": "Issue assignment diagnostics: PASS (pure validation and presentation 100% lines/statements/functions/branches)"
     }
   ]
 }
