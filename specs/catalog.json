@@ -1933,7 +1933,8 @@
         "quality/sdd/ownership-qualification.cjs",
         "quality/sdd/evidence/issue-856.json",
         "src/tooling/__tests__/sdd_ownership_question_scoring.test.ts",
-        "quality/sdd/evidence/issue-856-ownership-assessments.json"
+        "quality/sdd/evidence/issue-856-ownership-assessments.json",
+        "src/tooling/__tests__/sdd_ownership_prediction_assessment.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-management.mdx",

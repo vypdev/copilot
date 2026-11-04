@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "issue": 856,
   "date": "2026-11-04",
-  "status": "Post-finding local qualification passes: 901 Jest suites/17,678 tests, 57 new regressions, 267 extension tests, exhaustive policy coverage, all 27 changed coverable lines hit with zero partials. Normal hooks and new-head native review/CI/official Codecov remain required.",
+  "status": "Both native findings are addressed locally; the first was explicitly verified fixed at42db2726. Full current qualification passes902 suites/17,689 tests,68 new regressions,267 extension tests,27/27 changed coverable lines with zero partials. Normal hooks and new-head technical/review/official coverage gates remain required.",
   "sourceBase": "c0e7a130e06f2105034b149c0b479dc4eebc70ac",
   "reportedCases": {
     "existingUpdate": {
@@ -141,7 +141,7 @@
     "scope": "Actual SDK use case and in-memory ports. No real provider execution, Git source snapshot preparation or native response replay."
   },
   "deterministicTests": {
-    "newDistinct": 57,
+    "newDistinct": 68,
     "existing": 127,
     "mapping": "src/application/usecases/steps/issue/__tests__/pre_branch_sdd_gate_use_case.test.ts: tests prefixed 856:",
     "baselineFirstFourNewFailures": 4,
@@ -149,7 +149,9 @@
     "qualificationScorerNewDistinct": 29,
     "routeCases": 28,
     "routeSuitePassing": 155,
-    "qualificationScorerPassing": 29
+    "qualificationScorerPassing": 29,
+    "responseHandlingNewDistinct": 11,
+    "responseHandlingPassing": 11
   },
   "modelQualification": {
     "fixture": {
@@ -2549,6 +2551,77 @@
       "src/data/repository/ai/findings_agent_adapter.ts": "2bdbcc4a104fa3898d8906139ba7b543df2c07dca69cc199708b89261a574509",
       "src/infrastructure/composition/agent_capability_composition_root.ts": "501ff73a38aa8cb6c78bc21b34f679538df4104f3c3eaea9578648830f82a889",
       "src/application/policies/sdd_ownership_prompt_policy.ts": "5ce9c76dd2114b7f2067c0324964eb28e94fb6e7545b43ee7dd9d59c3c70b60a"
+    },
+    "absentResponseFixReplay": {
+      "allTrials": [
+        {
+          "variant": "baseline-1",
+          "cases": 12,
+          "correct": 6,
+          "invalid": 4,
+          "passed": false
+        },
+        {
+          "variant": "baseline-2",
+          "cases": 12,
+          "correct": 6,
+          "invalid": 3,
+          "passed": false
+        },
+        {
+          "variant": "baseline-3",
+          "cases": 12,
+          "correct": 7,
+          "invalid": 2,
+          "passed": false
+        },
+        {
+          "variant": "candidate-1",
+          "cases": 12,
+          "correct": 12,
+          "invalid": 0,
+          "passed": true
+        },
+        {
+          "variant": "candidate-2",
+          "cases": 12,
+          "correct": 11,
+          "invalid": 1,
+          "passed": false
+        },
+        {
+          "variant": "candidate-3",
+          "cases": 12,
+          "correct": 12,
+          "invalid": 0,
+          "passed": true
+        },
+        {
+          "variant": "revised-1",
+          "cases": 12,
+          "correct": 12,
+          "invalid": 0,
+          "passed": true
+        },
+        {
+          "variant": "revised-2",
+          "cases": 12,
+          "correct": 12,
+          "invalid": 0,
+          "passed": true
+        },
+        {
+          "variant": "revised-3",
+          "cases": 12,
+          "correct": 12,
+          "invalid": 0,
+          "passed": true
+        }
+      ],
+      "retainedPredictionAndScoreFilesIntact": 18,
+      "providerQueries": 0,
+      "missingResponsesObservedInHistoricalTrials": 0,
+      "method": "Actual exported qualification assessor with the unchanged real SDK domain parser and explicit question policy; every retained prediction replayed. Missing/invalid new input behavior tested separately in eleven regressions."
     }
   },
   "initialLocalSuite": {
@@ -2610,7 +2683,13 @@
     "sourceHead": "19396c58d4dd3604bb893d688a80b9be091fd20d",
     "scope": "Initial full qualification before scorer remediation; post-finding full suite pending."
   },
-  "localSuite": {
+  "nativeCommitFailureAt42db": {
+    "code": "agent.failed",
+    "reason": "Progress result reported 85% although its own complete ledger had two requirements, two supported, zero missing and zero unknown, after one complete reassessment. Guard correctly rejected publication.",
+    "retryable": true,
+    "response": "Keep contract and labels intact. The next source correction will start one fresh complete assessment; no relaxation or manual progress publication."
+  },
+  "previousLocalSuiteAt42db": {
     "numPassedTestSuites": 901,
     "numFailedTestSuites": 0,
     "numPassedTests": 17678,
@@ -2639,6 +2718,62 @@
       "branches": {
         "total": 34474,
         "covered": 33003,
+        "skipped": 0,
+        "pct": 95.73
+      },
+      "branchesTrue": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "changedRuntime": {
+      "coverable": 27,
+      "hit": 27,
+      "miss": 0,
+      "partial": 0
+    },
+    "extension": {
+      "tests": 267,
+      "files": 30,
+      "coveragePercent": {
+        "lines": 100,
+        "statements": 100,
+        "branches": 100,
+        "functions": 100
+      }
+    }
+  },
+  "localSuite": {
+    "numPassedTestSuites": 902,
+    "numFailedTestSuites": 0,
+    "numPassedTests": 17689,
+    "numFailedTests": 0,
+    "numPendingTests": 35,
+    "success": true,
+    "coverage": {
+      "lines": {
+        "total": 34960,
+        "covered": 34359,
+        "skipped": 0,
+        "pct": 98.28
+      },
+      "statements": {
+        "total": 40835,
+        "covered": 39861,
+        "skipped": 0,
+        "pct": 97.61
+      },
+      "functions": {
+        "total": 7292,
+        "covered": 7156,
+        "skipped": 0,
+        "pct": 98.13
+      },
+      "branches": {
+        "total": 34474,
+        "covered": 33004,
         "skipped": 0,
         "pct": 95.73
       },

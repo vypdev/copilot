@@ -60,3 +60,10 @@ raw responses without model calls; it does not require the historical prompt
 implementation to be checked out. Original scores remain historical evidence,
 not proof that the old keyword scorer enforced the declared semantic criterion.
 All eighteen historical questions and all nine re-scored trials are preserved.
+
+
+An absent or invalid provider response is recorded as an invalid plan before
+question access or response hashing. The module exports its actual assessor for
+side-effect-free regression tests; importing it never starts a campaign. The
+source-bound tests exercise missing/null/primitive/malformed responses and valid
+object/string controls separately from the historical model observations.

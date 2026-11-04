@@ -66,6 +66,13 @@ async function capture(input,fixture){
  for(const answer of input.answers||[]){comments.push({id:++id,body:'SDD Q1: '+answer,user:{login:'maintainer'}});if((await gate.begin(context)).status!=='waiting')throw Error('Resumed capture was not waiting');}
  if(requests.length!==1+(input.answers||[]).length)throw Error('Unexpected capture query count');return requests.at(-1);
 }
+function assessPrediction({scenario,response,fixture,variant,assessments,parseSddPlan,scoreOwnershipQuestion}){
+  let plan,error;try{let value=response;if(typeof value==='string')value=JSON.parse(value);plan=parseSddPlan(value,new Map(fixture.capabilities.map(c=>[c.id,c.specs])));}catch(e){error=e.reason||e.message;}
+  const expect=scenario.expected;let ownershipQuestionScore;
+  if(expect.ownershipQuestion&&plan)ownershipQuestionScore=scoreOwnershipQuestion({trialId:variant,caseId:scenario.id,responseSha256:digest(JSON.stringify(response)),expectedIntent:scenario.id==='contradictory-owner-path'?'resolve-owner-path-conflict':'select-existing-owner',questions:plan.questions},assessments[scenario.id]);
+  const correct=!!plan&&(expect.tuple?Object.entries(expect.tuple).every(([k,v])=>plan[k]===v):ownershipQuestionScore==='accepted');
+  return {id:scenario.id,response,plan,error,correct,ownershipQuestionScore};
+}
 async function run(){
  installSdkLoader();const fixture=read(path.join(OUT,'qualification-fixture.json')),freeze=read(path.join(OUT,'qualification-freeze.json')),descriptor=read(path.join(OUT,'ownership-cases.json'));
  if(digest(fs.readFileSync(path.join(OUT,'ownership-cases.json')))!==freeze.descriptorSha256)throw Error('Frozen cases changed');
@@ -79,13 +86,7 @@ async function run(){
  const {parseSddPlan}=require(path.join(SDK,'src/domain/pre_branch_sdd.ts'));
  const {scoreOwnershipQuestion}=require(scoringSource);
  const assessmentPath=path.join(OUT,variant+'-sdd-assessments.json');const assessments=fs.existsSync(assessmentPath)?read(assessmentPath):{};
- function assess(scenario,response){
-  let plan,error;try{let value=response;if(typeof value==='string')value=JSON.parse(value);plan=parseSddPlan(value,new Map(fixture.capabilities.map(c=>[c.id,c.specs])));}catch(e){error=e.reason||e.message;}
-  const expect=scenario.expected;let ownershipQuestionScore;
-  if(expect.ownershipQuestion)ownershipQuestionScore=scoreOwnershipQuestion({trialId:variant,caseId:scenario.id,responseSha256:digest(JSON.stringify(response)),expectedIntent:scenario.id==='contradictory-owner-path'?'resolve-owner-path-conflict':'select-existing-owner',questions:plan?plan.questions:(response.questions||[])},assessments[scenario.id]);
-  const correct=!!plan&&(expect.tuple?Object.entries(expect.tuple).every(([k,v])=>plan[k]===v):ownershipQuestionScore==='accepted');
-  return {id:scenario.id,response,plan,error,correct,ownershipQuestionScore};
- }
+ const assess=(scenario,response)=>assessPrediction({scenario,response,fixture,variant,assessments,parseSddPlan,scoreOwnershipQuestion});
  if(command==='score'){
   const file=path.join(OUT,variant+'-sdd-semantic-score.json');if(fs.existsSync(file))throw Error('Never overwrite completed semantic assessment');
   const prior=read(path.join(OUT,variant+'-sdd-predictions.json'));if(prior.variant!==variant)throw Error('Wrong retained trial');
@@ -103,4 +104,5 @@ async function run(){
  }
  const score={cases:results.length,correct:results.filter(r=>r.correct).length,invalid:results.filter(r=>r.error).length,passed:results.length===12&&results.every(r=>r.correct)&&results.every(r=>!r.error)};write(path.join(OUT,variant+'-sdd-score.json'),score);console.log({variant,...score});
 }
-if(command==='prepare')prepare();else run().catch(error=>{console.error(error);process.exitCode=1;});
+module.exports={assessPrediction};
+if(require.main===module){if(command==='prepare')prepare();else run().catch(error=>{console.error(error);process.exitCode=1;});}

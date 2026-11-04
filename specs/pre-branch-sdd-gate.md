@@ -648,7 +648,7 @@ authority is explicit; placeholder repository links and self-owned new companion
 are not supported evidence. Authorized retained answers resolve their decisions
 across rounds. These inputs remain data and grant no model or workspace authority.
 
-The following **233 distinct cases** are a floor derived from eligibility,
+The following **244 distinct cases** are a floor derived from eligibility,
 clarification, source freshness, publication races, partial writes, and SDD
 ownership/validation.
 
@@ -675,11 +675,13 @@ ownership/validation.
 | Blocked preparation and safe diagnostics (#714) | 25 | Fourteen cause/recovery, publication/idempotency, privacy/ownership and retention cases, seven publication-freshness cases and four existing-question recovery/race cases; locale and diagnostic boundary matrices are additional |
 | Ownership intent and proposal delivery (#856) | 28 | Six route/continuation delivery, eight freshness/authority, four published/clarified transition, four original-catalog guard and six prompt/safety/compatibility cases |
 | Ownership qualification assessment (#856 review) | 29 | Unrelated date/path questions, absent/malformed/blank assessments, exact trial/response/case/question binding, negative verdict and explicit conflict assessment |
-| **Total** | **233** | No case counted twice |
+| Qualification response failure handling (#856 review) | 11 | Actual probe assessor: absent/null/primitive/malformed responses, explicit tuple object/string controls, pending and explicitly assessed ownership questions |
+| **Total** | **244** | No case counted twice |
 
-The #856 correction reserves **57 new distinct deterministic cases**: 28 route/
-continuation cases and 29 qualification-assessment cases. The older rows sum to
-176; this amendment reconciles the previously stale prose/total and adds 57
+The #856 correction reserves **68 new distinct deterministic cases**: 28 route/
+continuation cases, 29 qualification-assessment cases and 11 actual probe
+response-handling cases. The older rows sum to
+176; this amendment reconciles the previously stale prose/total and adds 68
 without counting existing assertions or model repetitions as new cases.
 The floor is a requirement, not a claim that every historical case was rerun by
 the optional qualification probe.
@@ -741,6 +743,20 @@ regressions pass with 100% lines/statements/branches/functions; post-finding ful
 pre-existing skips plus 267 extension tests. All 27 modified coverable lines
 are covered without partials locally. New-head remote controls and official
 Codecov remain required before merge.
+
+
+A subsequent low-severity review identified an absent provider response reaching
+question access and response hashing after parsing had failed. The actual probe
+assessor now records invalid plans before attempting either operation. Its module
+can be imported for regression tests without executing a campaign. Eleven tests
+exercise undefined, null, primitive, malformed and array responses plus valid
+object/string tuples and the explicit semantic assessment path. A replay of all
+nine retained trials preserves every earlier metric and raw file without new
+model calls. No missing response occurred in those historical trials; this is
+separate failure-handling evidence. Full validation of this correction passes 902 suites/17,689 tests with 35
+pre-existing skips and 267 extension tests. All 27 modified coverable runtime
+lines remain covered without partials locally. New-head native controls and
+official Codecov remain required.
 
 The Windows adapter fixture MUST inject a destination creation immediately
 before the no-replace operation, assert that the operation fails with the
