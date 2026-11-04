@@ -108,7 +108,10 @@ cases from different candidate revisions or add generation attempts. Inspect
 every supplied assertion and actual Path/Change operation for the fidelity case.
 A hash or count alone cannot establish semantic fidelity. Scoped acceptance does
 not certify every generated sentence, full command semantics, universal model
-accuracy or executed product acceptance.
+accuracy or executed product acceptance. A supplemental C02 audit also checks material
+script-availability claims against direct immutable Git facts for baseline and
+final outputs: the catalog is not a complete file inventory, and a known false
+absence assertion rejects the cohort even if native tables pass.
 
 The recorded official platform runtime includes its external code-mode helper;
 its registry integrity, executable/helper signatures and all vendor hashes were
