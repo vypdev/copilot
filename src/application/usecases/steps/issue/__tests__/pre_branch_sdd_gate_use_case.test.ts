@@ -74,6 +74,62 @@ function harness(presentation?: ConstructorParameters<typeof PreBranchSddGateUse
 
 describe('PreBranchSddGateUseCase', () => {
   it.each([
+    ['update', true], ['companion', true], ['update', false], ['companion', false],
+  ] as const)('858: preserves supplied identities during the sole %s repair, corrected=%s', async (action, corrected) => {
+    const h = harness();
+    const request = { ...context(), issueBody: 'payments-change-C01: Missing credentials return 401.' };
+    h.getDescription.mockResolvedValue(request.issueBody);
+    const source = sddConsistencyFixture();
+    const rejected = source.replace(/payments-change-C01/gu, 'renamed-change-C01');
+    h.query.mockResolvedValueOnce({ ...plan, action, path: action === 'companion' ? 'specs/change.md' : plan.path, newCapability: null })
+      .mockResolvedValueOnce({ markdown: rejected }).mockResolvedValueOnce({ markdown: corrected ? source : rejected });
+    const outcome = await h.useCase.begin(request);
+    expect(outcome.status).toBe(corrected ? 'drafted' : 'blocked');
+    expect(h.query).toHaveBeenCalledTimes(3); // One analysis plus at most two drafts.
+    expect(h.validateDraft).toHaveBeenCalledTimes(corrected ? 1 : 0);
+    const repair = h.query.mock.calls[2][0];
+    expect(repair.sourceSnapshot).toEqual({ kind: 'pre-branch-sdd', phase: 'draft', baseSha });
+    expect(repair.options).toEqual(h.query.mock.calls[1][0].options);
+    expect(repair.prompt).toContain('"expected":1,"observed":0');
+    expect(repair.prompt).not.toContain('renamed-change-C01');
+    expect(h.publish).not.toHaveBeenCalled();
+    expect(h.labels()).not.toContain('branched');
+  });
+
+  it('858: enforces definitions from authorized answers without treating owner references or unrelated comments as new cases', async () => {
+    const h = harness();
+    h.isActorAllowedToModifyFiles.mockImplementation(async actor => actor === 'maintainer');
+    h.readSdd.mockResolvedValue('payments-C01: Existing owning case.');
+    const request = { ...context(), issueBody: 'payments-C01: Retained owner.' };
+    h.getDescription.mockResolvedValue(request.issueBody);
+    h.query.mockResolvedValueOnce({ ...plan, questions: [question], newCapability: null });
+    expect((await h.useCase.begin(request)).status).toBe('waiting');
+    h.comments.push({ id: 101, body: 'SDD Q1: payments-change-C01: Missing credentials return 401.', user: { login: 'maintainer' } });
+    h.comments.push({ id: 102, body: 'private-unrelated-C99: Not an authorized answer.', user: { login: 'mallory' } });
+    h.comments.push({ id: 103, body: 'SDD Q1: private-unrelated-C98: An unauthorized numbered answer.', user: { login: 'mallory' } });
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValue({ markdown: sddConsistencyFixture('renamed-change') });
+    expect((await h.useCase.begin(request)).status).toBe('blocked');
+    expect(h.query).toHaveBeenCalledTimes(4);
+    expect(h.query.mock.calls[3][0].prompt).toContain('"expected":1,"observed":0');
+    expect(h.query.mock.calls[3][0].prompt).not.toContain('private-unrelated-C99');
+    expect(h.query.mock.calls[3][0].prompt).not.toContain('private-unrelated-C98');
+    expect(h.isActorAllowedToModifyFiles).toHaveBeenCalledWith('mallory');
+    expect(h.validateDraft).not.toHaveBeenCalled();
+    expect(JSON.stringify(h.comments.filter(c => c.user.login === 'copilot[bot]'))).not.toContain('renamed-change-C01');
+    expect(h.publish).not.toHaveBeenCalled();
+  });
+
+  it('858: only enforces issue definitions visible within the existing prompt bound', async () => {
+    const h = harness();
+    const request = { ...context(), issueBody: 'x'.repeat(30000) + '\nwithheld-refinement-C99: Outside the admitted prompt view.' };
+    h.getDescription.mockResolvedValue(request.issueBody);
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: writerDraft('# Draft') });
+    expect((await h.useCase.begin(request)).status).toBe('drafted');
+    expect(h.query.mock.calls[1][0].prompt).not.toContain('withheld-refinement-C99');
+    expect(h.validateDraft).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
     { ...plan },
     { ...plan, action: 'companion', path: 'specs/payment-reconciliation.md' },
     { ...newPlan },

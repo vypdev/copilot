@@ -14,19 +14,21 @@ const CASE_ID = /^(?:[A-Za-z][A-Za-z0-9]*-)+C\d+$/u;
 const REQUIREMENT_ID = /^[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)+$/u;
 
 /** Generated candidates use visible tables; retained legacy owners are never reformatted. */
-export const SDD_CONSISTENCY_PROMPT = `Consistency contract for the proposed draft/appendix (not the retained owner):
-In section 4 include one table: Requirement | Behavior. Give every goal a stable requirement ID.
+export const SDD_CONSISTENCY_PROMPT = `Consistency contract for the final assembled proposed draft/appendix (not the retained owner):
+In section 4 include one table: Requirement | Behavior. Give every goal a stable hyphenated requirement ID, such as G-01. Its alphabetic prefix must have at least one hyphen-separated alphanumeric segment; unseparated G1 and G01 are invalid.
 In section 14 include one budget table: Area | Minimum distinct cases | Behaviors/risks covered; positive integers and one Total.
 Also in section 14 include one inventory table: Case ID | Area | Requirements | Scenario.
 Each row is one distinct executable case with a fully qualified ID such as capability-change-C01, one exact budget area, comma-separated requirement IDs and an observable scenario. Never use shorthand C01, ranges or redefine an ID found in any owning SDD. Reference retained baseline cases in prose using their full IDs; count only the new inventory. Ordinary technical designators in prose, scenario text or non-case columns are not acceptance-case references solely because they resemble short IDs; preserve their original terminology. Case-reference fields, explicit references and adjacent case-ID lists still require full identities.
 In section 17 include one table: Requirement | Cases. List comma-separated full case IDs for every requirement. Its links must exactly match the case inventory in both directions, with no undefined or generic documentation checks.
-In section 15 include one table: Path | Change. Change is update, reference or create. Include the selected SDD path itself with update for an existing SDD or create for a new/companion SDD. Use existing immutable-base files for update/reference. Only explicitly proposed new files may use create; never mark a missing current document as an existing artifact. Cite repository files as full repository-relative paths in backticks with a File or Path label when ambiguous, or relative Markdown file links. Put every planned new file in this table; a proposed parent directory is valid only as an ancestor of a declared new file, never as a file declaration. HTTP endpoints, media types, mode alternatives and module names are protocol notation, not file-existence claims. Label file-shaped relative asset addresses with URL or URI; do not relabel a repository citation to evade validation. Explicit Path/Change rows and relative Markdown destinations always receive strict repository checks. These tables are publication consistency checks, not runtime/security acceptance.`;
+In section 15 include one table: Path | Change. Path cells contain literal full repository-relative paths, optionally wrapped as code; do not format a Path cell as a Markdown link. Put navigation links outside this table. Change is update, reference or create. Include the selected SDD path itself with update for an existing SDD or create for a new/companion SDD. Use existing immutable-base files for update/reference. Only explicitly proposed new files may use create; never mark a missing current document as an existing artifact. Cite repository files as full repository-relative paths in backticks with a File or Path label when ambiguous, or relative Markdown file links. Put every planned new file in this table; a proposed parent directory is valid only as an ancestor of a declared new file, never as a file declaration. HTTP endpoints, media types, mode alternatives and module names are protocol notation, not file-existence claims. Label file-shaped relative asset addresses with URL or URI; do not relabel a repository citation to evade validation. Explicit Path/Change rows and relative Markdown destinations always receive strict repository checks. These tables are publication consistency checks, not runtime/security acceptance.`;
 
 const BUDGET_SLOT = '{{SDD_CASE_BUDGET}}';
 const TRACEABILITY_SLOT = '{{SDD_REQUIREMENT_CASES}}';
 
 /** The provider writes definitions once; trusted code renders their two redundant projections. */
-export const SDD_DERIVED_TABLES_PROMPT = `Draft assembly: the consistency contract above describes the final document. In your raw Markdown, write the complete Requirement | Behavior table in section 4 and Case ID | Area | Requirements | Scenario inventory in section 14. Preserve every resolved minimum, per-area allocation and observable case as actual inventory rows, never ranges or summaries. Instead of independently writing the budget table, put ${BUDGET_SLOT} once on its own visible line in section 14. Instead of writing the reverse Requirement | Cases table, put ${TRACEABILITY_SLOT} once on its own visible line in section 17. Do not include either derived table yourself or put these slots in examples, fences or comments. Trusted code derives exact counts, Total and reciprocal links from your unchanged definitions, then runs every publication check. The compact character target is advisory: use more space when required to preserve the full resolved inventory and scope. The hard limit applies after assembly too.`;
+export const SDD_DERIVED_TABLES_PROMPT = `Draft assembly: the consistency contract above describes the final document. In your raw Markdown, write the complete Requirement | Behavior table in section 4 and Case ID | Area | Requirements | Scenario inventory in section 14. Preserve every resolved minimum, per-area allocation and observable case as actual inventory rows, never ranges or summaries. Instead of independently writing the budget table, put ${BUDGET_SLOT} once on its own visible line in section 14. Instead of writing the reverse Requirement | Cases table, put ${TRACEABILITY_SLOT} once on its own visible line in section 17. One pair of inline-code backticks around an entire visible slot line is tolerated; bare slot lines are preferred. Do not include either derived table yourself or put these slots in examples, fences or comments. Trusted code derives exact counts, Total and reciprocal links from your unchanged definitions, then runs every publication check. The compact character target is advisory: use more space when required to preserve the full resolved inventory and scope. The hard limit applies after assembly too.`;
+
+export const SDD_FILE_LINKS_PROMPT = 'For each newly authored repository-file navigation link use [Descriptive label]({{SDD_FILE_LINK:PATH}}), replacing PATH with the exact full repository-relative target. The marker occupies the entire inline destination; paired backticks around it are tolerated. Use angle-bracket destinations for filenames with spaces. Trusted code computes and encodes the relative destination from the selected publication directory, so do not guess parent traversal. Every marker target, including those in representative UI examples, MUST also have its literal full path and verified operation in the operative section-15 Path | Change table. This explicit declaration is checked against immutable source or proposed creates by the unchanged native validator. Path cells themselves remain literal paths, never markers. Markers in prose, labels, comments or code examples become literal full-path citations and grant no existence or publication authority. Never invent a target to satisfy this format. Targets are single-line paths without braces or backticks. Remove template authoring notes. Ordinary valid Markdown and fragment links remain supported. The same final size bound and single shared repair apply.';
 
 function fail(reason: SddConsistencyReason, fact: SddValidationFact, additional: readonly SddValidationFact[] = []): never {
   // Closed diagnostics: rejected Markdown and repository text never become repair instructions.
@@ -107,17 +109,70 @@ function ids(value: string, pattern: RegExp, reason: SddConsistencyReason, secti
   return values;
 }
 
+/** Derive navigation only from explicit targets; the workspace still proves existence. */
+export function renderSddFileLinks(markdown: string, publicationPath: string): string {
+  const prefix = /\{\{\s*SDD_FILE_LINK\b/iu;
+  if (!prefix.test(markdown)) return markdown;
+  if (!safePath(publicationPath)) fail('repository-path', { detail: 'owner-path', section: 15 });
+  const pattern = /\{\{SDD_FILE_LINK:([^{}\r\n`]*)\}\}/gu;
+  const tokens = [...markdown.matchAll(pattern)];
+  if (!tokens.length) fail('repository-path', { detail: 'path-link', section: 0 });
+  const declared = new Set(table(visible(markdown), 15, ['Path', 'Change'], 'repository-path').map(row => row[0]));
+  let cursor = 0, result = '';
+  for (const token of tokens) {
+    const target = token[1], begin = token.index, end = begin + token[0].length;
+    const destination = sddFileDestination(target, publicationPath);
+    if (!declared.has(target)) fail('repository-path', { detail: 'path-link', section: 0 });
+    let start = begin, finish = end;
+    while (markdown[start - 1] === '`') start--;
+    while (markdown[finish] === '`') finish++;
+    let left = start - 1, right = finish;
+    const angle = markdown[left] === '<';
+    if (angle) left--;
+    while (/[ \t]/u.test(markdown[left] ?? '')) left--;
+    const paired = !angle || markdown[right++] === '>';
+    while (/[ \t]/u.test(markdown[right] ?? '')) right++;
+    const inDestination = markdown[left] === '(' && markdown[left - 1] === ']';
+    if (inDestination && (!paired || markdown[right] !== ')' || begin - start !== finish - end)) {
+      fail('repository-path', { detail: 'path-link', section: 0 });
+    }
+    // Outside a URL field this is a literal repository citation, not a nested link.
+    if (!inDestination) { start = begin; finish = end; }
+    result += markdown.slice(cursor, start) + (inDestination ? destination : target);
+    cursor = finish;
+  }
+  result += markdown.slice(cursor);
+  if (prefix.test(result)) fail('repository-path', { detail: 'path-link', section: 0 });
+  return result;
+}
+
+function sddFileDestination(target: string, publicationPath: string): string {
+  if (!safePath(target)) fail('repository-path', { detail: 'path-link', section: 0 });
+  const parent = publicationPath.split('/').slice(0, -1), parts = target.split('/');
+  let common = 0;
+  while (common < parent.length && common < parts.length && parent[common] === parts[common]) common++;
+  const relative = [...Array<string>(parent.length - common).fill('..'), ...parts.slice(common)];
+  if (!relative.length) fail('repository-path', { detail: 'path-link', section: 0 });
+  try {
+    return relative.map(part => encodeURIComponent(part).replace(/[!'()*]/gu,
+      character => `%${character.charCodeAt(0).toString(16).toUpperCase()}`)).join('/');
+  } catch { return fail('repository-path', { detail: 'path-link', section: 0 }); }
+}
+
 /** Never repairs definitions or contradictory supplied tables; the writer independently revalidates. */
 export function renderSddDerivedTables(markdown: string): string {
   if (!markdown.includes(BUDGET_SLOT) && !markdown.includes(TRACEABILITY_SLOT)) return markdown;
   const source = visible(markdown);
+  let normalized = markdown;
   for (const [slot, number, reason] of [
     [BUDGET_SLOT, 14, 'case-budget'], [TRACEABILITY_SLOT, 17, 'requirement-mapping'],
   ] as const) {
     const occurrences = markdown.split(slot).length - 1;
     if (occurrences !== 1) fail(reason, { detail: 'derived-slot-count', section: number, expected: 1, observed: occurrences });
-    const placed = section(source, number, reason).split('\n').filter(line => line.trim() === slot).length;
+    const wrapped = '`' + slot + '`';
+    const placed = section(source, number, reason).split('\n').filter(line => line.trim() === slot || line.trim() === wrapped).length;
     if (placed !== 1) fail(reason, { detail: 'derived-slot-placement', section: number, expected: 1, observed: placed });
+    normalized = normalized.replace(wrapped, slot);
   }
   const requirements = table(source, 4, ['Requirement', 'Behavior'], 'requirement-mapping').map(row => row[0]);
   uniqueIdentifiers(requirements, REQUIREMENT_ID, 'requirement-mapping', 4);
@@ -141,7 +196,7 @@ export function renderSddDerivedTables(markdown: string): string {
     `| Total | ${cases.length} | Distinct inventory cases; repeated executions do not add cases. |`].join('\n');
   const traceability = ['| Requirement | Cases |', '|---|---|',
     ...[...edges].map(([requirement, links]) => `| ${requirement} | ${links.join(', ')} |`)].join('\n');
-  return markdown.replace(BUDGET_SLOT, () => budget).replace(TRACEABILITY_SLOT, () => traceability);
+  return normalized.replace(BUDGET_SLOT, () => budget).replace(TRACEABILITY_SLOT, () => traceability);
 }
 
 export function reservedSddCaseIds(documents: readonly SddOwnerDocument[]): string[] {
@@ -168,6 +223,48 @@ export function reservedSddCaseIds(documents: readonly SddOwnerDocument[]): stri
     }
   }
   return [...reserved].sort();
+}
+
+/** Only explicit definitions in admitted request/answer text establish new case identities. */
+export function suppliedSddCaseIds(inputs: readonly string[], owners: readonly SddOwnerDocument[]): string[] {
+  const reserved = new Set(reservedSddCaseIds(owners));
+  const supplied = new Set<string>();
+  const add = (id: string) => { if (CASE_ID.test(id) && !reserved.has(id)) supplied.add(id); };
+  for (const input of inputs) {
+    const lines = visible(input).split('\n');
+    for (let index = 0; index < lines.length; index++) {
+      const line = lines[index];
+      // Quoted and indented examples are not operative definitions.
+      if (/^(?: {4}|\t| {0,3}>)/u.test(line)) continue;
+      if (/^\s*\|/u.test(line)) {
+        const cells = (row: string) => row.trim().replace(/^\||\|$/gu, '').split('|').map(clean);
+        const header = cells(line);
+        const scenario = header.findIndex(cell => cell === 'Scenario' || cell === 'Assertion');
+        const separator = cells(lines[index + 1] ?? '');
+        if (header[0] !== 'Case ID' || scenario < 1 || separator.length !== header.length
+          || !separator.every(cell => /^:?-{3,}:?$/u.test(cell))) continue;
+        index += 2;
+        while (index < lines.length && /^\s*\|/u.test(lines[index])) {
+          const row = cells(lines[index]);
+          if (row.length === header.length && row[scenario]) add(row[0]);
+          index++;
+        }
+        index--;
+      } else {
+        const declaration = /^\s*(?:[-*+]\s+|\d+[.)]\s+)?([^:]+):\s*\S/u.exec(line);
+        if (declaration) add(clean(declaration[1]));
+      }
+    }
+  }
+  return [...supplied].sort();
+}
+
+/** References and renamed aliases cannot stand in for supplied inventory definitions. */
+export function validateSuppliedSddCaseIds(markdown: string, supplied: readonly string[]): void {
+  if (!supplied.length) return;
+  const defined = new Set(table(visible(markdown), 14, ['Case ID', 'Area', 'Requirements', 'Scenario'], 'case-identity').map(row => row[0]));
+  const observed = supplied.filter(id => defined.has(id)).length;
+  if (observed !== supplied.length) fail('case-identity', { detail: 'case-identity', section: 14, expected: supplied.length, observed });
 }
 
 export function validateSddDraftConsistency(

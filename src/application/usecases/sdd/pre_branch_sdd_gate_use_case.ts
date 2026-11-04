@@ -36,7 +36,7 @@ import { logError } from '../../ports/logging_ports';
 import { renderSddAnalysisStatus, sddAnalysisStatusMarker } from '../../policies/sdd_analysis_status_policy';
 import { ApplicationError, toApplicationError } from '../../errors/application_error';
 import { draftSddMarkdown } from './pre_branch_sdd_draft_workflow';
-import { reservedSddCaseIds, type SddOwnerDocument } from '../../../domain/sdd_draft_consistency';
+import { reservedSddCaseIds, suppliedSddCaseIds, validateSuppliedSddCaseIds, type SddOwnerDocument } from '../../../domain/sdd_draft_consistency';
 import { renderSddOwnershipInstructions, type SddOwnershipAnalysisContext } from '../../policies/sdd_ownership_prompt_policy';
 
 export interface PreBranchSddContext {
@@ -244,10 +244,12 @@ export class PreBranchSddGateUseCase {
       }
       const reservedCases = JSON.stringify(reservedSddCaseIds(ownerDocuments));
       if (reservedCases.length > 30000) throw new Error('The owning SDD case inventory exceeds the bounded drafting context; maintainer review is required.');
+      const suppliedCases = suppliedSddCaseIds([context.issueBody.slice(0, 30000), ...answers.map(answer => answer.text)], ownerDocuments);
       const newCapability = plan.action === 'new' ? parseNewCapability(analysisValue.newCapability, plan) : undefined;
       let prepared: SddPreparedDraft | undefined;
       await draftSddMarkdown(this.agent, context.agentConfiguration, plan,
         `${buildDraftPrompt(context, snapshot, plan, answers, currentSdd)}\n\nCase IDs reserved across every owning SDD at ${snapshot.baseSha}:\n${reservedCases}`, async markdown => {
+          validateSuppliedSddCaseIds(markdown, suppliedCases);
           prepared = await this.workspace.validateDraft(snapshot, plan, markdown, newCapability);
         }, { kind: 'pre-branch-sdd', phase: 'draft', baseSha: snapshot.baseSha });
       if (!prepared) throw new Error('The SDD writer returned no validated draft.');

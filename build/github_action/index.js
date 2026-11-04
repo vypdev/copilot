@@ -52201,6 +52201,31 @@ function escapeTitle(value) {
 
 /***/ }),
 
+/***/ 14728:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SDD_DRAFT_GROUNDING_PROMPT = void 0;
+/** Guidance only; existing source admission and publication validators remain authoritative. */
+exports.SDD_DRAFT_GROUNDING_PROMPT = [
+    'Ground verification guidance and factual citations in the SDK-selected immutable source view. Inspect the actual files before writing concrete claims; the workflow bootstrap checkout, copied standard/template, examples and issue assertions do not establish what is installed in the selected project.',
+    'Before naming a repository verification command, inspect its execution directory/workspace, declared package manager or toolchain, and the exact script/entrypoint or documented invocation at that source. Before describing what it verifies, inspect its referenced definition; a script name or declared purpose does not prove full specification or catalog checks. Preserve legitimate existing command names while accurately qualifying their evidenced scope. A familiar SDK maintenance command or a command on another revision is not evidence of an installed consumer script.',
+    'For invocation facts, selected project declarations take precedence over copied SDK examples. Preserve the standard’s validation goals, but replace an unavailable example invocation with a genuinely evidenced equivalent or a command-free validation outcome. A different documentation check is not SDK consistency verification merely because that command exists. Never make an absent script a required step or DoD item to be installed later.',
+    'When an invocation is absent, unobserved or conflicting, describe the required format, consistency, catalog or product-validation outcome and state that the concrete invocation/prerequisite remains unverified. Do not invent scripts, wrappers, compatibility shims, dependency installation or workflow changes merely to make an example command exist. Command declaration is not execution, a passing check or acceptance.',
+    'Verify repository citations and copy exact observed commit/blob/checksum identities without approximate transcription. Use the full observed repository-relative path, including its real directory; a familiar basename does not establish a root-level file. If the supplied claim differs from the selected bytes/evidence, reconcile that discrepancy or retain explicit uncertainty. Distinguish verified existing files from prospective create declarations. Preserve exact module/entrypoint notation from its declaration. Cite a file and a function or symbol separately; do not invent a hybrid file:callable path by rewriting a dotted module entrypoint.',
+    'For file navigation, supply the exact full repository target through the file-link assembly representation described in the contract. The host derives the relative destination from the selected publication directory; do not infer a target from a basename or guess parent traversal. This does not prove existence: every final link still needs immutable-source or exact proposed-create evidence. Keep full repository-relative literal values in Path cells. When referring collectively to a declared file inventory, describe its rows/count in prose; do not invent a path-shaped placeholder, abbreviated filename or synthetic pattern as though it were a supplied repository citation.',
+    'Do not introduce incidental hypothetical repository paths into generic scope or non-goal prose. Keep every supplied path and technical requirement intact. If an illustrative hypothetical layout is actually useful, put it in a clearly non-operative fenced example; never recast an actual required repository citation as an example to evade validation.',
+    'Preserve every resolved independent case identity and its concrete observable refinement, all supplied minimums and prospective Path/Change operations. A broad retained journey or alias is not a new distinct refinement and cannot replace its specific supplied assertions. Derived counts and reciprocal tables prove structural consistency only; never present them as semantic completeness or executed acceptance.',
+    'Explicit visible Case ID tables with Scenario or Assertion columns, and fully qualified case-ID: assertion declarations in the admitted issue or authorized answers, define supplied cases. Preserve each valid new identity exactly as an inventory definition in section 14, even if its namespace differs from the new document name. Merely mentioning it in prose while defining a renamed alias does not preserve that identity. Existing owning case IDs remain references.',
+    'Build requirement rows from the concrete supplied behaviors and map each row to cases that actually exercise it. Keep publication/ownership metadata constraints in their appropriate invariant sections and existing validation evidence; do not invent uncovered generic goals or replace supplied protocol cases with documentation checks. A format repair must reconcile the mappings while retaining valid supplied new case IDs and their assertions; reserved owning case IDs remain references, never new counted definitions.',
+    'Use the space needed within the unchanged hard bound to retain this scope. The compact target is advisory. Do not silently summarize away independent inventory rows, future paths, unresolved decisions or evidence limitations. Inspect definitions without executing project commands and never copy credential values or secret-bearing script bodies into public guidance. This guidance grants no execution, file-write, publication or retry authority.',
+].join('\n');
+
+
+/***/ }),
+
 /***/ 99167:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -63864,6 +63889,7 @@ const pre_branch_sdd_1 = __nccwpck_require__(34730);
 const agent_response_length_failure_1 = __nccwpck_require__(28528);
 const agent_response_schema_failure_1 = __nccwpck_require__(70809);
 const sdd_draft_consistency_1 = __nccwpck_require__(27910);
+const sdd_draft_grounding_policy_1 = __nccwpck_require__(14728);
 /** Size and typed format failures share one regeneration; the writer still validates every candidate. */
 async function draftSddMarkdown(agent, configuration, plan, prompt, validate, sourceSnapshot) {
     const maximum = plan.action === 'update' ? pre_branch_sdd_1.SDD_MAX_UPDATE_CHARACTERS : pre_branch_sdd_1.SDD_MAX_DRAFT_CHARACTERS;
@@ -63877,14 +63903,14 @@ async function draftSddMarkdown(agent, configuration, plan, prompt, validate, so
     let formatReason = 'required-heading';
     let diagnostic = { reason: 'size', phase: 'response',
         facts: [{ detail: 'size-limit', section: 0, expected: maximum }] };
-    const contractPrompt = `${prompt}\n\nDraft contract: keep the complete draft within ${maximum} characters; aim for ${target} characters. Preserve the same owner, decisions and requirements. Include these literal canonical heading prefixes as Markdown headings, with the shown capitalization:\n${pre_branch_sdd_1.SDD_REQUIRED_HEADINGS.join('\n')}\nUse the canonical numeric test-budget table in section 14: Area | Minimum distinct cases | Behaviors/risks covered. Every allocation and the Total must be a positive integer, and the Total must equal the sum of the allocations. Return only the required JSON.`;
+    const contractPrompt = `${prompt}\n\nDraft contract: keep the complete draft within ${maximum} characters; aim for ${target} characters. Preserve the same owner, decisions and requirements. Include these literal canonical heading prefixes as Markdown headings, with the shown capitalization:\n${pre_branch_sdd_1.SDD_REQUIRED_HEADINGS.join('\n')}\nThe canonical numeric test-budget table in section 14 and reciprocal table in section 17 belong to the final assembled document. In your raw Markdown, supply the complete explicit inventories and the designated assembly slots described below; do not copy the template's derived tables alongside their slots. In the final document every allocation and the Total must be a positive integer, and the Total must equal the sum of the allocations. Return only the required JSON.`;
     for (let attempt = 0; attempt < 2; attempt++) {
         let value;
         try {
             value = await agent.query({
                 configuration, agentId: 'pre-branch-sdd-draft',
                 ...(sourceSnapshot ? { sourceSnapshot } : {}),
-                prompt: `${attempt === 0 ? contractPrompt : `${contractPrompt}\n\n${problem === 'size' ? `The previous response exceeded the ${maximum}-character draft limit.` : `The previous response failed the required SDD ${formatReason} contract.`} Regenerate a concise complete draft for this same owner and plan. Use the exact numbered canonical headings from the supplied template. Preserve all resolved requirements, architecture, documentation and acceptance. Do not change ownership or truncate a requirement.\nPrevious host validation (closed structural coordinates only, not new requirements): ${JSON.stringify((0, sdd_validation_diagnostic_1.normalizeSddValidationDiagnostic)(diagnostic))}`}\n\n${sdd_draft_consistency_1.SDD_CONSISTENCY_PROMPT}\n\n${sdd_draft_consistency_1.SDD_DERIVED_TABLES_PROMPT}`,
+                prompt: `${attempt === 0 ? contractPrompt : `${contractPrompt}\n\n${problem === 'size' ? `The previous response exceeded the ${maximum}-character draft limit.` : `The previous response failed the required SDD ${formatReason} contract.`} Regenerate a concise complete draft for this same owner and plan. Use the exact numbered canonical headings from the supplied template. Preserve all resolved requirements, architecture, documentation and acceptance. Do not change ownership or truncate a requirement.\nPrevious host validation (closed structural coordinates only, not new requirements): ${JSON.stringify((0, sdd_validation_diagnostic_1.normalizeSddValidationDiagnostic)(diagnostic))}`}\n\n${sdd_draft_consistency_1.SDD_CONSISTENCY_PROMPT}\n\n${sdd_draft_consistency_1.SDD_DERIVED_TABLES_PROMPT}\n\n${sdd_draft_consistency_1.SDD_FILE_LINKS_PROMPT}\n\n${sdd_draft_grounding_policy_1.SDD_DRAFT_GROUNDING_PROMPT}`,
                 options: { expectJson: true, schemaName: 'pre_branch_sdd_draft', schema },
             });
         }
@@ -63915,7 +63941,7 @@ async function draftSddMarkdown(agent, configuration, plan, prompt, validate, so
             throw minimumFailure(attempt, observedLength);
         let assembledCandidate = false;
         try {
-            const assembled = (0, sdd_draft_consistency_1.renderSddDerivedTables)(markdown);
+            const assembled = (0, sdd_draft_consistency_1.renderSddFileLinks)((0, sdd_draft_consistency_1.renderSddDerivedTables)(markdown), plan.path);
             if (assembled.length > maximum) {
                 problem = 'size';
                 diagnostic = { reason: 'size', phase: 'assembly', facts: [{ detail: 'size-limit', section: 0, expected: maximum }] };
@@ -64158,9 +64184,11 @@ class PreBranchSddGateUseCase {
             const reservedCases = JSON.stringify((0, sdd_draft_consistency_1.reservedSddCaseIds)(ownerDocuments));
             if (reservedCases.length > 30000)
                 throw new Error('The owning SDD case inventory exceeds the bounded drafting context; maintainer review is required.');
+            const suppliedCases = (0, sdd_draft_consistency_1.suppliedSddCaseIds)([context.issueBody.slice(0, 30000), ...answers.map(answer => answer.text)], ownerDocuments);
             const newCapability = plan.action === 'new' ? parseNewCapability(analysisValue.newCapability, plan) : undefined;
             let prepared;
             await (0, pre_branch_sdd_draft_workflow_1.draftSddMarkdown)(this.agent, context.agentConfiguration, plan, `${buildDraftPrompt(context, snapshot, plan, answers, currentSdd)}\n\nCase IDs reserved across every owning SDD at ${snapshot.baseSha}:\n${reservedCases}`, async (markdown) => {
+                (0, sdd_draft_consistency_1.validateSuppliedSddCaseIds)(markdown, suppliedCases);
                 prepared = await this.workspace.validateDraft(snapshot, plan, markdown, newCapability);
             }, { kind: 'pre-branch-sdd', phase: 'draft', baseSha: snapshot.baseSha });
             if (!prepared)
@@ -93007,9 +93035,12 @@ function freezeDocument(value, depth) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.SDD_DERIVED_TABLES_PROMPT = exports.SDD_CONSISTENCY_PROMPT = void 0;
+exports.SDD_FILE_LINKS_PROMPT = exports.SDD_DERIVED_TABLES_PROMPT = exports.SDD_CONSISTENCY_PROMPT = void 0;
+exports.renderSddFileLinks = renderSddFileLinks;
 exports.renderSddDerivedTables = renderSddDerivedTables;
 exports.reservedSddCaseIds = reservedSddCaseIds;
+exports.suppliedSddCaseIds = suppliedSddCaseIds;
+exports.validateSuppliedSddCaseIds = validateSuppliedSddCaseIds;
 exports.validateSddDraftConsistency = validateSddDraftConsistency;
 const pre_branch_sdd_1 = __nccwpck_require__(34730);
 const sdd_repository_reference_1 = __nccwpck_require__(17791);
@@ -93019,17 +93050,18 @@ const CASE = /\b(?:[A-Za-z][A-Za-z0-9]*-)+C\d+\b/gu;
 const CASE_ID = /^(?:[A-Za-z][A-Za-z0-9]*-)+C\d+$/u;
 const REQUIREMENT_ID = /^[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)+$/u;
 /** Generated candidates use visible tables; retained legacy owners are never reformatted. */
-exports.SDD_CONSISTENCY_PROMPT = `Consistency contract for the proposed draft/appendix (not the retained owner):
-In section 4 include one table: Requirement | Behavior. Give every goal a stable requirement ID.
+exports.SDD_CONSISTENCY_PROMPT = `Consistency contract for the final assembled proposed draft/appendix (not the retained owner):
+In section 4 include one table: Requirement | Behavior. Give every goal a stable hyphenated requirement ID, such as G-01. Its alphabetic prefix must have at least one hyphen-separated alphanumeric segment; unseparated G1 and G01 are invalid.
 In section 14 include one budget table: Area | Minimum distinct cases | Behaviors/risks covered; positive integers and one Total.
 Also in section 14 include one inventory table: Case ID | Area | Requirements | Scenario.
 Each row is one distinct executable case with a fully qualified ID such as capability-change-C01, one exact budget area, comma-separated requirement IDs and an observable scenario. Never use shorthand C01, ranges or redefine an ID found in any owning SDD. Reference retained baseline cases in prose using their full IDs; count only the new inventory. Ordinary technical designators in prose, scenario text or non-case columns are not acceptance-case references solely because they resemble short IDs; preserve their original terminology. Case-reference fields, explicit references and adjacent case-ID lists still require full identities.
 In section 17 include one table: Requirement | Cases. List comma-separated full case IDs for every requirement. Its links must exactly match the case inventory in both directions, with no undefined or generic documentation checks.
-In section 15 include one table: Path | Change. Change is update, reference or create. Include the selected SDD path itself with update for an existing SDD or create for a new/companion SDD. Use existing immutable-base files for update/reference. Only explicitly proposed new files may use create; never mark a missing current document as an existing artifact. Cite repository files as full repository-relative paths in backticks with a File or Path label when ambiguous, or relative Markdown file links. Put every planned new file in this table; a proposed parent directory is valid only as an ancestor of a declared new file, never as a file declaration. HTTP endpoints, media types, mode alternatives and module names are protocol notation, not file-existence claims. Label file-shaped relative asset addresses with URL or URI; do not relabel a repository citation to evade validation. Explicit Path/Change rows and relative Markdown destinations always receive strict repository checks. These tables are publication consistency checks, not runtime/security acceptance.`;
+In section 15 include one table: Path | Change. Path cells contain literal full repository-relative paths, optionally wrapped as code; do not format a Path cell as a Markdown link. Put navigation links outside this table. Change is update, reference or create. Include the selected SDD path itself with update for an existing SDD or create for a new/companion SDD. Use existing immutable-base files for update/reference. Only explicitly proposed new files may use create; never mark a missing current document as an existing artifact. Cite repository files as full repository-relative paths in backticks with a File or Path label when ambiguous, or relative Markdown file links. Put every planned new file in this table; a proposed parent directory is valid only as an ancestor of a declared new file, never as a file declaration. HTTP endpoints, media types, mode alternatives and module names are protocol notation, not file-existence claims. Label file-shaped relative asset addresses with URL or URI; do not relabel a repository citation to evade validation. Explicit Path/Change rows and relative Markdown destinations always receive strict repository checks. These tables are publication consistency checks, not runtime/security acceptance.`;
 const BUDGET_SLOT = '{{SDD_CASE_BUDGET}}';
 const TRACEABILITY_SLOT = '{{SDD_REQUIREMENT_CASES}}';
 /** The provider writes definitions once; trusted code renders their two redundant projections. */
-exports.SDD_DERIVED_TABLES_PROMPT = `Draft assembly: the consistency contract above describes the final document. In your raw Markdown, write the complete Requirement | Behavior table in section 4 and Case ID | Area | Requirements | Scenario inventory in section 14. Preserve every resolved minimum, per-area allocation and observable case as actual inventory rows, never ranges or summaries. Instead of independently writing the budget table, put ${BUDGET_SLOT} once on its own visible line in section 14. Instead of writing the reverse Requirement | Cases table, put ${TRACEABILITY_SLOT} once on its own visible line in section 17. Do not include either derived table yourself or put these slots in examples, fences or comments. Trusted code derives exact counts, Total and reciprocal links from your unchanged definitions, then runs every publication check. The compact character target is advisory: use more space when required to preserve the full resolved inventory and scope. The hard limit applies after assembly too.`;
+exports.SDD_DERIVED_TABLES_PROMPT = `Draft assembly: the consistency contract above describes the final document. In your raw Markdown, write the complete Requirement | Behavior table in section 4 and Case ID | Area | Requirements | Scenario inventory in section 14. Preserve every resolved minimum, per-area allocation and observable case as actual inventory rows, never ranges or summaries. Instead of independently writing the budget table, put ${BUDGET_SLOT} once on its own visible line in section 14. Instead of writing the reverse Requirement | Cases table, put ${TRACEABILITY_SLOT} once on its own visible line in section 17. One pair of inline-code backticks around an entire visible slot line is tolerated; bare slot lines are preferred. Do not include either derived table yourself or put these slots in examples, fences or comments. Trusted code derives exact counts, Total and reciprocal links from your unchanged definitions, then runs every publication check. The compact character target is advisory: use more space when required to preserve the full resolved inventory and scope. The hard limit applies after assembly too.`;
+exports.SDD_FILE_LINKS_PROMPT = 'For each newly authored repository-file navigation link use [Descriptive label]({{SDD_FILE_LINK:PATH}}), replacing PATH with the exact full repository-relative target. The marker occupies the entire inline destination; paired backticks around it are tolerated. Use angle-bracket destinations for filenames with spaces. Trusted code computes and encodes the relative destination from the selected publication directory, so do not guess parent traversal. Every marker target, including those in representative UI examples, MUST also have its literal full path and verified operation in the operative section-15 Path | Change table. This explicit declaration is checked against immutable source or proposed creates by the unchanged native validator. Path cells themselves remain literal paths, never markers. Markers in prose, labels, comments or code examples become literal full-path citations and grant no existence or publication authority. Never invent a target to satisfy this format. Targets are single-line paths without braces or backticks. Remove template authoring notes. Ordinary valid Markdown and fragment links remain supported. The same final size bound and single shared repair apply.';
 function fail(reason, fact, additional = []) {
     // Closed diagnostics: rejected Markdown and repository text never become repair instructions.
     throw new pre_branch_sdd_1.SddDraftFormatFailure(reason, `The SDD draft violates its ${reason} consistency contract.`, { reason, phase: 'validation', facts: [fact, ...additional] });
@@ -93116,20 +93148,89 @@ function ids(value, pattern, reason, section) {
         return fail(reason, { detail: 'identifier-list', section, observed: values.length });
     return values;
 }
+/** Derive navigation only from explicit targets; the workspace still proves existence. */
+function renderSddFileLinks(markdown, publicationPath) {
+    const prefix = /\{\{\s*SDD_FILE_LINK\b/iu;
+    if (!prefix.test(markdown))
+        return markdown;
+    if (!(0, sdd_repository_reference_1.isSafeSddRepositoryPath)(publicationPath))
+        fail('repository-path', { detail: 'owner-path', section: 15 });
+    const pattern = /\{\{SDD_FILE_LINK:([^{}\r\n`]*)\}\}/gu;
+    const tokens = [...markdown.matchAll(pattern)];
+    if (!tokens.length)
+        fail('repository-path', { detail: 'path-link', section: 0 });
+    const declared = new Set(table(visible(markdown), 15, ['Path', 'Change'], 'repository-path').map(row => row[0]));
+    let cursor = 0, result = '';
+    for (const token of tokens) {
+        const target = token[1], begin = token.index, end = begin + token[0].length;
+        const destination = sddFileDestination(target, publicationPath);
+        if (!declared.has(target))
+            fail('repository-path', { detail: 'path-link', section: 0 });
+        let start = begin, finish = end;
+        while (markdown[start - 1] === '`')
+            start--;
+        while (markdown[finish] === '`')
+            finish++;
+        let left = start - 1, right = finish;
+        const angle = markdown[left] === '<';
+        if (angle)
+            left--;
+        while (/[ \t]/u.test(markdown[left] ?? ''))
+            left--;
+        const paired = !angle || markdown[right++] === '>';
+        while (/[ \t]/u.test(markdown[right] ?? ''))
+            right++;
+        const inDestination = markdown[left] === '(' && markdown[left - 1] === ']';
+        if (inDestination && (!paired || markdown[right] !== ')' || begin - start !== finish - end)) {
+            fail('repository-path', { detail: 'path-link', section: 0 });
+        }
+        // Outside a URL field this is a literal repository citation, not a nested link.
+        if (!inDestination) {
+            start = begin;
+            finish = end;
+        }
+        result += markdown.slice(cursor, start) + (inDestination ? destination : target);
+        cursor = finish;
+    }
+    result += markdown.slice(cursor);
+    if (prefix.test(result))
+        fail('repository-path', { detail: 'path-link', section: 0 });
+    return result;
+}
+function sddFileDestination(target, publicationPath) {
+    if (!(0, sdd_repository_reference_1.isSafeSddRepositoryPath)(target))
+        fail('repository-path', { detail: 'path-link', section: 0 });
+    const parent = publicationPath.split('/').slice(0, -1), parts = target.split('/');
+    let common = 0;
+    while (common < parent.length && common < parts.length && parent[common] === parts[common])
+        common++;
+    const relative = [...Array(parent.length - common).fill('..'), ...parts.slice(common)];
+    if (!relative.length)
+        fail('repository-path', { detail: 'path-link', section: 0 });
+    try {
+        return relative.map(part => encodeURIComponent(part).replace(/[!'()*]/gu, character => `%${character.charCodeAt(0).toString(16).toUpperCase()}`)).join('/');
+    }
+    catch {
+        return fail('repository-path', { detail: 'path-link', section: 0 });
+    }
+}
 /** Never repairs definitions or contradictory supplied tables; the writer independently revalidates. */
 function renderSddDerivedTables(markdown) {
     if (!markdown.includes(BUDGET_SLOT) && !markdown.includes(TRACEABILITY_SLOT))
         return markdown;
     const source = visible(markdown);
+    let normalized = markdown;
     for (const [slot, number, reason] of [
         [BUDGET_SLOT, 14, 'case-budget'], [TRACEABILITY_SLOT, 17, 'requirement-mapping'],
     ]) {
         const occurrences = markdown.split(slot).length - 1;
         if (occurrences !== 1)
             fail(reason, { detail: 'derived-slot-count', section: number, expected: 1, observed: occurrences });
-        const placed = section(source, number, reason).split('\n').filter(line => line.trim() === slot).length;
+        const wrapped = '`' + slot + '`';
+        const placed = section(source, number, reason).split('\n').filter(line => line.trim() === slot || line.trim() === wrapped).length;
         if (placed !== 1)
             fail(reason, { detail: 'derived-slot-placement', section: number, expected: 1, observed: placed });
+        normalized = normalized.replace(wrapped, slot);
     }
     const requirements = table(source, 4, ['Requirement', 'Behavior'], 'requirement-mapping').map(row => row[0]);
     uniqueIdentifiers(requirements, REQUIREMENT_ID, 'requirement-mapping', 4);
@@ -93155,7 +93256,7 @@ function renderSddDerivedTables(markdown) {
         `| Total | ${cases.length} | Distinct inventory cases; repeated executions do not add cases. |`].join('\n');
     const traceability = ['| Requirement | Cases |', '|---|---|',
         ...[...edges].map(([requirement, links]) => `| ${requirement} | ${links.join(', ')} |`)].join('\n');
-    return markdown.replace(BUDGET_SLOT, () => budget).replace(TRACEABILITY_SLOT, () => traceability);
+    return normalized.replace(BUDGET_SLOT, () => budget).replace(TRACEABILITY_SLOT, () => traceability);
 }
 function reservedSddCaseIds(documents) {
     const reserved = new Set();
@@ -93184,6 +93285,54 @@ function reservedSddCaseIds(documents) {
         }
     }
     return [...reserved].sort();
+}
+/** Only explicit definitions in admitted request/answer text establish new case identities. */
+function suppliedSddCaseIds(inputs, owners) {
+    const reserved = new Set(reservedSddCaseIds(owners));
+    const supplied = new Set();
+    const add = (id) => { if (CASE_ID.test(id) && !reserved.has(id))
+        supplied.add(id); };
+    for (const input of inputs) {
+        const lines = visible(input).split('\n');
+        for (let index = 0; index < lines.length; index++) {
+            const line = lines[index];
+            // Quoted and indented examples are not operative definitions.
+            if (/^(?: {4}|\t| {0,3}>)/u.test(line))
+                continue;
+            if (/^\s*\|/u.test(line)) {
+                const cells = (row) => row.trim().replace(/^\||\|$/gu, '').split('|').map(clean);
+                const header = cells(line);
+                const scenario = header.findIndex(cell => cell === 'Scenario' || cell === 'Assertion');
+                const separator = cells(lines[index + 1] ?? '');
+                if (header[0] !== 'Case ID' || scenario < 1 || separator.length !== header.length
+                    || !separator.every(cell => /^:?-{3,}:?$/u.test(cell)))
+                    continue;
+                index += 2;
+                while (index < lines.length && /^\s*\|/u.test(lines[index])) {
+                    const row = cells(lines[index]);
+                    if (row.length === header.length && row[scenario])
+                        add(row[0]);
+                    index++;
+                }
+                index--;
+            }
+            else {
+                const declaration = /^\s*(?:[-*+]\s+|\d+[.)]\s+)?([^:]+):\s*\S/u.exec(line);
+                if (declaration)
+                    add(clean(declaration[1]));
+            }
+        }
+    }
+    return [...supplied].sort();
+}
+/** References and renamed aliases cannot stand in for supplied inventory definitions. */
+function validateSuppliedSddCaseIds(markdown, supplied) {
+    if (!supplied.length)
+        return;
+    const defined = new Set(table(visible(markdown), 14, ['Case ID', 'Area', 'Requirements', 'Scenario'], 'case-identity').map(row => row[0]));
+    const observed = supplied.filter(id => defined.has(id)).length;
+    if (observed !== supplied.length)
+        fail('case-identity', { detail: 'case-identity', section: 14, expected: supplied.length, observed });
 }
 function validateSddDraftConsistency(markdown, owners, inventory, sddPath) {
     const source = visible(markdown);
@@ -116065,7 +116214,7 @@ function renderCatalog(catalog) {
     '# Product capability specification catalog',
     '',
     '> Generated from [`catalog.json`](./catalog.json). Do not edit this table by hand.',
-    '> Run `pnpm run generate:specifications` after changing catalog metadata.',
+    '> Regenerate this view after metadata changes using verified repository specification tooling.',
     '',
     'This catalog answers which product contract owns a capability and where its',
     'implementation, verification, workflow, and user-documentation evidence lives.',
@@ -116086,7 +116235,9 @@ function renderCatalog(catalog) {
     '   behavior or an architecture boundary changes.',
     '3. Use repository-relative paths in `catalog.json`; each path is validated and every',
     '   top-level product SDD must have exactly one capability owner.',
-    '4. Run `pnpm run validate:specifications` in local and CI validation.',
+    '4. Validate specification structure, catalog ownership/evidence, and this generated',
+    '   view with tooling verified for the selected repository. Command declarations',
+    '   and structural validation are not proof that product tests have executed.',
     '',
   ].join('\n');
 }
@@ -116156,7 +116307,7 @@ function main(argv = process.argv.slice(2), root = DEFAULT_ROOT) {
     return;
   }
   if (normalizeCheckoutLineEndings(current) !== rendered) {
-    console.error(`${CATALOG_MARKDOWN} is stale; run pnpm run generate:specifications.`);
+    console.error(`${CATALOG_MARKDOWN} is stale; regenerate it with this SDK entrypoint's --write option, then rerun validation.`);
     process.exitCode = 1;
     return;
   }

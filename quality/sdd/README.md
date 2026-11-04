@@ -80,3 +80,67 @@ The twelve-case CLI above remains the original campaign, not a claim that its
 unmodified setup reproduces this additional SCM/state history. The executable
 public regression suite for that state flow is
 `src/application/usecases/steps/issue/__tests__/pre_branch_sdd_gate_use_case.test.ts`.
+
+## Selected-source grounding and case fidelity (#858)
+
+This separate campaign exercises the actual SDD gate, draft workflow, query
+composition, immutable source view and native workspace validation. Ownership
+analysis and issue/SCM ports are controlled; it never creates a remote branch or
+publishes. It is optional contributor evidence, not a consumer command or a live
+provider dependency added to CI.
+
+The eight authored worlds and their exact Git objects are preserved separately
+from real consumer incident evidence. They cover genuine and absent scripts,
+package-manager mismatch, selected Python versus bootstrap Node source, unknown
+tooling, a valid command-free SDK outcome, exact provenance, and retention of
+eighteen supplied assertions and ninety-five prospective file operations. Those
+assertions/files are input data, not 113 distinct SDK tests. Thirteen pure
+identity-policy cases and six application repair/authorization/boundary cases
+complement the two portable native CLI regressions. Twelve pure link-assembly cases and four workflow/boundary cases cover host-derived navigation, literal filename identity, native existence checks, closed failures and the unchanged final size/repair limits. One derived-table representation case checks single code wrappers while preserving hidden/duplicate-slot rejection. See the 46-case inventory
+and traceability in [the grounding SDD](../../specs/sdd-draft-source-grounding.md).
+
+Assessment is explicit contributor review against each frozen case's intent,
+not keyword scoring or human approval. A native rejection fails the case. For
+the final candidate, all eight cases in each of three whole trials must be both
+native-valid and semantically accepted; incomplete or blocked results cannot
+pass. Retain every ordinary repair and failed cohort. Never combine favorable
+cases from different candidate revisions or add generation attempts. Inspect
+every supplied assertion and actual Path/Change operation for the fidelity case.
+A hash or count alone cannot establish semantic fidelity. Scoped acceptance does
+not certify every generated sentence, full command semantics, universal model
+accuracy or executed product acceptance.
+
+The recorded official platform runtime includes its external code-mode helper;
+its registry integrity, executable/helper signatures and all vendor hashes were
+verified. Earlier app-only pins omitted that helper and are retained as rejected
+runtime-limitation evidence. A single separately authorized diagnostic identified
+that omission. An offline complete-source payload proof later confirmed that the
+qualification queries contain only authored fictional source and the public SDK
+standard/template, with no consumer data or private account files. Neither proof
+claims capture of the full provider stdin.
+
+The historical coordinator is an audit artifact, not a turnkey command with
+portable local paths. To reproduce, use the recorded baseline SDK commit and
+installed repository prerequisites, reconstruct each fictional source from the
+retained object archive, and supply separate identical replicas for the three
+trials. Preserve both the bootstrap anchor and selected commit in the Python
+world. Keep expected verdicts outside the model source. Put the coordinator in
+the candidate checkout, configure its output namespace, local baseline SDK root
+and complete pinned provider executable explicitly, and run the declared whole
+baseline/candidate trials. The coordinator refuses to overwrite attempted
+trials and checks source/runtime hashes before and after each measured trial.
+A different provider/runtime/source revision is a new cohort, never continuation
+of the recorded one. Provider outputs may vary; no rerun guarantees a pass.
+
+File navigation in raw final-candidate responses can use the internal explicit-target
+assembly marker described in the SDD. To reconstruct accepted Markdown, derive
+the budget/traceability tables, then apply the recorded host file-link renderer
+with the selected publication path, and verify the accepted SHA-256. Ordinary
+valid Markdown remains unchanged and fully validated. This representation never
+authorizes a target or proves existence; the native immutable-source/proposed
+path checks run after assembly. Earlier complete cohorts that failed link math
+remain rejected, including the cohort with 8/8, 8/8 and 7/8 native acceptances.
+The final three whole trials must pass independently; no successful case from
+those earlier cohorts can be substituted into them.
+
+Every file-marker target has a literal operative Path/Change declaration. UI examples can therefore render navigation without supplying existence authority; native source/declaration validation remains the acceptance boundary.

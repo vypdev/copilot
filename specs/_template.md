@@ -298,6 +298,15 @@ Define:
 Include migration and troubleshooting documentation where applicable. Keep
 examples synchronized with implementation fixtures or contract tests.
 
+For generated drafts and appendices, also include the visible file inventory
+below. Replace each placeholder with a literal full repository-relative path
+and its verified operation. Path cells may use code formatting; put navigation
+links outside this table.
+
+| Path | Change |
+|---|---|
+| <actual repository-relative path> | <update, reference, or create> |
+
 ## 16. Acceptance scenarios
 
 1. Given `<state>`, when `<event>`, then `<observable product result>`.
@@ -344,8 +353,10 @@ behavior change.
 - [ ] User/setup/operator/contributor documentation is complete and discoverable.
 - [ ] Failure, partial success, retry, idempotency, security, and cleanup pass.
 - [ ] Required generated artifacts and repository validation commands pass.
-- [ ] `specs/catalog.json` evidence and `specs/CATALOG.md` are current and
-      `pnpm run validate:specifications` passes.
+- [ ] `specs/catalog.json` evidence and `specs/CATALOG.md` are current;
+      specification structure, ownership/evidence and generated-view consistency
+      pass the repository's verified specification tooling. State an unverified
+      invocation explicitly instead of assuming an installed project script.
 - [ ] No readiness-blocking decision remains unresolved.
 
 ## 20. References and decisions
