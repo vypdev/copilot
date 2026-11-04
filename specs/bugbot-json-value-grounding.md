@@ -34,8 +34,13 @@ result as JSON text and suggested `typing.cast(str, value)` in place of required
 serialization. Immutable source establishes an object-only constructor and an
 object-valued decode. A separately executed original primitive probe on four
 fictional payloads confirms the value remains a dict, serialization round trips,
-and the suggested cast preserves identity and fails the text boundary. This is
-not execution of the reporter's six product tests or whole backend suite.
+and the suggested cast preserves identity and fails the text boundary. A separate
+qualification on the exact head additionally runs the six requested consumer
+regressions with its immutable lock and Python 3.14.6: all pass. The complete codec
+round-trips all four date/instant and ordinary/restricted variants, while replacing
+only the reported expression in memory makes each raise the reported storage
+error. All 517 original files remain unchanged. This is not a whole backend suite
+or historical complete model replay.
 
 The original review used SDK `3e7ceea08e6131360e026937d1c0cc1b120472e0` and
 smart effort. The reporter's later unchanged-code review omitted the finding;
@@ -185,9 +190,9 @@ No production API scope, filesystem permission or credential changes occur.
 
 Record exact input/runner/probe/source/CLI hashes, actual interpreter, model,
 effort, all predictions, individual scores and predefined aggregate. Source
-hashes do not prove full provider stdin capture. Original reporter evidence,
-new original-primitive execution, authored runtime controls and controlled model
-trials must remain separate. Neither this sample nor aggregate success guarantees
+hashes do not prove full provider stdin capture. Original reporter evidence, the
+newly executed original primitive and selected consumer tests, authored runtime
+controls and controlled model trials must remain separate. Neither this sample nor aggregate success guarantees
 population accuracy or explains historical model internals.
 
 ## 13. Compatibility, rollout and rollback

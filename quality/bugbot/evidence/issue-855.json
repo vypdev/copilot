@@ -1305,7 +1305,7 @@
     "verificationBounds": 1,
     "languageSpecificCast": 1
   },
-  "limits": "Private consumer code is not copied into this corpus. Primitive source probe is separate from reporter-owned backend test claims. Reference verdicts and observed values are not actual model predictions.",
+  "limits": "No private consumer implementation is copied into SDK fixtures. Fresh original-head six tests/full-codec counterfactual, four-payload primitive probe, authored controls, reporter full-backend evidence and real model trials are separate measurements. Reference verdicts are not provider predictions.",
   "originalConsumer": {
     "head": "19ff35cb2cb2ceb4a0397901341f1089001cc619",
     "codecSha256": "adf60c10b464451f05c0f36fd6ae915fd0c773578f4b99908fa15baae43e5e54",
@@ -1349,9 +1349,150 @@
         "alreadyTextObjectSerializationRejected": true
       }
     ],
-    "historicalTests": "Reporter evidence only: six product tests and whole backend are not rerun by this correction.",
+    "historicalTests": "Fresh original-head selected six regressions and full-codec counterfactual are now independently executed below. Whole backend/frontend/historical full model review and consumer feature acceptance are not rerun.",
     "followupHead": "ed7cd14190d750846833cf1bb822988b628560da",
-    "followupMeaning": "Three production files and one test unchanged; manual false-positive dismissal is not a code fix or SDK correction."
+    "followupMeaning": "Three production files and one test unchanged; manual false-positive dismissal is not a code fix or SDK correction.",
+    "targetedExecution": {
+      "at": "2026-11-04T05:45:32.911344+00:00",
+      "startedAt": "2026-11-04T05:45:27.600987+00:00",
+      "head": "19ff35cb2cb2ceb4a0397901341f1089001cc619",
+      "python": "Python 3.14.6",
+      "uv": "uv 0.11.29 (Homebrew 2026-07-15 aarch64-apple-darwin)",
+      "lockSha256": "a69e94841c266e4a086f659de78e0733d6bf25c453d314c9556b5c7227839dc3",
+      "sourceFilesUnchanged": 517,
+      "cases": [
+        {
+          "name": "test_relative_records_preserve_full_original_initial_and_successor_facts[False-False]",
+          "class": "tests.backend.test_sqlite_relative_recurrence_records",
+          "seconds": "0.005"
+        },
+        {
+          "name": "test_relative_records_preserve_full_original_initial_and_successor_facts[False-True]",
+          "class": "tests.backend.test_sqlite_relative_recurrence_records",
+          "seconds": "0.003"
+        },
+        {
+          "name": "test_relative_records_preserve_full_original_initial_and_successor_facts[True-False]",
+          "class": "tests.backend.test_sqlite_relative_recurrence_records",
+          "seconds": "0.002"
+        },
+        {
+          "name": "test_relative_records_preserve_full_original_initial_and_successor_facts[True-True]",
+          "class": "tests.backend.test_sqlite_relative_recurrence_records",
+          "seconds": "0.003"
+        },
+        {
+          "name": "test_actual_source_cycle_survives_approval_and_closure_without_rewriting_slot_facts",
+          "class": "tests.backend.test_sqlite_relative_integrity",
+          "seconds": "0.071"
+        },
+        {
+          "name": "test_real_restore_retains_a_generated_successor_proof_without_recreating_its_task",
+          "class": "tests.backend.test_sqlite_relative_integrity",
+          "seconds": "0.245"
+        }
+      ],
+      "passed": 6,
+      "errors": 0,
+      "skipped": 0,
+      "logSha256": "046c751ab2cc78e96575e27e0ae1186784e7188fb1295b0beeaa25f721cd764d",
+      "scope": "Fresh selected six consumer regressions on immutable original source and locked dependencies. Not whole backend/frontend/full model review or complete consumer feature acceptance.",
+      "isolation": "One owned temporary archive SDK; no-config UV, fresh project env/cache/TMPDIR, allowlisted credential-free environment, no HOME override; source517files unchanged.",
+      "command": "uv run --no-sync --locked pytest tests/backend/test_sqlite_relative_recurrence_records.py::test_relative_records_preserve_full_original_initial_and_successor_facts tests/backend/test_sqlite_relative_integrity.py::test_actual_source_cycle_survives_approval_and_closure_without_rewriting_slot_facts tests/backend/test_sqlite_relative_integrity.py::test_real_restore_retains_a_generated_successor_proof_without_recreating_its_task --no-cov",
+      "runtime": {
+        "packages": {
+          "PyYAML": "6.0.3",
+          "Pygments": "2.21.0",
+          "annotated-doc": "0.0.5",
+          "annotated-types": "0.8.0",
+          "anyio": "4.15.1",
+          "ast_serialize": "0.13.1",
+          "certifi": "2026.10.23",
+          "click": "8.5.0",
+          "coverage": "7.17.0",
+          "domus-server": "0.0.0",
+          "domus-tooling": "0.0.0",
+          "fastapi": "0.162.0",
+          "grimp": "3.18",
+          "h11": "0.16.0",
+          "hatchling": "1.33.0",
+          "httpcore": "1.0.9",
+          "httpcore2": "2.16.0",
+          "httpx": "0.28.1",
+          "httpx2": "2.16.0",
+          "idna": "3.20",
+          "import-linter": "2.15",
+          "iniconfig": "2.3.1",
+          "librt": "0.16.0",
+          "markdown-it-py": "4.2.0",
+          "mdurl": "0.1.2",
+          "mypy": "2.4.1",
+          "mypy_extensions": "1.1.0",
+          "opentelemetry-api": "1.45.2",
+          "packaging": "26.3",
+          "pathspec": "1.1.1",
+          "pluggy": "1.7.0",
+          "pydantic": "2.14.2",
+          "pydantic_core": "2.50.2",
+          "pytest": "9.2.0",
+          "pytest-cov": "7.1.0",
+          "rich": "15.0.0",
+          "ruff": "0.17.3",
+          "starlette": "1.10.0",
+          "tomlkit": "0.15.2",
+          "trove-classifiers": "2026.9.21.13",
+          "truststore": "0.10.5",
+          "typing-inspection": "0.4.4",
+          "typing_extensions": "4.16.0",
+          "tzdata": "2026.6",
+          "uvicorn": "0.54.0",
+          "websockets": "17.4"
+        },
+        "python": "3.14.6",
+        "sqlite": "3.53.3"
+      }
+    },
+    "counterfactualExecution": {
+      "sourceSha256": "adf60c10b464451f05c0f36fd6ae915fd0c773578f4b99908fa15baae43e5e54",
+      "mutations": 1,
+      "mode": "Isolated in-memory module; no consumer source changed. Not a whole historical model replay.",
+      "observations": [
+        {
+          "timed": false,
+          "restricted": false,
+          "nestedCycleType": "dict",
+          "originalRoundTrip": true,
+          "counterfactualError": "invalid_recurrence_record"
+        },
+        {
+          "timed": false,
+          "restricted": true,
+          "nestedCycleType": "dict",
+          "originalRoundTrip": true,
+          "counterfactualError": "invalid_recurrence_record"
+        },
+        {
+          "timed": true,
+          "restricted": false,
+          "nestedCycleType": "dict",
+          "originalRoundTrip": true,
+          "counterfactualError": "invalid_recurrence_record"
+        },
+        {
+          "timed": true,
+          "restricted": true,
+          "nestedCycleType": "dict",
+          "originalRoundTrip": true,
+          "counterfactualError": "invalid_recurrence_record"
+        }
+      ],
+      "at": "2026-11-04T05:46:14.751361+00:00",
+      "head": "19ff35cb2cb2ceb4a0397901341f1089001cc619",
+      "sourceFilesUnchanged": 517,
+      "driverSha256": "ea2d884c58187ca1f44b8220316d804e35d05549d86a45b60815c25fa78cfa1c",
+      "scope": "Actual original complete codec across all4date/instant and ordinary/restricted source variants;4unchanged roundtrips and4matching harmful-suggestion failures. No production patch or full feature acceptance.",
+      "replacementSemantics": "Replace only the nested object serialization with the reported Python identity cast, in an isolated in-memory module."
+    }
   },
   "validation": {
     "jest": {
