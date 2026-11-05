@@ -408,8 +408,10 @@ durable retention; the writer's independent state remains authoritative.
 
 The application MUST snapshot source and permit when observing the visit. Keep
 one delivery active and one latest pending visit; replacement is disclosed as
-unconfirmed delivery. Never acquire new consent for an old queued visit or retry
-an unknown submission. Fresh capture reads are independently single-flight with
+unconfirmed delivery. The active drain owns the loop through the notification
+that empties the queue. A visit observed synchronously in that notification
+continues in the same drain. Never acquire new consent for an old queued visit
+or retry an unknown submission. Fresh capture reads are independently single-flight with
 one coalesced trailing read. Controller/credential changes, clear and disposal
 retire stale queued work. Old callbacks cannot republish permits or incompleteness
 in a newer generation. Native duplicate delivery returns its original observation
@@ -659,8 +661,12 @@ executors. Type and runtime imports MUST remain acyclic with no gate exceptions.
 A reviewed generated-history clear MUST own a closed current-operation projection,
 independent from the journal being erased. Capture only after the native plan has
 verified paused intent/policy, exact history generation/revision, source and idle
-writer. Invalid or unavailable previews create no current entry or ticket. The
-existing confirmation, permission and lease requirements remain mandatory.
+writer. Clear preparations, retained reviews and running confirmations share
+16 slots. Each preparation reserves a slot before native reads. Invalidation
+retires the preparation's authority while it keeps the slot until its reads
+settle. Admission transfers that slot to the retained review. Invalid or
+unavailable previews create no current entry or ticket. The existing
+confirmation, permission and lease requirements remain mandatory.
 
 ```text
 Verified preview → current intent (one optional diagnostics ticket for recents only)
@@ -1319,7 +1325,7 @@ upgrade or publication is implied.
 | Bounded writer/ticket ownership | 64 | Opt-in timing, cap/coalescing, expiry, unknown append identity, known-row reconciliation, clear/late-result races, primary-result isolation |
 | Production ownership and closed gateway | 40 | Same preference owner, lazy listener-first bootstrap, independent reads, native binding/editor/credential fences, plan-family isolation, private-context/storage failure, center-only notifications |
 | Native destination permits/producer | 20 | Known consent/epoch, irreversible retirement, native document/editor-observer/credential boundaries, duplicate/capacity/reentry/fault isolation |
-| Bounded destination client | 18 | Captured scope, no backfill, single flight/latest pending, uncertain delivery, context/epoch rollover and late replies |
+| Bounded destination client | 19 | Captured scope, no backfill, single flight/latest pending, empty-queue reentry, uncertain delivery, context/epoch rollover and late replies |
 | Actual navigation composition | 12 | Initial admitted view, accepted/canceled/stay/leave, observer, profile generalization/feature IDs, off/unknown consent, separate privacy queries and uncertainty UI |
 | Preference observation projection | 16 | Validated action/target, preflight versus submission, acknowledgement/readback, replay and unknown provenance |
 | Current-operation ownership | 24 | Eight lifetime/clock cases, six retention-isolation cases, four source boundaries and six replacement/reentry/disposal races |
@@ -1339,14 +1345,14 @@ upgrade or publication is implied.
 | Mounted compound operation view | 16 | Four complete locales plus twelve pending/partial/recovery/retirement/independent-read journeys |
 | Clear projection and progression | 32 | Closed primitive facts, sticky submission, immutable terminal semantics and missing-observation disclosure |
 | Actual clear lifecycle and effect owner | 32 | Synchronous reservation order, reentrant confirmation/inspection/cancel, canonical readback, primary/secondary failure isolation and source races |
-| Clear current/history boundaries | 16 | No diagnostics self-record, optional recents-clear diagnostics, exact ticket/epoch retirement, shared bounds and readonly metadata |
+| Clear current/history boundaries | 18 | No diagnostics self-record, optional recents-clear diagnostics, exact ticket/epoch retirement, shared preparation capacity, invalidation during a read and readonly metadata |
 | Mounted clear-operation view | 16 | Four complete locales plus twelve pending/partial/unknown/recovery/source/privacy/native-cancel journeys |
 | Helper snapshot and closed projection | 20 | Whitelist, bounded ring, unavailable-versus-empty, immutable detachment and private-field rejection |
 | Pre-open native source admission | 24 | Actual content call before hiding, sender/source-tree/generation/epoch/revision fences, reentry, invalidation and primary-opening isolation |
 | Bounded handoff and optional retention | 24 | Native options binding,8/5minute/clock/replacement/removal limits, at-most2 tickets, no backfill/retry, clear/unknown identity and notification races |
 | Helper metadata reader and mounted UI | 16 | Single flight/source retirement, unavailable settings, four complete locales, static headings, focus/disposal and independent reads |
 | Actual helper composition journeys | 16 | Content panel/shortcut, native gateway/open/created-tab, listener-first late install, missing snapshot, secondary fault and lifecycle integration |
-| **Total** | **1029** | No substitution for semantic H3/catalog coverage |
+| **Total** | **1032** | No substitution for semantic H3/catalog coverage |
 
 Count each case once. Pure branches and modified executable lines/branches100%,
 no exclusions/threshold weakening; keep root budgets. Request fixtures are not

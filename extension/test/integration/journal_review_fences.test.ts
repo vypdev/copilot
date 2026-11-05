@@ -70,6 +70,39 @@ it('bounds retained previews at16 including concurrently admitted readers', asyn
     expect(results.filter(result => result.state === 'preview')).toHaveLength(16); expect(results.filter(result => result.state === 'busy')).toHaveLength(1);
     expect(await f.reviews.preview('diagnostics', JOURNAL_OWNER)).toEqual({ state: 'busy' });
 });
+it('shares the clear budget across preparing, retained and running work before another native read', async () => {
+    const f = journalReviewsFixture();
+    await clearPreview(f, 'recents');
+    const ready = await clearPreview(f, 'diagnostics');
+    const read = f.get.getMockImplementation()!;
+    const release = deferred<void>();
+    f.get.mockClear().mockImplementation(async key => { await release.promise; return read(key); });
+    const running = f.reviews.confirm(ready.operationId, JOURNAL_OWNER);
+    const preparing = Array.from({ length: 14 }, () => f.reviews.preview('recents', JOURNAL_OWNER));
+    const overflow = f.reviews.preview('recents', JOURNAL_OWNER);
+    const started = f.get.mock.calls.length;
+    release.resolve();
+    expect(await running).toMatchObject({ state: 'observed-cleared' });
+    expect((await Promise.all(preparing)).every(result => result.state === 'preview')).toBe(true);
+    expect(await overflow).toEqual({ state: 'busy' });
+    expect(started).toBe(15);
+});
+it('keeps invalidated clear preparations reserved until their native reads settle', async () => {
+    const f = journalReviewsFixture();
+    const read = f.get.getMockImplementation()!;
+    const release = deferred<void>();
+    f.get.mockImplementation(async key => { await release.promise; return read(key); });
+    const preparing = Array.from({ length: 16 }, () => f.reviews.preview('diagnostics', JOURNAL_OWNER));
+    f.reviews.invalidate();
+    const overflow = f.reviews.preview('diagnostics', JOURNAL_OWNER);
+    const started = f.get.mock.calls.length;
+    release.resolve();
+    expect((await Promise.all(preparing)).every(result => result.state === 'stale')).toBe(true);
+    expect(await overflow).toEqual({ state: 'busy' });
+    expect(started).toBe(16);
+    expect(f.store.execute).not.toHaveBeenCalled();
+    expect(await f.reviews.preview('diagnostics', JOURNAL_OWNER)).toMatchObject({ state: 'preview' });
+});
 it('rechecks writer availability after reading and rejects missing/colliding/throwing identifiers', async () => {
     const f = journalReviewsFixture(); f.ports.idle.mockReturnValueOnce(true).mockReturnValueOnce(false);
     expect(await f.reviews.preview('diagnostics', JOURNAL_OWNER)).toEqual({ state: 'busy' });

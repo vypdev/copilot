@@ -36,7 +36,7 @@ export class VisitDelivery {
             this.queued = value;
             if (replaced) this.dropped = Math.min(Number.MAX_SAFE_INTEGER, this.dropped + 1);
         } else {
-            this.active = value; this.running = Promise.resolve().then(() => this.drain());
+            this.active = value; this.running ??= Promise.resolve().then(() => this.drain());
         }
         this.publish();
     }

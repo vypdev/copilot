@@ -62,3 +62,30 @@ it('disposal reentering replacement assessment cannot restore queued work behind
     f.ports.relevant.mockImplementation(() => { f.queue.stop(); return true; }); f.queue.observe(value(3)); gate.resolve({ state: 'observed' }); await f.queue.flush();
     expect(f.ports.request).toHaveBeenCalledOnce(); expect(f.ports.changed).toHaveBeenCalledTimes(notifications); expect(f.queue.view.pending).toBe(0);
 });
+
+it('keeps the active drain when an empty-queue callback synchronously observes the next visit', async () => {
+    const f = fixture();
+    const entered = deferred<void>();
+    const release = deferred<unknown>();
+    f.ports.request.mockImplementation(async message => {
+        if (message.sequence === 1) return { state: 'observed' };
+        entered.resolve();
+        return release.promise;
+    });
+    let observed = false;
+    f.ports.changed.mockImplementation(view => {
+        if (view.pending !== 0 || observed) return;
+        observed = true;
+        f.queue.observe(value(2));
+    });
+    f.queue.observe(value());
+    const draining = f.queue.flush();
+    await entered.promise;
+    await Promise.resolve();
+    const owner = f.queue.flush();
+    release.resolve({ state: 'observed' });
+    await Promise.all([draining, owner]);
+    expect(f.ports.request.mock.calls.map(([message]) => message.sequence)).toEqual([1, 2]);
+    expect(owner).toBe(draining);
+    expect(f.queue.view).toEqual({ pending: 0, dropped: 0, incomplete: false });
+});

@@ -130,7 +130,9 @@ explanation must not relabel any of them as an emergency selected by the user.
 
 The content projection carries only the independent worker condition, document
 availability and generic scope: empty, active, retained, inactive, unverified or
-unknown. An active source requires current verified applicability; an unverified
+unknown. A readable document uses the localized document-read value, and its
+separate scope row shows whether the preferences apply. An active source requires
+current verified applicability; an unverified
 source cannot enable preferences. A cold positive record for the claimed numeric
 repository may conservatively veto restoration without reading a credential or
 claiming that the account is verified. A different verified page account, numeric

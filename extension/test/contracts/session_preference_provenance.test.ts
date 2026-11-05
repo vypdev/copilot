@@ -54,3 +54,15 @@ it('an unknown current preference operation explains unavailable native scope wi
     const view = runtimeProvenanceView(value, 'en'); expect(view.rows).toContainEqual({ label: own.scope, value: common.unknown });
     expect(view.rows).toContainEqual({ label: own.document, value: common.natives['not-checked'] }); expect(value.provenance.restriction.native.emergency).toBe(false);
 });
+
+it.each(['empty', 'inactive'] as const)('a readable session document with %s scope reports read status and applicability separately', scope => {
+    const restriction = { ...clearNativeRestriction(), session: { worker: 'clear', native: 'ready', scope, restricted: false } as const };
+    const value = runtimeConfiguration(DEFAULT_SETTINGS, CONFIG, null, 0, restriction)!;
+    const messages = { en: 'Document read', es: 'Documento consultado', fr: 'Document consulté', pt: 'Documento consultado', unknown: 'Document read' };
+    for (const [locale, documentRead] of Object.entries(messages)) {
+        const copy = sessionPreferenceProvenanceCopy(locale);
+        const view = runtimeProvenanceView(value, locale);
+        expect(view.rows).toContainEqual({ label: copy.document, value: documentRead });
+        expect(view.rows).toContainEqual({ label: copy.scope, value: copy.scopes[scope] });
+    }
+});

@@ -23,12 +23,14 @@ interface Clear {
     readonly generation: number; readonly fence: SettingsOwnerFence;
     trace: ClearOperationTrace | null;
 }
+type Bound = Pick<Clear, 'owner' | 'createdAt' | 'expiresAt' | 'generation' | 'fence'>;
 interface Completed extends Omit<Clear, 'trace'> { readonly result: JournalClearOutcome }
 interface Running { readonly record: Clear; readonly promise: Promise<JournalClearOutcome> }
 const TTL = 300_000;
 
 /** Fixed-scope reviewed deletion; independent from preference writes and from generated-data admission. */
 export class JournalReviews {
+    private readonly preparing = new Set<Bound>();
     private readonly pending = new Map<string, Clear>();
     private readonly completed = new Map<string, Completed>();
     private readonly running = new Map<string, Running>();
@@ -52,7 +54,7 @@ export class JournalReviews {
         } catch { return null; }
     }
     private idle(kind: JournalKind): boolean { try { return this.ports.idle(kind) === true; } catch { return false; } }
-    private current(record: Pick<Clear, 'owner' | 'createdAt' | 'expiresAt' | 'generation' | 'fence'>): boolean {
+    private current(record: Bound): boolean {
         const now = this.time(); const fence = this.fence(record.owner);
         return now !== null && now >= record.createdAt && now < record.expiresAt && record.generation === this.generation
             && fence !== null && fence.controllerEpoch === record.fence.controllerEpoch && fence.credentialEpoch === record.fence.credentialEpoch;
@@ -75,9 +77,11 @@ export class JournalReviews {
         if (!fence) return { state: 'denied' };
         if (now === null || !natural(now + TTL)) return { state: 'unavailable' };
         this.prune(now);
-        if (this.pending.size + this.running.size >= 16 || !this.idle(kind)) return { state: 'busy' };
-        const bound = { owner, fence, createdAt: now, expiresAt: now + TTL, generation: this.generation };
+        if (this.preparing.size + this.pending.size + this.running.size >= 16) return { state: 'busy' };
+        const bound: Bound = { owner, fence, createdAt: now, expiresAt: now + TTL, generation: this.generation };
+        this.preparing.add(bound);
         try {
+            if (!this.idle(kind)) return { state: 'busy' };
             const privacy = await this.paused(kind);
             if (!this.current(bound)) return { state: 'stale' };
             if ('issue' in privacy) return { state: privacy.issue };
@@ -90,18 +94,20 @@ export class JournalReviews {
             if (!this.current(bound)) return { state: 'stale' };
             if ('issue' in rechecked) return { state: rechecked.issue };
             if (rechecked.revision !== privacy.revision || rechecked.policyRevision !== privacy.policyRevision) return { state: 'stale' };
-            if (!this.idle(kind) || this.pending.size + this.running.size >= 16) return { state: 'busy' };
+            if (!this.idle(kind)) return { state: 'busy' };
             const id = this.ports.identifier();
             if (!settingsOperationId(id) || this.pending.has(id) || this.running.has(id) || this.completed.has(id)) return { state: 'unavailable' };
             if (!this.current(bound)) return { state: 'stale' };
             const retained: Clear = { ...bound, kind, epoch: result.snapshot.epoch, revision: result.snapshot.revision,
                 settingsRevision: privacy.revision, policyRevision: privacy.policyRevision, trace: null };
+            this.preparing.delete(bound);
             this.pending.set(id, retained);
             try { retained.trace = this.ports.observe?.(owner, kind, () => this.current(bound)) ?? null; } catch { /* Observation cannot reject an admitted clear plan. */ }
             if (!this.current(bound)) { if (this.pending.get(id) === retained) this.pending.delete(id); reportClear(retained.trace, 'blocked'); return { state: 'stale' }; }
             return deepFreeze({ state: 'preview', operationId: id, kind, epoch: result.snapshot.epoch,
                 revision: result.snapshot.revision, policyRevision: privacy.policyRevision, entries: result.snapshot.entries.length, expiresAt: bound.expiresAt });
         } catch { return { state: 'unavailable' }; }
+        finally { this.preparing.delete(bound); }
     }
     confirm(id: string, owner: string): Promise<JournalClearOutcome> {
         const admitted = this.admit(id, owner);

@@ -25,7 +25,7 @@ export function runtimeProvenanceView(configuration: RuntimeConfiguration | null
     if (r.retainedScope) rows.push({ label: copy.retained, value: copy.yes });
     const temporary = sessionPreferenceProvenanceCopy(locale); const session = r.session;
     rows.push({ label: temporary.worker, value: copy.workers[session.worker] },
-        { label: temporary.document, value: session.native === 'ready' ? copy.yes : copy.natives[session.native] },
+        { label: temporary.document, value: session.native === 'ready' ? temporary.documentRead : copy.natives[session.native] },
         { label: temporary.scope, value: session.scope === null ? copy.unknown : temporary.scopes[session.scope] });
     return deepFreeze({ ...common, summary: configuration.settings.paused ? copy.restricted : copy.available, rows,
         scopes: (['account', 'organization', 'repository', 'session'] as const).map(key => ({ label: copy[key], value: p.scope[key] ? copy.scopeKnown : copy.scopeUnknown })),
