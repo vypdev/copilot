@@ -128,7 +128,7 @@ function buildCoverageBlock(
                 `retained=${source.itemsRetained}`,
                 ...(source.omittedItems > 0 ? [`omitted=${source.omittedItems}`] : []),
                 ...(source.truncatedItems > 0 ? [`truncated=${source.truncatedItems}`] : []),
-                ...(source.providerLimitReached ? ['provider page limit reached; additional older records are uncounted'] : []),
+                ...(source.providerLimitReached ? ['provider page limit reached'] : []),
             ];
             return `- ${source.source}: ${details.join(', ')}`;
         });

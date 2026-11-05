@@ -42295,7 +42295,7 @@ const ENGLISH_MESSAGES = Object.freeze({
     'bugbot.coverage.retained': 'retained={count}',
     'bugbot.coverage.omitted': 'omitted={count}',
     'bugbot.coverage.truncated': 'truncated={count}',
-    'bugbot.coverage.providerLimit': 'provider page limit reached; additional older records are uncounted',
+    'bugbot.coverage.providerLimit': 'provider page limit reached',
     'bugbot.snapshot.currentStatus': 'Current status',
     'bugbot.snapshot.partial': 'Overall coverage is partial; this snapshot does not prove that all of its findings are resolved.',
     'bugbot.snapshot.unknown': Object.freeze({ one: 'The state of {count} finding from this review could not be verified.', other: 'The state of {count} findings from this review could not be verified.' }),
@@ -42385,7 +42385,7 @@ const SPANISH_MESSAGES = Object.freeze({
     'bugbot.coverage.retained': 'conservados={count}',
     'bugbot.coverage.omitted': 'omitidos={count}',
     'bugbot.coverage.truncated': 'truncados={count}',
-    'bugbot.coverage.providerLimit': 'se alcanzó el límite de páginas del proveedor; los registros anteriores adicionales no están contabilizados',
+    'bugbot.coverage.providerLimit': 'se alcanzó el límite de páginas del proveedor',
     'bugbot.snapshot.currentStatus': 'Estado actual',
     'bugbot.snapshot.partial': 'La cobertura global es parcial; esta instantánea no demuestra que todos sus hallazgos estén resueltos.',
     'bugbot.snapshot.unknown': Object.freeze({ one: 'No se pudo verificar el estado de {count} hallazgo de esta revisión.', many: 'No se pudo verificar el estado de {count} hallazgos de esta revisión.', other: 'No se pudo verificar el estado de {count} hallazgos de esta revisión.' }),
@@ -71067,7 +71067,7 @@ function buildCoverageBlock(context, partition) {
             `retained=${source.itemsRetained}`,
             ...(source.omittedItems > 0 ? [`omitted=${source.omittedItems}`] : []),
             ...(source.truncatedItems > 0 ? [`truncated=${source.truncatedItems}`] : []),
-            ...(source.providerLimitReached ? ['provider page limit reached; additional older records are uncounted'] : []),
+            ...(source.providerLimitReached ? ['provider page limit reached'] : []),
         ];
         return `- ${source.source}: ${details.join(', ')}`;
     });
@@ -71825,7 +71825,7 @@ async function loadBugbotContext(request, ports, resolvedPreflight, reviewSource
         });
     }
     if (canonicalPullRequest) {
-        const selectedNumber = canonicalPullRequest.number;
+        const { number: selectedNumber, headSha } = canonicalPullRequest;
         tasks.push(async () => {
             const result = await ports.listPullRequestReviewComments(selectedNumber);
             return { kind: "comments", value: [...result.value], coverage: result.coverage };
@@ -71833,7 +71833,7 @@ async function loadBugbotContext(request, ports, resolvedPreflight, reviewSource
             const result = await ports.listPullRequestReviewThreadStates(selectedNumber);
             return { kind: "threads", value: result.value, coverage: result.coverage };
         }, async () => {
-            const result = await ports.getReviewDiffSnapshot(selectedNumber);
+            const result = await ports.getReviewDiffSnapshot(selectedNumber, headSha);
             return { kind: "diff", value: result.value, coverage: result.coverage };
         });
     }
@@ -71881,7 +71881,7 @@ async function loadBugbotContext(request, ports, resolvedPreflight, reviewSource
         if (!(0, bugbot_framed_identity_policy_1.sameBugbotFramedPullRequest)(canonicalPullRequest, current))
             throw new framed_review_1.BugbotReviewCompletenessError('identity');
         canonicalPullRequest = current;
-        const pinnedRead = await ports.getReviewDiffSnapshot(current.number);
+        const pinnedRead = await ports.getReviewDiffSnapshot(current.number, current.headSha);
         framedCoverage = pinnedRead.coverage;
         framedSource = await reviewSource.readCompleteSource(current, pinnedRead.value, pinnedRead.coverage.status === 'complete', request.ignorePatterns);
         if (!(0, bugbot_framed_identity_policy_1.bugbotFramedSourceMatchesPullRequest)(framedSource, canonicalPullRequest))
@@ -94035,6 +94035,10 @@ const pull_request_review_error_metadata_1 = __nccwpck_require__(54354);
 const logger_1 = __nccwpck_require__(91151);
 const github_pagination_policy_1 = __nccwpck_require__(44812);
 const application_error_1 = __nccwpck_require__(75999);
+const git_object_id_1 = __nccwpck_require__(88623);
+const GITHUB_PULL_REQUEST_FILES_PER_PAGE = 100;
+// https://docs.github.com/en/rest/pulls/pulls#list-pull-requests-files
+const GITHUB_PULL_REQUEST_FILE_LIMIT = 3000;
 class PullRequestChangesRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
@@ -94048,40 +94052,64 @@ class PullRequestChangesRepository {
                 throw (0, pull_request_review_error_metadata_1.toPullRequestReviewOperationError)(error, 'list-files');
             }
         };
-        this.getBoundedBugbotReviewDiffSnapshot = async (owner, repository, pullNumber, token) => {
+        this.getBoundedBugbotReviewDiffSnapshot = async (owner, repository, pullNumber, token, expectedHeadSha) => {
             const octokit = this.githubClient.getClient(token);
+            const target = { owner, repo: repository, pull_number: pullNumber };
             try {
+                const { data: before } = await octokit.rest.pulls.get(target);
+                const headSha = (0, git_object_id_1.canonicalGitObjectId)(before.head?.sha);
+                const baseSha = (0, git_object_id_1.canonicalGitObjectId)(before.base?.sha);
+                const changedFiles = before.changed_files;
+                if (!headSha || !baseSha || changedFiles === undefined || !Number.isSafeInteger(changedFiles) || changedFiles < 0) {
+                    throw new Error('GitHub did not return a verifiable pull request file count and revision.');
+                }
+                if (expectedHeadSha !== undefined && headSha !== expectedHeadSha) {
+                    throw new Error('The pull request head changed before its diff was read.');
+                }
                 const files = [];
                 let pagesFetched = 0;
-                let limitReached = false;
-                for (let page = 1; page <= 10; page += 1) {
+                const fileLimit = Math.min(changedFiles, GITHUB_PULL_REQUEST_FILE_LIMIT);
+                const pageLimit = Math.ceil(fileLimit / GITHUB_PULL_REQUEST_FILES_PER_PAGE);
+                for (let page = 1; page <= pageLimit; page += 1) {
                     const response = await octokit.rest.pulls.listFiles({
-                        owner,
-                        repo: repository,
-                        pull_number: pullNumber,
-                        per_page: 100,
+                        ...target,
+                        per_page: GITHUB_PULL_REQUEST_FILES_PER_PAGE,
                         page,
                     });
                     const records = (0, github_pagination_policy_1.requireArrayPage)(response.data, 'pull request files');
+                    if (records.length > GITHUB_PULL_REQUEST_FILES_PER_PAGE || records.length > fileLimit - files.length) {
+                        throw new Error('GitHub returned more pull request files than expected.');
+                    }
                     pagesFetched += 1;
                     files.push(...records);
-                    if (records.length < 100)
+                    if (records.length < GITHUB_PULL_REQUEST_FILES_PER_PAGE)
                         break;
-                    if (page === 10)
-                        limitReached = true;
                 }
+                // GitHub's files endpoint takes a PR number, so verify that pagination
+                // did not cross an observed head, base or file-count change.
+                const { data: after } = await octokit.rest.pulls.get(target);
+                if ((0, git_object_id_1.canonicalGitObjectId)(after.head?.sha) !== headSha || (0, git_object_id_1.canonicalGitObjectId)(after.base?.sha) !== baseSha
+                    || after.base?.ref !== before.base?.ref || after.changed_files !== changedFiles) {
+                    throw new Error('The pull request revision or file count changed while its diff was read.');
+                }
+                if (new Set(files.map(file => file.filename)).size !== files.length) {
+                    throw new Error('GitHub returned duplicate paths while listing pull request files.');
+                }
+                const omittedItems = changedFiles - files.length;
+                const providerLimitReached = changedFiles > GITHUB_PULL_REQUEST_FILE_LIMIT
+                    && files.length === GITHUB_PULL_REQUEST_FILE_LIMIT;
                 return {
                     snapshot: PullRequestChangesRepository.toSnapshot(files),
                     coverage: {
                         source: 'diff',
-                        status: limitReached ? 'partial' : 'complete',
+                        status: omittedItems > 0 ? 'partial' : 'complete',
                         pagesFetched,
                         itemsFetched: files.length,
                         itemsRetained: files.length,
-                        omittedItems: 0,
+                        omittedItems,
                         truncatedItems: 0,
-                        limitReached,
-                        ...(limitReached ? { providerLimitReached: true } : {}),
+                        limitReached: providerLimitReached,
+                        ...(providerLimitReached ? { providerLimitReached: true } : {}),
                     },
                 };
             }
@@ -105408,8 +105436,8 @@ class BugbotScmPortFactory {
                 const result = await this.reviewThreads.listBugbotPullRequestReviewThreadStatesBounded(owner, repository, pullRequestNumber, token);
                 return { value: result.states, coverage: result.coverage };
             },
-            getReviewDiffSnapshot: async (pullRequestNumber) => {
-                const result = await this.changes.getBoundedBugbotReviewDiffSnapshot(owner, repository, pullRequestNumber, token);
+            getReviewDiffSnapshot: async (pullRequestNumber, expectedHeadSha) => {
+                const result = await this.changes.getBoundedBugbotReviewDiffSnapshot(owner, repository, pullRequestNumber, token, expectedHeadSha);
                 return { value: result.snapshot, coverage: result.coverage };
             },
             getPullRequestHeadSha: (pullRequestNumber) => this.changes.getPullRequestHeadSha(owner, repository, pullRequestNumber, token),

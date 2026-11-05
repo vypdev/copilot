@@ -110,8 +110,14 @@ or permission expansion is needed.
 
 ### Source-bound large reviews
 
-Ordinary adapters retain their existing behavior. To support the large framed
-profile, a custom gateway additionally supplies `reviewSource.readCompleteSource`
+Bugbot passes the selected head SHA as the optional second argument to
+`context.getReviewDiffSnapshot`. Gateways that read a mutable PR diff can use
+that argument to verify the revision and report coverage from the full
+changed-file inventory. Existing gateway implementations can continue to
+accept only the PR number.
+
+To support the large framed profile, a custom gateway additionally supplies
+`reviewSource.readCompleteSource`
 and `context.getSourceBoundPullRequest`. The latter returns the complete current
 PR identity, including the separately queried live target branch `baseRefSha`,
 base ref/comparison SHA, head repository/ref/SHA and native changed-file count.

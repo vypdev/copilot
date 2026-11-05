@@ -459,9 +459,14 @@ identifier invented in its response.
 
 Bugbot's status card contains a context-coverage section. `complete` means every
 applicable bounded source finished without reaching a fixed cap. `partial`
-means the run retained a deterministic subset—for example the newest 200
-comments, newest 200 thread records, or first 1,000 diff files. The per-prompt
-diff character budget does **not** omit later files: Bugbot splits every
+means the run retained a subset, such as the newest 200 comments or thread
+records. For the diff, GitHub can return up to 3,000 changed files. If files
+are missing, the status card reports the omitted count and Bugbot withholds
+the complete-review signal. At GitHub's ceiling a card might show
+`diff: partial; retained=3,000, omitted=90, provider page limit reached`.
+Split a PR that exceeds the ceiling to review every file.
+
+To stay within the per-prompt character budget, Bugbot splits every
 non-ignored provider patch into bounded fragments, reviews every partition for
 the same head SHA with at most two concurrent reviewer calls, verifies each
 partition attestation, and aggregates once before publication. Large patches

@@ -59,9 +59,13 @@ This page describes the **internal flow** of Bugbot: how detection runs, how the
    wrappers, metadata, separators and the omission notice share the total cap. Reaching
    a fixed non-diff context cap produces explicit **partial coverage**. The
    per-prompt diff cap creates another partition instead of omitting changed
-   patches. GitHub's 1,000-file enumeration cap still produces partial coverage
-   because files the provider did not enumerate cannot be assigned. A provider
-   error instead aborts before the agent or any finding mutation.
+   patches. Bugbot reads up to 3,000 changed files in 100-file pages, the
+   [GitHub REST endpoint limit](https://docs.github.com/en/rest/pulls/pulls#list-pull-requests-files).
+   It verifies the PR revision and changed-file count before and after the read.
+   If GitHub supplies fewer paths than the reported count, coverage is partial
+   and shows how many files are missing. A failed page or changed revision
+   aborts before the agent or any finding mutation. Recheck the current revision
+   after a transient failure, or split a PR that exceeds the endpoint limit.
 
 3. **Build and execute the review plan:** For a canonical PR, the action issues
    one read-only analysis request per diff partition, with at most two requests

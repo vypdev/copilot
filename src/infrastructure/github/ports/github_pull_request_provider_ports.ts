@@ -14,7 +14,7 @@ export interface GithubPullRequestChangesClient {
       ): Promise<{ data: GithubPullRequestFile[] }>;
       get(
         parameters: Record<string, unknown>,
-      ): Promise<{ data: { head?: { sha?: string } } }>;
+      ): Promise<{ data: { head?: { sha?: string }; base?: { sha?: string; ref?: string }; changed_files?: number } }>;
     };
   };
 }
