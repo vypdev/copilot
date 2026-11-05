@@ -1352,7 +1352,10 @@ upgrade or publication is implied.
 | Bounded handoff and optional retention | 24 | Native options binding,8/5minute/clock/replacement/removal limits, at-most2 tickets, no backfill/retry, clear/unknown identity and notification races |
 | Helper metadata reader and mounted UI | 16 | Single flight/source retirement, unavailable settings, four complete locales, static headings, focus/disposal and independent reads |
 | Actual helper composition journeys | 16 | Content panel/shortcut, native gateway/open/created-tab, listener-first late install, missing snapshot, secondary fault and lifecycle integration |
-| **Total** | **1032** | No substitution for semantic H3/catalog coverage |
+| Native pause operation observations (section 6.14) | 64 | Closed facts and redaction, native ordering and reentry, source and retention, gateway lifecycle and readonly disclosure |
+| Native pause authoring and recovery (section 6.15) | 160 | Reply bounds, review and retirement races, native policy and lifecycle, mounted authoring, composed routes and local loader |
+| Effective-state and runtime restriction provenance (section 6.16) | 160 | Native ordering, all-source resolution, redacted configuration, inspection boundaries, composition races and paused controls |
+| **Total** | **1416** | All listed allocations and the separate semantic H3 and product catalog gates |
 
 Count each case once. Pure branches and modified executable lines/branches100%,
 no exclusions/threshold weakening; keep root budgets. Request fixtures are not
