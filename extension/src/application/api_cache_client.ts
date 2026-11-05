@@ -27,9 +27,8 @@ export class ApiCacheClient {
     }
     async preview(): Promise<void> {
         if (this.stopped || this.held || !this.ports.canReview() || this.retained && ['preview', 'not-submitted'].includes(this.value.status!)) return;
-        const generation = this.generation; const prior = this.retained;
-        const unresolved = this.value.status !== 'cleared' && this.value.status !== 'cancelled' && this.value.status !== 'expired';
-        this.retained = null;
+        const generation = this.generation;
+        if (this.value.status === 'cleared' || this.value.status === 'cancelled' || this.value.status === 'expired') this.retained = null;
         this.publish({ phase: 'reviewing', open: true });
         if (!this.current(generation)) return;
         const result = await this.request({ method: 'center.cache.preview' });
@@ -37,8 +36,7 @@ export class ApiCacheClient {
         if (result?.state === 'preview' && this.fresh(result)) {
             this.retained = result; this.publish({ phase: 'idle', status: 'preview' });
         } else {
-            // Only an explicit refusal certifies that no new review replaced the prior selector.
-            if (result?.state === 'busy' && unresolved) this.retained = prior;
+            // An incomplete replacement cannot supersede an unresolved operation's selector.
             this.publish({ phase: 'idle', status: result && result.state !== 'preview' ? result.state : 'unavailable' });
         }
     }

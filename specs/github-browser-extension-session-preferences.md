@@ -271,13 +271,13 @@ registered H2 test application as engineering rollback, never H3 acceptance.
 | Native IO and restriction guard | 36 | Ack/readback independence, reentry, queue, unknown, adoption |
 | Mounted client/UX/localization | 32 | Draft retention, stale source, clear, keyboard, four locales |
 | Actual composition/restart/admission | 20 | Cold pause, verified application, worker recreation, redaction, no extra HTTP |
-| **Total** | **160** | Locale clones and reruns do not substitute for distinct risks |
+| **Session-preferences subtotal** | **160** | Locale clones and reruns do not substitute for distinct risks |
 
 Keep every prior regression. Require100% new executable lines, branches,
 functions and statements, strict changed-line coverage without partials, and no
-extension skips. Use deterministic native ports, clocks and IDs. Full H3 still
-requires source-bound Chrome/Firefox/Safari journeys and its independent human
-acceptance budget; deterministic tests are not evidence of human usability.
+extension skips. Use deterministic native ports, clocks and IDs. H3 acceptance
+also requires the [owning cumulative risk ledger](github-browser-extension-control-center-h3.md#cumulative-risk-budget),
+source-bound Chrome/Firefox/Safari journeys and the human acceptance budget.
 
 ## 15. Documentation
 
@@ -335,7 +335,8 @@ H3 evidence and current-head remote review/Codecov after the entire milestone.
 ## 19. Definition of Done
 
 - [ ] Every acceptance scenario has meaningful executable evidence.
-- [ ]160-case risk budget, all previous regressions and full coverage pass.
+- [ ] The 160 session-preferences cases, the cumulative H3 risk ledger, prior
+      regressions and full coverage pass.
 - [ ] Source/role/epoch/CAS/guard/readback and privacy gates cannot be weakened.
 - [ ] Reviewed four-locale native journey and complete docs are implemented.
 - [ ] Three-target packages, architecture, specifications and Graphify pass.

@@ -16,7 +16,10 @@ export function parseProgressPartitionReceipt(response: unknown, part: ProgressD
 }
 
 function prefix(diff: Partitioned): string {
-    return JSON.stringify({ kind: 'complete-framed-partition-analysis', protocol: diff.protocol,
+    const { requiredPaths: _requiredPaths, ...protocolIdentity } = diff.protocol!;
+    // Immutable analysis already carries the complete path dictionary.
+    const protocol = protocolIdentity.version === 'immutable-tree-v1' ? protocolIdentity : diff.protocol;
+    return JSON.stringify({ kind: 'complete-framed-partition-analysis', protocol,
         sources: diff.partitions.map(part => ({ requestId: part.id, sourceIdentity: part.sourceIdentity })) }).slice(0, -1) + ',"analysis":';
 }
 

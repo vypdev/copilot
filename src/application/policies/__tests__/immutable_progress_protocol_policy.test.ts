@@ -7,8 +7,8 @@ let original:Multipart;
 beforeAll(async()=>{const result=await inventoryFixture({},addedFiles(600)).read();if(result.kind!=='partitioned')throw Error();original=result;});
 const clone=():any=>JSON.parse(JSON.stringify(original));
 const bound=():Multipart=>bindProgressEvidence(original,'issue','scope','en-US') as Multipart;
-const receipts=(diff:Multipart,prose='Source.')=>diff.partitions.map(part=>parseProgressPartitionReceipt({outputLocale:'en-US',partitionId:part.id,
-    files:part.units!.map(unit=>({unitId:unit.id,path:unit.path,implemented:prose,remaining:prose}))},part,'en-US',600));
+const receipts=(diff:Multipart,prose='Source.',limit=600)=>diff.partitions.map(part=>parseProgressPartitionReceipt({outputLocale:'en-US',partitionId:part.id,
+    files:part.units!.map(unit=>({unitId:unit.id,path:unit.path,implemented:prose,remaining:prose}))},part,'en-US',limit));
 
 function reframe(edit:(diff:any)=>void):()=>unknown {
     const diff=clone();edit(diff);
@@ -37,8 +37,31 @@ describe('complete immutable source and receipt protocol', () => {
     it('binds new-profile request identity to the target locale', () => { const other=bindProgressEvidence(original,'issue','scope','es-ES') as Multipart;expect(other.partitions[0].id).not.toBe(bound().partitions[0].id); });
     it('reserves at least sixteen code points per facts field', () => { expect(framedProgressFactLimit(bound(),384000)).toBeGreaterThanOrEqual(16); });
     it('rejects inadequate aggregate capacity before model admission', () => { expect(()=>framedProgressFactLimit(bound(),1000)).toThrow(); });
-    it('projects validated exact-path facts into compact explicit unit tuples', () => { const d=bound(),text=aggregateProgressReceipts(d,receipts(d),384000);const final=JSON.parse(text);expect(final.analysis.kind).toBe('complete-immutable-tree-analysis-v1');expect(final.analysis.facts).toHaveLength(600);expect(final.analysis.assignments[0]).toEqual([d.partitions[0].units![0].id,0]);expect(text).not.toContain('recoveredContent'); });
-    it('admits worst-case JSON escaping within the preflight facts budget', () => { const d=bound(),limit=framedProgressFactLimit(d,384000),text=aggregateProgressReceipts(d,receipts(d,'\u0001'.repeat(limit)),384000);expect(Buffer.byteLength(text)).toBeLessThanOrEqual(384000); });
+    it('projects the complete inventory once and binds every tuple to its exact returned path', () => {
+        const diff = bound(), values = receipts(diff);
+        const reordered = values.map(receipt => ({ ...receipt, files: [...receipt.files].reverse() }));
+        const text = aggregateProgressReceipts(diff, reordered, 384000);
+        const { analysis, protocol, sources } = JSON.parse(text);
+        expect(analysis.kind).toBe('complete-immutable-tree-analysis-v1');
+        expect(analysis.format.facts).toEqual(['unitId', 'requiredPathIndex', 'implemented', 'remaining']);
+        expect(analysis.requiredPaths).toEqual(diff.protocol!.requiredPaths);
+        expect(protocol.requiredPaths).toBeUndefined();
+        expect(protocol.manifestDigest).toBe(diff.protocol!.manifestDigest);
+        expect(sources.map((source: { requestId: string }) => source.requestId)).toEqual(values.map(receipt => receipt.requestId));
+        expect(analysis.facts.map(([unitId, index, implemented, remaining]: [string, number, string, string]) =>
+            ({ unitId, path: analysis.requiredPaths[index], implemented, remaining }))).toEqual(reordered.flatMap(receipt => receipt.files));
+        expect(text).not.toContain('recoveredContent');
+    });
+    it('admits 21-code-point facts with the same constrained budget that previously admitted 19', () => {
+        const diff = bound(), budget = 201_200;
+        const limit = framedProgressFactLimit(diff, budget), fact = 'Falta probar el flujo';
+        expect([...fact]).toHaveLength(21);
+        expect(limit).toBeGreaterThanOrEqual(21);
+        const text = aggregateProgressReceipts(diff, receipts(diff, fact, limit), budget);
+        expect(Buffer.byteLength(text)).toBeLessThanOrEqual(budget);
+        expect(JSON.parse(text).analysis.facts).toHaveLength(600);
+    });
+    it('admits worst-case JSON escaping within the preflight facts budget', () => { const d=bound(),limit=framedProgressFactLimit(d,384000),text=aggregateProgressReceipts(d,receipts(d,'\u0001'.repeat(limit),limit),384000);expect(Buffer.byteLength(text)).toBeLessThanOrEqual(384000); });
     it('rejects omitted receipt sets at aggregation', () => { const d=bound();expect(()=>aggregateProgressReceipts(d,receipts(d).slice(1),384000)).toThrow(); });
     it('rejects reordered receipt sets at aggregation', () => { const d=bound();expect(()=>aggregateProgressReceipts(d,receipts(d).reverse(),384000)).toThrow(); });
     it('rejects duplicate receipt identities at aggregation', () => { const d=bound(),r=receipts(d);expect(()=>aggregateProgressReceipts(d,[r[0],r[0]],384000)).toThrow(); });

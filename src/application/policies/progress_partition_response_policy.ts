@@ -72,11 +72,11 @@ export function parseProgressPartitionFacts(response: unknown, partition: Progre
 function serializeProgressFacts(baseSha: string, headSha: string, partitions: readonly ProgressDiffPartition[], facts: readonly (readonly ProgressFileFacts[])[], profile?: ProgressEvidenceProfile): string {
     if (profile === 'immutable-tree-v1') {
         const paths = [...new Set(partitions.flatMap(part => part.paths))];
+        const pathIndices = new Map(paths.map((path, index) => [path, index]));
         return JSON.stringify({ kind: 'complete-immutable-tree-analysis-v1', baseSha, headSha,
             warning: 'Untrusted model facts, not build, test or review attestation. Preserve uncertainty. Full source parts were supplied; summaries may miss details.',
-            format: { assignments: ['unitId', 'requiredPathIndex'], facts: ['unitId', 'implemented', 'remaining'] }, requiredPaths: paths,
-            assignments: partitions.flatMap(part => part.units!.map(unit => [unit.id, paths.indexOf(unit.path)])),
-            facts: facts.flat().map(file => [file.unitId, file.implemented, file.remaining]) });
+            format: { facts: ['unitId', 'requiredPathIndex', 'implemented', 'remaining'] }, requiredPaths: paths,
+            facts: facts.flat().map(file => [file.unitId, pathIndices.get(file.path), file.implemented, file.remaining]) });
     }
     return JSON.stringify({ kind: 'complete-partition-analysis', baseSha, headSha,
         partitions: partitions.map(partition => ({ id: partition.id, fileCount: partition.paths.length, ...(partition.units ? { units: partition.units } : {}) })),

@@ -243,6 +243,13 @@ another account's private context. The encoded settings/import limit remains
 64 KiB. No connection, permission, credential, command or approval field is a
 profile preference.
 
+The Profiles editor exposes the closed feature inventory through a local filter
+and Inherit, Yes and No choices. Filtering preserves the draft choices for
+hidden rows. A profile save uses the existing review and revision fence. Selecting
+Inherit removes only that feature override, leaving the enclosing preferences to
+resolve the effective value. The choice does not itself select the profile or
+grant access to a feature.
+
 Session overrides are separate transient records bound to the current verified
 account, numeric repository and credential epoch. A changed or unavailable
 identity/epoch makes the old override inapplicable. A session override is never
@@ -1106,7 +1113,7 @@ or human acceptance, and modified executable branches remain100% covered.
 
 The historical 160-case H3 risk baseline is a starting minimum, not the complete
 acceptance threshold. Every additive minimum below is mandatory. The cumulative
-minimum is **886 distinct H3 risk cases: 160 baseline + 726 additions**. Reaching
+minimum is **890 distinct H3 risk cases: 160 baseline + 730 additions**. Reaching
 160 alone cannot satisfy H3. The original 56 CENTER catalog cases, the 56-case
 implementation inventory above and the full 803-case product catalog remain
 separately required; their execution does not offset an additive minimum.
@@ -1142,7 +1149,13 @@ separately required; their execution does not offset an additive minimum.
 | Independent imported profile pause | 10 | `settings_import_pauses.test.ts`, section 13 |
 | Independently observed negative emergency fact | 1 | Unknown-tab producer/factory/wire preservation case, beyond the existing affirmative case |
 | Native closure and final session permission races | 5 | `closed_pause_cleanup.test.ts` and `session_races.test.ts` |
-| **Total** | **886** | **160 + 726; every row is required** |
+| Profile feature editing | 2 | Mounted create/edit/inheritance in `center_app.test.ts` and rejected draft in `center_files.test.ts` |
+| Unresolved cache selector | 2 | `api_cache_client.test.ts` covers failed replacement before and after native admission |
+| **Total** | **890** | **160 + 730; every row is required** |
+
+The companion session-preferences specification also requires its 160 scoped
+cases. H3 acceptance requires both the owning milestone ledger and the scoped
+session-preferences evidence. Record each case once within the milestone ledger.
 
 Assign each semantic risk case one primary row and retain its executable test
 name and assertions in the source-bound evidence. A case may trace several
@@ -2424,6 +2437,11 @@ worker restart. Clearing is synchronous at its native admission point; a thrown
 boundary with no trustworthy result remains unknown and is not retried. Pending
 review notifications are followed by source/witness revalidation before the
 first effect. A verified clear remains a completed fact after later source loss.
+
+When a replacement preview fails or has no usable acknowledgement, the client
+keeps the exact selector for the prior unresolved operation. Inspecting that
+selector establishes only the prior operation's result. A verified replacement
+preview supersedes it. Neither inspection nor a failed preview repeats a clear.
 
 Representative UI:
 

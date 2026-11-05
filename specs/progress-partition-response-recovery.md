@@ -49,6 +49,12 @@ remain intact; no percentage is published.
   `progress-completion-mismatch`. Raw output was correctly unavailable; the
   exact contradictory direction is not established. The existing prompt stated
   the completion condition in one direction while the host enforces both.
+- At `abad2de4150a6855d2b85a5a42e3ce9e5202b98b`, both attempts of run
+  42002779093 used #830's one replacement, then rejected a 21-code-point
+  fact against a 19-code-point limit. The first named `implemented` in
+  `docs/browser-extension/features.mdx`. The second named `remaining` in
+  `docs/browser-extension/configuration.mdx`. The immutable final projection
+  was charging the same path dictionary and unit IDs twice.
 - Owners: `src/data/repository/progress_agent_response_policy.ts`,
   `src/application/policies/progress_partition_response_policy.ts`, `src/application/usecases/actions/summarize_progress_diff_workflow.ts`.
 - No external API or protocol change is proposed. The actual rejected prose
@@ -164,8 +170,11 @@ There is no new input, environment override, secret or permission. The fixed
 default is one eligible replacement; the alternative outcome is a normal
 fail-closed error when attribution or capacity is unavailable.
 
-The selected fact maximum remains the existing budget-derived value, at most
-600 code points. The immutable profile retains its own minimum. Source/frame/
+The selected fact maximum remains budget-derived, at most 600 code points.
+The immutable final projection carries the path dictionary and each exact unit
+ID once. Preflight counts that projection and reserves six bytes per code point
+for worst-case JSON escaping, using the same minimum of 16. The original and
+replacement share the resulting schema. Source/frame/
 part/aggregate limits, final-assessment scope, prompt ceiling, execution
 configuration and cancellation deadlines are unchanged and not configurable here.
 
@@ -249,9 +258,10 @@ single replacement within the current attempt.
 
 ## 13. Compatibility, migration, rollout, and rollback
 
-No stored-state or response-schema migration. Legacy parts and both framed
-profiles keep exact receipts and limits; single-part and non-progress tasks keep
-their established behavior. Rebuild Action/CLI/API bundles normally. Deploying
+No stored-state or response-schema migration. Both framed profiles keep exact
+source and receipt validation. The immutable final model input has a compact
+host-authored layout with the same complete inventory. Legacy, framed-v1,
+single-part and non-progress tasks keep their established behavior. Rebuild Action/CLI/API bundles normally. Deploying
 or releasing those bundles is outside this work. Rollback restores immediate
 rejection while preserving prior progress; no credentials or data need repair.
 
@@ -266,7 +276,8 @@ rejection while preserving prior progress; no credentials or data need repair.
 | Product presentation | 4 | English/Spanish facts, no raw output, closed variables and escaped text |
 | Complete publication integration | 3 | Successful complete aggregation, failure retains labels, stale result never publishes |
 | Part/final recovery composition | 3 | Independent single allowances, complete immutable inventory through late failure, no final query after exhausted part |
-| **Total** | **39** | Original 36 cases plus 3 composed-stage cases; no matrix/replay double counting |
+| Immutable aggregate capacity | 2 | Compact exact tuple projection after receipt reordering; 21-code-point facts fit a previously 19-point budget |
+| **Total** | **41** | Original 36 cases, 3 composed-stage cases and 2 immutable capacity cases |
 
 The three additional cases live in
 `src/application/usecases/actions/__tests__/progress_recovery_composition.integration.test.ts`:
@@ -279,6 +290,8 @@ The three additional cases live in
 
 These integration cases add to this companion's budget; they do not double-count
 or replace the final controller's separately owned 40-case acceptance inventory.
+`immutable_progress_protocol_policy.test.ts` covers the two immutable capacity
+cases and retains its worst-case JSON escape boundary test.
 
 Require 100% new pure-policy branches and every modified coverable line with no
 partials in Codecov against the correct live base. Preserve repository-wide
@@ -312,6 +325,9 @@ weaken their requirements.
 7. A repaired part followed by a repaired final assessment publishes once; a
    persistent part failure never enters the final stage, while final exhaustion
    retains all complete source facts without rereading or repeating parts.
+8. A previously 19-point immutable fixture admits 21-point facts within the
+   same byte ceiling. Every reordered tuple maps back to its validated unit and
+   path, and the exact worst-case escape budget still fits.
 
 ## 17. Requirements traceability
 
@@ -333,7 +349,7 @@ Graphify, normal bundles/hooks and current-head remote review.
 
 ## 19. Definition of Done
 
-- [ ] Every requirement has executable acceptance and all 39 risk cases pass.
+- [ ] Every requirement has executable acceptance and all 41 risk cases pass.
 - [ ] Inward dependencies, semantic ports and module budgets pass.
 - [ ] Source, response, prompt, configuration, deadline and publication gates remain.
 - [ ] Localized primary states, exact diagnostics and sanitization pass.
@@ -347,8 +363,9 @@ Graphify, normal bundles/hooks and current-head remote review.
 
 The existing owners are `specs/immutable-progress-content-recovery.md` and
 `specs/complete-progress-comparison-inventory.md`. This companion adds only
-same-attempt returned-part length recovery. Preserve their source and acceptance
-contracts. Reject silent truncation, larger output limits, guessed positional
+same-attempt returned-part length recovery and compact immutable fact framing.
+Preserve their source and acceptance contracts. Reject silent truncation,
+larger aggregate byte ceilings, guessed positional
 identity, workspace execution, incomplete comparison and blind full-run retries.
 Final assessment overflow, unsupported capacity and unrelated findings remain
 separate work; this change grants no release or deployment authority.

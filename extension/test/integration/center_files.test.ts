@@ -57,10 +57,16 @@ it('keeps a profile draft scoped to numeric identities and preserves feature ove
         const profile = draftProfile(draft)!; expect(profile.scope.kind).toBe(kind); expect(profile.preferences).toEqual({ density: 'compact', paused: true, shortcuts: false });
         expect(profileDraft(profile)).toEqual({ ...draft, accountId: ['account', 'organization', 'repository'].includes(kind) ? '7' : '',
             organizationId: kind === 'organization' ? '8' : '', repositoryId: kind === 'repository' ? '9' : '' });
-        const inherited = draftProfile({ ...draft, density: 'inherit', paused: 'inherit', shortcuts: 'inherit' }, { ...profile, preferences: { features: { 'BEX-NAV-01': true } } });
+        const saved = profileDraft({ ...profile, preferences: { features: { 'BEX-NAV-01': true } } });
+        const inherited = draftProfile(saved);
         expect(inherited?.preferences).toEqual({ features: { 'BEX-NAV-01': true } });
     }
     expect(draftProfile({ ...blank, id: 'work', name: 'Work', kind: 'account', accountId: 'login-name' })).toBeNull();
     expect(profileDraft({ id: 'flags', name: 'Flags', scope: { kind: 'global' }, preferences: { paused: false, shortcuts: true } }))
         .toMatchObject({ paused: 'no', shortcuts: 'yes' });
+});
+it('rejects a malformed profile feature choice before it becomes a settings intent', () => {
+    const draft = { ...profileDraft(), id: 'work', name: 'Work' };
+    Object.defineProperty(draft.features, 'BEX-NAV-01', { value: 'invalid', enumerable: true });
+    expect(draftProfile(draft)).toBeNull();
 });

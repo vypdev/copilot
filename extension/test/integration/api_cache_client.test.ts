@@ -63,6 +63,20 @@ it('a new review with a lost acknowledgement cannot borrow an earlier completed 
     const calls = h.clientPorts.request.mock.calls.length; await h.client.inspect(); expect(h.clientPorts.request).toHaveBeenCalledTimes(calls);
     expect(h.cache.clear).toHaveBeenCalledOnce();
 });
+it.each([false, true])('a failed replacement preserves the exact unresolved selector when the old clear ran=%s', async submitted => {
+    const h = apiCacheClientFixture(); await h.client.preview();
+    const prior = await h.clientPorts.request.mock.results[0].value as { operationId: string };
+    const send = h.clientPorts.request.getMockImplementation()!;
+    h.clientPorts.request.mockImplementationOnce(async input => { if (submitted) await send(input); return null; });
+    await h.client.confirm(); await h.client.dismiss();
+    h.clientPorts.request.mockImplementationOnce(async input => { if (submitted) await send(input); return null; });
+    await h.client.preview();
+    expect(h.client.view).toMatchObject({ status: 'unavailable', retained: true });
+    await h.client.inspect();
+    expect(h.clientPorts.request).toHaveBeenLastCalledWith({ method: 'center.cache.result', operationId: prior.operationId });
+    expect(h.client.view.status).toBe(submitted ? 'cleared' : 'not-submitted');
+    expect(h.cache.clear).toHaveBeenCalledTimes(submitted ? 1 : 0);
+});
 it('synchronous rendering notifications that retire editing authority prevent every later request handoff', async () => {
     for (const action of ['preview', 'inspect', 'confirm'] as const) {
         const h = apiCacheClientFixture(); if (action !== 'preview') await h.client.preview();

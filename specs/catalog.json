@@ -3424,6 +3424,7 @@
         "extension/src/presentation/OverviewPage.svelte",
         "extension/src/presentation/ProfileEditor.svelte",
         "extension/src/presentation/ProfileScopeFields.svelte",
+        "extension/src/presentation/FeatureOverrideFields.svelte",
         "extension/src/presentation/ProfilesPage.svelte",
         "extension/src/presentation/center.css",
         "extension/src/presentation/center_surface.ts",

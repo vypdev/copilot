@@ -3,6 +3,7 @@
     import type { CenterRouteProps } from '../domain/center_ui.ts';
     import { profileDraft, draftProfile } from '../domain/profile_draft.ts';
     import ProfileScopeFields from './ProfileScopeFields.svelte';
+    import FeatureOverrideFields from './FeatureOverrideFields.svelte';
     let { context, actions }: CenterRouteProps = $props();
     const baseline = untrack(() => context.settings);
     const previous = untrack(() => baseline.center.profiles.find(profile => profile.id === context.location.detail));
@@ -12,7 +13,7 @@
     const dirty = $derived(JSON.stringify(draft) !== originalText);
     $effect(() => actions.dirty(dirty)); onDestroy(() => actions.dirty(false));
     function preview(): void {
-        const profile = draftProfile(draft, previous);
+        const profile = draftProfile(draft);
         invalid = profile === null || !previous && baseline.center.profiles.some(existing => existing.id === draft.id);
         if (profile && !invalid) actions.preview({ type: 'profile', change: { type: 'save', profile } }, baseline.revision);
     }
@@ -28,6 +29,9 @@
             <p id="profile-id-hint">{m.identifierHint}</p>
             <label for="profile-name">{m.name}</label><input id="profile-name" type="text" required maxlength="60" bind:value={draft.name}>
             <ProfileScopeFields {draft} copy={context.copy} connections={context.connections}/>
+            <FeatureOverrideFields prefix="profile" center={context.copy}
+                choice={id => draft.features[id] === undefined ? 'inherit' : draft.features[id] ? 'yes' : 'no'}
+                change={(id, choice) => { if (choice === 'inherit') delete draft.features[id]; else draft.features[id] = choice === 'yes'; }}/>
             <button type="submit" disabled={!dirty}>{m.preview}</button>
         </fieldset>
     </form>

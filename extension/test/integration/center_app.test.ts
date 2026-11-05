@@ -41,7 +41,8 @@ it('creates, selects and edits an actual local profile without granting a connec
     expect(h.port.send.mock.calls.filter(([message]) => message.method === 'center.preview')).toHaveLength(previewCount);
     change('profile-id', ''); change('profile-name', '');
     button('Usar este perfil').click(); await save();
-    await navigate('profiles/work'); await ready(() => (document.querySelector('#profile-id') as HTMLInputElement | null)?.readOnly === true);
+    await navigate('profiles/work'); await ready(() => (document.querySelector('#profile-id') as HTMLInputElement | null)?.readOnly === true
+        && document.querySelector<HTMLFieldSetElement>('form fieldset')?.disabled === false);
     change('profile-name', 'Work'); button('Revisar cambio').click(); await save();
     const result = await h.native.repository.read(); expect(result.settings.center.selected).toEqual(['work']);
     expect(result.settings.center.profiles).toEqual([{ id: 'work', name: 'Work', scope: { kind: 'global' }, preferences: { density: 'compact' } }]);
@@ -52,6 +53,27 @@ it('keeps observers read-only until an explicit native takeover', async () => {
     expect((document.querySelector('fieldset') as HTMLFieldSetElement).disabled).toBe(true);
     button('Tomar el control de la edición').click(); await ready(() => (document.querySelector('fieldset') as HTMLFieldSetElement)?.disabled === false);
     expect(h.port.send.mock.calls.some(([message]) => message.method === 'center.claim')).toBe(true);
+});
+it('authors reviewed profile feature overrides, preserves hidden choices and removes only the selected override through inheritance', async () => {
+    const h = await render('profiles'); await ready(() => !!document.querySelector('#profile-feature-filter'));
+    change('profile-id', 'work'); change('profile-name', 'Work');
+    change('profile-feature-BEX-NAV-01', 'no');
+    change('profile-feature-filter', 'BEX-NAV-02');
+    expect(document.querySelector('#profile-feature-BEX-NAV-01')).toBeNull();
+    change('profile-feature-BEX-NAV-02', 'yes');
+    button('Revisar cambio').click(); await ready(() => !!document.querySelector('#settings-review-heading'));
+    expect((await h.native.repository.read()).settings.center.profiles).toEqual([]);
+    await save();
+    expect((await h.native.repository.read()).settings.center.profiles[0].preferences.features).toEqual({ 'BEX-NAV-01': false, 'BEX-NAV-02': true });
+    await navigate('profiles/work');
+    await ready(() => (document.querySelector('#profile-id') as HTMLInputElement | null)?.readOnly === true
+        && document.querySelector<HTMLFieldSetElement>('form fieldset')?.disabled === false
+        && !!document.querySelector('#profile-feature-BEX-NAV-01'));
+    const first = document.querySelector<HTMLSelectElement>('#profile-feature-BEX-NAV-01')!;
+    expect(first.value).toBe('no'); first.selectedIndex = 0; first.dispatchEvent(new Event('change', { bubbles: true })); flushSync();
+    button('Revisar cambio').click(); await save();
+    expect((await h.native.repository.read()).settings.center.profiles[0].preferences.features).toEqual({ 'BEX-NAV-02': true });
+    expect(h.browser.api.permissions.request).not.toHaveBeenCalled();
 });
 it('updates language only after confirmation and applies the complete selected resource', async () => {
     await render('language'); await ready(() => !!document.querySelector('#center-locale'));
