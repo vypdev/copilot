@@ -5,6 +5,7 @@ export type { AgentQueryOptions } from './agent_query_ports';
 
 export interface FindingsQueryRequest extends AgentQueryRequest {
     agentId: string;
+    readonly signal?: AbortSignal;
     /** Host-selected immutable source for pre-branch SDD queries; never a cwd input. */
     readonly sourceSnapshot?: AgentSourceSnapshot;
 }

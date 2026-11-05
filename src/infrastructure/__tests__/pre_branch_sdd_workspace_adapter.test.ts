@@ -1,3 +1,5 @@
+import { draftIncrementalSdd, assembleAndValidateSdd } from '../../application/usecases/sdd/pre_branch_sdd_incremental_workflow';
+import { assembleSddUnits, explicitSddObligations, mergeSddInventory } from '../../domain/sdd_incremental_plan';
 import fs from 'node:fs';
 import { SddTrustedCatalogMissingFailure } from '../../domain/sdd_trusted_catalog_failure';
 import { draftSddMarkdown } from '../../application/usecases/sdd/pre_branch_sdd_draft_workflow';
@@ -78,6 +80,26 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
   beforeEach(() => { ({ temp, repo } = fixture()); });
   afterEach(() => fs.rmSync(temp, { recursive: true, force: true }));
 
+  it('rejects immutable owner bytes that cannot be preserved as UTF-8', async () => {
+    fs.appendFileSync(path.join(repo, plan.path), Buffer.from([0xFF]));
+    git(repo, 'add', '--', plan.path);
+    git(repo, 'commit', '-m', 'Store an invalid byte in the owner');
+    const base = git(repo, 'rev-parse', 'HEAD');
+    await expect(new PreBranchSddWorkspaceAdapter(repo).readSdd(base, plan.path))
+      .rejects.toMatchObject({ name: 'SddSourceContextFailure', reason: 'unsafe-entry' });
+  });
+
+  it('blocks before branch creation if Git would stage different bytes from the validated artifact', async () => {
+    fs.writeFileSync(path.join(repo, '.gitattributes'), plan.path + ' text eol=lf\n');
+    git(repo, 'add', '--', '.gitattributes');
+    git(repo, 'commit', '-m', 'Configure Git line-ending normalization');
+    const base = git(repo, 'rev-parse', 'HEAD');
+    const workspace = new PreBranchSddWorkspaceAdapter(repo);
+    const snapshot = await workspace.loadSnapshotAtCommit(base);
+    const crlf = draft().replace(/\n/gu, '\r\n');
+    await expect(workspace.validateDraft(snapshot, plan, crlf)).rejects.toThrow('Git attributes changed the SDD or catalog bytes');
+  });
+
 
   it('preserves the Domus #30 twelve-case update shape through generation, real Git publication and replay', async () => {
     const ownerPath = path.join(repo, plan.path);
@@ -123,6 +145,57 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
     expect(git(repo, 'ls-remote', '--heads', 'origin', branch).split('\t')[0]).toBe(sha);
     expect(fs.readFileSync(ownerPath, 'utf8')).toBe(owner);
     expect(execute).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['autonomous', 'seed'] as const)('763: publishes a large %s draft on the immutable base and replays the first commit', async input => {
+    const ownerPath = path.join(repo, plan.path);
+    const owner = legacyDraft().trimEnd().padEnd(94_000, 'x') + '\n  \n\n';
+    fs.writeFileSync(ownerPath, owner);
+    git(repo, 'add', '--', plan.path);
+    git(repo, 'commit', '-m', 'Retain a large owned baseline');
+    git(repo, 'push', 'origin', 'develop');
+    const sourceRows = Array.from({ length: 1024 }, (_, index) => '| update-C' + (index + 1)
+      + ' | Policy | PAY-01 | Verify resolved independent payment scenario ' + (index + 1) + ' on the selected base. |');
+    const scope = ['| Requirement | Behavior |', '|---|---|', '| PAY-01 | Keep the resolved payment scenarios observable. |', '',
+      '| Case ID | Area | Requirements | Scenario |', '|---|---|---|---|', ...sourceRows, '',
+      '| Path | Change |', '|---|---|', '| docs/payments.mdx | update |'].join('\n');
+    const explicit = explicitSddObligations([scope]);
+    const workspace = new PreBranchSddWorkspaceAdapter(repo);
+    const snapshot = await workspace.loadSnapshot('develop');
+    let prepared: SddPreparedDraft | undefined;
+    const validate = async (markdown: string) => {
+      prepared = await workspace.validateDraft(snapshot, plan, markdown);
+    };
+    const prose = (section: number) => ({ section, body: 'Document the exact resolved change and its observable outcome. '.repeat(5) });
+    let delta: string;
+    if (input === 'autonomous') {
+      const agent = { query: async ({ prompt }: { prompt: string }) => {
+        const unitId = /Return only the JSON for unit ([a-z]+-\d+)\./u.exec(prompt)![1];
+        if (unitId.startsWith('inventory-')) return { unitId, requirements: [], cases: [], paths: [] };
+        const sections = prompt.split('Draft the body only for these numbered sections: ')[1].split('. Return all')[0]
+          .split('; ').map(heading => prose(Number(heading.split('.')[0])));
+        return { unitId, sections };
+      } };
+      delta = await draftIncrementalSdd({ agent, configuration: { provider: 'codex', model: 'test-model' },
+        plan, baseSha: snapshot.baseSha, title: 'Payments', inputs: [scope], explicit, context: 'Use the immutable owner.', validate });
+    } else {
+      const rows = mergeSddInventory(explicit, [], plan);
+      const sections = new Map(Array.from({ length: 20 }, (_, index) => [index + 1, prose(index + 1).body]));
+      delta = await assembleAndValidateSdd(assembleSddUnits('Payments', plan, rows, sections), plan, explicit, validate);
+    }
+    if (!prepared) throw new Error('Expected successful validation.');
+    expect(delta.length).toBeGreaterThan(70_000);
+    expect(delta).toContain('| Total | 1024 |');
+    expect(delta).toContain(sourceRows[1023]);
+    expect(delta).toContain('| PAY-01 | ' + Array.from({ length: 1024 }, (_, index) => 'update-C' + (index + 1)).join(', ') + ' |');
+    const branch = 'feature/42-large-update';
+    expect(git(repo, 'ls-remote', '--heads', 'origin', branch)).toBe('');
+    git(repo, 'push', 'origin', 'develop:refs/heads/' + branch);
+    const published = await workspace.publish(branch, prepared);
+    expect(await workspace.verifyPublication(branch, snapshot.baseSha, published, plan.path)).toBe(true);
+    expect(await workspace.recoverPublished(branch, prepared)).toBe(published);
+    expect((await workspace.readSdd(published, plan.path))?.startsWith(owner)).toBe(true);
+    expect(git(repo, 'diff-tree', '--no-commit-id', '--name-only', '-r', published)).toBe(plan.path);
   });
 
   it.each([['sdd-case-ref-C35','technical'],['sdd-case-ref-C36','shorthand'],['sdd-case-ref-C37','identity'],['sdd-case-ref-C38','replay']])('%s preserves real Git publication boundaries for %s', async (_id, scenario) => {

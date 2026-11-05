@@ -137,7 +137,7 @@ Text equivalent: issue and authorized answers -> pinned inventory -> bounded pre
 ### 6.3 Lossless incremental preparation
 
 1. **Pin source and classify evidence.** Build an operation identity from repository, issue digest, selected base and catalog digest, authorized answer receipts, route and current linked publication when present. Read Git path and mode separately from content. For registered documents retain path, blob identity and case and requirement reservations in an indexed inventory. If any source read fails, report the unavailable evidence and keep that distinct from proven absence.
-2. **Freeze obligations and work.** Start from the complete authorized issue and answers. Preserve explicit requirements, declared case IDs and acceptance floors, file operations and traceability as host-owned records. For unstructured requirements keep stable source spans with digests and assigned obligations, including constraints that remain in force by reference. Assign each source span and each explicit requirement and case exactly once to a delivery unit or a verified baseline reference. Verify these totals before making generation calls. Human clarification is appropriate when the source itself leaves a substantive decision unresolved. Structural coverage can prove every record and source span was accounted for. Product review assesses whether new prose faithfully expresses intent.
+2. **Freeze obligations and work.** Start from the complete authorized issue and answers. Preserve explicit requirements, declared case IDs and acceptance floors, file operations and traceability as host-owned records. Send every source span to one planned inventory unit, and keep explicitly authored rows in the host inventory. The prose groups receive the admitted source and a bounded ID projection. Keep existing obligations by reference to their immutable owner. Verify these totals before making generation calls. Human clarification is appropriate when the source itself leaves a substantive decision unresolved. Structural coverage can prove every record and source span was accounted for. Product review assesses whether new prose faithfully expresses intent.
 3. **Generate only changed units.** Fixed canonical section groups carry prose. Bounded row groups carry requirements, cases and literal file operations. Host code assigns IDs, order, resource slices and reference allowances before generation. The provider returns one closed unit with the expected identity and allocated entries. Cases can link to requirements in other units by stable IDs. Existing contracts are delivered as bounded relevant references. The complete owner document and complete historical case list remain available to host validation, independently of prompt projections.
 4. **Compose once.** Reject missing, duplicate, out-of-plan, cross-boundary or conflicting entries. Generate canonical heading positions, the section 15 Path/Change table, exact area totals and section 17 reverse mappings from the validated records. Assemble in stable order. Count serialized bytes and rows before expanding tables and links. A large owner may retain its full immutable byte prefix. Validate the new delta and its relationship to that baseline, then validate the exact complete output and keep compatibility with legacy first-publication recovery. Derive any combined totals without recounting existing cases.
 5. **Apply one repair budget.** Planned calls are fixed before drafting. One evidenced, recoverable failure may replace the exact affected unit once, with safe structural coordinates and the same allocation. A second failure, a failed aggregate invariant or loss of freshness terminates preparation. Keep accepted units in private run state for that repair. A replay after publication verifies the committed artifact and linked branch instead of invoking generation.
@@ -169,11 +169,27 @@ No new public repository configuration is recommended. Bounds are product safety
 
 Validation rejects exceeded resource bounds, insufficient permissions, stale digest or base, ambiguous or partial source, unsafe paths and cross-capability ownership. The default is autonomous generation with one evidenced repair. A maintainer may instead select a uniquely delimited seed or accept a named companion proposal.
 
-The implementation must qualify a fixed internal profile covering maximum planned calls, per-unit prompt and response bytes, operation elapsed time, scanned source bytes, case and edge counts, and composed write bytes. Charge the actual escaped JSON and rendered UTF-8 bytes to the relevant counters. An initial candidate for measurement is 32 generation units at up to 16 KiB of structured response per unit, with one shared replacement, 512 KiB of admitted response payload before repair, and a separate 512 KiB composed artifact allowance. Test 1,024 cases and at least 132 KiB rendered, then measure upper bounds under dense mapping and malformed input. The observed local renderer supports that workload, while the native provider and Git writer still require qualification. Publish the final measured profile and rationale in this SDD before activating the new envelope. The approved profile is a code-owned resource budget.
+The implemented internal profile permits 256 KiB of admitted issue and answer
+text, 12 KiB per source slice, 32 planned calls, one shared replacement, 16 KiB
+per structured response, 512 KiB of aggregate structured responses, and 512 KiB
+for the rendered publication. Prompts are limited to 384 KiB each and 2 MiB
+in aggregate. Owner scans admit 4 MiB in total and 65,536 identities. Inventory
+admits 8,192 rows and 32,768 edges. The draft has a 20-minute monotonic deadline.
+The host counts UTF-8 bytes, including JSON escaping for responses and the
+fully rendered artifact for publication.
 
-Repeated full source materialization can dominate the cost of a multipart plan. The adapter should prepare one credential-free, read-only source view for the operation, verify its unchanged identity before every unit, and clean it up on cancellation or completion. Keep process isolation per call and scope any lease to the same issue, base and operation. If this cannot retain the existing source-admission and integrity guarantees, include every materialization in the measured call budget before qualifying the profile.
+The selected immutable source is independently prepared for each provider call
+using the existing protected snapshot limits. This work consumes the same
+operation deadline. Each call remains isolated. A source-view lease would
+need its own integrity and cleanup qualification.
 
-The existing process transport bounds remain the outer guardrails. Set and test a monotonic operation deadline inside the 120-minute Issue job, with enough time reserved for freshness and publication. Cancellation clears private candidate state. On exhaustion publish the stage and measured dimension, then offer a companion only when the split remains coherent and preserves the complete change.
+The 16 KiB unit envelope has an isolated native twelve-case control at 7,761
+response bytes. The indexed validator accepted a 513,885-byte dense artifact
+with 2,048 cases and 16,384 edges in local measurement. Both generated and seed
+routes have deterministic Git publication controls with 1,024 cases and an
+appendix above 70,000 characters. Provider runs on the pinned candidate through
+the normal managed Action remain a separate acceptance gate.
+
 
 ## 8. Clean Architecture
 
@@ -207,6 +223,7 @@ flowchart LR
 - Concurrency/idempotency: bind every transition to issue digest and selected base; compare-and-set operation state; deduplicate card updates and publication by stable operation identity.
 - Trusted inputs: verified catalog, immutable tree metadata, authenticated actor and authorized answer. Issue text, comments, provider output and repository content are untrusted data.
 - Provider error mapping: transport/token exhaustion remains a provider failure; malformed schema/content remains malformed; code-point response ceiling, UTF-16 Markdown limits and byte measurements are separate.
+- Publication encoding: immutable owners must decode as UTF-8 without losing bytes. Validation and publication compare each staged blob with the exact prepared bytes before a commit can be pushed. A Git attributes rule that changes those bytes blocks before branch creation.
 
 ### 8.3 Executable architecture constraints
 

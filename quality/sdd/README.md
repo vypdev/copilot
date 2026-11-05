@@ -1,5 +1,34 @@
 # SDD ownership qualification
 
+## Managed publication qualification (#763)
+
+Generate the fixture with `node quality/sdd/qualification-763.cjs <new-directory> <candidate-commit>`.
+The `repo` directory contains the standard Feature Request form, issue and
+issue-comment workflows pinned to the candidate, and a synthetic immutable owner
+above 70,000 characters. The `requests` directory contains the exact issue
+bodies and digests and stays outside the consumer checkout. Use a private
+disposable consumer with `PRE_BRANCH_SDD=true`, the normal development base,
+and the normal authorized Action identity and provider credentials.
+
+1. Start the autonomous and large issues using the standard `feature` and
+   `in-progress` labels. Start the seed issue after submitting the exact review
+   command in the manifest. Only the seed issue needs the receipt reply shown
+   on the gate's card. Confirm there is no linked branch before that approval.
+2. On each issue, retain the candidate SHA, issue and run URLs, exact base SHA,
+   linked branch, first commit and staged path list. Check the published owner
+   starts with every byte of the base owner and independently check every case
+   row and both reciprocal links for each case against the issue input.
+3. Rerun the original issue workflow for each route and verify the same first
+   commit and the same bytes. An ordinary issue-triggered run that skips the
+   SDD gate or fails before publication does not qualify.
+
+The fixture captures the scale and shape of Domus #30 without copying its
+private repository content. Use the exact incident inputs for a separate
+private regression. Local bare Git publication and provider probes do not
+substitute for GitHub Actions publication evidence.
+
+## Historical ownership qualification (#856)
+
 `ownership-qualification.cjs` preserves the optional, issue-specific #856 campaign.
 It is not a product command or a replacement for CI, domain validation or consumer
 acceptance. The versioned evidence contains every cohort, including failed ones.

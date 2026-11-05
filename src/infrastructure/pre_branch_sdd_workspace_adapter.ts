@@ -1,3 +1,4 @@
+import { requireSddCapacity, SDD_RESOURCES, sddBytes } from '../domain/sdd_resource_budget';
 import { readSupportedSddCatalog, SddCatalogCompatibilityFailure } from '../domain/sdd_catalog_compatibility';
 import { SddTrustedCatalogMissingFailure } from '../domain/sdd_trusted_catalog_failure';
 import { SddSourceContextFailure, type AgentSourceSnapshot } from '../domain/agent_source_snapshot';
@@ -89,7 +90,20 @@ export class PreBranchSddWorkspaceAdapter implements PreBranchSddWorkspacePort {
     if (!entry) return undefined;
     const match = /^100(?:644|755) blob ([a-f0-9]{40})\t([^\0]+)\0$/u.exec(entry);
     if (!match || match[2] !== relativePath) throw new SddSourceContextFailure('unsafe-entry', source);
-    return this.readSddObject(['cat-file', 'blob', match[1]], source);
+    const size = Number((await this.readSddObject(['cat-file', '-s', match[1]], source)).trim());
+    if (!Number.isSafeInteger(size) || size < 0) throw new SddSourceContextFailure('object-unavailable', source);
+    requireSddCapacity('owner', 'bytes', SDD_RESOURCES.sourceBytes, size);
+    let blob: Buffer;
+    try {
+      blob = await this.gitBytes(['cat-file', 'blob', match[1]]);
+    } catch {
+      throw new SddSourceContextFailure('object-unavailable', source);
+    }
+    try {
+      return new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(blob);
+    } catch {
+      throw new SddSourceContextFailure('unsafe-entry', source);
+    }
   }
 
   private async readSddObject(args: string[], source: AgentSourceSnapshot): Promise<string> {
@@ -117,17 +131,22 @@ export class PreBranchSddWorkspaceAdapter implements PreBranchSddWorkspacePort {
         throw new Error('The SDD owner changed since analysis; restart clarification.');
       }
       const owners: SddOwnerDocument[] = [];
+      let ownerBytes = 0;
       const inventory = await this.inventoryAt(snapshot.baseSha);
       for (const file of snapshot.capabilities.find(capability => capability.id === plan.capabilityId)?.specs ?? []) {
         if (!isSafeSddPath(file)) throw new Error('An owning SDD path is unsafe.');
         if (!inventory.files.has(file)) throw new Error('An owning SDD is not a regular file at the immutable base.');
         assertRegularSpecFile(path.join(root, file));
-        owners.push({ path: file, markdown: await this.git(['show', `${snapshot.baseSha}:${file}`]) });
+        const owner = await this.readSdd(snapshot.baseSha, file);
+        if (owner === undefined) throw new Error('An owning SDD is not available at the immutable base.');
+        requireSddCapacity('owner', 'bytes', SDD_RESOURCES.sourceBytes, ownerBytes += sddBytes(owner));
+        owners.push({ path: file, markdown: owner });
       }
       validateSddDraftConsistency(markdown, owners, inventory, plan.path);
       if (plan.action === 'update') {
         assertRegularSpecFile(target);
-        const owner = await this.git(['show', `${snapshot.baseSha}:${plan.path}`]);
+        const owner = owners.find(file => file.path === plan.path)?.markdown;
+        if (owner === undefined) throw new Error('The selected owner is not catalogued at the immutable base.');
         markdown = composeSddUpdate(owner, markdown);
       }
       else if (pathExists(target)) throw new Error('The new SDD path is already occupied.');
@@ -166,6 +185,7 @@ export class PreBranchSddWorkspaceAdapter implements PreBranchSddWorkspacePort {
       if (!changedPaths.includes(plan.path) || changedPaths.some(changed => !allowed.has(changed))) {
         throw new Error('The draft changed files outside the SDD/catalog allowlist.');
       }
+      await this.stageExactDraft(root, changedPaths);
       return Object.freeze({
         plan, baseSha: snapshot.baseSha, markdown,
         ...(catalogJson ? { catalogJson, catalogMarkdown } : {}),
@@ -197,11 +217,7 @@ export class PreBranchSddWorkspaceAdapter implements PreBranchSddWorkspacePort {
         writeSpecFile(path.join(root, 'specs/catalog.json'), prepared.catalogJson, true);
         writeSpecFile(path.join(root, 'specs/CATALOG.md'), prepared.catalogMarkdown, true);
       }
-      await this.git(['add', '--', ...prepared.changedPaths], root);
-      const staged = (await this.git(['diff', '--cached', '--name-only'], root)).trim().split('\n').filter(Boolean);
-      if (staged.join('\n') !== [...prepared.changedPaths].sort().join('\n')) {
-        throw new Error('The staged paths differ from the validated SDD draft.');
-      }
+      await this.stageExactDraft(root, prepared.changedPaths);
       await withoutGitHooks(emptyHooks => this.git([
         '-c', 'user.name=copilot-action[bot]',
         '-c', 'user.email=41898282+github-actions[bot]@users.noreply.github.com',
@@ -240,18 +256,21 @@ export class PreBranchSddWorkspaceAdapter implements PreBranchSddWorkspacePort {
     ]);
     if (author.trim() !== '41898282+github-actions[bot]@users.noreply.github.com'
       || subject.trim() !== `docs(sdd): specify issue contract in ${prepared.plan.path}`) return undefined;
-    const content = await this.git(['show', `${first}:${prepared.plan.path}`]);
+    const content = await this.readSdd(first, prepared.plan.path);
+    if (content === undefined) return undefined;
     const snapshot = await this.readSnapshotAtSha(prepared.baseSha);
     let newCapability: SddCatalogCapability | undefined;
     if (prepared.plan.action === 'new') {
       const raw = await this.git(['show', `${first}:specs/catalog.json`]);
       newCapability = (JSON.parse(raw) as Catalog).capabilities.find(capability => capability.id === prepared.plan.capabilityId);
     }
-    const candidate = prepared.plan.action === 'update'
-      ? recoverSddUpdate(await this.git(['show', `${prepared.baseSha}:${prepared.plan.path}`]), content) : content;
+    const originalOwner = prepared.plan.action === 'update' ? await this.readSdd(prepared.baseSha, prepared.plan.path) : undefined;
+    if (prepared.plan.action === 'update' && originalOwner === undefined) return undefined;
+    const candidate = originalOwner !== undefined ? recoverSddUpdate(originalOwner, content) : content;
     if (!candidate) return undefined;
     const recovered = await this.validateDraft(snapshot, prepared.plan, candidate, newCapability);
-    if (recovered.markdown !== content) return undefined;
+    const expected = originalOwner !== undefined ? composeSddUpdate(originalOwner, candidate) : content;
+    if (recovered.markdown !== expected) return undefined;
     const committedPaths = (await this.git(['diff-tree', '--no-commit-id', '--name-only', '-r', first])).trim().split('\n').filter(Boolean).sort();
     if (committedPaths.join('\n') !== recovered.changedPaths.join('\n')) return undefined;
     if (recovered.catalogJson && await this.git(['show', `${first}:specs/catalog.json`]) !== recovered.catalogJson) return undefined;
@@ -281,6 +300,19 @@ export class PreBranchSddWorkspaceAdapter implements PreBranchSddWorkspacePort {
   private async changedPaths(root: string): Promise<string[]> {
     const output = await this.git(['status', '--porcelain', '--untracked-files=all'], root);
     return output.split('\n').filter(Boolean).map(line => line.slice(3)).sort();
+  }
+
+  private async stageExactDraft(root: string, changedPaths: readonly string[]): Promise<void> {
+    await this.git(['add', '--', ...changedPaths], root);
+    const staged = (await this.git(['diff', '--cached', '--name-only'], root)).trim().split('\n').filter(Boolean);
+    if (staged.join('\n') !== [...changedPaths].sort().join('\n')) {
+      throw new Error('The staged paths differ from the validated SDD draft.');
+    }
+    for (const file of changedPaths) {
+      const exact = await this.git(['hash-object', '--no-filters', '--', file], root);
+      const indexed = await this.git(['rev-parse', '--verify', ':' + file], root);
+      if (indexed !== exact) throw new Error('Git attributes changed the SDD or catalog bytes. Correct the repository rules and retry.');
+    }
   }
 
   private async inventoryAt(sha: string): Promise<SddRepositoryInventory> {
@@ -320,6 +352,10 @@ export class PreBranchSddWorkspaceAdapter implements PreBranchSddWorkspacePort {
   }
 
   private async git(args: string[], cwd = this.repositoryRoot, token?: string): Promise<string> {
+    return (await this.gitBytes(args, cwd, token)).toString('utf8');
+  }
+
+  private async gitBytes(args: string[], cwd = this.repositoryRoot, token?: string): Promise<Buffer> {
     const baseEnvironment = Object.fromEntries(
       Object.entries(process.env).filter((entry): entry is [string, string] =>
         entry[1] !== undefined && !entry[0].startsWith('GIT_')),
@@ -328,6 +364,7 @@ export class PreBranchSddWorkspaceAdapter implements PreBranchSddWorkspacePort {
     const { stdout } = await runFile('git', args, {
       cwd,
       env,
+      encoding: 'buffer',
       maxBuffer: 10 * 1024 * 1024,
     });
     return stdout;

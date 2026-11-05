@@ -35,9 +35,12 @@ describe('pre-branch SDD policy', () => {
     expect(merged).toContain('```markdown\n## Example heading\n```');
   });
 
-  it('rejects an oversized change appendix without dropping any existing requirement', () => {
-    expect(() => composeSddUpdate(validDocument('Owner'), validDocument('Change', 'x'.repeat(18_000))))
-      .toThrow('appendix exceeds 18000');
+  it('accepts an appendix above the legacy 18,000-character ceiling', () => {
+    const owner = validDocument('Owner');
+    const appendix = validDocument('Change', 'x'.repeat(24_000));
+    const published = composeSddUpdate(owner, appendix);
+    expect(published.startsWith(owner)).toBe(true);
+    expect(recoverSddUpdate(owner, published)).toBe(appendix);
   });
 
   it.each([1800, 18000])('recovers a valid %i-character appendix without counting the publication newline', size => {
@@ -65,9 +68,19 @@ describe('pre-branch SDD policy', () => {
     expect(recoverSddUpdate(owner, `${composeSddUpdate(owner, validDocument('Change'))}\n`)).toBeUndefined();
   });
 
-  it('rejects a combined owner beyond the fixed document limit instead of truncating it', () => {
-    expect(() => composeSddUpdate(validDocument('Owner', 'x'.repeat(60_000)), validDocument('Change', 'x'.repeat(10_000))))
-      .toThrow('length is outside');
+  it('retains every original byte of a large owner, including trailing whitespace', () => {
+    const owner = validDocument('Owner', 'x'.repeat(100_000) + '\n  \n\n');
+    const appendix = validDocument('Change', 'y'.repeat(20_000));
+    const published = composeSddUpdate(owner, appendix);
+    expect(published.startsWith(owner)).toBe(true);
+    expect(recoverSddUpdate(owner, published)).toBe(appendix);
+  });
+
+  it('enforces the measured composed-artifact byte envelope without truncation', () => {
+    const owner = validDocument('Owner', 'x'.repeat(500_000));
+    const appendix = validDocument('Change', '界'.repeat(10_000));
+    expect(() => composeSddUpdate(owner, appendix))
+      .toThrow(/publication exceeded its operational budget: \d+ bytes \(limit 524288\)/u);
   });
 
   it.each(['specs/payments.md', 'specs/new-capability.md'])('allows one normalized SDD path %s', path => {

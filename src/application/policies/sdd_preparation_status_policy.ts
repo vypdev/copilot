@@ -1,3 +1,4 @@
+import type { SddResourceFailure } from '../../domain/sdd_resource_budget';
 import { SDD_CATALOG_COMPATIBILITY_REASONS, type SddCatalogCompatibilityReason } from '../../domain/sdd_catalog_compatibility';
 import { isSddSourceContextDiagnostic } from '../../domain/agent_source_snapshot';
 import { APPLICATION_ERROR_METADATA, APPLICATION_ERROR_RECOVERY_IDS, isApplicationErrorCorrelationId } from '../../data/model/application_error';
@@ -33,6 +34,7 @@ export function renderSddPreparationFailure(options: Readonly<{
   locale?: string;
   error: ApplicationErrorPresentationSource;
   diagnostic?: SddValidationDiagnostic;
+  resource?: Pick<SddResourceFailure, 'stage' | 'unit' | 'limit' | 'observed'>;
   catalogReason?: SddCatalogCompatibilityReason;
   missingCatalogSource?: string;
   attempts?: 1 | 2;
@@ -98,6 +100,16 @@ export function renderSddPreparationFailure(options: Readonly<{
   } else if (options.catalogReason) {
     lines.push(`**${message('sddPreparation.catalogCompatibility')}:** \`${options.catalogReason}\``,
       '', message('sddPreparation.catalogProfile'), '', message('sddPreparation.catalogRetained'));
+  } else if (options.resource) {
+    const { stage, unit, observed, limit } = options.resource;
+    if (!['input', 'owner', 'plan', 'unit', 'assembly', 'publication'].includes(stage)
+      || !['bytes', 'units', 'rows', 'edges', 'identities', 'milliseconds'].includes(unit)
+      || ![observed, limit].every(n => Number.isSafeInteger(n) && n >= 0) || observed <= limit) {
+      throw new TypeError('Invalid SDD resource diagnostic.');
+    }
+    lines.push('**' + message('sddPreparation.phase') + ':** ' + stage,
+      '- ' + message('sddPreparation.expected') + ': ' + limit + ' ' + unit,
+      '- ' + message('sddPreparation.observed') + ': ' + observed + ' ' + unit);
   } else if (diagnostic) {
     lines.push(`**${message('sddPreparation.reason')}:** \`${diagnostic.reason}\``,
       `**${message('sddPreparation.phase')}:** \`${diagnostic.phase}\``);

@@ -1752,7 +1752,7 @@
       "id": "issue-start-and-sdd-readiness",
       "title": "Uniform issue start and pre-branch SDD readiness",
       "status": "implemented",
-      "scope": "Start every admitted issue with one explicit signal and publish a validated SDD before eligible Action-managed branch work; inspect verified SDD status and bounded structural publication comparisons and preserve complete navigable catalog links for accepted repository filenames and safely publish generated catalogs without following destination links; bootstrap truthful proposed SDK capabilities before implementation without changing readiness; reject incomplete specification discovery explicitly without following unregistered symbolic links; report confirmed missing trusted catalogs with immutable source provenance and prerequisite recovery before model or publication; bind pre-branch analysis and drafting to a verified independent read-only view of the selected immutable source without changing the canonical checkout; distinguish visible protocol notation from repository citations, allow only constructive proposed-file directory ancestry and expose bounded private-safe origin diagnostics; distinguish registered-document updates from new companion and independent capability publication, carrying fresh authorized unpublished ownership context across clarification without changing published ownership fences; ground verification guidance in selected project declarations, preserve exact evidence and independent refinements, and render portable catalog instructions without assuming consumer package scripts; preserve admitted explicit case identities and derive declared-target navigation before unchanged native validation",
+      "scope": "Start every admitted issue with one explicit signal and publish a validated SDD before eligible Action-managed branch work; inspect verified SDD status and bounded structural publication comparisons and preserve complete navigable catalog links for accepted repository filenames and safely publish generated catalogs without following destination links; bootstrap truthful proposed SDK capabilities before implementation without changing readiness; reject incomplete specification discovery explicitly without following unregistered symbolic links; report confirmed missing trusted catalogs with immutable source provenance and prerequisite recovery before model or publication; bind pre-branch analysis and drafting to a verified independent read-only view of the selected immutable source without changing the canonical checkout; distinguish visible protocol notation from repository citations, allow only constructive proposed-file directory ancestry and expose bounded private-safe origin diagnostics; distinguish registered-document updates from new companion and independent capability publication, carrying fresh authorized unpublished ownership context across clarification without changing published ownership fences; ground verification guidance in selected project declarations, preserve exact evidence and independent refinements, and render portable catalog instructions without assuming consumer package scripts; preserve admitted explicit case identities and derive declared-target navigation before unchanged native validation; assemble bounded SDD units, validate optional maintainer drafts, and bind companion recovery to immutable ownership and publication evidence",
       "owner": "Copilot maintainers",
       "lastVerified": "2026-11-05",
       "specs": [
@@ -1857,7 +1857,11 @@
         "src/domain/sdd_case_reference.ts",
         "src/application/policies/sdd_ownership_prompt_policy.ts",
         "src/tooling/sdd_ownership_question_scoring.ts",
-        "src/application/policies/sdd_draft_grounding_policy.ts"
+        "src/application/policies/sdd_draft_grounding_policy.ts",
+        "src/domain/sdd_resource_budget.ts",
+        "src/domain/sdd_incremental_plan.ts",
+        "src/application/policies/sdd_selection_policy.ts",
+        "src/application/usecases/sdd/pre_branch_sdd_incremental_workflow.ts"
       ],
       "tests": [
         "src/domain/__tests__/issue_workflow_runtime_policy.test.ts",
@@ -1948,7 +1952,8 @@
         "quality/sdd/evidence/issue-858-final-observations.jsonl",
         "quality/sdd/evidence/issue-858-rejected-observations.jsonl",
         "quality/sdd/evidence/issue-858-source-objects.json",
-        "quality/sdd/evidence/issue-858.json"
+        "quality/sdd/evidence/issue-858.json",
+        "src/application/usecases/sdd/pre_branch_sdd_incremental_workflow.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-management.mdx",

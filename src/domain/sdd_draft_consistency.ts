@@ -1,3 +1,4 @@
+import { requireSddCapacity, sddBytes, SDD_RESOURCES } from './sdd_resource_budget';
 import type { SddValidationFact } from './sdd_validation_diagnostic';
 import { SddDraftFormatFailure } from './pre_branch_sdd';
 import { appendSddReferenceContext, buildSddReferenceIndex, hasBlockedSddAncestor, isKnownSddRepositoryReference, isSddFileRole, isSafeSddRepositoryPath as safePath,
@@ -42,7 +43,7 @@ function assertRequirementsCovered(counts: readonly number[]): void {
 }
 
 /** Excludes examples and hidden records from the contract. */
-function visible(source: string): string {
+export function visibleSddContract(source: string): string {
   let fence: string | undefined;
   let comment = false;
   return source.replace(/\r\n/gu, '\n').split('\n').map(line => {
@@ -115,7 +116,7 @@ export function renderSddNavigation(markdown: string, publicationPath: string): 
   const prefix = /\{\{\s*SDD_FILE_NAVIGATION\b/iu;
   if (!prefix.test(markdown)) return markdown;
   if (!safePath(publicationPath) || markdown.split(slot).length !== 2) fail('repository-path', { detail: 'path-link', section: 0 });
-  const source = visible(markdown);
+  const source = visibleSddContract(markdown);
   const placed = section(source, 15, 'repository-path').split('\n').filter(line => {
     if (/^(?: {4}| {0,3}\t)/u.test(line)) return false;
     const index = line.indexOf(slot);
@@ -145,7 +146,7 @@ export function renderSddFileLinks(markdown: string, publicationPath: string): s
   const pattern = /\{\{SDD_FILE_LINK:([^{}\r\n`]*)\}\}/gu;
   const tokens = [...markdown.matchAll(pattern)];
   if (!tokens.length) fail('repository-path', { detail: 'path-link', section: 0 });
-  const declared = new Set(table(visible(markdown), 15, ['Path', 'Change'], 'repository-path').map(row => row[0]));
+  const declared = new Set(table(visibleSddContract(markdown), 15, ['Path', 'Change'], 'repository-path').map(row => row[0]));
   let cursor = 0, result = '';
   for (const token of tokens) {
     const target = token[1], begin = token.index, end = begin + token[0].length;
@@ -187,10 +188,24 @@ function sddFileDestination(target: string, publicationPath: string): string {
   } catch { return fail('repository-path', { detail: 'path-link', section: 0 }); }
 }
 
+/** Generated prose can cite known file links; trusted assembly owns file navigation. */
+export function sddProseDestinations(paths: readonly string[], publicationPath: string): ReadonlySet<string> {
+  return new Set(paths.map(target => sddFileDestination(target, publicationPath)));
+}
+
+export function validateSddProseDestinations(source: string, approved: ReadonlySet<string>): void {
+  for (const [index, destination] of readSddVisibleReferences(source).destinations.entries()) {
+    const href = destination.split(/[?#]/u)[0];
+    if (!href || /^(?:[a-z][a-z0-9+.-]*:|\/)/iu.test(href) || approved.has(href.replace(/^\.\//u, ''))) continue;
+    fail('repository-path', { detail: 'path-link', section: 0 },
+      [{ detail: 'path-link-reference', section: 0, row: index + 1 }]);
+  }
+}
+
 /** Never repairs definitions or contradictory supplied tables; the writer independently revalidates. */
 export function renderSddDerivedTables(markdown: string): string {
   if (!markdown.includes(BUDGET_SLOT) && !markdown.includes(TRACEABILITY_SLOT)) return markdown;
-  const source = visible(markdown);
+  const source = visibleSddContract(markdown);
   let normalized = markdown;
   for (const [slot, number, reason] of [
     [BUDGET_SLOT, 14, 'case-budget'], [TRACEABILITY_SLOT, 17, 'requirement-mapping'],
@@ -205,14 +220,19 @@ export function renderSddDerivedTables(markdown: string): string {
   const requirements = table(source, 4, ['Requirement', 'Behavior'], 'requirement-mapping').map(row => row[0]);
   uniqueIdentifiers(requirements, REQUIREMENT_ID, 'requirement-mapping', 4);
   const cases = table(source, 14, ['Case ID', 'Area', 'Requirements', 'Scenario'], 'case-identity');
+  requireSddCapacity('assembly', 'rows', SDD_RESOURCES.rows, cases.length + requirements.length);
   const caseIds = cases.map(row => row[0]);
   uniqueIdentifiers(caseIds, CASE_ID, 'case-identity', 14);
   const counts = new Map<string, number>();
   const edges = new Map(requirements.map(id => [id, [] as string[]]));
+  let edgeCount = 0, traceBytes = 0;
   for (const [index, [id, area, links]] of cases.entries()) {
     if (area === 'Total') fail('case-budget', { detail: 'budget-area', section: 14 });
     counts.set(area, (counts.get(area) ?? 0) + 1);
-    for (const requirement of ids(links, REQUIREMENT_ID, 'requirement-mapping', 14)) {
+    const linkedRequirements = ids(links, REQUIREMENT_ID, 'requirement-mapping', 14);
+    requireSddCapacity('assembly', 'edges', SDD_RESOURCES.edges, edgeCount += linkedRequirements.length);
+    requireSddCapacity('assembly', 'bytes', SDD_RESOURCES.artifactBytes, traceBytes += (sddBytes(id) + 2) * linkedRequirements.length);
+    for (const requirement of linkedRequirements) {
       const linked = edges.get(requirement);
       if (!linked) fail('requirement-mapping', { detail: 'requirement-reference', section: 14, row: index + 1, expected: 0, observed: 1 });
       linked.push(id);
@@ -229,14 +249,17 @@ export function renderSddDerivedTables(markdown: string): string {
 
 export function reservedSddCaseIds(documents: readonly SddOwnerDocument[]): string[] {
   const reserved = new Set<string>();
+  requireSddCapacity('owner', 'bytes', SDD_RESOURCES.sourceBytes, documents.reduce((total, doc) => total + sddBytes(doc.markdown), 0));
+  let expansions = 0;
   for (const document of documents) {
-    const source = visible(document.markdown);
+    const source = visibleSddContract(document.markdown);
     const qualified = source.match(CASE) ?? [];
     const namespaces = new Set(qualified.map(id => id.slice(0, id.lastIndexOf('-C') + 2)));
     for (const id of qualified) reserved.add(id);
     // Legacy inventories often qualify C01 and abbreviate the remaining rows.
     // Reserve every plausible namespace instead of silently assigning an alias a new meaning.
     for (const match of source.matchAll(/(?<![\w-])C(\d+)\b/gu)) {
+      requireSddCapacity('owner', 'identities', SDD_RESOURCES.ownerIdentities, expansions += namespaces.size);
       for (const namespace of namespaces) reserved.add(`${namespace}${match[1]}`);
     }
     for (const match of source.matchAll(/\bC(\d+)\s*[-–—]\s*C?(\d+)\b/gu)) {
@@ -245,11 +268,13 @@ export function reservedSddCaseIds(documents: readonly SddOwnerDocument[]): stri
       if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || end < start || end - start > 1000) {
         throw new Error('An owning SDD case range cannot be reconciled within the fixed bound; review the baseline before retrying.');
       }
+      requireSddCapacity('owner', 'identities', SDD_RESOURCES.ownerIdentities, expansions += (end - start + 1) * namespaces.size);
       for (let number = start; number <= end; number++) {
         for (const namespace of namespaces) reserved.add(`${namespace}${String(number).padStart(match[1].length, '0')}`);
       }
     }
   }
+  requireSddCapacity('owner', 'identities', SDD_RESOURCES.ownerIdentities, reserved.size);
   return [...reserved].sort();
 }
 
@@ -259,7 +284,7 @@ export function suppliedSddCaseIds(inputs: readonly string[], owners: readonly S
   const supplied = new Set<string>();
   const add = (id: string) => { if (CASE_ID.test(id) && !reserved.has(id)) supplied.add(id); };
   for (const input of inputs) {
-    const lines = visible(input).split('\n');
+    const lines = visibleSddContract(input).split('\n');
     for (let index = 0; index < lines.length; index++) {
       const line = lines[index];
       // Quoted and indented examples are not operative definitions.
@@ -290,9 +315,18 @@ export function suppliedSddCaseIds(inputs: readonly string[], owners: readonly S
 /** References and renamed aliases cannot stand in for supplied inventory definitions. */
 export function validateSuppliedSddCaseIds(markdown: string, supplied: readonly string[]): void {
   if (!supplied.length) return;
-  const defined = new Set(table(visible(markdown), 14, ['Case ID', 'Area', 'Requirements', 'Scenario'], 'case-identity').map(row => row[0]));
+  const defined = new Set(table(visibleSddContract(markdown), 14, ['Case ID', 'Area', 'Requirements', 'Scenario'], 'case-identity').map(row => row[0]));
   const observed = supplied.filter(id => defined.has(id)).length;
   if (observed !== supplied.length) fail('case-identity', { detail: 'case-identity', section: 14, expected: supplied.length, observed });
+}
+
+/** Also checks a prose unit before assembly, so the owning unit can be repaired once. */
+export function validateSddCaseReferences(source: string, defined: ReadonlySet<string>, reserved: ReadonlySet<string>): void {
+  const shorthand = countSddShorthandCaseReferences(source);
+  if (shorthand) fail('case-identity', { detail: 'case-shorthand', section: 0, expected: 0, observed: shorthand });
+  for (const [id] of source.matchAll(CASE)) {
+    if (!defined.has(id) && !reserved.has(id)) fail('case-identity', { detail: 'case-reference', section: 0 });
+  }
 }
 
 export function validateSddDraftConsistency(
@@ -301,23 +335,19 @@ export function validateSddDraftConsistency(
   inventory: SddRepositoryInventory,
   sddPath: string,
 ): void {
-  const source = visible(markdown);
+  const source = visibleSddContract(markdown);
   const requirements = table(source, 4, ['Requirement', 'Behavior'], 'requirement-mapping');
   const requirementIds = requirements.map(row => row[0]);
   uniqueIdentifiers(requirementIds, REQUIREMENT_ID, 'requirement-mapping', 4);
   const cases = table(source, 14, ['Case ID', 'Area', 'Requirements', 'Scenario'], 'case-identity');
+  requireSddCapacity('assembly', 'rows', SDD_RESOURCES.rows, cases.length + requirements.length);
   const caseIds = cases.map(row => row[0]);
   const reserved = new Set(reservedSddCaseIds(owners));
   uniqueIdentifiers(caseIds, CASE_ID, 'case-identity', 14);
-  const shorthand = countSddShorthandCaseReferences(source);
-  if (shorthand) fail('case-identity', { detail: 'case-shorthand', section: 0, expected: 0, observed: shorthand });
   const collisions = caseIds.filter(id => reserved.has(id)).length;
   if (collisions) fail('case-identity', { detail: 'case-reserved', section: 14, expected: 0, observed: collisions });
   // References to existing owner cases are allowed, but cannot count as newly defined cases.
-  const defined = new Set(caseIds);
-  for (const [id] of source.matchAll(CASE)) {
-    if (!defined.has(id) && !reserved.has(id)) fail('case-identity', { detail: 'case-reference', section: 0 });
-  }
+  validateSddCaseReferences(source, new Set(caseIds), reserved);
 
   const budget = table(source, 14, ['Area', 'Minimum distinct cases', 'Behaviors/risks covered'], 'case-budget');
   const counts = new Map<string, number>();
@@ -346,8 +376,11 @@ export function validateSddDraftConsistency(
   }
 
   const edges = new Map(requirementIds.map(id => [id, new Set<string>()]));
+  let edgeCount = 0;
   for (const [index, [id, , links]] of cases.entries()) {
-    for (const requirement of ids(links, REQUIREMENT_ID, 'requirement-mapping', 14)) {
+    const linkedRequirements = ids(links, REQUIREMENT_ID, 'requirement-mapping', 14);
+    requireSddCapacity('assembly', 'edges', SDD_RESOURCES.edges, edgeCount += linkedRequirements.length);
+    for (const requirement of linkedRequirements) {
       const linked = edges.get(requirement);
       if (!linked) fail('requirement-mapping', { detail: 'requirement-reference', section: 14, row: index + 1, expected: 0, observed: 1 });
       linked.add(id);

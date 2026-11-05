@@ -1,4 +1,5 @@
-import { SddCatalogCompatibilityFailure, isSddCatalogOwnerPath } from './sdd_catalog_compatibility';
+import { admitSddArtifact, requireSddCapacity, sddBytes, SDD_RESOURCES } from './sdd_resource_budget';
+import { SddCatalogCompatibilityFailure, isSddCatalogOwnerPath, type SddCatalogCapability } from './sdd_catalog_compatibility';
 import { normalizeSddValidationDiagnostic, type SddDraftFormatReason, type SddValidationDiagnostic } from './sdd_validation_diagnostic';
 /** Pure, bounded contracts for clarification before an Action-owned issue branch exists. */
 export type SddOwnerAction = 'update' | 'companion' | 'new';
@@ -29,6 +30,10 @@ export interface SddAnswer {
   readonly questionText?: string;
 }
 
+export type SddSelection =
+  | { readonly kind: 'seed'; readonly receipt: string; readonly seedHash: string; readonly newCapability?: SddCatalogCapability }
+  | { readonly kind: 'companion'; readonly receipt: string; readonly retainedPath: string };
+
 export interface SddGateRecord {
   readonly version: 1;
   readonly issueNumber: number;
@@ -38,6 +43,8 @@ export interface SddGateRecord {
   readonly round: number;
   readonly plan: SddPlan;
   readonly answers?: readonly SddAnswer[];
+  readonly selection?: SddSelection;
+  readonly selectionArtifact?: string;
   readonly branchName?: string;
   readonly commitSha?: string;
   readonly revisionSha?: string;
@@ -157,6 +164,9 @@ export function readSddGateRecord(body: string | null | undefined, issueNumber: 
     } catch {
       return undefined;
     }
+    if (value.selection !== undefined && !validSddSelection(value.selection)) return undefined;
+    if (value.selectionArtifact !== undefined
+      && (!value.selection || typeof value.selectionArtifact !== 'string' || !DIGEST.test(value.selectionArtifact))) return undefined;
     if (value.phase === 'published'
       && (typeof value.branchName !== 'string' || typeof value.commitSha !== 'string' || !SHA.test(value.commitSha))) return undefined;
     if ((value.branchName !== undefined || value.commitSha !== undefined)
@@ -182,6 +192,17 @@ export function readSddGateRecord(body: string | null | undefined, issueNumber: 
   }
 }
 
+function validSddSelection(value: unknown): boolean {
+  if (!isRecord(value) || typeof value.receipt !== 'string' || !DIGEST.test(value.receipt)) return false;
+  if (value.kind === 'seed') {
+    return Object.keys(value).every(key => ['kind', 'receipt', 'seedHash', 'newCapability'].includes(key))
+      && typeof value.seedHash === 'string' && DIGEST.test(value.seedHash)
+      && (value.newCapability === undefined || (isRecord(value.newCapability) && JSON.stringify(value.newCapability).length <= 16_384));
+  }
+  return value.kind === 'companion' && Object.keys(value).length === 3
+    && typeof value.retainedPath === 'string' && isSafeSddPath(value.retainedPath);
+}
+
 export function renderSddGateRecord(record: SddGateRecord, locale = 'en-US', issueUrl?: string): string {
   const spanish = /^es(?:-|$)/i.test(locale);
   const marker = `<!-- ${SDD_GATE_MARKER}\n${serializeSddGateValue(record)}\n-->`;
@@ -204,12 +225,18 @@ export function renderSddGateRecord(record: SddGateRecord, locale = 'en-US', iss
       : `The linked branch \`${record.branchName}\` and its first SDD commit are retained; implementation waits for this revision.`
     : spanish ? 'Todavía no existe ningún borrador del SDD ni ninguna rama.' : 'No SDD draft or branch exists yet.';
   const pendingPublication = Boolean(record.branchName && !record.commitSha && record.plan.questions.length === 0);
+  const choice = record.selection;
+  const selectionDetails = choice?.kind === 'seed'
+    ? (spanish ? 'SHA-256 del borrador: ' : 'Draft SHA-256: ') + '`' + choice.seedHash + '`' + '\n\n'
+    : choice?.kind === 'companion'
+      ? (spanish ? 'SDD conservado: ' : 'Retained SDD: ') + '`' + choice.retainedPath + '`' + '\n\n'
+      : '';
   const nextStep = pendingPublication
     ? spanish ? 'Vuelve a ejecutar el workflow de la issue para reintentar la publicación en esta misma rama.' : 'Run the issue workflow again to retry publication on this same branch.'
     : spanish ? 'Responde con `SDD Q1: tu respuesta` (una línea por pregunta). La Action continuará cuando las personas indicadas respondan todas las preguntas.' : 'Reply with `SDD Q1: your answer` (one line per question). The Action will continue after the required people answer every question.';
   return spanish
-    ? `## Estado del SDD\n\n**Estado actual:** ${pendingPublication ? 'La publicación del primer SDD está pendiente.' : 'A la espera de respuestas para la especificación.'} ${retained}\n\n**SDD responsable:** \`${record.plan.path}\`\n\n**Ronda de aclaración:** ${record.round}\n\n${questions}\n\n${nextStep}\n\n${marker}`
-    : `## SDD work status\n\n**Current status:** ${pendingPublication ? 'First SDD publication is pending.' : 'Waiting for specification answers.'} ${retained}\n\n**Owning SDD:** \`${record.plan.path}\`\n\n**Clarification round:** ${record.round}\n\n${questions}\n\n${nextStep}\n\n${marker}`;
+    ? `## Estado del SDD\n\n**Estado actual:** ${pendingPublication ? 'La publicación del primer SDD está pendiente.' : 'A la espera de respuestas para la especificación.'} ${retained}\n\n**SDD responsable:** \`${record.plan.path}\`\n\n**Ronda de aclaración:** ${record.round}\n\n${selectionDetails}${questions}\n\n${nextStep}\n\n${marker}`
+    : `## SDD work status\n\n**Current status:** ${pendingPublication ? 'First SDD publication is pending.' : 'Waiting for specification answers.'} ${retained}\n\n**Owning SDD:** \`${record.plan.path}\`\n\n**Clarification round:** ${record.round}\n\n${selectionDetails}${questions}\n\n${nextStep}\n\n${marker}`;
 }
 
 function sddPublicationLinks(record: SddGateRecord, issueUrl: string | undefined, spanish: boolean): string {
@@ -262,7 +289,12 @@ export const SDD_REQUIRED_HEADINGS = Object.freeze([
 ]);
 
 export function validateSddMarkdown(markdown: string): void {
-  if (markdown.length < SDD_MIN_DRAFT_CHARACTERS || markdown.length > SDD_MAX_DRAFT_CHARACTERS) throw new Error('The SDD draft length is outside the supported range.');
+  admitSddArtifact(markdown);
+  validateSddStructure(markdown);
+}
+
+function validateSddStructure(markdown: string): void {
+  if (markdown.length < SDD_MIN_DRAFT_CHARACTERS) throw new Error('The SDD draft length is outside the supported range.');
   for (const heading of SDD_REQUIRED_HEADINGS) {
     if (!markdown.includes(heading)) throw new SddDraftFormatFailure('required-heading', `The SDD draft is missing ${heading}.`, { reason: 'required-heading', phase: 'validation', facts: [{ detail: 'required-heading', section: 0, row: SDD_REQUIRED_HEADINGS.indexOf(heading) + 1 }] });
   }
@@ -329,27 +361,36 @@ function hasNumericSddBudgetTable(markdown: string): boolean {
 
 /** Automated extensions retain the owning contract verbatim; contributors integrate revisions explicitly. */
 export function composeSddUpdate(existing: string, change: string): string {
-  try { validateSddMarkdown(existing); }
+  requireSddCapacity('owner', 'bytes', SDD_RESOURCES.sourceBytes, sddBytes(existing));
+  try { validateSddStructure(existing); }
   catch (error) {
     if (error instanceof SddDraftFormatFailure) throw new SddOwnerFormatFailure(error.reason);
     throw error;
   }
   validateSddMarkdown(change);
-  if (change.length > SDD_MAX_UPDATE_CHARACTERS) throw new Error('An SDD update appendix exceeds 18000 characters; use a proportional change or a companion SDD.');
-  const appendix = shiftSddHeadings(change, 1);
-  const merged = `${existing.trimEnd()}\n\n${appendix.trim()}\n`;
-  validateSddMarkdown(merged);
+  const appendix = shiftSddHeadings(change, 1).trim();
+  const prefix = sddAppendixPrefix(existing);
+  requireSddCapacity('publication', 'bytes', SDD_RESOURCES.artifactBytes, sddBytes(prefix) + sddBytes(appendix) + 1);
+  const merged = `${prefix}${appendix}\n`;
+  validateSddStructure(merged);
   return merged;
 }
 
-/** Recovery validates the original candidate, not a second copy of its retained baseline. */
+function sddAppendixPrefix(existing: string): string {
+  if (existing.endsWith('\n\n')) return existing;
+  return existing.endsWith('\n') ? existing + '\n' : existing + '\n\n';
+}
+
+/** Recover the exact appendix and support the older whitespace-normalizing publication format. */
 export function recoverSddUpdate(existing: string, published: string): string | undefined {
-  const prefix = `${existing.trimEnd()}\n\n`;
-  if (!published.startsWith(prefix)) return undefined;
-  // Composition normalizes outer whitespace and adds a publication newline.
-  // Reconstruct an equivalent candidate inside the original size bounds.
+  const current = sddAppendixPrefix(existing);
+  const legacy = existing.trimEnd() + '\n\n';
+  const prefix = published.startsWith(current) ? current : published.startsWith(legacy) ? legacy : undefined;
+  if (!prefix) return undefined;
   const change = shiftSddHeadings(published.slice(prefix.length), -1).trim().padEnd(SDD_MIN_DRAFT_CHARACTERS, '\n');
-  return composeSddUpdate(existing, change) === published ? change : undefined;
+  const exact = composeSddUpdate(existing, change);
+  const reconstructed = prefix === current ? exact : legacy + exact.slice(current.length);
+  return reconstructed === published ? change : undefined;
 }
 
 function shiftSddHeadings(source: string, direction: 1 | -1): string {

@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { SddCatalogCompatibilityFailure, SDD_CATALOG_COMPATIBILITY_REASONS } from '../../../../../domain/sdd_catalog_compatibility';
 import { SddTrustedCatalogMissingFailure } from '../../../../../domain/sdd_trusted_catalog_failure';
 import { SddSourceContextFailure } from '../../../../../domain/agent_source_snapshot';
@@ -72,6 +73,19 @@ function harness(presentation?: ConstructorParameters<typeof PreBranchSddGateUse
   return { useCase, comments, query, loadSnapshot, readSourceRevision, isAncestor, readSdd, validateDraft, publish, recoverPublished, verifyPublication, addComment, updateComment, setLabels, isActorAllowedToModifyFiles, getDescription, getTitle, getLinkedBranch, labels: () => labels };
 }
 
+function incrementalReply({ prompt }: { prompt: string }, caseId = 'payments-change-C01') {
+  const unitId = /Return only the JSON for unit ([a-z]+-\d+)\./u.exec(prompt)?.[1];
+  if (!unitId) throw new Error('Expected an incremental SDD query.');
+  if (unitId.startsWith('inventory-')) return {
+    unitId, requirements: [['PAY-01', 'Preserve the resolved payment flow.']],
+    cases: [[caseId, 'Functional', 'PAY-01', 'Verify the resolved outcome.']], paths: [],
+  };
+  const numbers = prompt.split('Draft the body only for these numbered sections: ')[1].split('. Return all')[0]
+    .split('; ').map(heading => Number(heading.split('.')[0]));
+  return { unitId, sections: numbers.map(section => ({ section,
+    body: 'Document the resolved user behavior and acceptance conditions. '.repeat(4) })) };
+}
+
 describe('PreBranchSddGateUseCase', () => {
   it.each([
     ['update', true], ['companion', true], ['update', false], ['companion', false],
@@ -119,14 +133,89 @@ describe('PreBranchSddGateUseCase', () => {
     expect(h.publish).not.toHaveBeenCalled();
   });
 
-  it('858: only enforces issue definitions visible within the existing prompt bound', async () => {
+  it('763: preserves definitions beyond the legacy prompt cutoff through staged generation', async () => {
     const h = harness();
-    const request = { ...context(), issueBody: 'x'.repeat(30000) + '\nwithheld-refinement-C99: Outside the admitted prompt view.' };
+    const request = { ...context(), issueBody: 'x'.repeat(30_000) + '\nresolved-refinement-C99: Required beyond the previous cutoff.' };
     h.getDescription.mockResolvedValue(request.issueBody);
-    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: writerDraft('# Draft') });
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null })
+      .mockImplementation(request => incrementalReply(request, 'resolved-refinement-C99'));
     expect((await h.useCase.begin(request)).status).toBe('drafted');
-    expect(h.query.mock.calls[1][0].prompt).not.toContain('withheld-refinement-C99');
-    expect(h.validateDraft).toHaveBeenCalledTimes(1);
+    expect(h.query.mock.calls.some(([request]) => request.prompt.includes('resolved-refinement-C99'))).toBe(true);
+    expect(h.validateDraft.mock.calls[0][2]).toContain('resolved-refinement-C99');
+  });
+
+  it('763: a seed in an issue is optional and is excluded from autonomous provider prompts', async () => {
+    const h = harness();
+    const secretWitness = 'Never feed this unapproved draft to the provider.';
+    const request = { ...context(), issueBody: context().issueBody + '\n<!-- copilot:sdd-seed -->\n' + secretWitness + '\n<!-- /copilot:sdd-seed -->' };
+    h.getDescription.mockResolvedValue(request.issueBody);
+    h.comments.push({ id: 101, user: { login: 'untrusted' }, body: 'SDD Q1: review seed ' + createHash('sha256').update(secretWitness + '\n').digest('hex') });
+    h.isActorAllowedToModifyFiles.mockResolvedValue(false);
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: writerDraft('# Autonomous') });
+    expect((await h.useCase.begin(request)).status).toBe('drafted');
+    expect(h.query.mock.calls.every(([request]) => !request.prompt.includes(secretWitness))).toBe(true);
+  });
+
+  it.each(['publish', 'revoked', 'stale-base', 'use-autonomous'] as const)('763: handles seed selection and %s through the managed gate', async scenario => {
+    const h = harness();
+    const seed = sddConsistencyFixture('payments-change', plan.path, 'update').trimEnd() + '\n';
+    const request = { ...context(), issueBody: context().issueBody + '\n<!-- copilot:sdd-seed -->\n' + seed + '<!-- /copilot:sdd-seed -->' };
+    h.getDescription.mockResolvedValue(request.issueBody);
+    h.isActorAllowedToModifyFiles.mockImplementation(async actor => actor === 'maintainer');
+    h.comments.push({ id: 101, user: { login: 'maintainer' }, body: 'SDD Q1: review seed ' + createHash('sha256').update(seed).digest('hex') });
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null });
+    expect((await h.useCase.begin(request)).status).toBe('waiting');
+    const card = h.comments.find(comment => comment.user.login === 'copilot[bot]')!;
+    const receipt = readSddGateRecord(card.body, 42)?.selection?.receipt;
+    expect(receipt).toMatch(/^[a-f0-9]{64}$/u);
+    expect(card.body).not.toContain('Missing credentials return 401.');
+    h.comments.push({ id: 103, user: { login: 'untrusted' }, body: 'SDD Q1: use seed ' + receipt });
+    expect((await h.useCase.begin(request)).status).toBe('waiting');
+    h.comments.push({ id: 104, user: { login: 'maintainer' },
+      body: (scenario === 'use-autonomous' ? 'SDD Q1: generate ' : 'SDD Q1: use seed ') + receipt });
+    if (scenario === 'stale-base') {
+      h.loadSnapshot.mockResolvedValue({ ...snapshot, baseSha: 'c'.repeat(40) });
+      h.query.mockResolvedValueOnce({ ...plan, questions: [question], newCapability: null });
+      expect((await h.useCase.begin(request)).status).toBe('waiting');
+      expect(h.validateDraft).not.toHaveBeenCalled();
+      return;
+    }
+    if (scenario === 'use-autonomous') h.query.mockResolvedValueOnce({ markdown: writerDraft('# Autonomous') });
+    const draft = await h.useCase.begin(request);
+    expect(draft.status).toBe('drafted');
+    if (draft.status !== 'drafted') throw new Error('Expected an admitted draft.');
+    expect(h.query).toHaveBeenCalledTimes(scenario === 'use-autonomous' ? 2 : 1);
+    if (scenario === 'use-autonomous') {
+      expect(h.validateDraft.mock.calls[0][2]).toBe(writerDraft('# Autonomous'));
+    } else {
+      expect(h.validateDraft.mock.calls[0][2]).toBe(seed);
+    }
+    if (scenario === 'revoked') h.isActorAllowedToModifyFiles.mockResolvedValue(false);
+    const result = await h.useCase.publish(request, draft, 'feature/42-change');
+    expect(result.status).toBe(scenario === 'revoked' ? 'blocked' : 'published');
+    expect(h.publish).toHaveBeenCalledTimes(scenario === 'revoked' ? 0 : 1);
+  });
+
+  it('763: proposes an absent same-capability path and waits for an exact maintainer decision', async () => {
+    const h = harness();
+    h.readSdd.mockImplementation(async (_sha, path) => path === plan.path ? 'x'.repeat(524_288) : undefined);
+    h.isActorAllowedToModifyFiles.mockImplementation(async actor => actor === 'maintainer');
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null });
+    expect((await h.useCase.begin(context())).status).toBe('waiting');
+    const pending = readSddGateRecord(h.comments[0].body, 42)!;
+    expect(pending.plan).toMatchObject({ action: 'companion', capabilityId: plan.capabilityId, path: 'specs/payments-issue-42.md' });
+    expect(pending.selection).toMatchObject({ retainedPath: plan.path });
+    expect(h.readSdd).toHaveBeenCalledWith(baseSha, pending.plan.path);
+    expect(h.comments[0].body).toContain('524291 bytes');
+    expect(h.validateDraft).not.toHaveBeenCalled();
+    h.comments.push({ id: 101, user: { login: 'untrusted' }, body: 'SDD Q1: accept companion ' + pending.selection!.receipt });
+    expect((await h.useCase.begin(context())).status).toBe('waiting');
+    h.comments.push({ id: 102, user: { login: 'maintainer' }, body: 'SDD Q1: accept companion ' + pending.selection!.receipt });
+    h.query.mockImplementation(incrementalReply);
+    const outcome = await h.useCase.begin(context());
+    expect(outcome.status).toBe('drafted');
+    expect(h.validateDraft.mock.calls[0][1]).toMatchObject({ action: 'companion', path: pending.plan.path, capabilityId: plan.capabilityId });
+    expect(h.publish).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -567,13 +656,13 @@ describe('PreBranchSddGateUseCase', () => {
     expect(h.validateDraft).not.toHaveBeenCalled();
   });
 
-  it('blocks oversized owner identity context without truncating or drafting', async () => {
+  it('763: plans against large owner inventories without embedding them in provider prompts', async () => {
     const h = harness();
-    h.readSdd.mockResolvedValue(Array.from({ length: 2500 }, (_, index) => `payments-long-baseline-C${index}`).join('\n'));
-    h.query.mockResolvedValueOnce({ ...plan, newCapability: null });
-    expect((await h.useCase.begin(context())).status).toBe('blocked');
-    expect(h.query).toHaveBeenCalledTimes(1);
-    expect(h.validateDraft).not.toHaveBeenCalled();
+    h.readSdd.mockResolvedValue(Array.from({ length: 2500 }, (_, index) => 'payments-long-baseline-C' + index).join('\n'));
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockImplementation(incrementalReply);
+    expect((await h.useCase.begin(context())).status).toBe('drafted');
+    expect(h.query.mock.calls.every(([request]) => !request.prompt.includes('payments-long-baseline-C2499'))).toBe(true);
+    expect(h.validateDraft).toHaveBeenCalledTimes(1);
   });
 
   it('keeps publication blocked after repeated case inconsistencies', async () => {
@@ -733,24 +822,22 @@ describe('PreBranchSddGateUseCase', () => {
     expect(readSddGateRecord(h.comments[0].body, 42)?.answers).toEqual([]);
   });
 
-  it('validates a regenerated bounded draft before any publication', async () => {
+  it('763: replaces an oversized compact unit with bounded incremental generation', async () => {
     const h = harness();
     h.query.mockResolvedValueOnce({ ...plan, newCapability: null })
-      .mockResolvedValueOnce({ markdown: 'x'.repeat(18001) })
-      .mockResolvedValueOnce({ markdown: writerDraft('# Regenerated draft') });
+      .mockResolvedValueOnce({ markdown: 'x'.repeat(18001) }).mockImplementation(incrementalReply);
     const outcome = await h.useCase.begin(context());
     expect(outcome.status).toBe('drafted');
-    expect(h.query).toHaveBeenCalledTimes(3);
+    expect(h.query).toHaveBeenCalledTimes(8);
     expect(h.validateDraft).toHaveBeenCalledTimes(1);
-    expect(h.validateDraft).toHaveBeenCalledWith(snapshot, plan, writerDraft('# Regenerated draft'), undefined);
+    expect(h.validateDraft.mock.calls[0][2]).toContain('payments-change-C01');
     expect(h.publish).not.toHaveBeenCalled();
   });
 
   it('rejects a changed base after size repair without publishing the regenerated draft', async () => {
     const h = harness();
     h.query.mockResolvedValueOnce({ ...plan, newCapability: null })
-      .mockResolvedValueOnce({ markdown: 'x'.repeat(18001) })
-      .mockResolvedValueOnce({ markdown: writerDraft('# Regenerated draft') });
+      .mockResolvedValueOnce({ markdown: 'x'.repeat(18001) }).mockImplementation(incrementalReply);
     h.loadSnapshot.mockResolvedValueOnce(snapshot).mockResolvedValueOnce({ ...snapshot, baseSha: 'c'.repeat(40) });
     expect((await h.useCase.begin(context())).status).toBe('blocked');
     expect(h.validateDraft).toHaveBeenCalledTimes(1);
