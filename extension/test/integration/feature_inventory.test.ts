@@ -82,6 +82,8 @@ it('global feature changes and explicit inheritance retain other preferences and
     expect(document.querySelector('[data-feature-setting]')!.textContent).toContain('desactivada'); expect(detail('BEX-NAV-01')!.textContent).toContain('H4');
     change('feature-global-preference', 'enabled'); submit(); await save(); expect((await h.native.repository.read()).settings.features['BEX-NAV-01']).toBe(true);
     change('feature-global-preference', ''); submit(); await save(); expect((await h.native.repository.read()).settings.features).toEqual({ 'BEX-NAV-02': false });
+    expect(h.port.send.mock.calls.flatMap(([message]) => message.method === 'center.preview' ? [message.expectedRevision] : [])).toEqual([0, 1, 2]);
+    expect(window.location.hash).toBe('#/features/BEX-NAV-01');
 });
 it('an inherited pause remains visible after saving enabled and global source is not presented as authorization', async () => {
     const h = await open('BEX-NAV-01', { ...DEFAULT_SETTINGS, paused: true, features: { 'BEX-NAV-01': false } });

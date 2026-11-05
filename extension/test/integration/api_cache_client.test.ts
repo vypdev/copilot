@@ -77,6 +77,22 @@ it.each([false, true])('a failed replacement preserves the exact unresolved sele
     expect(h.client.view.status).toBe(submitted ? 'cleared' : 'not-submitted');
     expect(h.cache.clear).toHaveBeenCalledTimes(submitted ? 1 : 0);
 });
+it('a successful explicit replacement reviews a fresh operation after the owner has recorded the prior clear', async () => {
+    const h = apiCacheClientFixture(); await h.client.preview();
+    const prior = await h.clientPorts.request.mock.results[0].value as { operationId: string };
+    const send = h.clientPorts.request.getMockImplementation()!;
+    h.clientPorts.request.mockImplementationOnce(async input => { await send(input); return null; });
+    await h.client.confirm();
+    expect(h.client.view.status).toBe('unknown'); expect(h.cache.clear).toHaveBeenCalledOnce();
+    expect(await h.client.dismiss()).toBe(true);
+    await h.client.preview(); expect(h.client.view.status).toBe('preview');
+    const replacement = await h.clientPorts.request.mock.results.at(-1)!.value as { operationId: string };
+    expect(replacement.operationId).not.toBe(prior.operationId);
+    expect(await send({ method: 'center.cache.result', operationId: prior.operationId })).toEqual({ state: 'cleared' });
+    expect(await h.client.dismiss()).toBe(true);
+    expect(h.clientPorts.request).toHaveBeenLastCalledWith({ method: 'center.cache.cancel', operationId: replacement.operationId });
+    expect(h.cache.clear).toHaveBeenCalledOnce();
+});
 it('synchronous rendering notifications that retire editing authority prevent every later request handoff', async () => {
     for (const action of ['preview', 'inspect', 'confirm'] as const) {
         const h = apiCacheClientFixture(); if (action !== 'preview') await h.client.preview();
