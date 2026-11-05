@@ -41,8 +41,8 @@ jobs:
     if: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && (inputs.windows_startup_probe != true || inputs.upload_windows_coverage == true)) }}
     name: Setup package and local session (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    # Keep the full H3 campaign within the hosted job budgets.
-    timeout-minutes: ${{ matrix.os == 'windows-latest' && 120 || 30 }}
+    # macOS can still be running extension tests at the 30-minute mark.
+    timeout-minutes: ${{ matrix.os == 'windows-latest' && 120 || matrix.os == 'macos-latest' && 35 || 30 }}
     strategy:
       fail-fast: false
       matrix:
@@ -774,7 +774,17 @@ jobs:
           if-no-files-found: error
 
       - name: Full platform coverage and acceptance budgets
+        if: runner.os != 'Windows'
         run: pnpm run test:coverage
+      - name: Full hosted Windows repository coverage and acceptance budgets
+        if: runner.os == 'Windows'
+        run: |
+          pnpm exec jest --coverage --json --outputFile=coverage/setup-acceptance-jest.json --verbose=false
+          node scripts/validate-coverage-budgets.cjs
+          node scripts/validate-setup-assistant-acceptance.cjs coverage/setup-acceptance-jest.json
+      - name: Full hosted Windows extension coverage
+        if: runner.os == 'Windows'
+        run: pnpm run test:extension --maxWorkers 1
       - name: Preserve hosted Windows coverage
         if: runner.os == 'Windows'
         uses: actions/upload-artifact@v4

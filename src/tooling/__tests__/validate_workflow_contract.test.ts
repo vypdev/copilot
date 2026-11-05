@@ -1277,6 +1277,22 @@ describe('workflow contract validator', () => {
     expect(() => assertRunner(file, workflow)).toThrow('default Windows Codecov export to disabled');
   });
 
+  it.each([
+    'Full hosted Windows repository coverage and acceptance budgets',
+    'Full hosted Windows extension coverage',
+  ])('requires Windows to run %s before exporting coverage', (name) => {
+    const file = path.join(process.cwd(), '.github', 'workflows', 'setup_platform_smoke.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    const job = workflow.jobs['setup-platform-smoke'];
+    const steps = job.steps;
+    job.steps = steps.filter((step: { name?: string }) => step.name !== name);
+    expect(() => assertRunner(file, workflow)).toThrow('ordered full hosted Windows repository and extension coverage');
+    job.steps = steps;
+    const step = steps.find((entry: { name?: string }) => entry.name === name);
+    step.if = "runner.os == 'Linux'";
+    expect(() => assertRunner(file, workflow)).toThrow('ordered full hosted Windows repository and extension coverage');
+  });
+
   it.each(['setup-platform-smoke'])(
     'requires the real Windows job Node npm preflight in %s', (jobId) => {
       const file = path.join(process.cwd(), '.github', 'workflows', 'setup_platform_smoke.yml');

@@ -21,11 +21,22 @@ it.each(['issues-write', 'actions-write'] as const)('a standalone native page wi
     expect(h.vault()?.selected).toBeNull(); expect(h.provider).not.toHaveBeenCalled(); expect(h.localArea.set).not.toHaveBeenCalled();
 });
 it.each(['issues-write', 'actions-write'] as const)('selecting and freshly verifying %s through the native page still cannot make it a new read workspace member', async purpose => {
-    const h = await fixture(purpose); h.review(purpose); await ready(() => !!document.querySelector('[data-role-review]')); button(h.copy.confirm).click();
-    await ready(() => h.reviewText().includes(h.copy.saved)); button(h.copy.close).click(); h.provider.mockClear(); await navigate('repositories/workspaces');
-    const copy = workspaceCopy('en'); await ready(() => !!document.querySelector('[data-workspaces]')); button(copy.create).click();
-    const read = h.vault()!.entries.find(entry => entry.role === 'repository-read')!.id; await ready(() => !!document.getElementById(`workspace-member-${read}`));
-    expect(document.getElementById(`workspace-member-${h.id(purpose)}`)).toBeNull(); expect(h.provider).not.toHaveBeenCalled(); expect(h.localArea.set).not.toHaveBeenCalled();
+    const h = await fixture(purpose); const id = h.id(purpose);
+    await ready(() => document.querySelector<HTMLButtonElement>(`#connection-select-${id}`)?.disabled === false, 'optional identity review is enabled');
+    h.review(purpose);
+    await ready(() => !!document.querySelector('[data-role-review]') && !button(h.copy.confirm).disabled, 'optional identity review is ready to confirm');
+    button(h.copy.confirm).click();
+    await ready(() => h.reviewText().includes(h.copy.saved) && !button(h.copy.close).disabled, 'saved optional selection is ready to close');
+    expect(h.provider).toHaveBeenCalledTimes(2);
+    expect(h.vault()).toMatchObject({ writeSelections: { [purpose]: id } });
+    button(h.copy.close).click(); await ready(() => !document.querySelector('[data-role-review]'), 'optional identity review closed');
+    h.provider.mockClear(); await navigate('repositories/workspaces');
+    const copy = workspaceCopy('en');
+    await ready(() => !!document.querySelector('[data-workspaces]') && !button(copy.create).disabled, 'workspace creation is enabled');
+    button(copy.create).click();
+    const read = h.vault()!.entries.find(entry => entry.role === 'repository-read')!.id;
+    await ready(() => !!document.getElementById(`workspace-member-${read}`), 'read-only workspace member rendered');
+    expect(document.getElementById(`workspace-member-${id}`)).toBeNull(); expect(h.provider).not.toHaveBeenCalled(); expect(h.localArea.set).not.toHaveBeenCalled();
 });
 it.each(['issues-write', 'actions-write'] as const)('previously saved native grouping that names %s preserves its slot without offering a misleading read-selection action', async purpose => {
     const h = await fixture(purpose); const id = h.id(purpose); const stored = h.localValues.get(SETTINGS_KEY) as { current: typeof DEFAULT_SETTINGS }; const current = stored.current;

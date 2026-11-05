@@ -300,11 +300,31 @@ function assertManualRepoWiseWorkflow(file, workflow) {
   }
 }
 
-function assertPlatformCoverageAndValidators(relativeFile, job) {
+function assertPlatformCoverageAndValidators(relativeFile, job, hosted = false) {
   const steps = job.steps ?? [];
   const coverageStep = steps.find(step => step?.name === 'Full platform coverage and acceptance budgets');
-  if (coverageStep?.run !== 'pnpm run test:coverage' || coverageStep.if !== undefined) {
+  const coverageCondition = hosted ? "runner.os != 'Windows'" : undefined;
+  if (coverageStep?.run !== 'pnpm run test:coverage' || coverageStep.if !== coverageCondition) {
     throw new Error(`${relativeFile} must retain full platform coverage and acceptance budgets.`);
+  }
+  let lastCoverage = coverageStep;
+  if (hosted) {
+    const repository = steps.find(step => step?.name === 'Full hosted Windows repository coverage and acceptance budgets');
+    const extension = steps.find(step => step?.name === 'Full hosted Windows extension coverage');
+    const repositoryCommands = [
+      'pnpm exec jest --coverage --json --outputFile=coverage/setup-acceptance-jest.json --verbose=false',
+      'node scripts/validate-coverage-budgets.cjs',
+      'node scripts/validate-setup-assistant-acceptance.cjs coverage/setup-acceptance-jest.json',
+    ].join('\n');
+    if (repository?.if !== "runner.os == 'Windows'" || repository.run?.trim() !== repositoryCommands
+      || extension?.if !== "runner.os == 'Windows'" || extension.run !== 'pnpm run test:extension --maxWorkers 1'
+      || steps.indexOf(extension) <= steps.indexOf(repository)) {
+      throw new Error(`${relativeFile} must retain ordered full hosted Windows repository and extension coverage.`);
+    }
+    if ([coverageStep, repository, extension].some(step => step.env?.COPILOT_JEST_WINDOWS_SERVICE_COVERAGE !== undefined)) {
+      throw new Error(`${relativeFile} must not recycle hosted Windows Jest workers at the service-runner limit.`);
+    }
+    lastCoverage = extension;
   }
   const validationStep = steps.find(step => step?.name === 'Full platform documentation and contract validators');
   const requiredValidations = [
@@ -312,7 +332,7 @@ function assertPlatformCoverageAndValidators(relativeFile, job) {
     'validate:workflows', 'validate:specifications', 'validate:setup-acceptance',
   ];
   if (!validationStep?.run || requiredValidations.some(command => !validationStep.run.includes(`pnpm run ${command}`))
-    || steps.indexOf(validationStep) <= steps.indexOf(coverageStep)
+    || steps.indexOf(validationStep) <= Math.max(steps.indexOf(coverageStep), steps.indexOf(lastCoverage))
     || validationStep.if !== undefined) {
     throw new Error(`${relativeFile} must retain full platform documentation and contract validators after coverage.`);
   }
@@ -323,6 +343,7 @@ function assertPlatformCoverageAndValidators(relativeFile, job) {
     || !steps.some(step => step?.run === 'pnpm run typecheck')) {
     throw new Error(`${relativeFile} must retain build, typecheck, setup, agent and packaged npm fixtures on every platform.`);
   }
+  return lastCoverage;
 }
 
 function assertWindowsJobNpm(relativeFile, job) {
@@ -408,11 +429,7 @@ function assertRunner(file, workflow) {
           || JSON.stringify(platforms) !== JSON.stringify(['ubuntu-latest', 'windows-latest', 'macos-latest'])) {
           throw new Error(`${relativeFile} must use the PR or ordinary manual Ubuntu, Windows and macOS setup fixture matrix, independently of coverage export.`);
         }
-        assertPlatformCoverageAndValidators(relativeFile, job);
-        const hostedCoverage = (job.steps ?? []).find(step => step?.name === 'Full platform coverage and acceptance budgets');
-        if (hostedCoverage?.env?.COPILOT_JEST_WINDOWS_SERVICE_COVERAGE !== undefined) {
-          throw new Error(`${relativeFile} must not recycle hosted Windows Jest workers at the service-runner limit.`);
-        }
+        const hostedCoverage = assertPlatformCoverageAndValidators(relativeFile, job, true);
         assertWindowsJobNpm(relativeFile, job);
         assertPlatformHistoryCheckout(relativeFile, job);
         const artifact = (job.steps ?? []).find(step => step?.name === 'Preserve hosted Windows coverage');
@@ -422,7 +439,7 @@ function assertRunner(file, workflow) {
           || artifact.with?.path !== 'coverage/lcov.info'
           || artifact.with?.['if-no-files-found'] !== 'error'
           || artifact.with?.['retention-days'] !== 1
-          || (job.steps ?? []).indexOf(artifact) <= (job.steps ?? []).findIndex(step => step?.name === 'Full platform coverage and acceptance budgets')) {
+          || (job.steps ?? []).indexOf(artifact) <= (job.steps ?? []).indexOf(hostedCoverage)) {
           throw new Error(`${relativeFile} must preserve hosted Windows coverage for dependent upload.`);
         }
       } else {
