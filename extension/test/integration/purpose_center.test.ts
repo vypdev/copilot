@@ -54,11 +54,16 @@ it.each(['missing', 'unknown'] as const)('a %s native purpose field cannot silen
     expect(h.sessionValues.get(SESSION_KEY)).toEqual(active); expect((document.getElementById('connection-secret') as HTMLInputElement).value).toBe('');
 });
 it('an explicit row review focuses its heading and selects only the reviewed purpose after fresh native identity reads', async () => {
-    const h = await fixture(); await h.add(); const active = structuredClone(h.sessionValues.get(SESSION_KEY)); h.provider.mockClear(); h.review();
-    await ready(() => document.activeElement?.id === 'connection-role-review-heading'); expect(h.provider).not.toHaveBeenCalled(); button(h.copy.confirm).click();
-    await ready(() => h.reviewText().includes(h.copy.saved)); expect(h.provider).toHaveBeenCalledTimes(2);
+    const h = await fixture(); await h.add(); const active = structuredClone(h.sessionValues.get(SESSION_KEY)); h.provider.mockClear();
+    const row = `connection-select-${h.id('issues-write')}`;
+    await ready(() => document.querySelector<HTMLButtonElement>(`#${row}`)?.disabled === false, 'optional identity review is enabled'); h.review();
+    await ready(() => document.activeElement?.id === 'connection-role-review-heading' && !button(h.copy.confirm).disabled, 'optional identity review is focused and ready');
+    expect(h.provider).not.toHaveBeenCalled(); button(h.copy.confirm).click();
+    await ready(() => h.reviewText().includes(h.copy.saved) && !button(h.copy.close).disabled, 'saved optional selection is ready to close');
+    expect(h.provider).toHaveBeenCalledTimes(2);
     expect(h.vault()).toMatchObject({ writeSelections: { 'issues-write': h.id('issues-write'), 'actions-write': null } }); expect(h.sessionValues.get(SESSION_KEY)).toEqual(active);
-    expect(h.reviewText()).toContain(h.copy.grant); button(h.copy.close).click(); await ready(() => document.activeElement?.id === `connection-select-${h.id('issues-write')}`);
+    expect(h.reviewText()).toContain(h.copy.grant); button(h.copy.close).click();
+    await ready(() => document.activeElement?.id === row, 'selection focus returned to the reviewed row');
 });
 it('cancelling a real row review leaves native selections unchanged and returns keyboard focus without provider access', async () => {
     const h = await fixture(); await h.add(); const saved = structuredClone(h.vault()); h.provider.mockClear(); const writes = h.writes().length; h.review();

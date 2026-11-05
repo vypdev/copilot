@@ -23,6 +23,7 @@ it('an initially opted-in actual application records only its admitted first cur
 });
 it('off startup and accepted off navigation cannot be retrospectively added after enabling collection', async () => {
     const f = await renderHistory(); await navigate('work'); await navigate('activity'); expect(entries(f)).toHaveLength(0);
+    await ready(() => !historyButton('recents', f.copy.text.enable).disabled, 'recents consent review is enabled');
     historyButton('recents', f.copy.text.enable).click(); await historyReview(); button(f.copy.text.confirm).click();
     await ready(() => document.querySelector('.history-review')?.textContent?.includes(f.copy.reasons.done) === true); await captured(f); button(f.copy.text.close).click(); await ready(() => !document.querySelector('.history-review'));
     expect(entries(f)).toHaveLength(0); await navigate('appearance'); await ready(() => entries(f).length === 1);
