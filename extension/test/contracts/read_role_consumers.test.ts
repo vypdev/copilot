@@ -4,6 +4,8 @@ import { profileScopeChoices, repositoryPreferenceRows, selectedProfileContext, 
 import { workspaceChoices, workspaceReferences } from '../../src/domain/workspace_references.ts';
 import { profileDraft } from '../../src/domain/profile_draft.ts';
 import { DEFAULT_SETTINGS } from '../../src/domain/settings.ts';
+import { settingsReviewChanges } from '../../src/domain/center_frame.ts';
+import { centerCopy } from '../../src/domain/center_copy.ts';
 import { purposeEntry } from '../fixtures/credential_roles.ts';
 import type { WritePurpose } from '../../src/domain/credential_roles.ts';
 
@@ -32,6 +34,14 @@ it.each(['issues-write', 'actions-write'] as const)('workspace creation offers o
 it.each(['issues-write', 'actions-write'] as const)('a retained workspace slot naming a %s entry stays missing and cannot offer read verification or private labels', purpose => {
     const { view, group } = fixture(purpose); expect(workspaceReferences({ ...group, members: ['writer', 'read'] }, view)).toMatchObject([
         { id: 'writer', slot: 1, state: 'missing', entry: null, connected: false, revision: null }, { id: 'read', slot: 2, state: 'saved', connected: true }]);
+});
+it.each(['issues-write', 'actions-write'] as const)('a workspace review leaves the %s reference unavailable while labeling its read reference', purpose => {
+    const { view, group } = fixture(purpose);
+    const after = { ...DEFAULT_SETTINGS, center: { ...DEFAULT_SETTINGS.center, workspaces: [{ ...group, members: ['writer', 'read'] }] } };
+    const rows = settingsReviewChanges(DEFAULT_SETTINGS, after, centerCopy('en'), view);
+    expect(rows.find(row => row.id.endsWith('/writer'))?.label).toContain('Unavailable saved reference 1');
+    expect(rows.find(row => row.id.endsWith('/read'))?.label).toContain('Read account · octo/example');
+    expect(JSON.stringify(rows)).not.toMatch(/Private writer|writer\/private/u);
 });
 it.each(['issues-write', 'actions-write'] as const)('even a malformed read selection naming %s cannot activate scoped profile preferences', purpose => {
     const { view } = fixture(purpose); const malformed = { ...view, selected: 'writer' };

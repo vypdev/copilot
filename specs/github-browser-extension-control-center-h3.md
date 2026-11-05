@@ -1113,7 +1113,7 @@ or human acceptance, and modified executable branches remain100% covered.
 
 The historical 160-case H3 risk baseline is a starting minimum, not the complete
 acceptance threshold. Every additive minimum below is mandatory. The cumulative
-minimum is **895 distinct H3 risk cases: 160 baseline + 735 additions**. Reaching
+minimum is **896 distinct H3 risk cases: 160 baseline + 736 additions**. Reaching
 160 alone cannot satisfy H3. The original 56 CENTER catalog cases, the 56-case
 implementation inventory above and the full 803-case product catalog remain
 separately required; their execution does not offset an additive minimum.
@@ -1152,7 +1152,8 @@ separately required; their execution does not offset an additive minimum.
 | Profile feature editing | 2 | Mounted create/edit/inheritance in `center_app.test.ts` and rejected draft in `center_files.test.ts` |
 | Unresolved cache selector | 2 | `api_cache_client.test.ts` covers failed replacement before and after native admission |
 | Clear preparation, visit delivery and session provenance | 5 | Two shared reservation cases, one reentrant delivery, two readable-document applicability cases |
-| **Total** | **895** | **160 + 735; every row is required** |
+| Workspace review metadata scope | 1 | `read_role_consumers.test.ts` exercises both write purposes and a valid read reference in the actual review projection |
+| **Total** | **896** | **160 + 736; every row is required** |
 
 The companion session-preferences specification also requires its 160 scoped
 cases. H3 acceptance requires both the owning milestone ledger and the scoped
@@ -1929,9 +1930,10 @@ user action through the existing native session controller. Rendering, selecting
 or importing a group cannot request permission, start HTTP, connect an account,
 change feature preferences, or resume any pause. Native account/repository
 identity, purpose, controller, credential epoch and vault revision remain the
-session authority. Resolve display metadata only from the current admitted
-protected session summary. Clearly label saved reference metadata and selected
-connected identity; a saved name is not a fresh GitHub observation.
+session authority. The group view and its review resolve display metadata from
+the same admitted repository-read references. Write-purpose and unbound
+references use unavailable placeholders. Clearly label saved reference metadata
+and selected connected identity; a saved name is not a fresh GitHub observation.
 
 Disconnect/removal makes affected references unavailable without erasing the
 user's authored group. Do not rebind by a repository name, another account,

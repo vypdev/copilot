@@ -545,7 +545,9 @@ existing-session verification.
 
 Every edit, selection, removal and workspace-only reset uses the normal retained
 preview and confirmation. The preview includes names, ordering, membership and
-selection changes, including removals. Cancellation keeps your draft. A changed
+selection changes, including removals. The preview and saved view display
+repository names only for available read references. Other references appear as
+unavailable slots. Cancellation keeps your draft. A changed
 revision or unknown save requires inspection before another decision; no write
 is retried automatically. Workspace-only reset preserves other preferences,
 pauses and protected sessions. The normal rollback restores the previous

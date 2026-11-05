@@ -1,5 +1,6 @@
 import { copyWorkspaceSelection } from './workspaces.ts';
 import { workspaceCopy } from './workspace_copy.ts';
+import { workspaceReferences } from './workspace_references.ts';
 import type { ReviewChange } from './center_review.ts';
 import type { ConnectionOutcome } from './named_sessions.ts';
 import { deepFreeze, record } from './value.ts';
@@ -15,14 +16,13 @@ export function workspaceReviewChanges(before: unknown, after: unknown, locale: 
     };
     for (const id of [...new Set([...left.workspaces, ...right.workspaces].map(group => group.id))]) {
         const old = left.workspaces.find(group => group.id === id); const next = right.workspaces.find(group => group.id === id);
-        const name = (next ?? old)!.name; const prefix = `${copy.title} › ${name}`;
+        const group = (next ?? old)!; const prefix = `${copy.title} › ${group.name}`;
         add(`${id}/identifier`, `${prefix} › ${copy.identifier}`, old?.id ?? null, next?.id ?? null);
         add(`${id}/name`, `${prefix} › ${copy.name}`, old?.name ?? null, next?.name ?? null);
         add(`${id}/position`, `${prefix} › ${copy.position}`, old ? left.workspaces.indexOf(old) + 1 : null, next ? right.workspaces.indexOf(next) + 1 : null);
         const references = [...new Set([...(old?.members ?? []), ...(next?.members ?? [])])];
-        references.forEach((reference, index) => {
-            const entry = connections?.state === 'ready' ? connections.entries.find(entry => entry.id === reference) : undefined;
-            const label = entry ? `${copy.saved} · ${entry.name} · ${entry.repository}` : `${copy.missing} ${index + 1}`;
+        workspaceReferences({ ...group, members: references }, connections).forEach(({ id: reference, entry, slot }) => {
+            const label = entry ? `${copy.saved} · ${entry.name} · ${entry.repository}` : `${copy.missing} ${slot}`;
             const position = (members: readonly string[] | undefined) => members?.includes(reference) ? members.indexOf(reference) + 1 : null;
             add(`${id}/member/${reference}`, `${prefix} › ${label}`, position(old?.members), position(next?.members), copy.notMember);
         });
