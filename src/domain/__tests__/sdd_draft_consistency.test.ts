@@ -1,4 +1,4 @@
-import { renderSddDerivedTables, reservedSddCaseIds, validateSddDraftConsistency, type SddConsistencyReason } from '../sdd_draft_consistency';
+import { renderSddDerivedTables, reservedSddCaseIds, suppliedSddCaseIds, validateSuppliedSddCaseIds, validateSddDraftConsistency, type SddConsistencyReason } from '../sdd_draft_consistency';
 import { sddCaseReferenceFixture, sddConsistencyFixture } from '../../testing/sdd_consistency_fixture';
 
 const inventory = {
@@ -10,6 +10,58 @@ const owners = [{ path: 'specs/payments.md', markdown: 'payments-C01: Missing be
 const validate = (markdown: string) => validateSddDraftConsistency(markdown, owners, inventory, 'specs/change.md');
 
 describe('generated SDD consistency', () => {
+  it('retains explicit case definitions from request and answers, deduplicating them and excluding immutable owner identities', () => {
+    expect(suppliedSddCaseIds([
+      'payments-C01: Retained owning acceptance.\npayments-change-C01: Missing credentials return 401.\n- `payments-change-C02`: Valid credentials succeed.',
+      '1. **payments-change-C03**: Publishing preserves the principal.\npayments-change-C01: The same definition repeated.',
+    ], owners)).toEqual(['payments-change-C01', 'payments-change-C02', 'payments-change-C03']);
+  });
+
+  it.each([
+    'See payments-change-C01 for the retained baseline.',
+    '> payments-change-C01: Quoted example.',
+    '    payments-change-C01: Indented example.',
+    '\tpayments-change-C01: Indented example.',
+    '```md\npayments-change-C01: Fenced example.\n```',
+    '<!-- payments-change-C01: Hidden example. -->',
+    'C01: Short designator.\nHTTP-C1 component has a technical name.',
+    '| Case ID | Reference |\n|---|---|\n| payments-change-C01 | Retained baseline |',
+  ])('does not promote references or non-operative examples to new definitions: %s', input => {
+    expect(suppliedSddCaseIds([input], [])).toEqual([]);
+    expect(() => validateSuppliedSddCaseIds('No draft needs parsing when no definitions were supplied.', [])).not.toThrow();
+  });
+
+  it('reads operative Case ID tables with observable scenarios and preserves code-wrapped identities', () => {
+    const definitions = '| Case ID | Scenario |\n|:---|---:|\n| `payments-change-C01` | Missing credentials return 401. |\n'
+      + '| payments-change-C02 | Valid credentials succeed. |\n\npayments-change-C03: Publishing preserves the principal.';
+    const supplied = suppliedSddCaseIds([definitions, '| Case ID | Assertion |\n|---|---|\n| payments-change-C03 | Publishing preserves the principal. |'], []);
+    expect(supplied).toHaveLength(3);
+    const markdown = sddConsistencyFixture().replace('| payments-change-C01 |', '| `payments-change-C01` |');
+    expect(() => validateSuppliedSddCaseIds(markdown, supplied)).not.toThrow();
+  });
+
+  it('ignores malformed, empty and non-case table entries while reading subsequent real declarations', () => {
+    const definitions = '| Case ID | Assertion |\n|---|bad|\n| invalid-change-C01 | Invalid separator |\n\n'
+      + '| Case ID | Assertion |\n|---|---|\n| payments-change-C01 | Missing credentials return 401. |\n'
+      + '| payments-change-C02 | |\n| C03 | Short identity |\n| extra-change-C01 | Extra | column |\n\n'
+      + 'payments-change-C03: Publishing preserves the principal.';
+    expect(suppliedSddCaseIds([definitions, '| Case ID | Scenario |', '| Case ID | Scenario |\n|---|',
+      '| Case ID | Assertion |\n|---|---|'], [])).toEqual(['payments-change-C01', 'payments-change-C03']);
+  });
+
+  it('rejects renamed inventory aliases even when counts, assertions and prose references are retained', () => {
+    const supplied = ['payments-change-C01', 'payments-change-C02', 'payments-change-C03'];
+    const renamed = sddConsistencyFixture('renamed-change') + '\nReferences: ' + supplied.join(', ');
+    expect(() => validateSuppliedSddCaseIds(renamed, supplied)).toThrow(expect.objectContaining({ reason: 'case-identity',
+      diagnostic: { reason: 'case-identity', phase: 'validation', facts: [{ detail: 'case-identity', section: 14, expected: 3, observed: 0 }] } }));
+  });
+
+  it('reports only bounded counts for partial preservation without echoing supplied identifiers', () => {
+    expect(() => validateSuppliedSddCaseIds(sddConsistencyFixture(), ['payments-change-C01', 'private-refinement-C99']))
+      .toThrow(expect.objectContaining({ diagnostic: { reason: 'case-identity', phase: 'validation',
+        facts: [{ detail: 'case-identity', section: 14, expected: 2, observed: 1 }] } }));
+  });
+
   it('accepts complete tables with an independently scoped case namespace and exact reverse mappings', () => {
     expect(() => validate(sddConsistencyFixture())).not.toThrow();
   });

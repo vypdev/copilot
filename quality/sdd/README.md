@@ -80,3 +80,108 @@ The twelve-case CLI above remains the original campaign, not a claim that its
 unmodified setup reproduces this additional SCM/state history. The executable
 public regression suite for that state flow is
 `src/application/usecases/steps/issue/__tests__/pre_branch_sdd_gate_use_case.test.ts`.
+
+## Selected-source grounding and case fidelity (#858)
+
+This separate campaign exercises the actual SDD gate, draft workflow, query
+composition, immutable source view and native workspace validation. Ownership
+analysis and issue/SCM ports are controlled; it never creates a remote branch or
+publishes. It is optional contributor evidence, not a consumer command or a live
+provider dependency added to CI.
+
+### Recorded results and review bundle
+
+| Cohort | Native acceptances | Explicit scoped semantic passes |
+|---|---|---|
+| Three unchanged-SDK baselines | 5/8, 7/8, 5/8 | 5/8, 7/8, 4/8 |
+| Three whole V15 trials | 8/8, 8/8, 8/8 | 8/8, 8/8, 8/8 |
+
+V15 used 30 SDK queries, including six ordinary repairs. The original descriptor,
+all eight source worlds and the complete pinned runtime are unchanged. The 24
+accepted Markdown documents are retained verbatim and reconstruct exactly from
+their raw responses through derived tables, legacy links and inventory navigation.
+All three material C02 availability audits pass. Each C08 review reads all 18
+assertions and checks each of 95 exact operative create declarations; counts
+alone do not establish either result. V13 and V14 were rejected in full for the
+recorded visibility and repair-grammar failures; their results are not pooled.
+
+The scope matters: C01 certifies genuine command retention without invented
+execution, not every toy-script semantic detail. Its three outputs add a printed
+message absent from the toy validator. One C04 sentence attributes uv to package
+metadata instead of the command guide. These limitations remain visible in the
+accepted outputs and assessments. The campaign does not certify universal prose
+accuracy, full command semantics, consumer execution or human approval.
+
+| Artifact | Review purpose |
+|---|---|
+| [Manifest](./evidence/issue-858.json) | Pins, whole-trial results, limitations, history index, source binding and assembly audit |
+| [Frozen cases](./evidence/issue-858-cases.json) | Original inputs and target criteria; descriptor SHA-256 remains unchanged |
+| [Source objects](./evidence/issue-858-source-objects.json) | All 46 exact authored Git objects, including selected and bootstrap identities |
+| [Assessments](./evidence/issue-858-assessments.json) | Explicit baseline/final decisions and detailed availability/assertion/path audits |
+| [Baseline observations](./evidence/issue-858-baseline-observations.jsonl) | All 24 baseline observations, raw responses and accepted Markdown |
+| [Final observations](./evidence/issue-858-final-observations.jsonl) | All 24 V15 observations and every ordinary repair, with exact accepted Markdown |
+| [Rejected observations](./evidence/issue-858-rejected-observations.jsonl) | 30 representative native/semantic failures; the manifest indexes the complete local history |
+| [Coordinator audit](./evidence/issue-858-driver.cjs.txt) | Exact historical driver, requiring explicit local reconstruction/configuration |
+
+### Method and reconstruction
+
+The eight authored worlds and their exact Git objects are preserved separately
+from real consumer incident evidence. They cover genuine and absent scripts,
+package-manager mismatch, selected Python versus bootstrap Node source, unknown
+tooling, a valid command-free SDK outcome, exact provenance, and retention of
+eighteen supplied assertions and ninety-five prospective file operations. Those
+assertions/files are input data, not 113 distinct SDK tests. Thirteen pure
+identity-policy cases and six application repair/authorization/boundary cases
+complement the two portable native CLI regressions. Twelve pure link-assembly cases and five workflow/boundary cases cover host-derived navigation, literal filename identity, native existence checks, closed failures and the unchanged final size/repair limits. One derived-table representation case checks single code wrappers while preserving hidden/duplicate-slot rejection. Two inventory-navigation projection cases derive exact links from the sole literal path table and reject malformed/hidden slots. See the 49-case inventory
+and traceability in [the grounding SDD](../../specs/sdd-draft-source-grounding.md).
+
+Assessment is explicit contributor review against each frozen case's intent,
+not keyword scoring or human approval. A native rejection fails the case. For
+the final candidate, all eight cases in each of three whole trials must be both
+native-valid and semantically accepted; incomplete or blocked results cannot
+pass. Retain every ordinary repair and failed cohort. Never combine favorable
+cases from different candidate revisions or add generation attempts. Inspect
+every supplied assertion and actual Path/Change operation for the fidelity case.
+A hash or count alone cannot establish semantic fidelity. Scoped acceptance does
+not certify every generated sentence, full command semantics, universal model
+accuracy or executed product acceptance. A supplemental C02 audit also checks material
+script-availability claims against direct immutable Git facts for baseline and
+final outputs: the catalog is not a complete file inventory, and a known false
+absence assertion rejects the cohort even if native tables pass.
+
+The recorded official platform runtime includes its external code-mode helper;
+its registry integrity, executable/helper signatures and all vendor hashes were
+verified. Earlier app-only pins omitted that helper and are retained as rejected
+runtime-limitation evidence. A single separately authorized diagnostic identified
+that omission. An offline complete-source payload proof later confirmed that the
+qualification queries contain only authored fictional source and the public SDK
+standard/template, with no consumer data or private account files. Neither proof
+claims capture of the full provider stdin.
+
+The historical coordinator is an audit artifact, not a turnkey command with
+portable local paths. To reproduce, use the recorded baseline SDK commit and
+installed repository prerequisites, reconstruct each fictional source from the
+retained object archive, and supply separate identical replicas for the three
+trials. Preserve both the bootstrap anchor and selected commit in the Python
+world. Keep expected verdicts outside the model source. Put the coordinator in
+the candidate checkout, configure its output namespace, local baseline SDK root
+and complete pinned provider executable explicitly, and run the declared whole
+baseline/candidate trials. The coordinator refuses to overwrite attempted
+trials and checks source/runtime hashes before and after each measured trial.
+A different provider/runtime/source revision is a new cohort, never continuation
+of the recorded one. Provider outputs may vary; no rerun guarantees a pass.
+
+File navigation in raw final-candidate responses can use the internal explicit-target
+assembly marker described in the SDD. To reconstruct accepted Markdown, derive
+the budget/traceability tables, then apply the recorded host file-link renderer
+with the selected publication path, and verify the accepted SHA-256. Ordinary
+valid Markdown remains unchanged and fully validated. This representation never
+authorizes a target or proves existence; the native immutable-source/proposed
+path checks run after assembly. Earlier complete cohorts that failed link math
+remain rejected, including the cohort with 8/8, 8/8 and 7/8 native acceptances.
+The final three whole trials must pass independently; no successful case from
+those earlier cohorts can be substituted into them.
+
+Every file-marker target has a literal operative Path/Change declaration. UI examples can therefore render navigation without supplying existence authority; native source/declaration validation remains the acceptance boundary.
+
+New authoring uses the inventory-navigation slot rather than a second list of file targets. Reconstruct its output after derived tables and legacy file-marker assembly using the recorded navigation projection. The same Path/Change rows remain authoritative and receive unchanged native validation; the projection cannot infer targets or operations.

@@ -1752,9 +1752,9 @@
       "id": "issue-start-and-sdd-readiness",
       "title": "Uniform issue start and pre-branch SDD readiness",
       "status": "implemented",
-      "scope": "Start every admitted issue with one explicit signal and publish a validated SDD before eligible Action-managed branch work; inspect verified SDD status and bounded structural publication comparisons and preserve complete navigable catalog links for accepted repository filenames and safely publish generated catalogs without following destination links; bootstrap truthful proposed SDK capabilities before implementation without changing readiness; reject incomplete specification discovery explicitly without following unregistered symbolic links; report confirmed missing trusted catalogs with immutable source provenance and prerequisite recovery before model or publication; bind pre-branch analysis and drafting to a verified independent read-only view of the selected immutable source without changing the canonical checkout; distinguish visible protocol notation from repository citations, allow only constructive proposed-file directory ancestry and expose bounded private-safe origin diagnostics; distinguish registered-document updates from new companion and independent capability publication, carrying fresh authorized unpublished ownership context across clarification without changing published ownership fences",
+      "scope": "Start every admitted issue with one explicit signal and publish a validated SDD before eligible Action-managed branch work; inspect verified SDD status and bounded structural publication comparisons and preserve complete navigable catalog links for accepted repository filenames and safely publish generated catalogs without following destination links; bootstrap truthful proposed SDK capabilities before implementation without changing readiness; reject incomplete specification discovery explicitly without following unregistered symbolic links; report confirmed missing trusted catalogs with immutable source provenance and prerequisite recovery before model or publication; bind pre-branch analysis and drafting to a verified independent read-only view of the selected immutable source without changing the canonical checkout; distinguish visible protocol notation from repository citations, allow only constructive proposed-file directory ancestry and expose bounded private-safe origin diagnostics; distinguish registered-document updates from new companion and independent capability publication, carrying fresh authorized unpublished ownership context across clarification without changing published ownership fences; ground verification guidance in selected project declarations, preserve exact evidence and independent refinements, and render portable catalog instructions without assuming consumer package scripts; preserve admitted explicit case identities and derive declared-target navigation before unchanged native validation",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-11-04",
+      "lastVerified": "2026-11-05",
       "specs": [
         "specs/issue-start-and-branch-readiness.md",
         "specs/pre-branch-sdd-gate.md",
@@ -1763,7 +1763,8 @@
         "specs/pre-branch-sdd-source-context.md",
         "specs/sdd-draft-response-minimum.md",
         "specs/sdd-reference-classification.md",
-        "specs/sdd-case-reference-classification.md"
+        "specs/sdd-case-reference-classification.md",
+        "specs/sdd-draft-source-grounding.md"
       ],
       "workflows": [
         ".github/workflows/copilot_issue.yml",
@@ -1854,7 +1855,8 @@
         "src/domain/sdd_visible_references.ts",
         "src/domain/sdd_case_reference.ts",
         "src/application/policies/sdd_ownership_prompt_policy.ts",
-        "src/tooling/sdd_ownership_question_scoring.ts"
+        "src/tooling/sdd_ownership_question_scoring.ts",
+        "src/application/policies/sdd_draft_grounding_policy.ts"
       ],
       "tests": [
         "src/domain/__tests__/issue_workflow_runtime_policy.test.ts",
@@ -1936,7 +1938,16 @@
         "quality/sdd/evidence/issue-856-ownership-assessments.json",
         "src/tooling/__tests__/sdd_ownership_prediction_assessment.test.ts",
         "quality/sdd/evidence/issue-856-working-branch.json",
-        "quality/sdd/evidence/issue-856-working-branch-driver.cjs.txt"
+        "quality/sdd/evidence/issue-856-working-branch-driver.cjs.txt",
+        "src/domain/__tests__/sdd_draft_links.test.ts",
+        "quality/sdd/evidence/issue-858-assessments.json",
+        "quality/sdd/evidence/issue-858-baseline-observations.jsonl",
+        "quality/sdd/evidence/issue-858-cases.json",
+        "quality/sdd/evidence/issue-858-driver.cjs.txt",
+        "quality/sdd/evidence/issue-858-final-observations.jsonl",
+        "quality/sdd/evidence/issue-858-rejected-observations.jsonl",
+        "quality/sdd/evidence/issue-858-source-objects.json",
+        "quality/sdd/evidence/issue-858.json"
       ],
       "documentation": [
         "docs/issues/branch-management.mdx",

@@ -1,0 +1,326 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "id": "existing-pnpm-scripts",
+      "runtime": "pnpm-sdk",
+      "body": "The selected project has installed specification maintenance scripts. Name its existing validation and catalog-generation commands in contributor verification; preserve these legitimate commands rather than replacing them with vague outcomes.",
+      "expected": {
+        "intent": "Use the two genuinely declared pnpm scripts; do not claim their execution or successful runtime acceptance.",
+        "commands": [
+          "pnpm run validate:specifications",
+          "pnpm run generate:specifications"
+        ]
+      },
+      "input": {
+        "body": "Document a bounded companion for fixture-foundation at specs/grounding-guidance.md. Existing foundation ownership and its three retained baseline cases remain required. This is an authored qualification request, not a consumer implementation. Maintainer owns acceptance; no runtime permissions, installation, source implementation or compatibility policy changes. The selected project has installed specification maintenance scripts. Name its existing validation and catalog-generation commands in contributor verification; preserve these legitimate commands rather than replacing them with vague outcomes."
+      },
+      "fixture": {
+        "root": "/private/tmp/copilot-858-draft-sources-St08pe/existing-pnpm-scripts",
+        "baseSha": "b50a960242da65194a752ceaa90b4fd5f41da7f4",
+        "tree": "46481b7dcbfea9e46605fee81591de91cd1fe468",
+        "anchor": "b50a960242da65194a752ceaa90b4fd5f41da7f4",
+        "ownerBlob": "16f39aed096aae5cd8dee237d607ae606e802d2e",
+        "ownerSha256": "7edf1cb9ad46f8c06db97ecef6c8ddb4bc06bcb2a7793a1f4c6c8533a205ad60"
+      }
+    },
+    {
+      "id": "absent-copied-scripts",
+      "runtime": "pnpm-docs",
+      "body": "Specify repository documentation checks and SDK specification consistency acceptance. Preserve the selected standard and all its quality goals; require usable verification guidance for this actual selected source.",
+      "expected": {
+        "intent": "Use the real docs command or outcome; no mandatory runnable validate:specifications/generate:specifications script absent from selected package.",
+        "commands": [
+          "pnpm run docs:check"
+        ],
+        "absentScripts": [
+          "validate:specifications",
+          "generate:specifications"
+        ]
+      },
+      "input": {
+        "body": "Document a bounded companion for fixture-foundation at specs/grounding-guidance.md. Existing foundation ownership and its three retained baseline cases remain required. This is an authored qualification request, not a consumer implementation. Maintainer owns acceptance; no runtime permissions, installation, source implementation or compatibility policy changes. Specify repository documentation checks and SDK specification consistency acceptance. Preserve the selected standard and all its quality goals; require usable verification guidance for this actual selected source."
+      },
+      "fixture": {
+        "root": "/private/tmp/copilot-858-draft-sources-St08pe/absent-copied-scripts",
+        "baseSha": "ca4c453a795402a904ca3c4e968d1721c1cd6a7f",
+        "tree": "9247a5a41c6efa8b211ba29f8e460cdfaf292639",
+        "anchor": "ca4c453a795402a904ca3c4e968d1721c1cd6a7f",
+        "ownerBlob": "16f39aed096aae5cd8dee237d607ae606e802d2e",
+        "ownerSha256": "7edf1cb9ad46f8c06db97ecef6c8ddb4bc06bcb2a7793a1f4c6c8533a205ad60"
+      }
+    },
+    {
+      "id": "package-manager-mismatch",
+      "runtime": "npm-docs",
+      "body": "Document the existing project documentation verification command using the selected project package manager. Retain specification format/catalog consistency as acceptance outcomes.",
+      "expected": {
+        "intent": "Use npm run docs:check as declared in selected packageManager; copied pnpm examples do not establish installed pnpm prerequisites.",
+        "commands": [
+          "npm run docs:check"
+        ],
+        "absentScripts": [
+          "validate:specifications",
+          "generate:specifications"
+        ]
+      },
+      "input": {
+        "body": "Document a bounded companion for fixture-foundation at specs/grounding-guidance.md. Existing foundation ownership and its three retained baseline cases remain required. This is an authored qualification request, not a consumer implementation. Maintainer owns acceptance; no runtime permissions, installation, source implementation or compatibility policy changes. Document the existing project documentation verification command using the selected project package manager. Retain specification format/catalog consistency as acceptance outcomes."
+      },
+      "fixture": {
+        "root": "/private/tmp/copilot-858-draft-sources-St08pe/package-manager-mismatch",
+        "baseSha": "864af7c4c54e356f96a96ddd03f18396edc1745d",
+        "tree": "cd3a125ce9560690f6a712ca3f5d94f6d2a0e607",
+        "anchor": "864af7c4c54e356f96a96ddd03f18396edc1745d",
+        "ownerBlob": "16f39aed096aae5cd8dee237d607ae606e802d2e",
+        "ownerSha256": "7edf1cb9ad46f8c06db97ecef6c8ddb4bc06bcb2a7793a1f4c6c8533a205ad60"
+      }
+    },
+    {
+      "id": "selected-source-versus-default",
+      "runtime": "python",
+      "differentAnchor": true,
+      "body": "Document the project documentation check from the selected development source. The bootstrap checkout is a separate source; preserve the selected source layout and toolchain.",
+      "expected": {
+        "intent": "Use selected Python project uv run fixture-docs docs or its explicitly qualified outcome, never bootstrap Node scripts.",
+        "commands": [
+          "uv run fixture-docs docs"
+        ],
+        "absentScripts": [
+          "validate:specifications",
+          "generate:specifications"
+        ]
+      },
+      "input": {
+        "body": "Document a bounded companion for fixture-foundation at specs/grounding-guidance.md. Existing foundation ownership and its three retained baseline cases remain required. This is an authored qualification request, not a consumer implementation. Maintainer owns acceptance; no runtime permissions, installation, source implementation or compatibility policy changes. Document the project documentation check from the selected development source. The bootstrap checkout is a separate source; preserve the selected source layout and toolchain."
+      },
+      "fixture": {
+        "root": "/private/tmp/copilot-858-draft-sources-St08pe/selected-source-versus-default",
+        "baseSha": "24a9dd4d7506426adcdc4a8da0c274937e456329",
+        "tree": "9d3b90d32eb28a7969c85b282fce41b3d6cce536",
+        "anchor": "50f1f11efc8b35cb485aaadc1aa66c5a6f28bca9",
+        "ownerBlob": "16f39aed096aae5cd8dee237d607ae606e802d2e",
+        "ownerSha256": "7edf1cb9ad46f8c06db97ecef6c8ddb4bc06bcb2a7793a1f4c6c8533a205ad60"
+      }
+    },
+    {
+      "id": "unknown-command-evidence",
+      "runtime": "unknown",
+      "body": "Define specification validation outcomes for the selected source. Runtime/tooling prerequisites are not decided. Keep that uncertainty visible without installing tools or inventing repository verification scripts.",
+      "expected": {
+        "intent": "Describe format/consistency/catalog outcomes and explicitly retain unknown command/runtime evidence; do not invent installed wrappers, scripts or successful runs.",
+        "noInventedCommands": true
+      },
+      "input": {
+        "body": "Document a bounded companion for fixture-foundation at specs/grounding-guidance.md. Existing foundation ownership and its three retained baseline cases remain required. This is an authored qualification request, not a consumer implementation. Maintainer owns acceptance; no runtime permissions, installation, source implementation or compatibility policy changes. Define specification validation outcomes for the selected source. Runtime/tooling prerequisites are not decided. Keep that uncertainty visible without installing tools or inventing repository verification scripts."
+      },
+      "fixture": {
+        "root": "/private/tmp/copilot-858-draft-sources-St08pe/unknown-command-evidence",
+        "baseSha": "bd2bc6f30d97037d9ae0b1df3a1600c73a4ba112",
+        "tree": "61ad46dac9acc654c5c2ea0552fd4104ed0c0bc4",
+        "anchor": "bd2bc6f30d97037d9ae0b1df3a1600c73a4ba112",
+        "ownerBlob": "16f39aed096aae5cd8dee237d607ae606e802d2e",
+        "ownerSha256": "7edf1cb9ad46f8c06db97ecef6c8ddb4bc06bcb2a7793a1f4c6c8533a205ad60"
+      }
+    },
+    {
+      "id": "generic-outcome-is-valid",
+      "runtime": "pnpm-docs",
+      "body": "Keep the SDK specification format, consistency and reciprocal catalog checks as observable validation outcomes. Their concrete repository invocation is intentionally not an installed project script. The existing docs check is independent; no new script or compatibility shim is requested.",
+      "expected": {
+        "intent": "A generic SDK validation outcome is valid; preserve the real independent docs check if mentioned and do not replace an outcome with an absent mandatory script.",
+        "absentScripts": [
+          "validate:specifications",
+          "generate:specifications"
+        ]
+      },
+      "input": {
+        "body": "Document a bounded companion for fixture-foundation at specs/grounding-guidance.md. Existing foundation ownership and its three retained baseline cases remain required. This is an authored qualification request, not a consumer implementation. Maintainer owns acceptance; no runtime permissions, installation, source implementation or compatibility policy changes. Keep the SDK specification format, consistency and reciprocal catalog checks as observable validation outcomes. Their concrete repository invocation is intentionally not an installed project script. The existing docs check is independent; no new script or compatibility shim is requested."
+      },
+      "fixture": {
+        "root": "/private/tmp/copilot-858-draft-sources-St08pe/generic-outcome-is-valid",
+        "baseSha": "ca4c453a795402a904ca3c4e968d1721c1cd6a7f",
+        "tree": "9247a5a41c6efa8b211ba29f8e460cdfaf292639",
+        "anchor": "ca4c453a795402a904ca3c4e968d1721c1cd6a7f",
+        "ownerBlob": "16f39aed096aae5cd8dee237d607ae606e802d2e",
+        "ownerSha256": "7edf1cb9ad46f8c06db97ecef6c8ddb4bc06bcb2a7793a1f4c6c8533a205ad60"
+      }
+    },
+    {
+      "id": "exact-factual-citation",
+      "runtime": "pnpm-docs",
+      "citation": true,
+      "body": "Cite the selected owning document byte identities from its actual immutable source evidence. The request includes a possibly mistyped blob for review: {WRONG_BLOB}. Verify it; preserve the exact verified Git blob and SHA-256 strings rather than transcribing an approximate identity.",
+      "expected": {
+        "intent": "Read/verify the selected owner evidence; retain exact actual blob and SHA-256, identify or avoid the erroneous claim. No hidden historical consumer payload replay."
+      },
+      "input": {
+        "body": "Document a bounded companion for fixture-foundation at specs/grounding-guidance.md. Existing foundation ownership and its three retained baseline cases remain required. This is an authored qualification request, not a consumer implementation. Maintainer owns acceptance; no runtime permissions, installation, source implementation or compatibility policy changes. Cite the selected owning document byte identities from its actual immutable source evidence. The request includes a possibly mistyped blob for review: a6f39aed096aae5cd8dee237d607ae606e802d2e. Verify it; preserve the exact verified Git blob and SHA-256 strings rather than transcribing an approximate identity."
+      },
+      "fixture": {
+        "root": "/private/tmp/copilot-858-draft-sources-St08pe/exact-factual-citation",
+        "baseSha": "ca4c453a795402a904ca3c4e968d1721c1cd6a7f",
+        "tree": "9247a5a41c6efa8b211ba29f8e460cdfaf292639",
+        "anchor": "ca4c453a795402a904ca3c4e968d1721c1cd6a7f",
+        "ownerBlob": "16f39aed096aae5cd8dee237d607ae606e802d2e",
+        "ownerSha256": "7edf1cb9ad46f8c06db97ecef6c8ddb4bc06bcb2a7793a1f4c6c8533a205ad60"
+      }
+    },
+    {
+      "id": "retained-refinements-and-future-paths",
+      "runtime": "pnpm-docs",
+      "body": "Add exactly these 18 distinct new protocol refinements without replacing or recounting the retained authentication baseline. Preserve each supplied case identity and its concrete observable assertion. Each of the 95 future documentation artifacts is a prospective create operation, not an existing file. This is planned acceptance, never a claim of executed tests.\n\nfixture-protocol-C01: Restored bootstrap absence: after restoring a checkpoint without bootstrap state, no initial work is silently created; the next explicit bootstrap records exactly one generation.\nfixture-protocol-C02: Final source-scan unit with duplicate lookahead: a full final chunk whose lookahead is only already-seen records closes at the exact unique-record boundary without an empty extra cycle.\nfixture-protocol-C03: Cross-generation closed-cycle replay: replaying a completion token from the previous generation cannot complete or reopen the current generation.\nfixture-protocol-C04: Independent high-revision journals: two independent journals may each have the same high revision; resuming one cannot consume the other journal checkpoint.\nfixture-protocol-C05: Genuine-nine late-migration failure: when the persisted storage version really is nine and a late migration fails, the transaction rolls back every new record and retains version nine.\nfixture-protocol-C06: Inclusive stop boundary: an item at the exact configured stopping instant is included once and the immediately later item is deferred.\nfixture-protocol-C07: Canceled outstanding cursor: canceling an active cursor prevents its later response from appending work to a replacement cursor.\nfixture-protocol-C08: Duplicate continuation request: replaying the same accepted continuation key returns its prior batch without incrementing its counters.\nfixture-protocol-C09: Writer lease expires during scan: the expired writer cannot commit the final batch and the new lease holder retains its independently accepted progress.\nfixture-protocol-C10: Checkpoint checksum mismatch: recovery refuses the mismatched checkpoint without deleting the last independently verified checkpoint.\nfixture-protocol-C11: Clock moves backward after resume: the monotonic deadline is not renewed by a backward wall-clock adjustment.\nfixture-protocol-C12: Zero-result source generation: a completed empty scan advances the explicit generation once while preserving its no-work reason.\nfixture-protocol-C13: Pending journal after restart: restart preserves pending acknowledged entries and does not count them as newly generated work.\nfixture-protocol-C14: Simultaneous same-local-day requests: two accepted requests sharing a local day retain separate command identities and only their own results.\nfixture-protocol-C15: Previous-generation cleanup: retiring an old generation removes only its owned journal and cannot delete a live generation checkpoint.\nfixture-protocol-C16: Authentication revoked before commit: an authorized read followed by revocation cannot commit its pending state transition.\nfixture-protocol-C17: Late duplicate acknowledgment: a repeated acknowledgment after checkpoint compaction preserves the already closed result without recreating state.\nfixture-protocol-C18: Independent recovery failure: a failed recovery for one stream leaves the other stream readable with its exact accepted revision.\n\nProspective Path | Change declarations:\ndocs/proposed-evidence/item-01.md | create\ndocs/proposed-evidence/item-02.md | create\ndocs/proposed-evidence/item-03.md | create\ndocs/proposed-evidence/item-04.md | create\ndocs/proposed-evidence/item-05.md | create\ndocs/proposed-evidence/item-06.md | create\ndocs/proposed-evidence/item-07.md | create\ndocs/proposed-evidence/item-08.md | create\ndocs/proposed-evidence/item-09.md | create\ndocs/proposed-evidence/item-10.md | create\ndocs/proposed-evidence/item-11.md | create\ndocs/proposed-evidence/item-12.md | create\ndocs/proposed-evidence/item-13.md | create\ndocs/proposed-evidence/item-14.md | create\ndocs/proposed-evidence/item-15.md | create\ndocs/proposed-evidence/item-16.md | create\ndocs/proposed-evidence/item-17.md | create\ndocs/proposed-evidence/item-18.md | create\ndocs/proposed-evidence/item-19.md | create\ndocs/proposed-evidence/item-20.md | create\ndocs/proposed-evidence/item-21.md | create\ndocs/proposed-evidence/item-22.md | create\ndocs/proposed-evidence/item-23.md | create\ndocs/proposed-evidence/item-24.md | create\ndocs/proposed-evidence/item-25.md | create\ndocs/proposed-evidence/item-26.md | create\ndocs/proposed-evidence/item-27.md | create\ndocs/proposed-evidence/item-28.md | create\ndocs/proposed-evidence/item-29.md | create\ndocs/proposed-evidence/item-30.md | create\ndocs/proposed-evidence/item-31.md | create\ndocs/proposed-evidence/item-32.md | create\ndocs/proposed-evidence/item-33.md | create\ndocs/proposed-evidence/item-34.md | create\ndocs/proposed-evidence/item-35.md | create\ndocs/proposed-evidence/item-36.md | create\ndocs/proposed-evidence/item-37.md | create\ndocs/proposed-evidence/item-38.md | create\ndocs/proposed-evidence/item-39.md | create\ndocs/proposed-evidence/item-40.md | create\ndocs/proposed-evidence/item-41.md | create\ndocs/proposed-evidence/item-42.md | create\ndocs/proposed-evidence/item-43.md | create\ndocs/proposed-evidence/item-44.md | create\ndocs/proposed-evidence/item-45.md | create\ndocs/proposed-evidence/item-46.md | create\ndocs/proposed-evidence/item-47.md | create\ndocs/proposed-evidence/item-48.md | create\ndocs/proposed-evidence/item-49.md | create\ndocs/proposed-evidence/item-50.md | create\ndocs/proposed-evidence/item-51.md | create\ndocs/proposed-evidence/item-52.md | create\ndocs/proposed-evidence/item-53.md | create\ndocs/proposed-evidence/item-54.md | create\ndocs/proposed-evidence/item-55.md | create\ndocs/proposed-evidence/item-56.md | create\ndocs/proposed-evidence/item-57.md | create\ndocs/proposed-evidence/item-58.md | create\ndocs/proposed-evidence/item-59.md | create\ndocs/proposed-evidence/item-60.md | create\ndocs/proposed-evidence/item-61.md | create\ndocs/proposed-evidence/item-62.md | create\ndocs/proposed-evidence/item-63.md | create\ndocs/proposed-evidence/item-64.md | create\ndocs/proposed-evidence/item-65.md | create\ndocs/proposed-evidence/item-66.md | create\ndocs/proposed-evidence/item-67.md | create\ndocs/proposed-evidence/item-68.md | create\ndocs/proposed-evidence/item-69.md | create\ndocs/proposed-evidence/item-70.md | create\ndocs/proposed-evidence/item-71.md | create\ndocs/proposed-evidence/item-72.md | create\ndocs/proposed-evidence/item-73.md | create\ndocs/proposed-evidence/item-74.md | create\ndocs/proposed-evidence/item-75.md | create\ndocs/proposed-evidence/item-76.md | create\ndocs/proposed-evidence/item-77.md | create\ndocs/proposed-evidence/item-78.md | create\ndocs/proposed-evidence/item-79.md | create\ndocs/proposed-evidence/item-80.md | create\ndocs/proposed-evidence/item-81.md | create\ndocs/proposed-evidence/item-82.md | create\ndocs/proposed-evidence/item-83.md | create\ndocs/proposed-evidence/item-84.md | create\ndocs/proposed-evidence/item-85.md | create\ndocs/proposed-evidence/item-86.md | create\ndocs/proposed-evidence/item-87.md | create\ndocs/proposed-evidence/item-88.md | create\ndocs/proposed-evidence/item-89.md | create\ndocs/proposed-evidence/item-90.md | create\ndocs/proposed-evidence/item-91.md | create\ndocs/proposed-evidence/item-92.md | create\ndocs/proposed-evidence/item-93.md | create\ndocs/proposed-evidence/item-94.md | create\ndocs/proposed-evidence/item-95.md | create",
+      "expected": {
+        "intent": "Keep all 18 genuinely distinct refinements, their supplied IDs and assertions; retain all 95 explicit prospective create paths and distinguish planned from executed evidence. Retained baseline aliases are not new counted cases.",
+        "caseIds": [
+          "fixture-protocol-C01",
+          "fixture-protocol-C02",
+          "fixture-protocol-C03",
+          "fixture-protocol-C04",
+          "fixture-protocol-C05",
+          "fixture-protocol-C06",
+          "fixture-protocol-C07",
+          "fixture-protocol-C08",
+          "fixture-protocol-C09",
+          "fixture-protocol-C10",
+          "fixture-protocol-C11",
+          "fixture-protocol-C12",
+          "fixture-protocol-C13",
+          "fixture-protocol-C14",
+          "fixture-protocol-C15",
+          "fixture-protocol-C16",
+          "fixture-protocol-C17",
+          "fixture-protocol-C18"
+        ],
+        "scenarios": [
+          "Restored bootstrap absence: after restoring a checkpoint without bootstrap state, no initial work is silently created; the next explicit bootstrap records exactly one generation.",
+          "Final source-scan unit with duplicate lookahead: a full final chunk whose lookahead is only already-seen records closes at the exact unique-record boundary without an empty extra cycle.",
+          "Cross-generation closed-cycle replay: replaying a completion token from the previous generation cannot complete or reopen the current generation.",
+          "Independent high-revision journals: two independent journals may each have the same high revision; resuming one cannot consume the other journal checkpoint.",
+          "Genuine-nine late-migration failure: when the persisted storage version really is nine and a late migration fails, the transaction rolls back every new record and retains version nine.",
+          "Inclusive stop boundary: an item at the exact configured stopping instant is included once and the immediately later item is deferred.",
+          "Canceled outstanding cursor: canceling an active cursor prevents its later response from appending work to a replacement cursor.",
+          "Duplicate continuation request: replaying the same accepted continuation key returns its prior batch without incrementing its counters.",
+          "Writer lease expires during scan: the expired writer cannot commit the final batch and the new lease holder retains its independently accepted progress.",
+          "Checkpoint checksum mismatch: recovery refuses the mismatched checkpoint without deleting the last independently verified checkpoint.",
+          "Clock moves backward after resume: the monotonic deadline is not renewed by a backward wall-clock adjustment.",
+          "Zero-result source generation: a completed empty scan advances the explicit generation once while preserving its no-work reason.",
+          "Pending journal after restart: restart preserves pending acknowledged entries and does not count them as newly generated work.",
+          "Simultaneous same-local-day requests: two accepted requests sharing a local day retain separate command identities and only their own results.",
+          "Previous-generation cleanup: retiring an old generation removes only its owned journal and cannot delete a live generation checkpoint.",
+          "Authentication revoked before commit: an authorized read followed by revocation cannot commit its pending state transition.",
+          "Late duplicate acknowledgment: a repeated acknowledgment after checkpoint compaction preserves the already closed result without recreating state.",
+          "Independent recovery failure: a failed recovery for one stream leaves the other stream readable with its exact accepted revision."
+        ],
+        "createPaths": [
+          "docs/proposed-evidence/item-01.md",
+          "docs/proposed-evidence/item-02.md",
+          "docs/proposed-evidence/item-03.md",
+          "docs/proposed-evidence/item-04.md",
+          "docs/proposed-evidence/item-05.md",
+          "docs/proposed-evidence/item-06.md",
+          "docs/proposed-evidence/item-07.md",
+          "docs/proposed-evidence/item-08.md",
+          "docs/proposed-evidence/item-09.md",
+          "docs/proposed-evidence/item-10.md",
+          "docs/proposed-evidence/item-11.md",
+          "docs/proposed-evidence/item-12.md",
+          "docs/proposed-evidence/item-13.md",
+          "docs/proposed-evidence/item-14.md",
+          "docs/proposed-evidence/item-15.md",
+          "docs/proposed-evidence/item-16.md",
+          "docs/proposed-evidence/item-17.md",
+          "docs/proposed-evidence/item-18.md",
+          "docs/proposed-evidence/item-19.md",
+          "docs/proposed-evidence/item-20.md",
+          "docs/proposed-evidence/item-21.md",
+          "docs/proposed-evidence/item-22.md",
+          "docs/proposed-evidence/item-23.md",
+          "docs/proposed-evidence/item-24.md",
+          "docs/proposed-evidence/item-25.md",
+          "docs/proposed-evidence/item-26.md",
+          "docs/proposed-evidence/item-27.md",
+          "docs/proposed-evidence/item-28.md",
+          "docs/proposed-evidence/item-29.md",
+          "docs/proposed-evidence/item-30.md",
+          "docs/proposed-evidence/item-31.md",
+          "docs/proposed-evidence/item-32.md",
+          "docs/proposed-evidence/item-33.md",
+          "docs/proposed-evidence/item-34.md",
+          "docs/proposed-evidence/item-35.md",
+          "docs/proposed-evidence/item-36.md",
+          "docs/proposed-evidence/item-37.md",
+          "docs/proposed-evidence/item-38.md",
+          "docs/proposed-evidence/item-39.md",
+          "docs/proposed-evidence/item-40.md",
+          "docs/proposed-evidence/item-41.md",
+          "docs/proposed-evidence/item-42.md",
+          "docs/proposed-evidence/item-43.md",
+          "docs/proposed-evidence/item-44.md",
+          "docs/proposed-evidence/item-45.md",
+          "docs/proposed-evidence/item-46.md",
+          "docs/proposed-evidence/item-47.md",
+          "docs/proposed-evidence/item-48.md",
+          "docs/proposed-evidence/item-49.md",
+          "docs/proposed-evidence/item-50.md",
+          "docs/proposed-evidence/item-51.md",
+          "docs/proposed-evidence/item-52.md",
+          "docs/proposed-evidence/item-53.md",
+          "docs/proposed-evidence/item-54.md",
+          "docs/proposed-evidence/item-55.md",
+          "docs/proposed-evidence/item-56.md",
+          "docs/proposed-evidence/item-57.md",
+          "docs/proposed-evidence/item-58.md",
+          "docs/proposed-evidence/item-59.md",
+          "docs/proposed-evidence/item-60.md",
+          "docs/proposed-evidence/item-61.md",
+          "docs/proposed-evidence/item-62.md",
+          "docs/proposed-evidence/item-63.md",
+          "docs/proposed-evidence/item-64.md",
+          "docs/proposed-evidence/item-65.md",
+          "docs/proposed-evidence/item-66.md",
+          "docs/proposed-evidence/item-67.md",
+          "docs/proposed-evidence/item-68.md",
+          "docs/proposed-evidence/item-69.md",
+          "docs/proposed-evidence/item-70.md",
+          "docs/proposed-evidence/item-71.md",
+          "docs/proposed-evidence/item-72.md",
+          "docs/proposed-evidence/item-73.md",
+          "docs/proposed-evidence/item-74.md",
+          "docs/proposed-evidence/item-75.md",
+          "docs/proposed-evidence/item-76.md",
+          "docs/proposed-evidence/item-77.md",
+          "docs/proposed-evidence/item-78.md",
+          "docs/proposed-evidence/item-79.md",
+          "docs/proposed-evidence/item-80.md",
+          "docs/proposed-evidence/item-81.md",
+          "docs/proposed-evidence/item-82.md",
+          "docs/proposed-evidence/item-83.md",
+          "docs/proposed-evidence/item-84.md",
+          "docs/proposed-evidence/item-85.md",
+          "docs/proposed-evidence/item-86.md",
+          "docs/proposed-evidence/item-87.md",
+          "docs/proposed-evidence/item-88.md",
+          "docs/proposed-evidence/item-89.md",
+          "docs/proposed-evidence/item-90.md",
+          "docs/proposed-evidence/item-91.md",
+          "docs/proposed-evidence/item-92.md",
+          "docs/proposed-evidence/item-93.md",
+          "docs/proposed-evidence/item-94.md",
+          "docs/proposed-evidence/item-95.md"
+        ]
+      },
+      "input": {
+        "body": "Document a bounded companion for fixture-foundation at specs/grounding-guidance.md. Existing foundation ownership and its three retained baseline cases remain required. This is an authored qualification request, not a consumer implementation. Maintainer owns acceptance; no runtime permissions, installation, source implementation or compatibility policy changes. Add exactly these 18 distinct new protocol refinements without replacing or recounting the retained authentication baseline. Preserve each supplied case identity and its concrete observable assertion. Each of the 95 future documentation artifacts is a prospective create operation, not an existing file. This is planned acceptance, never a claim of executed tests.\n\nfixture-protocol-C01: Restored bootstrap absence: after restoring a checkpoint without bootstrap state, no initial work is silently created; the next explicit bootstrap records exactly one generation.\nfixture-protocol-C02: Final source-scan unit with duplicate lookahead: a full final chunk whose lookahead is only already-seen records closes at the exact unique-record boundary without an empty extra cycle.\nfixture-protocol-C03: Cross-generation closed-cycle replay: replaying a completion token from the previous generation cannot complete or reopen the current generation.\nfixture-protocol-C04: Independent high-revision journals: two independent journals may each have the same high revision; resuming one cannot consume the other journal checkpoint.\nfixture-protocol-C05: Genuine-nine late-migration failure: when the persisted storage version really is nine and a late migration fails, the transaction rolls back every new record and retains version nine.\nfixture-protocol-C06: Inclusive stop boundary: an item at the exact configured stopping instant is included once and the immediately later item is deferred.\nfixture-protocol-C07: Canceled outstanding cursor: canceling an active cursor prevents its later response from appending work to a replacement cursor.\nfixture-protocol-C08: Duplicate continuation request: replaying the same accepted continuation key returns its prior batch without incrementing its counters.\nfixture-protocol-C09: Writer lease expires during scan: the expired writer cannot commit the final batch and the new lease holder retains its independently accepted progress.\nfixture-protocol-C10: Checkpoint checksum mismatch: recovery refuses the mismatched checkpoint without deleting the last independently verified checkpoint.\nfixture-protocol-C11: Clock moves backward after resume: the monotonic deadline is not renewed by a backward wall-clock adjustment.\nfixture-protocol-C12: Zero-result source generation: a completed empty scan advances the explicit generation once while preserving its no-work reason.\nfixture-protocol-C13: Pending journal after restart: restart preserves pending acknowledged entries and does not count them as newly generated work.\nfixture-protocol-C14: Simultaneous same-local-day requests: two accepted requests sharing a local day retain separate command identities and only their own results.\nfixture-protocol-C15: Previous-generation cleanup: retiring an old generation removes only its owned journal and cannot delete a live generation checkpoint.\nfixture-protocol-C16: Authentication revoked before commit: an authorized read followed by revocation cannot commit its pending state transition.\nfixture-protocol-C17: Late duplicate acknowledgment: a repeated acknowledgment after checkpoint compaction preserves the already closed result without recreating state.\nfixture-protocol-C18: Independent recovery failure: a failed recovery for one stream leaves the other stream readable with its exact accepted revision.\n\nProspective Path | Change declarations:\ndocs/proposed-evidence/item-01.md | create\ndocs/proposed-evidence/item-02.md | create\ndocs/proposed-evidence/item-03.md | create\ndocs/proposed-evidence/item-04.md | create\ndocs/proposed-evidence/item-05.md | create\ndocs/proposed-evidence/item-06.md | create\ndocs/proposed-evidence/item-07.md | create\ndocs/proposed-evidence/item-08.md | create\ndocs/proposed-evidence/item-09.md | create\ndocs/proposed-evidence/item-10.md | create\ndocs/proposed-evidence/item-11.md | create\ndocs/proposed-evidence/item-12.md | create\ndocs/proposed-evidence/item-13.md | create\ndocs/proposed-evidence/item-14.md | create\ndocs/proposed-evidence/item-15.md | create\ndocs/proposed-evidence/item-16.md | create\ndocs/proposed-evidence/item-17.md | create\ndocs/proposed-evidence/item-18.md | create\ndocs/proposed-evidence/item-19.md | create\ndocs/proposed-evidence/item-20.md | create\ndocs/proposed-evidence/item-21.md | create\ndocs/proposed-evidence/item-22.md | create\ndocs/proposed-evidence/item-23.md | create\ndocs/proposed-evidence/item-24.md | create\ndocs/proposed-evidence/item-25.md | create\ndocs/proposed-evidence/item-26.md | create\ndocs/proposed-evidence/item-27.md | create\ndocs/proposed-evidence/item-28.md | create\ndocs/proposed-evidence/item-29.md | create\ndocs/proposed-evidence/item-30.md | create\ndocs/proposed-evidence/item-31.md | create\ndocs/proposed-evidence/item-32.md | create\ndocs/proposed-evidence/item-33.md | create\ndocs/proposed-evidence/item-34.md | create\ndocs/proposed-evidence/item-35.md | create\ndocs/proposed-evidence/item-36.md | create\ndocs/proposed-evidence/item-37.md | create\ndocs/proposed-evidence/item-38.md | create\ndocs/proposed-evidence/item-39.md | create\ndocs/proposed-evidence/item-40.md | create\ndocs/proposed-evidence/item-41.md | create\ndocs/proposed-evidence/item-42.md | create\ndocs/proposed-evidence/item-43.md | create\ndocs/proposed-evidence/item-44.md | create\ndocs/proposed-evidence/item-45.md | create\ndocs/proposed-evidence/item-46.md | create\ndocs/proposed-evidence/item-47.md | create\ndocs/proposed-evidence/item-48.md | create\ndocs/proposed-evidence/item-49.md | create\ndocs/proposed-evidence/item-50.md | create\ndocs/proposed-evidence/item-51.md | create\ndocs/proposed-evidence/item-52.md | create\ndocs/proposed-evidence/item-53.md | create\ndocs/proposed-evidence/item-54.md | create\ndocs/proposed-evidence/item-55.md | create\ndocs/proposed-evidence/item-56.md | create\ndocs/proposed-evidence/item-57.md | create\ndocs/proposed-evidence/item-58.md | create\ndocs/proposed-evidence/item-59.md | create\ndocs/proposed-evidence/item-60.md | create\ndocs/proposed-evidence/item-61.md | create\ndocs/proposed-evidence/item-62.md | create\ndocs/proposed-evidence/item-63.md | create\ndocs/proposed-evidence/item-64.md | create\ndocs/proposed-evidence/item-65.md | create\ndocs/proposed-evidence/item-66.md | create\ndocs/proposed-evidence/item-67.md | create\ndocs/proposed-evidence/item-68.md | create\ndocs/proposed-evidence/item-69.md | create\ndocs/proposed-evidence/item-70.md | create\ndocs/proposed-evidence/item-71.md | create\ndocs/proposed-evidence/item-72.md | create\ndocs/proposed-evidence/item-73.md | create\ndocs/proposed-evidence/item-74.md | create\ndocs/proposed-evidence/item-75.md | create\ndocs/proposed-evidence/item-76.md | create\ndocs/proposed-evidence/item-77.md | create\ndocs/proposed-evidence/item-78.md | create\ndocs/proposed-evidence/item-79.md | create\ndocs/proposed-evidence/item-80.md | create\ndocs/proposed-evidence/item-81.md | create\ndocs/proposed-evidence/item-82.md | create\ndocs/proposed-evidence/item-83.md | create\ndocs/proposed-evidence/item-84.md | create\ndocs/proposed-evidence/item-85.md | create\ndocs/proposed-evidence/item-86.md | create\ndocs/proposed-evidence/item-87.md | create\ndocs/proposed-evidence/item-88.md | create\ndocs/proposed-evidence/item-89.md | create\ndocs/proposed-evidence/item-90.md | create\ndocs/proposed-evidence/item-91.md | create\ndocs/proposed-evidence/item-92.md | create\ndocs/proposed-evidence/item-93.md | create\ndocs/proposed-evidence/item-94.md | create\ndocs/proposed-evidence/item-95.md | create"
+      },
+      "fixture": {
+        "root": "/private/tmp/copilot-858-draft-sources-St08pe/retained-refinements-and-future-paths",
+        "baseSha": "ca4c453a795402a904ca3c4e968d1721c1cd6a7f",
+        "tree": "9247a5a41c6efa8b211ba29f8e460cdfaf292639",
+        "anchor": "ca4c453a795402a904ca3c4e968d1721c1cd6a7f",
+        "ownerBlob": "16f39aed096aae5cd8dee237d607ae606e802d2e",
+        "ownerSha256": "7edf1cb9ad46f8c06db97ecef6c8ddb4bc06bcb2a7793a1f4c6c8533a205ad60"
+      }
+    }
+  ]
+}

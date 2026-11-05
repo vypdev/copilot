@@ -10,8 +10,9 @@ import {
 } from '../../../domain/pre_branch_sdd';
 import { AgentResponseLengthFailure } from '../../../domain/agent_response_length_failure';
 import { AgentResponseSchemaFailure } from '../../../domain/agent_response_schema_failure';
-import { renderSddDerivedTables, SDD_CONSISTENCY_PROMPT, SDD_DERIVED_TABLES_PROMPT } from '../../../domain/sdd_draft_consistency';
+import { renderSddDerivedTables, renderSddFileLinks, renderSddNavigation, SDD_CONSISTENCY_PROMPT, SDD_DERIVED_TABLES_PROMPT, SDD_FILE_LINKS_PROMPT } from '../../../domain/sdd_draft_consistency';
 import type { AgentSourceSnapshot } from '../../../domain/agent_source_snapshot';
+import { SDD_DRAFT_GROUNDING_PROMPT } from '../../policies/sdd_draft_grounding_policy';
 
 /** Size and typed format failures share one regeneration; the writer still validates every candidate. */
 export async function draftSddMarkdown(
@@ -33,14 +34,14 @@ export async function draftSddMarkdown(
   let formatReason: SddDraftFormatFailure['reason'] = 'required-heading';
   let diagnostic: SddValidationDiagnostic = { reason: 'size', phase: 'response',
     facts: [{ detail: 'size-limit', section: 0, expected: maximum }] };
-  const contractPrompt = `${prompt}\n\nDraft contract: keep the complete draft within ${maximum} characters; aim for ${target} characters. Preserve the same owner, decisions and requirements. Include these literal canonical heading prefixes as Markdown headings, with the shown capitalization:\n${SDD_REQUIRED_HEADINGS.join('\n')}\nUse the canonical numeric test-budget table in section 14: Area | Minimum distinct cases | Behaviors/risks covered. Every allocation and the Total must be a positive integer, and the Total must equal the sum of the allocations. Return only the required JSON.`;
+  const contractPrompt = `${prompt}\n\nDraft contract: keep the complete draft within ${maximum} characters; aim for ${target} characters. Preserve the same owner, decisions and requirements. Include these literal canonical heading prefixes as Markdown headings, with the shown capitalization:\n${SDD_REQUIRED_HEADINGS.join('\n')}\nThe canonical numeric test-budget table in section 14 and reciprocal table in section 17 belong to the final assembled document. In your raw Markdown, supply the complete explicit inventories and the designated assembly slots described below; do not copy the template's derived tables alongside their slots. In the final document every allocation and the Total must be a positive integer, and the Total must equal the sum of the allocations. Return only the required JSON.`;
   for (let attempt = 0; attempt < 2; attempt++) {
     let value;
     try {
       value = await agent.query({
       configuration, agentId: 'pre-branch-sdd-draft',
       ...(sourceSnapshot ? { sourceSnapshot } : {}),
-        prompt: `${attempt === 0 ? contractPrompt : `${contractPrompt}\n\n${problem === 'size' ? `The previous response exceeded the ${maximum}-character draft limit.` : `The previous response failed the required SDD ${formatReason} contract.`} Regenerate a concise complete draft for this same owner and plan. Use the exact numbered canonical headings from the supplied template. Preserve all resolved requirements, architecture, documentation and acceptance. Do not change ownership or truncate a requirement.\nPrevious host validation (closed structural coordinates only, not new requirements): ${JSON.stringify(normalizeSddValidationDiagnostic(diagnostic))}`}\n\n${SDD_CONSISTENCY_PROMPT}\n\n${SDD_DERIVED_TABLES_PROMPT}`,
+        prompt: `${attempt === 0 ? contractPrompt : `${contractPrompt}\n\n${problem === 'size' ? `The previous response exceeded the ${maximum}-character draft limit.` : `The previous response failed the required SDD ${formatReason} contract.`} Regenerate a concise complete draft for this same owner and plan. Use the exact numbered canonical headings from the supplied template. Preserve all resolved requirements, architecture, documentation and acceptance. Do not change ownership or truncate a requirement.\nPrevious host validation (closed structural coordinates only, not new requirements): ${JSON.stringify(normalizeSddValidationDiagnostic(diagnostic))}`}\n\n${SDD_CONSISTENCY_PROMPT}\n\n${SDD_DERIVED_TABLES_PROMPT}\n\n${SDD_FILE_LINKS_PROMPT}\n\n${SDD_DRAFT_GROUNDING_PROMPT}`,
       options: { expectJson: true, schemaName: 'pre_branch_sdd_draft', schema },
       });
     } catch (error) {
@@ -68,7 +69,7 @@ export async function draftSddMarkdown(
     if (observedLength < SDD_MIN_DRAFT_CHARACTERS) throw minimumFailure(attempt, observedLength);
     let assembledCandidate = false;
     try {
-      const assembled = renderSddDerivedTables(markdown);
+      const assembled = renderSddNavigation(renderSddFileLinks(renderSddDerivedTables(markdown), plan.path), plan.path);
       if (assembled.length > maximum) {
         problem = 'size';
         diagnostic = { reason: 'size', phase: 'assembly', facts: [{ detail: 'size-limit', section: 0, expected: maximum }] };

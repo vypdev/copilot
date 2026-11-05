@@ -3,7 +3,7 @@ import { draftSddMarkdown } from './pre_branch_sdd_draft_workflow';
 import { SDD_MIN_DRAFT_CHARACTERS, SddDraftFormatFailure, validateSddMarkdown, type SddPlan } from '../../../domain/pre_branch_sdd';
 import { AgentResponseLengthFailure } from '../../../domain/agent_response_length_failure';
 import { FindingsAgentAdapter } from '../../../data/repository/ai/findings_agent_adapter';
-import { validateSddDraftConsistency } from '../../../domain/sdd_draft_consistency';
+import { renderSddDerivedTables, renderSddFileLinks, renderSddNavigation, validateSddDraftConsistency } from '../../../domain/sdd_draft_consistency';
 import { sddCaseReferenceFixture, sddConsistencyFixture } from '../../../testing/sdd_consistency_fixture';
 
 const configuration = { provider: 'codex', model: 'model' } as never;
@@ -16,6 +16,92 @@ describe('draftSddMarkdown', () => {
   const assemblyDraft = () => sddConsistencyFixture()
     .replace(/\| Area \| Minimum distinct cases[\s\S]*?(?=\| Case ID)/u, '{{SDD_CASE_BUDGET}}\n\n')
     .replace(/\| Requirement \| Cases \|[\s\S]*$/u, '{{SDD_REQUIREMENT_CASES}}\n');
+
+  const linkSlot = (target: string) => '`{{SDD_FILE_LINK:' + target + '}}`';
+
+  it('sdd-source-grounding-C40: assembles native findings file links and tables before source-bound publication consistency checks', async () => {
+    const raw = assemblyDraft() + '\n[Review documentation](' + linkSlot('docs/payments.mdx') + ')';
+    const execute = jest.fn().mockResolvedValue(JSON.stringify({ markdown: writerDraft(raw) }));
+    const adapter = new FindingsAgentAdapter({ cli: { execute } });
+    const validate = jest.fn(async (candidate: string) => {
+      expect(candidate).toContain('[Review documentation](../docs/payments.mdx)');
+      expect(candidate).not.toContain('{{SDD_');
+      validateSddMarkdown(candidate);
+      validateSddDraftConsistency(candidate, [], { files: new Set(['docs/payments.mdx']), directories: new Set(['docs']), blocked: new Set() }, 'specs/change.md');
+    });
+    await expect(draftSddMarkdown(adapter, { provider: 'codex', modelProvider: 'openai', model: 'gpt-5' },
+      { ...plan, action: 'companion', path: 'specs/change.md' }, 'Resolved source and file targets', validate, sourceSnapshot)).resolves.toContain('| Total | 3 |');
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(validate).toHaveBeenCalledTimes(1);
+    expect(execute.mock.calls[0][0].sourceSnapshot).toEqual(sourceSnapshot);
+  });
+
+  it('sdd-source-grounding-C49: assembles native navigation from the sole path inventory before bounded source-bound validation', async () => {
+    const raw = assemblyDraft().replace('## 16.', '{{SDD_FILE_NAVIGATION}}\n\n## 16.');
+    const execute = jest.fn().mockResolvedValue(JSON.stringify({ markdown: writerDraft(raw) }));
+    const adapter = new FindingsAgentAdapter({ cli: { execute } });
+    const validate = jest.fn(async (candidate: string) => {
+      expect(candidate).toContain('[specs/change.md](change.md)');
+      expect(candidate).toContain('[docs/payments.mdx](../docs/payments.mdx)');
+      expect(candidate).not.toContain('{{SDD_');
+      validateSddMarkdown(candidate);
+      validateSddDraftConsistency(candidate, [], { files: new Set(['docs/payments.mdx']), directories: new Set(['docs']), blocked: new Set() }, 'specs/change.md');
+    });
+    await expect(draftSddMarkdown(adapter, { provider: 'codex', modelProvider: 'openai', model: 'gpt-5' },
+      { ...plan, action: 'companion', path: 'specs/change.md' }, 'Resolved source inventory', validate, sourceSnapshot)).resolves.toContain('| Total | 3 |');
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(validate).toHaveBeenCalledTimes(1);
+    expect(execute.mock.calls[0][0].sourceSnapshot).toEqual(sourceSnapshot);
+  });
+
+  it('sdd-source-grounding-C41: repairs malformed navigation once with unchanged source/schema and no rejected-target echo', async () => {
+    const query = jest.fn().mockResolvedValueOnce({ markdown: assemblyDraft() + '\n' + linkSlot('../PRIVATE_REJECTED.md') })
+      .mockResolvedValueOnce({ markdown: assemblyDraft() + '\n' + linkSlot('docs/payments.mdx') });
+    const validate = jest.fn().mockResolvedValue(undefined);
+    await expect(draftSddMarkdown({ query }, configuration, plan, 'Resolved targets', validate, sourceSnapshot))
+      .resolves.toContain('`docs/payments.mdx`');
+    expect(query).toHaveBeenCalledTimes(2);
+    expect(validate).toHaveBeenCalledTimes(1);
+    const repair = query.mock.calls[1][0];
+    expect(repair.prompt).toContain('SDD repository-path contract');
+    expect(repair.prompt).not.toContain('PRIVATE_REJECTED');
+    expect(repair.sourceSnapshot).toEqual(sourceSnapshot);
+    expect(repair.options).toEqual(query.mock.calls[0][0].options);
+  });
+
+  it('sdd-source-grounding-C42: blocks repeated malformed navigation after two drafts without calling the writer', async () => {
+    for (const markdown of [assemblyDraft() + '\n{{SDD_FILE_LINK:unfinished}}',
+      assemblyDraft().replace('## 16.', '[Nested]({{SDD_FILE_NAVIGATION}})\n\n## 16.')]) {
+      const query = jest.fn().mockResolvedValue({ markdown });
+      const validate = jest.fn();
+      await expect(draftSddMarkdown({ query }, configuration, plan, 'Resolved targets', validate, sourceSnapshot))
+        .rejects.toMatchObject({ attempts: 2, recovery: { id: 'sdd-draft-repository-path-invalid' }, diagnostic: { phase: 'assembly' } });
+      expect(query).toHaveBeenCalledTimes(2);
+      expect(validate).not.toHaveBeenCalled();
+    }
+  });
+
+  it('sdd-source-grounding-C43: applies the original final character limit after link expansion, sharing the same repair budget', async () => {
+    const target = 'docs/' + 'é'.repeat(50) + '.md';
+    const body = assemblyDraft().replace('| docs/payments.mdx | update |', '| docs/payments.mdx | update |\n| ' + target + ' | create |') + '\n[Read](' + linkSlot(target) + ')';
+    const raw = 'x'.repeat(18000 - renderSddDerivedTables(body).length - 1) + '\n' + body;
+    expect(raw.length).toBeLessThan(18000);
+    expect(renderSddDerivedTables(raw)).toHaveLength(18000);
+    expect(renderSddFileLinks(renderSddDerivedTables(raw), plan.path).length).toBeGreaterThan(18000);
+    const navBody = assemblyDraft().replace('| docs/payments.mdx | update |', '| docs/payments.mdx | update |\n| ' + target + ' | create |')
+      .replace('## 16.', '{{SDD_FILE_NAVIGATION}}\n\n## 16.');
+    const navRaw = 'x'.repeat(18000 - renderSddDerivedTables(navBody).length - 1) + '\n' + navBody;
+    expect(renderSddDerivedTables(navRaw)).toHaveLength(18000);
+    expect(renderSddNavigation(renderSddDerivedTables(navRaw), plan.path).length).toBeGreaterThan(18000);
+    for (const markdown of [raw, navRaw]) {
+      const query = jest.fn().mockResolvedValue({ markdown });
+      const validate = jest.fn();
+      await expect(draftSddMarkdown({ query }, configuration, plan, 'Resolved targets', validate, sourceSnapshot))
+        .rejects.toMatchObject({ attempts: 2, diagnostic: { reason: 'size', phase: 'assembly', facts: [{ detail: 'size-limit', section: 0, expected: 18000 }] } });
+      expect(query).toHaveBeenCalledTimes(2);
+      expect(validate).not.toHaveBeenCalled();
+    }
+  });
 
   it('reports malformed output on the sole repair as two attempts without another generation', async () => {
     const query = jest.fn().mockRejectedValueOnce(new AgentResponseLengthFailure('$.markdown', 18000)).mockResolvedValueOnce({ private: 'PRIVATE_OUTPUT' });

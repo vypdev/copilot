@@ -10,9 +10,18 @@ should converge on this standard when they are materially revised.
 
 The capability inventory and its implementation evidence live in
 [`catalog.json`](./catalog.json); [`CATALOG.md`](./CATALOG.md) is the generated
-human-readable view. Run `pnpm run validate:specifications` after changing a
+human-readable view. In this SDK repository, run `pnpm run validate:specifications` after changing a
 specification or any catalogued path, and `pnpm run generate:specifications`
 after changing catalog metadata.
+
+These invocation names are SDK-repository maintenance commands. Consumer
+specifications must verify actual commands, toolchains and execution directories
+against their selected immutable project source. A copied example does not
+establish an installed project script. When an invocation is absent, conflicting
+or unobserved, retain the required validation outcome and its explicit unresolved
+prerequisite; do not invent a wrapper or install a script to match an example.
+Command declarations and structurally valid specifications are separate from
+executed checks and product acceptance.
 
 ### Truthful proposed capability bootstrap
 
