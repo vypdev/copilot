@@ -41,8 +41,7 @@ jobs:
     if: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && (inputs.windows_startup_probe != true || inputs.upload_windows_coverage == true)) }}
     name: Setup package and local session (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    # Full H3 coverage exceeded the former Windows60/macOS20 job budgets.
-    timeout-minutes: ${{ matrix.os == 'windows-latest' && 90 || matrix.os == 'macos-latest' && 30 || 20 }}
+    timeout-minutes: ${{ matrix.os == 'windows-latest' && 50 || matrix.os == 'macos-latest' && 30 || 20 }}
     strategy:
       fail-fast: false
       matrix:
