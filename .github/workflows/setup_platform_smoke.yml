@@ -42,7 +42,7 @@ jobs:
     name: Setup package and local session (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     # Keep the full H3 campaign within the hosted job budgets.
-    timeout-minutes: ${{ matrix.os == 'windows-latest' && 90 || 30 }}
+    timeout-minutes: ${{ matrix.os == 'windows-latest' && 120 || 30 }}
     strategy:
       fail-fast: false
       matrix:

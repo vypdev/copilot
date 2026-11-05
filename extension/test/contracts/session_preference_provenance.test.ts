@@ -66,3 +66,12 @@ it.each(['empty', 'inactive'] as const)('a readable session document with %s sco
         expect(view.rows).toContainEqual({ label: copy.scope, value: copy.scopes[scope] });
     }
 });
+
+it('unsupported locale keys that name an inherited property use the complete English explanation', () => {
+    const restriction = { ...clearNativeRestriction(), session: { worker: 'clear', native: 'ready', scope: 'empty', restricted: false } as const };
+    const value = runtimeConfiguration(DEFAULT_SETTINGS, CONFIG, null, 0, restriction)!;
+    for (const locale of ['constructor', 'CONSTRUCTOR-ZZ']) {
+        expect(sessionPreferenceProvenanceCopy(locale)).toBe(sessionPreferenceProvenanceCopy('en'));
+        expect(runtimeProvenanceView(value, locale)).toEqual(runtimeProvenanceView(value, 'en'));
+    }
+});

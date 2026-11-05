@@ -16,4 +16,7 @@ const resources: Readonly<Record<string, Copy>> = deepFreeze({
         empty: 'Sem preferências temporárias observadas', active: 'Seleção nativa atual verificada', retained: 'Uma pausa retida mantém-se até ser revista explicitamente',
         inactive: 'Estas preferências temporárias não se aplicam a este contexto', unverified: 'Contexto não revalidado; as preferências não podem autorizar acesso', unknown: 'Não foi possível confirmar a seleção nativa atual' } },
 });
-export function sessionPreferenceProvenanceCopy(locale: string): Readonly<Copy> { return resources[locale.toLowerCase().split(/[-_]/u)[0]] ?? resources.en; }
+export function sessionPreferenceProvenanceCopy(locale: string): Readonly<Copy> {
+    const key = locale.toLowerCase().split(/[-_]/u)[0];
+    return Object.hasOwn(resources, key) ? resources[key] : resources.en;
+}

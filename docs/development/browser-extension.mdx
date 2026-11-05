@@ -287,17 +287,18 @@ assertions wait for verified provenance, enabled native controls and completed
 permission/history initialization before interacting or measuring new effects.
 Reference-composition assertions wait for native metadata inspection to finish
 before distinguishing a missing reference from unavailable inspection.
-The hosted Windows job allows 90 minutes for the complete root and extension
+The hosted Windows job allows 120 minutes for the complete root and extension
 coverage campaign. Hosted macOS and Ubuntu each allow 30 minutes after
 20-minute coverage runs timed out. The complete 64-path native Git tests and
 portable SDD publication cases have 120-second test budgets after hosted
 Windows exceeded 30 seconds. Assertions, per-command runtime limits, coverage
 and approval requirements remain in force.
-The previous Windows campaign reached this workflow's configured 60-minute
-timeout, not a runner-wide 60-minute limit. GitHub-hosted jobs permit up to six
-hours ([Actions limits](https://docs.github.com/en/actions/reference/limits));
-the 90-minute budget stays within that ceiling. The cancelled run is not
-evidence of a completed coverage campaign. Lazy Data
+Earlier Windows attempts reached the workflow's 60- and 90-minute limits.
+The 90-minute diagnostic attempt passed the root suite and started the
+extension suite before cancellation. Both suites must finish to establish
+platform acceptance. [GitHub-hosted job limits](https://docs.github.com/en/actions/reference/limits)
+
+Lazy Data
 routes, session removal dialogs and updated favorite controls must be observed
 before tests interact with them. A successful connection fixture waits for the
 actual form reset that follows the completed connection promise, so a later

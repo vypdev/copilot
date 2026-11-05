@@ -1113,7 +1113,7 @@ or human acceptance, and modified executable branches remain100% covered.
 
 The historical 160-case H3 risk baseline is a starting minimum, not the complete
 acceptance threshold. Every additive minimum below is mandatory. The cumulative
-minimum is **896 distinct H3 risk cases: 160 baseline + 736 additions**. Reaching
+minimum is **897 distinct H3 risk cases: 160 baseline + 737 additions**. Reaching
 160 alone cannot satisfy H3. The original 56 CENTER catalog cases, the 56-case
 implementation inventory above and the full 803-case product catalog remain
 separately required; their execution does not offset an additive minimum.
@@ -1153,7 +1153,8 @@ separately required; their execution does not offset an additive minimum.
 | Unresolved cache selector | 2 | `api_cache_client.test.ts` covers failed replacement before and after native admission |
 | Clear preparation, visit delivery and session provenance | 5 | Two shared reservation cases, one reentrant delivery, two readable-document applicability cases |
 | Workspace review metadata scope | 1 | `read_role_consumers.test.ts` exercises both write purposes and a valid read reference in the actual review projection |
-| **Total** | **896** | **160 + 736; every row is required** |
+| Session provenance locale fallback | 1 | `session_preference_provenance.test.ts` requires the complete English explanation when an unsupported locale matches an inherited key |
+| **Total** | **897** | **160 + 737; every row is required** |
 
 The companion session-preferences specification also requires its 160 scoped
 cases. H3 acceptance requires both the owning milestone ledger and the scoped
