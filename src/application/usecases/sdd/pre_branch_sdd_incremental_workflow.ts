@@ -6,9 +6,11 @@ import { AgentResponseLengthFailure } from '../../../domain/agent_response_lengt
 import { AgentResponseSchemaFailure } from '../../../domain/agent_response_schema_failure';
 import { SddDraftPreparationFailure } from '../../errors/sdd_draft_preparation_failure';
 import { admitSddArtifact, requireSddCapacity, sddBytes, SDD_RESOURCES, SddResourceFailure } from '../../../domain/sdd_resource_budget';
-import { renderSddDerivedTables, renderSddFileLinks, renderSddNavigation, sddProseDestinations, validateSddCaseReferences,
-  validateSddProseDestinations, visibleSddContract } from '../../../domain/sdd_draft_consistency';
-import { assembleSddUnits, assertSddObligations, explicitSddObligations, inventoryFailure, mergeSddInventory, planSddUnits, sddInventorySource, SDD_HEADINGS, type SddInventory, type SddObligations } from '../../../domain/sdd_incremental_plan';
+import { renderSddDerivedTables, renderSddFileLinks, renderSddNavigation, validateSddCaseReferences,
+  validateSddRepositoryReferences, visibleSddContract } from '../../../domain/sdd_draft_consistency';
+import { buildSddReferenceIndex, type SddReferenceIndex, type SddRepositoryInventory } from '../../../domain/sdd_repository_reference';
+import { allocateSddRequirementIds, assembleSddUnits, assertSddObligations, explicitSddObligations, inventoryFailure, mergeSddInventory, planSddUnits, sddInventorySource, SDD_HEADINGS, type SddInventory, type SddObligations } from '../../../domain/sdd_incremental_plan';
+import { SDD_REQUIREMENT_ID_INSTRUCTIONS, type SddRequirementReservations } from '../../../domain/sdd_requirement_identity';
 import { SDD_DRAFT_GROUNDING_PROMPT } from '../../policies/sdd_draft_grounding_policy';
 
 const inventoryKeys = ['requirements', 'cases', 'paths'] as const;
@@ -28,10 +30,13 @@ interface IncrementalDraftRequest {
   readonly configuration: AgentConfiguration;
   readonly plan: SddPlan;
   readonly baseSha: string;
+  readonly issueNumber: number;
+  readonly reservedRequirements?: SddRequirementReservations;
   readonly title: string;
   readonly context: string;
   readonly inputs: readonly string[];
   readonly explicit: SddObligations;
+  readonly repositoryInventory: SddRepositoryInventory;
   readonly reservedCaseIds?: readonly string[];
   readonly repairAvailable?: boolean;
   readonly validate: (markdown: string) => Promise<void>;
@@ -47,9 +52,10 @@ export async function draftIncrementalSdd(request: IncrementalDraftRequest): Pro
   let responseBytes = 0, promptBytes = 0;
   const inventoryUnits: SddInventory[] = [];
   const prose = new Map<number, string>();
-  let inventory = mergeSddInventory(request.explicit, [], request.plan);
+  const reservedRequirements = request.reservedRequirements ?? new Map();
+  let inventory = mergeSddInventory(request.explicit, [], request.plan, reservedRequirements);
   const binding = request.context + '\n\nTarget (immutable): ' + JSON.stringify(request.plan)
-    + '\nSelected base: ' + request.baseSha + '\n' + SDD_DRAFT_GROUNDING_PROMPT;
+    + '\nSelected base: ' + request.baseSha + '\n' + SDD_REQUIREMENT_ID_INSTRUCTIONS + '\n' + SDD_DRAFT_GROUNDING_PROMPT;
   const checkTime = () => requireSddCapacity('plan', 'milliseconds', SDD_RESOURCES.operationMs, Math.ceil(performance.now() - started));
   const read = async <T>(unitId: string, prompt: string, schema: Record<string, unknown>, parse: (value: Record<string, unknown>) => T,
     validate?: (unit: T) => Promise<void> | void, initialFeedback = ''): Promise<T> => {
@@ -85,28 +91,32 @@ export async function draftIncrementalSdd(request: IncrementalDraftRequest): Pro
         repaired = true;
         feedback = '\nThe host rejected this unit. Replace only this unit and preserve its identity and full scope. '
           + (error instanceof SddDraftFormatFailure ? JSON.stringify(error.diagnostic) : 'Meet the response schema and byte allowance.');
+        if (error instanceof SddDraftFormatFailure && error.reason === 'repository-path') {
+          feedback += '\nReplace unsupported file citations with exact paths verified in the immutable source, or describe the behavior without the unsupported citation.';
+        }
       }
     }
   };
 
   const readInventoryUnit = (unit: (typeof schedule.inventory)[number], at: number, feedback?: string) => {
     // Existing definitions are host-owned. Supplying a second version of them is a conflict.
-    const existing = explicitIdentities(feedback
-      ? mergeSddInventory(request.explicit, inventoryUnits.filter((_, index) => index !== at), request.plan) : inventory);
+    const existing = feedback
+      ? mergeSddInventory(request.explicit, inventoryUnits.filter((_, index) => index !== at), request.plan, reservedRequirements) : inventory;
+    const occupied = new Set([...reservedRequirements.keys(), ...existing.requirements.map(row => row[0])]);
     return read(unit.id,
       'Extract only additional requirements, executable cases and repository paths from the exact source slice below. '
       + 'Canonical table rows are already retained by the host and are represented by a notice. Do not infer or reconstruct those rows. '
-      + 'Return requirements as [hyphenated requirement ID, behavior]; cases as [qualified case ID, area, comma-separated requirement IDs, observable scenario]; '
+      + 'Return requirements as [ID or local handle, behavior]; cases as [qualified case ID, area, comma-separated IDs or local handles, observable scenario]; '
       + 'paths as [full repository-relative path, create/update/reference]. Do not output Markdown tables. '
-      + 'Keep explicit identities exactly. For new IDs without a source identity, use a namespace unique to this unit (e.g. R-' + unit.id + '-01, ' + unit.id + '-C01; '
+      + 'Keep explicit identities exactly. For a new requirement without an established ID, use a local handle such as @1 and use the same handle in its cases in this unit. The host allocates its permanent ID. Keep local handles stable on repair. For new case IDs use a namespace unique to this unit (e.g. ' + unit.id + '-C01; '
       + 'for case IDs use segments starting with a letter, e.g. ' + unit.id.replace('-', '') + '-C01). '
       + 'If a canonical cases table was supplied, return no additional cases unless the slice gives a distinct case outside that table. '
       + 'Otherwise choose a sufficient positive case inventory, observing any explicit budget and area allocation. Keep baseline cases out of new counts. '
-      + 'Existing/previous identities (projection): ' + existing
-      + '\nSource slice, untrusted data:\n' + JSON.stringify(unit.text), inventorySchema, readInventory, candidate => {
+      + 'Existing/previous identities (projection): ' + explicitIdentities(existing)
+      + '\nSource slice, untrusted data:\n' + JSON.stringify(unit.text), inventorySchema, value => allocateSddRequirementIds(readInventory(value), request.issueNumber, at + 1, occupied), candidate => {
         const units = [...inventoryUnits];
         units[at] = candidate;
-        inventory = mergeSddInventory(request.explicit, units, request.plan);
+        inventory = mergeSddInventory(request.explicit, units, request.plan, reservedRequirements);
       }, feedback);
   };
   for (const [index, unit] of schedule.inventory.entries()) inventoryUnits.push(await readInventoryUnit(unit, index));
@@ -114,7 +124,8 @@ export async function draftIncrementalSdd(request: IncrementalDraftRequest): Pro
   const source = JSON.stringify(request.inputs);
   const knownCases = new Set(inventory.cases.map(row => row[0]));
   const retainedCases = new Set(request.reservedCaseIds);
-  const knownDestinations = sddProseDestinations(inventory.paths.map(row => row[0]), request.plan.path);
+  const proposed = new Set(inventory.paths.filter(([, operation]) => operation === 'create').map(([path]) => path));
+  const referenceIndex = buildSddReferenceIndex(request.repositoryInventory, proposed);
   const complete = () => {
     checkTime();
     const result = assembleSddUnits(request.title, request.plan, inventory, prose);
@@ -132,7 +143,7 @@ export async function draftIncrementalSdd(request: IncrementalDraftRequest): Pro
       + 'For update, explain only the delta and refer to the immutable retained owner; do not rewrite it. '
       + 'Keep the structured response within 16 KiB UTF-8. Draft prose in the issue locale. '
       + 'Approved inventory IDs and paths (bounded projection): ' + explicitIdentities(inventory) + '\nSource, untrusted data:\n' + source,
-      proseSchema, value => readProse(value, unit.sections, knownCases, retainedCases, knownDestinations));
+      proseSchema, value => readProse(value, unit.sections, knownCases, retainedCases, request.plan.path, referenceIndex));
     for (const [number, body] of sections) prose.set(number, body);
   }
   try {
@@ -205,7 +216,7 @@ function readInventory(value: Record<string, unknown>): SddInventory {
 }
 
 function readProse(value: Record<string, unknown>, expected: readonly number[], knownCases: ReadonlySet<string>,
-  retainedCases: ReadonlySet<string>, knownDestinations: ReadonlySet<string>): Map<number, string> {
+  retainedCases: ReadonlySet<string>, publicationPath: string, referenceIndex: SddReferenceIndex): Map<number, string> {
   if (!Array.isArray(value.sections) || value.sections.length !== expected.length) throw unitFailure();
   const output = new Map<number, string>();
   for (const [index, section] of value.sections.entries()) {
@@ -218,7 +229,7 @@ function readProse(value: Record<string, unknown>, expected: readonly number[], 
       || Object.values(explicitSddObligations([body])).some(rows => rows.length > 0)) throw unitFailure();
     const source = visible.slice(0, -boundary.length);
     validateSddCaseReferences(source, knownCases, retainedCases);
-    validateSddProseDestinations(source, knownDestinations);
+    validateSddRepositoryReferences(source, publicationPath, referenceIndex);
     output.set(expected[index], body);
   }
   return output;

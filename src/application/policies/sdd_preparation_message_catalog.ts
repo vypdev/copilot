@@ -61,6 +61,7 @@ const FACTS = Object.freeze({
   "table-empty-cell": ["A required table cell is empty.", "Una celda obligatoria de la tabla está vacía."] as const,
   "table-empty": ["The canonical table has no data rows.", "La tabla canónica no tiene filas de datos."] as const,
   "identifier-list": ["An identifier list has invalid syntax or repeated entries.", "Una lista de identificadores tiene sintaxis no válida o entradas repetidas."] as const,
+  "requirement-reserved": ["Keep the existing definition or assign a new hyphenated ID to the new behavior.", "Conserva la definición existente o asigna un ID nuevo con guiones al nuevo comportamiento."] as const,
   "requirement-identity": ["Requirement identifiers must be valid and distinct.", "Los identificadores de requisitos deben ser válidos y distintos."] as const,
   "case-identity": ["Case identifiers must be fully qualified and distinct; shorthand references cannot establish identity.", "Los identificadores de casos deben ser completos y distintos; las referencias abreviadas no establecen identidad."] as const,
   "case-reserved": ["A proposed case reuses an identity reserved by an immutable owning specification.", "Un caso propuesto reutiliza una identidad reservada por una especificación propietaria inmutable."] as const,

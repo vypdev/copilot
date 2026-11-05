@@ -2,6 +2,8 @@ import { admitSddArtifact, requireSddCapacity, sddBytes, SDD_RESOURCES } from '.
 import { SddDraftFormatFailure, type SddPlan } from './pre_branch_sdd';
 import { isSafeSddRepositoryPath } from './sdd_repository_reference';
 import { visibleSddContract } from './sdd_draft_consistency';
+import { validateSddRequirementIds, validateSddRequirementReservations,
+  type SddRequirementReservations } from './sdd_requirement_identity';
 
 export const SDD_HEADINGS = Object.freeze([
   'Executive summary', 'Problem, current behavior, and evidence', 'Actors, surfaces, and terminology',
@@ -18,7 +20,7 @@ const TABLES = {
   paths: ['Path', 'Change'],
   budgets: ['Area', 'Minimum distinct cases', 'Behaviors/risks covered'],
 } as const;
-const REQUIREMENT_ID = /^[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)+$/u;
+const LOCAL_REQUIREMENT = /^@[1-9]\d{0,3}$/u;
 const CASE_ID = /^(?:[A-Za-z][A-Za-z0-9]*-)+C\d+$/u;
 const KEYS = ['requirements', 'cases', 'paths'] as const;
 type RowKind = typeof KEYS[number];
@@ -108,23 +110,58 @@ export function inventoryFailure(key: RowKind): SddDraftFormatFailure {
   return new SddDraftFormatFailure(reason, 'An SDD inventory unit is incomplete or conflicts with admitted obligations.');
 }
 
-export function mergeSddInventory(explicit: SddInventory, units: readonly SddInventory[], plan: SddPlan): SddInventory {
+/** Allocate only explicit draft-local handles. Never rewrite authored or established identities. */
+export function allocateSddRequirementIds(unit: SddInventory, issue: number, unitNumber: number, occupied: ReadonlySet<string>): SddInventory {
+  const supplied = unit.requirements.map(row => row[0] ?? '');
+  const canonical = supplied.filter(id => !LOCAL_REQUIREMENT.test(id));
+  // Keep the original row number for a malformed model-supplied identity.
+  validateSddRequirementIds(supplied.map(id => LOCAL_REQUIREMENT.test(id) ? 'Local-Key' : id), 4);
+  const used = new Set([...occupied, ...canonical]);
+  const allocated = new Map<string, string>();
+  for (const id of supplied) {
+    if (!LOCAL_REQUIREMENT.test(id)) continue;
+    if (allocated.has(id)) throw inventoryFailure('requirements');
+    const stem = 'SDD-I' + issue + '-U' + unitNumber + '-R' + id.slice(1);
+    let candidate = stem;
+    for (let suffix = 1; used.has(candidate); suffix++) candidate = stem + '-' + suffix;
+    used.add(candidate);
+    allocated.set(id, candidate);
+  }
+  return {
+    requirements: unit.requirements.map(row => [allocated.get(row[0]) ?? row[0], ...row.slice(1)]),
+    cases: unit.cases.map(row => row.length === 4
+      ? [row[0], row[1], row[2].split(/\s*,\s*/u).map(id => allocated.get(id) ?? id).join(', '), row[3]]
+      : row),
+    paths: unit.paths,
+  };
+}
+
+export function mergeSddInventory(explicit: SddInventory, units: readonly SddInventory[], plan: SddPlan,
+  reserved: SddRequirementReservations = new Map()): SddInventory {
   const result: Record<RowKind, Row[]> = { requirements: [], cases: [], paths: [] };
   let count = 0, edges = 0;
   for (const key of KEYS) {
     const rows = new Map<string, Row>();
     for (const source of [explicit, ...units]) {
-      for (const row of source[key]) {
+      if (key === 'requirements') {
+        validateSddRequirementIds(source.requirements.map(row => row[0] ?? ''), 4);
+        validateSddRequirementReservations(source.requirements, reserved);
+      }
+      for (const [index, row] of source[key].entries()) {
         if (row.length !== TABLES[key].length || row.some(cell => typeof cell !== 'string' || !cell.trim()
           || /[|\r\n\0]/u.test(cell))) throw inventoryFailure(key);
-        if (key === 'requirements' && !REQUIREMENT_ID.test(row[0])) throw inventoryFailure(key);
-        if (key === 'cases' && (!CASE_ID.test(row[0]) || row[1] === 'Total'
-          || row[2].split(/\s*,\s*/u).some(id => !REQUIREMENT_ID.test(id)))) throw inventoryFailure(key);
+        if (key === 'cases') {
+          if (!CASE_ID.test(row[0]) || row[1] === 'Total') throw inventoryFailure(key);
+          validateSddRequirementIds(row[2].split(/\s*,\s*/u), 14, index + 1);
+        }
         if (key === 'paths' && (!isSafeSddRepositoryPath(row[0]) || !['create', 'update', 'reference'].includes(row[1]))) {
           throw inventoryFailure(key);
         }
         const prior = rows.get(row[0]);
-        if (prior && !sameRow(prior, row)) throw inventoryFailure(key);
+        if (prior && !sameRow(prior, row)) {
+          if (key === 'requirements') validateSddRequirementReservations([row], new Map([[row[0], new Set([prior[1]])]]), index + 1);
+          throw inventoryFailure(key);
+        }
         if (!prior) {
           requireSddCapacity('plan', 'rows', SDD_RESOURCES.rows, ++count);
           if (key === 'cases') requireSddCapacity('plan', 'edges', SDD_RESOURCES.edges, edges += row[2].split(',').length);

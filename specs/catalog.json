@@ -1861,7 +1861,9 @@
         "src/domain/sdd_resource_budget.ts",
         "src/domain/sdd_incremental_plan.ts",
         "src/application/policies/sdd_selection_policy.ts",
-        "src/application/usecases/sdd/pre_branch_sdd_incremental_workflow.ts"
+        "src/application/usecases/sdd/pre_branch_sdd_incremental_workflow.ts",
+        "src/domain/sdd_clarification.ts",
+        "src/domain/sdd_requirement_identity.ts"
       ],
       "tests": [
         "src/domain/__tests__/issue_workflow_runtime_policy.test.ts",

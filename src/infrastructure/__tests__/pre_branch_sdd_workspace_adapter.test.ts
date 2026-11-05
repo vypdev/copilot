@@ -177,7 +177,8 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
         return { unitId, sections };
       } };
       delta = await draftIncrementalSdd({ agent, configuration: { provider: 'codex', model: 'test-model' },
-        plan, baseSha: snapshot.baseSha, title: 'Payments', inputs: [scope], explicit, context: 'Use the immutable owner.', validate });
+        plan, issueNumber: 42, baseSha: snapshot.baseSha, title: 'Payments', inputs: [scope], explicit, context: 'Use the immutable owner.',
+        repositoryInventory: await workspace.readRepositoryInventory(snapshot.baseSha), validate });
     } else {
       const rows = mergeSddInventory(explicit, [], plan);
       const sections = new Map(Array.from({ length: 20 }, (_, index) => [index + 1, prose(index + 1).body]));

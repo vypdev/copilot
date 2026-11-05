@@ -1,8 +1,8 @@
 import { draftIncrementalSdd, assembleAndValidateSdd } from './pre_branch_sdd_incremental_workflow';
-import { explicitSddObligations, planSddUnits } from '../../../domain/sdd_incremental_plan';
+import { allocateSddRequirementIds, explicitSddObligations, mergeSddInventory, planSddUnits } from '../../../domain/sdd_incremental_plan';
 import { SddDraftFormatFailure } from '../../../domain/pre_branch_sdd';
 import { sddBytes, SDD_RESOURCES } from '../../../domain/sdd_resource_budget';
-import { validateSddDraftConsistency } from '../../../domain/sdd_draft_consistency';
+import { reservedSddRequirements, validateSddDraftConsistency } from '../../../domain/sdd_draft_consistency';
 import { sddConsistencyFixture } from '../../../testing/sdd_consistency_fixture';
 
 const plan = { action: 'update', path: 'specs/payments.md', capabilityId: 'payments',
@@ -30,8 +30,8 @@ function run(inputs: readonly string[], query: jest.Mock, validate = jest.fn(asy
   validateSddDraftConsistency(markdown, [], inventory, plan.path);
 })) {
   return draftIncrementalSdd({
-    agent: { query }, configuration: { provider: 'codex', model: 'test-model' }, plan, baseSha: 'a'.repeat(40),
-    title: 'Payments', context: 'Immutable source contract.', inputs, explicit: explicitSddObligations(inputs), validate,
+    agent: { query }, configuration: { provider: 'codex', model: 'test-model' }, plan, issueNumber: 42, baseSha: 'a'.repeat(40),
+    title: 'Payments', context: 'Immutable source contract.', inputs, explicit: explicitSddObligations(inputs), repositoryInventory: inventory, validate,
   });
 }
 
@@ -123,6 +123,77 @@ describe('bounded incremental SDD drafting (#763)', () => {
     expect(result).not.toContain('](docs/payments.mdx)');
     expect(query).toHaveBeenCalledTimes(7);
     expect(query.mock.calls[2][0].prompt).toContain('path-link-reference');
+  });
+
+  it.each([
+    ['`docs/missing.mdx`', 'path-inline-reference'],
+    ['docs/missing.mdx', 'path-prose-reference'],
+  ])('checks the immutable tree before accepting a prose unit that cites %s', async (citation, diagnostic) => {
+    const query = jest.fn(async ({ prompt }) => reply(prompt)).mockImplementationOnce(async ({ prompt }) => reply(prompt))
+      .mockImplementationOnce(async ({ prompt }) => {
+        const valid = reply(prompt);
+        const sections = valid.sections as { section: number; body: string }[];
+        sections[0].body += '\n\nSee ' + citation + '.';
+        return valid;
+      });
+    const result = await run([fixture(3)], query);
+    expect(result).not.toContain('docs/missing.mdx');
+    expect(query).toHaveBeenCalledTimes(7);
+    expect(query.mock.calls[2][0].prompt).toContain('Return only the JSON for unit prose-1.');
+    expect(query.mock.calls[2][0].prompt).toContain(diagnostic);
+    expect(query.mock.calls[2][0].prompt).not.toContain('docs/missing.mdx');
+  });
+
+  it('905: reproduces eight invalid IDs, repairs one unit, and derives reciprocal links for host-assigned IDs', async () => {
+    const unit = (id: (n: number) => string) => ({
+      unitId: 'inventory-1',
+      requirements: Array.from({ length: 8 }, (_, i) => [id(i + 1), 'Verify distinct behavior ' + (i + 1)]),
+      cases: Array.from({ length: 8 }, (_, i) => ['inventory-C' + (i + 1), 'Functional', id(i + 1), 'Observe result ' + (i + 1)]),
+      paths: [],
+    });
+    const query = jest.fn(async ({ prompt }) => reply(prompt))
+      .mockResolvedValueOnce(unit(n => 'G' + n))
+      .mockResolvedValueOnce(unit(n => '@' + n));
+    const result = await run([fixture(1)], query);
+    expect(query).toHaveBeenCalledTimes(7);
+    for (const [request] of query.mock.calls.slice(0, 2)) expect(request.prompt).toContain('Use G-01 or PAY-02, never G01 or G1');
+    expect(query.mock.calls[1][0].prompt).toContain('"row":1,"expected":0,"observed":8');
+    expect(result).toContain('| SDD-I42-U1-R8 | inventory-C8 |');
+    expect(result).toContain('| PAY-01 | impact-C1 |');
+    expect(result).not.toContain('@8');
+  });
+
+  it('905: reserves canonical identities and assigns the same collision-free ID on replay', () => {
+    const unit = { requirements: [['@1', 'New behavior']], cases: [['local-C1', 'Policy', '@1, PAY-01', 'Observe both behaviors']], paths: [] };
+    const occupied = new Set(['SDD-I42-U1-R1', 'PAY-01']);
+    const first = allocateSddRequirementIds(unit, 42, 1, occupied);
+    expect(first).toEqual(allocateSddRequirementIds(unit, 42, 1, occupied));
+    expect(first.requirements[0][0]).toBe('SDD-I42-U1-R1-1');
+    expect(first.cases[0][2]).toBe('SDD-I42-U1-R1-1, PAY-01');
+    expect(allocateSddRequirementIds(unit, 42, 2, occupied).requirements[0][0]).toBe('SDD-I42-U2-R1');
+  });
+
+  it.each(['update', 'companion'] as const)('905: %s can reuse a retained definition and rejects a conflicting authorized definition', async action => {
+    const ownerPath = plan.path;
+    const target = action === 'update' ? ownerPath : 'specs/payment-companion.md';
+    const next = { ...plan, action, path: target };
+    const previous = sddConsistencyFixture('prior', ownerPath, 'update').replace('## 4.', '### 4.');
+    const owners = [{ path: ownerPath, markdown: previous }];
+    const seed = sddConsistencyFixture('impact', target, action === 'update' ? 'update' : 'create');
+    const repository = { ...inventory, files: new Set([ownerPath, 'docs/payments.mdx']) };
+    const writer = jest.fn(async (markdown: string) => validateSddDraftConsistency(markdown, owners, repository, target));
+    const actual = explicitSddObligations([seed]);
+    const reserved = reservedSddRequirements(owners);
+    expect(mergeSddInventory(actual, [], next, reserved).requirements).toEqual(actual.requirements);
+    await expect(assembleAndValidateSdd(seed, next, actual, writer)).resolves.toContain('| G-01 | impact-C01, impact-C02 |');
+    const changed = seed.replace(actual.requirements[0][1], 'A different meaning at the same identity.');
+    await expect(assembleAndValidateSdd(changed, next, explicitSddObligations([changed]), writer)).rejects.toMatchObject({
+      diagnostic: { facts: [{ detail: 'requirement-reserved', section: 4, row: 1, expected: 0, observed: 1 }] },
+    });
+    const malformed = seed.replace(/G-01/gu, 'G01');
+    await expect(assembleAndValidateSdd(malformed, next, explicitSddObligations([malformed]), writer)).rejects.toMatchObject({
+      diagnostic: { facts: [{ detail: 'identifier-list', section: 4, row: 1, expected: 0, observed: 1 }] },
+    });
   });
 
   it('fails before any provider call when authoritative input exceeds the operation budget', async () => {

@@ -1,4 +1,5 @@
 import type { SddPlan } from '../../domain/pre_branch_sdd';
+import type { SddRepositoryInventory } from '../../domain/sdd_repository_reference';
 
 import type { SddCatalogCapability } from '../../domain/sdd_catalog_compatibility';
 export type { SddCatalogCapability } from '../../domain/sdd_catalog_compatibility';
@@ -26,6 +27,7 @@ export interface PreBranchSddWorkspacePort {
   readSourceRevision?(baseBranch: string): Promise<string>;
   isAncestor(ancestorSha: string, descendantSha: string): Promise<boolean>;
   readSdd(baseSha: string, path: string): Promise<string | undefined>;
+  readRepositoryInventory(baseSha: string): Promise<SddRepositoryInventory>;
   validateDraft(snapshot: SddCatalogSnapshot, plan: SddPlan, markdown: string, newCapability?: SddCatalogCapability): Promise<SddPreparedDraft>;
   publish(branchName: string, prepared: SddPreparedDraft): Promise<string>;
   recoverPublished(branchName: string, prepared: SddPreparedDraft): Promise<string | undefined>;

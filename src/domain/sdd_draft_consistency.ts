@@ -2,21 +2,22 @@ import { requireSddCapacity, sddBytes, SDD_RESOURCES } from './sdd_resource_budg
 import type { SddValidationFact } from './sdd_validation_diagnostic';
 import { SddDraftFormatFailure } from './pre_branch_sdd';
 import { appendSddReferenceContext, buildSddReferenceIndex, hasBlockedSddAncestor, isKnownSddRepositoryReference, isSddFileRole, isSafeSddRepositoryPath as safePath,
-  isSddNonFileNotation, sddReferencePrefix, type SddRepositoryInventory } from './sdd_repository_reference';
+  isSddNonFileNotation, sddReferencePrefix, type SddReferenceIndex, type SddRepositoryInventory } from './sdd_repository_reference';
 export type { SddRepositoryInventory } from './sdd_repository_reference';
 import { readSddVisibleReferences } from './sdd_visible_references';
 import { countSddShorthandCaseReferences } from './sdd_case_reference';
+import { SDD_REQUIREMENT_ID, SDD_REQUIREMENT_ID_INSTRUCTIONS, validateSddRequirementReservations,
+  type SddRequirementReservations } from './sdd_requirement_identity';
 
 export type SddConsistencyReason = 'case-identity' | 'case-budget' | 'requirement-mapping' | 'repository-path';
 export interface SddOwnerDocument { readonly path: string; readonly markdown: string }
 
 const CASE = /\b(?:[A-Za-z][A-Za-z0-9]*-)+C\d+\b/gu;
 const CASE_ID = /^(?:[A-Za-z][A-Za-z0-9]*-)+C\d+$/u;
-const REQUIREMENT_ID = /^[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)+$/u;
 
 /** Generated candidates use visible tables; retained legacy owners are never reformatted. */
 export const SDD_CONSISTENCY_PROMPT = `Consistency contract for the final assembled proposed draft/appendix (not the retained owner):
-In section 4 include one table: Requirement | Behavior. Give every goal a stable hyphenated requirement ID, such as G-01. Its alphabetic prefix must have at least one hyphen-separated alphanumeric segment; unseparated G1 and G01 are invalid.
+In section 4 include one table: Requirement | Behavior. Give every goal a stable requirement ID. ${SDD_REQUIREMENT_ID_INSTRUCTIONS}
 In section 14 include one budget table: Area | Minimum distinct cases | Behaviors/risks covered; positive integers and one Total.
 Also in section 14 include one inventory table: Case ID | Area | Requirements | Scenario.
 Each row is one distinct executable case with a fully qualified ID: one or more hyphen-separated namespace segments of letters/digits, each starting with a letter, followed by -C and decimal digits, such as capability-change-C01. Keep that exact case-ID grammar in both drafts and repairs. Each row has one exact budget area, comma-separated requirement IDs and an observable scenario. Never use shorthand C01, ranges or redefine an ID found in any owning SDD. Reference retained baseline cases in prose using their full IDs; count only the new inventory. Ordinary technical designators in prose, scenario text or non-case columns are not acceptance-case references solely because they resemble short IDs; preserve their original terminology. Case-reference fields, explicit references and adjacent case-ID lists still require full identities.
@@ -188,20 +189,6 @@ function sddFileDestination(target: string, publicationPath: string): string {
   } catch { return fail('repository-path', { detail: 'path-link', section: 0 }); }
 }
 
-/** Generated prose can cite known file links; trusted assembly owns file navigation. */
-export function sddProseDestinations(paths: readonly string[], publicationPath: string): ReadonlySet<string> {
-  return new Set(paths.map(target => sddFileDestination(target, publicationPath)));
-}
-
-export function validateSddProseDestinations(source: string, approved: ReadonlySet<string>): void {
-  for (const [index, destination] of readSddVisibleReferences(source).destinations.entries()) {
-    const href = destination.split(/[?#]/u)[0];
-    if (!href || /^(?:[a-z][a-z0-9+.-]*:|\/)/iu.test(href) || approved.has(href.replace(/^\.\//u, ''))) continue;
-    fail('repository-path', { detail: 'path-link', section: 0 },
-      [{ detail: 'path-link-reference', section: 0, row: index + 1 }]);
-  }
-}
-
 /** Never repairs definitions or contradictory supplied tables; the writer independently revalidates. */
 export function renderSddDerivedTables(markdown: string): string {
   if (!markdown.includes(BUDGET_SLOT) && !markdown.includes(TRACEABILITY_SLOT)) return markdown;
@@ -218,7 +205,7 @@ export function renderSddDerivedTables(markdown: string): string {
     normalized = normalized.replace(wrapped, slot);
   }
   const requirements = table(source, 4, ['Requirement', 'Behavior'], 'requirement-mapping').map(row => row[0]);
-  uniqueIdentifiers(requirements, REQUIREMENT_ID, 'requirement-mapping', 4);
+  uniqueIdentifiers(requirements, SDD_REQUIREMENT_ID, 'requirement-mapping', 4);
   const cases = table(source, 14, ['Case ID', 'Area', 'Requirements', 'Scenario'], 'case-identity');
   requireSddCapacity('assembly', 'rows', SDD_RESOURCES.rows, cases.length + requirements.length);
   const caseIds = cases.map(row => row[0]);
@@ -229,7 +216,7 @@ export function renderSddDerivedTables(markdown: string): string {
   for (const [index, [id, area, links]] of cases.entries()) {
     if (area === 'Total') fail('case-budget', { detail: 'budget-area', section: 14 });
     counts.set(area, (counts.get(area) ?? 0) + 1);
-    const linkedRequirements = ids(links, REQUIREMENT_ID, 'requirement-mapping', 14);
+    const linkedRequirements = ids(links, SDD_REQUIREMENT_ID, 'requirement-mapping', 14);
     requireSddCapacity('assembly', 'edges', SDD_RESOURCES.edges, edgeCount += linkedRequirements.length);
     requireSddCapacity('assembly', 'bytes', SDD_RESOURCES.artifactBytes, traceBytes += (sddBytes(id) + 2) * linkedRequirements.length);
     for (const requirement of linkedRequirements) {
@@ -245,6 +232,34 @@ export function renderSddDerivedTables(markdown: string): string {
   const traceability = ['| Requirement | Cases |', '|---|---|',
     ...[...edges].map(([requirement, links]) => `| ${requirement} | ${links.join(', ')} |`)].join('\n');
   return normalized.replace(BUDGET_SLOT, () => budget).replace(TRACEABILITY_SLOT, () => traceability);
+}
+
+/** Read canonical definitions from immutable owners, including previously appended sections. */
+export function reservedSddRequirements(documents: readonly SddOwnerDocument[]): SddRequirementReservations {
+  requireSddCapacity('owner', 'bytes', SDD_RESOURCES.sourceBytes, documents.reduce((total, doc) => total + sddBytes(doc.markdown), 0));
+  const definitions = new Map<string, Set<string>>();
+  let count = 0;
+  for (const doc of documents) {
+    const lines = visibleSddContract(doc.markdown).split('\n');
+    for (let index = 0; index + 1 < lines.length; index++) {
+      const cells = (line: string) => line.trim().replace(/^\||\|$/gu, '').split('|').map(clean);
+      const header = cells(lines[index]);
+      if (!/^\s*\|/u.test(lines[index]) || header.length !== 2 || header[0] !== 'Requirement' || header[1] !== 'Behavior') continue;
+      const separator = cells(lines[index + 1]);
+      if (separator.length !== 2 || !separator.every(cell => /^:?-{3,}:?$/u.test(cell))) continue;
+      index += 2;
+      while (index < lines.length && /^\s*\|/u.test(lines[index])) {
+        const row = cells(lines[index++]);
+        if (row.length !== 2 || !SDD_REQUIREMENT_ID.test(row[0]) || !row[1]) continue;
+        requireSddCapacity('owner', 'identities', SDD_RESOURCES.ownerIdentities, ++count);
+        const meanings = definitions.get(row[0]) ?? new Set<string>();
+        meanings.add(row[1]);
+        definitions.set(row[0], meanings);
+      }
+      index--;
+    }
+  }
+  return definitions;
 }
 
 export function reservedSddCaseIds(documents: readonly SddOwnerDocument[]): string[] {
@@ -338,7 +353,8 @@ export function validateSddDraftConsistency(
   const source = visibleSddContract(markdown);
   const requirements = table(source, 4, ['Requirement', 'Behavior'], 'requirement-mapping');
   const requirementIds = requirements.map(row => row[0]);
-  uniqueIdentifiers(requirementIds, REQUIREMENT_ID, 'requirement-mapping', 4);
+  uniqueIdentifiers(requirementIds, SDD_REQUIREMENT_ID, 'requirement-mapping', 4);
+  validateSddRequirementReservations(requirements, reservedSddRequirements(owners));
   const cases = table(source, 14, ['Case ID', 'Area', 'Requirements', 'Scenario'], 'case-identity');
   requireSddCapacity('assembly', 'rows', SDD_RESOURCES.rows, cases.length + requirements.length);
   const caseIds = cases.map(row => row[0]);
@@ -378,7 +394,7 @@ export function validateSddDraftConsistency(
   const edges = new Map(requirementIds.map(id => [id, new Set<string>()]));
   let edgeCount = 0;
   for (const [index, [id, , links]] of cases.entries()) {
-    const linkedRequirements = ids(links, REQUIREMENT_ID, 'requirement-mapping', 14);
+    const linkedRequirements = ids(links, SDD_REQUIREMENT_ID, 'requirement-mapping', 14);
     requireSddCapacity('assembly', 'edges', SDD_RESOURCES.edges, edgeCount += linkedRequirements.length);
     for (const requirement of linkedRequirements) {
       const linked = edges.get(requirement);
@@ -425,14 +441,19 @@ function validatePaths(source: string, inventory: SddRepositoryInventory, sddPat
       proposed.add(file);
     } else if (!['update', 'reference'].includes(change) || !inventory.files.has(file)) fail('repository-path', { detail: 'path-operation', section: 15, row: seen.size });
   }
-  const referenceIndex = buildSddReferenceIndex(inventory, proposed);
-  // CommonMark replaces NUL with U+FFFD. Never let that normalization establish
-  // another repository identity from unsafe visible source spelling.
-  if (source.includes('\0')) fail('repository-path', { detail: 'path-reference', section: 0 }, [{ detail: 'path-reference-unsafe', section: 0 }]);
   // These exact two-cell rows have already received strict declaration checks.
   // Do not reinterpret their file identities as prose suffixes or Markdown links.
   const referenceSource = source.split('\n').map(line => declarationRows.has(line) ? ' '.repeat(line.length) : line).join('\n');
-  const references = readSddVisibleReferences(referenceSource);
+  validateSddRepositoryReferences(referenceSource, sddPath, buildSddReferenceIndex(inventory, proposed));
+}
+
+/** Check visible unit or document references using the selected Git tree and proposed paths. */
+export function validateSddRepositoryReferences(source: string, sddPath: string, referenceIndex: SddReferenceIndex): void {
+  const { inventory, proposed } = referenceIndex;
+  // CommonMark replaces NUL with U+FFFD. Never let that normalization establish
+  // another repository identity from unsafe visible source spelling.
+  if (source.includes('\0')) fail('repository-path', { detail: 'path-reference', section: 0 }, [{ detail: 'path-reference-unsafe', section: 0 }]);
+  const references = readSddVisibleReferences(source);
   type Origin = 'path-inline-reference' | 'path-prose-reference' | 'path-link-reference';
   const reject = (origin: Origin, ordinal: number, detail: 'path-reference-unsafe' | 'path-reference-blocked' | 'path-reference-missing' | 'path-reference-directory') =>
     fail('repository-path', { detail: 'path-reference', section: 0 },

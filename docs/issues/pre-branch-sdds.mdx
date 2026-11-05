@@ -435,6 +435,12 @@ validation policy.
 
 ## Issue flow
 
+Clarification covers unresolved product decisions and external prerequisites,
+including a prerequisite pull request whose merge or reviewed tree still needs
+confirmation. The Action prepares and verifies the linked branch as part of
+publication. Wait for the verified SDD and linked branch before starting source
+implementation.
+
 1. Open an admitted issue with a feature type or `contract-change`, then add `in-progress`.
 2. The Action adds `SDD`, analyzes the issue against the catalog, and posts one **SDD work status** comment. If it finds blocking questions, it waits in `state:specifying` without drafting a document or creating a branch.
 3. Answer each question in an issue comment using `SDD Q1: your answer`, `SDD Q2: your answer`, and so on. The issue author answers questions assigned to the author; a repository member answers maintainer questions. A comment can answer several numbered questions. The Action ignores answers from other accounts.
@@ -534,6 +540,13 @@ their own identities; no rejected candidate is published or downloadable.
 
 #### Size and format repair
 
+Use hyphenated requirement IDs such as `G-01` in an issue table or a
+maintainer draft. Copilot assigns IDs to new requirements in incremental
+generation and derives their reciprocal case links. When citing an existing
+requirement, keep its recorded ID and definition. Use a distinct ID for a
+different behavior. The recovery card identifies the first invalid or
+conflicting row.
+
 Copilot checks provider output, assembly, and the exact composed artifact
 separately. The managed drafting path admits up to 32 planned units, one shared
 repair, 16 KiB of structured response per unit, 512 KiB of aggregate structured
@@ -542,10 +555,11 @@ elapsed time, table rows, and reciprocal links. These budgets replace the former
 18,000- and 70,000-character document ceilings. A genuine provider token or
 transport failure keeps its own diagnosis.
 
-Check the stage and unit on the owned recovery card. If Copilot can identify
-which unit introduced a bad case reference or inventory row, the one repair
-replaces that unit and retains the other units. The complete artifact still
-passes all checks. The gate also checks that Git stages the exact validated
+Check the stage and unit on the owned recovery card. Each prose unit checks
+file citations against the selected Git tree. If Copilot can identify the unit
+that introduced a bad citation, case reference, or inventory row, the one repair
+replaces that unit and retains the others. The complete artifact still passes
+all checks. The gate also checks that Git stages the exact validated
 SDD and catalog bytes; if repository attributes transform them, correct the
 attributes and retry. If an independent delta fits as a companion and the existing
 owner cannot accept it within the publication budget, the card names the proposed

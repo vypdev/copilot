@@ -1,3 +1,4 @@
+import { blockingSddQuestions } from '../../../domain/sdd_clarification';
 import { createHash } from 'node:crypto';
 import { decideIssueStart } from '../../../domain/issue_start_policy';
 import { parseSddAnswer, parseSddPlan, type SddGateRecord } from '../../../domain/pre_branch_sdd';
@@ -80,7 +81,7 @@ export class SddEvidenceQueryUseCase {
             }
             const snapshot = await this.ports.workspace.loadSnapshot(source);
             if (snapshot.baseSha !== record.baseSha) return { state: 'stale' };
-            try { parseSddPlan(record.plan, new Map(snapshot.capabilities.map(capability => [capability.id, capability.specs]))); }
+            try { parseSddPlan(record.plan, new Map(snapshot.capabilities.map(capability => [capability.id, capability.specs])), true); }
             catch { return { state: 'invalid' }; }
         }
         if (stale) return { state: 'stale', ...(verified ? { verified } : {}) };
@@ -94,7 +95,7 @@ export class SddEvidenceQueryUseCase {
         authorizations: Map<string, Promise<boolean>>): Promise<string[]> {
         const pending: string[] = [];
         const cutoff = Math.max(cardId, ...(record.answers ?? []).map(answer => answer.commentId));
-        for (const question of record.plan.questions) {
+        for (const question of blockingSddQuestions(record.plan.questions)) {
             const retained = (record.answers ?? []).filter(answer => {
                 const provenance = answer as typeof answer & { readonly round?: number; readonly questionText?: string };
                 return Number.isSafeInteger(answer.commentId) && provenance.round === record.round

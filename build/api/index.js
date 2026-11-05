@@ -9814,7 +9814,7 @@ exports.SDD_VALIDATION_DETAILS = Object.freeze([
     'validation-contract', 'size-limit', 'response-shape', 'minimum-length', 'required-heading', 'numeric-budget',
     'section-count', 'table-count', 'table-separator', 'table-columns', 'table-empty-cell', 'table-empty',
     'derived-slot-count', 'derived-slot-placement',
-    'identifier-list', 'requirement-identity', 'case-identity', 'case-reserved', 'case-reference', 'case-shorthand',
+    'identifier-list', 'requirement-identity', 'requirement-reserved', 'case-identity', 'case-reserved', 'case-reference', 'case-shorthand',
     'budget-area', 'budget-integer', 'budget-order', 'budget-total', 'budget-distribution',
     'requirement-reference', 'requirement-coverage', 'traceability-links', 'traceability-membership', 'traceability-requirement',
     'owner-path', 'path-identity', 'create-existing-path', 'create-path-overlap', 'create-path-parent',

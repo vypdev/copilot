@@ -1,3 +1,4 @@
+import { SDD_QUESTION_KINDS, type SddQuestionKind } from './sdd_clarification';
 import { admitSddArtifact, requireSddCapacity, sddBytes, SDD_RESOURCES } from './sdd_resource_budget';
 import { SddCatalogCompatibilityFailure, isSddCatalogOwnerPath, type SddCatalogCapability } from './sdd_catalog_compatibility';
 import { normalizeSddValidationDiagnostic, type SddDraftFormatReason, type SddValidationDiagnostic } from './sdd_validation_diagnostic';
@@ -10,6 +11,7 @@ export interface SddQuestion {
   readonly text: string;
   readonly owner: SddAnswerOwner;
   readonly suggestion?: string;
+  readonly kind?: SddQuestionKind;
 }
 
 export interface SddPlan {
@@ -94,7 +96,7 @@ export class SddOwnershipFailure extends Error {
 }
 
 /** The agent may propose ownership but cannot invent a catalogued owner or arbitrary path. */
-export function parseSddPlan(value: unknown, catalog: ReadonlyMap<string, readonly string[]>): SddPlan {
+export function parseSddPlan(value: unknown, catalog: ReadonlyMap<string, readonly string[]>, retainedQuestionIds = false): SddPlan {
   const registeredPaths = new Set<string>();
   for (const paths of catalog.values()) {
     if (!Array.isArray(paths) || paths.length === 0) throw new SddCatalogCompatibilityFailure('owner-paths-invalid');
@@ -128,18 +130,23 @@ export function parseSddPlan(value: unknown, catalog: ReadonlyMap<string, readon
   if (!Array.isArray(value.questions) || value.questions.length > 8) {
     throw new Error('The SDD analysis must contain at most eight blocking questions.');
   }
+  let previousQuestion = 0;
   const questions = value.questions.map((question, index) => {
+    const number = isRecord(question) && typeof question.id === 'string' && /^Q[1-8]$/u.test(question.id) ? Number(question.id.slice(1)) : 0;
     if (!isRecord(question)
-      || question.id !== `Q${index + 1}`
+      || (retainedQuestionIds ? number <= previousQuestion : number !== index + 1)
+      || (question.kind !== undefined && !SDD_QUESTION_KINDS.some(kind => kind === question.kind))
       || typeof question.text !== 'string' || question.text.trim().length < 12 || question.text.length > 1000
       || !['issue-author', 'maintainer'].includes(String(question.owner))
       || (question.suggestion != null && (typeof question.suggestion !== 'string' || question.suggestion.length > 500))) {
       throw new Error(`Invalid blocking SDD question Q${index + 1}.`);
     }
+    previousQuestion = number;
     return Object.freeze({
       id: question.id as string,
       text: question.text as string,
       owner: question.owner as SddAnswerOwner,
+      ...(question.kind ? { kind: question.kind as SddQuestionKind } : {}),
       ...(typeof question.suggestion === 'string' ? { suggestion: question.suggestion } : {}),
     });
   });
@@ -160,7 +167,7 @@ export function readSddGateRecord(body: string | null | undefined, issueNumber: 
       || !isRecord(value.plan)) return undefined;
     try {
       const owner = new Map([[String(value.plan.capabilityId), [value.plan.action === 'companion' ? 'specs/existing-owner.md' : String(value.plan.path)]]]);
-      parseSddPlan(value.plan, value.plan.action === 'new' ? new Map() : owner);
+      parseSddPlan(value.plan, value.plan.action === 'new' ? new Map() : owner, true);
     } catch {
       return undefined;
     }
@@ -231,12 +238,15 @@ export function renderSddGateRecord(record: SddGateRecord, locale = 'en-US', iss
     : choice?.kind === 'companion'
       ? (spanish ? 'SDD conservado: ' : 'Retained SDD: ') + '`' + choice.retainedPath + '`' + '\n\n'
       : '';
+  const preparing = !pendingPublication && record.plan.questions.length === 0;
   const nextStep = pendingPublication
     ? spanish ? 'Vuelve a ejecutar el workflow de la issue para reintentar la publicación en esta misma rama.' : 'Run the issue workflow again to retry publication on this same branch.'
-    : spanish ? 'Responde con `SDD Q1: tu respuesta` (una línea por pregunta). La Action continuará cuando las personas indicadas respondan todas las preguntas.' : 'Reply with `SDD Q1: your answer` (one line per question). The Action will continue after the required people answer every question.';
+    : preparing
+      ? spanish ? 'La Action debe verificar el SDD y la rama vinculada antes de implementar.' : 'Wait for the Action to verify the SDD publication and linked branch before implementing.'
+      : spanish ? 'Responde con `SDD Q1: tu respuesta` (una línea por pregunta). La Action continuará cuando las personas indicadas respondan todas las preguntas.' : 'Reply with `SDD Q1: your answer` (one line per question). The Action will continue after the required people answer every question.';
   return spanish
-    ? `## Estado del SDD\n\n**Estado actual:** ${pendingPublication ? 'La publicación del primer SDD está pendiente.' : 'A la espera de respuestas para la especificación.'} ${retained}\n\n**SDD responsable:** \`${record.plan.path}\`\n\n**Ronda de aclaración:** ${record.round}\n\n${selectionDetails}${questions}\n\n${nextStep}\n\n${marker}`
-    : `## SDD work status\n\n**Current status:** ${pendingPublication ? 'First SDD publication is pending.' : 'Waiting for specification answers.'} ${retained}\n\n**Owning SDD:** \`${record.plan.path}\`\n\n**Clarification round:** ${record.round}\n\n${selectionDetails}${questions}\n\n${nextStep}\n\n${marker}`;
+    ? `## Estado del SDD\n\n**Estado actual:** ${pendingPublication ? 'La publicación del primer SDD está pendiente.' : preparing ? 'Preparando el SDD.' : 'A la espera de respuestas para la especificación.'} ${retained}\n\n**SDD responsable:** \`${record.plan.path}\`\n\n**Ronda de aclaración:** ${record.round}\n\n${selectionDetails}${questions}\n\n${nextStep}\n\n${marker}`
+    : `## SDD work status\n\n**Current status:** ${pendingPublication ? 'First SDD publication is pending.' : preparing ? 'Preparing the specification.' : 'Waiting for specification answers.'} ${retained}\n\n**Owning SDD:** \`${record.plan.path}\`\n\n**Clarification round:** ${record.round}\n\n${selectionDetails}${questions}\n\n${nextStep}\n\n${marker}`;
 }
 
 function sddPublicationLinks(record: SddGateRecord, issueUrl: string | undefined, spanish: boolean): string {

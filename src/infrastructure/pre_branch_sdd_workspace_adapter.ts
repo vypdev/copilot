@@ -132,7 +132,7 @@ export class PreBranchSddWorkspaceAdapter implements PreBranchSddWorkspacePort {
       }
       const owners: SddOwnerDocument[] = [];
       let ownerBytes = 0;
-      const inventory = await this.inventoryAt(snapshot.baseSha);
+      const inventory = await this.readRepositoryInventory(snapshot.baseSha);
       for (const file of snapshot.capabilities.find(capability => capability.id === plan.capabilityId)?.specs ?? []) {
         if (!isSafeSddPath(file)) throw new Error('An owning SDD path is unsafe.');
         if (!inventory.files.has(file)) throw new Error('An owning SDD is not a regular file at the immutable base.');
@@ -315,7 +315,8 @@ export class PreBranchSddWorkspaceAdapter implements PreBranchSddWorkspacePort {
     }
   }
 
-  private async inventoryAt(sha: string): Promise<SddRepositoryInventory> {
+  async readRepositoryInventory(sha: string): Promise<SddRepositoryInventory> {
+    assertSha(sha);
     const files = new Set<string>();
     const directories = new Set<string>();
     const blocked = new Set<string>();

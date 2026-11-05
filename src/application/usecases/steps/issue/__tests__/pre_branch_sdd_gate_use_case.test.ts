@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { SddCatalogCompatibilityFailure, SDD_CATALOG_COMPATIBILITY_REASONS } from '../../../../../domain/sdd_catalog_compatibility';
 import { SddTrustedCatalogMissingFailure } from '../../../../../domain/sdd_trusted_catalog_failure';
 import { SddSourceContextFailure } from '../../../../../domain/agent_source_snapshot';
-import { readSddGateRecord, parseSddPlan, SddOwnershipFailure, SddDraftFormatFailure, SDD_MIN_DRAFT_CHARACTERS } from '../../../../../domain/pre_branch_sdd';
+import { readSddGateRecord, renderSddGateRecord, parseSddPlan, SddOwnershipFailure, SddDraftFormatFailure, SDD_MIN_DRAFT_CHARACTERS } from '../../../../../domain/pre_branch_sdd';
 import { PreBranchSddGateUseCase, type PreBranchSddContext } from '../../../sdd/pre_branch_sdd_gate_use_case';
 import type { SddCatalogSnapshot, SddPreparedDraft } from '../../../../ports/pre_branch_sdd_ports';
 import { sddConsistencyFixture } from '../../../../../testing/sdd_consistency_fixture';
@@ -61,7 +61,9 @@ function harness(presentation?: ConstructorParameters<typeof PreBranchSddGateUse
   const getLinkedBranch = jest.fn().mockResolvedValue({ name: 'feature/42-change', headSha: baseSha });
   const useCase = new PreBranchSddGateUseCase(
     { query },
-    { loadSnapshot, isAncestor, readSdd, validateDraft, publish, recoverPublished, verifyPublication, ...(revisionReader ? { readSourceRevision } : {}) },
+    { loadSnapshot, isAncestor, readSdd, validateDraft, publish, recoverPublished, verifyPublication,
+      readRepositoryInventory: jest.fn().mockResolvedValue({ files: new Set([plan.path]), directories: new Set(['specs']), blocked: new Set() }),
+      ...(revisionReader ? { readSourceRevision } : {}) },
     { listIssueComments: jest.fn(async () => comments), addComment, updateComment },
     { getLabels: jest.fn(async () => labels), setLabels },
     { isActorAllowedToModifyFiles, isActorAllowedToUseMemberOnlyAutomation },
@@ -87,6 +89,64 @@ function incrementalReply({ prompt }: { prompt: string }, caseId = 'payments-cha
 }
 
 describe('PreBranchSddGateUseCase', () => {
+  const circular = { id: 'Q2', owner: 'maintainer',
+    text: 'Before source changes start, has the Action admitted this issue and published its exact managed branch?',
+    suggestion: 'Confirm the managed branch is available before implementation.' };
+  const prerequisite = { id: 'Q1', owner: 'maintainer',
+    text: 'Has PR24 merged and does its tree match the reviewed head?',
+    kind: 'external-prerequisite' };
+
+  it('860: removes the original circular Q2 while waiting for the actual prerequisite merge', async () => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...plan, questions: [prerequisite, circular], newCapability: null });
+    expect((await h.useCase.begin(context())).status).toBe('waiting');
+    expect(h.comments[0].body).toContain(prerequisite.text);
+    expect(h.comments[0].body).not.toContain(circular.text);
+    expect(h.query.mock.calls[0][0].prompt).toContain('Source implementation waits for verified SDD publication');
+    expect(h.getLinkedBranch).not.toHaveBeenCalled();
+    h.comments.push({ id: 101, body: 'SDD Q2: The Action should create its branch.', user: { login: 'maintainer' } });
+    expect((await h.useCase.begin(context())).status).toBe('waiting');
+    expect(h.validateDraft).not.toHaveBeenCalled();
+    h.comments.push({ id: 102, body: 'SDD Q1: PR24 merged and its tree matches the reviewed head.', user: { login: 'maintainer' } });
+    h.query.mockResolvedValueOnce({ ...plan, questions: [{ ...circular, id: 'Q1' }], newCapability: null })
+      .mockResolvedValueOnce({ markdown: writerDraft('# Draft after confirmed merge') });
+    expect((await h.useCase.begin(context())).status).toBe('drafted');
+    expect(h.publish).not.toHaveBeenCalled();
+    expect(h.labels()).not.toContain('branched');
+  });
+
+  it.each(['update', 'companion', 'new'] as const)('860: drafts before an Action-managed branch exists for %s', async action => {
+    const h = harness();
+    const target = action === 'update' ? plan : action === 'new' ? newPlan : { ...plan, action, path: 'specs/change.md' };
+    const newCapability = action === 'new' ? { ...snapshot.capabilities[0], id: target.capabilityId,
+      title: 'Invoicing', specs: [target.path], status: 'proposed' } : null;
+    h.query.mockResolvedValueOnce({ ...target, questions: [{ ...circular, id: 'Q1', kind: 'action-postcondition' }], newCapability })
+      .mockResolvedValueOnce({ markdown: writerDraft('# Prepared before branch') });
+    const outcome = await h.useCase.begin(context());
+    expect(outcome.status).toBe('drafted');
+    expect(h.getLinkedBranch).not.toHaveBeenCalled();
+    expect(h.publish).not.toHaveBeenCalled();
+    expect(h.validateDraft.mock.calls[0][1]).toMatchObject({ action, path: target.path });
+  });
+
+  it('860: migrates an old card without changing the number of a real product decision', async () => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...plan, questions: [question], newCapability: null });
+    expect((await h.useCase.begin(context())).status).toBe('waiting');
+    const old = readSddGateRecord(h.comments[0].body, 42)!;
+    h.comments[0].body = renderSddGateRecord({ ...old, plan: { ...old.plan,
+      questions: [{ ...circular, id: 'Q1', owner: 'maintainer' }, { ...question, id: 'Q2', owner: 'maintainer' }] } });
+    h.comments.push({ id: 101, body: 'SDD Q1: The branch does not exist yet.', user: { login: 'maintainer' } });
+    expect((await h.useCase.begin(context())).status).toBe('waiting');
+    expect(readSddGateRecord(h.comments[0].body, 42)?.plan.questions.map(item => item.id)).toEqual(['Q2']);
+    expect(h.comments[0].body).not.toContain(circular.text);
+    h.comments.push({ id: 102, body: 'SDD Q2: Preserve the existing behavior.', user: { login: 'maintainer' } });
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: writerDraft('# Product decision retained') });
+    expect((await h.useCase.begin(context())).status).toBe('drafted');
+    expect(h.query.mock.calls[1][0].prompt).toContain('Preserve the existing behavior.');
+    expect(h.query.mock.calls[1][0].prompt).not.toContain('The branch does not exist yet.');
+  });
+
   it.each([
     ['update', true], ['companion', true], ['update', false], ['companion', false],
   ] as const)('858: preserves supplied identities during the sole %s repair, corrected=%s', async (action, corrected) => {
