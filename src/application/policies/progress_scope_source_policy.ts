@@ -17,7 +17,12 @@ export function captureProgressScopeSource(issue: string): ProgressScopeSource {
         const start = offset; offset += text.length;
         return { id: `L${index + 1}`, quote: text.replace(/\r?\n$/u, '').trim(), start, end: offset };
     }).filter(line => line.quote);
-    if (original.length === 0 || original.length > 1_024 || original.some(line => [...line.quote].length > 1_200)) throw progressEvidenceTooLarge();
+    if (original.length === 0) throw progressEvidenceTooLarge({ phase: 'scope', dimension: 'source-line-count', observedCount: 0, supportedLimit: 1, bound: 'minimum' });
+    if (original.length > 1_024) throw progressEvidenceTooLarge({ phase: 'scope', dimension: 'source-line-count', observedCount: original.length,
+        supportedLimit: 1_024, context: { kind: 'source-line', sourceLineId: original[1_024].id } });
+    const overlong = original.find(line => [...line.quote].length > 1_200);
+    if (overlong) throw progressEvidenceTooLarge({ phase: 'scope', dimension: 'source-line-points', observedCount: [...overlong.quote].length,
+        supportedLimit: 1_200, context: { kind: 'source-line', sourceLineId: overlong.id } });
     const state = readConfigurationBlock(issue);
     const invalid = () => new ApplicationError('configuration.invalid', 'Stored issue configuration is ambiguous, malformed or unsupported. Existing progress was retained.');
     if (state.kind === 'invalid') throw invalid();

@@ -1,3 +1,4 @@
+import { BranchSyncPublicationFailure, isBranchSyncPublicationDiagnostic } from '../../../domain/branch_sync_publication';
 import { Result } from "../../../data/model/result";
 import { admittedBranchSyncValidationCode } from '../../../domain/branch_sync_validation';
 import type { BranchSyncCommandOptions } from "../../../domain/branch_sync_command";
@@ -22,9 +23,10 @@ import {
   type BranchSyncConflictFailure,
   completedBranchSyncResult,
   failedBranchSyncResult,
+  failedBranchSyncPublicationResult,
   unavailableBranchSyncResult,
 } from "./branch_sync_execution_policy";
-import type { ApplicationErrorRecovery } from '../../errors/application_error';
+import { ApplicationError, type ApplicationErrorRecovery } from '../../errors/application_error';
 import type { VerificationFailure } from '../../../domain/verification_failure';
 import { BranchSyncCatalogFailure, isBranchSyncCatalogDiagnostic } from '../../../domain/branch_sync_catalog_diagnostic';
 
@@ -66,7 +68,7 @@ export class SyncBranchUseCase implements ParamUseCase<SyncBranchRequest, Result
           id: 'branch-sync-catalog-incompatible', variables: { ...catalogFailure, abort: aborted ? 'completed' : 'unverified' },
         })];
       }
-      return [failedBranchSyncResult("Branch synchronization failed safely; no push was completed.", cause)];
+      return [failedBranchSyncResult("Branch synchronization completion could not be verified. Inspect the current remote state before retrying.", cause)];
     }
   }
 
@@ -112,11 +114,23 @@ export class SyncBranchUseCase implements ParamUseCase<SyncBranchRequest, Result
       return [await this.abortFailure(remoteValidation.reason ?? "A branch changed while synchronization was running; retry from the latest heads.", validationRecovery(remoteValidation.code))];
     }
 
-    const commitSha = await this.workspace.commitAndPush(
-      target.workingBranch,
-      `Merge ${parentBranch} into ${target.workingBranch}`,
-      author,
-    );
+    let commitSha: string;
+    try {
+      commitSha = await this.workspace.commitAndPush(target.workingBranch,
+        `Merge ${parentBranch} into ${target.workingBranch}`, author);
+    } catch (cause) {
+      if (cause instanceof BranchSyncPublicationFailure && isBranchSyncPublicationDiagnostic(cause.diagnostic)) {
+        if (cause.diagnostic.originalSha !== preparation.childSha) {
+          throw new ApplicationError('provider.contract-invalid', 'Publication facts do not match the prepared branch head.');
+        }
+        if (cause.diagnostic.remoteState === 'published') {
+          return [this.completed(preparation, parentBranch, target, 'merged-verified-remotely',
+            verification.commandCount, cause.diagnostic.candidateSha)];
+        }
+        return [failedBranchSyncPublicationResult(cause.diagnostic)];
+      }
+      throw cause;
+    }
     const outcome = conflictResolution.agentUsed ? "merged-with-agent" : "merged-cleanly";
     return [this.completed(preparation, parentBranch, target, outcome, verification.commandCount, commitSha)];
   }

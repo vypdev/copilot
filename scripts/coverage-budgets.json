@@ -831,6 +831,23 @@
       "successMessage": "organization reuse and batch planning coverage: PASS (pure policies 100%; each batch use case, provider and composition adapter 95% lines/statements, 90% branches/functions)"
     },
     {
+      "name": "Final progress completion recovery",
+      "missingEntryLabel": "final progress completion recovery",
+      "rules": [
+        {
+          "files": [
+            "src/domain/progress_completion_diagnostic.ts",
+            "src/application/errors/progress_completion_mismatch.ts",
+            "src/application/policies/progress_completion_recovery_policy.ts",
+            "src/application/usecases/actions/query_progress_assessment_workflow.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        }
+      ],
+      "successMessage": "final progress completion recovery: PASS (100% all metrics)"
+    },
+    {
       "name": "Complete multipart progress",
       "missingEntryLabel": "complete multipart progress",
       "rules": [
@@ -1355,6 +1372,158 @@
         }
       ],
       "successMessage": "Progress scope ownership policy: PASS (100% all metrics)"
+    },
+    {
+      "name": "Bounded progress part response recovery",
+      "missingEntryLabel": "progress part response recovery",
+      "rules": [
+        {
+          "files": [
+            "src/domain/progress_partition_length_failure.ts",
+            "src/application/policies/progress_partition_length_policy.ts",
+            "src/data/repository/progress_partition_length_failure.ts",
+            "src/application/usecases/actions/query_progress_partition_workflow.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        }
+      ],
+      "successMessage": "progress part response recovery: PASS (each policy, mapping and bounded workflow100% all metrics)"
+    },
+    {
+      "name": "Immutable SDD source context",
+      "missingEntryLabel": "immutable SDD source context",
+      "rules": [
+        {
+          "files": [
+            "src/domain/agent_source_snapshot.ts",
+            "src/application/policies/agent_source_snapshot_policy.ts",
+            "src/infrastructure/agents/agent_source_snapshot_git.ts",
+            "src/infrastructure/agents/agent_source_snapshot_workspace.ts",
+            "src/infrastructure/agents/agent_source_snapshot_integrity.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        }
+      ],
+      "successMessage": "immutable SDD source context coverage: PASS (100% lines/statements/branches/functions)"
+    },
+    {
+      "name": "Branch sync publication recovery",
+      "missingEntryLabel": "branch sync publication recovery",
+      "rules": [
+        {
+          "files": [
+            "src/domain/branch_sync_publication.ts",
+            "src/domain/git_push_failure.ts",
+            "src/infrastructure/git_push_diagnostic.ts",
+            "src/application/policies/branch_sync_publication_messages.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        }
+      ],
+      "successMessage": "branch sync publication recovery: PASS (closed facts, bounded classification and locale content100%)"
+    },
+    {
+      "name": "SDD case-reference classification",
+      "missingEntryLabel": "SDD case-reference classification",
+      "rules": [
+        {
+          "files": [
+            "src/domain/sdd_case_reference.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        }
+      ],
+      "successMessage": "SDD case-reference classification: PASS (100% lines/statements/functions/branches)"
+    },
+    {
+      "name": "Bugbot resource authority guidance",
+      "missingEntryLabel": "Bugbot resource authority guidance",
+      "rules": [
+        {
+          "files": [
+            "src/prompts/bugbot_resource_authority.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        }
+      ],
+      "successMessage": "Bugbot resource authority guidance: PASS (100% lines/statements/functions/branches)"
+    },
+    {
+      "name": "Bugbot asynchronous statement guidance",
+      "missingEntryLabel": "Bugbot asynchronous statement guidance",
+      "rules": [
+        {
+          "files": [
+            "src/prompts/bugbot_async_statement_evidence.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        }
+      ],
+      "successMessage": "Bugbot asynchronous statement guidance: PASS (100% lines/statements/functions/branches)"
+    },
+    {
+      "name": "Issue assignment diagnostics",
+      "missingEntryLabel": "issue assignment diagnostics",
+      "rules": [
+        {
+          "files": [
+            "src/domain/issue_assignment_diagnostic.ts",
+            "src/application/policies/issue_assignment_messages.ts",
+            "src/application/policies/issue_assignment_diagnostic_presentation.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        }
+      ],
+      "successMessage": "Issue assignment diagnostics: PASS (pure validation and presentation 100% lines/statements/functions/branches)"
+    },
+    {
+      "name": "Bugbot JSON value guidance",
+      "missingEntryLabel": "Bugbot JSON value guidance",
+      "rules": [
+        {
+          "files": [
+            "src/prompts/bugbot_json_value_evidence.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        }
+      ],
+      "successMessage": "Bugbot JSON value guidance: PASS (100% lines/statements/functions/branches)"
+    },
+    {
+      "name": "SDD ownership planning context",
+      "missingEntryLabel": "SDD ownership planning context",
+      "rules": [
+        {
+          "files": [
+            "src/application/policies/sdd_ownership_prompt_policy.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        }
+      ],
+      "successMessage": "SDD ownership planning context: PASS (100% lines/statements/functions/branches)"
+    },
+    {
+      "name": "SDD ownership question assessment",
+      "missingEntryLabel": "SDD ownership question assessment",
+      "rules": [
+        {
+          "files": [
+            "src/tooling/sdd_ownership_question_scoring.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        }
+      ],
+      "successMessage": "SDD ownership question assessment: PASS (100% lines/statements/functions/branches)"
     }
   ]
 }

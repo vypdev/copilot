@@ -2,13 +2,13 @@
 
 - Status: Implemented
 - Date: 2026-09-11
-- Last updated: 2026-10-26
+- Last updated: 2026-11-05
 - Catalog capability ID: `bugbot-analysis-and-autofix`
 - Last verified: 2026-10-11 on `master`
 - Owners: Copilot and Bugbot maintainers
 - Scope: resolve exactly one canonical pull request, bound every provider read
   and prompt section, and make incomplete context visible and safe
-- Related issues/PRs: none recorded
+- Related issues/PRs: [#899](https://github.com/vypdev/copilot/issues/899)
 - Required review gates: product UX, architecture, testing, documentation,
   security/operations, provider-contract review
 - Open decisions blocking readiness: none
@@ -221,10 +221,11 @@ standard bounded provider retry and otherwise becomes unavailable.
 | issue comments | 1 | 2 x 100 | newest 200 provider records |
 | canonical PR review comments | 1 | 2 x 100 | newest 200 provider records |
 | review thread states | 1 | 2 x 100 nodes | newest 200 thread records |
-| canonical PR diff snapshot | 1 | 10 x 100 files | 1,000 file records before prompt packing |
+| canonical PR diff snapshot | 1 | 2 revision/count reads and up to 30 x 100 files | 3,000 GitHub file records before prompt packing |
 
-With a canonical PR and issue, context loading therefore performs at most five
-logical reads and 17 raw provider requests before bounded transient retries.
+With a canonical PR and issue, the initial context load performs up to five
+logical reads and 39 raw provider requests before bounded transient retries.
+The source-bound framed profile adds its own verified read when selected.
 Without a PR it performs only the applicable issue read plus selection. Rules
 are local/versioned file reads and are not provider requests. The fixed request
 concurrency is two; pagination within one logical read is sequential.
@@ -240,7 +241,7 @@ before any item/character budget.
 |---|---:|---:|---:|---|
 | unresolved previous findings | 100 | 48,000 chars including wrappers/note | existing finding body cap | newest unresolved first, render chronological |
 | human conversation | 50 | 24,000 chars including omission note | 4,000 UTF-16 units per payload fragment | newest first for packing, render chronological |
-| diff | 1,000 files pre-plan; max 64 partitions | 64,000 chars per partition | 12,000 UTF-16 code units per fragment | provider file order; ignored files removed first; lossless line/hard splitting without separating surrogate pairs |
+| diff | 3,000 provider file records pre-plan; max 64 ordinary partitions | 64,000 chars per partition | 12,000 UTF-16 code units per fragment | provider file order; ignored files removed first; lossless line/hard splitting without separating surrogate pairs |
 | review rules | deduplicated | 100,000 chars | 30,000 chars | organization then repository specificity |
 
 Every record gains a normalized `createdAt` and stable provider ID. Combined
@@ -348,7 +349,7 @@ are explicit:
 
 **Status:** Findings below are based on the retained portion of PR #412 at `9ad6…`.
 **Impact:** This run cannot declare the whole pull request clean.
-**Coverage:** 1,000 files inspected; 37 file records and 18 older discussion items omitted by fixed limits.
+**Coverage:** 3,000 files inspected. GitHub omitted 37 file records at its endpoint limit. The discussion budget omitted 18 older items.
 **Action:** Do not treat this review as complete. Review the sources under
 **Incomplete coverage** and manually inspect omitted items; rerun only after
 reducing the relevant scope or restoring provider access.
@@ -559,3 +560,51 @@ source inventory, two sequential frames, live target-ref fences and exact
 coverage receipts supersede the ordinary over-cap remediation for eligible
 workloads. Ordinary planning, conversation/history limits, resolution ownership,
 public configuration and approval controls retain their existing contracts.
+
+
+## Complete discussion admission (#843, 2026-11-03)
+
+The [complete-conversation companion](./bugbot-complete-conversation-review.md)
+extends eligible canonical reviews with an existing read-only immutable-source
+capability. When legacy discussion packing would lose context, every bounded
+discussion page accompanies every source-bound partition, through the final
+outer envelope. The same closed native request/traffic limits, receipt binding,
+sole resolution owner, freshness and global reconciliation remain required.
+This explicitly extends legacy section capacity through that protocol; it does
+not relabel missing provider evidence as complete, enlarge public settings or
+grant comment authors instruction/approval authority. Other context callers
+retain their existing truthful partial behavior.
+
+### GitHub changed-file enumeration for Bugbot (#899, 2026-11-05)
+
+The GitHub adapter bounds its read to the reported changed-file count or
+GitHub's 3,000-file limit, whichever is smaller. The bound is fixed. The
+application supplies the selected head SHA through the review-context port.
+The adapter checks the head before listing files, then checks the head, base
+and count again before returning the snapshot. A failed page, observed
+revision change or repeated path rejects the read. The existing publication
+freshness check still runs before publication.
+
+```text
+Verify selected head and count → read bounded pages → verify revision and count
+  → exact count: complete diff coverage
+  → fewer files: partial diff coverage with the omitted count
+  → read or identity failure: stop and recheck the current revision
+```
+
+At the ceiling, a 3,090-file PR reports
+`diff: partial; retained=3,000, omitted=90, provider page limit reached`.
+A short result below the ceiling reports the omission count without the limit
+label. The existing complete-review and approval requirements apply to both
+results. Binary paths without a patch remain assigned for local inspection.
+A user can split a PR above the endpoint limit to obtain complete review.
+
+| Acceptance evidence | Minimum cases | Expected result |
+|---|---:|---|
+| Repository boundaries and pagination | 7 | Complete at 0, 1, 1,000, 1,090 and 3,000. Exact omissions after premature exhaustion and at GitHub's ceiling. The 1,090 fixture preserves binary and renamed paths on page 11. |
+| Repository failures and races | 14 | Later-page failure, stale selected head, four changes during pagination, five malformed metadata cases, three invalid inventories. No snapshot escapes these reads. |
+| Context and composition | 2 | The selected SHA reaches the adapter, and the planner assigns all 1,090 paths at that SHA. |
+| **Total** | **23** | Deterministic provider fixtures plus the existing approval, coverage and repository checks. |
+
+See the [GitHub files endpoint](https://docs.github.com/en/rest/pulls/pulls#list-pull-requests-files)
+and [Bugbot coverage documentation](../docs/bugbot/detection.mdx).

@@ -1,0 +1,4575 @@
+{
+  "baseline": {
+    "at": "2026-11-04T17:01:32.371818+00:00",
+    "descriptorSha256": "b5686bdcbd72b897da770c8d7bc5e02a2408e8fd6dac639765dd6e741589dd95",
+    "scope": "Frozen eight-case target criteria only. Native rejection fails the case regardless of content. Scoped pass does not certify every generated sentence, command implementation, consumer reproduction, universal model precision or executed product acceptance. Public toy script definitions are deliberately insufficient to prove full SDK validation semantics. Baseline source/runtime remain unchanged across comparison cohorts.",
+    "summary": [
+      {
+        "trial": "baseline-1",
+        "nativeAccepted": 5,
+        "scopedPass": 5,
+        "cases": 8,
+        "wholeTrialPassed": false
+      },
+      {
+        "trial": "baseline-2",
+        "nativeAccepted": 7,
+        "scopedPass": 7,
+        "cases": 8,
+        "wholeTrialPassed": false
+      },
+      {
+        "trial": "baseline-3",
+        "nativeAccepted": 5,
+        "scopedPass": 4,
+        "cases": 8,
+        "wholeTrialPassed": false
+      }
+    ],
+    "entries": [
+      {
+        "assessor": "Codex contributor agent; explicit scoped assessment, not human or native approval",
+        "trial": "baseline-1",
+        "case": "existing-pnpm-scripts",
+        "nativeStatus": "drafted",
+        "acceptedSha256": "10ade877c545f8d057a7a8dbc7a209290aae1eeef329d31281e854af94e0d8a7",
+        "responseDigests": [
+          "50bb92f8ee1cc51695f9441b0d272f0bc02e7770ccd26a0a534df5f49eebe50c"
+        ],
+        "verdict": "pass",
+        "basis": "The accepted draft retains both genuinely declared pnpm script names and treats execution/acceptance as prospective rather than an observed passing run. This case does not certify descriptions of the toy scripts as a full SDK validator."
+      },
+      {
+        "assessor": "Codex contributor agent; explicit scoped assessment, not human or native approval",
+        "trial": "baseline-1",
+        "case": "absent-copied-scripts",
+        "nativeStatus": "blocked",
+        "acceptedSha256": null,
+        "responseDigests": [
+          "6de6c4b379c453b0386f78d434e2fde5c7ba32431e1273fda5506a4d11040338",
+          "2d8321da1e3aa5e576ab16b5e098fe50eb5440887d74f0c16e4b9d4283d5d389"
+        ],
+        "verdict": "fail",
+        "basis": "Existing native host rejection after the shared draft/repair ceiling; no semantic acceptance inferred.",
+        "nativeDiagnostics": [
+          {
+            "passed": false,
+            "reason": "repository-path",
+            "name": "Error",
+            "message": "The SDD draft violates its repository-path consistency contract.",
+            "diagnostic": {
+              "reason": "repository-path",
+              "phase": "validation",
+              "facts": [
+                {
+                  "detail": "path-operation",
+                  "section": 15,
+                  "row": 2
+                }
+              ]
+            }
+          },
+          {
+            "passed": false,
+            "reason": "repository-path",
+            "name": "Error",
+            "message": "The SDD draft violates its repository-path consistency contract.",
+            "diagnostic": {
+              "reason": "repository-path",
+              "phase": "validation",
+              "facts": [
+                {
+                  "detail": "path-reference",
+                  "section": 0
+                },
+                {
+                  "detail": "path-inline-reference",
+                  "section": 0,
+                  "row": 13
+                },
+                {
+                  "detail": "path-reference-directory",
+                  "section": 0
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "assessor": "Codex contributor agent; explicit scoped assessment, not human or native approval",
+        "trial": "baseline-1",
+        "case": "package-manager-mismatch",
+        "nativeStatus": "drafted",
+        "acceptedSha256": "b8c50f1acbf7d1b59bd0f7fa8d492bcbf2a8ec7347a154db32dd79bf8da8f3ce",
+        "responseDigests": [
+          "e688f44c271124ab19a21be7dc7e4cd21c6263ac3b12a6e042553004a5a443f0"
+        ],
+        "verdict": "pass",
+        "basis": "The accepted draft preserves npm run docs:check from npm@11.0.0. Any copied pnpm SDK invocation is explicitly scoped to a separately supported environment with unresolved availability, rather than an installed pnpm prerequisite of the selected project."
+      },
+      {
+        "assessor": "Codex contributor agent; explicit scoped assessment, not human or native approval",
+        "trial": "baseline-1",
+        "case": "selected-source-versus-default",
+        "nativeStatus": "drafted",
+        "acceptedSha256": "d602a66f3516d25155e7ab9334fd1aeddf708364dd3e80efb507603f4b5f597a",
+        "responseDigests": [
+          "7d0b9c1b31aa9f9daf44bf6692367b178ec3dfc4fc8104fb0e8e55d44cb7bb85"
+        ],
+        "verdict": "pass",
+        "basis": "The accepted draft uses the selected Python fixture-docs/app.docs:main documentation outcome (trial 1) or the exact uv run fixture-docs docs invocation (trials 2/3), and treats execution as outstanding; it does not borrow bootstrap Node script declarations."
+      },
+      {
+        "assessor": "Codex contributor agent; explicit scoped assessment, not human or native approval",
+        "trial": "baseline-1",
+        "case": "unknown-command-evidence",
+        "nativeStatus": "blocked",
+        "acceptedSha256": null,
+        "responseDigests": [
+          "ddefa188f59b60f3a407b2a3815e68333e42557158fa75313427bbd131bd7244",
+          "5ebb72ea2b814e666de95f29ebfa6cf1b228d38b3d7002e7debfab7eb1684f7b"
+        ],
+        "verdict": "fail",
+        "basis": "Existing native host rejection after the shared draft/repair ceiling; no semantic acceptance inferred.",
+        "nativeDiagnostics": [
+          {
+            "passed": false,
+            "reason": "repository-path",
+            "name": "Error",
+            "message": "The SDD draft violates its repository-path consistency contract.",
+            "diagnostic": {
+              "reason": "repository-path",
+              "phase": "validation",
+              "facts": [
+                {
+                  "detail": "path-operation",
+                  "section": 15,
+                  "row": 5
+                }
+              ]
+            }
+          },
+          {
+            "passed": false,
+            "reason": "repository-path",
+            "name": "Error",
+            "message": "The SDD draft violates its repository-path consistency contract.",
+            "diagnostic": {
+              "reason": "repository-path",
+              "phase": "validation",
+              "facts": [
+                {
+                  "detail": "path-operation",
+                  "section": 15,
+                  "row": 2
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "assessor": "Codex contributor agent; explicit scoped assessment, not human or native approval",
+        "trial": "baseline-1",
+        "case": "generic-outcome-is-valid",
+        "nativeStatus": "drafted",
+        "acceptedSha256": "43197f5dc9ce5dc24973cf9881b8cc39133823e16754e315128eedef616bdaa2",
+        "responseDigests": [
+          "b2b8c963a52c375134869d83da08e6ba5b0e5bf73fa3e31266d65acbcb76b19e"
+        ],
+        "verdict": "pass",
+        "basis": "The accepted draft keeps specification format/consistency/reciprocal catalog outcomes separate from the existing independent docs check, explicitly says the SDK invocation is not an installed project script, and requires no wrapper or shim."
+      },
+      {
+        "assessor": "Codex contributor agent; explicit scoped assessment, not human or native approval",
+        "trial": "baseline-1",
+        "case": "exact-factual-citation",
+        "nativeStatus": "drafted",
+        "acceptedSha256": "bd811b9a8cf4da63b3380717dd02b10e7bec3c1650ddde565bc2219831605269",
+        "responseDigests": [
+          "10cd6e8bf167e709a3616a2a76cac708c925bdb9d95e5be8f47224ef04ef2e7c"
+        ],
+        "verdict": "pass",
+        "basis": "The accepted draft records the exact observed owner blob 16f39aed096aae5cd8dee237d607ae606e802d2e and SHA-256 7edf1cb9ad46f8c06db97ecef6c8ddb4bc06bcb2a7793a1f4c6c8533a205ad60, identifies the a6f39aed... supplied identity as mismatching, and does not substitute it as verified provenance."
+      },
+      {
+        "assessor": "Codex contributor agent; explicit scoped assessment, not human or native approval",
+        "trial": "baseline-1",
+        "case": "retained-refinements-and-future-paths",
+        "nativeStatus": "blocked",
+        "acceptedSha256": null,
+        "responseDigests": [
+          "63b64ab7a9cfcd02fabbea6c5f1225f32c0807be4111378376a9038aa51a047d",
+          "df16b6f577bd58aed898428da1326ef3db73325c82e29d969b01b65dfffa25c3"
+        ],
+        "verdict": "fail",
+        "basis": "Existing native host rejection after the shared draft/repair ceiling; no semantic acceptance inferred.",
+        "nativeDiagnostics": [
+          {
+            "passed": false,
+            "reason": "repository-path",
+            "name": "Error",
+            "message": "The SDD draft violates its repository-path consistency contract.",
+            "diagnostic": {
+              "reason": "repository-path",
+              "phase": "validation",
+              "facts": [
+                {
+                  "detail": "path-reference",
+                  "section": 0
+                },
+                {
+                  "detail": "path-inline-reference",
+                  "section": 0,
+                  "row": 17
+                },
+                {
+                  "detail": "path-reference-directory",
+                  "section": 0
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "assessor": "Codex contributor agent; explicit scoped assessment, not human or native approval",
+        "trial": "baseline-2",
+        "case": "existing-pnpm-scripts",
+        "nativeStatus": "drafted",
+        "acceptedSha256": "2393d0cd9cc26c67ba404eaf6b71a29c0fa6b6e3b3521d1a02557c5d57528e0c",
+        "responseDigests": [
+          "52347e9622d14f64e065714ce3615b3a755e45999bcbe302e0a28c8077325d3a",
+          "982abe30131db67616a9f28af3d79a6822adf5183d615d25180652456982f959"
+        ],
+        "verdict": "pass",
+        "basis": "The accepted draft retains both genuinely declared pnpm script names and treats execution/acceptance as prospective rather than an observed passing run. This case does not certify descriptions of the toy scripts as a full SDK validator."
+      },
+      {
+        "assessor": "Codex contributor agent; explicit scoped assessment, not human or native approval",
+        "trial": "baseline-2",
+        "case": "absent-copied-scripts",
+        "nativeStatus": "drafted",
+        "acceptedSha256": "c1e83a29b17aca4779a14e3ed8620ab197f985e866ea95b6611ea81ce1fb6f51",
+        "responseDigests": [
+          "1a3b032ae15f28ef0da9ba8118a89050e4c75296ac61896270eba6ca36b25614",
+          "f8f659ed4e364dd9c006ac36f5d3aff62eecde4b49ca9feb81ef27dfcd4dfd99"
+        ],
+        "verdict": "pass",
+        "basis": "The accepted draft distinguishes the actual docs:check declaration from the SDK example, states that specification-validator availability is not established, and does not require installing or invoking the absent script as a consumer prerequisite."
+      },
+      {
+        "assessor": "Codex contributor agent; explicit scoped assessment, not human or native approval",
+        "trial": "baseline-2",
+        "case": "package-manager-mismatch",
+        "nativeStatus": "drafted",
+        "acceptedSha256": "f1a682512e743d66eb87df7fd4559e26b9549957af5c58426b41fa17f598e62d",
+        "responseDigests": [
+          "7f800cd800fafed95e32f1f24d62de5945c8b32fcefe286a59aa338c75252533",
+          "b874c26f9e43781a2258344106b1122c09ff0405047bfce8405a27b438461592"
+        ],
+        "verdict": "pass",
+        "basis": "The accepted draft preserves npm run docs:check from npm@11.0.0. Any copied pnpm SDK invocation is explicitly scoped to a separately supported environment with unresolved availability, rather than an installed pnpm prerequisite of the selected project."
+      },
+      {
+        "assessor": "Codex contributor agent; explicit scoped assessment, not human or native approval",
+        "trial": "baseline-2",
+        "case": "selected-source-versus-default",
+        "nativeStatus": "drafted",
+        "acceptedSha256": "36d5b282627a759ca561f93f8db3e0af48692a38fe44cfbb525854f97e6a8196",
+        "responseDigests": [
+          "f546005c4d7d43cabbab8b969eb8c0c31429d2f4b1b1cb18ae0fecb22d0b2d7b"
+        ],
+        "verdict": "pass",
+        "basis": "The accepted draft uses the selected Python fixture-docs/app.docs:main documentation outcome (trial 1) or the exact uv run fixture-docs docs invocation (trials 2/3), and treats execution as outstanding; it does not borrow bootstrap Node script declarations."
+      },
+      {
+        "assessor": "Codex contributor agent; explicit scoped assessment, not human or native approval",
+        "trial": "baseline-2",
+        "case": "unknown-command-evidence",
+        "nativeStatus": "blocked",
+        "acceptedSha256": null,
+        "responseDigests": [
+          "7e9a95a1300642ba799e916a85e14d6f4c1395ab3521e058011fc75fb77bad92",
+          "859d75a416d5a35a514ed20e50869f953baa731e4b2739d3a38d45a7ab7ea30b"
+        ],
+        "verdict": "fail",
+        "basis": "Existing native host rejection after the shared draft/repair ceiling; no semantic acceptance inferred.",
+        "nativeDiagnostics": [
+          {
+            "passed": false,
+            "reason": "repository-path",
+            "name": "Error",
+            "message": "The SDD draft violates its repository-path consistency contract.",
+            "diagnostic": {
+              "reason": "repository-path",
+              "phase": "validation",
+              "facts": [
+                {
+                  "detail": "path-operation",
+                  "section": 15,
+                  "row": 2
+                }
+              ]
+            }
+          },
+          {
+            "passed": false,
+            "reason": "repository-path",
+            "name": "Error",
+            "message": "The SDD draft violates its repository-path consistency contract.",
+            "diagnostic": {
+              "reason": "repository-path",
+              "phase": "validation",
+              "facts": [
+                {
+                  "detail": "path-operation",
+                  "section": 15,
+                  "row": 7
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "assessor": "Codex contributor agent; explicit scoped assessment, not human or native approval",
+        "trial": "baseline-2",
+        "case": "generic-outcome-is-valid",
+        "nativeStatus": "drafted",
+        "acceptedSha256": "5b05d2af00d2cab804226196f5532727aa69570f0544512b73b99eb489f0d147",
+        "responseDigests": [
+          "0d92a740b38a5e33abe05b56392b8d241615fdfc1cb9ff8a5bc002155c9270a9"
+        ],
+        "verdict": "pass",
+        "basis": "The accepted draft keeps specification format/consistency/reciprocal catalog outcomes separate from the existing independent docs check, explicitly says the SDK invocation is not an installed project script, and requires no wrapper or shim."
+      },
+      {
+        "assessor": "Codex contributor agent; explicit scoped assessment, not human or native approval",
+        "trial": "baseline-2",
+        "case": "exact-factual-citation",
+        "nativeStatus": "drafted",
+        "acceptedSha256": "9fe3394cd78bf87710ed208dc42ad103f21e531ff4f0f4951f0bfd765462d862",
+        "responseDigests": [
+          "84da5a599cabaea75b6b54f068a3a82d953400f5ab926633abaa5d22407781d2"
+        ],
+        "verdict": "pass",
+        "basis": "The accepted draft records the exact observed owner blob 16f39aed096aae5cd8dee237d607ae606e802d2e and SHA-256 7edf1cb9ad46f8c06db97ecef6c8ddb4bc06bcb2a7793a1f4c6c8533a205ad60, identifies the a6f39aed... supplied identity as mismatching, and does not substitute it as verified provenance."
+      },
+      {
+        "assessor": "Codex contributor agent; explicit scoped assessment, not human or native approval",
+        "trial": "baseline-2",
+        "case": "retained-refinements-and-future-paths",
+        "nativeStatus": "drafted",
+        "acceptedSha256": "8d6947c19394ce72bcbea0e258e7e66b630f145d7aca1da3bc3ca891bdcf7b69",
+        "responseDigests": [
+          "ae702f6dcfd770fb382c66b853f25d9c4e6a37b3dc45d18dc5ae5c746c0c55d4"
+        ],
+        "verdict": "pass",
+        "basis": "Every supplied fixture-protocol-C01 through C18 is an actual new definition; each row retains its distinct observable assertion, all 95 exact prospective paths are actual create rows, and the foundation baseline cases are not recounted. Assertions were reviewed individually, not passed from counts or keywords.",
+        "reviewedAssertions": [
+          {
+            "id": "fixture-protocol-C01",
+            "suppliedAssertion": "Restored bootstrap absence: after restoring a checkpoint without bootstrap state, no initial work is silently created; the next explicit bootstrap records exactly one generation.",
+            "actualRows": [
+              [
+                "fixture-protocol-C01",
+                "Application/state",
+                "R-01",
+                "Restore a checkpoint without bootstrap state; observe no initial work, then explicitly bootstrap and observe exactly one recorded generation."
+              ]
+            ],
+            "verdict": "pass",
+            "basis": "The exact supplied ID defines the corresponding distinct observable condition and result shown in this row."
+          },
+          {
+            "id": "fixture-protocol-C02",
+            "suppliedAssertion": "Final source-scan unit with duplicate lookahead: a full final chunk whose lookahead is only already-seen records closes at the exact unique-record boundary without an empty extra cycle.",
+            "actualRows": [
+              [
+                "fixture-protocol-C02",
+                "Domain/policy",
+                "R-02",
+                "Finish a full final chunk with lookahead containing only seen records; observe closure at the unique-record boundary and no empty extra cycle."
+              ]
+            ],
+            "verdict": "pass",
+            "basis": "The exact supplied ID defines the corresponding distinct observable condition and result shown in this row."
+          },
+          {
+            "id": "fixture-protocol-C03",
+            "suppliedAssertion": "Cross-generation closed-cycle replay: replaying a completion token from the previous generation cannot complete or reopen the current generation.",
+            "actualRows": [
+              [
+                "fixture-protocol-C03",
+                "Application/state",
+                "R-03",
+                "Replay a prior-generation completion token; observe that the current generation neither completes nor reopens."
+              ]
+            ],
+            "verdict": "pass",
+            "basis": "The exact supplied ID defines the corresponding distinct observable condition and result shown in this row."
+          },
+          {
+            "id": "fixture-protocol-C04",
+            "suppliedAssertion": "Independent high-revision journals: two independent journals may each have the same high revision; resuming one cannot consume the other journal checkpoint.",
+            "actualRows": [
+              [
+                "fixture-protocol-C04",
+                "Adapter/persistence",
+                "R-04",
+                "Give two independent journals the same high revision and resume one; observe it cannot consume the other journal checkpoint."
+              ]
+            ],
+            "verdict": "pass",
+            "basis": "The exact supplied ID defines the corresponding distinct observable condition and result shown in this row."
+          },
+          {
+            "id": "fixture-protocol-C05",
+            "suppliedAssertion": "Genuine-nine late-migration failure: when the persisted storage version really is nine and a late migration fails, the transaction rolls back every new record and retains version nine.",
+            "actualRows": [
+              [
+                "fixture-protocol-C05",
+                "Integration/migration",
+                "R-05",
+                "Start from persisted version nine, fail a late migration, and observe all new records rolled back while version nine remains."
+              ]
+            ],
+            "verdict": "pass",
+            "basis": "The exact supplied ID defines the corresponding distinct observable condition and result shown in this row."
+          },
+          {
+            "id": "fixture-protocol-C06",
+            "suppliedAssertion": "Inclusive stop boundary: an item at the exact configured stopping instant is included once and the immediately later item is deferred.",
+            "actualRows": [
+              [
+                "fixture-protocol-C06",
+                "Domain/policy",
+                "R-06",
+                "Scan an item at the exact stop instant and the immediately later item; observe the boundary item once and later item deferred."
+              ]
+            ],
+            "verdict": "pass",
+            "basis": "The exact supplied ID defines the corresponding distinct observable condition and result shown in this row."
+          },
+          {
+            "id": "fixture-protocol-C07",
+            "suppliedAssertion": "Canceled outstanding cursor: canceling an active cursor prevents its later response from appending work to a replacement cursor.",
+            "actualRows": [
+              [
+                "fixture-protocol-C07",
+                "Application/state",
+                "R-07",
+                "Cancel an active cursor, then deliver its late response after replacement; observe no append to replacement work."
+              ]
+            ],
+            "verdict": "pass",
+            "basis": "The exact supplied ID defines the corresponding distinct observable condition and result shown in this row."
+          },
+          {
+            "id": "fixture-protocol-C08",
+            "suppliedAssertion": "Duplicate continuation request: replaying the same accepted continuation key returns its prior batch without incrementing its counters.",
+            "actualRows": [
+              [
+                "fixture-protocol-C08",
+                "Application/state",
+                "R-08",
+                "Replay the same accepted continuation key; observe prior batch returned and counters unchanged."
+              ]
+            ],
+            "verdict": "pass",
+            "basis": "The exact supplied ID defines the corresponding distinct observable condition and result shown in this row."
+          },
+          {
+            "id": "fixture-protocol-C09",
+            "suppliedAssertion": "Writer lease expires during scan: the expired writer cannot commit the final batch and the new lease holder retains its independently accepted progress.",
+            "actualRows": [
+              [
+                "fixture-protocol-C09",
+                "Application/state",
+                "R-09",
+                "Expire the writer lease during scan and let a new holder accept progress; observe expired writer cannot commit and new progress remains."
+              ]
+            ],
+            "verdict": "pass",
+            "basis": "The exact supplied ID defines the corresponding distinct observable condition and result shown in this row."
+          },
+          {
+            "id": "fixture-protocol-C10",
+            "suppliedAssertion": "Checkpoint checksum mismatch: recovery refuses the mismatched checkpoint without deleting the last independently verified checkpoint.",
+            "actualRows": [
+              [
+                "fixture-protocol-C10",
+                "Adapter/persistence",
+                "R-10",
+                "Recover from a checksum-mismatched checkpoint; observe refusal and retention of the last independently verified checkpoint."
+              ]
+            ],
+            "verdict": "pass",
+            "basis": "The exact supplied ID defines the corresponding distinct observable condition and result shown in this row."
+          },
+          {
+            "id": "fixture-protocol-C11",
+            "suppliedAssertion": "Clock moves backward after resume: the monotonic deadline is not renewed by a backward wall-clock adjustment.",
+            "actualRows": [
+              [
+                "fixture-protocol-C11",
+                "Domain/policy",
+                "R-11",
+                "Resume, move wall clock backward, and inspect deadline; observe monotonic deadline is not renewed."
+              ]
+            ],
+            "verdict": "pass",
+            "basis": "The exact supplied ID defines the corresponding distinct observable condition and result shown in this row."
+          },
+          {
+            "id": "fixture-protocol-C12",
+            "suppliedAssertion": "Zero-result source generation: a completed empty scan advances the explicit generation once while preserving its no-work reason.",
+            "actualRows": [
+              [
+                "fixture-protocol-C12",
+                "Application/state",
+                "R-12",
+                "Complete an empty source scan; observe one explicit generation advance and preserved no-work reason."
+              ]
+            ],
+            "verdict": "pass",
+            "basis": "The exact supplied ID defines the corresponding distinct observable condition and result shown in this row."
+          },
+          {
+            "id": "fixture-protocol-C13",
+            "suppliedAssertion": "Pending journal after restart: restart preserves pending acknowledged entries and does not count them as newly generated work.",
+            "actualRows": [
+              [
+                "fixture-protocol-C13",
+                "Adapter/persistence",
+                "R-13",
+                "Restart with pending acknowledged journal entries; observe they remain pending and are not counted as newly generated work."
+              ]
+            ],
+            "verdict": "pass",
+            "basis": "The exact supplied ID defines the corresponding distinct observable condition and result shown in this row."
+          },
+          {
+            "id": "fixture-protocol-C14",
+            "suppliedAssertion": "Simultaneous same-local-day requests: two accepted requests sharing a local day retain separate command identities and only their own results.",
+            "actualRows": [
+              [
+                "fixture-protocol-C14",
+                "Application/state",
+                "R-14",
+                "Accept two simultaneous requests for one local day; observe separate command identities and results confined to their own requests."
+              ]
+            ],
+            "verdict": "pass",
+            "basis": "The exact supplied ID defines the corresponding distinct observable condition and result shown in this row."
+          },
+          {
+            "id": "fixture-protocol-C15",
+            "suppliedAssertion": "Previous-generation cleanup: retiring an old generation removes only its owned journal and cannot delete a live generation checkpoint.",
+            "actualRows": [
+              [
+                "fixture-protocol-C15",
+                "Adapter/persistence",
+                "R-15",
+                "Retire an old generation; observe only its owned journal removed and live generation checkpoint retained."
+              ]
+            ],
+            "verdict": "pass",
+            "basis": "The exact supplied ID defines the corresponding distinct observable condition and result shown in this row."
+          },
+          {
+            "id": "fixture-protocol-C16",
+            "suppliedAssertion": "Authentication revoked before commit: an authorized read followed by revocation cannot commit its pending state transition.",
+            "actualRows": [
+              [
+                "fixture-protocol-C16",
+                "Security/authorization",
+                "R-16",
+                "Authorize a read, revoke authorization before commit, then attempt transition; observe no pending transition committed."
+              ]
+            ],
+            "verdict": "pass",
+            "basis": "The exact supplied ID defines the corresponding distinct observable condition and result shown in this row."
+          },
+          {
+            "id": "fixture-protocol-C17",
+            "suppliedAssertion": "Late duplicate acknowledgment: a repeated acknowledgment after checkpoint compaction preserves the already closed result without recreating state.",
+            "actualRows": [
+              [
+                "fixture-protocol-C17",
+                "Application/state",
+                "R-17",
+                "Repeat acknowledgment after checkpoint compaction; observe the closed result retained without state recreation."
+              ]
+            ],
+            "verdict": "pass",
+            "basis": "The exact supplied ID defines the corresponding distinct observable condition and result shown in this row."
+          },
+          {
+            "id": "fixture-protocol-C18",
+            "suppliedAssertion": "Independent recovery failure: a failed recovery for one stream leaves the other stream readable with its exact accepted revision.",
+            "actualRows": [
+              [
+                "fixture-protocol-C18",
+                "Adapter/persistence",
+                "R-18",
+                "Fail recovery for one stream and read another; observe the latter remains readable at its exact accepted revision."
+              ]
+            ],
+            "verdict": "pass",
+            "basis": "The exact supplied ID defines the corresponding distinct observable condition and result shown in this row."
+          }
+        ],
+        "verifiedCreateRows": [
+          {
+            "path": "docs/proposed-evidence/item-01.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-01.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-02.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-02.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-03.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-03.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-04.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-04.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-05.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-05.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-06.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-06.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-07.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-07.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-08.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-08.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-09.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-09.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-10.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-10.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-11.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-11.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-12.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-12.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-13.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-13.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-14.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-14.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-15.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-15.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-16.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-16.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-17.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-17.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-18.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-18.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-19.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-19.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-20.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-20.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-21.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-21.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-22.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-22.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-23.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-23.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-24.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-24.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-25.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-25.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-26.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-26.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-27.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-27.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-28.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-28.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-29.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-29.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-30.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-30.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-31.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-31.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-32.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-32.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-33.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-33.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-34.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-34.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-35.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-35.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-36.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-36.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-37.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-37.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-38.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-38.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-39.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-39.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-40.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-40.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-41.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-41.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-42.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-42.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-43.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-43.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-44.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-44.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-45.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-45.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-46.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-46.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-47.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-47.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-48.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-48.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-49.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-49.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-50.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-50.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-51.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-51.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-52.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-52.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-53.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-53.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-54.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-54.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-55.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-55.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-56.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-56.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-57.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-57.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-58.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-58.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-59.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-59.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-60.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-60.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-61.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-61.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-62.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-62.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-63.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-63.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-64.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-64.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-65.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-65.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-66.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-66.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-67.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-67.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-68.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-68.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-69.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-69.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-70.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-70.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-71.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-71.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-72.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-72.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-73.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-73.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-74.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-74.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-75.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-75.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-76.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-76.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-77.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-77.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-78.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-78.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-79.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-79.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-80.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-80.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-81.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-81.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-82.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-82.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-83.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-83.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-84.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-84.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-85.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-85.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-86.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-86.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-87.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-87.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-88.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-88.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-89.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-89.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-90.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-90.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-91.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-91.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-92.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-92.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-93.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-93.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-94.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-94.md",
+                "create"
+              ]
+            ]
+          },
+          {
+            "path": "docs/proposed-evidence/item-95.md",
+            "actualRows": [
+              [
+                "docs/proposed-evidence/item-95.md",
+                "create"
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "assessor": "Codex contributor agent; explicit scoped assessment, not human or native approval",
+        "trial": "baseline-3",
+        "case": "existing-pnpm-scripts",
+        "nativeStatus": "blocked",
+        "acceptedSha256": null,
+        "responseDigests": [
+          "716bfa9da38802350bdfdeeac74cfe1e0b16bd0be2cb2b8cb2413212749ab659",
+          "5bd012cbd3620ce25042393b6d18a819329821253eecaa1693c7fb653ab80f56"
+        ],
+        "verdict": "fail",
+        "basis": "Existing native host rejection after the shared draft/repair ceiling; no semantic acceptance inferred.",
+        "nativeDiagnostics": [
+          {
+            "passed": false,
+            "reason": "case-budget",
+            "name": "Error",
+            "message": "The SDD draft violates its case-budget consistency contract.",
+            "diagnostic": {
+              "reason": "case-budget",
+              "phase": "validation",
+              "facts": [
+                {
+                  "detail": "table-count",
+                  "section": 14,
+                  "expected": 1,
+                  "observed": 2
+                }
+              ]
+            }
+          },
+          {
+            "passed": false,
+            "reason": "repository-path",
+            "name": "Error",
+            "message": "The SDD draft violates its repository-path consistency contract.",
+            "diagnostic": {
+              "reason": "repository-path",
+              "phase": "validation",
+              "facts": [
+                {
+                  "detail": "path-operation",
+                  "section": 15,
+                  "row": 5
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "assessor": "Codex contributor agent; explicit scoped assessment, not human or native approval",
+        "trial": "baseline-3",
+        "case": "absent-copied-scripts",
+        "nativeStatus": "blocked",
+        "acceptedSha256": null,
+        "responseDigests": [
+          "a65b9c39e647386f32ac1da8b90bf4b99eb26bd7972b74366d59ab64d356e57a",
+          "fdaec51cbaba185e9f301dae89d3f210b84efe4d6038a1c25ee65876cb543ad2"
+        ],
+        "verdict": "fail",
+        "basis": "Existing native host rejection after the shared draft/repair ceiling; no semantic acceptance inferred.",
+        "nativeDiagnostics": [
+          {
+            "passed": false,
+            "reason": "repository-path",
+            "name": "Error",
+            "message": "The SDD draft violates its repository-path consistency contract.",
+            "diagnostic": {
+              "reason": "repository-path",
+              "phase": "validation",
+              "facts": [
+                {
+                  "detail": "path-operation",
+                  "section": 15,
+                  "row": 5
+                }
+              ]
+            }
+          },
+          {
+            "passed": false,
+            "reason": "repository-path",
+            "name": "Error",
+            "message": "The SDD draft violates its repository-path consistency contract.",
+            "diagnostic": {
+              "reason": "repository-path",
+              "phase": "validation",
+              "facts": [
+                {
+                  "detail": "path-operation",
+                  "section": 15,
+                  "row": 8
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "assessor": "Codex contributor agent; explicit scoped assessment, not human or native approval",
+        "trial": "baseline-3",
+        "case": "package-manager-mismatch",
+        "nativeStatus": "blocked",
+        "acceptedSha256": null,
+        "responseDigests": [
+          "aefccc9641c463e1a8d019f09a28d8739db828e73a2c334e41ec9f975fad1cd1",
+          "df5dab43f0452cbe923765543907bea22188f7c342a1638afd93c810889b52cb"
+        ],
+        "verdict": "fail",
+        "basis": "Existing native host rejection after the shared draft/repair ceiling; no semantic acceptance inferred.",
+        "nativeDiagnostics": [
+          {
+            "passed": false,
+            "reason": "repository-path",
+            "name": "Error",
+            "message": "The SDD draft violates its repository-path consistency contract.",
+            "diagnostic": {
+              "reason": "repository-path",
+              "phase": "validation",
+              "facts": [
+                {
+                  "detail": "path-operation",
+                  "section": 15,
+                  "row": 3
+                }
+              ]
+            }
+          },
+          {
+            "passed": false,
+            "reason": "repository-path",
+            "name": "Error",
+            "message": "The SDD draft violates its repository-path consistency contract.",
+            "diagnostic": {
+              "reason": "repository-path",
+              "phase": "validation",
+              "facts": [
+                {
+                  "detail": "path-operation",
+                  "section": 15,
+                  "row": 2
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "assessor": "Codex contributor agent; explicit scoped assessment, not human or native approval",
+        "trial": "baseline-3",
+        "case": "selected-source-versus-default",
+        "nativeStatus": "drafted",
+        "acceptedSha256": "dcea61af5d255ab70371e67ba41809f7a1a892884a20313651ad4acb9c762723",
+        "responseDigests": [
+          "c72e5b2424e9f36c0f8854c2faa7d697af2be725a121bac8b66e83782d83082b"
+        ],
+        "verdict": "pass",
+        "basis": "The accepted draft uses the selected Python fixture-docs/app.docs:main documentation outcome (trial 1) or the exact uv run fixture-docs docs invocation (trials 2/3), and treats execution as outstanding; it does not borrow bootstrap Node script declarations."
+      },
+      {
+        "assessor": "Codex contributor agent; explicit scoped assessment, not human or native approval",
+        "trial": "baseline-3",
+        "case": "unknown-command-evidence",
+        "nativeStatus": "drafted",
+        "acceptedSha256": "eef6f459c5c8fbbcfcbe6a87b67b714f4a500d425d0eb3e930f7a5fb1183b856",
+        "responseDigests": [
+          "67c40166316b08af8392ee4833ae8ebb91209f1c31e55abb1cab79059a26dbc5"
+        ],
+        "verdict": "pass",
+        "basis": "The accepted draft explicitly leaves runtime/tooling/validator invocation undecided, preserves specification structure and ownership/catalog checks as outcomes, and neither invents installation nor claims an executed pass."
+      },
+      {
+        "assessor": "Codex contributor agent; explicit scoped assessment, not human or native approval",
+        "trial": "baseline-3",
+        "case": "generic-outcome-is-valid",
+        "nativeStatus": "drafted",
+        "acceptedSha256": "88f538807e24f3910b1ff1e2cd4101cf69276c1fdb31ee6b2effb049a1b4e07d",
+        "responseDigests": [
+          "db24b001a1f5501b01966616fc386f951d788c3d556fe05512de4e6b4ba2febe"
+        ],
+        "verdict": "pass",
+        "basis": "The accepted draft keeps specification format/consistency/reciprocal catalog outcomes separate from the existing independent docs check, explicitly says the SDK invocation is not an installed project script, and requires no wrapper or shim."
+      },
+      {
+        "assessor": "Codex contributor agent; explicit scoped assessment, not human or native approval",
+        "trial": "baseline-3",
+        "case": "exact-factual-citation",
+        "nativeStatus": "drafted",
+        "acceptedSha256": "cdc7e648b971cf40e25887fc64325f5a0c65f813f451dd74b01cfb699ff650db",
+        "responseDigests": [
+          "4f94ff36c5c9c3232a9eda59d03c73192de07c48caa6c65cfcd9957264b398fa",
+          "2409ad785a4384f938eb522471743c9dded4892f4edb985348e432d4d5ae39fb"
+        ],
+        "verdict": "pass",
+        "basis": "The accepted draft records the exact observed owner blob 16f39aed096aae5cd8dee237d607ae606e802d2e and SHA-256 7edf1cb9ad46f8c06db97ecef6c8ddb4bc06bcb2a7793a1f4c6c8533a205ad60, identifies the a6f39aed... supplied identity as mismatching, and does not substitute it as verified provenance."
+      },
+      {
+        "assessor": "Codex contributor agent; explicit scoped assessment, not human or native approval",
+        "trial": "baseline-3",
+        "case": "retained-refinements-and-future-paths",
+        "nativeStatus": "drafted",
+        "acceptedSha256": "84a4f68bfb5d788ce9d1f23440bfa814e29ff5ec17134fbbf4ede7db004993e7",
+        "responseDigests": [
+          "98fd4724fe68461c68467a42160f89c98703bec1995cd69d9d637e0f3e90467c",
+          "0de231cbe7a7e228c844332d836ef7e3711a10b6486a188973044c1cc126c8f1"
+        ],
+        "verdict": "fail",
+        "basis": "All eighteen supplied fixture-protocol identities were replaced with fixture-grounding-guidance aliases. Native structure accepted the renamed rows; identity loss fails the frozen semantic criterion. All 95 path operations remain, which does not rescue the case.",
+        "missingDefinitions": [
+          "fixture-protocol-C01",
+          "fixture-protocol-C02",
+          "fixture-protocol-C03",
+          "fixture-protocol-C04",
+          "fixture-protocol-C05",
+          "fixture-protocol-C06",
+          "fixture-protocol-C07",
+          "fixture-protocol-C08",
+          "fixture-protocol-C09",
+          "fixture-protocol-C10",
+          "fixture-protocol-C11",
+          "fixture-protocol-C12",
+          "fixture-protocol-C13",
+          "fixture-protocol-C14",
+          "fixture-protocol-C15",
+          "fixture-protocol-C16",
+          "fixture-protocol-C17",
+          "fixture-protocol-C18"
+        ]
+      }
+    ]
+  },
+  "final": {
+    "at": "2026-11-05T00:00:18.385863+00:00",
+    "descriptorSha256": "b5686bdcbd72b897da770c8d7bc5e02a2408e8fd6dac639765dd6e741589dd95",
+    "scope": "Frozen eight-case target criteria and supplemental material C02 availability audit. Explicit contributor assessments, not keyword scoring, human approval, universal prose accuracy, full command semantics or consumer execution. Native failures reject a case; all final V15 cases passed. Earlier cohorts remain rejected and are never pooled.",
+    "summary": [
+      {
+        "trial": "candidate-1",
+        "nativeAccepted": 8,
+        "scopedPass": 8,
+        "cases": 8,
+        "sdkQueries": 9,
+        "wholeTrialPassed": true
+      },
+      {
+        "trial": "candidate-2",
+        "nativeAccepted": 8,
+        "scopedPass": 8,
+        "cases": 8,
+        "sdkQueries": 12,
+        "wholeTrialPassed": true
+      },
+      {
+        "trial": "candidate-3",
+        "nativeAccepted": 8,
+        "scopedPass": 8,
+        "cases": 8,
+        "sdkQueries": 9,
+        "wholeTrialPassed": true
+      }
+    ],
+    "entries": [
+      {
+        "at": "2026-11-04T23:36:18.216746+00:00",
+        "assessor": "Codex contributor agent; explicit scoped review, not human or native approval",
+        "trial": "candidate-1",
+        "case": "existing-pnpm-scripts",
+        "nativeStatus": "drafted",
+        "acceptedSha256": "eee17cae0b923e9b88dca57f230352753d4cd7db3518b9ca1b79284bfeec5c12",
+        "responseDigests": [
+          "28e6574269fc7f6223d0572ec80f5e85dc75e386475c9f22011a7f84559e077c"
+        ],
+        "verdict": "pass",
+        "basis": "Read all command, script, invocation, execution and publication-outcome claims across the accepted document, including case inventory. Both genuine pnpm command names are retained; no successful run or SDK-wide validator is invented. Generator semantics remain explicitly uninspected. Three concrete publication outcomes remain in DoD. The frozen C01 command-retention/no-execution target passes.",
+        "observedLimitations": "Section2 adds an incidental claim that check-docs prints a fixture-specific message, although its immutable body only checks file existence. That toy-semantic detail is not certified by the frozen C01 scope; the original raw output remains visible.",
+        "scopeLimit": "Frozen genuine-command-retention/no-execution target only; no universal generated-prose accuracy or full toy-command semantics claimed."
+      },
+      {
+        "at": "2026-11-04T23:40:16.381986+00:00",
+        "assessor": "Codex contributor agent; explicit scoped review, not human or native approval",
+        "trial": "candidate-1",
+        "case": "absent-copied-scripts",
+        "nativeStatus": "drafted",
+        "acceptedSha256": "ca70d738a95d93cef272215deaa54e32dd5a4cff378930f3a9efaa69439f66d2",
+        "responseDigests": [
+          "062a14dac831e30338be17d48b05948e2722e7430aa221fab7f8be3ca0d3820e"
+        ],
+        "verdict": "pass",
+        "basis": "Read all material availability, invocation, script-scope, execution and publication claims across the accepted draft. The real pnpm docs:check is accurately limited to file existence, with no execution claimed. Undeclared SDK script examples become three separate observable publication outcomes and unresolved prerequisites, not mandatory commands or wrappers.",
+        "sourceFactAudit": {
+          "verdict": "pass",
+          "sourceCommit": "ca4c453a795402a904ca3c4e968d1721c1cd6a7f",
+          "path": "scripts/check-docs.cjs",
+          "blob": "78feff2f27c56be69f04731e45713d4505df0fc1",
+          "basis": "Direct immutable blob/tree proof establishes existence. The output explicitly reads and describes the existing script; it never calls catalog omission a missing file or asserts false absence."
+        }
+      },
+      {
+        "at": "2026-11-04T23:41:13.139013+00:00",
+        "assessor": "Codex contributor agent; explicit scoped review, not human or native approval",
+        "trial": "candidate-1",
+        "case": "package-manager-mismatch",
+        "nativeStatus": "drafted",
+        "acceptedSha256": "3f428e014b27e3e2bb88b5815f7ad02f6525314993bebd2a359038f07f96a9c4",
+        "responseDigests": [
+          "0d01f8c8b8394c585e7783951d91c0b4bdedb53d2c52abf9de0492ebd2db5754"
+        ],
+        "verdict": "pass",
+        "basis": "Read all npm/pnpm, script/entrypoint, invocation, execution and wrapper claims plus publication DoD. Guidance uses the real npm run docs:check from npm@11.0.0, limits its behavior to documentation-file existence and claims no executed success. It does not prescribe copied SDK/pnpm tasks or an invented validator, and retains format, consistency and reciprocal catalog outcomes with the invocation unverified."
+      },
+      {
+        "at": "2026-11-04T23:43:00.369220+00:00",
+        "assessor": "Codex contributor agent; explicit scoped review, not human or native approval",
+        "trial": "candidate-1",
+        "case": "selected-source-versus-default",
+        "nativeStatus": "drafted",
+        "acceptedSha256": "b5bc8a1b3d35ab8711187f8f25e67bb248ddf47746ef6aa0b92d3443a40aa55b",
+        "responseDigests": [
+          "5bd961da7a2294f7dc5d93379f12fb83121009583fb95672990e23e723c6e115"
+        ],
+        "verdict": "pass",
+        "basis": "Read every Python/uv/entrypoint/bootstrap and execution claim, selected-source evidence, cases and DoD. The exact selected invocation uv run fixture-docs docs and declared app.docs:main are retained, with app/docs.py and main cited separately and narrow file-existence behavior accurately described. The docs argument is documented but not read by main. No bootstrap Node task, invented hybrid callable path, SDK equivalence or executed pass is imported; all publication outcomes remain distinct."
+      },
+      {
+        "at": "2026-11-04T23:44:52.276876+00:00",
+        "assessor": "Codex contributor agent; explicit scoped review, not human or native approval",
+        "trial": "candidate-1",
+        "case": "unknown-command-evidence",
+        "nativeStatus": "drafted",
+        "acceptedSha256": "9917ebe39a97a15dddaa22ba51e32001fedaf692c3fb9c7c6bfd04ae2f9e10d7",
+        "responseDigests": [
+          "edeb13c1a1c66eacd661dda69b0906dfdf3a508a3645215cd8e0c77a64d777c1"
+        ],
+        "verdict": "pass",
+        "basis": "Read all tooling/command/runtime/installation claims and publication acceptance text. Runtime and concrete invocation remain explicitly undecided, with no invented script, wrapper, installed validator or executed success. Section19 separately requires format conformance, internal/cross-document consistency and reciprocal catalog ownership/path/evidence agreement with the generated view; generic review does not replace these outcomes.",
+        "publicationOutcomes": {
+          "format": "Section19 line338: required format and explicit publication outcome.",
+          "consistency": "Section19 line339: internal and cross-document consistency checked with recorded outcome.",
+          "catalog": "Section19 line340: reciprocal ownership, paths and evidence agree with generated view with recorded outcome."
+        }
+      },
+      {
+        "at": "2026-11-04T23:49:31.752027+00:00",
+        "assessor": "Codex contributor agent; explicit scoped review, not human or native approval",
+        "trial": "candidate-1",
+        "case": "generic-outcome-is-valid",
+        "nativeStatus": "drafted",
+        "acceptedSha256": "08d712df77e908422db7b4c3139743625662941ede5c3dff98aa37f9c7138841",
+        "responseDigests": [
+          "62d8841b718d68f872a56e43d514b5929fe475f816d5798c0418eda02000ae1e"
+        ],
+        "verdict": "pass",
+        "basis": "Read all command/script/wrapper/invocation and execution claims, source declarations, cases and publication DoD. The document explicitly retains generic SDK format, internal/cross-document consistency and reciprocal catalog ownership/path/evidence outcomes with their invocation unresolved. The real independent docs:check remains only a file-presence check. No absent required package task, installation or compatibility shim replaces the outcome, and no execution is claimed."
+      },
+      {
+        "at": "2026-11-04T23:51:39.500959+00:00",
+        "assessor": "Codex contributor agent; explicit scoped review, not human or native approval",
+        "trial": "candidate-1",
+        "case": "exact-factual-citation",
+        "nativeStatus": "drafted",
+        "acceptedSha256": "bb83967204fb7f6b09e033aabd1e2759a72c356385d8fe0410e438b33e79f9cb",
+        "responseDigests": [
+          "92b40d5f1da016c592fd7a7da8bdd42cec2397dbf62730daed315b3baab0fcc0"
+        ],
+        "verdict": "pass",
+        "basis": "Read every identity/blob/SHA/transcription claim with surrounding context. The document repeatedly preserves the exact real owning blob and SHA-256, explicitly labels the issue-supplied a6f... blob as mismatched and does not approximate either verified value. Independent immutable Git-object bytes establish those identities; no full provider tool-transcript or historical consumer replay claim is inferred.",
+        "citationAudit": {
+          "path": "specs/foundation.md",
+          "blob": "16f39aed096aae5cd8dee237d607ae606e802d2e",
+          "sha256": "7edf1cb9ad46f8c06db97ecef6c8ddb4bc06bcb2a7793a1f4c6c8533a205ad60",
+          "inputMistype": "Explicitly reconciled as mismatch in evidence and scenario text"
+        }
+      },
+      {
+        "at": "2026-11-04T23:55:13.943411+00:00",
+        "assessor": "Codex contributor agent; explicit scoped review, not human or native approval",
+        "trial": "candidate-1",
+        "case": "retained-refinements-and-future-paths",
+        "nativeStatus": "drafted",
+        "acceptedSha256": "23d4a4b4299206aef56c4e6dce4b5a072838f137986ef628d50a1a2125ee10b0",
+        "responseDigests": [
+          "d0046c46083baf46477d19eebb37afcec485ef8c35a86d4bcbfe5b73f6523a6e",
+          "6bc4d7d5ec4922b68d627f7f40c11e12e368c01a16187814a09c492e4ab70265"
+        ],
+        "verdict": "pass",
+        "basis": "Explicitly read all18 supplied/actual assertion pairs and their concrete triggers, negative effects and retained-state outcomes. Each retains its exact supplied identity as an operative section14 definition. The visible native Path/Change table was checked independently for every one of the95 exact requested targets and its actual create operation, not merely row counts. Existing owner baseline remains required and uncounted; all cases/artifacts stay planned, without executed or existing-file claims.",
+        "assertionReviews": [
+          {
+            "caseId": "fixture-protocol-C01",
+            "suppliedAssertion": "Restored bootstrap absence: after restoring a checkpoint without bootstrap state, no initial work is silently created; the next explicit bootstrap records exactly one generation.",
+            "actualScenario": "Restore a checkpoint without bootstrap state and observe no initial work; issue the next explicit bootstrap and observe exactly one recorded generation.",
+            "verdict": "pass",
+            "basis": "Restore without bootstrap creates no initial work; only the next explicit bootstrap records exactly one generation."
+          },
+          {
+            "caseId": "fixture-protocol-C02",
+            "suppliedAssertion": "Final source-scan unit with duplicate lookahead: a full final chunk whose lookahead is only already-seen records closes at the exact unique-record boundary without an empty extra cycle.",
+            "actualScenario": "Scan a full final chunk whose lookahead contains only previously seen records; observe closure at the exact unique-record boundary with no empty extra cycle.",
+            "verdict": "pass",
+            "basis": "The full final chunk has duplicate-only lookahead, closes at the exact unique-record boundary, and adds no empty cycle."
+          },
+          {
+            "caseId": "fixture-protocol-C03",
+            "suppliedAssertion": "Cross-generation closed-cycle replay: replaying a completion token from the previous generation cannot complete or reopen the current generation.",
+            "actualScenario": "Replay a completion token from the previous generation; observe that the current generation is neither completed nor reopened.",
+            "verdict": "pass",
+            "basis": "A prior-generation completion token neither completes nor reopens the current generation."
+          },
+          {
+            "caseId": "fixture-protocol-C04",
+            "suppliedAssertion": "Independent high-revision journals: two independent journals may each have the same high revision; resuming one cannot consume the other journal checkpoint.",
+            "actualScenario": "Give two independent journals the same high revision and resume one; observe it cannot consume the other journal’s checkpoint.",
+            "verdict": "pass",
+            "basis": "Independent equal-high-revision journals cannot consume each other's checkpoints on resume."
+          },
+          {
+            "caseId": "fixture-protocol-C05",
+            "suppliedAssertion": "Genuine-nine late-migration failure: when the persisted storage version really is nine and a late migration fails, the transaction rolls back every new record and retains version nine.",
+            "actualScenario": "With persisted storage version nine, fail a late migration; observe rollback of every new record and retained version nine.",
+            "verdict": "pass",
+            "basis": "Persisted version really is nine; late migration failure rolls back every new record and retains version nine."
+          },
+          {
+            "caseId": "fixture-protocol-C06",
+            "suppliedAssertion": "Inclusive stop boundary: an item at the exact configured stopping instant is included once and the immediately later item is deferred.",
+            "actualScenario": "Place one item at the configured stopping instant and another immediately later; observe the boundary item included once and the later item deferred.",
+            "verdict": "pass",
+            "basis": "The exact stop-boundary item is included once and the immediately later item is deferred."
+          },
+          {
+            "caseId": "fixture-protocol-C07",
+            "suppliedAssertion": "Canceled outstanding cursor: canceling an active cursor prevents its later response from appending work to a replacement cursor.",
+            "actualScenario": "Cancel an active cursor, replace it, then deliver the old response; observe no work appended to the replacement cursor.",
+            "verdict": "pass",
+            "basis": "After cancellation/replacement, the old cursor's later response cannot append to the replacement."
+          },
+          {
+            "caseId": "fixture-protocol-C08",
+            "suppliedAssertion": "Duplicate continuation request: replaying the same accepted continuation key returns its prior batch without incrementing its counters.",
+            "actualScenario": "Replay the same accepted continuation key; observe the prior batch returned and counters unchanged.",
+            "verdict": "pass",
+            "basis": "Replaying the accepted continuation key returns its prior batch without incrementing counters."
+          },
+          {
+            "caseId": "fixture-protocol-C09",
+            "suppliedAssertion": "Writer lease expires during scan: the expired writer cannot commit the final batch and the new lease holder retains its independently accepted progress.",
+            "actualScenario": "Expire a writer lease during scan and attempt final commit; observe rejection and preservation of the new holder’s independently accepted progress.",
+            "verdict": "pass",
+            "basis": "The expired writer cannot commit the final batch, while the new holder's independently accepted progress remains."
+          },
+          {
+            "caseId": "fixture-protocol-C10",
+            "suppliedAssertion": "Checkpoint checksum mismatch: recovery refuses the mismatched checkpoint without deleting the last independently verified checkpoint.",
+            "actualScenario": "Recover from a checkpoint checksum mismatch; observe refusal and preservation of the last independently verified checkpoint.",
+            "verdict": "pass",
+            "basis": "Checksum-mismatched recovery is refused and the last independently verified checkpoint is preserved."
+          },
+          {
+            "caseId": "fixture-protocol-C11",
+            "suppliedAssertion": "Clock moves backward after resume: the monotonic deadline is not renewed by a backward wall-clock adjustment.",
+            "actualScenario": "Move wall clock backward after resume; observe that the monotonic deadline is not renewed.",
+            "verdict": "pass",
+            "basis": "A backward wall-clock change after resume does not renew the monotonic deadline."
+          },
+          {
+            "caseId": "fixture-protocol-C12",
+            "suppliedAssertion": "Zero-result source generation: a completed empty scan advances the explicit generation once while preserving its no-work reason.",
+            "actualScenario": "Complete an empty source scan; observe one explicit generation advance and preserved no-work reason.",
+            "verdict": "pass",
+            "basis": "Completed empty scanning advances the explicit generation once and preserves its no-work reason."
+          },
+          {
+            "caseId": "fixture-protocol-C13",
+            "suppliedAssertion": "Pending journal after restart: restart preserves pending acknowledged entries and does not count them as newly generated work.",
+            "actualScenario": "Restart with pending acknowledged journal entries; observe they persist and are not counted as newly generated work.",
+            "verdict": "pass",
+            "basis": "Restart retains pending acknowledged entries and does not recount them as newly generated work."
+          },
+          {
+            "caseId": "fixture-protocol-C14",
+            "suppliedAssertion": "Simultaneous same-local-day requests: two accepted requests sharing a local day retain separate command identities and only their own results.",
+            "actualScenario": "Submit two accepted requests for the same local day; observe separate command identities and each request retaining only its own results.",
+            "verdict": "pass",
+            "basis": "Two accepted requests on the same local day retain distinct command identities and only their own results."
+          },
+          {
+            "caseId": "fixture-protocol-C15",
+            "suppliedAssertion": "Previous-generation cleanup: retiring an old generation removes only its owned journal and cannot delete a live generation checkpoint.",
+            "actualScenario": "Retire an old generation; observe removal only of its owned journal and preservation of a live generation checkpoint.",
+            "verdict": "pass",
+            "basis": "Old-generation retirement removes only its owned journal and preserves a live generation checkpoint."
+          },
+          {
+            "caseId": "fixture-protocol-C16",
+            "suppliedAssertion": "Authentication revoked before commit: an authorized read followed by revocation cannot commit its pending state transition.",
+            "actualScenario": "Authorize a read, revoke authorization before commit, then attempt transition; observe the pending state transition does not commit.",
+            "verdict": "pass",
+            "basis": "An authorized read followed by pre-commit revocation cannot commit the pending state transition."
+          },
+          {
+            "caseId": "fixture-protocol-C17",
+            "suppliedAssertion": "Late duplicate acknowledgment: a repeated acknowledgment after checkpoint compaction preserves the already closed result without recreating state.",
+            "actualScenario": "Repeat acknowledgment after checkpoint compaction; observe the already closed result remains and no state is recreated.",
+            "verdict": "pass",
+            "basis": "A repeated acknowledgment after compaction preserves the closed result without recreating state."
+          },
+          {
+            "caseId": "fixture-protocol-C18",
+            "suppliedAssertion": "Independent recovery failure: a failed recovery for one stream leaves the other stream readable with its exact accepted revision.",
+            "actualScenario": "Fail recovery for one stream while reading the other; observe the other stream remains readable at its exact accepted revision.",
+            "verdict": "pass",
+            "basis": "One stream's failed recovery leaves the other readable at its exact accepted revision."
+          }
+        ],
+        "createPathAudit": {
+          "method": "Per-target comparison against the operative visible native table and complete immutable source inventory; no count-only inference.",
+          "selectedBase": "ca4c453a795402a904ca3c4e968d1721c1cd6a7f",
+          "entries": [
+            {
+              "path": "docs/proposed-evidence/item-01.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-02.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-03.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-04.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-05.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-06.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-07.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-08.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-09.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-10.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-11.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-12.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-13.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-14.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-15.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-16.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-17.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-18.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-19.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-20.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-21.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-22.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-23.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-24.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-25.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-26.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-27.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-28.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-29.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-30.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-31.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-32.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-33.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-34.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-35.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-36.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-37.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-38.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-39.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-40.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-41.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-42.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-43.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-44.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-45.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-46.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-47.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-48.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-49.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-50.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-51.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-52.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-53.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-54.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-55.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-56.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-57.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-58.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-59.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-60.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-61.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-62.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-63.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-64.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-65.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-66.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-67.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-68.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-69.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-70.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-71.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-72.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-73.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-74.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-75.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-76.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-77.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-78.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-79.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-80.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-81.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-82.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-83.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-84.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-85.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-86.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-87.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-88.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-89.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-90.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-91.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-92.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-93.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-94.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-95.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            }
+          ]
+        },
+        "scopeLimit": "The18 assertions and95 creates are one frozen fidelity case, not113 new SDK tests or executed consumer acceptance."
+      },
+      {
+        "at": "2026-11-04T23:39:36.097825+00:00",
+        "assessor": "Codex contributor agent; explicit scoped review, not human or native approval",
+        "trial": "candidate-2",
+        "case": "existing-pnpm-scripts",
+        "nativeStatus": "drafted",
+        "acceptedSha256": "60567d03a3cb3a9942d9deb7104254df74d23d7cfe0d93decd42d82bbcc25fb3",
+        "responseDigests": [
+          "bcffbeb45f2ee1b251aae976752483acdc84d5f61e301cc9329c622e8606f9e6",
+          "8d9599a03b3f06ad63817034d468cc10dce5aec6d2cf3762b703102167bfb557"
+        ],
+        "verdict": "pass",
+        "basis": "Read every command/script/invocation/execution claim, planned inventory and publication outcome. Both genuine pnpm commands remain explicit; no successful run is claimed and the narrow toy scripts do not stand in for SDK consistency. Format, consistency and reciprocal catalog outcomes remain explicit. The ordinary repair remains in raw evidence.",
+        "observedLimitations": "The accepted source description adds a fixture-message emission to check-docs; its immutable body only checks file presence. This incidental toy-semantic statement is outside the frozen C01 command-retention/no-execution claim and remains visible, not certified.",
+        "scopeLimit": "Frozen C01 target only, not universal prose accuracy or complete toy-command semantics."
+      },
+      {
+        "at": "2026-11-04T23:42:35.310346+00:00",
+        "assessor": "Codex contributor agent; explicit scoped review, not human or native approval",
+        "trial": "candidate-2",
+        "case": "absent-copied-scripts",
+        "nativeStatus": "drafted",
+        "acceptedSha256": "ae8668b088dd58edccc98ed34138e1fdb31e31afb52315b80d23b3f105d94852",
+        "responseDigests": [
+          "f62c2649543a0d74c90ca00b71a5b893e11a666a6b4b4f244713e5154324ee80",
+          "62fbaed75f9b0cec791cb42d92bba8f70d4d8fdfcea94cb1216b2ed89eb02faa"
+        ],
+        "verdict": "pass",
+        "basis": "Read all material command, availability, script, execution and publication assertions, including UI/recovery examples, cases and DoD. pnpm docs:check remains the actual narrow file-existence check; absent SDK examples are not installed prerequisites, wrappers or equivalent checks. Three publication outcomes and the unknown invocation remain explicit. All ordinary repair evidence is retained.",
+        "sourceFactAudit": {
+          "verdict": "pass",
+          "sourceCommit": "ca4c453a795402a904ca3c4e968d1721c1cd6a7f",
+          "path": "scripts/check-docs.cjs",
+          "blob": "78feff2f27c56be69f04731e45713d4505df0fc1",
+          "basis": "Independent immutable selected-tree/blob proof confirms the script exists. The accepted output explicitly cites and describes it, without a false missing-script assertion or catalog-omission inference."
+        }
+      },
+      {
+        "at": "2026-11-04T23:44:52.275880+00:00",
+        "assessor": "Codex contributor agent; explicit scoped review, not human or native approval",
+        "trial": "candidate-2",
+        "case": "package-manager-mismatch",
+        "nativeStatus": "drafted",
+        "acceptedSha256": "409e7ca25bb7ec742a71090da98325f0c1ccb3633384ebbea90049d20095785b",
+        "responseDigests": [
+          "8ff0765d39c1148a50a62d2bc4ba640e1893f8b93de43f321e0b2f735d7440c0"
+        ],
+        "verdict": "pass",
+        "basis": "Read all package-manager/script/invocation/execution claims, cases and DoD. The selected npm@11.0.0 declaration yields npm run docs:check with its real file-existence scope. Copied pnpm SDK commands remain unverified and are not prescribed. No executed result, wrapper or docs/SDK equivalence is invented; the three publication outcomes remain explicit."
+      },
+      {
+        "at": "2026-11-04T23:48:40.607777+00:00",
+        "assessor": "Codex contributor agent; explicit scoped review, not human or native approval",
+        "trial": "candidate-2",
+        "case": "selected-source-versus-default",
+        "nativeStatus": "drafted",
+        "acceptedSha256": "9ced339472ca2c1980b44e22a90a93cf6ca079e864802eae228583626c0b2945",
+        "responseDigests": [
+          "9dbe5b2564af7e91298c8f132f483a4c36c14d0dbfc43ca834d7cea32f13352e"
+        ],
+        "verdict": "pass",
+        "basis": "Read all selected Python/uv/entrypoint/bootstrap claims, cases and publication DoD. The exact uv run fixture-docs docs command, Python>=3.11 and app.docs:main entrypoint are retained from selected-source evidence, with real app/docs.py/main cited separately. File presence is correctly distinguished from full docs/SDK validation; no bootstrap Node scripts or executed success are imported.",
+        "observedLimitations": "A later sentence attributes uv itself to the package declaration. pyproject.toml directly declares Python and the entrypoint; the uv invocation is documented separately in docs/commands.md. This incidental attribution is not certified by the frozen selected-source/toolchain-vs-bootstrap target."
+      },
+      {
+        "at": "2026-11-04T23:51:09.110783+00:00",
+        "assessor": "Codex contributor agent; explicit scoped review, not human or native approval",
+        "trial": "candidate-2",
+        "case": "unknown-command-evidence",
+        "nativeStatus": "drafted",
+        "acceptedSha256": "65c13b1f13daef923651d61ef9acb6f936f122856582e4edc942cc2849c78dd3",
+        "responseDigests": [
+          "422ee96de7bd6cb7d46247a8161584aea8290213d6537fde5bfe8d8ab6a6c7fd"
+        ],
+        "verdict": "pass",
+        "basis": "Read all command, script, runtime/tooling, installation, execution and publication claims. Concrete invocation and prerequisites remain explicitly undecided; no wrapper, installed checker or executed success is invented. Section19 independently requires format, internal/cross-document consistency and reciprocal catalog ownership/path/evidence agreement with the generated view, retaining unchecked outcomes as unresolved.",
+        "publicationOutcomes": {
+          "format": "Section19 line355",
+          "consistency": "Section19 line356",
+          "catalog": "Section19 line357"
+        }
+      },
+      {
+        "at": "2026-11-04T23:52:58.620275+00:00",
+        "assessor": "Codex contributor agent; explicit scoped review, not human or native approval",
+        "trial": "candidate-2",
+        "case": "generic-outcome-is-valid",
+        "nativeStatus": "drafted",
+        "acceptedSha256": "1afdbfe4f64642dbee5a751c9a1452a6f813c99b8cc5d325f0d01a2df4da3966",
+        "responseDigests": [
+          "9a31a4d92827cc1bb9b0bc18151763ab781c1ded850d3c85095d8a01b5ff6213",
+          "6b8e1a7cb86e1504afc2800b3a3e295cb03335bac41c7fcf45236cf2b97fd13d"
+        ],
+        "verdict": "pass",
+        "basis": "Read all script, command, invocation, shim/wrapper, execution and publication claims, including cases and DoD. Generic SDK format, internal/cross-document consistency and reciprocal catalog outcomes remain explicit with an unverified invocation. The real pnpm docs:check only checks documentation-file presence and is independently described, never substituted for those outcomes. No absent required task, installation, compatibility shim or executed pass is invented. The ordinary repair remains visible."
+      },
+      {
+        "at": "2026-11-04T23:57:36.152103+00:00",
+        "assessor": "Codex contributor agent; explicit scoped review, not human or native approval",
+        "trial": "candidate-2",
+        "case": "exact-factual-citation",
+        "nativeStatus": "drafted",
+        "acceptedSha256": "ba7c508ae6daacfb30ae49c3fb81e16d0027d89731d22c64004533c979760b32",
+        "responseDigests": [
+          "7dc0f6fb0cf8e129c2d2efab4d93ce1eea269d589c26ee98dae476b7f8ca0a4b",
+          "5d2f0f5946bab386e1e365422c11b7547c89f6e92349bfb4b3d9b5680c9e98f4"
+        ],
+        "verdict": "pass",
+        "basis": "Read all blob/checksum/identity/transcription statements with surrounding evidence and scenario text. The real owner blob16f39aed096aae5cd8dee237d607ae606e802d2e and SHA-2567edf1cb9ad46f8c06db97ecef6c8ddb4bc06bcb2a7793a1f4c6c8533a205ad60 match independent immutable source bytes. The supplied a6f... value is explicitly mistyped/mismatched and never used as verified. The ordinary repair remains retained; no extra attempt or provider tool-transcript claim is inferred.",
+        "citationAudit": {
+          "path": "specs/foundation.md",
+          "blob": "16f39aed096aae5cd8dee237d607ae606e802d2e",
+          "sha256": "7edf1cb9ad46f8c06db97ecef6c8ddb4bc06bcb2a7793a1f4c6c8533a205ad60",
+          "inputMistype": "Reconciled in executive summary and evidence section"
+        }
+      },
+      {
+        "at": "2026-11-05T00:00:18.370841+00:00",
+        "assessor": "Codex contributor agent; explicit scoped review, not human or native approval",
+        "trial": "candidate-2",
+        "case": "retained-refinements-and-future-paths",
+        "nativeStatus": "drafted",
+        "acceptedSha256": "4fbe6ee6f810d31144f373ea02351e1a700d9b3a12046095e9b2b0cb6ba38613",
+        "responseDigests": [
+          "864b536f6eb1174ba587fa18960f95faac9d6d6823a2bd18266733ee001fda23"
+        ],
+        "verdict": "pass",
+        "basis": "Read all18 supplied/actual assertion pairs independently for this trial, preserving exact IDs and concrete trigger/result/retained-state semantics. Independently checked each of95 exact operative Path/Change rows as create against the complete selected-source inventory. Baseline cases remain required references and uncounted; cases and artifacts remain planned with no execution or current-existence claim.",
+        "assertionReviews": [
+          {
+            "caseId": "fixture-protocol-C01",
+            "suppliedAssertion": "Restored bootstrap absence: after restoring a checkpoint without bootstrap state, no initial work is silently created; the next explicit bootstrap records exactly one generation.",
+            "actualScenario": "Restore a checkpoint without bootstrap state; assert no initial work is created, then explicitly bootstrap and assert exactly one generation is recorded.",
+            "verdict": "pass",
+            "basis": "Restore without bootstrap creates no initial work; explicit bootstrap records exactly one generation."
+          },
+          {
+            "caseId": "fixture-protocol-C02",
+            "suppliedAssertion": "Final source-scan unit with duplicate lookahead: a full final chunk whose lookahead is only already-seen records closes at the exact unique-record boundary without an empty extra cycle.",
+            "actualScenario": "Scan a full final chunk whose lookahead contains only seen records; assert closure at the exact unique-record boundary with no empty extra cycle.",
+            "verdict": "pass",
+            "basis": "A full final chunk with duplicate-only lookahead closes at the exact unique-record boundary without an empty extra cycle."
+          },
+          {
+            "caseId": "fixture-protocol-C03",
+            "suppliedAssertion": "Cross-generation closed-cycle replay: replaying a completion token from the previous generation cannot complete or reopen the current generation.",
+            "actualScenario": "Replay a previous-generation completion token; assert it cannot complete or reopen the current generation.",
+            "verdict": "pass",
+            "basis": "A previous-generation completion token cannot complete or reopen the current generation."
+          },
+          {
+            "caseId": "fixture-protocol-C04",
+            "suppliedAssertion": "Independent high-revision journals: two independent journals may each have the same high revision; resuming one cannot consume the other journal checkpoint.",
+            "actualScenario": "Give two independent journals the same high revision; resume one and assert it cannot consume the other's checkpoint.",
+            "verdict": "pass",
+            "basis": "Independent journals at the same high revision cannot consume each other's checkpoint on resume."
+          },
+          {
+            "caseId": "fixture-protocol-C05",
+            "suppliedAssertion": "Genuine-nine late-migration failure: when the persisted storage version really is nine and a late migration fails, the transaction rolls back every new record and retains version nine.",
+            "actualScenario": "With persisted version nine, fail a late migration; assert every new record rolls back and version nine remains.",
+            "verdict": "pass",
+            "basis": "Actual persisted version nine plus late migration failure rolls back every new record and retains nine."
+          },
+          {
+            "caseId": "fixture-protocol-C06",
+            "suppliedAssertion": "Inclusive stop boundary: an item at the exact configured stopping instant is included once and the immediately later item is deferred.",
+            "actualScenario": "Place one item exactly at the configured stopping instant and another immediately later; assert the boundary item is included once and later item deferred.",
+            "verdict": "pass",
+            "basis": "Exact stop instant is included once and the immediately later item is deferred."
+          },
+          {
+            "caseId": "fixture-protocol-C07",
+            "suppliedAssertion": "Canceled outstanding cursor: canceling an active cursor prevents its later response from appending work to a replacement cursor.",
+            "actualScenario": "Cancel an active cursor, replace it, then deliver the old response; assert no work is appended to the replacement cursor.",
+            "verdict": "pass",
+            "basis": "A canceled cursor's later response cannot append to the replacement cursor."
+          },
+          {
+            "caseId": "fixture-protocol-C08",
+            "suppliedAssertion": "Duplicate continuation request: replaying the same accepted continuation key returns its prior batch without incrementing its counters.",
+            "actualScenario": "Replay an accepted continuation key; assert the prior batch is returned and counters do not increment.",
+            "verdict": "pass",
+            "basis": "Accepted continuation replay returns the prior batch without incrementing counters."
+          },
+          {
+            "caseId": "fixture-protocol-C09",
+            "suppliedAssertion": "Writer lease expires during scan: the expired writer cannot commit the final batch and the new lease holder retains its independently accepted progress.",
+            "actualScenario": "Expire a writer lease during scan; assert the old writer cannot commit the final batch and the new holder retains its accepted progress.",
+            "verdict": "pass",
+            "basis": "Expired writer final commit is rejected and the new holder retains its independently accepted progress."
+          },
+          {
+            "caseId": "fixture-protocol-C10",
+            "suppliedAssertion": "Checkpoint checksum mismatch: recovery refuses the mismatched checkpoint without deleting the last independently verified checkpoint.",
+            "actualScenario": "Recover a checksum-mismatched checkpoint; assert recovery refuses it and preserves the last independently verified checkpoint.",
+            "verdict": "pass",
+            "basis": "Mismatched-checksum recovery is refused while preserving the last independently verified checkpoint."
+          },
+          {
+            "caseId": "fixture-protocol-C11",
+            "suppliedAssertion": "Clock moves backward after resume: the monotonic deadline is not renewed by a backward wall-clock adjustment.",
+            "actualScenario": "Resume, move the wall clock backward, and assert the monotonic deadline is not renewed.",
+            "verdict": "pass",
+            "basis": "Backward wall time after resume does not renew the monotonic deadline."
+          },
+          {
+            "caseId": "fixture-protocol-C12",
+            "suppliedAssertion": "Zero-result source generation: a completed empty scan advances the explicit generation once while preserving its no-work reason.",
+            "actualScenario": "Complete an empty source generation; assert explicit generation advances once and the no-work reason remains.",
+            "verdict": "pass",
+            "basis": "Completed empty scanning advances the explicit generation once and preserves the no-work reason."
+          },
+          {
+            "caseId": "fixture-protocol-C13",
+            "suppliedAssertion": "Pending journal after restart: restart preserves pending acknowledged entries and does not count them as newly generated work.",
+            "actualScenario": "Restart with pending acknowledged journal entries; assert they remain pending and are not counted as newly generated work.",
+            "verdict": "pass",
+            "basis": "Restart retains pending acknowledged journal entries without counting them as new work."
+          },
+          {
+            "caseId": "fixture-protocol-C14",
+            "suppliedAssertion": "Simultaneous same-local-day requests: two accepted requests sharing a local day retain separate command identities and only their own results.",
+            "actualScenario": "Accept two requests for the same local day; assert separate command identities and each request retains only its own results.",
+            "verdict": "pass",
+            "basis": "Same-local-day accepted requests retain separate command identities and only their own results."
+          },
+          {
+            "caseId": "fixture-protocol-C15",
+            "suppliedAssertion": "Previous-generation cleanup: retiring an old generation removes only its owned journal and cannot delete a live generation checkpoint.",
+            "actualScenario": "Retire an old generation; assert only its owned journal is removed and the live generation checkpoint remains.",
+            "verdict": "pass",
+            "basis": "Old-generation retirement removes only its owned journal and preserves the live checkpoint."
+          },
+          {
+            "caseId": "fixture-protocol-C16",
+            "suppliedAssertion": "Authentication revoked before commit: an authorized read followed by revocation cannot commit its pending state transition.",
+            "actualScenario": "Authorize a read, revoke authentication before commit, and assert the pending state transition cannot commit.",
+            "verdict": "pass",
+            "basis": "Authorized read followed by authentication revocation before commit cannot commit pending state."
+          },
+          {
+            "caseId": "fixture-protocol-C17",
+            "suppliedAssertion": "Late duplicate acknowledgment: a repeated acknowledgment after checkpoint compaction preserves the already closed result without recreating state.",
+            "actualScenario": "Repeat an acknowledgment after checkpoint compaction; assert the closed result remains and state is not recreated.",
+            "verdict": "pass",
+            "basis": "Late repeated acknowledgment after compaction preserves the closed result without recreating state."
+          },
+          {
+            "caseId": "fixture-protocol-C18",
+            "suppliedAssertion": "Independent recovery failure: a failed recovery for one stream leaves the other stream readable with its exact accepted revision.",
+            "actualScenario": "Fail recovery for one stream; assert the other stream remains readable at its exact accepted revision.",
+            "verdict": "pass",
+            "basis": "One stream's failed recovery leaves the other readable at its exact accepted revision."
+          }
+        ],
+        "createPathAudit": {
+          "method": "Every exact requested target compared to its actual operative visible-table row and create operation, plus absence at the immutable source; no count-only pass.",
+          "selectedBase": "ca4c453a795402a904ca3c4e968d1721c1cd6a7f",
+          "entries": [
+            {
+              "path": "docs/proposed-evidence/item-01.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-02.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-03.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-04.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-05.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-06.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-07.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-08.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-09.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-10.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-11.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-12.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-13.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-14.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-15.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-16.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-17.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-18.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-19.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-20.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-21.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-22.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-23.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-24.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-25.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-26.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-27.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-28.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-29.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-30.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-31.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-32.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-33.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-34.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-35.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-36.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-37.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-38.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-39.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-40.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-41.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-42.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-43.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-44.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-45.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-46.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-47.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-48.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-49.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-50.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-51.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-52.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-53.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-54.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-55.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-56.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-57.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-58.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-59.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-60.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-61.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-62.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-63.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-64.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-65.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-66.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-67.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-68.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-69.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-70.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-71.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-72.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-73.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-74.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-75.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-76.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-77.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-78.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-79.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-80.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-81.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-82.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-83.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-84.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-85.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-86.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-87.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-88.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-89.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-90.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-91.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-92.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-93.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-94.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-95.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            }
+          ]
+        },
+        "scopeLimit": "18assertions/95creates are data in one fidelity case, not113 additional SDK tests or consumer execution."
+      },
+      {
+        "at": "2026-11-04T23:39:36.098489+00:00",
+        "assessor": "Codex contributor agent; explicit scoped review, not human or native approval",
+        "trial": "candidate-3",
+        "case": "existing-pnpm-scripts",
+        "nativeStatus": "drafted",
+        "acceptedSha256": "be066e7a816172de7bf28739e69d6d8ff03a832c06acaef8aa854e90869b8298",
+        "responseDigests": [
+          "bf6c1b6573e33020aaa8250721c123ae92e5966889ee1bd81c7dac91777964d1"
+        ],
+        "verdict": "pass",
+        "basis": "Read all command/script/execution claims, case inventory and publication outcomes. Both exact selected pnpm command names are retained; the document states neither ran or passed and does not equate their declarations/narrow behavior to full SDK publication validation. Format, internal/cross-document consistency and reciprocal catalog agreement remain explicit.",
+        "observedLimitations": "The draft states check-docs emits a fixture message, absent from its immutable body. This incidental semantic detail is not certified by the frozen C01 command-retention/no-execution target; original output is preserved.",
+        "scopeLimit": "Frozen C01 target only; no universal sentence accuracy or full toy-command behavior acceptance."
+      },
+      {
+        "at": "2026-11-04T23:40:16.382634+00:00",
+        "assessor": "Codex contributor agent; explicit scoped review, not human or native approval",
+        "trial": "candidate-3",
+        "case": "absent-copied-scripts",
+        "nativeStatus": "drafted",
+        "acceptedSha256": "8dc3fa22fc685efc38d8552a28354d1d6f142959b7a2d1438d4bf7d406b63587",
+        "responseDigests": [
+          "0b7a42e2b62be07e5fe7fe2873d538e1a0d97d29fdf19add131aa3a9e143660e"
+        ],
+        "verdict": "pass",
+        "basis": "Read all material command/availability claims and explicit DoD outcomes, including full source-evidence section. pnpm run docs:check retains its narrow actual existence-check semantics and is separate from SDK format, internal/cross-document and reciprocal catalog validation. No absent SDK command, wrapper, installed equivalent or executed success is required or claimed.",
+        "sourceFactAudit": {
+          "verdict": "pass",
+          "sourceCommit": "ca4c453a795402a904ca3c4e968d1721c1cd6a7f",
+          "path": "scripts/check-docs.cjs",
+          "blob": "78feff2f27c56be69f04731e45713d4505df0fc1",
+          "basis": "The real selected-tree script exists and matches the directly verified blob. Accepted prose explicitly treats it as inspected and existing; all broader command availability remains qualified rather than falsely absent."
+        }
+      },
+      {
+        "at": "2026-11-04T23:43:00.368442+00:00",
+        "assessor": "Codex contributor agent; explicit scoped review, not human or native approval",
+        "trial": "candidate-3",
+        "case": "package-manager-mismatch",
+        "nativeStatus": "drafted",
+        "acceptedSha256": "4d4458c32f1de3883f8431336b308c2013e7c61d8e5ce570128d8bae4bf27035",
+        "responseDigests": [
+          "15a686aa314ee803f838cf04c30c2f42a54d6a7cbb3c348c53c8bdc724b1384a"
+        ],
+        "verdict": "pass",
+        "basis": "Read all package-manager, command/script, invocation, execution, wrapper and publication claims. The draft uses npm run docs:check under npm@11.0.0, limits it to its inspected docs-file existence check, and marks copied pnpm SDK examples as undeclared/unverified rather than project prerequisites. No execution or SDK equivalence is claimed; format, consistency and reciprocal catalog outcomes remain explicit."
+      },
+      {
+        "at": "2026-11-04T23:46:03.438550+00:00",
+        "assessor": "Codex contributor agent; explicit scoped review, not human or native approval",
+        "trial": "candidate-3",
+        "case": "selected-source-versus-default",
+        "nativeStatus": "drafted",
+        "acceptedSha256": "7b505cac35796f404f363dabe95fa69eef71adaf6e016ee6d32639c5405e84f3",
+        "responseDigests": [
+          "a648b5da47332b8d04095bf77384162240ba15c389030528e28b00b6559d814f",
+          "86305963aac746becbf055960275cfb8b89764ff8c6450a0cb74a6594b2038cf"
+        ],
+        "verdict": "pass",
+        "basis": "Read every Python/uv/entrypoint/bootstrap/execution statement and publication DoD. The selected Python>=3.11, uv run fixture-docs docs and exact declared app.docs:main are retained. app/docs.py is a separate real file citation. The narrow docs-file existence check is not promoted to SDK validation and no command ran or bootstrap Node task was imported. The ordinary repair and every raw attempt remain preserved."
+      },
+      {
+        "at": "2026-11-04T23:48:40.608544+00:00",
+        "assessor": "Codex contributor agent; explicit scoped review, not human or native approval",
+        "trial": "candidate-3",
+        "case": "unknown-command-evidence",
+        "nativeStatus": "drafted",
+        "acceptedSha256": "041a40e0e3d1b86dc75adc3766a1016b927162b82f7a3b57e7c30d13e429a80b",
+        "responseDigests": [
+          "b9fdfe3a5b574dc1b4d01be90bd381e70278ad872701aa1423621c6c945d7673"
+        ],
+        "verdict": "pass",
+        "basis": "Read all command/script/invocation/installation and execution claims plus full publication DoD. Tooling and runtime prerequisites remain undecided; no concrete command, wrapper, installed checker or executed result is invented. Section19 explicitly requires format, internal/cross-document consistency and reciprocal catalog ownership/path/evidence agreement with the generated view, retaining blockers for unresolved evidence.",
+        "publicationOutcomes": {
+          "format": "Section19 line318",
+          "consistency": "Section19 line319",
+          "catalog": "Section19 line320, with discrepancy blocking readiness"
+        }
+      },
+      {
+        "at": "2026-11-04T23:51:09.111464+00:00",
+        "assessor": "Codex contributor agent; explicit scoped review, not human or native approval",
+        "trial": "candidate-3",
+        "case": "generic-outcome-is-valid",
+        "nativeStatus": "drafted",
+        "acceptedSha256": "d7fc606e733fe2a5217e17ba5f387326519b70444e666679b59e9be5f1301f19",
+        "responseDigests": [
+          "6034e3a5e13a0b2d51553cbab9ad5b95bdc957492e498222c2ef6c7a108aa44b"
+        ],
+        "verdict": "pass",
+        "basis": "Read all script/command/invocation/wrapper and publication assertions, including cases and DoD. The three SDK publication outcomes remain explicit even though their concrete invocation is unverified. The real docs:check declaration stays independent, with uninspected implementation honestly unknown; no equivalence, absent required task, shim, installation or executed result is invented."
+      },
+      {
+        "at": "2026-11-04T23:51:39.501612+00:00",
+        "assessor": "Codex contributor agent; explicit scoped review, not human or native approval",
+        "trial": "candidate-3",
+        "case": "exact-factual-citation",
+        "nativeStatus": "drafted",
+        "acceptedSha256": "e4531a3eebe4eaff1d99ae5af9a696af3153f8976326af9e2ebfb4725c728104",
+        "responseDigests": [
+          "fa467cfb2af46a3cafb0bcf001a567ed69d130369c21ecf29057809e27a97696"
+        ],
+        "verdict": "pass",
+        "basis": "Read all exact-identity, discrepancy and citation statements. The correct owner blob and SHA-256 match independently verified immutable bytes everywhere they are presented as verified. The supplied a6f... typo remains explicitly rejected, never accepted as the owner identity. This is exact factual fidelity within the frozen case, not proof of universal prose accuracy or complete provider tool reads.",
+        "citationAudit": {
+          "path": "specs/foundation.md",
+          "blob": "16f39aed096aae5cd8dee237d607ae606e802d2e",
+          "sha256": "7edf1cb9ad46f8c06db97ecef6c8ddb4bc06bcb2a7793a1f4c6c8533a205ad60",
+          "inputMistype": "Explicit mismatch and exact replacement retained"
+        }
+      },
+      {
+        "at": "2026-11-04T23:55:13.944232+00:00",
+        "assessor": "Codex contributor agent; explicit scoped review, not human or native approval",
+        "trial": "candidate-3",
+        "case": "retained-refinements-and-future-paths",
+        "nativeStatus": "drafted",
+        "acceptedSha256": "37fed9df3e77616a43aef1f9da5d73fd783d6d662fcff6c3b88f8bea1eca71aa",
+        "responseDigests": [
+          "e7a8cf84d4f9a64534dba935a0f55ea8d219bfae49c13677cdec3ba01e9cbd4f"
+        ],
+        "verdict": "pass",
+        "basis": "Explicitly read all18 supplied/actual assertion pairs and their concrete triggers, negative effects and retained-state outcomes. Each retains its exact supplied identity as an operative section14 definition. The visible native Path/Change table was checked independently for every one of the95 exact requested targets and its actual create operation, not merely row counts. Existing owner baseline remains required and uncounted; all cases/artifacts stay planned, without executed or existing-file claims.",
+        "assertionReviews": [
+          {
+            "caseId": "fixture-protocol-C01",
+            "suppliedAssertion": "Restored bootstrap absence: after restoring a checkpoint without bootstrap state, no initial work is silently created; the next explicit bootstrap records exactly one generation.",
+            "actualScenario": "Given a restored checkpoint with no bootstrap state, when restore completes, then no initial work exists; when the next explicit bootstrap runs, exactly one generation is recorded.",
+            "verdict": "pass",
+            "basis": "Restore without bootstrap creates no initial work; only the next explicit bootstrap records exactly one generation."
+          },
+          {
+            "caseId": "fixture-protocol-C02",
+            "suppliedAssertion": "Final source-scan unit with duplicate lookahead: a full final chunk whose lookahead is only already-seen records closes at the exact unique-record boundary without an empty extra cycle.",
+            "actualScenario": "Given a full final scan chunk and lookahead containing only already-seen records, when the scan closes, then it ends at the exact unique-record boundary without an empty extra cycle.",
+            "verdict": "pass",
+            "basis": "The full final chunk has duplicate-only lookahead, closes at the exact unique-record boundary, and adds no empty cycle."
+          },
+          {
+            "caseId": "fixture-protocol-C03",
+            "suppliedAssertion": "Cross-generation closed-cycle replay: replaying a completion token from the previous generation cannot complete or reopen the current generation.",
+            "actualScenario": "Given a current generation and a completion token from its previous generation, when replayed, then the current generation is neither completed nor reopened.",
+            "verdict": "pass",
+            "basis": "A prior-generation completion token neither completes nor reopens the current generation."
+          },
+          {
+            "caseId": "fixture-protocol-C04",
+            "suppliedAssertion": "Independent high-revision journals: two independent journals may each have the same high revision; resuming one cannot consume the other journal checkpoint.",
+            "actualScenario": "Given two independent journals at the same high revision, when one resumes, then it does not consume the other journal’s checkpoint.",
+            "verdict": "pass",
+            "basis": "Independent equal-high-revision journals cannot consume each other's checkpoints on resume."
+          },
+          {
+            "caseId": "fixture-protocol-C05",
+            "suppliedAssertion": "Genuine-nine late-migration failure: when the persisted storage version really is nine and a late migration fails, the transaction rolls back every new record and retains version nine.",
+            "actualScenario": "Given persisted storage version nine and a failing late migration, when migration is attempted, then every new record is rolled back and version nine remains.",
+            "verdict": "pass",
+            "basis": "Persisted version really is nine; late migration failure rolls back every new record and retains version nine."
+          },
+          {
+            "caseId": "fixture-protocol-C06",
+            "suppliedAssertion": "Inclusive stop boundary: an item at the exact configured stopping instant is included once and the immediately later item is deferred.",
+            "actualScenario": "Given a configured stopping instant, when one item is exactly at it and another immediately later, then the boundary item is included once and the later item is deferred.",
+            "verdict": "pass",
+            "basis": "The exact stop-boundary item is included once and the immediately later item is deferred."
+          },
+          {
+            "caseId": "fixture-protocol-C07",
+            "suppliedAssertion": "Canceled outstanding cursor: canceling an active cursor prevents its later response from appending work to a replacement cursor.",
+            "actualScenario": "Given an active cursor that is canceled and a replacement cursor, when the canceled cursor responds later, then its response appends no work to the replacement.",
+            "verdict": "pass",
+            "basis": "After cancellation/replacement, the old cursor's later response cannot append to the replacement."
+          },
+          {
+            "caseId": "fixture-protocol-C08",
+            "suppliedAssertion": "Duplicate continuation request: replaying the same accepted continuation key returns its prior batch without incrementing its counters.",
+            "actualScenario": "Given an accepted continuation key, when the same key is replayed, then its prior batch is returned and counters do not increment.",
+            "verdict": "pass",
+            "basis": "Replaying the accepted continuation key returns its prior batch without incrementing counters."
+          },
+          {
+            "caseId": "fixture-protocol-C09",
+            "suppliedAssertion": "Writer lease expires during scan: the expired writer cannot commit the final batch and the new lease holder retains its independently accepted progress.",
+            "actualScenario": "Given a writer lease that expires during scan and a new lease holder with independently accepted progress, when the expired writer submits the final batch, then it cannot commit and the new holder’s progress remains.",
+            "verdict": "pass",
+            "basis": "The expired writer cannot commit the final batch, while the new holder's independently accepted progress remains."
+          },
+          {
+            "caseId": "fixture-protocol-C10",
+            "suppliedAssertion": "Checkpoint checksum mismatch: recovery refuses the mismatched checkpoint without deleting the last independently verified checkpoint.",
+            "actualScenario": "Given a checkpoint with a checksum mismatch and a last independently verified checkpoint, when recovery runs, then it refuses the mismatch without deleting the verified checkpoint.",
+            "verdict": "pass",
+            "basis": "Checksum-mismatched recovery is refused and the last independently verified checkpoint is preserved."
+          },
+          {
+            "caseId": "fixture-protocol-C11",
+            "suppliedAssertion": "Clock moves backward after resume: the monotonic deadline is not renewed by a backward wall-clock adjustment.",
+            "actualScenario": "Given a resumed monotonic deadline, when wall time moves backward, then the deadline is not renewed.",
+            "verdict": "pass",
+            "basis": "A backward wall-clock change after resume does not renew the monotonic deadline."
+          },
+          {
+            "caseId": "fixture-protocol-C12",
+            "suppliedAssertion": "Zero-result source generation: a completed empty scan advances the explicit generation once while preserving its no-work reason.",
+            "actualScenario": "Given a completed empty source scan, when completion is recorded, then the explicit generation advances once and the no-work reason is preserved.",
+            "verdict": "pass",
+            "basis": "Completed empty scanning advances the explicit generation once and preserves its no-work reason."
+          },
+          {
+            "caseId": "fixture-protocol-C13",
+            "suppliedAssertion": "Pending journal after restart: restart preserves pending acknowledged entries and does not count them as newly generated work.",
+            "actualScenario": "Given acknowledged journal entries pending at restart, when restart recovery completes, then entries remain pending and are not counted as newly generated work.",
+            "verdict": "pass",
+            "basis": "Restart retains pending acknowledged entries and does not recount them as newly generated work."
+          },
+          {
+            "caseId": "fixture-protocol-C14",
+            "suppliedAssertion": "Simultaneous same-local-day requests: two accepted requests sharing a local day retain separate command identities and only their own results.",
+            "actualScenario": "Given two accepted requests sharing a local day, when each completes, then they retain separate command identities and only their own results.",
+            "verdict": "pass",
+            "basis": "Two accepted requests on the same local day retain distinct command identities and only their own results."
+          },
+          {
+            "caseId": "fixture-protocol-C15",
+            "suppliedAssertion": "Previous-generation cleanup: retiring an old generation removes only its owned journal and cannot delete a live generation checkpoint.",
+            "actualScenario": "Given an old generation and a live generation checkpoint, when old-generation cleanup runs, then it removes only its owned journal and leaves the live checkpoint intact.",
+            "verdict": "pass",
+            "basis": "Old-generation retirement removes only its owned journal and preserves a live generation checkpoint."
+          },
+          {
+            "caseId": "fixture-protocol-C16",
+            "suppliedAssertion": "Authentication revoked before commit: an authorized read followed by revocation cannot commit its pending state transition.",
+            "actualScenario": "Given an authorized read followed by authorization revocation before commit, when the pending transition attempts commit, then no state transition commits.",
+            "verdict": "pass",
+            "basis": "An authorized read followed by pre-commit revocation cannot commit the pending state transition."
+          },
+          {
+            "caseId": "fixture-protocol-C17",
+            "suppliedAssertion": "Late duplicate acknowledgment: a repeated acknowledgment after checkpoint compaction preserves the already closed result without recreating state.",
+            "actualScenario": "Given a closed result after checkpoint compaction, when its acknowledgment is repeated, then the closed result remains and no state is recreated.",
+            "verdict": "pass",
+            "basis": "A repeated acknowledgment after compaction preserves the closed result without recreating state."
+          },
+          {
+            "caseId": "fixture-protocol-C18",
+            "suppliedAssertion": "Independent recovery failure: a failed recovery for one stream leaves the other stream readable with its exact accepted revision.",
+            "actualScenario": "Given two streams and recovery fails for one, when the other is read, then it remains readable at its exact accepted revision.",
+            "verdict": "pass",
+            "basis": "One stream's failed recovery leaves the other readable at its exact accepted revision."
+          }
+        ],
+        "createPathAudit": {
+          "method": "Per-target comparison against the operative visible native table and complete immutable source inventory; no count-only inference.",
+          "selectedBase": "ca4c453a795402a904ca3c4e968d1721c1cd6a7f",
+          "entries": [
+            {
+              "path": "docs/proposed-evidence/item-01.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-02.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-03.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-04.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-05.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-06.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-07.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-08.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-09.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-10.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-11.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-12.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-13.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-14.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-15.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-16.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-17.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-18.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-19.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-20.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-21.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-22.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-23.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-24.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-25.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-26.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-27.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-28.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-29.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-30.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-31.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-32.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-33.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-34.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-35.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-36.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-37.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-38.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-39.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-40.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-41.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-42.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-43.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-44.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-45.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-46.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-47.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-48.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-49.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-50.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-51.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-52.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-53.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-54.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-55.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-56.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-57.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-58.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-59.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-60.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-61.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-62.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-63.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-64.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-65.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-66.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-67.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-68.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-69.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-70.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-71.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-72.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-73.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-74.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-75.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-76.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-77.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-78.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-79.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-80.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-81.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-82.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-83.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-84.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-85.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-86.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-87.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-88.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-89.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-90.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-91.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-92.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-93.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-94.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            },
+            {
+              "path": "docs/proposed-evidence/item-95.md",
+              "actualChange": "create",
+              "actualOccurrences": 1,
+              "absentAtSelectedBase": true,
+              "verdict": "pass"
+            }
+          ]
+        },
+        "scopeLimit": "The18 assertions and95 creates are one frozen fidelity case, not113 new SDK tests or executed consumer acceptance."
+      }
+    ]
+  },
+  "supplementalSourceFactAudit": {
+    "at": "2026-11-04T21:38:03.165337+00:00",
+    "case": "absent-copied-scripts",
+    "sourceCommit": "ca4c453a795402a904ca3c4e968d1721c1cd6a7f",
+    "path": "scripts/check-docs.cjs",
+    "existsAsRegularSelectedFile": true,
+    "blob": "78feff2f27c56be69f04731e45713d4505df0fc1",
+    "sha256": "2773b3e60f20828c34c42f6b332ae909f00d417fdbc22367fd5180705843a126",
+    "basis": "Actual immutable Git tree/object lookup, not catalog membership or provider assertion.",
+    "baseline": [
+      {
+        "trial": "baseline-1",
+        "nativeStatus": "blocked",
+        "audit": "No accepted document; native rejection already fails."
+      },
+      {
+        "trial": "baseline-2",
+        "nativeStatus": "drafted",
+        "audit": "Accepted document names the actual docs:check declaration and references its existing script; it does not assert this script absent. Generic unsupported-catalog scenario does not prove tree absence."
+      },
+      {
+        "trial": "baseline-3",
+        "nativeStatus": "blocked",
+        "audit": "No accepted document; native rejection already fails."
+      }
+    ],
+    "rejectedV10": [
+      {
+        "trial": "candidate-1",
+        "assertion": "No scripts/check-docs.cjs file is present in the selected tree.",
+        "verdict": "fail",
+        "acceptedSha256": "e3c711cc0530210c50dde04574ecea194a22c99772f5d35e48fd58bc1c94e0ef",
+        "responseDigests": [
+          "320b26538a5e4a806ffd32caaa585ec8322a85c917899383789353daa5a11cf9"
+        ]
+      },
+      {
+        "trial": "candidate-3",
+        "assertion": "The selected file inventory does not contain that entrypoint.",
+        "verdict": "fail",
+        "acceptedSha256": "6255a79919a7ab18a8733e4907a2b57e3bfe0f0a0c3238ddc5be340b0c91a053",
+        "responseDigests": [
+          "f7c607511820926b513f8621c4f28f98be3696f2de117d3735bcb9fe5de4abd0"
+        ]
+      }
+    ],
+    "acceptance": "For each final C02 output explicitly review material script availability statements against these selected-source facts. Uninspected/unknown is allowed; false absence is not. Do not claim general precision of every generated sentence."
+  }
+}

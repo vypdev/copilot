@@ -28,6 +28,7 @@ export interface BoundBugbotContextReadPorts {
     ): Promise<BoundedBugbotRead<Readonly<Record<string, PullRequestReviewThreadState>>>>;
     getReviewDiffSnapshot(
         pullRequestNumber: number,
+        expectedHeadSha?: string,
     ): Promise<BoundedBugbotRead<PullRequestReviewDiffSnapshot>>;
     getPullRequestHeadSha(pullRequestNumber: number): Promise<string | undefined>;
     getPullRequestReviewCommentBody(

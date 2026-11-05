@@ -1,0 +1,438 @@
+{
+  "schemaVersion": 1,
+  "issue": 845,
+  "kind": "Actual current domain validators with independently authored fixture data; no live provider or consumer execution",
+  "gitBase": "16bf97fff42670bc8718a40f02a518a0f855b634",
+  "approvedSDK": {
+    "sourceCommit": "771dc505ee24d5ea37883749ae298c27f1d6b337",
+    "mergedAs": "16bf97fff42670bc8718a40f02a518a0f855b634",
+    "cliSha256": "8cb351789cd82f9ef9d825fd97d3b46a87c50683ec551ee71b76bc9028313451"
+  },
+  "scope": "Actual current SDK validation functions loaded from exact source. Independently authored 48-row fixture and identical owners/inventory across phrase variants. No provider, consumer implementation execution, hosted Action or historical checkpoint-input equality claim.",
+  "readOnlyConsumerContext": {
+    "path": "specs/household-entry-interface.md",
+    "sha": "ff87750ca63faed8a650718900a52e9ce38e648d",
+    "size": 50477,
+    "html_url": "https://github.com/vypdev/domus/blob/ca55cdb56779573a0dd45b47b9546b74b4ffcc74/specs/household-entry-interface.md",
+    "sha256": "68c3f90d903290913ea517886487bbbfa12ca392ff0050a720571b866fcb10d4",
+    "ref": "ca55cdb56779573a0dd45b47b9546b74b4ffcc74",
+    "gitBlobVerified": true,
+    "literalRows": 48,
+    "limitations": "Reference document was read at the reported immutable commit; its historical owner/inventory checkpoint was not reconstructed or relabeled as this controlled fixture."
+  },
+  "before": {
+    "fixture": {
+      "baseSha256": "9a967037bf597e9e5035b5574e332f0a63fd747531b45e9e50cc3b571e5e3e8e",
+      "literalRows": 48,
+      "caseRowsSha256": "5598a710b58146acf599161334323f7d0f1188411ceae8b1c9fed1f9c65d5f83",
+      "reverseMappingSha256": "7eca819470e2e134200e223289dbde40b47d1606aa8dc655f9af15e7aef54522",
+      "baseline": {
+        "valid": true
+      }
+    },
+    "positives": [
+      {
+        "prose": "Existing household DEL/C1 read compatibility remains separate from stronger new-setup input validation.",
+        "inputSha256": "73cf04eea53bcaf6027144e271ef7e4267ee5499b04f873396e92810ed43dc35",
+        "literalRowsUnchanged": true,
+        "reverseMappingUnchanged": true,
+        "result": {
+          "valid": false,
+          "name": "Error",
+          "message": "The SDD draft violates its case-identity consistency contract.",
+          "reason": "case-identity",
+          "diagnostic": {
+            "reason": "case-identity",
+            "phase": "validation",
+            "facts": [
+              {
+                "detail": "case-shorthand",
+                "section": 0,
+                "expected": 0,
+                "observed": 1
+              }
+            ]
+          }
+        }
+      },
+      {
+        "prose": "Connector C1 is connected to component C2.",
+        "inputSha256": "7d56f8d8a513c14e380fcd92344c9b570ba6ce04a6e51b366ce0bb6b1c5a50b1",
+        "literalRowsUnchanged": true,
+        "reverseMappingUnchanged": true,
+        "result": {
+          "valid": false,
+          "name": "Error",
+          "message": "The SDD draft violates its case-identity consistency contract.",
+          "reason": "case-identity",
+          "diagnostic": {
+            "reason": "case-identity",
+            "phase": "validation",
+            "facts": [
+              {
+                "detail": "case-shorthand",
+                "section": 0,
+                "expected": 0,
+                "observed": 2
+              }
+            ]
+          }
+        }
+      },
+      {
+        "prose": "The Unicode C1 control set remains readable.",
+        "inputSha256": "6fab92eb599362d156a4b81cdc851960ef8ef7392404e9e78fed5143ed263ffe",
+        "literalRowsUnchanged": true,
+        "reverseMappingUnchanged": true,
+        "result": {
+          "valid": false,
+          "name": "Error",
+          "message": "The SDD draft violates its case-identity consistency contract.",
+          "reason": "case-identity",
+          "diagnostic": {
+            "reason": "case-identity",
+            "phase": "validation",
+            "facts": [
+              {
+                "detail": "case-shorthand",
+                "section": 0,
+                "expected": 0,
+                "observed": 1
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "negatives": [
+      {
+        "name": "explicit shorthand",
+        "inputSha256": "873527d5846a20d40e83c226cdb0781d3bf22327f8cc960a688f51f836036f0a",
+        "result": {
+          "valid": false,
+          "name": "Error",
+          "message": "The SDD draft violates its case-identity consistency contract.",
+          "reason": "case-identity",
+          "diagnostic": {
+            "reason": "case-identity",
+            "phase": "validation",
+            "facts": [
+              {
+                "detail": "case-shorthand",
+                "section": 0,
+                "expected": 0,
+                "observed": 2
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "shorthand range",
+        "inputSha256": "3e38ccea842dacb5f3439abe56463756e57e2a09c16160d1138b215e3458ae8a",
+        "result": {
+          "valid": false,
+          "name": "Error",
+          "message": "The SDD draft violates its case-identity consistency contract.",
+          "reason": "case-identity",
+          "diagnostic": {
+            "reason": "case-identity",
+            "phase": "validation",
+            "facts": [
+              {
+                "detail": "case-shorthand",
+                "section": 0,
+                "expected": 0,
+                "observed": 2
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "unknown full reference",
+        "inputSha256": "a3a6c51de6f2a06d7ab4d6eab91067b00e0fb882d0f5e555715b94562da081bf",
+        "result": {
+          "valid": false,
+          "name": "Error",
+          "message": "The SDD draft violates its case-identity consistency contract.",
+          "reason": "case-identity",
+          "diagnostic": {
+            "reason": "case-identity",
+            "phase": "validation",
+            "facts": [
+              {
+                "detail": "case-reference",
+                "section": 0
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "identity shorthand",
+        "inputSha256": "8305613a63898812cc24f7c678f176cc900485e63f774f5d0f5e401d8358c8ca",
+        "result": {
+          "valid": false,
+          "name": "Error",
+          "message": "The SDD draft violates its case-identity consistency contract.",
+          "reason": "case-identity",
+          "diagnostic": {
+            "reason": "case-identity",
+            "phase": "validation",
+            "facts": [
+              {
+                "detail": "identifier-list",
+                "section": 14,
+                "row": 1,
+                "expected": 0,
+                "observed": 1
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "reserved identity",
+        "inputSha256": "c06a1138eb2502068c5890d369fde7341175bd4b61153fb1e2e1272aecd32d7e",
+        "result": {
+          "valid": false,
+          "name": "Error",
+          "message": "The SDD draft violates its case-identity consistency contract.",
+          "reason": "case-identity",
+          "diagnostic": {
+            "reason": "case-identity",
+            "phase": "validation",
+            "facts": [
+              {
+                "detail": "case-reserved",
+                "section": 14,
+                "expected": 0,
+                "observed": 1
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "invalid reverse mapping",
+        "inputSha256": "32ff4787c3f6eade0bd71ec36a6bd7d64af7a5422c5ae7612c2c47ffd01673f6",
+        "result": {
+          "valid": false,
+          "name": "Error",
+          "message": "The SDD draft violates its requirement-mapping consistency contract.",
+          "reason": "requirement-mapping",
+          "diagnostic": {
+            "reason": "requirement-mapping",
+            "phase": "validation",
+            "facts": [
+              {
+                "detail": "traceability-links",
+                "section": 17,
+                "row": 1,
+                "expected": 24,
+                "observed": 23
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "loaded": {
+      "src/domain/pre_branch_sdd.ts": "636db20b18cd7b694c2d68e2d5fc53f5387daae90bcb231c98c2c2534d6125c3",
+      "src/domain/sdd_catalog_compatibility.ts": "150d56f78b12133d61c60d3321abbde254b23be8d55144f865bddae2b53b5d11",
+      "src/domain/sdd_validation_diagnostic.ts": "0ed4365e2e3739b5e3baf083bbdc73ecda3f09dc5a6e105b1cc12f72c90d7fb0",
+      "src/domain/sdd_draft_consistency.ts": "8fc8cb8632e99b0c7509143e7fefce807ed6d962ae797221862ef37e17db63d5",
+      "src/domain/sdd_repository_reference.ts": "32ab430eb76e7fc8058b678e9b7e2bfdc7f1808c85a0451300fa961d223d374c",
+      "src/domain/sdd_visible_references.ts": "b31e3804f0f18dfc5f7132d87b40922a0fc038a18f0df9723cade82422c9a407"
+    }
+  },
+  "after": {
+    "fixture": {
+      "baseSha256": "9a967037bf597e9e5035b5574e332f0a63fd747531b45e9e50cc3b571e5e3e8e",
+      "literalRows": 48,
+      "caseRowsSha256": "5598a710b58146acf599161334323f7d0f1188411ceae8b1c9fed1f9c65d5f83",
+      "reverseMappingSha256": "7eca819470e2e134200e223289dbde40b47d1606aa8dc655f9af15e7aef54522",
+      "baseline": {
+        "valid": true
+      }
+    },
+    "positives": [
+      {
+        "prose": "Existing household DEL/C1 read compatibility remains separate from stronger new-setup input validation.",
+        "inputSha256": "73cf04eea53bcaf6027144e271ef7e4267ee5499b04f873396e92810ed43dc35",
+        "literalRowsUnchanged": true,
+        "reverseMappingUnchanged": true,
+        "result": {
+          "valid": true
+        }
+      },
+      {
+        "prose": "Connector C1 is connected to component C2.",
+        "inputSha256": "7d56f8d8a513c14e380fcd92344c9b570ba6ce04a6e51b366ce0bb6b1c5a50b1",
+        "literalRowsUnchanged": true,
+        "reverseMappingUnchanged": true,
+        "result": {
+          "valid": true
+        }
+      },
+      {
+        "prose": "The Unicode C1 control set remains readable.",
+        "inputSha256": "6fab92eb599362d156a4b81cdc851960ef8ef7392404e9e78fed5143ed263ffe",
+        "literalRowsUnchanged": true,
+        "reverseMappingUnchanged": true,
+        "result": {
+          "valid": true
+        }
+      }
+    ],
+    "negatives": [
+      {
+        "name": "explicit shorthand",
+        "inputSha256": "873527d5846a20d40e83c226cdb0781d3bf22327f8cc960a688f51f836036f0a",
+        "result": {
+          "valid": false,
+          "name": "Error",
+          "message": "The SDD draft violates its case-identity consistency contract.",
+          "reason": "case-identity",
+          "diagnostic": {
+            "reason": "case-identity",
+            "phase": "validation",
+            "facts": [
+              {
+                "detail": "case-shorthand",
+                "section": 0,
+                "expected": 0,
+                "observed": 2
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "shorthand range",
+        "inputSha256": "3e38ccea842dacb5f3439abe56463756e57e2a09c16160d1138b215e3458ae8a",
+        "result": {
+          "valid": false,
+          "name": "Error",
+          "message": "The SDD draft violates its case-identity consistency contract.",
+          "reason": "case-identity",
+          "diagnostic": {
+            "reason": "case-identity",
+            "phase": "validation",
+            "facts": [
+              {
+                "detail": "case-shorthand",
+                "section": 0,
+                "expected": 0,
+                "observed": 2
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "unknown full reference",
+        "inputSha256": "a3a6c51de6f2a06d7ab4d6eab91067b00e0fb882d0f5e555715b94562da081bf",
+        "result": {
+          "valid": false,
+          "name": "Error",
+          "message": "The SDD draft violates its case-identity consistency contract.",
+          "reason": "case-identity",
+          "diagnostic": {
+            "reason": "case-identity",
+            "phase": "validation",
+            "facts": [
+              {
+                "detail": "case-reference",
+                "section": 0
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "identity shorthand",
+        "inputSha256": "8305613a63898812cc24f7c678f176cc900485e63f774f5d0f5e401d8358c8ca",
+        "result": {
+          "valid": false,
+          "name": "Error",
+          "message": "The SDD draft violates its case-identity consistency contract.",
+          "reason": "case-identity",
+          "diagnostic": {
+            "reason": "case-identity",
+            "phase": "validation",
+            "facts": [
+              {
+                "detail": "identifier-list",
+                "section": 14,
+                "row": 1,
+                "expected": 0,
+                "observed": 1
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "reserved identity",
+        "inputSha256": "c06a1138eb2502068c5890d369fde7341175bd4b61153fb1e2e1272aecd32d7e",
+        "result": {
+          "valid": false,
+          "name": "Error",
+          "message": "The SDD draft violates its case-identity consistency contract.",
+          "reason": "case-identity",
+          "diagnostic": {
+            "reason": "case-identity",
+            "phase": "validation",
+            "facts": [
+              {
+                "detail": "case-reserved",
+                "section": 14,
+                "expected": 0,
+                "observed": 1
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "invalid reverse mapping",
+        "inputSha256": "32ff4787c3f6eade0bd71ec36a6bd7d64af7a5422c5ae7612c2c47ffd01673f6",
+        "result": {
+          "valid": false,
+          "name": "Error",
+          "message": "The SDD draft violates its requirement-mapping consistency contract.",
+          "reason": "requirement-mapping",
+          "diagnostic": {
+            "reason": "requirement-mapping",
+            "phase": "validation",
+            "facts": [
+              {
+                "detail": "traceability-links",
+                "section": 17,
+                "row": 1,
+                "expected": 24,
+                "observed": 23
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "loaded": {
+      "src/domain/pre_branch_sdd.ts": "636db20b18cd7b694c2d68e2d5fc53f5387daae90bcb231c98c2c2534d6125c3",
+      "src/domain/sdd_catalog_compatibility.ts": "150d56f78b12133d61c60d3321abbde254b23be8d55144f865bddae2b53b5d11",
+      "src/domain/sdd_validation_diagnostic.ts": "0ed4365e2e3739b5e3baf083bbdc73ecda3f09dc5a6e105b1cc12f72c90d7fb0",
+      "src/domain/sdd_draft_consistency.ts": "f0c1db213a8485218ed9b4465e70f421490308c8f7874d8e47cf12d64e2becf8",
+      "src/domain/sdd_repository_reference.ts": "32ab430eb76e7fc8058b678e9b7e2bfdc7f1808c85a0451300fa961d223d374c",
+      "src/domain/sdd_visible_references.ts": "8705d87566ca663d43073d6f946340e2a41f88db37d59d2df4ce11320c825a59",
+      "src/domain/sdd_case_reference.ts": "23bfba93d7b18f65adf4fa67349a2478b07286ddbb3a432bbc59a64d6b78c167"
+    }
+  },
+  "limits": [
+    "The 48 fixture rows are not 48 executed SDK tests.",
+    "The after result binds working-tree source hashes; the Git base is not represented as an immutable after commit.",
+    "Historical consumer owner/inventory checkpoint and raw candidate hashes were not reconstructed."
+  ]
+}

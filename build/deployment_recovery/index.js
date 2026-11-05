@@ -32361,6 +32361,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.readEnglishApplicationErrorMessage = exports.APPLICATION_ERROR_CATALOG_DEFINITIONS = exports.SPANISH_APPLICATION_ERROR_DEFINITION = exports.ENGLISH_APPLICATION_ERROR_DEFINITION = exports.SPANISH_APPLICATION_ERROR_MESSAGES = exports.ENGLISH_APPLICATION_ERROR_MESSAGES = exports.APPLICATION_ERROR_MESSAGE_IDS = exports.APPLICATION_ERROR_CODES = void 0;
 exports.resolveStaticApplicationErrorCatalog = resolveStaticApplicationErrorCatalog;
 exports.resolveApplicationErrorCatalog = resolveApplicationErrorCatalog;
+const branch_sync_publication_messages_1 = __nccwpck_require__(3948);
+const issue_assignment_messages_1 = __nccwpck_require__(1737);
+const progress_capacity_messages_1 = __nccwpck_require__(2818);
 const bugbot_review_diagnostic_labels_1 = __nccwpck_require__(351);
 const comment_command_validation_message_catalog_1 = __nccwpck_require__(2002);
 const application_error_1 = __nccwpck_require__(7790);
@@ -32368,7 +32371,10 @@ const message_catalog_1 = __nccwpck_require__(7097);
 const resolved_message_catalog_policy_1 = __nccwpck_require__(5069);
 const LABEL_KEYS = Object.freeze([
     ...bugbot_review_diagnostic_labels_1.BUGBOT_REVIEW_DIAGNOSTIC_LABEL_KEYS,
-    'impact', 'errorCode', 'action', 'retainedState', 'retryable', 'yes', 'no', 'reference',
+    ...branch_sync_publication_messages_1.BRANCH_SYNC_PUBLICATION_LABEL_KEYS,
+    ...issue_assignment_messages_1.ASSIGNMENT_DIAGNOSTIC_LABEL_KEYS,
+    ...progress_capacity_messages_1.PROGRESS_CAPACITY_LABEL_KEYS,
+    'impact', 'errorCode', 'action', 'retainedState', 'retryable', 'yes', 'no', 'reference', 'draftLengthUnavailable',
 ]);
 const CONTENT_FIELDS = Object.freeze(['impact', 'action', 'retainedState']);
 exports.APPLICATION_ERROR_CODES = Object.freeze(Object.keys(application_error_1.APPLICATION_ERROR_METADATA));
@@ -32380,6 +32386,9 @@ exports.APPLICATION_ERROR_MESSAGE_IDS = Object.freeze([
 ]);
 const ENGLISH_LABELS = Object.freeze({
     ...bugbot_review_diagnostic_labels_1.ENGLISH_REVIEW_DIAGNOSTIC_LABELS,
+    ...branch_sync_publication_messages_1.ENGLISH_BRANCH_SYNC_PUBLICATION_LABELS,
+    ...issue_assignment_messages_1.ENGLISH_ASSIGNMENT_LABELS,
+    ...progress_capacity_messages_1.ENGLISH_PROGRESS_CAPACITY_LABELS,
     impact: 'Impact',
     errorCode: 'Error code',
     action: 'Action',
@@ -32388,9 +32397,13 @@ const ENGLISH_LABELS = Object.freeze({
     yes: 'Yes',
     no: 'No',
     reference: 'Reference',
+    draftLengthUnavailable: 'unavailable',
 });
 const SPANISH_LABELS = Object.freeze({
     ...bugbot_review_diagnostic_labels_1.SPANISH_REVIEW_DIAGNOSTIC_LABELS,
+    ...branch_sync_publication_messages_1.SPANISH_BRANCH_SYNC_PUBLICATION_LABELS,
+    ...issue_assignment_messages_1.SPANISH_ASSIGNMENT_LABELS,
+    ...progress_capacity_messages_1.SPANISH_PROGRESS_CAPACITY_LABELS,
     impact: 'Impacto',
     errorCode: 'Código de error',
     action: 'Acción',
@@ -32399,6 +32412,7 @@ const SPANISH_LABELS = Object.freeze({
     yes: 'Sí',
     no: 'No',
     reference: 'Referencia',
+    draftLengthUnavailable: 'no disponible',
 });
 const ENGLISH_CONTENT = Object.freeze(Object.fromEntries(exports.APPLICATION_ERROR_CODES.map(code => [code, Object.freeze({
         impact: application_error_1.APPLICATION_ERROR_METADATA[code].impact,
@@ -32485,7 +32499,7 @@ const SPANISH_CONTENT = Object.freeze({
     }),
     'validation.evidence-too-large': Object.freeze({
         impact: 'No se pudo evaluar el progreso dentro de los límites fijos de evidencia.',
-        action: 'Inspecciona la comparación completa y la capacidad indicada. La recuperación por partes continúa automáticamente cuando es compatible. Si se interrumpe, vuelve a ejecutar la fuente gestionada actual; una comparación idéntica que excede el límite no obtiene más capacidad.',
+        action: 'Inspecciona la comparación completa y los datos de capacidad disponibles. La continuación por partes acotada pertenece a una sola ejecución; este fallo de capacidad detiene el intento. Reintentar evidencia idéntica que supera el límite no aumenta la capacidad. Conserva toda la aceptación y evidencia, y reporta las cargas no compatibles con el enlace de ejecución.',
         retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas.',
     }),
     'workflow.invalid-event': Object.freeze({
@@ -32529,7 +32543,10 @@ const STORED_CONFIGURATION_ACTION_ES = 'Un mantenedor debe revisar {recoveryGuid
 const STORED_CONFIGURATION_RETAINED_EN = 'The issue/PR description and stored configuration were not changed by this read.';
 const STORED_CONFIGURATION_RETAINED_ES = 'Esta lectura no modificó la descripción de la issue/PR ni su configuración almacenada.';
 const ENGLISH_RECOVERY_CONTENT = Object.freeze({
+    ...issue_assignment_messages_1.ENGLISH_ASSIGNMENT_CONTENT,
+    ...progress_capacity_messages_1.ENGLISH_PROGRESS_CAPACITY_CONTENT,
     ...comment_command_validation_message_catalog_1.ENGLISH_COMMAND_VALIDATION_CONTENT,
+    ...branch_sync_publication_messages_1.ENGLISH_BRANCH_SYNC_PUBLICATION_CONTENT,
     'stored-configuration-schema-missing': Object.freeze({
         impact: 'Automation stopped for issue/PR #{issueNumber}: the stored configuration has no schema version; version {expectedVersion} is required.',
         action: STORED_CONFIGURATION_ACTION_EN,
@@ -32564,6 +32581,16 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
         impact: 'The returned progress result violated its contract; progress was not published.',
         action: 'Inspect the original requirement and response schema. Details: phase {phase}, reason {reason}, field {field}, requirement {requirementId}, original issue line {sourceLineId}. none means no verified identity is available. A fresh attempt may help when the provider can satisfy the unchanged contract; do not relax acceptance or verification.',
         retainedState: 'Existing progress labels and published assessments were preserved. An optional check-publication warning is a separate result.',
+    }),
+    'progress-partition-length-invalid': Object.freeze({
+        impact: 'A progress part still exceeds its response limit after one bounded replacement; progress was not published.',
+        action: 'Inspect part {partitionId}, file {filePath}, unit {unitId}, field {field}: observed {observed} Unicode code points; maximum {maximum}. The replacement must satisfy the unchanged schema. Do not remove files, truncate facts, relax acceptance or bypass verification.',
+        retainedState: 'Existing progress labels and assessments were preserved. No partial percentage or passing verification was published; execution and optional check-publication failures remain separate.',
+    }),
+    'progress-completion-recovery-exhausted': Object.freeze({
+        impact: 'The final progress result still contradicted completion after one complete reassessment; progress was not published.',
+        action: 'Inspect the complete pinned comparison and final facts: phase assessment, field $.progress, reported {reportedProgress}%, requirements {requirementCount}, supported {supportedCount}, missing {missingCount}, unknown {unknownCount}. Start a fresh complete assessment when the provider can satisfy the unchanged contract. These are model observations, not independent execution or approval evidence.',
+        retainedState: 'Existing progress labels and published assessments were preserved. Verification, review, coverage and approval remain independent gates.',
     }),
     'bugbot-review-incomplete': Object.freeze({
         impact: 'Complete Bugbot review is blocked: {resource} {countKind} {observed} {unit}; supported limit {limit} ({profile}).',
@@ -32625,6 +32652,11 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
         action: 'Review the safe validation diagnostics in the issue status card; correct existing paths or explicitly declare intended new files. Retry the same issue workflow.',
         retainedState: 'Existing answers and published SDDs were preserved; no draft was published. Publication checks do not establish runtime acceptance.',
     }),
+    'sdd-source-context-unavailable': Object.freeze({
+        impact: 'SDD {phase} stopped because its selected immutable source view is unavailable. Source: {sourceCommit}. Reason: {reason}.',
+        action: 'Inspect the source-context reason and the linked run. Verify local availability of the selected objects, Git support for --no-lazy-fetch, portable regular source paths and the fixed SDK limits. Correct the prerequisite and retry the same issue workflow; do not restore files into the default checkout or create a branch manually.',
+        retainedState: 'The canonical checkout, existing answers, published SDDs and linked branch were retained; this attempt published no specification or branch.',
+    }),
     'sdd-catalog-unsupported-profile': Object.freeze({
         impact: 'SDD preparation stopped before model analysis because the repository selected a catalog profile unsupported by the installed publication adapter.',
         action: 'Review catalog profile support in the SDD guide. Preserve the native schema, readiness, requirements, evidence and blockers; have a maintainer provide a reviewed compatible adapter, then retry this same issue.',
@@ -32644,6 +32676,11 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
         impact: 'SDD preparation stopped because the draft still lacked required headings or a numeric test budget after one automatic repair.',
         action: 'Retry SDD preparation with the canonical specification template and the explicit acceptance requirements.',
         retainedState: 'Existing answers and published SDDs were preserved; no draft was published.',
+    }),
+    'sdd-draft-response-too-short': Object.freeze({
+        impact: 'The SDD drafting response was below its {minimum} Unicode code-point minimum (observed: {observed}; draft attempt: {attempts}).',
+        action: 'Clarify in the issue description that a complete proposed Markdown document is required, preserving resolved requirements and ownership, then retry the same issue workflow. This failure does not start an automatic regeneration.',
+        retainedState: 'Existing answers, selected ownership and published specifications were retained; this attempt published no specification or branch.',
     }),
     'sdd-draft-size-exceeded': Object.freeze({
         impact: 'SDD preparation stopped because the draft remained too large after one automatic size repair.',
@@ -32712,7 +32749,10 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
     }),
 });
 const SPANISH_RECOVERY_CONTENT = Object.freeze({
+    ...issue_assignment_messages_1.SPANISH_ASSIGNMENT_CONTENT,
+    ...progress_capacity_messages_1.SPANISH_PROGRESS_CAPACITY_CONTENT,
     ...comment_command_validation_message_catalog_1.SPANISH_COMMAND_VALIDATION_CONTENT,
+    ...branch_sync_publication_messages_1.SPANISH_BRANCH_SYNC_PUBLICATION_CONTENT,
     'stored-configuration-schema-missing': Object.freeze({
         impact: 'La automatización se detuvo para la issue/PR #{issueNumber}: la configuración almacenada no tiene versión de esquema; se requiere la versión {expectedVersion}.',
         action: STORED_CONFIGURATION_ACTION_ES,
@@ -32747,6 +32787,16 @@ const SPANISH_RECOVERY_CONTENT = Object.freeze({
         impact: 'El resultado de progreso devuelto incumplió su contrato; no se publicó el progreso.',
         action: 'Inspecciona el requisito original y el esquema de respuesta. Detalles: fase {phase}, motivo {reason}, campo {field}, requisito {requirementId}, línea original de la issue {sourceLineId}. none indica que no hay una identidad verificada. Un nuevo intento puede ayudar si el proveedor cumple el contrato sin cambiarlo; no relajes la aceptación ni la verificación.',
         retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas. Un aviso de publicación del check opcional corresponde a otro resultado.',
+    }),
+    'progress-partition-length-invalid': Object.freeze({
+        impact: 'Una parte del progreso sigue superando el límite de respuesta tras una sustitución acotada; no se publicó el progreso.',
+        action: 'Inspecciona la parte {partitionId}, archivo {filePath}, unidad {unitId}, campo {field}: observado {observed} puntos de código Unicode; máximo {maximum}. La sustitución debe cumplir el mismo esquema. No elimines archivos, recortes los hechos, relajes la aceptación ni eludas la verificación.',
+        retainedState: 'Se conservaron las etiquetas y evaluaciones de progreso. No se publicó ningún porcentaje parcial ni verificación aprobada; los fallos de ejecución y de publicación del check opcional siguen siendo independientes.',
+    }),
+    'progress-completion-recovery-exhausted': Object.freeze({
+        impact: 'El resultado final siguió contradiciendo la completitud después de una reevaluación completa; no se publicó el progreso.',
+        action: 'Inspecciona la comparación completa fijada y los datos finales: fase assessment, campo $.progress, porcentaje {reportedProgress}%, requisitos {requirementCount}, respaldados {supportedCount}, pendientes {missingCount}, desconocidos {unknownCount}. Inicia una evaluación completa nueva cuando el proveedor pueda cumplir el contrato sin cambiarlo. Son observaciones del modelo, no evidencia independiente de ejecución ni aprobación.',
+        retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas. Verificación, revisión, cobertura y aprobación siguen siendo controles independientes.',
     }),
     'bugbot-review-incomplete': Object.freeze({
         impact: 'La revisión completa de Bugbot está bloqueada: {resource} {countKind} {observed} {unit}; límite admitido {limit} ({profile}).',
@@ -32808,6 +32858,11 @@ const SPANISH_RECOVERY_CONTENT = Object.freeze({
         action: 'Revisa los diagnósticos seguros de validación de la tarjeta de estado; corrige las rutas existentes o declara explícitamente los archivos nuevos previstos. Reintenta el workflow de la misma incidencia.',
         retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador. Estas comprobaciones no demuestran la aceptación en ejecución.',
     }),
+    'sdd-source-context-unavailable': Object.freeze({
+        impact: 'Se detuvo la fase {phase} del SDD porque no está disponible la vista del origen inmutable seleccionado. Origen: {sourceCommit}. Motivo: {reason}.',
+        action: 'Revisa el motivo del contexto de origen y la ejecución enlazada. Verifica los objetos locales seleccionados, que Git admita --no-lazy-fetch, las rutas portables de archivos regulares y los límites fijos del SDK. Corrige el requisito y reintenta el workflow de la misma incidencia; no restaures archivos en el checkout predeterminado ni crees una rama manualmente.',
+        retainedState: 'Se conservaron el checkout canónico, las respuestas, los SDD publicados y la rama enlazada; este intento no publicó ninguna especificación ni rama.',
+    }),
     'sdd-catalog-unsupported-profile': Object.freeze({
         impact: 'La preparación del SDD se detuvo antes del análisis del modelo porque el repositorio seleccionó un perfil de catálogo que el adaptador de publicación instalado no admite.',
         action: 'Revisa los perfiles admitidos en la guía de SDD. Conserva el esquema nativo, los estados, requisitos, evidencias y bloqueos; pide a un mantenedor un adaptador compatible revisado y reintenta esta misma incidencia.',
@@ -32827,6 +32882,11 @@ const SPANISH_RECOVERY_CONTENT = Object.freeze({
         impact: 'La preparación del SDD se detuvo porque seguían faltando secciones obligatorias o un presupuesto numérico de pruebas tras un intento automático de corrección.',
         action: 'Reintenta la preparación del SDD con la plantilla canónica y los criterios de aceptación explícitos.',
         retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador.',
+    }),
+    'sdd-draft-response-too-short': Object.freeze({
+        impact: 'La respuesta de redacción del SDD no alcanzó el mínimo de {minimum} puntos de código Unicode (cantidad observada: {observed}; intento de borrador: {attempts}).',
+        action: 'Aclara en la descripción de esta incidencia que se requiere una propuesta Markdown completa, conservando los requisitos resueltos y su propietario, y repite el mismo workflow. Este fallo no inicia una regeneración automática.',
+        retainedState: 'Se conservaron las respuestas, la propiedad seleccionada y las especificaciones publicadas; este intento no publicó ninguna especificación ni rama.',
     }),
     'sdd-draft-size-exceeded': Object.freeze({
         impact: 'La preparación del SDD se detuvo porque el borrador seguía siendo demasiado largo tras un intento automático de reducción.',
@@ -32933,6 +32993,56 @@ function resolveApplicationErrorCatalog(locale, configuration, resolver) {
 }
 const readEnglishApplicationErrorMessage = (id, variables = {}) => (0, message_catalog_1.renderCatalogMessage)(exports.ENGLISH_APPLICATION_ERROR_MESSAGES[id], variables, 'en-US');
 exports.readEnglishApplicationErrorMessage = readEnglishApplicationErrorMessage;
+
+
+/***/ }),
+
+/***/ 3948:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SPANISH_BRANCH_SYNC_PUBLICATION_CONTENT = exports.ENGLISH_BRANCH_SYNC_PUBLICATION_CONTENT = exports.SPANISH_BRANCH_SYNC_PUBLICATION_LABELS = exports.ENGLISH_BRANCH_SYNC_PUBLICATION_LABELS = exports.BRANCH_SYNC_PUBLICATION_LABEL_KEYS = void 0;
+exports.BRANCH_SYNC_PUBLICATION_LABEL_KEYS = ['syncRemoteUnchanged', 'syncRemoteChanged', 'syncRemoteUnverified', 'syncPushAttempted', 'syncPushNotAttempted'];
+exports.ENGLISH_BRANCH_SYNC_PUBLICATION_LABELS = {
+    syncRemoteUnchanged: 'The observed remote still points to the original head; the candidate was not observed as published.',
+    syncRemoteChanged: 'The remote has a different head; this observation does not establish whether it includes the candidate.',
+    syncRemoteUnverified: 'The remote head could not be established; publication remains unknown.',
+    syncPushAttempted: 'A normal push was attempted.', syncPushNotAttempted: 'No push was attempted.',
+};
+exports.SPANISH_BRANCH_SYNC_PUBLICATION_LABELS = {
+    syncRemoteUnchanged: 'El remoto observado conserva el head original; no se observó la publicación del candidato.',
+    syncRemoteChanged: 'El remoto tiene otro head; esta observación no determina si incluye el candidato.',
+    syncRemoteUnverified: 'No se pudo establecer el head remoto; la publicación sigue sin verificarse.',
+    syncPushAttempted: 'Se intentó un push normal.', syncPushNotAttempted: 'No se intentó ningún push.',
+};
+const retained = 'The local merge commit step finished; candidate identity: {candidateSha}. {pushStatus} {remoteStatus} Original head: {originalSha}; observed head: {observedSha}. Recovery did not reset or abort the committed workspace; runner-local storage is temporary.';
+const retainedSpanish = 'Terminó el paso de commit del merge local; identidad del candidato: {candidateSha}. {pushStatus} {remoteStatus} Head original: {originalSha}; head observado: {observedSha}. La recuperación no restableció ni abortó el espacio de trabajo confirmado; el almacenamiento del runner es temporal.';
+exports.ENGLISH_BRANCH_SYNC_PUBLICATION_CONTENT = {
+    'branch-sync-workflow-write-required': {
+        impact: 'The remote rejected workflow-file publication by the configured publisher.',
+        action: 'A maintainer must review the publisher credential and grant the appropriate workflow-write capability through its normal configuration, then rerun {syncCommand} from the current managed PR. Do not retry unchanged credentials or bypass the managed branch. Recovery guide: {publicationGuide}.',
+        retainedState: retained,
+    },
+    'branch-sync-publication-failed': {
+        impact: 'Branch synchronization did not reach a verified remote publication ({reason}).',
+        action: 'Inspect the current native remote head and the retained candidate before a fresh Action-managed synchronization. An unavailable observation is not proof that nothing was published. Recovery guide: {publicationGuide}.',
+        retainedState: retained,
+    },
+};
+exports.SPANISH_BRANCH_SYNC_PUBLICATION_CONTENT = {
+    'branch-sync-workflow-write-required': {
+        impact: 'El remoto rechazó la publicación de archivos de workflow mediante la credencial configurada.',
+        action: 'Un mantenedor debe revisar la credencial y conceder la capacidad de escritura de workflows adecuada mediante su configuración habitual; después, debe ejecutar {syncCommand} desde la PR gestionada actual. No repitas la misma credencial ni eludas la rama gestionada. Guía: {publicationGuide}.',
+        retainedState: retainedSpanish,
+    },
+    'branch-sync-publication-failed': {
+        impact: 'La sincronización no alcanzó una publicación remota verificada ({reason}).',
+        action: 'Inspecciona el head remoto nativo actual y el candidato conservado antes de una nueva sincronización gestionada por la Action. No disponer de una observación no demuestra que no se publicara nada. Guía: {publicationGuide}.',
+        retainedState: retainedSpanish,
+    },
+};
 
 
 /***/ }),
@@ -33426,6 +33536,58 @@ function deploymentCopy(catalog) {
 
 /***/ }),
 
+/***/ 1737:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SPANISH_ASSIGNMENT_CONTENT = exports.ENGLISH_ASSIGNMENT_CONTENT = exports.SPANISH_ASSIGNMENT_LABELS = exports.ASSIGNMENT_DIAGNOSTIC_LABEL_KEYS = exports.ENGLISH_ASSIGNMENT_LABELS = void 0;
+exports.ENGLISH_ASSIGNMENT_LABELS = {
+    assignmentRead: 'reading current assignees', assignmentLookup: 'checking organization membership',
+    assignmentSelect: 'selecting additional members', assignmentCreator: 'assigning the creator', assignmentMembers: 'assigning additional members',
+    assignmentReadOperation: 'issue assignees', assignmentTeams: 'organization teams', assignmentTeamMembers: 'organization team members',
+    assignmentAdd: 'add issue assignees', assignmentClient: 'provider client initialization', assignmentUnavailable: 'unavailable',
+    assignmentReadVerified: 'verified', assignmentWriteNone: 'not attempted', assignmentWriteUnverified: 'outcome unverified; it may have applied',
+    assignmentWriteVerified: 'confirmed', assignmentAccess: 'Check the configured credential, documented access and target resource before retrying. A 404 alone does not establish that a private resource is absent.',
+};
+exports.ASSIGNMENT_DIAGNOSTIC_LABEL_KEYS = Object.keys(exports.ENGLISH_ASSIGNMENT_LABELS);
+exports.SPANISH_ASSIGNMENT_LABELS = {
+    assignmentRead: 'leer las personas asignadas', assignmentLookup: 'consultar los miembros de la organización',
+    assignmentSelect: 'seleccionar miembros adicionales', assignmentCreator: 'asignar al autor', assignmentMembers: 'asignar miembros adicionales',
+    assignmentReadOperation: 'personas asignadas a la issue', assignmentTeams: 'equipos de la organización', assignmentTeamMembers: 'miembros de los equipos',
+    assignmentAdd: 'añadir personas asignadas', assignmentClient: 'inicialización del cliente', assignmentUnavailable: 'no disponible',
+    assignmentReadVerified: 'verificada', assignmentWriteNone: 'no intentada', assignmentWriteUnverified: 'resultado sin verificar; pudo aplicarse',
+    assignmentWriteVerified: 'confirmada', assignmentAccess: 'Comprueba la credencial configurada, el acceso documentado y el recurso antes de reintentar. Un 404 por sí solo no demuestra que un recurso privado no exista.',
+};
+exports.ENGLISH_ASSIGNMENT_CONTENT = {
+    'issue-assignment-count-invalid': {
+        impact: 'Automatic assignment did not start because desired-assignees-count is invalid.',
+        action: 'Set desired-assignees-count to an integer from 0 to 10 (0 disables assignment), then rerun the same issue workflow.',
+        retainedState: 'No assignment operation was attempted. Independent completed lifecycle effects are retained in their own results.',
+    },
+    'issue-assignment-failed': {
+        impact: 'Automatic assignment for #{targetNumber} stopped during {stage}. Provider operation: {operation}; status: {providerStatus}.',
+        action: '{guidance} Rerun the same issue workflow after addressing the cause; it rereads assignees before adding missing members.',
+        retainedState: 'Verified new assignments: {confirmedAssignments}. Remaining target count: {remainingAssignments}. Current assignee read: {assigneeRead}. Assignment write: {mutation}. Independent completed lifecycle effects are retained in their own results.',
+    },
+};
+exports.SPANISH_ASSIGNMENT_CONTENT = {
+    'issue-assignment-count-invalid': {
+        impact: 'La asignación automática no empezó porque desired-assignees-count no es válido.',
+        action: 'Configura desired-assignees-count como un entero de 0 a 10 (0 desactiva la asignación) y repite el mismo workflow.',
+        retainedState: 'No se intentó ninguna operación de asignación. Los efectos independientes completados se conservan en sus propios resultados.',
+    },
+    'issue-assignment-failed': {
+        impact: 'La asignación automática de #{targetNumber} se detuvo al {stage}. Operación del proveedor: {operation}; estado: {providerStatus}.',
+        action: '{guidance} Repite el mismo workflow tras resolver la causa; volverá a leer las personas asignadas antes de añadir las pendientes.',
+        retainedState: 'Asignaciones nuevas verificadas: {confirmedAssignments}. Objetivo pendiente: {remainingAssignments}. Lectura de personas asignadas: {assigneeRead}. Escritura de asignaciones: {mutation}. Los efectos independientes completados se conservan en sus propios resultados.',
+    },
+};
+
+
+/***/ }),
+
 /***/ 6033:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -33555,6 +33717,72 @@ function boundedMergeQueueDiagnostic(value) {
         .replace(/@/gu, '@\u200b')
         .slice(0, 500);
 }
+
+
+/***/ }),
+
+/***/ 2818:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SPANISH_PROGRESS_CAPACITY_CONTENT = exports.ENGLISH_PROGRESS_CAPACITY_CONTENT = exports.SPANISH_PROGRESS_CAPACITY_LABELS = exports.PROGRESS_CAPACITY_LABEL_KEYS = exports.ENGLISH_PROGRESS_CAPACITY_LABELS = void 0;
+exports.ENGLISH_PROGRESS_CAPACITY_LABELS = {
+    capacityUnavailable: 'unavailable', capacityExact: 'exact', capacityAtLeast: 'at least',
+    capacityInput: 'input framing', capacitySource: 'source planning', capacityScope: 'acceptance-scope planning',
+    capacityPartition: 'partition planning', capacityAggregate: 'aggregate planning', capacityAssessment: 'final-assessment planning',
+    capacityBytes: 'bytes', capacityParts: 'parts', capacityLines: 'lines', capacityPoints: 'Unicode code points', capacityUnits: 'evidence units',
+    capacitySourceUnit: 'source-unit serialization', capacitySourcePart: 'source-part serialization', capacityPartCount: 'source-part count',
+    capacityManifest: 'source-manifest serialization', capacityLineCount: 'original nonempty-line count', capacityLinePoints: 'original source-line length',
+    capacityInputText: 'untrusted input text', capacityNativePrompt: 'complete native request', capacityNativeReserve: 'reserved complete native request',
+    capacityAggregateReserve: 'minimum aggregate and framing reservation', capacityAllocation: 'aggregate allocation',
+    capacityAggregateEnvelope: 'receipt envelope and minimum payload reservation', capacityMinimumFacts: 'minimum complete fact reservation',
+    capacityUnitCount: 'evidence-unit count', capacityAggregateFacts: 'complete aggregate facts', capacityInvalidAllocation: 'invalid capacity allocation',
+    capacitySourceUnitCount: 'source-unit count',
+    capacityMaximumMeasurement: 'Measured or required: {observedCount} {unit}; maximum available: {supportedLimit} {unit} ({countKind}).',
+    capacityMinimumMeasurement: 'Measured: {observedCount} {unit}; minimum required: {supportedLimit} {unit} ({countKind}).',
+    capacityUnavailableMeasurement: 'Usage and applicable allocation are unavailable.',
+    capacityContextUnavailable: 'Source and path-coverage context are unavailable.',
+    capacitySourceLine: 'Original physical source line: {sourceLineId}.',
+    capacityManifestUnavailable: 'not available at this boundary', capacityNoPaths: 'no uncovered paths',
+    capacityComparison: 'Pinned comparison: {baseSha} → {headSha}. Required-path inventory: {requiredPathsDigest}; source manifest: {manifestDigest}. Accepted progress path receipts: {reviewedPathCount}/{requiredPathCount}; uncovered: {uncoveredPathCount}. Receipt-path inventory: {reviewedPathsDigest}; uncovered-path inventory: {uncoveredPathsDigest}. Paths: {paths}.',
+};
+exports.PROGRESS_CAPACITY_LABEL_KEYS = Object.keys(exports.ENGLISH_PROGRESS_CAPACITY_LABELS);
+exports.SPANISH_PROGRESS_CAPACITY_LABELS = {
+    capacityUnavailable: 'no disponible', capacityExact: 'exacto', capacityAtLeast: 'como mínimo',
+    capacityInput: 'preparación de la entrada', capacitySource: 'planificación de la fuente', capacityScope: 'planificación del alcance de aceptación',
+    capacityPartition: 'planificación de la parte', capacityAggregate: 'planificación del agregado', capacityAssessment: 'planificación de la evaluación final',
+    capacityBytes: 'bytes', capacityParts: 'partes', capacityLines: 'líneas', capacityPoints: 'puntos de código Unicode', capacityUnits: 'unidades de evidencia',
+    capacitySourceUnit: 'serialización de la unidad de origen', capacitySourcePart: 'serialización de la parte de origen', capacityPartCount: 'cantidad de partes de origen',
+    capacityManifest: 'serialización del manifiesto de origen', capacityLineCount: 'cantidad original de líneas no vacías', capacityLinePoints: 'longitud de la línea original',
+    capacityInputText: 'texto de entrada no confiable', capacityNativePrompt: 'petición nativa completa', capacityNativeReserve: 'petición nativa completa reservada',
+    capacityAggregateReserve: 'reserva mínima del agregado y su formato', capacityAllocation: 'asignación del agregado',
+    capacityAggregateEnvelope: 'envoltura de recibos y reserva mínima de contenido', capacityMinimumFacts: 'reserva mínima de hechos completos',
+    capacityUnitCount: 'cantidad de unidades de evidencia', capacityAggregateFacts: 'hechos completos del agregado', capacityInvalidAllocation: 'asignación de capacidad no válida',
+    capacitySourceUnitCount: 'cantidad de unidades de origen',
+    capacityMaximumMeasurement: 'Medido o requerido: {observedCount} {unit}; máximo disponible: {supportedLimit} {unit} ({countKind}).',
+    capacityMinimumMeasurement: 'Medido: {observedCount} {unit}; mínimo requerido: {supportedLimit} {unit} ({countKind}).',
+    capacityUnavailableMeasurement: 'El uso y la asignación aplicable no están disponibles.',
+    capacityContextUnavailable: 'El contexto de origen y cobertura de rutas no está disponible.',
+    capacitySourceLine: 'Línea física de origen: {sourceLineId}.',
+    capacityManifestUnavailable: 'no disponible en este límite', capacityNoPaths: 'ninguna ruta sin cubrir',
+    capacityComparison: 'Comparación fijada: {baseSha} → {headSha}. Inventario de rutas requeridas: {requiredPathsDigest}; manifiesto de origen: {manifestDigest}. Recibos de rutas de progreso aceptados: {reviewedPathCount}/{requiredPathCount}; sin cubrir: {uncoveredPathCount}. Inventario de rutas con recibo: {reviewedPathsDigest}; inventario de rutas sin cubrir: {uncoveredPathsDigest}. Rutas: {paths}.',
+};
+exports.ENGLISH_PROGRESS_CAPACITY_CONTENT = {
+    'progress-evidence-capacity-exceeded': {
+        impact: 'Progress was not assessed: {dimension} during {phase}. {measurement} {context}',
+        action: 'Inspect the boundary and pinned source. Bounded parts continue only within the same invocation; this capacity failure stops the attempt. Retrying unchanged over-limit evidence cannot increase capacity. Preserve all requirements and evidence. Report unsupported complete workloads with these facts and the run link; a larger bound requires a normally reviewed runtime change.',
+        retainedState: 'Existing progress labels and assessments were preserved. No partial progress was published; independent completed workflow effects remain in their own results.',
+    },
+};
+exports.SPANISH_PROGRESS_CAPACITY_CONTENT = {
+    'progress-evidence-capacity-exceeded': {
+        impact: 'No se evaluó el progreso: {dimension} durante {phase}. {measurement} {context}',
+        action: 'Inspecciona el límite y la fuente fijada. Las partes acotadas continúan solo dentro de la misma ejecución; este fallo de capacidad detiene el intento. Reintentar evidencia idéntica que supera el límite no aumenta la capacidad. Conserva todos los requisitos y evidencias. Reporta las cargas completas no compatibles con estos datos y el enlace de ejecución; un límite mayor requiere un cambio de runtime con su revisión normal.',
+        retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones. No se publicó progreso parcial; los efectos independientes completados conservan sus propios resultados.',
+    },
+};
 
 
 /***/ }),
@@ -33777,19 +34005,26 @@ var _ApplicationError_cause;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = exports.APPLICATION_ERROR_RECOVERY_IDS = void 0;
 exports.isApplicationErrorCorrelationId = isApplicationErrorCorrelationId;
+const branch_sync_publication_1 = __nccwpck_require__(7857);
 const framed_review_1 = __nccwpck_require__(3750);
 const progress_response_diagnostic_1 = __nccwpck_require__(6289);
+const progress_completion_diagnostic_1 = __nccwpck_require__(5095);
 const progress_inventory_diagnostic_1 = __nccwpck_require__(4048);
+const progress_capacity_diagnostic_1 = __nccwpck_require__(3919);
 const progress_response_diagnostic_2 = __nccwpck_require__(6289);
+const progress_partition_length_failure_1 = __nccwpck_require__(9292);
 const progress_binary_evidence_diagnostic_1 = __nccwpck_require__(364);
 const issue_workflow_diagnostic_1 = __nccwpck_require__(4347);
 const change_size_reconciliation_1 = __nccwpck_require__(5304);
+const issue_assignment_diagnostic_1 = __nccwpck_require__(2616);
 const copilot_command_validation_1 = __nccwpck_require__(4237);
 const closed_issue_reconciliation_1 = __nccwpck_require__(1565);
 const approval_evidence_diagnostic_1 = __nccwpck_require__(8205);
 const branch_sync_validation_1 = __nccwpck_require__(981);
 const verification_failure_1 = __nccwpck_require__(177);
 const branch_sync_catalog_diagnostic_1 = __nccwpck_require__(5677);
+const agent_source_snapshot_1 = __nccwpck_require__(9205);
+const sdd_validation_diagnostic_1 = __nccwpck_require__(4211);
 exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     ...copilot_command_validation_1.COPILOT_COMMAND_VALIDATION_REASONS,
     'pull-request-link-restored',
@@ -33804,10 +34039,14 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'branch-sync-resolution-invalid',
     'branch-sync-verification-failed',
     'branch-sync-catalog-incompatible',
+    'branch-sync-workflow-write-required',
+    'branch-sync-publication-failed',
     'sdd-draft-size-exceeded',
+    'sdd-draft-response-too-short',
     'sdd-catalog-unsupported-profile',
     'sdd-catalog-format-invalid',
     'sdd-catalog-missing-trusted-source',
+    'sdd-source-context-unavailable',
     'sdd-draft-format-invalid',
     'sdd-draft-case-identity-invalid',
     'sdd-draft-case-budget-invalid',
@@ -33818,13 +34057,18 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'closed-issue-reconciliation-failed',
     'approval-evidence-read-failed',
     'change-size-reconciliation-failed',
+    'issue-assignment-failed',
+    'issue-assignment-count-invalid',
     'issue-workflow-admission-blocked',
     'progress-binary-evidence-unavailable',
     'progress-inventory-incomplete',
+    'progress-evidence-capacity-exceeded',
     'bugbot-review-incomplete',
     'progress-result-contract-invalid',
+    'progress-partition-length-invalid',
     'progress-assessment-capacity-exceeded',
     'progress-scope-clause-limit',
+    'progress-completion-recovery-exhausted',
     'stored-configuration-schema-missing',
     'stored-configuration-schema-unsupported',
     'stored-configuration-invalid',
@@ -33925,7 +34169,7 @@ exports.APPLICATION_ERROR_METADATA = {
     'validation.evidence-too-large': {
         kind: 'validation', retryable: false,
         impact: 'Progress could not be assessed within the fixed evidence limits.',
-        action: 'Inspect the complete comparison and reported capacity. Supported multipart recovery continues automatically. If interrupted, rerun the current managed source; an identical over-limit comparison cannot gain capacity.',
+        action: 'Inspect the complete comparison and available capacity facts. Bounded multipart continuation is invocation-local; this capacity failure stops the attempt. Retrying unchanged over-limit evidence cannot increase capacity. Preserve complete acceptance and evidence, and report unsupported workloads with the run link.',
         retainedState: 'Existing progress labels and published assessments were preserved.',
     },
     'workflow.invalid-event': {
@@ -33998,9 +34242,17 @@ class ApplicationError extends Error {
         this.action = metadata.action;
         this.retainedState = options.recovery?.id === 'change-size-reconciliation-failed'
             ? 'Completed effects were retained; the failed and later size operations remain unverified.'
-            : options.recovery?.id === 'deployment-publication-context-missing'
-                ? PRESERVED_STATE
-                : metadata.retainedState;
+            : options.recovery?.id === 'issue-assignment-failed'
+                ? 'Verified assignments and independently completed effects were retained; the failed assignment operation remains unverified.'
+                : options.recovery?.id === 'issue-assignment-count-invalid'
+                    ? 'No assignment operation was attempted; independently completed lifecycle effects were retained.'
+                    : options.recovery?.id === 'sdd-draft-response-too-short'
+                        ? 'Existing answers, selected ownership and published specifications were retained; this attempt published no specification or branch.'
+                        : options.recovery?.id === 'progress-evidence-capacity-exceeded'
+                            ? 'Existing progress labels and assessments were preserved. No partial progress was published; independent completed workflow effects remain in their own results.'
+                            : options.recovery?.id === 'deployment-publication-context-missing'
+                                ? PRESERVED_STATE
+                                : metadata.retainedState;
         this.correlationId = correlationId;
         this.recovery = normalizeApplicationErrorRecovery(options.recovery);
         __classPrivateFieldSet(this, _ApplicationError_cause, options.cause, "f");
@@ -34043,6 +34295,8 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'approval-evidence-read-failed': Object.freeze(['operation', 'reason', 'permission']),
     'issue-workflow-admission-blocked': Object.freeze(['kind', 'reason', 'fields']),
     'change-size-reconciliation-failed': Object.freeze(['operation', 'issueNumber', 'targetNumber', 'projectIndex', 'verifiedOperations', 'pendingProjectSizes', 'providerStatus', 'providerReference']),
+    'issue-assignment-failed': Object.freeze(['targetNumber', 'desiredCount', 'stage', 'operation', 'providerStatus', 'assigneeRead', 'observedAssignees', 'confirmedAssignments', 'remainingAssignments', 'mutation']),
+    'issue-assignment-count-invalid': Object.freeze([]),
     'pull-request-link-restored': Object.freeze([]),
     'pull-request-link-base-retained': Object.freeze([]),
     'pull-request-link-reference-retained': Object.freeze([]),
@@ -34055,10 +34309,14 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'branch-sync-resolution-invalid': Object.freeze(['validationCode', 'command']),
     'branch-sync-verification-failed': Object.freeze(['stage', 'reason', 'command', 'commandIndex', 'childSha', 'restoration']),
     'branch-sync-catalog-incompatible': Object.freeze(['phase', 'profile', 'field', 'capabilityNumber', 'abort']),
+    'branch-sync-workflow-write-required': Object.freeze(['reason', 'remoteState', 'originalSha', 'candidateSha', 'observedSha', 'pushAttempted']),
+    'branch-sync-publication-failed': Object.freeze(['reason', 'remoteState', 'originalSha', 'candidateSha', 'observedSha', 'pushAttempted']),
     'sdd-draft-size-exceeded': Object.freeze([]),
+    'sdd-draft-response-too-short': Object.freeze(['minimum', 'observed', 'attempts']),
     'sdd-catalog-unsupported-profile': Object.freeze([]),
     'sdd-catalog-format-invalid': Object.freeze([]),
     'sdd-catalog-missing-trusted-source': Object.freeze([]),
+    'sdd-source-context-unavailable': Object.freeze(['sourceCommit', 'phase', 'reason']),
     'sdd-draft-format-invalid': Object.freeze([]),
     'sdd-draft-case-identity-invalid': Object.freeze([]),
     'sdd-draft-case-budget-invalid': Object.freeze([]),
@@ -34066,10 +34324,13 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'sdd-draft-repository-path-invalid': Object.freeze([]),
     'progress-binary-evidence-unavailable': Object.freeze(['paths', 'pathCount']),
     'progress-inventory-incomplete': Object.freeze(['profile', 'reason', 'observedCount', 'supportedLimit', 'countKind', 'paths']),
+    'progress-evidence-capacity-exceeded': Object.freeze(['phase', 'dimension', 'unit', 'bound', 'observedCount', 'supportedLimit', 'countKind', 'context']),
     'bugbot-review-incomplete': Object.freeze(['profile', 'countKind', 'resource', 'observed', 'limit', 'unit']),
     'progress-result-contract-invalid': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
+    'progress-partition-length-invalid': Object.freeze(['partitionId', 'filePath', 'unitId', 'field', 'maximum', 'observed']),
     'progress-assessment-capacity-exceeded': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
     'progress-scope-clause-limit': Object.freeze(['clauseKind', 'observed', 'limit', 'sourceLineId']),
+    'progress-completion-recovery-exhausted': Object.freeze(['reportedProgress', 'requirementCount', 'supportedCount', 'missingCount', 'unknownCount']),
     'deployment-publication-context-missing': Object.freeze([]),
     'workspace-changes-rejected': Object.freeze([]),
 });
@@ -34085,6 +34346,18 @@ function normalizeApplicationErrorRecovery(recovery) {
     if (actualKeys.length !== expectedKeys.length
         || actualKeys.some((key, index) => key !== expectedKeys[index])) {
         throw new TypeError(`Application error recovery variables are invalid for ${recovery.id}.`);
+    }
+    if (recovery.id === 'progress-completion-recovery-exhausted') {
+        return Object.freeze({ id: recovery.id, variables: (0, progress_completion_diagnostic_1.normalizeProgressCompletionDiagnostic)(variables) });
+    }
+    if (recovery.id === 'progress-evidence-capacity-exceeded') {
+        return Object.freeze({ id: recovery.id, variables: (0, progress_capacity_diagnostic_1.normalizeProgressCapacityDiagnostic)(variables) });
+    }
+    if (recovery.id === 'sdd-source-context-unavailable' && !(0, agent_source_snapshot_1.isSddSourceContextDiagnostic)(variables)) {
+        throw new TypeError('SDD source context diagnostic is invalid.');
+    }
+    if (recovery.id === 'sdd-draft-response-too-short' && !(0, sdd_validation_diagnostic_1.isSddDraftMinimumDiagnostic)(variables)) {
+        throw new TypeError('SDD minimum response diagnostic is invalid.');
     }
     if ((0, copilot_command_validation_1.isCopilotCommandValidationReason)(recovery.id)
         && !(0, copilot_command_validation_1.isValidCopilotCommandValidation)(recovery.id, variables.command)) {
@@ -34125,6 +34398,12 @@ function normalizeApplicationErrorRecovery(recovery) {
     if (recovery.id === 'branch-sync-verification-failed' && !(0, verification_failure_1.isBranchSyncVerificationFailure)(variables)) {
         throw new TypeError('Branch synchronization verification diagnostic is invalid.');
     }
+    if (recovery.id === 'branch-sync-workflow-write-required' || recovery.id === 'branch-sync-publication-failed') {
+        if (!(0, branch_sync_publication_1.isBranchSyncPublicationDiagnostic)(variables) || variables.remoteState === 'published'
+            || (recovery.id === 'branch-sync-workflow-write-required') !== (variables.reason === 'workflow-write-required')) {
+            throw new TypeError('Branch synchronization publication diagnostic is invalid.');
+        }
+    }
     if (recovery.id === 'branch-sync-catalog-incompatible') {
         const { abort, ...diagnostic } = variables;
         if (!(0, branch_sync_catalog_diagnostic_1.isBranchSyncCatalogDiagnostic)(diagnostic) || !['completed', 'unverified'].includes(String(abort))) {
@@ -34153,6 +34432,8 @@ function normalizeApplicationErrorRecovery(recovery) {
         throw new TypeError('Progress scope capacity diagnostic is invalid.');
     if (recovery.id === 'progress-result-contract-invalid' && !(0, progress_response_diagnostic_2.isProgressResponseDiagnosticFacts)(variables))
         throw new TypeError('Progress response diagnostic is invalid.');
+    if (recovery.id === 'progress-partition-length-invalid' && !(0, progress_partition_length_failure_1.isProgressPartitionLengthDiagnostic)(variables))
+        throw new TypeError('Progress part length diagnostic is invalid.');
     if (recovery.id === 'bugbot-review-incomplete' && !(0, framed_review_1.isBugbotReviewBlockFacts)(variables))
         throw new TypeError('Bugbot review diagnostic is invalid.');
     if (recovery.id === 'progress-inventory-incomplete' && !(0, progress_inventory_diagnostic_1.isProgressInventoryDiagnostic)(variables))
@@ -34163,6 +34444,9 @@ function normalizeApplicationErrorRecovery(recovery) {
         throw new TypeError('Issue admission diagnostic is invalid.');
     if (recovery.id === 'change-size-reconciliation-failed' && !(0, change_size_reconciliation_1.isChangeSizeReconciliationFacts)(variables)) {
         throw new TypeError('Change size reconciliation diagnostic is invalid.');
+    }
+    if (recovery.id === 'issue-assignment-failed' && !(0, issue_assignment_diagnostic_1.isIssueAssignmentDiagnostic)(variables)) {
+        throw new TypeError('Issue assignment diagnostic is invalid.');
     }
     return Object.freeze({
         id: recovery.id,
@@ -34822,6 +35106,66 @@ function workspaceModeForCapability(capability) {
 
 /***/ }),
 
+/***/ 9205:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SddSourceContextFailure = exports.SDD_SOURCE_CONTEXT_REASONS = void 0;
+exports.isSddSourceContextDiagnostic = isSddSourceContextDiagnostic;
+exports.sourceContextDiagnostic = sourceContextDiagnostic;
+exports.isSddSourceContextReason = isSddSourceContextReason;
+exports.readAgentSourceSnapshot = readAgentSourceSnapshot;
+exports.SDD_SOURCE_CONTEXT_REASONS = [
+    'binding-invalid', 'git-unavailable', 'object-unavailable', 'unsafe-entry', 'entry-limit',
+    'file-limit', 'blob-limit', 'byte-limit', 'metadata-limit',
+    'materialization-failed', 'view-integrity',
+];
+function isSddSourceContextDiagnostic(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return false;
+    const record = value;
+    return Object.keys(record).sort().join(',') === 'phase,reason,sourceCommit'
+        && isSddSourceContextReason(record.reason)
+        && ((record.sourceCommit === 'none' && record.phase === 'unknown')
+            || (typeof record.sourceCommit === 'string' && /^[a-f0-9]{40}$/u.test(record.sourceCommit)
+                && (record.phase === 'analysis' || record.phase === 'draft')));
+}
+/** Also protects renderers called with untyped external records. */
+function sourceContextDiagnostic(value) {
+    return Object.freeze(isSddSourceContextDiagnostic(value)
+        ? { sourceCommit: value.sourceCommit, phase: value.phase, reason: value.reason }
+        : { sourceCommit: 'none', phase: 'unknown', reason: 'binding-invalid' });
+}
+function isSddSourceContextReason(value) {
+    return typeof value === 'string' && exports.SDD_SOURCE_CONTEXT_REASONS.includes(value);
+}
+function readAgentSourceSnapshot(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return;
+    const record = value;
+    if (Object.keys(record).sort().join(',') !== 'baseSha,kind,phase'
+        || record.kind !== 'pre-branch-sdd' || !['analysis', 'draft'].includes(record.phase)
+        || typeof record.baseSha !== 'string' || !/^[a-f0-9]{40}$/u.test(record.baseSha))
+        return;
+    return Object.freeze({ kind: 'pre-branch-sdd', phase: record.phase, baseSha: record.baseSha });
+}
+/** Closed host facts only. Git output, paths, credentials and producer text are discarded. */
+class SddSourceContextFailure extends Error {
+    constructor(reason, source) {
+        super('The selected immutable source view could not be prepared; existing SDD and branch state was retained.');
+        this.name = 'SddSourceContextFailure';
+        this.reason = isSddSourceContextReason(reason) ? reason : 'binding-invalid';
+        this.source = readAgentSourceSnapshot(source);
+        Object.freeze(this);
+    }
+}
+exports.SddSourceContextFailure = SddSourceContextFailure;
+
+
+/***/ }),
+
 /***/ 8205:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -34970,6 +35314,63 @@ function classifyBranchSyncCatalog(value) {
     }
     return catalogDiagnostic('profile-compatibility', 'sdk-v1');
 }
+
+
+/***/ }),
+
+/***/ 7857:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BranchSyncPublicationFailure = exports.BRANCH_SYNC_REMOTE_STATES = exports.BRANCH_SYNC_PUBLICATION_REASONS = void 0;
+exports.isBranchSyncObjectId = isBranchSyncObjectId;
+exports.admittedBranchSyncObjectId = admittedBranchSyncObjectId;
+exports.isBranchSyncPublicationDiagnostic = isBranchSyncPublicationDiagnostic;
+exports.BRANCH_SYNC_PUBLICATION_REASONS = Object.freeze(['workflow-write-required', 'push-failed', 'candidate-unverified']);
+exports.BRANCH_SYNC_REMOTE_STATES = Object.freeze(['unchanged', 'published', 'changed', 'unverified']);
+function isBranchSyncObjectId(value) {
+    return typeof value === 'string' && /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u.test(value) && !/^0+$/u.test(value);
+}
+function admittedBranchSyncObjectId(value) {
+    return isBranchSyncObjectId(value) ? value : 'unavailable';
+}
+function isBranchSyncPublicationDiagnostic(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return false;
+    const d = value;
+    if (Object.keys(d).sort().join(',') !== 'candidateSha,observedSha,originalSha,pushAttempted,reason,remoteState'
+        || !exports.BRANCH_SYNC_PUBLICATION_REASONS.includes(d.reason) || !exports.BRANCH_SYNC_REMOTE_STATES.includes(d.remoteState)
+        || typeof d.pushAttempted !== 'boolean'
+        || ![d.originalSha, d.candidateSha, d.observedSha].every(x => x === 'unavailable' || isBranchSyncObjectId(x)))
+        return false;
+    if (d.reason === 'candidate-unverified' && (d.pushAttempted || d.candidateSha !== 'unavailable'))
+        return false;
+    if (d.reason !== 'candidate-unverified' && (!d.pushAttempted || !isBranchSyncObjectId(d.candidateSha) || d.candidateSha === d.originalSha))
+        return false;
+    if (d.remoteState === 'published')
+        return isBranchSyncObjectId(d.candidateSha) && d.observedSha === d.candidateSha;
+    if (d.remoteState === 'unchanged')
+        return isBranchSyncObjectId(d.originalSha) && d.observedSha === d.originalSha && d.observedSha !== d.candidateSha;
+    if (d.remoteState === 'changed')
+        return isBranchSyncObjectId(d.originalSha) && isBranchSyncObjectId(d.observedSha)
+            && d.observedSha !== d.originalSha && d.observedSha !== d.candidateSha;
+    return (d.observedSha === 'unavailable' || d.originalSha === 'unavailable')
+        && !(isBranchSyncObjectId(d.candidateSha) && d.observedSha === d.candidateSha);
+}
+/** A committed candidate is no longer an in-progress Git merge. */
+class BranchSyncPublicationFailure extends Error {
+    constructor(diagnostic) {
+        super('Branch synchronization candidate publication requires reconciliation.');
+        if (!isBranchSyncPublicationDiagnostic(diagnostic))
+            throw new TypeError('Invalid branch synchronization publication facts.');
+        this.name = 'BranchSyncPublicationFailure';
+        this.diagnostic = Object.freeze({ ...diagnostic });
+        Object.freeze(this);
+    }
+}
+exports.BranchSyncPublicationFailure = BranchSyncPublicationFailure;
 
 
 /***/ }),
@@ -35943,6 +36344,44 @@ function hasOnlyKeys(value, allowed) {
 
 /***/ }),
 
+/***/ 2616:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ASSIGNMENT_OPERATIONS = exports.ASSIGNMENT_STAGES = void 0;
+exports.isAssignmentProviderStatus = isAssignmentProviderStatus;
+exports.isIssueAssignmentDiagnostic = isIssueAssignmentDiagnostic;
+exports.ASSIGNMENT_STAGES = Object.freeze(['read-assignees', 'lookup-members', 'select-members', 'assign-creator', 'assign-members']);
+exports.ASSIGNMENT_OPERATIONS = Object.freeze(['read-assignees', 'list-teams', 'list-team-members', 'add-assignees', 'initialize-client', 'unavailable']);
+function isAssignmentProviderStatus(value) {
+    return typeof value === 'string' && (value === 'http-unavailable' || /^http-[1-5][0-9]{2}$/u.test(value));
+}
+function isIssueAssignmentDiagnostic(value) {
+    return Number.isSafeInteger(value.targetNumber) && Number(value.targetNumber) > 0
+        && Number.isInteger(value.desiredCount) && Number(value.desiredCount) >= 1 && Number(value.desiredCount) <= 10
+        && exports.ASSIGNMENT_STAGES.includes(value.stage)
+        && exports.ASSIGNMENT_OPERATIONS.includes(value.operation)
+        && isAssignmentProviderStatus(value.providerStatus)
+        && ['verified', 'unavailable'].includes(value.assigneeRead)
+        && ['not-attempted', 'unverified', 'verified'].includes(value.mutation)
+        && validCount(value.confirmedAssignments) && Number(value.confirmedAssignments) <= Number(value.desiredCount)
+        && (value.mutation !== 'not-attempted' || value.confirmedAssignments === 0)
+        && (value.mutation !== 'verified' || Number(value.confirmedAssignments) > 0)
+        && (value.assigneeRead === 'unavailable'
+            ? value.observedAssignees === 'unavailable' && value.remainingAssignments === 'unavailable'
+                && value.confirmedAssignments === 0 && value.mutation === 'not-attempted' && value.stage === 'read-assignees'
+            : validCount(value.observedAssignees) && validCount(value.remainingAssignments)
+                && value.remainingAssignments === Math.max(0, Number(value.desiredCount) - Number(value.observedAssignees) - Number(value.confirmedAssignments)));
+}
+function validCount(value) {
+    return Number.isInteger(value) && Number(value) >= 0 && Number(value) <= 10;
+}
+
+
+/***/ }),
+
 /***/ 9376:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -36857,6 +37296,150 @@ function progressBinaryEvidencePresentation(facts) {
 
 /***/ }),
 
+/***/ 3919:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PROGRESS_CAPACITY_DIMENSIONS = void 0;
+exports.normalizeProgressCapacityContext = normalizeProgressCapacityContext;
+exports.normalizeProgressCapacityDiagnostic = normalizeProgressCapacityDiagnostic;
+exports.progressCapacityDiagnostic = progressCapacityDiagnostic;
+const progress_evidence_path_1 = __nccwpck_require__(5887);
+const progress_response_diagnostic_1 = __nccwpck_require__(6289);
+const rule = (phases, unit, bounds = ['maximum']) => Object.freeze({ phases: Object.freeze([...phases]), unit, bounds: Object.freeze([...bounds]) });
+exports.PROGRESS_CAPACITY_DIMENSIONS = Object.freeze({
+    'source-unit-bytes': rule(['source'], 'bytes'),
+    'source-part-bytes': rule(['source'], 'bytes'),
+    'source-part-count': rule(['source'], 'parts'),
+    'source-unit-count': rule(['source'], 'units'),
+    'source-manifest-bytes': rule(['source'], 'bytes'),
+    'source-line-count': rule(['scope'], 'lines', ['minimum', 'maximum']),
+    'source-line-points': rule(['scope'], 'code-points'),
+    'input-text-bytes': rule(['input', 'scope', 'partition', 'assessment'], 'bytes'),
+    'native-prompt-bytes': rule(['input', 'scope', 'partition', 'assessment'], 'bytes'),
+    'native-prompt-reserve-bytes': rule(['partition', 'assessment'], 'bytes'),
+    'aggregate-reserve-bytes': rule(['aggregate'], 'bytes'),
+    'aggregate-allocation-bytes': rule(['aggregate'], 'bytes', ['minimum', 'maximum']),
+    'aggregate-envelope-bytes': rule(['aggregate'], 'bytes'),
+    'minimum-fact-bytes': rule(['aggregate'], 'bytes'),
+    'evidence-unit-count': rule(['aggregate'], 'units', ['minimum']),
+    'aggregate-fact-bytes': rule(['aggregate'], 'bytes'),
+    'invalid-allocation': rule(['input', 'source', 'scope', 'partition', 'aggregate', 'assessment'], 'bytes', ['unavailable']),
+});
+const record = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+const exact = (value, keys) => Object.keys(value).sort().join(',') === [...keys].sort().join(',');
+const own = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
+const count = (value) => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
+const measured = (value) => value === 'unavailable' || count(value);
+const oid = (value) => typeof value === 'string' && /^[a-f0-9]{40}$(?![\s\S])/u.test(value);
+const digest = (value) => typeof value === 'string' && /^[a-f0-9]{64}$(?![\s\S])/u.test(value);
+function invalid() { throw new TypeError('Invalid closed progress capacity diagnostic.'); }
+/** Shape validation does not certify a source; host call sites own attribution. */
+function normalizeProgressCapacityContext(value) {
+    if (!record(value))
+        return invalid();
+    if (value.kind === 'unavailable') {
+        if (!exact(value, ['kind']))
+            return invalid();
+        return Object.freeze({ kind: 'unavailable' });
+    }
+    if (value.kind === 'source-line') {
+        if (!exact(value, ['kind', 'sourceLineId']) || !(0, progress_response_diagnostic_1.isProgressSourceLineId)(value.sourceLineId))
+            return invalid();
+        return Object.freeze({ kind: 'source-line', sourceLineId: value.sourceLineId });
+    }
+    if (value.kind !== 'comparison' || !exact(value, ['kind', 'baseSha', 'headSha', 'manifestDigest', 'requiredPathsDigest',
+        'reviewedPathsDigest', 'uncoveredPathsDigest', 'requiredPathCount', 'reviewedPathCount', 'uncoveredPathCount', 'paths', 'sourceLineId'])
+        || !oid(value.baseSha) || !oid(value.headSha) || !(value.manifestDigest === 'none' || digest(value.manifestDigest))
+        || !digest(value.requiredPathsDigest) || !digest(value.reviewedPathsDigest) || !digest(value.uncoveredPathsDigest)
+        || !(value.sourceLineId === 'none' || (0, progress_response_diagnostic_1.isProgressSourceLineId)(value.sourceLineId))
+        || !count(value.requiredPathCount) || !count(value.reviewedPathCount)
+        || !count(value.uncoveredPathCount) || value.reviewedPathCount > value.requiredPathCount
+        || value.uncoveredPathCount !== value.requiredPathCount - value.reviewedPathCount
+        || !Array.isArray(value.paths) || value.paths.length > Math.min(8, value.uncoveredPathCount)
+        || (value.uncoveredPathCount > 0 && value.paths.length === 0)
+        || !value.paths.every(progress_evidence_path_1.isProgressEvidencePath) || new Set(value.paths).size !== value.paths.length
+        || Buffer.byteLength(JSON.stringify(value.paths), 'utf8') > 8192)
+        return invalid();
+    return Object.freeze({ kind: 'comparison', baseSha: value.baseSha, headSha: value.headSha,
+        manifestDigest: value.manifestDigest, sourceLineId: value.sourceLineId, requiredPathsDigest: value.requiredPathsDigest,
+        reviewedPathsDigest: value.reviewedPathsDigest, uncoveredPathsDigest: value.uncoveredPathsDigest,
+        requiredPathCount: value.requiredPathCount, reviewedPathCount: value.reviewedPathCount,
+        uncoveredPathCount: value.uncoveredPathCount, paths: Object.freeze([...value.paths]) });
+}
+/** Reject incoherent or arbitrary metadata and copy/freeze the complete public value. */
+function normalizeProgressCapacityDiagnostic(value) {
+    if (!record(value) || !exact(value, ['phase', 'dimension', 'unit', 'bound', 'observedCount', 'supportedLimit', 'countKind', 'context'])
+        || typeof value.dimension !== 'string' || !own(exports.PROGRESS_CAPACITY_DIMENSIONS, value.dimension))
+        return invalid();
+    const dimension = value.dimension;
+    const policy = exports.PROGRESS_CAPACITY_DIMENSIONS[dimension];
+    if (!policy.phases.includes(value.phase) || value.unit !== policy.unit
+        || !policy.bounds.includes(value.bound)
+        || !measured(value.observedCount) || !measured(value.supportedLimit)
+        || !['exact', 'at-least', 'unavailable'].includes(value.countKind)
+        || (value.observedCount === 'unavailable') !== (value.countKind === 'unavailable')
+        || (value.bound === 'unavailable' && (value.observedCount !== 'unavailable' || value.supportedLimit !== 'unavailable'))
+        || (value.bound === 'minimum' && value.countKind === 'at-least'))
+        return invalid();
+    if (typeof value.observedCount === 'number' && typeof value.supportedLimit === 'number'
+        && (value.bound === 'minimum' ? value.observedCount >= value.supportedLimit : value.observedCount <= value.supportedLimit))
+        return invalid();
+    const context = normalizeProgressCapacityContext(value.context);
+    const sourceLineId = context.kind === 'source-line' || context.kind === 'comparison' ? context.sourceLineId : 'none';
+    if (sourceLineId !== 'none' && (value.phase !== 'scope'
+        || !['source-line-count', 'source-line-points'].includes(dimension)))
+        return invalid();
+    return Object.freeze({ phase: value.phase, dimension, unit: policy.unit,
+        bound: value.bound, observedCount: value.observedCount, supportedLimit: value.supportedLimit,
+        countKind: value.countKind, context });
+}
+/** Unit/bound defaults are host policy, never text supplied by a model. */
+function progressCapacityDiagnostic(input) {
+    if (!record(input) || !['phase', 'dimension', 'observedCount', 'supportedLimit'].every(key => own(input, key))
+        || Object.keys(input).some(key => !['phase', 'dimension', 'observedCount', 'supportedLimit', 'bound', 'countKind', 'context'].includes(key)))
+        return invalid();
+    const policy = exports.PROGRESS_CAPACITY_DIMENSIONS[input.dimension];
+    return normalizeProgressCapacityDiagnostic({ phase: input.phase, dimension: input.dimension, unit: policy?.unit,
+        bound: input.bound ?? 'maximum', observedCount: input.observedCount, supportedLimit: input.supportedLimit,
+        countKind: input.countKind ?? 'exact', context: input.context ?? { kind: 'unavailable' } });
+}
+
+
+/***/ }),
+
+/***/ 5095:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.normalizeProgressCompletionDiagnostic = normalizeProgressCompletionDiagnostic;
+const KEYS = ['reportedProgress', 'requirementCount', 'supportedCount', 'missingCount', 'unknownCount'].sort();
+function normalizeProgressCompletionDiagnostic(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        throw new TypeError('Invalid closed progress completion diagnostic.');
+    }
+    const keys = Reflect.ownKeys(value);
+    if (keys.length !== KEYS.length || keys.some(key => typeof key !== 'string' || !KEYS.includes(key))) {
+        throw new TypeError('Invalid closed progress completion diagnostic.');
+    }
+    const { reportedProgress, requirementCount, supportedCount, missingCount, unknownCount } = value;
+    const count = (input) => typeof input === 'number' && Number.isSafeInteger(input) && input >= 0 && input <= 32;
+    if (typeof reportedProgress !== 'number' || !Number.isFinite(reportedProgress) || reportedProgress < 0 || reportedProgress > 100
+        || !count(requirementCount) || requirementCount < 1 || !count(supportedCount) || !count(missingCount) || !count(unknownCount)
+        || supportedCount + missingCount + unknownCount !== requirementCount
+        || (reportedProgress === 100) === (missingCount + unknownCount === 0)) {
+        throw new TypeError('Invalid progress completion percentage or counts.');
+    }
+    return Object.freeze({ reportedProgress, requirementCount, supportedCount, missingCount, unknownCount });
+}
+
+
+/***/ }),
+
 /***/ 5887:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -36927,6 +37510,47 @@ function isProgressInventoryDiagnostic(value) {
 }
 function progressInventoryPresentation(facts) {
     return Object.freeze({ ...facts, countKind: facts.countKind === 'at-least' ? '≥' : '=', paths: JSON.parse(facts.paths).map(progress_evidence_path_1.renderProgressEvidencePath).join('; ') });
+}
+
+
+/***/ }),
+
+/***/ 9292:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ProgressPartitionLengthFailure = void 0;
+exports.isProgressPartitionLengthDiagnostic = isProgressPartitionLengthDiagnostic;
+exports.progressPartitionLengthPresentation = progressPartitionLengthPresentation;
+const progress_response_diagnostic_1 = __nccwpck_require__(6289);
+const progress_evidence_path_1 = __nccwpck_require__(5887);
+/** Completed output supplied these bounded scalars; application must still bind the identity. */
+class ProgressPartitionLengthFailure extends progress_response_diagnostic_1.ProgressResponseContractFailure {
+    constructor(facts, details) {
+        super(facts);
+        this.details = Object.freeze({ ...details });
+    }
+}
+exports.ProgressPartitionLengthFailure = ProgressPartitionLengthFailure;
+function text(value, maximum) {
+    return typeof value === 'string' && value.length > 0 && value.length <= maximum && !/[\p{Cc}\p{Cf}]/u.test(value);
+}
+/** Closed operator facts; string counts are code points, never raw prose or body bytes. */
+function isProgressPartitionLengthDiagnostic(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return false;
+    const v = value;
+    return Object.keys(v).sort().join(',') === 'field,filePath,maximum,observed,partitionId,unitId'
+        && text(v.partitionId, 256) && (0, progress_evidence_path_1.isProgressEvidencePath)(v.filePath) && text(v.unitId, 256)
+        && (0, progress_response_diagnostic_1.isProgressResponseField)('partition', v.field) && /\.(?:implemented|remaining)$/u.test(v.field)
+        && typeof v.maximum === 'number' && Number.isSafeInteger(v.maximum) && v.maximum >= 1 && v.maximum <= 600
+        && typeof v.observed === 'number' && Number.isSafeInteger(v.observed) && v.observed > v.maximum;
+}
+function progressPartitionLengthPresentation(facts) {
+    return Object.freeze({ ...facts, partitionId: (0, progress_evidence_path_1.renderProgressEvidencePath)(facts.partitionId), filePath: (0, progress_evidence_path_1.renderProgressEvidencePath)(facts.filePath),
+        unitId: (0, progress_evidence_path_1.renderProgressEvidencePath)(facts.unitId), field: (0, progress_evidence_path_1.renderProgressEvidencePath)(facts.field) });
 }
 
 
@@ -37020,6 +37644,76 @@ function isProgressScopeCapacityFacts(value) {
         && ['required-or-uncertain', 'excluded'].includes(facts.clauseKind)
         && typeof facts.observed === 'number' && Number.isSafeInteger(facts.observed) && facts.observed > 32 && facts.observed <= 1024
         && facts.limit === 32 && (0, exports.isProgressSourceLineId)(facts.sourceLineId);
+}
+
+
+/***/ }),
+
+/***/ 4211:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SDD_VALIDATION_DETAILS = exports.SDD_DRAFT_FORMAT_REASONS = void 0;
+exports.isSddDraftMinimumDiagnostic = isSddDraftMinimumDiagnostic;
+exports.normalizeSddValidationDiagnostic = normalizeSddValidationDiagnostic;
+/** Public diagnostics contain only closed checks and bounded ordinal/count facts. */
+exports.SDD_DRAFT_FORMAT_REASONS = Object.freeze([
+    'required-heading', 'test-budget', 'case-identity', 'case-budget', 'requirement-mapping', 'repository-path',
+]);
+exports.SDD_VALIDATION_DETAILS = Object.freeze([
+    'validation-contract', 'size-limit', 'response-shape', 'minimum-length', 'required-heading', 'numeric-budget',
+    'section-count', 'table-count', 'table-separator', 'table-columns', 'table-empty-cell', 'table-empty',
+    'derived-slot-count', 'derived-slot-placement',
+    'identifier-list', 'requirement-identity', 'case-identity', 'case-reserved', 'case-reference', 'case-shorthand',
+    'budget-area', 'budget-integer', 'budget-order', 'budget-total', 'budget-distribution',
+    'requirement-reference', 'requirement-coverage', 'traceability-links', 'traceability-membership', 'traceability-requirement',
+    'owner-path', 'path-identity', 'create-existing-path', 'create-path-overlap', 'create-path-parent',
+    'path-operation', 'path-reference', 'path-link',
+    'path-inline-reference', 'path-prose-reference', 'path-link-reference',
+    'path-reference-unsafe', 'path-reference-blocked', 'path-reference-missing', 'path-reference-directory',
+]);
+const REASONS = [...exports.SDD_DRAFT_FORMAT_REASONS, 'size', 'response-shape', 'response-minimum'];
+const PHASES = ['response', 'assembly', 'validation'];
+/** Counts authorize no publication and never carry the rejected response. */
+function isSddDraftMinimumDiagnostic(input) {
+    if (!input || typeof input !== 'object' || Array.isArray(input)
+        || Object.keys(input).sort().join(',') !== 'attempts,minimum,observed')
+        return false;
+    const value = input;
+    return boundedInteger(value.minimum, 1)
+        && (value.observed === 'unavailable' || (boundedInteger(value.observed, 0) && Number(value.observed) < Number(value.minimum)))
+        && (value.attempts === 1 || value.attempts === 2);
+}
+/** Fail closed on extra fields, arbitrary text, unbounded facts or invalid coordinates. */
+function normalizeSddValidationDiagnostic(input) {
+    if (!input || typeof input !== 'object' || Array.isArray(input)
+        || Object.keys(input).sort().join(',') !== 'facts,phase,reason'
+        || !REASONS.includes(input.reason) || !PHASES.includes(input.phase)
+        || !Array.isArray(input.facts) || input.facts.length < 1 || input.facts.length > 8) {
+        throw new TypeError('Invalid bounded SDD validation diagnostic.');
+    }
+    const facts = input.facts.map(fact => {
+        if (!fact || typeof fact !== 'object' || Array.isArray(fact)
+            || Object.keys(fact).some(key => !['detail', 'section', 'row', 'expected', 'observed'].includes(key))
+            || !exports.SDD_VALIDATION_DETAILS.includes(fact.detail) || ![0, 4, 14, 15, 17].includes(fact.section)
+            || (fact.row !== undefined && !boundedInteger(fact.row, 1))
+            || (fact.expected !== undefined && !boundedInteger(fact.expected, 0))
+            || (fact.observed !== undefined && !boundedInteger(fact.observed, 0))) {
+            throw new TypeError('Invalid bounded SDD validation fact.');
+        }
+        return Object.freeze({ ...fact });
+    });
+    if (input.reason === 'response-minimum' && (input.phase !== 'response' || facts.length !== 1
+        || facts[0].detail !== 'minimum-length' || facts[0].section !== 0 || facts[0].row !== undefined
+        || !isSddDraftMinimumDiagnostic({ minimum: facts[0].expected, observed: facts[0].observed ?? 'unavailable', attempts: 1 }))) {
+        throw new TypeError('Invalid bounded SDD minimum diagnostic.');
+    }
+    return Object.freeze({ reason: input.reason, phase: input.phase, facts: Object.freeze(facts) });
+}
+function boundedInteger(value, minimum) {
+    return typeof value === 'number' && Number.isSafeInteger(value) && value >= minimum && value <= 100000;
 }
 
 

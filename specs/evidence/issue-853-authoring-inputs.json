@@ -1,0 +1,63 @@
+{
+  "kind": "Historical authoring input preserved before concise source presentation; not a new acceptance or runtime instruction",
+  "issue": 853,
+  "canonicalSdd": "specs/final-progress-completion-recovery.md",
+  "originalCaseIdMap": {
+    "final-progress-recovery-C01": "github-communication-experience-change-C125",
+    "final-progress-recovery-C02": "github-communication-experience-change-C126",
+    "final-progress-recovery-C03": "github-communication-experience-change-C127",
+    "final-progress-recovery-C04": "github-communication-experience-change-C128",
+    "final-progress-recovery-C05": "github-communication-experience-change-C129",
+    "final-progress-recovery-C06": "github-communication-experience-change-C130",
+    "final-progress-recovery-C07": "github-communication-experience-change-C131",
+    "final-progress-recovery-C08": "github-communication-experience-change-C132",
+    "final-progress-recovery-C09": "github-communication-experience-change-C133",
+    "final-progress-recovery-C10": "github-communication-experience-change-C134",
+    "final-progress-recovery-C11": "github-communication-experience-change-C135",
+    "final-progress-recovery-C12": "github-communication-experience-change-C136",
+    "final-progress-recovery-C13": "github-communication-experience-change-C137",
+    "final-progress-recovery-C14": "github-communication-experience-change-C138",
+    "final-progress-recovery-C15": "github-communication-experience-change-C139",
+    "final-progress-recovery-C16": "github-communication-experience-change-C140",
+    "final-progress-recovery-C17": "github-communication-experience-change-C141",
+    "final-progress-recovery-C18": "github-communication-experience-change-C142",
+    "final-progress-recovery-C19": "github-communication-experience-change-C143",
+    "final-progress-recovery-C20": "github-communication-experience-change-C144",
+    "final-progress-recovery-C21": "github-communication-experience-change-C145",
+    "final-progress-recovery-C22": "github-communication-experience-change-C146",
+    "final-progress-recovery-C23": "github-communication-experience-change-C147",
+    "final-progress-recovery-C24": "github-communication-experience-change-C148",
+    "final-progress-recovery-C25": "github-communication-experience-change-C149",
+    "final-progress-recovery-C26": "github-communication-experience-change-C150",
+    "final-progress-recovery-C27": "github-communication-experience-change-C151",
+    "final-progress-recovery-C28": "github-communication-experience-change-C152",
+    "final-progress-recovery-C29": "github-communication-experience-change-C153",
+    "final-progress-recovery-C30": "github-communication-experience-change-C154",
+    "final-progress-recovery-C31": "github-communication-experience-change-C155",
+    "final-progress-recovery-C32": "github-communication-experience-change-C156",
+    "final-progress-recovery-C33": "github-communication-experience-change-C157",
+    "final-progress-recovery-C34": "github-communication-experience-change-C158",
+    "final-progress-recovery-C35": "github-communication-experience-change-C159",
+    "final-progress-recovery-C36": "github-communication-experience-change-C160",
+    "final-progress-recovery-C37": "github-communication-experience-change-C161",
+    "final-progress-recovery-C38": "github-communication-experience-change-C162",
+    "final-progress-recovery-C39": "github-communication-experience-change-C163",
+    "final-progress-recovery-C40": "github-communication-experience-change-C164"
+  },
+  "items": [
+    {
+      "path": "specs/evidence/issue-853-authoring-body.txt",
+      "url": "https://github.com/vypdev/copilot/issues/853",
+      "updatedAt": "2026-11-02T14:02:08Z",
+      "bytes": 33209,
+      "sha256": "0a5e3b0f587d1cf42c31d84b63736f4a5fc29d17146e4825d5438443f10af46e"
+    },
+    {
+      "path": "specs/evidence/issue-853-clarification-6574242311.txt",
+      "url": "https://github.com/vypdev/copilot/issues/853#issuecomment-6574242311",
+      "updatedAt": "2026-11-02T09:58:16Z",
+      "bytes": 7027,
+      "sha256": "c26da2371f85e63273ab94cd80e481acb710e84792932d56727358cb9935a385"
+    }
+  ]
+}

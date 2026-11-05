@@ -173,7 +173,7 @@ changing dependency discovery, merge, authorization, or conflict safety.
 
 Replays keep the same card and do not repeat a transition fingerprint.
 Parent-child chains are reevaluated after bot
-pushes. Any failure attempts merge abort and reports whether no push occurred.
+pushes. Precommit failures attempt merge abort. After a successful commit, publication failures preserve the committed workspace and report independently observed remote facts; they never attempt merge abort or infer that no push occurred. See [publication recovery](branch-sync-publication-recovery.md) for the phase, capability and uncertain-response contract.
 
 ## 7. User-facing configuration
 

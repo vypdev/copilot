@@ -1,3 +1,5 @@
+import { GitPushFailure } from '../domain/git_push_failure';
+import { captureGitPushDiagnostic } from './git_push_diagnostic';
 import { verificationExecutable } from './verification_executable';
 import { nativeVerificationRetainsProfile } from './native_verification_profiles';
 import * as exec from '@actions/exec';
@@ -11,7 +13,7 @@ import { prepareRepositoryVerification } from './verification_setup_runner';
 import { captureSourceDependencyPreparation, type SourceDependencyPreparation } from './source_verification_dependencies';
 import { captureVerificationPythonLibraries } from './verification_python_library_environment';
 
-type GitCommandOptions = { stdout?: (data: Buffer) => void; env?: Record<string, string>; untrusted?: boolean; verifyRuntimePrerequisites?: boolean; resolveFromEnvironment?: boolean };
+type GitCommandOptions = { stdout?: (data: Buffer) => void; stderr?: (data: Buffer) => void; env?: Record<string, string>; untrusted?: boolean; verifyRuntimePrerequisites?: boolean; resolveFromEnvironment?: boolean };
 type GitCommandExecutor = (program: string, args: string[], options?: GitCommandOptions) => Promise<number>;
 
 export class GitCommitAdapter implements GitCommitPort {
@@ -21,8 +23,9 @@ export class GitCommitAdapter implements GitCommitPort {
             ? exec.exec(options.resolveFromEnvironment && options.env ? verificationExecutable(program, options.env) : program, args, {
                 // Captured Git reads can contain NUL-delimited records that
                 // hide subsequent lines in GitHub's Actions log viewer.
-                ...(options.stdout ? { silent: true } : {}),
-                ...(options.stdout ? { listeners: { stdout: options.stdout } } : {}),
+                ...(options.stdout || options.stderr ? { silent: true } : {}),
+                ...(options.stdout || options.stderr ? { listeners: { ...(options.stdout ? { stdout: options.stdout } : {}),
+                  ...(options.stderr ? { stderr: options.stderr } : {}) } } : {}),
                 ...(options.env ? { env: options.env } : {}),
             })
             : exec.exec(program, args),
@@ -63,7 +66,9 @@ export class GitCommitAdapter implements GitCommitPort {
     }
 
     async fetch(branch: string, token?: string): Promise<void> {
-        await this.executeAuthenticated(['fetch', 'origin', branch], token);
+        if (await this.executeAuthenticated(['fetch', 'origin', branch], token) !== 0) {
+            throw new Error('Git fetch did not complete successfully.');
+        }
     }
 
     async stageAll(): Promise<void> {
@@ -79,16 +84,22 @@ export class GitCommitAdapter implements GitCommitPort {
     }
 
     async push(branch: string, token?: string): Promise<void> {
-        await this.executeAuthenticated(['push', 'origin', branch], token);
+        const diagnostic = captureGitPushDiagnostic();
+        try {
+            const code = await this.executeAuthenticated(['push', 'origin', branch], token, diagnostic.stderr);
+            if (code !== 0) throw new GitPushFailure(diagnostic.classify());
+        } catch {
+            throw new GitPushFailure(diagnostic.classify());
+        }
     }
 
-    private async executeAuthenticated(args: string[], token?: string): Promise<void> {
+    private async executeAuthenticated(args: string[], token?: string, stderr?: (data: Buffer) => void): Promise<number> {
         if (!token?.trim()) {
-            await this.execute('git', args);
-            return;
+            return stderr ? this.execute('git', args, { stderr }) : this.execute('git', args);
         }
         const environment = buildGitAuthenticationEnvironment(token);
-        await this.execute('git', args, {
+        return this.execute('git', args, {
+            ...(stderr ? { stderr } : {}),
             // Supply authentication only to this trusted git subprocess. The
             // agent process never receives this value and nothing is persisted
             // in the repository's git configuration or remote URL.

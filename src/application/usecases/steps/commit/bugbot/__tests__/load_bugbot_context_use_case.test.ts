@@ -113,7 +113,7 @@ describe('loadBugbotContext', () => {
     expect(reader.findOpenPullRequestsByExactHead).not.toHaveBeenCalled();
     expect(reader.listPullRequestReviewComments).toHaveBeenCalledWith(50);
     expect(reader.listPullRequestReviewThreadStates).toHaveBeenCalledWith(50);
-    expect(reader.getReviewDiffSnapshot).toHaveBeenCalledWith(50);
+    expect(reader.getReviewDiffSnapshot).toHaveBeenCalledWith(50, sha);
   });
 
   it('loads the exact issue_comment PR using its verified provider head identity', async () => {
@@ -138,7 +138,7 @@ describe('loadBugbotContext', () => {
     expect(context.prContext?.prHeadSha).toBe('f'.repeat(40));
     expect(reader.getPullRequest).toHaveBeenCalledWith(50);
     expect(reader.findOpenPullRequestsByExactHead).not.toHaveBeenCalled();
-    expect(reader.getReviewDiffSnapshot).toHaveBeenCalledWith(50);
+    expect(reader.getReviewDiffSnapshot).toHaveBeenCalledWith(50, providerIdentity.headSha);
   });
 
   it('loads PR rules using its provider-verified head rather than the comment workflow checkout', async () => {
@@ -325,6 +325,27 @@ describe('loadBugbotContext', () => {
       limitReached: false,
     }));
     expect(loaded.coverage.status).toBe('complete');
+  });
+
+  it('assigns all 1,090 provider paths at the selected head', async () => {
+    const changes = Array.from({ length: 1_090 }, (_, index) => ({
+      filename: index === 1_089 ? 'src/reference.ts' : `assets/${index}.png`,
+      status: 'added',
+      additions: index === 1_089 ? 1 : 0,
+      deletions: 0,
+      patch: index === 1_089 ? '@@ -0 +1 @@\n+export const reference = true;' : '',
+    }));
+    const getReviewDiffSnapshot = jest.fn().mockResolvedValue({
+      value: { changes, filesWithFirstDiffLine: [], filesWithDiffLocations: [] },
+      coverage: coverage('diff', changes.length, { pagesFetched: 11 }),
+    });
+    const loaded = await loadBugbotContext(request(), ports({ getReviewDiffSnapshot }));
+
+    expect(getReviewDiffSnapshot).toHaveBeenCalledWith(50, sha);
+    expect(loaded.coverage.status).toBe('complete');
+    expect(loaded.reviewDiffFileCount).toBe(changes.length);
+    expect(loaded.reviewDiffPartitions?.flatMap(partition => partition.files)).toEqual(changes.map(file => file.filename));
+    expect(loaded.reviewDiffPartitions?.every(partition => partition.headSha === sha)).toBe(true);
   });
 
   it('fails before model analysis when the exhaustive plan exceeds the execution ceiling', async () => {

@@ -1,4 +1,5 @@
 import type { AgentCapability, AgentConfiguration } from '../model/agent';
+import type { AgentSourceSnapshot } from '../../domain/agent_source_snapshot';
 import type {
     AgentExecutionExitDiagnostic, AgentExecutionPreflightDiagnostic, AgentExecutionPreflightStage, AgentExecutionOutputDiagnostic,
 } from '../../application/ports/agent_execution_observation_ports';
@@ -15,6 +16,7 @@ export interface AgentCliRequest {
     maxPromptBytes?: number;
     /** Native final-response schema, used only by providers that support it. */
     outputSchema?: Record<string, unknown>;
+    readonly sourceSnapshot?: AgentSourceSnapshot;
 }
 
 export class AgentCliError extends Error {

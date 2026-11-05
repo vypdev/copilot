@@ -1,3 +1,6 @@
+import { BRANCH_SYNC_PUBLICATION_LABEL_KEYS, ENGLISH_BRANCH_SYNC_PUBLICATION_LABELS, SPANISH_BRANCH_SYNC_PUBLICATION_LABELS, ENGLISH_BRANCH_SYNC_PUBLICATION_CONTENT, SPANISH_BRANCH_SYNC_PUBLICATION_CONTENT } from './branch_sync_publication_messages';
+import { ASSIGNMENT_DIAGNOSTIC_LABEL_KEYS, ENGLISH_ASSIGNMENT_LABELS, SPANISH_ASSIGNMENT_LABELS, ENGLISH_ASSIGNMENT_CONTENT, SPANISH_ASSIGNMENT_CONTENT } from './issue_assignment_messages';
+import { PROGRESS_CAPACITY_LABEL_KEYS, ENGLISH_PROGRESS_CAPACITY_LABELS, SPANISH_PROGRESS_CAPACITY_LABELS, ENGLISH_PROGRESS_CAPACITY_CONTENT, SPANISH_PROGRESS_CAPACITY_CONTENT } from './progress_capacity_messages';
 import { BUGBOT_REVIEW_DIAGNOSTIC_LABEL_KEYS, ENGLISH_REVIEW_DIAGNOSTIC_LABELS, SPANISH_REVIEW_DIAGNOSTIC_LABELS } from './bugbot_review_diagnostic_labels';
 import { ENGLISH_COMMAND_VALIDATION_CONTENT, SPANISH_COMMAND_VALIDATION_CONTENT } from './comment_command_validation_message_catalog';
 import type {
@@ -24,7 +27,10 @@ import {
 
 const LABEL_KEYS = Object.freeze([
   ...BUGBOT_REVIEW_DIAGNOSTIC_LABEL_KEYS,
-  'impact', 'errorCode', 'action', 'retainedState', 'retryable', 'yes', 'no', 'reference',
+  ...BRANCH_SYNC_PUBLICATION_LABEL_KEYS,
+  ...ASSIGNMENT_DIAGNOSTIC_LABEL_KEYS,
+  ...PROGRESS_CAPACITY_LABEL_KEYS,
+  'impact', 'errorCode', 'action', 'retainedState', 'retryable', 'yes', 'no', 'reference', 'draftLengthUnavailable',
 ] as const);
 const CONTENT_FIELDS = Object.freeze(['impact', 'action', 'retainedState'] as const);
 
@@ -54,6 +60,9 @@ export const APPLICATION_ERROR_MESSAGE_IDS: readonly ApplicationErrorMessageId[]
 
 const ENGLISH_LABELS: Readonly<Record<LabelKey, string>> = Object.freeze({
   ...ENGLISH_REVIEW_DIAGNOSTIC_LABELS,
+  ...ENGLISH_BRANCH_SYNC_PUBLICATION_LABELS,
+  ...ENGLISH_ASSIGNMENT_LABELS,
+  ...ENGLISH_PROGRESS_CAPACITY_LABELS,
   impact: 'Impact',
   errorCode: 'Error code',
   action: 'Action',
@@ -62,10 +71,14 @@ const ENGLISH_LABELS: Readonly<Record<LabelKey, string>> = Object.freeze({
   yes: 'Yes',
   no: 'No',
   reference: 'Reference',
+  draftLengthUnavailable: 'unavailable',
 });
 
 const SPANISH_LABELS: Readonly<Record<LabelKey, string>> = Object.freeze({
   ...SPANISH_REVIEW_DIAGNOSTIC_LABELS,
+  ...SPANISH_BRANCH_SYNC_PUBLICATION_LABELS,
+  ...SPANISH_ASSIGNMENT_LABELS,
+  ...SPANISH_PROGRESS_CAPACITY_LABELS,
   impact: 'Impacto',
   errorCode: 'Código de error',
   action: 'Acción',
@@ -74,6 +87,7 @@ const SPANISH_LABELS: Readonly<Record<LabelKey, string>> = Object.freeze({
   yes: 'Sí',
   no: 'No',
   reference: 'Referencia',
+  draftLengthUnavailable: 'no disponible',
 });
 
 type ErrorContent = Readonly<Record<ApplicationErrorCode, Readonly<Record<ContentField, string>>>>;
@@ -170,7 +184,7 @@ const SPANISH_CONTENT: ErrorContent = Object.freeze({
   }),
   'validation.evidence-too-large': Object.freeze({
     impact: 'No se pudo evaluar el progreso dentro de los límites fijos de evidencia.',
-    action: 'Inspecciona la comparación completa y la capacidad indicada. La recuperación por partes continúa automáticamente cuando es compatible. Si se interrumpe, vuelve a ejecutar la fuente gestionada actual; una comparación idéntica que excede el límite no obtiene más capacidad.',
+    action: 'Inspecciona la comparación completa y los datos de capacidad disponibles. La continuación por partes acotada pertenece a una sola ejecución; este fallo de capacidad detiene el intento. Reintentar evidencia idéntica que supera el límite no aumenta la capacidad. Conserva toda la aceptación y evidencia, y reporta las cargas no compatibles con el enlace de ejecución.',
     retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas.',
   }),
   'workflow.invalid-event': Object.freeze({
@@ -216,7 +230,10 @@ const STORED_CONFIGURATION_RETAINED_EN = 'The issue/PR description and stored co
 const STORED_CONFIGURATION_RETAINED_ES = 'Esta lectura no modificó la descripción de la issue/PR ni su configuración almacenada.';
 
 const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
+  ...ENGLISH_ASSIGNMENT_CONTENT,
+  ...ENGLISH_PROGRESS_CAPACITY_CONTENT,
   ...ENGLISH_COMMAND_VALIDATION_CONTENT,
+  ...ENGLISH_BRANCH_SYNC_PUBLICATION_CONTENT,
   'stored-configuration-schema-missing': Object.freeze({
     impact: 'Automation stopped for issue/PR #{issueNumber}: the stored configuration has no schema version; version {expectedVersion} is required.',
     action: STORED_CONFIGURATION_ACTION_EN,
@@ -251,6 +268,16 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     impact: 'The returned progress result violated its contract; progress was not published.',
     action: 'Inspect the original requirement and response schema. Details: phase {phase}, reason {reason}, field {field}, requirement {requirementId}, original issue line {sourceLineId}. none means no verified identity is available. A fresh attempt may help when the provider can satisfy the unchanged contract; do not relax acceptance or verification.',
     retainedState: 'Existing progress labels and published assessments were preserved. An optional check-publication warning is a separate result.',
+  }),
+  'progress-partition-length-invalid': Object.freeze({
+    impact: 'A progress part still exceeds its response limit after one bounded replacement; progress was not published.',
+    action: 'Inspect part {partitionId}, file {filePath}, unit {unitId}, field {field}: observed {observed} Unicode code points; maximum {maximum}. The replacement must satisfy the unchanged schema. Do not remove files, truncate facts, relax acceptance or bypass verification.',
+    retainedState: 'Existing progress labels and assessments were preserved. No partial percentage or passing verification was published; execution and optional check-publication failures remain separate.',
+  }),
+  'progress-completion-recovery-exhausted': Object.freeze({
+    impact: 'The final progress result still contradicted completion after one complete reassessment; progress was not published.',
+    action: 'Inspect the complete pinned comparison and final facts: phase assessment, field $.progress, reported {reportedProgress}%, requirements {requirementCount}, supported {supportedCount}, missing {missingCount}, unknown {unknownCount}. Start a fresh complete assessment when the provider can satisfy the unchanged contract. These are model observations, not independent execution or approval evidence.',
+    retainedState: 'Existing progress labels and published assessments were preserved. Verification, review, coverage and approval remain independent gates.',
   }),
   'bugbot-review-incomplete': Object.freeze({
     impact: 'Complete Bugbot review is blocked: {resource} {countKind} {observed} {unit}; supported limit {limit} ({profile}).',
@@ -313,6 +340,11 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     action: 'Review the safe validation diagnostics in the issue status card; correct existing paths or explicitly declare intended new files. Retry the same issue workflow.',
     retainedState: 'Existing answers and published SDDs were preserved; no draft was published. Publication checks do not establish runtime acceptance.',
   }),
+  'sdd-source-context-unavailable': Object.freeze({
+    impact: 'SDD {phase} stopped because its selected immutable source view is unavailable. Source: {sourceCommit}. Reason: {reason}.',
+    action: 'Inspect the source-context reason and the linked run. Verify local availability of the selected objects, Git support for --no-lazy-fetch, portable regular source paths and the fixed SDK limits. Correct the prerequisite and retry the same issue workflow; do not restore files into the default checkout or create a branch manually.',
+    retainedState: 'The canonical checkout, existing answers, published SDDs and linked branch were retained; this attempt published no specification or branch.',
+  }),
   'sdd-catalog-unsupported-profile': Object.freeze({
     impact: 'SDD preparation stopped before model analysis because the repository selected a catalog profile unsupported by the installed publication adapter.',
     action: 'Review catalog profile support in the SDD guide. Preserve the native schema, readiness, requirements, evidence and blockers; have a maintainer provide a reviewed compatible adapter, then retry this same issue.',
@@ -332,6 +364,11 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     impact: 'SDD preparation stopped because the draft still lacked required headings or a numeric test budget after one automatic repair.',
     action: 'Retry SDD preparation with the canonical specification template and the explicit acceptance requirements.',
     retainedState: 'Existing answers and published SDDs were preserved; no draft was published.',
+  }),
+  'sdd-draft-response-too-short': Object.freeze({
+    impact: 'The SDD drafting response was below its {minimum} Unicode code-point minimum (observed: {observed}; draft attempt: {attempts}).',
+    action: 'Clarify in the issue description that a complete proposed Markdown document is required, preserving resolved requirements and ownership, then retry the same issue workflow. This failure does not start an automatic regeneration.',
+    retainedState: 'Existing answers, selected ownership and published specifications were retained; this attempt published no specification or branch.',
   }),
   'sdd-draft-size-exceeded': Object.freeze({
     impact: 'SDD preparation stopped because the draft remained too large after one automatic size repair.',
@@ -401,7 +438,10 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
 });
 
 const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
+  ...SPANISH_ASSIGNMENT_CONTENT,
+  ...SPANISH_PROGRESS_CAPACITY_CONTENT,
   ...SPANISH_COMMAND_VALIDATION_CONTENT,
+  ...SPANISH_BRANCH_SYNC_PUBLICATION_CONTENT,
   'stored-configuration-schema-missing': Object.freeze({
     impact: 'La automatización se detuvo para la issue/PR #{issueNumber}: la configuración almacenada no tiene versión de esquema; se requiere la versión {expectedVersion}.',
     action: STORED_CONFIGURATION_ACTION_ES,
@@ -436,6 +476,16 @@ const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     impact: 'El resultado de progreso devuelto incumplió su contrato; no se publicó el progreso.',
     action: 'Inspecciona el requisito original y el esquema de respuesta. Detalles: fase {phase}, motivo {reason}, campo {field}, requisito {requirementId}, línea original de la issue {sourceLineId}. none indica que no hay una identidad verificada. Un nuevo intento puede ayudar si el proveedor cumple el contrato sin cambiarlo; no relajes la aceptación ni la verificación.',
     retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas. Un aviso de publicación del check opcional corresponde a otro resultado.',
+  }),
+  'progress-partition-length-invalid': Object.freeze({
+    impact: 'Una parte del progreso sigue superando el límite de respuesta tras una sustitución acotada; no se publicó el progreso.',
+    action: 'Inspecciona la parte {partitionId}, archivo {filePath}, unidad {unitId}, campo {field}: observado {observed} puntos de código Unicode; máximo {maximum}. La sustitución debe cumplir el mismo esquema. No elimines archivos, recortes los hechos, relajes la aceptación ni eludas la verificación.',
+    retainedState: 'Se conservaron las etiquetas y evaluaciones de progreso. No se publicó ningún porcentaje parcial ni verificación aprobada; los fallos de ejecución y de publicación del check opcional siguen siendo independientes.',
+  }),
+  'progress-completion-recovery-exhausted': Object.freeze({
+    impact: 'El resultado final siguió contradiciendo la completitud después de una reevaluación completa; no se publicó el progreso.',
+    action: 'Inspecciona la comparación completa fijada y los datos finales: fase assessment, campo $.progress, porcentaje {reportedProgress}%, requisitos {requirementCount}, respaldados {supportedCount}, pendientes {missingCount}, desconocidos {unknownCount}. Inicia una evaluación completa nueva cuando el proveedor pueda cumplir el contrato sin cambiarlo. Son observaciones del modelo, no evidencia independiente de ejecución ni aprobación.',
+    retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas. Verificación, revisión, cobertura y aprobación siguen siendo controles independientes.',
   }),
   'bugbot-review-incomplete': Object.freeze({
     impact: 'La revisión completa de Bugbot está bloqueada: {resource} {countKind} {observed} {unit}; límite admitido {limit} ({profile}).',
@@ -498,6 +548,11 @@ const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     action: 'Revisa los diagnósticos seguros de validación de la tarjeta de estado; corrige las rutas existentes o declara explícitamente los archivos nuevos previstos. Reintenta el workflow de la misma incidencia.',
     retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador. Estas comprobaciones no demuestran la aceptación en ejecución.',
   }),
+  'sdd-source-context-unavailable': Object.freeze({
+    impact: 'Se detuvo la fase {phase} del SDD porque no está disponible la vista del origen inmutable seleccionado. Origen: {sourceCommit}. Motivo: {reason}.',
+    action: 'Revisa el motivo del contexto de origen y la ejecución enlazada. Verifica los objetos locales seleccionados, que Git admita --no-lazy-fetch, las rutas portables de archivos regulares y los límites fijos del SDK. Corrige el requisito y reintenta el workflow de la misma incidencia; no restaures archivos en el checkout predeterminado ni crees una rama manualmente.',
+    retainedState: 'Se conservaron el checkout canónico, las respuestas, los SDD publicados y la rama enlazada; este intento no publicó ninguna especificación ni rama.',
+  }),
   'sdd-catalog-unsupported-profile': Object.freeze({
     impact: 'La preparación del SDD se detuvo antes del análisis del modelo porque el repositorio seleccionó un perfil de catálogo que el adaptador de publicación instalado no admite.',
     action: 'Revisa los perfiles admitidos en la guía de SDD. Conserva el esquema nativo, los estados, requisitos, evidencias y bloqueos; pide a un mantenedor un adaptador compatible revisado y reintenta esta misma incidencia.',
@@ -517,6 +572,11 @@ const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     impact: 'La preparación del SDD se detuvo porque seguían faltando secciones obligatorias o un presupuesto numérico de pruebas tras un intento automático de corrección.',
     action: 'Reintenta la preparación del SDD con la plantilla canónica y los criterios de aceptación explícitos.',
     retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador.',
+  }),
+  'sdd-draft-response-too-short': Object.freeze({
+    impact: 'La respuesta de redacción del SDD no alcanzó el mínimo de {minimum} puntos de código Unicode (cantidad observada: {observed}; intento de borrador: {attempts}).',
+    action: 'Aclara en la descripción de esta incidencia que se requiere una propuesta Markdown completa, conservando los requisitos resueltos y su propietario, y repite el mismo workflow. Este fallo no inicia una regeneración automática.',
+    retainedState: 'Se conservaron las respuestas, la propiedad seleccionada y las especificaciones publicadas; este intento no publicó ninguna especificación ni rama.',
   }),
   'sdd-draft-size-exceeded': Object.freeze({
     impact: 'La preparación del SDD se detuvo porque el borrador seguía siendo demasiado largo tras un intento automático de reducción.',

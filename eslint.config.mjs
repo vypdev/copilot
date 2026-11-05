@@ -58,6 +58,18 @@ export default defineConfig(
     },
     rules: { '@typescript-eslint/no-require-imports': 'off' },
   },
+  {
+    files: ['src/tooling/__tests__/fixtures/bugbot_async_statement_probe.mjs'],
+    languageOptions: {
+      globals: {
+        customElements: 'readonly', document: 'readonly', requestAnimationFrame: 'readonly',
+      },
+    },
+  },
+  {
+    files: ['src/tooling/__tests__/fixtures/bugbot_async_statement_runner.mjs'],
+    languageOptions: { globals: { process: 'readonly', console: 'readonly' } },
+  },
   // Tests: allow any, unused vars, and require() for mocks/isolation
   {
     files: ['src/**/*.test.ts', 'src/**/__tests__/**/*.ts'],

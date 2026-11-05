@@ -34,6 +34,44 @@ Set the number of assignees in the workflow:
 ```
 
 Use a higher value to assign more people (e.g. `2` or `3`), up to the configured maximum.
+The shared assignment workflow rejects invalid counts before contacting GitHub.
+`configuration.invalid` with `issue-assignment-count-invalid` asks you to set an
+integer from `0` to `10`; the supplied invalid value is not echoed. Other issue
+steps continue and retain their own completed effects.
+
+### Recover an assignment failure
+
+Copilot reads current assignees first. If the target is already satisfied, it
+retains them without querying organization membership or adding the creator.
+Otherwise, it confirms requested identities in GitHub's assignment response.
+A confirmed creator is excluded when selecting additional members. The count
+is an upper target; the organization may have fewer eligible available members.
+
+```text
+Read current assignees -> retain satisfied target
+                      -> lookup -> add and confirm missing members
+Failure -> inspect stage and operation -> address cause -> rerun same workflow
+```
+
+An assignment failure names the stage, safe provider operation and HTTP status
+when known. `issue-assignment-failed` also records the current-read certainty,
+verified new assignments, remaining target count and whether the write was
+attempted or confirmed. An unread remaining count is shown as unavailable.
+For example, `lookup-members` / `list-teams` / `http-403` reports a failed
+organization-team lookup; it does not prove that the organization is empty.
+
+Check configured access for denied/authentication failures; verify both access
+and resource for 404, which can conceal a private resource. Wait for recovery
+when the provider is unavailable or rate limited. A malformed response or an
+unclassified `unexpected` error requires investigation using the correlation
+reference, rather than blind retries or automatically expanding permissions.
+No membership list, response body or credential is included in the diagnostic.
+
+If a write's outcome is unverified, it may have applied remotely. A retry reads
+current assignees again and avoids repeating a satisfied assignment. Confirmed
+assignments remain, as do independently completed type, Project and configuration
+effects reported by their own lifecycle results. The assignment error does not
+certify those other steps. See the [application error reference](/security-operations/operations/error-reference).
 
 ## Project (board) linking
 

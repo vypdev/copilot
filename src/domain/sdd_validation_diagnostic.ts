@@ -4,13 +4,16 @@ export const SDD_DRAFT_FORMAT_REASONS = Object.freeze([
 ] as const);
 export type SddDraftFormatReason = typeof SDD_DRAFT_FORMAT_REASONS[number];
 export const SDD_VALIDATION_DETAILS = Object.freeze([
-  'validation-contract', 'size-limit', 'response-shape', 'required-heading', 'numeric-budget',
+  'validation-contract', 'size-limit', 'response-shape', 'minimum-length', 'required-heading', 'numeric-budget',
   'section-count', 'table-count', 'table-separator', 'table-columns', 'table-empty-cell', 'table-empty',
+  'derived-slot-count', 'derived-slot-placement',
   'identifier-list', 'requirement-identity', 'case-identity', 'case-reserved', 'case-reference', 'case-shorthand',
   'budget-area', 'budget-integer', 'budget-order', 'budget-total', 'budget-distribution',
   'requirement-reference', 'requirement-coverage', 'traceability-links', 'traceability-membership', 'traceability-requirement',
   'owner-path', 'path-identity', 'create-existing-path', 'create-path-overlap', 'create-path-parent',
   'path-operation', 'path-reference', 'path-link',
+  'path-inline-reference', 'path-prose-reference', 'path-link-reference',
+  'path-reference-unsafe', 'path-reference-blocked', 'path-reference-missing', 'path-reference-directory',
 ] as const);
 export type SddValidationDetail = typeof SDD_VALIDATION_DETAILS[number];
 export interface SddValidationFact {
@@ -21,12 +24,28 @@ export interface SddValidationFact {
   readonly observed?: number;
 }
 export interface SddValidationDiagnostic {
-  readonly reason: SddDraftFormatReason | 'size' | 'response-shape';
+  readonly reason: SddDraftFormatReason | 'size' | 'response-shape' | 'response-minimum';
   readonly phase: 'response' | 'assembly' | 'validation';
   readonly facts: readonly SddValidationFact[];
 }
-const REASONS: readonly string[] = [...SDD_DRAFT_FORMAT_REASONS, 'size', 'response-shape'];
+const REASONS: readonly string[] = [...SDD_DRAFT_FORMAT_REASONS, 'size', 'response-shape', 'response-minimum'];
 const PHASES: readonly string[] = ['response', 'assembly', 'validation'];
+
+export interface SddDraftMinimumDiagnostic {
+  readonly minimum: number;
+  readonly observed: number | 'unavailable';
+  readonly attempts: 1 | 2;
+}
+
+/** Counts authorize no publication and never carry the rejected response. */
+export function isSddDraftMinimumDiagnostic(input: unknown): input is SddDraftMinimumDiagnostic {
+  if (!input || typeof input !== 'object' || Array.isArray(input)
+    || Object.keys(input).sort().join(',') !== 'attempts,minimum,observed') return false;
+  const value = input as Readonly<Record<string, unknown>>;
+  return boundedInteger(value.minimum, 1)
+    && (value.observed === 'unavailable' || (boundedInteger(value.observed, 0) && Number(value.observed) < Number(value.minimum)))
+    && (value.attempts === 1 || value.attempts === 2);
+}
 
 /** Fail closed on extra fields, arbitrary text, unbounded facts or invalid coordinates. */
 export function normalizeSddValidationDiagnostic(input: SddValidationDiagnostic): SddValidationDiagnostic {
@@ -47,6 +66,11 @@ export function normalizeSddValidationDiagnostic(input: SddValidationDiagnostic)
     }
     return Object.freeze({ ...fact });
   });
+  if (input.reason === 'response-minimum' && (input.phase !== 'response' || facts.length !== 1
+    || facts[0].detail !== 'minimum-length' || facts[0].section !== 0 || facts[0].row !== undefined
+    || !isSddDraftMinimumDiagnostic({ minimum: facts[0].expected, observed: facts[0].observed ?? 'unavailable', attempts: 1 }))) {
+    throw new TypeError('Invalid bounded SDD minimum diagnostic.');
+  }
   return Object.freeze({ reason: input.reason, phase: input.phase, facts: Object.freeze(facts) });
 }
 

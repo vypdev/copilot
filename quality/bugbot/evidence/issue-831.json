@@ -1,0 +1,1409 @@
+{
+  "schemaVersion": 1,
+  "issue": 831,
+  "date": "2026-11-02",
+  "scope": "Owned synthetic version/grammar observations; no consumer source executed or modified.",
+  "priorCorpus": {
+    "cases": 140,
+    "decodedCasesSha256": "1369ed5d34fa688e5f6f1d125cd8fe482a31bbb3752cd02fc96c325414556564",
+    "decodedReferencesSha256": "0c29769695fe9300a06d29c8f97326bf82075917c60acc5e09439240bbff75f2"
+  },
+  "branchBase": "2cffdc68faad42f019b8e5b017179989b46fdfe4",
+  "ownedNative": {
+    "python313": {
+      "interpreter": "3.13.14",
+      "kind": "parse-only",
+      "cases": [
+        {
+          "case": "list",
+          "parses": false
+        },
+        {
+          "case": "three",
+          "parses": false
+        },
+        {
+          "case": "group",
+          "parses": false
+        },
+        {
+          "case": "list-as",
+          "parses": false
+        },
+        {
+          "case": "group-as",
+          "parses": false
+        },
+        {
+          "case": "parenthesized-as",
+          "parses": true
+        },
+        {
+          "case": "parenthesized-group-as",
+          "parses": true
+        },
+        {
+          "case": "single-as",
+          "parses": true
+        },
+        {
+          "case": "missing-binding",
+          "parses": false
+        }
+      ]
+    },
+    "python314": {
+      "interpreter": "3.14.6",
+      "kind": "parse-only",
+      "cases": [
+        {
+          "case": "list",
+          "parses": true
+        },
+        {
+          "case": "three",
+          "parses": true
+        },
+        {
+          "case": "group",
+          "parses": true
+        },
+        {
+          "case": "list-as",
+          "parses": false
+        },
+        {
+          "case": "group-as",
+          "parses": false
+        },
+        {
+          "case": "parenthesized-as",
+          "parses": true
+        },
+        {
+          "case": "parenthesized-group-as",
+          "parses": true
+        },
+        {
+          "case": "single-as",
+          "parses": true
+        },
+        {
+          "case": "missing-binding",
+          "parses": true
+        }
+      ]
+    },
+    "runtime314": {
+      "kind": "owned-runtime",
+      "ordinary": [
+        "ValueError",
+        "TypeError",
+        "OSError"
+      ],
+      "group": [
+        "both"
+      ],
+      "capture": true,
+      "missingBindingFails": true
+    }
+  },
+  "candidate": {
+    "status": "measured-passing",
+    "identity": {
+      "sourceBase": "2cffdc68faad42f019b8e5b017179989b46fdfe4",
+      "uncommittedSource": true,
+      "runtime": {
+        "provider": "codex",
+        "model": "gpt-6-luna",
+        "effort": "medium",
+        "node": "24.20.0",
+        "cli": "0.164.0-alpha.11.1"
+      },
+      "sourceHashes": {
+        "src/prompts/bugbot.ts": "b0b7559a02b2791b44a0a47352d31fadf98f40ed036b49f2f916d34eebc29b47",
+        "src/tooling/bugbot_benchmark_runner.ts": "c4fb9c2abec9259ccee91bdbf99bf327bbfb1c34418af8eaf8076ab327c80cc8",
+        "src/application/usecases/steps/commit/bugbot/build_bugbot_prompt.ts": "43e6cc1eec37b214b76e4adb2ca598cb88feef64a7374ea9a29c8785480b174c",
+        "src/application/usecases/steps/commit/bugbot/verify_generated_literal_findings.ts": "703ef8b0db4a5b5933da6dd7407c6f0950b61257aa982c40a2df9f869991386a"
+      },
+      "cliSha256": "58db371ff5ffcadcab85690a4f894e4c3cc979eac6dca6db9ba7ba3818dca1f0",
+      "packageJsonSha256": "6a6dc864bf2a3d75f94beb45176ca5ed5334fc484cf3693e4f914d8b4ba67bbe",
+      "workspace": "/private/tmp/copilot-831-campaign/candidate-final",
+      "input": "frozen-corpus-v2.json",
+      "execution": "candidate-final-benchmark.log",
+      "predictions": "candidate-final-predictions.json",
+      "score": "candidate-final-score.json"
+    },
+    "metrics": {
+      "metrics": {
+        "expected": 6,
+        "actual": 6,
+        "matched": 6,
+        "precision": 1,
+        "recall": 1,
+        "locationAccuracy": 1,
+        "severityAccuracy": 1,
+        "categoryAccuracy": 1,
+        "f1": 1,
+        "falsePositives": 0,
+        "falseNegatives": 0,
+        "meanLineDistance": 0,
+        "confidenceBrierScore": 3.3333333333333396e-05
+      },
+      "violations": [],
+      "missingCases": []
+    },
+    "predictions": {
+      "schemaVersion": 1,
+      "predictions": {
+        "py-pep758-314-two": [],
+        "py-pep758-314-three": [],
+        "py-pep758-314-group": [],
+        "py-pep758-314-parenthesized-as": [],
+        "py-pep758-313-list": [
+          {
+            "id": "backend/owned_handlers.py:4:unsupported-except-syntax",
+            "title": "Multiple exception types require parentheses on supported Python versions",
+            "description": "The project supports Python 3.13 and excludes 3.14. In Python 3.13, multiple exception types in an `except` clause must be parenthesized, so this changed clause prevents the module from parsing and the handler cannot run.",
+            "file": "backend/owned_handlers.py",
+            "line": 4,
+            "endLine": 4,
+            "severity": "medium",
+            "confidence": 0.99,
+            "category": "reliability",
+            "evidence": "The effective `requires-python` range is `>=3.13,<3.14`; the changed clause is `except ValueError, TypeError:`. Python 3.13 does not accept this syntax.",
+            "suggestion": "Parenthesize the exception types for compatibility with the supported Python range.",
+            "symbol": "catch_owned",
+            "codeSnippet": "except ValueError, TypeError:",
+            "suggestedCode": "except (ValueError, TypeError):",
+            "fingerprint": "fp-0e315901",
+            "semanticFingerprint": "sf-5a9df965"
+          }
+        ],
+        "py-pep758-313-group": [
+          {
+            "id": "backend/owned_handlers.py:4:unsupported-except-star-syntax",
+            "title": "Handler uses syntax unsupported by the configured Python range",
+            "description": "The project supports Python 3.13 but excludes 3.14. In Python 3.13, an `except*` clause with multiple exception types must use a parenthesized tuple, so this changed clause causes the module to fail parsing on a supported interpreter.",
+            "file": "backend/owned_handlers.py",
+            "line": 4,
+            "endLine": 4,
+            "severity": "medium",
+            "confidence": 1,
+            "category": "reliability",
+            "evidence": "The configured `requires-python` is `>=3.13,<3.14`; line 4 uses `except* ValueError, TypeError:`.",
+            "suggestion": "Parenthesize the exception types so the clause parses on Python 3.13.",
+            "symbol": "catch_owned",
+            "codeSnippet": "except* ValueError, TypeError:",
+            "suggestedCode": "except* (ValueError, TypeError):",
+            "fingerprint": "fp-8ef6ad4d",
+            "semanticFingerprint": "sf-cfe648a7"
+          }
+        ],
+        "py-pep758-314-list-as": [
+          {
+            "id": "backend/owned_handlers.py:4:invalid-except-tuple-syntax",
+            "title": "Parenthesize multiple exception types when using as",
+            "description": "This `except` clause lists multiple exception types with `as` but does not enclose them in parentheses. Python 3.14 requires parentheses for this form, so the module fails to parse.",
+            "file": "backend/owned_handlers.py",
+            "line": 4,
+            "endLine": 4,
+            "severity": "medium",
+            "confidence": 0.99,
+            "category": "reliability",
+            "evidence": "The changed clause is `except ValueError, TypeError as error:`. The configured supported Python range is `>=3.14,<3.15`, where multiple exception types with `as` require parentheses.",
+            "suggestion": "Write the exception types as a parenthesized tuple.",
+            "symbol": "catch_owned",
+            "codeSnippet": "except ValueError, TypeError as error:",
+            "suggestedCode": "except (ValueError, TypeError) as error:",
+            "fingerprint": "fp-a69e8806",
+            "semanticFingerprint": "sf-091103b5"
+          }
+        ],
+        "py-pep758-314-group-as": [
+          {
+            "id": "backend/owned_handlers.py:4:invalid-except-star-syntax",
+            "title": "Invalid syntax for grouped except* types",
+            "description": "This handler uses an unparenthesized comma-separated type list with `except*` and `as`. Python 3.14 still requires multiple exception types in an `except*` clause to be parenthesized, so the module cannot be parsed under the repository's declared Python 3.14 requirement.",
+            "file": "backend/owned_handlers.py",
+            "line": 4,
+            "endLine": 4,
+            "severity": "medium",
+            "confidence": 1,
+            "category": "reliability",
+            "evidence": "The changed clause is `except* ValueError, TypeError as error:`. The project requires Python `>=3.14,<3.15`; the supported grammar requires parentheses around multiple types when binding with `as`.",
+            "suggestion": "Parenthesize the exception types, for example `except* (ValueError, TypeError) as error:`.",
+            "symbol": "catch_owned",
+            "codeSnippet": "except* ValueError, TypeError as error:",
+            "suggestedCode": "except* (ValueError, TypeError) as error:",
+            "fingerprint": "fp-b7e213f3",
+            "semanticFingerprint": "sf-36dcdbe7"
+          }
+        ],
+        "py-pep758-mixed-range": [
+          {
+            "id": "backend/owned_handlers.py:4:unsupported-except-syntax",
+            "title": "Multiple exception types need parentheses on Python 3.13",
+            "description": "The project supports Python 3.13, but this clause uses the Python 3.14 PEP 758 syntax for multiple exception types without parentheses. Python 3.13 cannot parse the module, preventing it from loading on a supported runtime.",
+            "file": "backend/owned_handlers.py",
+            "line": 4,
+            "endLine": 4,
+            "severity": "medium",
+            "confidence": 1,
+            "category": "reliability",
+            "evidence": "The changed clause is `except ValueError, TypeError:`. The supported range includes Python 3.13; the provided parser observation only confirms parsing under Python 3.14.6.",
+            "suggestion": "Parenthesize the exception types to retain compatibility with Python 3.13.",
+            "symbol": "catch_owned",
+            "codeSnippet": "except ValueError, TypeError:",
+            "suggestedCode": "except (ValueError, TypeError):",
+            "fingerprint": "fp-5f698c1e",
+            "semanticFingerprint": "sf-5a9df965"
+          }
+        ],
+        "py-pep758-unknown-range": [],
+        "py-pep758-stale-parser": [],
+        "py-pep758-unbound-handler": [
+          {
+            "id": "backend/owned_handlers.py:4:undefined-exception-name",
+            "title": "Undefined exception name masks the ValueError",
+            "description": "When `ValueError(\"sentinel\")` is raised, Python evaluates the exception types in the handler. `MissingError` is undefined in this module, so evaluating the clause raises `NameError` instead of catching the `ValueError`. The clause is valid syntax under the specified Python 3.14 configuration; the defect is the runtime name lookup.",
+            "file": "backend/owned_handlers.py",
+            "line": 4,
+            "endLine": 4,
+            "severity": "medium",
+            "confidence": 1,
+            "category": "correctness",
+            "evidence": "The changed clause names `MissingError`, which the scenario states is neither defined nor imported anywhere in the complete module; the preceding `raise ValueError(\"sentinel\")` reaches that handler.",
+            "suggestion": "Remove `MissingError` or replace it with an exception type defined or imported by the module.",
+            "symbol": "catch_owned",
+            "codeSnippet": "except ValueError, MissingError:",
+            "fingerprint": "fp-57a53a4b",
+            "semanticFingerprint": "sf-b38461f0"
+          }
+        ]
+      }
+    },
+    "decision": "Ship the version/grammar correction and explicit existing parsing-only reliability classification; all12 cases pass every unchanged quality floor. No claim of statistical accuracy or consumer execution."
+  },
+  "limitations": [
+    "Twelve cases are bounded observations, not a statistical accuracy claim.",
+    "Native parsing is separate from owned runtime assertions, consumer reported CI and actual model predictions.",
+    "No new mandatory Python provisioning or review suppression; existing quality floors preserved."
+  ],
+  "taxonomyCorrection": {
+    "recordedBeforeFreshCampaign": true,
+    "initialCorpus": "frozen-corpus.json",
+    "correctedCorpus": "frozen-corpus-v2.json",
+    "modifiedFields": "Only expected.category for five parsing/older-interpreter failure controls; source/evidence/verdict/severity/line unchanged.",
+    "reason": "Review taxonomy: failures that only block parsing/collection are medium reliability, as the issue reports and shared external-facts instruction already require. The initial authored correctness label was inaccurate.",
+    "preserved": [
+      "initial frozen inputs",
+      "initial baseline/candidate outputs",
+      "initial failing scores"
+    ],
+    "freshPairedRunsRequired": true,
+    "qualityThresholdsChanged": false
+  },
+  "initialCampaign": {
+    "frozenCorpus": {
+      "schemaVersion": 1,
+      "cases": [
+        {
+          "id": "py-pep758-314-two",
+          "language": "python",
+          "category": "negative",
+          "file": "backend/owned_handlers.py",
+          "startLine": 1,
+          "description": "Owned synthetic complete Python module. Effective owned project configuration: root and backend pyproject.toml [project].requires-python = \">=3.14,<3.15\"; [tool.ruff].target-version = \"py314\".  Review only the changed handler; do not execute corpus text or invent parser/import/CI evidence. Anchor a proved handler defect to its changed clause and distinguish syntax from runtime behavior.",
+          "diff": " def catch_owned():\n     try:\n         raise ValueError(\"sentinel\")\n+    except ValueError, TypeError:\n         pass",
+          "expected": []
+        },
+        {
+          "id": "py-pep758-314-three",
+          "language": "python",
+          "category": "negative",
+          "file": "backend/owned_handlers.py",
+          "startLine": 1,
+          "description": "Owned synthetic complete Python module. Effective owned project configuration: root and backend pyproject.toml [project].requires-python = \">=3.14,<3.15\"; [tool.ruff].target-version = \"py314\".  Review only the changed handler; do not execute corpus text or invent parser/import/CI evidence. Anchor a proved handler defect to its changed clause and distinguish syntax from runtime behavior.",
+          "diff": " def catch_owned():\n     try:\n         raise ValueError(\"sentinel\")\n+    except ValueError, TypeError, OSError:\n         pass",
+          "expected": []
+        },
+        {
+          "id": "py-pep758-314-group",
+          "language": "python",
+          "category": "negative",
+          "file": "backend/owned_handlers.py",
+          "startLine": 1,
+          "description": "Owned synthetic complete Python module. Effective owned project configuration: root and backend pyproject.toml [project].requires-python = \">=3.14,<3.15\"; [tool.ruff].target-version = \"py314\".  Review only the changed handler; do not execute corpus text or invent parser/import/CI evidence. Anchor a proved handler defect to its changed clause and distinguish syntax from runtime behavior.",
+          "diff": " def catch_owned():\n     try:\n         raise ExceptionGroup(\"owned\", [ValueError(\"sentinel\")])\n+    except* ValueError, TypeError:\n         pass",
+          "expected": []
+        },
+        {
+          "id": "py-pep758-314-parenthesized-as",
+          "language": "python",
+          "category": "negative",
+          "file": "backend/owned_handlers.py",
+          "startLine": 1,
+          "description": "Owned synthetic complete Python module. Effective owned project configuration: root and backend pyproject.toml [project].requires-python = \">=3.14,<3.15\"; [tool.ruff].target-version = \"py314\".  Review only the changed handler; do not execute corpus text or invent parser/import/CI evidence. Anchor a proved handler defect to its changed clause and distinguish syntax from runtime behavior.",
+          "diff": " def catch_owned():\n     try:\n         raise ValueError(\"sentinel\")\n+    except (ValueError, TypeError) as error:\n         pass",
+          "expected": []
+        },
+        {
+          "id": "py-pep758-313-list",
+          "language": "python",
+          "category": "correctness",
+          "file": "backend/owned_handlers.py",
+          "startLine": 1,
+          "description": "Owned synthetic complete Python module. Effective owned project configuration: root and backend pyproject.toml [project].requires-python = \">=3.13,<3.14\"; [tool.ruff].target-version = \"py313\".  Review only the changed handler; do not execute corpus text or invent parser/import/CI evidence. Anchor a proved handler defect to its changed clause and distinguish syntax from runtime behavior.",
+          "diff": " def catch_owned():\n     try:\n         raise ValueError(\"sentinel\")\n+    except ValueError, TypeError:\n         pass",
+          "expected": [
+            {
+              "id": "py-pep758-313-list",
+              "title": "The changed exception handler fails under a supported execution path",
+              "file": "backend/owned_handlers.py",
+              "line": 4,
+              "severity": "medium",
+              "category": "correctness",
+              "codeSnippet": "    except ValueError, TypeError:"
+            }
+          ]
+        },
+        {
+          "id": "py-pep758-313-group",
+          "language": "python",
+          "category": "correctness",
+          "file": "backend/owned_handlers.py",
+          "startLine": 1,
+          "description": "Owned synthetic complete Python module. Effective owned project configuration: root and backend pyproject.toml [project].requires-python = \">=3.13,<3.14\"; [tool.ruff].target-version = \"py313\".  Review only the changed handler; do not execute corpus text or invent parser/import/CI evidence. Anchor a proved handler defect to its changed clause and distinguish syntax from runtime behavior.",
+          "diff": " def catch_owned():\n     try:\n         raise ExceptionGroup(\"owned\", [ValueError(\"sentinel\")])\n+    except* ValueError, TypeError:\n         pass",
+          "expected": [
+            {
+              "id": "py-pep758-313-group",
+              "title": "The changed exception handler fails under a supported execution path",
+              "file": "backend/owned_handlers.py",
+              "line": 4,
+              "severity": "medium",
+              "category": "correctness",
+              "codeSnippet": "    except* ValueError, TypeError:"
+            }
+          ]
+        },
+        {
+          "id": "py-pep758-314-list-as",
+          "language": "python",
+          "category": "correctness",
+          "file": "backend/owned_handlers.py",
+          "startLine": 1,
+          "description": "Owned synthetic complete Python module. Effective owned project configuration: root and backend pyproject.toml [project].requires-python = \">=3.14,<3.15\"; [tool.ruff].target-version = \"py314\".  Review only the changed handler; do not execute corpus text or invent parser/import/CI evidence. Anchor a proved handler defect to its changed clause and distinguish syntax from runtime behavior.",
+          "diff": " def catch_owned():\n     try:\n         raise ValueError(\"sentinel\")\n+    except ValueError, TypeError as error:\n         pass",
+          "expected": [
+            {
+              "id": "py-pep758-314-list-as",
+              "title": "The changed exception handler fails under a supported execution path",
+              "file": "backend/owned_handlers.py",
+              "line": 4,
+              "severity": "medium",
+              "category": "correctness",
+              "codeSnippet": "    except ValueError, TypeError as error:"
+            }
+          ]
+        },
+        {
+          "id": "py-pep758-314-group-as",
+          "language": "python",
+          "category": "correctness",
+          "file": "backend/owned_handlers.py",
+          "startLine": 1,
+          "description": "Owned synthetic complete Python module. Effective owned project configuration: root and backend pyproject.toml [project].requires-python = \">=3.14,<3.15\"; [tool.ruff].target-version = \"py314\".  Review only the changed handler; do not execute corpus text or invent parser/import/CI evidence. Anchor a proved handler defect to its changed clause and distinguish syntax from runtime behavior.",
+          "diff": " def catch_owned():\n     try:\n         raise ExceptionGroup(\"owned\", [ValueError(\"sentinel\")])\n+    except* ValueError, TypeError as error:\n         pass",
+          "expected": [
+            {
+              "id": "py-pep758-314-group-as",
+              "title": "The changed exception handler fails under a supported execution path",
+              "file": "backend/owned_handlers.py",
+              "line": 4,
+              "severity": "medium",
+              "category": "correctness",
+              "codeSnippet": "    except* ValueError, TypeError as error:"
+            }
+          ]
+        },
+        {
+          "id": "py-pep758-mixed-range",
+          "language": "python",
+          "category": "correctness",
+          "file": "backend/owned_handlers.py",
+          "startLine": 1,
+          "description": "Owned synthetic complete Python module. Effective owned project configuration: root and backend pyproject.toml [project].requires-python = \">=3.13,<3.15\"; [tool.ruff].target-version = \"py313\". Independent owned parser observation: this exact module parses under CPython 3.14.6. The supported 3.13 target remains part of the compatibility contract. Review only the changed handler; do not execute corpus text or invent parser/import/CI evidence. Anchor a proved handler defect to its changed clause and distinguish syntax from runtime behavior.",
+          "diff": " def catch_owned():\n     try:\n         raise ValueError(\"sentinel\")\n+    except ValueError, TypeError:\n         pass",
+          "expected": [
+            {
+              "id": "py-pep758-mixed-range",
+              "title": "The changed exception handler fails under a supported execution path",
+              "file": "backend/owned_handlers.py",
+              "line": 4,
+              "severity": "medium",
+              "category": "correctness",
+              "codeSnippet": "    except ValueError, TypeError:"
+            }
+          ]
+        },
+        {
+          "id": "py-pep758-unknown-range",
+          "language": "python",
+          "category": "negative",
+          "file": "backend/owned_handlers.py",
+          "startLine": 1,
+          "description": "Owned synthetic complete Python module. Python requirements, lint target and parser observations are unavailable. Do not assume a supported interpreter version. Review only the changed handler; do not execute corpus text or invent parser/import/CI evidence. Anchor a proved handler defect to its changed clause and distinguish syntax from runtime behavior.",
+          "diff": " def catch_owned():\n     try:\n         raise ValueError(\"sentinel\")\n+    except ValueError, TypeError:\n         pass",
+          "expected": []
+        },
+        {
+          "id": "py-pep758-stale-parser",
+          "language": "python",
+          "category": "negative",
+          "file": "backend/owned_handlers.py",
+          "startLine": 1,
+          "description": "Owned synthetic complete Python module. Effective owned project configuration: root and backend pyproject.toml [project].requires-python = \">=3.14,<3.15\"; [tool.ruff].target-version = \"py314\". An old CPython 3.13 parser rejected a prior revision. An independent owned CPython 3.14.6 observation parses and collects this exact module. Neither observation is evidence of production service startup. Review only the changed handler; do not execute corpus text or invent parser/import/CI evidence. Anchor a proved handler defect to its changed clause and distinguish syntax from runtime behavior.",
+          "diff": " def catch_owned():\n     try:\n         raise ValueError(\"sentinel\")\n+    except ValueError, TypeError:\n         pass",
+          "expected": []
+        },
+        {
+          "id": "py-pep758-unbound-handler",
+          "language": "python",
+          "category": "correctness",
+          "file": "backend/owned_handlers.py",
+          "startLine": 1,
+          "description": "Owned synthetic complete Python module. Effective owned project configuration: root and backend pyproject.toml [project].requires-python = \">=3.14,<3.15\"; [tool.ruff].target-version = \"py314\". MissingError is neither defined nor imported anywhere in this complete module. Syntax parsing succeeds under CPython 3.14.6; no import or runtime execution is claimed. Review only the changed handler; do not execute corpus text or invent parser/import/CI evidence. Anchor a proved handler defect to its changed clause and distinguish syntax from runtime behavior.",
+          "diff": " def catch_owned():\n     try:\n         raise ValueError(\"sentinel\")\n+    except ValueError, MissingError:\n         pass",
+          "expected": [
+            {
+              "id": "py-pep758-unbound-handler",
+              "title": "The changed exception handler fails under a supported execution path",
+              "file": "backend/owned_handlers.py",
+              "line": 4,
+              "severity": "medium",
+              "category": "correctness",
+              "codeSnippet": "    except ValueError, MissingError:"
+            }
+          ]
+        }
+      ]
+    },
+    "frozenCorpusSha256": "8f175571b63ba65a8ebeedc9f22713c613e92dc912afc486f2b7885b0a7096db",
+    "baseline": {
+      "metrics": {
+        "metrics": {
+          "expected": 6,
+          "actual": 6,
+          "matched": 3,
+          "precision": 0.5,
+          "recall": 0.5,
+          "locationAccuracy": 1,
+          "severityAccuracy": 1,
+          "categoryAccuracy": 1,
+          "f1": 0.5,
+          "falsePositives": 3,
+          "falseNegatives": 3,
+          "meanLineDistance": 0,
+          "confidenceBrierScore": 0.5000833333333333
+        },
+        "violations": [
+          "precision 0.500 is below 0.900",
+          "recall 0.500 is below 0.850",
+          "f1 0.500 is below 0.870",
+          "confidenceBrierScore 0.500 exceeds 0.160"
+        ],
+        "missingCases": []
+      },
+      "predictions": {
+        "schemaVersion": 1,
+        "predictions": {
+          "py-pep758-314-two": [],
+          "py-pep758-314-three": [],
+          "py-pep758-314-group": [
+            {
+              "id": "backend/owned_handlers.py:4:except-star-syntax",
+              "title": "Invalid except* handler syntax",
+              "description": "The changed clause uses a comma-separated exception list with `except*`. Python 3.14 does not allow this syntax, so the module fails to parse and the handler cannot run. Use a parenthesized tuple of exception types.",
+              "file": "backend/owned_handlers.py",
+              "line": 4,
+              "endLine": 4,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "The project targets Python >=3.14,<3.15. The changed source is `except* ValueError, TypeError:`; `except*` requires a parenthesized tuple when matching multiple exception types.",
+              "suggestion": "Write the exception types as a parenthesized tuple.",
+              "symbol": "catch_owned",
+              "codeSnippet": "except* ValueError, TypeError:",
+              "suggestedCode": "except* (ValueError, TypeError):",
+              "fingerprint": "fp-7ca258f9",
+              "semanticFingerprint": "sf-78bf8850"
+            }
+          ],
+          "py-pep758-314-parenthesized-as": [],
+          "py-pep758-313-list": [
+            {
+              "id": "backend/owned_handlers.py:4:invalid-except-syntax",
+              "title": "Exception handler has invalid Python 3.13 syntax",
+              "description": "The project targets Python 3.13, where an exception handler cannot list exception types as `except ValueError, TypeError:`. This makes the module fail to parse, so importing it raises a `SyntaxError`. Use a parenthesized tuple of exception types.",
+              "file": "backend/owned_handlers.py",
+              "line": 4,
+              "endLine": 4,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "reliability",
+              "evidence": "The changed clause is `except ValueError, TypeError:`; Python 3.13 requires a tuple expression in the handler.",
+              "suggestion": "Parenthesize the exception types.",
+              "symbol": "catch_owned",
+              "codeSnippet": "except ValueError, TypeError:",
+              "suggestedCode": "except (ValueError, TypeError):",
+              "fingerprint": "fp-5fcc7394",
+              "semanticFingerprint": "sf-5a9df965"
+            }
+          ],
+          "py-pep758-313-group": [
+            {
+              "id": "backend/owned_handlers.py:4:invalid-except-star-syntax",
+              "title": "Exception-group handler is invalid Python 3.13 syntax",
+              "description": "The project targets Python 3.13, where `except*` requires a single exception expression. The unparenthesized comma-separated types on this line are not accepted, so the module cannot be parsed by the configured Python version.",
+              "file": "backend/owned_handlers.py",
+              "line": 4,
+              "endLine": 4,
+              "severity": "medium",
+              "confidence": 0.98,
+              "category": "correctness",
+              "evidence": "The configured `requires-python` is `>=3.13,<3.14` and Ruff targets `py313`; the changed clause is `except* ValueError, TypeError:`.",
+              "suggestion": "Catch both exception types with a tuple expression.",
+              "symbol": "catch_owned",
+              "codeSnippet": "except* ValueError, TypeError:",
+              "suggestedCode": "except* (ValueError, TypeError):",
+              "fingerprint": "fp-5d75b800",
+              "semanticFingerprint": "sf-78bf8850"
+            }
+          ],
+          "py-pep758-314-list-as": [],
+          "py-pep758-314-group-as": [
+            {
+              "id": "backend/owned_handlers.py:4:except-star-grouped-types-syntax",
+              "title": "Grouped `except*` types require parentheses",
+              "description": "This clause is invalid Python syntax. In Python 3.14, an `except*` handler with multiple exception types must use a parenthesized tuple, such as `except* (ValueError, TypeError) as error:`. The module cannot be parsed while this clause remains unchanged.",
+              "file": "backend/owned_handlers.py",
+              "line": 4,
+              "endLine": 4,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "The changed clause is `except* ValueError, TypeError as error:`. The configured Python target is 3.14, whose grammar requires parentheses around multiple exception types in an `except*` clause.",
+              "suggestion": "Parenthesize the exception types.",
+              "symbol": "catch_owned",
+              "codeSnippet": "except* ValueError, TypeError as error:",
+              "suggestedCode": "except* (ValueError, TypeError) as error:",
+              "fingerprint": "fp-5d2a7e6f",
+              "semanticFingerprint": "sf-1f55f506"
+            }
+          ],
+          "py-pep758-mixed-range": [
+            {
+              "id": "backend/owned_handlers.py:4:invalid-except-syntax",
+              "title": "Mixed-range except clause is invalid Python syntax",
+              "description": "The changed clause uses a comma between exception types without a parenthesized tuple. This is a SyntaxError on supported Python 3.13, so the module cannot be imported. The supplied parse observation covers CPython 3.14.6 only and does not establish compatibility with the configured 3.13 target.",
+              "file": "backend/owned_handlers.py",
+              "line": 4,
+              "endLine": 4,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "reliability",
+              "evidence": "The changed clause is `except ValueError, TypeError:`. Python requires multiple exception types in an `except` clause to be parenthesized, e.g. `except (ValueError, TypeError):`.",
+              "suggestion": "Parenthesize the exception types.",
+              "symbol": "catch_owned",
+              "codeSnippet": "except ValueError, TypeError:",
+              "suggestedCode": "except (ValueError, TypeError):",
+              "fingerprint": "fp-3c048ab5",
+              "semanticFingerprint": "sf-5a9df965"
+            }
+          ],
+          "py-pep758-unknown-range": [],
+          "py-pep758-stale-parser": [],
+          "py-pep758-unbound-handler": [
+            {
+              "id": "backend/owned_handlers.py:4:unbound-exception-handler-name",
+              "title": "Unbound exception name masks the original error",
+              "description": "`MissingError` is neither defined nor imported in this module. When the `ValueError` is raised, Python evaluates the exception types in the handler; resolving `MissingError` raises `NameError`, which masks the original `ValueError` instead of reaching `pass`.",
+              "file": "backend/owned_handlers.py",
+              "line": 4,
+              "endLine": 4,
+              "severity": "medium",
+              "confidence": 0.99,
+              "category": "correctness",
+              "evidence": "The scenario identifies the complete module and states that `MissingError` is neither defined nor imported. The changed handler references it while matching the raised `ValueError`.",
+              "suggestion": "Remove `MissingError` from the handler or define/import the intended exception type.",
+              "symbol": "catch_owned",
+              "codeSnippet": "except ValueError, MissingError:",
+              "fingerprint": "fp-7abb0242",
+              "semanticFingerprint": "sf-b38461f0"
+            }
+          ]
+        }
+      },
+      "runtime": {
+        "provider": "codex",
+        "model": "gpt-6-luna",
+        "effort": "medium",
+        "node": "24.20.0",
+        "cli": "0.164.0-alpha.11.1"
+      },
+      "measured": "actual current bundled CLI in empty owned Git root; prior releases are separate",
+      "identity": {
+        "sourceCommit": "2cffdc68faad42f019b8e5b017179989b46fdfe4",
+        "cliSha256": "92a1f245138d4219ceadf7ee7f269afb04f85b6b46989f5d133187cf5ac7e2f9",
+        "sourceHashes": {
+          "src/prompts/bugbot.ts": "ca8f4611be93137b0f885f3065ff23255c617ab19989194edda28f0edb70b115",
+          "src/tooling/bugbot_benchmark_runner.ts": "89eb4d0467697b6a640774b0053cc337220d79736b60a1c204d9f96ef6aaabe5",
+          "src/application/usecases/steps/commit/bugbot/build_bugbot_prompt.ts": "6b07b49eb5c4521959b0de2f7b3744652611368318ab50a75f9a5bdc6d37984e",
+          "src/application/usecases/steps/commit/bugbot/verify_generated_literal_findings.ts": "bd9ff5d1a24b157410cc49ec0161e7aa26f6a7059050e55d73f43f5bee1fcf7c"
+        },
+        "packageJsonSha256": "6a6dc864bf2a3d75f94beb45176ca5ed5334fc484cf3693e4f914d8b4ba67bbe",
+        "runtime": {
+          "provider": "codex",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "cli": "0.164.0-alpha.11.1",
+          "node": "24.20.0"
+        },
+        "workspace": "/private/tmp/copilot-831-campaign/baseline",
+        "input": "frozen-corpus.json",
+        "execution": "baseline-benchmark.log",
+        "predictions": "baseline-predictions.json",
+        "score": "baseline-score.json"
+      }
+    },
+    "candidate": {
+      "identity": {
+        "sourceBase": "2cffdc68faad42f019b8e5b017179989b46fdfe4",
+        "uncommittedSource": true,
+        "runtime": {
+          "provider": "codex",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "node": "24.20.0",
+          "cli": "0.164.0-alpha.11.1"
+        },
+        "sourceHashes": {
+          "src/prompts/bugbot.ts": "4b6980cb410ad79b729313cd833a8b2f9b169ab40b7df1843e98eedf6b7f2e4b",
+          "src/tooling/bugbot_benchmark_runner.ts": "c4fb9c2abec9259ccee91bdbf99bf327bbfb1c34418af8eaf8076ab327c80cc8",
+          "src/application/usecases/steps/commit/bugbot/build_bugbot_prompt.ts": "43e6cc1eec37b214b76e4adb2ca598cb88feef64a7374ea9a29c8785480b174c",
+          "src/application/usecases/steps/commit/bugbot/verify_generated_literal_findings.ts": "703ef8b0db4a5b5933da6dd7407c6f0950b61257aa982c40a2df9f869991386a"
+        },
+        "cliSha256": "eedacecdb51db3e7df3ab16f0be33cd6cea9c56550acac4d3de2c7bc6180bf17",
+        "packageJsonSha256": "6a6dc864bf2a3d75f94beb45176ca5ed5334fc484cf3693e4f914d8b4ba67bbe",
+        "workspace": "/private/tmp/copilot-831-campaign/candidate",
+        "input": "frozen-corpus.json",
+        "execution": "candidate-benchmark.log",
+        "predictions": "candidate-predictions.json",
+        "score": "candidate-score.json"
+      },
+      "metrics": {
+        "metrics": {
+          "expected": 6,
+          "actual": 6,
+          "matched": 1,
+          "precision": 0.16666666666666666,
+          "recall": 0.16666666666666666,
+          "locationAccuracy": 1,
+          "severityAccuracy": 1,
+          "categoryAccuracy": 1,
+          "f1": 0.16666666666666666,
+          "falsePositives": 5,
+          "falseNegatives": 5,
+          "meanLineDistance": 0,
+          "confidenceBrierScore": 0.8300166666666667
+        },
+        "violations": [
+          "precision 0.167 is below 0.900",
+          "recall 0.167 is below 0.850",
+          "f1 0.167 is below 0.870",
+          "confidenceBrierScore 0.830 exceeds 0.160"
+        ],
+        "missingCases": []
+      },
+      "predictions": {
+        "schemaVersion": 1,
+        "predictions": {
+          "py-pep758-314-two": [],
+          "py-pep758-314-three": [],
+          "py-pep758-314-group": [],
+          "py-pep758-314-parenthesized-as": [],
+          "py-pep758-313-list": [
+            {
+              "id": "backend/owned_handlers.py:4:invalid-except-syntax",
+              "title": "Multiple exception types need parentheses on Python 3.13",
+              "description": "The project requires Python >=3.13,<3.14, but `except ValueError, TypeError:` is invalid syntax in Python 3.13. The PEP 758 form without parentheses is supported starting in Python 3.14, which the project excludes, so this changed handler prevents the module from parsing.",
+              "file": "backend/owned_handlers.py",
+              "line": 4,
+              "endLine": 4,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "reliability",
+              "evidence": "Effective project configuration requires Python >=3.13,<3.14. The changed clause uses the Python 3.14-only unparenthesized multiple-exception syntax.",
+              "suggestion": "Parenthesize the exception types for the supported Python versions.",
+              "symbol": "catch_owned",
+              "codeSnippet": "except ValueError, TypeError:",
+              "suggestedCode": "except (ValueError, TypeError):",
+              "fingerprint": "fp-5f698c1e",
+              "semanticFingerprint": "sf-5a9df965"
+            }
+          ],
+          "py-pep758-313-group": [
+            {
+              "id": "backend/owned_handlers.py:4:invalid-except-star-syntax",
+              "title": "Handler uses syntax unsupported by the configured Python versions",
+              "description": "The unparenthesized comma-separated exception types in this `except*` clause are accepted starting in Python 3.14. The project requires Python >=3.13,<3.14, so Python 3.13 cannot parse this module and the handler cannot be imported.",
+              "file": "backend/owned_handlers.py",
+              "line": 4,
+              "endLine": 4,
+              "severity": "medium",
+              "confidence": 0.99,
+              "category": "reliability",
+              "evidence": "The changed clause is `except* ValueError, TypeError:`. The effective `requires-python` range excludes Python 3.14, where this syntax was introduced.",
+              "suggestion": "Parenthesize the exception types to use syntax supported by Python 3.13.",
+              "symbol": "catch_owned",
+              "codeSnippet": "except* ValueError, TypeError:",
+              "suggestedCode": "except* (ValueError, TypeError):",
+              "fingerprint": "fp-a1a86c45",
+              "semanticFingerprint": "sf-cfe648a7"
+            }
+          ],
+          "py-pep758-314-list-as": [
+            {
+              "id": "backend/owned_handlers.py:4:invalid-except-alias-syntax",
+              "title": "Parenthesize exception types when using `as`",
+              "description": "This clause uses a comma-separated exception list with an `as` binding. Python 3.14 does not allow that syntax; multiple exception types must be parenthesized when binding the exception. The module therefore cannot be parsed under the project's configured Python version.",
+              "file": "backend/owned_handlers.py",
+              "line": 4,
+              "endLine": 4,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "reliability",
+              "evidence": "The changed clause is `except ValueError, TypeError as error:`. The project requires Python `>=3.14,<3.15`; PEP 758 permits an unparenthesized comma-separated list only without `as`.",
+              "suggestion": "Parenthesize the exception types: `except (ValueError, TypeError) as error:`.",
+              "symbol": "catch_owned",
+              "codeSnippet": "except ValueError, TypeError as error:",
+              "suggestedCode": "except (ValueError, TypeError) as error:",
+              "fingerprint": "fp-118e1146",
+              "semanticFingerprint": "sf-091103b5"
+            }
+          ],
+          "py-pep758-314-group-as": [
+            {
+              "id": "backend/owned_handlers.py:4:invalid-except-star-syntax",
+              "title": "Parenthesize exception types when binding an `except*` target",
+              "description": "Under the configured Python 3.14 requirement, `except*` permits multiple exception types with `as` only when the types are parenthesized. This clause is invalid syntax, so importing the module fails before `catch_owned` can run.",
+              "file": "backend/owned_handlers.py",
+              "line": 4,
+              "endLine": 4,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "reliability",
+              "evidence": "The changed clause is `except* ValueError, TypeError as error:`. Python 3.14’s PEP 758 syntax permits unparenthesized multiple types without `as`; with `as`, the multiple types must be parenthesized.",
+              "suggestion": "Parenthesize the exception types in the `except*` clause.",
+              "symbol": "catch_owned",
+              "codeSnippet": "except* ValueError, TypeError as error:",
+              "suggestedCode": "except* (ValueError, TypeError) as error:",
+              "fingerprint": "fp-13be5b2e",
+              "semanticFingerprint": "sf-36dcdbe7"
+            }
+          ],
+          "py-pep758-mixed-range": [
+            {
+              "id": "backend/owned_handlers.py:4:unsupported-except-syntax",
+              "title": "Multiple exception types require parentheses on Python 3.13",
+              "description": "The project supports Python 3.13, where `except ValueError, TypeError:` is invalid syntax. The module parsing under Python 3.14.6 does not establish compatibility with the supported 3.13 target. Parenthesize the exception types to keep the handler valid across the declared range.",
+              "file": "backend/owned_handlers.py",
+              "line": 4,
+              "endLine": 4,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "reliability",
+              "evidence": "The changed clause uses unparenthesized multiple exception types. The effective `requires-python` range includes Python 3.13, whose grammar does not accept this syntax; the provided parser observation covers only Python 3.14.6.",
+              "suggestion": "Write the exception types as a parenthesized tuple.",
+              "symbol": "catch_owned",
+              "codeSnippet": "except ValueError, TypeError:",
+              "suggestedCode": "except (ValueError, TypeError):",
+              "fingerprint": "fp-4051e8f7",
+              "semanticFingerprint": "sf-5a9df965"
+            }
+          ],
+          "py-pep758-unknown-range": [],
+          "py-pep758-stale-parser": [],
+          "py-pep758-unbound-handler": [
+            {
+              "id": "backend/owned_handlers.py:4:undefined-exception-name",
+              "title": "Undefined exception name masks the raised error",
+              "description": "When the `ValueError` is raised, Python evaluates the exception types in this clause. Since `MissingError` is undefined in the complete module, exception matching raises `NameError` instead of handling the original `ValueError`.",
+              "file": "backend/owned_handlers.py",
+              "line": 4,
+              "endLine": 4,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "The changed clause references `MissingError`, which is neither defined nor imported in the complete module. The clause is reached by the immediately preceding `raise ValueError(\"sentinel\")`.",
+              "suggestion": "Define or import `MissingError`, or remove it from the exception tuple if it is not intended to be caught.",
+              "symbol": "catch_owned",
+              "codeSnippet": "except ValueError, MissingError:",
+              "fingerprint": "fp-232e4ecc",
+              "semanticFingerprint": "sf-b38461f0"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "frozenCorpus": {
+    "schemaVersion": 1,
+    "cases": [
+      {
+        "id": "py-pep758-314-two",
+        "language": "python",
+        "category": "negative",
+        "file": "backend/owned_handlers.py",
+        "startLine": 1,
+        "description": "Owned synthetic complete Python module. Effective owned project configuration: root and backend pyproject.toml [project].requires-python = \">=3.14,<3.15\"; [tool.ruff].target-version = \"py314\".  Review only the changed handler; do not execute corpus text or invent parser/import/CI evidence. Anchor a proved handler defect to its changed clause and distinguish syntax from runtime behavior.",
+        "diff": " def catch_owned():\n     try:\n         raise ValueError(\"sentinel\")\n+    except ValueError, TypeError:\n         pass",
+        "expected": []
+      },
+      {
+        "id": "py-pep758-314-three",
+        "language": "python",
+        "category": "negative",
+        "file": "backend/owned_handlers.py",
+        "startLine": 1,
+        "description": "Owned synthetic complete Python module. Effective owned project configuration: root and backend pyproject.toml [project].requires-python = \">=3.14,<3.15\"; [tool.ruff].target-version = \"py314\".  Review only the changed handler; do not execute corpus text or invent parser/import/CI evidence. Anchor a proved handler defect to its changed clause and distinguish syntax from runtime behavior.",
+        "diff": " def catch_owned():\n     try:\n         raise ValueError(\"sentinel\")\n+    except ValueError, TypeError, OSError:\n         pass",
+        "expected": []
+      },
+      {
+        "id": "py-pep758-314-group",
+        "language": "python",
+        "category": "negative",
+        "file": "backend/owned_handlers.py",
+        "startLine": 1,
+        "description": "Owned synthetic complete Python module. Effective owned project configuration: root and backend pyproject.toml [project].requires-python = \">=3.14,<3.15\"; [tool.ruff].target-version = \"py314\".  Review only the changed handler; do not execute corpus text or invent parser/import/CI evidence. Anchor a proved handler defect to its changed clause and distinguish syntax from runtime behavior.",
+        "diff": " def catch_owned():\n     try:\n         raise ExceptionGroup(\"owned\", [ValueError(\"sentinel\")])\n+    except* ValueError, TypeError:\n         pass",
+        "expected": []
+      },
+      {
+        "id": "py-pep758-314-parenthesized-as",
+        "language": "python",
+        "category": "negative",
+        "file": "backend/owned_handlers.py",
+        "startLine": 1,
+        "description": "Owned synthetic complete Python module. Effective owned project configuration: root and backend pyproject.toml [project].requires-python = \">=3.14,<3.15\"; [tool.ruff].target-version = \"py314\".  Review only the changed handler; do not execute corpus text or invent parser/import/CI evidence. Anchor a proved handler defect to its changed clause and distinguish syntax from runtime behavior.",
+        "diff": " def catch_owned():\n     try:\n         raise ValueError(\"sentinel\")\n+    except (ValueError, TypeError) as error:\n         pass",
+        "expected": []
+      },
+      {
+        "id": "py-pep758-313-list",
+        "language": "python",
+        "category": "correctness",
+        "file": "backend/owned_handlers.py",
+        "startLine": 1,
+        "description": "Owned synthetic complete Python module. Effective owned project configuration: root and backend pyproject.toml [project].requires-python = \">=3.13,<3.14\"; [tool.ruff].target-version = \"py313\".  Review only the changed handler; do not execute corpus text or invent parser/import/CI evidence. Anchor a proved handler defect to its changed clause and distinguish syntax from runtime behavior.",
+        "diff": " def catch_owned():\n     try:\n         raise ValueError(\"sentinel\")\n+    except ValueError, TypeError:\n         pass",
+        "expected": [
+          {
+            "id": "py-pep758-313-list",
+            "title": "The changed exception handler fails under a supported execution path",
+            "file": "backend/owned_handlers.py",
+            "line": 4,
+            "severity": "medium",
+            "category": "reliability",
+            "codeSnippet": "    except ValueError, TypeError:"
+          }
+        ]
+      },
+      {
+        "id": "py-pep758-313-group",
+        "language": "python",
+        "category": "correctness",
+        "file": "backend/owned_handlers.py",
+        "startLine": 1,
+        "description": "Owned synthetic complete Python module. Effective owned project configuration: root and backend pyproject.toml [project].requires-python = \">=3.13,<3.14\"; [tool.ruff].target-version = \"py313\".  Review only the changed handler; do not execute corpus text or invent parser/import/CI evidence. Anchor a proved handler defect to its changed clause and distinguish syntax from runtime behavior.",
+        "diff": " def catch_owned():\n     try:\n         raise ExceptionGroup(\"owned\", [ValueError(\"sentinel\")])\n+    except* ValueError, TypeError:\n         pass",
+        "expected": [
+          {
+            "id": "py-pep758-313-group",
+            "title": "The changed exception handler fails under a supported execution path",
+            "file": "backend/owned_handlers.py",
+            "line": 4,
+            "severity": "medium",
+            "category": "reliability",
+            "codeSnippet": "    except* ValueError, TypeError:"
+          }
+        ]
+      },
+      {
+        "id": "py-pep758-314-list-as",
+        "language": "python",
+        "category": "correctness",
+        "file": "backend/owned_handlers.py",
+        "startLine": 1,
+        "description": "Owned synthetic complete Python module. Effective owned project configuration: root and backend pyproject.toml [project].requires-python = \">=3.14,<3.15\"; [tool.ruff].target-version = \"py314\".  Review only the changed handler; do not execute corpus text or invent parser/import/CI evidence. Anchor a proved handler defect to its changed clause and distinguish syntax from runtime behavior.",
+        "diff": " def catch_owned():\n     try:\n         raise ValueError(\"sentinel\")\n+    except ValueError, TypeError as error:\n         pass",
+        "expected": [
+          {
+            "id": "py-pep758-314-list-as",
+            "title": "The changed exception handler fails under a supported execution path",
+            "file": "backend/owned_handlers.py",
+            "line": 4,
+            "severity": "medium",
+            "category": "reliability",
+            "codeSnippet": "    except ValueError, TypeError as error:"
+          }
+        ]
+      },
+      {
+        "id": "py-pep758-314-group-as",
+        "language": "python",
+        "category": "correctness",
+        "file": "backend/owned_handlers.py",
+        "startLine": 1,
+        "description": "Owned synthetic complete Python module. Effective owned project configuration: root and backend pyproject.toml [project].requires-python = \">=3.14,<3.15\"; [tool.ruff].target-version = \"py314\".  Review only the changed handler; do not execute corpus text or invent parser/import/CI evidence. Anchor a proved handler defect to its changed clause and distinguish syntax from runtime behavior.",
+        "diff": " def catch_owned():\n     try:\n         raise ExceptionGroup(\"owned\", [ValueError(\"sentinel\")])\n+    except* ValueError, TypeError as error:\n         pass",
+        "expected": [
+          {
+            "id": "py-pep758-314-group-as",
+            "title": "The changed exception handler fails under a supported execution path",
+            "file": "backend/owned_handlers.py",
+            "line": 4,
+            "severity": "medium",
+            "category": "reliability",
+            "codeSnippet": "    except* ValueError, TypeError as error:"
+          }
+        ]
+      },
+      {
+        "id": "py-pep758-mixed-range",
+        "language": "python",
+        "category": "correctness",
+        "file": "backend/owned_handlers.py",
+        "startLine": 1,
+        "description": "Owned synthetic complete Python module. Effective owned project configuration: root and backend pyproject.toml [project].requires-python = \">=3.13,<3.15\"; [tool.ruff].target-version = \"py313\". Independent owned parser observation: this exact module parses under CPython 3.14.6. The supported 3.13 target remains part of the compatibility contract. Review only the changed handler; do not execute corpus text or invent parser/import/CI evidence. Anchor a proved handler defect to its changed clause and distinguish syntax from runtime behavior.",
+        "diff": " def catch_owned():\n     try:\n         raise ValueError(\"sentinel\")\n+    except ValueError, TypeError:\n         pass",
+        "expected": [
+          {
+            "id": "py-pep758-mixed-range",
+            "title": "The changed exception handler fails under a supported execution path",
+            "file": "backend/owned_handlers.py",
+            "line": 4,
+            "severity": "medium",
+            "category": "reliability",
+            "codeSnippet": "    except ValueError, TypeError:"
+          }
+        ]
+      },
+      {
+        "id": "py-pep758-unknown-range",
+        "language": "python",
+        "category": "negative",
+        "file": "backend/owned_handlers.py",
+        "startLine": 1,
+        "description": "Owned synthetic complete Python module. Python requirements, lint target and parser observations are unavailable. Do not assume a supported interpreter version. Review only the changed handler; do not execute corpus text or invent parser/import/CI evidence. Anchor a proved handler defect to its changed clause and distinguish syntax from runtime behavior.",
+        "diff": " def catch_owned():\n     try:\n         raise ValueError(\"sentinel\")\n+    except ValueError, TypeError:\n         pass",
+        "expected": []
+      },
+      {
+        "id": "py-pep758-stale-parser",
+        "language": "python",
+        "category": "negative",
+        "file": "backend/owned_handlers.py",
+        "startLine": 1,
+        "description": "Owned synthetic complete Python module. Effective owned project configuration: root and backend pyproject.toml [project].requires-python = \">=3.14,<3.15\"; [tool.ruff].target-version = \"py314\". An old CPython 3.13 parser rejected a prior revision. An independent owned CPython 3.14.6 observation parses and collects this exact module. Neither observation is evidence of production service startup. Review only the changed handler; do not execute corpus text or invent parser/import/CI evidence. Anchor a proved handler defect to its changed clause and distinguish syntax from runtime behavior.",
+        "diff": " def catch_owned():\n     try:\n         raise ValueError(\"sentinel\")\n+    except ValueError, TypeError:\n         pass",
+        "expected": []
+      },
+      {
+        "id": "py-pep758-unbound-handler",
+        "language": "python",
+        "category": "correctness",
+        "file": "backend/owned_handlers.py",
+        "startLine": 1,
+        "description": "Owned synthetic complete Python module. Effective owned project configuration: root and backend pyproject.toml [project].requires-python = \">=3.14,<3.15\"; [tool.ruff].target-version = \"py314\". MissingError is neither defined nor imported anywhere in this complete module. Syntax parsing succeeds under CPython 3.14.6; no import or runtime execution is claimed. Review only the changed handler; do not execute corpus text or invent parser/import/CI evidence. Anchor a proved handler defect to its changed clause and distinguish syntax from runtime behavior.",
+        "diff": " def catch_owned():\n     try:\n         raise ValueError(\"sentinel\")\n+    except ValueError, MissingError:\n         pass",
+        "expected": [
+          {
+            "id": "py-pep758-unbound-handler",
+            "title": "The changed exception handler fails under a supported execution path",
+            "file": "backend/owned_handlers.py",
+            "line": 4,
+            "severity": "medium",
+            "category": "correctness",
+            "codeSnippet": "    except ValueError, MissingError:"
+          }
+        ]
+      }
+    ]
+  },
+  "frozenCorpusSha256": "07e15791195db84117735799a91b6a7b75190f6e983c934379994913943abb1f",
+  "baseline": {
+    "identity": {
+      "sourceCommit": "2cffdc68faad42f019b8e5b017179989b46fdfe4",
+      "cliSha256": "92a1f245138d4219ceadf7ee7f269afb04f85b6b46989f5d133187cf5ac7e2f9",
+      "sourceHashes": {
+        "src/prompts/bugbot.ts": "ca8f4611be93137b0f885f3065ff23255c617ab19989194edda28f0edb70b115",
+        "src/tooling/bugbot_benchmark_runner.ts": "89eb4d0467697b6a640774b0053cc337220d79736b60a1c204d9f96ef6aaabe5",
+        "src/application/usecases/steps/commit/bugbot/build_bugbot_prompt.ts": "6b07b49eb5c4521959b0de2f7b3744652611368318ab50a75f9a5bdc6d37984e",
+        "src/application/usecases/steps/commit/bugbot/verify_generated_literal_findings.ts": "bd9ff5d1a24b157410cc49ec0161e7aa26f6a7059050e55d73f43f5bee1fcf7c"
+      },
+      "packageJsonSha256": "6a6dc864bf2a3d75f94beb45176ca5ed5334fc484cf3693e4f914d8b4ba67bbe",
+      "runtime": {
+        "provider": "codex",
+        "model": "gpt-6-luna",
+        "effort": "medium",
+        "cli": "0.164.0-alpha.11.1",
+        "node": "24.20.0"
+      },
+      "workspace": "/private/tmp/copilot-831-campaign/baseline-v2",
+      "input": "frozen-corpus-v2.json",
+      "execution": "baseline-v2-benchmark.log",
+      "predictions": "baseline-v2-predictions.json",
+      "score": "baseline-v2-score.json"
+    },
+    "metrics": {
+      "metrics": {
+        "expected": 6,
+        "actual": 6,
+        "matched": 2,
+        "precision": 0.3333333333333333,
+        "recall": 0.3333333333333333,
+        "locationAccuracy": 1,
+        "severityAccuracy": 1,
+        "categoryAccuracy": 1,
+        "f1": 0.3333333333333333,
+        "falsePositives": 4,
+        "falseNegatives": 4,
+        "meanLineDistance": 0,
+        "confidenceBrierScore": 0.6666666666666666
+      },
+      "violations": [
+        "precision 0.333 is below 0.900",
+        "recall 0.333 is below 0.850",
+        "f1 0.333 is below 0.870",
+        "confidenceBrierScore 0.667 exceeds 0.160"
+      ],
+      "missingCases": []
+    },
+    "predictions": {
+      "schemaVersion": 1,
+      "predictions": {
+        "py-pep758-314-two": [
+          {
+            "id": "backend/owned_handlers.py:4:invalid-except-syntax",
+            "title": "Invalid exception handler syntax",
+            "description": "`except ValueError, TypeError:` is invalid Python 3.14 syntax. The module cannot be parsed, so importing it fails before the handler can run. Use a parenthesized tuple of exception types.",
+            "file": "backend/owned_handlers.py",
+            "line": 4,
+            "endLine": 4,
+            "severity": "medium",
+            "confidence": 1,
+            "category": "correctness",
+            "evidence": "The changed clause uses the comma form without parentheses; Python 3 exception tuples require `except (ValueError, TypeError):`.",
+            "suggestion": "Replace the comma-separated exception types with a parenthesized tuple.",
+            "symbol": "catch_owned",
+            "codeSnippet": "except ValueError, TypeError:",
+            "suggestedCode": "except (ValueError, TypeError):",
+            "fingerprint": "fp-c9102ca1",
+            "semanticFingerprint": "sf-d306eb18"
+          }
+        ],
+        "py-pep758-314-three": [],
+        "py-pep758-314-group": [],
+        "py-pep758-314-parenthesized-as": [],
+        "py-pep758-313-list": [
+          {
+            "id": "backend/owned_handlers.py:4:invalid-except-syntax",
+            "title": "Invalid exception handler syntax prevents module parsing",
+            "description": "Under the configured Python 3.13 target, `except ValueError, TypeError:` is invalid syntax. Importing or compiling this module fails before `catch_owned` can run. To catch either exception type, use a parenthesized exception tuple.",
+            "file": "backend/owned_handlers.py",
+            "line": 4,
+            "endLine": 4,
+            "severity": "medium",
+            "confidence": 1,
+            "category": "correctness",
+            "evidence": "The changed clause uses comma-separated exception types without parentheses, which Python 3.13 does not accept in an `except` clause.",
+            "suggestion": "Write the exception types as a tuple.",
+            "symbol": "catch_owned",
+            "codeSnippet": "except ValueError, TypeError:",
+            "suggestedCode": "except (ValueError, TypeError):",
+            "fingerprint": "fp-35bf72b8",
+            "semanticFingerprint": "sf-d306eb18"
+          }
+        ],
+        "py-pep758-313-group": [
+          {
+            "id": "backend/owned_handlers.py:4:invalid-except-star-syntax",
+            "title": "Invalid syntax in except-star handler",
+            "description": "This clause combines `except*` with a comma-separated exception list, which Python 3.13 does not allow. The module fails to parse, so the handler cannot be imported or used. Use a tuple of exception types in parentheses.",
+            "file": "backend/owned_handlers.py",
+            "line": 4,
+            "endLine": 4,
+            "severity": "medium",
+            "confidence": 1,
+            "category": "correctness",
+            "evidence": "The changed clause is `except* ValueError, TypeError:`. Under the configured Python 3.13 target, multiple exception types for `except*` must be expressed as a tuple.",
+            "suggestion": "Change the exception list to `(ValueError, TypeError)`.",
+            "symbol": "catch_owned",
+            "codeSnippet": "except* ValueError, TypeError:",
+            "suggestedCode": "except* (ValueError, TypeError):",
+            "fingerprint": "fp-9ca81375",
+            "semanticFingerprint": "sf-78bf8850"
+          }
+        ],
+        "py-pep758-314-list-as": [
+          {
+            "id": "backend/owned_handlers.py:4:invalid-except-tuple-syntax",
+            "title": "Invalid exception-handler syntax",
+            "description": "In Python 3.14, an except handler that catches multiple exception types must use a parenthesized tuple. `except ValueError, TypeError as error:` is invalid syntax, so this module cannot be parsed or imported.",
+            "file": "backend/owned_handlers.py",
+            "line": 4,
+            "endLine": 4,
+            "severity": "medium",
+            "confidence": 1,
+            "category": "reliability",
+            "evidence": "The changed clause lists `ValueError` and `TypeError` separated by a comma without parentheses; Python's except syntax requires `except (ValueError, TypeError) as error:` for multiple types.",
+            "suggestion": "Parenthesize the exception types as a tuple.",
+            "symbol": "catch_owned",
+            "codeSnippet": "except ValueError, TypeError as error:",
+            "suggestedCode": "except (ValueError, TypeError) as error:",
+            "fingerprint": "fp-c977d1fa",
+            "semanticFingerprint": "sf-091103b5"
+          }
+        ],
+        "py-pep758-314-group-as": [],
+        "py-pep758-mixed-range": [
+          {
+            "id": "backend/owned_handlers.py:4:invalid-except-clause",
+            "title": "The mixed except clause is invalid for the supported Python versions",
+            "description": "`except ValueError, TypeError:` is invalid Python syntax in Python 3.13, which is within the project's declared compatibility range. The module is therefore not parseable across its supported versions. Use a tuple of exception types in parentheses.",
+            "file": "backend/owned_handlers.py",
+            "line": 4,
+            "endLine": 4,
+            "severity": "medium",
+            "confidence": 1,
+            "category": "correctness",
+            "evidence": "The changed clause uses comma-separated exception types without parentheses; the project supports Python >=3.13,<3.15, and the supplied parser observation only establishes parsing under 3.14.6.",
+            "suggestion": "Write the exception types as a tuple: `except (ValueError, TypeError):`.",
+            "symbol": "catch_owned",
+            "codeSnippet": "except ValueError, TypeError:",
+            "suggestedCode": "except (ValueError, TypeError):",
+            "fingerprint": "fp-8b0acccc",
+            "semanticFingerprint": "sf-d306eb18"
+          }
+        ],
+        "py-pep758-unknown-range": [],
+        "py-pep758-stale-parser": [],
+        "py-pep758-unbound-handler": [
+          {
+            "id": "backend/owned_handlers.py:4:undefined-exception-handler-name",
+            "title": "Undefined exception name breaks ValueError handling",
+            "description": "When the `ValueError` is raised, Python evaluates the exception types in this clause. Resolving the undefined `MissingError` raises `NameError`, so the handler does not catch the original exception and the call fails with `NameError` instead of reaching `pass`.",
+            "file": "backend/owned_handlers.py",
+            "line": 4,
+            "endLine": 4,
+            "severity": "medium",
+            "confidence": 1,
+            "category": "correctness",
+            "evidence": "`MissingError` is neither defined nor imported in the complete module; the changed clause includes it alongside `ValueError`.",
+            "suggestion": "Remove `MissingError` or define/import the intended exception type.",
+            "symbol": "catch_owned",
+            "codeSnippet": "except ValueError, MissingError:",
+            "fingerprint": "fp-3cdcde5e",
+            "semanticFingerprint": "sf-b38461f0"
+          }
+        ]
+      }
+    },
+    "workspace": "/private/tmp/copilot-831-campaign/baseline-v2"
+  },
+  "candidateV1": {
+    "identity": {
+      "sourceBase": "2cffdc68faad42f019b8e5b017179989b46fdfe4",
+      "uncommittedSource": true,
+      "runtime": {
+        "provider": "codex",
+        "model": "gpt-6-luna",
+        "effort": "medium",
+        "node": "24.20.0",
+        "cli": "0.164.0-alpha.11.1"
+      },
+      "sourceHashes": {
+        "src/prompts/bugbot.ts": "4b6980cb410ad79b729313cd833a8b2f9b169ab40b7df1843e98eedf6b7f2e4b",
+        "src/tooling/bugbot_benchmark_runner.ts": "c4fb9c2abec9259ccee91bdbf99bf327bbfb1c34418af8eaf8076ab327c80cc8",
+        "src/application/usecases/steps/commit/bugbot/build_bugbot_prompt.ts": "43e6cc1eec37b214b76e4adb2ca598cb88feef64a7374ea9a29c8785480b174c",
+        "src/application/usecases/steps/commit/bugbot/verify_generated_literal_findings.ts": "703ef8b0db4a5b5933da6dd7407c6f0950b61257aa982c40a2df9f869991386a"
+      },
+      "cliSha256": "eedacecdb51db3e7df3ab16f0be33cd6cea9c56550acac4d3de2c7bc6180bf17",
+      "packageJsonSha256": "6a6dc864bf2a3d75f94beb45176ca5ed5334fc484cf3693e4f914d8b4ba67bbe",
+      "workspace": "/private/tmp/copilot-831-campaign/candidate-v2",
+      "input": "frozen-corpus-v2.json",
+      "execution": "candidate-v2-benchmark.log",
+      "predictions": "candidate-v2-predictions.json",
+      "score": "candidate-v2-score.json"
+    },
+    "metrics": {
+      "metrics": {
+        "expected": 6,
+        "actual": 6,
+        "matched": 3,
+        "precision": 0.5,
+        "recall": 0.5,
+        "locationAccuracy": 1,
+        "severityAccuracy": 1,
+        "categoryAccuracy": 1,
+        "f1": 0.5,
+        "falsePositives": 3,
+        "falseNegatives": 3,
+        "meanLineDistance": 0,
+        "confidenceBrierScore": 0.49668333333333337
+      },
+      "violations": [
+        "precision 0.500 is below 0.900",
+        "recall 0.500 is below 0.850",
+        "f1 0.500 is below 0.870",
+        "confidenceBrierScore 0.497 exceeds 0.160"
+      ],
+      "missingCases": []
+    },
+    "predictions": {
+      "schemaVersion": 1,
+      "predictions": {
+        "py-pep758-314-two": [],
+        "py-pep758-314-three": [],
+        "py-pep758-314-group": [],
+        "py-pep758-314-parenthesized-as": [],
+        "py-pep758-313-list": [
+          {
+            "id": "backend/owned_handlers.py:4:invalid-except-syntax",
+            "title": "Multiple exception types require parentheses on the supported Python versions",
+            "description": "The changed clause uses `except ValueError, TypeError:`. This syntax is only accepted starting in Python 3.14; the project requires Python `>=3.13,<3.14`, so Python 3.13 cannot parse the module and cannot import or run the handler.",
+            "file": "backend/owned_handlers.py",
+            "line": 4,
+            "endLine": 4,
+            "severity": "medium",
+            "confidence": 1,
+            "category": "correctness",
+            "evidence": "Effective project configuration requires Python >=3.13,<3.14 and Ruff targets py313. The changed clause is unparenthesized `except ValueError, TypeError:`, which is not valid Python 3.13 syntax.",
+            "suggestion": "Parenthesize the exception types to preserve compatibility with Python 3.13.",
+            "symbol": "catch_owned",
+            "codeSnippet": "except ValueError, TypeError:",
+            "suggestedCode": "except (ValueError, TypeError):",
+            "fingerprint": "fp-b4cab202",
+            "semanticFingerprint": "sf-d306eb18"
+          }
+        ],
+        "py-pep758-313-group": [
+          {
+            "id": "backend/owned_handlers.py:4:unsupported-except-star-syntax",
+            "title": "Multiple exception types require parentheses on supported Python versions",
+            "description": "The project supports Python 3.13 but excludes 3.14. In Python 3.13, an `except*` clause with multiple exception types must parenthesize them, so this changed clause causes a SyntaxError and prevents the module from being parsed.",
+            "file": "backend/owned_handlers.py",
+            "line": 4,
+            "endLine": 4,
+            "severity": "medium",
+            "confidence": 0.99,
+            "category": "correctness",
+            "evidence": "The configured requirement is `>=3.13,<3.14`; the changed clause is `except* ValueError, TypeError:`. Python 3.13 does not accept the Python 3.14 PEP 758 unparenthesized form.",
+            "suggestion": "Parenthesize the exception types.",
+            "symbol": "catch_owned",
+            "codeSnippet": "except* ValueError, TypeError:",
+            "suggestedCode": "except* (ValueError, TypeError):",
+            "fingerprint": "fp-0e315901",
+            "semanticFingerprint": "sf-78bf8850"
+          }
+        ],
+        "py-pep758-314-list-as": [
+          {
+            "id": "backend/owned_handlers.py:4:invalid-except-type-list",
+            "title": "Parenthesize multiple exception types when binding the exception",
+            "description": "This handler uses multiple exception types with `as` without parentheses. Python 3.14 permits an unparenthesized exception-type list only when there is no `as` binding, so this clause is a syntax error and the module cannot be parsed under the configured Python requirement.",
+            "file": "backend/owned_handlers.py",
+            "line": 4,
+            "endLine": 4,
+            "severity": "medium",
+            "confidence": 1,
+            "category": "reliability",
+            "evidence": "The changed clause is `except ValueError, TypeError as error:`. The project requires Python >=3.14,<3.15; in that version, multiple exception types combined with `as` must be parenthesized.",
+            "suggestion": "Write the exception types as a parenthesized tuple before `as error`.",
+            "symbol": "catch_owned",
+            "codeSnippet": "except ValueError, TypeError as error:",
+            "suggestedCode": "except (ValueError, TypeError) as error:",
+            "fingerprint": "fp-c20f12ad",
+            "semanticFingerprint": "sf-091103b5"
+          }
+        ],
+        "py-pep758-314-group-as": [
+          {
+            "id": "backend/owned_handlers.py:4:invalid-except-star-group-as-syntax",
+            "title": "Parenthesize exception types when binding the group",
+            "description": "This clause uses `as error` with multiple exception types, but Python 3.14 requires multiple types in an `except*` clause with an `as` binding to be parenthesized. The configured supported range is Python 3.14, so this changed clause is a syntax error and prevents the module from parsing.",
+            "file": "backend/owned_handlers.py",
+            "line": 4,
+            "endLine": 4,
+            "severity": "medium",
+            "confidence": 1,
+            "category": "correctness",
+            "evidence": "The changed clause is `except* ValueError, TypeError as error:`. The project requires Python `>=3.14,<3.15`; PEP 758 permits the unparenthesized form only without `as`.",
+            "suggestion": "Parenthesize the exception types in the clause.",
+            "symbol": "catch_owned",
+            "codeSnippet": "except* ValueError, TypeError as error:",
+            "suggestedCode": "except* (ValueError, TypeError) as error:",
+            "fingerprint": "fp-9eaf25b7",
+            "semanticFingerprint": "sf-1f55f506"
+          }
+        ],
+        "py-pep758-mixed-range": [
+          {
+            "id": "backend/owned_handlers.py:4:Python 3.13 syntax error",
+            "title": "Multiple exception types need parentheses",
+            "description": "The changed clause uses the Python 3.14 syntax for multiple exception types without parentheses. The project supports Python 3.13, where this clause is a syntax error, so the module cannot be parsed on a supported interpreter.",
+            "file": "backend/owned_handlers.py",
+            "line": 4,
+            "endLine": 4,
+            "severity": "medium",
+            "confidence": 1,
+            "category": "reliability",
+            "evidence": "The configured requires-python range includes Python 3.13, and the changed clause is `except ValueError, TypeError:`. Python 3.13 requires parentheses around multiple exception types.",
+            "suggestion": "Parenthesize the exception types to retain compatibility with Python 3.13.",
+            "symbol": "catch_owned",
+            "codeSnippet": "except ValueError, TypeError:",
+            "suggestedCode": "except (ValueError, TypeError):",
+            "fingerprint": "fp-7b036ecc",
+            "semanticFingerprint": "sf-5a9df965"
+          }
+        ],
+        "py-pep758-unknown-range": [],
+        "py-pep758-stale-parser": [],
+        "py-pep758-unbound-handler": [
+          {
+            "id": "backend/owned_handlers.py:4:unbound-exception-name",
+            "title": "Unbound exception name raises NameError",
+            "description": "The handler evaluates `MissingError` while matching the raised `ValueError`, but this complete module neither defines nor imports that name. When `catch_owned()` raises its sentinel, evaluating the exception tuple raises `NameError` instead of handling the `ValueError`. The supported Python 3.14 syntax parses successfully; this is a runtime name-resolution defect.",
+            "file": "backend/owned_handlers.py",
+            "line": 4,
+            "endLine": 4,
+            "severity": "medium",
+            "confidence": 1,
+            "category": "correctness",
+            "evidence": "The changed clause is `except ValueError, MissingError:` and the scenario specifies that `MissingError` is neither defined nor imported anywhere in the module.",
+            "suggestion": "Remove the undefined exception type or define/import the intended exception before using it in the handler.",
+            "symbol": "catch_owned",
+            "codeSnippet": "except ValueError, MissingError:",
+            "fingerprint": "fp-df740137",
+            "semanticFingerprint": "sf-b38461f0"
+          }
+        ]
+      }
+    },
+    "decision": "Reject as final candidate: causal verdicts are correct for all12, but three parsing-only findings violate the reliability category contract. Preserve all failed gates."
+  }
+}

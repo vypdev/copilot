@@ -5,8 +5,11 @@ import type { BugbotBenchmarkCorpus, BugbotBenchmarkPredictions, BugbotBenchmark
 import type { BugbotEvalFinding } from './bugbot_quality_eval';
 import { renderUntrustedField, UNTRUSTED_CONTENT_POLICY } from '../domain/security/untrusted_content';
 import { normalizeBugbotResponse } from '../application/usecases/steps/commit/bugbot/prepare_bugbot_findings_policy';
-import { BUGBOT_MARKDOWN_LINKS_INSTRUCTION, BUGBOT_WASM_BINDINGS_INSTRUCTION, BUGBOT_ACTION_CONTRACTS_INSTRUCTION, BUGBOT_TEST_PATHS_INSTRUCTION, BUGBOT_DEPENDENCY_TYPES_INSTRUCTION, BUGBOT_EXTERNAL_FACTS_INSTRUCTION, BUGBOT_FINDING_GROUNDING_INSTRUCTION } from '../prompts/bugbot';
-import { renderPythonLiteralWitnesses, projectPythonLiteralWitnesses } from '../application/policies/bugbot_python_literal_witness_policy';
+import { BUGBOT_FIXTURE_VALUES_INSTRUCTION, BUGBOT_RECOVERY_CONTRACT_INSTRUCTION, BUGBOT_PYTHON_SYNTAX_INSTRUCTION, BUGBOT_MARKDOWN_LINKS_INSTRUCTION, BUGBOT_WASM_BINDINGS_INSTRUCTION, BUGBOT_ACTION_CONTRACTS_INSTRUCTION, BUGBOT_TEST_PATHS_INSTRUCTION, BUGBOT_DEPENDENCY_TYPES_INSTRUCTION, BUGBOT_EXTERNAL_FACTS_INSTRUCTION, BUGBOT_FINDING_GROUNDING_INSTRUCTION } from '../prompts/bugbot';
+import { renderPythonLiteralWitnesses } from '../application/policies/bugbot_python_literal_witness_policy';
+import { BUGBOT_RESOURCE_AUTHORITY_INSTRUCTION } from '../prompts/bugbot_resource_authority';
+import { BUGBOT_ASYNC_STATEMENT_INSTRUCTION } from '../prompts/bugbot_async_statement_evidence';
+import { BUGBOT_JSON_VALUE_INSTRUCTION } from '../prompts/bugbot_json_value_evidence';
 
 import { verifyGeneratedLiteralFindings } from '../application/usecases/steps/commit/bugbot/verify_generated_literal_findings';
 
@@ -32,7 +35,7 @@ export async function runBugbotBenchmarkAgent(
                 schemaName: 'bugbot_benchmark_response',
             },
         });
-        const verified = testCase.language === 'python' && /\.py$/iu.test(testCase.file) && projectPythonLiteralWitnesses(testCase.diff).witnesses.length > 0
+        const verified = /\.py$/iu.test(testCase.file) && testCase.diff.length > 0
             ? await verifyGeneratedLiteralFindings(agent, configuration, prompt, response, 'en-US') : response;
         predictions[testCase.id] = extractBenchmarkFindings(verified);
     }
@@ -46,9 +49,20 @@ export function buildBugbotBenchmarkPrompt(testCase: BugbotBenchmarkCase): strin
     return `${UNTRUSTED_CONTENT_POLICY}
 
 You are running a controlled Bugbot quality benchmark.
+Use en-US for product-facing text and echo outputLocale exactly as en-US.
 Review only the supplied synthetic diff. Report actionable defects caused by added or changed code; do not report style, pre-existing issues, or speculative concerns. Return an empty findings array when the change is safe.
 
 ${BUGBOT_FINDING_GROUNDING_INSTRUCTION}
+
+${BUGBOT_RECOVERY_CONTRACT_INSTRUCTION}
+
+${BUGBOT_FIXTURE_VALUES_INSTRUCTION}
+
+${BUGBOT_RESOURCE_AUTHORITY_INSTRUCTION}
+
+${BUGBOT_ASYNC_STATEMENT_INSTRUCTION}
+
+${BUGBOT_JSON_VALUE_INSTRUCTION}
 
 ${BUGBOT_EXTERNAL_FACTS_INSTRUCTION}
 
@@ -61,6 +75,8 @@ ${BUGBOT_ACTION_CONTRACTS_INSTRUCTION}
 ${BUGBOT_WASM_BINDINGS_INSTRUCTION}
 
 ${BUGBOT_MARKDOWN_LINKS_INSTRUCTION}
+
+${BUGBOT_PYTHON_SYNTAX_INSTRUCTION}
 
 Language: ${testCase.language}
 Repository-relative file: ${testCase.file}

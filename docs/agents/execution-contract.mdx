@@ -31,6 +31,35 @@ The runtime creates one complete `AgentExecutionPlan`. A compile-time exhaustive
 
 All roles deny agent-tool network, approval escalation, MCP, plugins, subagents, session persistence, Git credentials, and ambient repository/user provider configuration. Only `fixer` receives workspace write access; trusted Copilot code remains responsible for validation, commit, push, publication, and GitHub mutation.
 
+## Immutable SDD source views
+
+Pre-branch SDD analysis and drafting carry an internal binding to the exact
+loaded source commit. The canonical repository root and `GITHUB_WORKSPACE`
+checks still validate the requested anchor first. Only then does the SDK create
+an independent private Git view for the same read-only provider policy. There is
+no public workspace selector, extra writable root or permission. Ordinary agent
+operations keep their existing workspace behavior.
+
+Git must support `--no-lazy-fetch`; unsupported Git fails before source object
+reads. Preparation never downloads missing promisor objects. It imports only the
+selected commit/tree/blobs, without parent history, remotes, source Git config,
+credentials, alternates or shared worktree administration. Raw blob bytes avoid
+checkout/archive transformations. A sealed inventory and private metadata hashes
+are checked before launch; missing, unsafe or changed content blocks the full view.
+
+Fixed ceilings are 10,000 regular files, 20,000 total recursive entries, 32 MiB per
+blob, 256 MiB of regular source, 1 MiB per commit, 48 MiB of inventory and 288 MiB
+of packed objects. Portable UTF-8 paths have 1,024-byte full and 255-byte segment
+limits. Symlinks, gitlinks, reserved names and case/Unicode aliases are rejected.
+Preparation has at most 60 seconds **within** the original operation timeout;
+final admission also consumes that timeout. No source is truncated to fit.
+
+The owned view/profile/manifest are removed on success, failure, cancellation and
+timeout. A source-context failure uses the existing SDD preparation card with
+closed source/phase/reason facts; it does not consume a draft repair or publish a
+branch. Native fake-child tests establish local host behavior, not a live model
+request, a Windows Codex service sandbox or a released consumer fix.
+
 Codex child commands retain only a fixed list of system variables: `PATH`,
 `SystemRoot`, `WINDIR`, `PATHEXT`, `TMPDIR`, `TEMP`, `TMP`, `LANG`, and `LC_ALL`.
 These let the sandbox locate its system tools on Linux and Windows. Model,
@@ -143,6 +172,21 @@ complete invocation against current native source; partial facts are never
 persisted or reused as a checkpoint. The read-only source adapter receives no
 checkout, command, mutable-ref or new credential capability.
 
+Deterministic capacity failures use `validation.evidence-too-large` with the
+closed `progress-evidence-capacity-exceeded` recovery. Its eight variables are
+`phase`, `dimension`, `unit`, `bound`, `observedCount`, `supportedLimit`,
+`countKind` and `context`. Host guards distinguish exact serialized/request
+bytes, required worst-case reservations, minimum counts and stopped-scan lower
+bounds. Known integer allocations outside their range retain exact usage and
+limit; unrepresentable allocations remain unavailable. Only host planning and
+aggregation can add independently validated source coverage; provider errors
+retain their identity. The comparison context keeps base/head, an available
+manifest digest, three ordered path-inventory digests, reconciled totals and
+bounded inert uncovered names, plus a known original line anchor. It never
+certifies execution or review. No budget, recovery allowance or query count is
+increased. Capacity failure is terminal for the invocation and retains prior
+progress and independent completed workflow results.
+
 Inherited production binaries may be absent from the complete actual PR delta
 even when they differ from development; this is a comparison-source correction,
 not a binary metadata exemption. Actually changed binary/non-text contents remain
@@ -177,12 +221,52 @@ The application binds the details to its current host inventory, retaining a
 separate immutable source-anchor map without changing scope/model JSON.
 
 Execution/provider errors remain distinct. A missing result does not become
-proof of completed output, and no automatic repair/retry loop is added. A fresh
-attempt can help when the provider returns a result conforming to the unchanged
+proof of completed output. Only an overlong `implemented` or `remaining` file
+fact, verified against its current immutable part, exact path/unit, locale and
+selected schema limit, permits one replacement response for that entire part.
+Both the original and replacement envelopes for every part must fit before any
+part is queried. The replacement preserves all source, schema and uncertainty;
+it never includes the rejected prose. No other part-validation or execution
+failure starts this recovery.
+
+A separate final-response recovery allows one complete final reassessment after
+the host has validated every field, locale, scope identity,
+status/evidence relation and full cited projection and found only a completion
+contradiction: 100% requires every requirement to be supported, and every
+requirement supported requires 100%. Direct parser callers retain their existing
+rejection record. The workflow snapshots the complete prompt, schema, options,
+configuration and host scope; the replacement adds only a closed five-number
+observation of the rejected model response. It does not carry rejected prose,
+recollect source, repeat parts or attest execution. Host uncertainty stays unknown.
+
+Before any model request, the whole original and worst replacement envelopes
+must fit existing budgets, including the fixed footer and a 256-byte numeric
+hint reservation. Padding is never sent. A second contradiction terminates with
+`agent.failed` and `progress-completion-recovery-exhausted`; other failures retain
+their original classification. No third query or publication retry follows.
+Existing admission timeouts, cancellation and outer deadlines still apply.
+A fresh attempt can help when the provider returns a result conforming to the unchanged
 contract; it cannot enlarge fixed budgets or authorize a scope change. All
 invalid, canceled, incomplete or stale outcomes retain previous progress.
 The same correlation reference and localized semantic view reach CLI, Check
 and Job Summary; optional native evidence publication is a separate result.
+
+Part and final-response allowances are independent: each eligible part may be
+replaced once, and the validated complete aggregate may receive one final
+reassessment. A persistent part failure never enters the final stage. A final
+failure cannot restart accepted parts or recollect the comparison.
+
+If a part replacement still exceeds the fact limit,
+`progress-partition-length-invalid` identifies the verified part, path, source
+unit (`none` for legacy parts), response field, maximum and observed Unicode
+code-point count. Filenames are inert, reversible JSON code spans. The response
+body never enters diagnostics. There is no third part query or partial progress
+publication; inspect the named fact and unchanged contract.
+
+Final progress must match its requirement states in both directions: all
+supported with null remaining means 100; any missing or verification-unknown
+requirement means below 100. The host rejects either contradiction and never
+normalizes it into completion. Progress cannot authorize approval or merge.
 
 ## Optional native Check Run evidence
 

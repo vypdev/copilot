@@ -10,6 +10,9 @@ import { classifyAgentCliExitDiagnostic, classifyAgentCliToolDiagnostic } from '
 import { verifyWindowsRuntimePathPrivate } from '../../infrastructure/agents/windows_runtime_acl';
 import { validateAgentExecutableFile } from '../../infrastructure/agents/agent_executable_file';
 import { trustedWindowsSystemTool } from '../../infrastructure/agents/agent_trusted_system_tools';
+import { verifySourceSnapshotWorkspace } from '../../infrastructure/agents/agent_source_snapshot_integrity';
+import { SddSourceContextFailure } from '../../domain/agent_source_snapshot';
+import { AGENT_EXECUTION_TIMEOUT_MAX_MS } from '../../domain/agent_execution_plan';
 
 const MAX_STDERR_BYTES = 8 * 1024;
 
@@ -17,15 +20,30 @@ export function runAgentCli(plan: AgentExecutionPlan, prompt: string, signal?: A
     onToolDiagnostic?: (diagnostic: AgentExecutionToolDiagnostic) => void): Promise<string> {
     return new Promise((resolve, reject) => {
         let runtimeDirectory: string | undefined;
+        let admittedPlan = plan;
         try {
             runtimeDirectory = verifyOwnedRuntimeDirectory(plan.runtimeDirectory);
             verifyAdmittedPlan(plan, runtimeDirectory);
+            if (plan.sourceSnapshot) {
+                if (plan.capability !== 'findings' || plan.workspaceMode !== 'read-only'
+                    || !Number.isFinite(plan.sourceDeadlineMs) || plan.sourceDeadlineMs! > performance.now() + AGENT_EXECUTION_TIMEOUT_MAX_MS) {
+                    throw new SddSourceContextFailure('view-integrity', plan.sourceSnapshot);
+                }
+                verifySourceSnapshotWorkspace(plan.sourceSnapshot, plan.workspace, runtimeDirectory, plan.artifacts);
+                if (signal?.aborted) throw new AgentCliError('Agent CLI execution was cancelled.', 'cancelled');
+                const remaining = Math.floor(Math.min(plan.timeoutMs, plan.sourceDeadlineMs! - performance.now()));
+                if (remaining <= 0) throw new AgentCliError('The read-only source operation exhausted its deadline.', 'timeout', true);
+                admittedPlan = { ...plan, timeoutMs: remaining };
+            } else if (plan.sourceDeadlineMs !== undefined) {
+                throw new AgentCliError('A source deadline requires an admitted source snapshot.', 'configuration');
+            }
             if (Buffer.byteLength(prompt, 'utf8') > plan.maxPromptBytes) {
                 throw new AgentCliError(`Agent CLI prompt exceeded the ${plan.maxPromptBytes}-byte limit.`, 'configuration');
             }
         } catch (error) {
             if (runtimeDirectory) cleanupRuntimeDirectory(runtimeDirectory);
-            reject(error instanceof AgentCliError ? error : new AgentCliError('Agent execution plan integrity check failed.', 'configuration'));
+            reject(error instanceof AgentCliError || error instanceof SddSourceContextFailure
+                ? error : new AgentCliError('Agent execution plan integrity check failed.', 'configuration'));
             return;
         }
         const cleanup = () => cleanupRuntimeDirectory(runtimeDirectory);
@@ -51,7 +69,7 @@ export function runAgentCli(plan: AgentExecutionPlan, prompt: string, signal?: A
         if (!child) return;
         const lifecycle = createAgentProcessLifecycle(
             child,
-            plan,
+            admittedPlan,
             signal,
             (value) => { cleanup(); resolve(value); },
             (error) => { cleanup(); reject(error); },

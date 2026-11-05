@@ -92,7 +92,7 @@ describe('precise failing SDD facts (#714)', () => {
     ['unknown documentation operation', (s: string) => s.replace('| docs/payments.mdx | update |', '| docs/payments.mdx | delete |'), { detail: 'path-operation', section: 15, row: 1 }],
     ['overlapping proposed paths', (s: string) => s.replace('| specs/change.md | create |', '| specs/change.md | create |\n| specs/change.md/child | create |'), { detail: 'create-path-overlap', section: 15, row: 3 }],
     ['blocked proposed parent', (s: string) => s.replace('| specs/change.md | create |', '| specs/change.md | create |\n| docs/payments.mdx/child | create |'), { detail: 'create-path-parent', section: 15, row: 3 }],
-    ['invalid relative link', (s: string) => s + '\n[reference](%ZZ)', { detail: 'path-link', section: 0 }],
+    ['invalid UTF-8 relative link', (s: string) => s + '\n[reference](%FF)', { detail: 'path-link', section: 0 }],
     ['missing prose reference', (s: string) => s + '\nInspect `docs/PRIVATE.mdx`.', { detail: 'path-reference', section: 0 }],
   ] as const)('reports the actual failing constraint for %s', (_label, change, fact) => {
     try {

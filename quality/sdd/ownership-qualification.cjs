@@ -1,0 +1,108 @@
+// Optional owned #856 qualification campaign. Run from the SDK repository root.
+// prepare creates a fictional immutable source and freezes cases; capture <baseline|candidate|revised>
+// freezes actual use-case requests; run <cohort>-<1|2|3> uses the real configured Codex CLI.
+// Never overwrite an attempted trial or compare captures from different cases/fixtures.
+// Historical results and all cohort outcomes: quality/sdd/evidence/issue-856.json.
+const fs=require('node:fs'),path=require('node:path'),cp=require('node:child_process'),os=require('node:os'),crypto=require('node:crypto'),ts=require('typescript');
+const SDK=process.cwd(),OUT=path.join(SDK,'.tmp/bug-fix-evidence/856');const command=process.argv[2],variant=process.argv[3];
+const scoringSource=path.resolve(__dirname,'../../src/tooling/sdd_ownership_question_scoring.ts');
+const digest=v=>crypto.createHash('sha256').update(v).digest('hex');const read=p=>JSON.parse(fs.readFileSync(p,'utf8'));const write=(p,v)=>fs.writeFileSync(p,JSON.stringify(v,null,2)+'\n');
+const executable='/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex';
+const configuration={provider:'codex',model:'gpt-6-luna',effort:'medium',executable};
+const tuple=(action,capabilityId,spec)=>({action,capabilityId,path:spec});
+const primary=tuple('update','household-identity','specs/household-identity.md');
+const existing=tuple('update','household-identity','specs/household-administration.md');
+const companion=tuple('companion','household-identity','specs/household-audit.md');
+const fresh=tuple('new','shared-presentation-package','specs/shared-presentation-package.md');
+const explicit=t=>`The required action is ${t.action}, capabilityId ${t.capabilityId}, path ${t.path}. Preserve every other registered owner and publication. This changes specification acceptance only. Maintainer owns the review; no runtime permissions, compatibility or data-retention policy changes are requested.`;
+const seed=t=>({...t,reason:'The source and package publication responsibilities require this selected owning target.'});
+const cases=[
+ {id:'existing-companion-update',input:{body:'Update the existing registered companion publication. '+explicit(existing)},expected:{tuple:existing}},
+ {id:'independent-new-package',input:{body:'Introduce a genuinely independent shared presentation package with its own source/version/verification, preserving application-experience. '+explicit(fresh)},expected:{tuple:fresh}},
+ {id:'genuine-new-companion',input:{body:'Add one new bounded audit publication under the existing household owner. '+explicit(companion)},expected:{tuple:companion}},
+ {id:'existing-primary-update',input:{body:'Extend the existing primary publication with acceptance examples. '+explicit(primary)},expected:{tuple:primary}},
+ {id:'resumed-existing-update',input:{body:'Extend the existing registered companion without duplicating its inventory or changing any owner.',proposal:seed(existing),answers:['Confirmed. Keep that exact proposed action, capability and publication target. Maintainer owns delivery.']},expected:{tuple:existing}},
+ {id:'resumed-new-package',input:{body:'Create an independent reusable presentation package; keep the application owner. Its previously proposed publication must remain separate.',proposal:seed(fresh),answers:['Confirmed. Keep that exact proposed action, capability and publication target. Maintainer owns delivery.']},expected:{tuple:fresh}},
+ {id:'resumed-new-companion',input:{body:'Add a bounded audit publication under the household owner without changing its existing documents.',proposal:seed(companion),answers:['Confirmed. Keep that exact proposed action, capability and publication target. Maintainer owns delivery.']},expected:{tuple:companion}},
+ {id:'third-round-new-package',input:{body:'Create an independent reusable presentation package; retain the already proposed owner and publication target.',proposal:seed(fresh),answers:['Confirmed. Keep that exact proposed owner and target. Maintainer owns delivery.','The second decision is resolved: retain the proposed independent package and its specification. No scope or ownership change.']},expected:{tuple:fresh}},
+ {id:'authorized-new-to-companion',input:{body:'A separate audit package was proposed; the maintainer may refine ownership before publication.',proposal:seed(fresh),answers:['Change the unpublished proposal: '+explicit(companion)+' Do not retain the independent package proposal.']},expected:{tuple:companion}},
+ {id:'authorized-companion-to-update',input:{body:'An audit companion was proposed; the maintainer may refine ownership before publication.',proposal:seed(companion),answers:['Change the unpublished proposal: '+explicit(existing)+' Update that registered companion instead of creating another document.']},expected:{tuple:existing}},
+ {id:'ambiguous-existing-owner',input:{body:'Add acceptance criteria to an existing publication, but household-identity or application-experience could own them. No owner or target has been selected. Ask the maintainer to choose the publication before drafting.'},expected:{ownershipQuestion:true}},
+ {id:'contradictory-owner-path',input:{body:'Update specs/household-administration.md under delivery, although that path may belong to another catalog owner. Do not silently override either value: ask the maintainer to resolve this ownership conflict before drafting.'},expected:{ownershipQuestion:true}},
+];
+function installSdkLoader(){require.extensions['.ts']=(module,filename)=>{if(!filename.startsWith(SDK+path.sep+'src'+path.sep)&&filename!==scoringSource)throw Error('Only reviewed SDK source and the exact qualification policy may be compiled');module._compile(ts.transpileModule(fs.readFileSync(filename,'utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS,esModuleInterop:true}}).outputText,filename);};}
+function prepare(){
+ const expectedBase='c0e7a130e06f2105034b149c0b479dc4eebc70ac';
+ const baselineFiles=['src/application/usecases/sdd/pre_branch_sdd_gate_use_case.ts','src/domain/pre_branch_sdd.ts','src/data/repository/ai/findings_agent_adapter.ts','src/infrastructure/composition/agent_capability_composition_root.ts'];
+ if(cp.execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim()!==expectedBase)throw Error('Prepare requires the recorded baseline commit');
+ for(const file of baselineFiles)if(digest(cp.execFileSync('git',['show',expectedBase+':'+file]))!==digest(fs.readFileSync(path.join(SDK,file))))throw Error('Prepare requires unchanged baseline source');
+ if(fs.existsSync(path.join(SDK,'src/application/policies/sdd_ownership_prompt_policy.ts')))throw Error('Prepare must precede candidate implementation');
+ const receipt=path.join(OUT,'qualification-fixture.json');if(fs.existsSync(receipt))throw Error('Never overwrite a frozen fixture');
+ const root=fs.mkdtempSync('/private/tmp/copilot-856-ownership-source-');const put=(name,text)=>{const file=path.join(root,name);fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file,text);};
+ const owners=[['household-identity',['specs/household-identity.md','specs/household-administration.md']],['application-experience',['specs/application-experience.md']],['delivery',['specs/delivery.md']]];
+ const capabilities=owners.map(([id,specs])=>({id,title:id,status:'implemented',scope:'Fictional '+id+' source and specification responsibilities.',owner:'Maintainer',lastVerified:'2026-11-04',specs,workflows:[],entrypoints:['app/core.py'],code:['app/core.py'],tests:['checks/test_core.py'],documentation:['docs/fixture.md']}));
+ put('specs/catalog.json',JSON.stringify({version:1,capabilities},null,2)+'\n');put('specs/README.md',fs.readFileSync(path.join(SDK,'specs/README.md'),'utf8'));put('specs/_template.md',fs.readFileSync(path.join(SDK,'specs/_template.md'),'utf8'));put('docs/fixture.md','# Owned qualification fixture\n\nFictional inputs only. No model verdicts or private consumer implementation are stored here.\n');
+ put('app/core.py','def identity(value):\n    return value\n');put('checks/test_core.py','from app.core import identity\n\ndef test_identity():\n    assert identity(1) == 1\n');
+ for(const [id,specs] of owners)for(const name of specs)put(name,`# ${id} existing publication\n\nCatalog owner: ${id}. This is a fictional registered specification. Its existing acceptance and ownership must be preserved; a document described as a companion is still an existing update target.\n`);
+ cp.execFileSync('git',['init','--quiet','-b','develop',root]);const empty=path.join(root,'.git/qualification-empty-hooks');fs.mkdirSync(empty);const git=args=>cp.execFileSync('git',['-C',root,'-c','core.hooksPath='+empty,'-c','commit.gpgsign=false',...args],{encoding:'utf8',env:{...process.env,GIT_AUTHOR_NAME:'Owned fixture',GIT_AUTHOR_EMAIL:'fixture@example.invalid',GIT_COMMITTER_NAME:'Owned fixture',GIT_COMMITTER_EMAIL:'fixture@example.invalid',GIT_AUTHOR_DATE:'2026-11-04T00:00:00Z',GIT_COMMITTER_DATE:'2026-11-04T00:00:00Z'}}).trim();
+ git(['-c','core.autocrlf=false','add','--','specs','docs','app','checks']);git(['commit','--quiet','-m','Owned immutable SDD ownership fixture']);const baseSha=git(['rev-parse','HEAD']);if(git(['status','--porcelain']))throw Error('Fixture must be clean');
+ const descriptor=path.join(OUT,'ownership-cases.json');write(descriptor,{schemaVersion:1,cases});write(receipt,{root,baseSha,tree:git(['rev-parse','HEAD^{tree}']),capabilities,source:'Authored minimal Git source, not a consumer clone; no reference verdicts/driver copied into it.',consumerEvidence:'Original consumer catalogs and original parser controls remain separate.',cleanup:'Retain until all trials and review qualification finish; no source mutation or hooks of the product repository bypassed.'});
+ const sourceFiles=['src/application/usecases/sdd/pre_branch_sdd_gate_use_case.ts','src/domain/pre_branch_sdd.ts','src/data/repository/ai/findings_agent_adapter.ts','src/infrastructure/composition/agent_capability_composition_root.ts'];
+ write(path.join(OUT,'qualification-freeze.json'),{at:new Date().toISOString(),base:'c0e7a130e06f2105034b149c0b479dc4eebc70ac',descriptorSha256:digest(fs.readFileSync(descriptor)),fixtureCommit:baseSha,sourceHashes:Object.fromEntries(sourceFiles.map(p=>[p,digest(fs.readFileSync(path.join(SDK,p)))])),plan:{trialsPerRuntime:3,cases:12,provider:'codex',model:'gpt-6-luna',effort:'medium',thresholds:'Every explicit/resolved tuple correct; every ambiguous/conflicting request has a focused ownership question; zero schema/semantic-invalid plans in each trial and cohort. Product questions may remain. No best-sample selection, reference retuning, hidden-payload replay or publication.'}});
+ console.log({fixture:root,baseSha,cases:cases.length});
+}
+async function capture(input,fixture){
+ const {PreBranchSddGateUseCase}=require(path.join(SDK,'src/application/usecases/sdd/pre_branch_sdd_gate_use_case.ts'));const requests=[],comments=[];let id=99,labels=['feature','in-progress'];
+ const context={issueNumber:7,issueTitle:'Publication routing request',issueBody:input.body,issueAuthor:'author',issueUrl:'https://github.com/owned/fixture/issues/7',issueLocale:'en-US',admittedKind:'feature',baseBranch:'develop',profileDigest:'owned-qualification',tokenUser:'copilot[bot]',agentConfiguration:configuration};
+ const stop=input.proposal||seed(primary);const question=index=>({id:'Q1',text:index===1?'Confirm the proposed publication owner and accountable maintainer.':'Confirm the remaining maintenance decision for this proposal.',owner:'maintainer'});
+ const never=async()=>{throw Error('A capture cannot draft, publish or create/link a branch');};
+ const snapshot={baseSha:fixture.baseSha,template:fs.readFileSync(path.join(fixture.root,'specs/_template.md'),'utf8'),standard:fs.readFileSync(path.join(fixture.root,'specs/README.md'),'utf8'),capabilities:fixture.capabilities};
+ const gate=new PreBranchSddGateUseCase({query:async request=>{requests.push(request);return {...stop,questions:[question(requests.length)],newCapability:null};}},
+ {loadSnapshot:async()=>snapshot,isAncestor:never,readSdd:never,validateDraft:never,publish:never,recoverPublished:never,verifyPublication:never},
+ {listIssueComments:async()=>comments,addComment:async(_issue,body)=>comments.push({id:++id,body,user:{login:'copilot[bot]'}}),updateComment:async(_issue,key,body)=>{comments.find(c=>c.id===key).body=body;}},
+ {getLabels:async()=>labels,setLabels:async(_issue,next)=>{labels=next;}},{isActorAllowedToModifyFiles:async()=>true,isActorAllowedToUseMemberOnlyAutomation:async()=>true},
+ {getDescription:async()=>input.body},{getTitle:async()=>context.issueTitle},{getLinkedBranch:never});
+ if((await gate.begin(context)).status!=='waiting')throw Error('Initial capture was not waiting');
+ for(const answer of input.answers||[]){comments.push({id:++id,body:'SDD Q1: '+answer,user:{login:'maintainer'}});if((await gate.begin(context)).status!=='waiting')throw Error('Resumed capture was not waiting');}
+ if(requests.length!==1+(input.answers||[]).length)throw Error('Unexpected capture query count');return requests.at(-1);
+}
+function assessPrediction({scenario,response,fixture,variant,assessments,parseSddPlan,scoreOwnershipQuestion}){
+  let plan,error;try{let value=response;if(typeof value==='string')value=JSON.parse(value);plan=parseSddPlan(value,new Map(fixture.capabilities.map(c=>[c.id,c.specs])));}catch(e){error=e.reason||e.message;}
+  const expect=scenario.expected;let ownershipQuestionScore;
+  if(expect.ownershipQuestion&&plan)ownershipQuestionScore=scoreOwnershipQuestion({trialId:variant,caseId:scenario.id,responseSha256:digest(JSON.stringify(response)),expectedIntent:scenario.id==='contradictory-owner-path'?'resolve-owner-path-conflict':'select-existing-owner',questions:plan.questions},assessments[scenario.id]);
+  const correct=!!plan&&(expect.tuple?Object.entries(expect.tuple).every(([k,v])=>plan[k]===v):ownershipQuestionScore==='accepted');
+  return {id:scenario.id,response,plan,error,correct,ownershipQuestionScore};
+}
+async function run(){
+ installSdkLoader();const fixture=read(path.join(OUT,'qualification-fixture.json')),freeze=read(path.join(OUT,'qualification-freeze.json')),descriptor=read(path.join(OUT,'ownership-cases.json'));
+ if(digest(fs.readFileSync(path.join(OUT,'ownership-cases.json')))!==freeze.descriptorSha256)throw Error('Frozen cases changed');
+ if(command==='capture'){
+  if(!['baseline','candidate','revised'].includes(variant))throw Error('Unknown capture variant');const dest=path.join(OUT,variant+'-analysis-requests.json');if(fs.existsSync(dest))throw Error('Do not overwrite frozen requests');
+  if(variant==='baseline')for(const [file,hash] of Object.entries(freeze.sourceHashes))if(digest(fs.readFileSync(path.join(SDK,file)))!==hash)throw Error('Production changed before baseline');
+  const sourceFiles=[...Object.keys(freeze.sourceHashes),...(variant!=='baseline'?['src/application/policies/sdd_ownership_prompt_policy.ts']:[])];const requests={};for(const scenario of descriptor.cases)requests[scenario.id]=await capture(scenario.input,fixture);write(dest,{at:new Date().toISOString(),requests,sourceHashes:Object.fromEntries(sourceFiles.map(p=>[p,digest(fs.readFileSync(path.join(SDK,p)))])),scope:'Actual SDK use-case requests captured through in-memory ports; neither scripted stop responses nor reference verdicts are actual model predictions.'});console.log({captured:variant,cases:Object.keys(requests).length});return;
+ }
+ if(!['run','score'].includes(command)||!/^(baseline|candidate|revised)-[123]$/.test(variant))throw Error('Expected declared trial');const cohort=variant.split('-')[0],identity=path.join(OUT,variant+'-sdd-identity.json');if(command==='run'&&fs.existsSync(identity))throw Error('Never replace an attempted trial');
+ const captured=read(path.join(OUT,cohort+'-analysis-requests.json'));for(const [file,hash] of Object.entries(captured.sourceHashes))if((command==='run'||file==='src/domain/pre_branch_sdd.ts')&&digest(fs.readFileSync(path.join(SDK,file)))!==hash)throw Error('Measured source changed');
+ const {parseSddPlan}=require(path.join(SDK,'src/domain/pre_branch_sdd.ts'));
+ const {scoreOwnershipQuestion}=require(scoringSource);
+ const assessmentPath=path.join(OUT,variant+'-sdd-assessments.json');const assessments=fs.existsSync(assessmentPath)?read(assessmentPath):{};
+ const assess=(scenario,response)=>assessPrediction({scenario,response,fixture,variant,assessments,parseSddPlan,scoreOwnershipQuestion});
+ if(command==='score'){
+  const file=path.join(OUT,variant+'-sdd-semantic-score.json');if(fs.existsSync(file))throw Error('Never overwrite completed semantic assessment');
+  const prior=read(path.join(OUT,variant+'-sdd-predictions.json'));if(prior.variant!==variant)throw Error('Wrong retained trial');
+  const results=descriptor.cases.map(scenario=>{const matches=prior.results.filter(r=>r.id===scenario.id);if(matches.length!==1)throw Error('Missing or duplicate retained prediction');return assess(scenario,matches[0].response);});
+  if(results.some(r=>r.ownershipQuestionScore&&r.ownershipQuestionScore!=='accepted'&&r.ownershipQuestionScore!=='rejected'))throw Error('Explicit semantic assessments are incomplete or invalid; no qualified score written');
+  const score={cases:results.length,correct:results.filter(r=>r.correct).length,invalid:results.filter(r=>r.error).length,passed:results.length===12&&results.every(r=>r.correct)&&results.every(r=>!r.error)};
+  write(file,{variant,score,assessmentSha256:digest(fs.readFileSync(assessmentPath)),predictionsSha256:digest(fs.readFileSync(path.join(OUT,variant+'-sdd-predictions.json'))),scoringSourceSha256:digest(fs.readFileSync(scoringSource)),method:'Explicit Codex contributor semantic assessments, not automatic keyword matching, human review or native approval. All original scores and raw predictions retained.',results});console.log({variant,...score});return;
+ }
+ const {createFindingsQueryPort}=require(path.join(SDK,'src/infrastructure/composition/agent_capability_composition_root.ts'));const agent=createFindingsQueryPort();
+ write(identity,{at:new Date().toISOString(),variant,fixtureCommit:fixture.baseSha,fixture:fixture.root,sourceHashes:captured.sourceHashes,requestsSha256:digest(fs.readFileSync(path.join(OUT,cohort+'-analysis-requests.json'))),descriptorSha256:freeze.descriptorSha256,node:process.version,typescript:ts.version,configuration,fullProviderStdinCaptured:false});
+ process.chdir(fixture.root);const results=[];
+ for(const scenario of descriptor.cases){
+  const request=captured.requests[scenario.id];const response=await agent.query(request);write(path.join(OUT,variant+'-sdd-progress.json'),{completed:results.length,lastCase:scenario.id,response});
+  results.push(assess(scenario,response));write(path.join(OUT,variant+'-sdd-predictions.json'),{variant,results});
+ }
+ const score={cases:results.length,correct:results.filter(r=>r.correct).length,invalid:results.filter(r=>r.error).length,passed:results.length===12&&results.every(r=>r.correct)&&results.every(r=>!r.error)};write(path.join(OUT,variant+'-sdd-score.json'),score);console.log({variant,...score});
+}
+module.exports={assessPrediction};
+if(require.main===module){if(command==='prepare')prepare();else run().catch(error=>{console.error(error);process.exitCode=1;});}

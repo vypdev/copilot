@@ -1,3 +1,4 @@
+import { GitPushFailure } from '../../domain/git_push_failure';
 import type { GitCommitPort } from "../../application/ports/git_ports";
 import { BranchSyncWorkspaceAdapter } from "../branch_sync_workspace_adapter";
 import { execFileSync } from 'node:child_process';
@@ -259,24 +260,25 @@ describe("BranchSyncWorkspaceAdapter", () => {
   });
 
   it("prepares, validates, commits, and pushes a clean merge", async () => {
+    const child = 'a'.repeat(40), parent = 'b'.repeat(40), candidate = 'c'.repeat(40);
     const { git } = createGit({
       [STATUS]: ["", "M  src/a.ts\n", "M  src/a.ts\n", "M  src/a.ts\n"],
-      "rev-parse HEAD": ["child\n", "child\n", "merge\n"],
-      "rev-parse FETCH_HEAD": ["parent\n", "parent\n", "child\n"],
-      "merge-base --is-ancestor parent child": [new Error("not ancestor")],
+      "rev-parse HEAD": [child, child, candidate],
+      "rev-parse FETCH_HEAD": [parent, parent, child],
+      ['merge-base --is-ancestor ' + parent + ' ' + child]: [new Error("not ancestor")],
       [UNRESOLVED]: ["", ""],
       [INDEX]: ["100644 sha 0\tsrc/a.ts\0", "100644 sha 0\tsrc/a.ts\0"],
-      "rev-parse MERGE_HEAD": ["parent\n"],
+      "rev-parse MERGE_HEAD": [parent],
     });
     const adapter = new BranchSyncWorkspaceAdapter(git);
 
     await expect(adapter.prepare("develop", "feature/42", "token")).resolves.toMatchObject({ kind: "clean" });
     await expect(adapter.validatePreparedMerge([])).resolves.toEqual({ valid: true });
-    await expect(adapter.assertRemoteHeadsUnchanged("develop", "parent", "feature/42", "child", "token"))
+    await expect(adapter.assertRemoteHeadsUnchanged("develop", parent, "feature/42", child, "token"))
       .resolves.toEqual({ valid: true });
     await expect(adapter.commitAndPush(
       "feature/42", "Merge develop into feature/42", { name: "Bot", email: "bot@example.com" }, "token",
-    )).resolves.toBe("merge");
+    )).resolves.toBe(candidate);
     expect(git.configureAuthor).toHaveBeenCalledWith("Bot", "bot@example.com");
     expect(git.stageAll).toHaveBeenCalled();
     expect(git.commit).toHaveBeenCalledWith("Merge develop into feature/42");
@@ -420,5 +422,69 @@ describe("BranchSyncWorkspaceAdapter", () => {
     )).rejects.toThrow("No prepared branch synchronization is available.");
     await expect(adapter.abort()).resolves.toBeUndefined();
     expect(context.execute).not.toHaveBeenCalled();
+  });
+});
+
+
+describe('Committed branch synchronization publication recovery', () => {
+  const child = 'a'.repeat(40), parent = 'b'.repeat(40), candidate = 'c'.repeat(40);
+  async function prepared(head: Reply = candidate, observed: Reply = child, original = child) {
+    return prepareCleanAdapter({ 'rev-parse HEAD': [original, head], 'rev-parse FETCH_HEAD': [parent, observed],
+      ['merge-base --is-ancestor ' + parent + ' ' + original]: [new Error('not ancestor')] });
+  }
+  it.each([
+    ['unchanged', child], ['published', candidate], ['changed', 'd'.repeat(40)],
+    ['unverified', 'PRIVATE'], ['unverified', new Error('PRIVATE read failure')],
+  ] as const)('records %s after push denial without aborting or discarding the candidate', async (remoteState, observed) => {
+    const { adapter, git, execute } = await prepared(candidate, observed);
+    git.push.mockRejectedValue(new GitPushFailure('workflow-write-required'));
+    await expect(adapter.commitAndPush('feature/42', 'merge', { name: 'Bot', email: 'bot@example.invalid' }, 'fixture')).rejects.toMatchObject({
+      diagnostic: { reason: 'workflow-write-required', remoteState, originalSha: child, candidateSha: candidate,
+        observedSha: remoteState === 'unverified' ? 'unavailable' : observed, pushAttempted: true },
+    });
+    await adapter.abort();
+    expect(execute.mock.calls.some(([, args]) => args[0] === 'reset' || (args[0] === 'merge' && args[1] === '--abort'))).toBe(false);
+    expect(git.push).toHaveBeenCalledTimes(1); expect(git.fetch).toHaveBeenCalledTimes(3);
+    expect(git.fetch).toHaveBeenLastCalledWith('feature/42', 'fixture');
+    await expect(adapter.commitAndPush('feature/42', 'again', { name: 'Bot', email: 'b' }, 'fixture')).rejects.toThrow('No prepared');
+  });
+  it.each(['PRIVATE', child, new Error('PRIVATE candidate read')])('never pushes an unverifiable candidate %p', async head => {
+    const { adapter, git, execute } = await prepared(head);
+    await expect(adapter.commitAndPush('feature/42', 'merge', { name: 'Bot', email: 'b' }, 'fixture')).rejects.toMatchObject({
+      diagnostic: { reason: 'candidate-unverified', candidateSha: 'unavailable', remoteState: 'unchanged', pushAttempted: false },
+    });
+    await adapter.abort(); expect(git.push).not.toHaveBeenCalled();
+    expect(execute.mock.calls.some(([, args]) => ['reset', 'merge'].includes(args[0]) && args[1] !== '--no-ff')).toBe(false);
+  });
+  it('rejects a nonthrowing failed Git read as unavailable', async () => {
+    const { adapter, git } = await prepared(candidate, 1); git.push.mockRejectedValue(Error('PRIVATE'));
+    await expect(adapter.commitAndPush('feature/42', 'merge', { name: 'Bot', email: 'b' }, 'fixture')).rejects.toMatchObject({
+      diagnostic: { remoteState: 'unverified', observedSha: 'unavailable' },
+    });
+  });
+  it('does not claim an unchanged remote when authenticated observation fails', async () => {
+    const { adapter, git } = await prepared(); git.push.mockRejectedValue(Error('PRIVATE'));
+    git.fetch.mockRejectedValueOnce(Error('PRIVATE fetch'));
+    await expect(adapter.commitAndPush('feature/42', 'merge', { name: 'Bot', email: 'b' }, 'fixture')).rejects.toMatchObject({
+      diagnostic: { reason: 'push-failed', remoteState: 'unverified', observedSha: 'unavailable' },
+    });
+    await adapter.abort(); expect(git.push).toHaveBeenCalledTimes(1); expect(git.fetch).toHaveBeenCalledTimes(3);
+  });
+  it('does not push if the original identity was invalid', async () => {
+    const { adapter, git } = await prepared(candidate, parent, 'PRIVATE');
+    await expect(adapter.commitAndPush('feature/42', 'merge', { name: 'Bot', email: 'b' }, 'fixture')).rejects.toMatchObject({
+      diagnostic: { reason: 'candidate-unverified', remoteState: 'unverified', originalSha: 'unavailable', pushAttempted: false },
+    });
+    expect(git.push).not.toHaveBeenCalled();
+  });
+  it('preserves pre-commit abort semantics when the commit itself fails', async () => {
+    const { adapter, git, execute } = await prepared(child); git.commit.mockRejectedValue(Error('commit rejected'));
+    await expect(adapter.commitAndPush('feature/42', 'merge', { name: 'Bot', email: 'b' }, 'fixture')).rejects.toThrow('commit rejected');
+    await adapter.abort(); expect(execute).toHaveBeenCalledWith('git', ['merge', '--abort']); expect(git.push).not.toHaveBeenCalled();
+  });
+  it('accepts a successful SHA-256 candidate and makes no redundant remote observation', async () => {
+    const sha = 'e'.repeat(64); const { adapter, git } = await prepared(sha);
+    await expect(adapter.commitAndPush('feature/42', 'merge', { name: 'Bot', email: 'b' }, 'fixture')).resolves.toBe(sha);
+    await adapter.abort(); expect(git.fetch).toHaveBeenCalledTimes(2); expect(git.push).toHaveBeenCalledTimes(1);
   });
 });

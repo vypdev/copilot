@@ -51,11 +51,14 @@ describe('complete comparison patch recovery', () => {
         const f = fixture({}, { 'a': 'text' }); if (scenario === 'missing merge base') f.data.merge_base_commit.sha = ''; else f.data.base_commit.sha = HEAD;
         await expect(f.read()).rejects.toMatchObject({ code: 'validation.evidence-unavailable' }); expect(f.getCommit).not.toHaveBeenCalled();
     });
-    it('fails closed with unreviewed paths when recovered serialized contents exceed sixteen parts', async () => {
+    it('preserves structured source capacity and unreviewed paths when recovered contents exceed the framed part ceiling', async () => {
         const after = Object.fromEntries(['a','b','c','d'].map(path => [path, '\0'.repeat(900_000)]));
         // Use non-NUL controls: valid UTF-8, but six-byte JSON escaping exhausts the unchanged multipart budget.
         for (const path of Object.keys(after)) after[path] = '\u0001'.repeat(900_000);
-        await expect(fixture({}, after).read()).rejects.toMatchObject({ code: 'validation.evidence-too-large', message: expect.stringContaining('Unreviewed paths (4)') });
+        await expect(fixture({}, after).read()).rejects.toMatchObject({ code: 'validation.evidence-too-large', recovery: {
+            id: 'progress-evidence-capacity-exceeded', variables: expect.objectContaining({ phase: 'source', dimension: 'source-part-count', observedCount: 65, supportedLimit: 64, countKind: 'at-least',
+                context: expect.objectContaining({ requiredPathCount: 4, reviewedPathCount: 0, uncoveredPathCount: 4, paths: ['a', 'b', 'c', 'd'] }) }),
+        } });
     });
     it('replays from exact objects with fresh invocation budgets and identities but identical complete sources', async () => {
         const f = fixture({}, { 'a': 'x'.repeat(260_000) }); const first = await f.read(); const second = await f.read();

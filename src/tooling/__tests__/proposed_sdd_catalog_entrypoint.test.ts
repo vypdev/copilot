@@ -1,4 +1,4 @@
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -6,6 +6,15 @@ import { capability, documents, implementation, catalog } from './fixtures/propo
 
 const validator = require('../../infrastructure/specification_catalog_validator.cjs');
 const upstream = resolve(__dirname, '../../..');
+
+function installPortableSdk(root: string): string {
+  for (const relative of ['src/infrastructure/specification_catalog_validator.cjs',
+    'src/infrastructure/specification_catalog_publication.cjs', 'src/domain/specification_catalog_path_policy.cjs']) {
+    mkdirSync(dirname(join(root, relative)), { recursive: true });
+    copyFileSync(join(upstream, relative), join(root, relative));
+  }
+  return join(root, 'src/infrastructure/specification_catalog_validator.cjs');
+}
 
 describe('standalone SDK catalog bootstrap entrypoint', () => {
   let root: string; let previousExit: typeof process.exitCode;
@@ -29,10 +38,7 @@ describe('standalone SDK catalog bootstrap entrypoint', () => {
   });
 
   it('runs the matching three-file portable SDK with no consumer package or fake product code', () => {
-    for (const relative of ['src/infrastructure/specification_catalog_validator.cjs',
-      'src/infrastructure/specification_catalog_publication.cjs', 'src/domain/specification_catalog_path_policy.cjs']) {
-      mkdirSync(dirname(join(root, relative)), { recursive: true }); copyFileSync(join(upstream, relative), join(root, relative));
-    }
+    installPortableSdk(root);
     const guide = readFileSync(join(upstream, 'docs/development/specifications.mdx'), 'utf8');
     const block = [...guide.matchAll(/```bash\r?\n([\s\S]*?)```/gu)].find(match => match[1].includes('node src/infrastructure/specification_catalog_validator.cjs --write'));
     const commands = block![1].trim().split(/\r?\n/u);
@@ -43,11 +49,49 @@ describe('standalone SDK catalog bootstrap entrypoint', () => {
     expect(readFileSync(join(root, 'specs/CATALOG.md'), 'utf8')).toContain('Not yet implemented (proposed capability).');
   });
 
+  it('source-grounding-C09: portable generation supplies outcomes without inventing consumer package scripts', () => {
+    const entry = installPortableSdk(root);
+    const original = readFileSync(join(root, 'specs/catalog.json'), 'utf8');
+    expect(existsSync(join(root, 'package.json'))).toBe(false);
+    expect(execFileSync(process.execPath, [entry, '--write'], { cwd: root, encoding: 'utf8' })).toContain('generation: PASS');
+    const markdown = readFileSync(join(root, 'specs/CATALOG.md'), 'utf8').replace(/\r\n/gu, '\n');
+    const table = markdown.indexOf('| Capability ID |');
+    const maintenance = markdown.indexOf('## Maintenance contract\n');
+    expect(table).toBeGreaterThan(0); expect(maintenance).toBeGreaterThan(table);
+    const ownedGuidance = markdown.slice(0, table) + markdown.slice(maintenance);
+    // Catalog metadata and evidence are data; only SDK-owned instructions are checked.
+    expect(ownedGuidance).not.toMatch(/\b(?:pnpm|npm|yarn|bun)\s+(?:run\s+)?[A-Za-z][\w:-]*/u);
+    expect(ownedGuidance.toLowerCase()).toContain('regenerate');
+    expect(ownedGuidance.toLowerCase()).toContain('validat');
+    expect(execFileSync(process.execPath, [entry], { cwd: root, encoding: 'utf8' })).toContain('validation: PASS');
+    expect(readFileSync(join(root, 'specs/catalog.json'), 'utf8')).toBe(original);
+    expect(existsSync(join(root, 'package.json'))).toBe(false);
+  });
+
+  it('source-grounding-C10: reported standalone stale recovery uses a real SDK option without a project package', () => {
+    const entry = installPortableSdk(root);
+    const original = readFileSync(join(root, 'specs/catalog.json'), 'utf8');
+    execFileSync(process.execPath, [entry, '--write'], { cwd: root, encoding: 'utf8' });
+    const index = join(root, 'specs/CATALOG.md');
+    writeFileSync(index, '# Stale owned index\n');
+    const rejected = spawnSync(process.execPath, [entry], { cwd: root, encoding: 'utf8' });
+    expect(rejected.error).toBeUndefined(); expect(rejected.status).toBe(1);
+    expect(rejected.stdout).not.toContain('PASS');
+    expect(readFileSync(index, 'utf8')).toBe('# Stale owned index\n');
+    const recovery = rejected.stderr.match(/(?:^|[\s`])(--write)(?=[\s`.,]|$)/u);
+    expect(recovery).not.toBeNull();
+    // Exercise the actual reported option, without substituting a package script.
+    expect(execFileSync(process.execPath, [entry, recovery![1]], { cwd: root, encoding: 'utf8' })).toContain('generation: PASS');
+    expect(execFileSync(process.execPath, [entry], { cwd: root, encoding: 'utf8' })).toContain('validation: PASS');
+    expect(readFileSync(join(root, 'specs/catalog.json'), 'utf8')).toBe(original);
+    expect(existsSync(join(root, 'package.json'))).toBe(false);
+  });
+
   it('rejects a stale index without claiming validation or changing its bytes', () => {
     writeFileSync(join(root, 'specs/CATALOG.md'), '# Stale\n');
     validator.main([], root);
     expect(process.exitCode).toBe(1); expect(console.log).not.toHaveBeenCalled();
-    expect(console.error).toHaveBeenCalledWith('specs/CATALOG.md is stale; run pnpm run generate:specifications.');
+    expect(console.error).toHaveBeenCalledWith("specs/CATALOG.md is stale; regenerate it with this SDK entrypoint's --write option, then rerun validation.");
     expect(readFileSync(join(root, 'specs/CATALOG.md'), 'utf8')).toBe('# Stale\n');
   });
 

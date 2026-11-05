@@ -133,6 +133,13 @@ add mutation returns the exact ProjectV2 item ID. A direct read of that node ver
 
 ### 6.2 Alternative paths
 
+Assignment diagnosis and replay are specified by the focused
+[assignment failure and recovery contract](./issue-assignment-failure-recovery.md)
+for #849. Read native assignees before membership, retain a satisfied target,
+confirm requested assignments, preserve safe provider/application context and
+confirmed partial effects, then reread native state on retry. Other lifecycle
+steps retain their independent results; assignment failure does not certify them.
+
 - With `issue-managed-branches=false`, eligible regular work proceeds without an Action-managed branch; help is always branchless.
 - Existing correct branch becomes a no-op; a rename decision may create the new safe name.
 - Admitted help issues receive answers instead of branch recommendations. A

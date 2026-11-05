@@ -5,6 +5,7 @@ import { isProgressRequirementId, isProgressSourceLineId, type ProgressResponseR
 
 import { MAX_PROGRESS_FACT_POINTS, MAX_PROGRESS_ASSESSMENT_POINTS, progressAssessmentFactLimit, progressAssessmentPrefix } from './progress_assessment_capacity_policy';
 import { AGENT_OUTPUT_LOCALE_SCHEMA_PROPERTY } from './agent_output_locale_policy';
+import { ProgressCompletionMismatch } from '../errors/progress_completion_mismatch';
 
 export const MAX_PROGRESS_SCOPE_BYTES = 64_000;
 export const MAX_PROGRESS_SCOPE_CLAUSES = 32;
@@ -131,7 +132,7 @@ export function parseScopedProgressResponse(response: unknown, locale: string, s
             if (fact.remaining !== null) reject('requirement-remaining-invalid', `${field}.remaining`, id);
             if (fact.evidence !== 'source-only') reject('requirement-evidence-mismatch', `${field}.evidence`, id);
         } else if (!text(fact.remaining)) reject('requirement-remaining-invalid', `${field}.remaining`, id);
-        return { id, summary: fact.summary as string, remaining: fact.remaining as string | null };
+        return { id, status: fact.status, summary: fact.summary as string, remaining: fact.remaining as string | null };
     });
     const ordered = scope.requirements.map(requirement => ({ requirement, fact: entries.find(entry => entry.id === requirement.id)! }));
     function render(field: 'summary' | 'remaining'): string {
@@ -150,6 +151,14 @@ export function parseScopedProgressResponse(response: unknown, locale: string, s
     const remaining = render('remaining');
     // Never round an uncertain 99.9 to completion. A percentage cannot authorize approval/merge.
     const progress = payload.progress === 100 ? 100 : Math.min(99, Math.round(payload.progress as number));
-    if ((progress === 100) === Boolean(remaining)) reject('progress-completion-mismatch', '$.progress');
+    if ((progress === 100) === Boolean(remaining)) {
+        const original = progressResponseRejected({ phase: 'assessment', reason: 'progress-completion-mismatch', field: '$.progress',
+            requirementId: 'none', sourceLineId: 'none' });
+        if (scope.requirements.length < 1 || scope.requirements.length > MAX_PROGRESS_SCOPE_CLAUSES) throw original;
+        throw new ProgressCompletionMismatch(original, { reportedProgress: payload.progress as number, requirementCount: scope.requirements.length,
+            supportedCount: entries.filter(entry => entry.status === 'supported').length,
+            missingCount: entries.filter(entry => entry.status === 'missing').length,
+            unknownCount: entries.filter(entry => entry.status === 'verification-unknown').length }, scope);
+    }
     return { progress, summary, remaining, reasoning: '' };
 }

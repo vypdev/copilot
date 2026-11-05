@@ -54,7 +54,7 @@ describe('OrganizationMembersRepository', () => {
     const provider = { getClient: jest.fn(() => client) } as unknown as GithubClientPort<GithubOrganizationMembersClient>;
     const repository = new OrganizationMembersRepository(provider);
 
-    await expect(repository.getAllMembers('acme', 'token')).rejects.toThrow('organization access denied');
+    await expect(repository.getAllMembers('acme', 'token')).rejects.toMatchObject({ code: 'unexpected', operation: 'list-teams', providerStatus: 'http-unavailable' });
   });
 
   it('does not query GitHub when no members are requested', async () => {

@@ -77,7 +77,7 @@ export async function analyzeBugbotRevision(
             logInfo(`Bugbot reviewer planned ${partitions.length} bounded diff ${partitions.length === 1 ? 'partition' : 'partitions'} with maximum concurrency 2.`);
             const responses = await runWithConcurrencyLimit(
                 partitions.map((partition) => async () => {
-                    const { prompt, hasLiteralWitnesses } = buildBugbotReviewInput(execution, context, { partition });
+                    const { prompt, requiresCandidateVerification } = buildBugbotReviewInput(execution, context, { partition });
                     dependencies.telemetry.observePrompt(prompt);
                     dependencies.telemetry.beginPartition();
                     try {
@@ -87,7 +87,7 @@ export async function analyzeBugbotRevision(
                             prompt,
                             targetLocale,
                             { partitionId: partition.id, headSha: partition.headSha },
-                            { enabled: hasLiteralWitnesses, observePrompt: value => dependencies.telemetry.observePrompt(value), observeResponse: value => dependencies.telemetry.observeResponse(value) },
+                            { enabled: requiresCandidateVerification, observePrompt: value => dependencies.telemetry.observePrompt(value), observeResponse: value => dependencies.telemetry.observeResponse(value) },
                         );
                         dependencies.telemetry.endPartition(true);
                         logInfo(`Bugbot reviewer completed partition ${partition.ordinal}/${partition.total}.`);
@@ -105,14 +105,14 @@ export async function analyzeBugbotRevision(
             return aggregateBugbotPartitionResponses(partitions, responses);
         })
         : await dependencies.telemetry.measure('analysis', async () => {
-            const { prompt, hasLiteralWitnesses } = buildBugbotReviewInput(execution, context);
+            const { prompt, requiresCandidateVerification } = buildBugbotReviewInput(execution, context);
             dependencies.telemetry.observePrompt(prompt);
             const response = await queryBugbotFindings(
                 dependencies.agent,
                 execution.analysis.agentConfiguration,
                 prompt,
                 targetLocale,
-                { enabled: hasLiteralWitnesses, observePrompt: value => dependencies.telemetry.observePrompt(value), observeResponse: value => dependencies.telemetry.observeResponse(value) },
+                { enabled: requiresCandidateVerification, observePrompt: value => dependencies.telemetry.observePrompt(value), observeResponse: value => dependencies.telemetry.observeResponse(value) },
             );
             return response;
         });

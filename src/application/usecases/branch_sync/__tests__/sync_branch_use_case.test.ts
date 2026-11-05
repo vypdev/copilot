@@ -1,3 +1,4 @@
+import { BranchSyncPublicationFailure, type BranchSyncPublicationDiagnostic } from '../../../../domain/branch_sync_publication';
 import type { Execution } from "../../../../data/model/execution";
 import type { BranchMergePreparation } from "../../../ports/branch_sync_ports";
 import { SyncBranchUseCase } from "../sync_branch_use_case";
@@ -405,5 +406,47 @@ describe("SyncBranchUseCase", () => {
     const failedResults = await failed.useCase.invoke({ context: execution(), options });
     expect(failedResults[0]).toMatchObject({ success: false, executed: true });
     expect(JSON.stringify(failedResults)).not.toContain("secret provider detail");
+  });
+});
+
+
+describe('Scoped publication reconciliation', () => {
+  const child = 'a'.repeat(40), parent = 'b'.repeat(40), candidate = 'c'.repeat(40);
+  const facts: BranchSyncPublicationDiagnostic = { reason: 'workflow-write-required', remoteState: 'unchanged', originalSha: child, candidateSha: candidate, observedSha: child, pushAttempted: true };
+  it.each([
+    facts,
+    { ...facts, reason: 'push-failed' as const, remoteState: 'unverified' as const, observedSha: 'unavailable' },
+    { ...facts, reason: 'push-failed' as const, remoteState: 'changed' as const, observedSha: 'd'.repeat(40) },
+    { ...facts, reason: 'candidate-unverified' as const, candidateSha: 'unavailable', pushAttempted: false },
+  ])('reports committed failure with closed nonretryable recovery: %p', async diagnostic => {
+    const context = setup({ kind: 'clean', parentSha: parent, childSha: child });
+    context.workspace.commitAndPush.mockRejectedValue(new BranchSyncPublicationFailure(diagnostic));
+    const [result] = await context.useCase.invoke({ context: execution(), options });
+    expect(result.success).toBe(false); expect(context.workspace.abort).not.toHaveBeenCalled();
+    expect(context.workspace.commitAndPush).toHaveBeenCalledTimes(1);
+    expect(result.errors[0]).toMatchObject({ code: diagnostic.reason === 'workflow-write-required' ? 'authorization.denied' : 'provider.unavailable', retryable: false,
+      recovery: { id: diagnostic.reason === 'workflow-write-required' ? 'branch-sync-workflow-write-required' : 'branch-sync-publication-failed', variables: diagnostic } });
+  });
+  it('recognizes exact remote confirmation after a failed response without a second publication', async () => {
+    const context = setup({ kind: 'clean', parentSha: parent, childSha: child });
+    context.workspace.commitAndPush.mockRejectedValue(new BranchSyncPublicationFailure({ ...facts, remoteState: 'published', observedSha: candidate }));
+    const [result] = await context.useCase.invoke({ context: execution(), options });
+    expect(result.success).toBe(true); expect(result.payload).toMatchObject({ outcome: 'merged-verified-remotely', commitSha: candidate });
+    expect(result.steps.join(' ')).toContain('No second push'); expect(context.workspace.abort).not.toHaveBeenCalled(); expect(context.workspace.commitAndPush).toHaveBeenCalledTimes(1);
+  });
+  it('rejects publication facts belonging to a different original child', async () => {
+    const context = setup({ kind: 'clean', parentSha: parent, childSha: child });
+    context.workspace.commitAndPush.mockRejectedValue(new BranchSyncPublicationFailure({ ...facts, originalSha: 'd'.repeat(40), observedSha: 'd'.repeat(40) }));
+    const [result] = await context.useCase.invoke({ context: execution(), options });
+    expect(result.errors[0].code).toBe('provider.contract-invalid'); expect(result.errors[0].recovery).toBeUndefined();
+  });
+  it.each(['prepare', 'malformed', 'generic'] as const)('does not accept unscoped or untyped facts: %s', async scenario => {
+    const context = setup({ kind: 'clean', parentSha: parent, childSha: child });
+    const error = scenario === 'malformed' ? Object.assign(Object.create(BranchSyncPublicationFailure.prototype), { diagnostic: { reason: 'PRIVATE' } })
+      : scenario === 'generic' ? Error('PRIVATE token') : new BranchSyncPublicationFailure(facts);
+    (scenario === 'prepare' ? context.workspace.prepare : context.workspace.commitAndPush).mockRejectedValue(error);
+    const [result] = await context.useCase.invoke({ context: execution(), options });
+    expect(result.success).toBe(false); expect(result.errors[0].recovery).toBeUndefined(); expect(context.workspace.abort).toHaveBeenCalledTimes(1);
+    expect(result.steps.join(' ')).toContain('could not be verified'); expect(renderApplicationErrorMarkdown(result.errors[0])).not.toContain('PRIVATE');
   });
 });

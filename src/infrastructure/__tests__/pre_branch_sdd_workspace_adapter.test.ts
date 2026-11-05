@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import { SddTrustedCatalogMissingFailure } from '../../domain/sdd_trusted_catalog_failure';
-import { sddConsistencyFixture } from '../../testing/sdd_consistency_fixture';
+import { sddCaseReferenceFixture, sddConsistencyFixture } from '../../testing/sdd_consistency_fixture';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -74,6 +74,84 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
 
   beforeEach(() => { ({ temp, repo } = fixture()); });
   afterEach(() => fs.rmSync(temp, { recursive: true, force: true }));
+
+
+  it.each([['sdd-case-ref-C35','technical'],['sdd-case-ref-C36','shorthand'],['sdd-case-ref-C37','identity'],['sdd-case-ref-C38','replay']])('%s preserves real Git publication boundaries for %s', async (_id, scenario) => {
+    const workspace = new PreBranchSddWorkspaceAdapter(repo);
+    const snapshot = await workspace.loadSnapshot('develop');
+    const selected: SddPlan = { ...plan, action: 'companion', path: 'specs/case-reference.md' };
+    const prose = scenario === 'shorthand' ? 'Cases C01 and C02 establish acceptance.'
+      : 'Existing household DEL/C1 read compatibility remains separate from stronger new-setup input validation.';
+    const candidate = sddCaseReferenceFixture(prose, selected.path);
+    const markdown = scenario === 'identity' ? candidate.replace(/entry-prose-C01/gu, 'C01') : candidate;
+    const before = fs.readFileSync(path.join(repo, plan.path), 'utf8');
+    if (scenario === 'shorthand' || scenario === 'identity') {
+      await expect(workspace.validateDraft(snapshot, selected, markdown)).rejects.toMatchObject({ reason: 'case-identity' });
+      expect(git(repo, 'ls-remote', '--heads', 'origin', 'feature/42-change')).toBe('');
+    } else {
+      const prepared = await workspace.validateDraft(snapshot, selected, markdown);
+      expect(prepared.markdown).toContain(prose); expect(prepared.markdown.match(/^\| entry-prose-C\d+ \|/gm)).toHaveLength(48);
+      git(repo, 'push', 'origin', 'develop:refs/heads/feature/42-change');
+      const sha = await workspace.publish('feature/42-change', prepared);
+      expect(await workspace.verifyPublication('feature/42-change', snapshot.baseSha, sha, selected.path)).toBe(true);
+      if (scenario === 'replay') expect(await workspace.recoverPublished('feature/42-change', prepared)).toBe(sha);
+      expect(git(repo, 'show', sha + ':' + selected.path)).toContain(prose);
+    }
+    expect(fs.readFileSync(path.join(repo, plan.path), 'utf8')).toBe(before);
+    expect(git(repo, 'status', '--porcelain')).toBe('');
+    expect(git(repo, 'worktree', 'list', '--porcelain').match(/^worktree /gm)).toHaveLength(1);
+  });
+
+  it.each(['update', 'companion'] as const)('accepts protocol notation in a complete %s against immutable Git evidence', async action => {
+    const workspace = new PreBranchSddWorkspaceAdapter(repo);
+    const snapshot = await workspace.loadSnapshot('develop');
+    const selected = { ...plan, action, path: action === 'update' ? plan.path : 'specs/companion.md' };
+    const before = fs.readFileSync(path.join(repo, plan.path), 'utf8');
+    const notation = '\nHTTP endpoint: `api/v1/session`\nMedia type: `application/json`\nURL: `assets/main.js`\nDeployment alternatives: `native/standalone`\nExample: `[illustrative](../missing.md)`\n[Actual guide](../docs/payments.mdx)\n';
+    const prepared = await workspace.validateDraft(snapshot, selected, draft(selected.path, action) + notation);
+    expect(prepared.markdown).toContain(notation.trim());
+    expect(fs.readFileSync(path.join(repo, plan.path), 'utf8')).toBe(before);
+    expect(git(repo, 'status', '--porcelain')).toBe('');
+    expect(git(repo, 'worktree', 'list', '--porcelain').match(/^worktree /gm)).toHaveLength(1);
+  });
+
+  it.each(['update', 'companion'] as const)('permits only constructive future directories in a validated %s without materializing source', async action => {
+    const workspace = new PreBranchSddWorkspaceAdapter(repo);
+    const snapshot = await workspace.loadSnapshot('develop');
+    const selected = { ...plan, action, path: action === 'update' ? plan.path : 'specs/companion.md' };
+    const markdown = draft(selected.path, action).replace('| docs/payments.mdx | update |', '| docs/payments.mdx | update |\n| src/new/domain/entry.ts | create |')
+      + '\nFuture directory: `src/new/domain/`.\n';
+    const prepared = await workspace.validateDraft(snapshot, selected, markdown);
+    expect(prepared.markdown).toContain('`src/new/domain/`');
+    expect(fs.existsSync(path.join(repo, 'src/new'))).toBe(false);
+    expect(git(repo, 'status', '--porcelain')).toBe('');
+    expect(git(repo, 'worktree', 'list', '--porcelain').match(/^worktree /gm)).toHaveLength(1);
+  });
+
+  it.each(['update', 'companion'] as const)('still rejects a genuine missing %s citation and preserves the owner', async action => {
+    const workspace = new PreBranchSddWorkspaceAdapter(repo);
+    const snapshot = await workspace.loadSnapshot('develop');
+    const selected = { ...plan, action, path: action === 'update' ? plan.path : 'specs/companion.md' };
+    const before = fs.readFileSync(path.join(repo, plan.path), 'utf8');
+    await expect(workspace.validateDraft(snapshot, selected, draft(selected.path, action) + '\nFile: `src/PRIVATE.ts`.'))
+      .rejects.toMatchObject({ reason: 'repository-path', diagnostic: { facts: expect.arrayContaining([
+        { detail: 'path-inline-reference', section: 0, row: 1 }, { detail: 'path-reference-missing', section: 0 },
+      ]) } });
+    expect(fs.readFileSync(path.join(repo, plan.path), 'utf8')).toBe(before);
+    expect(git(repo, 'status', '--porcelain')).toBe('');
+    expect(git(repo, 'worktree', 'list', '--porcelain').match(/^worktree /gm)).toHaveLength(1);
+  });
+
+  it.each(['update', 'companion'] as const)('never exempts a protocol-shaped Path/Change file declaration in %s', async action => {
+    const workspace = new PreBranchSddWorkspaceAdapter(repo);
+    const snapshot = await workspace.loadSnapshot('develop');
+    const selected = { ...plan, action, path: action === 'update' ? plan.path : 'specs/companion.md' };
+    const markdown = draft(selected.path, action).replace('| docs/payments.mdx | update |', '| docs/payments.mdx | update |\n| application/json | reference |');
+    await expect(workspace.validateDraft(snapshot, selected, markdown)).rejects.toMatchObject({ reason: 'repository-path' });
+    expect(git(repo, 'status', '--porcelain')).toBe('');
+    expect(git(repo, 'worktree', 'list', '--porcelain').match(/^worktree /gm)).toHaveLength(1);
+    expect(git(repo, 'ls-remote', '--heads', 'origin', 'feature/42-change')).toBe('');
+  });
 
   it.each(['update', 'companion'] as const)('requires the selected %s SDD in its own path inventory before publication', async action => {
     const workspace = new PreBranchSddWorkspaceAdapter(repo);

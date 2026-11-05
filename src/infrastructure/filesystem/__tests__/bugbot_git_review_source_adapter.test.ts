@@ -8,6 +8,11 @@ import type { BugbotPullRequestIdentity } from '../../../domain/bugbot/context';
 import type { PullRequestReviewChange } from '../../../application/ports/bugbot_pull_request_read_ports';
 import { BugbotReviewCompletenessError } from '../../../domain/bugbot/framed_review';
 
+// Real Git process/checkout I/O exceeded Jest's 5s unit default on hosted Windows
+// under coverage. Match this file's existing 30s native cases; retain production
+// command deadlines, integrity assertions and the explicit 120s large-workload cases.
+const NATIVE_GIT_TEST_MS = 30_000;
+
 function repository(oldFiles: Record<string, string | Buffer>, newFiles: Record<string, string | Buffer>, format: 'sha1' | 'sha256' = 'sha1') {
     const root = mkdtempSync(join(tmpdir(), 'copilot-framed-git-'));
     const git = (...args: string[]) => execFileSync('git', ['-C', root,
@@ -51,7 +56,7 @@ it.each([
         expect(fixture.git('status', '--porcelain')).toBe(before);
         expect(fixture.git('rev-parse', 'HEAD')).toBe(fixture.head);
     } finally { fixture.dispose(); }
-});
+}, NATIVE_GIT_TEST_MS);
 
 it('retains a complete provider patch and still establishes the unique immutable merge-base', async () => {
     const fixture = repository({ 'file': 'old\n' }, { 'file': 'new\n' });
@@ -61,7 +66,7 @@ it('retains a complete provider patch and still establishes the unique immutable
         expect(source.changes[0]).toMatchObject({ patch, source: 'provider' });
         expect(Object.isFrozen(source.changes[0])).toBe(true);
     } finally { fixture.dispose(); }
-});
+}, NATIVE_GIT_TEST_MS);
 
 it('recovers a truncated provider patch instead of trusting its declared coverage', async () => {
     const fixture = repository({ 'file': 'old\n' }, { 'file': 'new\n' });
@@ -70,7 +75,7 @@ it('recovers a truncated provider patch instead of trusting its declared coverag
         expect(source.changes[0].source).toBe('local-git');
         expect(source.changes[0].patch).toContain('+new');
     } finally { fixture.dispose(); }
-});
+}, NATIVE_GIT_TEST_MS);
 
 it.each([
     ['native count mismatch', (f: ReturnType<typeof repository>) => f.read([change('file')], true, f.pr(2))],
@@ -86,7 +91,7 @@ it.each([
     const fixture = repository({ 'file': 'old\n' }, { 'file': 'new\n' });
     try { await expect(read(fixture)).rejects.toBeInstanceOf(BugbotReviewCompletenessError); }
     finally { fixture.dispose(); }
-});
+}, NATIVE_GIT_TEST_MS);
 
 it.each([
     ['NUL binary', Buffer.from('binary\0content')],
@@ -96,7 +101,7 @@ it.each([
     const fixture = repository({}, { file: bytes });
     try { await expect(fixture.read([change('file', 'added', 1, 0)])).rejects.toBeInstanceOf(BugbotReviewCompletenessError); }
     finally { fixture.dispose(); }
-});
+}, NATIVE_GIT_TEST_MS);
 
 it('recovers a rename against its previous immutable blob path', async () => {
     const fixture = repository({ old: 'old\n' }, { current: 'new\n' });
@@ -104,7 +109,7 @@ it('recovers a rename against its previous immutable blob path', async () => {
         const source = await fixture.read([{ ...change('current', 'renamed'), previousFilename: 'old' }]);
         expect(source.changes[0].patch).toContain('-old\n+new');
     } finally { fixture.dispose(); }
-});
+}, NATIVE_GIT_TEST_MS);
 
 it('represents a zero-line rename as verified object/path metadata, not a missing-source placeholder', async () => {
     const fixture = repository({ old: 'same\n' }, { current: 'same\n' });
@@ -113,13 +118,13 @@ it('represents a zero-line rename as verified object/path metadata, not a missin
         expect(JSON.parse(source.changes[0].patch)).toMatchObject({ kind: 'verified-metadata-only', oldPath: 'old', path: 'current' });
         expect(source.changes[0].source).toBe('local-git');
     } finally { fixture.dispose(); }
-});
+}, NATIVE_GIT_TEST_MS);
 
 it('does not mistake an unchanged empty file for recovered changed source', async () => {
     const fixture = repository({ file: '' }, { file: '' });
     try { await expect(fixture.read([change('file', 'modified', 0, 0)])).rejects.toBeInstanceOf(BugbotReviewCompletenessError); }
     finally { fixture.dispose(); }
-});
+}, NATIVE_GIT_TEST_MS);
 
 it('treats literal Git path metacharacters as data and preserves their exact path', async () => {
     // Brackets, wildcards and colon are permitted Git names on Unix; use brackets on Windows too.
@@ -130,7 +135,7 @@ it('treats literal Git path metacharacters as data and preserves their exact pat
         expect(source.changes[0].filename).toBe(name);
         expect(source.changes[0].patch).toContain('+safe');
     } finally { fixture.dispose(); }
-});
+}, NATIVE_GIT_TEST_MS);
 
 it('disables native external execution/network and strips ambient credentials from every fixed-argv read', async () => {
     const fixture = repository({ file: 'old\n' }, { file: 'new\n' });
@@ -154,7 +159,7 @@ it('disables native external execution/network and strips ambient credentials fr
             }
         }
     } finally { execute.mockRestore(); fixture.dispose(); }
-});
+}, NATIVE_GIT_TEST_MS);
 
 it('bugbot-framed-C067 recovers64 absent added patches under all independent source limits', async () => {
     const files = Object.fromEntries(Array.from({ length: 64 }, (_, i) => [`file${i}`, `new${i}\n`]));
@@ -175,7 +180,7 @@ it('bugbot-framed-C068 blocks the65th missing patch before Git reads', async () 
             .rejects.toMatchObject({ facts: { resource: 'recoveredFiles', observed: 65, limit: 64 } });
         expect(execute).not.toHaveBeenCalled();
     } finally { execute.mockRestore(); fixture.dispose(); }
-});
+}, NATIVE_GIT_TEST_MS);
 
 it.each([
     33, 34,
@@ -222,7 +227,7 @@ it('rejects a valid-looking provider patch against a required nonregular Git obj
         const patch = '@@ -1 +1 @@\n-old\n+target\n\\ No newline at end of file\n';
         await expect(fixture.read([change('file', 'modified', 1, 1, patch)], true, identity)).rejects.toBeInstanceOf(BugbotReviewCompletenessError);
     } finally { fixture.dispose(); }
-});
+}, NATIVE_GIT_TEST_MS);
 
 it('recovers a provider patch with matching counts but different immutable content', async () => {
     const fixture = repository({ file: 'old\n' }, { file: 'new\n' });
@@ -232,7 +237,7 @@ it('recovers a provider patch with matching counts but different immutable conte
         const source = await fixture.read([change('file', 'modified', 1, 1, patch)]);
         expect(source.changes[0]).toMatchObject({ source: 'local-git', patch: expect.stringContaining('+new') });
     } finally { fixture.dispose(); }
-});
+}, NATIVE_GIT_TEST_MS);
 
 it('verifies a complete provider patch only after an independent complete Git inventory', async () => {
     const fixture = repository({ file: 'old\n' }, { file: 'new\n', omitted: 'missing native record\n' });
@@ -240,7 +245,7 @@ it('verifies a complete provider patch only after an independent complete Git in
         const patch = '@@ -1 +1 @@\n-old\n+new\n';
         await expect(fixture.read([change('file', 'modified', 1, 1, patch)])).rejects.toMatchObject({ facts: { resource: 'coverage' } });
     } finally { fixture.dispose(); }
-});
+}, NATIVE_GIT_TEST_MS);
 
 it('accepts a verified empty-file addition as metadata without fabricating text hunks', async () => {
     const fixture = repository({}, { file: '' });
@@ -249,7 +254,7 @@ it('accepts a verified empty-file addition as metadata without fabricating text 
         expect(source.changes[0].git?.current?.mode).toBe('100644');
         expect(JSON.parse(source.changes[0].patch).kind).toBe('verified-metadata-only');
     } finally { fixture.dispose(); }
-});
+}, NATIVE_GIT_TEST_MS);
 
 it('preserves a UTF-8 BOM as immutable source content instead of losing it during decoding', async () => {
     const fixture = repository({ file: '\ufeffold\n' }, { file: '\ufeffnew\n' });
@@ -260,7 +265,7 @@ it('preserves a UTF-8 BOM as immutable source content instead of losing it durin
         expect(source.changes[0].patch).toBe(patch);
         expect(source.metrics).toMatchObject({ verifiedBlobs: 2, verifiedBlobBytes: 14, recoveredFiles: 0 });
     } finally { fixture.dispose(); }
-});
+}, NATIVE_GIT_TEST_MS);
 
 it('rejects an actually shallow local repository without fetching missing ancestors', async () => {
     const fixture = repository({ file: 'old\n' }, { file: 'new\n' });
@@ -268,7 +273,7 @@ it('rejects an actually shallow local repository without fetching missing ancest
         writeFileSync(join(fixture.root, '.git', 'shallow'), fixture.base + '\n');
         await expect(fixture.read([change('file')])).rejects.toMatchObject({ facts: { resource: 'source' } });
     } finally { fixture.dispose(); }
-});
+}, NATIVE_GIT_TEST_MS);
 
 it.each([984, 985])('bounds actual immutable Git operations at the %s-rename edge', async count => {
     const oldFiles = Object.fromEntries(Array.from({ length: count }, (_, i) => [`old-${i}`, 'old\n']));
@@ -289,14 +294,14 @@ it('verifies SHA-256 repositories and blob identities without assuming SHA-1 sto
         expect(source.identity.headSha).toHaveLength(64);
         expect(source.changes[0].git!.current!.oid).toHaveLength(64);
     } finally { fixture.dispose(); }
-});
+}, NATIVE_GIT_TEST_MS);
 it('projects an empty-file deletion with no current text side', async () => {
     const fixture = repository({ file: '' }, {});
     try {
         const source = await fixture.read([change('file', 'removed', 0, 0)]);
         expect(JSON.parse(source.changes[0].patch).current).toBeNull();
     } finally { fixture.dispose(); }
-});
+}, NATIVE_GIT_TEST_MS);
 it('verifies inventory but does not read ignored blobs or resolve a nonexistent working root', async () => {
     const fixture = repository({ file: 'old\n' }, { file: 'new\n' });
     const snapshot = { changes: [change('file')], filesWithFirstDiffLine: [], filesWithDiffLocations: [] };
@@ -307,7 +312,7 @@ it('verifies inventory but does not read ignored blobs or resolve a nonexistent 
             .rejects.toMatchObject({ facts: { resource: 'source' } });
         await expect(fixture.read([change('file'), change('file')])).rejects.toMatchObject({ facts: { resource: 'coverage' } });
     } finally { fixture.dispose(); }
-});
+}, NATIVE_GIT_TEST_MS);
 
 const wireFaults: Array<[string, (args: string[]) => boolean, (out: Buffer) => Buffer, string]> = [
     ['wrong working root', args => args.includes('--show-toplevel'), () => Buffer.from(tmpdir() + '\n'), 'identity'],
@@ -330,7 +335,7 @@ it.each(wireFaults)('rejects %s from the trusted Git process boundary', async (_
         execute(command, args, options, (error, out, stderr) => callback(error, matches(args) ? corrupt(out as Buffer) : out, stderr))) as any);
     try { await expect(fixture.read([change('file')])).rejects.toMatchObject({ facts: { resource } }); }
     finally { spy.mockRestore(); fixture.dispose(); }
-});
+}, NATIVE_GIT_TEST_MS);
 it.each(['stdout', 'stderr'])('reports only a proven stdout overflow as a recovered-patch lower bound: %s', async stream => {
     const fixture = repository({ file: 'old\n' }, { file: 'new\n' });
     const execute = child.execFile;
@@ -341,7 +346,7 @@ it.each(['stdout', 'stderr'])('reports only a proven stdout overflow as a recove
         await expect(fixture.read([change('file')])).rejects.toMatchObject({ facts: stream === 'stdout'
             ? { resource: 'recoveredPatchBytes', observed: 2097153, limit: 2097152, countKind: 'at-least' } : { resource: 'source' } });
     } finally { spy.mockRestore(); fixture.dispose(); }
-});
+}, NATIVE_GIT_TEST_MS);
 it('selects native Windows null-device arguments without inheriting a shell', async () => {
     const fixture = repository({ file: 'old\n' }, { file: 'new\n' });
     const platform = Object.getOwnPropertyDescriptor(process, 'platform')!;
@@ -352,7 +357,7 @@ it('selects native Windows null-device arguments without inheriting a shell', as
         expect((execute.mock.calls[0][2] as any).env.GIT_CONFIG_GLOBAL).toBe('NUL');
         expect(execute.mock.calls[0][1]).toContain('core.hooksPath=NUL');
     } finally { Object.defineProperty(process, 'platform', platform); execute.mockRestore(); fixture.dispose(); }
-});
+}, NATIVE_GIT_TEST_MS);
 
 it('uses the current working root only when explicitly composed without an alternate root', async () => {
     const fixture = repository({ file: 'old\n' }, { file: 'new\n' });
@@ -361,7 +366,7 @@ it('uses the current working root only when explicitly composed without an alter
             { changes: [change('file')], filesWithFirstDiffLine: [], filesWithDiffLocations: [] }, true, []))
             .rejects.toBeInstanceOf(BugbotReviewCompletenessError);
     } finally { fixture.dispose(); }
-});
+}, NATIVE_GIT_TEST_MS);
 
 
 it.each([
@@ -377,7 +382,7 @@ it.each([
         await expect(fixture.read([record])).rejects.toMatchObject({ facts: { resource: 'source' } });
         expect(execute).not.toHaveBeenCalled();
     } finally { execute.mockRestore(); fixture.dispose(); }
-});
+}, NATIVE_GIT_TEST_MS);
 
 it('consumes every maximum-length admitted path through bounded native tree batches', async () => {
     const directories = ['d'.repeat(200), 'e'.repeat(200), 'f'.repeat(200), 'g'.repeat(200)];
@@ -421,7 +426,7 @@ it('verifies a copy as its own addition without consuming its unchanged previous
         expect(source.changes[0]).toMatchObject({ filename: 'current', previousFilename: 'old', status: 'copied' });
         expect(completeTextPatch(source.changes[0].patch, 1, 0)).toBe(true);
     } finally { fixture.dispose(); }
-});
+}, NATIVE_GIT_TEST_MS);
 
 it.each(['modified', 'removed'] as const)('rejects a copy that omits its separately %s source before any blob reads', async status => {
     const fixture = repository({ old: 'old\n' }, { current: 'old\n', ...(status === 'modified' ? { old: 'new\n' } : {}) });
@@ -434,7 +439,7 @@ it.each(['modified', 'removed'] as const)('rejects a copy that omits its separat
         expect(execute.mock.calls.some(call => (call[1] as string[]).includes('cat-file'))).toBe(false);
         expect(fixture.git('status', '--porcelain')).toBe(before);
     } finally { execute.mockRestore(); fixture.dispose(); }
-});
+}, NATIVE_GIT_TEST_MS);
 
 it.each(['modified', 'removed'] as const)('retains both native records when a copy source is separately %s', async status => {
     const fixture = repository({ old: 'old\n' }, { current: 'old\n', ...(status === 'modified' ? { old: 'new\n' } : {}) });
@@ -445,7 +450,7 @@ it.each(['modified', 'removed'] as const)('retains both native records when a co
         expect(source.changes.map(c => [c.filename, c.status])).toEqual([['current', 'copied'], ['old', status]]);
         for (const record of source.changes) expect(completeTextPatch(record.patch, record.additions, record.deletions)).toBe(true);
     } finally { fixture.dispose(); }
-});
+}, NATIVE_GIT_TEST_MS);
 
 it.each(['modified', 'removed'] as const)('does not let an ignored copy hide its unassigned %s source', async status => {
     const fixture = repository({ old: 'old\n' }, { current: 'old\n', ...(status === 'modified' ? { old: 'new\n' } : {}) });
@@ -455,7 +460,7 @@ it.each(['modified', 'removed'] as const)('does not let an ignored copy hide its
             { changes: records, filesWithFirstDiffLine: [], filesWithDiffLocations: [] }, true, ['current']))
             .rejects.toMatchObject({ facts: { resource: 'coverage' } });
     } finally { fixture.dispose(); }
-});
+}, NATIVE_GIT_TEST_MS);
 
 it('permits multiple complete copy additions sharing one unchanged source without duplicate native ownership', async () => {
     const fixture = repository({ old: 'old\n' }, { old: 'old\n', first: 'old\n', second: 'old\n' });
@@ -464,7 +469,7 @@ it('permits multiple complete copy additions sharing one unchanged source withou
         expect(source.complete).toBe(true);
         expect(source.changes.map(c => c.filename)).toEqual(['first', 'second']);
     } finally { fixture.dispose(); }
-});
+}, NATIVE_GIT_TEST_MS);
 
 it('verifies all current-side content when optional copy-source metadata is absent', async () => {
     const fixture = repository({ old: 'old\n' }, { old: 'old\n', current: 'old\n' });
@@ -473,7 +478,7 @@ it('verifies all current-side content when optional copy-source metadata is abse
         expect(source.complete).toBe(true);
         expect(completeTextPatch(source.changes[0].patch, 1, 0)).toBe(true);
     } finally { fixture.dispose(); }
-});
+}, NATIVE_GIT_TEST_MS);
 
 
 it.each([
@@ -488,4 +493,4 @@ it.each([
             { changes: records, filesWithFirstDiffLine: [], filesWithDiffLocations: [] }, true, ignores))
             .rejects.toMatchObject({ facts: { resource: 'coverage' } });
     } finally { fixture.dispose(); }
-});
+}, NATIVE_GIT_TEST_MS);

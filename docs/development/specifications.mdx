@@ -44,6 +44,14 @@ The specification validator rejects missing or escaped paths, duplicate
 capability/spec ownership, invalid status/date metadata, unregistered top-level
 SDDs, and a stale generated `CATALOG.md`.
 
+The package tasks above are declared by this Copilot source repository. A
+consumer must verify its own selected-source commands and execution directory;
+copying this standard does not install those script names. Generated catalogs
+therefore describe regeneration and validation outcomes without prescribing a
+project package manager. When no concrete invocation is verified, keep that
+prerequisite explicit. Declarations, structural validation and product execution
+are separate evidence. See [grounded draft guidance](/issues/pre-branch-sdds#verification-guidance-and-evidence).
+
 Discovery also rejects every symbolic link encountered under `specs/`, including
 unregistered file links and directory links. It never follows their targets.
 Replace a reported link with ordinary repository files, register any resulting
@@ -75,6 +83,12 @@ The catalog preserves literal path labels and encodes each destination segment;
 do not pre-encode paths in `catalog.json`. Regenerate the catalog with the normal
 commands below after updating the shared SDK validator. The same renderer serves
 primary SDDs, companion SDDs and every evidence role.
+
+Technical terminology may retain designators such as `DEL/C1` and connector
+`C1`. Use fully qualified IDs when referring to acceptance cases in case-role
+fields, explicit references and case-ID lists. Ordinary technical operands are
+not counted as cases; identity, budget, reciprocal mapping and immutable owner
+checks still apply. See [the SDD consistency guide](/issues/pre-branch-sdds).
 
 ## Capability titles
 
@@ -130,6 +144,11 @@ regenerate and retry. Keep all source-vendored dependencies at the same reviewed
 revision. Upgrade an older installed Action/SDK through its normal reviewed route;
 changing its validator, declaring fake evidence or disabling a gate cannot
 establish readiness.
+
+For a stale index, this standalone entrypoint reports its existing `--write`
+option. Run the generation invocation shown above, then the read-only validation
+invocation. Recovery does not require adding `package.json` or an absent
+`validate:specifications` or `generate:specifications` project script.
 
 When implementation exists, record its actual entrypoints, source and meaningful
 tests and review the implementation before changing to `implemented`. Mixed

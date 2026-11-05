@@ -3,6 +3,7 @@ import { partitionProgressDiff } from '../../../policies/progress_diff_partition
 import { progressPartitionResponseSchema } from '../../../policies/progress_partition_response_policy';
 import { remainingProgressPromptBytes } from '../../../policies/progress_prompt_capacity_policy';
 import { MAX_PROGRESS_SCOPE_BYTES } from '../../../policies/progress_scope_policy';
+import { progressPartitionRepairPrompt } from '../../../policies/progress_partition_length_policy';
 
 it('reserves dynamic scope framing in every part before admitting the first model request', () => {
     const diff = partitionProgressDiff('a'.repeat(40), 'b'.repeat(40), ['a.md', 'b.md'].map(path => ({
@@ -23,7 +24,7 @@ it('reserves dynamic scope framing in every part before admitting the first mode
         }
     }
     const { prompts, factLimit } = planProgressDiffPrompts(diff, context, issue(low), 384_000, scope);
-    const available = prompts.map((prompt, index) => remainingProgressPromptBytes(prompt, 'progress-partition', progressPartitionResponseSchema(diff.partitions[index], factLimit)));
+    const available = prompts.map((prompt, index) => remainingProgressPromptBytes(progressPartitionRepairPrompt(prompt), 'progress-partition', progressPartitionResponseSchema(diff.partitions[index], factLimit)));
     expect(Math.min(...available)).toBeGreaterThanOrEqual(1_024);
     expect(Math.min(...available)).toBeLessThan(1_030);
 });

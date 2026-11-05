@@ -6,23 +6,25 @@ import { progressProtocolRejected } from '../progress_evidence_protocol_policy';
 import { buildApplicationErrorPresentation, renderApplicationErrorMarkdown, renderApplicationErrorText } from '../application_error_presentation_policy';
 import { resolveStaticApplicationErrorCatalog } from '../application_error_message_catalog';
 
-it.each(['en-US', 'es-ES'])('presents supported automatic continuation and retained state in %s', locale => {
-    const catalog = resolveStaticApplicationErrorCatalog(locale), view = buildApplicationErrorPresentation(progressEvidenceTooLarge(), catalog.message);
-    expect(view.action).toMatch(locale === 'en-US' ? /continues automatically/ : /continúa automáticamente/);
-    expect(view.action).toMatch(locale === 'en-US' ? /current managed source/ : /fuente gestionada actual/);
+const capacityFailure = () => progressEvidenceTooLarge({ phase: 'source', dimension: 'source-unit-bytes', observedCount: 256001, supportedLimit: 256000 });
+
+it.each(['en-US', 'es-ES'])('distinguishes terminal capacity from supported invocation-local continuation in %s', locale => {
+    const catalog = resolveStaticApplicationErrorCatalog(locale), view = buildApplicationErrorPresentation(capacityFailure(), catalog.message);
+    expect(view.action).toMatch(locale === 'en-US' ? /same invocation/ : /misma ejecución/);
+    expect(view.action).toMatch(locale === 'en-US' ? /capacity failure stops the attempt/ : /fallo de capacidad detiene el intento/);
     expect(view.retainedState).toMatch(locale === 'en-US' ? /progress labels/ : /etiquetas de progreso/);
 });
 it('keeps identical over-capacity comparisons terminal', () => {
-    const error = progressEvidenceTooLarge(); expect(error.retryable).toBe(false);
-    expect(buildApplicationErrorPresentation(error).action).toContain('identical over-limit comparison cannot gain capacity');
+    const error = capacityFailure(); expect(error.retryable).toBe(false);
+    expect(buildApplicationErrorPresentation(error).action).toContain('Retrying unchanged over-limit evidence cannot increase capacity');
 });
 it('does not recommend splitting a coherent package or changing the base', () => {
-    const view = buildApplicationErrorPresentation(progressEvidenceTooLarge()); expect(view.action).not.toMatch(/split|retarget|smaller changes/iu);
+    const view = buildApplicationErrorPresentation(capacityFailure()); expect(view.action).not.toMatch(/split|retarget|smaller changes/iu);
 });
 it('uses the same continuation contract in terminal and GitHub Markdown', () => {
-    const error = progressEvidenceTooLarge();
+    const error = capacityFailure();
     for (const view of [renderApplicationErrorText(error), renderApplicationErrorMarkdown(error)]) {
-        expect(view).toContain('continues automatically'); expect(view).toContain('Existing progress labels');
+        expect(view).toContain('capacity failure stops the attempt'); expect(view).toContain('Existing progress labels');
     }
 });
 it('exposes only closed source-protocol reasons while preserving progress', () => {
@@ -56,6 +58,6 @@ it('reports the actual exhausted counters and path excerpt without a partial out
     });
 });
 it('keeps the correlation reference stable across public serialization and presentation', () => {
-    const error = progressEvidenceTooLarge(), view = buildApplicationErrorPresentation(error);
+    const error = capacityFailure(), view = buildApplicationErrorPresentation(error);
     expect(view.reference).toBe(error.toJSON().correlationId); expect(view.reference).toMatch(/^[a-f0-9-]{36}$/u);
 });
