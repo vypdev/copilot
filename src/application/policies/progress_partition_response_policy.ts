@@ -108,8 +108,8 @@ export function progressPartitionFactBounds(baseSha: string, headSha: string, pa
         observedCount: envelopeBytes + count * 12 * minimum, supportedLimit: budget });
     if (profile !== 'immutable-tree-v1') return { factLimit: Math.min(600, worstCase) };
     const factJsonBytes = Math.min(600 * 6, Math.floor(remaining / (count * 2)));
-    // UTF-8 scalar values take at most four bytes. Validate the actual escaped JSON size separately.
-    return { factLimit: Math.min(600, Math.floor(factJsonBytes / 4)), factJsonBytes };
+    // Each code point costs at least one JSON byte. The receipt checks the actual encoded size.
+    return { factLimit: Math.min(600, factJsonBytes), factJsonBytes };
 }
 
 export function aggregateProgressFacts(baseSha: string, headSha: string, partitions: readonly ProgressDiffPartition[], facts: readonly (readonly ProgressFileFacts[])[], budget = MAX_PROGRESS_AGGREGATE_BYTES, profile?: ProgressEvidenceProfile): string {

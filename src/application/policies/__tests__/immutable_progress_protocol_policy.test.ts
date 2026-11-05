@@ -62,15 +62,15 @@ describe('complete immutable source and receipt protocol', () => {
         expect(Buffer.byteLength(text)).toBeLessThanOrEqual(budget);
         expect(JSON.parse(text).analysis.facts).toHaveLength(600);
     });
-    it('admits 26-code-point facts and four-byte Unicode within the original 24-point byte allocation', () => {
+    it('admits 42-code-point facts and exact UTF-8 boundaries within the original 24-point byte allocation', () => {
         const diff = bound();
         const withSingleByteFacts = aggregateProgressReceipts(diff, receipts(diff, 'x'), 384000);
         const budget = Buffer.byteLength(withSingleByteFacts) + 600 * 2 * (24 * 6 - 1);
         const { factLimit, factJsonBytes } = framedProgressFactBounds(diff, budget);
-        expect({ factLimit, factJsonBytes }).toEqual({ factLimit: 36, factJsonBytes: 144 });
-        const prose = 'Generated metadata update.';
-        expect([...prose]).toHaveLength(26);
-        for (const fact of [prose, '🧪'.repeat(factLimit)]) {
+        expect({ factLimit, factJsonBytes }).toEqual({ factLimit: 144, factJsonBytes: 144 });
+        const prose = 'Platform test timeouts extended for checks';
+        expect([...prose]).toHaveLength(42);
+        for (const fact of [prose, 'x'.repeat(factLimit), '🧪'.repeat(factJsonBytes! / 4)]) {
             const text = aggregateProgressReceipts(diff, receipts(diff, fact, factLimit, factJsonBytes), budget);
             expect(Buffer.byteLength(text)).toBeLessThanOrEqual(budget);
         }
@@ -82,10 +82,12 @@ describe('complete immutable source and receipt protocol', () => {
         const text = aggregateProgressReceipts(diff, receipts(diff, '\u0001'.repeat(escapedLimit), factLimit, factJsonBytes), budget);
         expect(Buffer.byteLength(text)).toBeLessThanOrEqual(budget);
         expect(escapedLimit + 1).toBeLessThanOrEqual(factLimit);
-        expect(() => receipts(diff, '\u0001'.repeat(escapedLimit + 1), factLimit, factJsonBytes)).toThrow(expect.objectContaining({
-            recovery: { id: 'progress-result-contract-invalid', variables: expect.objectContaining({ phase: 'partition',
-                reason: 'partition-facts-invalid', field: '$.files[0].implemented' }) },
-        }));
+        for (const fact of ['\u0001'.repeat(escapedLimit + 1), '🧪'.repeat(Math.floor(factJsonBytes! / 4) + 1)]) {
+            expect(() => receipts(diff, fact, factLimit, factJsonBytes)).toThrow(expect.objectContaining({
+                recovery: { id: 'progress-result-contract-invalid', variables: expect.objectContaining({ phase: 'partition',
+                    reason: 'partition-facts-invalid', field: '$.files[0].implemented' }) },
+            }));
+        }
     });
     it('rejects omitted receipt sets at aggregation', () => { const d=bound();expect(()=>aggregateProgressReceipts(d,receipts(d).slice(1),384000)).toThrow(); });
     it('rejects reordered receipt sets at aggregation', () => { const d=bound();expect(()=>aggregateProgressReceipts(d,receipts(d).reverse(),384000)).toThrow(); });

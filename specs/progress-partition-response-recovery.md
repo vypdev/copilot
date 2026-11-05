@@ -59,6 +59,11 @@ remain intact; no percentage is published.
   collected 905 paths in 32 complete parts. The compact projection raised the
   bound to 24. The replacement returned 26 code points in `implemented` for
   the generated metadata unit `file-2-metadata` at `build/cli/index.js`.
+- At `0d1a9c582b2821ba9ee02031e3289369d05c39ac`, run 42017545061
+  collected 914 paths in 34 complete parts. Its replacement returned 42 code
+  points against 36 for `implemented` on the platform workflow base unit
+  `file-1-base-1-of-1`. A four-byte assumption at schema admission can
+  still reject prose that fits the field's actual byte allocation.
 - Owners: `src/data/repository/progress_agent_response_policy.ts`,
   `src/application/policies/progress_partition_response_policy.ts`, `src/application/usecases/actions/summarize_progress_diff_workflow.ts`.
 - No external API or protocol change is proposed. The actual rejected prose
@@ -179,9 +184,10 @@ The immutable final projection carries the path dictionary and each exact unit
 ID once. Preflight divides the remaining exact JSON bytes between both fields
 of all units. It still requires enough room for the original worst-case
 six-byte escape cost at the 16-point minimum. The original and replacement
-share a schema sized for four-byte UTF-8 code points. Receipt admission also
-counts the actual encoded bytes, including escapes, within the per-field
-allocation. This admits every fact within the former six-byte-derived bound
+share a schema whose code-point maximum uses the field's byte allocation and
+the unchanged 600-point ceiling. Receipt admission counts the actual encoded
+bytes, including escapes, within that allocation. A short localized phrase
+guides generation while the host measures bytes. This admits every fact within the former six-byte-derived bound
 and gives ordinary prose more room. The legacy and framed-v1 profiles keep the
 six-byte calculation for their schema maximum. Source/frame/
 part/aggregate limits, final-assessment scope, prompt ceiling, execution
@@ -285,7 +291,7 @@ rejection while preserving prior progress; no credentials or data need repair.
 | Product presentation | 4 | English/Spanish facts, no raw output, closed variables and escaped text |
 | Complete publication integration | 3 | Successful complete aggregation, failure retains labels, stale result never publishes |
 | Part/final recovery composition | 4 | Independent single allowances, complete immutable inventory through late failure, no final query after exhausted part or rejected escaped fact |
-| Immutable aggregate capacity | 4 | Compact exact tuple projection, 21 points in the old 19-point budget, 26 points and four-byte Unicode in the old 24-point budget, escaped byte overflow rejected at receipt admission |
+| Immutable aggregate capacity | 4 | Compact exact tuple projection, 21 points in the old 19-point budget, 42 points and exact ASCII and four-byte Unicode boundaries in the old 24-point budget, escaped byte overflow rejected at receipt admission |
 | **Total** | **44** | Original 36 cases, 4 composed-stage cases and 4 immutable capacity cases |
 
 The four composition cases live in
@@ -337,8 +343,8 @@ weaken their requirements.
    retains all complete source facts without rereading or repeating parts.
 8. A previously 19-point immutable fixture admits 21-point facts within the
    same byte ceiling. Every reordered tuple maps back to its validated unit and
-   path. With a former 24-point budget, 26-point ordinary prose and the full
-   four-byte Unicode boundary fit. The old worst-case escape boundary also
+   path. With a former 24-point budget, 42-point ordinary prose and the exact
+   single-byte and four-byte Unicode boundaries fit. The old worst-case escape boundary also
    fits. An escaped value over the exact allocation is rejected before a
    receipt is formed.
 
