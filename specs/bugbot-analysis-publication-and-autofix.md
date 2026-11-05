@@ -389,7 +389,7 @@ transitions are ordered marker-first and repaired by replay.
 Confidence floor, schema validation, head guards, path safety, marker ownership,
 publication ordering, independent review, provider page limits/concurrency,
 lossless Unicode-safe fragmentation, prompt bounds (100 prior findings/48,000 characters, 50 logical conversation entries/
-24,000 rendered characters with 4,000-unit Unicode-safe payload fragments, 1,000 diff files, 12,000-character fragments, 64,000
+24,000 rendered characters with 4,000-unit Unicode-safe payload fragments, 3,000 GitHub diff file records, 12,000-character fragments, 64,000
 characters per partition, 64 ordinary partitions or the separately bounded framed profile, and 2,000 aggregate candidates), retained-only
 resolution eligibility, and credential isolation are not configurable.
 The one-retry post-autofix bound is fixed and adds no user setting. Only the

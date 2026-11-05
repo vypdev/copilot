@@ -333,10 +333,11 @@ semantics are owned by
    open PR and then issue detail calls for each candidate.
 3. Detailed comments, threads, and review state load for at most one canonical
    PR. At most two independent detail requests may run concurrently.
-4. With a canonical PR and issue, context loading performs at most five logical
-   reads and 17 raw provider requests before bounded transient retries, with
-   maximum concurrency two. Selection requests at most two exact-head matches;
-   comments/threads use two pages of 100 and diff uses ten pages of 100 files.
+4. With a canonical PR and issue, the initial context load performs at most
+   five logical reads, with maximum concurrency two. Selection requests at
+   most two exact-head matches. The
+   [context budget](./bugbot-context-selection-and-budgeting.md#63-provider-and-page-budget)
+   defines the provider request ceilings and revision checks.
 5. Preserve the distinct existing content budgets: previous findings 100 items/
    48,000 chars; human conversation 50 items/24,000 chars/2,000 per item; diff
    64,000 chars/12,000 per patch; rules 100,000 chars/30,000 per rule source.

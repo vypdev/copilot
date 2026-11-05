@@ -79,7 +79,7 @@ export async function loadBugbotContext(
     });
   }
   if (canonicalPullRequest) {
-    const selectedNumber = canonicalPullRequest.number;
+    const { number: selectedNumber, headSha } = canonicalPullRequest;
     tasks.push(
       async () => {
         const result = await ports.listPullRequestReviewComments(selectedNumber);
@@ -90,7 +90,7 @@ export async function loadBugbotContext(
         return { kind: "threads", value: result.value, coverage: result.coverage };
       },
       async () => {
-        const result = await ports.getReviewDiffSnapshot(selectedNumber);
+        const result = await ports.getReviewDiffSnapshot(selectedNumber, headSha);
         return { kind: "diff", value: result.value, coverage: result.coverage };
       },
     );
@@ -147,7 +147,7 @@ export async function loadBugbotContext(
     const current = await ports.getSourceBoundPullRequest(canonicalPullRequest.number);
     if (!sameBugbotFramedPullRequest(canonicalPullRequest, current)) throw new BugbotReviewCompletenessError('identity');
     canonicalPullRequest = current;
-    const pinnedRead = await ports.getReviewDiffSnapshot(current.number);
+    const pinnedRead = await ports.getReviewDiffSnapshot(current.number, current.headSha);
     framedCoverage = pinnedRead.coverage;
     framedSource = await reviewSource.readCompleteSource(current, pinnedRead.value,
       pinnedRead.coverage.status === 'complete', request.ignorePatterns);

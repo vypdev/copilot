@@ -1593,7 +1593,7 @@ const ENGLISH_MESSAGES = Object.freeze({
     'bugbot.coverage.retained': 'retained={count}',
     'bugbot.coverage.omitted': 'omitted={count}',
     'bugbot.coverage.truncated': 'truncated={count}',
-    'bugbot.coverage.providerLimit': 'provider page limit reached; additional older records are uncounted',
+    'bugbot.coverage.providerLimit': 'provider page limit reached',
     'bugbot.snapshot.currentStatus': 'Current status',
     'bugbot.snapshot.partial': 'Overall coverage is partial; this snapshot does not prove that all of its findings are resolved.',
     'bugbot.snapshot.unknown': Object.freeze({ one: 'The state of {count} finding from this review could not be verified.', other: 'The state of {count} findings from this review could not be verified.' }),
@@ -1683,7 +1683,7 @@ const SPANISH_MESSAGES = Object.freeze({
     'bugbot.coverage.retained': 'conservados={count}',
     'bugbot.coverage.omitted': 'omitidos={count}',
     'bugbot.coverage.truncated': 'truncados={count}',
-    'bugbot.coverage.providerLimit': 'se alcanzó el límite de páginas del proveedor; los registros anteriores adicionales no están contabilizados',
+    'bugbot.coverage.providerLimit': 'se alcanzó el límite de páginas del proveedor',
     'bugbot.snapshot.currentStatus': 'Estado actual',
     'bugbot.snapshot.partial': 'La cobertura global es parcial; esta instantánea no demuestra que todos sus hallazgos estén resueltos.',
     'bugbot.snapshot.unknown': Object.freeze({ one: 'No se pudo verificar el estado de {count} hallazgo de esta revisión.', many: 'No se pudo verificar el estado de {count} hallazgos de esta revisión.', other: 'No se pudo verificar el estado de {count} hallazgos de esta revisión.' }),
@@ -4794,7 +4794,7 @@ function buildCoverageBlock(context, partition) {
             `retained=${source.itemsRetained}`,
             ...(source.omittedItems > 0 ? [`omitted=${source.omittedItems}`] : []),
             ...(source.truncatedItems > 0 ? [`truncated=${source.truncatedItems}`] : []),
-            ...(source.providerLimitReached ? ['provider page limit reached; additional older records are uncounted'] : []),
+            ...(source.providerLimitReached ? ['provider page limit reached'] : []),
         ];
         return `- ${source.source}: ${details.join(', ')}`;
     });
@@ -4968,7 +4968,7 @@ async function loadBugbotContext(request, ports, resolvedPreflight, reviewSource
         });
     }
     if (canonicalPullRequest) {
-        const selectedNumber = canonicalPullRequest.number;
+        const { number: selectedNumber, headSha } = canonicalPullRequest;
         tasks.push(async () => {
             const result = await ports.listPullRequestReviewComments(selectedNumber);
             return { kind: "comments", value: [...result.value], coverage: result.coverage };
@@ -4976,7 +4976,7 @@ async function loadBugbotContext(request, ports, resolvedPreflight, reviewSource
             const result = await ports.listPullRequestReviewThreadStates(selectedNumber);
             return { kind: "threads", value: result.value, coverage: result.coverage };
         }, async () => {
-            const result = await ports.getReviewDiffSnapshot(selectedNumber);
+            const result = await ports.getReviewDiffSnapshot(selectedNumber, headSha);
             return { kind: "diff", value: result.value, coverage: result.coverage };
         });
     }
@@ -5024,7 +5024,7 @@ async function loadBugbotContext(request, ports, resolvedPreflight, reviewSource
         if (!(0, bugbot_framed_identity_policy_1.sameBugbotFramedPullRequest)(canonicalPullRequest, current))
             throw new framed_review_1.BugbotReviewCompletenessError('identity');
         canonicalPullRequest = current;
-        const pinnedRead = await ports.getReviewDiffSnapshot(current.number);
+        const pinnedRead = await ports.getReviewDiffSnapshot(current.number, current.headSha);
         framedCoverage = pinnedRead.coverage;
         framedSource = await reviewSource.readCompleteSource(current, pinnedRead.value, pinnedRead.coverage.status === 'complete', request.ignorePatterns);
         if (!(0, bugbot_framed_identity_policy_1.bugbotFramedSourceMatchesPullRequest)(framedSource, canonicalPullRequest))

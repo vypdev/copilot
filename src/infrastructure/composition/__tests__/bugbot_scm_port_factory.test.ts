@@ -63,7 +63,7 @@ describe('Bugbot SCM port factory', () => {
     await ports.listIssueComments(11);
     await ports.listPullRequestReviewComments(7);
     await ports.listPullRequestReviewThreadStates(7);
-    await ports.getReviewDiffSnapshot(7);
+    await ports.getReviewDiffSnapshot(7, 'a'.repeat(40));
     await ports.getPullRequestHeadSha(7);
     await ports.getPullRequestReviewCommentBody(7, 99);
     await ports.loadRules(['src/a.ts'], 'a'.repeat(40));
@@ -74,7 +74,7 @@ describe('Bugbot SCM port factory', () => {
     expect(boundedIssues.listBugbotIssueCommentsBounded).toHaveBeenCalledWith('base-owner', 'repo', 11, 'secret');
     expect(reviewComments.listBugbotPullRequestReviewCommentsBounded).toHaveBeenCalledWith('base-owner', 'repo', 7, 'secret');
     expect(reviewThreads.listBugbotPullRequestReviewThreadStatesBounded).toHaveBeenCalledWith('base-owner', 'repo', 7, 'secret');
-    expect(changes.getBoundedBugbotReviewDiffSnapshot).toHaveBeenCalledWith('base-owner', 'repo', 7, 'secret');
+    expect(changes.getBoundedBugbotReviewDiffSnapshot).toHaveBeenCalledWith('base-owner', 'repo', 7, 'secret', 'a'.repeat(40));
     expect(changes.getPullRequestHeadSha).toHaveBeenCalledWith('base-owner', 'repo', 7, 'secret');
     expect(pullRequests.getPullRequestReviewCommentBody).toHaveBeenCalledWith(
       'base-owner', 'repo', 7, 99, 'secret',

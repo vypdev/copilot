@@ -14,7 +14,7 @@ export interface BoundBugbotContextReadPorts {
     listIssueComments(issueNumber: number): Promise<BoundedBugbotRead<readonly BugbotIssueComment[]>>;
     listPullRequestReviewComments(pullRequestNumber: number): Promise<BoundedBugbotRead<readonly PullRequestReviewComment[]>>;
     listPullRequestReviewThreadStates(pullRequestNumber: number): Promise<BoundedBugbotRead<Readonly<Record<string, PullRequestReviewThreadState>>>>;
-    getReviewDiffSnapshot(pullRequestNumber: number): Promise<BoundedBugbotRead<PullRequestReviewDiffSnapshot>>;
+    getReviewDiffSnapshot(pullRequestNumber: number, expectedHeadSha?: string): Promise<BoundedBugbotRead<PullRequestReviewDiffSnapshot>>;
     getPullRequestHeadSha(pullRequestNumber: number): Promise<string | undefined>;
     getPullRequestReviewCommentBody(pullRequestNumber: number, commentId: number): Promise<string | null>;
     loadRules(paths: readonly string[], revision?: string): ReturnType<BugbotRuleFileQueryPort['loadRules']>;

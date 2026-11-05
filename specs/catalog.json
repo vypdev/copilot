@@ -2203,7 +2203,7 @@
       "status": "implemented",
       "scope": "Select one canonical PR, exhaustively analyze bounded diff partitions with version-grounded dependency, policy-to-request transformation and source-bound assertion and generated-source coordinates with independent candidate verification, configuration-selected initial-session credential ownership, delegated test-path and external Action input-contract, host-aware self-repository references and Kotlin/Wasm lexical-binding and renderer-grounded Markdown path evidence, publish stable findings atomically, and apply authorized verified fixes with regression coverage for cwd/pattern-grounded indirect unittest discovery and source-bound module execution evidence, with active-instance Kotlin Json nullable-input policy grounding; verify complete large diffs through a source-bound closed framed profile with immutable local Git proof, live-base freshness and atomic global publication; ground Python exception syntax in declared interpreter versions and PEP 758 while preserving older-target and independent runtime defects; ground filesystem recovery findings in retention/no-overwrite, ownership and publication contracts while preserving required disposable cleanup and data-loss defects; independently adjudicate candidates for supplied Python source, retaining existing bounded source, identity and history controls; trace concrete helper defaults/overrides, database-file parent containment and stored query values before judging assertions, preserving exact fragment coordinates and genuine assertion failures; co-deliver complete long discussion to every source-bound partition within closed native prompt and invocation traffic limits, preserving provenance and truthful provider partial coverage; verify actual resource content, source binding, human authority and intended entry availability before reporting an authentication defect; ground asynchronous findings in complete statements, actual receiver/cycle/caller and reached lifecycle effects, preserving genuine unfinished updates and omitting disproved claims JSON boundary evidence follows producer/decoder/transform/reader values and Python identity-cast semantics; paired source-bound controls preserve actual serialization failures without consumer-specific suppression.",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-11-04",
+      "lastVerified": "2026-11-05",
       "specs": [
         "specs/bugbot-analysis-publication-and-autofix.md",
         "specs/bugbot-context-selection-and-budgeting.md",
@@ -2227,6 +2227,8 @@
         "src/application/usecases/steps/commit/bugbot/bugbot_autofix_use_case.ts"
       ],
       "code": [
+        "src/application/ports/bugbot_context_ports.ts",
+        "src/data/repository/pull_request/pull_request_changes_repository.ts",
         "src/domain/bugbot/context.ts",
         "src/domain/bugbot/finding.ts",
         "src/domain/bugbot/finding_identity.ts",
@@ -2327,6 +2329,7 @@
         "quality/bugbot/evidence/issue-855.json"
       ],
       "tests": [
+        "src/data/repository/__tests__/pull_request_changes_repository.test.ts",
         "src/application/usecases/steps/commit/__tests__/bugbot_review_lifecycle.e2e.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/bugbot_review_operation_context.test.ts",
         "src/application/policies/__tests__/bugbot_partition_completion_policy.test.ts",

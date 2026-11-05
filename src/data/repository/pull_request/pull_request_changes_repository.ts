@@ -10,6 +10,11 @@ import type {
 } from '../../../application/ports/bugbot_pull_request_read_ports';
 import { toApplicationError } from '../../../application/errors/application_error';
 import type { BugbotSourceCoverage } from '../../../domain/bugbot/context';
+import { canonicalGitObjectId } from '../../../domain/git_object_id';
+
+const GITHUB_PULL_REQUEST_FILES_PER_PAGE = 100;
+// https://docs.github.com/en/rest/pulls/pulls#list-pull-requests-files
+const GITHUB_PULL_REQUEST_FILE_LIMIT = 3_000;
 
 export class PullRequestChangesRepository {
     constructor(private readonly githubClient: GithubClientPort<GithubPullRequestChangesClient>) {}
@@ -105,38 +110,67 @@ export class PullRequestChangesRepository {
         repository: string,
         pullNumber: number,
         token: string,
+        expectedHeadSha?: string,
     ): Promise<{ readonly snapshot: PullRequestReviewDiffSnapshot; readonly coverage: BugbotSourceCoverage }> => {
         const octokit = this.githubClient.getClient(token);
+        const target = { owner, repo: repository, pull_number: pullNumber };
         try {
+            const { data: before } = await octokit.rest.pulls.get(target);
+            const headSha = canonicalGitObjectId(before.head?.sha);
+            const baseSha = canonicalGitObjectId(before.base?.sha);
+            const changedFiles = before.changed_files;
+            if (!headSha || !baseSha || changedFiles === undefined || !Number.isSafeInteger(changedFiles) || changedFiles < 0) {
+                throw new Error('GitHub did not return a verifiable pull request file count and revision.');
+            }
+            if (expectedHeadSha !== undefined && headSha !== expectedHeadSha) {
+                throw new Error('The pull request head changed before its diff was read.');
+            }
+
             const files: GithubPullRequestFile[] = [];
             let pagesFetched = 0;
-            let limitReached = false;
-            for (let page = 1; page <= 10; page += 1) {
+            const fileLimit = Math.min(changedFiles, GITHUB_PULL_REQUEST_FILE_LIMIT);
+            const pageLimit = Math.ceil(fileLimit / GITHUB_PULL_REQUEST_FILES_PER_PAGE);
+            for (let page = 1; page <= pageLimit; page += 1) {
                 const response = await octokit.rest.pulls.listFiles({
-                    owner,
-                    repo: repository,
-                    pull_number: pullNumber,
-                    per_page: 100,
+                    ...target,
+                    per_page: GITHUB_PULL_REQUEST_FILES_PER_PAGE,
                     page,
                 });
                 const records = requireArrayPage<GithubPullRequestFile>(response.data, 'pull request files');
+                if (records.length > GITHUB_PULL_REQUEST_FILES_PER_PAGE || records.length > fileLimit - files.length) {
+                    throw new Error('GitHub returned more pull request files than expected.');
+                }
                 pagesFetched += 1;
                 files.push(...records);
-                if (records.length < 100) break;
-                if (page === 10) limitReached = true;
+                if (records.length < GITHUB_PULL_REQUEST_FILES_PER_PAGE) break;
             }
+
+            // GitHub's files endpoint takes a PR number, so verify that pagination
+            // did not cross an observed head, base or file-count change.
+            const { data: after } = await octokit.rest.pulls.get(target);
+            if (canonicalGitObjectId(after.head?.sha) !== headSha || canonicalGitObjectId(after.base?.sha) !== baseSha
+                || after.base?.ref !== before.base?.ref || after.changed_files !== changedFiles) {
+                throw new Error('The pull request revision or file count changed while its diff was read.');
+            }
+            if (new Set(files.map(file => file.filename)).size !== files.length) {
+                throw new Error('GitHub returned duplicate paths while listing pull request files.');
+            }
+
+            const omittedItems = changedFiles - files.length;
+            const providerLimitReached = changedFiles > GITHUB_PULL_REQUEST_FILE_LIMIT
+                && files.length === GITHUB_PULL_REQUEST_FILE_LIMIT;
             return {
                 snapshot: PullRequestChangesRepository.toSnapshot(files),
                 coverage: {
                     source: 'diff',
-                    status: limitReached ? 'partial' : 'complete',
+                    status: omittedItems > 0 ? 'partial' : 'complete',
                     pagesFetched,
                     itemsFetched: files.length,
                     itemsRetained: files.length,
-                    omittedItems: 0,
+                    omittedItems,
                     truncatedItems: 0,
-                    limitReached,
-                    ...(limitReached ? { providerLimitReached: true } : {}),
+                    limitReached: providerLimitReached,
+                    ...(providerLimitReached ? { providerLimitReached: true } : {}),
                 },
             };
         } catch (error) {

@@ -67,12 +67,13 @@ export class BugbotScmPortFactory {
         );
         return { value: result.states, coverage: result.coverage };
       },
-      getReviewDiffSnapshot: async (pullRequestNumber: number) => {
+      getReviewDiffSnapshot: async (pullRequestNumber: number, expectedHeadSha?: string) => {
         const result = await this.changes.getBoundedBugbotReviewDiffSnapshot(
           owner,
           repository,
           pullRequestNumber,
           token,
+          expectedHeadSha,
         );
         return { value: result.snapshot, coverage: result.coverage };
       },
