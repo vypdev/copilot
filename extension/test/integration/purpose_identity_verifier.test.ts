@@ -44,6 +44,35 @@ it.each(['viewer', 'repository'] as const)('invalidation during the %s GET retir
     expect(source.aborted).toBe(true); gate.resolve({ state: 'ok', bytes: 10, etag: '', data: stage === 'viewer' ? { id: '1', login: 'octo' } : { id: '7', name: 'octo/example' } });
     expect(await pending).toEqual({ state: 'stale' }); expect(h.values.has(SESSION_KEY)).toBe(false);
 });
+it('retires an optional verification without aborting a separate read or replacing its cache witness', async () => {
+    const h = fixture(); const activeEntered = deferred<void>(); const optionalEntered = deferred<void>();
+    const activeResult = deferred<ReadResult>(); const optionalResult = deferred<ReadResult>();
+    const request = { type: 'object', repository: 'octo/example', kind: 'issue', number: 42 } as const;
+    const activity = { visible: true, active: true, online: true, pending: false, manual: true };
+    vi.mocked(h.reader.read).mockImplementation(async item => {
+        if (item.type === 'object') { activeEntered.resolve(); return activeResult.promise; }
+        optionalEntered.resolve(); return optionalResult.promise;
+    });
+    const reading = h.scheduler.run('1/7/issue/42', '1/7', request, 'synthetic_read_credential', h.ports.cancellation(), activity);
+    await activeEntered.promise; const verifying = h.verify(); await optionalEntered.promise;
+    const [activeSignal, optionalSignal] = vi.mocked(h.reader.read).mock.calls.map(([, , signal]) => signal);
+    const witness = h.scheduler.captureApiCache(); h.verifier.invalidate();
+    const signals = { active: activeSignal.aborted, optional: optionalSignal.aborted };
+    activeResult.resolve(requestResult(request)); optionalResult.resolve(requestResult({ type: 'viewer' }));
+    expect(await verifying).toEqual({ state: 'stale' });
+    expect(await reading).toEqual(requestResult(request));
+    expect(signals).toEqual({ active: false, optional: true });
+    expect(h.scheduler.apiCacheCurrent(witness)).toBe(true);
+});
+it('optional identity verification leaves no response or ETag available under its attempt key', async () => {
+    const h = fixture(); expect(await h.verify()).toMatchObject({ state: 'verified' });
+    h.advance(10000); vi.mocked(h.reader.read).mockClear();
+    const viewer = { type: 'viewer' } as const;
+    const activity = { visible: true, active: true, online: true, pending: false, manual: true };
+    expect(await h.scheduler.run('purpose/issues-write/1/viewer', 'purpose/issues-write', viewer, h.entry.connection.secret,
+        h.ports.cancellation(), activity)).toMatchObject({ state: 'ok' });
+    expect(h.reader.read).toHaveBeenCalledWith(viewer, h.entry.connection.secret, expect.anything(), undefined);
+});
 it('another verification cannot evade a running request or free its slot until invalidated native work drains', async () => {
     const h = fixture(); const gate = deferred<ReadResult>(); vi.mocked(h.reader.read).mockReturnValueOnce(gate.promise); const pending = h.verify();
     await vi.waitFor(() => expect(h.reader.read).toHaveBeenCalled()); expect(await h.verify()).toEqual({ state: 'conflict' }); h.verifier.invalidate();

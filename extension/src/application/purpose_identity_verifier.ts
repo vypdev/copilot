@@ -15,7 +15,7 @@ export class PurposeIdentityVerifier {
     private generation = 0;
     private running: { readonly cancellation: CancellationOwner } | null = null;
     constructor(private readonly scheduler: ReadScheduler, private readonly ports: SessionPorts) {}
-    invalidate(): void { this.generation++; this.running?.cancellation.abort(); this.scheduler.invalidate(); }
+    invalidate(): void { this.generation++; this.running?.cancellation.abort(); }
     async verify(purpose: WritePurpose, secret: string, repository: string, current: () => boolean, expected?: SessionIdentity): Promise<PurposeIdentityResult> {
         if (!writePurpose(purpose) || !optionalRoleCredential(secret) || !repositoryAddress(repository)) return { state: 'invalid' };
         if (this.running) return { state: 'conflict' };
@@ -30,10 +30,11 @@ export class PurposeIdentityVerifier {
             const permitted = await ready(); if (!live()) return { state: 'stale' };
             if (!permitted) return { state: 'unavailable' };
             const prefix = `purpose/${purpose}/${generation}`;
-            const viewer = await this.scheduler.run(`${prefix}/viewer`, `purpose/${purpose}`, { type: 'viewer' }, secret, task.cancellation, activity);
+            const readOptions = { cacheResponse: false };
+            const viewer = await this.scheduler.run(`${prefix}/viewer`, `purpose/${purpose}`, { type: 'viewer' }, secret, task.cancellation, activity, readOptions);
             if (!live()) return { state: 'stale' };
             if (viewer.state !== 'ok' || !('login' in viewer.data)) return this.failure(viewer);
-            const target = await this.scheduler.run(`${prefix}/repository`, `purpose/${purpose}`, { type: 'repository', name: repository }, secret, task.cancellation, activity);
+            const target = await this.scheduler.run(`${prefix}/repository`, `purpose/${purpose}`, { type: 'repository', name: repository }, secret, task.cancellation, activity, readOptions);
             if (!live()) return { state: 'stale' };
             if (target.state !== 'ok' || !('name' in target.data)) return this.failure(target);
             if (viewer.bytes + target.bytes > 1024 * 1024) return { state: 'unavailable' };

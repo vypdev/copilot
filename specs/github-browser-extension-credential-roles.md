@@ -174,8 +174,11 @@ preferences. Removing or changing a purpose never rebinds these authored values.
 
 One background owner serializes all named-vault writes and removes. An admitted
 identity/role change MUST retire relevant private evidence before asynchronous
-verification; cached reads are partitioned by purpose and attempt. Provider
-verification, persistence and publication recheck current authority. Native
+verification. Optional identity GETs use distinct purpose and attempt keys in
+the shared scheduler and retain no response or ETag in the API cache. Retiring
+an optional verifier aborts its own request and preserves independent scheduled
+reads and their cache witnesses. Provider verification, persistence and
+publication recheck current authority. Native
 vault drift before persistence MUST be detected rather than overwritten. Browser
 storage has no cross-process transactional CAS; the enforced single-owner port
 and final source/revision checks are the supported concurrency model.
@@ -343,17 +346,17 @@ Rebuilding packages does not establish loaded-browser behavior or store approval
 
 ## 14. Testing strategy
 
-Minimum **208 distinct new risk cases**, each assigned once:
+Minimum **210 distinct new risk cases**, each assigned once:
 
 | Area | Floor | Distinct risks |
 |---|---:|---|
 | Pure policy/schema | 44 | Purposes, slot matching, migration, capacity, malformed/unknown state, credential reuse and twelve adjacent read-consumer cases |
-| Identity verification | 36 | Numeric identity/rename, isolated GETs, SSO/denial, rate/budget, cancellation and late completion |
+| Identity verification | 38 | Numeric identity/rename, isolated GETs, SSO/denial, rate/budget, cancellation, late completion, independent read continuity and no retained response or ETag |
 | Native state/races | 40 | CAS/queue, lost acknowledgement, canonical readback, select/disable/remove/forget and suspension |
 | Native wire/security | 24 | Actual closed parser/gateway, controller/source/role denial, oversized/private payloads |
 | Mounted UI | 42 | Defaults, role guidance/review, retained drafts, uncertainty, source loss, focus, localization/accessibility and six read-consumer journeys |
 | Composition | 22 | Actual background→gateway→native page; read runtime, settings and setup isolation plus six adjacent role-boundary journeys |
-| **Total** | **208** | Existing cases and repeated locale executions do not add new risks |
+| **Total** | **210** | Existing cases and repeated locale executions do not add new risks |
 
 Tests use deterministic clocks, IDs and provider/native fakes; no real wait or live
 credential. All existing tests remain. The full extension suite and every changed

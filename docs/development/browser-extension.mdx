@@ -1349,8 +1349,9 @@ with future/unreadable schemas. It does not share the active read key's owner.
 
 `NamedSessions` orchestrates both purposes through that queue. The separate
 `PurposeIdentityVerifier` makes only semantic viewer/repository GETs through the
-shared budget, with purpose/attempt-isolated cache keys and cancellable source
-fences. It cannot activate the read service, save a read opt-in or certify a
+shared budget, with separate purpose and attempt keys and cancellable source
+fences. The GETs retain no response or ETag in the API cache. Retiring the
+verifier aborts its own request and preserves other scheduled reads. It cannot activate the read service, save a read opt-in or certify a
 write grant. A selected optional identity's private proof binds the whole native
 vault and current read credential epoch; generic later metadata cannot recreate
 an unknown operation's proof. Suspension/restart loses that worker proof.
