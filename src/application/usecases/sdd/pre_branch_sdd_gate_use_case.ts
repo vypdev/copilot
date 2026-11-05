@@ -235,11 +235,11 @@ export class PreBranchSddGateUseCase {
       }
 
       const currentSdd = plan.action === 'update' ? await this.workspace.readSdd(snapshot.baseSha, plan.path) : undefined;
-      if (plan.action === 'update' && !currentSdd) throw new Error('The catalogued SDD owner is missing from the selected base.');
+      if (plan.action === 'update' && currentSdd === undefined) throw new Error('The catalogued SDD owner is missing from the selected base.');
       const ownerDocuments: SddOwnerDocument[] = [];
       for (const path of snapshot.capabilities.find(capability => capability.id === plan.capabilityId)?.specs ?? []) {
-        const markdown = path === plan.path && currentSdd ? currentSdd : await this.workspace.readSdd(snapshot.baseSha, path);
-        if (!markdown) throw new Error('A catalogued owning SDD is unavailable at the selected immutable base.');
+        const markdown = path === plan.path && currentSdd !== undefined ? currentSdd : await this.workspace.readSdd(snapshot.baseSha, path);
+        if (markdown === undefined) throw new Error('A catalogued owning SDD is unavailable at the selected immutable base.');
         ownerDocuments.push({ path, markdown });
       }
       const reservedCases = JSON.stringify(reservedSddCaseIds(ownerDocuments));

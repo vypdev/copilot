@@ -1,5 +1,6 @@
 import { readSupportedSddCatalog, SddCatalogCompatibilityFailure } from '../domain/sdd_catalog_compatibility';
 import { SddTrustedCatalogMissingFailure } from '../domain/sdd_trusted_catalog_failure';
+import { SddSourceContextFailure, type AgentSourceSnapshot } from '../domain/agent_source_snapshot';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -83,10 +84,19 @@ export class PreBranchSddWorkspaceAdapter implements PreBranchSddWorkspacePort {
   async readSdd(baseSha: string, relativePath: string): Promise<string | undefined> {
     assertSha(baseSha);
     if (!isSafeSddPath(relativePath)) throw new Error('SDD path is outside the specification boundary.');
+    const source = { kind: 'pre-branch-sdd', phase: 'draft', baseSha: baseSha.toLowerCase() } as const;
+    const entry = await this.readSddObject(['ls-tree', '-z', '--full-tree', baseSha, '--', relativePath], source);
+    if (!entry) return undefined;
+    const match = /^100(?:644|755) blob ([a-f0-9]{40})\t([^\0]+)\0$/u.exec(entry);
+    if (!match || match[2] !== relativePath) throw new SddSourceContextFailure('unsafe-entry', source);
+    return this.readSddObject(['cat-file', 'blob', match[1]], source);
+  }
+
+  private async readSddObject(args: string[], source: AgentSourceSnapshot): Promise<string> {
     try {
-      return await this.git(['show', `${baseSha}:${relativePath}`]);
+      return await this.git(args);
     } catch {
-      return undefined;
+      throw new SddSourceContextFailure('object-unavailable', source);
     }
   }
 

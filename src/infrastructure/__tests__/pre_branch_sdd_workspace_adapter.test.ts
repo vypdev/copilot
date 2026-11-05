@@ -1,11 +1,14 @@
 import fs from 'node:fs';
 import { SddTrustedCatalogMissingFailure } from '../../domain/sdd_trusted_catalog_failure';
+import { draftSddMarkdown } from '../../application/usecases/sdd/pre_branch_sdd_draft_workflow';
+import { FindingsAgentAdapter } from '../../data/repository/ai/findings_agent_adapter';
 import { sddCaseReferenceFixture, sddConsistencyFixture } from '../../testing/sdd_consistency_fixture';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { PreBranchSddWorkspaceAdapter } from '../pre_branch_sdd_workspace_adapter';
 import type { SddPlan } from '../../domain/pre_branch_sdd';
+import type { SddPreparedDraft } from '../../application/ports/pre_branch_sdd_ports';
 import { canCreateFileSymlink } from '../../testing/file_symlink_capability';
 import { portableSddCapability, writePortableSddEvidence } from '../../testing/portable_sdd_catalog_fixture';
 
@@ -75,6 +78,52 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
   beforeEach(() => { ({ temp, repo } = fixture()); });
   afterEach(() => fs.rmSync(temp, { recursive: true, force: true }));
 
+
+  it('preserves the Domus #30 twelve-case update shape through generation, real Git publication and replay', async () => {
+    const ownerPath = path.join(repo, plan.path);
+    const owner = legacyDraft().trimEnd().padEnd(28_217, 'x') + '\n';
+    fs.writeFileSync(ownerPath, owner);
+    git(repo, 'add', '--', plan.path);
+    git(repo, 'commit', '-m', 'Retain the independently owned baseline');
+    git(repo, 'push', 'origin', 'develop');
+
+    const retainedRows = new Set([1, 2, 3, 4, 5, 6, 25, 26, 27, 28, 29, 30]);
+    const raw = sddCaseReferenceFixture('Twelve independently observable adoption cases.', plan.path, 'update')
+      .replace(/\| Area \| Minimum distinct cases[\s\S]*?(?=\| Case ID)/u, '{{SDD_CASE_BUDGET}}\n\n')
+      .replace(/^\| entry-prose-C(\d+)[^\n]*\n/gmu, (row, id: string) => retainedRows.has(Number(id)) ? row : '')
+      .replace(/\| Requirement \| Cases \|[\s\S]*$/u, '{{SDD_REQUIREMENT_CASES}}\n');
+    const text = raw.replace('## 8.', 'x'.repeat(10_619 - raw.length) + '\n## 8.');
+    expect(text).toHaveLength(10_620);
+
+    const workspace = new PreBranchSddWorkspaceAdapter(repo);
+    const snapshot = await workspace.loadSnapshot('develop');
+    const branch = 'feature/42-change';
+    const execute = jest.fn().mockResolvedValueOnce(JSON.stringify({ markdown: text }));
+    const agent = new FindingsAgentAdapter({ cli: { execute } });
+    const configuration = { provider: 'codex', modelProvider: 'openai', model: 'test-model' } as const;
+
+    let prepared: SddPreparedDraft | undefined;
+    const rendered = await draftSddMarkdown(agent, configuration, plan, 'Twelve resolved consumer cases',
+      async candidate => { prepared = await workspace.validateDraft(snapshot, plan, candidate); },
+      { kind: 'pre-branch-sdd', phase: 'draft', baseSha: snapshot.baseSha });
+    if (!prepared) throw new Error('Expected the SDD writer to validate the assembled candidate.');
+    expect(prepared.changedPaths).toEqual([plan.path]);
+    expect(prepared.markdown.startsWith(owner)).toBe(true);
+    expect(rendered.match(/^\| entry-prose-C\d+ \|/gmu)).toHaveLength(12);
+    expect(rendered).toContain('| Total | 12 |');
+    expect(rendered).toContain('| G-01 | entry-prose-C01, entry-prose-C02, entry-prose-C03, entry-prose-C04, entry-prose-C05, entry-prose-C06 |');
+    expect(rendered).toContain('| G-02 | entry-prose-C25, entry-prose-C26, entry-prose-C27, entry-prose-C28, entry-prose-C29, entry-prose-C30 |');
+    expect(git(repo, 'ls-remote', '--heads', 'origin', branch)).toBe('');
+
+    git(repo, 'push', 'origin', 'develop:refs/heads/' + branch);
+    const sha = await workspace.publish(branch, prepared);
+    expect(git(repo, 'rev-parse', sha + '^')).toBe(snapshot.baseSha);
+    expect(await workspace.verifyPublication(branch, snapshot.baseSha, sha, plan.path)).toBe(true);
+    expect(await workspace.recoverPublished(branch, prepared)).toBe(sha);
+    expect(git(repo, 'ls-remote', '--heads', 'origin', branch).split('\t')[0]).toBe(sha);
+    expect(fs.readFileSync(ownerPath, 'utf8')).toBe(owner);
+    expect(execute).toHaveBeenCalledTimes(1);
+  });
 
   it.each([['sdd-case-ref-C35','technical'],['sdd-case-ref-C36','shorthand'],['sdd-case-ref-C37','identity'],['sdd-case-ref-C38','replay']])('%s preserves real Git publication boundaries for %s', async (_id, scenario) => {
     const workspace = new PreBranchSddWorkspaceAdapter(repo);
@@ -372,6 +421,24 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
     expect(await workspace.readSdd(snapshot.baseSha, plan.path)).toContain('Existing payment contract');
     expect(await workspace.readSdd(snapshot.baseSha, 'specs/missing.md')).toBeUndefined();
     await expect(workspace.readSdd(snapshot.baseSha, '../outside.md')).rejects.toThrow('outside the specification boundary');
+  });
+
+  it('distinguishes an unavailable Git object from an absent SDD', async () => {
+    const workspace = new PreBranchSddWorkspaceAdapter(repo);
+    const absentCommit = 'a'.repeat(40);
+    await expect(workspace.readSdd(absentCommit, plan.path)).rejects.toMatchObject({
+      name: 'SddSourceContextFailure', reason: 'object-unavailable',
+      source: { kind: 'pre-branch-sdd', phase: 'draft', baseSha: absentCommit },
+    });
+  });
+
+  fileSymlinkIt('distinguishes an unsafe SDD from an absent SDD', async () => {
+    fs.symlinkSync('payments.md', path.join(repo, 'specs/unsafe.md'), 'file');
+    git(repo, 'add', '--', 'specs/unsafe.md');
+    git(repo, 'commit', '-m', 'Add a tracked symlink');
+    const workspace = new PreBranchSddWorkspaceAdapter(repo);
+    await expect(workspace.readSdd(git(repo, 'rev-parse', 'HEAD'), 'specs/unsafe.md'))
+      .rejects.toMatchObject({ name: 'SddSourceContextFailure', reason: 'unsafe-entry' });
   });
 
   it('rejects a malformed repository catalog before asking an agent to draft', async () => {

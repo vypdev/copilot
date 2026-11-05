@@ -8,13 +8,13 @@
 - Scope: Define bounded, evidence-grounded preparation and recovery for pre-branch SDD changes while preserving complete requirements, established ownership and publication safeguards.
 - Related issues/PRs: [#763](https://github.com/vypdev/copilot/issues/763); related closed work #695, #714, #541, #833, #836, #856 and #858; reproducer #704; evidence in #763 discussion.
 - Required review gates: product UX, architecture, testing, documentation, security/operations
-- Open decisions blocking readiness: None for the behavior specified here; implementation must verify deployed provider, transport and resource limits before changing any threshold.
+- Open decisions blocking readiness: Qualify the incremental capacity profile on the supported provider and runner, then verify live publication through the candidate Action.
 
 > Start with the repository standard in [`README.md`](./README.md). Remove this note when the spec is ready. Mark a non-applicable section explicitly and give a reason instead of silently deleting the concern.
 
 ## 1. Executive summary
 
-The gate will prepare complete SDD changes predictably from verified ownership and inventory evidence. It will plan bounded incremental work, preserve every resolved requirement and case, and distinguish provider output, rendered appendix, derived tables and final composed-document limits. If an update cannot be prepared within supported bounds, the maintainer receives one concrete same-capability companion proposal with its path, retained baseline and explicit decision. A maintainer may also supply an optional bounded seed candidate; it is bound to the current issue and immutable source and passes the same checks as generated content. A branch's established SDD ownership never changes silently.
+The Action generates a complete SDD by preparing only the changed sections, requirement and case groups, and file operations against an immutable owner inventory. A deterministic assembler checks that every planned unit is present, renders the budget and reciprocal links, and hands the complete result to the publication gate. Resource budgets govern provider calls, aggregate work and Git writes independently. Maintainers decide when to split document ownership and may optionally supply a draft that goes through the same validation.
 
 ```text
 Issue + authorized answers -> immutable inventory and ownership plan -> bounded candidate preparation -> deterministic validation -> explicit recovery decision if needed -> validated Draft publication and branch readiness
@@ -40,9 +40,34 @@ Maintainers cannot reliably distinguish an oversized candidate from provider/tra
 - Code/workflow/documentation references: `src/application/usecases/sdd/pre_branch_sdd_gate_use_case.ts`, `src/application/usecases/sdd/pre_branch_sdd_draft_workflow.ts`, `src/domain/pre_branch_sdd.ts`, `src/domain/sdd_draft_consistency.ts`, `src/infrastructure/pre_branch_sdd_workspace_adapter.ts`, `specs/pre-branch-sdd-gate.md`, `docs/issues/pre-branch-sdds.mdx`.
 - Incidents or concrete examples: #704 and #763 discussion evidence cited above; immutable base `a859c9e9e567055c76cd60a96ada91713c6f0773` and issue #763 canonical URL.
 - External primary sources: None required; provider limits and deployed behavior must be verified from implementation/deployment evidence before threshold changes.
-- Unknowns: Historical rejected output and exact stage/counts; provider token and transport ceilings and memory/render/publication costs; whether a validated seed or a more targeted repair gives the best operational recovery. These remain investigation items, not inferred facts.
+- Unknowns: The rejected historical provider text, precise rejection counts and the provider token use in those calls. The maintainer selected both autonomous generation and an optional validated seed. The provider/runtime qualification below is still required.
 
-### 2.4 Retrospective classification (as-built baselines only)
+### 2.4 What the existing limits protect
+
+| Boundary | Current contract | Replacement criterion |
+|---|---|---|
+| Local JSON response schema | An update has an 18,000 Unicode code point maximum. A new document or companion has a 70,000 maximum. These aligned the response and writer checks after issue #461. | Enforce a measured bound per structured unit and a finite operation plan. Validate complete unit identity and all cross-unit dependencies. |
+| Render and composition | JavaScript checks UTF-16 length before and after expansion. The writer caps both the existing and composed owner at 70,000. This also bounded the original document scanner. | Preflight bytes, structural counts, indexing and work limits, then validate the exact fully rendered artifact. Derived expansion is charged before allocation and accounted for separately. |
+| Prompt evidence | The update prompt can inline the full owner. The serialized case reservation rejects above 30,000 UTF-16 code units, and the issue-body prompt is sliced at 30,000. | Build complete host-owned evidence and deliver bounded relevant projections with immutable identity. Detect unsupported input before generation with a closed resource fact. |
+| Immutable provider workspace | Source admission allows 10,000 regular files, 20,000 entries, 256 MiB of regular content and up to 60 seconds of preparation per source view. | Include preparation, integrity checks and cleanup in the operation budget. Validate reuse of a single pinned view within one operation before enabling multiple generation calls. |
+| Provider and process | The provider can exhaust its own output tokens. The process contract independently caps input at 512 KiB, output at 4 MiB and each call at 15 minutes. Git reads use a 10 MiB subprocess output buffer. | Preserve these outer protections, bound each request and the aggregate preparation, and measure provider limits in their own units. |
+
+The issue #541 compatibility fix already omits native string length keywords for Codex while retaining the local checks. The 70,000 document cap is therefore a host limit even when native schema projection or provider behavior changes. A synthetic structural profile can size host work but cannot establish an effective model output budget.
+
+### 2.5 Controlled reproduction
+
+The [Domus #30 issue](https://github.com/vypdev/domus/issues/30) contains the exact twelve-case update seed. The pinned tree is 0170085f283ea5775f41e77a2f8c8d9cc69f20b7. Both owner blobs were checked against their Git hashes and all 588 regular files were taken from the complete tree. The released runtime 3e7ceea08 and develop a859c9e9e each accepted 10,620 UTF-16 units of source, produced an 11,765-unit appendix and composed a 40,005-unit owner with the original 28,218-unit prefix intact. Reconstructing the appendix from the published-form bytes also passed. The real historical Action stopped at the response boundary after two attempts. The controlled run supplies a known good response to the same workflow, so it measures feasibility and locates the historical failure before the writer.
+
+Independent controls on a859c9e9e:
+
+- 18,001 raw units stop at response. A 17,999-unit raw response expands to 19,144 units and stops at assembly. Both consume the one repair and reach the writer zero times.
+- 9,001 supplementary Unicode characters pass the 18,000-code-point schema check and hit the 18,002-unit JavaScript check.
+- The registered #763 owner is 187,073 UTF-16 units and fails before a valid 11,765-unit appendix can be composed. A valid synthetic owner at 66,994 units passes its own check and fails after composing that same appendix. Both currently return the same generic length error.
+- A synthetic 3,072-case fixture with 393,276 rendered UTF-8 bytes passed the underlying structural assembler and consistency validator in a median 75.9 ms over seven local samples. A 1,024-case fixture with 132,154 bytes passed in 19.1 ms. These are local structural measurements. Full Git validation, provider generation and native publication require separate evidence.
+
+The first implementation increment indexes case membership, area totals and reciprocal edges. In a paired local validation run with a 3,072-case artifact of 393,260 bytes, median validation fell from 69.55 ms to 42.37 ms over 15 samples per revision after warm-up. Both revisions assembled identical bytes. Exact owner reads now prove absence through a successful Git tree lookup and distinguish unavailable objects and unsafe entries with closed diagnostics.
+
+### 2.6 Retrospective classification (as-built baselines only)
 
 Not applicable: this is a prospective specification and does not reconstruct an implemented baseline.
 
@@ -67,7 +92,8 @@ Not applicable: this is a prospective specification and does not reconstruct an 
 | SDD-BDR-05 | Support an optional maintainer-authorized seed bound to issue digest, selected immutable base, capability, path and decision; reject stale, ambiguous, partial or unauthorized inputs. |
 | SDD-BDR-06 | Reuse safe structured diagnostics and durable idempotent cards; show known closed stage/count/limit facts and next supported action without rejected output, secrets or private source. |
 | SDD-BDR-07 | Preserve one automatic repair total, established linked SDD path and immutable first publication; require explicit authorization for ownership transition. |
-| SDD-BDR-08 | Keep provider token/transport failures distinct from Markdown size and malformed-output failures; preserve existing guards until independently measured replacements prove equivalent protection. |
+| SDD-BDR-08 | Keep provider token and transport failures distinct from Markdown size and malformed output. Replace legacy guards only after measured equivalents protect the same boundaries. |
+| SDD-BDR-09 | The default managed workflow autonomously generates and publishes a complete SDD above the old whole-document threshold when the independent resource budgets permit it. Qualify both autonomous and authorized-seed publication on the candidate Action. |
 
 ## 5. Current versus proposed product journey
 
@@ -98,17 +124,27 @@ Text equivalent: issue and authorized answers -> pinned inventory -> bounded pre
 
 1. Bind issue identity/digest, authorized answers, capability and selected immutable base.
 2. Read trusted catalog and complete immutable tree or successful exact-path lookup; verify regular files and reserve existing requirement/case inventory.
-3. Produce a bounded plan of independently checkable units, generating only necessary changes. Deterministic composition renders derived tables and validates reciprocal mappings.
+3. Freeze an ordered plan of independently checkable units from the full change inventory. Generate only the necessary units, then compose and derive the complete tables from the validated union.
 4. Validate raw provider response, rendered appendix, derived expansion and exact final publication independently, with correct unit and stage.
 5. Publish only after freshness, path, catalog, scope, budget, case collision, traceability and ownership checks pass; retain immutable first publication evidence.
 
 ### 6.2 Alternative paths
 
 - A supplied seed is optional. It must have a bounded, unambiguous source, digest and authorized decision bound to the current issue, base, capability and path. It follows the same deterministic checks and publication path as generated content.
-- A same-capability companion is proposed when coherent scope cannot fit the update bounds. The proposal identifies the checked new path, reason, retained baseline and cases, and requires explicit maintainer acceptance bound to issue digest, proposal and selected base.
+- Propose a same-capability companion when document responsibilities form a coherent split or a measured publication boundary requires separation. The proposal identifies the checked new path, the scope assigned to it, retained contracts and cases, the reason and the explicit maintainer decision. Bind the acceptance to the issue digest, proposal digest and selected base.
 - Repair is allowed only when closed failure evidence identifies a recoverable candidate defect. One automatic repair total applies across preparation, regardless of planned generation-unit count. Generation units are not retries.
 
-### 6.3 State machine
+### 6.3 Lossless incremental preparation
+
+1. **Pin source and classify evidence.** Build an operation identity from repository, issue digest, selected base and catalog digest, authorized answer receipts, route and current linked publication when present. Read Git path and mode separately from content. For registered documents retain path, blob identity and case and requirement reservations in an indexed inventory. If any source read fails, report the unavailable evidence and keep that distinct from proven absence.
+2. **Freeze obligations and work.** Start from the complete authorized issue and answers. Preserve explicit requirements, declared case IDs and acceptance floors, file operations and traceability as host-owned records. For unstructured requirements keep stable source spans with digests and assigned obligations, including constraints that remain in force by reference. Assign each source span and each explicit requirement and case exactly once to a delivery unit or a verified baseline reference. Verify these totals before making generation calls. Human clarification is appropriate when the source itself leaves a substantive decision unresolved. Structural coverage can prove every record and source span was accounted for. Product review assesses whether new prose faithfully expresses intent.
+3. **Generate only changed units.** Fixed canonical section groups carry prose. Bounded row groups carry requirements, cases and literal file operations. Host code assigns IDs, order, resource slices and reference allowances before generation. The provider returns one closed unit with the expected identity and allocated entries. Cases can link to requirements in other units by stable IDs. Existing contracts are delivered as bounded relevant references. The complete owner document and complete historical case list remain available to host validation, independently of prompt projections.
+4. **Compose once.** Reject missing, duplicate, out-of-plan, cross-boundary or conflicting entries. Generate canonical heading positions, the section 15 Path/Change table, exact area totals and section 17 reverse mappings from the validated records. Assemble in stable order. Count serialized bytes and rows before expanding tables and links. A large owner may retain its full immutable byte prefix. Validate the new delta and its relationship to that baseline, then validate the exact complete output and keep compatibility with legacy first-publication recovery. Derive any combined totals without recounting existing cases.
+5. **Apply one repair budget.** Planned calls are fixed before drafting. One evidenced, recoverable failure may replace the exact affected unit once, with safe structural coordinates and the same allocation. A second failure, a failed aggregate invariant or loss of freshness terminates preparation. Keep accepted units in private run state for that repair. A replay after publication verifies the committed artifact and linked branch instead of invoking generation.
+6. **Use the same publication gate for a seed.** Use an explicit uniquely delimited Markdown block in the issue body, plus an authorized numbered selection of the exact candidate digest. Capture the visible issue digest and bind candidate SHA-256, selected base, capability, path and route to the answer receipt. Use the full exact block with strict delimiter, duplicate and byte-budget checks. Parse it into the same canonical plan and validate complete obligation coverage, paths, collisions, tables and exact composition. A seed selects the candidate input only. Generation remains the default.
+7. **Require an explicit ownership decision.** When needed, show the maintainer the proposed companion path, split of responsibilities, retained owners and case provenance in the durable card. One numbered maintainer acceptance can select the displayed proposal for the current base. Recheck path, permissions and freshness before using it. A previously verified publication keeps its exact branch, SDD path and first commit. A new approved companion may supplement the same capability through its own managed publication.
+
+### 6.4 State machine
 
 | State | Entered when | User-visible meaning | Allowed next states | Recovery/owner |
 |---|---|---|---|---|
@@ -131,7 +167,13 @@ No new public repository configuration is recommended. Bounds are product safety
 | Draft source | Generated candidate or authorized seed reference | Generated bounded plan | One unambiguous authorized candidate | Operation snapshot bound to issue/base/capability/path/digest |
 | Recovery decision | Structured maintainer choice | No transition without authorization | Continue targeted repair when eligible; accept named companion; use valid seed; cancel | Bound to issue digest, proposal and base |
 
-Validation rejects unsupported size, permissions, stale digest/base, ambiguous or partial source, unsafe path and cross-capability ownership. No migration of existing settings is needed. Unknown recovery choices fail closed. Limits, complete scope, one-repair ceiling, branch ownership and validation are not configurable. Recommended example: normal bounded generation, then one evidence-based repair. Alternative: maintainer supplies a valid seed or accepts the explicit companion proposal.
+Validation rejects exceeded resource bounds, insufficient permissions, stale digest or base, ambiguous or partial source, unsafe paths and cross-capability ownership. The default is autonomous generation with one evidenced repair. A maintainer may instead select a uniquely delimited seed or accept a named companion proposal.
+
+The implementation must qualify a fixed internal profile covering maximum planned calls, per-unit prompt and response bytes, operation elapsed time, scanned source bytes, case and edge counts, and composed write bytes. Charge the actual escaped JSON and rendered UTF-8 bytes to the relevant counters. An initial candidate for measurement is 32 generation units at up to 16 KiB of structured response per unit, with one shared replacement, 512 KiB of admitted response payload before repair, and a separate 512 KiB composed artifact allowance. Test 1,024 cases and at least 132 KiB rendered, then measure upper bounds under dense mapping and malformed input. The observed local renderer supports that workload, while the native provider and Git writer still require qualification. Publish the final measured profile and rationale in this SDD before activating the new envelope. The approved profile is a code-owned resource budget.
+
+Repeated full source materialization can dominate the cost of a multipart plan. The adapter should prepare one credential-free, read-only source view for the operation, verify its unchanged identity before every unit, and clean it up on cancellation or completion. Keep process isolation per call and scope any lease to the same issue, base and operation. If this cannot retain the existing source-admission and integrity guarantees, include every materialization in the measured call budget before qualifying the profile.
+
+The existing process transport bounds remain the outer guardrails. Set and test a monotonic operation deadline inside the 120-minute Issue job, with enough time reserved for freshness and publication. Cancellation clears private candidate state. On exhaustion publish the stage and measured dimension, then offer a companion only when the split remains coherent and preserves the complete change.
 
 ## 8. Clean Architecture
 
@@ -157,7 +199,8 @@ flowchart LR
 
 ### 8.2 Contracts, state, and trust boundaries
 
-- Pure decisions: inventory classification, deterministic work-unit plan, limit stage/unit classification, case reservation, companion eligibility, decision binding.
+- Pure decisions: inventory classification, source-span and obligation allocation, deterministic work-unit plan, admission counters, case reservation, stable assembly, companion eligibility and decision binding.
+- Data structures: immutable source receipts; indexed owner, case, requirement and path sets; a plan with fixed unit IDs, source digests, ordered allocations and approved references; a prepared artifact containing exact Markdown, digest and publication path manifest. Use maps and sets for counts and reciprocal edges. Avoid rescanning the full case list per area or scanning a long reverse mapping per edge. Measure dense inputs and independently cap edges and rows.
 - Application contracts: immutable operation identity, evidence snapshot, planned units, candidate result, closed diagnostic, authorized recovery decision and publication result.
 - Semantic ports: immutable source inventory/read, bounded candidate generation, issue authorization lookup, durable card upsert, exact publication validation and publication.
 - Durable state/schema ownership: existing issue/workflow state and durable card mechanisms; any new persisted decision schema requires versioning and replay rules.
@@ -199,7 +242,7 @@ Automated checks MUST prevent domain imports of provider/GitHub/process modules,
 
 ## What happens next
 
-Accepting publishes the proposed companion through the existing readiness gate. The linked branch keeps its established SDD owner until an authorized transition is completed.
+Accepting authorizes preparation of the named companion. The Action still checks the exact candidate, source freshness and linked publication. An established linked SDD keeps its path and original first commit.
 
 ## Proposal
 
@@ -264,13 +307,13 @@ Existing owner contracts and case budgets remain intact by reference, including 
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain/configuration/pure planning | 4 | Observable scenarios in the case inventory. |
-| State/application/idempotency/races | 5 | Observable scenarios in the case inventory. |
-| Adapters/provider contracts | 5 | Observable scenarios in the case inventory. |
+| Domain/configuration/pure planning | 6 | Observable scenarios in the case inventory. |
+| State/application/idempotency/races | 6 | Observable scenarios in the case inventory. |
+| Adapters/provider contracts | 6 | Observable scenarios in the case inventory. |
 | Workflows/setup/schema | 3 | Observable scenarios in the case inventory. |
 | UI/UX/localization/sanitization | 4 | Observable scenarios in the case inventory. |
-| Integration/security/migration | 5 | Observable scenarios in the case inventory. |
-| Total | 26 | Distinct inventory cases; repeated executions do not add cases. |
+| Integration/security/migration | 7 | Observable scenarios in the case inventory. |
+| Total | 32 | Distinct inventory cases; repeated executions do not add cases. |
 
 | Case ID | Area | Requirements | Scenario |
 |---|---|---|---|
@@ -300,8 +343,26 @@ Existing owner contracts and case budgets remain intact by reference, including 
 | sdd-bounded-drafting-C24 | Integration/security/migration | SDD-BDR-02, SDD-BDR-07 | End-to-end fixture retains all resolved answers and full case inventory through publication. |
 | sdd-bounded-drafting-C25 | Integration/security/migration | SDD-BDR-07 | Cancellation before publication leaves no branch or SDD publication and retains safe evidence. |
 | sdd-bounded-drafting-C26 | Integration/security/migration | SDD-BDR-07 | Partial publication failure reconciles by operation identity without repeating irreversible effect. |
+| sdd-bounded-drafting-C27 | Adapters/provider contracts | SDD-BDR-02, SDD-BDR-03, SDD-BDR-09 | The pinned Domus #30 twelve-case update passes the default generation and assembly path and preserves the exact owner prefix. |
+| sdd-bounded-drafting-C28 | Integration/security/migration | SDD-BDR-05, SDD-BDR-09 | The same Domus #30 seed travels through numbered authorization, trusted validation and managed publication with the full case inventory. |
+| sdd-bounded-drafting-C29 | Domain/configuration/pure planning | SDD-BDR-02, SDD-BDR-08, SDD-BDR-09 | A plan beyond the legacy document ceiling fits measured unit and aggregate budgets and validates all required coverage. |
+| sdd-bounded-drafting-C30 | Domain/configuration/pure planning | SDD-BDR-02, SDD-BDR-09 | An omitted source span, explicit case or file operation prevents complete composition even when the returned units are individually well formed. |
+| sdd-bounded-drafting-C31 | Integration/security/migration | SDD-BDR-04, SDD-BDR-07, SDD-BDR-09 | The large autonomous publication and its unchanged replay preserve the verified first managed commit and complete catalog linkage. |
+| sdd-bounded-drafting-C32 | State/application/idempotency/races | SDD-BDR-03, SDD-BDR-07, SDD-BDR-08 | Operation deadline, dense edge budget or aggregate source budget exhaustion stops before publication with a measured dimension. |
 
-Repository-wide coverage thresholds remain in force; no numeric threshold was supplied by the immutable evidence, so implementation must record the verified project threshold rather than invent one. New pure planning policy must achieve at least 90% branch coverage and 100% decision-table row coverage. Changed modules must meet repository thresholds without reducing their baseline. Use deterministic clocks, IDs and fakes; no real waits or live services. Test structured contracts and semantics as well as golden presentation fixtures. Workflow checks parse schemas and paths, not prose grep. Manual UX evidence: maintainers verify proposal clarity and card readability on narrow screen and supported light/dark themes.
+The verified Jest global thresholds are 90% lines and statements, 88% functions and 82% branches. Existing per-module budgets and applicable CI checks remain part of acceptance. New pure planning policy must achieve at least 90% branch coverage and 100% decision-table row coverage. Changed modules must meet repository thresholds without reducing their baseline. Use deterministic clocks, IDs and fakes; no real waits or live services. Test structured contracts and semantics as well as golden presentation fixtures. Workflow checks parse schemas and paths, not prose grep. Manual UX evidence: maintainers verify proposal clarity and card readability on narrow screen and supported light/dark themes.
+
+### 14.1 Incident regression coverage
+
+| Evidence | Fixture behavior | Cases |
+|---|---|---|
+| Extension H3 #704 and Domus #17, #20, #21, #25 and #27 | Large or near-capacity retained owner, compact valid delta, separate response and composed-document failure, verified same-capability recovery. Preserve the resolved case inventories and the exact source identity. | sdd-bounded-drafting-C01, sdd-bounded-drafting-C03, sdd-bounded-drafting-C10, sdd-bounded-drafting-C11, sdd-bounded-drafting-C12, sdd-bounded-drafting-C14, sdd-bounded-drafting-C15, sdd-bounded-drafting-C16, sdd-bounded-drafting-C27, sdd-bounded-drafting-C29 |
+| Domus #23 and ha-ui #7 | Differentiate a later path or reciprocal-map failure from an earlier size rejection. Require a concrete current decision and retain the baseline, including ha-ui's 64 cases. | sdd-bounded-drafting-C06, sdd-bounded-drafting-C08, sdd-bounded-drafting-C13, sdd-bounded-drafting-C14, sdd-bounded-drafting-C15, sdd-bounded-drafting-C16, sdd-bounded-drafting-C18, sdd-bounded-drafting-C19, sdd-bounded-drafting-C20, sdd-bounded-drafting-C30 |
+| Domus #30 | Preserve all twelve cases. Exercise a known fitting update, the missing canonical path table, the invalid path reference and the independent response limit. Verify autonomous and authorized-seed publication under the exact managed gate. | sdd-bounded-drafting-C02, sdd-bounded-drafting-C05, sdd-bounded-drafting-C10, sdd-bounded-drafting-C13, sdd-bounded-drafting-C16, sdd-bounded-drafting-C22, sdd-bounded-drafting-C27, sdd-bounded-drafting-C28, sdd-bounded-drafting-C30, sdd-bounded-drafting-C31 |
+
+### 14.2 Qualification through the normal Action
+
+Use a disposable consumer repository with the candidate Action pinned to its exact commit and the existing Issue Form, admission, answer and branch workflow. Seed it with immutable input fixtures that preserve the incident geometry and contractual IDs. The first live issue exercises autonomous generation of the Domus #30 twelve-case update. The second exercises the authorized seed and validates the same twelve obligations independently. A third exercises autonomous generation of a document above the old whole-document limit. Freeze issue, base and workflow provenance. For each run verify parent and first commit, issue linkage, remote head, actual staged file manifest, unchanged owner bytes where applicable, case budget, all reciprocal edges and an unchanged replay. A run at the old runtime or against a stub cannot establish this acceptance. Retain run links and measured workload for each case.
 
 ## 15. Documentation and discoverability
 
@@ -332,20 +393,24 @@ Repository-wide coverage thresholds remain in force; no numeric threshold was su
 7. Given repeated or out-of-order recovery events, when processed, then the one-repair ceiling and established linked SDD ownership remain unchanged and one idempotent durable card reflects the latest state.
 8. Given malicious Markdown, forged authorization, unsafe path or secret-like rejected content, when diagnostics render, then the content is rejected or sanitized and no private output is exposed.
 9. Given publication succeeds but readiness reconciliation fails, when the operation resumes, then it reports partial success and reconciles without repeating publication.
-10. Given the user documentation is reviewed, when a maintainer follows its normal and recovery paths, then the examples match supported decisions and explain that declared validation is not proof of executed acceptance.
+10. Given the user documentation is reviewed, when a maintainer follows its normal and recovery paths, then the examples match supported decisions and distinguish declared cases from execution evidence.
+11. Given the Domus #30 source and twelve-case contract, when the candidate Action runs each supported input route, then it publishes and verifies the first managed SDD commit with every case and reciprocal link.
+12. Given a planned SDD above the legacy 70,000-unit threshold within the qualified operational budgets, when the default path runs, then it autonomously composes and publishes the complete validated result.
+13. Given a provider unit that drops an explicit case, source-span obligation or file operation, when trusted code aggregates the units, then coverage verification blocks the candidate and preserves every retained obligation.
 
 ## 17. Requirements traceability
 
 | Requirement | Cases |
 |---|---|
 | SDD-BDR-01 | sdd-bounded-drafting-C01, sdd-bounded-drafting-C04, sdd-bounded-drafting-C14, sdd-bounded-drafting-C23 |
-| SDD-BDR-02 | sdd-bounded-drafting-C01, sdd-bounded-drafting-C02, sdd-bounded-drafting-C16, sdd-bounded-drafting-C24 |
-| SDD-BDR-03 | sdd-bounded-drafting-C03, sdd-bounded-drafting-C10, sdd-bounded-drafting-C11, sdd-bounded-drafting-C12 |
-| SDD-BDR-04 | sdd-bounded-drafting-C15, sdd-bounded-drafting-C20 |
-| SDD-BDR-05 | sdd-bounded-drafting-C05, sdd-bounded-drafting-C06, sdd-bounded-drafting-C17, sdd-bounded-drafting-C23 |
+| SDD-BDR-02 | sdd-bounded-drafting-C01, sdd-bounded-drafting-C02, sdd-bounded-drafting-C16, sdd-bounded-drafting-C24, sdd-bounded-drafting-C27, sdd-bounded-drafting-C29, sdd-bounded-drafting-C30 |
+| SDD-BDR-03 | sdd-bounded-drafting-C03, sdd-bounded-drafting-C10, sdd-bounded-drafting-C11, sdd-bounded-drafting-C12, sdd-bounded-drafting-C27, sdd-bounded-drafting-C32 |
+| SDD-BDR-04 | sdd-bounded-drafting-C15, sdd-bounded-drafting-C20, sdd-bounded-drafting-C31 |
+| SDD-BDR-05 | sdd-bounded-drafting-C05, sdd-bounded-drafting-C06, sdd-bounded-drafting-C17, sdd-bounded-drafting-C23, sdd-bounded-drafting-C28 |
 | SDD-BDR-06 | sdd-bounded-drafting-C18, sdd-bounded-drafting-C19, sdd-bounded-drafting-C20, sdd-bounded-drafting-C21 |
-| SDD-BDR-07 | sdd-bounded-drafting-C07, sdd-bounded-drafting-C08, sdd-bounded-drafting-C09, sdd-bounded-drafting-C15, sdd-bounded-drafting-C22, sdd-bounded-drafting-C24, sdd-bounded-drafting-C25, sdd-bounded-drafting-C26 |
-| SDD-BDR-08 | sdd-bounded-drafting-C03, sdd-bounded-drafting-C10, sdd-bounded-drafting-C13 |
+| SDD-BDR-07 | sdd-bounded-drafting-C07, sdd-bounded-drafting-C08, sdd-bounded-drafting-C09, sdd-bounded-drafting-C15, sdd-bounded-drafting-C22, sdd-bounded-drafting-C24, sdd-bounded-drafting-C25, sdd-bounded-drafting-C26, sdd-bounded-drafting-C31, sdd-bounded-drafting-C32 |
+| SDD-BDR-08 | sdd-bounded-drafting-C03, sdd-bounded-drafting-C10, sdd-bounded-drafting-C13, sdd-bounded-drafting-C29, sdd-bounded-drafting-C32 |
+| SDD-BDR-09 | sdd-bounded-drafting-C27, sdd-bounded-drafting-C28, sdd-bounded-drafting-C29, sdd-bounded-drafting-C30, sdd-bounded-drafting-C31 |
 
 ## 18. Implementation sequence
 
@@ -369,12 +434,12 @@ Repository-wide coverage thresholds remain in force; no numeric threshold was su
 - [ ] Failure, partial success, retry, idempotency, security, and cleanup pass.
 - [ ] Required generated artifacts and repository validation commands pass; unverified invocation is stated explicitly.
 - [ ] `specs/catalog.json` evidence and `specs/CATALOG.md` are current; structure, ownership/evidence and generated-view consistency pass verified tooling.
-- [ ] Deterministic fixtures cover raw, rendered, derived and composed limits separately; passing fixtures or publishing a Draft is not represented as live end-to-end acceptance.
+- [ ] Deterministic fixtures cover raw response, derived expansion and final composition. Live candidate runs verify both Domus #30 input routes and autonomous publication above the legacy ceiling.
 - [ ] No readiness-blocking decision remains unresolved.
 
 ## 20. References and decisions
 
 - Primary sources: canonical issue [#763](https://github.com/vypdev/copilot/issues/763); verified start context at `a859c9e9e567055c76cd60a96ada91713c6f0773`.
 - Related specs/ADRs/issues/PRs: catalog owners `specs/issue-start-and-branch-readiness.md`, `specs/pre-branch-sdd-gate.md`, `specs/pre-branch-sdd-diff.md`, `specs/pre-branch-sdd-status-readiness.md`, `specs/pre-branch-sdd-source-context.md`, `specs/sdd-draft-response-minimum.md`, `specs/sdd-reference-classification.md`, `specs/sdd-case-reference-classification.md`, `specs/sdd-draft-source-grounding.md`; issues #695, #714, #541, #833, #836, #856, #858; reproducer #704.
-- Decisions and rejected alternatives: retain existing owners and case budgets by reference; use evidence-grounded bounded incremental planning; permit an explicitly authorized validated seed as an optional candidate; require explicit same-capability companion approval; do not raise limits, truncate scope, lower budgets, relax validation, expose rejected drafts or bypass publication proof. Do not infer the historical #704 failure cause.
+- Decisions and rejected alternatives: retain existing owners and case budgets by reference; use evidence-grounded bounded incremental planning; permit an explicitly authorized validated seed as an optional candidate; require explicit same-capability companion approval. Replace coupled size limits only after measured operational bounds cover all protected resources. Attribute historical failures only to the stage supported by recorded evidence.
 - Follow-up work explicitly outside this spec: retrying #704, changing H3 scope, release, hotfix or deployment.

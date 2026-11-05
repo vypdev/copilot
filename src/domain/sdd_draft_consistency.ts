@@ -311,9 +311,13 @@ export function validateSddDraftConsistency(
   uniqueIdentifiers(caseIds, CASE_ID, 'case-identity', 14);
   const shorthand = countSddShorthandCaseReferences(source);
   if (shorthand) fail('case-identity', { detail: 'case-shorthand', section: 0, expected: 0, observed: shorthand });
-  if (caseIds.some(id => reserved.has(id))) fail('case-identity', { detail: 'case-reserved', section: 14, expected: 0, observed: caseIds.filter(id => reserved.has(id)).length });
+  const collisions = caseIds.filter(id => reserved.has(id)).length;
+  if (collisions) fail('case-identity', { detail: 'case-reserved', section: 14, expected: 0, observed: collisions });
   // References to existing owner cases are allowed, but cannot count as newly defined cases.
-  if ([...source.matchAll(CASE)].some(([id]) => !caseIds.includes(id) && !reserved.has(id))) fail('case-identity', { detail: 'case-reference', section: 0 });
+  const defined = new Set(caseIds);
+  for (const [id] of source.matchAll(CASE)) {
+    if (!defined.has(id) && !reserved.has(id)) fail('case-identity', { detail: 'case-reference', section: 0 });
+  }
 
   const budget = table(source, 14, ['Area', 'Minimum distinct cases', 'Behaviors/risks covered'], 'case-budget');
   const counts = new Map<string, number>();
@@ -329,9 +333,17 @@ export function validateSddDraftConsistency(
   if (total !== caseIds.length) fail('case-budget', { detail: 'budget-total', section: 14, expected: caseIds.length, ...(total !== undefined && total <= 100_000 ? { observed: total } : {}) });
   const sum = [...counts.values()].reduce((value, count) => value + count, 0);
   if (sum !== total) fail('case-budget', { detail: 'budget-total', section: 14, expected: total, ...(sum <= 100_000 ? { observed: sum } : {}) });
-  const unknownAreas = cases.filter(row => !counts.has(row[1])).length;
+  const observedCounts = new Map<string, number>();
+  let unknownAreas = 0;
+  for (const [, area] of cases) {
+    if (counts.has(area)) observedCounts.set(area, (observedCounts.get(area) ?? 0) + 1);
+    else unknownAreas++;
+  }
   if (unknownAreas) fail('case-budget', { detail: 'budget-area', section: 14, expected: 0, observed: unknownAreas });
-  for (const [area, count] of counts) if (cases.filter(row => row[1] === area).length !== count) fail('case-budget', { detail: 'budget-distribution', section: 14, expected: count, observed: cases.filter(row => row[1] === area).length });
+  for (const [area, count] of counts) {
+    const observed = observedCounts.get(area) ?? 0;
+    if (observed !== count) fail('case-budget', { detail: 'budget-distribution', section: 14, expected: count, observed });
+  }
 
   const edges = new Map(requirementIds.map(id => [id, new Set<string>()]));
   for (const [index, [id, , links]] of cases.entries()) {
@@ -349,7 +361,12 @@ export function validateSddDraftConsistency(
     const actual = ids(links, CASE_ID, 'requirement-mapping', 17);
     if (!expected || seen.has(requirement)) fail('requirement-mapping', { detail: 'traceability-requirement', section: 17, row: seen.size + 1, expected: 0, observed: 1 });
     if (expected.size !== actual.length) fail('requirement-mapping', { detail: 'traceability-links', section: 17, row: seen.size + 1, expected: expected.size, observed: actual.length });
-    const mismatch = [...expected].filter(id => !actual.includes(id)).length + actual.filter(id => !expected.has(id)).length;
+    let mismatch = 0;
+    for (const id of actual) {
+      if (!expected.has(id)) mismatch++;
+    }
+    // The validated sets have equal cardinality, so each unexpected edge also displaces an expected edge.
+    mismatch *= 2;
     if (mismatch) fail('requirement-mapping', { detail: 'traceability-membership', section: 17, row: seen.size + 1, expected: 0, observed: mismatch });
     seen.add(requirement);
   }

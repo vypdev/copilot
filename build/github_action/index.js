@@ -64172,12 +64172,12 @@ class PreBranchSddGateUseCase {
                 return { status: 'waiting', results: [this.result(true, true, `Asked ${plan.questions.length} blocking SDD question(s); no draft or branch was created.`)] };
             }
             const currentSdd = plan.action === 'update' ? await this.workspace.readSdd(snapshot.baseSha, plan.path) : undefined;
-            if (plan.action === 'update' && !currentSdd)
+            if (plan.action === 'update' && currentSdd === undefined)
                 throw new Error('The catalogued SDD owner is missing from the selected base.');
             const ownerDocuments = [];
             for (const path of snapshot.capabilities.find(capability => capability.id === plan.capabilityId)?.specs ?? []) {
-                const markdown = path === plan.path && currentSdd ? currentSdd : await this.workspace.readSdd(snapshot.baseSha, path);
-                if (!markdown)
+                const markdown = path === plan.path && currentSdd !== undefined ? currentSdd : await this.workspace.readSdd(snapshot.baseSha, path);
+                if (markdown === undefined)
                     throw new Error('A catalogued owning SDD is unavailable at the selected immutable base.');
                 ownerDocuments.push({ path, markdown });
             }
@@ -93411,11 +93411,15 @@ function validateSddDraftConsistency(markdown, owners, inventory, sddPath) {
     const shorthand = (0, sdd_case_reference_1.countSddShorthandCaseReferences)(source);
     if (shorthand)
         fail('case-identity', { detail: 'case-shorthand', section: 0, expected: 0, observed: shorthand });
-    if (caseIds.some(id => reserved.has(id)))
-        fail('case-identity', { detail: 'case-reserved', section: 14, expected: 0, observed: caseIds.filter(id => reserved.has(id)).length });
+    const collisions = caseIds.filter(id => reserved.has(id)).length;
+    if (collisions)
+        fail('case-identity', { detail: 'case-reserved', section: 14, expected: 0, observed: collisions });
     // References to existing owner cases are allowed, but cannot count as newly defined cases.
-    if ([...source.matchAll(CASE)].some(([id]) => !caseIds.includes(id) && !reserved.has(id)))
-        fail('case-identity', { detail: 'case-reference', section: 0 });
+    const defined = new Set(caseIds);
+    for (const [id] of source.matchAll(CASE)) {
+        if (!defined.has(id) && !reserved.has(id))
+            fail('case-identity', { detail: 'case-reference', section: 0 });
+    }
     const budget = table(source, 14, ['Area', 'Minimum distinct cases', 'Behaviors/risks covered'], 'case-budget');
     const counts = new Map();
     let total;
@@ -93437,12 +93441,21 @@ function validateSddDraftConsistency(markdown, owners, inventory, sddPath) {
     const sum = [...counts.values()].reduce((value, count) => value + count, 0);
     if (sum !== total)
         fail('case-budget', { detail: 'budget-total', section: 14, expected: total, ...(sum <= 100000 ? { observed: sum } : {}) });
-    const unknownAreas = cases.filter(row => !counts.has(row[1])).length;
+    const observedCounts = new Map();
+    let unknownAreas = 0;
+    for (const [, area] of cases) {
+        if (counts.has(area))
+            observedCounts.set(area, (observedCounts.get(area) ?? 0) + 1);
+        else
+            unknownAreas++;
+    }
     if (unknownAreas)
         fail('case-budget', { detail: 'budget-area', section: 14, expected: 0, observed: unknownAreas });
-    for (const [area, count] of counts)
-        if (cases.filter(row => row[1] === area).length !== count)
-            fail('case-budget', { detail: 'budget-distribution', section: 14, expected: count, observed: cases.filter(row => row[1] === area).length });
+    for (const [area, count] of counts) {
+        const observed = observedCounts.get(area) ?? 0;
+        if (observed !== count)
+            fail('case-budget', { detail: 'budget-distribution', section: 14, expected: count, observed });
+    }
     const edges = new Map(requirementIds.map(id => [id, new Set()]));
     for (const [index, [id, , links]] of cases.entries()) {
         for (const requirement of ids(links, REQUIREMENT_ID, 'requirement-mapping', 14)) {
@@ -93462,7 +93475,13 @@ function validateSddDraftConsistency(markdown, owners, inventory, sddPath) {
             fail('requirement-mapping', { detail: 'traceability-requirement', section: 17, row: seen.size + 1, expected: 0, observed: 1 });
         if (expected.size !== actual.length)
             fail('requirement-mapping', { detail: 'traceability-links', section: 17, row: seen.size + 1, expected: expected.size, observed: actual.length });
-        const mismatch = [...expected].filter(id => !actual.includes(id)).length + actual.filter(id => !expected.has(id)).length;
+        let mismatch = 0;
+        for (const id of actual) {
+            if (!expected.has(id))
+                mismatch++;
+        }
+        // The validated sets have equal cardinality, so each unexpected edge also displaces an expected edge.
+        mismatch *= 2;
         if (mismatch)
             fail('requirement-mapping', { detail: 'traceability-membership', section: 17, row: seen.size + 1, expected: 0, observed: mismatch });
         seen.add(requirement);
@@ -100418,6 +100437,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PreBranchSddWorkspaceAdapter = void 0;
 const sdd_catalog_compatibility_1 = __nccwpck_require__(95312);
 const sdd_trusted_catalog_failure_1 = __nccwpck_require__(44763);
+const agent_source_snapshot_1 = __nccwpck_require__(59205);
 const fs = __importStar(__nccwpck_require__(87561));
 const os = __importStar(__nccwpck_require__(70612));
 const path = __importStar(__nccwpck_require__(49411));
@@ -100492,11 +100512,21 @@ class PreBranchSddWorkspaceAdapter {
         assertSha(baseSha);
         if (!(0, pre_branch_sdd_1.isSafeSddPath)(relativePath))
             throw new Error('SDD path is outside the specification boundary.');
+        const source = { kind: 'pre-branch-sdd', phase: 'draft', baseSha: baseSha.toLowerCase() };
+        const entry = await this.readSddObject(['ls-tree', '-z', '--full-tree', baseSha, '--', relativePath], source);
+        if (!entry)
+            return undefined;
+        const match = /^100(?:644|755) blob ([a-f0-9]{40})\t([^\0]+)\0$/u.exec(entry);
+        if (!match || match[2] !== relativePath)
+            throw new agent_source_snapshot_1.SddSourceContextFailure('unsafe-entry', source);
+        return this.readSddObject(['cat-file', 'blob', match[1]], source);
+    }
+    async readSddObject(args, source) {
         try {
-            return await this.git(['show', `${baseSha}:${relativePath}`]);
+            return await this.git(args);
         }
         catch {
-            return undefined;
+            throw new agent_source_snapshot_1.SddSourceContextFailure('object-unavailable', source);
         }
     }
     async validateDraft(snapshot, plan, markdown, newCapability) {
