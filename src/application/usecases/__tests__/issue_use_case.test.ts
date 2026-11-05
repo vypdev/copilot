@@ -284,6 +284,7 @@ describe("IssueUseCase", () => {
     const param = minimalExecution({ issueStartDecision: { started: true, branchRequired: true, sddRequired: true, helpRequired: false } });
     await createUseCase(undefined, { begin, publish } as never).invoke(param);
     expect(begin).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 8, baseBranch: 'develop' }));
+    expect(mockUpdateTitleInvoke).toHaveBeenCalledWith(expect.objectContaining({ preserveIssueTitle: true }));
     expect(mockPrepareBranchesInvoke).not.toHaveBeenCalled();
     expect(mockDeployAddedInvoke).not.toHaveBeenCalled();
     expect(publish).not.toHaveBeenCalled();

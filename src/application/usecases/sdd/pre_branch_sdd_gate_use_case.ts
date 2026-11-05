@@ -186,6 +186,25 @@ export class PreBranchSddGateUseCase {
         throw new Error('The SDD revision is absent from the linked remote branch.');
       }
 
+      const pendingSeed = card?.record.phase === 'awaiting-answer' && card.record.selection?.kind === 'seed'
+        ? card.record.selection : undefined;
+      const staleSeed = card && pendingSeed && (staleAwaiting || card.record.issueDigest !== digest);
+      // Retain an initial review request while ordinary pre-publication questions are answered.
+      const reviewCutoff = card?.record.phase === 'awaiting-answer' && !card.record.branchName && !card.record.selection
+        ? 0 : Math.max(card?.id ?? 0, pendingSeed?.reviewCommentId ?? 0);
+      const seedReview = seedInput.hash && (!pendingSeed || staleSeed)
+        ? await this.findSeedReview(context, allComments, reviewCutoff, seedInput.hash) : undefined;
+      if (card && pendingSeed && staleSeed && !seedReview) {
+        const withdrawal = await this.collectAnswers({
+          ...card.record, plan: { ...card.record.plan, questions: [
+            { id: 'Q1', owner: 'maintainer', text: 'Choose how to resume SDD preparation.' },
+          ] },
+        }, card.id, allComments, context);
+        if (withdrawal[0]?.text !== 'generate ' + pendingSeed.receipt) {
+          throw new ApplicationError('workflow.stale', 'The SDD seed receipt is stale. Request a fresh seed review or explicitly choose generation from the existing card.');
+        }
+      }
+
       let answers: readonly SddAnswer[] = [];
       let acceptedSelection: SddGateRecord['selection'];
       let clarificationOwnership: SddOwnershipAnalysisContext | undefined;
@@ -261,13 +280,13 @@ export class PreBranchSddGateUseCase {
       }
 
       const newCapability = plan.action === 'new' ? parseNewCapability(analysisValue.newCapability, plan) : undefined;
-      if (seedInput.seed && seedInput.hash && !acceptedSelection
-        && await this.maintainerRequestedSeed(context, allComments, card?.id, seedInput.hash)) {
+      if (seedInput.seed && seedInput.hash && !acceptedSelection && seedReview) {
         const receipt = sddSelectionReceipt({ ...record, baseSha: snapshot.baseSha }, plan, 'seed', seedInput.hash, newCapability);
         const text = /^es(?:-|$)/iu.test(context.issueLocale ?? '')
           ? 'Revisa el borrador y responde exactamente con use seed ' + receipt + ' o generate ' + receipt + '.'
           : 'Review the draft and reply exactly with use seed ' + receipt + ' or generate ' + receipt + '.';
-        const pending: SddGateRecord = { ...record, selection: { kind: 'seed', receipt, seedHash: seedInput.hash, ...(newCapability ? { newCapability } : {}) },
+        const pending: SddGateRecord = { ...record, selection: { kind: 'seed', receipt, seedHash: seedInput.hash, reviewCommentId: seedReview,
+          ...(newCapability ? { newCapability } : {}) },
           plan: { ...plan, questions: [{ id: 'Q1', owner: 'maintainer', text }] } };
         await this.assertFresh(context, snapshot.baseSha, sourceBranch);
         await this.writeCard(context.issueNumber, card?.id, pending, context.issueLocale, context.issueUrl);
@@ -405,14 +424,14 @@ export class PreBranchSddGateUseCase {
     }
   }
 
-  private async maintainerRequestedSeed(context: PreBranchSddContext, comments: readonly IssueCommentPublicationTarget[],
-    cardId: number | undefined, hash: string): Promise<boolean> {
-    for (const comment of comments) {
+  private async findSeedReview(context: PreBranchSddContext, comments: readonly IssueCommentPublicationTarget[],
+    cutoff: number, hash: string): Promise<number | undefined> {
+    for (const comment of [...comments].sort((a, b) => b.id - a.id)) {
       const actor = comment.user?.login;
-      if (comment.id > (cardId ?? 0) && actor && actor.toLowerCase() !== context.tokenUser.toLowerCase()
-        && isSddSeedReview(comment.body ?? '', hash) && await this.actors.isActorAllowedToModifyFiles(actor)) return true;
+      if (comment.id > cutoff && actor && actor.toLowerCase() !== context.tokenUser.toLowerCase()
+        && isSddSeedReview(comment.body ?? '', hash) && await this.actors.isActorAllowedToModifyFiles(actor)) return comment.id;
     }
-    return false;
+    return undefined;
   }
 
   private async assertSelectionCurrent(context: PreBranchSddContext, record: SddGateRecord): Promise<void> {
@@ -457,7 +476,8 @@ export class PreBranchSddGateUseCase {
   private async collectAnswers(record: SddGateRecord, cardId: number, comments: readonly IssueCommentPublicationTarget[], context: PreBranchSddContext): Promise<readonly SddAnswer[]> {
     const answers: SddAnswer[] = [];
     for (const question of record.plan.questions) {
-      const cutoff = Math.max(cardId, ...(record.answers ?? []).map(answer => answer.commentId));
+      const reviewCommentId = record.selection?.kind === 'seed' ? record.selection.reviewCommentId ?? 0 : 0;
+      const cutoff = Math.max(cardId, reviewCommentId, ...(record.answers ?? []).map(answer => answer.commentId));
       const candidates = comments.filter(comment => comment.id > cutoff && comment.user?.login && comment.body)
         .sort((a, b) => b.id - a.id);
       for (const candidate of candidates) {

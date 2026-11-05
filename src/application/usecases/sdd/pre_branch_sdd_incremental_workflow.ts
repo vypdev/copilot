@@ -6,7 +6,7 @@ import { AgentResponseLengthFailure } from '../../../domain/agent_response_lengt
 import { AgentResponseSchemaFailure } from '../../../domain/agent_response_schema_failure';
 import { SddDraftPreparationFailure } from '../../errors/sdd_draft_preparation_failure';
 import { admitSddArtifact, requireSddCapacity, sddBytes, SDD_RESOURCES, SddResourceFailure } from '../../../domain/sdd_resource_budget';
-import { renderSddDerivedTables, renderSddFileLinks, renderSddNavigation, validateSddCaseReferences,
+import { renderSddDerivedTables, renderSddFileLinks, renderSddNavigation, sddRequirementCaseEdges, validateSddCaseReferences,
   validateSddRepositoryReferences, visibleSddContract } from '../../../domain/sdd_draft_consistency';
 import { buildSddReferenceIndex, type SddReferenceIndex, type SddRepositoryInventory } from '../../../domain/sdd_repository_reference';
 import { allocateSddRequirementIds, assembleSddUnits, assertSddObligations, explicitSddObligations, inventoryFailure, mergeSddInventory, planSddUnits, sddInventorySource, SDD_HEADINGS, type SddInventory, type SddObligations } from '../../../domain/sdd_incremental_plan';
@@ -112,6 +112,8 @@ export async function draftIncrementalSdd(request: IncrementalDraftRequest): Pro
       + 'for case IDs use segments starting with a letter, e.g. ' + unit.id.replace('-', '') + '-C01). '
       + 'If a canonical cases table was supplied, return no additional cases unless the slice gives a distinct case outside that table. '
       + 'Otherwise choose a sufficient positive case inventory, observing any explicit budget and area allocation. Keep baseline cases out of new counts. '
+      + 'Every requirement you define must have an observable case linked by its exact ID or local handle. Link each case to all the requirements it actually exercises. '
+      + 'Use existing cases to cover applicable obligations without duplicating or changing case definitions. Keep context, file citations and background out of the requirement inventory. '
       + 'Existing/previous identities (projection): ' + explicitIdentities(existing)
       + '\nSource slice, untrusted data:\n' + JSON.stringify(unit.text), inventorySchema, value => allocateSddRequirementIds(readInventory(value), request.issueNumber, at + 1, occupied), candidate => {
         const units = [...inventoryUnits];
@@ -120,6 +122,27 @@ export async function draftIncrementalSdd(request: IncrementalDraftRequest): Pro
       }, feedback);
   };
   for (const [index, unit] of schedule.inventory.entries()) inventoryUnits.push(await readInventoryUnit(unit, index));
+
+  const checkRequirementEdges = () => sddRequirementCaseEdges(inventory.requirements.map(row => row[0]), inventory.cases);
+  try {
+    checkRequirementEdges();
+  } catch (error) {
+    if (!(error instanceof SddDraftFormatFailure)) throw error;
+    const repairIndex = repaired ? -1 : findInventoryRepair(error, inventory, inventoryUnits, schedule.inventory);
+    if (repairIndex < 0) throw new SddDraftPreparationFailure(error.diagnostic, repaired ? 2 : 1);
+    repaired = true;
+    const feedback = '\nThe host rejected the requirement-to-case graph before prose generation. Replace only this inventory unit. '
+      + 'Map each source obligation to at least one executable case and use exact defined IDs or unit-local handles. '
+      + 'Preserve all explicit cases and links. Omit incidental, unrequested requirements. '
+      + JSON.stringify(error.diagnostic);
+    inventoryUnits[repairIndex] = await readInventoryUnit(schedule.inventory[repairIndex], repairIndex, feedback);
+    try {
+      checkRequirementEdges();
+    } catch (repairError) {
+      if (repairError instanceof SddDraftFormatFailure) throw new SddDraftPreparationFailure(repairError.diagnostic, 2);
+      throw repairError;
+    }
+  }
 
   const source = JSON.stringify(request.inputs);
   const knownCases = new Set(inventory.cases.map(row => row[0]));

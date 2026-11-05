@@ -1,5 +1,6 @@
 import type { GithubClientPort } from '../../../../infrastructure/github/ports/github_client_provider_port';
 import type { GithubIssueTitleClient } from '../../../../infrastructure/github/ports/github_issue_provider_ports';
+import { normalizeSddIssueTitle } from '../../../../domain/pre_branch_sdd';
 import { Labels } from '../../../model/labels';
 import { IssueTitleRepository } from '../issue_title_repository';
 
@@ -42,6 +43,22 @@ describe('IssueTitleRepository', () => {
             owner: 'owner', repo: 'repo', issue_number: 42, title: '✨ - 1.2.3 - Add login',
         });
         expect(client.getClient).toHaveBeenCalledWith('token');
+    });
+
+    it('preserves the material SDD title when updating Action decoration', async () => {
+        const labels = createLabels();
+        labels.currentIssueLabels = [labels.feature];
+        const title = 'SDD qualification: maintainer-authorized draft (café)';
+        const formatted = await repository.updateTitleIssueFormat(
+            'owner', 'repo', '', title, 42, '✨', labels, 'token', true,
+        );
+        expect(formatted).toBe('✨ - ' + title);
+        expect(normalizeSddIssueTitle(formatted!)).toBe(normalizeSddIssueTitle(title));
+        expect(normalizeSddIssueTitle(formatted!.replace('café', 'cafe'))).not.toBe(title);
+        await expect(repository.updateTitleIssueFormat(
+            'owner', 'repo', '', formatted!, 42, '✨', labels, 'token', true,
+        )).resolves.toBeUndefined();
+        expect(update).toHaveBeenCalledTimes(1);
     });
 
     it('does not call GitHub when the formatted title is unchanged', async () => {

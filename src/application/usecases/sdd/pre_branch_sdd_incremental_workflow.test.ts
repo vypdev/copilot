@@ -163,6 +163,21 @@ describe('bounded incremental SDD drafting (#763)', () => {
     expect(result).not.toContain('@8');
   });
 
+  it('905: repairs a valid identifier with missing reciprocal coverage before drafting prose', async () => {
+    const unit = { unitId: 'inventory-1', requirements: [['@1', 'Resolve the admitted scenario.']], cases: [], paths: [] };
+    const query = jest.fn(async ({ prompt }) => reply(prompt))
+      .mockResolvedValueOnce(unit)
+      .mockResolvedValueOnce({ ...unit, cases: [['alloc-C1', 'Functional', '@1', 'Observe the resolved result.']] });
+    const result = await run([fixture(1)], query);
+    expect(query).toHaveBeenCalledTimes(7);
+    expect(query.mock.calls[1][0].prompt).toContain('The host rejected the requirement-to-case graph before prose generation.');
+    expect(query.mock.calls[1][0].prompt).toContain('"detail":"requirement-coverage","section":4,"row":2');
+    expect(query.mock.calls[1][0].prompt).not.toContain('Resolve the admitted scenario.');
+    expect(query.mock.calls[2][0].prompt).toContain('Return only the JSON for unit prose-1.');
+    expect(result).toContain('| alloc-C1 | Functional | SDD-I42-U1-R1 |');
+    expect(result).toContain('| SDD-I42-U1-R1 | alloc-C1 |');
+  });
+
   it('905: reserves canonical identities and assigns the same collision-free ID on replay', () => {
     const unit = { requirements: [['@1', 'New behavior']], cases: [['local-C1', 'Policy', '@1, PAY-01', 'Observe both behaviors']], paths: [] };
     const occupied = new Set(['SDD-I42-U1-R1', 'PAY-01']);

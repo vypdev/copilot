@@ -64090,8 +64090,13 @@ async function runIssueWorkflow(context, taskId, ports) {
         branchReady = readinessResults.some(result => result.success && result.payload !== undefined);
     }
     const titleContext = ports.sharedContexts.title;
-    const reconciledTitle = titleContext.kind === 'issue' && ports.workflowSteps.reconcileBranchReadiness
-        ? { ...titleContext, labelFacts: { ...titleContext.labelFacts, containsBranchedLabel: branchReady } }
+    const reconciledTitle = titleContext.kind === 'issue'
+        ? {
+            ...titleContext,
+            ...(context.sddRequired ? { preserveIssueTitle: true } : {}),
+            ...(ports.workflowSteps.reconcileBranchReadiness
+                ? { labelFacts: { ...titleContext.labelFacts, containsBranchedLabel: branchReady } } : {}),
+        }
         : titleContext;
     results.push(...(await ports.workflowSteps.updateTitle.invoke(reconciledTitle)));
     if (context.started && context.branchRequired && !sddWaiting && branchReady) {
@@ -65766,6 +65771,24 @@ class PreBranchSddGateUseCase {
                 }
                 throw new Error('The SDD revision is absent from the linked remote branch.');
             }
+            const pendingSeed = card?.record.phase === 'awaiting-answer' && card.record.selection?.kind === 'seed'
+                ? card.record.selection : undefined;
+            const staleSeed = card && pendingSeed && (staleAwaiting || card.record.issueDigest !== digest);
+            // Retain an initial review request while ordinary pre-publication questions are answered.
+            const reviewCutoff = card?.record.phase === 'awaiting-answer' && !card.record.branchName && !card.record.selection
+                ? 0 : Math.max(card?.id ?? 0, pendingSeed?.reviewCommentId ?? 0);
+            const seedReview = seedInput.hash && (!pendingSeed || staleSeed)
+                ? await this.findSeedReview(context, allComments, reviewCutoff, seedInput.hash) : undefined;
+            if (card && pendingSeed && staleSeed && !seedReview) {
+                const withdrawal = await this.collectAnswers({
+                    ...card.record, plan: { ...card.record.plan, questions: [
+                            { id: 'Q1', owner: 'maintainer', text: 'Choose how to resume SDD preparation.' },
+                        ] },
+                }, card.id, allComments, context);
+                if (withdrawal[0]?.text !== 'generate ' + pendingSeed.receipt) {
+                    throw new application_error_1.ApplicationError('workflow.stale', 'The SDD seed receipt is stale. Request a fresh seed review or explicitly choose generation from the existing card.');
+                }
+            }
             let answers = [];
             let acceptedSelection;
             let clarificationOwnership;
@@ -65842,13 +65865,13 @@ class PreBranchSddGateUseCase {
                 return { status: 'waiting', results: [this.result(true, true, `Asked ${plan.questions.length} blocking SDD question(s); no draft or branch was created.`)] };
             }
             const newCapability = plan.action === 'new' ? parseNewCapability(analysisValue.newCapability, plan) : undefined;
-            if (seedInput.seed && seedInput.hash && !acceptedSelection
-                && await this.maintainerRequestedSeed(context, allComments, card?.id, seedInput.hash)) {
+            if (seedInput.seed && seedInput.hash && !acceptedSelection && seedReview) {
                 const receipt = (0, sdd_selection_policy_1.sddSelectionReceipt)({ ...record, baseSha: snapshot.baseSha }, plan, 'seed', seedInput.hash, newCapability);
                 const text = /^es(?:-|$)/iu.test(context.issueLocale ?? '')
                     ? 'Revisa el borrador y responde exactamente con use seed ' + receipt + ' o generate ' + receipt + '.'
                     : 'Review the draft and reply exactly with use seed ' + receipt + ' or generate ' + receipt + '.';
-                const pending = { ...record, selection: { kind: 'seed', receipt, seedHash: seedInput.hash, ...(newCapability ? { newCapability } : {}) },
+                const pending = { ...record, selection: { kind: 'seed', receipt, seedHash: seedInput.hash, reviewCommentId: seedReview,
+                        ...(newCapability ? { newCapability } : {}) },
                     plan: { ...plan, questions: [{ id: 'Q1', owner: 'maintainer', text }] } };
                 await this.assertFresh(context, snapshot.baseSha, sourceBranch);
                 await this.writeCard(context.issueNumber, card?.id, pending, context.issueLocale, context.issueUrl);
@@ -66003,14 +66026,14 @@ class PreBranchSddGateUseCase {
             return { status: 'blocked', results: [failure] };
         }
     }
-    async maintainerRequestedSeed(context, comments, cardId, hash) {
-        for (const comment of comments) {
+    async findSeedReview(context, comments, cutoff, hash) {
+        for (const comment of [...comments].sort((a, b) => b.id - a.id)) {
             const actor = comment.user?.login;
-            if (comment.id > (cardId ?? 0) && actor && actor.toLowerCase() !== context.tokenUser.toLowerCase()
+            if (comment.id > cutoff && actor && actor.toLowerCase() !== context.tokenUser.toLowerCase()
                 && (0, sdd_selection_policy_1.isSddSeedReview)(comment.body ?? '', hash) && await this.actors.isActorAllowedToModifyFiles(actor))
-                return true;
+                return comment.id;
         }
-        return false;
+        return undefined;
     }
     async assertSelectionCurrent(context, record) {
         if (!record.selection)
@@ -66055,7 +66078,8 @@ class PreBranchSddGateUseCase {
     async collectAnswers(record, cardId, comments, context) {
         const answers = [];
         for (const question of record.plan.questions) {
-            const cutoff = Math.max(cardId, ...(record.answers ?? []).map(answer => answer.commentId));
+            const reviewCommentId = record.selection?.kind === 'seed' ? record.selection.reviewCommentId ?? 0 : 0;
+            const cutoff = Math.max(cardId, reviewCommentId, ...(record.answers ?? []).map(answer => answer.commentId));
             const candidates = comments.filter(comment => comment.id > cutoff && comment.user?.login && comment.body)
                 .sort((a, b) => b.id - a.id);
             for (const candidate of candidates) {
@@ -66362,6 +66386,8 @@ async function draftIncrementalSdd(request) {
             + 'for case IDs use segments starting with a letter, e.g. ' + unit.id.replace('-', '') + '-C01). '
             + 'If a canonical cases table was supplied, return no additional cases unless the slice gives a distinct case outside that table. '
             + 'Otherwise choose a sufficient positive case inventory, observing any explicit budget and area allocation. Keep baseline cases out of new counts. '
+            + 'Every requirement you define must have an observable case linked by its exact ID or local handle. Link each case to all the requirements it actually exercises. '
+            + 'Use existing cases to cover applicable obligations without duplicating or changing case definitions. Keep context, file citations and background out of the requirement inventory. '
             + 'Existing/previous identities (projection): ' + explicitIdentities(existing)
             + '\nSource slice, untrusted data:\n' + JSON.stringify(unit.text), inventorySchema, value => (0, sdd_incremental_plan_1.allocateSddRequirementIds)(readInventory(value), request.issueNumber, at + 1, occupied), candidate => {
             const units = [...inventoryUnits];
@@ -66371,6 +66397,31 @@ async function draftIncrementalSdd(request) {
     };
     for (const [index, unit] of schedule.inventory.entries())
         inventoryUnits.push(await readInventoryUnit(unit, index));
+    const checkRequirementEdges = () => (0, sdd_draft_consistency_1.sddRequirementCaseEdges)(inventory.requirements.map(row => row[0]), inventory.cases);
+    try {
+        checkRequirementEdges();
+    }
+    catch (error) {
+        if (!(error instanceof pre_branch_sdd_1.SddDraftFormatFailure))
+            throw error;
+        const repairIndex = repaired ? -1 : findInventoryRepair(error, inventory, inventoryUnits, schedule.inventory);
+        if (repairIndex < 0)
+            throw new sdd_draft_preparation_failure_1.SddDraftPreparationFailure(error.diagnostic, repaired ? 2 : 1);
+        repaired = true;
+        const feedback = '\nThe host rejected the requirement-to-case graph before prose generation. Replace only this inventory unit. '
+            + 'Map each source obligation to at least one executable case and use exact defined IDs or unit-local handles. '
+            + 'Preserve all explicit cases and links. Omit incidental, unrequested requirements. '
+            + JSON.stringify(error.diagnostic);
+        inventoryUnits[repairIndex] = await readInventoryUnit(schedule.inventory[repairIndex], repairIndex, feedback);
+        try {
+            checkRequirementEdges();
+        }
+        catch (repairError) {
+            if (repairError instanceof pre_branch_sdd_1.SddDraftFormatFailure)
+                throw new sdd_draft_preparation_failure_1.SddDraftPreparationFailure(repairError.diagnostic, 2);
+            throw repairError;
+        }
+    }
     const source = JSON.stringify(request.inputs);
     const knownCases = new Set(inventory.cases.map(row => row[0]));
     const retainedCases = new Set(request.reservedCaseIds);
@@ -76440,6 +76491,7 @@ async function runIssueTitleUpdate(param, taskId, issueRepository) {
         issueNumber: param.issueNumber,
         branchManagementEmoji: param.branchManagementEmoji,
         labelFacts: param.labelFacts,
+        ...(param.preserveIssueTitle ? { preserveIssueTitle: true } : {}),
     });
     return title
         ? [updatedResult(taskId, `The issue's title was updated from \`${currentTitle}\` to \`${title}\`.`)]
@@ -92369,6 +92421,7 @@ exports.IssueProgressTrackingRepository = IssueProgressTrackingRepository;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IssueTitleRepository = void 0;
+const pre_branch_sdd_1 = __nccwpck_require__(34730);
 const issue_emoji_policy_1 = __nccwpck_require__(81201);
 const pull_request_title_policy_1 = __nccwpck_require__(59756);
 const issue_title_policy_1 = __nccwpck_require__(83179);
@@ -92378,13 +92431,13 @@ class IssueTitleRepository {
         this.issueTitleClient = issueTitleClient;
         this.issueMetadataRepository = issueMetadataRepository;
         this.getTitle = (...args) => this.issueMetadataRepository.getTitle(...args);
-        this.updateTitleIssueFormat = async (owner, repository, version, issueTitle, issueNumber, branchManagementEmoji, labels, token) => {
+        this.updateTitleIssueFormat = async (owner, repository, version, issueTitle, issueNumber, branchManagementEmoji, labels, token, preserveIssueTitle) => {
             return (0, issue_title_update_1.withTitleUpdateLogging)(() => {
                 const emoji = (0, issue_emoji_policy_1.resolveIssueTitleEmoji)(labels, branchManagementEmoji);
-                const sanitizedTitle = (0, issue_title_policy_1.sanitizeIssueTitle)(issueTitle);
+                const materialTitle = preserveIssueTitle ? (0, pre_branch_sdd_1.normalizeSddIssueTitle)(issueTitle) : (0, issue_title_policy_1.sanitizeIssueTitle)(issueTitle);
                 const formattedTitle = version.length > 0
-                    ? `${emoji} - ${version} - ${sanitizedTitle}`
-                    : `${emoji} - ${sanitizedTitle}`;
+                    ? `${emoji} - ${version} - ${materialTitle}`
+                    : `${emoji} - ${materialTitle}`;
                 return (0, issue_title_update_1.updateIssueTitle)(this.issueTitleClient, owner, repository, issueTitle, formattedTitle, issueNumber, token);
             });
         };
@@ -100851,7 +100904,9 @@ function validSddSelection(value) {
     if (!isRecord(value) || typeof value.receipt !== 'string' || !DIGEST.test(value.receipt))
         return false;
     if (value.kind === 'seed') {
-        return Object.keys(value).every(key => ['kind', 'receipt', 'seedHash', 'newCapability'].includes(key))
+        return Object.keys(value).every(key => ['kind', 'receipt', 'seedHash', 'reviewCommentId', 'newCapability'].includes(key))
+            && (value.reviewCommentId === undefined || (typeof value.reviewCommentId === 'number'
+                && Number.isSafeInteger(value.reviewCommentId) && value.reviewCommentId > 0))
             && typeof value.seedHash === 'string' && DIGEST.test(value.seedHash)
             && (value.newCapability === undefined || (isRecord(value.newCapability) && JSON.stringify(value.newCapability).length <= 16384));
     }
@@ -102598,6 +102653,7 @@ exports.SDD_FILE_LINKS_PROMPT = exports.SDD_DERIVED_TABLES_PROMPT = exports.SDD_
 exports.visibleSddContract = visibleSddContract;
 exports.renderSddNavigation = renderSddNavigation;
 exports.renderSddFileLinks = renderSddFileLinks;
+exports.sddRequirementCaseEdges = sddRequirementCaseEdges;
 exports.renderSddDerivedTables = renderSddDerivedTables;
 exports.reservedSddRequirements = reservedSddRequirements;
 exports.reservedSddCaseIds = reservedSddCaseIds;
@@ -102815,6 +102871,24 @@ function sddFileDestination(target, publicationPath) {
         return fail('repository-path', { detail: 'path-link', section: 0 });
     }
 }
+/** Check the canonical graph before prose generation and use it again for exact publication. */
+function sddRequirementCaseEdges(requirementIds, cases) {
+    const edges = new Map(requirementIds.map(id => [id, new Set()]));
+    let edgeCount = 0, traceBytes = 0;
+    for (const [index, [id, , links]] of cases.entries()) {
+        const linkedRequirements = ids(links, sdd_requirement_identity_1.SDD_REQUIREMENT_ID, 'requirement-mapping', 14);
+        (0, sdd_resource_budget_1.requireSddCapacity)('assembly', 'edges', sdd_resource_budget_1.SDD_RESOURCES.edges, edgeCount += linkedRequirements.length);
+        (0, sdd_resource_budget_1.requireSddCapacity)('assembly', 'bytes', sdd_resource_budget_1.SDD_RESOURCES.artifactBytes, traceBytes += ((0, sdd_resource_budget_1.sddBytes)(id) + 2) * linkedRequirements.length);
+        for (const requirement of linkedRequirements) {
+            const linked = edges.get(requirement);
+            if (!linked)
+                fail('requirement-mapping', { detail: 'requirement-reference', section: 14, row: index + 1, expected: 0, observed: 1 });
+            linked.add(id);
+        }
+    }
+    assertRequirementsCovered([...edges.values()].map(links => links.size));
+    return edges;
+}
 /** Never repairs definitions or contradictory supplied tables; the writer independently revalidates. */
 function renderSddDerivedTables(markdown) {
     if (!markdown.includes(BUDGET_SLOT) && !markdown.includes(TRACEABILITY_SLOT))
@@ -102840,28 +102914,17 @@ function renderSddDerivedTables(markdown) {
     const caseIds = cases.map(row => row[0]);
     uniqueIdentifiers(caseIds, CASE_ID, 'case-identity', 14);
     const counts = new Map();
-    const edges = new Map(requirements.map(id => [id, []]));
-    let edgeCount = 0, traceBytes = 0;
-    for (const [index, [id, area, links]] of cases.entries()) {
+    for (const [, area] of cases) {
         if (area === 'Total')
             fail('case-budget', { detail: 'budget-area', section: 14 });
         counts.set(area, (counts.get(area) ?? 0) + 1);
-        const linkedRequirements = ids(links, sdd_requirement_identity_1.SDD_REQUIREMENT_ID, 'requirement-mapping', 14);
-        (0, sdd_resource_budget_1.requireSddCapacity)('assembly', 'edges', sdd_resource_budget_1.SDD_RESOURCES.edges, edgeCount += linkedRequirements.length);
-        (0, sdd_resource_budget_1.requireSddCapacity)('assembly', 'bytes', sdd_resource_budget_1.SDD_RESOURCES.artifactBytes, traceBytes += ((0, sdd_resource_budget_1.sddBytes)(id) + 2) * linkedRequirements.length);
-        for (const requirement of linkedRequirements) {
-            const linked = edges.get(requirement);
-            if (!linked)
-                fail('requirement-mapping', { detail: 'requirement-reference', section: 14, row: index + 1, expected: 0, observed: 1 });
-            linked.push(id);
-        }
     }
-    assertRequirementsCovered([...edges.values()].map(links => links.length));
+    const edges = sddRequirementCaseEdges(requirements, cases);
     const budget = ['| Area | Minimum distinct cases | Behaviors/risks covered |', '|---|---:|---|',
         ...[...counts].map(([area, count]) => `| ${area} | ${count} | Observable scenarios in the case inventory. |`),
         `| Total | ${cases.length} | Distinct inventory cases; repeated executions do not add cases. |`].join('\n');
     const traceability = ['| Requirement | Cases |', '|---|---|',
-        ...[...edges].map(([requirement, links]) => `| ${requirement} | ${links.join(', ')} |`)].join('\n');
+        ...[...edges].map(([requirement, links]) => `| ${requirement} | ${[...links].join(', ')} |`)].join('\n');
     return normalized.replace(BUDGET_SLOT, () => budget).replace(TRACEABILITY_SLOT, () => traceability);
 }
 /** Read canonical definitions from immutable owners, including previously appended sections. */
@@ -103037,19 +103100,7 @@ function validateSddDraftConsistency(markdown, owners, inventory, sddPath) {
         if (observed !== count)
             fail('case-budget', { detail: 'budget-distribution', section: 14, expected: count, observed });
     }
-    const edges = new Map(requirementIds.map(id => [id, new Set()]));
-    let edgeCount = 0;
-    for (const [index, [id, , links]] of cases.entries()) {
-        const linkedRequirements = ids(links, sdd_requirement_identity_1.SDD_REQUIREMENT_ID, 'requirement-mapping', 14);
-        (0, sdd_resource_budget_1.requireSddCapacity)('assembly', 'edges', sdd_resource_budget_1.SDD_RESOURCES.edges, edgeCount += linkedRequirements.length);
-        for (const requirement of linkedRequirements) {
-            const linked = edges.get(requirement);
-            if (!linked)
-                fail('requirement-mapping', { detail: 'requirement-reference', section: 14, row: index + 1, expected: 0, observed: 1 });
-            linked.add(id);
-        }
-    }
-    assertRequirementsCovered([...edges.values()].map(links => links.size));
+    const edges = sddRequirementCaseEdges(requirementIds, cases);
     const traceability = table(source, 17, ['Requirement', 'Cases'], 'requirement-mapping');
     const seen = new Set();
     for (const [requirement, links] of traceability) {
@@ -108298,7 +108349,7 @@ function bindIssueCommentUpdate(port, binding) {
 function bindIssueTitle(port, binding) {
     return {
         getTitle: (issueNumber) => port.getTitle(binding.owner, binding.repository, issueNumber, binding.token),
-        updateIssueTitle: (input) => port.updateTitleIssueFormat(binding.owner, binding.repository, input.version, input.currentTitle, input.issueNumber, input.branchManagementEmoji, input.labelFacts, binding.token),
+        updateIssueTitle: (input) => port.updateTitleIssueFormat(binding.owner, binding.repository, input.version, input.currentTitle, input.issueNumber, input.branchManagementEmoji, input.labelFacts, binding.token, input.preserveIssueTitle),
         updatePullRequestTitle: (input) => port.updateTitlePullRequestFormat(binding.owner, binding.repository, input.pullRequestTitle, input.issueTitle, input.issueNumber, input.pullRequestNumber, '', input.labelFacts, binding.token),
     };
 }

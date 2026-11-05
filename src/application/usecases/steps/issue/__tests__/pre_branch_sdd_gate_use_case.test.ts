@@ -216,10 +216,13 @@ describe('PreBranchSddGateUseCase', () => {
     expect(h.query.mock.calls.every(([request]) => !request.prompt.includes(secretWitness))).toBe(true);
   });
 
-  it.each(['publish', 'revoked', 'stale-base', 'use-autonomous'] as const)('763: handles seed selection and %s through the managed gate', async scenario => {
+  it.each(['publish', 'revoked', 'stale-base', 'stale-title', 'use-autonomous', 'withdraw-stale'] as const)('763: handles seed selection and %s through the managed gate', async scenario => {
     const h = harness();
     const seed = sddConsistencyFixture('payments-change', plan.path, 'update').trimEnd() + '\n';
-    const request = { ...context(), issueBody: context().issueBody + '\n<!-- copilot:sdd-seed -->\n' + seed + '<!-- /copilot:sdd-seed -->' };
+    const title = 'SDD qualification: maintainer-authorized draft (café)';
+    const request = { ...context(), issueTitle: title,
+      issueBody: context().issueBody + '\n<!-- copilot:sdd-seed -->\n' + seed + '<!-- /copilot:sdd-seed -->' };
+    h.getTitle.mockResolvedValue(title);
     h.getDescription.mockResolvedValue(request.issueBody);
     h.isActorAllowedToModifyFiles.mockImplementation(async actor => actor === 'maintainer');
     h.comments.push({ id: 101, user: { login: 'maintainer' }, body: 'SDD Q1: review seed ' + createHash('sha256').update(seed).digest('hex') });
@@ -232,28 +235,64 @@ describe('PreBranchSddGateUseCase', () => {
     h.comments.push({ id: 103, user: { login: 'untrusted' }, body: 'SDD Q1: use seed ' + receipt });
     expect((await h.useCase.begin(request)).status).toBe('waiting');
     h.comments.push({ id: 104, user: { login: 'maintainer' },
-      body: (scenario === 'use-autonomous' ? 'SDD Q1: generate ' : 'SDD Q1: use seed ') + receipt });
-    if (scenario === 'stale-base') {
-      h.loadSnapshot.mockResolvedValue({ ...snapshot, baseSha: 'c'.repeat(40) });
-      h.query.mockResolvedValueOnce({ ...plan, questions: [question], newCapability: null });
-      expect((await h.useCase.begin(request)).status).toBe('waiting');
+      body: ((scenario === 'use-autonomous' || scenario === 'withdraw-stale') ? 'SDD Q1: generate ' : 'SDD Q1: use seed ') + receipt });
+    const continued = { ...request, issueTitle: '✨ - ' + (scenario === 'stale-title' ? title.replace('café', 'cafe') : title) };
+    h.getTitle.mockResolvedValue(continued.issueTitle);
+    if (scenario === 'stale-base' || scenario === 'stale-title') {
+      if (scenario === 'stale-base') h.loadSnapshot.mockResolvedValue({ ...snapshot, baseSha: 'c'.repeat(40) });
+      expect(await h.useCase.begin(continued)).toMatchObject({ status: 'blocked',
+        results: [expect.objectContaining({ errors: [expect.objectContaining({ code: 'workflow.stale' })] })] });
+      expect(h.query).toHaveBeenCalledTimes(1);
       expect(h.validateDraft).not.toHaveBeenCalled();
+      expect(h.publish).not.toHaveBeenCalled();
+      h.comments.push({ id: 105, user: { login: 'maintainer' }, body: 'SDD Q1: review seed ' + createHash('sha256').update(seed).digest('hex') });
+      h.query.mockResolvedValueOnce({ ...plan, newCapability: null });
+      expect((await h.useCase.begin(continued)).status).toBe('waiting');
+      const refreshed = readSddGateRecord(card.body, 42)?.selection;
+      expect(refreshed).toMatchObject({ kind: 'seed', reviewCommentId: 105 });
+      expect(refreshed?.receipt).not.toBe(receipt);
       return;
     }
-    if (scenario === 'use-autonomous') h.query.mockResolvedValueOnce({ markdown: writerDraft('# Autonomous') });
-    const draft = await h.useCase.begin(request);
+    if (scenario === 'withdraw-stale') {
+      h.loadSnapshot.mockResolvedValue({ ...snapshot, baseSha: 'c'.repeat(40) });
+      h.getLinkedBranch.mockResolvedValue({ name: 'feature/42-change', headSha: 'c'.repeat(40) });
+      h.validateDraft.mockResolvedValue({ ...prepared, baseSha: 'c'.repeat(40) });
+      h.query.mockResolvedValueOnce({ ...plan, newCapability: null });
+    }
+    const autonomous = scenario === 'use-autonomous' || scenario === 'withdraw-stale';
+    if (autonomous) h.query.mockResolvedValueOnce({ markdown: writerDraft('# Autonomous') });
+    const draft = await h.useCase.begin(continued);
     expect(draft.status).toBe('drafted');
     if (draft.status !== 'drafted') throw new Error('Expected an admitted draft.');
-    expect(h.query).toHaveBeenCalledTimes(scenario === 'use-autonomous' ? 2 : 1);
-    if (scenario === 'use-autonomous') {
+    expect(h.query).toHaveBeenCalledTimes(scenario === 'withdraw-stale' ? 3 : autonomous ? 2 : 1);
+    if (autonomous) {
       expect(h.validateDraft.mock.calls[0][2]).toBe(writerDraft('# Autonomous'));
     } else {
       expect(h.validateDraft.mock.calls[0][2]).toBe(seed);
     }
     if (scenario === 'revoked') h.isActorAllowedToModifyFiles.mockResolvedValue(false);
-    const result = await h.useCase.publish(request, draft, 'feature/42-change');
+    const result = await h.useCase.publish(continued, draft, 'feature/42-change');
     expect(result.status).toBe(scenario === 'revoked' ? 'blocked' : 'published');
     expect(h.publish).toHaveBeenCalledTimes(scenario === 'revoked' ? 0 : 1);
+  });
+
+  it('763: retains an authorized seed review through a genuine product question', async () => {
+    const h = harness();
+    const seed = sddConsistencyFixture('payments-change', plan.path, 'update').trimEnd() + '\n';
+    const request = { ...context(),
+      issueBody: context().issueBody + '\n<!-- copilot:sdd-seed -->\n' + seed + '<!-- /copilot:sdd-seed -->' };
+    h.getDescription.mockResolvedValue(request.issueBody);
+    h.isActorAllowedToModifyFiles.mockImplementation(async actor => actor === 'maintainer');
+    h.comments.push({ id: 101, user: { login: 'maintainer' }, body: 'SDD Q1: review seed ' + createHash('sha256').update(seed).digest('hex') });
+    h.query.mockResolvedValueOnce({ ...plan, questions: [question], newCapability: null })
+      .mockResolvedValueOnce({ ...plan, newCapability: null });
+    expect((await h.useCase.begin(request)).status).toBe('waiting');
+    const card = h.comments.find(comment => comment.user.login === 'copilot[bot]')!;
+    expect(readSddGateRecord(card.body, 42)?.selection).toBeUndefined();
+    h.comments.push({ id: 103, user: { login: 'maintainer' }, body: 'SDD Q1: Retain existing caller behavior.' });
+    expect((await h.useCase.begin(request)).status).toBe('waiting');
+    expect(readSddGateRecord(card.body, 42)?.selection).toMatchObject({ kind: 'seed', reviewCommentId: 101 });
+    expect(h.validateDraft).not.toHaveBeenCalled();
   });
 
   it('763: proposes an absent same-capability path and waits for an exact maintainer decision', async () => {

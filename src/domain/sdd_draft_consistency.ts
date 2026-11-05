@@ -189,6 +189,24 @@ function sddFileDestination(target: string, publicationPath: string): string {
   } catch { return fail('repository-path', { detail: 'path-link', section: 0 }); }
 }
 
+/** Check the canonical graph before prose generation and use it again for exact publication. */
+export function sddRequirementCaseEdges(requirementIds: readonly string[], cases: readonly (readonly string[])[]): ReadonlyMap<string, ReadonlySet<string>> {
+  const edges = new Map(requirementIds.map(id => [id, new Set<string>()]));
+  let edgeCount = 0, traceBytes = 0;
+  for (const [index, [id, , links]] of cases.entries()) {
+    const linkedRequirements = ids(links, SDD_REQUIREMENT_ID, 'requirement-mapping', 14);
+    requireSddCapacity('assembly', 'edges', SDD_RESOURCES.edges, edgeCount += linkedRequirements.length);
+    requireSddCapacity('assembly', 'bytes', SDD_RESOURCES.artifactBytes, traceBytes += (sddBytes(id) + 2) * linkedRequirements.length);
+    for (const requirement of linkedRequirements) {
+      const linked = edges.get(requirement);
+      if (!linked) fail('requirement-mapping', { detail: 'requirement-reference', section: 14, row: index + 1, expected: 0, observed: 1 });
+      linked.add(id);
+    }
+  }
+  assertRequirementsCovered([...edges.values()].map(links => links.size));
+  return edges;
+}
+
 /** Never repairs definitions or contradictory supplied tables; the writer independently revalidates. */
 export function renderSddDerivedTables(markdown: string): string {
   if (!markdown.includes(BUDGET_SLOT) && !markdown.includes(TRACEABILITY_SLOT)) return markdown;
@@ -211,26 +229,16 @@ export function renderSddDerivedTables(markdown: string): string {
   const caseIds = cases.map(row => row[0]);
   uniqueIdentifiers(caseIds, CASE_ID, 'case-identity', 14);
   const counts = new Map<string, number>();
-  const edges = new Map(requirements.map(id => [id, [] as string[]]));
-  let edgeCount = 0, traceBytes = 0;
-  for (const [index, [id, area, links]] of cases.entries()) {
+  for (const [, area] of cases) {
     if (area === 'Total') fail('case-budget', { detail: 'budget-area', section: 14 });
     counts.set(area, (counts.get(area) ?? 0) + 1);
-    const linkedRequirements = ids(links, SDD_REQUIREMENT_ID, 'requirement-mapping', 14);
-    requireSddCapacity('assembly', 'edges', SDD_RESOURCES.edges, edgeCount += linkedRequirements.length);
-    requireSddCapacity('assembly', 'bytes', SDD_RESOURCES.artifactBytes, traceBytes += (sddBytes(id) + 2) * linkedRequirements.length);
-    for (const requirement of linkedRequirements) {
-      const linked = edges.get(requirement);
-      if (!linked) fail('requirement-mapping', { detail: 'requirement-reference', section: 14, row: index + 1, expected: 0, observed: 1 });
-      linked.push(id);
-    }
   }
-  assertRequirementsCovered([...edges.values()].map(links => links.length));
+  const edges = sddRequirementCaseEdges(requirements, cases);
   const budget = ['| Area | Minimum distinct cases | Behaviors/risks covered |', '|---|---:|---|',
     ...[...counts].map(([area, count]) => `| ${area} | ${count} | Observable scenarios in the case inventory. |`),
     `| Total | ${cases.length} | Distinct inventory cases; repeated executions do not add cases. |`].join('\n');
   const traceability = ['| Requirement | Cases |', '|---|---|',
-    ...[...edges].map(([requirement, links]) => `| ${requirement} | ${links.join(', ')} |`)].join('\n');
+    ...[...edges].map(([requirement, links]) => `| ${requirement} | ${[...links].join(', ')} |`)].join('\n');
   return normalized.replace(BUDGET_SLOT, () => budget).replace(TRACEABILITY_SLOT, () => traceability);
 }
 
@@ -391,18 +399,7 @@ export function validateSddDraftConsistency(
     if (observed !== count) fail('case-budget', { detail: 'budget-distribution', section: 14, expected: count, observed });
   }
 
-  const edges = new Map(requirementIds.map(id => [id, new Set<string>()]));
-  let edgeCount = 0;
-  for (const [index, [id, , links]] of cases.entries()) {
-    const linkedRequirements = ids(links, SDD_REQUIREMENT_ID, 'requirement-mapping', 14);
-    requireSddCapacity('assembly', 'edges', SDD_RESOURCES.edges, edgeCount += linkedRequirements.length);
-    for (const requirement of linkedRequirements) {
-      const linked = edges.get(requirement);
-      if (!linked) fail('requirement-mapping', { detail: 'requirement-reference', section: 14, row: index + 1, expected: 0, observed: 1 });
-      linked.add(id);
-    }
-  }
-  assertRequirementsCovered([...edges.values()].map(links => links.size));
+  const edges = sddRequirementCaseEdges(requirementIds, cases);
   const traceability = table(source, 17, ['Requirement', 'Cases'], 'requirement-mapping');
   const seen = new Set<string>();
   for (const [requirement, links] of traceability) {

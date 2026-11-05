@@ -584,8 +584,11 @@ immediately before the closing marker. A maintainer posts
 request before starting the issue. Copilot resolves the owner and any other
 questions, then posts a receipt bound to the draft, issue, base and exact path.
 Reply `SDD Q1: use seed <receipt>` to select it or
-`SDD Q1: generate <receipt>` to use normal generation. Editing the issue or
-moving the base invalidates the previous receipt. Copilot rechecks the
+`SDD Q1: generate <receipt>` to use normal generation. A material edit to the
+issue or a change to the base invalidates the previous seed receipt. The
+Action can update its own title decoration without changing the receipt.
+After a material change, post a fresh review request for the current draft or
+explicitly choose generation from the existing card. Copilot rechecks the
 maintainer's permission and the selection before publication.
 
 An unselected seed is excluded from generation. A selected seed passes the same

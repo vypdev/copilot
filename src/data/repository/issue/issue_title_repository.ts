@@ -1,6 +1,7 @@
 import type { IssueTitlePort, TitleLabelFacts } from '../../../application/ports/issue_title_ports';
 import type { GithubClientPort } from '../../../infrastructure/github/ports/github_client_provider_port';
 import type { GithubIssueTitleClient } from '../../../infrastructure/github/ports/github_issue_provider_ports';
+import { normalizeSddIssueTitle } from '../../../domain/pre_branch_sdd';
 import { resolveIssueTitleEmoji } from '../issue_emoji_policy';
 import { generatedPullRequestTitle, hasConventionalPullRequestTitle } from '../../../application/policies/pull_request_title_policy';
 import { normalizePullRequestSourceTitle, sanitizeIssueTitle, sanitizePullRequestTitle } from '../issue_title_policy';
@@ -16,14 +17,14 @@ export class IssueTitleRepository implements IssueTitlePort {
 
     updateTitleIssueFormat = async (
         owner: string, repository: string, version: string, issueTitle: string, issueNumber: number,
-        branchManagementEmoji: string, labels: TitleLabelFacts, token: string,
+        branchManagementEmoji: string, labels: TitleLabelFacts, token: string, preserveIssueTitle?: boolean,
     ): Promise<string | undefined> => {
         return withTitleUpdateLogging(() => {
             const emoji = resolveIssueTitleEmoji(labels, branchManagementEmoji);
-            const sanitizedTitle = sanitizeIssueTitle(issueTitle);
+            const materialTitle = preserveIssueTitle ? normalizeSddIssueTitle(issueTitle) : sanitizeIssueTitle(issueTitle);
             const formattedTitle = version.length > 0
-                ? `${emoji} - ${version} - ${sanitizedTitle}`
-                : `${emoji} - ${sanitizedTitle}`;
+                ? `${emoji} - ${version} - ${materialTitle}`
+                : `${emoji} - ${materialTitle}`;
             return updateIssueTitle(this.issueTitleClient, owner, repository, issueTitle, formattedTitle, issueNumber, token);
         });
     };

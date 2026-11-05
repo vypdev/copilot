@@ -173,8 +173,13 @@ export async function runIssueWorkflow(
     branchReady = readinessResults.some(result => result.success && result.payload !== undefined);
   }
   const titleContext = ports.sharedContexts.title;
-  const reconciledTitle = titleContext.kind === 'issue' && ports.workflowSteps.reconcileBranchReadiness
-    ? { ...titleContext, labelFacts: { ...titleContext.labelFacts, containsBranchedLabel: branchReady } }
+  const reconciledTitle = titleContext.kind === 'issue'
+    ? {
+      ...titleContext,
+      ...(context.sddRequired ? { preserveIssueTitle: true } : {}),
+      ...(ports.workflowSteps.reconcileBranchReadiness
+        ? { labelFacts: { ...titleContext.labelFacts, containsBranchedLabel: branchReady } } : {}),
+    }
     : titleContext;
   results.push(...(await ports.workflowSteps.updateTitle.invoke(reconciledTitle)));
   if (context.started && context.branchRequired && !sddWaiting && branchReady) {

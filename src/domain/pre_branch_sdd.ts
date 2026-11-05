@@ -33,7 +33,7 @@ export interface SddAnswer {
 }
 
 export type SddSelection =
-  | { readonly kind: 'seed'; readonly receipt: string; readonly seedHash: string; readonly newCapability?: SddCatalogCapability }
+  | { readonly kind: 'seed'; readonly receipt: string; readonly seedHash: string; readonly reviewCommentId?: number; readonly newCapability?: SddCatalogCapability }
   | { readonly kind: 'companion'; readonly receipt: string; readonly retainedPath: string };
 
 export interface SddGateRecord {
@@ -202,7 +202,9 @@ export function readSddGateRecord(body: string | null | undefined, issueNumber: 
 function validSddSelection(value: unknown): boolean {
   if (!isRecord(value) || typeof value.receipt !== 'string' || !DIGEST.test(value.receipt)) return false;
   if (value.kind === 'seed') {
-    return Object.keys(value).every(key => ['kind', 'receipt', 'seedHash', 'newCapability'].includes(key))
+    return Object.keys(value).every(key => ['kind', 'receipt', 'seedHash', 'reviewCommentId', 'newCapability'].includes(key))
+      && (value.reviewCommentId === undefined || (typeof value.reviewCommentId === 'number'
+        && Number.isSafeInteger(value.reviewCommentId) && value.reviewCommentId > 0))
       && typeof value.seedHash === 'string' && DIGEST.test(value.seedHash)
       && (value.newCapability === undefined || (isRecord(value.newCapability) && JSON.stringify(value.newCapability).length <= 16_384));
   }

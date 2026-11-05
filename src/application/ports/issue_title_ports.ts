@@ -1,6 +1,6 @@
 export interface IssueTitlePort {
     getTitle(owner: string, repository: string, issueNumber: number, token: string): Promise<string | undefined>;
-    updateTitleIssueFormat(owner: string, repository: string, version: string, issueTitle: string, issueNumber: number, branchManagementEmoji: string, labels: TitleLabelFacts, token: string): Promise<string | undefined>;
+    updateTitleIssueFormat(owner: string, repository: string, version: string, issueTitle: string, issueNumber: number, branchManagementEmoji: string, labels: TitleLabelFacts, token: string, preserveIssueTitle?: boolean): Promise<string | undefined>;
     updateTitlePullRequestFormat(owner: string, repository: string, pullRequestTitle: string, issueTitle: string, issueNumber: number, pullRequestNumber: number, branchManagementEmoji: string, labels: TitleLabelFacts, token: string): Promise<string | undefined>;
 }
 
@@ -13,6 +13,7 @@ export interface BoundIssueTitlePort {
         readonly issueNumber: number;
         readonly branchManagementEmoji: string;
         readonly labelFacts: TitleLabelFacts;
+        readonly preserveIssueTitle?: boolean;
     }): Promise<string | undefined>;
     updatePullRequestTitle(input: {
         readonly pullRequestTitle: string;
