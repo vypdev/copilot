@@ -23,6 +23,7 @@ export interface NamedSessionPorts {
 /** One worker owns a protected, bounded vault. Only redacted summaries leave this use case. */
 export class NamedSessions {
     private busy = false;
+    private pendingRevocations = 0;
     private generation = 0;
     private preferenceWitness: object = {};
     private roleProof: { readonly vault: SessionVault; readonly purpose: WritePurpose; readonly epoch: number } | null = null;
@@ -31,10 +32,11 @@ export class NamedSessions {
         this.vault = new NativeSessionVault(store, () => ports.protected());
     }
     private notify(): void { try { this.ports.changed(); } catch { /* Notifications cannot replace protected storage facts. */ } }
+    private get mutationPending(): boolean { return this.busy || this.pendingRevocations > 0; }
     /** Private application lease; never serialize it or treat it as native mutation authority. */
     capturePreferenceSource(): () => boolean {
         const witness = this.preferenceWitness; const epoch = this.active.status().epoch;
-        return () => !this.busy && witness === this.preferenceWitness && epoch === this.active.status().epoch;
+        return () => !this.mutationPending && witness === this.preferenceWitness && epoch === this.active.status().epoch;
     }
     /** Native vault events retire preference sources without interrupting this owner's own connection transaction. */
     invalidatePreferenceSource(): void { this.preferenceWitness = {}; }
@@ -105,7 +107,7 @@ export class NamedSessions {
         if (input.type === 'revoke-all') {
             try { await this.revokeAll(capture, current); return this.read(current); } catch { return { state: 'unavailable' }; }
         }
-        if (this.busy) return { state: 'conflict' };
+        if (this.mutationPending) return { state: 'conflict' };
         this.busy = true; this.invalidatePreferenceSource(); const generation = this.generation;
         const credentials = new CredentialEpochFence(() => this.active.status().epoch);
         const live = () => generation === this.generation && current() && credentials.current();
@@ -176,14 +178,23 @@ export class NamedSessions {
     }
     /** Permission removal is independent of preference-schema or center editing availability. */
     async revokeAll(observe?: ObserveSessionOperation, current: () => boolean = () => true): Promise<void> {
-        this.invalidatePreferenceSource(); this.roleProof = null; this.roleVerifier?.invalidate();
+        // Removal preempts admitted changes and keeps new changes out until both native keys settle.
+        this.pendingRevocations++;
         const generation = ++this.generation; const live = () => generation === this.generation && current();
-        let trace: SessionOperationTrace | null = null;
-        try { trace = observe?.('revoke-all', { location: { route: 'connections' }, label: null }, live) ?? null; } catch { /* Removal remains independent of recording. */ }
-        const removal = this.active.revoke(trace);
         try {
-            const removed = await this.vault.forget(sessionStep(trace, 'remove-vault')); await removal;
-            if (removed.observation !== 'committed' || this.active.status().state === 'unavailable') throw new Error('protected-removal-unavailable');
-        } finally { await removal; this.notify(); }
+            this.invalidatePreferenceSource(); this.roleProof = null; this.roleVerifier?.invalidate();
+            let trace: SessionOperationTrace | null = null;
+            try { trace = observe?.('revoke-all', { location: { route: 'connections' }, label: null }, live) ?? null; } catch { /* Removal remains independent of recording. */ }
+            const removal = this.active.revoke(trace);
+            void removal.catch(() => undefined); // The failure is awaited even if it occurs before vault forgetting settles.
+            try {
+                const removed = await this.vault.forget(sessionStep(trace, 'remove-vault')); await removal;
+                if (removed.observation !== 'committed' || this.active.status().state === 'unavailable') throw new Error('protected-removal-unavailable');
+            } finally { await removal; }
+        } finally {
+            this.pendingRevocations--;
+            this.invalidatePreferenceSource();
+            this.notify();
+        }
     }
 }

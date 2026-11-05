@@ -87,10 +87,19 @@ it.each(['light', 'dark'] as const)('effective %s appearance changes only the ex
     expect(dom.document.documentElement.style.colorScheme).toBe(''); expect(dom.document.querySelector('textarea')!.style.colorScheme).toBe('');
 });
 it('a failed native credential removal after site permission revocation cannot produce an unhandled rejection or current read authority', async () => {
-    const h = browserFixture(); vi.mocked(h.sessionArea.remove).mockRejectedValue(new Error('private unavailable store'));
-    const stop = startBackground(h.api); cleanups.push(stop);
+    const h = backgroundCenterFixture(); cleanups.push(h.stop);
+    const client = await h.client();
+    await client.connections({ type: 'connect', name: 'Work', secret: CONNECTED.secret, repository: CONNECTED.repository }, 0);
+    expect(h.sessionValues.get(SESSION_KEY)).toEqual(CONNECTED);
+    expect(await h.call(CONFIG, pageSender)).toMatchObject({ state: 'ready', connected: true });
+    const providerCalls = h.provider.mock.calls.length;
+    vi.mocked(h.api.permissions.contains).mockResolvedValue(false);
+    vi.mocked(h.sessionArea.remove).mockRejectedValue(new Error('private unavailable store'));
+    vi.mocked(h.api.runtime.sendMessage).mockClear();
     for (const listener of h.permissionRemoved.listeners) listener({ origins: ['https://api.github.com/*'] });
     await vi.waitFor(() => expect(h.api.runtime.sendMessage).toHaveBeenCalledWith({ version: 1, method: 'center.invalidated' }));
-    const listener = [...h.onMessage.listeners][0]; const result = new Promise<unknown>(resolve => listener(CONFIG, pageSender, resolve));
-    expect(await result).toMatchObject({ state: 'ready', connected: false });
+    expect(h.sessionArea.remove).toHaveBeenCalledWith(SESSION_KEY);
+    expect(h.sessionValues.get(SESSION_KEY)).toEqual(CONNECTED);
+    expect(await h.call(CONFIG, pageSender)).toMatchObject({ state: 'ready', connected: false });
+    expect(h.provider).toHaveBeenCalledTimes(providerCalls);
 });

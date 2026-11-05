@@ -342,7 +342,9 @@ permission clears all protected sessions and cancels their outstanding work.
 local protected sessions, including an unreadable record. It preserves your
 preferences and does not revoke credentials at GitHub. If the browser cannot
 establish that deletion succeeded, keep the error visible and read the current
-state before deciding how to recover.
+state before deciding how to recover. If another connection change reports a
+conflict while removal is in progress, wait for removal to finish and read the
+current sessions before reviewing a new change.
 
 If a response is uncertain, select **Read current sessions** to inspect the
 actual result. Do not repeat Connect automatically. **Last observed operation** lists each actual active-credential, repository-preference and named-session storage attempt independently. A returned session view does not prove every effect succeeded. A verified direct response clears the submitted form; if that response is lost, inspect current sessions before deciding what to do next. Permission denial, changed

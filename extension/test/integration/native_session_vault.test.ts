@@ -75,6 +75,18 @@ it('queued forgetting runs after an admitted native write and cannot let its lat
     expect(h.port.remove).not.toHaveBeenCalled(); release.resolve(); expect(await writing).toMatchObject({ state: 'saved' });
     expect(await forgetting).toEqual({ acknowledgement: 'accepted', observation: 'committed' }); expect(h.values.has(NAMED_SESSIONS_KEY)).toBe(false);
 });
+it('retires a write queued behind protected cleanup when its controller is lost before storage admission', async () => {
+    const h = fixture(false); const before = await h.read();
+    const entered = deferred<void>(); const release = deferred<void>();
+    const remove = vi.mocked(h.port.remove).getMockImplementation()!;
+    vi.mocked(h.port.remove).mockImplementationOnce(async key => { entered.resolve(); await release.promise; await remove(key); });
+    const forgetting = h.owner.forget(); await entered.promise;
+    const writing = h.owner.save(before, { ...h.proposed, revision: 1 }, h.current);
+    h.current.mockReturnValue(false); release.resolve();
+    expect(await forgetting).toMatchObject({ observation: 'committed' });
+    expect(await writing).toEqual({ state: 'stale' });
+    expect(h.port.set).not.toHaveBeenCalled(); expect(h.values.has(NAMED_SESSIONS_KEY)).toBe(false);
+});
 it.each(['accepted', 'lost'] as const)('explicit forgetting verifies absence after %s acknowledgement without requiring readable schema or protection', async acknowledgement => {
     const h = fixture(); h.values.set(NAMED_SESSIONS_KEY, { schemaVersion: 9 }); h.protection.mockResolvedValue(false); const remove = vi.mocked(h.port.remove).getMockImplementation()!;
     vi.mocked(h.port.remove).mockImplementation(async key => { await remove(key); if (acknowledgement === 'lost') throw new Error('lost remove acknowledgement'); });

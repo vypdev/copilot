@@ -631,6 +631,8 @@ GitHub credential. Confirmed forgetting also clears an unsubmitted password
 field; opening and canceling that confirmation does not discard it. A failed
 native credential deletion remains unavailable,
 rather than being treated as proof that all credentials were removed.
+A new connection change reports a conflict while either protected key is being
+removed. A fresh reviewed change can run after all pending removals settle.
 Session-storage or permission unavailability
 cannot trigger fallback into persistent local storage.
 
@@ -1113,7 +1115,7 @@ or human acceptance, and modified executable branches remain100% covered.
 
 The historical 160-case H3 risk baseline is a starting minimum, not the complete
 acceptance threshold. Every additive minimum below is mandatory. The cumulative
-minimum is **897 distinct H3 risk cases: 160 baseline + 737 additions**. Reaching
+minimum is **934 distinct H3 risk cases: 160 baseline + 774 additions**. Reaching
 160 alone cannot satisfy H3. The original 56 CENTER catalog cases, the 56-case
 implementation inventory above and the full 803-case product catalog remain
 separately required; their execution does not offset an additive minimum.
@@ -1135,6 +1137,7 @@ separately required; their execution does not offset an additive minimum.
 | Bounded diagnostic ring | 24 | Diagnostic registry/lifecycle/composition refinement |
 | Runtime provenance | 34 | Runtime source/restriction explanation refinement |
 | Workspaces and reference composition | 48 | Workspace refinement |
+| Repository relocation | 34 | Explicit relocation refinement, with separate closed-wire, application, mounted review and transport allocations |
 | Temporary pauses | 64 | Native temporary-pause foundation |
 | Local journal | 56 | Consent, canonical writes and retention refinement |
 | Named sessions | 120 | Closed protocol, owners and composed session journeys |
@@ -1154,7 +1157,8 @@ separately required; their execution does not offset an additive minimum.
 | Clear preparation, visit delivery and session provenance | 5 | Two shared reservation cases, one reentrant delivery, two readable-document applicability cases |
 | Workspace review metadata scope | 1 | `read_role_consumers.test.ts` exercises both write purposes and a valid read reference in the actual review projection |
 | Session provenance locale fallback | 1 | `session_preference_provenance.test.ts` requires the complete English explanation when an unsupported locale matches an inherited key |
-| **Total** | **897** | **160 + 737; every row is required** |
+| Concurrent protected revocation | 3 | New connection admission during one removal, overlapping removals and active revocation failure in `named_session_revocation.test.ts` |
+| **Total** | **934** | **160 + 774; every row is required** |
 
 The companion session-preferences specification also requires its 160 scoped
 cases. H3 acceptance requires both the owning milestone ledger and the scoped
@@ -1881,8 +1885,8 @@ credential epoch or vault revision remains rejected by independent native gates.
 Add **34 distinct risk cases**: 8 closed-wire/identity policies, 10 application
 verification/persistence/fence cases, 10 mounted review/draft/localization cases,
 and 6 transport/composition/privacy cases. Count reruns once. Every changed
-runtime line and branch must be covered; every row of the cumulative H3 risk budget,
-56+56 CENTER cases and 803-case product floor remain unchanged. Document the
+runtime line and branch must be covered. The 34 cases form a separate row in the
+cumulative H3 risk budget. The 56+56 CENTER cases and 803-case product floor remain required. Document the
 normal recovery flow, unsupported redirects, wrong-identity/unknown outcomes,
 retained protected credential and explicit retry/revocation in configuration,
 permissions and runtime troubleshooting. Keep native H3 and human acceptance

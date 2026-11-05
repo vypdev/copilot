@@ -164,18 +164,6 @@ it.each(['load', 'revocation', 'grant'] as const)('a late controller loss at %s 
     const mutation = h.connections.change(CONNECTION_INPUT, 0, h.current); await entered.promise; h.current.mockReturnValue(false); release.resolve();
     expect(await mutation).toEqual({ state: 'stale' }); expect(h.values.has(NAMED_SESSIONS_KEY)).toBe(false);
 });
-it('retires a write queued behind an earlier protected cleanup when its controller is lost before storage admission', async () => {
-    const h = namedSessionsFixture(); await h.connections.read(h.current);
-    const entered = deferred<void>(); const release = deferred<void>(); const remove = vi.mocked(h.port.remove).getMockImplementation()!;
-    vi.mocked(h.port.remove).mockImplementation(async key => { if (key === NAMED_SESSIONS_KEY) { entered.resolve(); await release.promise; } await remove(key); });
-    const cleanup = h.connections.revokeAll(); await entered.promise;
-    h.namedPorts.connected.mockImplementationOnce(async () => {
-        queueMicrotask(() => queueMicrotask(() => h.current.mockReturnValue(false)));
-    });
-    const mutation = h.connections.change(CONNECTION_INPUT, 0, h.current);
-    await vi.waitFor(() => expect(h.current()).toBe(false)); release.resolve(); await cleanup;
-    expect(await mutation).toEqual({ state: 'stale' }); expect(h.values.has(NAMED_SESSIONS_KEY)).toBe(false);
-});
 it('does not revoke an already selected credential when the admission fence rejects a new direct connection', async () => {
     const h = namedSessionsFixture(); await h.service.connect(CONNECTION_INPUT.secret, CONNECTION_INPUT.repository);
     const epoch = h.service.status().epoch;

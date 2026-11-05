@@ -3831,6 +3831,7 @@
         "extension/test/integration/center_import_scope.test.ts",
         "extension/test/contracts/named_sessions.test.ts",
         "extension/test/integration/named_sessions.test.ts",
+        "extension/test/integration/named_session_revocation.test.ts",
         "extension/test/integration/center_connections.test.ts",
         "extension/test/integration/center_connection_authority.test.ts",
         "extension/test/integration/center_connection_actions.test.ts",
