@@ -1232,11 +1232,13 @@ effect. An unexpected lost write/adoption result retains shared precaution.
 and four concurrent lookups. Public choices contain only native ID and bounded
 repository/object labels; target source paths and guard witnesses stay private.
 Native reload/navigation retires matching reviews even at the same URL.
-`ClosedPauseCleanup` coalesces up to 128 trusted closure IDs and removes only
-those scopes through the same guarded writer. It does not retry failed batches,
-rebind stale IDs or fabricate user history. Tests with actual background
-composition cover role isolation, malformed saved preferences, replay, unknown
-effects and native closure. They remain distinct from loaded-browser acceptance.
+`ClosedPauseCleanup` coalesces up to 128 trusted closure IDs. While an admitted
+pause write settles, those IDs remain in the buffer. Cleanup checks the guard
+witness around the native read and removes only the closed scopes through the
+same guarded writer. Once attempted, an effect is handled through the existing
+outcome and precaution rules. The integration tests cover role isolation,
+malformed preferences, replay, unknown effects and native closure, including
+concurrent writes and shutdown while a closure is waiting.
 
 `PauseObservations` adds the closed nine-field `pause-operation` projection to
 current memory and optional diagnostics retention. `TemporaryPauseReviews`

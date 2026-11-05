@@ -16,6 +16,7 @@ export class SettingsMutationQueue {
         this.queue = operation.then(settled, settled);
         return operation;
     }
+    settled(): Promise<void> { return this.queue; }
     reserve(): SettingsMutationReservation | null {
         if (this.pending || this.held) return null;
         let unlock!: () => void;

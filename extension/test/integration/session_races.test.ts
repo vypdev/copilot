@@ -104,6 +104,19 @@ it('a page departure while restoration checks native protection retains the cred
     await vi.waitFor(() => expect(h.ports.permitted).toHaveBeenCalledTimes(1)); cancellation.abort(); permission.resolve(true); await restore;
     expect(h.reader.read).not.toHaveBeenCalled(); expect(h.values.get(SESSION_KEY)).toEqual(CONNECTED); expect(h.service.status().state).toBe('disconnected');
 });
+it.each(['cancellation', 'scope replacement'] as const)('%s during the final restore permission check fences activation', async retirement => {
+    const h = sessionHarness(); h.values.set(SESSION_KEY, CONNECTED);
+    const permission = deferred<boolean>(); const cancellation = new BrowserCancellation(); let current = true;
+    h.ports.permitted.mockResolvedValueOnce(true).mockReturnValueOnce(permission.promise);
+    const restore = h.service.start({ cancellation, current: () => current });
+    await vi.waitFor(() => expect(h.ports.permitted).toHaveBeenCalledTimes(2));
+    expect(h.port.set).toHaveBeenCalledWith(SESSION_KEY, CONNECTED);
+    if (retirement === 'cancellation') cancellation.abort(); else current = false;
+    permission.resolve(true); await restore;
+    expect(h.service.verifiedIdentity()).toBeNull();
+    expect(h.service.status().state).toBe('disconnected');
+    expect(h.values.has(SESSION_KEY)).toBe(false);
+});
 it('an obsolete rejected Connect transport cannot change the state after an independent revocation', async () => {
     const h = sessionHarness(); await h.service.start(); const pending = deferred<ScheduledRead>(); const run = vi.spyOn(h.scheduler, 'run').mockReturnValueOnce(pending.promise);
     const connect = h.service.connect(CONNECTED.secret, CONNECTED.repository); await vi.waitFor(() => expect(run).toHaveBeenCalled());

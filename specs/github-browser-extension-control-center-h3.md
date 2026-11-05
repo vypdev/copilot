@@ -1106,7 +1106,7 @@ or human acceptance, and modified executable branches remain100% covered.
 
 The historical 160-case H3 risk baseline is a starting minimum, not the complete
 acceptance threshold. Every additive minimum below is mandatory. The cumulative
-minimum is **881 distinct H3 risk cases: 160 baseline + 721 additions**. Reaching
+minimum is **886 distinct H3 risk cases: 160 baseline + 726 additions**. Reaching
 160 alone cannot satisfy H3. The original 56 CENTER catalog cases, the 56-case
 implementation inventory above and the full 803-case product catalog remain
 separately required; their execution does not offset an additive minimum.
@@ -1141,7 +1141,8 @@ separately required; their execution does not offset an additive minimum.
 | Preparation and current-document admission | 15 | Reservation, import revision and reopen regressions |
 | Independent imported profile pause | 10 | `settings_import_pauses.test.ts`, section 13 |
 | Independently observed negative emergency fact | 1 | Unknown-tab producer/factory/wire preservation case, beyond the existing affirmative case |
-| **Total** | **881** | **160 + 721; every row is required** |
+| Native closure and final session permission races | 5 | `closed_pause_cleanup.test.ts` and `session_races.test.ts` |
+| **Total** | **886** | **160 + 726; every row is required** |
 
 Assign each semantic risk case one primary row and retain its executable test
 name and assertions in the source-bound evidence. A case may trace several
@@ -2300,14 +2301,25 @@ and [Firefox](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtens
 Safari identity/lifetime behavior still requires source-bound native evidence.
 
 Native closure facts have one coalescing owner and a **128-ID** pending buffer.
-Cleanup derives a next-revision snapshot removing only those tab scopes, preserves
-emergency and all unrelated scopes, and uses the same canonical writer/guard.
+The owner retains these facts while an admitted write settles and reads a fresh
+snapshot if a write changed the guard during inspection. It removes only the
+closed tab scopes from the resulting revision and uses the same canonical
+writer/guard, preserving emergency and all unrelated scopes.
 An unknown cleanup retains precaution. Failed/conflicting/busy/overflowed batches
 are never retried automatically; an unavailable closed scope may remain listed
 for explicit removal but cannot be rebound to another tab. Shutdown retires future
 work without claiming that an already accepted native effect was cancelled.
 Malformed/future native data is preserved. Native expiry is a system fact, not a
 fabricated user operation or user history entry.
+
+The closure race supplement requires three cases. Closing tabs behind a
+suspended write expires both scopes from the revision that actually committed.
+A write that settles during inspection invalidates the earlier snapshot.
+Stopping the owner while it waits retires the queued closures. The separate
+session race cases exercise cancellation and scope replacement during the final
+permission read after protected persistence. Both must leave the session
+disconnected with no published identity. The existing user controls, permission
+boundary and buffer limit apply to all five cases.
 
 Minimum **120** distinct component risk cases: 32 closed domain/protocol, 48
 retained review/ownership/reentry/result boundaries, 16 target metadata/bounds,

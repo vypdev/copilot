@@ -27,6 +27,43 @@ it('a new closure arriving during inspection is processed as fresh work after th
     pending.resolve({ ...h.before, tabs: [7, 9] }); await idle;
     expect(h.values.get(TEMPORARY_PAUSES_KEY)).toEqual({ ...h.before, revision: 2, tabs: [] }); expect(h.port.set).toHaveBeenCalledTimes(2);
 });
+it('retains closed IDs behind a pending write and plans cleanup from the newer native revision', async () => {
+    const h = fixture(); const pending = deferred<void>();
+    const set = vi.mocked(h.port.set).getMockImplementation()!;
+    vi.mocked(h.port.set).mockImplementationOnce(async (key, value) => { await pending.promise; await set(key, value); });
+    const write = h.store.commit({ ...h.before, tabs: [7, 9] }, { ...h.before, revision: 1, emergency: true, tabs: [7, 9, 11] }, () => true);
+    await vi.waitFor(() => expect(h.port.set).toHaveBeenCalledOnce());
+    h.cleanup.close(7); const idle = h.cleanup.idle();
+    await vi.waitFor(() => expect(h.port.get).toHaveBeenCalledTimes(2));
+    h.cleanup.close(9);
+    pending.resolve(); await write; await idle;
+    expect(h.values.get(TEMPORARY_PAUSES_KEY)).toEqual({ ...h.before, revision: 2, emergency: true, tabs: [11] });
+    expect(h.port.set).toHaveBeenCalledTimes(2);
+});
+it('rereads a closure snapshot if a guarded write settled during the native observation', async () => {
+    const h = fixture(); const reading = deferred<unknown>();
+    const before = { ...h.before, tabs: [7, 9] };
+    vi.mocked(h.port.get).mockReturnValueOnce(reading.promise);
+    h.cleanup.close(7); const idle = h.cleanup.idle();
+    await vi.waitFor(() => expect(h.port.get).toHaveBeenCalledOnce());
+    await h.store.commit(before, { ...before, revision: 1, emergency: true }, () => true);
+    reading.resolve(before); await idle;
+    expect(h.values.get(TEMPORARY_PAUSES_KEY)).toEqual({ ...before, revision: 2, emergency: true, tabs: [9] });
+    expect(h.port.set).toHaveBeenCalledTimes(2);
+});
+it('retires queued closures when stopped while waiting for a pending pause write', async () => {
+    const h = fixture(); const pending = deferred<void>();
+    const set = vi.mocked(h.port.set).getMockImplementation()!;
+    vi.mocked(h.port.set).mockImplementationOnce(async (key, value) => { await pending.promise; await set(key, value); });
+    const before = { ...h.before, tabs: [7, 9] }; const after = { ...before, revision: 1, emergency: true };
+    const write = h.store.commit(before, after, () => true);
+    await vi.waitFor(() => expect(h.port.set).toHaveBeenCalledOnce());
+    h.cleanup.close(7); const idle = h.cleanup.idle();
+    await vi.waitFor(() => expect(h.port.get).toHaveBeenCalledTimes(2));
+    h.cleanup.stop(); pending.resolve(); await write; await idle;
+    expect(h.values.get(TEMPORARY_PAUSES_KEY)).toEqual(after);
+    expect(h.port.set).toHaveBeenCalledOnce();
+});
 it('a source retired before scheduled work performs no native inspection and cannot be restarted by another event', async () => {
     const h = fixture(); h.cleanup.close(7); const idle = h.cleanup.idle(); h.cleanup.stop(); h.cleanup.close(9); await idle;
     expect(h.port.get).not.toHaveBeenCalled(); expect(h.port.set).not.toHaveBeenCalled(); await h.cleanup.idle();

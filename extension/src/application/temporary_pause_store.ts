@@ -23,6 +23,9 @@ export class TemporaryPauseStore {
         const loaded = await this.native.read();
         return { loaded, witness: this.guard.capture(), precaution: this.guard.uncertain, pending: this.guard.pending };
     }
+    pendingMutations(): Promise<void> | null {
+        return this.pending > 0 ? this.mutations.settled() : null;
+    }
     private changed(): void { try { this.ports.changed(); } catch { /* Native facts and the precaution are already settled. */ } }
     protectUnknown(): void { this.guard.protect(); this.changed(); }
     private enqueue(work: () => Promise<TemporaryPauseOutcome>): Promise<TemporaryPauseOutcome> {

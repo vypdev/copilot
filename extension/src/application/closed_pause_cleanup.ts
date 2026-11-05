@@ -16,10 +16,16 @@ export class ClosedPauseCleanup {
     private async drain(): Promise<void> {
         try {
             while (!this.stopped && this.closed.size) {
-                const ids = [...this.closed]; this.closed.clear();
-                const inspected = await this.store.inspect();
+                const ids = [...this.closed];
+                const witness = this.store.guard.capture();
+                const inspected = await this.store.inspect().catch(() => null);
                 if (this.stopped) return;
-                if (inspected.loaded.state !== 'ready' || inspected.pending) continue;
+                const pending = this.store.pendingMutations();
+                if (pending) { await pending; continue; }
+                // A completed write may have invalidated the snapshot while the read was in flight.
+                if (witness !== this.store.guard.capture()) continue;
+                for (const id of ids) this.closed.delete(id);
+                if (inspected?.loaded.state !== 'ready' || inspected.pending) continue;
                 const plan = planClosedTabPauses(inspected.loaded.value, ids);
                 if (plan.state === 'ready') await this.store.commit(plan.before, plan.after, () => !this.stopped);
             }

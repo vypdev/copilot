@@ -591,8 +591,10 @@ its outcome must distinguish those facts from permission to continue editing.
 Eligible tab choices use existing GitHub access and show a repository/object
 label, without titles or full URLs. Private and unavailable tabs are excluded;
 the list is limited to 128 native candidates. Closing a tab ends that tab's
-scope without releasing emergency or other tab pauses. Failed cleanup can leave
-an unavailable scope for explicit removal; it never resumes another tab. These
+scope without releasing emergency or other tab pauses. When a pause change is
+already saving, the extension waits for that change before cleaning up. Failed
+cleanup can leave an unavailable scope for explicit removal; it never resumes
+another tab. These
 controls show a complete before/after review before confirmation. A local filter
 searches safe labels and tab IDs without saving or sending the query. Missing
 paused tabs keep generic IDs and an unavailable label; they are not silently
