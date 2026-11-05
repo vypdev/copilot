@@ -7,13 +7,18 @@ import { SETTINGS_KEY } from '../../src/application/settings_repository.ts';
 
 it.each([['appearance', 'center-theme', 'dark'], ['language', 'center-locale', 'fr'], ['profiles', 'profile-name', 'Draft profile']])(
     'keeps a %s draft at its original revision when another window saves', async (route, id, value) => {
-        const h = await render(route); await ready(() => !!document.getElementById(id)); change(id, value);
+        const h = await render(route);
+        await ready(() => document.getElementById(id)?.matches(':enabled') === true, 'draft field is editable');
+        change(id, value);
         if (route === 'profiles') change('profile-id', 'draft');
         await h.native.repository.update(settings => ({ ...settings, paused: true }));
         for (const listener of h.browser.changed.listeners) listener({ [SETTINGS_KEY]: {} }, 'local');
-        await ready(() => document.querySelector('form [role=status]')?.textContent?.includes('Este borrador no se ha reemplazado.') === true);
+        await ready(() => document.querySelector('form > [role=status]')?.textContent?.includes('Este borrador no se ha reemplazado.') === true
+            && document.querySelector('main .revision code')?.textContent === '1', 'external revision and stale draft are visible');
         expect((document.getElementById(id) as HTMLInputElement).value).toBe(value);
-        button('Revisar cambio').click(); await ready(() => !!document.querySelector('main > [role=alert]'));
+        await ready(() => button('Revisar cambio').matches(':enabled'), 'stale draft can request review');
+        button('Revisar cambio').click();
+        await ready(() => !!document.querySelector('main > [role=alert]'), 'stale review is rejected');
         expect(document.body.textContent).toContain('Se conserva tu borrador'); expect(h.native.port.set).toHaveBeenCalledTimes(1);
     });
 it('overview reflects selected profiles and reviews the global pause through the same native gateway', async () => {
