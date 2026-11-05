@@ -1,0 +1,56 @@
+// Owned #858 draft qualification. Frozen cases stay outside every fictional model source.
+const fs=require('node:fs'),path=require('node:path'),cp=require('node:child_process'),crypto=require('node:crypto'),ts=require('typescript');
+const HOST=process.cwd(),OUT=path.join(HOST,'.tmp/bug-fix-evidence/858/complete-runtime-v15');
+const SETUP=JSON.parse(fs.readFileSync(path.join(OUT,'setup.json'),'utf8'));
+const SDK=process.argv[3]==='baseline'?SETUP.baselineSdkRoot:HOST;
+const digest=x=>crypto.createHash('sha256').update(x).digest('hex');
+const read=p=>JSON.parse(fs.readFileSync(p,'utf8'));const write=(p,x)=>fs.writeFileSync(p,JSON.stringify(x,null,2)+'\n');
+const baseline='4a463a4b0211a71ff75e2a5104561e170e893667';
+const sourceFiles=['src/domain/sdd_visible_references.ts','src/application/usecases/sdd/pre_branch_sdd_gate_use_case.ts','src/application/usecases/sdd/pre_branch_sdd_draft_workflow.ts','src/domain/sdd_draft_consistency.ts','src/data/repository/ai/findings_agent_adapter.ts','src/infrastructure/composition/agent_capability_composition_root.ts','src/infrastructure/pre_branch_sdd_workspace_adapter.ts','src/infrastructure/specification_catalog_validator.cjs','src/infrastructure/specification_catalog_publication.cjs','src/domain/specification_catalog_path_policy.cjs','src/domain/pre_branch_sdd.ts'];
+const configuration=SETUP.providerConfiguration;
+function loader(){require.extensions['.ts']=(module,file)=>{if(!file.startsWith(SDK+path.sep+'src'+path.sep))throw Error('Only the current reviewed SDK source is loadable');module._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS,esModuleInterop:true}}).outputText,file);};}
+function checkFreeze(cohort){
+ const freeze=read(path.join(OUT,'qualification-freeze.json'));if(digest(fs.readFileSync(path.join(OUT,'draft-cases.json')))!==freeze.descriptorSha256)throw Error('Frozen cases changed');
+ if(cohort==='baseline'||cohort==='baseline-recovery')for(const [f,h] of Object.entries(freeze.sourceHashes))if(digest(fs.readFileSync(path.join(SDK,f)))!==h)throw Error('Baseline SDK changed');
+ if(cp.execFileSync(configuration.executable,['--version'],{encoding:'utf8'}).trim()!==freeze.cliVersion||process.version!==freeze.node||ts.version!==freeze.typescript)throw Error('Frozen execution versions changed');
+ if(digest(fs.readFileSync(configuration.executable))!==freeze.cliSha256)throw Error('Pinned provider bytes changed');
+ for(const [f,h] of Object.entries(freeze.runtimeFileHashes))if(digest(fs.readFileSync(path.join(freeze.completeVendorRoot,f)))!==h)throw Error('Complete provider payload changed: '+f);
+ if(cohort==='baseline')cp.execFileSync('git',['-C',SDK,'diff','--quiet',baseline,'--','src','specs/README.md','specs/_template.md']);
+ return freeze;
+}
+async function runTrial(cohort,trial){
+ if((!['baseline','candidate'].includes(cohort)||!['1','2','3'].includes(trial))&&!(cohort==='baseline-recovery'&&trial==='3'))throw Error('Only declared whole trials or audited interrupted-trial recovery');
+ const freeze=checkFreeze(cohort);const descriptor=read(path.join(OUT,'draft-cases.json'));const id=cohort+'-'+trial;const dest=path.join(OUT,id);if(fs.existsSync(dest))throw Error('Never replace an attempted trial');fs.mkdirSync(dest);
+ loader();const {createFindingsQueryPort}=require(path.join(SDK,'src/infrastructure/composition/agent_capability_composition_root.ts'));const {PreBranchSddGateUseCase}=require(path.join(SDK,'src/application/usecases/sdd/pre_branch_sdd_gate_use_case.ts'));const {PreBranchSddWorkspaceAdapter}=require(path.join(SDK,'src/infrastructure/pre_branch_sdd_workspace_adapter.ts'));
+ const currentHashes=Object.fromEntries(sourceFiles.concat(fs.existsSync(path.join(SDK,'src/application/policies/sdd_draft_grounding_policy.ts'))?['src/application/policies/sdd_draft_grounding_policy.ts']:[]).map(f=>[f,digest(fs.readFileSync(path.join(SDK,f)))]));
+ const identity={at:new Date().toISOString(),id,configuration,freezeSha256:digest(fs.readFileSync(path.join(OUT,'qualification-freeze.json'))),descriptorSha256:freeze.descriptorSha256,runnerSha256:digest(fs.readFileSync(__filename)),cliSha256:digest(fs.readFileSync(configuration.executable)),node:process.version,typescript:ts.version,sourceHashes:currentHashes,fullProviderStdinCaptured:false,scope:freeze.scope};write(path.join(dest,'identity.json'),identity);
+ const results=[];
+ for(const scenario of descriptor.cases){
+  const f={...scenario.fixture,root:SETUP.worlds[trial][scenario.id]};process.chdir(f.root);const git=a=>cp.execFileSync('git',['-C',f.root,...a],{encoding:'utf8'}).trim();if(git(['rev-parse','HEAD'])!==f.anchor||git(['status','--porcelain=v1','--ignored']))throw Error('Authored source changed');
+  const before={head:git(['rev-parse','HEAD']),status:git(['status','--porcelain=v1','--ignored']),worktrees:git(['worktree','list','--porcelain'])};const out=path.join(dest,scenario.id);fs.mkdirSync(out);
+  const native=new PreBranchSddWorkspaceAdapter(f.root);const snapshot=await native.loadSnapshotAtCommit(f.baseSha);const real=createFindingsQueryPort();const comments=[];let labels=['feature','in-progress'],commentId=10,analysisCalls=0;const requests=[],responses=[],validations=[];
+  const plan={action:'companion',capabilityId:'fixture-foundation',path:'specs/grounding-guidance.md',reason:'A separate bounded publication records the requested verification and product acceptance refinements.',questions:[]};
+  const context={issueNumber:47,issueTitle:'Grounded project verification and acceptance',issueBody:scenario.input.body,issueAuthor:'author',issueUrl:'https://github.com/owned/fixture/issues/47',issueLocale:'en-US',admittedKind:'feature',baseBranch:'selected-source',profileDigest:'owned-grounding-qualification',tokenUser:'copilot[bot]',agentConfiguration:configuration};
+  const never=async()=>{throw Error('This qualification cannot publish or create/link a branch');};
+  const query=async request=>{
+   if(request.agentId==='pre-branch-sdd-analysis'){analysisCalls++;return {...plan,newCapability:null};}
+   if(request.agentId!=='pre-branch-sdd-draft'||requests.length>=2||request.sourceSnapshot?.baseSha!==f.baseSha)throw Error('Unexpected drafting authority or query count');
+   requests.push(request);write(path.join(out,'requests.json'),requests);
+   try{const response=await real.query(request);const envelope={present:response!==undefined,...(response!==undefined?{value:response}:{})};responses.push({response:envelope,responseSha256:digest(JSON.stringify(envelope))});write(path.join(out,'responses.json'),responses);return response;}
+   catch(error){responses.push({error:{name:error.name,code:error.code,message:error.message}});write(path.join(out,'responses.json'),responses);throw error;}
+  };
+  const workspace={loadSnapshot:async()=>snapshot,readSourceRevision:async()=>f.baseSha,isAncestor:native.isAncestor.bind(native),readSdd:native.readSdd.bind(native),validateDraft:async(...args)=>{
+   const index=validations.length;fs.writeFileSync(path.join(out,'assembled-'+(index+1)+'.md'),args[2]);
+   try{const prepared=await native.validateDraft(...args);validations.push({passed:true,markdownSha256:digest(prepared.markdown),changedPaths:prepared.changedPaths});write(path.join(out,'validations.json'),validations);return prepared;}
+   catch(error){validations.push({passed:false,reason:error.reason,name:error.name,message:error.message,diagnostic:error.diagnostic});write(path.join(out,'validations.json'),validations);throw error;}
+  },publish:never,recoverPublished:never,verifyPublication:never};
+  const gate=new PreBranchSddGateUseCase({query},workspace,{listIssueComments:async()=>comments,addComment:async(_issue,body)=>comments.push({id:++commentId,body,user:{login:'copilot[bot]'}}),updateComment:async(_issue,id,body)=>{const target=comments.find(c=>c.id===id);if(!target)throw Error('Unknown owned comment');target.body=body;}},{getLabels:async()=>labels,setLabels:async(_issue,next)=>{labels=next;}},{isActorAllowedToModifyFiles:async()=>true,isActorAllowedToUseMemberOnlyAutomation:async()=>true},{getDescription:async()=>context.issueBody},{getTitle:async()=>context.issueTitle},{getLinkedBranch:never});
+  const outcome=await gate.begin(context);write(path.join(out,'outcome.json'),outcome);if(outcome.status==='drafted')fs.writeFileSync(path.join(out,'accepted.md'),outcome.prepared.markdown);
+  const after={head:git(['rev-parse','HEAD']),status:git(['status','--porcelain=v1','--ignored']),worktrees:git(['worktree','list','--porcelain'])};const unchanged=JSON.stringify(before)===JSON.stringify(after);if(!unchanged)throw Error('Qualification changed canonical fixture state');if(analysisCalls!==1||requests.length<1||requests.length>2)throw Error('Unexpected SDK invocation trace');
+  const result={case:scenario.id,status:outcome.status,queries:requests.length,analysis:'Single controlled valid owner selection, not a model ownership prediction',responseDigests:responses.map(r=>r.responseSha256??null),acceptedSha256:outcome.status==='drafted'?digest(outcome.prepared.markdown):null,validationAttempts:validations,source:f,sourceStateUnchanged:unchanged,semanticAssessment:'pending explicit contributor assessment; not yet qualified'};results.push(result);write(path.join(dest,'results.json'),{id,completed:results.length,results});console.log(JSON.stringify({trial:id,case:scenario.id,status:result.status,queries:result.queries,validationAttempts:validations.map(v=>({passed:v.passed,reason:v.reason})),semanticAssessment:result.semanticAssessment}));
+  for(const [file,hash] of Object.entries(currentHashes))if(digest(fs.readFileSync(path.join(SDK,file)))!==hash)throw Error('SDK source changed during a measured trial');
+ }
+ checkFreeze(cohort);
+ write(path.join(dest,'completed.json'),{id,cases:results.length,hostAccepted:results.filter(r=>r.status==='drafted').length,blocked:results.filter(r=>r.status!=='drafted').length,semanticAssessment:'pending; no cohort pass claimed'});console.log(JSON.stringify({trial:id,completed:results.length,hostAccepted:results.filter(r=>r.status==='drafted').length,semanticAssessment:'pending'}));
+}
+if(process.argv[2]==='run')runTrial(process.argv[3],process.argv[4]).catch(e=>{console.error(e);process.exitCode=1;});else throw Error('Expected prepare or run <cohort> <trial>.');

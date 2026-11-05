@@ -89,6 +89,42 @@ analysis and issue/SCM ports are controlled; it never creates a remote branch or
 publishes. It is optional contributor evidence, not a consumer command or a live
 provider dependency added to CI.
 
+### Recorded results and review bundle
+
+| Cohort | Native acceptances | Explicit scoped semantic passes |
+|---|---|---|
+| Three unchanged-SDK baselines | 5/8, 7/8, 5/8 | 5/8, 7/8, 4/8 |
+| Three whole V15 trials | 8/8, 8/8, 8/8 | 8/8, 8/8, 8/8 |
+
+V15 used 30 SDK queries, including six ordinary repairs. The original descriptor,
+all eight source worlds and the complete pinned runtime are unchanged. The 24
+accepted Markdown documents are retained verbatim and reconstruct exactly from
+their raw responses through derived tables, legacy links and inventory navigation.
+All three material C02 availability audits pass. Each C08 review reads all 18
+assertions and checks each of 95 exact operative create declarations; counts
+alone do not establish either result. V13 and V14 were rejected in full for the
+recorded visibility and repair-grammar failures; their results are not pooled.
+
+The scope matters: C01 certifies genuine command retention without invented
+execution, not every toy-script semantic detail. Its three outputs add a printed
+message absent from the toy validator. One C04 sentence attributes uv to package
+metadata instead of the command guide. These limitations remain visible in the
+accepted outputs and assessments. The campaign does not certify universal prose
+accuracy, full command semantics, consumer execution or human approval.
+
+| Artifact | Review purpose |
+|---|---|
+| [Manifest](./evidence/issue-858.json) | Pins, whole-trial results, limitations, history index, source binding and assembly audit |
+| [Frozen cases](./evidence/issue-858-cases.json) | Original inputs and target criteria; descriptor SHA-256 remains unchanged |
+| [Source objects](./evidence/issue-858-source-objects.json) | All 46 exact authored Git objects, including selected and bootstrap identities |
+| [Assessments](./evidence/issue-858-assessments.json) | Explicit baseline/final decisions and detailed availability/assertion/path audits |
+| [Baseline observations](./evidence/issue-858-baseline-observations.jsonl) | All 24 baseline observations, raw responses and accepted Markdown |
+| [Final observations](./evidence/issue-858-final-observations.jsonl) | All 24 V15 observations and every ordinary repair, with exact accepted Markdown |
+| [Rejected observations](./evidence/issue-858-rejected-observations.jsonl) | 30 representative native/semantic failures; the manifest indexes the complete local history |
+| [Coordinator audit](./evidence/issue-858-driver.cjs.txt) | Exact historical driver, requiring explicit local reconstruction/configuration |
+
+### Method and reconstruction
+
 The eight authored worlds and their exact Git objects are preserved separately
 from real consumer incident evidence. They cover genuine and absent scripts,
 package-manager mismatch, selected Python versus bootstrap Node source, unknown

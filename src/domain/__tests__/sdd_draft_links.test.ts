@@ -157,6 +157,7 @@ describe('single-inventory SDD navigation', () => {
 
   it('sdd-source-grounding-C48: rejects hidden, duplicate, malformed and nested slots without creating target authority', () => {
     for (const slot of ['<!-- ' + navigation + ' -->', '```md\n' + navigation + '\n```',
+      '    ' + navigation, '\t' + navigation, ' \t' + navigation, '  \t' + navigation, '   \t' + navigation,
       navigation + '\n' + navigation, '[Nested](' + navigation + ')', '``' + navigation + '``',
       '`' + navigation, navigation.toLowerCase(), '{{SDD_FILE_NAVIGATION:unknown}}',
       navigation + '\n{{sdd_file_navigation}}']) {
