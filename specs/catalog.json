@@ -1764,7 +1764,8 @@
         "specs/sdd-draft-response-minimum.md",
         "specs/sdd-reference-classification.md",
         "specs/sdd-case-reference-classification.md",
-        "specs/sdd-draft-source-grounding.md"
+        "specs/sdd-draft-source-grounding.md",
+        "specs/sdd-bounded-drafting-and-companion-recovery.md"
       ],
       "workflows": [
         ".github/workflows/copilot_issue.yml",
