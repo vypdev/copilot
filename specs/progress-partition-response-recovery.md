@@ -55,6 +55,10 @@ remain intact; no percentage is published.
   `docs/browser-extension/features.mdx`. The second named `remaining` in
   `docs/browser-extension/configuration.mdx`. The immutable final projection
   was charging the same path dictionary and unit IDs twice.
+- At `c147797c1811c2ba2566a2b61805e72b9204bbdc`, run 42013190060
+  collected 905 paths in 32 complete parts. The compact projection raised the
+  bound to 24. The replacement returned 26 code points in `implemented` for
+  the generated metadata unit `file-2-metadata` at `build/cli/index.js`.
 - Owners: `src/data/repository/progress_agent_response_policy.ts`,
   `src/application/policies/progress_partition_response_policy.ts`, `src/application/usecases/actions/summarize_progress_diff_workflow.ts`.
 - No external API or protocol change is proposed. The actual rejected prose
@@ -172,9 +176,14 @@ fail-closed error when attribution or capacity is unavailable.
 
 The selected fact maximum remains budget-derived, at most 600 code points.
 The immutable final projection carries the path dictionary and each exact unit
-ID once. Preflight counts that projection and reserves six bytes per code point
-for worst-case JSON escaping, using the same minimum of 16. The original and
-replacement share the resulting schema. Source/frame/
+ID once. Preflight divides the remaining exact JSON bytes between both fields
+of all units. It still requires enough room for the original worst-case
+six-byte escape cost at the 16-point minimum. The original and replacement
+share a schema sized for four-byte UTF-8 code points. Receipt admission also
+counts the actual encoded bytes, including escapes, within the per-field
+allocation. This admits every fact within the former six-byte-derived bound
+and gives ordinary prose more room. The legacy and framed-v1 profiles keep the
+six-byte calculation for their schema maximum. Source/frame/
 part/aggregate limits, final-assessment scope, prompt ceiling, execution
 configuration and cancellation deadlines are unchanged and not configurable here.
 
@@ -275,11 +284,11 @@ rejection while preserving prior progress; no credentials or data need repair.
 | Whole-prompt capacity | 4 | Original/replacement reserve, later-part preflight, zero calls on overflow, single-part compatibility |
 | Product presentation | 4 | English/Spanish facts, no raw output, closed variables and escaped text |
 | Complete publication integration | 3 | Successful complete aggregation, failure retains labels, stale result never publishes |
-| Part/final recovery composition | 3 | Independent single allowances, complete immutable inventory through late failure, no final query after exhausted part |
-| Immutable aggregate capacity | 2 | Compact exact tuple projection after receipt reordering; 21-code-point facts fit a previously 19-point budget |
-| **Total** | **41** | Original 36 cases, 3 composed-stage cases and 2 immutable capacity cases |
+| Part/final recovery composition | 4 | Independent single allowances, complete immutable inventory through late failure, no final query after exhausted part or rejected escaped fact |
+| Immutable aggregate capacity | 4 | Compact exact tuple projection, 21 points in the old 19-point budget, 26 points and four-byte Unicode in the old 24-point budget, escaped byte overflow rejected at receipt admission |
+| **Total** | **44** | Original 36 cases, 4 composed-stage cases and 4 immutable capacity cases |
 
-The three additional cases live in
+The four composition cases live in
 `src/application/usecases/actions/__tests__/progress_recovery_composition.integration.test.ts`:
 
 | Case ID | Requirements | Observable contract |
@@ -287,11 +296,12 @@ The three additional cases live in
 | progress-partition-composition-C01 | PL-02, PL-04, PL-06 | A legacy multipart response uses one part replacement and one final reassessment, preserves both independent allowances and publishes once after all six queries finish. |
 | progress-partition-composition-C02 | PL-02, PL-04, PL-06 | The 887-path, 952-unit, 6,503,131-byte immutable fixture repairs its last part, then rejects two contradictory final estimates with exact exhaustion counts, unchanged source-read counts and no publication. |
 | progress-partition-composition-C03 | PL-02, PL-04, PL-06 | A second attributable part overflow terminates after two part queries; no final query or publication occurs. |
+| progress-partition-composition-C04 | PL-03, PL-04, PL-06 | A fact inside the schema point limit exceeds its escaped byte allocation. No receipt, replacement, final query or publication follows. |
 
 These integration cases add to this companion's budget; they do not double-count
 or replace the final controller's separately owned 40-case acceptance inventory.
-`immutable_progress_protocol_policy.test.ts` covers the two immutable capacity
-cases and retains its worst-case JSON escape boundary test.
+`immutable_progress_protocol_policy.test.ts` covers the four immutable capacity
+cases, including acceptance at the old worst-case escape boundary.
 
 Require 100% new pure-policy branches and every modified coverable line with no
 partials in Codecov against the correct live base. Preserve repository-wide
@@ -327,18 +337,21 @@ weaken their requirements.
    retains all complete source facts without rereading or repeating parts.
 8. A previously 19-point immutable fixture admits 21-point facts within the
    same byte ceiling. Every reordered tuple maps back to its validated unit and
-   path, and the exact worst-case escape budget still fits.
+   path. With a former 24-point budget, 26-point ordinary prose and the full
+   four-byte Unicode boundary fit. The old worst-case escape boundary also
+   fits. An escaped value over the exact allocation is rejected before a
+   receipt is formed.
 
 ## 17. Requirements traceability
 
 | Requirement | Owner | Evidence | Documentation |
 |---|---|---|---|
 | PL-01 | Adapter/domain/binding policy | Length mapping and policy tests | Error reference |
-| PL-02 | Partition query workflow | Native-adapter integration, execution-failure cases and composition-C01/C02/C03 | Execution contract |
+| PL-02 | Partition query workflow | Native-adapter integration, execution-failure cases and composition-C01/C02/C03/C04 | Execution contract |
 | PL-03 | Complete prompt planner | Capacity and zero-query fixtures | Contributor/recovery guide |
-| PL-04 | Existing aggregate/freshness/publication | Complete CheckProgress integration and composition-C01/C02/C03 | Progress guide |
+| PL-04 | Existing aggregate/freshness/publication | Complete CheckProgress integration and composition-C01/C02/C03/C04 | Progress guide |
 | PL-05 | Recovery normalizer and existing catalogs | English/Spanish semantic output and sanitization | Error reference |
-| PL-06 | Existing protocol and architecture owners | Legacy/framed/immutable, composition-C01/C02/C03, full suites, bundles and Codecov | This companion and original recovery owner |
+| PL-06 | Existing protocol and architecture owners | Legacy/framed/immutable, composition-C01/C02/C03/C04, full suites, bundles and Codecov | This companion and original recovery owner |
 
 ## 18. Implementation sequence
 
@@ -349,7 +362,7 @@ Graphify, normal bundles/hooks and current-head remote review.
 
 ## 19. Definition of Done
 
-- [ ] Every requirement has executable acceptance and all 41 risk cases pass.
+- [ ] Every requirement has executable acceptance and all 44 risk cases pass.
 - [ ] Inward dependencies, semantic ports and module budgets pass.
 - [ ] Source, response, prompt, configuration, deadline and publication gates remain.
 - [ ] Localized primary states, exact diagnostics and sanitization pass.

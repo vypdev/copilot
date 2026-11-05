@@ -1,6 +1,6 @@
 import { progressContentUnits, progressRecoveryError } from '../progress_content_evidence_policy';
 import { partitionProgressDiff } from '../progress_diff_partition_policy';
-import { aggregateProgressFacts, parseProgressPartitionFacts, progressPartitionFactLimit, progressPartitionResponseSchema } from '../progress_partition_response_policy';
+import { aggregateProgressFacts, parseProgressPartitionFacts, progressPartitionFactBounds, progressPartitionResponseSchema } from '../progress_partition_response_policy';
 const change = { path: 'specs/a.md', status: 'modified', additions: 0, deletions: 0 };
 const snapshot = (text: string, sha = 'a'.repeat(40)) => ({ path: change.path, sha, mode: '100644', text });
 const units = (text: string) => progressContentUnits(change, { comparisonBaseSha: 'c'.repeat(40), head: snapshot(text) }, 'file-1');
@@ -71,7 +71,7 @@ describe('exact recovered-unit analysis', () => {
         expect(() => parseProgressPartitionFacts(value, part, 'en-US')).toThrow(expect.objectContaining({ code: 'agent.failed' }));
     });
     it('budgets all unit facts and exposes their complete identity in the final aggregate', () => {
-        const limit = progressPartitionFactLimit('a', 'b', [part]);
+        const { factLimit: limit } = progressPartitionFactBounds('a', 'b', [part]);
         const value = response(); for (const fact of value.files) { fact.implemented = '\0'.repeat(limit); fact.remaining = '🧪'.repeat(limit); }
         const facts = parseProgressPartitionFacts(value, part, 'en-US', limit);
         const result = JSON.parse(aggregateProgressFacts('a', 'b', [part], [facts]));

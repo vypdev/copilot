@@ -1,7 +1,7 @@
 import { captureProgressScopeSource } from '../progress_scope_source_policy';
 import { renderProgressPromptData } from '../../../prompts/progress_scope';
 import { invalidProgressCapacityAllocation, partitionProgressDiff } from '../progress_diff_partition_policy';
-import { aggregateProgressFacts, progressPartitionFactLimit } from '../progress_partition_response_policy';
+import { aggregateProgressFacts, progressPartitionFactBounds } from '../progress_partition_response_policy';
 import { framedProgressFactBudget } from '../progress_partition_receipt_policy';
 import { remainingProgressPromptBytes, remainingProgressAssessmentPromptBytes } from '../progress_prompt_capacity_policy';
 import { ProgressCapacityFailure } from '../../errors/progress_capacity_failure';
@@ -54,21 +54,21 @@ it('attributes the complete final replacement reserve rather than the smaller or
     expect(rejected(() => remainingProgressAssessmentPromptBytes(prompt, schema)).diagnostic).toMatchObject({ phase: 'assessment', dimension: 'native-prompt-reserve-bytes', observedCount: AGENT_PROMPT_MAX_BYTES + 1 });
 });
 it('reports the actual complete legacy fact reservation before a model request', () => {
-    const result = rejected(() => progressPartitionFactLimit(base, head, parts(), 1)).diagnostic;
+    const result = rejected(() => progressPartitionFactBounds(base, head, parts(), 1)).diagnostic;
     expect(result).toMatchObject({ dimension: 'minimum-fact-bytes', supportedLimit: 1, countKind: 'exact' });
     expect(result.observedCount).toBeGreaterThan(1);
 });
 it('keeps the immutable profile minimum fact length in its complete reservation', () => {
-    const legacy = rejected(() => progressPartitionFactLimit(base, head, parts(), 1)).diagnostic;
-    const immutable = rejected(() => progressPartitionFactLimit(base, head, parts(), 1, 'immutable-tree-v1')).diagnostic;
+    const legacy = rejected(() => progressPartitionFactBounds(base, head, parts(), 1)).diagnostic;
+    const immutable = rejected(() => progressPartitionFactBounds(base, head, parts(), 1, 'immutable-tree-v1')).diagnostic;
     expect(immutable.dimension).toBe('minimum-fact-bytes'); expect(immutable.observedCount).toBeGreaterThan(1);
     expect(immutable.observedCount).not.toBe(legacy.observedCount);
 });
 it('reports an empty unit inventory as a measured unsupported minimum', () => {
-    expect(rejected(() => progressPartitionFactLimit(base, head, [])).diagnostic).toMatchObject({ dimension: 'evidence-unit-count', observedCount: 0, supportedLimit: 1, bound: 'minimum' });
+    expect(rejected(() => progressPartitionFactBounds(base, head, [])).diagnostic).toMatchObject({ dimension: 'evidence-unit-count', observedCount: 0, supportedLimit: 1, bound: 'minimum' });
 });
 it('retains unavailable facts for an invalid fact allocation', () => {
-    expect(rejected(() => progressPartitionFactLimit(base, head, parts(), NaN)).diagnostic).toMatchObject({ dimension: 'invalid-allocation', supportedLimit: 'unavailable' });
+    expect(rejected(() => progressPartitionFactBounds(base, head, parts(), NaN)).diagnostic).toMatchObject({ dimension: 'invalid-allocation', supportedLimit: 'unavailable' });
 });
 it('reports a known excessive aggregate allocation against its applicable maximum', () => {
     expect(rejected(() => aggregateProgressFacts(base, head, parts(), [], 384_001)).diagnostic).toMatchObject({ dimension: 'aggregate-allocation-bytes', observedCount: 384_001, supportedLimit: 384_000, bound: 'maximum' });
@@ -90,7 +90,7 @@ it('reports a measured zero aggregate allocation against the known minimum', () 
 });
 it('does not manufacture integer allocation facts from negative or fractional bytes', () => {
     for (const budget of [-1, 0.5, Number.MAX_SAFE_INTEGER + 1]) {
-        expect(rejected(() => progressPartitionFactLimit(base, head, parts(), budget)).diagnostic).toMatchObject({ dimension: 'invalid-allocation', observedCount: 'unavailable' });
+        expect(rejected(() => progressPartitionFactBounds(base, head, parts(), budget)).diagnostic).toMatchObject({ dimension: 'invalid-allocation', observedCount: 'unavailable' });
     }
 });
 it('keeps a missing or invalid host maximum explicitly unavailable', () => {

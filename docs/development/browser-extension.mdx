@@ -288,10 +288,11 @@ permission/history initialization before interacting or measuring new effects.
 Reference-composition assertions wait for native metadata inspection to finish
 before distinguishing a missing reference from unavailable inspection.
 The hosted Windows job allows 90 minutes for the complete root and extension
-coverage campaign; macOS allows 30 minutes and Linux keeps 20. The current H3
-macOS campaign exhausted its former 20-minute job budget during coverage.
-These job budgets do not change
-test assertions, ordinary test timeouts, coverage or approval requirements.
+coverage campaign. Hosted macOS and Ubuntu each allow 30 minutes after
+20-minute coverage runs timed out. The complete 64-path native Git tests and
+portable SDD publication cases have 120-second test budgets after hosted
+Windows exceeded 30 seconds. Assertions, per-command runtime limits, coverage
+and approval requirements remain in force.
 The previous Windows campaign reached this workflow's configured 60-minute
 timeout, not a runner-wide 60-minute limit. GitHub-hosted jobs permit up to six
 hours ([Actions limits](https://docs.github.com/en/actions/reference/limits));

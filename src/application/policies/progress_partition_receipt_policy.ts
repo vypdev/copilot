@@ -1,5 +1,5 @@
 import type { ProgressDiffEvidence, ProgressDiffPartition } from '../ports/progress_diff_query_ports';
-import { aggregateProgressFacts, parseProgressPartitionFacts, progressPartitionFactLimit, MAX_PROGRESS_AGGREGATE_BYTES, type ProgressFileFacts } from './progress_partition_response_policy';
+import { aggregateProgressFacts, parseProgressPartitionFacts, progressPartitionFactBounds, MAX_PROGRESS_AGGREGATE_BYTES, type ProgressFileFacts, type ProgressPartitionFactBounds } from './progress_partition_response_policy';
 import { progressEvidenceTooLarge, invalidProgressCapacityAllocation } from './progress_diff_partition_policy';
 import { progressProtocolRejected, validateFramedProgressEvidence } from './progress_evidence_protocol_policy';
 
@@ -10,8 +10,8 @@ export interface ProgressPartitionReceipt {
 }
 
 /** Retains the actual returned identity, after exact assignment validation. */
-export function parseProgressPartitionReceipt(response: unknown, part: ProgressDiffPartition, locale: string, limit: number): ProgressPartitionReceipt {
-    const files = parseProgressPartitionFacts(response, part, locale, limit);
+export function parseProgressPartitionReceipt(response: unknown, part: ProgressDiffPartition, locale: string, limit: number, factJsonBytes?: number): ProgressPartitionReceipt {
+    const files = parseProgressPartitionFacts(response, part, locale, limit, factJsonBytes);
     return Object.freeze({ requestId: (response as { partitionId: string }).partitionId, files });
 }
 
@@ -33,8 +33,8 @@ export function framedProgressFactBudget(diff: Partitioned, budget: number): num
         observedCount: envelopeBytes + 1, supportedLimit: budget, countKind: 'at-least' });
     return remaining;
 }
-export function framedProgressFactLimit(diff: Partitioned, budget: number): number {
-    return progressPartitionFactLimit(diff.baseSha, diff.headSha, diff.partitions, framedProgressFactBudget(diff, budget), diff.protocol!.version);
+export function framedProgressFactBounds(diff: Partitioned, budget: number): ProgressPartitionFactBounds {
+    return progressPartitionFactBounds(diff.baseSha, diff.headSha, diff.partitions, framedProgressFactBudget(diff, budget), diff.protocol!.version);
 }
 
 /** A complete exact-once receipt set is required again at the final boundary. */

@@ -8,7 +8,7 @@ import { largeCompleteProgressFixture } from '../../../../data/repository/__test
 const BASE = 'a'.repeat(40), HEAD = 'b'.repeat(40);
 const context = { issueNumber: 830, pushedBranch: 'bugfix/830-work', developmentBranch: 'develop', branchTypes: ['bugfix'],
     agentConfiguration: { provider: 'codex' as const, model: 'fixture-model' }, includeReasoning: false, targetLocale: 'en-US' };
-function scenario(mode: 'success' | 'final-exhausted' | 'part-exhausted', completeSource?: ReturnType<typeof largeCompleteProgressFixture>) {
+function scenario(mode: 'success' | 'final-exhausted' | 'part-exhausted' | 'escaped-fact', completeSource?: ReturnType<typeof largeCompleteProgressFixture>) {
     let diff: ProgressDiffEvidence;
     const getDiff = jest.fn(async () => diff = completeSource ? await completeSource.read() : partitionProgressDiff(BASE, HEAD,
         ['first.ts', 'last.ts'].map(path => ({ path, status: 'added', additions: 1, deletions: 0, patch: 'x'.repeat(150_000) }))));
@@ -29,6 +29,10 @@ function scenario(mode: 'success' | 'final-exhausted' | 'part-exhausted', comple
             const attempt = (partCalls.get(id) ?? 0) + 1; partCalls.set(id, attempt);
             const files = part.units ? part.units.map(unit => ({ unitId: unit.id, path: unit.path, implemented: 'Source.', remaining: 'Unknown.' }))
                 : part.paths.map(path => ({ path, implemented: 'Source.', remaining: 'Unknown.' }));
+            if (mode === 'escaped-fact') {
+                const limit = schema.properties.files.items.properties.implemented.maxLength;
+                files[0].remaining = '\u0001'.repeat(limit);
+            }
             const selected = completeSource ? diff.partitions.at(-1)! : diff.partitions[0];
             if (part === selected && (attempt === 1 || mode === 'part-exhausted')) {
                 files[0].implemented = 'PRIVATE_REJECTED_PART_' + 'x'.repeat(schema.properties.files.items.properties.implemented.maxLength);
@@ -76,3 +80,17 @@ it('progress-partition-composition-C03: persistent part overflow terminates with
     expect(f.execute).toHaveBeenCalledTimes(3); expect([...f.partCalls.values()]).toEqual([2]); expect(f.finalCalls()).toBe(0);
     expect(f.getDiff).toHaveBeenCalledTimes(1); noPublication(f); expect(JSON.stringify(result)).not.toContain('PRIVATE_REJECTED');
 });
+
+it('progress-partition-composition-C04: excessive escaped bytes fail before a receipt, final query or publication', async () => {
+    const f = scenario('escaped-fact', largeCompleteProgressFixture());
+    const result = (await f.invoke())[0];
+    expect(result).toMatchObject({ success: false, errors: [{ recovery: {
+        id: 'progress-result-contract-invalid', variables: {
+            phase: 'partition', reason: 'partition-facts-invalid', field: '$.files[0].remaining',
+        },
+    } }] });
+    expect(f.execute).toHaveBeenCalledTimes(2);
+    expect([...f.partCalls.values()]).toEqual([1]);
+    expect(f.finalCalls()).toBe(0);
+    noPublication(f);
+}, 60000);

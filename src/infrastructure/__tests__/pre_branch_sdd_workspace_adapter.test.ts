@@ -286,7 +286,7 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
     expect(await workspace.verifyPublication('feature/42-change', snapshot.baseSha, sha, selected.path)).toBe(true);
     expect(git(repo, 'diff-tree', '--no-commit-id', '--name-only', '-r', sha).split('\n').sort()).toEqual(expected);
     expect(git(repo, 'status', '--porcelain')).toBe('');
-  });
+  }, 120_000);
 
   it('blocks a portable draft with missing test evidence before publication', async () => {
     const capability = portableSddCapability();

@@ -303,8 +303,11 @@ full source part retains its content and metadata and is checked again at aggreg
 The final assessment includes one complete path dictionary and one tuple per
 validated unit with its ID, path index and both facts. Omitting duplicate
 inventory framing leaves more room for the facts within the same byte ceiling.
-Before any model call, the host reserves 16–600 Unicode code points per field,
-allowing six bytes per code point for worst-case JSON escaping.
+Before any model call, the host requires room for at least 16 code points per
+field under worst-case JSON escaping. The schema maximum, capped at 600, uses
+four bytes per code point. The host also counts the exact escaped JSON bytes
+of each returned fact before accepting its receipt. Both the original and
+replacement use the same bounds.
 
 Identity-only compact references never replace returned request/unit/path validation
 or complete byte coverage and Git blob hashing. A missing side, omitted slice, stale

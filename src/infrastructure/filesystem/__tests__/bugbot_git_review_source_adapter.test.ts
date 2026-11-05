@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import child from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { realpath } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { BugbotGitReviewSourceAdapter, completeTextPatch } from '../bugbot_git_review_source_adapter';
@@ -12,6 +13,8 @@ import { BugbotReviewCompletenessError } from '../../../domain/bugbot/framed_rev
 // under coverage. Match this file's existing 30s native cases; retain production
 // command deadlines, integrity assertions and the explicit 120s large-workload cases.
 const NATIVE_GIT_TEST_MS = 30_000;
+// The complete 64-path campaigns make many sequential native Git calls.
+const NATIVE_GIT_LARGE_TEST_MS = 120_000;
 
 function repository(oldFiles: Record<string, string | Buffer>, newFiles: Record<string, string | Buffer>, format: 'sha1' | 'sha256' = 'sha1') {
     const root = mkdtempSync(join(tmpdir(), 'copilot-framed-git-'));
@@ -169,7 +172,7 @@ it('bugbot-framed-C067 recovers64 absent added patches under all independent sou
         expect(source.changes).toHaveLength(64);
         expect(source.changes.every(x => x.source === 'local-git')).toBe(true);
     } finally { fixture.dispose(); }
-}, 30000);
+}, NATIVE_GIT_LARGE_TEST_MS);
 
 it('bugbot-framed-C068 blocks the65th missing patch before Git reads', async () => {
     const files = Object.fromEntries(Array.from({ length: 65 }, (_, i) => [`file${i}`, `new${i}\n`]));
@@ -192,13 +195,15 @@ it.each([
     try {
         const read = fixture.read(Object.keys(oldFiles).map(name => change(name)));
         expect((await read).changes).toHaveLength(64);
-        expect(execute.mock.calls.length).toBeLessThanOrEqual(256);
-        expect(execute.mock.calls.filter(call => (call[1] as string[]).includes('--batch'))).toHaveLength(1);
-        expect(execute.mock.calls.filter(call => (call[1] as string[]).includes('--batch-check'))).toHaveLength(1);
+        const root = await realpath(fixture.root);
+        const commands = execute.mock.calls.filter(call => (call[2] as { cwd?: string } | undefined)?.cwd === root);
+        expect(commands.length).toBeLessThanOrEqual(256);
+        expect(commands.filter(call => (call[1] as string[]).includes('--batch'))).toHaveLength(1);
+        expect(commands.filter(call => (call[1] as string[]).includes('--batch-check'))).toHaveLength(1);
         const source = await read;
         expect(new Set(source.changes.flatMap(item => [item.git!.old!.oid, item.git!.current!.oid])).size).toBe(oldCount + 52);
     } finally { execute.mockRestore(); fixture.dispose(); }
-}, 30000);
+}, NATIVE_GIT_LARGE_TEST_MS);
 
 it.each([
     ['@@ -1 +1 @@\n-old\n+new\n', 1, 1, true],
@@ -285,7 +290,7 @@ it.each([984, 985])('bounds actual immutable Git operations at the %s-rename edg
         if (count === 984) expect((await fixture.read(changes)).metrics!.gitReads).toBe(256);
         else await expect(fixture.read(changes)).rejects.toMatchObject({ facts: { resource: 'gitReads', observed: 257, limit: 256 } });
     } finally { fixture.dispose(); }
-}, 120000);
+}, NATIVE_GIT_LARGE_TEST_MS);
 
 it('verifies SHA-256 repositories and blob identities without assuming SHA-1 storage', async () => {
     const fixture = repository({ file: 'old\n' }, { file: 'new\n' }, 'sha256');

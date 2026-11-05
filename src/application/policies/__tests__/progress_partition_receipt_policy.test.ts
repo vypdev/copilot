@@ -1,4 +1,4 @@
-import { aggregateProgressReceipts, framedProgressFactBudget, framedProgressFactLimit, parseProgressPartitionReceipt } from '../progress_partition_receipt_policy';
+import { aggregateProgressReceipts, framedProgressFactBudget, framedProgressFactBounds, parseProgressPartitionReceipt } from '../progress_partition_receipt_policy';
 import { MAX_PROGRESS_AGGREGATE_BYTES } from '../progress_partition_response_policy';
 import { bound, framed, clone } from './fixtures/framed_progress_fixture';
 
@@ -23,7 +23,7 @@ it('requires a bound source before reserving aggregate space', () => {
 it('subtracts all receipt metadata before calculating the worst-case prose limit', () => {
     const diff = bound(); const budget = framedProgressFactBudget(diff, 5_000);
     expect(budget).toBeGreaterThan(0); expect(budget).toBeLessThan(5_000);
-    const limit = framedProgressFactLimit(diff, 5_000); expect(limit).toBeGreaterThan(0); expect(limit).toBeLessThan(600);
+    const { factLimit: limit } = framedProgressFactBounds(diff, 5_000); expect(limit).toBeGreaterThan(0); expect(limit).toBeLessThan(600);
     const values = receipts(diff).map(receipt => ({ ...receipt, files: receipt.files.map(file => ({ ...file, implemented: '\u0000'.repeat(limit), remaining: '\u0000'.repeat(limit) })) }));
     expect(Buffer.byteLength(aggregateProgressReceipts(diff, values, 5_000))).toBeLessThanOrEqual(5_000);
 });
