@@ -251,12 +251,14 @@ describe('PreBranchSddGateUseCase', () => {
     expect(h.query.mock.calls.every(([request]) => !request.prompt.includes(secretWitness))).toBe(true);
   });
 
-  it.each(['partial', 'duplicate', 'fenced'] as const)('keeps a %s seed block out of all provider prompts', async shape => {
+  it.each(['partial', 'duplicate', 'fenced', 'fenced closing marker'] as const)('keeps a %s seed block out of all provider prompts', async shape => {
     const h = harness();
     const open = '<!-- copilot:sdd-seed -->', close = '<!-- /copilot:sdd-seed -->';
     const literal = open + '\nPRIVATE_SEED_WITNESS\n' + close;
+    const fence = '\x60\x60\x60';
     const seed = shape === 'partial' ? open + '\nPRIVATE_SEED_WITNESS' : shape === 'duplicate' ? literal + '\n' + literal
-      : '\x60\x60\x60md\n' + literal + '\n\x60\x60\x60';
+      : shape === 'fenced' ? fence + 'md\n' + literal + '\n' + fence
+        : open + '\nPRIVATE_SEED_WITNESS\n' + fence + 'md\n' + close + '\n' + fence + '\nRequired text beyond the marker.';
     const request = { ...context(), issueBody: context().issueBody + '\n' + seed };
     h.getDescription.mockResolvedValue(request.issueBody);
     expect((await h.useCase.begin(request)).status).toBe('blocked');

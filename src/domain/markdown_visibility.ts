@@ -4,7 +4,9 @@ const HTML_COMMENT_START = '<!--';
 const HTML_COMMENT_END = '-->';
 
 /** Markdown structure and comment-free field values share the same source lines. */
-export function projectMarkdownVisibility(source: string): { structural: string[]; uncommented: string[] } {
+export function projectMarkdownVisibility(source: string): {
+  structural: string[]; uncommented: string[]; codeLines: ReadonlySet<number>;
+} {
   const endings = source.match(/\r\n?|\n/gu) ?? [];
   const normalized = source.replace(/\r\n?/gu, '\n');
   const lines = normalized.split('\n');
@@ -48,7 +50,7 @@ export function projectMarkdownVisibility(source: string): { structural: string[
     structural.push(visible);
     uncommented.push(fieldValue + (comment ? '' : ending));
   }
-  return { structural, uncommented };
+  return { structural, uncommented, codeLines: examples };
 }
 
 function readCodeLocations(source: string, starts: readonly number[]) {

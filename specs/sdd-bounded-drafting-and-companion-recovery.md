@@ -335,8 +335,8 @@ Existing owner contracts and case budgets remain intact by reference, including 
 | Adapters/provider contracts | 8 | Observable scenarios in the case inventory. |
 | Workflows/setup/schema | 4 | Observable scenarios in the case inventory. |
 | UI/UX/localization/sanitization | 5 | Observable scenarios in the case inventory. |
-| Integration/security/migration | 12 | Observable scenarios in the case inventory. |
-| Total | 54 | Distinct inventory cases. Repeated executions do not add cases. |
+| Integration/security/migration | 13 | Observable scenarios in the case inventory. |
+| Total | 55 | Distinct inventory cases. Repeated executions do not add cases. |
 
 | Case ID | Area | Requirements | Scenario |
 |---|---|---|---|
@@ -394,6 +394,7 @@ Existing owner contracts and case budgets remain intact by reference, including 
 | sdd-bounded-drafting-C52 | Domain/configuration/pure planning | SDD-BDR-02, SDD-BDR-05 | Indented backtick or HTML marker examples cannot hide later tables, and true fenced code and hidden comments do not contribute obligations. |
 | sdd-bounded-drafting-C53 | Workflows/setup/schema | SDD-BDR-02, SDD-BDR-11 | The Feature Request form retains real required headings after literal examples, so admission reaches the shared inventory and publication gate. |
 | sdd-bounded-drafting-C54 | UI/UX/localization/sanitization | SDD-BDR-05, SDD-BDR-11 | The Action preserves a user-authored emoji, version-like, or punctuation prefix across title decoration and keeps the SDD input fingerprint stable. |
+| sdd-bounded-drafting-C55 | Integration/security/migration | SDD-BDR-05 | A closing seed marker inside fenced Markdown cannot delimit a candidate or expose a partial seed as provider scope. |
 
 The verified Jest global thresholds are 90% lines and statements, 88% functions and 82% branches. Existing per-module budgets and applicable CI checks remain part of acceptance. New pure planning policy must achieve at least 90% branch coverage and 100% decision-table row coverage. Changed modules must meet repository thresholds without reducing their baseline. Use deterministic clocks, IDs and fakes; no real waits or live services. Test structured contracts and semantics as well as golden presentation fixtures. Workflow checks parse schemas and paths, not prose grep. Manual UX evidence: maintainers verify proposal clarity and card readability on narrow screen and supported light/dark themes.
 
@@ -470,7 +471,7 @@ Use a disposable consumer repository with the candidate Action pinned to its exa
 | SDD-BDR-02 | sdd-bounded-drafting-C01, sdd-bounded-drafting-C02, sdd-bounded-drafting-C16, sdd-bounded-drafting-C24, sdd-bounded-drafting-C27, sdd-bounded-drafting-C29, sdd-bounded-drafting-C30, sdd-bounded-drafting-C51, sdd-bounded-drafting-C52, sdd-bounded-drafting-C53 |
 | SDD-BDR-03 | sdd-bounded-drafting-C03, sdd-bounded-drafting-C10, sdd-bounded-drafting-C11, sdd-bounded-drafting-C12, sdd-bounded-drafting-C27, sdd-bounded-drafting-C32 |
 | SDD-BDR-04 | sdd-bounded-drafting-C15, sdd-bounded-drafting-C20, sdd-bounded-drafting-C31 |
-| SDD-BDR-05 | sdd-bounded-drafting-C05, sdd-bounded-drafting-C06, sdd-bounded-drafting-C17, sdd-bounded-drafting-C23, sdd-bounded-drafting-C28, sdd-bounded-drafting-C36, sdd-bounded-drafting-C48, sdd-bounded-drafting-C49, sdd-bounded-drafting-C51, sdd-bounded-drafting-C52, sdd-bounded-drafting-C54 |
+| SDD-BDR-05 | sdd-bounded-drafting-C05, sdd-bounded-drafting-C06, sdd-bounded-drafting-C17, sdd-bounded-drafting-C23, sdd-bounded-drafting-C28, sdd-bounded-drafting-C36, sdd-bounded-drafting-C48, sdd-bounded-drafting-C49, sdd-bounded-drafting-C51, sdd-bounded-drafting-C52, sdd-bounded-drafting-C54, sdd-bounded-drafting-C55 |
 | SDD-BDR-06 | sdd-bounded-drafting-C18, sdd-bounded-drafting-C19, sdd-bounded-drafting-C20, sdd-bounded-drafting-C21 |
 | SDD-BDR-07 | sdd-bounded-drafting-C07, sdd-bounded-drafting-C08, sdd-bounded-drafting-C09, sdd-bounded-drafting-C15, sdd-bounded-drafting-C22, sdd-bounded-drafting-C24, sdd-bounded-drafting-C25, sdd-bounded-drafting-C26, sdd-bounded-drafting-C31, sdd-bounded-drafting-C32, sdd-bounded-drafting-C39, sdd-bounded-drafting-C40, sdd-bounded-drafting-C44, sdd-bounded-drafting-C45, sdd-bounded-drafting-C46, sdd-bounded-drafting-C47, sdd-bounded-drafting-C50 |
 | SDD-BDR-08 | sdd-bounded-drafting-C03, sdd-bounded-drafting-C10, sdd-bounded-drafting-C13, sdd-bounded-drafting-C29, sdd-bounded-drafting-C32 |

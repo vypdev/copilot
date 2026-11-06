@@ -36934,7 +36934,7 @@ function projectMarkdownVisibility(source) {
         structural.push(visible);
         uncommented.push(fieldValue + (comment ? '' : ending));
     }
-    return { structural, uncommented };
+    return { structural, uncommented, codeLines: examples };
 }
 function readCodeLocations(source, starts) {
     const examples = new Set();

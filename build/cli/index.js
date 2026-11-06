@@ -50774,35 +50774,24 @@ exports.sddSelectionReceipt = sddSelectionReceipt;
 exports.sddArtifactDigest = sddArtifactDigest;
 const node_crypto_1 = __nccwpck_require__(6005);
 const application_error_1 = __nccwpck_require__(75999);
+const markdown_visibility_1 = __nccwpck_require__(43591);
 const SHA256 = '[a-f0-9]{64}';
 const start = '<!-- copilot:sdd-seed -->';
 const end = '<!-- /copilot:sdd-seed -->';
 function readSddSeed(body) {
-    const normalized = body.replace(/\r\n/gu, '\n');
+    const normalized = body.replace(/\r\n?/gu, '\n');
     const lines = normalized.split('\n');
     const open = lines.indexOf(start), close = lines.indexOf(end);
     const markers = [...normalized.matchAll(/<!--\s*\/?copilot:sdd-seed\b/giu)].length;
     if (markers === 0)
         return { scope: body };
+    const { codeLines } = (0, markdown_visibility_1.projectMarkdownVisibility)(normalized);
     if (markers !== 2 || open < 0 || close <= open + 1 || !lines.slice(open + 1, close).some(line => line.trim())
-        || fencedAt(lines, open) || lines.lastIndexOf(start) !== open || lines.lastIndexOf(end) !== close) {
+        || codeLines.has(open + 1) || codeLines.has(close + 1) || lines.lastIndexOf(start) !== open || lines.lastIndexOf(end) !== close) {
         throw new application_error_1.ApplicationError('validation.invalid-input', 'Use exactly one complete SDD seed block with standalone opening and closing markers, or remove the seed markers.');
     }
     const seed = lines.slice(open + 1, close).join('\n') + '\n';
     return { scope: [...lines.slice(0, open), ...lines.slice(close + 1)].join('\n'), seed, hash: sddArtifactDigest(seed) };
-}
-function fencedAt(lines, lineIndex) {
-    let fence;
-    for (const line of lines.slice(0, lineIndex)) {
-        const boundary = /^ {0,3}(`{3,}|~{3,})(.*)$/u.exec(line);
-        if (!boundary)
-            continue;
-        if (!fence)
-            fence = boundary[1];
-        else if (boundary[1][0] === fence[0] && boundary[1].length >= fence.length && !boundary[2].trim())
-            fence = undefined;
-    }
-    return fence !== undefined;
 }
 function isSddSeedReview(body, seedHash) {
     return new RegExp('^SDD Q1: review seed (' + SHA256 + ')$', 'iu').exec(body.trimEnd())?.[1].toLowerCase() === seedHash;
@@ -100613,7 +100602,7 @@ function projectMarkdownVisibility(source) {
         structural.push(visible);
         uncommented.push(fieldValue + (comment ? '' : ending));
     }
-    return { structural, uncommented };
+    return { structural, uncommented, codeLines: examples };
 }
 function readCodeLocations(source, starts) {
     const examples = new Set();
