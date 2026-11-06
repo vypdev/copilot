@@ -65,7 +65,7 @@ export function explicitSddObligations(inputs: readonly string[]): SddObligation
 
 /** Keep the surrounding decisions, but do not ask the provider to re-extract pinned rows. */
 export function sddInventorySource(input: string): string {
-  const source = input.replace(/\r\n/gu, '\n').split('\n');
+  const source = input.replace(/\r\n?/gu, '\n').split('\n');
   visitSddTables(input, (key, rows, start, end) => {
     source[start] = '[Canonical ' + key + ' table: ' + rows.length + ' rows retained by the host.]';
     source.fill('', start + 1, end);

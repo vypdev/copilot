@@ -62,6 +62,24 @@ describe('bounded incremental SDD drafting (#763)', () => {
     expect(query.mock.calls.every(([request]) => request.sourceSnapshot.baseSha === 'a'.repeat(40))).toBe(true);
   });
 
+  it.each([
+    ['an inline comment marker', 'Use `<!--` literally.'],
+    ['an inline span with a longer delimiter across lines', 'Use ``a literal `\n marker <!--`` here.'],
+    ['an indented backtick example', '    ```'],
+    ['an indented HTML marker example', '\t<!--'],
+  ])('retains all explicit inventory after %s for generation and seed validation', async (_name, example) => {
+    const input = example + '\n\n' + fixture(2);
+    const expected = explicitSddObligations([fixture(2)]);
+    expect(explicitSddObligations([input])).toEqual(expected);
+    const result = await run([input], jest.fn(async ({ prompt }) => reply(prompt)));
+    expect(result).toContain('| PAY-01 | impact-C1, impact-C2 |');
+    const incomplete = result.replace(/^\| impact-C2 \|.*\n/mu, '');
+    const writer = jest.fn();
+    await expect(assembleAndValidateSdd(incomplete, plan, explicitSddObligations([input]), writer))
+      .rejects.toMatchObject({ reason: 'case-identity' });
+    expect(writer).not.toHaveBeenCalled();
+  });
+
   it('does not allow a seed to replace the scenario of an admitted case with the same ID', async () => {
     const seed = sddConsistencyFixture('impact', plan.path, 'update').replace(/impact-C01/gu, 'impact-C1');
     const explicit = explicitSddObligations([fixture(1)]);

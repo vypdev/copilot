@@ -330,13 +330,13 @@ Existing owner contracts and case budgets remain intact by reference, including 
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain/configuration/pure planning | 10 | Observable scenarios in the case inventory. |
+| Domain/configuration/pure planning | 12 | Observable scenarios in the case inventory. |
 | State/application/idempotency/races | 13 | Observable scenarios in the case inventory. |
 | Adapters/provider contracts | 8 | Observable scenarios in the case inventory. |
 | Workflows/setup/schema | 3 | Observable scenarios in the case inventory. |
 | UI/UX/localization/sanitization | 4 | Observable scenarios in the case inventory. |
 | Integration/security/migration | 12 | Observable scenarios in the case inventory. |
-| Total | 50 | Distinct inventory cases. Repeated executions do not add cases. |
+| Total | 52 | Distinct inventory cases. Repeated executions do not add cases. |
 
 | Case ID | Area | Requirements | Scenario |
 |---|---|---|---|
@@ -390,6 +390,8 @@ Existing owner contracts and case budgets remain intact by reference, including 
 | sdd-bounded-drafting-C48 | Integration/security/migration | SDD-BDR-05 | Partial, duplicated and fenced seed blocks never reach the provider. |
 | sdd-bounded-drafting-C49 | Integration/security/migration | SDD-BDR-05 | A quoted, duplicated, fenced or foreign-repository receipt cannot authorize a publication. |
 | sdd-bounded-drafting-C50 | Integration/security/migration | SDD-BDR-07 | An advanced legacy pending ref or a commit with forged bot metadata cannot establish publication. |
+| sdd-bounded-drafting-C51 | Domain/configuration/pure planning | SDD-BDR-02, SDD-BDR-05 | Inline code containing an HTML comment marker, including a code span that wraps to the next line, cannot suppress visible requirements, cases, or paths during generation or seed validation. |
+| sdd-bounded-drafting-C52 | Domain/configuration/pure planning | SDD-BDR-02, SDD-BDR-05 | Indented backtick or HTML marker examples cannot hide later tables, and true fenced code and hidden comments do not contribute obligations. |
 
 The verified Jest global thresholds are 90% lines and statements, 88% functions and 82% branches. Existing per-module budgets and applicable CI checks remain part of acceptance. New pure planning policy must achieve at least 90% branch coverage and 100% decision-table row coverage. Changed modules must meet repository thresholds without reducing their baseline. Use deterministic clocks, IDs and fakes; no real waits or live services. Test structured contracts and semantics as well as golden presentation fixtures. Workflow checks parse schemas and paths, not prose grep. Manual UX evidence: maintainers verify proposal clarity and card readability on narrow screen and supported light/dark themes.
 
@@ -456,16 +458,17 @@ Use a disposable consumer repository with the candidate Action pinned to its exa
 14. Given an invalid requirement ID or a new local handle, the gate reports invalid syntax or allocates a canonical ID and derives its reciprocal links. An authorized seed cannot redefine a reserved ID.
 15. Given the Domus #25 clarification shape, including a question with both a real prerequisite and a separate future-branch clause, the gate retains the genuine decision and proceeds after authorized evidence. Verified publication and linkage still govern implementation.
 16. Given an interrupted publication, the Action reconciles the recorded prepared commit, or stops for review when the linked branch lacks that exact evidence. Git author and subject fields grant no authority.
+17. Given a visible canonical inventory after a literal inline comment marker or indented code example, the Action retains every row for both drafting routes. Real hidden comments and code blocks remain excluded.
 
 ## 17. Requirements traceability
 
 | Requirement | Cases |
 |---|---|
 | SDD-BDR-01 | sdd-bounded-drafting-C01, sdd-bounded-drafting-C04, sdd-bounded-drafting-C14, sdd-bounded-drafting-C23 |
-| SDD-BDR-02 | sdd-bounded-drafting-C01, sdd-bounded-drafting-C02, sdd-bounded-drafting-C16, sdd-bounded-drafting-C24, sdd-bounded-drafting-C27, sdd-bounded-drafting-C29, sdd-bounded-drafting-C30 |
+| SDD-BDR-02 | sdd-bounded-drafting-C01, sdd-bounded-drafting-C02, sdd-bounded-drafting-C16, sdd-bounded-drafting-C24, sdd-bounded-drafting-C27, sdd-bounded-drafting-C29, sdd-bounded-drafting-C30, sdd-bounded-drafting-C51, sdd-bounded-drafting-C52 |
 | SDD-BDR-03 | sdd-bounded-drafting-C03, sdd-bounded-drafting-C10, sdd-bounded-drafting-C11, sdd-bounded-drafting-C12, sdd-bounded-drafting-C27, sdd-bounded-drafting-C32 |
 | SDD-BDR-04 | sdd-bounded-drafting-C15, sdd-bounded-drafting-C20, sdd-bounded-drafting-C31 |
-| SDD-BDR-05 | sdd-bounded-drafting-C05, sdd-bounded-drafting-C06, sdd-bounded-drafting-C17, sdd-bounded-drafting-C23, sdd-bounded-drafting-C28, sdd-bounded-drafting-C36, sdd-bounded-drafting-C48, sdd-bounded-drafting-C49 |
+| SDD-BDR-05 | sdd-bounded-drafting-C05, sdd-bounded-drafting-C06, sdd-bounded-drafting-C17, sdd-bounded-drafting-C23, sdd-bounded-drafting-C28, sdd-bounded-drafting-C36, sdd-bounded-drafting-C48, sdd-bounded-drafting-C49, sdd-bounded-drafting-C51, sdd-bounded-drafting-C52 |
 | SDD-BDR-06 | sdd-bounded-drafting-C18, sdd-bounded-drafting-C19, sdd-bounded-drafting-C20, sdd-bounded-drafting-C21 |
 | SDD-BDR-07 | sdd-bounded-drafting-C07, sdd-bounded-drafting-C08, sdd-bounded-drafting-C09, sdd-bounded-drafting-C15, sdd-bounded-drafting-C22, sdd-bounded-drafting-C24, sdd-bounded-drafting-C25, sdd-bounded-drafting-C26, sdd-bounded-drafting-C31, sdd-bounded-drafting-C32, sdd-bounded-drafting-C39, sdd-bounded-drafting-C40, sdd-bounded-drafting-C44, sdd-bounded-drafting-C45, sdd-bounded-drafting-C46, sdd-bounded-drafting-C47, sdd-bounded-drafting-C50 |
 | SDD-BDR-08 | sdd-bounded-drafting-C03, sdd-bounded-drafting-C10, sdd-bounded-drafting-C13, sdd-bounded-drafting-C29, sdd-bounded-drafting-C32 |

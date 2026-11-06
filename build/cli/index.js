@@ -103502,7 +103502,7 @@ function explicitSddObligations(inputs) {
 }
 /** Keep the surrounding decisions, but do not ask the provider to re-extract pinned rows. */
 function sddInventorySource(input) {
-    const source = input.replace(/\r\n/gu, '\n').split('\n');
+    const source = input.replace(/\r\n?/gu, '\n').split('\n');
     visitSddTables(input, (key, rows, start, end) => {
         source[start] = '[Canonical ' + key + ' table: ' + rows.length + ' rows retained by the host.]';
         source.fill('', start + 1, end);
@@ -103967,37 +103967,115 @@ exports.readSddTextBlockLocations = readSddTextBlockLocations;
 exports.readSddVisibleReferences = readSddVisibleReferences;
 exports.isSddMarkdownLinkExample = isSddMarkdownLinkExample;
 const commonmark_1 = __nccwpck_require__(86076);
-/** Excludes examples and hidden records from the contract. */
+const HTML_COMMENT_START = '<!--';
+const HTML_COMMENT_END = '-->';
+/** Excludes examples and hidden records from the contract, preserving source line numbers. */
 function visibleSddContract(source) {
-    let fence;
+    const normalized = source.replace(/\r\n?/gu, '\n');
+    const lines = normalized.split('\n');
+    let lineStart = 0;
+    const starts = lines.map(line => {
+        const start = lineStart;
+        lineStart += line.length + 1;
+        return start;
+    });
+    const { examples, literalOpeners } = readSddExampleLocations(normalized, starts);
     let comment = false;
-    return source.replace(/\r\n/gu, '\n').split('\n').map(line => {
-        const boundary = /^\s*(`{3,}|~{3,})/u.exec(line);
-        if (fence) {
-            // Comment syntax inside code is literal; only the original line can close it.
-            if (boundary && boundary[1][0] === fence[0] && boundary[1].length >= fence.length
-                && /^ {0,3}(?:`+|~+)[ \t]*$/u.test(line))
-                fence = undefined;
+    return lines.map((line, index) => {
+        if (!comment && examples.has(index + 1))
             return '';
-        }
-        if (!comment && boundary) {
-            fence = boundary[1];
-            return '';
-        }
         let result = '';
         let offset = 0;
         while (offset < line.length) {
-            const marker = comment ? '-->' : '<!--';
+            const marker = comment ? HTML_COMMENT_END : HTML_COMMENT_START;
             const next = line.indexOf(marker, offset);
             if (next < 0)
                 return result + (comment ? '' : line.slice(offset));
-            if (!comment)
-                result += line.slice(offset, next) + ' ';
+            if (!comment && (literalOpeners.has(starts[index] + next) || isEscaped(line, next))) {
+                result += line.slice(offset, next + marker.length);
+            }
+            else {
+                if (!comment)
+                    result += line.slice(offset, next) + ' ';
+                comment = !comment;
+            }
             offset = next + marker.length;
-            comment = !comment;
         }
         return result;
     }).join('\n');
+}
+function readSddExampleLocations(source, starts) {
+    const examples = new Set();
+    const literalOpeners = new Set();
+    const walker = new commonmark_1.Parser().parse(source).walker();
+    let inlineBlock;
+    let hasLiteralOpener = false;
+    let event;
+    while ((event = walker.next())) {
+        const { node, entering } = event;
+        if (node.type === 'code_block' && entering) {
+            const [start, end] = node.sourcepos;
+            for (let line = start[0]; line <= end[0]; line++)
+                examples.add(line);
+        }
+        if (node.type === 'paragraph' || node.type === 'heading') {
+            if (entering) {
+                const [start, end] = node.sourcepos;
+                inlineBlock = [starts[start[0] - 1], starts[end[0]] ?? source.length];
+                hasLiteralOpener = false;
+            }
+            else if (hasLiteralOpener && inlineBlock) {
+                const [start, end] = inlineBlock;
+                for (const marker of inlineCodeCommentOffsets(source.slice(start, end)))
+                    literalOpeners.add(start + marker);
+            }
+        }
+        if (node.type === 'code' && entering && node.literal.includes(HTML_COMMENT_START))
+            hasLiteralOpener = true;
+    }
+    return { examples, literalOpeners };
+}
+/** CommonMark gives block positions only. Match inline runs of equal length within that block. */
+function inlineCodeCommentOffsets(block) {
+    const tokens = [...block.matchAll(/`+|<!--/gu)];
+    const nextByLength = new Map();
+    const closers = new Map();
+    for (let index = tokens.length - 1; index >= 0; index--) {
+        const token = tokens[index];
+        const [run] = token;
+        if (run === HTML_COMMENT_START)
+            continue;
+        const openingLength = isEscaped(block, token.index) ? run.length - 1 : run.length;
+        const closingEnd = nextByLength.get(openingLength);
+        if (closingEnd !== undefined)
+            closers.set(token.index, closingEnd);
+        nextByLength.set(run.length, token.index + run.length);
+    }
+    const markers = [];
+    let codeUntil = -1;
+    let skipUntil = -1;
+    for (const token of tokens) {
+        if (token.index < skipUntil)
+            continue;
+        if (token[0] === HTML_COMMENT_START) {
+            if (token.index < codeUntil)
+                markers.push(token.index);
+            else if (!isEscaped(block, token.index)) {
+                const close = block.indexOf(HTML_COMMENT_END, token.index + HTML_COMMENT_START.length);
+                skipUntil = close === -1 ? block.length : close + HTML_COMMENT_END.length;
+            }
+        }
+        else if (token.index >= codeUntil) {
+            codeUntil = closers.get(token.index) ?? codeUntil;
+        }
+    }
+    return markers;
+}
+function isEscaped(text, index) {
+    let backslashes = 0;
+    while (index > 0 && text[--index] === '\\')
+        backslashes++;
+    return backslashes % 2 !== 0;
 }
 /** CommonMark supplies block boundaries; callers retain raw table-cell escapes. */
 function readSddTextBlockLocations(source) {
