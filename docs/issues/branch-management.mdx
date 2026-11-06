@@ -298,6 +298,13 @@ in-flight assessment. No automatic semantic repair or extra model call is added.
 
 ## Completion after a PR merge
 
+For an eligible preparatory PR into the configured non-default development
+branch, a maintainer can [declare a staged rollout](./notifications-and-auto-close#staged-rollout-after-a-preparatory-merge).
+The issue stays assignable while acceptance is pending. The workflow credential
+needs access to read PR reviews, check repository collaborator roles, and write
+comments on the managed issue. If tracking registration fails, rerun the failed
+jobs from the merge run.
+
 Native issue closure owns completion. Copilot clears obsolete managed active,
 waiting, temporary activity and old percentage labels with selective operations.
 It retains issue kind, priority, size, branch/SDD history and unrelated labels.

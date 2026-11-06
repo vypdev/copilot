@@ -1,3 +1,5 @@
+import { getOctokitClient } from '../github/octokit_client_resolver';
+import { StagedRolloutReviewRepository, type StagedRolloutGitHubClient } from '../../data/repository/pull_request/staged_rollout_review_repository';
 import { createReplyRequestReadPort } from './reply_request_composition_root';
 import { createChangeSizeProjectMembershipQueryPort } from './change_size_project_membership_composition_root';
 import { bindIssueCommentPublication, bindBranchSyncRetirementComments } from './push_single_action_capability_port_binding';
@@ -88,6 +90,10 @@ export function createPullRequestUseCaseCompositionRoot(binding: BugbotScmBindin
   const boundPullRequestLifecycle = bindPullRequestIssueLink(pullRequestLifecycle, binding);
   const boundProjectBoard = bindProjectBoardCommands(projectBoard.command, binding);
 
+  const rolloutReviews = new StagedRolloutReviewRepository(
+    getOctokitClient<StagedRolloutGitHubClient>(binding.token), binding.owner, binding.repository,
+  );
+
   const workflowSteps = {
     updateTitle: new UpdateTitleUseCase(bindIssueTitle(issueTitle, binding)),
     assignMemberToIssue: new AssignMemberToIssueUseCase(
@@ -115,7 +121,17 @@ export function createPullRequestUseCaseCompositionRoot(binding: BugbotScmBindin
     retireBranchSync: new RetireClosedIssueCardsUseCase(
       new RetireBranchSyncUseCase(createNativeStatusReadPort(binding), bindBranchSyncRetirementComments(bindIssueCommentPublication(issueContent, binding)), createReplyRequestReadPort(binding)),
       new RetireProgressUseCase(createNativeStatusReadPort(binding), bindBranchSyncRetirementComments(bindIssueCommentPublication(issueContent, binding)), createReplyRequestReadPort(binding))),
-    closeIssueAfterMerging: new CloseIssueAfterMergingUseCase(bindIssueCompletion(createIssueCompletionRepository(binding))),
+    closeIssueAfterMerging: new CloseIssueAfterMergingUseCase(bindIssueCompletion(createIssueCompletionRepository(binding)), {
+      publicationTarget: Object.freeze({
+        owner: binding.owner, repository: binding.repository,
+        repositoryUrl: `https://github.com/${encodeURIComponent(binding.owner)}/${encodeURIComponent(binding.repository)}`,
+      }),
+      reviews: Object.freeze({
+        readMergedPullRequest: rolloutReviews.readMergedPullRequest.bind(rolloutReviews),
+        isMaintainer: rolloutReviews.isMaintainer.bind(rolloutReviews),
+      }),
+      comments: bindIssueCommentPublication(issueContent, binding),
+    }),
   };
 
   return composePullRequestUseCase(

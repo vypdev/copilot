@@ -53,6 +53,21 @@ export function hasExplicitClosingReference(body: string, repository: string, is
     return presence.managed || presence.outside;
 }
 
+/** Staged eligibility rejects closing keywords in visible PR prose, including inline references. */
+export function hasClosingKeywordForIssue(body: string, repository: string, issueNumber: number): boolean {
+    const walker = new Parser().parse(body).walker();
+    let event;
+    while ((event = walker.next())) {
+        if (!event.entering || event.node.type !== 'text' || !event.node.literal) continue;
+        const references = event.node.literal.matchAll(/(?:^|[^\w-])([a-z]+):?[ \t]+(?:([a-z0-9][a-z0-9_.-]*\/[a-z0-9_.-]+))?#([1-9]\d*)(?![\w])/giu);
+        for (const [, word, targetRepository, targetIssue] of references) {
+            if (CLOSING_WORDS.has(word.toLowerCase()) && Number(targetIssue) === issueNumber
+                && (!targetRepository || targetRepository.toLowerCase() === repository.toLowerCase())) return true;
+        }
+    }
+    return false;
+}
+
 /** Preserve only intent that the selected ownership mode would otherwise erase. */
 export function shouldPreserveClosingReference(
     body: string,

@@ -8,7 +8,7 @@ import type { BoundPullRequestBranchQueryPort } from '../../ports/pull_request_b
 import type { BoundBranchListQueryPort } from '../../ports/branch_lifecycle_ports';
 import type { ProgressContext } from '../push_single_action_contexts';
 import { ParamUseCase } from '../base/param_usecase';
-import { runCheckProgressWorkflow } from './check_progress_workflow';
+import { runCheckProgressWorkflow, type ProgressRolloutFence } from './check_progress_workflow';
 import type { BoundPublicationSourceQueryPort } from '../../ports/publication_freshness_ports';
 
 /** Application boundary for assessing and publishing issue progress. */
@@ -25,6 +25,7 @@ export class CheckProgressUseCase implements ParamUseCase<ProgressContext, Resul
         private readonly publicationSourceQuery: BoundPublicationSourceQueryPort,
         private readonly progressDiffQuery: BoundProgressDiffQueryPort,
         private readonly progressComparisonSourceQuery: BoundProgressComparisonSourceQueryPort,
+        private readonly rolloutFence?: ProgressRolloutFence,
     ) {}
 
     async invoke(param: ProgressContext): Promise<Result[]> {
@@ -38,6 +39,7 @@ export class CheckProgressUseCase implements ParamUseCase<ProgressContext, Resul
             publicationSourceQuery: this.publicationSourceQuery,
             progressDiffQuery: this.progressDiffQuery,
             progressComparisonSourceQuery: this.progressComparisonSourceQuery,
+            rolloutFence: this.rolloutFence,
         });
     }
 }

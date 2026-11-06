@@ -28,7 +28,7 @@ opened/reopened -> resolve optional distinct issue -> enrich PR -> concise descr
 synchronize -> concise description policy -> review
 ready_for_review -> full read-only review, without repeating enrichment
 edited metadata -> no Copilot PR workflow
-merged -> close distinct linked issue only
+merged -> verify staged declaration -> defer rollout or close distinct linked issue
 ```
 
 ## 2. Problem, current behavior, and evidence
@@ -164,7 +164,10 @@ link mutations are compensated on every edge, and partial cleanup is explicit.
    only when a distinct issue exists.
 3. Review result updates current status/lifecycle.
 4. Synchronize reruns only refreshable content and review.
-5. Merge closes the linked issue and exposes completion.
+5. Ordinary merge closes the linked issue and exposes completion. A qualifying
+   preparatory merge keeps the exact original issue open for operational acceptance.
+   The [staged rollout contract](./managed-issue-and-branch-lifecycle-issue-735.md)
+   defines the declaration, evidence, and recovery rules.
 
 ### 6.2 Alternative paths
 

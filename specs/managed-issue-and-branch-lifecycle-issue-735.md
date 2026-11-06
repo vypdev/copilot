@@ -1,22 +1,24 @@
 # Staged rollout after a preparatory pull request
 
-- Status: Draft
+- Status: Implemented, pending maintainer review
 - Date: 2026-11-06
 - Catalog capability ID: managed-issue-lifecycle
-- Last verified: not applicable (prospective companion)
+- Last verified: 2026-11-06 (merged-route integration with deterministic GitHub fixtures)
 - Owners: Copilot maintainers
 - Scope: Define how an explicitly reviewed preparatory merge can leave its managed issue open as the sole tracker for post-merge operational acceptance.
 - Related issues/PRs: [Issue #735](https://github.com/vypdev/copilot/issues/735); [VaultStadio issue #85](https://github.com/vypdev/vaultstadio/issues/85); [VaultStadio PR #108](https://github.com/vypdev/vaultstadio/pull/108)
 - Required review gates: product UX, architecture, testing, documentation, security/operations
-- Open decisions blocking readiness: None in the supplied answers. Draft remains blocked from implementation readiness until required review gates and repository validation are completed.
+- Open decisions blocking readiness: none
 
-This is a proposed companion to the existing [managed issue and branch lifecycle specification](managed-issue-and-branch-lifecycle.md) and [issue assignment failure recovery specification](issue-assignment-failure-recovery.md). Preserve both as the owning baseline; this document adds only staged merge behavior. The catalog's existing paths identify current evidence locations, not proof of future implementation. The supplied implementation arrays are absent for a proposed owner, so this draft does not claim the proposed behavior exists or has been tested.
+This companion extends the [managed issue and branch lifecycle specification](managed-issue-and-branch-lifecycle.md).
+It uses the existing merge and native issue-close routes. The catalog lists
+the corresponding implementation and merge-route fixture.
 
 ## 1. Executive summary
 
 A maintainer may declare, through a qualifying GitHub PR review submitted before merge, that a preparatory PR completes implementation work while operational acceptance remains pending. Copilot then keeps the original managed issue open, assignable, and intact as the sole rollout tracker. It publishes one status card tied to the merged PR and reports “Rollout pending”; it does not mark the issue 100% complete. After reviewing evidence and completing the issue's existing checklist, a maintainer closes the issue through the existing native close and reconciliation path.
 
-Without a valid declaration, ordinary close-on-merge behavior remains unchanged. A recognizable but invalid, stale, conflicting, unauthorized, or unverifiable declaration fails closed: Copilot does not perform merge-driven completion or publish 100%, and the issue remains actionable with a safe next step. This declaration grants no merge, deployment, activation, release, approval, or branch-protection authority.
+When there is no declaration or active rollout card, ordinary close-on-merge behavior applies. A recognizable but invalid, stale, conflicting, unauthorized, or unverifiable declaration fails closed: Copilot does not perform merge-driven completion or publish 100%, and the issue remains actionable with a safe next step. This declaration grants no merge, deployment, activation, release, approval, or branch-protection authority.
 
 ```text
 Managed issue + qualifying reviewed declaration -> preparatory PR merged -> issue remains open with Rollout pending card -> maintainer records operational evidence -> native issue close and reconciliation
@@ -33,19 +35,15 @@ Maintainers and assignees need a supported way to merge a prerequisite implement
 1. A managed issue may be linked to a PR using non-closing context such as `Refs #85`.
 2. In the reported consumer event, PR108 merged to `develop`; its description explicitly left operational acceptance pending. The subsequent Copilot `pull_request:closed` run succeeded, and the linked issue was closed by `vypbot` with progress later shown as 100%.
 3. The reported merge preserved the verified candidate tree and left `master` and `VERIFICATION_SETUP=false` unchanged. Candidate macOS and Linux runs each executed 4,484 tests, but were not the immutable trusted-main Copilot protocol.
-4. These are incident facts from the issue report, not a claim that this companion's behavior is implemented. The companion proposes an opt-in staged path while retaining ordinary completion for genuinely complete work.
+4. The regression fixture uses the incident repository, PR, issue, head, and operational acceptance facts. Its qualifying review declaration is synthetic.
 
 ### 2.3 Evidence
 
 - Code/workflow/documentation references in the validated owning catalog: `.github/workflows/copilot_issue.yml`, `.github/workflows/copilot_commit.yml`; lifecycle entrypoints `src/application/usecases/issue_use_case.ts` and `src/application/usecases/commit_use_case.ts`; completion path `src/application/usecases/steps/issue/close_issue_after_merging_use_case.ts`; reconciliation paths `src/application/usecases/actions/reconcile_closed_issue_use_case.ts` and `src/application/usecases/actions/reconcile_closed_issue_metadata_use_case.ts`; progress and lifecycle policies and tests listed in the catalog.
 - Current user documentation evidence: `docs/issues/notifications-and-auto-close.mdx`, `docs/issues/branch-management.mdx`, `docs/issues/labels-and-branch-types.mdx`, and `docs/issues/comment-commands.mdx`.
 - Incident: [VaultStadio issue #85](https://github.com/vypdev/vaultstadio/issues/85), [PR #108](https://github.com/vypdev/vaultstadio/pull/108), [merge workflow run](https://github.com/vypdev/vaultstadio/actions/runs/40424079232), [macOS candidate run](https://github.com/vypdev/vaultstadio/actions/runs/40411879338), and [Linux candidate run](https://github.com/vypdev/vaultstadio/actions/runs/40416515611). The supplied report also identifies pre-merge evidence and progress comments #6430079839, #6430309650, and resulting progress card #6427726092.
-- External primary sources: GitHub pull request review identity, commit association, submission, edit and dismissal facts must be obtained from the provider's review/event APIs; implementation must verify supported API semantics against GitHub documentation. No external source was supplied or independently verified for this draft.
-- Unknowns: Exact current event payload/API behavior, repository permission mapping, card marker conventions, coverage thresholds, and available validation commands require confirmation against the repository implementation/toolchain before implementation. No workflow execution is evidenced by the catalog listing.
-
-### 2.4 Retrospective classification (as-built baselines only)
-
-Not applicable: this is a prospective companion and reconstructs no implemented baseline. The incident facts above are evidence motivating proposed behavior, not an as-built contract for Copilot.
+- GitHub provides review state, author, associated commit, submission time and edit time. The collaborator permission response provides the current role and user identity. [Review fields](https://docs.github.com/en/graphql/reference/pulls#pullrequestreview) · [Collaborator permission](https://docs.github.com/en/rest/collaborators/collaborators#get-repository-permissions-for-a-user)
+- The actual VaultStadio PR returned #85 in the native closing-issue connection even though its body uses `Refs #85`. GitHub applies native linked-issue closure on default-branch merges. The non-default target and explicit closing-keyword guard establish eligibility here. [GitHub closure semantics](https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/linking-a-pull-request-to-an-issue)
 
 ## 3. Actors, surfaces, and terminology
 
@@ -56,7 +54,7 @@ Not applicable: this is a prospective companion and reconstructs no implemented 
 | Copilot workflow | Evaluate declaration, preserve issue state, register rollout status | Same-repository PR closed event | Issue card, job summary, logs |
 | Operator | Recover publication failures and inspect authorization result | Failed or replayed merge job | Job summary, sanitized logs, issue card |
 
-**Managed issue** means the distinct issue already resolved by Copilot for processing that PR. **Staged declaration** means the exact submitted review body `Copilot-Stage-Rollout: #<issue-number>`. **Preparatory PR** means a regular same-repository PR merged into a non-default integration branch, with no native closing link or keyword for the staged issue. **Rollout pending** means implementation has merged while operational acceptance remains open. **Status card** means the single Copilot-owned issue card keyed to that preparatory PR. Candidate verification, trusted-source readiness, activation approval, and official operational verification are separate facts.
+**Managed issue** means the distinct issue already resolved by Copilot for processing that PR. **Staged declaration** means the exact submitted review body `Copilot-Stage-Rollout: #<issue-number>`. **Preparatory PR** means a regular same-repository managed PR merged into the configured non-default development branch, with no closing keyword in the PR prose for the staged issue. **Rollout pending** means implementation has merged while operational acceptance remains open. **Status card** means the single Copilot-owned issue card keyed to that preparatory PR. Candidate verification, trusted-source readiness, activation approval, and official operational verification are separate facts.
 
 ## 4. Goals
 
@@ -64,7 +62,7 @@ Not applicable: this is a prospective companion and reconstructs no implemented 
 |---|---|
 | SDD-I735-R1 | A valid staged declaration defers only Copilot's merge-driven completion for the exact distinct managed issue it names; that issue remains open, assigned, and retains its acceptance checklist. |
 | SDD-I735-R2 | A declaration is valid only when a human GitHub review author has a current repository maintainer/admin role, the exact managed issue is named, and the review is submitted before merge, tied to the exact merged PR head, unedited, undismissed, and unconflicted. |
-| SDD-I735-R3 | Staging is limited to regular same-repository managed PRs merged into a non-default integration branch without native closing links or keywords; invalid or unverifiable declarations hold Copilot completion and 100%. |
+| SDD-I735-R3 | Staging is limited to regular same-repository managed PRs merged into the configured non-default development branch without an explicit closing keyword for the issue; invalid or unverifiable declarations hold Copilot completion and 100%. |
 | SDD-I735-R4 | A staged merge publishes or updates one issue status card keyed to the preparatory PR with “Rollout pending,” the merged PR link, and a next action to finish the existing checklist and record evidence. |
 | SDD-I735-R5 | Card publication is idempotent; a retry after a lost create response adopts the same card, while publication failure identifies the same failed merge job as recovery. |
 | SDD-I735-R6 | Staged state cannot be overwritten by stale progress refresh; duplicate, replay, manual close, and reopen events preserve current native state and evidence. |
@@ -83,7 +81,7 @@ Not applicable: this is a prospective companion and reconstructs no implemented 
 
 1. The issue named by a declaration must equal the distinct managed issue already resolved for that PR; one declaration cannot stage other linked issues or change which issues Copilot processes.
 2. Free text and `Refs` links are context only. Only a qualifying GitHub review supplies the declaration.
-3. Native closing references/keywords retain existing behavior and disqualify the staged path for the named issue.
+3. Native GitHub closure retains its existing behavior. A default-branch target or closing keyword for the exact issue disqualifies staging. An existing sidebar relationship on an eligible non-default target is informational for this merge.
 4. Staging leaves the original issue open, assigned, and with its complete acceptance; it never reports merge as 100% completion.
 5. No green candidate run or staged declaration authorizes activation or weakens required checks.
 
@@ -117,17 +115,21 @@ Text equivalent: managed issue and PR -> qualifying review and eligible merge ->
 
 1. Copilot resolves the PR's managed issue using existing issue-resolution rules before evaluating the declaration.
 2. It reads submitted reviews and relevant PR facts, then validates reviewer identity/role, exact issue identity, merged head, timing, edit/dismissal state, conflicts, repository identity, target branch, and absence of native closing syntax.
-3. With a valid declaration, the merge workflow records staged status for that issue/PR, leaves issue state, assignees, and acceptance untouched, and publishes or updates the keyed status card.
+3. With a valid declaration, the merge workflow leaves issue state, assignees,
+   and acceptance untouched and publishes or reuses the keyed status card. It
+   verifies the owned card and selectively removes a stale 100% label if present.
+   Existing lower estimates remain implementation history. New progress assessments
+   and card publications skip an issue with an active owned rollout card.
 4. A maintainer uses the issue's existing checklist to record trusted source revision, separate activation approval, and official non-no-op verification evidence as applicable. For VaultStadio, evidence includes runtime, command, cleanup, and ref-publication proof.
 5. The maintainer closes the original issue natively; existing reconciliation handles closure and preserves evidence.
 
 ### 6.2 Alternative paths
 
-- No declaration: preserve ordinary close-on-merge behavior.
+- No declaration or active rollout card: preserve ordinary close-on-merge behavior. An already registered rollout continues to own completion on the open issue.
 - Multiple managed issues: declaration applies only to its exact distinct issue; each other issue follows its own existing link and completion behavior. It cannot alter issue selection.
 - Malformed, mismatched, unauthorized, bot-authored, stale, edited, dismissed, conflicting, or unverifiable declaration: keep the named managed issue open, do not mark it complete, and give a safe next action to review the existing issue and handle acceptance there.
 - Unsupported repository/branch scope: hold Copilot completion for the declared managed issue and report the scope reason. Never treat unsupported context as authorization.
-- Native closing reference/keyword: staged behavior is not eligible; preserve native close semantics and report the conflict for operator visibility.
+- Native default-branch closure is independent. A closing keyword in the PR prose for the exact issue holds staged completion and reports the scope conflict.
 - Card publication failure: retain staged decision and issue facts; fail the merge job with a retry instruction for that same job. Do not report successful registration.
 
 ### 6.3 State machine
@@ -144,7 +146,7 @@ Duplicate merge delivery must not create another card or repeat completion effec
 
 ## 7. User-facing configuration
 
-No new user-facing configuration is proposed. The staged path is opt-in per PR through a typed review declaration; this keeps the existing close-on-merge default. The exact review body is `Copilot-Stage-Rollout: #<issue-number>` and `<issue-number>` is the already-resolved distinct managed issue number.
+No new configuration input is required. The staged path is opt-in per PR through a typed review declaration; this keeps the existing close-on-merge default. The exact review body is `Copilot-Stage-Rollout: #<issue-number>` and `<issue-number>` is the already-resolved distinct managed issue number.
 
 Validation rejects any body that does not exactly match, any issue mismatch, or a review that fails the role, timing, head, integrity, dismissal, conflict, repository, branch, or native-closing checks. Operation-time facts must be reread from GitHub when processing the merge event; no authorization is inferred from cached prose or labels. There is no migration setting, retired value, or arbitrary URL/ref/secret input. Non-configurable invariants are listed in section 4. The recommended form is the exact review body by a current human maintainer before merge. There is no alternate syntax; ordinary complete work uses no staged declaration.
 
@@ -179,9 +181,14 @@ flowchart LR
 
 - Pure decisions: parse exact declaration; compare issue identity; determine reviewer authority and review integrity from normalized facts; determine scope eligibility; classify no declaration, valid, invalid, or unverifiable.
 - Application contracts: immutable input contains repository/PR/merged-head/target-branch facts and resolved managed issue; output records ordinary, staged, or held decision and card-registration result.
-- Semantic ports: retrieve review and merge facts, current human role, issue state, and native closing references; find/create/update the status card; preserve issue assignees/checklist; invoke existing completion/reconciliation only on the ordinary or native path.
-- Durable state/schema ownership: use existing issue/card provider state and stable marker keyed by repository, issue, and preparatory PR. No new storage schema is assumed; implementation must establish whether provider state suffices and document any migration before readiness.
-- Concurrency/idempotency: serialize or conditionally reconcile per issue/PR identity; repeated events converge on one card and current native issue state. Stale progress writes must compare lifecycle version/ownership before update.
+- Semantic ports: retrieve review and merge facts, current human role, issue state, and explicit closing keywords in the PR body; find/create/update the status card; preserve issue assignees/checklist; invoke existing completion/reconciliation only on the ordinary or native path.
+- Durable state/schema ownership: use existing issue/card provider state and stable marker keyed by repository, issue, and preparatory PR. The existing publication marker stores the issue, preparatory PR, head and review identity. Existing issues need no storage migration.
+- Concurrency/idempotency: the PR workflow serializes runs for the PR. The existing comment reconciler
+  discovers the canonical owned card before creating, checks current native issue
+  state before writes, and cleans up exact duplicates. A fresh marker check fences
+  progress. The progress writer rechecks after the percentage write and clears a
+  stale 100% if the rollout card appeared during that write. GitHub issue and
+  comment mutations are separate provider operations.
 - Trusted and untrusted inputs: GitHub review bodies, comments, PR descriptions, issue text, labels, event payloads, and provider error text are untrusted. GitHub identity/role and review/commit association are provider facts but must be freshly validated.
 - Provider error mapping: distinguish not found/permission denied/rate limit/transient/network ambiguity from invalid declaration. A lost create response requires lookup before retrying create.
 
@@ -206,41 +213,25 @@ Add dependency checks ensuring domain policies import no GitHub/workflow SDKs, a
 Pending/no action is not applicable for a staged issue: evidence acceptance always remains actionable until native completion.
 
 ```markdown
-<!-- copilot-rollout-card: repository/issue-85/pr-108 -->
+## Rollout pending
 
-# 🚧 Rollout pending
+Preparatory [PR #108](https://github.com/vypdev/vaultstadio/pull/108) merged.
+Operational acceptance is pending.
 
-> **Current status:** PR #108 merged to `develop`; operational acceptance remains open.
->
-> **Action required:** Complete the acceptance checklist and record trusted-source and official verification evidence.
-
-## Progress
-
-- [x] Preparatory implementation merged: [PR #108](https://github.com/vypdev/vaultstadio/pull/108)
-- [ ] Trusted-source readiness and required operational verification
-
-## What happens next
-
-Keep this issue open until a maintainer reviews the evidence and closes it through the normal issue workflow.
-
-## Links
-
-[Original rollout issue](https://github.com/vypdev/vaultstadio/issues/85) · [Merged preparatory PR](https://github.com/vypdev/vaultstadio/pull/108)
-
-<details>
-<summary>Technical details</summary>
-
-Staged declaration review and merged head are validated by Copilot. Candidate test results do not certify trusted-main activation.
-</details>
+**Next step** Complete this issue’s acceptance checklist and record the evidence
+for a maintainer to review before closing.
 ```
 
-**Action-required variant:** The pending card above is the action-required state; it names the checklist and evidence to record.
+The card includes a collapsed link to the submitted review and the validated
+head. The issue contains the full checklist and assignees.
 
-**Blocked/failed before irreversible effects:** “Rollout status was not registered. Cause: GitHub could not confirm or publish the issue card. Action: retry this failed merge job. Retained state: the issue remains open and assigned; no activation or closure was performed.”
-
-**Partially successful:** “PR #108 merged, but rollout tracking registration is incomplete. Action: retry this failed merge job. Retained state: merged PR and original open issue remain; operational acceptance is pending.”
-
-**Completed:** “Operational acceptance reviewed and issue closed. The original checklist and evidence remain available in the issue; existing reconciliation has completed.”
+- **Before merge** The dedicated review is visible on the PR.
+- **Declaration held** The Job Summary links the issue and gives a reason code.
+  Review the acceptance there. For unavailable evidence, restore access and rerun.
+- **Registration failed** The merge succeeded and acceptance remains on the issue.
+  In the merge run, select **Re-run failed jobs**.
+- **Native completion** The issue is closed and existing reconciliation archives
+  the card. Acceptance and evidence remain in the issue.
 
 ### 9.3 Issue, PR, and comment behavior
 
@@ -289,14 +280,14 @@ Errors follow impact -> cause -> action -> retained state. A successful PR merge
 ## 13. Compatibility, migration, rollout, and rollback
 
 - Existing in-flight operations without a valid declaration retain current behavior. Existing ordinary complete merges continue to close/reconcile as before.
-- No configuration or database schema migration is intended; confirm card marker compatibility and existing issue metadata before implementation.
-- No deprecation of `Refs` or native closing syntax. `Refs` remains context; native closing links retain their existing native semantics and exclude staged eligibility.
-- Roll out behind a narrowly scoped capability guard if the existing workflow supports safe staged activation; otherwise use a reviewed workflow release with observability and rollback plan. Do not invent a flag before confirming configuration conventions.
-- Rollback disables staged interpretation for future events. It must not close staged issues or delete their cards; maintainers continue acceptance and native closure manually.
+- The new topic uses the existing publication marker schema. Existing progress cards and issue metadata remain readable.
+- `Refs` remains context. Native linked-issue closure still applies on the default branch.
+- Ship through the reviewed workflow release. The exact maintainer review is the per-PR opt-in.
+- A rollback leaves already registered issues and cards available to operators. Avoid merging another PR linked to a still-pending issue with an older runtime.
 
 ## 14. Testing strategy
 
-Minimum budget counts only the new companion inventory below; retained baseline tests remain required and are not redeclared. The supplied catalog identifies existing lifecycle and completion tests, including `src/application/usecases/steps/issue/__tests__/close_issue_after_merging_use_case.test.ts`, `src/domain/__tests__/issue_completion.test.ts`, and reconciliation tests. No proposed acceptance case is represented as an executed test.
+Minimum budget counts only the new companion inventory below; retained baseline tests remain required and are not redeclared. The supplied catalog identifies existing lifecycle and completion tests, including `src/application/usecases/steps/issue/__tests__/close_issue_after_merging_use_case.test.ts`, `src/domain/__tests__/issue_completion.test.ts`, and reconciliation tests. The staged merge integration suite implements the inventory with GitHub provider fakes.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
@@ -325,7 +316,13 @@ Minimum budget counts only the new companion inventory below; retained baseline 
 | rollout-I735-C13 | State/application/idempotency | SDD-I735-R6 | Replay after manual closure or reopen preserves current native issue state and evidence. |
 | rollout-I735-C14 | Workflows/setup/schema | SDD-I735-R3, SDD-I735-R8 | Staged declaration outside same-repository, regular PR, non-default integration-branch scope holds Copilot completion. |
 
-Define thresholds by retaining repository-wide coverage gates and verifying exact values in repository configuration before readiness. New pure declaration/eligibility policy requires at least 90% branch coverage; changed application modules require at least 85% line coverage unless existing repository thresholds are stricter. Use table-driven policy tests, replay and stale-write fakes, provider contract tests, parsed workflow permission/branch checks, and semantic assertions over rendered content. Use deterministic clocks, IDs, and provider fakes; no live services or real waits. Golden Markdown fixtures must be paired with semantic checks for status, actions, links, and sanitization. Manual UX evidence must show issue readability at narrow width and confirm that maintainers can distinguish pending acceptance from completed work.
+The repository coverage gates remain in force. The changed close step retains
+its 95% line and 90% branch floor. The rollout declaration policy shares the native completion policy’s exhaustive
+coverage gate. The integration suite exercises the real PR merge orchestration, review
+adapter, ordinary issue completion, card reconciliation, native closure, and
+Job Summary. Provider fakes supply reviewed coordinates and fault injection
+without network writes. The progress suite covers an active card appearing
+during an assessment.
 
 ## 15. Documentation and discoverability
 
@@ -340,8 +337,9 @@ Define thresholds by retaining repository-wide coverage gates and verifying exac
 
 | Path | Change |
 |---|---|
-| `specs/managed-issue-and-branch-lifecycle-issue-735.md` | create |
-| `specs/managed-issue-and-branch-lifecycle.md` | reference |
+| `specs/managed-issue-and-branch-lifecycle-issue-735.md` | update |
+| `specs/managed-issue-and-branch-lifecycle.md` | update |
+| `specs/pull-request-lifecycle-and-enrichment.md` | update |
 | `specs/issue-assignment-failure-recovery.md` | reference |
 | `specs/catalog.json` | update |
 | `specs/CATALOG.md` | update |
@@ -349,7 +347,9 @@ Define thresholds by retaining repository-wide coverage gates and verifying exac
 | `docs/issues/branch-management.mdx` | update |
 | `docs/issues/comment-commands.mdx` | update |
 
-Catalog updates must register this companion under `managed-issue-lifecycle` without inventing implementation evidence. Keep proposed entrypoint, code, and test evidence arrays empty until reviewed implementation exists; preserve nonempty specification and documentation paths. The catalog verification date records metadata/document review, not implementation execution. The supplied standard names `pnpm run validate:specifications` and `pnpm run generate:specifications` for this SDK repository, but availability and successful invocation have not been verified here.
+The owning capability records the implementation and executed test paths.
+Regenerate the catalog view with `pnpm run generate:specifications` and verify
+it with `pnpm run validate:specifications`.
 
 ## 16. Acceptance
 
@@ -386,7 +386,7 @@ Catalog updates must register this companion under `managed-issue-lifecycle` wit
 4. Implement provider review/card adapters and parsed workflow guards, including lost-response reconciliation.
 5. Implement issue card and job summary presentation, fixtures, accessibility, localization, and sanitization.
 6. Update user/operator/contributor docs and catalog metadata; document migration/rollback and recovery.
-7. Run repository and changed-module coverage gates, workflow/architecture checks, and manual UX review. These are planned activities, not executed validation.
+7. Run repository and changed-module coverage gates, workflow/architecture checks, and manual UX review. Record the final SHA checks and review evidence in the linked PR.
 
 ## 19. Definition of Done
 
@@ -399,8 +399,8 @@ Catalog updates must register this companion under `managed-issue-lifecycle` wit
 - [ ] User, setup, operator, contributor, recovery, and compatibility documentation is discoverable.
 - [ ] Failure, partial success, replay, idempotency, permissions, and cleanup pass.
 - [ ] Required generated artifacts and repository validation commands pass; unverified command availability is resolved before readiness.
-- [ ] `specs/catalog.json` and `specs/CATALOG.md` reflect truthful proposed evidence; specification structure, ownership/evidence, and generated-view consistency pass the verified tooling.
-- [ ] No readiness-blocking decision remains unresolved; this Draft is not implementation-ready until review gates and validation prerequisites are satisfied.
+- [ ] The catalog and generated view reflect the implemented capability and executed test paths.
+- [ ] The linked PR has review evidence and checks for its final SHA.
 
 ## 20. References and decisions
 

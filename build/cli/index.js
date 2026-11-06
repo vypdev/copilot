@@ -50964,6 +50964,7 @@ const application_error_presentation_policy_1 = __nccwpck_require__(95067);
 const git_object_id_1 = __nccwpck_require__(88623);
 const implementation_result_policy_1 = __nccwpck_require__(30203);
 const implementation_plan_1 = __nccwpck_require__(77001);
+const staged_rollout_presentation_policy_1 = __nccwpck_require__(99043);
 function selectSemanticStatusIntents(context) {
     return Object.freeze(context.results.flatMap(result => {
         if (!result.executed || !result.success)
@@ -51204,6 +51205,8 @@ function renderAccessPolicyReply(messages) {
     ].join('\n');
 }
 function renderSemanticStatus(intent, messages = (0, publication_message_catalog_1.resolveStaticPublicationCatalog)(intent.locale).catalog) {
+    if (intent.projection.kind === 'staged-rollout')
+        return (0, staged_rollout_presentation_policy_1.renderStagedRolloutCard)({ ...intent, projection: intent.projection });
     const marker = (0, publication_identity_policy_1.buildPublicationMarker)(intent);
     if (intent.projection.kind === 'plan') {
         return `${marker}\n\n${renderImplementationPlanCard(intent.projection.plan, messages)}`;
@@ -57265,6 +57268,107 @@ exports.SourceDependencyError = SourceDependencyError;
 
 /***/ }),
 
+/***/ 99043:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.STAGED_ROLLOUT_RESULT = void 0;
+exports.renderStagedRolloutCard = renderStagedRolloutCard;
+exports.hasActiveStagedRolloutCard = hasActiveStagedRolloutCard;
+exports.retireStagedRolloutCard = retireStagedRolloutCard;
+exports.stagedRolloutSummaryRows = stagedRolloutSummaryRows;
+const result_1 = __nccwpck_require__(73817);
+const git_object_id_1 = __nccwpck_require__(88623);
+const github_user_policy_1 = __nccwpck_require__(84403);
+const positive_integer_policy_1 = __nccwpck_require__(19879);
+const staged_rollout_1 = __nccwpck_require__(92865);
+const publication_identity_policy_1 = __nccwpck_require__(45403);
+exports.STAGED_ROLLOUT_RESULT = 'StagedRolloutAfterMerge';
+function spanish(locale) {
+    return /^es(?:-|$)/iu.test(locale);
+}
+function renderStagedRolloutCard(intent) {
+    const { pullNumber, repositoryUrl, headSha, reviewId } = intent.projection;
+    const pull = `[PR #${pullNumber}](${repositoryUrl}/pull/${pullNumber})`;
+    const review = `[GitHub review](${repositoryUrl}/pull/${pullNumber}#pullrequestreview-${reviewId})`;
+    const content = spanish(intent.locale)
+        ? ['## Rollout pendiente', '', `El PR preparatorio ${pull} se fusionó. La aceptación operativa sigue pendiente.`, '',
+            '**Próximo paso** Completa la lista de aceptación de esta issue y registra la evidencia para que un mantenedor la revise antes del cierre.']
+        : ['## Rollout pending', '', `Preparatory ${pull} merged. Operational acceptance is pending.`, '',
+            '**Next step** Complete this issue’s acceptance checklist and record the evidence for a maintainer to review before closing.'];
+    return [(0, publication_identity_policy_1.buildPublicationMarker)(intent), '', ...content, '',
+        `<details><summary>${spanish(intent.locale) ? 'Evidencia de la declaración' : 'Declaration evidence'}</summary>`,
+        '', `${review} · \`${headSha}\``, '', '</details>'].join('\n');
+}
+function activeMarker(body, issueNumber) {
+    const marker = (0, publication_identity_policy_1.parsePublicationMarker)(body?.split('\n', 1)[0]);
+    if (!marker || marker.identity.topic !== 'staged-rollout' || marker.identity.target.kind !== 'issue'
+        || marker.identity.target.number !== issueNumber || !/^head:(?:[a-f\d]{40}|[a-f\d]{64}):review:[1-9]\d{0,19}$/u.test(marker.sourceVersion))
+        return;
+    const pullNumber = (0, positive_integer_policy_1.parsePositiveSafeInteger)(Number(/^pr:([1-9]\d*)$/u.exec(marker.identity.key)?.[1]));
+    if (pullNumber)
+        return { marker, pullNumber };
+}
+function hasActiveStagedRolloutCard(comments, issueNumber, botLogin) {
+    return comments.some(comment => (0, github_user_policy_1.githubUsersMatch)(comment.user?.login ?? '', botLogin) && activeMarker(comment.body, issueNumber));
+}
+function retireStagedRolloutCard(body, issueNumber, locale, reason) {
+    const active = activeMarker(body, issueNumber);
+    if (!active)
+        return;
+    const archive = body.slice(body.indexOf('\n') + 1).trim();
+    const sourceVersion = `closed:${reason}:${active.marker.sourceVersion}`;
+    const marker = (0, publication_identity_policy_1.buildPublicationMarker)({
+        identity: active.marker.identity, sourceVersion, digest: (0, publication_identity_policy_1.createSemanticDigest)({ sourceVersion, archive }),
+    });
+    const heading = spanish(locale) ? 'Rollout archivado' : 'Rollout archived';
+    const message = spanish(locale)
+        ? 'GitHub registra esta issue como cerrada. La lista de aceptación y la evidencia siguen en la conversación.'
+        : 'GitHub records this issue as closed. The acceptance checklist and evidence remain in the conversation.';
+    const history = spanish(locale) ? 'Seguimiento antes del cierre' : 'Tracking before closure';
+    return [marker, '', `## ${heading}`, '', message, '',
+        `<details><summary>${history}</summary>`, '', archive.replace(/<\/?details>|<\/?summary>/gu, ''), '', '</details>'].join('\n');
+}
+function stagedRolloutSummaryRows(results, owner, repository, locale) {
+    const es = spanish(locale);
+    const root = `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}`;
+    return results.flatMap(result => {
+        if (result.id !== exports.STAGED_ROLLOUT_RESULT)
+            return [];
+        const data = (0, result_1.getResultPayload)(result.payload);
+        const issue = (0, positive_integer_policy_1.parsePositiveSafeInteger)(data?.issueNumber);
+        const pull = (0, positive_integer_policy_1.parsePositiveSafeInteger)(data?.pullNumber);
+        if (!issue || !pull)
+            return [];
+        const issueLink = `[Issue #${issue}](${root}/issues/${issue})`;
+        const pullLink = `[PR #${pull}](${root}/pull/${pull})`;
+        const head = (0, git_object_id_1.canonicalGitObjectId)(data?.headSha);
+        const card = (0, positive_integer_policy_1.parsePositiveSafeInteger)(data?.commentId);
+        const details = `${issueLink} · ${pullLink}${head ? ` · \`${head}\`` : ''}${card
+            ? ` · [${es ? 'Tarjeta de seguimiento' : 'Tracking card'}](${root}/issues/${issue}#issuecomment-${card})` : ''}`;
+        const label = es ? 'Rollout por etapas' : 'Staged rollout';
+        if (data?.state === 'pending') {
+            return [`| ${label} | ${es ? 'Rollout pendiente. Completa la aceptación en la issue abierta.' : 'Rollout pending. Complete acceptance in the open issue.'} ${details} |`];
+        }
+        if (data?.state === 'registration-failed') {
+            return [`| ${label} | ${es
+                    ? 'Falló el registro. El PR se fusionó y la aceptación sigue en la issue. Vuelve a ejecutar los jobs fallidos de esta ejecución.'
+                    : 'Registration failed. The PR merged and acceptance remains in the issue. Re-run failed jobs for this workflow run.'} ${details} |`];
+        }
+        if (data?.state !== 'held' || !staged_rollout_1.STAGED_ROLLOUT_HOLD_REASONS.some(reason => reason === data.reason))
+            return [];
+        const retry = data.reason === 'evidence-unavailable';
+        return [`| ${label} | ${es ? 'Declaración bloqueada' : 'Declaration held'} (\`${data.reason}\`). ${retry
+                ? es ? 'Restaura el acceso a la evidencia y vuelve a ejecutar los jobs fallidos de esta ejecución.' : 'Restore access to the evidence and re-run failed jobs for this workflow run.'
+                : es ? 'Revisa la issue abierta y registra allí la aceptación antes de cerrarla.' : 'Review the open issue and record acceptance there before closing it.'} ${details} |`];
+    });
+}
+
+
+/***/ }),
+
 /***/ 3449:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -58313,7 +58417,7 @@ exports.CheckProgressUseCase = void 0;
 const check_progress_workflow_1 = __nccwpck_require__(94343);
 /** Application boundary for assessing and publishing issue progress. */
 class CheckProgressUseCase {
-    constructor(issueDescriptionQueryPort, issueLabelsPort, issueProgressPort, branchRepository, pullRequestRepository, aiRepository, publicationSourceQuery, progressDiffQuery, progressComparisonSourceQuery) {
+    constructor(issueDescriptionQueryPort, issueLabelsPort, issueProgressPort, branchRepository, pullRequestRepository, aiRepository, publicationSourceQuery, progressDiffQuery, progressComparisonSourceQuery, rolloutFence) {
         this.issueDescriptionQueryPort = issueDescriptionQueryPort;
         this.issueLabelsPort = issueLabelsPort;
         this.issueProgressPort = issueProgressPort;
@@ -58323,6 +58427,7 @@ class CheckProgressUseCase {
         this.publicationSourceQuery = publicationSourceQuery;
         this.progressDiffQuery = progressDiffQuery;
         this.progressComparisonSourceQuery = progressComparisonSourceQuery;
+        this.rolloutFence = rolloutFence;
         this.taskId = 'CheckProgressUseCase';
     }
     async invoke(param) {
@@ -58336,6 +58441,7 @@ class CheckProgressUseCase {
             publicationSourceQuery: this.publicationSourceQuery,
             progressDiffQuery: this.progressDiffQuery,
             progressComparisonSourceQuery: this.progressComparisonSourceQuery,
+            rolloutFence: this.rolloutFence,
         });
     }
 }
@@ -58359,6 +58465,7 @@ const sync_progress_labels_to_open_pull_requests_1 = __nccwpck_require__(18277);
 const progress_summary_builder_1 = __nccwpck_require__(62721);
 const progress_analysis_workflow_1 = __nccwpck_require__(88729);
 const application_error_1 = __nccwpck_require__(75999);
+const staged_rollout_presentation_policy_1 = __nccwpck_require__(99043);
 const publication_outcome_policy_1 = __nccwpck_require__(79719);
 /** Publishes a completed progress assessment after the analysis workflow succeeds. */
 async function runCheckProgressWorkflow(param, taskId, dependencies) {
@@ -58371,6 +58478,12 @@ async function runCheckProgressWorkflow(param, taskId, dependencies) {
         if (param.issueNumber > 0 && await dependencies.publicationSourceQuery.isIssueOpen(param.issueNumber) !== true) {
             throw new application_error_1.ApplicationError('workflow.stale', 'Progress analysis requires a verified open issue. Existing state retained.');
         }
+        const rolloutPending = async (issueNumber) => param.trustedBotLogin && dependencies.rolloutFence
+            && (0, staged_rollout_presentation_policy_1.hasActiveStagedRolloutCard)(await dependencies.rolloutFence.listIssueComments(issueNumber), issueNumber, param.trustedBotLogin);
+        const skipped = () => [new result_1.Result({ id: taskId, success: true, executed: false,
+                steps: ['Progress estimation deferred while the original issue tracks staged rollout.'] })];
+        if (param.issueNumber > 0 && await rolloutPending(param.issueNumber))
+            return skipped();
         const analysis = await (0, progress_analysis_workflow_1.analyzeProgress)(param, taskId, dependencies);
         if (analysis.kind === 'failure')
             return [analysis.result];
@@ -58392,10 +58505,19 @@ async function runCheckProgressWorkflow(param, taskId, dependencies) {
             (0, logging_ports_1.logInfo)(`Progress mutation omitted: ${branch} no longer points at the analyzed source.`);
             return [buildStaleSourceResult(taskId, branch, sourceHeadSha)];
         }
+        if (await rolloutPending(issueNumber))
+            return skipped();
         if (progress === 0) {
             return [buildZeroProgressResult(taskId, issueNumber, branch, developmentBranch, summary, reasoning, sourceHeadSha, comparisonSource, baseSha)];
         }
-        await persistProgress(param, issueNumber, branch, progress, dependencies);
+        await dependencies.issueProgressPort.setProgressLabel(issueNumber, progress);
+        // The label write and rollout comment are separate GitHub operations.
+        // Repair a stale 100% if registration won the race during this write.
+        if (dependencies.rolloutFence && await rolloutPending(issueNumber)) {
+            await dependencies.rolloutFence.removeFullProgressLabel(issueNumber);
+            return skipped();
+        }
+        await (0, sync_progress_labels_to_open_pull_requests_1.syncProgressLabelsToOpenPullRequests)(branch, progress, dependencies.issueLabelsPort, dependencies.pullRequestRepository);
         return [buildProgressResult(taskId, issueNumber, branch, developmentBranch, progress, summary, reasoning, remaining, sourceHeadSha, comparisonSource, baseSha)];
     }
     catch (error) {
@@ -58445,10 +58567,6 @@ function buildZeroProgressResult(taskId, issueNumber, branch, developmentBranch,
             baseSha,
         },
     });
-}
-async function persistProgress(param, issueNumber, branch, progress, dependencies) {
-    await dependencies.issueProgressPort.setProgressLabel(issueNumber, progress);
-    await (0, sync_progress_labels_to_open_pull_requests_1.syncProgressLabelsToOpenPullRequests)(branch, progress, dependencies.issueLabelsPort, dependencies.pullRequestRepository);
 }
 function buildProgressResult(taskId, issueNumber, branch, developmentBranch, progress, summary, reasoning, remaining, sourceHeadSha, comparisonSource, baseSha) {
     return new result_1.Result({
@@ -61468,6 +61586,7 @@ const closed_issue_reconciliation_error_1 = __nccwpck_require__(12183);
 const closed_issue_reconciliation_1 = __nccwpck_require__(21565);
 const result_1 = __nccwpck_require__(73817);
 const github_user_policy_1 = __nccwpck_require__(84403);
+const staged_rollout_presentation_policy_1 = __nccwpck_require__(99043);
 const publication_identity_policy_1 = __nccwpck_require__(45403);
 const retired_progress_presentation_policy_1 = __nccwpck_require__(93427);
 const application_error_1 = __nccwpck_require__(75999);
@@ -61511,13 +61630,16 @@ class RetireProgressUseCase {
                 return [this.result(retired, nativeClosed)];
             nativeClosed = true;
             phase = 'card-inventory';
-            const cards = (await this.comments.listIssueComments(context.issueNumber)).filter(comment => {
+            const cards = (await this.comments.listIssueComments(context.issueNumber)).flatMap(comment => {
+                if (!comment.body || !Number.isSafeInteger(comment.id) || comment.id < 1
+                    || !(0, github_user_policy_1.githubUsersMatch)(context.trustedBotLogin, comment.user?.login ?? ''))
+                    return [];
                 const marker = (0, publication_identity_policy_1.parsePublicationMarker)(comment.body);
-                return marker?.identity.topic === 'progress' && marker.identity.target.kind === 'issue'
+                const body = marker?.identity.topic === 'progress' && marker.identity.target.kind === 'issue'
                     && marker.identity.target.number === context.issueNumber && marker.identity.key === 'work'
-                    && (0, retired_progress_presentation_policy_1.buildRetiredProgressComment)(comment.body ?? '', context.locale, initial.reason) !== undefined
-                    && Number.isSafeInteger(comment.id) && comment.id > 0
-                    && Boolean(comment.user?.login && (0, github_user_policy_1.githubUsersMatch)(context.trustedBotLogin, comment.user.login));
+                    ? (0, retired_progress_presentation_policy_1.buildRetiredProgressComment)(comment.body, context.locale, initial.reason)
+                    : (0, staged_rollout_presentation_policy_1.retireStagedRolloutCard)(comment.body, context.issueNumber, context.locale, initial.reason);
+                return body === undefined ? [] : [{ card: comment, body }];
             });
             remaining = Math.min(cards.length, 3000);
             if (cards.length > 20)
@@ -61528,8 +61650,7 @@ class RetireProgressUseCase {
                 if (!nativeClosed || fresh.reason !== initial.reason || fresh.deploymentCompletion === 'pending')
                     throw stale();
             };
-            for (const card of cards) {
-                const body = (0, retired_progress_presentation_policy_1.buildRetiredProgressComment)(card.body ?? '', context.locale, initial.reason);
+            for (const { card, body } of cards) {
                 const verified = await (0, verify_closed_issue_card_retirement_1.verifyClosedIssueCardRetirement)({ issueNumber: context.issueNumber,
                     commentId: card.id, author: context.trustedBotLogin, originalBody: card.body ?? '', finalBody: body,
                     freshness: this.cardFreshness, verifyClosed, onUpdated: () => { retired++; }, phase: value => { phase = value; },
@@ -64836,6 +64957,15 @@ function projectPullRequestWorkflowStepContexts(source) {
             }),
             issueNumber: source.issueNumber,
             pullRequestNumber: source.pullRequest.number,
+            ...(source.pullRequest.headSha ? { stagedRollout: Object.freeze({
+                    headSha: source.pullRequest.headSha,
+                    integrationBranch: source.branches.development,
+                    branchTypes: Object.freeze([
+                        source.branches.featureTree, source.branches.bugfixTree, source.branches.docsTree, source.branches.choreTree,
+                    ].filter((type) => Boolean(type))),
+                    botLogin: source.tokenUser,
+                    locale: source.locale.issue ?? 'en-US',
+                }) } : {}),
         }),
     });
 }
@@ -64961,6 +65091,7 @@ function projectProgressContext(source) {
         includeReasoning: source.ai.getAiIncludeReasoning(),
         targetLocale: source.locale.issue,
         ...(sourceHeadSha ? { sourceHeadSha } : {}),
+        ...(source.tokenUser ? { trustedBotLogin: source.tokenUser } : {}),
     });
 }
 function projectRecommendStepsContext(source) {
@@ -76165,6 +76296,138 @@ function capitalize(value) {
 
 /***/ }),
 
+/***/ 62963:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.reconcileStatusCard = reconcileStatusCard;
+const github_publication_1 = __nccwpck_require__(35793);
+const github_user_policy_1 = __nccwpck_require__(84403);
+const publication_identity_policy_1 = __nccwpck_require__(45403);
+const publication_message_catalog_1 = __nccwpck_require__(34223);
+const semantic_result_publication_policy_1 = __nccwpck_require__(81985);
+const staged_rollout_presentation_policy_1 = __nccwpck_require__(99043);
+const application_error_1 = __nccwpck_require__(75999);
+const duplicate_comment_cleanup_workflow_1 = __nccwpck_require__(79544);
+async function reconcileStatusCard(context, comments, sourceQuery, nativeFence) {
+    if (!context.botLogin.trim())
+        return unchangedOutcome();
+    const isCurrent = async () => (!nativeFence || await nativeFence()) && await sourceIsCurrent(context.intent, sourceQuery);
+    if (!await isCurrent())
+        return staleSourceOutcome();
+    const target = context.intent.identity.target;
+    const rendered = (0, semantic_result_publication_policy_1.renderSemanticStatus)(context.intent, context.catalog);
+    const inventory = await comments.listIssueComments(target.number);
+    if (context.intent.projection.kind === 'progress' && (0, staged_rollout_presentation_policy_1.hasActiveStagedRolloutCard)(inventory, target.number, context.botLogin))
+        return staleSourceOutcome();
+    let owned = ownedCards(inventory, context.intent.identity, context.botLogin);
+    let effect = 'unchanged';
+    if (owned.length === 0) {
+        if (!await isCurrent())
+            return staleSourceOutcome();
+        await comments.addComment(target.number, rendered);
+        effect = 'created';
+        owned = ownedCards(await comments.listIssueComments(target.number), context.intent.identity, context.botLogin);
+    }
+    if (owned.length === 0) {
+        return Object.freeze({
+            effect, duplicatesRemoved: 0, duplicatesCompacted: 0, compactedCommentIds: Object.freeze([]),
+        });
+    }
+    const [canonical, ...duplicates] = owned.sort((left, right) => left.id - right.id);
+    const canonicalMarker = (0, publication_identity_policy_1.parsePublicationMarker)(canonical.body);
+    if (canonicalMarker?.digest !== context.intent.digest
+        || context.intent.projection.kind === 'staged-rollout' && canonical.body !== rendered) {
+        if (!await isCurrent()) {
+            return staleSourceOutcome(canonical.id);
+        }
+        await comments.updateComment(target.number, canonical.id, rendered);
+        effect = effect === 'created' ? 'created' : 'updated';
+    }
+    let duplicatesRemoved = 0;
+    let duplicatesCompacted = 0;
+    const compactedCommentIds = [];
+    for (const duplicate of duplicates) {
+        const cleanup = await (0, duplicate_comment_cleanup_workflow_1.cleanupDuplicateComment)({
+            issueNumber: target.number,
+            duplicateCommentId: duplicate.id,
+            compactBody: duplicatePointer(context, canonical.id),
+        }, comments, isCurrent);
+        if (cleanup === 'stale') {
+            return staleSourceOutcome(canonical.id, effect, duplicatesRemoved, duplicatesCompacted, compactedCommentIds);
+        }
+        if (cleanup === 'removed')
+            duplicatesRemoved += 1;
+        else {
+            duplicatesCompacted += 1;
+            compactedCommentIds.push(duplicate.id);
+        }
+    }
+    return Object.freeze({
+        effect,
+        canonicalCommentId: canonical.id,
+        duplicatesRemoved,
+        duplicatesCompacted,
+        compactedCommentIds: Object.freeze(compactedCommentIds),
+    });
+}
+async function sourceIsCurrent(intent, sourceQuery) {
+    const guard = intent.sourceGuard;
+    if (!guard)
+        return true;
+    if (!sourceQuery) {
+        throw new application_error_1.ApplicationError('configuration.unsupported', 'Commit-derived status publication requires an authoritative source query.');
+    }
+    if (await sourceQuery.getBranchHeadSha(guard.branch) !== guard.sha)
+        return false;
+    if (intent.projection.kind !== 'progress')
+        return true;
+    if (!sourceQuery.isIssueOpen)
+        throw new application_error_1.ApplicationError('configuration.unsupported', 'Progress publication requires a native issue state query.');
+    return await sourceQuery.isIssueOpen(intent.identity.target.number) === true;
+}
+function staleSourceOutcome(canonicalCommentId, effect = 'unchanged', duplicatesRemoved = 0, duplicatesCompacted = 0, compactedCommentIds = []) {
+    return Object.freeze({
+        effect,
+        ...(canonicalCommentId === undefined ? {} : { canonicalCommentId }),
+        duplicatesRemoved,
+        duplicatesCompacted,
+        compactedCommentIds: Object.freeze([...compactedCommentIds]),
+        reason: 'stale-source',
+    });
+}
+function unchangedOutcome() {
+    return Object.freeze({
+        effect: 'unchanged', duplicatesRemoved: 0, duplicatesCompacted: 0,
+        compactedCommentIds: Object.freeze([]),
+    });
+}
+function ownedCards(comments, identity, botLogin) {
+    return comments.filter(comment => {
+        const marker = (0, publication_identity_policy_1.parsePublicationMarker)(comment.body);
+        return marker !== undefined
+            && (0, github_publication_1.publicationIdentityEquals)(marker.identity, identity)
+            && (0, github_user_policy_1.githubUsersMatch)(comment.user?.login ?? '', botLogin);
+    });
+}
+function duplicatePointer(context, canonicalCommentId) {
+    const messages = context.catalog ?? (0, publication_message_catalog_1.resolveStaticPublicationCatalog)(context.intent.locale).catalog;
+    const targetPath = context.intent.identity.target.kind === 'pull-request' ? 'pull' : 'issues';
+    const url = `https://github.com/${encodeURIComponent(context.owner)}/${encodeURIComponent(context.repository)}/${targetPath}/${context.intent.identity.target.number}#issuecomment-${canonicalCommentId}`;
+    return [
+        (0, publication_identity_policy_1.buildDuplicateMarker)(canonicalCommentId),
+        '',
+        messages.supersededStatus,
+        '',
+        `[${messages.viewCurrentStatus}](${url}).`,
+    ].join('\n');
+}
+
+
+/***/ }),
+
 /***/ 40558:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -77204,11 +77467,13 @@ const result_1 = __nccwpck_require__(73817);
 const issue_completion_1 = __nccwpck_require__(31147);
 const application_error_1 = __nccwpck_require__(75999);
 const positive_integer_policy_1 = __nccwpck_require__(19879);
+const reconcile_staged_rollout_after_merge_1 = __nccwpck_require__(28695);
 const deferred_deployment_completion_1 = __nccwpck_require__(26779);
 /** Native completion first, selective metadata second; retained effects survive partial failures. */
 class CloseIssueAfterMergingUseCase {
-    constructor(issues) {
+    constructor(issues, stagedRollout) {
         this.issues = issues;
+        this.stagedRollout = stagedRollout;
         this.taskId = 'CloseIssueAfterMergingUseCase';
     }
     async invoke(param) {
@@ -77239,8 +77504,20 @@ class CloseIssueAfterMergingUseCase {
             if (facts.state === 'open' && facts.reason === 'reopened')
                 throw stale();
             if (facts.state === 'open') {
-                closedThisRun = await target.close();
-                facts = await read();
+                if (this.stagedRollout) {
+                    const rollout = await (0, reconcile_staged_rollout_after_merge_1.reconcileStagedRolloutAfterMerge)(param, this.stagedRollout, read, target.removeLabel);
+                    if (rollout)
+                        return [rollout];
+                    facts = await read();
+                    if (facts.deploymentCompletion === 'pending')
+                        return [(0, deferred_deployment_completion_1.deferredDeploymentCompletionResult)(this.taskId, facts, true)];
+                    if (facts.reason === 'reopened')
+                        throw stale();
+                }
+                if (facts.state === 'open') {
+                    closedThisRun = await target.close();
+                    facts = await read();
+                }
             }
             nativeClosed = facts.state === 'closed';
             if (!nativeClosed || closedThisRun && facts.reason !== 'completed')
@@ -78003,6 +78280,94 @@ class ReconcileBranchReadinessUseCase {
     }
 }
 exports.ReconcileBranchReadinessUseCase = ReconcileBranchReadinessUseCase;
+
+
+/***/ }),
+
+/***/ 28695:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.reconcileStagedRolloutAfterMerge = reconcileStagedRolloutAfterMerge;
+const result_1 = __nccwpck_require__(73817);
+const staged_rollout_1 = __nccwpck_require__(92865);
+const application_error_1 = __nccwpck_require__(75999);
+const publication_identity_policy_1 = __nccwpck_require__(45403);
+const staged_rollout_presentation_policy_1 = __nccwpck_require__(99043);
+const status_card_publication_workflow_1 = __nccwpck_require__(62963);
+const github_user_policy_1 = __nccwpck_require__(84403);
+async function reconcileStagedRolloutAfterMerge(request, ports, read, removeLabel) {
+    const { issueNumber, pullRequestNumber: pullNumber, stagedRollout: scope } = request;
+    const botLogin = scope?.botLogin ?? '';
+    const result = (status, executed = false) => {
+        const success = status.state === 'pending';
+        const steps = status.state === 'held'
+            ? ['Staged rollout declaration was held. Review operational acceptance on the original issue.']
+            : status.state === 'registration-failed'
+                ? ['Rollout registration could not be verified. Re-run failed jobs for this workflow run.']
+                : ['Preparatory PR merged. Operational acceptance remains on the open issue.'];
+        return new result_1.Result({
+            id: staged_rollout_presentation_policy_1.STAGED_ROLLOUT_RESULT, success, executed, steps,
+            ...(!success ? { errors: [new application_error_1.ApplicationError('workflow.failed', steps[0])] } : {}),
+            payload: { issueNumber, pullNumber, ...status },
+        });
+    };
+    let decision;
+    try {
+        const evidence = await ports.reviews.readMergedPullRequest(pullNumber);
+        decision = (0, staged_rollout_1.decideStagedRollout)(evidence, scope, issueNumber);
+        if (decision.kind === 'ordinary') {
+            const inventory = botLogin && await ports.comments.listIssueComments(issueNumber);
+            if (inventory && (0, staged_rollout_presentation_policy_1.hasActiveStagedRolloutCard)(inventory, issueNumber, botLogin)) {
+                return result({ state: 'pending' });
+            }
+            return undefined;
+        }
+        if (decision.kind === 'held')
+            return result({ state: 'held', reason: decision.reason });
+        if (!await ports.reviews.isMaintainer(decision.author))
+            return result({ state: 'held', reason: 'unauthorized' });
+    }
+    catch {
+        return result({ state: 'held', reason: 'evidence-unavailable' });
+    }
+    const { headSha, reviewId } = decision;
+    const locale = scope?.locale ?? 'en-US';
+    const projection = {
+        kind: 'staged-rollout', pullNumber,
+        repositoryUrl: ports.publicationTarget.repositoryUrl,
+        headSha, reviewId,
+    };
+    const intent = {
+        kind: 'status', locale, projection, digest: (0, publication_identity_policy_1.createSemanticDigest)({ locale, projection }),
+        identity: { topic: 'staged-rollout', target: { kind: 'issue', number: issueNumber }, key: `pr:${pullNumber}` },
+        sourceVersion: `head:${headSha}:review:${reviewId}`,
+    };
+    const isOpen = (facts) => facts.state === 'open' && facts.reason !== 'reopened' && facts.deploymentCompletion !== 'pending';
+    let executed = false;
+    try {
+        const publication = await (0, status_card_publication_workflow_1.reconcileStatusCard)({ ...ports.publicationTarget, botLogin, intent }, ports.comments, undefined, async () => isOpen(await read()));
+        executed = publication.effect !== 'unchanged' || publication.duplicatesRemoved > 0 || publication.duplicatesCompacted > 0;
+        const commentId = publication.canonicalCommentId;
+        const rendered = (0, staged_rollout_presentation_policy_1.renderStagedRolloutCard)(intent);
+        if (publication.reason || !commentId || !(await ports.comments.listIssueComments(issueNumber)).some(comment => comment.id === commentId && (0, github_user_policy_1.githubUsersMatch)(comment.user?.login ?? '', botLogin) && comment.body === rendered)) {
+            return result({ state: 'registration-failed', headSha }, executed);
+        }
+        const current = await read();
+        if (!isOpen(current))
+            return result({ state: 'registration-failed', headSha }, executed);
+        if (current.labels.includes('100%')) {
+            await removeLabel('100%');
+            executed = true;
+        }
+        return result({ state: 'pending', headSha, commentId }, executed);
+    }
+    catch {
+        return result({ state: 'registration-failed', headSha }, executed);
+    }
+}
 
 
 /***/ }),
@@ -95983,6 +96348,101 @@ exports.PullRequestStatusQueryRepository = PullRequestStatusQueryRepository;
 
 /***/ }),
 
+/***/ 21223:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.StagedRolloutReviewRepository = void 0;
+const application_error_1 = __nccwpck_require__(75999);
+const staged_rollout_1 = __nccwpck_require__(92865);
+const github_user_policy_1 = __nccwpck_require__(84403);
+const MERGED_REVIEW_QUERY = `query StagedRolloutReviews($owner: String!, $repo: String!, $number: Int!, $cursor: String) {
+    repository(owner: $owner, name: $repo) {
+        nameWithOwner defaultBranchRef { name }
+        pullRequest(number: $number) {
+            number state body headRefName headRefOid headRepository { nameWithOwner } baseRefName mergedAt
+            reviews(first: 100, after: $cursor) {
+                nodes { fullDatabaseId body state submittedAt lastEditedAt commit { oid } author { __typename login } }
+                pageInfo { hasNextPage endCursor }
+            }
+        }
+    }
+}`;
+class StagedRolloutReviewRepository {
+    constructor(client, owner, repo) {
+        this.client = client;
+        this.owner = owner;
+        this.repo = repo;
+    }
+    async readMergedPullRequest(pullRequestNumber) {
+        const reviews = [];
+        const cursors = new Set();
+        let cursor = null;
+        let initial;
+        for (let page = 0; page < 10; page++) {
+            const response = await this.client.graphql(MERGED_REVIEW_QUERY, {
+                owner: this.owner, repo: this.repo, number: pullRequestNumber, cursor,
+            });
+            const repository = response.repository;
+            const pull = repository?.pullRequest;
+            if (repository?.nameWithOwner?.toLowerCase() !== `${this.owner}/${this.repo}`.toLowerCase()
+                || pull?.number !== pullRequestNumber || pull.state !== 'MERGED'
+                || !pull.mergedAt || typeof pull.body !== 'string' || !pull.baseRefName || !pull.headRefName || !pull.headRefOid
+                || !repository.defaultBranchRef?.name || !Array.isArray(pull.reviews?.nodes)
+                || pull.reviews.nodes.length > 100 || typeof pull.reviews.pageInfo?.hasNextPage !== 'boolean')
+                throw unavailable();
+            const facts = {
+                repository: repository.nameWithOwner,
+                headRepository: pull.headRepository?.nameWithOwner ?? null,
+                headBranch: pull.headRefName,
+                headSha: pull.headRefOid,
+                baseBranch: pull.baseRefName,
+                defaultBranch: repository.defaultBranchRef.name,
+                mergedAt: pull.mergedAt,
+                body: pull.body,
+            };
+            if (initial && JSON.stringify(initial) !== JSON.stringify(facts))
+                throw unavailable();
+            initial = facts;
+            for (const review of pull.reviews.nodes) {
+                if (typeof review?.body !== 'string')
+                    throw unavailable();
+                if (!(0, staged_rollout_1.isStagedRolloutDeclaration)(review.body))
+                    continue;
+                reviews.push({
+                    id: review.fullDatabaseId, body: review.body, state: review.state, submittedAt: review.submittedAt,
+                    lastEditedAt: review.lastEditedAt, commitSha: review.commit?.oid ?? null,
+                    author: review.author && { login: review.author.login, type: review.author.__typename },
+                });
+            }
+            if (!pull.reviews.pageInfo.hasNextPage)
+                return { ...facts, reviews };
+            cursor = pull.reviews.pageInfo.endCursor;
+            if (!cursor || cursors.has(cursor))
+                throw unavailable();
+            cursors.add(cursor);
+        }
+        throw unavailable();
+    }
+    async isMaintainer(login) {
+        const { data } = await this.client.rest.repos.getCollaboratorPermissionLevel({
+            owner: this.owner, repo: this.repo, username: login, request: { redirect: 'error' },
+        });
+        if (data.user?.type !== 'User' || !(0, github_user_policy_1.githubUsersMatch)(data.user.login ?? '', login))
+            return false;
+        return data.role_name === 'admin' || data.role_name === 'maintain';
+    }
+}
+exports.StagedRolloutReviewRepository = StagedRolloutReviewRepository;
+function unavailable() {
+    return new application_error_1.ApplicationError('provider.contract-invalid', 'GitHub staged rollout review evidence is incomplete or changed.');
+}
+
+
+/***/ }),
+
 /***/ 96578:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -99520,6 +99980,7 @@ exports.publicationTargetToken = publicationTargetToken;
 exports.PUBLICATION_TOPICS = [
     'plan',
     'progress',
+    'staged-rollout',
     'branch-sync',
     'bugbot',
     'release',
@@ -102381,6 +102842,7 @@ function enumArray(value, allowed, label, max, errors) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.hasExplicitClosingReference = hasExplicitClosingReference;
+exports.hasClosingKeywordForIssue = hasClosingKeywordForIssue;
 exports.shouldPreserveClosingReference = shouldPreserveClosingReference;
 const commonmark_1 = __nccwpck_require__(86076);
 const pull_request_description_1 = __nccwpck_require__(45315);
@@ -102436,6 +102898,22 @@ function referencePresence(body, repository, issueNumber) {
 function hasExplicitClosingReference(body, repository, issueNumber) {
     const presence = referencePresence(body, repository, issueNumber);
     return presence.managed || presence.outside;
+}
+/** Staged eligibility rejects closing keywords in visible PR prose, including inline references. */
+function hasClosingKeywordForIssue(body, repository, issueNumber) {
+    const walker = new commonmark_1.Parser().parse(body).walker();
+    let event;
+    while ((event = walker.next())) {
+        if (!event.entering || event.node.type !== 'text' || !event.node.literal)
+            continue;
+        const references = event.node.literal.matchAll(/(?:^|[^\w-])([a-z]+):?[ \t]+(?:([a-z0-9][a-z0-9_.-]*\/[a-z0-9_.-]+))?#([1-9]\d*)(?![\w])/giu);
+        for (const [, word, targetRepository, targetIssue] of references) {
+            if (CLOSING_WORDS.has(word.toLowerCase()) && Number(targetIssue) === issueNumber
+                && (!targetRepository || targetRepository.toLowerCase() === repository.toLowerCase()))
+                return true;
+        }
+    }
+    return false;
 }
 /** Preserve only intent that the selected ownership mode would otherwise erase. */
 function shouldPreserveClosingReference(body, mode, identity, issueNumber) {
@@ -104406,6 +104884,59 @@ function isSetupWorkflowEnabled(file, features) {
 function featureEnabled(feature, features) {
     const candidates = Array.isArray(feature) ? feature : [feature];
     return candidates.some((candidate) => features[candidate] !== false);
+}
+
+
+/***/ }),
+
+/***/ 92865:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.STAGED_ROLLOUT_HOLD_REASONS = void 0;
+exports.isStagedRolloutDeclaration = isStagedRolloutDeclaration;
+exports.decideStagedRollout = decideStagedRollout;
+const git_object_id_1 = __nccwpck_require__(88623);
+const github_user_policy_1 = __nccwpck_require__(84403);
+const pull_request_closing_reference_1 = __nccwpck_require__(21390);
+exports.STAGED_ROLLOUT_HOLD_REASONS = [
+    'invalid-declaration', 'conflicting-declarations', 'unsupported-scope', 'invalid-review', 'unauthorized', 'evidence-unavailable',
+];
+function isStagedRolloutDeclaration(body) {
+    return /^Copilot-Stage-Rollout\b/iu.test(body.trimStart());
+}
+function decideStagedRollout(evidence, scope, issueNumber) {
+    const [review, ...others] = evidence.reviews.filter(candidate => isStagedRolloutDeclaration(candidate.body));
+    if (!review)
+        return { kind: 'ordinary' };
+    if (others.length)
+        return { kind: 'held', reason: 'conflicting-declarations' };
+    if (review.body.trim() !== `Copilot-Stage-Rollout: #${issueNumber}`) {
+        return { kind: 'held', reason: 'invalid-declaration' };
+    }
+    if (!scope || evidence.headRepository?.toLowerCase() !== evidence.repository.toLowerCase()
+        || evidence.baseBranch === evidence.defaultBranch || evidence.baseBranch !== scope.integrationBranch
+        || !scope.branchTypes.some(type => evidence.headBranch.startsWith(`${type}/${issueNumber}-`))
+        || (0, pull_request_closing_reference_1.hasClosingKeywordForIssue)(evidence.body, evidence.repository, issueNumber)) {
+        return { kind: 'held', reason: 'unsupported-scope' };
+    }
+    const headSha = (0, git_object_id_1.canonicalGitObjectId)(evidence.headSha);
+    const mergedAt = Date.parse(evidence.mergedAt);
+    const submittedAt = Date.parse(review.submittedAt ?? '');
+    if (!headSha || headSha !== (0, git_object_id_1.canonicalGitObjectId)(scope.headSha) || headSha !== (0, git_object_id_1.canonicalGitObjectId)(review.commitSha)
+        || !Number.isFinite(mergedAt) || !(submittedAt < mergedAt) || review.lastEditedAt !== null
+        || !['COMMENTED', 'APPROVED'].includes(review.state) || !review.id || !/^[1-9]\d{0,19}$/u.test(review.id)) {
+        return { kind: 'held', reason: 'invalid-review' };
+    }
+    if (!scope.botLogin)
+        return { kind: 'held', reason: 'evidence-unavailable' };
+    if (review.author?.type !== 'User' || !/^[a-z\d][a-z\d-]{0,38}$/iu.test(review.author.login)
+        || (0, github_user_policy_1.githubUsersMatch)(review.author.login, scope.botLogin)) {
+        return { kind: 'held', reason: 'unauthorized' };
+    }
+    return { kind: 'candidate', headSha, reviewId: review.id, author: review.author.login };
 }
 
 
@@ -106853,8 +107384,17 @@ function createCheckProgressCompositionRoot(binding) {
     const labels = new issue_label_repository_1.IssueLabelRepository((0, github_issue_client_factory_1.createIssueLabelsClient)());
     const content = new issue_content_repository_1.IssueContentRepository((0, github_issue_client_factory_1.createIssueContentClient)());
     const diff = new progress_diff_repository_1.ProgressDiffRepository((0, github_branch_client_factory_1.createBranchComparisonClient)(), (0, github_branch_client_factory_1.createProgressObjectClient)());
+    const issueCompletion = (0, issue_completion_composition_root_1.createIssueCompletionRepository)(binding);
     const comparisonSource = new progress_comparison_source_repository_1.ProgressComparisonSourceRepository((0, github_branch_client_factory_1.createProgressComparisonClient)());
-    return new check_progress_use_case_1.CheckProgressUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(content, binding), (0, lifecycle_capability_port_binding_1.bindIssueLabels)(labels, binding), (0, push_single_action_capability_port_binding_1.bindIssueProgress)(new issue_progress_tracking_repository_1.IssueProgressTrackingRepository(content, labels, new issue_progress_label_repository_1.IssueProgressLabelRepository(new issue_label_repository_1.IssueLabelRepository((0, github_issue_client_factory_1.createIssueLabelsClient)()))), binding), (0, push_single_action_capability_port_binding_1.bindBranchListQuery)(new branch_lifecycle_repository_1.BranchLifecycleRepository((0, github_branch_client_factory_1.createBranchClient)()), binding), (0, push_single_action_capability_port_binding_1.bindPullRequestBranchQuery)(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)(), (0, shared_capability_port_binding_1.bindPublicationSourceQuery)(new github_publication_source_repository_1.GithubPublicationSourceRepository((0, github_branch_client_factory_1.createBranchClient)()), binding, (0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding)), Object.freeze({ getDiff: (baseSha, headSha) => diff.getDiff(binding.owner, binding.repository, baseSha, headSha, binding.token) }), Object.freeze({ getSource: (branch) => comparisonSource.getSource(binding.owner, binding.repository, branch, binding.token) }));
+    return new check_progress_use_case_1.CheckProgressUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(content, binding), (0, lifecycle_capability_port_binding_1.bindIssueLabels)(labels, binding), (0, push_single_action_capability_port_binding_1.bindIssueProgress)(new issue_progress_tracking_repository_1.IssueProgressTrackingRepository(content, labels, new issue_progress_label_repository_1.IssueProgressLabelRepository(new issue_label_repository_1.IssueLabelRepository((0, github_issue_client_factory_1.createIssueLabelsClient)()))), binding), (0, push_single_action_capability_port_binding_1.bindBranchListQuery)(new branch_lifecycle_repository_1.BranchLifecycleRepository((0, github_branch_client_factory_1.createBranchClient)()), binding), (0, push_single_action_capability_port_binding_1.bindPullRequestBranchQuery)(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)(), (0, shared_capability_port_binding_1.bindPublicationSourceQuery)(new github_publication_source_repository_1.GithubPublicationSourceRepository((0, github_branch_client_factory_1.createBranchClient)()), binding, (0, issue_completion_composition_root_1.bindNativeStatusRead)(issueCompletion)), Object.freeze({ getDiff: (baseSha, headSha) => diff.getDiff(binding.owner, binding.repository, baseSha, headSha, binding.token) }), Object.freeze({ getSource: (branch) => comparisonSource.getSource(binding.owner, binding.repository, branch, binding.token) }), Object.freeze({
+        ...(0, shared_capability_port_binding_1.bindIssueCommentQuery)(content, binding),
+        removeFullProgressLabel: async (issueNumber) => {
+            const current = await issueCompletion.readIssue(issueNumber);
+            if (current.state === 'open' && current.labels.includes('100%')) {
+                await issueCompletion.removeLabel(issueNumber, '100%');
+            }
+        },
+    }));
 }
 
 
@@ -108025,6 +108565,8 @@ function composePullRequestUseCase(...dependencies) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createPullRequestUseCaseCompositionRoot = createPullRequestUseCaseCompositionRoot;
+const octokit_client_resolver_1 = __nccwpck_require__(54047);
+const staged_rollout_review_repository_1 = __nccwpck_require__(21223);
 const reply_request_composition_root_1 = __nccwpck_require__(99065);
 const change_size_project_membership_composition_root_1 = __nccwpck_require__(99375);
 const push_single_action_capability_port_binding_1 = __nccwpck_require__(49417);
@@ -108080,6 +108622,7 @@ function createPullRequestUseCaseCompositionRoot(binding) {
     const boundOrganizationSelection = (0, lifecycle_capability_port_binding_1.bindOrganizationMemberSelection)(organizationMembers, binding);
     const boundPullRequestLifecycle = (0, lifecycle_capability_port_binding_1.bindPullRequestIssueLink)(pullRequestLifecycle, binding);
     const boundProjectBoard = (0, lifecycle_capability_port_binding_1.bindProjectBoardCommands)(projectBoard.command, binding);
+    const rolloutReviews = new staged_rollout_review_repository_1.StagedRolloutReviewRepository((0, octokit_client_resolver_1.getOctokitClient)(binding.token), binding.owner, binding.repository);
     const workflowSteps = {
         updateTitle: new update_title_use_case_1.UpdateTitleUseCase((0, shared_capability_port_binding_1.bindIssueTitle)(issueTitle, binding)),
         assignMemberToIssue: new assign_members_to_issue_use_case_1.AssignMemberToIssueUseCase(boundIssueAssignee, boundOrganizationSelection),
@@ -108089,7 +108632,17 @@ function createPullRequestUseCaseCompositionRoot(binding) {
         syncSizeAndProgressLabels: new sync_size_and_progress_labels_from_issue_to_pr_use_case_1.SyncSizeAndProgressLabelsFromIssueToPrUseCase((0, lifecycle_capability_port_binding_1.bindIssueLabels)(pullRequestLabels, binding), Object.freeze({ setTaskSize: boundProjectBoard.setTaskSize }), (0, change_size_project_membership_composition_root_1.createChangeSizeProjectMembershipQueryPort)(binding)),
         checkPriorityPullRequestSize: new check_priority_pull_request_size_use_case_1.CheckPriorityPullRequestSizeUseCase(boundProjectBoard),
         retireBranchSync: new retire_closed_issue_cards_use_case_1.RetireClosedIssueCardsUseCase(new retire_branch_sync_use_case_1.RetireBranchSyncUseCase((0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding), (0, push_single_action_capability_port_binding_1.bindBranchSyncRetirementComments)((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueContent, binding)), (0, reply_request_composition_root_1.createReplyRequestReadPort)(binding)), new retire_progress_use_case_1.RetireProgressUseCase((0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding), (0, push_single_action_capability_port_binding_1.bindBranchSyncRetirementComments)((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueContent, binding)), (0, reply_request_composition_root_1.createReplyRequestReadPort)(binding))),
-        closeIssueAfterMerging: new close_issue_after_merging_use_case_1.CloseIssueAfterMergingUseCase((0, issue_completion_composition_root_1.bindIssueCompletion)((0, issue_completion_composition_root_1.createIssueCompletionRepository)(binding))),
+        closeIssueAfterMerging: new close_issue_after_merging_use_case_1.CloseIssueAfterMergingUseCase((0, issue_completion_composition_root_1.bindIssueCompletion)((0, issue_completion_composition_root_1.createIssueCompletionRepository)(binding)), {
+            publicationTarget: Object.freeze({
+                owner: binding.owner, repository: binding.repository,
+                repositoryUrl: `https://github.com/${encodeURIComponent(binding.owner)}/${encodeURIComponent(binding.repository)}`,
+            }),
+            reviews: Object.freeze({
+                readMergedPullRequest: rolloutReviews.readMergedPullRequest.bind(rolloutReviews),
+                isMaintainer: rolloutReviews.isMaintainer.bind(rolloutReviews),
+            }),
+            comments: (0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueContent, binding),
+        }),
     };
     return (0, pull_request_use_case_composition_1.composePullRequestUseCase)(new update_pull_request_description_use_case_1.UpdatePullRequestDescriptionUseCase((0, lifecycle_capability_port_binding_1.bindPullRequestDescription)(pullRequestLifecycle, binding, new pull_request_changes_repository_1.PullRequestChangesRepository((0, github_pull_request_client_factory_1.createPullRequestChangesClient)())), (0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueContent, binding), (0, shared_capability_port_binding_1.bindOrganizationMembers)(organizationMembers, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), workflowSteps, new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase((0, agent_capability_composition_root_1.createFindingsQueryPort)(), bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase((0, agent_capability_composition_root_1.createLanguageQueryPort)())), (0, lifecycle_capability_port_binding_1.bindActorAuthorization)((0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), binding));
 }

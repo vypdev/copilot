@@ -1,4 +1,5 @@
 import type { Result } from '../../data/model/result';
+import { stagedRolloutSummaryRows } from './staged_rollout_presentation_policy';
 import { projectClosedIssueCleanupCounts } from './closed_issue_reconciliation_outcome_policy';
 import { projectInactivityResultCounts } from './inactivity_result_counts_projection_policy';
 import { sanitizeAgentMarkdown } from './github_comment_publication_policy';
@@ -98,6 +99,7 @@ export function buildActionSummary(
         `| ${catalogText(catalog, 'summary.results')} | ${formatResultCounts(context.results, catalog)} |`,
         ...inactivitySummaryRows(context.results, catalog),
         ...closedIssueCleanupRows(context.results, catalog),
+        ...stagedRolloutSummaryRows(context.results, context.owner, context.repository, context.locale?.repository ?? 'en-US'),
         `| ${catalogText(catalog, 'summary.findingStates')} | ${formatFindingStates(findingStateProjection, catalog)} |`,
         `| ${catalogText(catalog, 'summary.bugbotReview')} | ${formatBugbotTelemetry(telemetryProjection, catalog)} |`,
         ...(staleSourceSuppressed ? [

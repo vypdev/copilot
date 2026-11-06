@@ -6,6 +6,7 @@ import { Result } from '../../../data/model/result';
 import { githubUsersMatch } from '../../../domain/github_user_policy';
 import type { BoundIssueCompletionReadPort } from '../../ports/issue_completion_ports';
 import type { BoundIssueCommentQueryPort, BoundIssueCommentUpdatePort } from '../../ports/issue_lifecycle_ports';
+import { retireStagedRolloutCard } from '../../policies/staged_rollout_presentation_policy';
 import { parsePublicationMarker } from '../../policies/publication_identity_policy';
 import { buildRetiredProgressComment } from '../../policies/retired_progress_presentation_policy';
 import { ApplicationError } from '../../errors/application_error';
@@ -54,13 +55,15 @@ export class RetireProgressUseCase implements ParamUseCase<RetireProgressContext
       if (initial.state !== 'closed') return [this.result(retired, nativeClosed)];
       nativeClosed = true;
       phase = 'card-inventory';
-      const cards = (await this.comments.listIssueComments(context.issueNumber)).filter(comment => {
+      const cards = (await this.comments.listIssueComments(context.issueNumber)).flatMap(comment => {
+        if (!comment.body || !Number.isSafeInteger(comment.id) || comment.id < 1
+          || !githubUsersMatch(context.trustedBotLogin!, comment.user?.login ?? '')) return [];
         const marker = parsePublicationMarker(comment.body);
-        return marker?.identity.topic === 'progress' && marker.identity.target.kind === 'issue'
+        const body = marker?.identity.topic === 'progress' && marker.identity.target.kind === 'issue'
           && marker.identity.target.number === context.issueNumber && marker.identity.key === 'work'
-          && buildRetiredProgressComment(comment.body ?? '', context.locale, initial.reason) !== undefined
-          && Number.isSafeInteger(comment.id) && comment.id > 0
-          && Boolean(comment.user?.login && githubUsersMatch(context.trustedBotLogin!, comment.user.login));
+          ? buildRetiredProgressComment(comment.body, context.locale, initial.reason)
+          : retireStagedRolloutCard(comment.body, context.issueNumber, context.locale, initial.reason);
+        return body === undefined ? [] : [{ card: comment, body }];
       });
       remaining = Math.min(cards.length, 3_000);
       if (cards.length > 20) throw stale();
@@ -69,8 +72,7 @@ export class RetireProgressUseCase implements ParamUseCase<RetireProgressContext
         const fresh = await read();
         if (!nativeClosed || fresh.reason !== initial.reason || fresh.deploymentCompletion === 'pending') throw stale();
       };
-      for (const card of cards) {
-        const body = buildRetiredProgressComment(card.body ?? '', context.locale, initial.reason)!;
+      for (const { card, body } of cards) {
         const verified = await verifyClosedIssueCardRetirement({ issueNumber: context.issueNumber,
           commentId: card.id, author: context.trustedBotLogin, originalBody: card.body ?? '', finalBody: body,
           freshness: this.cardFreshness, verifyClosed, onUpdated: () => { retired++; }, phase: value => { phase = value; },
