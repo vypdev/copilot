@@ -333,10 +333,10 @@ Existing owner contracts and case budgets remain intact by reference, including 
 | Domain/configuration/pure planning | 12 | Observable scenarios in the case inventory. |
 | State/application/idempotency/races | 13 | Observable scenarios in the case inventory. |
 | Adapters/provider contracts | 8 | Observable scenarios in the case inventory. |
-| Workflows/setup/schema | 3 | Observable scenarios in the case inventory. |
-| UI/UX/localization/sanitization | 4 | Observable scenarios in the case inventory. |
+| Workflows/setup/schema | 4 | Observable scenarios in the case inventory. |
+| UI/UX/localization/sanitization | 5 | Observable scenarios in the case inventory. |
 | Integration/security/migration | 12 | Observable scenarios in the case inventory. |
-| Total | 52 | Distinct inventory cases. Repeated executions do not add cases. |
+| Total | 54 | Distinct inventory cases. Repeated executions do not add cases. |
 
 | Case ID | Area | Requirements | Scenario |
 |---|---|---|---|
@@ -392,6 +392,8 @@ Existing owner contracts and case budgets remain intact by reference, including 
 | sdd-bounded-drafting-C50 | Integration/security/migration | SDD-BDR-07 | An advanced legacy pending ref or a commit with forged bot metadata cannot establish publication. |
 | sdd-bounded-drafting-C51 | Domain/configuration/pure planning | SDD-BDR-02, SDD-BDR-05 | Inline code containing an HTML comment marker, including a code span that wraps to the next line, cannot suppress visible requirements, cases, or paths during generation or seed validation. |
 | sdd-bounded-drafting-C52 | Domain/configuration/pure planning | SDD-BDR-02, SDD-BDR-05 | Indented backtick or HTML marker examples cannot hide later tables, and true fenced code and hidden comments do not contribute obligations. |
+| sdd-bounded-drafting-C53 | Workflows/setup/schema | SDD-BDR-02, SDD-BDR-11 | The Feature Request form retains real required headings after literal examples, so admission reaches the shared inventory and publication gate. |
+| sdd-bounded-drafting-C54 | UI/UX/localization/sanitization | SDD-BDR-05, SDD-BDR-11 | The Action preserves a user-authored emoji, version-like, or punctuation prefix across title decoration and keeps the SDD input fingerprint stable. |
 
 The verified Jest global thresholds are 90% lines and statements, 88% functions and 82% branches. Existing per-module budgets and applicable CI checks remain part of acceptance. New pure planning policy must achieve at least 90% branch coverage and 100% decision-table row coverage. Changed modules must meet repository thresholds without reducing their baseline. Use deterministic clocks, IDs and fakes; no real waits or live services. Test structured contracts and semantics as well as golden presentation fixtures. Workflow checks parse schemas and paths, not prose grep. Manual UX evidence: maintainers verify proposal clarity and card readability on narrow screen and supported light/dark themes.
 
@@ -458,23 +460,23 @@ Use a disposable consumer repository with the candidate Action pinned to its exa
 14. Given an invalid requirement ID or a new local handle, the gate reports invalid syntax or allocates a canonical ID and derives its reciprocal links. An authorized seed cannot redefine a reserved ID.
 15. Given the Domus #25 clarification shape, including a question with both a real prerequisite and a separate future-branch clause, the gate retains the genuine decision and proceeds after authorized evidence. Verified publication and linkage still govern implementation.
 16. Given an interrupted publication, the Action reconciles the recorded prepared commit, or stops for review when the linked branch lacks that exact evidence. Git author and subject fields grant no authority.
-17. Given a visible canonical inventory after a literal inline comment marker or indented code example, the Action retains every row for both drafting routes. Real hidden comments and code blocks remain excluded.
+17. Given a visible canonical inventory after a literal inline comment marker or indented code example, the Action retains every row for both drafting routes. The issue form and SDD parser share these visibility rules, so a literal example cannot mask later required form headings. Real hidden comments and code blocks remain excluded.
 
 ## 17. Requirements traceability
 
 | Requirement | Cases |
 |---|---|
 | SDD-BDR-01 | sdd-bounded-drafting-C01, sdd-bounded-drafting-C04, sdd-bounded-drafting-C14, sdd-bounded-drafting-C23 |
-| SDD-BDR-02 | sdd-bounded-drafting-C01, sdd-bounded-drafting-C02, sdd-bounded-drafting-C16, sdd-bounded-drafting-C24, sdd-bounded-drafting-C27, sdd-bounded-drafting-C29, sdd-bounded-drafting-C30, sdd-bounded-drafting-C51, sdd-bounded-drafting-C52 |
+| SDD-BDR-02 | sdd-bounded-drafting-C01, sdd-bounded-drafting-C02, sdd-bounded-drafting-C16, sdd-bounded-drafting-C24, sdd-bounded-drafting-C27, sdd-bounded-drafting-C29, sdd-bounded-drafting-C30, sdd-bounded-drafting-C51, sdd-bounded-drafting-C52, sdd-bounded-drafting-C53 |
 | SDD-BDR-03 | sdd-bounded-drafting-C03, sdd-bounded-drafting-C10, sdd-bounded-drafting-C11, sdd-bounded-drafting-C12, sdd-bounded-drafting-C27, sdd-bounded-drafting-C32 |
 | SDD-BDR-04 | sdd-bounded-drafting-C15, sdd-bounded-drafting-C20, sdd-bounded-drafting-C31 |
-| SDD-BDR-05 | sdd-bounded-drafting-C05, sdd-bounded-drafting-C06, sdd-bounded-drafting-C17, sdd-bounded-drafting-C23, sdd-bounded-drafting-C28, sdd-bounded-drafting-C36, sdd-bounded-drafting-C48, sdd-bounded-drafting-C49, sdd-bounded-drafting-C51, sdd-bounded-drafting-C52 |
+| SDD-BDR-05 | sdd-bounded-drafting-C05, sdd-bounded-drafting-C06, sdd-bounded-drafting-C17, sdd-bounded-drafting-C23, sdd-bounded-drafting-C28, sdd-bounded-drafting-C36, sdd-bounded-drafting-C48, sdd-bounded-drafting-C49, sdd-bounded-drafting-C51, sdd-bounded-drafting-C52, sdd-bounded-drafting-C54 |
 | SDD-BDR-06 | sdd-bounded-drafting-C18, sdd-bounded-drafting-C19, sdd-bounded-drafting-C20, sdd-bounded-drafting-C21 |
 | SDD-BDR-07 | sdd-bounded-drafting-C07, sdd-bounded-drafting-C08, sdd-bounded-drafting-C09, sdd-bounded-drafting-C15, sdd-bounded-drafting-C22, sdd-bounded-drafting-C24, sdd-bounded-drafting-C25, sdd-bounded-drafting-C26, sdd-bounded-drafting-C31, sdd-bounded-drafting-C32, sdd-bounded-drafting-C39, sdd-bounded-drafting-C40, sdd-bounded-drafting-C44, sdd-bounded-drafting-C45, sdd-bounded-drafting-C46, sdd-bounded-drafting-C47, sdd-bounded-drafting-C50 |
 | SDD-BDR-08 | sdd-bounded-drafting-C03, sdd-bounded-drafting-C10, sdd-bounded-drafting-C13, sdd-bounded-drafting-C29, sdd-bounded-drafting-C32 |
 | SDD-BDR-09 | sdd-bounded-drafting-C27, sdd-bounded-drafting-C28, sdd-bounded-drafting-C29, sdd-bounded-drafting-C30, sdd-bounded-drafting-C31 |
 | SDD-BDR-10 | sdd-bounded-drafting-C33, sdd-bounded-drafting-C34, sdd-bounded-drafting-C35, sdd-bounded-drafting-C36, sdd-bounded-drafting-C41 |
-| SDD-BDR-11 | sdd-bounded-drafting-C37, sdd-bounded-drafting-C38, sdd-bounded-drafting-C39, sdd-bounded-drafting-C40, sdd-bounded-drafting-C42, sdd-bounded-drafting-C43 |
+| SDD-BDR-11 | sdd-bounded-drafting-C37, sdd-bounded-drafting-C38, sdd-bounded-drafting-C39, sdd-bounded-drafting-C40, sdd-bounded-drafting-C42, sdd-bounded-drafting-C43, sdd-bounded-drafting-C53, sdd-bounded-drafting-C54 |
 
 ## 18. Implementation sequence
 

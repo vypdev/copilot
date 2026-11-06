@@ -61,6 +61,28 @@ describe('IssueTitleRepository', () => {
         expect(update).toHaveBeenCalledTimes(1);
     });
 
+    it.each(['🔥 - Keep this wording', '1.2.3 - Keep this wording', '- Keep this wording'])(
+        'preserves the user-authored title prefix in %s across decoration changes',
+        async title => {
+            const labels = createLabels();
+            labels.currentIssueLabels = [labels.feature];
+            const formatted = await repository.updateTitleIssueFormat(
+                'owner', 'repo', '', title, 42, '🧑‍💻', labels, 'token', true,
+            );
+            expect(formatted).toBe('✨ - ' + title);
+            expect(normalizeSddIssueTitle(formatted!)).toBe(normalizeSddIssueTitle(title));
+            labels.currentIssueLabels = [labels.feature, 'branched'];
+            const linked = await repository.updateTitleIssueFormat(
+                'owner', 'repo', '', formatted!, 42, '🧑‍💻', labels, 'token', true,
+            );
+            expect(linked).toBe('✨🧑‍💻 - ' + title);
+            labels.currentIssueLabels = [labels.feature];
+            await expect(repository.updateTitleIssueFormat(
+                'owner', 'repo', '', linked!, 42, '🧑‍💻', labels, 'token', true,
+            )).resolves.toBe('✨ - ' + title);
+        },
+    );
+
     it('does not call GitHub when the formatted title is unchanged', async () => {
         const labels = createLabels();
         labels.currentIssueLabels = [labels.feature];

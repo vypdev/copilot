@@ -92626,10 +92626,16 @@ class IssueTitleRepository {
         this.updateTitleIssueFormat = async (owner, repository, version, issueTitle, issueNumber, branchManagementEmoji, labels, token, preserveIssueTitle) => {
             return (0, issue_title_update_1.withTitleUpdateLogging)(() => {
                 const emoji = (0, issue_emoji_policy_1.resolveIssueTitleEmoji)(labels, branchManagementEmoji);
-                const materialTitle = preserveIssueTitle ? (0, pre_branch_sdd_1.normalizeSddIssueTitle)(issueTitle) : (0, issue_title_policy_1.sanitizeIssueTitle)(issueTitle);
+                const materialTitle = preserveIssueTitle
+                    ? (0, issue_emoji_policy_1.stripIssueTitleDecoration)(issueTitle, version, labels, branchManagementEmoji)
+                    : (0, issue_title_policy_1.sanitizeIssueTitle)(issueTitle);
                 const formattedTitle = version.length > 0
                     ? `${emoji} - ${version} - ${materialTitle}`
                     : `${emoji} - ${materialTitle}`;
+                // A cosmetic update must leave existing SDD issue fingerprints stable.
+                if (preserveIssueTitle && (0, pre_branch_sdd_1.normalizeSddIssueTitle)(formattedTitle) !== (0, pre_branch_sdd_1.normalizeSddIssueTitle)(issueTitle)) {
+                    return Promise.resolve(undefined);
+                }
                 return (0, issue_title_update_1.updateIssueTitle)(this.issueTitleClient, owner, repository, issueTitle, formattedTitle, issueNumber, token);
             });
         };
@@ -92974,6 +92980,7 @@ exports.IssueTypeRepository = IssueTypeRepository;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolveIssueTitleEmoji = resolveIssueTitleEmoji;
+exports.stripIssueTitleDecoration = stripIssueTitleDecoration;
 exports.resolvePullRequestTitleEmoji = resolvePullRequestTitleEmoji;
 const TYPE_RULES = [
     { emoji: '🔥', matches: labels => labels.isHotfix },
@@ -92990,6 +92997,19 @@ const CONTEXT_RULES = [
 ];
 function resolveIssueTitleEmoji(labels, branchManagementEmoji) {
     return resolveTitleEmoji(labels, branchManagementEmoji);
+}
+/** Remove only decorations this issue type can receive, including during readiness transitions. */
+function stripIssueTitleDecoration(title, version, labels, branchManagementEmoji) {
+    const trimmed = title.trim();
+    const typeEmoji = firstMatchingEmoji(TYPE_RULES, labels);
+    const baseEmoji = typeEmoji ?? resolveTitleEmoji(labels, '');
+    const decorated = typeEmoji ? [typeEmoji + branchManagementEmoji, baseEmoji] : [baseEmoji];
+    const prefix = decorated.map(emoji => emoji + ' - ').find(value => trimmed.startsWith(value));
+    if (!prefix)
+        return trimmed;
+    const material = trimmed.slice(prefix.length);
+    const versionPrefix = version + ' - ';
+    return version && material.startsWith(versionPrefix) ? material.slice(versionPrefix.length) : material;
 }
 function resolvePullRequestTitleEmoji(labels, branchManagementEmoji) {
     return resolveTitleEmoji(labels, branchManagementEmoji);
@@ -99892,67 +99912,28 @@ function branchIsReady(input) {
 /***/ }),
 
 /***/ 99376:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.readIssueWorkflowFields = readIssueWorkflowFields;
-/** Source positions stay unchanged: examples/comments cannot introduce structural form headings. */
+const markdown_visibility_1 = __nccwpck_require__(43591);
+/** Examples and hidden comments cannot supply or duplicate structural form headings. */
 function readIssueWorkflowFields(body, headings) {
-    const structural = maskIssueWorkflowExamples(body);
+    const { structural, uncommented } = (0, markdown_visibility_1.projectMarkdownVisibility)(body);
+    const sections = structural.map((line, index) => ({ line, index })).filter(({ line }) => /^#{1,6}[ \t]+/u.test(line));
     return Object.freeze(headings.map(heading => {
         const escaped = heading.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
-        const matches = [...structural.matchAll(new RegExp(`^#{1,6}[ \t]+${escaped}[ \t]*$`, 'gmi'))];
+        const headingPattern = new RegExp(`^#{1,6}[ \t]+${escaped}[ \t]*$`, 'iu');
+        const matches = sections.filter(({ line }) => headingPattern.test(line));
         if (matches.length !== 1)
             return Object.freeze({ heading, count: matches.length, value: '' });
-        const start = matches[0].index + matches[0][0].length;
-        const next = /^#{1,6}[ \t]+/mu.exec(structural.slice(start));
-        const end = next ? start + next.index : body.length;
-        const value = body.slice(start, end).replace(/<!--[\s\S]*?(?:-->|$)/gu, '').trim();
+        const start = matches[0].index;
+        const end = sections.find(({ index }) => index > start)?.index;
+        const value = uncommented.slice(start + 1, end).join('').trim();
         return Object.freeze({ heading, count: 1, value: /^_No response_$/iu.test(value) ? '' : value });
     }));
-}
-function maskIssueWorkflowExamples(body) {
-    let fence;
-    let comment = false;
-    const blank = (value) => value.replace(/[^\r\n]/g, ' ');
-    return Array.from(body.matchAll(/[^\n]*(?:\n|$)/gu), match => match[0]).map(line => {
-        const plain = line.replace(/\r?\n$/u, '');
-        if (fence) {
-            if (new RegExp(`^ {0,3}${fence.char}{${fence.length},}\\s*$`, 'u').test(plain))
-                fence = undefined;
-            return blank(line);
-        }
-        // A comment marker inside a fenced example must not hide later real fields.
-        const opening = !comment && /^ {0,3}(`{3,}|~{3,})/u.exec(plain);
-        if (opening) {
-            fence = { char: opening[1][0], length: opening[1].length };
-            return blank(line);
-        }
-        let structural = '';
-        let offset = 0;
-        while (offset < line.length) {
-            if (comment) {
-                const end = line.indexOf('-->', offset);
-                const stop = end < 0 ? line.length : end + 3;
-                structural += blank(line.slice(offset, stop));
-                offset = stop;
-                comment = end < 0;
-            }
-            else {
-                const start = line.indexOf('<!--', offset);
-                if (start < 0) {
-                    structural += line.slice(offset);
-                    break;
-                }
-                structural += line.slice(offset, start);
-                offset = start;
-                comment = true;
-            }
-        }
-        return structural;
-    }).join('');
 }
 
 
@@ -100570,6 +100551,142 @@ function parseManagedPullRequestMarker(body) {
 }
 function isSafeOperationId(value) {
     return /^[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/.test(value);
+}
+
+
+/***/ }),
+
+/***/ 43591:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.projectMarkdownVisibility = projectMarkdownVisibility;
+const commonmark_1 = __nccwpck_require__(86076);
+const HTML_COMMENT_START = '<!--';
+const HTML_COMMENT_END = '-->';
+/** Markdown structure and comment-free field values share the same source lines. */
+function projectMarkdownVisibility(source) {
+    const endings = source.match(/\r\n?|\n/gu) ?? [];
+    const normalized = source.replace(/\r\n?/gu, '\n');
+    const lines = normalized.split('\n');
+    let lineStart = 0;
+    const starts = lines.map(line => {
+        const start = lineStart;
+        lineStart += line.length + 1;
+        return start;
+    });
+    const { examples, literalOpeners } = readCodeLocations(normalized, starts);
+    let comment = false;
+    const structural = [];
+    const uncommented = [];
+    for (const [index, line] of lines.entries()) {
+        const ending = endings[index] ?? '';
+        if (!comment && examples.has(index + 1)) {
+            structural.push('');
+            uncommented.push(line + ending);
+            continue;
+        }
+        let visible = '';
+        let fieldValue = '';
+        let offset = 0;
+        while (offset < line.length) {
+            const marker = comment ? HTML_COMMENT_END : HTML_COMMENT_START;
+            const next = line.indexOf(marker, offset);
+            const literal = !comment && next >= 0 && (literalOpeners.has(starts[index] + next) || isEscaped(line, next));
+            const stop = next < 0 ? line.length : literal ? next + marker.length : next;
+            if (!comment) {
+                const text = line.slice(offset, stop);
+                visible += text;
+                fieldValue += text;
+            }
+            if (next < 0)
+                break;
+            if (!literal) {
+                if (!comment)
+                    visible += ' ';
+                comment = !comment;
+            }
+            offset = next + marker.length;
+        }
+        structural.push(visible);
+        uncommented.push(fieldValue + (comment ? '' : ending));
+    }
+    return { structural, uncommented };
+}
+function readCodeLocations(source, starts) {
+    const examples = new Set();
+    const literalOpeners = new Set();
+    const walker = new commonmark_1.Parser().parse(source).walker();
+    let inlineBlock;
+    let hasLiteralOpener = false;
+    let event;
+    while ((event = walker.next())) {
+        const { node, entering } = event;
+        if (node.type === 'code_block' && entering) {
+            const [start, end] = node.sourcepos;
+            for (let line = start[0]; line <= end[0]; line++)
+                examples.add(line);
+        }
+        if (node.type === 'paragraph' || node.type === 'heading') {
+            if (entering) {
+                const [start, end] = node.sourcepos;
+                inlineBlock = [starts[start[0] - 1], starts[end[0]] ?? source.length];
+                hasLiteralOpener = false;
+            }
+            else if (hasLiteralOpener && inlineBlock) {
+                const [start, end] = inlineBlock;
+                for (const marker of inlineCodeCommentOffsets(source.slice(start, end)))
+                    literalOpeners.add(start + marker);
+            }
+        }
+        if (node.type === 'code' && entering && node.literal.includes(HTML_COMMENT_START))
+            hasLiteralOpener = true;
+    }
+    return { examples, literalOpeners };
+}
+/** CommonMark gives block positions only. Match inline runs of equal length within that block. */
+function inlineCodeCommentOffsets(block) {
+    const tokens = [...block.matchAll(/`+|<!--/gu)];
+    const nextByLength = new Map();
+    const closers = new Map();
+    for (let index = tokens.length - 1; index >= 0; index--) {
+        const token = tokens[index];
+        const [run] = token;
+        if (run === HTML_COMMENT_START)
+            continue;
+        const openingLength = isEscaped(block, token.index) ? run.length - 1 : run.length;
+        const closingEnd = nextByLength.get(openingLength);
+        if (closingEnd !== undefined)
+            closers.set(token.index, closingEnd);
+        nextByLength.set(run.length, token.index + run.length);
+    }
+    const markers = [];
+    let codeUntil = -1;
+    let skipUntil = -1;
+    for (const token of tokens) {
+        if (token.index < skipUntil)
+            continue;
+        if (token[0] === HTML_COMMENT_START) {
+            if (token.index < codeUntil)
+                markers.push(token.index);
+            else if (!isEscaped(block, token.index)) {
+                const close = block.indexOf(HTML_COMMENT_END, token.index + HTML_COMMENT_START.length);
+                skipUntil = close === -1 ? block.length : close + HTML_COMMENT_END.length;
+            }
+        }
+        else if (token.index >= codeUntil) {
+            codeUntil = closers.get(token.index) ?? codeUntil;
+        }
+    }
+    return markers;
+}
+function isEscaped(text, index) {
+    let backslashes = 0;
+    while (index > 0 && text[--index] === '\\')
+        backslashes++;
+    return backslashes % 2 !== 0;
 }
 
 
@@ -103967,115 +104084,10 @@ exports.readSddTextBlockLocations = readSddTextBlockLocations;
 exports.readSddVisibleReferences = readSddVisibleReferences;
 exports.isSddMarkdownLinkExample = isSddMarkdownLinkExample;
 const commonmark_1 = __nccwpck_require__(86076);
-const HTML_COMMENT_START = '<!--';
-const HTML_COMMENT_END = '-->';
-/** Excludes examples and hidden records from the contract, preserving source line numbers. */
+const markdown_visibility_1 = __nccwpck_require__(43591);
+/** Excludes examples and hidden records from the contract. */
 function visibleSddContract(source) {
-    const normalized = source.replace(/\r\n?/gu, '\n');
-    const lines = normalized.split('\n');
-    let lineStart = 0;
-    const starts = lines.map(line => {
-        const start = lineStart;
-        lineStart += line.length + 1;
-        return start;
-    });
-    const { examples, literalOpeners } = readSddExampleLocations(normalized, starts);
-    let comment = false;
-    return lines.map((line, index) => {
-        if (!comment && examples.has(index + 1))
-            return '';
-        let result = '';
-        let offset = 0;
-        while (offset < line.length) {
-            const marker = comment ? HTML_COMMENT_END : HTML_COMMENT_START;
-            const next = line.indexOf(marker, offset);
-            if (next < 0)
-                return result + (comment ? '' : line.slice(offset));
-            if (!comment && (literalOpeners.has(starts[index] + next) || isEscaped(line, next))) {
-                result += line.slice(offset, next + marker.length);
-            }
-            else {
-                if (!comment)
-                    result += line.slice(offset, next) + ' ';
-                comment = !comment;
-            }
-            offset = next + marker.length;
-        }
-        return result;
-    }).join('\n');
-}
-function readSddExampleLocations(source, starts) {
-    const examples = new Set();
-    const literalOpeners = new Set();
-    const walker = new commonmark_1.Parser().parse(source).walker();
-    let inlineBlock;
-    let hasLiteralOpener = false;
-    let event;
-    while ((event = walker.next())) {
-        const { node, entering } = event;
-        if (node.type === 'code_block' && entering) {
-            const [start, end] = node.sourcepos;
-            for (let line = start[0]; line <= end[0]; line++)
-                examples.add(line);
-        }
-        if (node.type === 'paragraph' || node.type === 'heading') {
-            if (entering) {
-                const [start, end] = node.sourcepos;
-                inlineBlock = [starts[start[0] - 1], starts[end[0]] ?? source.length];
-                hasLiteralOpener = false;
-            }
-            else if (hasLiteralOpener && inlineBlock) {
-                const [start, end] = inlineBlock;
-                for (const marker of inlineCodeCommentOffsets(source.slice(start, end)))
-                    literalOpeners.add(start + marker);
-            }
-        }
-        if (node.type === 'code' && entering && node.literal.includes(HTML_COMMENT_START))
-            hasLiteralOpener = true;
-    }
-    return { examples, literalOpeners };
-}
-/** CommonMark gives block positions only. Match inline runs of equal length within that block. */
-function inlineCodeCommentOffsets(block) {
-    const tokens = [...block.matchAll(/`+|<!--/gu)];
-    const nextByLength = new Map();
-    const closers = new Map();
-    for (let index = tokens.length - 1; index >= 0; index--) {
-        const token = tokens[index];
-        const [run] = token;
-        if (run === HTML_COMMENT_START)
-            continue;
-        const openingLength = isEscaped(block, token.index) ? run.length - 1 : run.length;
-        const closingEnd = nextByLength.get(openingLength);
-        if (closingEnd !== undefined)
-            closers.set(token.index, closingEnd);
-        nextByLength.set(run.length, token.index + run.length);
-    }
-    const markers = [];
-    let codeUntil = -1;
-    let skipUntil = -1;
-    for (const token of tokens) {
-        if (token.index < skipUntil)
-            continue;
-        if (token[0] === HTML_COMMENT_START) {
-            if (token.index < codeUntil)
-                markers.push(token.index);
-            else if (!isEscaped(block, token.index)) {
-                const close = block.indexOf(HTML_COMMENT_END, token.index + HTML_COMMENT_START.length);
-                skipUntil = close === -1 ? block.length : close + HTML_COMMENT_END.length;
-            }
-        }
-        else if (token.index >= codeUntil) {
-            codeUntil = closers.get(token.index) ?? codeUntil;
-        }
-    }
-    return markers;
-}
-function isEscaped(text, index) {
-    let backslashes = 0;
-    while (index > 0 && text[--index] === '\\')
-        backslashes++;
-    return backslashes % 2 !== 0;
+    return (0, markdown_visibility_1.projectMarkdownVisibility)(source).structural.join('\n');
 }
 /** CommonMark supplies block boundaries; callers retain raw table-cell escapes. */
 function readSddTextBlockLocations(source) {

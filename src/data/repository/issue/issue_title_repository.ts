@@ -2,7 +2,7 @@ import type { IssueTitlePort, TitleLabelFacts } from '../../../application/ports
 import type { GithubClientPort } from '../../../infrastructure/github/ports/github_client_provider_port';
 import type { GithubIssueTitleClient } from '../../../infrastructure/github/ports/github_issue_provider_ports';
 import { normalizeSddIssueTitle } from '../../../domain/pre_branch_sdd';
-import { resolveIssueTitleEmoji } from '../issue_emoji_policy';
+import { resolveIssueTitleEmoji, stripIssueTitleDecoration } from '../issue_emoji_policy';
 import { generatedPullRequestTitle, hasConventionalPullRequestTitle } from '../../../application/policies/pull_request_title_policy';
 import { normalizePullRequestSourceTitle, sanitizeIssueTitle, sanitizePullRequestTitle } from '../issue_title_policy';
 import { updateIssueTitle, withTitleUpdateLogging } from './issue_title_update';
@@ -21,10 +21,16 @@ export class IssueTitleRepository implements IssueTitlePort {
     ): Promise<string | undefined> => {
         return withTitleUpdateLogging(() => {
             const emoji = resolveIssueTitleEmoji(labels, branchManagementEmoji);
-            const materialTitle = preserveIssueTitle ? normalizeSddIssueTitle(issueTitle) : sanitizeIssueTitle(issueTitle);
+            const materialTitle = preserveIssueTitle
+                ? stripIssueTitleDecoration(issueTitle, version, labels, branchManagementEmoji)
+                : sanitizeIssueTitle(issueTitle);
             const formattedTitle = version.length > 0
                 ? `${emoji} - ${version} - ${materialTitle}`
                 : `${emoji} - ${materialTitle}`;
+            // A cosmetic update must leave existing SDD issue fingerprints stable.
+            if (preserveIssueTitle && normalizeSddIssueTitle(formattedTitle) !== normalizeSddIssueTitle(issueTitle)) {
+                return Promise.resolve(undefined);
+            }
             return updateIssueTitle(this.issueTitleClient, owner, repository, issueTitle, formattedTitle, issueNumber, token);
         });
     };
