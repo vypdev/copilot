@@ -346,7 +346,13 @@ Rebuilding packages does not establish loaded-browser behavior or store approval
 
 ## 14. Testing strategy
 
-Minimum **210 distinct new risk cases**, each assigned once:
+The [H3 cumulative risk budget](github-browser-extension-control-center-h3.md#cumulative-risk-budget)
+assigns **210 distinct new risk cases** to purpose-isolated credential roles.
+The 38 identity-verification cases include the two tests in
+`purpose_identity_verifier.test.ts` for independent read and cache continuity
+after retirement and for the absence of a retained optional response or ETag.
+The separate H3 named read-session allocation and the later workspace review
+projection case have their own primary rows.
 
 | Area | Floor | Distinct risks |
 |---|---:|---|

@@ -1116,12 +1116,11 @@ or human acceptance, and modified executable branches remain100% covered.
 
 ### Cumulative risk budget
 
-The historical 160-case H3 risk baseline is a starting minimum, not the complete
-acceptance threshold. Every additive minimum below is mandatory. The cumulative
-minimum is **939 distinct H3 risk cases: 160 baseline + 779 additions**. Reaching
-160 alone cannot satisfy H3. The original 56 CENTER catalog cases, the 56-case
-implementation inventory above and the full 803-case product catalog remain
-separately required; their execution does not offset an additive minimum.
+The cumulative minimum is **1,157 distinct H3 risk cases**. It comprises the
+160-case baseline and 997 mandatory additions. The original 56 CENTER catalog
+cases, the 56-case implementation inventory above and the full 803-case product
+catalog remain separately required. Their execution cannot offset an additive
+minimum.
 
 | Risk allocation | Minimum distinct cases | Owning contract/evidence |
 |---|---:|---|
@@ -1143,7 +1142,8 @@ separately required; their execution does not offset an additive minimum.
 | Repository relocation | 34 | Explicit relocation refinement, with separate closed-wire, application, mounted review and transport allocations |
 | Temporary pauses | 64 | Native temporary-pause foundation |
 | Local journal | 56 | Consent, canonical writes and retention refinement |
-| Named sessions | 120 | Closed protocol, owners and composed session journeys |
+| Named sessions | 120 | Closed protocol, owners and composed named read-session journeys |
+| Purpose-isolated credential roles | 210 | [Credential role manager testing strategy](github-browser-extension-credential-roles.md#14-testing-strategy), including the two optional identity verification isolation cases |
 | Private API cache clearing | 15 | Cache-clear additional risk inventory |
 | Useful local destinations | 20 | Navigation and destination inventory |
 | Native focus composition | 2 | Two composed acceptance cases following that inventory |
@@ -1158,12 +1158,12 @@ separately required; their execution does not offset an additive minimum.
 | Profile feature editing | 2 | Mounted create/edit/inheritance in `center_app.test.ts` and rejected draft in `center_files.test.ts` |
 | Unresolved cache selector | 2 | `api_cache_client.test.ts` covers failed replacement before and after native admission |
 | Clear preparation, visit delivery and session provenance | 5 | Two shared reservation cases, one reentrant delivery, two readable-document applicability cases |
-| Workspace review metadata scope | 1 | `read_role_consumers.test.ts` exercises both write purposes and a valid read reference in the actual review projection |
+| Workspace review metadata scope | 1 | `read_role_consumers.test.ts` exercises both write purposes and a valid read reference in the actual review projection, beyond the twelve original role-consumer policy cases |
 | Session provenance locale fallback | 1 | `session_preference_provenance.test.ts` requires the complete English explanation when an unsupported locale matches an inherited key |
 | Concurrent protected revocation | 3 | New connection admission during one removal, overlapping removals and active revocation failure in `named_session_revocation.test.ts` |
-| Optional identity verification isolation | 2 | Independent scheduled read and cache witness survive retirement, and the optional response leaves no retained ETag |
+| Shared protected-session restoration | 10 | `session_races.test.ts` covers nine admission, cancellation, supersession, revocation, reentry and capacity cases. `page_configuration.test.ts` covers one composed native-tab release case. |
 | Profile identity in reviews | 3 | Mounted removal with a retained neighbor, mixed import changes and independent list order |
-| **Total** | **939** | **160 + 779; every row is required** |
+| **Total** | **1,157** | **160 baseline + 997 additions. Every row is required.** |
 
 The companion session-preferences specification also requires its 160 scoped
 cases. H3 acceptance requires both the owning milestone ledger and the scoped
