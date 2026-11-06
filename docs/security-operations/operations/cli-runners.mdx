@@ -80,8 +80,11 @@ The verifier checks the selected launcher, interpreter, and package entry point 
 The Setup Platform Smoke workflow runs fixture and package tests on hosted
 Ubuntu, macOS, and Windows for pull requests. Hosted Windows reports repository
 coverage and browser extension coverage in separate steps. Vitest runs the full
-extension suite in one worker with per-file isolation and the existing coverage
-thresholds. The persistent self-hosted macOS/Ubuntu Codex
+extension suite in two worker threads with per-file isolation, an isolated npm
+cache and the existing coverage thresholds. Its 80-minute step budget leaves
+time for diagnostics within the 120-minute job budget. If the runner can finish
+post-failure steps, it preserves the extension test log for one day. The
+persistent self-hosted macOS/Ubuntu Codex
 matrix runs only when manually dispatched from the protected `master` branch;
 dispatching a PR branch, `develop`, or tag skips that matrix. A result from `master` or an
 older PR commit does not verify the current PR head on those service runners.

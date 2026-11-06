@@ -1293,6 +1293,18 @@ describe('workflow contract validator', () => {
     expect(() => assertRunner(file, workflow)).toThrow('ordered full hosted Windows repository and extension coverage');
   });
 
+  it.each([
+    ['Full hosted Windows extension coverage', 'timeout-minutes'],
+    ['Full hosted Windows extension coverage', 'env'],
+    ['Preserve hosted Windows extension failure log', 'if'],
+  ])('requires %s to retain its %s', (name, property) => {
+    const file = path.join(process.cwd(), '.github', 'workflows', 'setup_platform_smoke.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    const step = workflow.jobs['setup-platform-smoke'].steps.find((entry: { name?: string }) => entry.name === name);
+    delete step[property];
+    expect(() => assertRunner(file, workflow)).toThrow('bound hosted Windows extension coverage and retain its failure log');
+  });
+
   it.each(['setup-platform-smoke'])(
     'requires the real Windows job Node npm preflight in %s', (jobId) => {
       const file = path.join(process.cwd(), '.github', 'workflows', 'setup_platform_smoke.yml');
