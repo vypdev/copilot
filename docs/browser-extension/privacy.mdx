@@ -1,0 +1,95 @@
+---
+title: Local data and privacy
+description: Understand what the development extension stores, what leaves the browser and which controls pause, forget, clear or reset each scope.
+---
+
+# Local data and privacy
+
+Start with **Privacy** in the [local control center](/browser-extension/configuration).
+Browser access, credential selection, local preferences and optional generated
+history are separate controls. H3 is still in development; source-level tests
+and this guide do not certify complete native-browser acceptance or store delivery.
+
+```text
+Your preferences → local browser profile → effective page settings
+Explicit connection → protected session → admitted GitHub API reads
+Optional collection consent → bounded local generated history
+Explicit export review → a local file you choose to download
+```
+
+These flows remain separate. Changing a preference cannot grant site access,
+create a credential, authorize an Action or enable optional collection by itself.
+
+## What stays in this browser profile
+
+| Data | Location and lifetime | Inspection/control |
+|---|---|---|
+| Preferences, profiles and repository overrides | Versioned local storage, with one nonsecret rollback | Configuration, Your data, reviewed reset or rollback |
+| Named credentials and purpose selections | Protected session storage; no disk/sync fallback | Connections; disconnect the chosen session or forget all protected sessions |
+| Private API response cache | Bounded background memory; retired on session change or suspension | Current runtime observations; no cache export |
+| Optional diagnostics and recent extension destinations | Independently consented, bounded generated local collections | Privacy, Activity and Diagnostics; stop, clear or review export separately |
+| Unsaved drafts, editor authority and pending reviews | The current page/background context | Explicit review, discard or recovery read; no durable authority token |
+
+Use the [history guide](/browser-extension/local-history) for exact collection
+limits, expiration and clear/export behavior. Recent destinations describe
+accepted routes inside the extension, rather than ordinary browsing history.
+Private repository targets, credentials and raw provider errors do not become
+generated history entries.
+
+The extension does not upload browser history or send telemetry. Browser-local
+storage does not imply that a file you explicitly download is private forever:
+the browser and operating system own that file after download.
+
+## What can contact GitHub
+
+Standalone configuration works without a credential. An optional admitted read
+uses the selected protected read session, current identity, eligible visible
+page and pause/permission checks. Reading local preferences, inspecting native
+browser permissions and navigating the center do not themselves authorize a
+GitHub write or dispatch an Action.
+
+An optional issue/Actions credential is stored and selected independently. Its
+purpose describes the extension's use, not the full provider entitlements of
+the token. In this H3 build, those selections do not implement future remote
+write workflows. See [browser access and separate purposes](/browser-extension/permissions).
+
+## Choose the control that matches your intent
+
+| Intent | Control | What it does not establish |
+|---|---|---|
+| Stop page enhancements | Pause the selected scope | Credential deletion or generated-history clearing |
+| Stop future optional collection | Review stop for that collection | Removal of already retained entries |
+| Remove retained generated entries | Review clear for that collection | Reset of authored preferences, credentials or the other collection |
+| Remove a local read session | Disconnect selected session | Provider-side revocation of the token |
+| Remove all local credential purposes | Forget all protected sessions, then inspect the result | Deletion when protected cleanup remains unconfirmed |
+| Restore chosen preferences | Review scoped reset or rollback | GitHub permission grants, credential changes or unrelated data clearing |
+
+Native permission revocation is managed by the browser. Provider token revocation
+is managed in GitHub. The [permissions guide](/browser-extension/permissions)
+links both controls. Unknown cleanup remains unknown until observed; disabling
+the extension or restarting the browser is an explicit recovery path when local
+protected storage cannot be checked. No deletion or save is silently retried.
+
+## Exports and imports
+
+A preference export contains portable authored preferences, including configured
+profile names and scope identifiers. It excludes reusable credentials, native
+connection authority and private runtime response data. Inspect the scope before
+sharing it. Importing preferences cannot grant a permission, connect an account
+or release an existing pause.
+
+Generated-history downloads have a separate review and contain only that
+collection's allowed generated rows. The export does not bundle other local
+collections or authored settings. An existing downloaded file is not recalled
+when a collection is cleared in the extension.
+
+## Losing a page or background connection
+
+Navigating between center sections preserves the same document and draft.
+Native disconnection retires editing authority. Already observed saved facts
+remain factual; a submitted operation with a lost acknowledgement stays uncertain
+until exact readback proves its result. **Read current settings** can reconnect
+without automatically repeating a mutation or restoring a credential.
+
+See [troubleshooting and recovery](/browser-extension/troubleshooting) for the
+next action for unavailable, incompatible, stale and uncertain states.

@@ -1,0 +1,149 @@
+---
+title: Feature inventory
+description: Search all 150 extension capabilities, understand implementation and access requirements, and review personal preferences and favorites.
+---
+
+# Feature inventory
+
+Open **Features** in the [local control center](/browser-extension/configuration)
+to search the complete 150-function product inventory. Descriptions and search are packaged locally. Browsing it does not invoke a model, start an
+Action, request a browser permission or perform a GitHub write.
+
+This is a development inventory. **H3 in progress** means its local tools are
+being implemented and verified. **Later milestone** identifies work still to be
+implemented. An enabled preference, working subflow or visible button does not
+prove a complete capability, native-browser acceptance or store readiness.
+
+Current local tools in a feature guide use named destinations. Activity and
+Diagnostics guides link to their actual local views. The privacy/reset guide
+links separately to preference data, Privacy, Connections and the global pause;
+each keeps its own scope and review. **Your data** also links to these independent
+controls. A preference reset cannot authorize clearing API responses or removing
+credentials. Favorites in [Work](/browser-extension/configuration#use-your-local-workspace)
+open these same feature guides in your saved order.
+
+```text
+Features → search/filter in the displayed context → open a feature
+ → inspect purpose, safeguards, implementation and preference source
+ → review a global preference or favorite → confirm → inspect the saved result
+```
+
+The inventory first explains the function and its limits. Saving a preference
+uses the same review and confirmation as the rest of the center; it does not
+start the function's future operation.
+
+The Privacy link opens the [permission inspector](/browser-extension/permissions).
+Browser-reported scope, a configured preference and the selected GitHub read
+identity are separate facts. Opening the inspector does not grant access.
+
+## Find a capability
+
+Search matches identifiers, localized titles and descriptions, categories,
+capability/access descriptions and winning profile names. It ignores case and
+accents and accepts at most 200 characters. It searches all 150 records, including
+records outside the current page.
+
+Combine category, native surface, capability, required access, implementation,
+preference source, winning profile and effective-preference filters. Surface
+filters can span categories: a PR surface includes relevant navigation, code,
+checks and Copilot records. The profile filter concerns the winning profile in
+the displayed context; it does not select or activate that profile.
+
+Results announce their count and the displayed range. Each page contains at
+most 25 records. **Previous results** and **Next results** move through the local
+result set. Changing filters returns to the first page. **Clear search and
+filters** restores the full inventory. A no-match result offers that same
+recovery; it is not an API failure.
+
+Opening a detail and returning preserves the list's search, filters and page
+for this open center instance. Those controls are not browser history, are not
+written into the URL or exported settings, and are discarded with the page.
+
+| Category | Functions | Planned implementation |
+|---|---:|---|
+| Navigation and context |12| H4, issue705 |
+| Code and diffs |14| H4, issue705 |
+| PRs and reviews |14| H5, issue706 |
+| Issues and discussions |12| H5, issue706 |
+| Search and personal views |8| H6, issue707 |
+| Notifications and attention |8| H6, issue707 |
+| Actions and checks |10| H7, issue708 |
+| Releases and changes |8| H7, issue708 |
+| Personal work |8| H6, issue707 |
+| Copilot Action integration |24| H9, issue710 |
+| Local control center |14| H3, issue704 |
+| Integrated setup |18| H11, issue712 |
+
+The separate producer, shared-setup and final acceptance milestones remain
+required. The table is delivery order, not a smaller product tier.
+
+## Understand a detail
+
+A detail shows purpose and safeguards, current development status, effective
+saved preference and its source, required access and the owning milestone.
+It also explains the required data source, freshness boundary and registered
+default. These requirements are descriptions, not live execution evidence.
+**Open the current local tools** appears only for an existing useful local
+route. It is not offered as a placeholder for an unfinished workflow.
+
+Account, organization and repository preference layers use the selected
+verified read session. Without one, the context is personal and github.com
+preferences. The page names the account and repository when applicable. A
+credential epoch change retires an old session projection. Foreground refresh or
+native invalidation removes its private context before awaiting the new result,
+then rereads current sessions once the current document is ready. It does not
+retain the old profile's apparent authority.
+
+A winning profile name is plain text and links to its local profile. A profile
+with no matching context or no winning feature override need not produce a
+result under that filter. Required access describes a contract, not a statement
+that access has been granted. Optional monitoring is not enabled here; Safari's
+planned attention channel remains the center or toolbar.
+
+Technical details contain the stable identifier, planned browser targets,
+optional browser-permission names and a fixed link to the product contract.
+These links navigate only after a normal user action. The inventory accepts no
+custom provider URL, repository host or executable download destination.
+
+## Review a preference or favorite
+
+Choose **Enabled preference**, **Disabled preference** or **Use the feature
+default** under **Global feature preference**, then review the complete change.
+The last choice removes the explicit global override. Other feature settings
+are retained. Profiles may still override the chosen global value, and enabling
+a feature cannot release an inherited pause or implement a pending capability.
+The local recovery center remains accessible.
+
+An unsaved choice guards navigation. Keep editing, cancel the review, or discard
+the draft explicitly; canceling a review does not silently discard the form.
+An observer window can browse and filter but must take editing control before
+requesting a change. A stale review requires a new current-state review.
+
+Use **Add to favorites** or **Remove from favorites** and confirm the proposed
+change. Keep at most 20 distinct known feature IDs. At capacity, remove one before
+adding another. Favorites are personal nonsecret settings, included in the
+normal safe preferences export. The **Favorites only** filter searches the
+whole inventory. An unfinished preference draft blocks a separate favorite
+change so it cannot discard that draft.
+
+English, Spanish, French and Portuguese include titles, descriptions, filters,
+status meanings and review content. Other selected languages use the center's
+whole-resource English fallback. Keyboard, screen-reader, zoom and native-browser
+acceptance for the complete H3 product remain separate verification obligations.
+
+## Browse while preferences are unavailable
+
+The complete packaged catalog remains searchable when saved settings use a
+future schema, are corrupt, need migration or cannot be read. Details still show
+the documented defaults, required access, data freshness and implementation
+milestone. These defaults are separate from your saved preferences, which are
+explicitly unknown. Favorites, profile names, effective-state controls and their
+filters stay unavailable. Browsing does not repair or reset the stored data,
+request a browser grant or retry a failed migration.
+
+Use **Read current settings** to try a fresh read after resolving the cause.
+An unfinished feature override remains visible and disabled if a read fails.
+Recovery preserves its original revision: an external edit makes that draft
+conflict instead of silently overwriting newer preferences. Discard it explicitly
+and start from the new configuration when necessary. An untouched form updates
+from the current configuration automatically.

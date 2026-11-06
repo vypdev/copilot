@@ -1,23 +1,20 @@
-import { progressResponseRejected, progressResponsePayload } from './progress_response_rejection_policy';
+import { progressScopeSourceLines, type ProgressScopeSourceLine } from './progress_scope_source_policy';
+export { progressScopeSourceLines, type ProgressScopeSourceLine } from './progress_scope_source_policy';
+import { progressScopeCapacityRejected, progressResponseRejected, progressResponsePayload } from './progress_response_rejection_policy';
 import { isProgressRequirementId, isProgressSourceLineId, type ProgressResponseReason } from '../../domain/progress_response_diagnostic';
-import { progressEvidenceTooLarge } from './progress_diff_partition_policy';
+
+import { MAX_PROGRESS_FACT_POINTS, MAX_PROGRESS_ASSESSMENT_POINTS, progressAssessmentFactLimit, progressAssessmentPrefix } from './progress_assessment_capacity_policy';
 import { AGENT_OUTPUT_LOCALE_SCHEMA_PROPERTY } from './agent_output_locale_policy';
+import { ProgressCompletionMismatch } from '../errors/progress_completion_mismatch';
 
 export const MAX_PROGRESS_SCOPE_BYTES = 64_000;
 export const MAX_PROGRESS_SCOPE_CLAUSES = 32;
-const MAX_QUOTE = 1_200;
-const MAX_FACT = 800;
+const MAX_FACT = MAX_PROGRESS_FACT_POINTS;
 export interface ProgressScopeClause { readonly id: string; readonly quote: string; readonly uncertain?: true }
 export type ProgressScopeAnchors = Readonly<Record<string, string>>;
 export interface ProgressScopeExtraction { readonly scope: ProgressScope; readonly anchors: ProgressScopeAnchors }
 export interface ProgressScope { readonly requirements: readonly ProgressScopeClause[]; readonly exclusions: readonly ProgressScopeClause[] }
 
-export interface ProgressScopeSourceLine { readonly id: string; readonly quote: string }
-export function progressScopeSourceLines(issue: string): readonly ProgressScopeSourceLine[] {
-    const lines = issue.split(/\r?\n/).map((line, index) => ({ id: `L${index + 1}`, quote: line.trim() })).filter(line => line.quote);
-    if (lines.length === 0 || lines.length > 1_024 || lines.some(line => [...line.quote].length > MAX_QUOTE)) throw progressEvidenceTooLarge();
-    return Object.freeze(lines.map(line => Object.freeze(line)));
-}
 export function progressScopeResponseSchema(lines: readonly ProgressScopeSourceLine[]) {
     return { type: 'object', additionalProperties: false,
         properties: { outputLocale: AGENT_OUTPUT_LOCALE_SCHEMA_PROPERTY,
@@ -67,7 +64,7 @@ export function parseProgressScopeWithAnchors(response: unknown, issue: string, 
     const anchors: Record<string, string> = {};
     function clauses(kinds: readonly string[], prefix: string): readonly ProgressScopeClause[] {
         const selected = source.filter(line => kinds.includes(classified.find(item => item.id === line.id)!.kind as string));
-        if (selected.length > MAX_PROGRESS_SCOPE_CLAUSES) reject('scope-clause-limit', '$.lines', selected[MAX_PROGRESS_SCOPE_CLAUSES].id);
+        if (selected.length > MAX_PROGRESS_SCOPE_CLAUSES) throw progressScopeCapacityRejected({ clauseKind: prefix === 'R' ? 'required-or-uncertain' : 'excluded', observed: selected.length, limit: 32, sourceLineId: selected[MAX_PROGRESS_SCOPE_CLAUSES].id });
         return Object.freeze(selected.map((line, index) => {
             const id = `${prefix}${index + 1}`; anchors[id] = line.id;
             return Object.freeze({ id, quote: line.quote,
@@ -80,8 +77,8 @@ export function parseProgressScopeWithAnchors(response: unknown, issue: string, 
     return Object.freeze({ scope, anchors: Object.freeze(anchors) });
 }
 
-const factSchema = { type: 'string', minLength: 1, maxLength: MAX_FACT };
-export function scopedProgressResponseSchema(scope: ProgressScope) {
+export function scopedProgressResponseSchema(scope: ProgressScope, anchors: ProgressScopeAnchors = {}) {
+    const factSchema = { type: 'string', minLength: 1, maxLength: progressAssessmentFactLimit(scope.requirements, anchors) };
     return {
         type: 'object', additionalProperties: false,
         properties: { outputLocale: AGENT_OUTPUT_LOCALE_SCHEMA_PROPERTY,
@@ -135,15 +132,33 @@ export function parseScopedProgressResponse(response: unknown, locale: string, s
             if (fact.remaining !== null) reject('requirement-remaining-invalid', `${field}.remaining`, id);
             if (fact.evidence !== 'source-only') reject('requirement-evidence-mismatch', `${field}.evidence`, id);
         } else if (!text(fact.remaining)) reject('requirement-remaining-invalid', `${field}.remaining`, id);
-        return { id, summary: fact.summary as string, remaining: fact.remaining as string | null };
+        return { id, status: fact.status, summary: fact.summary as string, remaining: fact.remaining as string | null };
     });
     const ordered = scope.requirements.map(requirement => ({ requirement, fact: entries.find(entry => entry.id === requirement.id)! }));
-    const summary = ordered.map(({ requirement, fact }) => `[${requirement.id}] ${requirement.quote} — ${fact.summary}`).join('\n');
-    const remaining = ordered.filter(({ fact }) => fact.remaining !== null)
-        .map(({ requirement, fact }) => `[${requirement.id}] ${requirement.quote} — ${fact.remaining}`).join('\n');
+    function render(field: 'summary' | 'remaining'): string {
+        let points = 0;
+        return ordered.filter(({ fact }) => fact[field] !== null).map(({ requirement, fact }, index) => {
+            const line = progressAssessmentPrefix(requirement) + fact[field];
+            points += [...line].length + (index === 0 ? 0 : 1);
+            if (points > MAX_PROGRESS_ASSESSMENT_POINTS) {
+                const inputIndex = entries.findIndex(entry => entry.id === requirement.id);
+                reject('assessment-text-limit', `$.requirements[${inputIndex}].${field}`, requirement.id);
+            }
+            return line;
+        }).join('\n');
+    }
+    const summary = render('summary');
+    const remaining = render('remaining');
     // Never round an uncertain 99.9 to completion. A percentage cannot authorize approval/merge.
     const progress = payload.progress === 100 ? 100 : Math.min(99, Math.round(payload.progress as number));
-    if ((progress === 100) === Boolean(remaining)) reject('progress-completion-mismatch', '$.progress');
-    if ([...summary].length > 8_000 || [...remaining].length > 8_000) reject('assessment-text-limit', '$.requirements');
+    if ((progress === 100) === Boolean(remaining)) {
+        const original = progressResponseRejected({ phase: 'assessment', reason: 'progress-completion-mismatch', field: '$.progress',
+            requirementId: 'none', sourceLineId: 'none' });
+        if (scope.requirements.length < 1 || scope.requirements.length > MAX_PROGRESS_SCOPE_CLAUSES) throw original;
+        throw new ProgressCompletionMismatch(original, { reportedProgress: payload.progress as number, requirementCount: scope.requirements.length,
+            supportedCount: entries.filter(entry => entry.status === 'supported').length,
+            missingCount: entries.filter(entry => entry.status === 'missing').length,
+            unknownCount: entries.filter(entry => entry.status === 'verification-unknown').length }, scope);
+    }
     return { progress, summary, remaining, reasoning: '' };
 }

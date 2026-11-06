@@ -37,7 +37,7 @@ describe('AssignMemberToIssueUseCase', () => {
     mockGetAllMembers.mockResolvedValue(['alice', 'bob']);
     mockGetCurrentAssignees.mockResolvedValue([]);
     mockGetRandomMembers.mockResolvedValue(['bob']);
-    mockAssignMembersToIssue.mockResolvedValue(['bob']);
+    mockAssignMembersToIssue.mockImplementation(async (_number: number, members: string[]) => members);
   });
 
   it('assigns issue creator when creator is team member and not yet assigned', async () => {

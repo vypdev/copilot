@@ -11,7 +11,7 @@ export interface BugbotSourceCoverage {
     /** Exact bounded provider identities of retained conversation items truncated by the prompt. */
     readonly truncatedItemIds?: readonly string[];
     readonly limitReached: boolean;
-    /** True when a provider page cap hides an unknown number of older records. */
+    /** True when the provider page cap prevents fetching additional records. */
     readonly providerLimitReached?: boolean;
 }
 export interface BugbotContextCoverage {
@@ -38,6 +38,12 @@ export interface BugbotReviewTarget {
     };
 }
 export interface BugbotPullRequestIdentity {
+    /** Required by source-bound framed reviews; supplied by canonical provider facts. */
+    readonly baseSha?: string;
+    /** Live target branch tip; PR base.sha may retain an earlier comparison revision. */
+    readonly baseRefSha?: string;
+    readonly baseRef?: string;
+    readonly changedFileCount?: number;
     readonly number: number;
     readonly state: "open" | "closed";
     readonly draft: boolean;

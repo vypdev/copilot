@@ -13,6 +13,7 @@ export interface BoundedBugbotRead<T> {
 }
 
 export interface BoundBugbotContextReadPorts {
+    getSourceBoundPullRequest?(pullRequestNumber: number): Promise<BugbotPullRequestIdentity>;
     getPullRequest(pullRequestNumber: number): Promise<BugbotPullRequestIdentity>;
     findOpenPullRequestsByExactHead(
         headOwner: string,
@@ -27,6 +28,7 @@ export interface BoundBugbotContextReadPorts {
     ): Promise<BoundedBugbotRead<Readonly<Record<string, PullRequestReviewThreadState>>>>;
     getReviewDiffSnapshot(
         pullRequestNumber: number,
+        expectedHeadSha?: string,
     ): Promise<BoundedBugbotRead<PullRequestReviewDiffSnapshot>>;
     getPullRequestHeadSha(pullRequestNumber: number): Promise<string | undefined>;
     getPullRequestReviewCommentBody(

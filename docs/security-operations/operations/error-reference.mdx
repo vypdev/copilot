@@ -69,10 +69,41 @@ redacted and GitHub workflow commands, markup and mentions are neutralized.
 
 Pre-branch SDD validation failures also publish a reusable issue status card.
 Open its safe validation details and inspect the exact check and available
-section/row/count evidence before retrying. An unavailable diagnostic is not
-proof that the candidate or validator is correct. Existing specifications and
+section/row/count evidence before retrying. The one existing format regeneration
+receives only normalized host check/section/row/count facts, never rejected content. Undefined links and
+uncovered goals include the first relevant data-row ordinal; derived slots
+distinguish occurrence count from visible placement. All publication checks
+remain mandatory, and no extra regeneration is added. An unavailable diagnostic
+is not proof that the candidate or validator is correct. Existing specifications and
 answers remain; see [blocked preparation recovery](/issues/pre-branch-sdds#when-specification-preparation-is-blocked).
 
+
+Undersized draft responses use nonretryable `validation.invalid-input` with
+`sdd-draft-response-too-short`. The validated recovery contains only `minimum`,
+`observed` and `attempts`; its phase is draft response. The minimum remains
+1,800 Unicode code points. An unretained observed length is `unavailable`, not
+zero. Clarify the complete proposed Markdown requirement in the issue description,
+preserving resolved requirements and ownership, then retry its normal workflow.
+Existing answers, owner and specifications remain. This cause adds no generation
+attempt, relaxes no acceptance bound and is separate from provider unavailability.
+See [undersized draft recovery](/issues/pre-branch-sdds#undersized-draft-response).
+
+Managed SDD resource diagnostics show the measured stage, observed amount, and
+allowed amount in the same unit. Provider transport and token failures have
+separate diagnoses. A composed update can offer a specific companion for
+maintainer approval when its existing owner cannot accept the delta. See
+[SDD recovery](/issues/pre-branch-sdds#size-and-format-repair).
+
+SDD source-view failures use `validation.evidence-unavailable` with
+`sdd-source-context-unavailable`. The only recovery facts are the immutable
+`sourceCommit`, `phase` and closed `reason`; unverified identity is `none` /
+`unknown`. Check the linked run, local selected Git objects, `--no-lazy-fetch`
+support, portable regular source paths and the fixed SDK limits. Correct the
+prerequisite and retry the same issue workflow. The canonical checkout, answers,
+published SDDs and linked branch remain; no model repair or publication is
+attempted. Do not restore files into the default checkout or create a branch
+manually. See [source selection](/issues/pre-branch-sdds#source-used-by-analysis-and-drafting)
+and [execution limits](/agents/execution-contract#immutable-sdd-source-views).
 
 Catalog profile failures use `configuration.unsupported` with the closed
 `sdd-catalog-unsupported-profile` or `sdd-catalog-format-invalid` recovery.
@@ -100,6 +131,34 @@ retarget a legitimate PR or split production binaries just to obtain text patche
 
 
 
+## Complete progress evidence capacity
+
+`validation.evidence-too-large` may carry
+`progress-evidence-capacity-exceeded`. Its public variables are exactly
+`phase`, `dimension`, `unit`, `bound`, `observedCount`, `supportedLimit`,
+`countKind` and `context`. `maximum` compares measured or required usage with
+available capacity; `minimum` reports a missing minimum. `exact`, `at-least`
+and `unavailable` distinguish a completed measurement, a stopped scan and
+missing facts. Out-of-range integer allocations retain known bounds; unknown
+or unrepresentable allocations never become negative or invented counts.
+
+Source, original scope, part prompts, reserved replacement prompts, receipt
+envelopes and aggregate facts are separate dimensions. Known comparison context
+contains actual base/head, source-manifest digest when available, separate
+required/accepted/uncovered path-inventory digests and reconciled counts, plus
+up to eight inert uncovered path excerpts within 8,192 serialized bytes. A
+known original physical source line remains attached. `none` means that the
+manifest or line identity is unavailable at this boundary; verified zero
+coverage remains distinct from unavailable context. Model receipt acceptance
+does not certify CI, tests or review.
+
+Existing progress is retained. Supported parts continue within one invocation;
+this nonretryable capacity error stops it. Preserve complete evidence and
+requirements when reporting the diagnostic and run link. Identical input
+cannot gain capacity, and partial receipts are not a durable checkpoint.
+Existing inventory, source, scope and model-response recoveries retain their
+own contracts. See [capacity troubleshooting](./troubleshooting#complete-progress-evidence-capacity).
+
 ## Invalid completed progress result
 
 `agent.failed` can describe a process failure or an invalid returned assessment.
@@ -121,6 +180,72 @@ codes and fields, never returned values, unknown property names or exceptions.
 Existing execution/transport classification and retryability remain unchanged.
 A later optional Check Run 403 is secondary and retains the primary failure and
 correlation reference.
+
+For a final completion contradiction only, the host makes one complete read-only
+reassessment after all other checks pass. Both full prompt envelopes are admitted
+before the first model request. No third query, source recollection, partial
+assessment publication or write retry is allowed. If the second final response
+still contradicts completion, `agent.failed` has recovery
+`progress-completion-recovery-exhausted`, with exactly five numeric observations
+of that response. For example:
+
+{/* progress-completion-example */}
+```json
+{
+  "code": "agent.failed",
+  "correlationId": "11111111-1111-4111-8111-111111111111",
+  "recovery": {
+    "id": "progress-completion-recovery-exhausted",
+    "variables": {
+      "reportedProgress": 100,
+      "requirementCount": 32,
+      "supportedCount": 29,
+      "missingCount": 2,
+      "unknownCount": 1
+    }
+  }
+}
+```
+
+These illustrative counts are not independent execution evidence. CLI, API,
+Check and Summary retain the same error code and correlation reference. Inspect
+the complete pinned comparison and final facts at `assessment / $.progress`;
+start a fresh complete assessment when the provider can satisfy the unchanged
+contract. Existing labels and assessments remain. Verification, review, coverage
+and approval are independent gates. Malformed output, provider interruption and
+other semantic failures retain their own error and do not receive this recovery.
+
+For `assessment-text-limit`, the host reports the first source-ordered aggregate
+overflow and its actual response-array summary/remaining field. Every full
+original citation, ID, separator and newline participates in the unchanged
+8,000-code-point limit; the per-fact ceiling remains 800. Generation derives a
+smaller fact schema limit when needed. Older uneven facts remain valid when
+the complete projection fits; no prose is clipped.
+
+`validation.evidence-too-large` with `progress-assessment-capacity-exceeded`
+means classification succeeded but the original citations leave insufficient
+space for one nonempty fact per requirement. No evidence or final assessment
+query follows. This is nonretryable for identical scope, preserves prior
+progress and cannot authorize a passing verification. Inspect the exact original
+scope and review a supported assessment protocol while preserving acceptance.
+See [progress text capacity](./troubleshooting#progress-assessment-text-capacity).
+
+### Progress part response length
+
+An overlong file fact with a verified current part/path/unit, locale and schema
+limit receives one replacement for the same complete immutable part. Every
+original and replacement request is capacity-checked before the first part
+query. Source evidence, identities, uncertainty and strict validation remain
+unchanged. Provider, cancellation, locale and other schema failures retain their
+own classifications and do not start this recovery.
+
+Persistent overflow reports `agent.failed` with
+`progress-partition-length-invalid`: part, path, unit, response field, maximum
+and observed Unicode code-point count. `none` means the legacy part has no unit
+identity. Paths are inert reversible JSON code spans; raw model output is never
+shown. Inspect that fact in the linked run. There is no third part query, no
+clipping, and no partial update to labels or the previous assessment. A later
+optional Check Run warning remains a separate outcome.
 
 ## Optional Check Run publication not confirmed
 
@@ -176,3 +301,55 @@ with the same `single-action-operation-id` and `single-action-version`. Do not
 create a new operation, publish packages again, or bypass the stored ID, version,
 phase and accepted production SHA checks to clear this error. See
 [single-action configuration](/single-actions/configuration#internal-operation-identity).
+
+## Complete Bugbot review blocked
+
+`validation.evidence-unavailable` with recovery `bugbot-review-incomplete` means
+a complete source-bound Bugbot review could not be verified. It is nonretryable
+for identical unsupported input. The closed diagnostic reports the resource,
+measured count, supported limit and unit; `≥` is an explicit lower bound. A zero
+limit on an integrity diagnostic means no failures are acceptable, not a file
+quota. Existing findings and resolution state remain; no partial frame or clean
+review was published by this attempt.
+
+Restore unavailable immutable Git objects through the Action-managed checkout
+or synchronization flow, correct the source/identity evidence, or review the
+PR's intended scope when it exceeds the finite profile. Start a fresh complete
+review afterward. Do not add ignores, relax controls or treat a build/coverage
+report as review proof. See [Bugbot recovery](/bugbot/failure-scenarios) and
+[large-diff bounds](/bugbot/how-it-works#complete-review-of-large-diffs).
+
+## Progress scope clause capacity
+
+`progress-scope-clause-limit` reports the exact host-validated selected count,
+fixed limit 32, closed `required-or-uncertain` or `excluded` kind, and first
+crossing original line. Progress remains unchanged. Inspect the complete human
+scope and classifier result; do not remove acceptance or raise a bound to pass.
+Generated persisted state is operational context, not another requirement.
+Malformed state fails through the existing configuration-error family before
+model queries. Raw rejected output is never part of these diagnostics.
+
+## Assignment failures
+
+`issue-assignment-count-invalid` uses nonretryable `configuration.invalid` when
+the shared workflow receives a count outside its integer `0`–`10` contract.
+Correct `desired-assignees-count` and rerun the same issue workflow. No assignment
+operation was attempted; independent completed effects retain their own results.
+The descriptor has no parameters and never echoes the supplied invalid value.
+
+`issue-assignment-failed` identifies the assignment stage and safe provider
+operation, target number, bounded HTTP status (or unavailable), current-read
+certainty, observed/confirmed/remaining counts, and assignment-write certainty.
+An unverified write may already have applied; do not treat zero confirmed new
+assignments as proof of zero external changes. The same workflow rereads current
+assignees before retrying missing work. Independent completed lifecycle effects
+are retained in their own results.
+
+Known denied/authentication failures are not retryable outages. A 403 with
+rate-limit evidence or a 429 uses `provider.rate-limited`; recognized transport,
+408 and 5xx failures use `provider.unavailable`. Unknown exceptions are
+`unexpected`, with no invented transient cause. Malformed lists/rows use
+`provider.contract-invalid`, rather than becoming an empty membership list.
+For 404, check access and target; private-resource absence cannot be inferred.
+Raw assignment-provider exceptions are discarded after their safe classification.
+See [assignment recovery](/issues/assignees-and-projects#recover-an-assignment-failure).

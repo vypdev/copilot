@@ -14,7 +14,7 @@ export interface GithubPullRequestChangesClient {
       ): Promise<{ data: GithubPullRequestFile[] }>;
       get(
         parameters: Record<string, unknown>,
-      ): Promise<{ data: { head?: { sha?: string } } }>;
+      ): Promise<{ data: { head?: { sha?: string }; base?: { sha?: string; ref?: string }; changed_files?: number } }>;
     };
   };
 }
@@ -25,6 +25,7 @@ export interface GithubPullRequestFile {
   additions: number;
   deletions: number;
   patch?: string;
+  previous_filename?: string;
 }
 
 export interface GithubPullRequestLinkageResponse {
@@ -43,6 +44,9 @@ export interface GithubPullRequestLinkageResponse {
 export interface GithubPullRequestLifecycleClient {
   graphql?<T>(query: string, variables: Record<string, unknown>): Promise<T>;
   rest: {
+    git?: {
+      getRef(parameters: Record<string, unknown>): Promise<{ data: { ref?: string; object?: { sha?: string; type?: string } } }>;
+    };
     pulls: {
       list(
         parameters: Record<string, unknown>,
@@ -52,6 +56,7 @@ export interface GithubPullRequestLifecycleClient {
         number?: number;
         state?: string;
         draft?: boolean;
+        changed_files?: number;
         body?: string | null;
         head?: {
           ref?: string | null;
@@ -59,6 +64,7 @@ export interface GithubPullRequestLifecycleClient {
           repo?: { name?: string | null; owner?: { login?: string | null } | null } | null;
         };
         base?: {
+          sha?: string | null;
           ref?: string | null;
           repo?: {
             id?: number;
@@ -75,6 +81,7 @@ export interface GithubPullRequestSummary {
   number: number;
   state?: string;
   draft?: boolean;
+  changed_files?: number;
   body?: string | null;
   head?: {
     ref?: string | null;
@@ -82,6 +89,8 @@ export interface GithubPullRequestSummary {
     repo?: { name?: string | null; owner?: { login?: string | null } | null } | null;
   };
   base?: {
+    sha?: string | null;
+    ref?: string | null;
     repo?: {
       id?: number;
       name?: string | null;

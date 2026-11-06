@@ -1,4 +1,5 @@
 import type { AgentCapability, AgentProvider } from './agent';
+import type { AgentSourceSnapshot } from './agent_source_snapshot';
 
 export const AGENT_EXECUTION_TIMEOUT_MAX_MS = 15 * 60 * 1000;
 export const AGENT_PROMPT_MAX_BYTES = 512 * 1024;
@@ -12,7 +13,7 @@ export type AgentOutputContract = 'text' | 'local-json-schema' | 'native-and-loc
 export interface AgentManagedArtifact {
     readonly path: string;
     readonly sha256: string;
-    readonly purpose: 'git-config' | 'provider-config' | 'sandbox-config' | 'output-schema';
+    readonly purpose: 'git-config' | 'provider-config' | 'sandbox-config' | 'output-schema' | 'source-snapshot';
 }
 
 export interface AgentRuntimeContract {
@@ -45,6 +46,9 @@ export interface AgentExecutionPlan {
     readonly artifacts: readonly AgentManagedArtifact[];
     readonly runtimeDirectory: string;
     readonly runtimeContract: AgentRuntimeContract;
+    readonly sourceSnapshot?: AgentSourceSnapshot;
+    /** In-process monotonic deadline; source preparation cannot extend the query allowance. */
+    readonly sourceDeadlineMs?: number;
 }
 
 export function workspaceModeForCapability(capability: AgentCapability): AgentWorkspaceMode {

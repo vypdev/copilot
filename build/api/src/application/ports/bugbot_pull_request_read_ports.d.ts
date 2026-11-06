@@ -4,6 +4,7 @@ export interface PullRequestDiffLocation {
     side: "LEFT" | "RIGHT";
 }
 export interface PullRequestReviewChange {
+    readonly previousFilename?: string;
     filename: string;
     status: string;
     additions: number;

@@ -113,7 +113,7 @@ describe('loadBugbotContext', () => {
     expect(reader.findOpenPullRequestsByExactHead).not.toHaveBeenCalled();
     expect(reader.listPullRequestReviewComments).toHaveBeenCalledWith(50);
     expect(reader.listPullRequestReviewThreadStates).toHaveBeenCalledWith(50);
-    expect(reader.getReviewDiffSnapshot).toHaveBeenCalledWith(50);
+    expect(reader.getReviewDiffSnapshot).toHaveBeenCalledWith(50, sha);
   });
 
   it('loads the exact issue_comment PR using its verified provider head identity', async () => {
@@ -138,7 +138,7 @@ describe('loadBugbotContext', () => {
     expect(context.prContext?.prHeadSha).toBe('f'.repeat(40));
     expect(reader.getPullRequest).toHaveBeenCalledWith(50);
     expect(reader.findOpenPullRequestsByExactHead).not.toHaveBeenCalled();
-    expect(reader.getReviewDiffSnapshot).toHaveBeenCalledWith(50);
+    expect(reader.getReviewDiffSnapshot).toHaveBeenCalledWith(50, providerIdentity.headSha);
   });
 
   it('loads PR rules using its provider-verified head rather than the comment workflow checkout', async () => {
@@ -327,6 +327,27 @@ describe('loadBugbotContext', () => {
     expect(loaded.coverage.status).toBe('complete');
   });
 
+  it('assigns all 1,090 provider paths at the selected head', async () => {
+    const changes = Array.from({ length: 1_090 }, (_, index) => ({
+      filename: index === 1_089 ? 'src/reference.ts' : `assets/${index}.png`,
+      status: 'added',
+      additions: index === 1_089 ? 1 : 0,
+      deletions: 0,
+      patch: index === 1_089 ? '@@ -0 +1 @@\n+export const reference = true;' : '',
+    }));
+    const getReviewDiffSnapshot = jest.fn().mockResolvedValue({
+      value: { changes, filesWithFirstDiffLine: [], filesWithDiffLocations: [] },
+      coverage: coverage('diff', changes.length, { pagesFetched: 11 }),
+    });
+    const loaded = await loadBugbotContext(request(), ports({ getReviewDiffSnapshot }));
+
+    expect(getReviewDiffSnapshot).toHaveBeenCalledWith(50, sha);
+    expect(loaded.coverage.status).toBe('complete');
+    expect(loaded.reviewDiffFileCount).toBe(changes.length);
+    expect(loaded.reviewDiffPartitions?.flatMap(partition => partition.files)).toEqual(changes.map(file => file.filename));
+    expect(loaded.reviewDiffPartitions?.every(partition => partition.headSha === sha)).toBe(true);
+  });
+
   it('fails before model analysis when the exhaustive plan exceeds the execution ceiling', async () => {
     const changes = Array.from({ length: 65 }, (_, index) => ({
       filename: `src/oversized/file-${index}.ts`,
@@ -343,8 +364,8 @@ describe('loadBugbotContext', () => {
     });
 
     await expect(loadBugbotContext(request(), reader)).rejects.toMatchObject({
-      code: 'workflow.failed',
-      message: expect.stringContaining('64-partition'),
+      name: 'BugbotReviewCompletenessError',
+      facts: { resource: 'capability', observed: 1, limit: 0 },
     });
     expect(reader.loadRules).not.toHaveBeenCalled();
   });
@@ -360,8 +381,8 @@ describe('loadBugbotContext', () => {
     });
 
     await expect(loadBugbotContext(request(), reader)).rejects.toMatchObject({
-      code: 'workflow.failed',
-      message: expect.stringContaining('raw-input'),
+      name: 'BugbotReviewCompletenessError',
+      facts: { resource: 'capability', observed: 1, limit: 0 },
     });
     expect(reader.loadRules).not.toHaveBeenCalled();
   });
@@ -377,8 +398,8 @@ describe('loadBugbotContext', () => {
     });
 
     await expect(loadBugbotContext(request(), reader)).rejects.toMatchObject({
-      code: 'workflow.failed',
-      message: expect.stringContaining('Correct the provider source'),
+      name: 'BugbotReviewCompletenessError',
+      facts: { resource: 'source', observed: 1, limit: 0 },
     });
     expect(reader.loadRules).not.toHaveBeenCalled();
   });
@@ -472,4 +493,17 @@ it('bugbot-analysis-and-autofix-C13 never repairs incomplete diff evidence by fu
   expect(result.coverage.status).toBe('partial');
   expect(result.coverage.sources.find(source => source.source === 'diff')?.status).toBe('partial');
   expect(result.coverage.sources.find(source => source.source === 'human-conversation')).toMatchObject({ status: 'complete', truncatedItems: 0 });
+});
+
+it.each(['identity', 'source'])('rejects framed %s mismatches before rules or reviewer execution', async stage => {
+    const current: BugbotPullRequestIdentity = { ...identity, baseSha: sha, baseRefSha: sha, baseRef: 'develop', headRepositoryName: 'repo', changedFileCount: 1 };
+    const changes = [{ filename: 'huge.ts', status: 'modified', additions: 1, deletions: 1, patch: 'x'.repeat(4096001) }];
+    const reader = ports({ getPullRequest: async () => current,
+        getSourceBoundPullRequest: async () => stage === 'identity' ? { ...current, baseSha: 'b'.repeat(40) } : current,
+        getReviewDiffSnapshot: async () => ({ value: { changes, filesWithFirstDiffLine: [], filesWithDiffLocations: [] }, coverage: coverage('diff', 1) }) });
+    const source = { readCompleteSource: jest.fn(async () => ({ identity: { owner: 'foreign', repository: 'repo', pullRequestNumber: 50,
+        baseRef: 'develop', baseSha: sha, headOwner: 'acme', headRepository: 'repo', headRef: 'feature/42', headSha: sha, mergeBaseSha: sha }, changes: [], complete: true })) };
+    await expect(loadBugbotContext(request(), reader, undefined, source)).rejects.toMatchObject({ facts: { resource: 'identity' } });
+    expect(reader.loadRules).not.toHaveBeenCalled();
+    if (stage === 'identity') expect(source.readCompleteSource).not.toHaveBeenCalled();
 });

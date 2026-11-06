@@ -56,7 +56,7 @@ it('github-browser-extension-runtime-C19 protected storage, permission, identity
         if (failure === 'repository') vi.mocked(h.reader.read).mockImplementation(async request => request.type === 'viewer'
             ? { state: 'ok', data: { id: '1', login: 'octo' }, etag: '', bytes: 1 } : { state: 'invalid', bytes: 0 });
         if (failure === 'write') vi.mocked(h.port.set).mockRejectedValue(new Error('private'));
-        if (failure === 'remove') { await h.service.start(); vi.mocked(h.port.remove).mockRejectedValue(new Error('private')); await h.service.revoke(); }
+        if (failure === 'remove') { await h.service.start(); h.values.set(SESSION_KEY, CONNECTED); vi.mocked(h.port.remove).mockRejectedValue(new Error('private')); await h.service.revoke(); }
         else expect(JSON.stringify(await h.service.connect(CONNECTED.secret, CONNECTED.repository))).not.toContain('private');
         expect(h.service.status().state).toBe('unavailable');
     }

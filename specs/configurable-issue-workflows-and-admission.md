@@ -1058,8 +1058,9 @@ error prose and field values remain private. No YAML code/custom tag execution,
 new dependency bootstrap or remote consumer mutation is authorized.
 
 Runtime validates labels/enablement first. Missing mapped headings, duplicate or
-empty values remain blockers. Heading-like examples inside fenced code/HTML
-comments MUST NOT supply or duplicate structural form fields. Visible values are
+empty values remain blockers. Heading-like examples inside code blocks or HTML
+comments MUST NOT supply or duplicate structural form fields. Literal inline
+comment markers and indented code examples leave following form fields visible. Visible values are
 preserved for semantic validation; a missing-response placeholder does not count
 as a supplied required value. No truncation or body rewriting is allowed.
 

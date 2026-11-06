@@ -61,7 +61,7 @@ it('github-browser-extension-runtime-C17 permits only packaged credential comman
     expect(allowedMessage(PAGE, sender, 'test', origin)).toBe(true);
     expect(allowedMessage({ ...PAGE, route: `${PAGE.route}?other` }, sender, 'test', origin)).toBe(false);
     expect(allowedMessage(PAGE, extension, 'test', origin)).toBe(false);
-    expect(allowedMessage({ version: 1, method: 'settings.read' }, sender, 'test', origin)).toBe(true);
+    expect(allowedMessage({ version: 1, method: 'settings.read' }, sender, 'test', origin)).toBe(false);
 });
 it('github-browser-extension-runtime-C19 validates a bounded protected session and rejects extra or malformed authority', () => {
     expect(validSession(CONNECTED)).toBe(true);

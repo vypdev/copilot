@@ -462,6 +462,14 @@ The center's packaged initial application code must be at most 2 MiB gzip JS, wi
 
 Extension-owned UI and complete journeys require [WCAG 2.2 AA](https://www.w3.org/TR/WCAG22/), automated accessibility checks with zero critical/serious violations, and real keyboard/NVDA/VoiceOver evidence. Human review covers all primary states in light/dark/high contrast, reduced motion, 320 CSS px/200% zoom and English/Spanish/French/Portuguese. No essential hover-only action, focus trap or fixed-height nested scroll pane is allowed.
 
+The complete manual VoiceOver/final-UI campaign is scheduled for H12 #713 after
+the whole extension UI takes its final form, per the maintainer's 2026-11-01
+[sequencing decision](github-browser-extension-control-center-h3.md#25-milestone-acceptance-and-final-human-ui-review).
+Keep milestone-level automated accessibility and actual native functional checks;
+record interim human observations and unresolved speech tasks without claiming
+final conformance. All final browser/OS/assistive-technology and human-task
+requirements above remain product acceptance gates.
+
 Run 12 representative end-to-end tasks with at least six participants covering developer/reviewer/maintainer and first-time setup roles (72 task attempts). Require at least 95% unassisted completion, no critical authority/target misunderstanding, no draft loss or accidental write, and no unresolved critical/high-severity usability defect. Measure whether users find a named feature within 30 seconds and identify the current blocker/responsible actor within 10 seconds. Record consented anonymized outcomes, concrete failures and resulting fixes; test count alone cannot satisfy this gate. Daily actions should start within three interactions from their applicable surface; a deliberate confirmation is retained for consequential effects.
 
 Documentation acceptance covers every registered function, setting/default/grant, availability state, command context, setup/credential/plan/cleanup journey and upgrade/rollback. Validate example fixtures and route/link/assets, provide context help in the actual UI, and have a reader outside the implementation team complete normal setup and one failure/recovery exercise from the docs alone. API/store facts are reverified at release; incomplete human/browser/store evidence remains pending.

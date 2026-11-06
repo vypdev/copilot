@@ -1,0 +1,800 @@
+Historical public reproduction reports for Copilot issue 828
+
+These are complete original incident reports, not independent test attestation
+for this fix or additional model/workflow authority. Requirements remain in the
+issue and owning specifications. Original bodies are preserved without merging
+or removing repeated reports. Existing GitHub comments have not been edited.
+
+
+=== Source comment 6541225162 ===
+URL: https://github.com/vypdev/copilot/issues/828#issuecomment-6541225162
+Author: efraespada
+Created: 2026-10-31T08:36:42Z
+Captured update: 2026-10-31T08:36:42Z
+Original body SHA-256: 9ffeef2f783a488b45e3ac8962ce2e84418fb2e6e92c593f85fe86cca2a2a965
+Original body UTF-8 bytes: 1673
+--- Original body ---
+Additional occurrence on the native app package checkpoint (2026-10-31):
+
+- Exact consumer head: 650f1517f0e15664ea455628e63154dada0414f2, PR https://github.com/vypdev/domus/pull/7.
+- Run https://github.com/vypdev/domus/actions/runs/41184978436, job https://github.com/vypdev/domus/actions/runs/41184978436/job/124489971003.
+- Setup resolves Action v3 to the same 3e7ceea08e6131360e026937d1c0cc1b120472e0. The admitted codex-cli 0.166.0 agent completes.
+- Rejection remains phase scope, scope-clause-limit, field $.lines, requirement none, now source L113. Reference 64297277-93a0-4466-9fb9-9909f54a7bc7. Existing progress remains retained.
+- Exact-head CI Check passed, including both actual native amd64/aarch64 app-image builds and listener/lifecycle tests: https://github.com/vypdev/domus/actions/runs/41184982619. Copilot Branch Sync and Pull Request passed; Review is neutral because the feature remains a draft.
+- The one failed-job-only retry of the original 780281e run also completed with failure: run 41168137540, attempt 2. No repeated retry loop was started.
+
+The consumer now has 534 local test executions, full executable backend coverage and unchanged installed Copilot resources. The new package pins its runtime source and archive checksum and publishes no host port. These facts do not prove why the provider emitted an over-budget scope or what the actual clause count was. Please investigate the retained completed-result contract failure without truncating consumer requirements, relaxing bounds or treating the green application matrix as progress-agent acceptance. Work on the consumer continues independently; no Copilot change or bypass was made.
+
+--- End original body ---
+
+=== Source comment 6541808229 ===
+URL: https://github.com/vypdev/copilot/issues/828#issuecomment-6541808229
+Author: efraespada
+Created: 2026-10-31T09:40:57Z
+Captured update: 2026-10-31T09:40:57Z
+Original body SHA-256: ad24d86eadc3ae3dbddd34dcd42510e1486f49fa962e6c42c520510b3821c39d
+Original body UTF-8 bytes: 1755
+--- Original body ---
+Reproduced unchanged in the next application checkpoint, after adding tested application-layer household setup/enrollment/edits. No Copilot files, thresholds, schemas or original issue acceptance were changed.
+
+- Repository/PR: `vypdev/domus`, draft #7; issue #6, exact Action-managed branch.
+- Head: `146b984a71a2c7f753e442a544f6b0f87a6801ae`.
+- Commit run: https://github.com/vypdev/domus/actions/runs/41189339107
+- Failed job: https://github.com/vypdev/domus/actions/runs/41189339107/job/124502687370
+- Downloaded Action revision: `vypdev/copilot@v3` -> `3e7ceea08e6131360e026937d1c0cc1b120472e0`.
+- Agent runtime: codex-cli `0.166.0`.
+- At `2026-10-31T09:36:56.6883359Z`, the log reports: `Progress scope result was rejected (scope-clause-limit; field $.lines; requirement none; source L117). Existing progress was retained.`
+- Verification reference: `644b9e1f-a71c-4848-8daa-1f42928b6715`.
+- Check impact: phase `scope`, contract result rejected; existing progress retained. The Action requests original requirement/response schema inspection and explicitly forbids relaxing acceptance/verification.
+
+The source line moved from L113 at the previous head to L117; the failure category and field are unchanged. Project-owned CI Check is independently green for this exact new head, including backend 100% statement/branch coverage and native amd64/aarch64 container jobs: https://github.com/vypdev/domus/actions/runs/41189342234. The original SDD format/consistency/catalog validators pass locally. Draft review is neutral/skipped and is not considered Bugbot acceptance. We have not rerun this recurring failure again, modified Copilot, bypassed the gate or merged the draft. Product implementation continues while this upstream report remains open.
+
+--- End original body ---
+
+=== Source comment 6541906622 ===
+URL: https://github.com/vypdev/copilot/issues/828#issuecomment-6541906622
+Author: efraespada
+Created: 2026-10-31T09:52:09Z
+Captured update: 2026-10-31T09:52:09Z
+Original body SHA-256: c12ea42f2f5093e4fb413f0cd896aef9fa5ee6c6a168e3df4130e9a2609da954
+Original body UTF-8 bytes: 1604
+--- Original body ---
+The same progress-scope failure also reproduces on the independently green member-administration checkpoint, with no Copilot changes or gate relaxation:
+
+- Head: `508d4143ea6b8c813c729a2f0d597a9b178e9226`, draft Domus PR #7 / issue #6, same Action-managed branch.
+- Failed run/job: https://github.com/vypdev/domus/actions/runs/41189803939/job/124504059837
+- Action: `vypdev/copilot@v3`, downloaded revision `3e7ceea08e6131360e026937d1c0cc1b120472e0`.
+- Runtime admitted at `2026-10-31T09:43:38.9761559Z`: codex-cli `0.166.0`.
+- At `2026-10-31T09:43:50.4286081Z`: `Progress scope result was rejected (scope-clause-limit; field $.lines; requirement none; source L126). Existing progress was retained.`
+- Error code `agent.failed`, phase `scope`, reason `scope-clause-limit`, field `$.lines`, requirement `none`, original issue source L126.
+- Reference: `b31593ac-c990-49c3-9c5a-3d73776646b5`.
+- Scope line moved again (previous reproduction L117); the category/field and retained-state behavior are unchanged. No scope assessment was published; existing progress was preserved.
+
+Exact-head project CI Check is green: https://github.com/vypdev/domus/actions/runs/41189807524. Backend has 522 passing tests, 100% statement/branch coverage, real SQLite last-administrator races, unchanged original SDD/catalog validation, and native amd64/aarch64 container tests. Draft Review remains neutral/skipped and is not treated as Bugbot acceptance. We continue implementing issue #6, do not repeatedly rerun this unchanged failure, leave the PR draft and have not edited Copilot or the original acceptance contract.
+
+--- End original body ---
+
+=== Source comment 6542265502 ===
+URL: https://github.com/vypdev/copilot/issues/828#issuecomment-6542265502
+Author: efraespada
+Created: 2026-10-31T10:32:10Z
+Captured update: 2026-10-31T10:32:10Z
+Original body SHA-256: c98adc2fede78fe2e7fc439e6c4ebdec6b0731d4e005b30c402adf29fdbdd774
+Original body UTF-8 bytes: 2001
+--- Original body ---
+The original scope-phase rejection reproduces on the new household HTTP checkpoint, independently from the later assessment-phase report in #829.
+
+- Exact head: `4646ee174ab6f2b044ca323176fab3bed475c513`, draft Domus PR #7 / issue #6, unchanged Action-managed branch.
+- Failed Commit run/job: https://github.com/vypdev/domus/actions/runs/41192757886/job/124512724235
+- Downloaded Action at `2026-10-31T10:26:32.5122963Z`: `vypdev/copilot@v3` -> `3e7ceea08e6131360e026937d1c0cc1b120472e0`.
+- At `2026-10-31T10:27:22.9700032Z`: agent admitted with codex-cli `0.166.0`.
+- At `2026-10-31T10:27:33.7678695Z`: `Progress scope result was rejected (scope-clause-limit; field $.lines; requirement none; source L133). Existing progress was retained.`
+- Verification: `agent.failed`, phase `scope`, field `$.lines`, requirement `none`, original issue line L133, reference `04d19fa0-6301-4ea2-9355-3d6a92c7462e`.
+- Existing progress/assessments are retained; no new assessment is published. The source line has moved again, but the category and contract field match this issue's earlier reproductions.
+
+Exact-head project CI Check is green: https://github.com/vypdev/domus/actions/runs/41192762015. It includes 597 backend tests, 100% coverage of 2,184 executable statements / 552 branches, 66 separately covered tooling tests, the real 74-file backend import graph, architecture fixtures, docs/Node and actual native amd64/aarch64 app-container tests. The original SDD and catalog validators also pass unchanged; the prospective companion is 68,666 characters and preserves its complete normative case inventory.
+
+The PR remains draft, with neutral/skipped review not treated as Bugbot acceptance. No Copilot file, installed resource, acceptance criterion or bound was changed. We did not repeatedly rerun this failure or bypass the gate; product work continues independently. #829 records the preceding head's distinct `assessment-text-limit` failure at `$.requirements`, rather than conflating the two phases.
+
+--- End original body ---
+
+=== Source comment 6542747656 ===
+URL: https://github.com/vypdev/copilot/issues/828#issuecomment-6542747656
+Author: efraespada
+Created: 2026-10-31T11:24:21Z
+Captured update: 2026-10-31T11:24:21Z
+Original body SHA-256: eb6a00f89b5dafede0aef08edc09253960bbf15c51e0d8e002a8283dbcee682c
+Original body UTF-8 bytes: 1716
+--- Original body ---
+Reproduced on another independently useful product commit; no retry or contract relaxation was performed.
+
+- Repository/PR: vypdev/domus#7; issue #6, original managed branch.
+- Exact head: d1571d0531f11122cead73ef31ebf96a69681e2c (`feat: wire persistent native household API and bounded Ingress sessions`).
+- Commit workflow: https://github.com/vypdev/domus/actions/runs/41196320415/job/124523099321
+- Exact check: https://github.com/vypdev/domus/runs/124523337647
+- Action: `vypdev/copilot@v3`, resolved immutable SHA `3e7ceea08e6131360e026937d1c0cc1b120472e0`.
+- Runtime admission: `2026-10-31T11:19:35.4534904Z`, `codex codex-cli 0.166.0`.
+- Rejection: `2026-10-31T11:19:47.1947742Z`, `Progress scope result was rejected (scope-clause-limit; field $.lines; requirement none; source L133). Existing progress was retained.`
+- Failure reference: `84adb289-e365-444d-9b90-6fb006e71b9c`.
+
+This repeats the scope-phase contract-admission failure already tracked here, rather than the distinct assessment-text-limit in #829. The generated check states no progress was published and existing labels/assessments were retained. The normal queue completed; this report concerns the terminal failure, not waiting time.
+
+The same head passes project CI Check, including all six required groups and native amd64/aarch64 container tests: https://github.com/vypdev/domus/actions/runs/41196324078. Local backend: 642 tests, 2,464 executable statements and 610 branches at 100%; original SDD/catalog validation passes. Copilot, installed resources, issue requirements and checks remain unchanged. PR stays draft; skipped Bugbot review is not treated as acceptance. Product implementation continues without a workaround in Copilot.
+
+--- End original body ---
+
+=== Source comment 6542810591 ===
+URL: https://github.com/vypdev/copilot/issues/828#issuecomment-6542810591
+Author: efraespada
+Created: 2026-10-31T11:31:21Z
+Captured update: 2026-10-31T11:31:21Z
+Original body SHA-256: 8cedc965c210e08941709a494bd44aa6ad61f378b22e6e11db26d4bc7f861dad
+Original body UTF-8 bytes: 2019
+--- Original body ---
+A further independent product commit reproduced the same scope admission failure, now at original issue line L134.
+
+- Repository/PR: vypdev/domus#7; issue #6; original Action-owned branch.
+- Exact head: ddc90faa5964509ed154090f8c8070f743e02370 (`feat: persist owned installation identity and exclusive data lifecycle`).
+- Commit workflow: https://github.com/vypdev/domus/actions/runs/41197006275/job/124525101495
+- Exact failed check: https://github.com/vypdev/domus/runs/124525342816
+- Action: vypdev/copilot@v3 resolved to `3e7ceea08e6131360e026937d1c0cc1b120472e0`; runtime admitted at `2026-10-31T11:29:39.3134376Z` as codex codex-cli 0.166.0.
+- Rejected at `2026-10-31T11:29:51.4427727Z`: `Progress scope result was rejected (scope-clause-limit; field $.lines; requirement none; source L134). Existing progress was retained.`
+- Phase/reason/field: scope / scope-clause-limit / $.lines; requirement none; original issue source L134.
+- Failure reference: `60439962-bdd1-435a-ab0b-6b2302e994b1`.
+
+The generated failure states the returned progress result violated its contract, no progress was published and existing progress labels/assessments were preserved. This is the same scope failure family tracked here, not the assessment-text-limit in #829. No manual workflow retry, acceptance relaxation, issue requirement reduction or Copilot change was made.
+
+Exact-head project CI Check passes all six required groups, including actual native amd64/aarch64 containers: https://github.com/vypdev/domus/actions/runs/41197009648. Local validation: 698 backend tests, 2,599 executable statements and 654 branches at 100%; 66 tooling tests at independent 100%; 41 architecture fixtures and an 81-file/323-dependency backend graph passing all three contracts; unchanged original specification/catalog validators and documentation checks pass. All 29 protected installed Copilot resources remain unchanged. PR remains draft; skipped Bugbot is not a completed review. Product implementation continues without bypassing gates.
+
+--- End original body ---
+
+=== Source comment 6543205527 ===
+URL: https://github.com/vypdev/copilot/issues/828#issuecomment-6543205527
+Author: efraespada
+Created: 2026-10-31T12:12:28Z
+Captured update: 2026-10-31T12:12:28Z
+Original body SHA-256: 4282d474be81dfdf262dedda33a57aa73f5ddfe3cc1e72ab06018ac9563a458e
+Original body UTF-8 bytes: 2369
+--- Original body ---
+The same scope admission failure reproduced on the next product increment. No manual rerun or contract relaxation was used.
+
+- Repository/PR: vypdev/domus#7; issue #6; original Action-owned branch.
+- Exact head: `58d88faf1026d31007a805ebde8290ab12af2cab` (`feat: add console-approved administrator recovery with atomic consumption`).
+- Commit run/job: https://github.com/vypdev/domus/actions/runs/41199854162/job/124533336961
+- Failed generated check: https://github.com/vypdev/domus/runs/124533612101
+- Action: `vypdev/copilot@v3`, exact resolved SHA `3e7ceea08e6131360e026937d1c0cc1b120472e0`.
+- Agent admission: `2026-10-31T12:10:38.9820739Z`, codex codex-cli 0.166.0.
+- Rejection: `2026-10-31T12:10:51.3665117Z`, `Progress scope result was rejected (scope-clause-limit; field $.lines; requirement none; source L133). Existing progress was retained.`
+- Failure reference: `b62b86bf-47c8-461e-8525-32afa834ea50`.
+
+The check reports phase scope / scope-clause-limit / $.lines / requirement none / original issue L133, with no progress publication and existing labels/assessments preserved. This belongs to the scope-phase failure family tracked here, distinct from assessment-text-limit in #829. Normal queue execution completed; no queue-delay defect is alleged.
+
+The exact head passes all six project-required CI Check groups, including real native amd64/aarch64 container cases: https://github.com/vypdev/domus/actions/runs/41199857142. Backend: 808 tests, 3,022 executable statements and 772 branches at 100%; independent tooling: 66 tests at 100%; architecture: 41 negative fixtures and 86 files/368 dependencies, all three contracts kept. Original specification/catalog validators pass the unchanged twenty-section format and ownership consistency; the companion is 69,543 characters with all requirements/case inventory retained. Frozen lock, actual API schema equality and documentation links also pass.
+
+Copilot, installed resources, issue requirements and checks remain unchanged. The real product recovery feature was implemented rather than replacing it with a smaller scope: two-authority console approval, both deployment HTTP compositions, schema migration, races/rollback and real PTY evidence are now committed. PR remains draft, and neutral/skipped Bugbot is not treated as completed review. Remaining product work continues without bypassing gates.
+
+--- End original body ---
+
+=== Source comment 6543710534 ===
+URL: https://github.com/vypdev/copilot/issues/828#issuecomment-6543710534
+Author: efraespada
+Created: 2026-10-31T13:02:56Z
+Captured update: 2026-10-31T13:02:56Z
+Original body SHA-256: 9e965fa925bc73cdcaf7da0d1d3ea83659a08b2f3e55c1b76c3f0cbfd9ce134c
+Original body UTF-8 bytes: 2076
+--- Original body ---
+The scope admission failure reproduced on the explicit-file storage-boundary correction. No manual rerun or contract relaxation was used.
+
+- Repository/PR: vypdev/domus#7; issue #6; original Action-owned branch.
+- Exact head: `48c06bf4c89fbb16fcd6807e5357208b6eb245f3` (`fix: reject owned databases from explicit-file runtime paths`).
+- Commit run/job: https://github.com/vypdev/domus/actions/runs/41203513795/job/124543891228
+- Failed generated check: https://github.com/vypdev/domus/runs/124544177433
+- Action: `vypdev/copilot@v3`, exact SHA `3e7ceea08e6131360e026937d1c0cc1b120472e0`.
+- Agent admission: `2026-10-31T13:00:30.0392385Z`, codex codex-cli 0.166.0.
+- Rejection: `2026-10-31T13:00:43.6220307Z`, `Progress scope result was rejected (scope-clause-limit; field $.lines; requirement none; source L127). Existing progress was retained.`
+- Failure reference: `fef424af-b2f6-4ecd-94b9-dbb8c3e24fe7`.
+
+The check reports phase scope / scope-clause-limit / $.lines / requirement none / original issue L127. This is the same failure family tracked here, now on a different original source line, distinct from the snapshot-head assessment failure in #829. Existing progress labels and assessments were retained. Queue execution completed normally.
+
+The exact head passes every required CI Check group: https://github.com/vypdev/domus/actions/runs/41203516820. Backend: 897 tests with 3,325 statements and 860 branches at 100%; tooling: 66 tests independently at 100%; 41 architecture fixtures and 89 files/401 dependencies with three contracts kept. Original unchanged SDD/catalog validators pass twenty-section format and ownership; the companion is 69,444 characters. The correction prevents both native and standalone explicit-file entrypoints from bypassing owned-directory lifecycle locks, verified before SQLite initialization with unchanged database bytes.
+
+No Copilot resource, original requirement or gate changed; all 29 protected files remain unchanged. PR is still draft, and neutral/skipped Bugbot is not merge acceptance. Product work continues independently.
+
+--- End original body ---
+
+=== Source comment 6543754206 ===
+URL: https://github.com/vypdev/copilot/issues/828#issuecomment-6543754206
+Author: efraespada
+Created: 2026-10-31T13:07:14Z
+Captured update: 2026-10-31T13:07:14Z
+Original body SHA-256: 6a970308b5f68755d047a72fe505c62aea8326174c61d529c7b62d35d5f50740
+Original body UTF-8 bytes: 2390
+--- Original body ---
+The scope admission failure reproduced on the standalone managed-directory runtime increment. No manual rerun or contract relaxation was used.
+
+- Repository/PR: vypdev/domus#7; issue #6; original Action-owned branch.
+- Exact head: `78766a05e96a34ce4fe54df54af27aac688a1aa9` (`feat: share managed data lifecycle with standalone runtime`).
+- Commit run/job: https://github.com/vypdev/domus/actions/runs/41203885194/job/124544938018
+- Failed generated check: https://github.com/vypdev/domus/runs/124545230164
+- Action: `vypdev/copilot@v3`, exact SHA `3e7ceea08e6131360e026937d1c0cc1b120472e0`.
+- Agent admission: `2026-10-31T13:05:12.4880299Z`, codex codex-cli 0.166.0.
+- Rejection: `2026-10-31T13:05:23.7015161Z`, `Progress scope result was rejected (scope-clause-limit; field $.lines; requirement none; source L127). Existing progress was retained.`
+- Failure reference: `6ceffc0e-f953-4393-81d9-d4e7b03d9df6`.
+
+The check reports phase scope / scope-clause-limit / $.lines / requirement none / original issue L127. This is the same failure family tracked here, again at original source line L127, distinct from the snapshot-head assessment failure in #829. Existing progress labels and assessments were retained. Queue execution completed normally.
+
+The exact head passes every required CI Check group: https://github.com/vypdev/domus/actions/runs/41203889095. Backend: 913 tests with 3,351 statements and 868 branches at 100%; tooling: 66 tests independently at 100%; 41 architecture fixtures and 89 files/401 dependencies with three contracts kept. Original unchanged SDD/catalog validators pass twenty-section format and ownership; the companion is 69,660 characters. The increment gives the standalone runtime the same persisted UUID/channel and owned-directory lifecycle as native composition. Real-file API tests verify household/original-operation restart, discarded authentication sessions, channel/cookie separation, exactly one initialization, console attachment and lease release after composition/listener/credential-shutdown failures. The native container cases still exercise the pinned stateless preview; this is not newer persistent package or owner HA acceptance.
+
+No Copilot resource, original requirement or gate changed; all 29 protected files remain unchanged. PR is still draft, and neutral/skipped Bugbot is not merge acceptance. Product work continues independently.
+
+--- End original body ---
+
+=== Source comment 6543902716 ===
+URL: https://github.com/vypdev/copilot/issues/828#issuecomment-6543902716
+Author: efraespada
+Created: 2026-10-31T13:21:12Z
+Captured update: 2026-10-31T13:21:12Z
+Original body SHA-256: d32e763b081530f0d0603fdd421b3e00f9fe8441baa0e301e6533deb2737edf0
+Original body UTF-8 bytes: 2406
+--- Original body ---
+The scope admission failure reproduced on the private native-app launcher preparation. No manual rerun or contract relaxation was used.
+
+- Repository/PR: vypdev/domus#7; issue #6; original Action-owned branch.
+- Exact head: `d013cf2c8b932d0e00f5858053cbc0e663d5eee1` (`feat: prepare private Home Assistant app launcher`).
+- Commit run/job: https://github.com/vypdev/domus/actions/runs/41204674734/job/124547232355
+- Failed generated check: https://github.com/vypdev/domus/runs/124547521807
+- Action: `vypdev/copilot@v3`, exact SHA `3e7ceea08e6131360e026937d1c0cc1b120472e0`.
+- Agent admission: `2026-10-31T13:15:39.6080775Z`, codex codex-cli 0.166.0.
+- Rejection: `2026-10-31T13:15:51.4039433Z`, `Progress scope result was rejected (scope-clause-limit; field $.lines; requirement none; source L112). Existing progress was retained.`
+- Failure reference: `b36c4f98-defd-41be-a754-00ab5193ad5f`.
+
+The check reports phase scope / scope-clause-limit / $.lines / requirement none / original issue L112. This is the same failure family tracked here, again at original source line L112, distinct from the snapshot-head assessment failure in #829. Existing progress labels and assessments were retained. Queue execution completed normally.
+
+The exact head passes every required CI Check group: https://github.com/vypdev/domus/actions/runs/41204679962. Backend: 953 tests with 3,434 statements and 888 branches at 100%; tooling: 66 tests independently at 100%; 41 architecture fixtures and 90 files/411 dependencies with three contracts kept. Original unchanged SDD/catalog validators pass twenty-section format and ownership; the companion is 69,864 characters. The increment prepares a fixed-path package launcher that validates bounded strict app options before provisioning the private child, clears groups, sets/verifies all runtime IDs and execs the fixed native entrypoint. Real-file tests and ordered privilege/exec doubles cover unsafe paths/options, existing-data refusal and failure sanitation. Source-head CI image cases still use the previous stateless preview; the subsequent immutable package increment separately exercises real Linux kernel privilege dropping. Owner HA remains unchanged.
+
+No Copilot resource, original requirement or gate changed; all 29 protected files remain unchanged. PR is still draft, and neutral/skipped Bugbot is not merge acceptance. Product work continues independently.
+
+--- End original body ---
+
+=== Source comment 6543946806 ===
+URL: https://github.com/vypdev/copilot/issues/828#issuecomment-6543946806
+Author: efraespada
+Created: 2026-10-31T13:25:20Z
+Captured update: 2026-10-31T13:25:20Z
+Original body SHA-256: c358e1a28483a7f5026b8579c3c2fb9743955ac03fc14e204441d95d48a08689
+Original body UTF-8 bytes: 2568
+--- Original body ---
+The scope admission failure reproduced on the persistent native-app package increment. No manual rerun or contract relaxation was used.
+
+- Repository/PR: vypdev/domus#7; issue #6; original Action-owned branch.
+- Exact head: `fcbf78635a5ed4df77714b12e41d9bd8da3e1fe2` (`feat: package persistent native Home Assistant runtime`).
+- Commit run/job: https://github.com/vypdev/domus/actions/runs/41205177710/job/124548683026
+- Failed generated check: https://github.com/vypdev/domus/runs/124548973438
+- Action: `vypdev/copilot@v3`, exact SHA `3e7ceea08e6131360e026937d1c0cc1b120472e0`.
+- Agent admission: `2026-10-31T13:22:13.0497650Z`, codex codex-cli 0.166.0.
+- Rejection: `2026-10-31T13:22:25.2587661Z`, `Progress scope result was rejected (scope-clause-limit; field $.lines; requirement none; source L133). Existing progress was retained.`
+- Failure reference: `5957724c-ebcd-4236-bed7-a4061b50e651`.
+
+The check reports phase scope / scope-clause-limit / $.lines / requirement none / original issue L133. This is the same failure family tracked here, again at original source line L133, distinct from the snapshot-head assessment failure in #829. Existing progress labels and assessments were retained. Queue execution completed normally.
+
+The exact head passes every required CI Check group: https://github.com/vypdev/domus/actions/runs/41205183680. Backend: 954 tests with 3,434 statements and 888 branches at 100%; tooling: 66 tests independently at 100%; 41 architecture fixtures and 90 files/411 dependencies with three contracts kept. Original unchanged SDD/catalog validators pass twenty-section format and ownership; the companion is 69,953 characters. This package pins runtime d013cf2c8b932d0e00f5858053cbc0e663d5eee1 and its verified archive checksum. Unlike the source-preparation head, current-head CI builds and exercises the new persistent image on native amd64/aarch64 runners. All four real-image cases pass: fixed launcher/source binding, safe configuration refusal, actual server UID/GID/groups/capabilities, private root-owned volume provisioning, forged-request rejection, excluded second runtime, shared console attachment and one-effect canonical storage/replay across stop/start. Temporary runtime containers have networking disabled and are cleaned with their own volumes. Owner HA update/live acceptance remains separate and pending.
+
+No Copilot resource, original requirement or gate changed; all 29 protected files remain unchanged. PR is still draft, and neutral/skipped Bugbot is not merge acceptance. Product work continues independently.
+
+--- End original body ---
+
+=== Source comment 6544273564 ===
+URL: https://github.com/vypdev/copilot/issues/828#issuecomment-6544273564
+Author: efraespada
+Created: 2026-10-31T13:54:50Z
+Captured update: 2026-10-31T13:54:50Z
+Original body SHA-256: b207979a4b008a95abb97fedcd77a79a7ff7600df93157fc768bac0f0770f434
+Original body UTF-8 bytes: 2789
+--- Original body ---
+The scope admission failure reproduced on the persistent owner acceptance, packaged snapshot verification and accepted restore-history policy increment. No manual rerun or contract relaxation was used.
+
+- Repository/PR: vypdev/domus#7; issue #6; original Action-owned branch.
+- Exact head: `47a0f240c3f1300e61645a8792c3ee43ab04088d` (`test: record persistent HA acceptance and restore history policy`).
+- Commit run/job: https://github.com/vypdev/domus/actions/runs/41207324499/job/124554965718
+- Failed generated check: https://github.com/vypdev/domus/runs/124555254998
+- Action: `vypdev/copilot@v3`, exact SHA `3e7ceea08e6131360e026937d1c0cc1b120472e0`.
+- Agent admission: `2026-10-31T13:50:51.7170523Z`, codex codex-cli 0.166.0.
+- Rejection: `2026-10-31T13:51:02.0933394Z`, `Progress scope result was rejected (scope-clause-limit; field $.lines; requirement none; source L133). Existing progress was retained.`
+- Failure reference: `ca988e53-a51d-496b-92a3-4349dac386dc`.
+
+The check reports phase scope / scope-clause-limit / $.lines / requirement none / original issue L133. This is the same failure family tracked here, again at original source line L133, distinct from the snapshot-head assessment failure in #829. Existing progress labels and assessments were retained. Queue execution completed normally.
+
+The exact head passes every required CI Check group: https://github.com/vypdev/domus/actions/runs/41207327261. Backend: 954 tests with 3,434 statements and 888 branches at 100%; tooling: 66 tests independently at 100%; 41 architecture fixtures and 90 files/411 dependencies with three contracts kept. Original unchanged SDD/catalog validators pass twenty-section format and ownership; the companion is 69,851 characters. The head extends the actual image tests with registered domus-admin snapshot create and independent inspect after real stop/start/replay. Both commands agree on the exact schema/checkpoint/manifest using the pinned image SQLite 3.46.1. All four real-image cases pass on native amd64/aarch64. Separately, the owner HA now runs Edge.2 and passes update, origin configuration, start, existing-session access, normal Chrome reload and app restart; no household/member/recovery grant or Domus snapshot was created there. The owner accepted A30 to retain readable later processed receipts/history when restoring older state; its implementation remains pending. Only checkpoint descriptions were compacted to retain the unchanged twenty-section format, complete requirement/case inventory and original size bound; no acceptance condition was removed.
+
+No Copilot resource, original requirement or gate changed; all 29 protected files remain unchanged. PR is still draft, and neutral/skipped Bugbot is not merge acceptance. Product work continues independently.
+
+--- End original body ---
+
+=== Source comment 6544795506 ===
+URL: https://github.com/vypdev/copilot/issues/828#issuecomment-6544795506
+Author: efraespada
+Created: 2026-10-31T14:36:34Z
+Captured update: 2026-10-31T14:36:34Z
+Original body SHA-256: 12e217458218364281abe0c18d6e77b35b10f554fe85858d68d5472260b604ba
+Original body UTF-8 bytes: 3318
+--- Original body ---
+The progress scope admission failure reproduced while implementing the owner's accepted restore-history policy in Domus. These are normal new commits, not manual workflow retries. No Copilot resource, original issue requirement, SDD acceptance condition or verification gate was changed.
+
+Repository/PR: vypdev/domus#7, issue #6, original Action-owned branch `feature/6-implement-home-assistant-identity-and-sqlite-platform-persistence`.
+
+## Blocked restoration preparation
+
+- Exact head: `03e5e8265b96f4407aeaff3d2b946db923cba771` (`feat: prepare blocked SQLite restoration with retained history`).
+- Run/job: https://github.com/vypdev/domus/actions/runs/41210419677/job/124564058258
+- Generated failing verification check: https://github.com/vypdev/domus/runs/124564386645
+- Action: `vypdev/copilot@v3`, resolved SHA `3e7ceea08e6131360e026937d1c0cc1b120472e0`.
+- Agent admission: `2026-10-31T14:31:26.9793143Z`, codex codex-cli 0.166.0.
+- Rejection: `2026-10-31T14:31:38.7151718Z`.
+- Contract: phase `scope`, reason `scope-clause-limit`, field `$.lines`, requirement `none`, original issue source `L127`.
+- Failure reference: `39948817-4e44-479d-aabb-8f52adc367ea`.
+
+Exact diagnostic:
+
+```text
+Progress scope result was rejected (scope-clause-limit; field $.lines; requirement none; source L127). Existing progress was retained.
+Impact: The returned progress result violated its contract; progress was not published.
+Error code: agent.failed
+Action: Inspect the original requirement and response schema. Details: phase scope, reason scope-clause-limit, field $.lines, requirement none, original issue line L127. none means no verified identity is available. A fresh attempt may help when the provider can satisfy the unchanged contract; do not relax acceptance or verification.
+Reference: 39948817-4e44-479d-aabb-8f52adc367ea
+```
+
+That exact head passed every CI Check group: https://github.com/vypdev/domus/actions/runs/41210424715. Local and CI backend verification: 1,087 tests, 3,760 statements and 992 branches at 100%. Tooling: 66 tests independently at 100%. Architecture: 41 negative fixtures, 94 files/444 dependencies, three contracts kept, mypy 60 source files. The 22,895-character restoration companion and unchanged 69,851-character primary companion pass the byte-verified upstream twenty-section format/consistency policies; the catalog passes. All 29 protected Copilot resources are unchanged.
+
+The increment implements pure complete-operation evidence/reconciliation and real private SQLite preparation/inspection. It preserves the exact checkpoint bytes and later original facts in a sealed journal, blocks every runtime path to candidates, validates empty/legacy snapshots and a coherent concurrent WAL source view, and rejects rehashed malformed or inconsistent inputs. Runtime history import/replay, consumed-recovery guards and offline activation remain explicitly pending. The installed owner Edge.2 image is unchanged; current container checks validate that pinned package, not these unpackaged restoration sources. No owner HA restore or household change was made.
+
+The draft PR's separate Bugbot result remains neutral/skipped and is not merge acceptance. Existing progress was retained. Product implementation continues independently; no contract relaxation or synthetic branch was used.
+
+--- End original body ---
+
+=== Source comment 6545183593 ===
+URL: https://github.com/vypdev/copilot/issues/828#issuecomment-6545183593
+Author: efraespada
+Created: 2026-10-31T15:10:03Z
+Captured update: 2026-10-31T15:10:03Z
+Original body SHA-256: 062982c09a2fbb18a5397532d183308261d73dae7f7923bd195e14cd4502736f
+Original body UTF-8 bytes: 4174
+--- Original body ---
+The scope admission failure reproduced on the schema-4 retained-operation history and recovery-guard increment. This is a normal new implementation commit, not a manual workflow retry. No original requirement, verification gate or installed Copilot resource was changed.
+
+- Repository/PR/issue: vypdev/domus#7, issue #6, original Action-owned branch `feature/6-implement-home-assistant-identity-and-sqlite-platform-persistence`.
+- Exact head: `5ac4da7658647bc2ea93a0e85974565c8e379ee9` (`feat: retain restored operation history and recovery guards`).
+- Run/job: https://github.com/vypdev/domus/actions/runs/41213114689/job/124572041181
+- Generated failing check: https://github.com/vypdev/domus/runs/124572391038
+- Action: `vypdev/copilot@v3`, resolved SHA `3e7ceea08e6131360e026937d1c0cc1b120472e0`.
+- Agent admission: `2026-10-31T15:06:02.8720693Z`, codex codex-cli 0.166.0.
+- Agent completion: `2026-10-31T15:06:16.0240842Z`.
+- Rejection: `2026-10-31T15:06:16.0292400Z`.
+- Contract: phase `scope`, reason `scope-clause-limit`, field `$.lines`, requirement `none`, original issue source `L113`.
+- Failure reference: `d29ed399-2f18-4076-bf08-c7a5bd7876e8`.
+
+Exact diagnostic:
+
+```text
+Progress scope result was rejected (scope-clause-limit; field $.lines; requirement none; source L113). Existing progress was retained.
+Error code: agent.failed
+Action: Inspect the original requirement and response schema. Details: phase scope, reason scope-clause-limit, field $.lines, requirement none, original issue line L113. none means no verified identity is available. A fresh attempt may help when the provider can satisfy the unchanged contract; do not relax acceptance or verification.
+Reference: d29ed399-2f18-4076-bf08-c7a5bd7876e8
+```
+
+The same failure family now reports L113, whereas the preceding preparation run reported L127 and earlier owner-acceptance runs reported L133. The intervening deadline-fix head reached assessment and failed its separate contract (#829). This normal queued execution reached a terminal result; there was no manual retry, acceptance reduction, model/configuration change or replacement branch.
+
+Every CI Check group passes for this exact head: https://github.com/vypdev/domus/actions/runs/41213120152 (aggregate 124572216814). Backend job 124572056691 confirms 1,140 passing tests, 3,959 statements and 1,068 branches at 100%; mypy checks 61 source files. Tooling has 66 tests independently at 100%, including the hashes of all 29 protected Copilot files; all are unchanged. The 41 architecture fixtures pass, with 96 files/458 dependencies and all three backend contracts kept. Ruff, Node/type/policy tests, local documentation and both native CPU-family pinned-image jobs pass.
+
+The primary companion retains its complete twenty-section requirement/case contract at 69,863 characters; only checkpoint wording changed. The restoration companion is 26,223 characters and passes the same byte-verified unchanged upstream format/consistency policies. The generated catalog is current. No acceptance condition was removed.
+
+The product increment adds complete retained facts independent of current-household foreign keys, an infrastructure-only savepoint import, original-result replay with current authorization, truthful historical/suppressed responses in both composed APIs, monotonic acknowledgements/global sequence, repeated-snapshot history preservation and guards against reusing consumed/canceled recovery under another key. Real-file tests cover corruption, partial/conflicting imports, current authority loss, independent frozen v1/v2/v3 upgrades and rollback of an injected schema-3 migration failure. Production offline activation and interruption recovery are explicitly unfinished.
+
+The owner HA remains on the previously accepted schema-3 Edge.2 pin; it was not changed. Pinned-image CI validates that existing package, not the unpackaged schema-4 history code. No owner household, recovery grant, restore, device or user change was made. The PR is still draft; neutral/skipped Bugbot is not treated as a complete current-head no-findings review. Product work continues independently without changing Copilot or relaxing gates.
+
+--- End original body ---
+
+=== Source comment 6545507651 ===
+URL: https://github.com/vypdev/copilot/issues/828#issuecomment-6545507651
+Author: efraespada
+Created: 2026-10-31T15:38:22Z
+Captured update: 2026-10-31T15:38:22Z
+Original body SHA-256: 86602f75d2746dd140a1b6759b7c6ac656aa5206079e5eb7f9f2367a3d5975bf
+Original body UTF-8 bytes: 4097
+--- Original body ---
+The same scope admission failure reproduced on the managed-generation startup and partial-restore protection increment. This is a normal new implementation commit; no manual workflow retry or original requirement reduction was used.
+
+- Repository/PR/issue: vypdev/domus#7, issue #6, original Action-owned branch.
+- Exact head: `0e86193b69371e5c27b23923ea740f34d7ef49e8` (`feat: load bound storage generations and block partial restores`).
+- Run/job: https://github.com/vypdev/domus/actions/runs/41215437367/job/124578863424
+- Failed generated verification check: https://github.com/vypdev/domus/runs/124579206271
+- Action: `vypdev/copilot@v3`, resolved SHA `3e7ceea08e6131360e026937d1c0cc1b120472e0`.
+- Agent admission: `2026-10-31T15:34:54.4685258Z`, codex codex-cli 0.166.0.
+- Agent completion: `2026-10-31T15:35:04.4361282Z`.
+- Rejection: `2026-10-31T15:35:04.4413816Z`.
+- Contract: phase `scope`, reason `scope-clause-limit`, field `$.lines`, requirement `none`, original issue source `L133`.
+- Reference: `ab8934d0-78b6-4de7-9f8e-47de8572bb89`.
+
+Exact diagnostic:
+
+```text
+Progress scope result was rejected (scope-clause-limit; field $.lines; requirement none; source L133). Existing progress was retained.
+Error code: agent.failed
+Action: Inspect the original requirement and response schema. Details: phase scope, reason scope-clause-limit, field $.lines, requirement none, original issue line L133. none means no verified identity is available. A fresh attempt may help when the provider can satisfy the unchanged contract; do not relax acceptance or verification.
+Reference: ab8934d0-78b6-4de7-9f8e-47de8572bb89
+```
+
+The preceding history commit reproduced this failure at L113; earlier runs used L127/L133. This run completed normally from the queue and retained previous progress. The failing phase/field and missing requirement identity remain the same. No prompt/model change, rerun, contract relaxation, replacement branch or installed-resource edit was used.
+
+Every CI Check group passes for this exact head: https://github.com/vypdev/domus/actions/runs/41215442133 (aggregate 124579052352). Backend job 124578877400 confirms 1,184 tests, 4,031 statements and 1,090 branches at 100%, with mypy checking 62 source files. Tooling has 66 tests independently at 100%, including byte-identical hashes for all 29 protected Copilot resources. The 41 architecture fixtures pass with 97 files/465 dependencies and three contracts kept. Ruff, Node/type/policy, documentation and both native CPU-family pinned-image jobs pass.
+
+The unchanged original M1 requirement/case inventory remains in the primary twenty-section companion at 69,863 characters. The complete restoration companion is 27,917 characters and passes byte-verified unchanged upstream format/consistency validation; the catalog is current. No requirement or acceptance case was removed to fit admission.
+
+This increment implements a pure path-free generation selection and strict managed startup under installation-wide leases, preserving legacy flat data without fallback/adoption. It rereads selection after acquiring leases, verifies slot identity/private inventory and blocks direct slot startup. Both actual composed APIs pass selected-household/original-receipt restart tests. Real snapshot/preparation fixtures work in private root archives. Restore identity now blocks startup before any database bytes, and manifest/journal/generation signals prevent partial explicit-file bypass. The lease-reread regression initially selected stale generation-1 after selection changed to generation-2, then passed after the fix.
+
+Production generation publication, stopped-write source binding and interruption recovery are still explicitly pending. The owner HA remains on the previously accepted schema-3 Edge.2 pin, without new household/recovery/restore/device/user changes. Image CI validates that existing package, not unpackaged generation/history code. The PR remains draft; neutral/skipped Bugbot is not complete current-head review acceptance. Product implementation continues without editing Copilot or weakening gates.
+
+--- End original body ---
+
+=== Source comment 6546206947 ===
+URL: https://github.com/vypdev/copilot/issues/828#issuecomment-6546206947
+Author: efraespada
+Created: 2026-10-31T16:40:28Z
+Captured update: 2026-10-31T16:40:28Z
+Original body SHA-256: 70346dfe05b0202dc19467c74b9e6fa81702cfd4fd7ec6194e37e8b08aac9238
+Original body UTF-8 bytes: 2939
+--- Original body ---
+A new normal push reproduces the same scope-contract rejection at a different source line. This is additional exact-head evidence for #828, not a manual retry or a new inferred failure.
+
+| Field | Observed value |
+| --- | --- |
+| Consumer | vypdev/domus, issue #6, draft PR #7 |
+| Source head | faa1654a5c9cddb562bfcd4c02d4cebfeb78e9f5 |
+| Comparison base | 0012a172492515e282be09c37921f4014a451e64 |
+| Managed branch | feature/6-implement-home-assistant-identity-and-sqlite-platform-persistence |
+| Trigger | Normal push of reviewed implementation work; no workflow dispatch or manual rerun |
+| Action | vypdev/copilot@v3, resolved SHA 3e7ceea08e6131360e026937d1c0cc1b120472e0 |
+| Runtime | codex codex-cli 0.166.0 |
+| Run/job | [41220477288 / 124593779032](https://github.com/vypdev/domus/actions/runs/41220477288/job/124593779032) |
+| Verification check | [124594108949](https://github.com/vypdev/domus/runs/124594108949), failure |
+| Admission UTC | 2026-10-31T16:37:20.3132876Z |
+| Completion UTC | 2026-10-31T16:37:31.1172524Z |
+| Contract rejection UTC | 2026-10-31T16:37:31.1225397Z |
+| Phase / reason | scope / scope-clause-limit |
+| Field | $.lines |
+| Requirement identity | none; no verified identity available |
+| Original issue source | L112 |
+| Error / reference | agent.failed / d275ae8a-57bf-44df-91e0-905be91a1550 |
+
+The source comparison is pinned to the above base/head. Before admission the log reports 197 required paths, 8 source parts and complete progress evidence; recovery usage: one frame, 46 files, 823707 bytes, 69 requests and 184 tree entries. This is a completed runtime response rejected by the unchanged scope contract, not a queue/admission timeout or missing consumer runtime.
+
+The exact terminal diagnosis says progress was not published because the returned progress result violated its contract. Existing progress labels and published assessments were preserved. No response clause, requirement, SDD, acceptance condition or verification limit was weakened to make the result pass. All 29 installed Copilot resources remain unchanged.
+
+Independent [CI Check at this exact head](https://github.com/vypdev/domus/actions/runs/41220481891) succeeds in all groups, including both native CPU-family image jobs. Backend CI confirms 1299 tests and 100% of 4684 statements / 1302 branches. The implementation adds real offline restore activation/resume and rollback; the actual current package still pins the previous runtime, which is explicitly separated in its evidence.
+
+Review is a separate gate: push Bugbot analysis yielded ownership to PR #7, and PR check [124593898418](https://github.com/vypdev/domus/runs/124593898418) reports a skipped/neutral review. We do not treat that as a full no-findings review or merge acceptance. The PR remains draft and product work continues. Please fix the producer/contract handling in Copilot without relaxing the consumer's original requirements or verification.
+
+--- End original body ---
+
+=== Source comment 6546454327 ===
+URL: https://github.com/vypdev/copilot/issues/828#issuecomment-6546454327
+Author: efraespada
+Created: 2026-10-31T17:01:53Z
+Captured update: 2026-10-31T17:29:47Z
+Original body SHA-256: 538ce5c1f6a6bde00739a79036d345a54ba3ba5fb6762e9be49f6ef5f055e18f
+Original body UTF-8 bytes: 5309
+--- Original body ---
+Another normal push reproduces #828 on the restoration-capable package head. This is a new exact-head observation, not a manual rerun.
+
+| Field | Observed value |
+| --- | --- |
+| Consumer | vypdev/domus, issue #6, draft PR #7 |
+| Head | 0484ba7cf3786fffac9c678032790e0690710fcb |
+| Base | 0012a172492515e282be09c37921f4014a451e64 |
+| Branch | feature/6-implement-home-assistant-identity-and-sqlite-platform-persistence |
+| Action | vypdev/copilot@v3, resolved 3e7ceea08e6131360e026937d1c0cc1b120472e0 |
+| Runtime | codex codex-cli 0.166.0 |
+| Run/job | [41222151325 / 124598781541](https://github.com/vypdev/domus/actions/runs/41222151325/job/124598781541) |
+| Verification check | [124599129219](https://github.com/vypdev/domus/runs/124599129219), failure |
+| Admission UTC | 2026-10-31T16:58:44.5724661Z |
+| Completion UTC | 2026-10-31T16:58:58.5810227Z |
+| Rejection UTC | 2026-10-31T16:58:58.5865091Z |
+| Phase / reason | scope / scope-clause-limit |
+| Field / requirement | $.lines / none (no verified requirement identity) |
+| Original issue line | L127 |
+| Error / reference | agent.failed / dd8c1470-917c-49d3-9ce2-1d0cf48e3b80 |
+
+The log confirms complete progress evidence before runtime admission: 200 required paths, 8 source parts, one recovery frame with 49 files/864902 bytes/72 requests/186 tree entries. The provider completed and the scope result was rejected by the unchanged response contract. Progress was not published; existing progress labels and published assessments were retained. This is separate from a queue delay or runtime provisioning failure.
+
+This head completes publication of the Edge.3 package and its generated catalog. Runtime source is independently pinned to faa1654a5c9cddb562bfcd4c02d4cebfeb78e9f5, archive SHA-256 15bcd701696204b3362cebe5901feb3d0072c9bac1db2ef2cbc5007e9ed73717; every one of its 272 tracked blobs was compared against the archive. The package has 15 passing local real-image cases (Python 3.14.6 / SQLite 3.46.1), including both compositions, actual Edge.2/schema 3 upgrade, restore/restart/history/rollback, real process termination and previous-image refusal without any changed data file. Backend 1299 tests cover all 4684 statements/1302 branches at 100%; tooling 66 tests independently has 100%. Exact-head CI now passes every group, including all 15 image cases on native amd64 and aarch64, in [run 41222154726](https://github.com/vypdev/domus/actions/runs/41222154726). They now build both current and immutable previous images.
+
+All 29 installed Copilot resources are unchanged. No requirement, SDD case, clause limit, acceptance condition or verification gate was relaxed. The project-owned CI Check only adds real previous-image compatibility coverage. Earlier package-only head d9e5a9026c33695d8ee8b0be814aee8851edb0d5 had normal executions canceled after the generated-catalog follow-up push; those cancellations are not reported as a distinct defect and no job was manually restarted.
+
+Review remains a separate gate: [124598906398](https://github.com/vypdev/domus/runs/124598906398) is skipped/neutral, not a full no-findings Bugbot review. The PR remains draft and is not merged. Product work continues without changing Copilot. Please correct the producer/contract failure while retaining the original consumer requirements and verification strength.
+
+
+### Follow-up: owner acceptance receipt at 8b59a0435fbb11f069298d23cc5e0735c9547bb1
+
+A subsequent normal push adds the verified owner Edge.3 update/session/reload/restart receipt and corrects current operational documentation. Runtime source/package pins and implementation are unchanged. The same rejection now identifies L112:
+
+| Field | Observed value |
+| --- | --- |
+| Head / base | 8b59a0435fbb11f069298d23cc5e0735c9547bb1 / 0012a172492515e282be09c37921f4014a451e64 |
+| Run/job | [41224127949 / 124604600825](https://github.com/vypdev/domus/actions/runs/41224127949/job/124604600825) |
+| Verification check | [124604960456](https://github.com/vypdev/domus/runs/124604960456), failure |
+| Action / runtime | v3 resolved 3e7ceea08e6131360e026937d1c0cc1b120472e0 / codex codex-cli 0.166.0 |
+| Admission UTC | 2026-10-31T17:22:33.3742931Z |
+| Completion UTC | 2026-10-31T17:22:45.8899138Z |
+| Rejection UTC | 2026-10-31T17:22:45.8949805Z |
+| Phase / reason / field | scope / scope-clause-limit / $.lines |
+| Requirement / original issue source | none / L112 |
+| Error / reference | agent.failed / e5a58ff6-70e3-4ffe-b686-658f903276d1 |
+
+Complete evidence precedes admission: 201 required paths, 8 source parts, one recovery frame with 49 files/864902 bytes/72 requests/186 tree entries. Existing progress was retained; no manual rerun, requirement edit or gate relaxation was used. All 29 installed Copilot resources remain unchanged.
+
+[Exact-head CI Check](https://github.com/vypdev/domus/actions/runs/41224134372) passes every group, including 1299 backend tests at 100% of 4684 statements/1302 branches and 15 image cases on each native CPU family. [Review 124604732145](https://github.com/vypdev/domus/runs/124604732145) is skipped/neutral and remains insufficient for merge. The unchanged project continues in draft; full product and live restore acceptance are not claimed. This follow-up is appended to the same package report to avoid another duplicate issue/comment.
+
+--- End original body ---
+
+=== Source comment 6547316839 ===
+URL: https://github.com/vypdev/copilot/issues/828#issuecomment-6547316839
+Author: efraespada
+Created: 2026-10-31T18:17:10Z
+Captured update: 2026-10-31T18:17:10Z
+Original body SHA-256: 3f09a18396786281d160f8414afc0b06f4d1fa9f54abb013c9cc201d574c18ef
+Original body UTF-8 bytes: 2455
+--- Original body ---
+The existing scope-clause-limit family reproduced during a real review-reconciliation documentation update. This is not a manual rerun, a queue-delay report or a change to consumer acceptance.
+
+- Consumer issue/PR: vypdev/domus#6 / https://github.com/vypdev/domus/pull/7.
+- Exact head: d67475a92792a109eef67df1c1e98039a6bcd43f; base 0012a172492515e282be09c37921f4014a451e64; existing Action-owned branch.
+- Commit run/job: https://github.com/vypdev/domus/actions/runs/41228415361/job/124617321581.
+- Generated check: https://github.com/vypdev/domus/runs/124617717493.
+- Resolved Action: vypdev/copilot@v3 at 3e7ceea08e6131360e026937d1c0cc1b120472e0; codex-cli 0.166.0.
+- Complete collected evidence: 205 required paths, 9 source parts, one recovery frame, 60 files / 952843 bytes / 83 requests / 188 tree entries.
+- Admission: 2026-10-31T18:15:42.5904344Z; completed 18:15:55.8447133Z; scope rejection 18:15:55.8501586Z.
+- Diagnostic: phase scope, reason scope-clause-limit, field $.lines, requirement none, original issue line L133.
+- Reference: a69eac20-9ce6-43d8-b3b6-109ad18da461.
+
+Existing progress/labels were retained; no final progress was published. The new source does not alter runtime behavior: all runtime/test/OpenAPI hashes still match the independently passing 1387-test, 100%-coverage acceptance audit at ead7dde. Current-head application CI is running normally; backend already passes. No claim of complete current-head CI or Bugbot acceptance is made before it finishes.
+
+The preceding actual ready review completed all 30 diff partitions / 204 files, but correctly declared partial human-conversation context (6 of 9 retained). We preserved all nine original public clarification comments verbatim in docs/evidence/issue6-human-clarifications.json at this head and compacted redundant live restatements, without removing any decision, requirement or gate. Current review must independently establish complete context. A valid stale snapshot-schema doc finding was fixed; two Python 3.14 false positives are tracked separately in #831. The preceding partition schema-string-long result is tracked in #830, not conflated with this scope failure.
+
+Copilot source and all installed resources remain unchanged. No output bound, managed branch, requirement or verification gate was relaxed. PR remains unmerged while review completes; product work and the separately admitted household entry UI issue continue within their proper lifecycle.
+
+--- End original body ---
+
+=== Source comment 6547989635 ===
+URL: https://github.com/vypdev/copilot/issues/828#issuecomment-6547989635
+Author: efraespada
+Created: 2026-10-31T19:18:19Z
+Captured update: 2026-10-31T19:18:19Z
+Original body SHA-256: c9e6bc2dbba1f10ddf6b70c9de276ad595615b8c53a09941f434ea1ea0920abf
+Original body UTF-8 bytes: 2094
+--- Original body ---
+Another verified occurrence of the same progress scope-clause-limit family on a later source head; this is evidence from the normal push lifecycle, not an unchanged-input manual retry.
+
+- Consumer: vypdev/domus issue #6 / PR #7.
+- Exact source head: 72e3e87dc7da241327384424a7e179bea2f83151; comparison base: 0012a172492515e282be09c37921f4014a451e64.
+- Installed reusable runtime: vypdev/copilot@3e7ceea08e6131360e026937d1c0cc1b120472e0.
+- Run: https://github.com/vypdev/domus/actions/runs/41231793737 ; job: https://github.com/vypdev/domus/actions/runs/41231793737/job/124627359712 ; native Verification check: 124627687235.
+- Error: agent.failed, phase=scope, reason=scope-clause-limit, field=$.lines, requirement=none, original issue line=L113. Reference: 50ffb0fd-6a74-40b5-9d56-c17f6d39aa6c.
+- 2026-10-31T18:57:26.1707054Z: complete progress evidence reported 207 required paths, 9 source parts and recovery usage files=61, bytes=961085, requests=84, treeEntries=189, frames=1. At 18:57:37.0119781Z the scope result was rejected; existing progress was retained.
+- The exact current original issue-body L113 is an ordinary generated-plan requirement detail: `Cover restart durability, rollback, concurrency, cleanup, and consistent backup and restore using real database files.` The enclosing item is `Add durable SQLite persistence`. `none` was the diagnostic's lack of verified requirement identity; it is not an empty requirement supplied by the owner.
+
+No generated scope candidate was exposed, so the precise over-budget clauses cannot be reconstructed from safe logs. No Copilot resources, schemas, limits, acceptance criteria or progress labels were modified. Independent CI Check on the same head passes all jobs, including 1,411 backend tests and 100% supported backend coverage. The separate full-context Bugbot review completed all 31/31 partitions. Progress-schema publication failure must remain distinct from those source validation results. Please retain this occurrence with the previous L133 instance when investigating source-line classification and bounded scope output.
+
+--- End original body ---
+
+=== Source comment 6550424473 ===
+URL: https://github.com/vypdev/copilot/issues/828#issuecomment-6550424473
+Author: efraespada
+Created: 2026-10-31T23:12:28Z
+Captured update: 2026-10-31T23:12:28Z
+Original body SHA-256: f0d196688dcc68ef19e97d44d9baf9f34cf6037c57c0fb2ceb22c591597e319b
+Original body UTF-8 bytes: 2483
+--- Original body ---
+New occurrence of the same bounded progress-scope rejection on a different consumer feature; no Copilot change or unchanged manual rerun was requested.
+
+- Consumer issue: https://github.com/vypdev/domus/issues/13 ; draft PR: https://github.com/vypdev/domus/pull/14.
+- Exact checkpoint head: `143de3e79bf8aa02171b4123b794d222f4d4f231`.
+- Failed push workflow: https://github.com/vypdev/domus/actions/runs/41251187140 ; job `124684856136`.
+- Actual downloaded SDK: `3e7ceea08e6131360e026937d1c0cc1b120472e0`.
+- At 23:08:42 UTC the original job reports: `Progress scope result was rejected (scope-clause-limit; field $.lines; requirement none; source L108). Existing progress was retained.`
+- Native `Copilot / Verification` check `124685111269` fails with `agent.failed`, phase `scope`, field `$.lines`, requirement `none`, reference `56be6563-048b-4730-83d2-14a71cbda1dc`. Retryable is Yes; prior progress was retained.
+
+In the retrieved issue body, L108 is the Action-maintained recommendation title `Prove behavior and merge readiness`, inside `recommendationState.implementationPlan.steps`; L110/L111 contain its coverage/current-head CI/Bugbot details. This describes the retrieved source anchor, not an observed provider response or proof that generated metadata caused the rejection. No returned clause count or limit is exposed.
+
+Separate product evidence at that same SHA: the independent CI backend job `124684962399`, run https://github.com/vypdev/domus/actions/runs/41251223568, collected and passed 1,603 tests, with all 4,857 statements and 1,366 branches covered. The new two pure task policy modules have 192 tests, 153 statements and 58 branches covered; task application/SQLite/API implementation remains in progress. Other CI groups were passing at inspection, while one container job/aggregate was still running. This is not a claim that the full CI run or task feature has completed. Draft Bugbot is legitimately neutral/skipped and is not treated as review acceptance.
+
+Original SDK SDD/path/catalog validation and current dependency/type checks pass. The Action-published issue branch/SDD remain intact. Please investigate the source/result clause-bound contract and supported recovery upstream, preserving exact-head/source identity, acceptance scope and fail-closed progress publication. The consumer will continue implementing its feature without changing Copilot, deleting generated recommendation metadata or weakening verification to obtain a green check.
+
+--- End original body ---
+
+=== Source comment 6551159222 ===
+URL: https://github.com/vypdev/copilot/issues/828#issuecomment-6551159222
+Author: efraespada
+Created: 2026-11-01T00:26:59Z
+Captured update: 2026-11-01T12:56:51Z
+Original body SHA-256: 2ceb7db2f5c59eaf36837e28adb806d101842eb97f63037a91fd8dc3aec9aea9
+Original body UTF-8 bytes: 24887
+--- Original body ---
+A fresh normal contributor push reproduced the same progress-contract failure, now at the published task-storage checkpoint. No Copilot resources, issue metadata, lifecycle labels or verification policy were changed to bypass it.
+
+- Consumer: `vypdev/domus`, issue #13, draft PR #14.
+- Exact published head: `ee825e6d16dcdca7f8c1ad761d447c419c856f64`.
+- Managed ref remains `feature/13-implement-durable-task-definitions-and-occurrence-execution`; the Action had already verified it with `branched`.
+- Failed Commit run: https://github.com/vypdev/domus/actions/runs/41256521166/job/124700737627
+- Verification check: https://github.com/vypdev/domus/runs/124701071951
+- Reference: `332dc6b2-c568-49b5-812f-8cc3d270fe20`.
+- Failure: phase `scope`, reason `scope-clause-limit`, field `$.lines`, requirement `none`, original issue line `L110`; exposed as `agent.failed`. The summary says existing published progress/labels were retained.
+
+In the issue body retrieved after this run, L110 is inside the Action-generated implementation recommendation:
+
+> Add meaningful policy, application, real SQLite, adapter, and composed HTTP coverage, including concurrency, rollback, revocation, restoration, and partial or unavailable integrations.
+
+This is source context, not proof of the hidden response or root cause. The earlier failure referenced L108 in the recommendation title. I have not altered either line or fabricated a simplified issue to obtain a passing assessment, and have not rerun this unchanged failed job.
+
+The application Backend, Python tooling, architecture, frontend-toolchain and documentation checks on this exact published head have passed; both container jobs were still running at inspection. Local backend evidence is 1,867 tests, all 5,326 statements and 1,520 branches covered. Task current-authority checks, commands and HTTP are deliberately still in progress. The PR remains draft; its neutral skipped Bugbot result is not merge acceptance.
+
+Please investigate the unchanged progress contract and surface enough bounded diagnostic context to distinguish an overlong original scope clause, recommendation text, or generated response. We will keep contributing to the verified issue branch without modifying Copilot or weakening review/coverage gates.
+
+
+### Further normal push: current task-authority checkpoint
+
+The same failure recurred at `e439a70cdde86ff4f1294a466d8ac0cdd46c64f4` (no unchanged-job rerun):
+
+- Commit run/job: https://github.com/vypdev/domus/actions/runs/41257204172/job/124702796608
+- Verification: https://github.com/vypdev/domus/runs/124703099814
+- Reference: `e1562172-f325-4adb-b875-0a9455b36cb9`.
+- Same phase `scope`, reason `scope-clause-limit`, field `$.lines`, requirement `none`, issue line `L110`.
+- Existing progress/labels retained. Application backend, Python tooling, both architecture checks and links passed on that head at inspection; frontend and containers were still running.
+- Local current evidence: 1,910 backend tests; 5,399 statements and 1,546 branches fully covered. These source-authority helpers remain separate from pending transactional task commands/API and draft Bugbot acceptance.
+
+This adds a source-identified occurrence to the existing report. The hidden generated assessment is still unavailable, so the original issue-line context above is not asserted as the cause. Copilot source/configuration and normal acceptance gates remain unchanged.
+
+
+### Further normal push: material durability and canonical read checkpoint
+
+The same scope-phase contract rejection returned on the normal push from `bef50570bf5bb3825df4171e959a5ad18d2c46ae` to `daeb398a8b839df2ebb901af09e421303aa4ab3c`. This is distinct from the preceding head's assessment-phase failure recorded in #829; no unchanged workflow was manually rerun.
+
+- Consumer issue [vypdev/domus#13](https://github.com/vypdev/domus/issues/13), [draft PR #14](https://github.com/vypdev/domus/pull/14), same already verified managed branch.
+- Commit run/job: https://github.com/vypdev/domus/actions/runs/41270612785/job/124742441400
+- Original Verification check: https://github.com/vypdev/domus/runs/124742718085
+- Error `agent.failed`; phase `scope`; reason `scope-clause-limit`; field `$.lines`; requirement `none`; original issue source `L111`.
+- Reference `74708ed5-5e48-4956-906c-7ff7203271bd`; retryable Yes. The check explicitly says progress was not published and existing labels/published assessments were retained.
+- In the currently retrieved issue body, L111 is the Action-generated recommendation under `Prove behavior and merge readiness`, requiring complete backend coverage/current-head CI/full-context Bugbot and retaining later domain/UI/deployment release prerequisites. The preceding L110 describes policy/application/SQLite/adapter/HTTP failure coverage. This is observed source context, not evidence of the generated candidate or root cause.
+- The exposed check summary does not identify returned clauses/counts, the exceeded limit or a resolved current Action SDK revision. Those are not inferred from the older runtime pin in this report; please inspect the linked original run/input when diagnosing.
+
+Independent project run: https://github.com/vypdev/domus/actions/runs/41270616677 . At this snapshot, Backend application 124742453052, Python tooling 124742453011, Python architecture 124742452988, Node architecture 124742453258, documentation 124742453112 and frontend 124742453087 all succeeded on this exact head. Both image architectures were still running; this is not a completed aggregate CI claim. Branch Sync and Pull Request checks succeeded. Copilot Review 124742525820 is neutral/skipped for the draft, not complete Bugbot acceptance.
+
+Local final evidence: 2,459 passing backend tests, every authored file in the coverage report (95/95), all 6,774 statements and 1,898 branches covered. Strict types, 113 tooling/architecture fixtures, inward/acyclic graph (131 files/763 dependencies) and unchanged original pinned SDD/catalog validators pass. Schema-6 material persistence now has an actual original schema-5 migration/receipt replay/offline activation fixture; material write/settlement commands and real Inventory/UI/package adoption remain incomplete. These product checks are separate from progress-agent contract validity.
+
+No Copilot source/installed resources, bounds, generated recommendation text, source requirement, progress labels or merge gates were changed. The consumer remains draft and work continues on the admitted branch. Please retain this occurrence in the same source/result bound investigation and preserve fail-closed publication plus original progress.
+
+
+
+### Additional immutable-head reproduction: dependency review / A37 (2026-11-01)
+
+This same scope failure has now recurred on another independently verified Domus head. This is a terminal progress-contract rejection, not queue latency. I did not change Copilot, weaken any guard or retry the unchanged failed run.
+
+- Repository/issue/PR: `vypdev/domus` #13 / #14; exact head `487506f0fb5add530aeb90ea6c4c82ab3e3fd0b0`, base `develop` at `a63b2315cd5121dde9585ba8875e286fdef5330e`.
+- Existing Action-managed branch: `feature/13-implement-durable-task-definitions-and-occurrence-execution`.
+- Commit workflow: https://github.com/vypdev/domus/actions/runs/41286239539 ; job `124788005729`.
+- Published verification check: https://github.com/vypdev/domus/runs/124788308007 . The parent Commit job failed; Branch Sync and Pull Request workflows succeeded.
+- The original job log directly records `Download action repository 'vypdev/copilot@v3' (SHA:3e7ceea08e6131360e026937d1c0cc1b120472e0)`. This runtime identity is observed in the hosted log, not inferred from Domus's local SDK pin.
+- Complete progress evidence was reported as `96 required paths`, `9 source parts`, with recovery usage `frames:1`, current/total `files:3`, `bytes:854164`, `requests:15`, `treeEntries:188`. The failure follows evidence collection.
+
+Original failure (2026-11-01T07:49:52–07:49:57Z):
+
+```text
+Progress scope result was rejected (scope-clause-limit; field $.lines; requirement none; source L103). Existing progress was retained.
+Impact: The returned progress result violated its contract; progress was not published.
+Error code: agent.failed
+Action: Inspect the original requirement and response schema. Details: phase scope, reason scope-clause-limit, field $.lines, requirement none, original issue line L103. none means no verified identity is available. A fresh attempt may help when the provider can satisfy the unchanged contract; do not relax acceptance or verification.
+Retained state: Existing progress labels and published assessments were preserved. An optional check-publication warning is a separate result.
+Retryable: Yes
+Reference: 54757356-6e14-4879-9400-5d04d415ff92
+```
+
+The current original issue body has 120 lines / 15,287 characters. Line L103 is:
+
+```text
+                        "Add typed, bounded HTTP DTOs and explicit routes in both Python compositions through shared application services.",
+```
+
+`requirement none` is the tool's explicit absence of a verified identity; I am not assigning this failure to an invented requirement ID, source file or Bugbot finding. The returned provider scope payload and numeric exceeded-clause count are not present in the retained console diagnostic, so the precise producer defect remains unverified.
+
+Independent application evidence on this exact head:
+
+- All eight project CI groups and aggregate **CI Check** pass: https://github.com/vypdev/domus/actions/runs/41286242861 ; aggregate check `124788646175`. This includes backend, Python tooling/architecture, Node policy, frontend and both container architectures.
+- Final complete backend: **2,853 passing tests**, all **7,456 statements / 2,098 branches** in all **102 authored files** covered. Exact authored-source/report inventory equality; no skipped tests, coverage configuration changes or new exclusions.
+- 110 new cases execute through actual native/standalone ASGI compositions and real SQLite, including causal positions, original-cycle queries, current management/read revocation, concurrent acceptance, atomic rollback, restoration and original schema-6 migration/activation.
+- Strict types pass for 106 files including tooling, 113 tooling/architecture fixtures pass, and all three inward/acyclic contracts pass (138 analyzed files / 857 dependencies). Both OpenAPI artifacts are additive relative to parent 7beb63c.
+- The unchanged byte-verified original SDK at `3e7ceea08e6131360e026937d1c0cc1b120472e0` passes SDD format, consistency and catalog checks, independently retaining original planned case rows. This is a separate gate from hosted progress scope. The task SDD is 69,853 UTF-16 units, under its unchanged 70,000-unit limit.
+- No `.copilot`, generated Copilot workflow/skill, template, Copilot repository or gateway content changed. The feature remains Draft/incomplete. No owner HA deployment, actual Inventory/Points delivery or full-product acceptance is claimed.
+- Draft review `124788096983` is neutral/skipped (`effort=smart`, 498ms); it is not complete full-context Bugbot acceptance. Domus remains subject to its complete-feature/current-head-CI/no-unresolved-full-review merge gates.
+
+Reproduction for maintainers: inspect the source-identified original push run/job above with the unchanged runtime revision, then trace scope production and validation for original line L103. Compare the complete-evidence summary with the rejected `$.lines` output before any assessment publication. Preserve source identities and existing acceptance limits; a fix should produce a valid bounded scope or actionable producer diagnostics, without truncating scope or publishing stale progress as a success. The previously reported assessment-text-limit family remains separately tracked in #829.
+
+
+### Additional observed instance: first household-entry model, 695e5c3
+
+Consumer [Domus PR #15](https://github.com/vypdev/domus/pull/15), head 695e5c31a466b8a42c8840c46f708141979b35e4, original [Commit run 41294982587 / job 124813820543](https://github.com/vypdev/domus/actions/runs/41294982587/job/124813820543). The hosted log resolves vypdev/copilot@v3 to unchanged 3e7ceea08e6131360e026937d1c0cc1b120472e0 and admits codex-cli 0.166.0.
+
+At 2026-11-01T09:53:27.5029594Z progress scope is rejected again: phase scope, reason scope-clause-limit, field $.lines, requirement none, original source line L115. Error reference 56263937-b3b4-45d5-b50c-e7c56ecb838b; separate Copilot Verification check 124814126171 fails. The preceding progress state remains retained. The raw returned scope/clauses are not logged, so no exact rejected clause list or requirement identity is claimed.
+
+Current original issue #8 line L115 is a display-preferences table row: `|Display|English and Spanish; English fallback; responsive, light/dark, reduced motion|Presentation preferences cannot grant access|`. That source was reread after the failure; it is supplied context, not the unavailable agent response. Preserve full requirements/clauses, source identity and safe bounds rather than discarding acceptance to make extraction pass.
+
+This source increment implements the first framework-free entry/setup decision model, not the complete UI. Forty actual Chromium tests pass with every one of 30 statements, 42 branches, four functions and 25 lines covered across the current runtime file. The independent whole-runtime inventory audit, strict types, 35 Node architecture/policy tests and 73 Python tooling/CI-contract tests pass locally. Hosted application-frontend, backend, Python tooling, architecture, documentation, Node and framework-fixture jobs in run 41295062246 pass; the two container jobs/aggregate were still running at this report's capture. Those states are distinct from the Copilot scope error. The PR is open for early review; full interface, current-head full Bugbot and first-release acceptance remain unproven.
+
+This is a new published source instance, not an unchanged-job retry. No Copilot source, resource, model, prompt, validation bound, installation/workflow or gateway was changed. We continue the product work and retain all 48 exact published entry case rows and all eight requirements.
+
+
+## Additional consumer occurrence: entry-controller source, original route row L93 (2026-11-01)
+
+The same scope-clause-limit contract failure recurred on a new, normally contributed consumer commit. This is a changed-source occurrence, not an unchanged recheck or a new Bugbot finding.
+
+- Consumer: https://github.com/vypdev/domus/pull/15, ready for review; issue https://github.com/vypdev/domus/issues/8.
+- Exact head: `59278ff19cc800bf80a55a91eece9dab52c16799` (parent `d01a69d5d272546f8008450c4ba9cf9500524fe8`). Native progress comparison uses develop base `a97294385798b31e98c200e7ed93e355ffc7c9a7` and the exact PR head.
+- Failure: https://github.com/vypdev/domus/actions/runs/41301559803/job/124833361308; published Copilot / Verification check `124833752609`.
+- Exact downloaded Action pin: `vypdev/copilot@v3` resolves to `3e7ceea08e6131360e026937d1c0cc1b120472e0`. Agent execution reports codex-cli `0.166.0`, configured findings role `codex/openai/gpt-6-luna`.
+- At 11:23:30 UTC the scope response was rejected: `scope-clause-limit; field $.lines; requirement none; source L93`. Published error: `agent.failed`, phase `scope`, reference `cf498d1e-6192-4cc1-897f-0cdbefa37e74`, retryable yes. Existing progress labels/assessments were retained. There is no verified requirement identity; do not invent one from `none`.
+
+Exact original source L93, read back from the issue after the failure:
+
+```text
+|`GET /api/v1/operations/{operation_id}`|Original own receipt plus actual pending/delivered/suppressed delivery, under current original-command authority|
+```
+
+This is an existing protocol-route table row describing scoped own-receipt and delivery reads. It is not a repository filename and the controller change did not rewrite the issue. Please investigate why a legitimate bounded route row yields a response exceeding the clause contract, preserving full source identity and the existing safety/verification limits. The raw rejected scope JSON and actual generated clause count are absent from the consumer log, so those details remain unproven rather than inferred.
+
+Independent evidence: all 210 real Chromium model/journal/storage/controller tests pass, including 67 Application scenarios; all 403 statements, 297 branches, 71 functions and 287 lines across five authored runtime modules have 100% coverage, independently audited against the filesystem inventory. Strict types, 35 Node policy/architecture tests, docs/Ruff and the byte-verified original SDD format/consistency/catalog checks pass, retaining all 48 prospective case rows. These are not completed HTTP/UI/owner acceptance: that work continues.
+
+Bugbot is separate: PR review job `124833372719` completed, but Copilot / Review `124833650476` is neutral/partial (historical fixed=1, no currently unresolved native thread). Its conversation coverage limitation is already tracked in #843. Neither this progress error nor zero findings under partial coverage proves full feature/review acceptance. Parent synchronization/PAT failure remains separately tracked in #844.
+
+No Copilot code, installed resources, workflows, limits or credentials were modified; no manual parent sync, force push or unchanged workflow retry was used. Continuing the strict HTTP/context and rendered-interface work instead of waiting for this upstream progress failure to be repaired.
+
+
+## Additional consumer occurrence: reconciled entry/task source, original observability line L151 (2026-11-01)
+
+The unchanged scope response contract failed again on a new legitimate merge/source, with a different original source line. Consumer [Domus PR #15](https://github.com/vypdev/domus/pull/15) is ready for review and mergeable. Head `ca55cdb56779573a0dd45b47b9546b74b4ffcc74` has exact parents `f05fc2d827d90344b468f48ae5e0f1015f0ea97e` and develop `a97294385798b31e98c200e7ed93e355ffc7c9a7`. The prior source f05fc2d's Copilot / Verification check passed; this is a changed-source occurrence, with no unchanged workflow retry.
+
+- Failure: https://github.com/vypdev/domus/actions/runs/41304104039/job/124840866102; Copilot / Verification check `124841230150`.
+- Runtime pin: downloaded `vypdev/copilot@v3` resolves to `3e7ceea08e6131360e026937d1c0cc1b120472e0`.
+- Native progress comparison explicitly pins PR head ca55cdb and develop base a972943.
+- At 11:58:08 UTC, progress scope rejected `scope-clause-limit; field $.lines; requirement none; source L151`. Published `agent.failed`, phase scope, reference `c7dd3b89-b137-4e0f-b8be-99b32193a393`, retryable yes. Existing progress labels/assessments retained; `none` provides no verified requirement identity.
+
+Exact original issue line L151, independently read back after the failure:
+
+```text
+Safe status/channel/freshness and useful validated operation/correlation references only. No journal/credential/private Ingress/household diagnostic leakage. Retain source/runtime/browser identity, commands/assertions/counts/screenshots/cleanup; source/build/fixture/package/owner claims stay separate.
+```
+
+This is the original observability/privacy/evidence boundary, not a request to leak private context or bypass verification. The consumer log exposes neither the rejected scope JSON nor generated clause count; their exact contents/cause remain unproven. Please preserve source provenance and investigate why the supported issue scope cannot satisfy the bounded scope response contract. No clause/text limit or verification policy was relaxed, and no human source history was removed.
+
+Independent current-head project CI Check `124841557935` is green, including both container architectures. Locally integrated source passes 2,932 backend tests with 7,672 statements/2,162 branches100% over105 modules,147 tooling tests with214 statements/98 branches100%,210 actual Chromium cases with all four metrics100% on five frontend runtime modules,35 Node policy cases, strict types/architecture/Ruff/docs and original SDK48-row format/consistency/catalog verification. The backend proof includes33 actual context/HTTP/SQLite scenarios and integrated task-route assertions. Frontend HTTP/rendering/owner acceptance remains incomplete; these counts are not complete product acceptance.
+
+Separate review on this head: job `124840877006` / Copilot / Review `124841188421` completed6/6 code partitions over39 files with zero new candidate/published findings and fixed=1 historical finding. Human conversation coverage remains partial (9 fetched,4 retained,5 omitted,0 truncated,limit reached) under#843; no full-context clean acceptance is inferred. Parent recovery from the separate Action/PAT failure#844 is recorded at https://github.com/vypdev/copilot/issues/844#issuecomment-6557615006 and does not repair this scope failure.
+
+No Copilot code/resources/workflows/credentials or gateway changed. Source work continues under the maintained branch, with the original failure/report history preserved.
+
+
+## Additional consumer occurrence: strict entry HTTP adapter, original receipt-contract line L97 (2026-11-01)
+
+A new ordinary contributor push to the same Action-managed ref reproduces this scope-admission failure at a different original source line. Consumer [Domus PR #15](https://github.com/vypdev/domus/pull/15) remains ready for review, exact head `e51556f1ec571b1d25111051a0bb22aa0947995e`, parent `ca55cdb56779573a0dd45b47b9546b74b4ffcc74`, exact develop base `a97294385798b31e98c200e7ed93e355ffc7c9a7`. This is changed product source, not an unchanged retry.
+
+- Original commit run [41308553314](https://github.com/vypdev/domus/actions/runs/41308553314), attempt 1, failed job `124853928446`; Copilot / Verification check `124854299109`.
+- At 12:54:19 UTC the actual published error is `agent.failed`, phase `scope`, reason `scope-clause-limit`, field `$.lines`, requirement `none`, original issue source `L97`. Reference `4270827b-4e8d-4ea9-85a2-1eecb84a89ed`, retryable yes. Existing progress labels and assessments are retained. No verified requirement identity can be inferred from `none`.
+- Exact original issue body was independently fetched after the failure. L97 is:
+
+> Receipt fields: committed/historical state, archived_by, operation_id, original result, UTC epoch-millisecond created_at, message/action_required. Historical effect is absent; receipts never assert current membership. Identical payload/key recovers the original receipt before stale-revision rejection; changed payload or a stale new write conflicts. Refresh actual state after results. Blocked errors contain code/message/action_required/correlation_id. Distinguish 401,403,409,422,503 from uncertain 500/timeout/transport loss. Preserve the original command; no automatic retry, rebase or new key. Never render raw errors. Console approval has no HTTP endpoint.
+
+This is the actual receipt/idempotency/error-handling protocol, not a filename or a request to bypass safety limits. The consumer log does not expose rejected scope JSON or generated clause count; those details and their cause remain unknown. Please investigate upstream while preserving exact issue/source identity, clause bounds and verification policy.
+
+The new concrete adapter independently passes 379 Chromium cases with all 696 statements, 482 branches, 120 functions and 497 lines covered across every one of seven runtime modules; 37 Node policy/graph cases and two actual guarded native/standalone provider corpus tests pass. Current-head hosted Frontend application job `124853938288` also passes all 379 tests and its independent source-inventory/four-metric audit. The whole-project hosted run was still in progress at this report observation, so no aggregate/backend result is inferred.
+
+Separate actual review job `124853938719` (run `41308556484`), check `124854415280`, completes 8/8 code partitions over 45 files. Telemetry: zero new candidate/published findings; open=0, reopened=0, fixed=1, verification-required=0, unknown=0. Human conversation remains explicitly partial: nine fetched, four retained, five omitted, zero truncated, limitReached=true; this is followed under #843. It is not full-context clean acceptance.
+
+Original complete progress/review/frontend job logs, issue body and pinned local measurements are retained in the consumer HTTP-adapter checkpoint. Copilot resource/configuration/credential/workflow/limit, original case rows, source history and owner HA remain untouched. No unchanged retry or permissive workaround was used. The unrelated natural-language Unicode designation false positive is reported separately in #845; consumer prose spelling resolves that document validation without repairing this progress failure.
+
+--- End original body ---

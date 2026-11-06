@@ -8,6 +8,7 @@ import { getValidatedAgentConfiguration } from '../agent_configuration_policy';
 
 import type { AgentConfiguration } from '../../../application/ports/agent_configuration_ports';
 import type { AgentCapability } from '../../../domain/agent';
+import type { AgentSourceSnapshot } from '../../../domain/agent_source_snapshot';
 import type { AgentCliPort } from '../../../infrastructure/agents/ports/agent_provider_ports';
 
 export interface AgentCapabilityInfrastructure {
@@ -27,6 +28,8 @@ export abstract class AgentCapabilityAdapter {
         capability: AgentCapability;
         mapCliOutput: (output: string) => T;
         outputSchema?: Record<string, unknown>;
+        sourceSnapshot?: AgentSourceSnapshot;
+        signal?: AbortSignal;
     }): Promise<T | undefined> {
         const taskConfiguration = getValidatedAgentConfiguration(request.configuration, request.capability);
         let output: string;
@@ -36,7 +39,9 @@ export abstract class AgentCapabilityAdapter {
             prompt: applyAgentEffortInstruction(request.prompt, taskConfiguration.effort),
             timeoutMs: AGENT_REQUEST_TIMEOUT_MS,
             capability: request.capability,
+            ...(request.signal ? { signal: request.signal } : {}),
             ...(request.outputSchema ? { outputSchema: request.outputSchema } : {}),
+            ...(request.sourceSnapshot ? { sourceSnapshot: request.sourceSnapshot } : {}),
             });
         } catch (error) {
             if (!(error instanceof AgentCliError)) throw error;

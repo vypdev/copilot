@@ -1,3 +1,4 @@
+import type { BugbotReviewSourcePort } from '../../application/ports/bugbot_review_source_ports';
 import type { BugbotScmPorts } from '../../application/ports/bugbot_scm_ports';
 import type { BugbotRuleFileQueryPort } from '../../application/ports/bugbot_rule_ports';
 import type { BugbotIssueRepository } from '../../data/repository/issue/bugbot_issue_repository';
@@ -27,11 +28,14 @@ export class BugbotScmPortFactory {
     private readonly reviewThreads: PullRequestReviewThreadRepository,
     private readonly rules: BugbotRuleFileQueryPort,
     private readonly navigation: GithubBugbotReviewNavigationAdapter,
+    private readonly reviewSource?: BugbotReviewSourcePort,
   ) {}
 
   bind(binding: BugbotScmBinding): BugbotScmPorts {
     const { owner, repository, token } = binding;
     const context = {
+      getSourceBoundPullRequest: (pullRequestNumber: number) =>
+        this.lifecycle.getBugbotSourceBoundPullRequestIdentity(owner, repository, pullRequestNumber, token),
       getPullRequest: (pullRequestNumber: number) =>
         this.lifecycle.getBugbotPullRequestIdentity(owner, repository, pullRequestNumber, token),
       findOpenPullRequestsByExactHead: (headOwner: string, headRef: string) =>
@@ -63,12 +67,13 @@ export class BugbotScmPortFactory {
         );
         return { value: result.states, coverage: result.coverage };
       },
-      getReviewDiffSnapshot: async (pullRequestNumber: number) => {
+      getReviewDiffSnapshot: async (pullRequestNumber: number, expectedHeadSha?: string) => {
         const result = await this.changes.getBoundedBugbotReviewDiffSnapshot(
           owner,
           repository,
           pullRequestNumber,
           token,
+          expectedHeadSha,
         );
         return { value: result.snapshot, coverage: result.coverage };
       },
@@ -134,6 +139,7 @@ export class BugbotScmPortFactory {
     };
 
     return {
+      ...(this.reviewSource ? { reviewSource: this.reviewSource } : {}),
       context,
       publication: { issueComments, pullRequestComments },
       resolution: { issueComments, pullRequestComments },

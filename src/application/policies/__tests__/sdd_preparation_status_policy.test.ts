@@ -7,6 +7,10 @@ import { renderSddPreparationFailure, renderSddPreparationRecovered, sddWorkflow
 import { ENGLISH_SDD_PREPARATION_CATALOG, SDD_PREPARATION_CATALOGS, SDD_PREPARATION_MESSAGE_IDS, resolveSddPreparationCatalog, resolveStaticSddPreparationCatalog } from '../sdd_preparation_message_catalog';
 import { validateCatalogDefinition } from '../../../domain/message_catalog';
 import { ResolveMessageCatalogUseCase } from '../../usecases/localization/resolve_message_catalog_use_case';
+import { validateSddDraftConsistency } from '../../../domain/sdd_draft_consistency';
+import { SddDraftFormatFailure } from '../../../domain/pre_branch_sdd';
+import { sddCaseReferenceFixture } from '../../../testing/sdd_consistency_fixture';
+import { sddReferenceFixture } from '../../../testing/sdd_reference_fixture';
 
 const configuration = { provider: 'codex' as const, model: 'model' };
 const run = { serverOrigin: 'https://github.example.test', owner: 'acme', repository: 'repo', runId: '123' };
@@ -15,6 +19,27 @@ const diagnostic = (): SddValidationDiagnostic => ({ reason: 'requirement-mappin
 const failure = () => new SddDraftPreparationFailure(diagnostic(), 2);
 
 describe('safe SDD blocked/recovered presentation', () => {
+  it.each(['en-US', 'es-ES'].flatMap(locale => [
+    { locale, notation: '`frontend/PRIVATE.ts`', detail: 'path-inline-reference' },
+    { locale, notation: '[Private](../frontend/PRIVATE.ts)', detail: 'path-link-reference' },
+  ]))('renders a private-safe $detail occurrence in $locale from real validator evidence', ({ locale, notation, detail }) => {
+    let evidence: SddValidationDiagnostic | undefined;
+    try {
+      validateSddDraftConsistency(sddReferenceFixture(notation), [], {
+        files: new Set(['README.md']), directories: new Set(['specs', 'frontend']), blocked: new Set(),
+      }, 'specs/reference-control.md');
+    } catch (error) {
+      expect(error).toBeInstanceOf(SddDraftFormatFailure);
+      evidence = (error as SddDraftFormatFailure).diagnostic;
+    }
+    expect(evidence?.facts).toContainEqual({ detail, section: 0, row: 1 });
+    const body = renderSddPreparationFailure({ issueNumber: 42, locale, error: new SddDraftPreparationFailure(evidence!, 2), diagnostic: evidence, attempts: 2 });
+    expect(body).toContain(locale === 'es-ES' ? 'Aparición de referencia visible: 1' : 'Visible reference occurrence: 1');
+    expect(body).toContain(locale === 'es-ES' ? 'La referencia no está en el inventario inmutable' : 'The reference is absent from the immutable inventory');
+    expect(body).toContain('copilot:sdd-analysis-status:v1');
+    expect(body).not.toMatch(/PRIVATE|frontend|Section: 0|Sección: 0/u);
+  });
+
   it.each([...SDD_DRAFT_FORMAT_REASONS, 'size'] as const)('shows %s with bounded repair evidence and preserved state', reason => {
     const evidence = { ...diagnostic(), reason };
     const error = new SddDraftPreparationFailure(evidence, 2);
@@ -83,7 +108,9 @@ describe('safe SDD blocked/recovered presentation', () => {
     expect(() => renderSddPreparationFailure({ issueNumber: 42, error: failure(), diagnostic: { ...diagnostic(), raw: 'PRIVATE' } as never })).toThrow();
     expect(() => renderSddPreparationFailure({ issueNumber: 42, error: failure(), attempts: 3 as never })).toThrow();
     expect(() => new SddDraftPreparationFailure(diagnostic(), 3 as never)).toThrow();
-    expect(() => new SddDraftPreparationFailure(diagnostic(), 1)).toThrow();
+    const rejectedBeforeRepair = new SddDraftPreparationFailure(diagnostic(), 1);
+    expect(rejectedBeforeRepair.attempts).toBe(1);
+    expect(rejectedBeforeRepair.message).not.toContain('after one bounded repair');
     expect(JSON.stringify(failure())).not.toMatch(/PRIVATE|markdown|prompt/u);
     expect(new SddDraftPreparationFailure({ reason: 'response-shape', phase: 'response',
       facts: [{ detail: 'response-shape', section: 0 }] }, 1).recovery).toBeUndefined();
@@ -219,5 +246,23 @@ describe('missing trusted catalog presentation (#808)', () => {
     const body = renderSddPreparationFailure({ issueNumber: 42, error, missingCatalogSource: 'a'.repeat(40) });
     expect(body).not.toContain('PRIVATE');
     expect(body).toContain('a'.repeat(40));
+  });
+});
+
+
+describe('Real shorthand recovery remains separate from technical prose', () => {
+  it.each([{id:'sdd-case-ref-C39',locale:'en-US'},{id:'sdd-case-ref-C40',locale:'es-ES'}])('$id renders safe $locale recovery for a genuine reference violation', ({locale}) => {
+    let evidence: SddValidationDiagnostic | undefined;
+    try { validateSddDraftConsistency(sddCaseReferenceFixture('Cases C01 and C02 establish acceptance. PRIVATE_PROSE'), [], {
+      files: new Set(['docs/payments.mdx']), directories: new Set(['docs']), blocked: new Set(),
+    }, 'specs/change.md'); } catch (error) {
+      expect(error).toBeInstanceOf(SddDraftFormatFailure); evidence=(error as SddDraftFormatFailure).diagnostic;
+    }
+    expect(evidence).toMatchObject({ reason:'case-identity', phase:'validation', facts:[{ detail:'case-shorthand', expected:0, observed:2 }] });
+    const body=renderSddPreparationFailure({ issueNumber:42, locale, error:new SddDraftPreparationFailure(evidence!,2), diagnostic:evidence, attempts:2 });
+    expect(body).toContain(locale==='es-ES'?'Hay referencias abreviadas a casos':'Unqualified shorthand case references are present');
+    expect(body).toContain(locale==='es-ES'?'Cantidad observada: 2':'Observed count: 2');
+    expect(body).toContain(locale==='es-ES'?'Se conservan las respuestas':'Existing answers and published specifications are retained');
+    expect(body).not.toMatch(/PRIVATE_PROSE|entry-prose|Cases C01/);
   });
 });

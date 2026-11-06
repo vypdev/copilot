@@ -2,15 +2,175 @@
 
 - Status: As-built baseline
 - Date: 2026-09-11
-- Last updated: 2026-10-30
+- Last updated: 2026-11-04
 - Catalog capability ID: `bugbot-analysis-and-autofix`
-- Last verified: 2026-10-30; versioned Ktor routing-root regression #809, active Kotlin Json policy #807, indirect unittest discovery regression #806, generated-source coordinate evidence #796, dependency-generated request/assertion evidence #784, renderer-grounded Markdown links #772, host-aware self-repository Action references #770, Kotlin/Wasm binding guidance #764, resolved-type grounding #736, delegated test-path evidence #738, versioned Action input contracts #739 and exact validation witnesses #749 alongside the dated package/framework evidence in #720, #721 and #722
+- Last verified: 2026-11-04; JSON value/reader grounding #855; fixture-value grounding #834; recovery-contract grounding #832; Python exception grammar regression #831; versioned Ktor routing-root regression #809, active Kotlin Json policy #807, indirect unittest discovery regression #806, generated-source coordinate evidence #796, dependency-generated request/assertion evidence #784, renderer-grounded Markdown links #772, host-aware self-repository Action references #770, Kotlin/Wasm binding guidance #764, resolved-type grounding #736, delegated test-path evidence #738, versioned Action input contracts #739 and exact validation witnesses #749 alongside the dated package/framework evidence in #720, #721 and #722
 - Owners: Copilot maintainers
 - Scope: bounded change analysis, finding identity/publication, authorized autofix, and independent verification
 - Related issues/PRs: Bugbot review-state reconciliation SDD; architecture
   quality and scalability hardening SDD
 - Required review gates: product UX, architecture, testing, documentation, security/operations
 - Open decisions blocking readiness: none for the baseline
+
+### JSON value and reader-contract grounding — #855 (2026-11-04)
+
+The [JSON value companion](./bugbot-json-value-grounding.md) owns tracing actual
+producer/decoder/transform/reader values before alleging extra encoding or
+proposing a cast. Twelve source-bound controls and 22 deterministic regressions
+contrast working codecs with real JSON boundary failures. Original primitive,
+reporter product tests, authored runtime probes and model measurements remain
+separate evidence. One shared pure rule reaches ordinary/framed review, existing
+Python candidate verification and the benchmark; identity, bounds, historical
+state, permissions and approval controls remain unchanged.
+
+### Complete statements and asynchronous ordering — #848 (2026-11-03)
+
+The [statement-order companion](./bugbot-async-statement-evidence.md) owns reading
+semicolon-separated awaits, actual receiver/cycle/helper ownership and reached
+lifecycle writes before claiming missing synchronization. Its twelve independently
+executed Lit controls and 18 deterministic SDK regressions preserve real unfinished
+update defects and separate private verdicts from observed facts. Ordinary/framed
+source review and the benchmark share guidance; existing Python verifier activation,
+traffic, publication, history and authorization remain unchanged. Qualification
+retains every fixed-input baseline/candidate sample and its actual limitations.
+
+### Fixture-value grounding — #834 (2026-11-03)
+
+The [fixture-value companion](./bugbot-fixture-value-grounding.md) owns tracing
+helper defaults/overrides, database-file parents and actual SQL result values
+before judging test assertions. Its twelve frozen source cases, 51 deterministic
+regressions and separately recorded native/model evidence preserve genuine wrong
+assertions while keeping private verdicts outside model input. Fragment origins
+remain independent of separately supplied helper context. Existing architecture,
+publication, trust, bounded adjudication and history controls remain applicable.
+The verifier's existing schema constrains original file/known snippet values;
+the unchanged per-ID guard still rejects swapped identities and preserves precise
+anchor enrichment when an original snippet was absent.
+
+### Recovery-contract grounding — #832 (2026-11-03)
+
+The [recovery-contract companion](./bugbot-recovery-contract-grounding.md) owns
+retention/no-overwrite, safely owned disposable staging, changed ownership and
+after-publication failure requirements. Its ten frozen controls, 56 deterministic
+regressions and separately recorded native/model evidence preserve real cleanup
+and data-loss findings. Existing publication, historical resolution, trust,
+coverage and approval contracts below remain applicable.
+
+### Python exception grammar correction — #831 (2026-11-02)
+
+This bounded amendment applies the baseline architecture, publication, security,
+recovery and documentation contracts below. The original report and its added
+Domus PR #14 report both misclassify a Python 3.14 exception list as a collection
+or startup SyntaxError. The latter review completed every partition and context
+source; missing context alone does not explain the wrong language rule. Those
+consumer parser/import/CI results are reporter evidence, not executions performed
+by this implementation. Do not rewrite valid consumer handlers to hide a review
+defect. Earlier SDK releases and the current branch are separate measurements.
+
+**Intentional contract, syntax-R01:** ordinary, partitioned and framed review with assigned/canonical Python files,
+the real-agent benchmark, and independent generated-source candidate verification
+MUST use supported interpreter grammar. Python 3.14 / PEP 758 accepts an
+unparenthesized multiple-exception list without `as`, for both `except` and
+`except*`; parentheses remain required for a multiple-exception expression with
+`as`. The semantics do not revert to Python 2 capture behavior. Preserve a proved
+failure on any actually supported older interpreter, a missing binding or another
+independent exception-handling defect. Parsing-only failures follow the existing
+medium-severity reliability contract; do not confuse them with a runtime handling
+fault. A successful 3.14 parse cannot certify a
+declared 3.13 compatibility target.
+
+**Evidence, syntax-R02:** inspect effective root/nearest project requirements,
+version pins and applicable CI matrix; Ruff's target is corroboration, not the
+supported runtime range. Reconcile exact-source, same-head parser/collection
+evidence and contrary observations with their actual interpreter. Different-head,
+cached, skipped or unrelated green jobs do not disprove a fault. Parsing proves
+neither import success nor runtime behavior. Unknown versions cannot justify a
+universal Python 3 SyntaxError claim; omit that unsupported premise while
+retaining supported independent findings. Never invent tools, runs or results.
+
+```text
+changed clause -> effective supported versions -> version-matched grammar
+ -> applicable source/execution counterevidence -> proved finding or omission
+```
+
+Text equivalent: identify the clause and actual compatibility contract before
+evaluating evidence; publish only a supported causal defect. The existing review
+completeness and approval gates still apply independently of the verdict.
+
+**Architecture/configuration, syntax-R03:** one shared pure instruction is used
+by actual review with a retained canonical or assigned `.py` path, the benchmark
+and the independent verifier. Non-Python and unknown-file legacy scopes keep
+the generic source/version grounding; no language is inferred from prose. No parser, range
+interpreter, process executor, repository scan, semantic port or persistent state
+is added to production. No automatic regex suppression, new language dependency,
+permission, config/override, public schema, retry or threshold change is allowed.
+The verifier retains its existing trigger, identity/batching/size checks and
+historical-state separation; this amendment does not claim every Python handler
+receives a second query. The existing 15,000-character compatibility prompt test,
+source-bound framing receipts, locale and untrusted-input boundaries stay in force.
+
+**UX/operations, syntax-R04:** existing pending/complete/partial/failed review
+cards remain authoritative. Example pending: “Reviewing changed code — no action
+required.” Complete safe case: no inline syntax finding; completion does not mean
+other quality gates passed. A supported older-runtime defect is anchored to the
+changed clause, e.g. “This handler cannot parse on the supported Python 3.13
+target,” with concrete version evidence and a practical fix. Partial context
+remains partial, failed verification remains failed; do not turn omission into a
+clean review or resolve a historical thread without the normal explicit process.
+Existing accessible text, locales, sanitization, durable markers and comment
+budgets need no new surface. Inspect the existing review/run links and recheck
+after upgrading the SDK; rollback reverts instruction/tests/docs together without
+rewriting review history. Merge to develop alone does not update consumer runtime.
+
+Reserve **32 distinct deterministic cases before changing production guidance**:
+
+| Area | Minimum cases | Risk/observable result |
+|---|---:|---|
+| Frozen corpus inventory | 1 | Twelve inputs, six real defects and six safe/unknown cases |
+| Scorer counter-controls | 12 | Penalize false syntax claims and missed actual defects with unchanged floors |
+| Exact inputs/anchors | 12 | Runtime/evidence retained; true defects anchor the actual changed clause |
+| Real delivery | 5 | Ordinary, resolution owner/non-owner, benchmark and independent verifier retain guidance |
+| Label privacy | 1 | Expected verdict and suggested replacement cannot leak into model input |
+| Prior corpus preservation | 1 | All prior inputs/references preserved as decoded data |
+| **Total** | **32** | Each test counted once; native/model observations are separate |
+
+Optional fixed owned probes MUST distinguish 18 actual native parser observations
+(nine each under CPython 3.13 and 3.14) from separately authored 3.14 ordinary,
+group, capture and missing-binding runtime checks. They never execute corpus or
+consumer source, read no external input and introduce no mandatory Python CI
+requirement. Freeze the 12 synthetic inputs/verdicts before measuring current
+baseline and candidate with identical model/runtime/effort and unchanged scorer
+floors. Record all samples and failures; neither a passing baseline nor deterministic
+schema/prompt tests establish historical reproduction or statistical improvement.
+
+Acceptance: the two/three-type and group clauses are not condemned merely for
+missing parentheses on 3.14; invalid `as` clauses and genuinely supported older
+targets remain reportable; stale evidence, unknown requirements and parser-only
+proof cannot be inflated. Update detection/observability documentation, catalog
+evidence and generated index with the implementation. Require fully hit modified
+runtime lines, existing global/module coverage, build/types/lint, specs/docs/workflow
+checks, Graphify, exact-head CI/platform verification, complete review without
+findings and official Codecov with zero missed/partial modified lines against the
+actual base. Manual browser/VoiceOver work is inapplicable to this backend prompt
+change. No readiness decision is left open for the contract; measured candidate
+quality and all implementation gates remain to be established.
+
+Campaign provenance: the first authored expectations incorrectly labeled five
+parsing-only failures as correctness. Preserve that entire initial input and
+both failing samples. A separately frozen taxonomy correction changes only those
+five expected categories to reliability, as already required by the product;
+source, causal verdicts, anchors, severity and thresholds remain unchanged. Fresh
+paired samples are required after that recorded correction. The first candidate
+then gets every causal verdict right but fails three category matches; retain
+and reject that candidate as final. Clarify the existing parsing-only category
+in the shared instruction and measure that distinct candidate against the same
+corrected frozen inputs. Never relabel a measured prediction to hide a failure.
+The final distinct candidate passes all twelve cases and every unchanged score
+floor: precision/recall/F1/location/severity/category 1.0, zero false positives
+or negatives. This is bounded campaign evidence, not a statistical guarantee.
+
+Primary sources: [PEP 758](https://peps.python.org/pep-0758/) and
+[Python 3.14 language changes](https://docs.python.org/3.14/whatsnew/3.14.html#pep-758-allow-except-and-except-expressions-without-brackets).
 
 ## 1. Executive summary
 
@@ -70,7 +230,7 @@ comments can also disagree after partial mutations.
 - Known debt and limitations: model quality is probabilistic; provider APIs can
   make surfaces temporarily unverifiable; comment update budget limits how many
   historical blocks are refreshed per run; non-diff/provider caps can intentionally
-  produce a partial review; plans above 64 partitions require PR splitting;
+  produce a partial review; ordinary plans stop at 64 partitions; eligible larger diffs use the source-bound framed companion;
   controlled live quality evidence is external.
 - Unknown rationale: earlier prompt wording is not treated as a permanent public contract.
 - Implemented hardening: canonical single-PR selection, bounded provider reads,
@@ -191,7 +351,7 @@ the existing mutation, authorization and freshness contracts remain in force.
 - Diff prompt overflow creates lossless partitions. An agent-call or response-
   validation failure may be retried twice for that same partition only; a
   missing/invalid partition after this fixed bound aborts the whole aggregate
-  before mutation. A plan over 64 partitions does not start.
+  before mutation. An ordinary plan over 64 partitions selects the source-bound framed companion when all of its independent proof and capacity bounds fit; unsupported workloads remain blocked.
 - A superseded independent post-autofix review permits exactly one fresh
   read-only review attempt (at most two complete review attempts). Failed,
   unexecuted, partial or malformed evidence does not activate that retry.
@@ -229,8 +389,8 @@ transitions are ordered marker-first and repaired by replay.
 Confidence floor, schema validation, head guards, path safety, marker ownership,
 publication ordering, independent review, provider page limits/concurrency,
 lossless Unicode-safe fragmentation, prompt bounds (100 prior findings/48,000 characters, 50 logical conversation entries/
-24,000 rendered characters with 4,000-unit Unicode-safe payload fragments, 1,000 diff files, 12,000-character fragments, 64,000
-characters per partition, 64 partitions, and 2,000 aggregate candidates), retained-only
+24,000 rendered characters with 4,000-unit Unicode-safe payload fragments, 3,000 GitHub diff file records, 12,000-character fragments, 64,000
+characters per partition, 64 ordinary partitions or the separately bounded framed profile, and 2,000 aggregate candidates), retained-only
 resolution eligibility, and credential isolation are not configurable.
 The one-retry post-autofix bound is fixed and adds no user setting. Only the
 final attempt enters the returned canonical review evidence; the discarded
@@ -2371,3 +2531,33 @@ quality/observability, this owner and catalog/index together. Full normal hooks,
 package/build/types/lint, docs/specification/workflow checks, Graphify, exact-head
 CI, all three native cleanup footers and complete review with zero active
 findings remain merge requirements.
+
+### Complete source-bound framed review — #839 (2026-11-01)
+
+The companion [source-bound framed review](./bugbot-source-bound-framed-review.md)
+owns the closed large-diff protocol, immutable local source proof, live base-ref
+freshness, complete ordered receipts and finite invocation budgets. It extends
+ordinary analysis without changing its <=64 planner cap, public configuration,
+resolution eligibility, protected approval or single publication owner. Missing
+source, unsupported capacity or incomplete receipts are nonretryable completeness
+blocks, not clean or resumable partial reviews. The companion's 130-case inventory
+is additional to the 67 ordinary partition cases. Source/planner/application,
+adapter, presentation and integration tests plus current-head remote evidence
+are required before merge; independent application coverage is never proof that
+a live model reviewed every historical H3 file.
+
+### Resource classification and authority evidence — #847 (2026-11-03)
+
+The [resource/authority companion](./bugbot-resource-authority-evidence.md) requires
+verified content/effects and separate source-binding and human-proof reasoning.
+Nonpersonal entry availability does not authorize personal APIs or waive source
+access controls. The ordinary/framed prompt, benchmark and existing Python
+candidate verifier share one pure instruction; identity, history, finite source/
+traffic limits, freshness and publication remain unchanged. Its 18 distinct cases
+include 12 resource/scorer controls and six composition/identity contracts; native
+and model repetitions are separate evidence, not additional unique tests.
+
+The scoped corpus keeps the existing 174-case corpus and its references unchanged,
+with the 200-case per-invocation bound intact. The evidence retains actual baseline
+and candidate samples, failed gates and authored fixture corrections. Historical
+consumer root cause and release adoption remain separate claims.

@@ -360,6 +360,220 @@
         "confidence": 1
       }
     ],
-    "ktor-routing-unavailable-implementation": []
+    "ktor-routing-unavailable-implementation": [],
+    "py-pep758-314-two": [],
+    "py-pep758-314-three": [],
+    "py-pep758-314-group": [],
+    "py-pep758-314-parenthesized-as": [],
+    "py-pep758-313-list": [
+      {
+        "id": "py-pep758-313-list",
+        "title": "The changed exception handler fails under a supported execution path",
+        "file": "backend/owned_handlers.py",
+        "line": 4,
+        "severity": "medium",
+        "category": "reliability",
+        "codeSnippet": "    except ValueError, TypeError:",
+        "confidence": 1
+      }
+    ],
+    "py-pep758-313-group": [
+      {
+        "id": "py-pep758-313-group",
+        "title": "The changed exception handler fails under a supported execution path",
+        "file": "backend/owned_handlers.py",
+        "line": 4,
+        "severity": "medium",
+        "category": "reliability",
+        "codeSnippet": "    except* ValueError, TypeError:",
+        "confidence": 1
+      }
+    ],
+    "py-pep758-314-list-as": [
+      {
+        "id": "py-pep758-314-list-as",
+        "title": "The changed exception handler fails under a supported execution path",
+        "file": "backend/owned_handlers.py",
+        "line": 4,
+        "severity": "medium",
+        "category": "reliability",
+        "codeSnippet": "    except ValueError, TypeError as error:",
+        "confidence": 1
+      }
+    ],
+    "py-pep758-314-group-as": [
+      {
+        "id": "py-pep758-314-group-as",
+        "title": "The changed exception handler fails under a supported execution path",
+        "file": "backend/owned_handlers.py",
+        "line": 4,
+        "severity": "medium",
+        "category": "reliability",
+        "codeSnippet": "    except* ValueError, TypeError as error:",
+        "confidence": 1
+      }
+    ],
+    "py-pep758-mixed-range": [
+      {
+        "id": "py-pep758-mixed-range",
+        "title": "The changed exception handler fails under a supported execution path",
+        "file": "backend/owned_handlers.py",
+        "line": 4,
+        "severity": "medium",
+        "category": "reliability",
+        "codeSnippet": "    except ValueError, TypeError:",
+        "confidence": 1
+      }
+    ],
+    "py-pep758-unknown-range": [],
+    "py-pep758-stale-parser": [],
+    "py-pep758-unbound-handler": [
+      {
+        "id": "py-pep758-unbound-handler",
+        "title": "The changed exception handler fails under a supported execution path",
+        "file": "backend/owned_handlers.py",
+        "line": 4,
+        "severity": "medium",
+        "category": "correctness",
+        "codeSnippet": "    except ValueError, MissingError:",
+        "confidence": 1
+      }
+    ],
+    "snapshot-recovery-explicit-retain": [],
+    "snapshot-recovery-disposable-retain": [
+      {
+        "id": "snapshot-recovery-disposable-retain",
+        "title": "The changed handler violates the selected recovery contract",
+        "file": "owned/snapshot_contract.py",
+        "line": 62,
+        "severity": "medium",
+        "category": "reliability",
+        "symbol": "retained_snapshot",
+        "codeSnippet": "        raise",
+        "confidence": 0.98
+      }
+    ],
+    "snapshot-recovery-disposable-clean": [],
+    "snapshot-recovery-published-report": [],
+    "snapshot-recovery-published-cleanup": [
+      {
+        "id": "snapshot-recovery-published-cleanup",
+        "title": "The changed handler violates the selected recovery contract",
+        "file": "owned/snapshot_contract.py",
+        "line": 84,
+        "severity": "high",
+        "category": "correctness",
+        "symbol": "published_snapshot_deleted",
+        "codeSnippet": "        shutil.rmtree(destination)",
+        "confidence": 0.98
+      }
+    ],
+    "snapshot-recovery-existing-destination": [
+      {
+        "id": "snapshot-recovery-existing-destination",
+        "title": "The changed handler violates the selected recovery contract",
+        "file": "owned/snapshot_contract.py",
+        "line": 90,
+        "severity": "high",
+        "category": "correctness",
+        "symbol": "overwrite_existing_snapshot",
+        "codeSnippet": "        shutil.rmtree(destination)",
+        "confidence": 0.98
+      }
+    ],
+    "snapshot-recovery-changed-ownership": [],
+    "snapshot-recovery-policy-unavailable": [],
+    "snapshot-recovery-incomplete-manifest": [],
+    "snapshot-recovery-completed-destination": [
+      {
+        "id": "snapshot-recovery-completed-destination",
+        "title": "The changed handler violates the selected recovery contract",
+        "file": "owned/snapshot_contract.py",
+        "line": 90,
+        "severity": "high",
+        "category": "correctness",
+        "symbol": "overwrite_existing_snapshot",
+        "codeSnippet": "        shutil.rmtree(destination)",
+        "confidence": 0.98
+      }
+    ],
+    "fixture-values-db-file-parent": [],
+    "fixture-values-db-file-peer": [
+      {
+        "title": "New assertion contradicts the actual fixture result",
+        "file": "owned/test_fixture_values.py",
+        "line": 89,
+        "severity": "medium",
+        "category": "correctness",
+        "symbol": "test_file_source_peer",
+        "codeSnippet": "assert rejected is False",
+        "confidence": 0.98
+      }
+    ],
+    "fixture-values-db-directory-peer": [],
+    "fixture-values-db-directory-child": [
+      {
+        "title": "New assertion contradicts the actual fixture result",
+        "file": "owned/test_fixture_values.py",
+        "line": 105,
+        "severity": "medium",
+        "category": "correctness",
+        "symbol": "test_directory_source_child",
+        "codeSnippet": "assert rejected is False",
+        "confidence": 0.98
+      }
+    ],
+    "fixture-values-ids-default-asc": [],
+    "fixture-values-ids-default-inverted": [
+      {
+        "title": "New assertion contradicts the actual fixture result",
+        "file": "owned/test_fixture_values.py",
+        "line": 128,
+        "severity": "medium",
+        "category": "correctness",
+        "symbol": "test_default_id_alternate_order",
+        "codeSnippet": "assert result == (a.request_id, b.request_id)",
+        "confidence": 0.98
+      }
+    ],
+    "fixture-values-ids-override-asc": [],
+    "fixture-values-ids-override-inverted": [
+      {
+        "title": "New assertion contradicts the actual fixture result",
+        "file": "owned/test_fixture_values.py",
+        "line": 150,
+        "severity": "medium",
+        "category": "correctness",
+        "symbol": "test_overridden_id_alternate_order",
+        "codeSnippet": "assert result == (b.request_id, a.request_id)",
+        "confidence": 0.98
+      }
+    ],
+    "fixture-values-ids-default-desc": [],
+    "fixture-values-ids-desc-inverted": [
+      {
+        "title": "New assertion contradicts the actual fixture result",
+        "file": "owned/test_fixture_values.py",
+        "line": 172,
+        "severity": "medium",
+        "category": "correctness",
+        "symbol": "test_descending_alternate_order",
+        "codeSnippet": "assert result == (b.request_id, a.request_id)",
+        "confidence": 0.98
+      }
+    ],
+    "fixture-values-ids-filtered": [],
+    "fixture-values-ids-unfiltered": [
+      {
+        "title": "New assertion contradicts the actual fixture result",
+        "file": "owned/test_fixture_values.py",
+        "line": 196,
+        "severity": "medium",
+        "category": "correctness",
+        "symbol": "test_pending_alternate_query",
+        "codeSnippet": "assert result == (active.request_id,)",
+        "confidence": 0.98
+      }
+    ]
   }
 }

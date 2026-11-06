@@ -1,0 +1,126 @@
+---
+title: Welcome, updates and recovery
+description: Resume local welcome, understand selected profiles and browser access, and use help when settings cannot be read.
+---
+
+# Welcome, updates and recovery
+
+Open **Welcome** from the control center. The saved step is shown at the top.
+Explore any step without changing the saved progress. **Review progress to next
+step** prepares a normal preference review; inspect it and confirm or cancel.
+Closing and reopening resumes the last committed step.
+
+```text
+Discover local settings → understand selected profiles → understand browser access
+ → review welcome completion → continue to overview
+```
+
+**Return to saved step** returns from an explored step without writing anything.
+At the last saved step, **Review welcome completion** records completion after
+confirmation. **Review welcome restart** offers the same review before returning
+saved progress to the first step. Canceling any review preserves the saved step.
+The overview also shows the saved progress and links back to Welcome.
+
+## Profiles and access stay separate
+
+The profile step shows your selected **local preference profiles**. It does not
+certify current GitHub account access or apply a scoped profile outside its
+verified context. Use **Manage profiles** for a separate reviewed selection.
+Keeping default preferences is supported; a selected profile is not required.
+
+The access step links to [Privacy](/browser-extension/permissions) to inspect
+browser-reported grants. Optional GitHub access belongs to **Connections**.
+Welcome requests no grant, reads no GitHub API and changes no profile. Completing
+it requires no account and does not certify feature readiness or product acceptance.
+
+Progress is a nonsecret personal preference in this browser, using the existing
+`welcome`, `profile`, `permissions`, `complete` values. There is no account-level
+progress record. Unsupported/corrupt settings remain preserved without editable
+default progress. Observer, revision, source and save guards remain the same as
+other [configuration changes](/browser-extension/configuration).
+
+## Help when settings cannot be read
+
+**Help**, **About** and **Recovery** load independently of readable preferences.
+Guides and local links remain usable while a background read is waiting. Opening
+these pages does not contact GitHub, grant permissions or change profiles.
+
+| State | Next action | Retained facts |
+|---|---|---|
+| Checking settings | Wait, or reopen if the native context does not respond | Support links work; no fresh settings are claimed |
+| Current read unavailable | Select **Read current settings** | Retained preferences are not a new observation |
+| Editing session expired | Read current settings to reconnect | No change is repeated |
+| Page/background build mismatch | Reload through the browser, then reopen options | Page identity does not certify the background |
+| Save uncertain | Read actual settings and inspect the retained result | A lost acknowledgment is not cancellation; do not repeat automatically |
+| Saved, then a later read fails | Keep the saved result and inspect current state | The later failure does not undo a saved change |
+| Settings from a newer extension | Install a compatible package, then reopen | Data is preserved rather than downgraded |
+| Unreadable settings | Keep the original and follow recovery guidance | No automatic reset or default replacement |
+| Migration blocked by storage | Resolve storage and read again to inspect or retry the supported migration | Original data is preserved; editing remains disabled |
+
+The read action is disabled during an active client operation. It rereads saved
+state; it does not repeat a mutation, repair data automatically, request an update
+or revoke credentials. Reading a supported legacy record can retry its existing
+safe migration. Reset and rollback keep separate reviewed flows in **Your data**.
+
+If a packaged support module itself fails to load, a fixed documentation link
+remains. Reopen options through the browser and use the
+[runtime guide](/browser-extension/runtime). Generic browser-page results and
+earlier H2 receipts do not prove this H3 build's native behavior.
+
+## Recover optional credential roles
+
+Use [Connections](/browser-extension/configuration#optional-github-roles) to
+inspect reading, issue-triage and Actions-purpose selections separately. A
+**Stored selection** needs fresh identity verification; it is not a current
+write grant. The optional operational controls remain unavailable in this
+development stage. Creating a role or selecting an identity never makes a
+GitHub change or substitutes for later operation-specific review.
+
+If a selection response is lost, the open review keeps its uncertain result
+even after reading current metadata. Inspect the native selection without
+automatically submitting it again. Closing or leaving a review does not undo
+previously requested or saved native effects.
+
+An unreadable session list can mean an unsupported native schema, lost protection
+or storage failure. Keep the record and reopen a compatible development build;
+the first optional-role mutation uses a purpose-aware session format. Do not
+expect an older build to downgrade it. Explicit **Forget all protected sessions**
+is a separate destructive local choice that preserves preferences and does not
+revoke tokens at GitHub. Unconfirmed native deletion stays unconfirmed; use the
+browser's disable controls and provider revocation when needed.
+
+## Identify a development installation
+
+**About** reads native package information once, independently of the background
+handshake. **Observed package version** comes from `runtime.getManifest()`.
+**Technical details** separates the bounded native name and manifest version
+from **this page's source tree SHA-256**.
+
+These facts do not identify the installed Action version, a Git commit, the
+background's source, store availability or product acceptance. Missing, malformed
+or failing native metadata stays unavailable. Unbundled pages have no verified
+source digest. No guessed version or remote lookup fills those gaps. Raw
+manifests, native errors, credentials and private evidence are not displayed.
+
+For support, share only the displayed nonsecret version/source facts needed for
+the problem. Do not attach credentials, raw storage, private repository evidence
+or an unreviewed preference backup.
+
+## Update safely
+
+The [project release history](https://github.com/vypdev/copilot/releases) includes
+Action and CLI releases. It does not establish an extension package, store
+listing or compatible update. Use your installation channel's compatible package
+and procedure; development builds follow the
+[contributor procedure](/development/browser-extension).
+
+1. Finish or inspect pending operations. Keep a safe preference backup if current
+   settings are readable.
+2. Update through the browser or documented development procedure. Preserve
+   stored data instead of erasing it to suppress an error.
+3. Reopen the center and read settings. Inspect profiles and access separately:
+   updates do not silently expand grants or select another profile.
+
+This flow adds no update polling, update/reload button, remote support upload or
+surprise welcome/update tab. Remaining product delivery gates stay visible in
+[feature availability](/browser-extension/features).

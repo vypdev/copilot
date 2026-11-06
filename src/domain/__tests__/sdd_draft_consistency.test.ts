@@ -1,5 +1,5 @@
-import { reservedSddCaseIds, validateSddDraftConsistency, type SddConsistencyReason } from '../sdd_draft_consistency';
-import { sddConsistencyFixture } from '../../testing/sdd_consistency_fixture';
+import { renderSddDerivedTables, reservedSddCaseIds, suppliedSddCaseIds, validateSuppliedSddCaseIds, validateSddDraftConsistency, type SddConsistencyReason } from '../sdd_draft_consistency';
+import { sddCaseReferenceFixture, sddConsistencyFixture } from '../../testing/sdd_consistency_fixture';
 
 const inventory = {
   files: new Set(['docs/payments.mdx', 'docs/my_guide.mdx', 'backend/app.kt']),
@@ -10,6 +10,58 @@ const owners = [{ path: 'specs/payments.md', markdown: 'payments-C01: Missing be
 const validate = (markdown: string) => validateSddDraftConsistency(markdown, owners, inventory, 'specs/change.md');
 
 describe('generated SDD consistency', () => {
+  it('retains explicit case definitions from request and answers, deduplicating them and excluding immutable owner identities', () => {
+    expect(suppliedSddCaseIds([
+      'payments-C01: Retained owning acceptance.\npayments-change-C01: Missing credentials return 401.\n- `payments-change-C02`: Valid credentials succeed.',
+      '1. **payments-change-C03**: Publishing preserves the principal.\npayments-change-C01: The same definition repeated.',
+    ], owners)).toEqual(['payments-change-C01', 'payments-change-C02', 'payments-change-C03']);
+  });
+
+  it.each([
+    'See payments-change-C01 for the retained baseline.',
+    '> payments-change-C01: Quoted example.',
+    '    payments-change-C01: Indented example.',
+    '\tpayments-change-C01: Indented example.',
+    '```md\npayments-change-C01: Fenced example.\n```',
+    '<!-- payments-change-C01: Hidden example. -->',
+    'C01: Short designator.\nHTTP-C1 component has a technical name.',
+    '| Case ID | Reference |\n|---|---|\n| payments-change-C01 | Retained baseline |',
+  ])('does not promote references or non-operative examples to new definitions: %s', input => {
+    expect(suppliedSddCaseIds([input], [])).toEqual([]);
+    expect(() => validateSuppliedSddCaseIds('No draft needs parsing when no definitions were supplied.', [])).not.toThrow();
+  });
+
+  it('reads operative Case ID tables with observable scenarios and preserves code-wrapped identities', () => {
+    const definitions = '| Case ID | Scenario |\n|:---|---:|\n| `payments-change-C01` | Missing credentials return 401. |\n'
+      + '| payments-change-C02 | Valid credentials succeed. |\n\npayments-change-C03: Publishing preserves the principal.';
+    const supplied = suppliedSddCaseIds([definitions, '| Case ID | Assertion |\n|---|---|\n| payments-change-C03 | Publishing preserves the principal. |'], []);
+    expect(supplied).toHaveLength(3);
+    const markdown = sddConsistencyFixture().replace('| payments-change-C01 |', '| `payments-change-C01` |');
+    expect(() => validateSuppliedSddCaseIds(markdown, supplied)).not.toThrow();
+  });
+
+  it('ignores malformed, empty and non-case table entries while reading subsequent real declarations', () => {
+    const definitions = '| Case ID | Assertion |\n|---|bad|\n| invalid-change-C01 | Invalid separator |\n\n'
+      + '| Case ID | Assertion |\n|---|---|\n| payments-change-C01 | Missing credentials return 401. |\n'
+      + '| payments-change-C02 | |\n| C03 | Short identity |\n| extra-change-C01 | Extra | column |\n\n'
+      + 'payments-change-C03: Publishing preserves the principal.';
+    expect(suppliedSddCaseIds([definitions, '| Case ID | Scenario |', '| Case ID | Scenario |\n|---|',
+      '| Case ID | Assertion |\n|---|---|'], [])).toEqual(['payments-change-C01', 'payments-change-C03']);
+  });
+
+  it('rejects renamed inventory aliases even when counts, assertions and prose references are retained', () => {
+    const supplied = ['payments-change-C01', 'payments-change-C02', 'payments-change-C03'];
+    const renamed = sddConsistencyFixture('renamed-change') + '\nReferences: ' + supplied.join(', ');
+    expect(() => validateSuppliedSddCaseIds(renamed, supplied)).toThrow(expect.objectContaining({ reason: 'case-identity',
+      diagnostic: { reason: 'case-identity', phase: 'validation', facts: [{ detail: 'case-identity', section: 14, expected: 3, observed: 0 }] } }));
+  });
+
+  it('reports only bounded counts for partial preservation without echoing supplied identifiers', () => {
+    expect(() => validateSuppliedSddCaseIds(sddConsistencyFixture(), ['payments-change-C01', 'private-refinement-C99']))
+      .toThrow(expect.objectContaining({ diagnostic: { reason: 'case-identity', phase: 'validation',
+        facts: [{ detail: 'case-identity', section: 14, expected: 2, observed: 1 }] } }));
+  });
+
   it('accepts complete tables with an independently scoped case namespace and exact reverse mappings', () => {
     expect(() => validate(sddConsistencyFixture())).not.toThrow();
   });
@@ -210,5 +262,46 @@ describe('generated SDD consistency', () => {
 
   it('blocks an unreconcilable owner range rather than truncating its reservation', () => {
     expect(() => reservedSddCaseIds([{ path: 'specs/legacy.md', markdown: 'identity-access-C01; C02–C99999.' }])).toThrow('review the baseline');
+  });
+});
+
+
+describe('Technical prose with literal48-case consistency', () => {
+  const original = 'Existing household DEL/C1 read compatibility remains separate from stronger new-setup input validation.';
+  it('sdd-case-ref-C25 accepts the reported fragment through the full consistency policy', () => {
+    const markdown = sddCaseReferenceFixture(original);
+    expect(markdown.match(/^\| entry-prose-C\d+ \|/gm)).toHaveLength(48);
+    expect(() => validate(markdown)).not.toThrow();
+  });
+  it('sdd-case-ref-C26 retains byte-identical case rows and reverse mappings across technical wording', () => {
+    const a = sddCaseReferenceFixture(original), b = sddCaseReferenceFixture(original.replace('DEL/C1', 'DEL and U+0080–U+009F'));
+    expect(a.match(/^\| entry-prose-C\d+ \|.*$/gm)).toEqual(b.match(/^\| entry-prose-C\d+ \|.*$/gm));
+    expect(a.split('## 17.')[1]).toBe(b.split('## 17.')[1]);
+    expect(() => validate(a)).not.toThrow(); expect(() => validate(b)).not.toThrow();
+  });
+  it.each([
+    ['sdd-case-ref-C27', 'case-identity', (s: string) => s.replace(/entry-prose-C01/gu, 'C01')],
+    ['sdd-case-ref-C28', 'case-identity', (s: string) => s.replace(/entry-prose-C01/gu, 'payments-C01')],
+    ['sdd-case-ref-C29', 'case-identity', (s: string) => s + '\nSee entry-unknown-C99.'],
+    ['sdd-case-ref-C30', 'case-identity', (s: string) => s.replace('| G-01 | entry-prose-C01, ', '| G-01 | C01, ')],
+    ['sdd-case-ref-C31', 'requirement-mapping', (s: string) => s.replace('| G-01 | entry-prose-C01, ', '| G-01 | ')],
+    ['sdd-case-ref-C32', 'case-budget', (s: string) => s.replace('| Total | 48 |', '| Total | 47 |')],
+  ])('%s retains its independent %s rejection', (_id, reason, mutate) => {
+    expect(() => validate(mutate(sddCaseReferenceFixture(original)))).toThrow(expect.objectContaining({ reason }));
+  });
+  it('sdd-case-ref-C33 retains legacy shorthand and range reservations unchanged', () => {
+    expect(reservedSddCaseIds([{ path: 'specs/legacy.md', markdown: 'retained-C01; C02–C05.' }]))
+      .toEqual(['retained-C01','retained-C02','retained-C03','retained-C04','retained-C05']);
+  });
+  it('sdd-case-ref-C34 independently revalidates derived tables without rewriting technical prose', () => {
+    const source = sddCaseReferenceFixture(original)
+      .replace(/\| Area \| Minimum distinct cases[\s\S]*?(?=\| Case ID)/u, '{{SDD_CASE_BUDGET}}\n\n')
+      .replace(/\| Requirement \| Cases \|[\s\S]*$/u, '{{SDD_REQUIREMENT_CASES}}\n');
+    const assembled = renderSddDerivedTables(source);
+    expect(assembled).toContain(original); expect(assembled.match(/^\| entry-prose-C\d+ \|/gm)).toHaveLength(48);
+    expect(() => validate(assembled)).not.toThrow();
+  });
+  it.each(['<!-- Case C01 -->', '```md\nCase C01\n```'])('retains the owner visibility projection for a negative example: %s', example => {
+    expect(() => validate(sddCaseReferenceFixture(original) + '\n' + example)).not.toThrow();
   });
 });

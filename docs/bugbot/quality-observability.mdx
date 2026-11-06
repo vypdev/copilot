@@ -5,7 +5,132 @@ description: Measure Bugbot accuracy, latency, outcomes, feedback, and regressio
 
 # Bugbot quality and observability
 
-Bugbot separates deterministic evaluator checks from optional, cost-bearing model benchmarks. The versioned corpus at `quality/bugbot/corpus.v1.json` contains 106 positive and negative synthetic cases across TypeScript/TSX, Python, Go, SQL, Java, Rust, YAML workflows, shell, Terraform, C#, Kotlin, and Markdown. Ground truth is never included in the model prompt.
+Bugbot separates deterministic evaluator checks from optional, cost-bearing model benchmarks. The versioned corpus at `quality/bugbot/corpus.v1.json` contains 174 positive and negative synthetic cases across TypeScript/TSX, Python, Go, SQL, Java, Rust, YAML workflows, shell, Terraform, C#, Kotlin, and Markdown. Ground truth is never included in the model prompt.
+
+## JSON value regression
+
+The separate `quality/bugbot/json-value-corpus.v1.json` group has twelve frozen
+Python controls: six working object/text/reader paths and six genuine failures.
+It includes an object-valued decode, nested outer decode, an actual text decoder,
+a legitimate identity cast after a type guard, Unicode nested values and distinct
+serialization levels. Counterexamples include casting an object into a text
+reader, real extra encoding, a raw object at the reader, Python representation
+used as JSON, a missing inner decode and a misleading return annotation.
+
+The fixed authored optional probe runs only its sibling module with stdlib-only
+Python. The recorded run uses Python 3.14.6. Repeat it with an available reviewed
+Python 3 interpreter; retain the actual version and output as a new observation:
+
+```bash
+python3 -I -B -S src/tooling/__tests__/fixtures/bugbot_json_value_runner.py
+```
+
+The runner imports no consumer source and never evaluates corpus strings.
+Mandatory Node CI binds exact LF probe/runner bytes, measured line origins and
+observations to the corpus, checks opposite-verdict scoring and prompt privacy,
+and verifies all existing delivery/query/history/size contracts. It introduces
+no Python dependency in the Action. Actual runtime observations, deterministic
+reference controls and real model predictions remain separate evidence.
+
+`quality/bugbot/evidence/issue-855.json` records qualification identities and every
+prospectively declared model trial. Three baseline and three trials per distinct
+candidate use identical inputs and unchanged default evaluator floors. Individual
+failures and aborts remain visible; the predefined aggregate namespaces every
+trial's cases instead of selecting a best run. These medium-effort authored-case
+measurements do not replay the reported smart-effort historical consumer review.
+The original primitive was separately exercised on four fictional payloads.
+Fresh execution of the exact original head with its immutable lock and Python
+3.14.6 also passes the six requested consumer regressions. All four complete-codec
+variants round-trip unchanged; the reported expression replacement in memory
+makes all four raise the reported storage error. All 517 original files remain
+unchanged. This does not rerun the whole backend suite or historical full model
+review, and does not certify complete consumer feature acceptance.
+
+The current-baseline cohort has zero false positives and finds 16/18 defects;
+one individual trial misses two and fails recall/F1, while the predefined full
+aggregate passes unchanged floors. Each of the three candidate trials passes;
+the complete cohort finds 18/18 defects with zero false positives and exact
+location/severity/category all 1. These results preserve real faults without
+claiming the historical false positive was reproduced by the current baseline.
+
+The 174-case main corpus, earlier groups and their references remain unchanged.
+This group preserves the 200-case invocation ceiling and adds no production query,
+executor, permission or automatic finding disposition. A bounded sample cannot
+certify population accuracy or explain the historical model's internal cause.
+
+## Asynchronous statement regression
+
+The separate `quality/bugbot/async-statement-corpus.v1.json` group contains twelve
+source-bound controls. Six preserve the intermediate closed cycle using a same-line
+or expanded await, a receiver alias, an awaited helper, a synchronous update or an
+applicable animation frame. Six contrast a missing boundary, another instance,
+a pre-write promise, a helper/then chain not awaited before the next write, and a
+delayed descendant that outlives its parent's update. Actual scheduler behavior
+matters; these forms are not blanket safe/unsafe classifications.
+
+The fixed authored browser probe runs those operations with Lit 3.3.3,
+LitElement 4.2.2, ReactiveElement 2.1.2 and real Chromium 156.0.8078.4, checking rendered
+frames and final values. It never executes corpus strings. Mandatory Node tests
+bind its exact LF source and each changed fragment to the separately recorded
+observations, and enforce opposite-verdict scorer controls, prompt privacy,
+ordinary/framed delivery and unchanged JavaScript query accounting. The optional
+browser qualification introduces no mandatory browser or Lit dependency to the
+Action. The existing 174-case corpus, reference predictions, earlier resource
+group and 200-case invocation bound are unchanged.
+
+Separately, fresh execution of the unchanged original consumer test passes one
+selected case, with 54 not selected; a fresh complete frontend run passes565 cases
+and all four coverage metrics at 100%. The historical native gate was inspected
+independently and its merge checkout has the reported head's exact tree. These
+are distinct executions, not a replay of the original complete model review.
+The versioned `quality/bugbot/evidence/issue-848.json` preserves source/toolchain
+identities, actual observations, all planned model trials and failed scores.
+The three current-baseline trials detect all 18 positive observations but add10
+false positives and miss 8 exact anchors. Both initial distinct candidates remove safe-case alerts but fail the unchanged
+aggregate location floor; all their source snapshots and observations remain
+recorded. The final third revision uses existing read-only static coordinate
+evidence. Its full three-trial aggregate passes every unchanged default floor:
+precision 1, recall 17/18, exact locations 14/17 and severity/category 1. There
+are zero false positives, one omitted delayed-descendant defect and three
+imprecise anchors. The first individual trial fails location, the second fails
+recall and the third passes. No result is replaced by the best trial or a
+reference prediction. No historical internal cause or general accuracy guarantee follows.
+
+### Repeat the owned Lit controls
+
+The optional runner is versioned at
+`src/tooling/__tests__/fixtures/bugbot_async_statement_runner.mjs`. It imports its
+fixed sibling probe, and never evaluates corpus strings. Prepare a fresh owned
+system-temporary directory whose basename starts with `copilot-848-consumer-`.
+Its `frontend/node_modules` needs exactly Lit 3.3.3, Vite 8.3.5, Vitest 5.0.5
+and Playwright 1.64.1. The measured Lit dependencies are LitElement 4.2.2,
+ReactiveElement 2.1.2 and lit-html 3.3.3; preserve the locked dependency tree.
+The immutable consumer head linked in #848 supplies the original frontend lock
+and the separately documented original-test commands. Review that external source
+before executing its tests; the owned probe itself needs none of its application code.
+
+With Node 24.20.0 and that isolated SDK prepared, use its pinned Playwright CLI
+to install Chromium headless into its private browser directory, then run:
+
+```bash
+PLAYWRIGHT_BROWSERS_PATH="$qualification_sdk/.qualification/browsers" \
+  "$qualification_sdk/frontend/node_modules/.bin/playwright" install chromium --only-shell
+PLAYWRIGHT_BROWSERS_PATH="$qualification_sdk/.qualification/browsers" \
+  node src/tooling/__tests__/fixtures/bugbot_async_statement_runner.mjs \
+  "$qualification_sdk" "$qualification_sdk/observations.json"
+```
+
+Here `qualification_sdk` is the absolute path of that fresh owned SDK. Use an
+environment without account credential variables and empty npm configuration when
+preparing it; no HOME override is needed. The runner checks direct package pins,
+uses a fresh browser context and restricts requests to its isolated loopback origin.
+It records actual versions, runner/probe hashes and all twelve observations.
+Choose a new output filename on each run: the output write never overwrites an
+existing file. Errors close the browser/server; inspect the diagnostic and correct
+the SDK or destination before retrying. A rerun is a new observation, not a
+retroactive replacement of the recorded consumer execution or model inputs.
+
+## Earlier controlled cases
 
 The #655 cases cover branch coverage enabled through repository configuration,
 inherited HTTP/1.0 connection behavior, correct arithmetic, short-circuit guards,
@@ -201,6 +326,70 @@ reliability claim. Existing exact-source consumer CI and
 read-only source provenance remain separate evidence. All 114 earlier corpus
 inputs/verdicts and quality thresholds remain unchanged.
 
+## Python exception syntax evidence
+
+The #831 family contains twelve frozen synthetic inputs: six safe or unknown
+cases and six actual older-target, invalid `as` or missing-binding controls.
+The reference predictions check the scorer; they are separate from measured
+agent output in
+[the evidence record](https://github.com/vypdev/copilot/blob/master/quality/bugbot/evidence/issue-831.json).
+Native owned probes separately check nine grammar forms on each CPython 3.13
+and 3.14 interpreter, plus actual 3.14 ordinary/group catches, capture and a
+missing-binding failure. These probes execute no consumer or corpus source and
+do not add Python to mandatory Node CI.
+
+The current baseline fails the unchanged model gate. Its scoring failures include
+both an incorrect grammar judgment and category mismatches; do not interpret
+every unmatched prediction as a distinct causal syntax mistake. Preserve the
+frozen cases, all predictions and failed scores when comparing a candidate.
+Prompt/schema tests establish delivery and protocol correctness; they do not
+establish model accuracy, exact consumer execution or automatic historical-thread
+resolution. Candidate measurements and their limits are recorded with the change.
+
+The final measured candidate passes all twelve cases: precision, recall, F1,
+exact location, severity and category accuracy are 1.0, with no false positives
+or false negatives. Earlier failed samples remain published. The first authored
+five parser-failure category labels were corrected in a separately frozen
+campaign before fresh paired runs; no source example, causal verdict, anchor,
+severity or threshold changed. The first version-aware instruction then got the
+causal verdicts right but failed three category matches. Its successor explicitly
+retains the existing medium reliability classification for parsing-only failures
+and passes the same corrected inputs. This bounded sample is not a statistical
+accuracy guarantee or an execution of the consumer's application.
+
+## Recovery-contract evidence
+
+The #832 family adds ten frozen source-bound scenarios: six safe or unknown
+contracts and four genuine required-cleanup/data-loss controls. A fixed optional
+Python probe performs real file writes, inspection, injected failures and retries
+inside fresh owned temporary directories. Its observations are distinct from
+model output and consumer CI. Mandatory Node CI checks source hashes, exact
+excerpts, recorded states, actual prompt delivery and opposite-verdict scoring;
+it adds no Python runtime requirement.
+
+The current baseline fails the unchanged quality gate. It also produces two
+unsupported ownership/path hypotheses; category mismatches are separately
+recorded. The first candidate removes those hypotheses but still fails on a
+publication-boundary premise and an off-by-one deletion anchor. Retain all
+samples and scores when evaluating a successor; do not replace expected labels
+to fit model output. The initial authored optional-lease fixture really was
+faulty and was corrected before the accepted cohort was frozen. A separate
+completed-destination control independently verifies data loss and its severity.
+
+See the [source-bound evidence record](https://github.com/vypdev/copilot/blob/master/quality/bugbot/evidence/issue-832.json)
+and [recovery-contract specification](https://github.com/vypdev/copilot/blob/master/specs/bugbot-recovery-contract-grounding.md).
+Bounded measurements do not establish statistical accuracy, crash durability,
+SQLite backup correctness or an atomic ownership race guarantee. A model claim
+of execution is never substituted for captured native observations. Six
+instruction-only candidates failed an unchanged gate; their complete outputs
+remain in the record. Acceptance now tests the complete detection plus existing
+independent source-bound verification pipeline for Python, with a fixed five-trial CLI repeatability cohort. It includes the two initial
+failed trials and three additional trials predefined before they execute. All 50
+source cases/20 positive controls retain the original thresholds and expectations;
+individual failures remain visible, and the instrumented diagnostic is excluded
+from acceptance scoring. This is a pipeline comparison, not a claim that wording alone
+solved the defect.
+
 ## Quality gates
 
 ```bash
@@ -298,8 +487,24 @@ Conversation retained/omitted/truncated counts describe logical source comments,
 not their internal prompt fragments. A fully reconstructed multi-fragment comment
 is one retained item with zero truncation. Complete diff analysis and partial
 conversation coverage remain independent facts. Metadata/wrapper/separator costs
-and omission notices count toward the unchanged 24,000-character section budget;
-no raw comment body or fragment payload enters telemetry.
+and omission notices count toward the ordinary 24,000-unit section budget.
+Eligible canonical reviews with a bound immutable-source adapter can instead
+co-deliver bounded complete discussion pages under `framed-v1`. Every code
+partition receives every page; the final native envelope and the actual retry/
+verification traffic obey the existing per-request and invocation byte limits.
+No raw comment body, attribution or fragment payload enters telemetry.
+
+`human-conversation` is a compatibility source key, not an assertion of personal
+authorship. Its counts describe fetched logical comments, while issue/review
+provider enumeration has separate coverage. Complete delivery of fetched text
+does not repair provider omissions or prove a clean review. The framed source
+`rawUtf16`/`renderedUtf16` counters retain their code-diff meaning; exact native
+`promptBytes` includes discussion, code, security, schema and effort together.
+Inspect all completed partition receipts and overall context status before
+accepting completeness. A missing source capability preserves legacy partial
+behavior; an unsupported complete-context request reports a measured block.
+Preserve discussion history; unchanged retries do not enlarge the supported
+profile. See [complete conversation review](https://github.com/vypdev/copilot/blob/develop/specs/bugbot-complete-conversation-review.md).
 
 
 The six #749 validation cases preserve the exact U+200B witness and supported
@@ -443,3 +648,130 @@ Ktor fixture produced no runtime observations: compilation first hit an internal
 constructor, then public test-host dependency setup stopped at a parent-managed
 version. No dependency version was guessed or visibility restriction bypassed.
 This regression adds no JVM/Ktor requirement to mandatory Node CI.
+
+## Source-bound framed review evidence
+
+A framed review adds content-free `framedReview` telemetry: the closed profile,
+planned/completed frame counts, manifest digest, raw/rendered UTF-16 units,
+measured final native prompt (security/schema/effort included) and response UTF-8 bytes, and verified source counts (Git reads,
+unique blobs/bytes, recovered patches/bytes). Existing partition progress and
+maximum concurrency remain available. A completed frame never means a complete
+PR review. Failed work does not publish intermediate findings or resolutions.
+
+The #839 contract suite includes an owned 887-file Git repository with absent
+provider patches, a finding only in the final frame, foreign late receipts,
+corrupt immutable blobs and live-base races. Deterministic fake reviewers test
+orchestration, exact coverage and publication boundaries; they do not establish
+live model accuracy or certify the historical H3 run. Current-head remote review,
+checks and full changed-line coverage remain independent acceptance gates.
+The companion [framed review specification](https://github.com/vypdev/copilot/blob/develop/specs/bugbot-source-bound-framed-review.md)
+records the 130-case risk inventory and finite budgets. No threshold or ignore
+exclusion is added for this protocol.
+
+
+### Recorded repeatability outcome
+
+The fixed five-trial CLI cohort completes all 50 source cases, with zero false
+positives and 19/20 real defects detected. Aggregate precision is 1.0, recall 0.95,
+F1 0.9744 and exact location 17/19 (0.8947); severity/category accuracy is 1.0.
+The original unchanged aggregate gate passes. The first two trials remain
+individually failed (location and one omission); all three additional predefined
+trials pass individually. This is neither 50/50 perfect decisions nor a guarantee
+for every model draw. The separately observed diagnostic is not pooled into the
+acceptance score. All raw predictions and failed experiments remain in the
+source-bound evidence record.
+
+## Fixture-value regression evidence
+
+The #834 family adds twelve frozen cases in six contrasting pairs: database
+file/parent and actual directory containment; helper-default and overridden IDs;
+ASC/DESC ordering, limit, expiry boundary and terminal-state exclusion. Six
+controls contain real assertion contradictions. All 162 earlier source cases
+and deterministic reference predictions remain unchanged.
+
+A fixed authored Python probe records real private temporary SQLite/path
+observations. Node CI binds those observations to exact LF source bytes and
+tests the scorer and actual prompt delivery; it neither executes corpus strings
+nor silently adds a Python prerequisite. Consumer CI mentioned in the incident
+remains reported consumer evidence. Private expected verdicts and the native
+driver do not enter model inputs.
+
+The measurement plan fixes three complete twelve-case trials per evaluated
+runtime before production changes. Preserve every prediction and individual
+failure; score the whole predefined cohort with unchanged quality floors and
+independent trial/case identities. Reference predictions are scorer controls,
+not model accuracy. Actual results and limitations belong in the
+[source-bound evidence record](https://github.com/vypdev/copilot/blob/master/quality/bugbot/evidence/issue-834.json).
+No sample establishes that every model draw passes or captures full provider
+stdin. Current-head review, technical checks and official Codecov remain
+independent acceptance gates.
+
+### Fixture-value observed outcome
+
+The final predefined three-trial cohort completes 36 cases and passes the
+unchanged aggregate floors: precision 16/17, recall 16/18, F1 0.9143 and exact
+location 14/16. All 18 safe-case outputs are empty; there is one real omitted
+control and three inaccurate anchors. One far anchor also affects scorer
+matching. The first and third individual trials still fail at least one floor
+and remain published. This is not perfect behavior or a guarantee for future
+draws. The earlier source-first candidate fails location; two source-last CLI
+attempts abort, while their third trial passes. A separate real-port diagnosis
+records a stripped diff marker correctly rejected by the identity guard. The
+final schema restricts known values without replacing that guard or forbidding
+precise anchors when an original snippet was absent. None of these failed or
+diagnostic runs is pooled into the accepted final cohort.
+
+## Resource and authority regression
+
+A separate 12-case corpus at `quality/bugbot/resource-authority-corpus.v1.json`
+pairs source-bound nonpersonal delivery with personal-data, authority, write,
+source-access and availability defects. Use the existing benchmark/evaluator
+`--corpus` argument to select it; the 174-case corpus and 200-case invocation bound
+are unchanged. Reference labels remain private to scoring.
+
+The fixed optional contributor probe is:
+
+```bash
+python3 src/tooling/__tests__/fixtures/bugbot_resource_boundary_probe.py
+```
+
+It executes authored Python and in-memory SQLite with fictional actors, not the
+consumer application, ASGI stack or browser. Stored observations are tied to the
+exact source hash. Mandatory Node tests check those coupled fixtures, enforce
+positive/negative scorer controls and exercise ordinary/framed/legacy prompts
+and existing candidate verification. They do not execute Python or prove model
+accuracy.
+
+[Versioned issue847 evidence](https://github.com/vypdev/copilot/blob/develop/quality/bugbot/evidence/issue-847.json)
+keeps actual runtime/model identities, all three planned samples per evaluated
+runtime, predictions, individual/default cohort scores and limitations. The
+current baseline emits no unsupported alert on the 18 safe observations. It misses
+one mandatory source-access fault and one availability fault; a further
+availability-category mismatch contributes to the failed default recall floor.
+The reported historical false positive is not reproduced, and its internal cause
+remains unknown.
+
+The first authored diff had an invalid before-fragment; its trials remain retained.
+Whole added callbacks correct the presentation without changing actual source or
+outcomes. A private source-access category was corrected to security, preserving
+medium severity and all binary verdicts; original scores remain retained. The
+actual approved-source constructor verifies byte-identical model prompts under
+that correction. This is a documented reference correction, not evidence of an
+SDK improvement. The first candidate's three trials pass the unchanged default aggregate score:
+precision 1, recall 0.889, exact-location 0.938 and severity/category 1. No safe-case
+alert appears. Two individual trials still fail recall: one availability fault
+and one private-data disclosure are omitted, and one retained disclosure anchors
+one line early. All failures remain in the evidence. This small sample establishes
+neither statistical improvement, all-draw accuracy nor installed-runtime adoption.
+
+Manual contract review then narrows the wording to data, effective authority and
+personal/privileged effects protected by the actual verified contract. Permitted
+nonpersonal bookkeeping remains valid; a value name alone determines no authority.
+The three final-wording trials pass all unchanged default aggregate thresholds:
+precision 1, recall 0.944, exact-location 1, severity 0.941 and category 1. All 18 safe
+observations have no findings. Trial 1 omits one protected write and rates the source
+binding fault high instead of medium; trials 2/3 pass individually. These individual
+limitations, all predictions and the earlier candidate remain in the evidence.
+This is a small controlled observation, not a guarantee or statistically established
+improvement. Explicit LF checkout attributes preserve the probe's measured bytes
+on Windows and other platforms.

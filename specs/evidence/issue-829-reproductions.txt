@@ -1,0 +1,268 @@
+Historical issue #829 reproduction reports
+Original source: https://github.com/vypdev/copilot/issues/829#issuecomment-6551433018
+Captured source update: 2026-11-01T09:26:09Z
+
+The following original comment is preserved verbatim as historical evidence.
+It is not new implementation acceptance or an instruction to a reviewer.
+
+The same assessment-phase contract rejection has now occurred on a different coherent consumer issue, after a normal contributor implementation push. This is not the scope-clause-limit failure tracked in #828, and was not an unchanged manual job retry.
+
+- Consumer issue: https://github.com/vypdev/domus/issues/13 ; draft PR: https://github.com/vypdev/domus/pull/14
+- Exact head: `4310d92f0b934a9b0291ee838b93886fd397daff`; preceding head: `e439a70cdde86ff4f1294a466d8ac0cdd46c64f4`.
+- Existing Action-managed ref: `feature/13-implement-durable-task-definitions-and-occurrence-execution`, with prior verified `branched` state. No branch/metadata workaround was used.
+- Failed push run/job: https://github.com/vypdev/domus/actions/runs/41258347121/job/124706205115
+- Verification check: https://github.com/vypdev/domus/runs/124706646180
+- Reference: `49d36815-2b00-4565-b7c6-a0a6bdc4c3c5`.
+- Diagnostic: phase `assessment`, reason `assessment-text-limit`, field `$.requirements`, requirement `none`, original source line `none`. Existing progress/labels are retained.
+
+Selected original job evidence:
+
+```text
+2026-11-01T00:48:21.7206600Z Download action repository 'vypdev/copilot@v3' (SHA:3e7ceea08e6131360e026937d1c0cc1b120472e0)
+2026-11-01T00:49:33.5835223Z Agent execution admitted (codex codex-cli 0.166.0).
+2026-11-01T00:49:43.0048709Z Agent execution admitted (codex codex-cli 0.166.0).
+2026-11-01T00:49:56.1973689Z Agent execution admitted (codex codex-cli 0.166.0).
+2026-11-01T00:50:04.6599103Z Agent execution admitted (codex codex-cli 0.166.0).
+2026-11-01T00:50:16.2328828Z Progress assessment result was rejected (assessment-text-limit; field $.requirements; requirement none; source none). Existing progress was retained.
+```
+
+All independent exact-head project CI groups and aggregate passed: https://github.com/vypdev/domus/actions/runs/41258350578 (aggregate check `124706965554`). This includes backend, tooling, both architecture policies, links, actual frontend framework/build/browser contracts and actual amd64/aarch64 native images. Local backend evidence: 1,957 tests, all 5,508 statements and 1,570 branches covered across all 78 authored backend files. The feature remains partial/draft and its neutral skipped Bugbot is not accepted review.
+
+The runtime module `progress_scope_policy.ts` builds each final rendered summary/remaining line from the source quote plus the returned fact, and then applies an 8,000-code-point total bound. That source observation may help investigation; it does **not** establish which scope or hidden returned facts produced this particular rejection, their lengths, or whether a valid bounded response was impossible. None of those raw generated inputs are exposed in the inspected logs. Please retain fail-closed validation and expose safe aggregate/limit/phase diagnostics or bounded recovery without truncating the approved consumer scope or weakening coverage/review.
+
+Copilot source, installed workflows/configuration and all acceptance gates remain unchanged. We continue product implementation on the verified issue branch rather than waiting for an upstream workaround. No live HA credentials, user payloads or secret material are included.
+
+
+### Later normal push: execution/cycle checkpoint
+
+The assessment-phase rejection recurred at `4454490d0351b57d9da987dec991ccace6046be7` (predecessor `4310d92f0b934a9b0291ee838b93886fd397daff`), following the normal execution/verification/reopening implementation commit. No unchanged-job rerun or scope/configuration workaround was used.
+
+- Failed run/job: https://github.com/vypdev/domus/actions/runs/41259897393/job/124710820113
+- Verification: https://github.com/vypdev/domus/runs/124711256922
+- Reference: `0350fd6f-3224-4525-b833-398d5fcc2615`.
+- Same phase `assessment`, reason `assessment-text-limit`, field `$.requirements`, requirement/source `none`; prior published progress retained.
+- Exact-head project CI fully passes, including aggregate `124711600360`, both native image jobs and actual frontend browser contracts: https://github.com/vypdev/domus/actions/runs/41259901871
+- Local source evidence: 2,003 backend tests, 5,623 statements and 1,598 branches fully covered across 78 authored files. Actual SQLite rollback, concurrent cycle decisions and offline activation/replay are covered; real consumer/review/UI/deployment acceptance remains incomplete.
+
+The PR is still draft, and its skipped neutral Bugbot result is not accepted review. Hidden returned assessment text and exact aggregate lengths remain unavailable; neither the quoted source renderer observation nor this repeat establishes the concrete rejected response or root cause. We continue product work without modifying Copilot or lowering acceptance/coverage.
+
+
+### Later normal push: task policy and dependency editors
+
+The same assessment rejection recurred at `3b52e0792bfe27bcdc6289e3c8b28e66020215de` (predecessor `4454490d0351b57d9da987dec991ccace6046be7`) after a normal task editor implementation commit. No unchanged-job rerun or contract/configuration workaround was used.
+
+- Failed run/job: https://github.com/vypdev/domus/actions/runs/41262305126/job/124717878283
+- Verification: https://github.com/vypdev/domus/runs/124718343112
+- Reference: `ff0ca457-3ccf-4376-8dfc-964fc46a67ec`.
+- Phase `assessment`, reason `assessment-text-limit`, field `$.requirements`, requirement/source `none`; existing progress preserved.
+- Exact-head project CI and aggregate `124718583545` pass, including both native architectures and frontend browser contracts: https://github.com/vypdev/domus/actions/runs/41262308179
+- Local evidence: 2,044 backend tests, all 5,741 statements and 1,624 branches covered across all 79 authored backend files. No omit/scope/test reduction.
+
+The PR remains draft with intentionally incomplete feature acceptance. Skipped neutral Bugbot review is not full-context acceptance, and no merge is being attempted. The hidden assessment response, actual total length and rejected requirement mapping are still unavailable. We are continuing product work without modifying Copilot, changing its limits, truncating the approved requirements or weakening review/coverage.
+
+
+### Later normal push: bounded task queries/cursors/history
+
+The assessment rejection recurred at `04d8925c5a62c6e485ec046c213b9f8dd8124b94` (predecessor `3b52e0792bfe27bcdc6289e3c8b28e66020215de`) after the normal query/history commit. This is not an unchanged-job rerun.
+
+- Failed run/job: https://github.com/vypdev/domus/actions/runs/41264213316/job/124723504046
+- Verification: https://github.com/vypdev/domus/runs/124723973401
+- Reference: `d11ebd41-0388-453c-9082-401963a3df21`.
+- Same `assessment` / `assessment-text-limit` / `$.requirements` / requirement-source `none`; existing published progress preserved.
+- Original job log confirms `vypdev/copilot@v3` SHA `3e7ceea08e6131360e026937d1c0cc1b120472e0` at `2026-11-01T02:12:27.6973065Z`, admitted `codex-cli 0.166.0`, and rejection at `2026-11-01T02:14:34.7330563Z`.
+- All exact-head project groups and aggregate `124724230690` pass, including actual frontend browser checks and both native image architectures: https://github.com/vypdev/domus/actions/runs/41264216723
+- Local original metrics: 2,170 backend tests; all 6,071 statements and 1,722 branches covered across all 83 authored files. No excluded runtime inventory or coverage configuration changes.
+
+The PR remains intentionally draft/partial; skipped Bugbot is not accepted review and no merge is attempted. Hidden returned assessment text/lengths and verified rejected requirement mapping remain unavailable. We continue product HTTP work without altering Copilot, retrying unchanged jobs, weakening gates or trimming approved scope.
+
+
+### Later normal push: shared task HTTP in both business compositions
+
+The same fail-closed assessment rejection recurred at `17ea90771be2b380099e4d96b30072ec7cec18ca` after the normal API implementation commit (predecessor `04d8925c5a62c6e485ec046c213b9f8dd8124b94`). No unchanged-job rerun or acceptance workaround was used.
+
+- Failed run/job: https://github.com/vypdev/domus/actions/runs/41266134596/job/124729215429
+- Verification: https://github.com/vypdev/domus/runs/124729748362
+- Reference: `bbfe99c8-3bcf-428c-bdf5-aafdd2ff2df2`.
+- Phase `assessment`, reason `assessment-text-limit`, field `$.requirements`, requirement/source `none`; existing published progress retained.
+- Complete exact-head project CI passes, including aggregate `124729869188`, all actual frontend checks and both image architectures: https://github.com/vypdev/domus/actions/runs/41266138149
+- Final local evidence: 2,256 tests; all 6,277 statements and 1,736 branches covered across all 86 authored backend files. Both production ASGI compositions, original-authority/task receipts and actual owned-storage restoration/recomposition are covered. Port fakes, source APIs and real consumer/package/owner adoption remain explicitly distinct.
+
+The feature is still draft with required material/consumer work outstanding. Its neutral skipped Bugbot is not accepted review. The hidden assessment text, concrete aggregate lengths and verified rejected requirement mapping are still unavailable, so the prior source-renderer observation is not claimed as this run's proven root cause. We continue material implementation without changing Copilot, its limits, coverage or review gates.
+
+
+### Material core head bef5057
+
+The same contract failure recurred on `bef50570bf5bb3825df4171e959a5ad18d2c46ae` after adding immutable material intents and transaction-local semantic Inventory ports. The original current-head check summary reports phase `assessment`, reason `assessment-text-limit`, field `$.requirements`, requirement/source issue line `none`, reference `077d6ddf-7032-4a4e-8114-0f048e936a02`. It states progress was not published and prior labels/assessments were retained. No generated assessment or its length/mapping is available from that check summary, so a concrete provider output/root cause is not inferred.
+
+Evidence: [verification check](https://github.com/vypdev/domus/runs/124739652883), [commit job](https://github.com/vypdev/domus/actions/runs/41269485271/job/124739108797). The independent [application CI run](https://github.com/vypdev/domus/actions/runs/41269488790) passed every group and aggregate `CI Check` 124739759618 on this exact source, including backend, architecture, frontend and both image architectures. Local full backend: 2,400 passing tests, all 6,624 statements and 1,870 branches covered across 91 authored files; no coverage exclusions/runtime narrowing were added. These scopes do not prove real Inventory delivery or package adoption. Copilot Review 124739203991 was neutral/skipped for the draft and is not complete Bugbot merge acceptance.
+
+No Copilot source/configuration/limit was changed, and no unchanged failed run was retried. Work continues on the admitted Domus branch, with the merge gates intact. Please keep this occurrence with the existing failure investigation.
+
+
+### Initial material command head ae665a7
+
+The same assessment-phase contract rejection recurred on the normal push from `daeb398a8b839df2ebb901af09e421303aa4ab3c` to `ae665a7653a7598e89602731e117df4afba33c1d` (Domus issue #13 / draft PR #14). The preceding head's distinct scope-clause-limit rejection remains in #828; these phases are not conflated.
+
+- Commit run/job: https://github.com/vypdev/domus/actions/runs/41273936695/job/124752168829
+- Original Verification check: https://github.com/vypdev/domus/runs/124752681408
+- Error `agent.failed`; phase `assessment`; reason `assessment-text-limit`; field `$.requirements`; requirement `none`; original issue line `none`.
+- Reference `ae5b5ec4-b6a9-470c-a41d-91a9d1ef4df0`; retryable Yes. The check says progress was not published and existing labels/published assessments were retained.
+- The safe exposed summary does not show the generated assessment, its lengths, verified requirement mapping or resolved SDK revision for this current run. Those are not inferred from earlier runtime/source evidence; no concrete returned clauses or root cause are fabricated.
+
+Independent exact-head [application run](https://github.com/vypdev/domus/actions/runs/41273939404) completed successfully: aggregate CI Check 124752749697 and all backend, tooling, architecture, docs, frontend and both image architecture groups are green. Branch Sync and Pull Request also succeeded. Copilot Review 124752252499 was neutral/skipped for the draft, which is not complete full-context Bugbot acceptance.
+
+Local final source evidence: 2,536 passing backend tests; source and coverage inventories match all 96 authored files; all 6,896 statements and 1,934 branches covered. Strict types, 113 tooling/architecture fixtures, the 132-file/781-dependency inward/acyclic graph, links and unchanged byte-verified pinned SDD/catalog validation pass. The 77 new cases cover typed canonical material requests, current scope/grants, transaction-bound initial consumption, child SQL/task rollback, contention, actual commit/lost return, maximum document budgets and real main-database restoration with historical original-key retry. Inventory confirmations/attached SQL remain explicit semantic fakes, not a real ledger or owner package/HA acceptance claim. Material HTTP/explicit settlement and full product work remain in progress.
+
+No Copilot source/resources/configuration, generated recommendation metadata, schema/limit, source requirement, progress label or merge gate was changed. No unchanged failed job was manually rerun. Please retain this occurrence with the existing assessment bound investigation, preserve fail-closed progress and expose enough bounded diagnostic context to establish the actual rejected candidate and supported recovery. Domus work continues on its admitted Action-managed branch.
+
+## Further occurrence: material HTTP and original-cycle projections (2026-11-01)
+
+A normal push of tested consumer work produced another terminal rejection in the same assessment family. This is a new source head, not a repeated unchanged workflow dispatch.
+
+- Consumer: vypdev/domus issue #13, draft PR #14, unchanged Action-managed ref `feature/13-implement-durable-task-definitions-and-occurrence-execution`.
+- Previous immutable head: `ae665a7653a7598e89602731e117df4afba33c1d`.
+- New immutable head: `2a3809d8cbca4c2e062881195fcfda2fd3572741` — Expose material inputs and live cycle outcomes through both APIs.
+- Source change: strict bounded material selection/completion wire mapping through both actual native/standalone compositions; current and original-cycle projections; one pure source-integrity rule shared with checkpoint validation; desired total distinct from last confirmed quantity/effect/time; original compact receipt compatibility. Owner decision A36 was recorded separately at https://github.com/vypdev/domus/issues/13#issuecomment-6554120216.
+- Commit workflow: https://github.com/vypdev/domus/actions/runs/41278709157/job/124766032853 — terminal failure.
+- Verification result: https://github.com/vypdev/domus/runs/124766620272 — terminal failure on this exact head.
+- Failure reference: `136b511e-d516-4034-8751-74611459c940`.
+
+### Original published failure classification
+
+The check reports `agent.failed`, lifecycle `blocked`, assessment phase, reason `assessment-text-limit`, field `$.requirements`, requirement `none`, original issue line `none`. It states that the returned progress result violated its contract and progress was not published. Existing labels and published assessments were retained. The result marks retryable but advises preserving acceptance/verification. No candidate text or verified requirement identity is available from that result. An unchanged retry was not requested.
+
+Locale remains en-US for repository, issue and PR, with catalog resolution `en-US -> en-US (exact, descriptors=294)`. This report does not infer the rejected candidate content, candidate source, root cause or resolved Action implementation SHA. A local byte-verified SDK validation pin is independent evidence and is not presented as the hosted runtime version.
+
+### Independent exact-head project results
+
+The complete project workflow is https://github.com/vypdev/domus/actions/runs/41278713230. All eight required groups and its aggregate passed:
+
+| Check | Job/check ID | Result |
+|---|---|---|
+| CI Check aggregate | 124766626392 | success |
+| Backend application | 124766044585 | success |
+| Python tooling | 124766044575 | success |
+| Python architecture contracts | 124766044654 | success |
+| Node architecture policy | 124766044428 | success |
+| Local documentation links | 124766044619 | success |
+| Frontend toolchain | 124766044621 | success |
+| App container amd64 | 124766044643 | success |
+| App container aarch64 | 124766044589 | success |
+
+Branch Sync also passed, check 124766032667, workflow https://github.com/vypdev/domus/actions/runs/41278709085. Pull Request passed, check 124766044968, workflow https://github.com/vypdev/domus/actions/runs/41278713307. Review check 124766116363 is neutral/skipped for this draft; its skipped Bugbot result is not complete full-context acceptance. The feature stays in draft and cannot merge until actual implementation and all review gates are satisfied.
+
+### Source-identified validation and limits
+
+The final full local backend campaign passes 2,641 tests, covering every one of 6,965 statements and 1,942 branches across all 98 authored files, with exact source/report inventory equality and no exclusion/configuration/test weakening. Thirty task modules cover all 2,209 statements and 622 branches. All 105 new HTTP/query cases execute in the complete suite; strict typing/formatting, 113 tooling/architecture fixtures and the inward/acyclic 134-file/795-dependency graph pass.
+
+An earlier local run had three unrelated launcher ownership failures under a shared temporary parent inheriting GID 0 while the process GID was 20. The final complete run uses a verified private parent with its actual user/group; no test or ownership safeguard changed. Original interim and final measurements are retained separately in the consumer evidence.
+
+Original unchanged policy modules from pin `3e7ceea08e6131360e026937d1c0cc1b120472e0` validate SDD format/consistency and the catalog. Original 49 Tasks, 30 Identity, 44 Points and 42 companion case rows remain unchanged; fourteen Draft SDDs, 109 requirements and 485 planned IDs are not confused with executed tests. Before publication, overlong draft prose was condensed within the existing supported limit; no validator/limit was changed.
+
+Catalog/confirmation and attached child SQL are explicit semantic fixtures, not a real Inventory ledger. Explicit settlement, dependency review, real consumers and all-domain/UI/packaged/owner acceptance remain unfinished. No source, resources, configuration or generated metadata belonging to Copilot or the gateway was modified. No progress label, schema, assessment bound, acceptance gate or merge rule was relaxed.
+
+Please add this new reference to the existing assessment-text-limit investigation. A useful diagnosis needs bounded original-candidate/context evidence and a supported recovery while preserving fail-closed publication. Consumer development continues independently on the admitted branch.
+
+## Further occurrence: explicit material settlement (2026-11-01)
+
+A new normal contributor push on the admitted Domus issue branch produced another terminal assessment rejection. No unchanged failed workflow was manually rerun.
+
+- Consumer issue: https://github.com/vypdev/domus/issues/13 ; draft PR: https://github.com/vypdev/domus/pull/14
+- Existing Action-owned ref: `feature/13-implement-durable-task-definitions-and-occurrence-execution`.
+- Previous immutable head: `2a3809d8cbca4c2e062881195fcfda2fd3572741`.
+- New immutable head: `7beb63c8eafba51f17a284ee55baee1a70ebff8b` — Settle task materials with current authority and original evidence.
+- Change scope: explicit post/correct/dismiss through both production HTTP compositions; A36 current material authority including confirmed corrections; strict original source selectors/performers; staged single-step correction CAS; original receipt recovery after later corrections or restoration; safe original-action history. Current work/cycle revisions are not changed by settlement.
+- Commit workflow: https://github.com/vypdev/domus/actions/runs/41281546731/job/124774308201 — terminal failure.
+- Verification check: https://github.com/vypdev/domus/runs/124774939053 — terminal failure.
+- Failure reference: `c1de1759-878a-4a46-911f-2c75e472a6d5`.
+
+### Published failure, without inferred candidate identity
+
+The original check reports `agent.failed`, lifecycle `blocked`, phase `assessment`, reason `assessment-text-limit`, field `$.requirements`, requirement `none`, and original issue line `none`. It says the returned progress result violated its contract; progress was not published, and existing progress labels/published assessments were preserved. Retryable is true, with guidance not to relax acceptance or verification. No verified candidate requirement identity or candidate text is available from that result.
+
+Repository, issue and PR locales are en-US; catalog resolution remains `en-US -> en-US (exact, descriptors=294)`. This report does not infer which candidate/source caused the bound, a root cause, or the resolved hosted Action implementation SHA. Local pinned policy validation below is independent evidence, not a hosted runtime identity claim.
+
+### Complete project CI on the same immutable head
+
+All eight required project groups and the aggregate passed in https://github.com/vypdev/domus/actions/runs/41281550090:
+
+| Check | Job/check ID | Result |
+|---|---|---|
+| CI Check aggregate | 124774985422 | success |
+| Backend application | 124774317229 | success |
+| Python tooling | 124774317324 | success |
+| Python architecture contracts | 124774317301 | success |
+| Node architecture policy | 124774317285 | success |
+| Local documentation links | 124774316992 | success |
+| Frontend toolchain | 124774317130 | success |
+| App container amd64 | 124774317511 | success |
+| App container aarch64 | 124774317160 | success |
+
+Branch Sync passed, check 124774307932, workflow https://github.com/vypdev/domus/actions/runs/41281546716. Pull Request passed, check 124774317556, workflow https://github.com/vypdev/domus/actions/runs/41281550137. Review 124774405226 remains neutral/skipped for the draft (`Bugbot review skipped, effort=smart, 468ms`), not completed full-context review. The unfinished feature stays in draft; no merge gate was waived.
+
+### Consumer validation and honest scope
+
+The final complete local backend campaign passes 2,743 tests. Every one of 7,117 statements and 1,994 branches is covered across all 99 authored files, with exact source/report inventory equality and no coverage configuration, exclusions, pragmas or scope weakening. Thirty-one task modules cover all 2,361 statements and 674 branches. Strict typing/formatting, 113 tooling/architecture fixtures and the inward/acyclic 135-file/812-dependency graph pass.
+
+The 102 new cases include both actual ASGI compositions; current Origin/CSRF/HA proof; malformed/canonical inputs; safe normal conflicts; current grant revocation; coherent-but-invalid source evidence; separate desired/confirmed totals; staged and confirmed CAS/audit/outbox rollback; real competing corrections; lost return after actual commit; and actual restoration both before completion and before settlement. Restored-away intent/cycle facts do not cause provider replay. A test exposed Boolean revision aliases in the consumer's own source-selector comparison; strict type checks fixed that before publication.
+
+Inventory catalog/confirmation and attached child SQL remain explicit semantic fixtures. The fictional ledger is outside the restored application root, so coupled actual Inventory restoration/stock policy is not claimed. Dependency review, actual consumers, product UI/package/owner acceptance and the full all-domain first release remain unfinished.
+
+Unmodified, byte-verified policy modules at local pin `3e7ceea08e6131360e026937d1c0cc1b120472e0` validate the format, consistency and catalog. Original 49 Tasks, 30 Identity, 44 Points and 42 companion case rows remain unchanged; fourteen Draft SDDs, 109 requirements and 485 planned IDs are distinct from executed tests. Own SDD prose was kept within its existing supported bound; no SDK validator or limit was edited.
+
+No Copilot/gateway source, resources, configuration, generated metadata, recommendation/schema/assessment bound, source requirement, progress label or merge gate was modified. Please include this new reference in the existing assessment-text-limit investigation and preserve fail-closed progress publication. Bounded original candidate/context evidence and a supported recovery are still needed to diagnose the actual rejected response. Consumer work continues independently.
+
+
+
+### Additional immutable-head reproduction — typed lifecycle source (2026-11-01)
+
+This assessment-text-limit rejection recurred after the independent typed lifecycle-source increment on exact Domus head `cd0795125274678432464f976c86995925562882` (parent `487506f0fb5add530aeb90ea6c4c82ab3e3fd0b0`), issue #13 / draft PR #14. The same existing Action-managed branch is in use; Copilot/gateway remain unchanged and no unchanged failed run was retried.
+
+Original hosted evidence:
+
+- Commit run https://github.com/vypdev/domus/actions/runs/41288273614 , job `124793961358`.
+- Verification check https://github.com/vypdev/domus/runs/124794730529 . The Commit job failed; Branch Sync and Pull Request workflows succeeded.
+- The actual download log resolves `vypdev/copilot@v3` to `3e7ceea08e6131360e026937d1c0cc1b120472e0`. This is directly observed hosted runtime identity.
+- At 2026-11-01T08:19:44Z, complete evidence reported `100 required paths`, `10 source parts`, recovery `frames:1`; current/total `files:8`, `bytes:1027173`, `requests:28`, `treeEntries:358`.
+- All ten bounded evidence-part rounds logged completion before final assessment. The final CheckProgress call logs `prompt length=94798, issue description length=15287`; the admitted agent is `codex codex-cli 0.166.0`. These are observed context/version facts, not proof that prompt size caused the rejected output.
+- At 2026-11-01T08:21:34Z, the assessment result was rejected:
+
+```text
+Progress assessment result was rejected (assessment-text-limit; field $.requirements; requirement none; source none). Existing progress was retained.
+Error code: agent.failed
+Action: Inspect the original requirement and response schema. Details: phase assessment, reason assessment-text-limit, field $.requirements, requirement none, original issue line none. none means no verified identity is available. A fresh attempt may help when the provider can satisfy the unchanged contract; do not relax acceptance or verification.
+Retained state: Existing progress labels and published assessments were preserved. An optional check-publication warning is a separate result.
+Reference: a188cf1d-f00f-4217-9bc3-7880ad1e6edb
+```
+
+No verified requirement/source identity or offending output text length is provided by the diagnostic. I am not carrying L103 from the preceding, separately tracked scope-clause-limit failure (#828) into this assessment failure. The provider's rejected `$.requirements` payload and precise exceeded count are unavailable in the console evidence; the exact producer defect remains unverified.
+
+Independent application gates on this exact head pass:
+
+- All eight project groups and aggregate **CI Check**: https://github.com/vypdev/domus/actions/runs/41288277594 , aggregate `124794683042`, including backend/tooling/architecture/frontend/both image architectures.
+- Complete backend: **2,899 tests**, all **7,605 statements / 2,146 branches** covered in all **104 authored files**, with exact source/report inventory equality and unchanged coverage configuration/pragmas. No tests were skipped.
+- The 46 new source cases and existing review/material/identity/restore regressions all execute. Both actual business runtime compositions expose the same read-only typed source. Tests cover original lifecycle snapshots, namespace/stage/version negatives, more-than-100-event pagination, transport-acknowledged reads, original v6 migration and actual restoration excluding retained-away approval/reopening.
+- Strict typing passes for 108 files including tooling, all 113 tooling/architecture fixtures pass, and all three inward/acyclic contracts pass (140 files / 880 dependencies). Both public OpenAPI artifacts are byte-identical to parent 487506f.
+- The unchanged byte-verified original SDD SDK at the same pin passes format/consistency/catalog checks, preserving all original planned case rows. The companion has 69,973 UTF-16 units under the unchanged 70,000 limit. This gate is separate from hosted progress assessment.
+- No actual owning consumer ledger, product UI, owner HA update or complete first-release acceptance is claimed. The feature remains Draft/incomplete while complete source/coverage acceptance and real domain integration continue.
+- Draft review `124794192285` remains neutral/skipped (`effort=smart`, 391ms); it is not full-context Bugbot acceptance and does not permit merge.
+
+Please use the exact source-identified run/job above to inspect assessment production and `$.requirements` validation after complete-evidence acquisition. Preserve the original requirement identity and existing acceptance bounds; repair the producer or diagnostics rather than silently truncating assessment text, removing requirements or publishing retained stale progress as a success. This follow-up preserves all earlier report bodies and reproduction scopes.
+
+
+### Two further Domus observations: ca78c0e and 2207bca
+
+These are new published source checkpoints, not retries of an unchanged failed job. No Copilot source, configuration, installed workflow, schema, text bound or acceptance policy was modified.
+
+| Observed source | Original Commit run/job | Final assessment reference | Logged final prompt / issue length |
+| --- | --- | --- | --- |
+| ca78c0e65625cc64b91b62e0cd55cb8b41d91fd3 | [41292011901 / 124805000246](https://github.com/vypdev/domus/actions/runs/41292011901/job/124805000246) | 7cd7cf48-d381-460e-9bdf-6656624d21fc | 98,709 / 15,287 |
+| 2207bca2f13dedee7cf61372eae711765c1bb911 | [41292752620 / 124807201200](https://github.com/vypdev/domus/actions/runs/41292752620/job/124807201200) | 14f86db8-1a2a-4c75-9a3d-fe42fe47c03b | 99,735 / 15,287 |
+
+Both original hosted logs explicitly resolve vypdev/copilot@v3 to 3e7ceea08e6131360e026937d1c0cc1b120472e0 and admit codex-cli 0.166.0. Each logs evidence parts 1 through 10, round 1 of 1, then final CheckProgress. Each final result is rejected in phase assessment, reason assessment-text-limit, field $.requirements, requirement none, original issue/source line none. No verified requirement identity or raw response is exposed. The prior published progress remains retained; this evidence does not identify which response entry crossed a bound. It is consistent with this existing family but does not prove the separate deterministic counterexample above occurred in either remote response.
+
+The ca78c0e source adds an independent complete-backend coverage auditor to Domus-owned CI. Its backend job passed all 2,899 tests and the new audit against 104 authored files (7,605 statements / 2,146 branches, all 100%). That run's project aggregate failed separately at Python tooling Ruff I001 before tooling tests: an ignored local frontend coverage directory had affected automatic import classification. This Domus defect is now corrected by explicit third-party classification and normal import ordering in 2207bca; it is not attributed to Copilot.
+
+At 2207bca, all eight project groups and aggregate [CI Check 124808009327 / run 41292758909](https://github.com/vypdev/domus/actions/runs/41292758909/job/124808009327) pass, including both container architectures. Hosted backend reruns all 2,899 tests and the independent audit successfully; hosted tooling runs 146 tests with all 214 statements / 98 branches covered. The separate Copilot Verification check 124807974183 still fails with the final-assessment reference above. The neutral/skipped Bugbot review is not complete review acceptance. Domus PR #14 remains a draft with full feature/Bugbot gates intact; the product's complete all-domain, both-target, isolated-channel acceptance is not claimed.
+
+Please retain the complete requirement set, source evidence, original diagnostic references and the prior safe publication state when fixing the accepted-scope/final-rendering-bound mismatch. Do not relax a bound, truncate requirements or manufacture a passing check. We continue Domus work on its Action-created branch and report this here without changing Copilot or rerunning the unchanged failure.

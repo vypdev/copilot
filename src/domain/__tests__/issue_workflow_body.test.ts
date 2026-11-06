@@ -5,6 +5,11 @@ describe('structural Issue Form sections', () => {
     it('counts duplicate headings without choosing a value', () => expect(field('### Version\na\n### Version\nb')).toMatchObject({ count: 2, value: '' }));
     it('matches labels literally despite regex punctuation', () => expect(field('### App.Version (stable)?\n1.2.3', 'App.Version (stable)?').value).toBe('1.2.3'));
     it('supports case-insensitive CRLF form headings', () => expect(field('### version\r\n1.2.3\r\n').value).toBe('1.2.3'));
+    it('preserves exact field values and line endings around hidden comments', () => {
+        expect(field('### Version\r\n1.2<!-- annotation\r\n-->.3').value).toBe('1.2.3');
+        expect(field('### Changelog\r\nUse `<!--` literally.\r\nSecond line.', 'Changelog').value)
+            .toBe('Use `<!--` literally.\r\nSecond line.');
+    });
     it('does not admit a field that exists only inside backtick code', () => expect(field('```md\n### Version\n1.2.3\n```').count).toBe(0));
     it('does not admit a field that exists only inside tilde code', () => expect(field('~~~md\n### Version\n1.2.3\n~~~').count).toBe(0));
     it('does not count a fenced duplicate as another actual field', () => expect(field('```md\n### Version\nexample\n```\n### Version\n1.2.3')).toMatchObject({ count: 1, value: '1.2.3' }));

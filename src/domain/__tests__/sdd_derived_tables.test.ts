@@ -26,6 +26,23 @@ describe('SDD derived tables', () => {
     expect(() => validate(markdown)).not.toThrow();
   });
 
+  it('sdd-source-grounding-C46: whole-line code wrappers are presentation while hidden or malformed slots remain invalid', () => {
+    for (const newline of ['\n', '\r\n']) {
+      const source = draft().replace(budgetSlot, '`' + budgetSlot + '`')
+        .replace(traceabilitySlot, '`' + traceabilitySlot + '`').replace(/\n/gu, newline);
+      const markdown = renderSddDerivedTables(source);
+      expect(markdown).toContain('| Total | 3 |');
+      expect(markdown).toContain('| G-01 | payments-change-C01, payments-change-C02 |');
+      expect(markdown).not.toContain('`|');
+      expect(() => validate(markdown)).not.toThrow();
+    }
+    for (const wrapper of ['``' + budgetSlot + '``', '`' + budgetSlot, 'Text `' + budgetSlot + '`',
+      '<!-- `' + budgetSlot + '` -->', '```md\n`' + budgetSlot + '`\n```']) {
+      expect(() => renderSddDerivedTables(draft().replace(budgetSlot, wrapper)))
+        .toThrow(expect.objectContaining({ reason: 'case-budget' }));
+    }
+  });
+
   it('compiles the 96-case seven-area distribution from #694 without independent arithmetic or reverse edges', () => {
     const areas = [['F', 12], ['N', 14], ['A', 12], ['I', 16], ['V', 14], ['S', 16], ['E', 12]] as const;
     const rows = areas.flatMap(([area, count]) => Array.from({ length: count }, (_, index) =>

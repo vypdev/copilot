@@ -24,7 +24,46 @@ Locked install -> contracts and typecheck -> three target builds
 Contributors install locked dependencies, check the shared contract, build all
 targets and compare their deterministic receipts before opening a PR.
 
+The maintainer's 2026-11-01 sequencing decision puts the complete manual VoiceOver
+and final visual/interaction review in [H12 #713](https://github.com/vypdev/copilot/issues/713),
+when the whole extension UI has its final form. Earlier references below to
+human H3 acceptance follow that decision: keep scoped human observations, carry
+unverified spoken results forward explicitly, and do not repeat that full manual
+campaign before each intermediate PR. Automated accessibility, focus, locale,
+layout, native functional, architecture, coverage and review gates still apply
+to each milestone. Fix observed defects as they arise; interim merges do not
+certify final product accessibility or replace the required human task matrix.
+
 ## Build and verify
+
+The local center's [welcome and support guide](/browser-extension/onboarding)
+documents resumable reviewed progress and independent Help/About/Recovery.
+The browser package reader projects only bounded native manifest fields and the
+page build digest into an immutable frame. The support policy keeps current
+configuration availability separate from a saved/uncertain operation. Neither
+observation authorizes mutations or certifies the Action/background/store.
+Native metadata and support routes do not wait for the configuration handshake.
+The separate typed support loader accepts no fabricated Settings; authored links
+remain under the component AST gate. Welcome reuses the existing preference
+transaction and four progress values, without adding a storage engine or schema.
+Source-bound native and human H3 acceptance remains required after unit coverage.
+
+Runtime helper failures are independent of configuration availability. A failing
+panel cannot disable a valid shortcut helper. Only the failed helper is held
+until a fresh source-bound configuration lease. The content lifetime keeps at
+most100 closed mount/refresh/cleanup reason records in memory; retired failures
+remain historical and cannot disable replacements. Diagnostic delivery cannot
+prevent another controller's cleanup. Error text, URLs, identities, credentials
+and drafts do not enter the ring.
+
+The existing native listener accepts the parameterless `runtime.health` query
+only from this extension's non-content sender. It returns the page source and
+closed snapshot only for a current visible eligible configuration. Unknown,
+hidden/protected or identity-changed contexts are unavailable without a stale
+payload. Stopped listeners inspect no document. Responses are synchronous and
+attempted at most once. This boundary adds no network, storage, grant or generic
+request dispatcher. Full activity/diagnostic-history UI, consent, reviewed
+export/clear/recovery and native/human H3 evidence remain required.
 
 Use Node 24 and the repository's pnpm 10.12.4. From the repository root:
 
@@ -58,8 +97,9 @@ arbitrary output-path or partial-target CLI override.
 ## Target artifacts and compatibility
 
 Generated outputs are under `extension/dist/chrome`, `extension/dist/firefox`
-and `extension/dist/safari`. Each contains exactly `manifest.json`, `background.js`, `content.js`,
-`runtime.html` and `runtime.js`. `extension/dist/receipt.json` records
+and `extension/dist/safari`. Each contains `manifest.json`, `background.js`, `content.js`,
+`runtime.html`, `runtime.js`, `runtime.css` and declared packaged center chunks.
+`extension/dist/receipt.json` records
 `development-build-only`, the Git revision, an input-tree SHA-256 and asset hashes.
 The tree hash distinguishes pending source edits from the committed revision.
 Validation reads the bounded closed receipt and recomputes each declared asset
@@ -68,6 +108,16 @@ integrity validation; changing both bundle and receipt still fails comparison
 with fresh source builds. Invalid UTF-8 and malformed/noncanonical receipts are
 rejected rather than accepted as verified output.
 No timestamps, absolute source paths or secrets are included in the receipt.
+
+The builder always selects production mode, production browser/module exports
+and a constant production `process.env.NODE_ENV`, and ignores local environment
+files. Running it from a test runner or a development shell must produce the
+same complete artifacts and receipt as a production caller. No packaging
+environment override is exposed. `development-build-only` identifies local
+distribution evidence; the runtime itself uses the production Svelte build.
+The four-environment regression runs the real compiler in fresh child processes
+and compares every target byte. When validation reports stale output, run the
+complete build and validation again; do not edit its receipt to match old bytes.
 
 | Target | Chosen API floor | Development background | Identity |
 |---|---|---|---|
@@ -219,6 +269,74 @@ Firefox's `getManifest()` expands absolute extension paths and nullable defaults
 only the explicitly tested inert defaults are normalized. New grants/remote code
 or a foreign extension origin fail acceptance.
 
+The native Settings-entry harness re-queries its one exact button when WebDriver
+rejects a click with `404 stale element reference`, before activation. It allows
+at most three native attempts, each with a newly resolved reference. Transport,
+interception, malformed-reference and other failures still fail the journey;
+an uncertain click is never replayed or counted as a successful navigation.
+The separate Safari replaced-window handling still requires one new owned view.
+Cold three-target fixture setup in the package/receipt/Safari harness suites has
+an explicit 120-second hook budget. The public validation-command integration
+case has the same budget for its two actual complete clean builds; ordinary
+assertions keep their existing timeouts. Privacy inspection waits for the
+independent history hydration before asserting its exact request sequence.
+Cold two-build fixtures and receipt/source comparison use that same 120-second
+budget. Environment-isolation cases keep a 60-second bound per real child build,
+and allow 120 seconds for a case that runs two of them. Profile and operation
+assertions wait for verified provenance, enabled native controls and completed
+permission/history initialization before interacting or measuring new effects.
+Reference-composition assertions wait for native metadata inspection to finish
+before distinguishing a missing reference from unavailable inspection.
+The hosted Windows job allows 120 minutes for the complete root and extension
+coverage campaign. Hosted macOS and Ubuntu each allow 30 minutes after
+20-minute coverage runs timed out. The complete 64-path native Git tests and
+portable SDD publication cases have 120-second test budgets after hosted
+Windows exceeded 30 seconds. Assertions, per-command runtime limits, coverage
+and approval requirements remain in force.
+Earlier Windows attempts reached the workflow's 60- and 90-minute limits.
+The 90-minute diagnostic attempt passed the root suite and started the
+extension suite before cancellation. Both suites must finish to establish
+platform acceptance. [GitHub-hosted job limits](https://docs.github.com/en/actions/reference/limits)
+
+Lazy Data
+routes, session removal dialogs and updated favorite controls must be observed
+before tests interact with them. A successful connection fixture waits for the
+actual form reset that follows the completed connection promise, so a later
+settings-driven remount cannot erase a newly opened removal dialog.
+Retained collection assertions wait for the independent journal writer to drain
+and the explicit history-read control to become enabled before reading retained
+effects. Optional identity journeys observe enabled review/confirm/close/disable
+controls as well as returned focus. These are readiness conditions, with the
+existing five-second bound, rather than retries of a possibly submitted action.
+
+Settings preview admission reserves capacity before reading native storage.
+The fixed 16-operation budget includes preparations, retained previews and
+running confirmations. A suspended native read keeps its reservation until it
+settles, including after invalidation; overflow returns Busy without another
+inspection. Every failed preparation releases its reservation, and successful
+preparation transfers the slot to its retained preview without an async gap.
+Closed operation receipts retain their separate bounded history.
+
+Imports use the currently observed revision when submitted, including after a
+refresh on the same Data page. That submit-time revision remains the fence while
+the file is read: a later refresh cannot silently move the import onto newer
+settings. A newly opening or disposed native client exposes no retained snapshot
+as current settings; discovery waits for a compatible current document.
+
+The native driver sends the string `text` parameter required by
+[W3C Element Send Keys](https://www.w3.org/TR/webdriver2/#element-send-keys).
+The adapter's wire tests cover unchanged Unicode, multiline/empty replacement
+and keyboard tokens; loaded-browser evidence remains a separate requirement.
+
+Both original Svelte script scopes pass through the same TypeScript architecture
+gate as ordinary presentation modules. It rejects direct `window`, `document`,
+`self` and `navigator` authority, including nested callbacks. Keep native DOM
+capabilities in infrastructure and pass semantic actions or view data inward.
+Ordinary data fields such as a translated `document` label remain valid; their
+property names, class fields and renamed destructuring keys do not acquire a
+global capability. Markup restrictions, checked
+navigation and explicit native control event handling remain separate gates.
+
 Safari prerequisites are macOS 27.0.1 build 26A434, Safari 27.0.1 build
 22625.1.29.11.28, Xcode 27.1 build 27A9275, enabled remote automation and local
 development-extension support. Build the actual containing app:
@@ -240,6 +358,133 @@ session: its native WebExtension endpoint loads the exact embedded resources
 from the verified registered containing app. Ordinary WebKit is never used.
 Receipts distinguish this automation from normal-profile enablement and signed
 store delivery. Never replace a failed prerequisite with a generic WebKit pass.
+
+### Prepare the separate H3 Safari container
+
+For the current local-center work, use the H3 command instead of rebuilding the
+registered H2 rollback:
+
+```sh
+pnpm run build:extension
+pnpm run build:safari:center:extension
+```
+
+This creates `CopilotH3.app` under
+`.tmp/safari-h3/derived/Build/Products/Debug`, with fixed private identity
+`invalid.extensions.copilot.h3` and embedded `.Extension` identity. H2 retains its
+existing default command and separate `.tmp/safari-h2` output. Neither command
+accepts app-name, identifier, output-path or signing overrides. Both use local
+ad-hoc signing without a distribution identity or store action.
+
+The constructor detects exactly one generated `project.pbxproj` or
+`project.xcproj`, limited to1MiB. Xcode27.2's JSONC generation is supported in
+addition to the legacy format. Modern projects require the two expected targets;
+unknown identities, versions, malformed data, ambiguous layouts and symlinked
+files fail before compilation. Only the generated scratch project is normalized;
+unrelated generated settings are retained. Native identity, embedded resource
+hashes, signature and registration are verified after building.
+
+Each invocation generates a fresh project and fresh Xcode output under an owned
+`candidate-*` staging directory. It verifies the complete web resource set,
+identifiers and signature before replacing the fixed app directory, then opens
+that complete app for registration and verifies it again. Historical chunks in
+an old app or converter cache cannot become part of the new app. Unknown web
+resources, links, invalid UTF-8 and missing declared assets fail validation.
+Only regular native `Assets.car` and one-level `.lproj/*.strings` metadata are
+allowed outside the web receipt; native signature verification still applies.
+
+`attempt.json` reports the current phase and `building`, `failed` or `verified`.
+`container.json` is the last verified app receipt, which may belong to an earlier
+source; a failed attempt does not promote it into a new success. `build.log`
+contains the current failure diagnostics, capped at4MiB of valid UTF-8. Inspect
+these files under the selected profile's directory. Correct the failed phase
+before rebuilding; no reset of browser data or permissions is performed.
+
+The attempt also records `appReplaced` and staging `cleanup`. A failure before
+replacement keeps the old complete app. A later failure can leave the new
+complete app without confirmed registration or a current success receipt;
+inspect the phase rather than assuming the old app is still installed. An
+interrupted `.app.previous` backup remains evidence: inspect both versions
+before retrying. Staging is removed after ordinary success/failure; if cleanup
+fails, the attempt says so and preserves the original failure diagnostic.
+Fixed output parents and evidence files cannot follow links into H2. Neither
+cleanup nor rebuild changes browser permissions or stored preferences.
+
+Each fixed profile also owns `.build.lock` for the entire command. A second H3
+build cannot rewrite the first attempt or launch another native build. If the
+lock already exists, inspect its `owner.json`, the recorded process and write
+permissions; do not remove it blindly. H2 and H3 use independent locks. The owner
+releases its lock on success and failure, including failure to write the initial
+attempt; an interrupted process can leave evidence that requires inspection.
+
+The Xcode27.1/versioned H2 receipts above remain historical H2 evidence. A new H3
+build, including one made with Xcode27.2, is preparation evidence only. Complete
+source-bound Safari options/storage/session journeys and independent human
+accessibility evidence remain required. A `session not created`/RWI readiness
+failure occurs before extension behavior can be observed; report it as an
+automation prerequisite and preserve the failed receipt. Do not replace it with
+another WebKit engine or claim a native pass from a command-plan fixture.
+
+[Apple documents the modern project format](https://developer.apple.com/documentation/xcode/updating-your-xcode-project-configuration-file-format).
+
+Ad-hoc rebuilds do not establish a data-preserving upgrade. Apple documents that
+an [ad-hoc designated requirement is tied to a specific binary version](https://developer.apple.com/documentation/technotes/tn3127-inside-code-signing-requirements/).
+During local H3 preparation, two verified containing-app builds exposed different
+Safari extension origins: the previous origin had preference revision2 and the
+new origin revision0. This observation does not prove that the same profile was
+erased or that production upgrades preserve data. Keep both source-bound
+observations, verify the actual native identity, and test upgrade continuity
+separately with the intended signing identity. Do not change signing rules,
+restore/import data automatically, or reuse an earlier receipt as an upgrade pass.
+
+### H3 native center component journey
+
+Run the separate center command with explicit browser and matching driver paths:
+
+```sh
+export COPILOT_H3_CHROME_BINARY=/absolute/path/to/chrome
+export COPILOT_H3_CHROME_DRIVER=/absolute/path/to/chromedriver
+pnpm run build:extension
+pnpm run test:center-browsers:extension chrome
+# Firefox uses COPILOT_H3_FIREFOX_BINARY and COPILOT_H3_FIREFOX_DRIVER:
+pnpm run test:center-browsers:extension firefox
+```
+
+Node24 is required. The reviewed native pins for this component journey are
+Chrome156.0.8078.80/ChromeDriver156.0.8078.80 and Firefox159.0/geckodriver0.37.1.
+These identify the tested current engines; they do not change the API floors
+below. `--visible` is the only optional switch; it retains the same owned fresh
+profile and allows separate native browser UI observations. The default is
+headless. Safari uses the registered H3 containing-app procedure above; this
+command rejects Safari instead of substituting an unpacked installation identity.
+
+Before browser startup, the command validates the complete current package and
+two clean reproducible builds through the package command in its own working
+directory. It never changes the caller's working directory. It records browser
+and driver hashes, verifies the native engine/version, and checks the executed
+content/options/background source identities. A changed working tree is labeled
+`development-worktree`, rather than evidence of an exact committed candidate.
+
+The journey uses the extension-owned GitHub Runtime settings control, visits all
+20 sections, checks preview/cancel without durable writes, confirms a reviewed
+appearance change, destroys/reopens the options document, and reads back the
+retained value. It separately probes actual local/session storage with a
+nonsecret owned marker, skips an existing foreign key, cleans up its own marker,
+reads and explicitly revokes a fresh empty vault, verifies preferences remain,
+and restores the initial theme through review. No credential is injected.
+The public W3C page interface sends native clicks, typing, option selection and
+window commands; it never dispatches synthetic product input events or casts
+private driver/session fields. Rectangle requests are outer window dimensions,
+so responsive acceptance must measure the CSS viewport independently.
+
+Unique receipts and PNGs live under `.tmp/extension-browser-center-evidence`;
+`<target>-attempt.json` identifies the latest phase and failed/verified outcome.
+Success requires the owned session to close. Failed or incomplete cleanup cannot
+produce a successful receipt. PNG transport validation is not rendered-image
+inspection. Unit fixtures prove assertion/cleanup behavior only. Toolbar and
+browser Settings entrypoints, worker-idle/uncertain-write recovery, other H3
+acceptance cases and independent human accessibility remain separate evidence;
+this component journey always reports `fullH3Acceptance: false`.
 
 The automated browser workflow starts at an unauthenticated public github.com
 page to establish the genuine content-script origin, then installs the original
@@ -287,6 +532,139 @@ independent local and session storage areas: integration tests assert that only
 nonsecret preferences reach local storage and only protected session storage
 holds connection/scheduler state.
 
+## H3 configuration work
+
+The H3 branch adds closed center routes, bounded account-qualified profiles,
+effective-setting provenance and complete profile-change previews. These core
+policies are implementation building blocks; they do not establish that the
+full control-center UI or its native-browser acceptance has completed.
+
+Personal settings use schema 2 with a separate schema-1 center record inside
+the existing atomic settings envelope. Exact H2 settings migrate with their
+revision and preferences preserved. Migration keeps the prior current record
+as a compatible rollback; quota or the 64 KiB total limit leaves the original
+envelope intact. Unknown newer root/center schemas remain read-only. No session
+credential or private repository evidence belongs to this persistent record.
+
+Profiles cannot grant connections or permissions. Imported settings preserve
+current repository pauses even when the imported record omits that repository,
+and cannot remove an active selected profile pause by deleting or renaming the
+profile, even if the current or incoming settings also have a global pause.
+Resuming the global pause later must leave the selected profile pause intact.
+An import that would discard that independent pause is rejected before a preview
+or write; explicitly resuming/resetting that profile remains a separate reviewed
+action. A complete semantic preview includes removed overrides returning to
+inheritance and explicit false values. Session overrides are bound to verified
+account/repository identity and credential epoch before applying them.
+
+The H3 background now owns immutable settings previews and confirms only the
+retained operation ID/revision. Cancellation before confirmation writes nothing.
+Current settings, their previous rollback and the operation receipt share one
+atomic storage operation. A readback must confirm that exact complete record
+before the application reports saved state. A lost acknowledgement and an
+unavailable/changed readback are distinct outcomes; uncertain persistence is
+never retried automatically. Settings reset does not revoke a credential;
+disconnect is a separate explicit operation, and rollback cannot restore grants.
+
+Only the packaged runtime page can use the closed center protocol. One native
+window edits while the others observe; explicit takeover increments the
+controller epoch and retires old previews. Native document/tab bindings, an
+eight-client limit and thirty-minute foreground idle checks bound those worker
+clients without a background timer. Settings previews last at most five minutes.
+Known packaged hash navigation retains its client; reload, departure, close and
+tab removal retire it. Worker restart requires a fresh handshake and preview.
+Saved receipts remain inspectable facts rather than reusable approval.
+
+The dedicated settings preview is bounded to 68 KiB of request data and 132 KiB
+of complete before/after response, while each settings record remains at most
+64 KiB and other center methods at most 8 KiB. These transport bounds do not
+change setup-broker limits, add permissions or enable arbitrary commands.
+`center_native.test.ts` verifies the native background composition with fake
+browser ports; it is not a loaded Chrome/Firefox/Safari receipt. The full Svelte
+center, all fourteen workflows and source-bound native/human acceptance remain
+in progress on H3.
+
+See the [H3 companion](https://github.com/vypdev/copilot/blob/develop/specs/github-browser-extension-control-center-h3.md)
+for the complete fourteen-capability scope and acceptance gates. Its tests and
+browser receipts remain distinct from H2's engineering evidence.
+
+H3 pins Svelte 5.57.1, its Vite plugin 7.3.1 and svelte-check 4.7.6 in the
+private package. `typecheck:extension` runs TypeScript and Svelte checks with
+zero warnings required. The source gate inspects original typed scripts,
+templates and styles; a compiler-erased import cannot bypass layer rules.
+Components stay within ninety lines. Original Svelte/CSS and check configuration
+are source-fingerprinted. Native globals, raw HTML, bound password values,
+unreviewed destinations, resource-bearing markup/styles and warning suppression
+are rejected. Static local layout/theme/contrast/reduced-motion styles remain
+valid. Literal local lazy imports are composition-owned.
+
+The first mounted Svelte review component presents before/after values, a
+read-only view, saving state and honest completed/uncertain/conflicting outcomes.
+Its en/es/fr/pt messages are complete resources; untrusted authored text is
+escaped. Unknown persistence offers a current-state read instead of repeating
+a write. Its DOM tests select only Svelte's public browser export, preserving
+native Node exports for build/driver tests. This is component evidence; actual
+H3 browser/human journeys remain required.
+
+The options entry now mounts the Svelte center with packaged lazy routes.
+Overview, appearance, language, profiles and local data operations use the
+background review contract. The foreground keeps reusable native handles private
+and sends each draft's original revision and credential context. Saved values
+never silently replace an unsaved draft. Leaving requires an explicit decision;
+drafts reset only after the exact saved revision is observed. A lost response
+offers a read, never an automatic write. These routes have complete en/es/fr/pt
+resources. Appearance saves its five preferences in one atomic review.
+
+Import validates at most 64 KiB of UTF-8 JSON before preview. Export contains
+closed portable preferences without connection grants or native session state.
+Future/invalid data remains inert. Query-bearing or invalid initial options
+destinations reload the fixed recovery URL before native registration.
+
+Center JavaScript uses packaged ES modules and CSS. Static/lazy dependencies
+must name declared local assets. Source-tagged chunks are bounded, reachable
+and individually hashed; CSS cannot fetch resources. Safari-resource and
+reproducibility checks include every chunk. Mounted tests use deterministic
+native ports and a nonopaque jsdom URL, not a loaded extension.
+
+### Native center transport
+
+One private `runtime.connect` port represents the center document. Anchor
+navigation retains that source; disconnect or real departure retires it.
+Native frames keep the closed existing envelope and byte limits. Each source
+retains at most16 correlation/SHA-256 pairs and32 incoming frames, including the
+one being hashed. Object-key order is normalized before native WebCrypto hashes
+the UTF-8 JSON; array order and values are retained. Completed request/reply
+bodies and credentials are absent from the fingerprint window.
+
+An identical retained copy causes no extra gateway call, response or observed
+completion. Changed-content collisions retire the source. Requests outside the
+window still need an increasing correlation, and replies still need a pending
+request. The adapter never retransmits a mutation or a cached response. Hash
+success and failure recheck lifetime, so a retired task cannot disconnect a
+replacement. Missing or failed native crypto exposes the existing recovery
+state without downgrading the sender/source checks.
+
+The canonicalization/window policy is pure domain code. Native hashing and the
+ordered queue stay in browser adapters; application operation/approval policy
+remains independent. No runtime dependency or permission is added. jsdom's
+missing SubtleCrypto is supplied by Node's actual API in test setup; scheduling
+unit cases can use the test-only Node SHA-256 adapter. Paired-port tests cover
+separately cloned duplicate requests/replies, collisions, eviction, review/save,
+cancel, worker loss and exact readback. Native engine and human evidence remain
+separate gates in the [lifetime specification](https://github.com/vypdev/copilot/blob/develop/specs/github-browser-extension-center-lifetime.md).
+
+
+Unfinished development sections do not satisfy CENTER acceptance. Complete
+repository management, full searchable inventory/provenance,
+remaining routes and all source-bound Chrome/Firefox/Safari and human
+accessibility journeys still belong to H3.
+
+Profile identifiers provide visible localized guidance and native validation.
+Escape literal hyphens in HTML character classes: current input constraints use
+Unicode Sets semantics, as described in the [HTML pattern reference](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Attributes/pattern).
+Test actual input validity as well as domain admission; an invalid HTML pattern
+can be ignored by the browser even when the background still rejects the value.
+
 Post-Connect preference changes use the serialized settings update port and
 retain the initiating operation/session fence. An older failed settings commit
 cannot disconnect a newer account, and a newer update reads the latest complete
@@ -324,3 +702,823 @@ heading in its independently authored DOM fixture and verifies that document
 visibility is genuinely visible. Safari can otherwise leave an automation tab
 hidden; the runtime correctly pauses such a tab. No live GitHub control is clicked
 for focus, and no script overrides visibility, extension code or native APIs.
+
+
+The center now uses a separate bounded protected vault for up to five named
+`github.com`/`repository-read` contexts. Domain contracts validate closed intents,
+numeric verified identity, names, scope and nonsecret summaries. `NamedSessions`
+owns revision checks, active-credential fencing, exact acknowledgement readback
+and serialized permission revocation. `CenterGateway` separately checks native
+origin/document, controller role/epoch and credential epoch. A settings-schema
+failure does not prevent reading sessions or disconnecting.
+
+The production form passes its native element to infrastructure, where permission
+request is the first browser API operation in the submit gesture. The unbound
+password field clears before waiting; its value never becomes a Svelte property.
+Mounted tests verify permission denial, late takeover, page disposal, uncertain
+transport, exact-entry removal, escaped names and future/corrupt preferences.
+These deterministic ports do not prove loaded-browser session-storage isolation.
+The registered H2 Safari package remains rollback evidence until new source-bound
+H3 options/storage/session journeys replace it.
+
+
+The H3 composition rejects retained direct H2 Connect/settings-write commands.
+Legacy absolute Disconnect clears both protected keys through the same named
+manager, without resetting nonsecret authored preferences. The upgrade regression
+executes the actual background and foreground client through deterministic native
+ports; it reproduces all three pre-fix bypass/retention failures. The original
+standalone H2 gateway tests remain explicitly scoped to that older composition.
+
+Profile scope controls use saved numeric provider identities. The GET decoder
+projects optional validated owner ID/type/login, never unrelated provider DTO
+fields. Selected-session views use fresh restored owner facts even while an
+inactive vault entry retains older metadata. Scope choices and saved-preference
+provenance are pure domain policies; Svelte receives their immutable output.
+Repository pause/reset uses retained preference reviews and cannot consume an
+unsubmitted connection draft. Content-runtime resolver wiring, workspaces, rename
+recovery and source-bound native/human journeys remain required for H3.
+
+## Generated history transaction boundary
+
+The journal core is available to background-owned application services; its
+consent, activity/privacy UI and source-bound browser acceptance are still being
+implemented. It is not an exposed generic recording endpoint or completed H3.
+The [journal specification](https://github.com/vypdev/copilot/blob/develop/specs/github-browser-extension-local-journal.md)
+defines its full delivery requirements.
+
+`IndexedJournalStore` opens only `copilot.generated-history.v1`, native version2,
+with fixed `diagnostics`, `recents` and `policy` stores. The known version1
+upgrade adds policy without changing either history; an unknown layout is not
+repaired. Journals use the `current` key, policy uses only diagnostics/recents.
+A readwrite transaction reads the bounded journal and policy, runs the synchronous domain
+decision, and queues its replacement from the native success callback. Do not
+await unrelated work inside that callback. Only transaction completion establishes
+commit; request success does not. A rollback is reported as aborted, and an
+unestablished result stays unknown. Connection cleanup cannot erase a completed fact.
+
+Clear advances the generation and revision atomically. An admitted old-generation
+write or update cannot repopulate cleared history after a worker restart. A clear
+for an older reviewed revision is stale. Expiry runs transactionally on access;
+it is not a background wakeup or guaranteed physical erasure at exactly seven days.
+Future/corrupt documents and unexpected native layouts are preserved. No database
+deletion, downgrade, permission request, network request, telemetry or credential
+fallback is present. The deterministic request driver verifies these boundaries;
+real Chrome, Firefox and Safari transaction journeys remain a separate H3 gate.
+
+`JournalReviews` adds retained, time-limited clear plans with editor/credential,
+privacy revision and exact history revision fences. It requires a shared paused-
+collection reservation and passes a private admission guard through asynchronous
+native opening to the request callback. A separate reread distinguishes an
+acknowledged clear from its observed result; unknown acknowledgements do not
+attribute the write. In-flight cancellation stays pending, and duplicate confirms
+join or replay one result. The production collector and center UI composition
+remain required; these application services alone do not expose clear controls.
+
+The preference half uses `SettingsRepository.reserveMutations()` over its existing
+FIFO. It is acquired only when no own preference mutation is pending. While held,
+new commit/update/startup-migration operations wait; read/inspection remains
+available. `JournalReviews` acquires it before the collection reservation and
+holds it through canonical readback. Rejected work does not poison the queue,
+source guards still apply after waiting, and a stale/idempotently released lease
+cannot unlock a new owner. This queue reservation alone does not establish
+collection or complete its UI.
+
+`CollectionCoordinator` is the application consent owner. Its restriction-only
+`SettingsWriteEffects` port runs inside the same FIFO, after the before/after
+snapshot and replay/revision checks. Native preference publication waits for it
+and rechecks the source. The scope remains owned through primary readback;
+cleanup failure cannot change an established settings result. Existing startup
+migrations are preserved. `CollectionHistory` now wires this preflight into the
+production background's same preference repository. Mounted center controls and
+the admitted-destination and preference-observation producers are now composed;
+complete native/human acceptance remains delivery work; helper samples now have source-checked pre-open capture and native options handoff, and explicit clears now have independent attempt, acknowledgement and readback observations.
+
+Both kinds pause admission before a consent-change I/O wait. Off attempts a
+policy pause and independently permits the off preference to save. Every
+false-to-true change must first observe paused policy; a plain import cannot
+reuse an old active marker. Unknown writes keep acknowledgement and canonical
+observation separate. Ordinary refresh cannot release an uncertain session stop.
+If neither restriction persisted, restart can only restore the stored active
+facts; the UI must disclose the missing durable stop and native-disable recovery.
+Unrelated saves preserve healthy consent. Global pause retains consent/history
+and retires old admission tickets. An uncertain global-pause save stays blocked
+in this process until a durable pause is observed; reading unchanged unpaused
+preferences cannot release it. A later verified resume creates fresh admission.
+Old/mid-write refreshes cannot replace newer observations. A burst shares one
+active read batch and at most one coalesced trailing request, including reentry;
+disposing a scheduled owner performs no native read. History notifications
+must stay center-only and must not invalidate content helper quarantine.
+
+`CollectionReviews` now retains at most16 pending/running plans and32 completed
+results with a five-minute lifetime and editor/controller/credential fence.
+Confirm/cancel selects the retained exact plan; the renderer receives no private
+native policy nonce or admission witness. Completed records discard full saved
+preference snapshots. Duplicate confirmation joins one submission, in-flight
+cancel remains pending, and replay returns historical facts without another write.
+
+`collection_effects.ts` orders preference and policy phases. A committed opt-in
+continues only from its own operation-bound preflight receipt and admission
+generation. That generation is captured before the native wait, so a later stop
+cannot be adopted by the older start. Activation acquires an idle preference
+lease after the queued preference operation has completed, rereads the complete
+confirmed canonical snapshot and receipt, and submits one exact guarded policy
+transition. Partial persistence of other settings cannot certify that plan.
+Independent readback
+must match the private receipt before admission. Source or policy movement keeps
+the first-phase fact and prevents later admission. Exhausted counters fail closed.
+
+Stop retires admission synchronously after its running promise is registered.
+It attempts metadata pause first under an idle preference lease, even when the
+preference counter cannot advance. For on intent, that one attempt is staged
+under the operation ID, kind and preference revision (at most16 running contexts).
+Release the lease before queued commit; its mandatory preflight consumes the
+matching stop result instead of repeating an unknown submission. Mismatching or
+increasing intents cannot consume it, and all terminal paths clear staging.
+Already-off intent gets an actual retained policy plan, with no invented settings
+change. Guarded stop observation retires older reads, so the live cache retains
+known policy success even if preferences subsequently fail. Unknown/future policy
+and a busy secondary writer do not prevent reviewing off.
+`preferenceVerifiedAtObservation`, `admittedAtObservation` and
+`sourceCurrentAtObservation` are historical result fields; always render the live
+coordinator view independently. These application contracts are not yet native
+browser or mounted UI acceptance.
+
+`IndexedCollectionPolicyStore` stores one closed receipt per collection and
+requires a private source guard for a set. Policy and history request success are
+distinct from native transaction commit. Append checks active policy revision and
+journal epoch atomically; clear checks paused policy plus its reviewed revision.
+Admitted updates may finish while off until history clear invalidates their epoch.
+Both native reads must finish before any decision; repeated callbacks cannot
+substitute missing policy or cause a second put. Policy domain/adapter code does
+not yet compose the collector or UI. See the
+[consent refinement](https://github.com/vypdev/copilot/blob/develop/specs/github-browser-extension-collection-consent.md)
+for full restart, partial-outcome and native/human delivery requirements.
+
+`JournalWriter` adds secondary retention without changing the primary operation's
+result. Trusted use cases admit frozen closed facts under known active consent
+and a known history epoch. Its opaque tickets stay in the background; they are
+not reusable renderer authority. Track at most200 logical records for five
+minutes, coalesce per ticket, and perform one native operation at a time. Initial
+unknown epoch, capacity or expiry drops are inspectable as incomplete history;
+later availability does not backfill them. The entry time is the first observed
+fact, rather than a claimed completion timestamp.
+
+An uncertain append cannot be identified by guessing a sequence or matching its
+time/action. It remains unknown without automatic retry or later row updates.
+Known rows retain exact epoch/sequence/original-time/action identity. An uncertain
+update can be read back; that observation does not retry the write. A different
+new observation may advance the same known row. Established completion and
+accepted acknowledgement survive weaker later availability. Persisted reviewed
+records pass through submitted even when the desired completion was coalesced.
+
+`ObservedJournalStore` delivers canonical results before releasing shared clear
+reservations. A new clear epoch retires old tickets and queued work; reservation
+release cannot resurrect them. Failed clear releases deferred admitted work
+without claiming deletion. Wire `JournalReviews.idle` to the actual writer's idle
+state, not coordinator eligibility, which is false while the reservation is held.
+The writer and review cores now share production ownership and a closed gateway;
+independent real-browser acceptance remains; helper samples now have source-checked pre-open capture and native options handoff. Actual preference, session, start/stop and clear observations are described below.
+
+`CollectionHistory` constructs the actual coordinator, preference repository,
+writer and observed store without I/O. Native bootstrap follows synchronous
+listener registration. It reads control policy even with capture off and primes
+only verified active journals. The lazy IndexedDB factory acquires the native API
+only on open and fails closed in private contexts. Native unavailability cannot
+break unrelated preference saves. History notifications use only
+`center.history.invalidated`, without querying tabs or resetting helper quarantine.
+
+`HistoryControls` binds both retained review families to the same native editor
+fence and real writer-idle reservation. `HistoryGateway` is reached through the
+existing origin/document/tab authorization; observers may read and report their
+own consented local destinations. Only the current editor and credential may
+change authored preferences or collection controls. Controller movement invalidates both
+families. Reads recheck the binding/credential after I/O and remain available
+independently from unreadable preferences. Domain history-state declarations keep
+UI contracts independent from application implementation classes.
+
+The closed protocol supports one collection's read, start/stop or clear preview,
+confirmation/cancellation and read-only inspection of a retained public review ID. It accepts no raw
+facts, policy nonce, callback, store name or provider request. Current compound
+results preserve separate preference/policy facts; do not flatten partial success
+into a completed history record. Helper samples now use their own source-checked pre-open observation and native options handoff. Explicit clears now use their own closed family below. Session and compound start/stop observations use their own closed families below. The localized typed client/UI is now composed in the options
+page; native-browser and human acceptance remain outstanding.
+
+`HistoryClient` owns one mutation review and one bounded read stream with at
+most one trailing request per kind. Public immutable views strip native review
+selectors. Secondary read/transport failures do not poison primary preferences;
+a source-tree mismatch still retires the shared native owner. Read cursors and
+clear anchors prevent late old data from restoring cleared rows. Result-only
+inspection never confirms or retries an effect and cannot erase established
+completion or clear acknowledgement facts. Exact export bytes are retired as
+soon as their source read is invalidated. Download uses a separate native-file
+adapter and fixed filenames; no storage envelope or credential is exported.
+
+Activity, Diagnostics and the independent Privacy history section are packaged
+literal lazy modules. Their load failures cannot hide the native permission
+inspector. The options composition combines primary and history navigation
+guards, fences queued actions, and refreshes canonical preferences after a
+collection result. History-only invalidation never refreshes the unrelated
+provider/settings views. See [local activity](/browser-extension/local-history).
+
+### Accepted-destination producer
+
+`RecentsCapture` issues a private, purpose-separated permit only from already
+known active consent and a known writer epoch. Capture reads native metadata;
+it performs no store or provider I/O. The permit binds client, document, tab,
+controller and credential generation. It stays outside public preference, Svelte,
+journal and export state. Consent or writer uncertainty synchronously retires it;
+later recovery cannot revive it. Cache pruning never calls other clients'
+authorization callbacks or prolongs their native idle lifetimes.
+
+`center.recents.observe` accepts only that permit, a positive safe delivery
+sequence and a closed destination. Native binding and admission are rechecked
+before the actual writer port. Sequence replay is semantic and idempotent;
+reusing a sequence with different content is invalid and older delivery is stale.
+Capture returns the private high-water mark so reconnection cannot reuse an
+earlier submission number. Exhausting this ephemeral delivery namespace rotates
+only the permit for future observations; it never resets a journal or retries an
+old visit.
+
+`RecentsClient` snapshots that private context at observation. `VisitDelivery`
+keeps one active submission and one latest queued destination. Replacements or
+unknown responses produce local, count-only uncertainty; there is no resend or
+backfill. A fresh metadata read prepares future observations only. Old native
+contexts and clear generations cannot publish into the current queue or revive
+cleared data. Subscriber and provider failures do not change navigation.
+
+The actual options composition observes the first admitted current view and
+accepted visible navigation, never a pending guarded destination, Stay or focus
+refresh. `centerDestination` strips private profile details before IPC and retains
+only registered feature detail. Native editor and observer windows can report
+their own consented visits. Four-locale Activity/Privacy views distinguish local
+delivery uncertainty from retained history and writer progress. Gateway and DOM
+integration tests exercise this composition; loaded-browser and human evidence
+remain separate gates.
+
+### Preference observations and independent current operation
+
+`SettingsOperations` retains the validated action with its exact plan, registers
+the running confirmation before observer callbacks, and shares that promise for
+duplicates. `SettingsRepository.commit` invokes the submission callback only
+after the native store port has actually been called, including synchronous
+failure. Confirmation alone is not proof of submission. Secondary callbacks
+receive a detached frozen result and cannot change the primary result, cached
+replay, write count or canonical readback.
+
+`CurrentOperations` owns one captured target per native client, eight entries
+maximum, for five minutes from first observation. Neither reads nor updates
+renew that lifetime. The current target is captured from the admitted detached
+intent; source loss, replacement, eviction, clock failure, expiry or shutdown
+retires it irreversibly. Pruning does not authorize another client or touch its
+idle lifetime. The optional writer ticket is acquired once at preview capture;
+later activation never backfills an untracked operation. Old completions may
+update only their original ticket and cannot replace a newer current entry.
+
+The closed `center.operation.read` accepts only version and the native client
+selector. After existing origin/document/tab/controller authorization, it reads
+memory only: no preference, history-store or provider I/O. The response contains
+closed settings/session-family facts, an optional current target and independent retention,
+never reusable native selectors or approval. `center.operation.invalidated`
+refreshes only this metadata and never resets content quarantine.
+
+The typed `CurrentOperationReader` has one active request and one coalesced
+trailing request, immediately redacts private target detail on invalidation and
+rechecks lifetime after external boundaries. Options starts metadata inspection
+after native role admission, independently of a stalled primary settings read.
+The four-locale `CurrentOperationPanel` preserves earlier proved facts while
+disclosing stale/unavailable metadata. Its read button never confirms or retries.
+
+An ordinary primary settings read may reconcile only an existing same-owner,
+current, unexpired unknown confirmation against its exact receipt, before revision
+and complete expected after-state. The existing32-result/five-minute primary
+cache retains this private expectation only while unknown, releasing it on
+invalidation, expiry, eviction or verified completion. It never enters metadata,
+history or export. Generated-history clear leaves the separate temporary current
+view intact. Session effects and compound preference/policy outcomes use their own closed families below. This settings family cannot stand in for either.
+
+### Active-session persistence foundation
+
+`ProtectedSessionService` now keeps native save/removal and their one canonical
+readback inside the same persistence queue. `protectedMutation` returns only
+immutable acknowledgement and desired-state observation, with no raw exception
+or credential. `sameProtectedSession` compares the entire validated record,
+including optional organization identity, independently of key order. A matching
+save or absent removed key can establish completion after lost acknowledgement;
+accepted-but-unapplied effects and failed inspections remain unconfirmed.
+Existing epoch, permission and source gates still control publication. These
+internal persistence facts now feed the per-call session projection below. Helper samples now use their own source-checked pre-open observation and native options handoff. Explicit clears now use their own closed family below.
+
+
+### Native session-operation observations
+
+`NamedSessions` captures a per-call observation only after native validation and
+preflight restoration. `SessionObservationSource` owns the private controller and
+credential witness; only the active service's synchronous own-epoch notification
+can advance it. External source loss retires it permanently. Neither selectors
+nor epoch callbacks enter renderer events or generated facts.
+
+`SessionObservations` is an inert bounded accumulator. It records submission only
+after the actual mutation port is invoked and preserves each independent canonical
+readback: active retirement/save/cleanup, repository read preference, vault
+save/removal. `SettingsRepository.updateObserved` uses canonical verification even
+without a working observer. Secondary faults never choose a weaker primary path.
+Permission-driven revocation supplies no attributed user observer. Cold explicit
+revocation prevents silent restoration in this worker; unconfirmed native removal
+still cannot establish durable deletion after restart.
+
+The closed session fact has at most16 ordered effects and no private payload.
+`CurrentOperations` shares its eight-client/five-minute bound between settings
+and sessions. `SessionEffects` renders immutable facts in all four locales.
+`CenterClient` keeps its private summary fenced; only a directly observed vault
+revision returns to the native form handler to clear a successful submitted draft.
+The context-change callback refreshes metadata without carrying native IDs or
+restoring a retired identity. Missing responses never trigger a guessed success.
+
+The writer supports same-row session progress alongside the existing mandatory
+settings transition. Canonical absence retires a known ticket. The generated
+journal counts its exact JSON export envelope toward64KiB and evicts oldest other
+rows before publishing an append/update; it keeps the updated row's complete facts
+and never trims authored data. Current metadata reads perform no store/provider
+I/O and cannot reconcile an old session write solely from a matching payload.
+See the session fact/source/service/gateway/capacity/mounted-view suites for
+executable contracts. These do not replace native-browser or human acceptance.
+
+### Compound collection-operation observations
+
+`CollectionReviews` captures one per-call observer after admitting the exact plan.
+It reports confirmation, cancellation and expiry without minting another plan or
+ticket on replay/inspection. `CollectionObservations` retains three fixed phase
+slots; service completion cannot reconstruct a missing native phase or rewrite
+an established observation. Missing or pending observations remain incomplete.
+
+`attemptCollectionPolicy` reports submission after the actual port invocation,
+including synchronous failure. Restriction and activation inspect once and pass
+only detached closed facts. Attribution checks the exact mode, policy revision,
+before revision, preference revision and private nonce. The private nonce and
+native client/plan selectors never enter the observation or journal; a closed
+nonsecret policy revision may be retained. A missing acknowledgement remains unknown even
+when canonical readback proves the desired state.
+
+`SettingsRepository.commit` forwards a per-call policy observer through its
+mandatory `SettingsWriteEffects` preflight. The coordinator consumes an exact
+staged stop without creating a second pause trace. `commitCollectionPreference`
+uses the same canonical primary path with or without an observer. Secondary
+failures cannot change replay, policy admission, current-source guards or cleanup.
+
+The shared closed vocabulary lives below journals/reviews in
+`collection_operation.ts`; retained effect plans live in application transition
+ports, independently from executors. Both type and runtime imports remain acyclic.
+Static `h3`/`h4` headings preserve current-view/history nesting under the existing
+markup-authority gate. All four locales distinguish not observed, submitted and
+inspected phases. Historical admission/verification flags are shown only after
+the service result, separately from live current-source metadata.
+
+Collection current entries share the existing eight-client/five-minute limit and
+the same diagnostic tickets. No new recording IPC, permission, configuration key
+or global callback registry is added. Helper samples now use source-checked pre-open observation and native options handoff; complete native/human H3 acceptance remains separate work. Explicit clears use a distinct closed family below.
+
+
+### Explicit clear observations
+
+`JournalReviews` captures a per-call `ClearOperationTrace` only after validating
+the paused preference/policy, exact history snapshot, source and idle writer.
+`ClearObservations` retains only closed primitive intent/progress facts. Native
+selectors, generation/revision, targets and raw errors never enter `ClearFact`.
+`clear_operation.ts` owns the neutral issue vocabulary so journal/model imports
+remain acyclic, including type imports.
+
+Confirmation registers its primary running promise before observer callbacks or
+native reservations can reenter. Preference reservation remains synchronous,
+so later writes cannot preempt it. Reentrant confirm joins the same promise;
+cancel and result inspection report pending. Submission is observed after the
+actual native port invocation, then acknowledgement before canonical readback.
+An exact next empty generation is an observed condition, not causal attribution.
+Returned summaries cannot invent a missing attempt; incompleteness stays visible.
+
+`CurrentOperations.reviewClear` shares the existing eight-client/five-minute owner.
+Diagnostics clear deliberately never calls history admission, even under a stale
+secondary cache. Recents clear may acquire one diagnostics ticket at review time;
+no replay, progress callback or opt-in later may acquire another. Canonical native
+clear observations retire old tickets before deferred work resumes. Current
+metadata uses no storage/provider/permission I/O and is outside generated clear.
+`ClearEffects.svelte` renders the independent facts in all four locales using
+static nested headings; absence of a sampled source flag is not rendered as false.
+
+Contract/native-gateway/DOM regressions cover reentry, queue order, pending write
+versus pending read, lost responses, explicit no-write, historical source loss,
+no self-record, ticket retirement and independent metadata. These deterministic
+cases are not loaded-browser or human H3 acceptance.
+
+
+### Source-page helper sample and native options handoff
+
+Content composition snapshots its admitted visible source into the existing
+`settings.open` call, before native options opening hides the source. The optional
+intent is closed and detached before async work: source digest, generation,
+credential epoch, settings revision and the two registered helpers' bounded ring,
+or explicit unavailable evidence. No arbitrary recorder/page-send method or
+browser API dependency is added. Native top-frame/source/window/configuration
+lease and available document identity must agree. A new native configuration
+attempt withdraws the old helper receipt before its first await; only that latest
+attempt can publish a replacement. Four regressions cover failed/pending native
+and settings reads plus an older late success.
+
+`HelperSamples` creates historical observations, not a live page lease. It
+retains at most8 native options-tab samples for5minutes, with opaque one-use
+internal handoff receipts and fixed native created-tab identity. Native removal
+retires unbound receipts so a late result cannot reuse an uncertain identity.
+No renderer selects a source tab. The admitted `center.health.read` reads only
+that client's own native tab, with no preferences/history/provider/grant I/O.
+A dedicated center-only notification handles install racing initial client
+admission. `HelperSampleReader` registers before notification reentry, joins
+duplicates and can coalesce one invalidated generation without polling or retries.
+
+The complete100-reason memory sample and separately sampled blocked set remain
+historical. No fault time, URL, private target, account/repository identity or raw
+error is invented or persisted. At capture only, the existing consented writer
+may admit one latest closed reason per helper, at most2 diagnostics tickets.
+Admission is never reacquired by native install, read, replay or later opt-in.
+Writer generation/expiry/unknown-identity fences still apply. Retention is separate
+from sample availability and cannot change native opening. Static four-locale
+Diagnostics/Help presentation works independently of usable current preferences.
+Actual content/background orchestration and mounted native-gateway fixtures remain
+separate from full loaded-browser/human H3 evidence.
+
+### Explicit repository relocation boundary
+
+The optional `repository` operand on named-session `select` is a bounded
+`owner/name`, not a provider URL or new session purpose. `NamedSessions` reuses
+only the selected entry's protected read credential;
+`ProtectedSessionService` verifies the existing numeric viewer/repository pair
+before canonical persistence. No adapter redirect or endpoint policy changes.
+The direct exact next-vault-revision receipt can clear the local draft. A later
+read may enable another review but cannot certify the previous outcome.
+
+`repository_relocation` contracts, named-session integration, actual center
+transport/mounted four-locale tests and authority fixtures cover wrong identity,
+old controller/document/epoch, unknown persistence/response, revision change,
+navigation discard and secret exclusion. Their deterministic provider/native
+fixtures do not establish loaded-browser or human H3 acceptance. The owning H3
+refinement retains those gates and the complete workspace/write-purpose scope.
+
+### Bounded authored workspace boundary
+
+Nested center schema 2 adds at most ten groups of twenty opaque references and
+one selected group. Exact schema-1 migration is additive; root schema 2, the
+64-KiB limit and future/corrupt preservation remain. Pure workspace validation,
+planning, reference projection and complete semantic review live in domain
+modules. The fixed `#/repositories/workspaces` subroute uses existing lazy-page,
+draft, retained SettingsOperations, canonical commit/readback and rollback paths.
+It shares no connection form or new RPC/provider authority.
+
+Use immutable detached validated intents across runtime messaging; reactive UI
+proxies are not portable structured-clone payloads. Metadata inspection is local
+and cannot restore a protected connection. Explicit Connect/Verify/select fences
+and verifies its candidate without first restoring a different identity. The
+fixed H2 alias is promoted to a unique native ID only on explicit verified
+selection. Imported `unbound-` slots never resolve, even if a protected record
+happens to use that ID; local reattachment is explicit.
+
+Workspace/group preference changes never alter pauses, connection grants or
+private storage. Current operation capture names the authored group and fixed
+subroute; redacted history retains the existing local-center preference action.
+Tests exercise actual native background/settings/session composition with
+deterministic browser/provider ports, alongside mounted four-locale pages,
+closed-schema migration, rollback/replay, unknown outcomes and privacy boundaries.
+These results remain separate from loaded-browser and human H3 evidence.
+
+The H3 temporary-pause admission foundation uses a separate, closed
+`copilot.temporary-pauses.v1` protected session record: schema/revision,
+emergency boolean and at most 128 native tab IDs. Its 16-KiB bound contains no
+URLs, repository metadata or credentials. `TemporaryPauseReader` has no write,
+repair, permission-request or fallback-storage path. An absent key is the only
+empty default; unavailable/corrupt/future data restricts admission. The actual
+background installs this dependency before credential restoration and shares
+its result with configuration and object-GET admission. It rereads before
+publication and invalidates native page leases on this exact session key.
+
+Pure emergency/tab change plans do not authorize native writes. The production
+coordinator now retains authoring reviews and checks native target/controller
+admission before canonical commit/readback. Resumption UX, operation observations
+and four-locale provenance still require presentation integration before H3 is
+complete. Deterministic independent
+worker instances prove composition against retained fake session storage; they
+do not prove Chrome, Firefox or Safari restart behavior. The existing loaded
+H2 receipts cannot substitute for that evidence.
+
+`TemporaryPauseStore` owns a bounded16-job native FIFO and canonical snapshot
+persistence. `TemporaryPauseGuard` has at most16 private holds, a worker-local
+precaution and a changing private witness. A production writer and runtime
+reader must share that guard. Complete reviewed snapshots are detached before
+queueing; a source retired before a queued start cannot inspect native storage.
+Compare the full current record and recheck ownership before one native set.
+Keep acknowledgement, canonical observation and current-publication authority
+separate. Preserve unknown effects; never automatically repeat or inverse-write.
+
+Explicit reconciliation rereads the exact reviewed native state and the same
+idle private guard witness, then lifts only the extra precaution. It writes no
+native data and certifies no older operation. Neither a metadata read nor an
+ordinary successful write can clear prior precaution. Private witnesses do not
+belong in browser messages or Svelte props.
+
+The production `TemporaryPauseReviews` coordinator exposes only the five closed
+`center.pauses.*` messages through the native center gateway. It retains at most
+16 preparing/pending/running operations and 32 completed outcomes with five-minute
+lifetimes. Native reads reserve capacity before waiting; takeover cannot pretend
+they have completed. Origin/document/controller/credential/revision fences and
+fresh target checks precede effects. Completion rechecks publication authority
+after the primitive returns. Duplicate confirm joins or replays facts, never an
+effect. An unexpected lost write/adoption result retains shared precaution.
+
+`BrowserPauseTargets` uses the existing GitHub host grant, at most 128 candidates
+and four concurrent lookups. Public choices contain only native ID and bounded
+repository/object labels; target source paths and guard witnesses stay private.
+Native reload/navigation retires matching reviews even at the same URL.
+`ClosedPauseCleanup` coalesces up to 128 trusted closure IDs. While an admitted
+pause write settles, those IDs remain in the buffer. Cleanup checks the guard
+witness around the native read and removes only the closed scopes through the
+same guarded writer. Once attempted, an effect is handled through the existing
+outcome and precaution rules. The integration tests cover role isolation,
+malformed preferences, replay, unknown effects and native closure, including
+concurrent writes and shutdown while a closure is waiting.
+
+`PauseObservations` adds the closed nine-field `pause-operation` projection to
+current memory and optional diagnostics retention. `TemporaryPauseReviews`
+acquires at most one secondary ticket at capture; the same protected native
+writer reports invocation, acknowledgement and canonical readback. Acknowledgement
+is observable before a delayed readback. Source is rechecked after completion
+observers before publishing the response. Secondary failures never repeat effects
+or acquire a fallback ticket. Adoption has no native submission/acknowledgement;
+trusted tab cleanup has no user observer. Current and retained effects render in
+en/es/fr/pt. The localized native authoring/recovery page is described below;
+full runtime provenance and loaded-browser/human acceptance remain H3 obligations.
+
+Pause observer liveness retains only the owner/epoch/time/generation binding and
+its shared retirement marker. It never captures the pending native plan, source
+path, snapshots, intent or guard witness into the longer-lived observer closure.
+
+
+### Native pause authoring client
+
+`#/repositories/pauses` uses `PauseClient`, `PauseReader` and `PauseReviewClient`.
+The renderer receives immutable public snapshots and callbacks. Native ownership,
+controller/credential epochs and retained operation IDs stay private in clients;
+strict closed reply validators bind each plan to its requested action/scope and
+revision. `CenterClient` supplies the private native transport context. Ordinary
+preference reads cannot block independently authorized native safety work; actual
+mutations, drafts and competing reviews still exclude it. A new editor identity
+is delivered before its preference read completes after explicit takeover. A
+pending native claim has a distinct busy phase and cannot be repeated.
+
+Metadata has one owned request plus one coalesced trailing read. Review admission
+bounds outstanding effect calls at sixteen, with one concurrent exact retained
+inspection. The UI merges at most 128 candidates and 128 preserved scopes and
+filters locally with a 120-character query. Native target notifications contain
+only four closed fields; foreign/content senders are ignored, and no native URL,
+title or grant enters the signal. Selected target retirement purges public plans;
+already-started operations keep exact private inspection selectors until local
+retirement/dismissal. Inspecting never resends confirmation.
+
+Review notifications can synchronously retire the page: recheck source/eligibility
+before actual dispatch. Native resumption also rechecks extra precaution after
+verification and inside its store queue before invocation. Preserve factual
+post-invocation results independently. The deterministic transport, reentrancy,
+background, four-locale page and actual mounted composition cases are listed in
+[the authoring contract](../../specs/github-browser-extension-collection-consent.md#615-native-pause-authoring-and-recovery).
+These tests and local coverage are not loaded-browser or human H3 acceptance.
+
+
+### Effective-state provenance implementation
+
+The in-progress H3 provenance work adds `TemporaryPauseReader.observe()` alongside
+its fail-closed admission read. A closed worker condition distinguishes pending
+work, earlier precaution, both together and unavailable state. It is sampled
+before protected access, before native IO and after IO. A restriction discards a
+usable old snapshot and is never attributed to native emergency. The production
+background supplies this precise condition without exposing hold counts, tokens
+or witnesses. `nativePauseProvenance` returns closed scalar facts only, with
+independent emergency/tab booleans or explicit unknowns. It reveals no other tab
+IDs, native snapshots or revision.
+
+`resolveProfile` now retains every positive applicable `pauseSources` entry in
+precedence order, while preserving its existing monotonic pause value and winner.
+These domain sources include private local profile IDs and therefore must be
+mapped to generic scope codes before any public content configuration. Neither
+component authorizes connected work. `runtimePreferenceProvenance` maps private
+resolver sources to nine generic scope codes, all 150 feature winners, every
+positive applicable saved pause and four applicability flags. The public decoder
+detaches and validates the closed bounded response before rendering. It rejects
+private extras, missing features, contradictory native facts and unusable scopes.
+
+`PageConfigurationService` finalizes each result against settings content,
+credential epoch, route ownership and a second native observation. Native
+infrastructure failure restricts access; hot identity may explain scope, while
+cold vetoes do not read credentials merely to explain themselves. Retained and
+claimed-scope vetoes remain distinct from verified applicability and native pause.
+Connection facts retain separate bounded waiting/deadline state. The existing
+store invalidation already cancels queued reads when native work acquires its
+guard; real-composition reservation regressions preserve this behavior.
+
+The fixed `local-control` lifecycle purpose allows the readonly shell during
+pause, with its own eligibility/quarantine/source/cleanup gates intact. It does
+not unpause enhancements or authorize GETs. Each configuration delivery retires
+the older view even when settings revision and credential epoch are unchanged.
+`inspectOnly: true` attenuates configuration to local metadata without credential
+restoration or provider invocation; it is unavailable on activity requests.
+Lazy preference rows have one owned toggle listener. View restoration uses only
+owned node references and same-source state, preserving focus/expansion through
+pending delivery without stealing native editor focus. English, Spanish, French
+and Portuguese share these contracts. Full H3 native/human gates remain open.
+
+## Purpose-isolated native session roles
+
+The [credential-role refinement](https://github.com/vypdev/copilot/blob/develop/specs/github-browser-extension-credential-roles.md)
+owns the complete H3 manager. Pure `credential_roles`, `session_vault_entries`,
+`purpose_session_vault`, `connection_intent` and `session_vault_plan` modules
+define three fixed purposes, one shared five-entry/16 KiB vault, closed intents,
+schema1 compatibility and explicit schema2 upgrades. The read slot can select
+only a read entry; optional slots select only their own purpose. The retained
+credential cannot cross purposes, and the reserved H2 alias remains read-only.
+
+`NativeSessionVault` is the single named-vault persistence queue. It checks
+protection/current source, compares the observed native record immediately
+before writing, requires the next revision and forbids downgrade. It performs
+one write and one canonical readback, retaining acknowledgement separately from
+the observed result. Explicit forgetting queues behind admitted saves, including
+with future/unreadable schemas. It does not share the active read key's owner.
+
+`NamedSessions` orchestrates both purposes through that queue. The separate
+`PurposeIdentityVerifier` makes only semantic viewer/repository GETs through the
+shared budget, with separate purpose and attempt keys and cancellable source
+fences. The GETs retain no response or ETag in the API cache. Retiring the
+verifier aborts its own request and preserves other scheduled reads. It cannot activate the read service, save a read opt-in or certify a
+write grant. A selected optional identity's private proof binds the whole native
+vault and current read credential epoch; generic later metadata cannot recreate
+an unknown operation's proof. Suspension/restart loses that worker proof.
+
+The native gesture adapter snapshots purpose before waiting for permission,
+clears the unbound password and validates the lazy unknown input before sending
+any private message. Missing/invalid purposes never become a read fallback. The
+four-locale form, purpose summaries and exact-row review preserve drafts, focus
+and separate unknown-result state. Only a direct matching response can complete
+that local review. Background composition invalidates page leases before relevant
+identity changes. Actual native operation observations show the vault effect
+without inventing active-read or preference effects for optional role changes.
+
+The closed manager exposes no writer transport, credential getter, setup secret
+bridge or provider-mutation stub. Real issue/run operations remain in their
+owning milestone and need independent permission/target/intent checks. Native
+message and full page→client→background tests use deterministic provider/browser
+ports; they are not loaded-browser evidence or human H3 acceptance. No H3 source
+publication or PR is implied before the full milestone is complete.
+
+## Reviewed temporary session preferences
+
+The native `#/repositories/session` route and its Profiles/Repositories links use
+one source-bound typed client. The renderer receives complete review values and
+callbacks, while operation selectors remain private. All150 feature preferences
+support explicit inheritance and bounded local filtering. Reads preserve authored
+drafts and owned focus; a changed binding requires explicit rebasing. The independent
+current-state reader cannot certify a retained operation's outcome.
+
+`SessionPreferencesStore` owns schema1 of `copilot.session-preferences.v1` in
+protected browser-session storage, bounded at16KiB. Canonical clear retains revision
+controls. `NativeMutationGuard` mechanics are shared with pauses through separate
+instances: witnesses, pending reservations and precaution never cross owners.
+`SessionPreferenceReviews` retains at most16 pending/running reviews,32 completed
+scalar receipts and a five-minute deadline. It rechecks native binding, current
+controller/credential epochs and saved settings under the existing settings queue's
+reservation before one protected write and canonical readback. Unknown submission,
+acknowledgement and observation remain separate facts; no inverse or replay occurs.
+Clear/adoption can operate on known native data when saved settings are unreadable.
+
+Native materialized entry, vault revision and numeric account/repository establish
+stable browser-session ownership. The fresh worker epoch independently fences current
+application. `SessionPreferenceAdmission` observes its own guard/document before
+restoration, vetoes a cold positive record without credential IO, and enables values
+only from an already verified matching selection. Page account, numeric repository
+and canonical route can veto applicability. Empty canonical data needs no native
+credential/vault inspection. The actual configuration and GET path uses this same
+admission; store notifications cancel leases before queued provider submission.
+
+Content provenance contains only worker condition, native availability, a closed
+generic scope and restriction state. Its decoder cross-checks session applicability
+and pause attribution; native reply decoders also compare explicit override values
+with all150 effective sources. No authored record, target selector or secret crosses
+the content boundary. See the [session-preference SDD](https://github.com/vypdev/copilot/blob/develop/specs/github-browser-extension-session-preferences.md)
+and [user journey](/browser-extension/configuration#temporary-session-preferences).
+Deterministic composition tests remain separate from source-bound Chrome, Firefox,
+Safari and human H3 acceptance. The full milestone must be complete before publication.
+
+Named-session mutations retain the read credential generation through every
+provider and native-storage await. Only callbacks from the same operation’s own
+read connect/revoke can advance its private expected generation. An unrelated
+account change retires it. A save already submitted remains an observed local
+effect; retirement cannot certify that identity, replay the save or undo it.
+
+## Reviewed temporary API response clearing
+
+H3's independent cache control is in progress. The owning contract is the
+[cache-clearing refinement](https://github.com/vypdev/copilot/blob/develop/specs/github-browser-extension-control-center-h3.md#reviewed-private-api-cache-clearing-2026-10-31).
+Its fixed scope is this background's temporary API response cache. Credentials,
+authored preferences, scheduling budgets/cooldowns and existing generated history
+have separate owners.
+
+`ReadScheduler` captures a frozen opaque worker-local witness and admits clearing
+only against its original generation plus a live source guard. Clearing retires
+ETags/bodies and aborts shared pending reads; a late response cannot restore the
+old generation. The generation uses reference identity rather than a wrapping
+counter. No cache key, body, count, credential or witness enters the center wire.
+
+`ApiCacheReviews` owns preview/cancel/confirm/read-result, a five-minute lifetime,
+one pending review per owner and 32 combined retained records. Confirmation reserves
+its attempt before notifying observers. Re-entry cannot submit a second clear or
+confirm an unreturned preview. A source that was lost cannot revive the old plan.
+Known completion, not-applied and uncertain completion remain distinct; result
+inspection never repeats the effect. Optional observations cannot change primary
+outcomes or enable collection. The native composition binds the service to the
+actual scheduler, retires old page leases after a clear and sends metadata
+invalidation without reconnecting. Publication failure cannot change a known
+clear. The closed protocol admits only the native editor and private owner fence;
+it never uses a settings revision as cache authority.
+
+The background's fixed `runtime.cache.invalidated` notification is distinct from
+ordinary invalidation. Content handles it with `page.configuration` and literal
+`inspectOnly: true`, so a formerly blocked retained credential cannot restore or
+issue identity GETs merely because the cache was cleared. Native sender/closed
+packet admission and the normal source fence still apply. The actual composed
+content/background regression verifies no HTTP or credential read and preserves
+the GitHub editor's text, selection and focus.
+
+`ApiCacheClient` keeps its retained selector out of the rendered view. A lost
+confirm response leaves an explicit read-result action, including after closing
+the review. Reading that result never sends another confirmation. An observed
+unsubmitted review can be explicitly cancelled; it cannot authorize a retry of
+an uncertain confirmation. Source loss retires the old selector rather than
+binding it to a new owner. Busy operations and live reviews protect navigation,
+other reviews and drafts. Future/corrupt saved preferences do not disable this
+independent safety control.
+
+Current-operation metadata and the optional consented journal use a closed
+`cache-operation` / `clear-api-cache` / state fact. Coalesced journal updates
+persist the submitted transition before a terminal outcome. No private target,
+operation ID, response body, ETag or witness enters those facts. The Privacy,
+current-operation and history presentations have complete en/es/fr/pt resources.
+Source-bound browser and human acceptance must still complete before H3 ships.
+
+The cache scheduler and review suites use the real scheduler/use case with bounded
+synthetic provider and authority boundaries. They do not certify a loaded browser
+or the remaining complete H3 product. No source publication is allowed before the
+full milestone's controls, documents and acceptance gates are complete.
+
+## Useful local navigation and dependency discovery
+
+The H3 development source replaces the generic Work/Attention/Copilot/Setup
+pending tabs with literal lazy-loaded views. `local_navigation.ts` projects only
+validated committed preferences and canonical feature metadata. Favorites keep
+their saved order; selected profile/group labels remain authored choices with
+unverified applicability. Groups expose saved reference counts, never private
+vault identities. Attention derives local pause/onboarding/profile review items,
+with an empty-state claim limited to that revision.
+
+Copilot/Setup show distinct current tools and canonical planned capability guides.
+Milestones come from `FEATURE_MILESTONES` and the existing issue mapping:
+WORK H6/#707, COPILOT H9/#710 and SETUP H11/#712. No duplicate Action/CLI authority
+or automatic provider request is introduced. All resources have complete
+en/es/fr/pt bundles with atomic English fallback. Feature guides now expose the
+actual Activity/Diagnostics tools and distinct privacy/reset destinations.
+
+The existing native owner, source-fenced loader, recovery gate and separately
+consented recent-route capture remain authoritative. New projections contain no
+controller, provider or storage port. Models carry local locations and registered feature references; renderers use
+the existing checked link builders at each anchor. No arbitrary model URL is
+accepted by the unchanged presentation-navigation guard.
+Future/corrupt sources are preserved with a direct recovery destination, never an invented empty workspace. Actual
+foreground/native-channel/background tests cover offline viewing, no retained
+credential read, observer navigation, another editor's confirmed revision and
+opaque-source preservation. Those deterministic tests remain separate from
+final-source loaded-browser and human acceptance.
+
+Recent-destination delivery reports an observation only when the background
+journal accepts its ticket. Capacity or readiness rejection stays unavailable
+on duplicate delivery and contributes to incomplete delivery evidence; it is
+never retried automatically. Admission is secondary retention, not proof that
+the eventual native write completed.
+
+Shared component fixtures wait for lazy route content and the displayed canonical
+revision after confirmation. The saved receipt can precede that independent
+reread and route remount. Workspace and profile assertions share this readiness
+condition; they do not treat a transient saved message as completed rendering.
+The review buttons and result text follow the current locale, including a
+locale change in the confirmed preferences.
+
+When the native pause record cannot be read, emergency and tab remain unknown.
+When a ready record is available but its native tab scope is unknown, the
+independently observed emergency value remains visible and tab remains unknown.
+Both observations restrict execution; the factory and wire decoder preserve
+this distinction without repairing storage or contacting the provider. The
+H3 SDD's [cumulative risk budget](https://github.com/vypdev/copilot/blob/develop/specs/github-browser-extension-control-center-h3.md#cumulative-risk-budget)
+requires its full baseline and every additive refinement. Each row requires
+its own semantic evidence, regardless of test, locale and browser reruns.
+Packaged CSS rejects escapes before parsing, including escaped resource-function
+names.

@@ -39,7 +39,21 @@ it('bexh1-foundation-C28 parses root commands and CI gates; contributor guidance
     const upload = workflow.jobs['ci-check'].steps.find(step => step.name === 'Upload coverage to Codecov');
     expect(upload?.with?.files?.split(',')).toEqual(['./coverage/lcov.info', './extension/coverage/lcov.info']);
     expect(vitestConfig.test?.coverage).toMatchObject({ allowExternal: true,
-        reporter: expect.arrayContaining([['lcovonly', { projectRoot: root }]]) });
+        reporter: expect.arrayContaining([['lcovonly', { projectRoot: root }]]),
+        include: expect.arrayContaining(['src/**/*.svelte', 'tooling/*.mts']) });
+});
+
+it('Safari H3 command registration cannot accidentally invoke the H2 rollback builder', () => {
+    const wrongRoot = pkg(); wrongRoot.scripts['build:safari:center:extension'] = 'pnpm --dir extension run build:safari';
+    expect(() => validatePackageContract(wrongRoot, extension(), workspace(), ci())).toThrow('dedicated Safari H3');
+    const wrongEntry = extension(); wrongEntry.scripts['build:safari:center'] = 'node tooling/safari_cli.mts';
+    expect(() => validatePackageContract(pkg(), wrongEntry, workspace(), ci())).toThrow('dedicated Safari H3');
+});
+it('native center command registration keeps the H3 journey and H2 runtime harness independently selectable', () => {
+    const wrongRoot = pkg(); wrongRoot.scripts['test:center-browsers:extension'] = 'pnpm --dir extension run test:browsers';
+    expect(() => validatePackageContract(wrongRoot, extension(), workspace(), ci())).toThrow('dedicated native H3 center');
+    const wrongEntry = extension(); wrongEntry.scripts['test:center-browsers'] = 'node tooling/browser_cli.mts';
+    expect(() => validatePackageContract(pkg(), wrongEntry, workspace(), ci())).toThrow('dedicated native H3 center');
 });
 it('rejects package publication drift and verifies meaningful missing orchestration/CI failures', () => {
     for (const mutate of [
@@ -58,4 +72,18 @@ it('rejects package publication drift and verifies meaningful missing orchestrat
     expect(() => validatePackageContract(pkg(), extension(), workspace(), {})).toThrow('CI gate');
     expect(() => validatePackageContract(pkg(), extension(), workspace(), { jobs: { missingSteps: {} } })).toThrow('CI gate');
     expect(() => validatePackageContract({}, extension(), workspace(), ci())).toThrow('file selection');
+});
+it('keeps reviewed rendering pins and both TypeScript/Svelte warning gates mandatory for extension acceptance', () => {
+    for (const key of ['svelte', '@sveltejs/vite-plugin-svelte', 'svelte-check']) {
+        const value = extension(); value.devDependencies[key] = 'latest';
+        expect(() => validatePackageContract(pkg(), value, workspace(), ci())).toThrow('reviewed Svelte pins');
+    }
+    for (const script of ['tsc --noEmit', 'svelte-check --tsconfig tsconfig.svelte.json', 'true']) {
+        const value = extension(); value.scripts.typecheck = script;
+        expect(() => validatePackageContract(pkg(), value, workspace(), ci())).toThrow('warning/type gates');
+    }
+    const value = extension(); delete value.devDependencies;
+    expect(() => validatePackageContract(pkg(), value, workspace(), ci())).toThrow('reviewed Svelte pins');
+    const noScript = extension(); delete noScript.scripts;
+    expect(() => validatePackageContract(pkg(), noScript, workspace(), ci())).toThrow('warning/type gates');
 });

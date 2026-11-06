@@ -1,6 +1,6 @@
 {
   "name": "@vypdev/copilot",
-  "version": "3.10.7",
+  "version": "3.10.8",
   "packageManager": "pnpm@10.12.4",
   "pnpm": {
     "overrides": {
@@ -86,7 +86,9 @@
     "test:extension": "pnpm --dir extension run test",
     "validate:extension": "pnpm --dir extension run validate",
     "test:browsers:extension": "pnpm --dir extension run test:browsers",
-    "build:safari:extension": "pnpm --dir extension run build:safari"
+    "test:center-browsers:extension": "pnpm --dir extension run test:center-browsers",
+    "build:safari:extension": "pnpm --dir extension run build:safari",
+    "build:safari:center:extension": "pnpm --dir extension run build:safari:center"
   },
   "keywords": [],
   "author": "Efra Espada",

@@ -1,3 +1,4 @@
+import { BugbotGitReviewSourceAdapter } from '../filesystem/bugbot_git_review_source_adapter';
 import { createIssueContentClient } from "./github_issue_client_factory";
 import { createGraphqlTransportClient } from "./github_project_client_factory";
 import {
@@ -68,6 +69,7 @@ export function createBugbotCompositionRoot(binding: BugbotScmBinding): BugbotCo
     threadCommand,
     rules,
     navigation,
+    new BugbotGitReviewSourceAdapter(),
   ).bind(binding);
   return {
     issue,

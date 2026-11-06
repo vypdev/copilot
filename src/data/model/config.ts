@@ -1,3 +1,4 @@
+import { CONFIGURATION_SCHEMA_VERSION } from '../../domain/configuration_markers';
 import {BranchConfiguration} from "./branch_configuration";
 import {restoreRecommendationState, RecommendationState} from "./recommendation_state";
 import {Result} from "./result";
@@ -6,7 +7,7 @@ import { isDeploymentOperationSnapshot, type DeploymentOperationSnapshot } from 
 import { ISSUE_WORKFLOW_KINDS, type IssueWorkflowKind } from '../../domain/issue_workflow_profile';
 
 /** Version of the durable configuration contract stored in issue/PR content. */
-export const CONFIG_SCHEMA_VERSION = 3;
+export const CONFIG_SCHEMA_VERSION = CONFIGURATION_SCHEMA_VERSION;
 
 /** Accepts only the currently supported durable configuration contract. */
 export function requireCurrentConfigurationPayload(value: unknown): Record<string, unknown> {

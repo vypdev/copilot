@@ -1,0 +1,109 @@
+---
+title: Local navigation shortcuts
+description: Review four bounded GitHub-page navigation assignments, preserve typing and understand native conflict uncertainty.
+---
+
+# Local navigation shortcuts
+
+Open **Shortcuts** in the [local control center](/browser-extension/configuration)
+to configure local navigation on eligible GitHub pages. H3 remains in progress;
+this working subflow does not establish complete product or native-browser
+acceptance.
+
+| Command | Fixed destination |
+|---|---|
+| Overview | The local center's overview |
+| Features | The complete local feature inventory |
+| Profiles | Local profile management |
+| Help | Local help |
+
+These commands open packaged extension pages in another tab. They do not run an
+Action, read GitHub, request a permission, submit a draft or authorize a write.
+They are page-local shortcuts, not global operating-system hotkeys.
+
+## Configure and review
+
+1. Select **Enable shortcuts globally** if you want the global preference enabled.
+2. Choose an assignment for each command you want. **Unassigned** leaves it off.
+   Each of at most four assignments uses `Alt+Shift+A` through `Alt+Shift+Z`.
+   Two commands cannot use the same combination.
+3. Select **Review change** and inspect the enabled preference and localized
+   before/after combination for each affected command.
+4. Confirm to save the whole change, or cancel to keep the saved configuration.
+   Canceling the review retains the local form draft for further editing.
+5. Check actual delivery on an eligible GitHub page outside any editor or form.
+
+The current profile, feature preference or pause may still disable shortcuts.
+A global switch does not override those restrictions. Assignments are nonsecret
+preferences; they are included in the existing validated preference export.
+Profiles and favorites are separate collections and are not sent to content
+scripts. Only these bounded assignments accompany the resolved runtime settings.
+
+**Clear assignments in this draft** makes all four commands unassigned locally.
+It does not save, change the enabled switch, clear favorites or revoke a grant.
+Review and confirm the resulting change deliberately. An observer can inspect
+the page but must take editing control explicitly before changing it.
+
+A pristine form follows a newer committed revision. An edited form keeps its
+original revision and choices. If another window saves, the center rejects a
+stale preview rather than silently overwriting that saved configuration.
+
+## Understand conflict checks
+
+Duplicate local assignments are rejected before a preview. A matching native
+HTML access key on the current page keeps its behavior: Copilot does not consume
+the event and explains the collision locally. Inspection is limited to128 access
+keys. An unavailable or larger observation remains unknown and the event is left
+untouched.
+
+There is no complete browser API registry for operating-system and
+other-extension conflicts. A valid saved combination or empty native command
+list does not prove that it will arrive. The browser or system may intercept it
+first. If no command is received, delivery remains unknown; choose a different
+assignment and retain the toolbar/options entrypoint as a reliable alternative.
+
+- **Chrome:** review browser/system shortcuts and any other extension assignments
+  in the browser's shortcut manager. Copilot's assignments here are local-page
+  preferences, not new global commands registered with that manager.
+- **Firefox:** review extension shortcuts in Add-ons and themes and check system
+  input-source combinations. An extension's command list is not a system-wide
+  collision check.
+- **Safari on macOS:** Alt means Option. Check website access, the relevant
+  browser profile and macOS Keyboard settings. Option combinations may produce
+  layout-specific symbols; the configured physical position remains the same.
+
+Assignments identify physical positions on the US QWERTY reference shown in
+the page. They do not identify every layout’s printed character. Only the26
+letter positions are supported; Option-generated printable symbols can still
+invoke their configured position. The extension reads no keyboard-layout map
+or extra permission. Missing physical codes, dead/process/unknown keys, control
+characters, Ctrl/Meta and Windows/Linux AltGr combinations, held keys and
+composition remain inactive. Firefox’s documented Mac Option/AltGraph alias is
+interpreted using a transient browser-reported platform hint; that hint is not
+stored or exported. Unknown modifier context remains inactive. Native behavior must be tested on the actual
+browser and keyboard configuration; deterministic tests do not certify it.
+
+## Preserve native typing and context
+
+The runtime ignores input and password fields, textareas, selections, forms,
+editable content, protected text roles and uninspectable frame/shadow focus
+before reading the event's character. It reads no field value, draft,
+composition payload, clipboard or browsing history. Synthetic events and
+already prevented keys cannot invoke a command.
+
+Keep focus on the page background or its nonediting main region. Other focused
+hosts are excluded because an ordinary element can hide a closed shadow editor;
+the host's tag alone does not prove that typing is safe to intercept.
+
+Only a current, focused, visible, eligible top frame with admitted settings can
+deliver a shortcut. Route, setting, permission or document changes retire the
+owning listeners. Native background admission verifies the active nonprivate
+tab and fixed destination again. A pending native inspection is canceled as an
+admission ticket on retirement; an opening already accepted cannot be undone
+by closing its original view.
+
+One opening request may be pending per owning runtime and native tab. Requests
+do not retry automatically. The local status distinguishes a received shortcut,
+acknowledged opening, page-access-key collision and unconfirmed result. If an
+opening cannot be confirmed, inspect existing tabs before retrying. No key log
+or interaction history is stored.

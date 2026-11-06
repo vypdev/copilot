@@ -1,0 +1,294 @@
+---
+title: Local activity, diagnostics and recent destinations
+description: Review optional collection, independent operation facts, generated-history clear and the exact JSON download in the local browser profile.
+---
+
+# Local activity, diagnostics and recent destinations
+
+Open **Activity**, **Diagnostics** or **Privacy** in the
+[local control center](/browser-extension/configuration). Diagnostics shows one
+collection; Activity and Privacy show both diagnostics and recent extension
+destinations. Reads remain separate from preference editing. A read-only window
+can inspect and export available generated history without taking control.
+
+H3 is still being implemented. These controls and their typed client are present
+in the development source, including consented recent destinations from the
+actual local navigation, preference operations, session operations and compound collection start/stop operations. Explicit clears now distinguish their native attempt, acknowledgement and canonical read. Helper samples now have a source-checked pre-open handoff and separate readonly view. Complete native-browser acceptance and the owning human experience gate remain outstanding. Source-level
+and DOM tests do not certify those gates or a store-ready product.
+
+## Inspect local state
+
+Each collection distinguishes three facts:
+
+| Fact | Meaning |
+|---|---|
+| Saved preference | The last verified authored intent: on, off or unknown. |
+| Verified durable state | The observed policy that admits or pauses collection. |
+| Collection at the last inspection | Whether that observation actually admitted capture, including global and temporary pauses. |
+
+**Read current state** obtains a new local observation. It never confirms a
+review, requests a permission, reads GitHub or retries a write. Unknown, corrupt
+and future data remain unavailable and preserved. Moving away from the route,
+hiding the page or losing focus retires old read observations. Returning obtains
+new ones. An old response cannot restore entries from before a confirmed clear.
+
+The optional limits are fixed: at most 200 diagnostic/operation entries and50
+recent extension destinations, each for seven days and at most64KiB of its exact exported JSON. Older generated rows can leave sooner to fit that bound. Collection defaults off.
+Recent destinations concern routes inside this extension; no browser history
+permission is requested. Credentials, exact private targets, URLs, raw errors,
+authored notes and private profile labels do not enter these journals.
+
+## Recent extension destinations
+
+With verified active consent, the center records its first admitted current view
+and subsequent accepted destinations. Canceling a guarded departure, choosing
+**Keep editing**, refreshing a read or returning focus does not create a visit.
+Navigation while the page is hidden or unfocused is not captured later. A
+read-only center window can record its own consented destinations; it still
+cannot edit preferences or collection controls.
+
+Only the local route and, for a feature page, its registered feature identifier
+are retained. Profile labels and profile-detail paths are removed before the
+observation leaves the page. This covers the extension's center, not ordinary
+GitHub navigation or browsing history.
+
+Capture requires known consent and a known collection generation at the time
+of observation. Visits made while collection is off or unknown are not filled
+in after enabling it. Losing the native context or clearing the journal retires
+old capture state. A missing response never triggers an automatic resend.
+
+The recent-destination panel discloses observations whose delivery could not be
+confirmed in this window, separately from retained entries and native writer
+state. The sender holds at most one active delivery and one latest waiting
+destination. Replacing a waiting observation increases that local uncertainty
+count. Neither a confirmed delivery nor a successful primary action proves that
+history storage retained an entry. Reading state does not replay missing visits.
+
+## Inspect the last observed operation
+
+**Last observed operation** is available across the local center, expanded in
+Activity and Diagnostics. **Read last operation** inspects only the current
+window's background metadata. It remains independent of preference reads and
+optional history: collection can be off or history storage unavailable. Reading
+does not confirm, cancel, retry or start any write, permission request or GitHub
+request.
+
+The development cache control has its own closed last-operation fact: reviewed,
+cancelled, blocked, submitted, cleared, not-applied or unknown. It names only
+temporary API responses, with no private target or cache content. A successful
+clear stays historical even when a new explicit read later caches a response.
+Inspect an uncertain retained result in
+[Privacy](/browser-extension/configuration#clear-temporary-api-responses);
+reading last-operation metadata or an empty cache cannot establish completion.
+Existing verified diagnostics consent may retain one redacted cache-action row.
+Clearing this cache does not enable collection or delete existing history.
+
+The panel distinguishes a reviewed change, pending confirmation, an observed
+write attempt, cancellation, a preflight block, verified saving and an unknown
+result. It shows the last proved acknowledgement and observed persistence
+separately. A failed later inspection preserves those proved facts while
+retiring the private target. **Read current settings** can reconcile an uncertain
+save against its exact retained receipt and complete expected settings, without
+repeating the write. Reading last-operation metadata alone does not read settings
+or establish that reconciliation.
+
+A captured profile label or repository target belongs only to this current
+operation. A local session label follows the same rule. It is never added to generated history or its JSON export. The native
+owner keeps one current entry per window, at most eight, for five minutes from
+first observation. Reads do not extend that period. Losing the current source,
+expiry, replacement or background shutdown removes the target; it cannot be
+rebuilt from saved preferences or history. Leaving focus hides current target
+detail until a new source-checked inspection. A cleared or unavailable current
+entry is not evidence that a submitted write did nothing.
+
+History retention is a separate result. A successful save does not prove a
+retained row. Preference previews observed with collection off or unknown are
+never added retrospectively after activation. A previously admitted operation
+may update its exact existing row while collection is off, until a clear or
+other generation change invalidates its ticket. An untracked operation does not
+prove that a historical row is absent: read retained history separately.
+
+## Inspect session operations
+
+Connect, select, disconnect, remove and explicit **Forget all protected sessions**
+now have their own operation view. Each actual storage attempt is listed in order:
+removing the previous active credential, saving a verified candidate, saving the
+repository read preference, saving/removing named sessions, and any candidate
+cleanup needed after a partial result. Inactive-entry removal can save just the
+vault; its failure keeps the unrelated selected connection available.
+
+Each step distinguishes acknowledgement from its one canonical inspection. A
+different record or failed inspection does not become verified saving. Cleanup
+does not erase a previously verified step. An updated session view from the
+service is separate from these individual facts and from a new **Read current
+sessions** observation. Later reads cannot attribute an old unconfirmed mutation
+solely because its desired data is present now.
+
+The private target is captured from the admitted session intent. This operation's
+own credential changes can continue the same verified source; an unrelated
+revocation, controller replacement or lost source retires it. Background
+permission revocation is not recorded as a new user operation. Session effects
+default to no retained history, share the current eight-window/five-minute bound,
+and keep at most 16 effect observations. Any overflow or incomplete observation is
+disclosed. No effect is automatically retried.
+
+Generated diagnostics hold at most 200 entries for seven days, within 64 KiB including
+the reviewed JSON envelope. Larger effect lists may mean fewer rows. At capacity,
+the oldest other generated rows are evicted while the explicitly updated row and
+all its phase facts are kept. A read may apply this capacity policy to older valid
+data. Authored notes, preferences, credentials and malformed/future records are
+never trimmed to fit. An evicted row cannot be recreated by a late old ticket.
+
+## Review enable or stop
+
+The **Last observed operation** panel also shows these compound changes. It keeps
+three steps separate: prerequisite durable pause, preference publication and
+activation. A stop cannot activate collection. If the preference was already off,
+the plan can pause policy without inventing another preference write. Reusing a
+pause during saving does not appear as a second storage attempt.
+
+For each observed phase, inspect acknowledgement and canonical state separately.
+An already-paused inspection is different from an attempted command. A returned
+service result does not establish that every effect completed. Historical
+verification, admission and source indicators appear only after that result;
+before then, unobserved phases remain unobserved. A missing phase stays explicitly
+incomplete and is never reconstructed from the overall result.
+
+Receipt attribution means the exact expected policy and preference revisions
+matched this operation. A matching mode or identifier alone does not establish
+that. **Read last operation** performs no storage or provider reads and never
+confirms or retries; **Read current state** separately describes collection now.
+
+History admission happens at review time. Enabling diagnostics does not backfill
+its own earlier off/unknown preview. A previously admitted stop may finish its
+one known row while collection is off, until clear, expiry or eviction retires
+tracking. Cancel, replay and result inspection create no extra row or write.
+
+1. In the current editor window, choose **Review enable** or **Review stop**.
+2. Inspect the before/after preference and durable policy for this collection
+   in the current browser profile.
+3. Confirm that exact review, or cancel before effects.
+4. Inspect the independent preference and collection step results.
+
+Enabling saves the opt-in before activation. Stopping attempts the durable pause
+before saving the off preference. One successful step does not establish that
+both completed. Importing or restoring an enabled preference does not activate
+capture. A global pause can retain saved consent while pausing actual admission.
+
+An acknowledged request and a canonical completion are separate facts. If the
+response is lost, **Check this result** reads the retained owner's result without
+repeating the effect. A failed check cannot erase an already observed completed
+fact or a known acknowledgement. An owner reporting no observed submission does
+not prove that an earlier request cannot still arrive. No automatic write retry
+is made. A submitted operation keeps navigation guarded while its request is
+pending; closing the UI cannot undo a native transaction.
+
+Operation history, when available, labels intent, acknowledgement and observed
+result separately. **First observed** is the timestamp of the initial retained
+observation, not a fabricated completion time. A helper reason describes its
+recorded observation; it does not certify that the helper is blocked now.
+Incomplete history is disclosed and does not change the primary action's result.
+
+## Inspect a clear operation
+
+**Review clear** creates a separate **Last observed operation** entry after the
+native service verifies the paused collection and exact history revision. Confirm
+once. The panel distinguishes the actual native attempt, its acknowledgement and
+the subsequent read of the reviewed generation. An accepted response alone does
+not prove that an empty generation was observed. A lost response can still be
+followed by a verified empty generation; its acknowledgement remains unknown.
+
+An explicit **not started** or **aborted** response is shown as no applied write.
+An unavailable or changed read stays unverified. Read current history separately;
+metadata inspection never repeats deletion. An unsubmitted cancellation has no
+attempt, and missing observation is not evidence that no change occurred. The
+source-at-observation indicator appears only when the service sampled it.
+
+Deleting diagnostics never records its own deletion in diagnostics, including
+when a secondary admission observation is stale. Deleting recent destinations
+can retain one redacted diagnostic only if diagnostics was already consented at
+review time. It never records itself in recent destinations. Neither enabling
+collection later nor a late callback restores a cleared row. The separate current
+view retains its existing eight-window/five-minute limit and is outside the clear.
+
+## Inspect a source-page helper sample
+
+Open the center from the page's **Runtime settings** control or a configured page
+shortcut. The extension captures its small closed health sample before opening
+hides that page. In **Diagnostics** or **Help**, **Source-page helper sample**
+shows the capture time, helpers held at capture and earlier reasons in reverse
+observation order. A reason has its original active/retired observation scope,
+not an original timestamp. The sample is historical and cannot certify live
+helper health or automatically retry a helper.
+
+**Read source sample** inspects only this window's existing background metadata.
+It does not inspect the now-hidden page, reread settings/history, request a grant,
+contact GitHub or open another tab. Missing or failed capture is different from
+an inspected sample without reasons. The view remains usable when current
+preferences are unavailable. If no observation is available, return to an admitted
+visible source page before a new explicit open.
+
+The background keeps at most eight native option-tab samples for five minutes
+from capture; reads do not renew them. Native tab removal, expiry, replacement or
+background shutdown retires them. A sample preserves at most 100 closed reasons,
+without URLs, account/repository identity, page contents or raw errors. It never
+contains a native source selector or changes a permission.
+
+If diagnostics already has verified consent and a known generation, capture may
+retain only the latest reason for each of the two fixed helpers. The full ring
+is not replayed into history. Optional retention is shown separately: failure
+cannot block opening or erase the sample. Later opt-in, metadata refresh or a
+late notification cannot retrospectively add those observations. Nothing is
+written to recent destinations by a helper sample. Retained helper rows show
+translated names and reasons. Their time identifies the retained observation,
+not the original failure time or current helper health.
+
+## Clear generated entries
+
+Stop collection first. **Review clear** binds the exact collection, generation
+and revision, and shows the retained entry count. Confirming that review removes
+only those generated entries. It preserves the small generation, revision and
+clock controls that reject old writes after clear. These controls and consent
+receipts persist until native extension-data removal.
+
+Preferences, protected credentials, authored notes, the temporary current-operation
+view and GitHub content are outside this clear. Use their separate controls.
+Stopping alone preserves existing
+history until expiry or a separately reviewed clear. An unknown clear response
+is not presented as a successful deletion; inspect its retained result and the
+current state separately.
+
+## Review a JSON download
+
+Choose **Review JSON export** for available retained entries. The read-only JSON
+field contains the exact nonsecret bytes proposed for download. A separate
+**Download reviewed JSON** gesture creates a local file with a fixed name.
+Canceling the export makes no download. Changing or invalidating the read
+observation retires the displayed export; read state and review again.
+
+The generated-history JSON is bounded to64KiB. It includes only the selected
+closed history snapshot, never preferences, policy nonces, credentials or private
+native selectors. A failed native download keeps the review and reports the
+failure. It does not claim that the browser saved a file. Preference exports and
+imports remain separate under **Data and recovery**.
+
+Read the [browser permission guide](/browser-extension/permissions) for native
+revocation and the [feature inventory](/browser-extension/features) for the
+remaining product milestones.
+
+### Native pause operation facts
+
+The development center can display emergency/tab pause and adoption operations
+in **Last observed operation**. A retained diagnostics row requires diagnostics
+to have been enabled when the review was captured. It separates the native write
+attempt, acknowledgement, canonical observation and operation response. A lost
+response can coexist with a separately proved acknowledgement or observed pause
+record; reading current pauses never confirms that older response.
+
+Adoption explicitly reports no native write or acknowledgement. Closing a tab
+is native lifecycle cleanup and does not create a user operation in history.
+Retained facts contain no native tab IDs, URLs, pause snapshots or operation IDs,
+and offer no confirm/resume control. Use **Repositories → Temporary pauses** for
+an explicit new native review; generated history cannot authorize or replay it.
+That page can inspect its own retained unknown result without retransmitting the
+confirmation. Full native/human H3 acceptance remains pending.

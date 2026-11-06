@@ -16,6 +16,7 @@ export type UpdateTitleContext =
         readonly version: string;
         readonly branchManagementEmoji: string;
         readonly labelFacts: TitleLabelFacts;
+        readonly preserveIssueTitle?: boolean;
     }
     | {
         readonly kind: 'pull-request';
@@ -84,6 +85,7 @@ export async function runIssueTitleUpdate(
         issueNumber: param.issueNumber,
         branchManagementEmoji: param.branchManagementEmoji,
         labelFacts: param.labelFacts,
+        ...(param.preserveIssueTitle ? { preserveIssueTitle: true } : {}),
     });
     return title
         ? [updatedResult(taskId, `The issue's title was updated from \`${currentTitle}\` to \`${title}\`.`)]

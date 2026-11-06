@@ -58,6 +58,54 @@ function mockContext(overrides: Partial<BugbotContext> = {}): BugbotContext {
 }
 
 describe("buildBugbotPrompt", () => {
+    it.each([
+        ['canonical Python', 'owned.py', '+raise', undefined, [], true],
+        ['uppercase Python', 'owned.PY', '+raise', undefined, [], true],
+        ['assigned Python', 'owned.ts', '+raise', ['assigned.py'], [], true],
+        ['different assigned language', 'owned.py', '+return 1', ['assigned.ts'], [], false],
+        ['ignored canonical Python', 'owned.py', '+raise', undefined, ['*.py'], false],
+        ['Python-looking text without Python identity', 'owned.ts', '+shutil.rmtree(destination)', undefined, [], false],
+        ['canonical Python without source', 'owned.py', '', undefined, [], false],
+        ['nonempty source before normalization', 'owned.py', '\u0000\u0001', undefined, [], true],
+    ] as const)('selects independent candidate verification for %s', (_name, filename, source, assigned, ignores, expected) => {
+        const input = buildBugbotReviewInput(mockExecution({ ignorePatterns: ignores }), mockContext({ reviewDiffBlock: source,
+            prContext: { changes: [{ filename, status: 'modified', additions: 1, deletions: 0, patch: source }] } as BugbotContext['prContext'],
+        }), assigned ? { partition: {
+            id: 'source-contract', ordinal: 1, total: 1, headSha: 'a'.repeat(40), block: source,
+            fragmentCount: 1, files: assigned, ownsResolution: true,
+        } } : undefined);
+        expect(input.hasLiteralWitnesses).toBe(false);
+        expect(input.requiresCandidateVerification).toBe(expected);
+    });
+    it.each(['ordinary', 'owner', 'non-owner'])('grounds recovery contracts in the actual %s review input', mode => {
+        const source = '+        shutil.rmtree(destination)';
+        const prompt = buildBugbotPrompt(mockExecution(), mockContext({ reviewDiffBlock: source }), mode === 'ordinary' ? undefined : { partition: {
+            id: 'recovery-contract', ordinal: 1, total: 2, headSha: 'a'.repeat(40), block: source,
+            fragmentCount: 1, files: ['owned.py'], ownsResolution: mode === 'owner',
+        } });
+        expect(prompt).toContain(source);
+        expect(prompt).toContain('Ownership does NOT imply disposability');
+        expect(prompt).toContain('ownership and publication boundaries');
+        expect(prompt).toContain('Trace the actual selected fault through the exact try/catch');
+        expect(prompt).toContain('medium reliability');
+        expect(prompt).toContain('high correctness when data loss is proved');
+    });
+    it.each(['ordinary', 'owner', 'non-owner'])('delivers version-grounded exception grammar in %s review', mode => {
+        const source = '+    except ValueError, TypeError:';
+        const context = mockContext({ reviewDiffBlock: source, prContext: {
+            changes: [{ filename: 'owned.py', status: 'modified', additions: 1, deletions: 1, patch: source }],
+        } as BugbotContext['prContext'] });
+        const prompt = buildBugbotPrompt(mockExecution(), context, mode === 'ordinary' ? undefined : { partition: {
+            id: 'python-grammar', ordinal: 1, total: 2, headSha: 'a'.repeat(40), block: source,
+            fragmentCount: 1, files: ['owned.py'], ownsResolution: mode === 'owner',
+        } });
+        expect(prompt).toContain(source);
+        expect(prompt).toContain('Python 3.14 / PEP 758');
+        expect(prompt).toContain('supported older interpreter');
+        expect(prompt).toContain('Ruff target alone');
+        expect(prompt).toContain('Parsing is not import/runtime proof');
+        expect(prompt).toContain('never invent parser/CI execution');
+    });
     it("includes repo context and task instructions", () => {
         const prompt = buildBugbotPrompt(mockExecution(), mockContext());
         expect(prompt).toContain("o");

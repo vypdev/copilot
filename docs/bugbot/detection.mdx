@@ -7,6 +7,83 @@ description: When Bugbot runs, where findings appear, severity, comment limit, a
 
 This page describes **when** Bugbot runs, **where** findings are published, and how **severity**, **comment limit**, and **resolved findings** work.
 
+## JSON values and reader contracts
+
+Before reporting double encoding, Bugbot traces the producer, actual decoder
+implementation, nested value and reader input contract. A decoded object can need
+serialization before a text-only reader. Encoding an outer envelope and serializing
+its nested object for another reader are different boundaries.
+
+Python `typing.cast` returns the same runtime value; it does not serialize a dict.
+A method named `decode` or a return annotation alone does not prove the result's
+shape. A decoder that actually returns JSON text can legitimately feed a text
+reader directly. Review must preserve genuine double encoding, raw objects passed
+to text readers, Python representation used as JSON and missing decode operations.
+
+A suggested replacement needs the same value/reader proof as the finding. If the
+defect is established but its replacement is not, retain the finding and omit
+unverified replacement code. Reconcile exact-source runtime counterevidence;
+unrelated or stale green checks prove neither correctness nor failure. A disproved
+premise is omitted, including informational alerts about correct code.
+
+This shared rule adds no automatic suppression, consumer exception, executor or
+historical dismissal authority. See [controlled JSON evidence and limits](/bugbot/quality-observability#json-value-regression).
+
+## Complete statements and asynchronous updates
+
+Bugbot reads every statement before reporting a missing wait. For example,
+`element.view = closed; await element.updateComplete;` completes the wait before
+the next statement even though assignment and await share a line. Moving that
+await to a new line changes readability, not execution.
+
+Review traces the actual receiver, current promise, helper and caller, plus the
+resolved framework's scheduler. A valid wait on the same cycle is different from
+a stale promise, another instance or a helper started without awaiting it. With
+[Lit](https://lit.dev/docs/components/lifecycle/), parent completion need not wait
+for descendants. A proved synchronous update or applicable animation-frame boundary
+can already have completed the required work. Neither any await nor its absence
+alone establishes correctness.
+
+Follow reached lifecycle writes: a closed update that clears a draft does not
+restore the former draft on reopening without another writer. Reconcile the exact
+selected source and observations; omit a candidate whose evidence disproves its
+premise, including informational explanations of correct code. Preserve demonstrated
+unfinished-update defects and anchor the changed operation that overtakes that work.
+A predicted failure must remain a prediction; unrelated or unselected green tests
+do not prove this case passed.
+
+This source/benchmark guidance adds no text-based suppression, executor, new query
+or dismissal authority. Existing findings keep their normal verification process.
+See [actual qualification and limits](/bugbot/quality-observability#asynchronous-statement-regression).
+
+## Resource classification and proof boundaries
+
+Before calling a missing authentication step a bypass, verify what the resource
+returns and changes. Check bootstrap fields, headers/cookies, personal facts,
+principals, grants and credentials against its actual contract. A static label
+alone proves nothing.
+
+Source/peer/session/prefix binding and current human identity are separate gates.
+A verified nonpersonal document or asset can intentionally load before sign-in or
+without a live identity provider so it can display access or availability guidance.
+Personal APIs still need their own current proof. Preserve every mandatory source
+restriction: static content does not authorize an untrusted source.
+
+Keep findings for demonstrated protected disclosure, effective authority issuance,
+personal or privileged writes that violate the actual proof contract, and missing
+source-access controls. Preserve permitted nonpersonal bookkeeping; a state write
+or a value named token does not alone establish a protected effect.
+Trace an added proof prerequisite
+through intended entry availability before recommending it for every asset. An
+old personal preview can have a different contract. Rendered failure claims need
+the actual response/initialization/error path and matching observations; unrelated
+green tests establish neither safety nor a failure.
+
+This shared guidance reaches source review and existing candidate verification.
+It adds no whitelist, automatic dismissal, execution capability or permission.
+Historical findings still require normal current-source adjudication. See
+[controlled evidence and limitations](/bugbot/quality-observability#resource-and-authority-regression).
+
 ## Exact validation witnesses
 
 Before reporting that a validator accepts an invalid value, Bugbot must trace
@@ -382,9 +459,14 @@ identifier invented in its response.
 
 Bugbot's status card contains a context-coverage section. `complete` means every
 applicable bounded source finished without reaching a fixed cap. `partial`
-means the run retained a deterministic subset—for example the newest 200
-comments, newest 200 thread records, or first 1,000 diff files. The per-prompt
-diff character budget does **not** omit later files: Bugbot splits every
+means the run retained a subset, such as the newest 200 comments or thread
+records. For the diff, GitHub can return up to 3,000 changed files. If files
+are missing, the status card reports the omitted count and Bugbot withholds
+the complete-review signal. At GitHub's ceiling a card might show
+`diff: partial; retained=3,000, omitted=90, provider page limit reached`.
+Split a PR that exceeds the ceiling to review every file.
+
+To stay within the per-prompt character budget, Bugbot splits every
 non-ignored provider patch into bounded fragments, reviews every partition for
 the same head SHA with at most two concurrent reviewer calls, verifies each
 partition attestation, and aggregates once before publication. Large patches
@@ -434,16 +516,59 @@ head, close the obsolete PR or invoke the review from the intended PR event.
 A generated report from a User account and an ordinary human comment follow the
 same untrusted conversation rules. A 5,959-character report can be retained in
 full as ordered fragments without granting trust to its heading or author name.
-The fixed budget is 50 logical comments and 24,000 rendered characters, with at
-most 4,000 UTF-16 units per payload fragment. Source attribution is bounded
-untrusted metadata too. No fragment creates a separate source or notification.
+Ordinary packing retains up to 50 logical comments and 24,000 rendered UTF-16
+units, with at most 4,000 units per payload fragment. If this would omit or
+truncate discussion in a canonical PR review with the bound read-only source
+capability, Bugbot automatically selects the existing `framed-v1` protocol.
+It divides all fetched eligible discussion into bounded pages and delivers
+**every page in every code-partition request**, including the final outer
+security envelope. It does not summarize the history or review independent
+context windows. Attribution stays untrusted: an agent-authored technical
+proposal under a maintainer account is not personal authorization.
 
-Only fully retained comments have zero truncation. Genuine source/provider or
-section exhaustion still makes the overall review partial, even when the diff
-analysis completed with no findings. Inspect **Incomplete coverage** before
-calling that review complete. Approval and protected-path requirements remain
-unchanged; retaining a report does not authorize a merge.
+The complete request must still fit the fixed 524,288-byte native envelope;
+the invocation must fit 33,554,432 bytes including retries and dependent
+verification. Source, rendering, fragment, code and response limits also remain
+finite. Unsupported capacity blocks the run before partial findings or clean
+approval can be published; inspect the measured resource in the run details.
+Preserve discussion history. Repeating unchanged unsupported input cannot help;
+a workload beyond the profile requires a reviewed complete-context protocol.
 
+Only fully delivered comments have zero truncation. Provider omissions and all
+other incomplete dimensions remain partial even when every fetched discussion
+body fits. API/context callers without the bound immutable-source capability
+retain the existing truthful partial behavior; intent, autofix and dismissal do
+not acquire new host capabilities. Inspect **Incomplete coverage** before
+calling a review complete. Approval remains independent; retained text cannot
+authorize a merge.
+
+See the [complete-conversation review specification](https://github.com/vypdev/copilot/blob/develop/specs/bugbot-complete-conversation-review.md)
+for source identity, page bounds, native traffic and failure contracts.
+
+
+## Python interpreter versions and exception syntax
+
+Reviews with a retained canonical or assigned Python file receive version-aware
+syntax guidance. Read the effective `requires-python`, interpreter pins and CI
+matrix; Ruff's target does not define the supported runtime range.
+[PEP 758](https://peps.python.org/pep-0758/) permits unparenthesized lists such as
+`except ValueError, TypeError:` and `except* ValueError, TypeError:` in Python
+3.14 when there is no `as` clause. Multiple types with `as` still need parentheses.
+
+A supported Python 3.13 target can therefore expose a genuine compatibility
+failure even when Python 3.14 parses the same file. An undefined exception name
+can also fail at runtime after successful parsing. Reviewers must reconcile
+exact-source parser and collection evidence with its actual interpreter and head;
+cached, skipped, unrelated or older-revision success does not certify the change.
+Parsing alone proves neither import nor runtime success. Unknown versions do not
+justify a universal Python 3 SyntaxError claim.
+
+This guidance adds no Python installation, parser execution or setting to the
+Action. The existing independent generated-source verifier receives the same
+rule when its normal trigger applies; there is no blanket suppression or new
+second-query trigger for every Python handler. Existing completeness, finding
+identity, resolution and approval checks remain independent. Upgrade the SDK to
+adopt this behavior; merging its source to develop does not update a consumer.
 
 ## Dependency types and error handlers
 
@@ -605,3 +730,76 @@ companion directories, or that its output writer handles symlinks safely. Those
 remain independent checks. Prior findings are rechecked against current source;
 missing evidence keeps their state unresolved instead of inventing a failure or
 resolution.
+
+
+## Retained output and recovery contracts
+
+Before suggesting filesystem cleanup, Bugbot reads the effective recovery
+contract and tests, then traces the selected failure through ownership guards
+and the actual publication boundary.
+
+```text
+selected error path -> retention or disposable-staging contract
+ -> actual ownership/publication guards -> proved violation or claim omitted
+```
+
+Partial diagnostic evidence may deliberately remain for inspection while a
+manifest-last bundle is invalid and retries refuse to overwrite it. That is not
+by itself a missing-cleanup defect. Likewise, a typed reporting failure after
+publication does not mean publication had no effect. Retained evidence and
+published output must not be deleted merely to make an error path look clean.
+
+A genuine failure to remove safely owned disposable staging remains reportable,
+as does deletion of retained or published output. An unknown or changed owner
+requires inspection, not an invented cleanup mandate. Reconcile exact-source
+observations and the selected case; a different configured fault or unrelated
+green test does not prove the reported path.
+
+This language-independent guidance changes review reasoning only. It adds no
+filesystem executor, cleanup permission, configuration or historical-finding
+resolution shortcut. The existing complete/partial status and independent
+approval rules still apply. Adoption requires the normal SDK upgrade; merging
+an SDK change to develop alone does not update installed consumers.
+
+
+For supplied source assigned to a retained `.py` path (case-insensitive), every
+proposed candidate set also passes the
+existing independent source-bound verifier, including files without generated
+literals. It explicitly retains or rejects each candidate, keeps IDs/file/snippet
+identity and can correct a supported candidate's reasoning/location. It cannot
+create findings or resolve historical threads. An empty candidate set uses no
+extra model query. Non-Python and empty legacy input keep their prior verifier
+applicability.
+
+This extra adjudication has a bounded provider/latency cost. Existing candidate,
+source, response, batch and framed-traffic limits remain fixed. Incomplete or
+oversized verification fails closed; inspect the run, split the review scope and
+recheck. An informational explanation of correct code is not a valid finding,
+and a malformed verification response is not evidence of a clean review.
+
+## Fixture values and test assertions
+
+Before claiming that a test always fails, trace the actual fixture and helper
+values through the operation and assertion. A path named `database` can be a
+SQLite file: its parent, rather than its filename, may be the guarded source
+root. Likewise, a variable named `a` can contain a record whose ID is `request`.
+Evaluate stored values under the actual query's ordering, direction, limit,
+expiry boundary and state filter. Do not infer IDs or containment from names.
+
+Applicable execution on the reviewed source and runtime is counterevidence to
+reconcile; an unrelated or skipped green test is not proof. Preserve a genuine
+wrong nesting or query assertion. Anchor a supported finding at the changed
+statement using that fragment's stated line origin; separate helper excerpts
+do not shift its coordinates. Missing helper evidence does not justify an
+invented failure, test edit or execution claim.
+
+These rules add no setting or execution permission. Existing candidate
+verification, historical-resolution controls and complete-review requirements
+remain in effect. See the [fixture-value specification](https://github.com/vypdev/copilot/blob/master/specs/bugbot-fixture-value-grounding.md).
+
+Independent verification keeps the existing finding's file and known code
+fragment literally, including any indentation or diff marker already supplied.
+The structured response constrains those values to the original batch, and the
+application still checks their binding to each ID. A missing original snippet
+can receive a more precise anchor. Invalid identity changes fail closed; they
+never certify a clean review or silently change the tested statement.

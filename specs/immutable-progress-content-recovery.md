@@ -9,6 +9,12 @@
 - Review gates: UX, architecture, security, tests, documentation and operations.
 - Open decisions blocking readiness: none.
 
+The focused [progress part response recovery specification](./progress-partition-response-recovery.md)
+defines the narrow #830 amendment: one preflighted replacement for a verified
+overlong per-file fact, preserving the complete immutable part and every
+existing validation and publication fence. Its additional risk budget does not
+replace this specification's existing cases.
+
 ## 1. Executive summary
 
 Progress MUST use every required file from one pinned comparison. When a source
@@ -129,8 +135,9 @@ published percentage. No new durable state or schema is introduced.
 
 Automatic recovery is the default and has no new input, flag, secret, variable
 or precedence rule. The recommended path is normal progress assessment; the
-meaningful alternative for an unsupported/oversized comparison is smaller
-reviewed changes. Manual inspection never certifies Copilot completion.
+meaningful alternative for an unsupported/oversized comparison is a reviewed
+complete-evidence protocol or capacity change, preserving coherent scope.
+Manual inspection never certifies Copilot completion.
 
 | Fixed per-invocation limit | Bound and validation |
 |---|---:|
@@ -188,7 +195,7 @@ Partial analysis: Assessing evidence part 2 of 7. Previous progress remains
 published until all parts and the final assessment finish.
 Complete: Progress assessed from the pinned revision. CI remains a separate gate.
 Blocked: Progress was not assessed; immutable text could not be verified.
-Action: Inspect the named paths in the pinned comparison or split reviewed work.
+Action: Inspect the named pinned paths and report an unsupported complete workload.
 Retained state: Existing progress labels and assessments were preserved.
 Technical details: validation.evidence-unavailable; Unreviewed paths (2):
 "specs/a.md", "specs/registry.json"; linked workflow run.
@@ -208,8 +215,8 @@ readability; neither color nor the diagram is the sole status signal.
 
 | Failure | Result, recovery and retained state |
 |---|---|
-| Missing object/invalid bytes/unsupported content | Terminal `validation.evidence-unavailable`, named paths; inspect or split work; prior progress retained |
-| Content/work/serialization/fact budget | Terminal `validation.evidence-too-large`, named recovery paths; reduce/split; prior progress retained |
+| Missing object/invalid bytes/unsupported content | Terminal `validation.evidence-unavailable`, named paths; inspect complete evidence; prior progress retained |
+| Content/work/serialization/fact budget | Terminal `validation.evidence-too-large`, named recovery paths; inspect capacity without dropping requirements; prior progress retained |
 | Genuine transport/auth/rate limit | Original provider classification and retryability; no deterministic omission mislabeled as outage |
 | Invalid/failed middle part or final result | Existing model failure; no final percentage after a failed part and no progress publication |
 | Head/base/body movement, native closure or cancellation | Existing stale/canceled outcome; previous progress retained |
@@ -515,6 +522,11 @@ and [pinned comparisons](https://docs.github.com/en/rest/commits/commits#compare
 
 
 ## 22. Bounded framed assessment for coherent large comparisons — #773
+
+The [capacity diagnostic companion](progress-capacity-diagnostics.md) qualifies
+safe measured boundary and uncovered-path facts for this existing bounded
+continuation contract. It preserves invocation-local state and every capacity;
+the original #851 failed dimension is not inferred from review file counts.
 
 - Status: implementation contract, 2026-10-29.
 - Owner: existing `github-communication-experience` capability.
@@ -831,8 +843,10 @@ Optional evidence publication cannot erase or replace the primary diagnostic.
 - Every existing locale, exact-ID/path/unit, evidence/status, uncertainty,
   cardinality, percentage/remaining, Unicode and size rule MUST remain enforced.
 - No invalid result becomes accepted; no source or scope is shortened or changed.
-- There is no automatic result-repair loop, retry, threshold change, new runtime
-  permission, credential, command or repository configuration.
+- There is no general result-repair loop, threshold change, new runtime
+  permission, credential, command or repository configuration. The focused #830
+  amendment permits exactly one replacement for a host-bound per-file length
+  failure; all other invalid results retain this rejection path.
 - Existing execution/provider errors and retry rules remain authoritative.
   `agent.failed` remains eligible for a fresh attempt after a provider returns
   an invalid result; same input is not promised to produce a valid result.

@@ -8,17 +8,22 @@
   },
   "scripts": {
     "build": "node tooling/cli.mts build",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && svelte-check --tsconfig tsconfig.svelte.json --fail-on-warnings",
     "test": "vitest run --coverage",
     "validate": "node tooling/cli.mts validate",
     "test:browsers": "node tooling/browser_cli.mts",
-    "build:safari": "node tooling/safari_cli.mts"
+    "test:center-browsers": "node tooling/center_browser_cli.mts",
+    "build:safari": "node tooling/safari_cli.mts",
+    "build:safari:center": "node tooling/safari_center_cli.mts"
   },
   "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "7.3.1",
     "@types/jsdom": "28.0.3",
     "@types/node": "^22.9.1",
     "@vitest/coverage-v8": "5.0.5",
     "jsdom": "29.1.1",
+    "svelte": "5.57.1",
+    "svelte-check": "4.7.6",
     "typescript": "5.9.3",
     "vite": "8.3.1",
     "vitest": "5.0.5"

@@ -82,6 +82,7 @@ export interface BranchSyncWorkspacePort {
     childSha: string,
     token: string,
   ): Promise<BranchSyncResolutionValidation>;
+  /** Postcommit failures use validated BranchSyncPublicationFailure facts; never promise non-publication from an untyped error. */
   commitAndPush(
     workingBranch: string,
     message: string,
@@ -109,6 +110,7 @@ export interface BoundBranchSyncWorkspacePort {
     workingBranch: string,
     childSha: string,
   ): Promise<BranchSyncResolutionValidation>;
+  /** Postcommit failures use validated BranchSyncPublicationFailure facts; never promise non-publication from an untyped error. */
   commitAndPush(
     workingBranch: string,
     message: string,

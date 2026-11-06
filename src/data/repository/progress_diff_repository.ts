@@ -1,3 +1,5 @@
+import { progressInventoryError } from '../../application/policies/progress_inventory_error_policy';
+import { completeProgressDiff } from './complete_progress_diff_repository';
 import { ApplicationError } from '../../application/errors/application_error';
 import type { ProgressDiffEvidence } from '../../application/ports/progress_diff_query_ports';
 import type { GithubBranchComparisonClient } from '../../infrastructure/github/ports/github_branch_provider_ports';
@@ -9,6 +11,7 @@ import { progressContentUnits, progressRecoveryError } from '../../application/p
 import { PROGRESS_RECOVERY_TOTAL_LIMITS } from '../../application/policies/progress_recovery_capacity_policy';
 import { frameProgressEvidence } from '../../application/policies/progress_evidence_protocol_policy';
 import { randomUUID } from 'node:crypto';
+import { progressComparisonCapacityContext, withProgressCapacityContext } from '../../application/policies/progress_capacity_context_policy';
 import { partitionProgressDiff, serializeProgressDiff, MAX_PROGRESS_EVIDENCE_BYTES, type ProgressDiffChange } from '../../application/policies/progress_diff_partition_policy';
 
 const MAX_COMPARISON_FILES = 300;
@@ -21,7 +24,10 @@ export class ProgressDiffRepository {
         if (![baseSha, headSha].every(sha => /^[a-f0-9]{40}$/u.test(sha))) throw unavailable('workflow.stale');
         const { data } = await this.client.getClient(token).rest.repos.compareCommits({ owner, repo: repository, base: baseSha, head: headSha, per_page: 1, page: 1 });
         // GitHub supplies at most 300 comparison files. At that boundary, completeness is unknown.
-        if (!Array.isArray(data.files) || data.files.length >= MAX_COMPARISON_FILES) throw unavailable();
+        if (!Array.isArray(data.files)) throw unavailable();
+        if (data.files.length > MAX_COMPARISON_FILES) throw progressInventoryError('prefix', data.files.length, MAX_COMPARISON_FILES);
+        if (data.files.length === MAX_COMPARISON_FILES) return completeProgressDiff(this.objects?.getClient(token), data, baseSha, headSha, owner, repository,
+            async () => (await this.client.getClient(token).rest.repos.compareCommits({ owner, repo: repository, base: baseSha, head: headSha, per_page: 1, page: 1 })).data);
         const paths = new Set<string>();
         const changes = data.files.map(file => {
             const path = file.filename;
@@ -43,8 +49,10 @@ export class ProgressDiffRepository {
         const missing = changes.filter(file => file.recover);
         if (missing.length === 0) {
             const complete = changes.map(file => file.change);
-            const plan = partitionProgressDiff(baseSha, headSha, complete, 'framed-v1');
-            return plan.kind === 'single' ? plan : frameProgressEvidence(plan, data.merge_base_commit!.sha, complete, complete.map(file => file.path), undefined, randomUUID());
+            return withProgressCapacityContext(() => {
+                const plan = partitionProgressDiff(baseSha, headSha, complete, 'framed-v1');
+                return plan.kind === 'single' ? plan : frameProgressEvidence(plan, data.merge_base_commit!.sha, complete, complete.map(file => file.path), undefined, randomUUID());
+            }, () => progressComparisonCapacityContext({ baseSha, headSha, requiredPaths: complete.map(file => file.path) }));
         }
         const unreviewed = changes.map(file => file.change.path);
         if (missing.length > PROGRESS_RECOVERY_TOTAL_LIMITS.files) throw progressRecoveryError(`file recovery budget exhausted (requested ${missing.length}, supported total ${PROGRESS_RECOVERY_TOTAL_LIMITS.files})`, unreviewed, true);
@@ -56,14 +64,12 @@ export class ProgressDiffRepository {
             const content = await recovery.recover(data.merge_base_commit!.sha, headSha, file.change.path, file.change.status, file.previousPath, [file.change.path, ...unreviewed.filter(path => path !== file.change.path)]);
             complete.push(...progressContentUnits(file.change, content, `file-${index + 1}`));
         }
-        try {
-            const plan = partitionProgressDiff(baseSha, headSha, complete, 'framed-v1');
-            return plan.kind === 'single' ? plan : frameProgressEvidence(plan, data.merge_base_commit!.sha, complete, unreviewed, recovery.usage, randomUUID());
-        }
-        catch (error) {
-            if (error instanceof ApplicationError && error.code === 'validation.evidence-too-large') throw progressRecoveryError('complete content exceeds the bounded multipart analysis budget', unreviewed, true);
-            throw error;
-        }
+        return withProgressCapacityContext(() => {
+            // At least one recovered unit exists; every patch/content entry above has a unit ID.
+            // The partitioner therefore cannot select its raw, unit-free single-comparison form.
+            const plan = partitionProgressDiff(baseSha, headSha, complete, 'framed-v1') as Extract<ProgressDiffEvidence, { kind: 'partitioned' }>;
+            return frameProgressEvidence(plan, data.merge_base_commit!.sha, complete, unreviewed, recovery.usage, randomUUID());
+        }, () => progressComparisonCapacityContext({ baseSha, headSha, requiredPaths: unreviewed }));
     }
 }
 function unavailable(code: 'workflow.stale' | 'provider.unavailable' = 'provider.unavailable'): ApplicationError {

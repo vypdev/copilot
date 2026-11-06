@@ -1,4 +1,6 @@
+import { captureProgressScopeSource } from '../../policies/progress_scope_source_policy';
 import { queryProgressResult } from './query_progress_result_workflow';
+import { queryProgressAssessment } from './query_progress_assessment_workflow';
 import type { BoundProgressComparisonSourceQueryPort, ProgressComparisonSource } from '../../ports/progress_comparison_source_ports';
 import { selectProgressComparisonSource } from '../../policies/progress_comparison_source_policy';
 import { isAgentConfigurationReady } from '../../../data/model/agent';
@@ -14,16 +16,18 @@ import type { BoundProgressDiffQueryPort } from '../../ports/progress_diff_query
 import { findIssueBranch } from './find_issue_branch';
 import { validateProgressPrerequisites } from './progress_prerequisite_policy';
 import {
-    parseProgressResponse, progressResponseSchema, type ProgressAttemptResult,
+    progressResponseSchema, type ProgressAttemptResult,
 } from './progress_response';
 import { ApplicationError, type ApplicationErrorCode } from '../../errors/application_error';
 import { productFacingAgentQueryOptions } from '../../policies/agent_output_locale_policy';
 import type { BoundPublicationSourceQueryPort } from '../../ports/publication_freshness_ports';
 import { planProgressDiffPrompts, summarizeProgressDiff } from './summarize_progress_diff_workflow';
-import { MAX_PROGRESS_SCOPE_BYTES, MAX_PROGRESS_SCOPE_CLAUSES, progressScopeSourceLines, progressScopeResponseSchema, parseProgressScopeWithAnchors } from '../../policies/progress_scope_policy';
+import { MAX_PROGRESS_SCOPE_BYTES, MAX_PROGRESS_SCOPE_CLAUSES, progressScopeResponseSchema, parseProgressScopeWithAnchors } from '../../policies/progress_scope_policy';
 import { bindProgressEvidence, validateFramedProgressEvidence } from '../../policies/progress_evidence_protocol_policy';
-import { remainingProgressPromptBytes, progressAggregateBudget } from '../../policies/progress_prompt_capacity_policy';
+import { remainingProgressPromptBytes, remainingProgressAssessmentPromptBytes, progressAggregateBudget } from '../../policies/progress_prompt_capacity_policy';
 import { getProgressScopePrompt } from '../../../prompts/progress_scope';
+import { withProgressCapacityContext } from '../../policies/progress_capacity_context_policy';
+import { progressCapacityDiffContext } from '../../policies/progress_capacity_source_context_policy';
 
 export interface ProgressAnalysisDependencies {
     issueDescriptionQueryPort: BoundIssueDescriptionQueryPort;
@@ -131,45 +135,43 @@ export async function analyzeProgress(
         diffEvidence: '',
         acceptanceScope: ' '.repeat(MAX_PROGRESS_SCOPE_BYTES),
     };
-    const sourceLines = progressScopeSourceLines(issueDescription);
-    const scopePrompt = getProgressScopePrompt(JSON.stringify(sourceLines), param.targetLocale);
-    remainingProgressPromptBytes(scopePrompt, 'progress-scope', progressScopeResponseSchema(sourceLines), effort);
+    const capacityContext = () => progressCapacityDiffContext(diff);
+    const capturedScopeSource = withProgressCapacityContext(() => captureProgressScopeSource(issueDescription), capacityContext);
+    const sourceLines = capturedScopeSource.lines;
+    logInfo(`Progress scope source: ${sourceLines.length} human lines; ${capturedScopeSource.operationalLines} operational lines; ${capturedScopeSource.totalLines} original nonempty lines. Required/uncertain and excluded clause limits remain 32 each.`);
+    const scopePrompt = withProgressCapacityContext(() => getProgressScopePrompt(JSON.stringify(sourceLines), param.targetLocale), capacityContext);
+    withProgressCapacityContext(() => remainingProgressPromptBytes(scopePrompt, 'progress-scope', progressScopeResponseSchema(sourceLines), effort), capacityContext);
     const reservedScope = { requirements: Array.from({ length: MAX_PROGRESS_SCOPE_CLAUSES }, (_, index) =>
         ({ id: `R${index + 1}`, quote: 'Reserved requirement' })), exclusions: [] };
     const reservedSchema = progressResponseSchema(reservedScope);
-    const aggregateBudget = progressAggregateBudget(getCheckProgressPrompt(promptParameters), reservedSchema, effort);
-    const reservedDiff = bindProgressEvidence(diff, issueDescription, promptParameters.acceptanceScope, param.targetLocale);
-    planProgressDiffPrompts(reservedDiff, param, issueDescription, aggregateBudget, promptParameters.acceptanceScope);
-    if (diff.kind !== 'partitioned') remainingProgressPromptBytes(getCheckProgressPrompt({ ...promptParameters, diffEvidence: diff.evidence }), 'progress', reservedSchema, effort);
+    const aggregateBudget = withProgressCapacityContext(() => progressAggregateBudget(getCheckProgressPrompt(promptParameters), reservedSchema, effort), capacityContext);
+    const reservedDiff = withProgressCapacityContext(() => bindProgressEvidence(diff, issueDescription, promptParameters.acceptanceScope, param.targetLocale), capacityContext);
+    withProgressCapacityContext(() => planProgressDiffPrompts(reservedDiff, param, issueDescription, aggregateBudget, promptParameters.acceptanceScope), capacityContext);
+    if (diff.kind !== 'partitioned') withProgressCapacityContext(() => remainingProgressAssessmentPromptBytes(getCheckProgressPrompt({ ...promptParameters, diffEvidence: diff.evidence }), reservedSchema, effort), capacityContext);
     const { scope, anchors } = parseProgressScopeWithAnchors(await queryProgressResult(dependencies.aiRepository, {
         configuration: param.agentConfiguration, agentId: AGENT_PLAN, prompt: scopePrompt,
         options: { ...productFacingAgentQueryOptions('progress-scope', progressScopeResponseSchema(sourceLines)), includeReasoning: param.includeReasoning },
     }, { phase: 'scope', sourceLineIds: sourceLines.map(line => line.id) }), issueDescription, param.targetLocale);
+    const assessmentSchema = progressResponseSchema(scope, anchors);
     const acceptanceScope = JSON.stringify(scope);
-    const boundDiff = bindProgressEvidence(diff, issueDescription, acceptanceScope, param.targetLocale);
-    const actualBudget = progressAggregateBudget(getCheckProgressPrompt({ ...promptParameters, acceptanceScope }), progressResponseSchema(scope), effort);
+    const boundDiff = withProgressCapacityContext(() => bindProgressEvidence(diff, issueDescription, acceptanceScope, param.targetLocale), capacityContext);
+    const actualBudget = withProgressCapacityContext(() => progressAggregateBudget(getCheckProgressPrompt({ ...promptParameters, acceptanceScope }), assessmentSchema, effort), capacityContext);
     const diffEvidence = await summarizeProgressDiff(boundDiff, param, issueDescription, dependencies.aiRepository, actualBudget, acceptanceScope);
     const prompt = getCheckProgressPrompt({ ...promptParameters, acceptanceScope, diffEvidence });
-    remainingProgressPromptBytes(prompt, 'progress', progressResponseSchema(scope), effort);
+    withProgressCapacityContext(() => remainingProgressAssessmentPromptBytes(prompt, assessmentSchema, effort), () => progressCapacityDiffContext(boundDiff, true));
     logDebugInfo(
         `CheckProgress: prompt length=${prompt.length}, issue description length=${issueDescription.length}.`,
     );
     logInfo('🤖 Analyzing progress using the configured agent...');
-    const attemptResult = parseProgressResponse(
-        await queryProgressResult(dependencies.aiRepository, {
+    const attemptResult = await queryProgressAssessment(dependencies.aiRepository, {
             configuration: param.agentConfiguration,
             agentId: AGENT_PLAN,
             prompt,
             options: {
-                ...productFacingAgentQueryOptions('progress', progressResponseSchema(scope)),
+                ...productFacingAgentQueryOptions('progress', assessmentSchema),
                 includeReasoning: param.includeReasoning,
             },
-        }, { phase: 'assessment', requirementIds: scope.requirements.map(requirement => requirement.id),
-            sourceLineIds: sourceLines.map(line => line.id), anchors }),
-        param.targetLocale,
-        scope,
-        anchors,
-    );
+        }, { scope, anchors, targetLocale: param.targetLocale, sourceLineIds: sourceLines.map(line => line.id) });
 
     return {
         kind: 'ready',

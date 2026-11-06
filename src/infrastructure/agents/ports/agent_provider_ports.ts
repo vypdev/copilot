@@ -1,4 +1,5 @@
 import type { AgentCapability, AgentConfiguration } from '../../../domain/agent';
+import type { AgentSourceSnapshot } from '../../../domain/agent_source_snapshot';
 
 export interface AgentCliPort {
     execute(request: {
@@ -12,5 +13,6 @@ export interface AgentCliPort {
         maxOutputBytes?: number;
         maxPromptBytes?: number;
         outputSchema?: Record<string, unknown>;
+        readonly sourceSnapshot?: AgentSourceSnapshot;
     }): Promise<string>;
 }

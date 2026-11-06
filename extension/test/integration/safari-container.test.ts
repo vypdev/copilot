@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, expect, it, vi } from 'vitest';
-import { mkdtemp, mkdir, readFile, writeFile, rm, copyFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, writeFile, rm, copyFile, readdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -12,8 +12,8 @@ beforeAll(async () => {
     temporary = await mkdtemp(path.join(tmpdir(), 'copilot-h2-safari-container-unit-'));
     await buildDevelopmentSet(root, path.join(temporary, 'extension/dist')); app = path.join(temporary, 'CopilotH2.app');
     const resources = path.join(app, 'Contents/PlugIns/CopilotH2 Extension.appex/Contents/Resources'); await mkdir(resources, { recursive: true });
-    for (const file of ['background.js', 'content.js', 'manifest.json', 'runtime.html', 'runtime.js']) await copyFile(path.join(temporary, 'extension/dist/safari', file), path.join(resources, file));
-});
+    for (const file of await readdir(path.join(temporary, 'extension/dist/safari'))) await copyFile(path.join(temporary, 'extension/dist/safari', file), path.join(resources, file));
+}, 120_000);
 afterAll(async () => { await rm(temporary, { recursive: true, force: true }); });
 function commands(): ContainerCommand {
     return vi.fn(async (file, args) => {
@@ -48,16 +48,20 @@ it('github-browser-extension-runtime-C35 builds the real converter/Xcode command
     const target = path.join(temporary, '.tmp/safari-h2/derived/Build/Products/Debug/CopilotH2.app');
     const run: ContainerCommand = vi.fn(async (file, args) => {
         if (file.endsWith('xcrun')) {
-            const project = path.join(temporary, '.tmp/safari-h2/project/CopilotH2/CopilotH2.xcodeproj'); await mkdir(project, { recursive: true });
+            const project = path.join(args[args.indexOf('--project-location') + 1], 'CopilotH2/CopilotH2.xcodeproj'); await mkdir(project, { recursive: true });
             await writeFile(path.join(project, 'project.pbxproj'), 'invalid.extensions.copilot.CopilotH2 MARKETING_VERSION = 1.0;');
-            const resources = path.join(target, 'Contents/PlugIns/CopilotH2 Extension.appex/Contents/Resources'); await mkdir(resources, { recursive: true });
-            for (const asset of ['background.js', 'content.js', 'manifest.json', 'runtime.html', 'runtime.js']) await copyFile(path.join(temporary, 'extension/dist/safari', asset), path.join(resources, asset));
+        }
+        if (file.endsWith('xcodebuild') && args.includes('build')) {
+            const project = args[args.indexOf('-project') + 1];
+            expect(await readFile(path.join(project, 'project.pbxproj'), 'utf8')).toContain('MARKETING_VERSION = 0.1.0;');
+            const candidate = path.join(args[args.indexOf('-derivedDataPath') + 1], 'Build/Products/Debug/CopilotH2.app');
+            const resources = path.join(candidate, 'Contents/PlugIns/CopilotH2 Extension.appex/Contents/Resources'); await mkdir(resources, { recursive: true });
+            for (const asset of await readdir(path.join(temporary, 'extension/dist/safari'))) await copyFile(path.join(temporary, 'extension/dist/safari', asset), path.join(resources, asset));
         }
         if (file.endsWith('pluginkit')) return `${CONTAINER_ID}.Extension ${target}`;
         return commands()(file, args);
     });
     expect(await buildSafariContainer(temporary, run)).toBe(target);
-    expect(await readFile(path.join(temporary, '.tmp/safari-h2/project/CopilotH2/CopilotH2.xcodeproj/project.pbxproj'), 'utf8')).toContain('MARKETING_VERSION = 0.1.0;');
     expect(JSON.parse(await readFile(path.join(temporary, '.tmp/safari-h2/container.json'), 'utf8'))).toMatchObject({ distribution: false });
     const fail: ContainerCommand = async () => { throw new Error('native-prerequisite'); };
     await expect(buildSafariContainer(temporary, fail)).rejects.toThrow('native-prerequisite');
@@ -74,10 +78,12 @@ it('Safari CLI preserves import inertness, reports local app path only after bui
 });
 
 it('failed Xcode builds replace any stale success log with bounded captured diagnostics or an explicit unavailable-log fact', async () => {
-    const project = path.join(temporary, '.tmp/safari-h2/project/CopilotH2/CopilotH2.xcodeproj'); await mkdir(project, { recursive: true });
     for (const failure of [Object.assign(new Error('build-failed'), { stdout: 'compiler output', stderr: 'compiler diagnostic' }), null, { stdout: 42, stderr: 'x'.repeat(4 * 1024 * 1024 + 1) }]) {
-        await writeFile(path.join(project, 'project.pbxproj'), 'invalid.extensions.copilot.CopilotH2 MARKETING_VERSION = 1.0;');
         const run: ContainerCommand = async (file, args) => {
+            if (file.endsWith('xcrun')) {
+                const project = path.join(args[args.indexOf('--project-location') + 1], 'CopilotH2/CopilotH2.xcodeproj'); await mkdir(project, { recursive: true });
+                await writeFile(path.join(project, 'project.pbxproj'), 'invalid.extensions.copilot.CopilotH2 MARKETING_VERSION = 1.0;');
+            }
             if (file.endsWith('xcodebuild')) throw failure;
             return commands()(file, args);
         };

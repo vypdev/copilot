@@ -2,6 +2,8 @@ import ts from 'typescript';
 import path from 'node:path';
 import { SHARED, SHARED_ENTRY, sourceProgram, moduleSpecifiers, type Sources } from './source_graph.mts';
 import { FoundationGateError } from './gate_error.mts';
+import { componentScript } from './component_validation.mts';
+import { validateStyles } from './style_validation.mts';
 
 const DIRECTIONS: Record<string, readonly string[]> = {
     domain: ['domain'], application: ['application', 'domain'],
@@ -11,11 +13,20 @@ const DIRECTIONS: Record<string, readonly string[]> = {
 const NETWORK = new Set(['fetch', 'XMLHttpRequest', 'WebSocket', 'EventSource', 'sendBeacon']);
 const AUTHORITY = new Set(['fetch', 'XMLHttpRequest', 'WebSocket', 'EventSource', 'chrome', 'browser',
     'localStorage', 'sessionStorage', 'sendBeacon', 'credentials', 'authorization', 'token']);
+const DOM_GLOBALS = new Set(['window', 'document', 'self', 'navigator']);
 
 export function validateArchitecture(root: string, sources: Sources): void {
     const errors: string[] = [];
     const graph = new Map<string, string[]>();
-    const { program, resolve } = sourceProgram(root, sources);
+    const scripts = new Map(sources);
+    for (const [name, text] of sources) {
+        if (name.endsWith('.svelte')) scripts.set(name, componentScript(name, text));
+        if (name.endsWith('.css')) {
+            if (!name.startsWith('extension/src/presentation/')) throw new FoundationGateError(`${name}: style-layer`);
+            validateStyles(name, text); scripts.set(name, '');
+        }
+    }
+    const { program, resolve } = sourceProgram(root, scripts);
     const checker = program.getTypeChecker();
     const report = (file: string, rule: string) => errors.push(`${file}: ${rule}`);
     for (const diagnostic of program.getSyntacticDiagnostics()) {
@@ -29,7 +40,10 @@ export function validateArchitecture(root: string, sources: Sources): void {
         if (text.split('\n').length > 220) report(name, 'module-size exceeds 220 lines');
         const dependencies: string[] = [];
         for (const specifier of moduleSpecifiers(file)) {
+            if (specifier.text === 'svelte' && ['presentation', 'infrastructure'].includes(layer)
+                && ts.isImportDeclaration(specifier.node)) continue;
             if (!specifier.text?.startsWith('.')) { report(name, 'external-or-dynamic-import'); continue; }
+            if (ts.isCallExpression(specifier.node) && (layer !== 'infrastructure' || specifier.node.arguments.length !== 1)) report(name, 'dynamic-import-boundary');
             const resolved = resolve(specifier.text, name);
             if (!resolved || !sources.has(resolved)) { report(name, 'unresolved-or-escaping-import'); continue; }
             dependencies.push(resolved);
@@ -46,18 +60,21 @@ export function validateArchitecture(root: string, sources: Sources): void {
                 const parent = node.parent;
                 const propertyName = (ts.isPropertyAssignment(parent) || ts.isPropertySignature(parent)
                     || ts.isPropertyAccessExpression(parent)) && parent.name === node;
+                const domAuthority = DOM_GLOBALS.has(node.text) && !propertyName
+                    && !(ts.isPropertyDeclaration(parent) && parent.name === node)
+                    && !(ts.isBindingElement(parent) && parent.propertyName === node);
                 if (['eval', 'Function', 'require', 'globalThis', 'window', 'document', 'chrome', 'browser',
                     'process', 'Buffer', 'fetch', 'self', 'navigator', 'localStorage', 'sessionStorage'].includes(node.text)
                     && layer === 'domain' && !propertyName) report(name, 'pure-global');
                 if (['eval', 'Function', 'require'].includes(node.text)) report(name, 'executable-primitive');
-                if (layer === 'presentation' && (AUTHORITY.has(node.text) || node.text === 'globalThis')) report(name, 'presentation-authority');
+                if (layer === 'presentation' && (AUTHORITY.has(node.text) || node.text === 'globalThis' || domAuthority)) report(name, 'presentation-authority');
             }
             ts.forEachChild(node, visit);
         }
         visit(file);
     }
     const pureFiles = [...sources.keys()].filter(file => file.startsWith(SHARED) || file.startsWith('extension/src/domain/'));
-    const pure = sourceProgram(root, sources, pureFiles).program;
+    const pure = sourceProgram(root, scripts, pureFiles).program;
     for (const diagnostic of pure.getSemanticDiagnostics()) {
         const name = diagnostic.file && path.relative(root, diagnostic.file.fileName).split(path.sep).join('/');
         if (name && pureFiles.includes(name)) report(name, `pure-environment TS${diagnostic.code}`);

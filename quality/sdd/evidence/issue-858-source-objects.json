@@ -1,0 +1,380 @@
+{
+  "schemaVersion": 1,
+  "scope": "Contributor-authored fictional immutable source corpus for #858, not consumer repositories or hidden historical payloads. Git object IDs independently recomputed; exact UTF-8 blobs and binary trees retained. Each trial replica uses identical objects.",
+  "worlds": [
+    {
+      "case": "existing-pnpm-scripts",
+      "anchor": "b50a960242da65194a752ceaa90b4fd5f41da7f4",
+      "selectedCommit": "b50a960242da65194a752ceaa90b4fd5f41da7f4",
+      "selectedTree": "46481b7dcbfea9e46605fee81591de91cd1fe468",
+      "ownerBlob": "16f39aed096aae5cd8dee237d607ae606e802d2e",
+      "ownerSha256": "7edf1cb9ad46f8c06db97ecef6c8ddb4bc06bcb2a7793a1f4c6c8533a205ad60",
+      "localBranchNames": [
+        "develop",
+        "selected-source"
+      ]
+    },
+    {
+      "case": "absent-copied-scripts",
+      "anchor": "ca4c453a795402a904ca3c4e968d1721c1cd6a7f",
+      "selectedCommit": "ca4c453a795402a904ca3c4e968d1721c1cd6a7f",
+      "selectedTree": "9247a5a41c6efa8b211ba29f8e460cdfaf292639",
+      "ownerBlob": "16f39aed096aae5cd8dee237d607ae606e802d2e",
+      "ownerSha256": "7edf1cb9ad46f8c06db97ecef6c8ddb4bc06bcb2a7793a1f4c6c8533a205ad60",
+      "localBranchNames": [
+        "develop",
+        "selected-source"
+      ]
+    },
+    {
+      "case": "package-manager-mismatch",
+      "anchor": "864af7c4c54e356f96a96ddd03f18396edc1745d",
+      "selectedCommit": "864af7c4c54e356f96a96ddd03f18396edc1745d",
+      "selectedTree": "cd3a125ce9560690f6a712ca3f5d94f6d2a0e607",
+      "ownerBlob": "16f39aed096aae5cd8dee237d607ae606e802d2e",
+      "ownerSha256": "7edf1cb9ad46f8c06db97ecef6c8ddb4bc06bcb2a7793a1f4c6c8533a205ad60",
+      "localBranchNames": [
+        "develop",
+        "selected-source"
+      ]
+    },
+    {
+      "case": "selected-source-versus-default",
+      "anchor": "50f1f11efc8b35cb485aaadc1aa66c5a6f28bca9",
+      "selectedCommit": "24a9dd4d7506426adcdc4a8da0c274937e456329",
+      "selectedTree": "9d3b90d32eb28a7969c85b282fce41b3d6cce536",
+      "ownerBlob": "16f39aed096aae5cd8dee237d607ae606e802d2e",
+      "ownerSha256": "7edf1cb9ad46f8c06db97ecef6c8ddb4bc06bcb2a7793a1f4c6c8533a205ad60",
+      "localBranchNames": [
+        "develop",
+        "selected-source"
+      ]
+    },
+    {
+      "case": "unknown-command-evidence",
+      "anchor": "bd2bc6f30d97037d9ae0b1df3a1600c73a4ba112",
+      "selectedCommit": "bd2bc6f30d97037d9ae0b1df3a1600c73a4ba112",
+      "selectedTree": "61ad46dac9acc654c5c2ea0552fd4104ed0c0bc4",
+      "ownerBlob": "16f39aed096aae5cd8dee237d607ae606e802d2e",
+      "ownerSha256": "7edf1cb9ad46f8c06db97ecef6c8ddb4bc06bcb2a7793a1f4c6c8533a205ad60",
+      "localBranchNames": [
+        "develop",
+        "selected-source"
+      ]
+    },
+    {
+      "case": "generic-outcome-is-valid",
+      "anchor": "ca4c453a795402a904ca3c4e968d1721c1cd6a7f",
+      "selectedCommit": "ca4c453a795402a904ca3c4e968d1721c1cd6a7f",
+      "selectedTree": "9247a5a41c6efa8b211ba29f8e460cdfaf292639",
+      "ownerBlob": "16f39aed096aae5cd8dee237d607ae606e802d2e",
+      "ownerSha256": "7edf1cb9ad46f8c06db97ecef6c8ddb4bc06bcb2a7793a1f4c6c8533a205ad60",
+      "localBranchNames": [
+        "develop",
+        "selected-source"
+      ]
+    },
+    {
+      "case": "exact-factual-citation",
+      "anchor": "ca4c453a795402a904ca3c4e968d1721c1cd6a7f",
+      "selectedCommit": "ca4c453a795402a904ca3c4e968d1721c1cd6a7f",
+      "selectedTree": "9247a5a41c6efa8b211ba29f8e460cdfaf292639",
+      "ownerBlob": "16f39aed096aae5cd8dee237d607ae606e802d2e",
+      "ownerSha256": "7edf1cb9ad46f8c06db97ecef6c8ddb4bc06bcb2a7793a1f4c6c8533a205ad60",
+      "localBranchNames": [
+        "develop",
+        "selected-source"
+      ]
+    },
+    {
+      "case": "retained-refinements-and-future-paths",
+      "anchor": "ca4c453a795402a904ca3c4e968d1721c1cd6a7f",
+      "selectedCommit": "ca4c453a795402a904ca3c4e968d1721c1cd6a7f",
+      "selectedTree": "9247a5a41c6efa8b211ba29f8e460cdfaf292639",
+      "ownerBlob": "16f39aed096aae5cd8dee237d607ae606e802d2e",
+      "ownerSha256": "7edf1cb9ad46f8c06db97ecef6c8ddb4bc06bcb2a7793a1f4c6c8533a205ad60",
+      "localBranchNames": [
+        "develop",
+        "selected-source"
+      ]
+    }
+  ],
+  "objects": {
+    "b50a960242da65194a752ceaa90b4fd5f41da7f4": {
+      "type": "commit",
+      "bytes": 208,
+      "sha256": "37c3bb539d7e50d5295722c9d9bdab487a5e0c04c09a09c6410edbf4dfc695f9",
+      "utf8": "tree 46481b7dcbfea9e46605fee81591de91cd1fe468\nauthor Owned fixture <fixture@example.invalid> 1793750400 +0000\ncommitter Owned fixture <fixture@example.invalid> 1793750400 +0000\n\nOwned selected source fixture\n"
+    },
+    "46481b7dcbfea9e46605fee81591de91cd1fe468": {
+      "type": "tree",
+      "bytes": 200,
+      "sha256": "7665dbc2beb8decf6c47edec5ca884745a39dc2a286500c087e0f0d297a5b65f",
+      "base64": "NDAwMDAgYXBwANBbo8aXRSFQrCTjNeZJ7KAEMOvRNDAwMDAgY2hlY2tzADpCQ5K0xt+pBumeLZ0YoKkEHnFENDAwMDAgZG9jcwD0JaZ7hhK3zB+kxejZk3FRHcp5mzEwMDY0NCBwYWNrYWdlLmpzb24A9qavGVSfqpacZg7850NKmaBlLtE0MDAwMCBzY3JpcHRzAOMEfss8VQc+fnCnFuxz28jp8Fo8NDAwMDAgc3BlY3MAlTxu1Vn3xBpM9k8NSTs7O4vlGGg="
+    },
+    "d05ba3c697452150ac24e335e649eca00430ebd1": {
+      "type": "tree",
+      "bytes": 35,
+      "sha256": "9705315e812ecbbce47fea8082cbc0fa1188348300db30a1cfec9e68a54aa634",
+      "base64": "MTAwNjQ0IGNvcmUucHkA1C6EZOJUcqiRqIRDZ/237T+DzCw="
+    },
+    "d42e8464e25472a891a8844367fdb7ed3f83cc2c": {
+      "type": "blob",
+      "bytes": 38,
+      "sha256": "edaaeb1663f87186a7d2b9942f72c68fdfb45038cadc123c80897872606d0c10",
+      "utf8": "def identity(value):\n    return value\n"
+    },
+    "3a424392b4c6dfa906e99e2d9d18a0a9041e7144": {
+      "type": "tree",
+      "bytes": 40,
+      "sha256": "a63c883ee1b7510485d9d9e53b789a85701d46ca832c95ae393afc9e8f7610dd",
+      "base64": "MTAwNjQ0IHRlc3RfY29yZS5weQC7mrW4kZbDkPZ7OhFwGSy5l8Qpjg=="
+    },
+    "bb9ab5b89196c390f67b3a1170192cb997c4298e": {
+      "type": "blob",
+      "bytes": 80,
+      "sha256": "7840ad155b6e0f265e2d3ff590e7fc228930ee766839dd23e5aeaf503bc602d1",
+      "utf8": "from app.core import identity\n\ndef test_identity():\n    assert identity(1) == 1\n"
+    },
+    "f425a67b8612b7cc1fa4c5e8d99371511dca799b": {
+      "type": "tree",
+      "bytes": 125,
+      "sha256": "0302f218e47a85728e8e891b433641adcc8e082e1f004cf5d99bd7ee4e2649c2",
+      "base64": "MTAwNjQ0IGNvbW1hbmRzLm1kAK4cPqPe4eHXWGKiMNe1bqaNS8dcMTAwNjQ0IHBheW1lbnRzLm1keAB6Ubj13krpniVcutfLoRGIlkIhFTEwMDY0NCBzb3VyY2UtZXZpZGVuY2UubWQA8cQcaISGz6hj+17wUFQt9sbuRSs="
+    },
+    "ae1c3ea3dee1e1d75862a230d7b56ea68d4bc75c": {
+      "type": "blob",
+      "bytes": 143,
+      "sha256": "3032f15f3935322bcfcd8bf67737bfb333a7c12d1e28ae01887cc4f62536309b",
+      "utf8": "# Project commands\n\npnpm run validate:specifications\npnpm run generate:specifications\nDeclared project commands; no successful run is claimed.\n"
+    },
+    "7a51b8f5de4ae99e255cbad7cba1118896422115": {
+      "type": "blob",
+      "bytes": 124,
+      "sha256": "2b493ebcb5de49dbb5aa415c74d2720f652e3105a236ee4a00a3f9a7be778bc8",
+      "utf8": "# Fixture foundation\n\nAuthored baseline documentation; no implementation or execution is inferred from this source fixture.\n"
+    },
+    "f1c41c688486cfa863fb5ef050542df6c6ee452b": {
+      "type": "blob",
+      "bytes": 277,
+      "sha256": "a3a6ec2aa23f44720a6371042808da6a9900e7cc4335625c83d7c48b25295f19",
+      "utf8": "# Selected owner identity\n\nFile: specs/foundation.md\nGit blob: 16f39aed096aae5cd8dee237d607ae606e802d2e\nSHA-256: 7edf1cb9ad46f8c06db97ecef6c8ddb4bc06bcb2a7793a1f4c6c8533a205ad60\nThese identities describe the actual authored file bytes; they do not establish runtime execution.\n"
+    },
+    "f6a6af19549faa969c660efce7434a99a0652ed1": {
+      "type": "blob",
+      "bytes": 259,
+      "sha256": "3be577ba3513e719ff124e9c3329da9997390d6f21d4dd4e37e0520886a36eb8",
+      "utf8": "{\n  \"name\": \"owned-draft-fixture\",\n  \"version\": \"1.0.0\",\n  \"private\": true,\n  \"packageManager\": \"pnpm@10.12.4\",\n  \"scripts\": {\n    \"validate:specifications\": \"node scripts/check-docs.cjs\",\n    \"generate:specifications\": \"node scripts/generate-docs.cjs\"\n  }\n}\n"
+    },
+    "e3047ecb3c55073e7e70a716ec73dbc8e9f05a3c": {
+      "type": "tree",
+      "bytes": 87,
+      "sha256": "6a6969886bd8db7bf6cd3740eb8c396083421a01054d4d1b85328e724a995387",
+      "base64": "MTAwNjQ0IGNoZWNrLWRvY3MuY2pzAHj+/y8nxWvmnwRzHkVxPUUF3w/BMTAwNjQ0IGdlbmVyYXRlLWRvY3MuY2pzAMazU5ENFJ4Tha8CcJB5nK6yk/Y4"
+    },
+    "78feff2f27c56be69f04731e45713d4505df0fc1": {
+      "type": "blob",
+      "bytes": 87,
+      "sha256": "2773b3e60f20828c34c42f6b332ae909f00d417fdbc22367fd5180705843a126",
+      "utf8": "const fs=require('node:fs');if(!fs.existsSync('docs/payments.mdx'))process.exitCode=1;\n"
+    },
+    "c6b353910d149e1385af027090799caeb293f638": {
+      "type": "blob",
+      "bytes": 116,
+      "sha256": "8b16a297b85eacdafb8591137133162c88fd75bb7ad3e95fb595801c31337a97",
+      "utf8": "process.stdout.write('Fixture catalog-generation command is declared; this fixture is not SDK execution proof.\\n');\n"
+    },
+    "953c6ed559f7c41a4cf64f0d493b3b3b8be51868": {
+      "type": "tree",
+      "bytes": 196,
+      "sha256": "969fdbb39fa68eac2016c81c0622298bff6387ab55c7fa2421378ee3da008a83",
+      "base64": "MTAwNjQ0IENBVEFMT0cubWQAVQJtgNYqM8HmDTdiF/IkgDaaKtIxMDA2NDQgUkVBRE1FLm1kAK/98hGTd+/SYmwKLAPCk5Sqiki5MTAwNjQ0IF90ZW1wbGF0ZS5tZAB0w/4uwhu1fFGe3W8UTiRSs8VAUDEwMDY0NCBjYXRhbG9nLmpzb24A8ZduzDW11cY/nDlE3k6qGced9LkxMDA2NDQgZm91bmRhdGlvbi5tZAAW85rtCWquXNje4jfWB65gboAtLg=="
+    },
+    "55026d80d62a33c1e60d376217f22480369a2ad2": {
+      "type": "blob",
+      "bytes": 1690,
+      "sha256": "2a08689782365812efe20f186cad7c69430ce482d342a5c4bfab3ca214e8f09f",
+      "utf8": "# Product capability specification catalog\n\n> Generated from [`catalog.json`](./catalog.json). Do not edit this table by hand.\n> Run `pnpm run generate:specifications` after changing catalog metadata.\n\nThis catalog answers which product contract owns a capability and where its\nimplementation, verification, workflow, and user-documentation evidence lives.\nAn **As-built baseline** records verified current behavior; it does not hide known\ndebt or convert unknown historic intent into a design decision.\n\n| Capability ID | Status | Scope | Primary SDD | Evidence |\n|---|---|---|---|---|\n| `fixture-foundation` | Implemented | Authored source-grounding fixture with existing authentication baseline and planned protocol refinements. | [Fictional foundation](./foundation.md) | 4 paths \u00b7 2026-11-04 |\n\n## Evidence map\n\n### `fixture-foundation` \u2014 Fictional foundation\n\n- Owner: Fixture maintainer\n- Last verified: 2026-11-04\n- Specifications: [`specs/foundation.md`](./foundation.md)\n- Workflows: Not applicable for this capability.\n- Entrypoints: [`app/core.py`](../app/core.py)\n- Core code: [`app/core.py`](../app/core.py)\n- Tests: [`checks/test_core.py`](../checks/test_core.py)\n- User documentation: [`docs/payments.mdx`](../docs/payments.mdx)\n\n## Maintenance contract\n\n1. Read the relevant SDD before changing a catalogued capability.\n2. Change the SDD, catalog evidence, tests, and user documentation together when\n   behavior or an architecture boundary changes.\n3. Use repository-relative paths in `catalog.json`; each path is validated and every\n   top-level product SDD must have exactly one capability owner.\n4. Run `pnpm run validate:specifications` in local and CI validation.\n"
+    },
+    "affdf2119377efd2626c0a2c03c29394aa8a48b9": {
+      "type": "blob",
+      "bytes": 14546,
+      "sha256": "410c827dd3a6699d10177e32aca144d7c43a8c8ff4bd9e38f08bc417f186e59d",
+      "utf8": "# Product Specification Standard\n\nThis directory contains implementation-driving product and engineering\nspecifications. A spec is a shared product contract, not only a technical design.\nIt must make the intended behavior understandable to someone who did not take\npart in the original discussion and testable by someone who did not implement it.\n\nNew specifications start from [`_template.md`](./_template.md). Existing specs\nshould converge on this standard when they are materially revised.\n\nThe capability inventory and its implementation evidence live in\n[`catalog.json`](./catalog.json); [`CATALOG.md`](./CATALOG.md) is the generated\nhuman-readable view. Run `pnpm run validate:specifications` after changing a\nspecification or any catalogued path, and `pnpm run generate:specifications`\nafter changing catalog metadata.\n\n### Truthful proposed capability bootstrap\n\nA new product repository MAY register prospective SDDs as SDK version-1\n`proposed` capabilities before product implementation exists. Every path field\nMUST be present as an array. For proposed entries only, `entrypoints`, `code`\nand `tests` MAY be empty; `specs` and `documentation` remain nonempty, and every\nsupplied path MUST satisfy the ordinary existing-file, containment and ownership\nchecks. Workflows retain their existing optional cardinality. Other statuses\nretain complete implementation-evidence requirements.\n\nBootstrap the standard, template, Draft SDDs, documentation and truthful catalog\nthrough an enabled documentation issue and its Action-owned branch, then review\nand merge the prerequisites before starting an eligible feature's normal gate.\nCatalog validation does not make a Draft Ready for implementation or establish\nexecuted tests. Preserve unresolved decisions and readiness metadata. Add real\nentrypoint/source/test evidence as it exists and change status to implemented\nonly with the corresponding reviewed implementation. The recorded verification\ndate for a proposed entry identifies its metadata/document review.\n\nSee the [greenfield initialization guide](https://docs.page/vypdev/copilot/issues/pre-branch-sdds#starting-without-product-implementation)\nfor the supported lifecycle and [SDK maintenance commands](https://docs.page/vypdev/copilot/development/specifications#initial-catalog-generation)\nfor generation without an application package. Upgrade an older SDK through its\nreviewed installation route; never manufacture evidence or bypass its validator.\n\n### Retrospective (as-built) specifications\n\nAn already implemented capability MAY be documented with status\n`As-built baseline`. This is not a claim that the feature is perfect or that all\nhistoric design choices were intentional. Its purpose is to establish a\nreviewable contract before subsequent changes.\n\nAn as-built baseline MUST:\n\n- label verified repository behavior as **observed behavior**;\n- label the behavior maintainers choose to preserve as the **intentional\n  contract**;\n- record defects, missing evidence, and architectural weaknesses under **known\n  debt and limitations**;\n- mark historic motivation as **unknown** when evidence does not establish it;\n- keep desired improvements separate from the current contract and link them to\n  follow-up work rather than presenting them as implemented;\n- cite current code, workflows, tests, and user documentation; and\n- use the same UX, architecture, configuration, security, testing,\n  documentation, acceptance, and Definition of Done standard as a prospective\n  specification.\n\nThe baseline date and `Last verified` catalog date identify the repository\nsnapshot that was audited. A behavior-changing implementation MUST update the\nrelevant SDD, catalog evidence, tests, and user documentation in the same change.\n\n## 1. Core criteria\n\nEvery spec must be:\n\n- **Product-near:** use the names, states, actions, and surfaces that users and\n  operators will actually see.\n- **Visual where it helps:** show multi-step flows, state changes, ownership, or\n  several relationships with a compact diagram, table, timeline, or Markdown\n  wireframe.\n- **Textually complete:** every visual has an adjacent textual equivalent; color,\n  emoji, screenshots, and Mermaid are never the only source of meaning.\n- **Explicit:** distinguish current facts, proposed behavior, recommended\n  defaults, configurable choices, fixed safety limits, non-goals, and open\n  questions.\n- **End-to-end:** include happy paths, alternatives, partial success, failure,\n  retry, cancellation, migration, and cleanup where relevant.\n- **Verifiable:** important statements use normative language and map to an\n  automated test, contract check, or explicit human acceptance artifact.\n- **Proportional:** a concern may be marked not applicable with a reason; it must\n  not disappear silently.\n\nUse `MUST`, `SHOULD`, and `MAY` deliberately. A `MUST` requires an acceptance\nscenario. Avoid prescribing implementation details unless they protect product\nbehavior, architecture, interoperability, or safety.\n\n## 2. Required specification contract\n\nA specification must cover the following concerns or mark them not applicable:\n\n| Concern | Required outcome |\n|---|---|\n| Decision metadata | Status, date, owners, scope, review gates, and unresolved decisions |\n| Problem and evidence | Current behavior, concrete pain, affected actors, and evidence/source |\n| Goals and limits | Measurable outcomes, non-goals, fixed safety/product invariants |\n| Product journey | Current versus proposed flow, actors, entrypoints, visible surfaces, next actions |\n| Domain model | Shared terminology, invariants, states, transitions, and ownership of facts |\n| Configuration | Recommended defaults, bounded alternatives, validation, precedence, persistence, migration |\n| Architecture | Dependency direction, pure policy, use cases, ports, adapters, presentation, state and trust boundaries |\n| UI/UX and content | Information hierarchy, examples for every primary state, navigation, accessibility, localization |\n| Failure and recovery | Impact, partial-success facts, retryability, idempotency, cleanup, operator action |\n| Security and privacy | Permissions, untrusted input, secrets, execution boundaries, auditability |\n| Observability | User status, operator evidence, logs/metrics, correlation, noise budget |\n| Compatibility and rollout | Existing in-flight state, migration, deprecation, rollout and rollback |\n| Testing | Numeric risk-derived budget, distribution, coverage, fixtures, integration and human evidence |\n| Documentation | User, setup, configuration, recovery, migration, architecture and discoverability |\n| Acceptance and DoD | Observable scenarios, traceability, implementation order, all quality gates |\n\n## 3. Product and GitHub UI/UX standard\n\nGitHub issues, pull requests, reviews, comments, checks, labels, releases, and Job\nSummaries are product surfaces when a person uses them to understand or operate a\nfeature. CLI output and generated documentation are product surfaces for the same\nreason.\n\nFor each primary state, the first visible content must answer in this order:\n\n1. What is happening now?\n2. What completed already?\n3. What happens next?\n4. Is human action required?\n5. What is the impact, especially for partial success or failure?\n6. Where can the result or transition be inspected?\n7. Where are technical details available?\n\nA spec affecting these surfaces must include representative rendered Markdown\nor a wireframe for at least pending, action-required, blocked/failed, partially\ncomplete, and complete states. Use actual product terminology and plausible data.\nDo not specify only abstract fields such as `status`, `message`, and `url`.\n\nThe UX contract must define, when applicable:\n\n- one primary status and one primary action;\n- progress/state representation and the facts behind it;\n- deterministic titles, headings, labels, and durable markers;\n- descriptive links to the issue, PR, comparison, commit, run, artifact, release,\n  package, documentation, and recovery action;\n- progressive disclosure: user meaning first, technical diagnostics later;\n- error content in `impact -> cause -> action -> retained state` order;\n- idempotent update behavior and a bounded comment/notification budget;\n- locale source, supported locales, and fallback behavior;\n- narrow/mobile readability, light/dark themes, and logical heading/table use;\n- sanitization of mentions, commands, Markdown, HTML markers, URLs, and diagrams;\n  and\n- a textual fallback for Mermaid, images, icons, and other visual elements.\n\nFor a flow with three or more dependent transitions, include one overview visual.\nFor a user-facing issue or PR change, include at least one concrete content\nmockup. Screenshots can supplement these artifacts but cannot replace the\nsemantic written contract.\n\n## 4. Clean Architecture standard\n\nApply Clean Architecture to the repository's real boundaries rather than\ninventing a parallel folder taxonomy. A design must identify:\n\n- domain entities, value objects, invariants, and pure policies;\n- application use cases and narrow immutable input/output contracts;\n- semantic ports that express capabilities without provider DTOs;\n- data/provider adapters and their error mappings;\n- infrastructure and composition ownership;\n- entrypoint responsibility and trusted/untrusted event boundaries;\n- presentation view models and renderers, separate from mutation policy;\n- durable state, concurrency, idempotency, and migration ownership; and\n- forbidden dependency directions that can be enforced automatically.\n\nUse a component/dependency diagram when three or more layers or external systems\ninteract. Use a sequence or state diagram when ordering, retries, asynchronous\nevents, or partial completion affect correctness.\n\nArchitecture requirements are incomplete without executable constraints. The\nspec must state which dependency, contract, cycle, schema, or workflow checks\nwill prevent boundary erosion.\n\n## 5. Configuration standard\n\nConfiguration exists to support legitimate product variation, not to make every\nimplementation detail optional. Every input must define:\n\n| Field | Required information |\n|---|---|\n| Name and type | Stable public name, type, and owning surface |\n| Recommended default | Safe default and why it is recommended |\n| Allowed values/range | Bounded choices with observable semantics |\n| Validation | Invalid values and invalid cross-field combinations |\n| Scope and precedence | Project/repository/operation scope and override order |\n| Persistence | Whether an in-flight operation snapshots or rereads the value |\n| Migration | Behavior for absent, retired, renamed, or future values |\n| Security | Values that must never accept arbitrary code, refs, URLs, or secrets |\n\nShow at least one recommended configuration and one meaningful alternative.\nState which correctness and safety invariants are intentionally not configurable.\n\n## 6. Test budget standard\n\nEvery implementation-driving spec must contain a numeric test budget. Derive it\nfrom the behavior and risk inventory; do not reuse one universal count for small\nand large changes.\n\nThe budget table must distribute a minimum number of distinct cases across the\napplicable areas:\n\n- domain/configuration/pure planning;\n- state transitions, idempotency, replay, cancellation, and races;\n- application use cases;\n- adapters and provider error mapping;\n- workflows, permissions, schemas, and setup contracts;\n- presentation states, links, localization, accessibility, and sanitization;\n- integration/end-to-end and compatibility/migration; and\n- security/abuse cases.\n\nEach `it`/`test` case counts once. Parameterized rows count separately only when\nthey represent distinct behavior. The number is a floor, not a substitute for\ncovering every requirement and failure mode.\n\nThe spec must also define:\n\n- repository-wide thresholds that remain in force;\n- higher branch coverage for new pure policy where justified;\n- changed-module expectations;\n- deterministic fakes instead of real waits or live services;\n- fixtures/golden output without relying only on snapshots;\n- workflow/contract checks that parse structure rather than grep prose;\n- required manual UX evidence that automation cannot establish; and\n- a traceability mapping from each normative requirement to tests or evidence.\n\n## 7. Documentation standard\n\nDocumentation is an implementation deliverable. Identify the applicable\naudiences and artifacts:\n\n- user journey and recommended default;\n- setup, permissions, environments, credentials, and external prerequisites;\n- complete configuration reference and examples;\n- operator state model, troubleshooting, recovery, replay, and cleanup;\n- upgrade, migration, compatibility, deprecation, and rollback;\n- architecture, contracts, trust boundaries, and contributor guidance; and\n- route/navigation registration, links, assets, examples, and validation jobs.\n\nLead documentation with the normal path and one helpful visual, then disclose\nconfiguration, failures, and internals progressively. Examples must be checked\nagainst implementation fixtures or contract tests whenever practical.\n\n## 8. Acceptance, traceability, and review\n\nAcceptance scenarios describe observable behavior, not implementation activity.\nCover normal, alternative, boundary, invalid, duplicate, out-of-order, partial,\nfailure, recovery, migration, security, UX, and accessibility behavior as\napplicable.\n\nMaintain a traceability table for substantial specs:\n\n```text\nRequirement -> domain/policy/use case/adapter/presentation -> test or evidence -> documentation\n```\n\nBefore changing a spec to `Ready for implementation`, reviewers must be able to\nanswer yes to the following:\n\n- Is the origin/current behavior supported by evidence?\n- Can a user understand the proposed product without reading implementation code?\n- Are product defaults and non-configurable safety limits explicit?\n- Are architecture boundaries and executable constraints clear?\n- Is the numeric test budget proportional and complete?\n- Are documentation and migration deliverables named?\n- Do UI examples cover pending, action, error/partial, and completed states?\n- Can status and required action be understood quickly without logs?\n- Are security, idempotency, retries, concurrency, and cleanup addressed?\n- Does every `MUST` map to acceptance and verification?\n- Are material decisions resolved or explicitly blocking readiness?\n\nThe Definition of Done must repeat these gates. A concern mentioned only in an\nintroductory paragraph is not an enforceable delivery requirement.\n"
+    },
+    "74c3fe2ec21bb57c519edd6f144e2452b3c54050": {
+      "type": "blob",
+      "bytes": 11599,
+      "sha256": "8393cc62fac5d7f76203e9a35ff184c622faff0f1b49664ef48a6c5bd754b044",
+      "utf8": "# <Product/Feature Specification Title>\n\n- Status: Draft\n- Date: YYYY-MM-DD\n- Catalog capability ID: <stable id in catalog.json>\n- Last verified: <YYYY-MM-DD for an as-built baseline, otherwise not applicable>\n- Owners: <product/engineering owners>\n- Scope: <one sentence>\n- Related issues/PRs: <links>\n- Required review gates: product UX, architecture, testing, documentation,\n  security/operations\n- Open decisions blocking readiness: <none or list>\n\n> Start with the repository standard in [`README.md`](./README.md). Remove this\n> note when the spec is ready. Mark a non-applicable section explicitly and give\n> a reason instead of silently deleting the concern.\n\n## 1. Executive summary\n\nDescribe the user-visible outcome, the recommended default, and the principal\nsafety/correctness rule in plain language.\n\n```text\n<One compact end-to-end flow in product terminology>\n```\n\n## 2. Problem, current behavior, and evidence\n\n### 2.1 Problem\n\nWho is affected, what they cannot understand/do safely, and why it matters.\n\n### 2.2 Current behavior\n\nNumber the actual current sequence. Separate verified facts from assumptions.\n\n### 2.3 Evidence\n\n- Code/workflow/documentation references:\n- Incidents or concrete examples:\n- External primary sources:\n- Unknowns:\n\n### 2.4 Retrospective classification (as-built baselines only)\n\n- Observed behavior: <facts directly supported by current evidence>\n- Intentional contract: <observed behavior maintainers choose to preserve>\n- Known debt and limitations: <defects, constraints, and missing evidence>\n- Unknown rationale: <historic motivation that evidence cannot establish>\n- Proposed improvements: <future changes, clearly not represented as current>\n\nFor a prospective specification, mark this subsection not applicable because no\nimplemented baseline is being reconstructed.\n\n## 3. Actors, surfaces, and terminology\n\n| Actor | Goal | Entry point | Visible surfaces |\n|---|---|---|---|\n| <actor> | <goal> | <event/action> | <issue/PR/CLI/docs/etc.> |\n\nDefine product terms, branch/data roles, ownership of facts, and language that\nmust remain consistent across UI, code, tests, and documentation.\n\n## 4. Goals, non-goals, and fixed invariants\n\n### 4.1 Goals\n\n1. <Measurable outcome>\n\n### 4.2 Non-goals\n\n1. <Explicitly excluded behavior>\n\n### 4.3 Fixed product/safety invariants\n\n1. <Rule that configuration cannot weaken>\n\n## 5. Current versus proposed product journey\n\n| Stage | Current | Proposed | User/operator effect |\n|---|---|---|---|\n| <stage> | <behavior> | <behavior> | <observable change> |\n\nFor three or more dependent transitions, add a visual and a textual equivalent:\n\n```mermaid\nflowchart LR\n    A[User entry point] --> B[System transition]\n    B --> C[Visible result]\n```\n\nText equivalent: `<entry point> -> <transition> -> <visible result>`.\n\n## 6. Functional behavior and state model\n\n### 6.1 Happy path\n\n1. <Observable step and owner>\n\n### 6.2 Alternative paths\n\n- <Supported alternative and consequence>\n\n### 6.3 State machine\n\n| State | Entered when | User-visible meaning | Allowed next states | Recovery/owner |\n|---|---|---|---|---|\n| <state> | <verified fact> | <plain language> | <states> | <action> |\n\nDefine duplicate, stale, out-of-order, canceled, and partially completed event\nbehavior where applicable.\n\n## 7. User-facing configuration\n\n| Input | Type | Recommended default | Allowed values/range | Scope/persistence |\n|---|---|---|---|---|\n| `<name>` | <type> | `<default>` \u2014 <reason> | <bounded values> | <scope/snapshot> |\n\nDocument:\n\n- validation and invalid cross-field combinations;\n- precedence and operation-time snapshot/reread behavior;\n- migration, retired, unknown, and deprecated values;\n- one recommended example and one meaningful alternative; and\n- behavior intentionally not configurable.\n\n## 8. Clean Architecture design\n\n### 8.1 Responsibilities and dependency direction\n\n| Layer/boundary | Owns | Must not own/import |\n|---|---|---|\n| Domain/pure policy | <decisions/invariants> | <provider/framework concerns> |\n| Application | <use cases/semantic ports> | <concrete SDK/process concerns> |\n| Adapters/data | <mapping/provider operations> | <product policy> |\n| Infrastructure/composition | <implementations/wiring> | <business decisions> |\n| Entrypoints | <input/event adaptation> | <duplicated orchestration> |\n| Presentation | <view models/rendering> | <mutations/state transitions> |\n\n```mermaid\nflowchart LR\n    E[Entrypoint] --> A[Application use case]\n    A --> D[Domain policy]\n    A --> P[Semantic port]\n    I[Provider adapter] --> P\n    A --> V[Presentation model]\n```\n\n### 8.2 Contracts, state, and trust boundaries\n\n- Pure decisions:\n- Application contracts:\n- Semantic ports:\n- Durable state/schema ownership:\n- Concurrency/idempotency strategy:\n- Trusted and untrusted inputs:\n- Provider error mapping:\n\n### 8.3 Executable architecture constraints\n\n- <Dependency/cycle/contract/schema rule and its automated check>\n\n## 9. UI/UX and content contract\n\nTreat issues, PRs, comments, labels, checks, summaries, CLI output, and docs as UI\nwhen applicable.\n\n### 9.1 Information hierarchy\n\n1. Current status\n2. Completed facts\n3. Next transition\n4. Human action, or explicit statement that none is needed\n5. Impact and inspectable links\n6. Collapsed technical evidence\n\n### 9.2 Representative primary view\n\n```markdown\n<!-- stable machine marker -->\n\n# <Icon plus textual operation title>\n\n> **Current status:** <plain-language state>\n>\n> **Action required:** <one instruction/link or \"No action required\">\n\n## Progress\n\n- [x] <completed fact>\n- [ ] <current/pending fact>\n\n## What happens next\n\n<One concise consequence>\n\n## Links\n\n[Descriptive destination](...) \u00b7 [Descriptive destination](...)\n\n<details>\n<summary>Technical details</summary>\n<IDs, full hashes, provider facts, sanitized diagnostics>\n</details>\n```\n\nAdd concrete variants for:\n\n- pending/no action;\n- action required;\n- blocked or failed before irreversible effects;\n- partially successful after an irreversible effect; and\n- completed.\n\n### 9.3 Issue, PR, and comment behavior\n\n- Deterministic titles and purpose:\n- What merge/close/retry will do:\n- Durable marker and idempotent update policy:\n- Comment/notification budget:\n- Labels and checks as supplemental state:\n- Direct links and navigation:\n\n### 9.4 Accessibility, localization, and responsive behavior\n\n- Supported locales and fallback:\n- Textual equivalent for visuals:\n- Narrow/mobile and light/dark expectations:\n- Heading/table/link rules:\n- Sanitization of untrusted Markdown, mentions, commands, markers, and URLs:\n\n## 10. Failure, recovery, and cleanup\n\n| Failure/partial state | User impact | Retained facts | Automatic retry | Required action | Cleanup |\n|---|---|---|---|---|---|\n| <condition> | <impact> | <durable facts> | <yes/no/bounded> | <action/link> | <rule> |\n\nUser-facing errors follow `impact -> cause -> action -> retained state` and must\nnot imply that an already successful irreversible action failed.\n\n## 11. Security, permissions, and privacy\n\n1. <Least privilege and authorization>\n2. <Untrusted input and execution boundary>\n3. <Secret/PII/logging/storage rule>\n4. <Abuse/replay/forgery protection>\n\n## 12. Observability and operational UX\n\n- User-facing state:\n- Job Summary/operator evidence:\n- Logs, metrics, and correlation:\n- Pending external dependency versus workflow failure:\n- Rate-limit/retry behavior:\n- Noise/comment budget:\n\n## 13. Compatibility, migration, rollout, and rollback\n\n- Existing in-flight operations/data:\n- Schema/configuration migration:\n- Deprecated behavior and compatibility window:\n- Rollout stages/feature flag if needed:\n- Rollback and irreversible effects:\n\n## 14. Testing strategy and numeric budget\n\nThe count is derived from the behavior/risk inventory and is a minimum, not a\nsubstitute for requirement coverage.\n\n| Area | Minimum distinct cases | Behaviors/risks covered |\n|---|---:|---|\n| Domain/configuration/pure planning | <n> | <list> |\n| State/application/idempotency/races | <n> | <list> |\n| Adapters/provider contracts | <n> | <list> |\n| Workflows/setup/schema | <n> | <list> |\n| UI/UX/localization/sanitization | <n> | <list> |\n| Integration/security/migration | <n> | <list> |\n| **Total** | **<n>** | No double counting |\n\nDefine:\n\n- repository and changed-module coverage thresholds;\n- pure-policy branch coverage;\n- table-driven, replay, race, adapter, workflow-contract, and security tests;\n- deterministic clocks/IDs/fakes with no real waits or live services;\n- golden UI fixtures plus semantic assertions; and\n- manual UX evidence for readability that automation cannot establish.\n\n## 15. Documentation and discoverability\n\n| Audience | Artifact/page | Required content | Validation/navigation |\n|---|---|---|---|\n| User | <page> | <journey/default/examples> | <route/link check> |\n| Setup owner | <page> | <permissions/configuration> | <contract fixture> |\n| Operator | <page> | <states/recovery/cleanup> | <decision tree> |\n| Contributor | <page> | <architecture/contracts> | <architecture check> |\n\nInclude migration and troubleshooting documentation where applicable. Keep\nexamples synchronized with implementation fixtures or contract tests.\n\n## 16. Acceptance scenarios\n\n1. Given `<state>`, when `<event>`, then `<observable product result>`.\n2. <Alternative/boundary/invalid case>\n3. <Duplicate/out-of-order/cancellation/recovery case>\n4. <Failure before irreversible effect>\n5. <Partial success after irreversible effect>\n6. <Security/permission/forged-input case>\n7. <UI/accessibility/localization case>\n8. <Documentation/configuration/architecture-contract case>\n\n## 17. Requirements traceability\n\n| Requirement | Policy/use case/adapter/presentation | Test or evidence | Documentation |\n|---|---|---|---|\n| `<section/item>` | <owner> | <test/evidence> | <page> |\n\n## 18. Implementation sequence\n\n1. Contracts, decisions, configuration, and architecture checks.\n2. Pure policies and tests.\n3. State/application orchestration and tests.\n4. Adapters/workflows and contract tests.\n5. Presentation, fixtures, accessibility, and localization.\n6. Migration, recovery, security, documentation, and generated artifacts.\n7. Integration, coverage, human UX evidence, and final validation.\n\nAdjust ordering to risk and dependencies; do not postpone documentation or UX\nuntil after behavior is considered complete.\n\nFor an as-built baseline, interpret this as the required change sequence for\nfuture maintenance and state explicitly that the document itself proposes no\nbehavior change.\n\n## 19. Definition of Done\n\n- [ ] Every normative requirement has acceptance and traceability.\n- [ ] Architecture boundaries are implemented and automatically enforced.\n- [ ] Numeric test budget, distribution, and coverage requirements pass.\n- [ ] Configuration defaults, limits, validation, persistence, and migration agree.\n- [ ] Primary UI states and content examples are implemented and reviewed.\n- [ ] Accessibility, localization, responsive behavior, sanitization, and noise\n      budgets pass.\n- [ ] User/setup/operator/contributor documentation is complete and discoverable.\n- [ ] Failure, partial success, retry, idempotency, security, and cleanup pass.\n- [ ] Required generated artifacts and repository validation commands pass.\n- [ ] `specs/catalog.json` evidence and `specs/CATALOG.md` are current and\n      `pnpm run validate:specifications` passes.\n- [ ] No readiness-blocking decision remains unresolved.\n\n## 20. References and decisions\n\n- Primary sources:\n- Related specs/ADRs/issues/PRs:\n- Decisions and rejected alternatives:\n- Follow-up work explicitly outside this spec:\n"
+    },
+    "f1976ecc35b5d5c63f9c3944de4eaa19c79df4b9": {
+      "type": "blob",
+      "bytes": 654,
+      "sha256": "f53b8e5c1177d67ae9758896301f40804cfaf9fb55f1dac2c23808df520228b8",
+      "utf8": "{\n  \"version\": 1,\n  \"capabilities\": [\n    {\n      \"id\": \"fixture-foundation\",\n      \"title\": \"Fictional foundation\",\n      \"status\": \"implemented\",\n      \"scope\": \"Authored source-grounding fixture with existing authentication baseline and planned protocol refinements.\",\n      \"owner\": \"Fixture maintainer\",\n      \"lastVerified\": \"2026-11-04\",\n      \"specs\": [\n        \"specs/foundation.md\"\n      ],\n      \"workflows\": [],\n      \"entrypoints\": [\n        \"app/core.py\"\n      ],\n      \"code\": [\n        \"app/core.py\"\n      ],\n      \"tests\": [\n        \"checks/test_core.py\"\n      ],\n      \"documentation\": [\n        \"docs/payments.mdx\"\n      ]\n    }\n  ]\n}\n"
+    },
+    "16f39aed096aae5cd8dee237d607ae606e802d2e": {
+      "type": "blob",
+      "bytes": 2909,
+      "sha256": "7edf1cb9ad46f8c06db97ecef6c8ddb4bc06bcb2a7793a1f4c6c8533a205ad60",
+      "utf8": "# Payment behavior\n\n- Status: Draft\n- Owners: Maintainers\n\n## 1. Executive summary\nPreserve authorization, immutable evidence and the existing owning product contract. Preserve authorization, immutable evidence and the existing owning product contract. Preserve authorization, immutable evidence and the existing owning product contract. Preserve authorization, immutable evidence and the existing owning product contract. Preserve authorization, immutable evidence and the existing owning product contract. Preserve authorization, immutable evidence and the existing owning product contract. Preserve authorization, immutable evidence and the existing owning product contract. Preserve authorization, immutable evidence and the existing owning product contract. Preserve authorization, immutable evidence and the existing owning product contract. Preserve authorization, immutable evidence and the existing owning product contract. Preserve authorization, immutable evidence and the existing owning product contract. Preserve authorization, immutable evidence and the existing owning product contract. Preserve authorization, immutable evidence and the existing owning product contract. Preserve authorization, immutable evidence and the existing owning product contract. Preserve authorization, immutable evidence and the existing owning product contract. Preserve authorization, immutable evidence and the existing owning product contract. Preserve authorization, immutable evidence and the existing owning product contract. Preserve authorization, immutable evidence and the existing owning product contract. \n\n## 4. Goals\n| Requirement | Behavior |\n|---|---|\n| G-01 | Reject missing credentials and accept valid credentials. |\n| G-02 | Preserve the accepted principal through publication. |\n\n## 8. Clean Architecture\nThe domain owns pure decisions; the workspace adapter reads immutable Git objects and the application coordinates validation before publication.\n\n## 14. Testing strategy\n| Area | Minimum distinct cases | Behaviors/risks covered |\n|---|---:|---|\n| Policy | 2 | Authentication |\n| Adapter | 1 | Publication |\n| **Total** | **3** | No double counting |\n\n| Case ID | Area | Requirements | Scenario |\n|---|---|---|---|\n| fixture-foundation-C01 | Policy | G-01 | Missing credentials return 401. |\n| fixture-foundation-C02 | Policy | G-01 | Valid credentials produce an accepted principal. |\n| fixture-foundation-C03 | Adapter | G-02 | Publishing preserves the principal. |\n\n## 15. Documentation\n| Path | Change |\n|---|---|\n| docs/payments.mdx | update |\n| specs/foundation.md | update |\n\n## 16. Acceptance scenarios\nThe three cases above are observable product outcomes; runtime and security review remain separate acceptance gates.\n\n## 17. Requirements traceability\n| Requirement | Cases |\n|---|---|\n| G-01 | fixture-foundation-C01, fixture-foundation-C02 |\n| G-02 | fixture-foundation-C03 |\n"
+    },
+    "ca4c453a795402a904ca3c4e968d1721c1cd6a7f": {
+      "type": "commit",
+      "bytes": 208,
+      "sha256": "8c0216059733215de98cafc610b127e0d4e01b9d0b6e511370784641283519fc",
+      "utf8": "tree 9247a5a41c6efa8b211ba29f8e460cdfaf292639\nauthor Owned fixture <fixture@example.invalid> 1793750400 +0000\ncommitter Owned fixture <fixture@example.invalid> 1793750400 +0000\n\nOwned selected source fixture\n"
+    },
+    "9247a5a41c6efa8b211ba29f8e460cdfaf292639": {
+      "type": "tree",
+      "bytes": 200,
+      "sha256": "60ae6ecbc687a44f20865a382d6b1dc98e130f065ad79bf63a34fef7fe20b5cf",
+      "base64": "NDAwMDAgYXBwANBbo8aXRSFQrCTjNeZJ7KAEMOvRNDAwMDAgY2hlY2tzADpCQ5K0xt+pBumeLZ0YoKkEHnFENDAwMDAgZG9jcwDKdQZYlRkdITyU9NVLsloDNa8zNDEwMDY0NCBwYWNrYWdlLmpzb24A7suXrW7Y22z//f9Glm5xBiu6bKk0MDAwMCBzY3JpcHRzAC1WPptlD6glakGBvbocs0Tw0XzINDAwMDAgc3BlY3MAlTxu1Vn3xBpM9k8NSTs7O4vlGGg="
+    },
+    "ca75065895191d213c94f4d54bb25a0335af3334": {
+      "type": "tree",
+      "bytes": 125,
+      "sha256": "a6631a85a12fc0cdf81fc9f5897c70b1a1e0626d26e5808d75843f8f49494ec8",
+      "base64": "MTAwNjQ0IGNvbW1hbmRzLm1kACB9yAPGMrA6D6kQqK4y9EZDbtWXMTAwNjQ0IHBheW1lbnRzLm1keAB6Ubj13krpniVcutfLoRGIlkIhFTEwMDY0NCBzb3VyY2UtZXZpZGVuY2UubWQA8cQcaISGz6hj+17wUFQt9sbuRSs="
+    },
+    "207dc803c632b03a0fa910a8ae32f446436ed597": {
+      "type": "blob",
+      "bytes": 97,
+      "sha256": "5fe98716fdcdf8ed171ea0f82f2f466fb5812cd99805a67908c5ea54f779951d",
+      "utf8": "# Project commands\n\npnpm run docs:check\nDeclared project commands; no successful run is claimed.\n"
+    },
+    "eecb97ad6ed8db6cfffdff46966e71062bba6ca9": {
+      "type": "blob",
+      "bytes": 181,
+      "sha256": "83772e80b8179b11b6f106eafd6a868659b89c8c2fa2863cecc714c7ca7d3f9b",
+      "utf8": "{\n  \"name\": \"owned-draft-fixture\",\n  \"version\": \"1.0.0\",\n  \"private\": true,\n  \"packageManager\": \"pnpm@10.12.4\",\n  \"scripts\": {\n    \"docs:check\": \"node scripts/check-docs.cjs\"\n  }\n}\n"
+    },
+    "2d563e9b650fa8256a4181bdba1cb344f0d17cc8": {
+      "type": "tree",
+      "bytes": 42,
+      "sha256": "4180bf1f2ea251169d692a8a101844b3473214efd598f05744ba6d0d5f08413b",
+      "base64": "MTAwNjQ0IGNoZWNrLWRvY3MuY2pzAHj+/y8nxWvmnwRzHkVxPUUF3w/B"
+    },
+    "864af7c4c54e356f96a96ddd03f18396edc1745d": {
+      "type": "commit",
+      "bytes": 208,
+      "sha256": "db2b0c51b044d941248aec0b1e0faa7ce75547e293b1ce9a206bd97719cba42b",
+      "utf8": "tree cd3a125ce9560690f6a712ca3f5d94f6d2a0e607\nauthor Owned fixture <fixture@example.invalid> 1793750400 +0000\ncommitter Owned fixture <fixture@example.invalid> 1793750400 +0000\n\nOwned selected source fixture\n"
+    },
+    "cd3a125ce9560690f6a712ca3f5d94f6d2a0e607": {
+      "type": "tree",
+      "bytes": 200,
+      "sha256": "2f550936e28f7d601f9845192c800f1a0d0e8ba3f10f5c15555746d0086ac7ba",
+      "base64": "NDAwMDAgYXBwANBbo8aXRSFQrCTjNeZJ7KAEMOvRNDAwMDAgY2hlY2tzADpCQ5K0xt+pBumeLZ0YoKkEHnFENDAwMDAgZG9jcwDjgzgBM5ptD8KD+ROFmKN/eccwkTEwMDY0NCBwYWNrYWdlLmpzb24AbC6U3CFhGOlIhYjNXyRox7W1X6k0MDAwMCBzY3JpcHRzAC1WPptlD6glakGBvbocs0Tw0XzINDAwMDAgc3BlY3MAlTxu1Vn3xBpM9k8NSTs7O4vlGGg="
+    },
+    "e3833801339a6d0fc283f9138598a37f79c73091": {
+      "type": "tree",
+      "bytes": 125,
+      "sha256": "d0c2a2c910a1e30a2ef137cd50c22192a45aaaf714df74d9a435b580f4f606de",
+      "base64": "MTAwNjQ0IGNvbW1hbmRzLm1kAM68X8ZLftoNcQ1mGKqpkKjq0f+ZMTAwNjQ0IHBheW1lbnRzLm1keAB6Ubj13krpniVcutfLoRGIlkIhFTEwMDY0NCBzb3VyY2UtZXZpZGVuY2UubWQA8cQcaISGz6hj+17wUFQt9sbuRSs="
+    },
+    "cebc5fc64b7eda0d710d6618aaa990a8ead1ff99": {
+      "type": "blob",
+      "bytes": 96,
+      "sha256": "dbb4055617f95e4fce0acd341927dfbf22abeec49458eaf786ac5a713a9bea36",
+      "utf8": "# Project commands\n\nnpm run docs:check\nDeclared project commands; no successful run is claimed.\n"
+    },
+    "6c2e94dc216118e9488588cd5f2468c7b5b55fa9": {
+      "type": "blob",
+      "bytes": 179,
+      "sha256": "868ebb29e3fc19d3844ea17aed92fc0bd4c0937fbb18d4f76099ebab22ddada4",
+      "utf8": "{\n  \"name\": \"owned-draft-fixture\",\n  \"version\": \"1.0.0\",\n  \"private\": true,\n  \"packageManager\": \"npm@11.0.0\",\n  \"scripts\": {\n    \"docs:check\": \"node scripts/check-docs.cjs\"\n  }\n}\n"
+    },
+    "50f1f11efc8b35cb485aaadc1aa66c5a6f28bca9": {
+      "type": "commit",
+      "bytes": 282,
+      "sha256": "9ae535263dfaae8dd99733fc39c09ed4fe5a38d1a26c3639193dfca212da39cb",
+      "utf8": "tree 11a053192b566c6f1faed12c5fba74a376362a1a\nparent 24a9dd4d7506426adcdc4a8da0c274937e456329\nauthor Owned fixture <fixture@example.invalid> 1793750400 +0000\ncommitter Owned fixture <fixture@example.invalid> 1793750400 +0000\n\nDifferent bootstrap source; never selected for drafting\n"
+    },
+    "24a9dd4d7506426adcdc4a8da0c274937e456329": {
+      "type": "commit",
+      "bytes": 208,
+      "sha256": "efb448fefd1702e91047c94ef195d59ec4c75405ccf69f077dd95553cd01afc5",
+      "utf8": "tree 9d3b90d32eb28a7969c85b282fce41b3d6cce536\nauthor Owned fixture <fixture@example.invalid> 1793750400 +0000\ncommitter Owned fixture <fixture@example.invalid> 1793750400 +0000\n\nOwned selected source fixture\n"
+    },
+    "11a053192b566c6f1faed12c5fba74a376362a1a": {
+      "type": "tree",
+      "bytes": 254,
+      "sha256": "03768dce07e4565b7b618074bb5cbd1be9bc20a6db44a19ebbd56e4183d3d5d9",
+      "base64": "NDAwMDAgYXBwAIGdUvg3fhsIwEh7TMYDP+KGKxP8MTAwNjQ0IGJvb3RzdHJhcC1vbmx5LmNqcwD3uLWRkuy6amDmd1UBo4BExHwwEDQwMDAwIGNoZWNrcwA6QkOStMbfqQbpni2dGKCpBB5xRDQwMDAwIGRvY3MA2/6fW3OOT/rrFnp4l0DnvkgIdGoxMDA2NDQgcGFja2FnZS5qc29uABmKBO5Z4gvo5kYck189xStXIJhEMTAwNjQ0IHB5cHJvamVjdC50b21sAEMD9UDDuHU8Aa3oAACntNDTJKUxNDAwMDAgc3BlY3MAlTxu1Vn3xBpM9k8NSTs7O4vlGGg="
+    },
+    "819d52f8377e1b08c0487b4cc6033fe2862b13fc": {
+      "type": "tree",
+      "bytes": 70,
+      "sha256": "1508f585ddd07cfef85c833bbc67f8e441978b9c84c7ff9c9f51ea847f563a6c",
+      "base64": "MTAwNjQ0IGNvcmUucHkA1C6EZOJUcqiRqIRDZ/237T+DzCwxMDA2NDQgZG9jcy5weQA3uGi5OjFZ6PacovgFleiowtQwXQ=="
+    },
+    "37b868b93a3159e8f69ca2f80595e8a8c2d4305d": {
+      "type": "blob",
+      "bytes": 88,
+      "sha256": "76ef337564e2288f9692943e942ff58f58ccfebabe03528cb76605e37429f3d5",
+      "utf8": "def main():\n    from pathlib import Path\n    assert Path(\"docs/payments.mdx\").is_file()\n"
+    },
+    "f7b8b59192ecba6a60e6775501a38044c47c3010": {
+      "type": "blob",
+      "bytes": 50,
+      "sha256": "38aabbc83cd203ff80d68ed3cf6d3db8602ae672159f27abdb8455d5de5e9b36",
+      "utf8": "process.stdout.write('bootstrap-only command\\n');\n"
+    },
+    "dbfe9f5b738e4ffaeb167a789740e7be4808746a": {
+      "type": "tree",
+      "bytes": 125,
+      "sha256": "c2ef384c34b9a0db2f0d2dd60c3a38951b473eebfbf73f069d92562225345d89",
+      "base64": "MTAwNjQ0IGNvbW1hbmRzLm1kAKInRwwItORzPwQFWiFhi1+sLbWaMTAwNjQ0IHBheW1lbnRzLm1keAB6Ubj13krpniVcutfLoRGIlkIhFTEwMDY0NCBzb3VyY2UtZXZpZGVuY2UubWQA8cQcaISGz6hj+17wUFQt9sbuRSs="
+    },
+    "a227470c08b4e4733f04055a21618b5fac2db59a": {
+      "type": "blob",
+      "bytes": 142,
+      "sha256": "d444b4a7ab609ed03e2fe740b5c7c66671f63199a10903a5d96ad737d14405da",
+      "utf8": "# Project commands\n\nuv run fixture-docs docs\nThis is the selected project documentation invocation. Execution acceptance remains outstanding.\n"
+    },
+    "198a04ee59e20be8e6461c935f3dc52b57209844": {
+      "type": "blob",
+      "bytes": 243,
+      "sha256": "1d77a79c8c137e90b845c50186a9a803e7028d4f4c6fa00821bbfc76a6cd2d41",
+      "utf8": "{\n  \"name\": \"bootstrap-only\",\n  \"version\": \"1.0.0\",\n  \"private\": true,\n  \"packageManager\": \"pnpm@10.12.4\",\n  \"scripts\": {\n    \"validate:specifications\": \"node bootstrap-only.cjs\",\n    \"generate:specifications\": \"node bootstrap-only.cjs\"\n  }\n}\n"
+    },
+    "4303f540c3b8753c01ade80000a7b4d0d324a531": {
+      "type": "blob",
+      "bytes": 125,
+      "sha256": "72b35f58407e65a148ee64ab1bcb5ddc874b05e49ab1911feb977363b3981473",
+      "utf8": "[project]\nname=\"owned-draft-fixture\"\nversion=\"1.0.0\"\nrequires-python=\">=3.11\"\n[project.scripts]\nfixture-docs=\"app.docs:main\"\n"
+    },
+    "9d3b90d32eb28a7969c85b282fce41b3d6cce536": {
+      "type": "tree",
+      "bytes": 168,
+      "sha256": "256d79fecc0d341c5774c705d7d7d40b65cd8ec32afae646372c19c3b7e26767",
+      "base64": "NDAwMDAgYXBwAIGdUvg3fhsIwEh7TMYDP+KGKxP8NDAwMDAgY2hlY2tzADpCQ5K0xt+pBumeLZ0YoKkEHnFENDAwMDAgZG9jcwDb/p9bc45P+usWeniXQOe+SAh0ajEwMDY0NCBweXByb2plY3QudG9tbABDA/VAw7h1PAGt6AAAp7TQ0ySlMTQwMDAwIHNwZWNzAJU8btVZ98QaTPZPDUk7OzuL5Rho"
+    },
+    "bd2bc6f30d97037d9ae0b1df3a1600c73a4ba112": {
+      "type": "commit",
+      "bytes": 208,
+      "sha256": "e6184c4bbcaa96a78692c079e773e741c0efd8df13eae8195976865e6d9ad6a1",
+      "utf8": "tree 61ad46dac9acc654c5c2ea0552fd4104ed0c0bc4\nauthor Owned fixture <fixture@example.invalid> 1793750400 +0000\ncommitter Owned fixture <fixture@example.invalid> 1793750400 +0000\n\nOwned selected source fixture\n"
+    },
+    "61ad46dac9acc654c5c2ea0552fd4104ed0c0bc4": {
+      "type": "tree",
+      "bytes": 126,
+      "sha256": "cda105adc4628680aa3d74a2aa7095dfa1446ffd124a5a4635bbd15d644cc9b2",
+      "base64": "NDAwMDAgYXBwANBbo8aXRSFQrCTjNeZJ7KAEMOvRNDAwMDAgY2hlY2tzADpCQ5K0xt+pBumeLZ0YoKkEHnFENDAwMDAgZG9jcwBEUC25K120lqidl985csjPshLC5DQwMDAwIHNwZWNzAJU8btVZ98QaTPZPDUk7OzuL5Rho"
+    },
+    "44502db92b5db496a89d97df3972c8cfb212c2e4": {
+      "type": "tree",
+      "bytes": 125,
+      "sha256": "30a4c352c67e001ebb1dd3b2831dae569f160bb84a6f6c49bb9aca60691fafca",
+      "base64": "MTAwNjQ0IGNvbW1hbmRzLm1kAKbgt/pYBp+mWA//qaGN5e5HsESLMTAwNjQ0IHBheW1lbnRzLm1keAB6Ubj13krpniVcutfLoRGIlkIhFTEwMDY0NCBzb3VyY2UtZXZpZGVuY2UubWQA8cQcaISGz6hj+17wUFQt9sbuRSs="
+    },
+    "a6e0b7fa58069fa6580fffa9a18de5ee47b0448b": {
+      "type": "blob",
+      "bytes": 174,
+      "sha256": "8a7312270039abb45e7f080e9d45fb21907131208bf89c0fb336a65d352d3ab7",
+      "utf8": "# Project verification\n\nNo repository script or runtime invocation has been selected. Specify the required validation outcome and retain the unknown invocation prerequisite.\n"
+    }
+  }
+}

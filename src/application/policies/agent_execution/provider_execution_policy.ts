@@ -9,7 +9,7 @@ import type {
 export interface AgentArtifactTemplate {
     readonly path: string;
     readonly contents: string;
-    readonly purpose: 'git-config' | 'provider-config' | 'sandbox-config' | 'output-schema';
+    readonly purpose: 'git-config' | 'provider-config' | 'sandbox-config' | 'output-schema' | 'source-snapshot';
 }
 
 export interface ProviderExecutionPolicyInput {

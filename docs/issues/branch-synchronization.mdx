@@ -232,7 +232,7 @@ If verification prevents a normal Git abort, Copilot restores the captured
 child only while both prepared merge identities remain unchanged. A moved
 HEAD or parent is retained and requires inspection of the run.
 
-If any boundary fails, Copilot aborts the merge and does not push. Immediately before committing, it fetches both branches again and rejects stale work. Git credentials are scoped only to trusted fetch/push subprocesses and are never exposed to the agent or verification commands.
+If a precommit boundary fails, Copilot attempts to abort the prepared merge and does not push. A completed commit is preserved when later publication fails; see the recovery states below. Immediately before committing, it fetches both branches again and rejects stale work. Git credentials are scoped only to trusted fetch/push subprocesses and are never exposed to the agent or verification commands.
 
 ## Result report
 
@@ -242,7 +242,9 @@ Every command finishes with a comment in the conversation. The report distinguis
 - dry-run clean or conflicted;
 - merged cleanly without an agent;
 - merged after fixer-agent conflict resolution; or
-- safely aborted, with a publishable reason and no provider-secret details.
+- safely aborted before commit, with a publishable reason and no provider-secret details;
+- committed locally but publication rejected or unverified; or
+- the exact committed candidate independently confirmed on the remote after a failed push response, without a second push.
 
 When workspace validation rejects a resolution, the reply and workflow log
 include a closed diagnostic code such as `sdd-catalog-invalid`,
@@ -270,6 +272,55 @@ and number of verification checks. It never repeats internal execution steps or
 adds a generic action summary to the conversation.
 
 Successful reports include the parent and working branches, verification count, and merge commit SHA in the structured run result. The subsequent push observer resolves the prior stale-branch card.
+
+### Recover a committed candidate after publication failure
+
+A successful commit ends the abortable merge phase. If the push fails, Copilot
+keeps that workspace and makes one authenticated observation of the existing
+working branch. It reports the original, candidate and observed commit identities,
+whether push was attempted, and one of these results:
+
+| Observation | Meaning | Next action |
+| --- | --- | --- |
+| Original head | Candidate not observed as published | Inspect the rejection before a fresh managed synchronization. |
+| Exact candidate | Publication independently confirmed | Command completes; no second push is sent. |
+| Other head | Another current head exists; ancestry is not established | Inspect native branch history before retrying. |
+| Unavailable | Publication remains unknown | Establish the current remote state before retrying. |
+
+An unavailable candidate identity stops the push. Runner-local candidates are
+temporary, not durable backups. Recovery does not abort/reset a committed
+workspace, force-push, create backup branches or modify credentials.
+
+An explicit remote workflow-write rejection becomes nonretryable
+`authorization.denied`, with localized instructions to review the actual
+publisher credential. A workflow path alone does not prove insufficient scope.
+See [workflow-write recovery](/security-operations/operations/troubleshooting#branch-sync-workflow-write-recovery)
+for credential-specific guidance. Existing branch ownership, verification,
+security and coverage gates still apply.
+
+### Validate the synchronized pull request
+
+The synchronization report confirms its configured verification commands and
+published merge commit. Review, issue progress, CI and Codecov remain separate
+results that must refer to the current PR head and target base before merge.
+
+If the repository's bot-actor admission rule skips Commit or PR analysis for the
+synchronization push, a skipped run does not certify those results. On the PR,
+`/copilot recheck` requests a read-only Bugbot review of the current revision; it
+does not calculate issue progress or replace CI and coverage checks. Progress
+assessment runs on the next ordinary contributor push or an explicitly
+configured `check_progress_action` single action. Inspect each applicable
+current-head result, including unresolved findings and any human approval gate;
+a clean synchronization is not merge approval.
+
+Progress assessment separates human acceptance text from a recognized persisted
+recommendation-state block. The full original issue body still controls input
+bounds and freshness; saved operational state does not create extra requirements.
+For a scope-capacity failure, inspect the reported phase, clause kind, count and
+original source line, keeping the human requirements intact. Follow the
+[scope recovery guide](../security-operations/operations/troubleshooting#progress-scope-rejects-a-generated-plan-or-exceeds-32-clauses)
+before starting another assessment; Bugbot review has its own independent
+completeness and capacity checks.
 
 ## Why the normal commit workflow remains limited
 

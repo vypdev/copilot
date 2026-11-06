@@ -1,0 +1,2958 @@
+{
+  "schemaVersion": 1,
+  "issue": 856,
+  "date": "2026-11-04",
+  "status": "Local qualification passes 902 Jest suites and 17,704 tests (35 pre-existing skips), 267 extension tests at 100%, 31/31 modified coverable lines without partials, and 45/45 final model cases. All earlier cohorts and failures remain. Rebuilt bundles and the 99-file package smoke pass; normal hooks and fresh current-head native controls remain required.",
+  "sourceBase": "c0e7a130e06f2105034b149c0b479dc4eebc70ac",
+  "reportedCases": {
+    "existingUpdate": {
+      "repo": "vypdev/domus",
+      "issue": 21,
+      "run": 41449262449,
+      "base": "4b71969d3b3f6df5f28d617ab0da4e86c9be5884",
+      "expected": {
+        "action": "update",
+        "capabilityId": "household-identity",
+        "path": "specs/household-administration.md"
+      }
+    },
+    "independentNew": {
+      "repo": "vypdev/domus",
+      "issue": 30,
+      "base": "0170085f283ea5775f41e77a2f8c8d9cc69f20b7",
+      "expected": {
+        "action": "new",
+        "capabilityId": "shared-presentation-package",
+        "path": "specs/shared-presentation-package.md"
+      }
+    },
+    "limitations": "Both report companion-path-registered; hidden rejected payloads and full historical prompts are unavailable. No common root cause or historical replay is asserted. Consumer recovery through a new companion does not prove this SDK correction."
+  },
+  "immutableReadOnlySources": [
+    {
+      "repo": "vypdev/copilot",
+      "ref": "3e7ceea08e6131360e026937d1c0cc1b120472e0",
+      "path": "src/domain/pre_branch_sdd.ts",
+      "blob": "17d2d99471f7371a393c2976bf9fd30ca63e2c83",
+      "sha256": "636db20b18cd7b694c2d68e2d5fc53f5387daae90bcb231c98c2c2534d6125c3",
+      "size": 20763
+    },
+    {
+      "repo": "vypdev/domus",
+      "ref": "4b71969d3b3f6df5f28d617ab0da4e86c9be5884",
+      "path": "specs/catalog.json",
+      "blob": "a954304bcdcce5d991d38b37ea6c1567b0479c61",
+      "sha256": "d17546844e0650443c602bcd0f57bd1cd3bd5ea1edf22cd9876594572d0c6d41",
+      "size": 38774
+    },
+    {
+      "repo": "vypdev/domus",
+      "ref": "0170085f283ea5775f41e77a2f8c8d9cc69f20b7",
+      "path": "specs/catalog.json",
+      "blob": "8960d68e32f57e03475de8eabe739878799238fe",
+      "sha256": "4ed1341ae4e327e098ee2dbca508d41c431f3c81b4e1f0af92f32bfd61b88ac2",
+      "size": 42060
+    }
+  ],
+  "originalParserControl": {
+    "at": "2026-11-04T07:03:17.583Z",
+    "originalSDK": "3e7ceea08e6131360e026937d1c0cc1b120472e0",
+    "executedModules": 4,
+    "typescript": "5.9.3",
+    "sourceIdentitiesUnchanged": true,
+    "observations": [
+      {
+        "id": "reported-existing-update",
+        "input": {
+          "action": "update",
+          "capabilityId": "household-identity",
+          "path": "specs/household-administration.md"
+        },
+        "catalogSha256": "d17546844e0650443c602bcd0f57bd1cd3bd5ea1edf22cd9876594572d0c6d41",
+        "owners": 11,
+        "status": "accepted",
+        "plan": {
+          "action": "update",
+          "path": "specs/household-administration.md",
+          "capabilityId": "household-identity",
+          "reason": "Follow the exact publication request while preserving every registered owner and original scope.",
+          "questions": []
+        }
+      },
+      {
+        "id": "same-tuple-invalid-companion",
+        "input": {
+          "action": "companion",
+          "capabilityId": "household-identity",
+          "path": "specs/household-administration.md"
+        },
+        "catalogSha256": "d17546844e0650443c602bcd0f57bd1cd3bd5ea1edf22cd9876594572d0c6d41",
+        "owners": 11,
+        "status": "rejected",
+        "reason": "companion-path-registered"
+      },
+      {
+        "id": "reported-new-tuple",
+        "input": {
+          "action": "new",
+          "capabilityId": "shared-presentation-package",
+          "path": "specs/shared-presentation-package.md"
+        },
+        "catalogSha256": "4ed1341ae4e327e098ee2dbca508d41c431f3c81b4e1f0af92f32bfd61b88ac2",
+        "owners": 11,
+        "status": "accepted",
+        "plan": {
+          "action": "new",
+          "path": "specs/shared-presentation-package.md",
+          "capabilityId": "shared-presentation-package",
+          "reason": "Follow the exact publication request while preserving every registered owner and original scope.",
+          "questions": []
+        }
+      },
+      {
+        "id": "authored-invalid-existing-companion-control",
+        "input": {
+          "action": "companion",
+          "capabilityId": "application-experience",
+          "path": "specs/application-experience.md"
+        },
+        "catalogSha256": "4ed1341ae4e327e098ee2dbca508d41c431f3c81b4e1f0af92f32bfd61b88ac2",
+        "owners": 11,
+        "status": "rejected",
+        "reason": "companion-path-registered"
+      }
+    ],
+    "limits": "Independent original pure-parser controls using both actual immutable catalogs. The fourth input is an authored invalid-tuple contrast, never claimed as a hidden native payload. No consumer code, planner prompt replay, draft or branch publication is executed."
+  },
+  "currentPreFixDelivery": {
+    "sourceBase": "c0e7a130e06f2105034b149c0b479dc4eebc70ac",
+    "queries": 2,
+    "first": "waiting",
+    "second": "waiting",
+    "answerDelivered": true,
+    "priorPathDelivered": false,
+    "priorCapabilityDelivered": false,
+    "linkedBranchClaimed": false,
+    "sourceSnapshot": {
+      "kind": "pre-branch-sdd",
+      "phase": "analysis",
+      "baseSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "scope": "Actual SDK use case and in-memory ports. No real provider execution, Git source snapshot preparation or native response replay."
+  },
+  "deterministicTests": {
+    "newDistinct": 83,
+    "existing": 127,
+    "mapping": "src/application/usecases/steps/issue/__tests__/pre_branch_sdd_gate_use_case.test.ts: tests prefixed 856:",
+    "baselineFirstFourNewFailures": 4,
+    "assertionCorrection": "Three additional route-change assertions incorrectly demanded an empty questions array despite deliberately returning a blocking question. Corrected to check the selected tuple/reason and one current question; no runtime, model case, scorer or floor changed.",
+    "qualificationScorerNewDistinct": 29,
+    "routeCases": 28,
+    "routeSuitePassing": 155,
+    "qualificationScorerPassing": 29,
+    "responseHandlingNewDistinct": 11,
+    "responseHandlingPassing": 11,
+    "workingBranchNewDistinct": 15,
+    "existingReplayTestSemanticsReconciled": "An old replay test equated generic workingBranch with SDD publication. Its updated assertion preserves actual source/link/idempotence and the saved plan without claiming publication. Explicit first-publication failure/recovery tests keep their previous semantics.",
+    "workingBranchPassing": 15
+  },
+  "modelQualification": {
+    "fixture": {
+      "baseSha": "76c0b6a95776b094290cfb9be66dfa449261aed1",
+      "tree": "5276a1fd4a1f98578d9c48492de5fc92512d2497",
+      "capabilities": [
+        {
+          "id": "household-identity",
+          "title": "household-identity",
+          "status": "implemented",
+          "scope": "Fictional household-identity source and specification responsibilities.",
+          "owner": "Maintainer",
+          "lastVerified": "2026-11-04",
+          "specs": [
+            "specs/household-identity.md",
+            "specs/household-administration.md"
+          ],
+          "workflows": [],
+          "entrypoints": [
+            "app/core.py"
+          ],
+          "code": [
+            "app/core.py"
+          ],
+          "tests": [
+            "checks/test_core.py"
+          ],
+          "documentation": [
+            "docs/fixture.md"
+          ]
+        },
+        {
+          "id": "application-experience",
+          "title": "application-experience",
+          "status": "implemented",
+          "scope": "Fictional application-experience source and specification responsibilities.",
+          "owner": "Maintainer",
+          "lastVerified": "2026-11-04",
+          "specs": [
+            "specs/application-experience.md"
+          ],
+          "workflows": [],
+          "entrypoints": [
+            "app/core.py"
+          ],
+          "code": [
+            "app/core.py"
+          ],
+          "tests": [
+            "checks/test_core.py"
+          ],
+          "documentation": [
+            "docs/fixture.md"
+          ]
+        },
+        {
+          "id": "delivery",
+          "title": "delivery",
+          "status": "implemented",
+          "scope": "Fictional delivery source and specification responsibilities.",
+          "owner": "Maintainer",
+          "lastVerified": "2026-11-04",
+          "specs": [
+            "specs/delivery.md"
+          ],
+          "workflows": [],
+          "entrypoints": [
+            "app/core.py"
+          ],
+          "code": [
+            "app/core.py"
+          ],
+          "tests": [
+            "checks/test_core.py"
+          ],
+          "documentation": [
+            "docs/fixture.md"
+          ]
+        }
+      ],
+      "source": "Authored minimal Git source, not a consumer clone; no reference verdicts/driver copied into it.",
+      "consumerEvidence": "Original consumer catalogs and original parser controls remain separate.",
+      "cleanup": "Retain until all trials and review qualification finish; no source mutation or hooks of the product repository bypassed."
+    },
+    "freeze": {
+      "at": "2026-11-04T07:10:28.926Z",
+      "base": "c0e7a130e06f2105034b149c0b479dc4eebc70ac",
+      "descriptorSha256": "5f06dfedc06ef1bf9ae355306f53aec9e6a6ab596117a6b36cd284f6d590b4e4",
+      "fixtureCommit": "76c0b6a95776b094290cfb9be66dfa449261aed1",
+      "sourceHashes": {
+        "src/application/usecases/sdd/pre_branch_sdd_gate_use_case.ts": "a01d2902ce27d93e6596b0c8c358b6a78137284443ccb4b818de2855e634fd96",
+        "src/domain/pre_branch_sdd.ts": "636db20b18cd7b694c2d68e2d5fc53f5387daae90bcb231c98c2c2534d6125c3",
+        "src/data/repository/ai/findings_agent_adapter.ts": "2bdbcc4a104fa3898d8906139ba7b543df2c07dca69cc199708b89261a574509",
+        "src/infrastructure/composition/agent_capability_composition_root.ts": "501ff73a38aa8cb6c78bc21b34f679538df4104f3c3eaea9578648830f82a889"
+      },
+      "plan": {
+        "trialsPerRuntime": 3,
+        "cases": 12,
+        "provider": "codex",
+        "model": "gpt-6-luna",
+        "effort": "medium",
+        "thresholds": "Every explicit/resolved tuple correct; every ambiguous/conflicting request has a focused ownership question; zero schema/semantic-invalid plans in each trial and cohort. Product questions may remain. No best-sample selection, reference retuning, hidden-payload replay or publication."
+      }
+    },
+    "cases": [
+      {
+        "id": "existing-companion-update",
+        "input": {
+          "body": "Update the existing registered companion publication. The required action is update, capabilityId household-identity, path specs/household-administration.md. Preserve every other registered owner and publication. This changes specification acceptance only. Maintainer owns the review; no runtime permissions, compatibility or data-retention policy changes are requested."
+        },
+        "expected": {
+          "tuple": {
+            "action": "update",
+            "capabilityId": "household-identity",
+            "path": "specs/household-administration.md"
+          }
+        }
+      },
+      {
+        "id": "independent-new-package",
+        "input": {
+          "body": "Introduce a genuinely independent shared presentation package with its own source/version/verification, preserving application-experience. The required action is new, capabilityId shared-presentation-package, path specs/shared-presentation-package.md. Preserve every other registered owner and publication. This changes specification acceptance only. Maintainer owns the review; no runtime permissions, compatibility or data-retention policy changes are requested."
+        },
+        "expected": {
+          "tuple": {
+            "action": "new",
+            "capabilityId": "shared-presentation-package",
+            "path": "specs/shared-presentation-package.md"
+          }
+        }
+      },
+      {
+        "id": "genuine-new-companion",
+        "input": {
+          "body": "Add one new bounded audit publication under the existing household owner. The required action is companion, capabilityId household-identity, path specs/household-audit.md. Preserve every other registered owner and publication. This changes specification acceptance only. Maintainer owns the review; no runtime permissions, compatibility or data-retention policy changes are requested."
+        },
+        "expected": {
+          "tuple": {
+            "action": "companion",
+            "capabilityId": "household-identity",
+            "path": "specs/household-audit.md"
+          }
+        }
+      },
+      {
+        "id": "existing-primary-update",
+        "input": {
+          "body": "Extend the existing primary publication with acceptance examples. The required action is update, capabilityId household-identity, path specs/household-identity.md. Preserve every other registered owner and publication. This changes specification acceptance only. Maintainer owns the review; no runtime permissions, compatibility or data-retention policy changes are requested."
+        },
+        "expected": {
+          "tuple": {
+            "action": "update",
+            "capabilityId": "household-identity",
+            "path": "specs/household-identity.md"
+          }
+        }
+      },
+      {
+        "id": "resumed-existing-update",
+        "input": {
+          "body": "Extend the existing registered companion without duplicating its inventory or changing any owner.",
+          "proposal": {
+            "action": "update",
+            "capabilityId": "household-identity",
+            "path": "specs/household-administration.md",
+            "reason": "The source and package publication responsibilities require this selected owning target."
+          },
+          "answers": [
+            "Confirmed. Keep that exact proposed action, capability and publication target. Maintainer owns delivery."
+          ]
+        },
+        "expected": {
+          "tuple": {
+            "action": "update",
+            "capabilityId": "household-identity",
+            "path": "specs/household-administration.md"
+          }
+        }
+      },
+      {
+        "id": "resumed-new-package",
+        "input": {
+          "body": "Create an independent reusable presentation package; keep the application owner. Its previously proposed publication must remain separate.",
+          "proposal": {
+            "action": "new",
+            "capabilityId": "shared-presentation-package",
+            "path": "specs/shared-presentation-package.md",
+            "reason": "The source and package publication responsibilities require this selected owning target."
+          },
+          "answers": [
+            "Confirmed. Keep that exact proposed action, capability and publication target. Maintainer owns delivery."
+          ]
+        },
+        "expected": {
+          "tuple": {
+            "action": "new",
+            "capabilityId": "shared-presentation-package",
+            "path": "specs/shared-presentation-package.md"
+          }
+        }
+      },
+      {
+        "id": "resumed-new-companion",
+        "input": {
+          "body": "Add a bounded audit publication under the household owner without changing its existing documents.",
+          "proposal": {
+            "action": "companion",
+            "capabilityId": "household-identity",
+            "path": "specs/household-audit.md",
+            "reason": "The source and package publication responsibilities require this selected owning target."
+          },
+          "answers": [
+            "Confirmed. Keep that exact proposed action, capability and publication target. Maintainer owns delivery."
+          ]
+        },
+        "expected": {
+          "tuple": {
+            "action": "companion",
+            "capabilityId": "household-identity",
+            "path": "specs/household-audit.md"
+          }
+        }
+      },
+      {
+        "id": "third-round-new-package",
+        "input": {
+          "body": "Create an independent reusable presentation package; retain the already proposed owner and publication target.",
+          "proposal": {
+            "action": "new",
+            "capabilityId": "shared-presentation-package",
+            "path": "specs/shared-presentation-package.md",
+            "reason": "The source and package publication responsibilities require this selected owning target."
+          },
+          "answers": [
+            "Confirmed. Keep that exact proposed owner and target. Maintainer owns delivery.",
+            "The second decision is resolved: retain the proposed independent package and its specification. No scope or ownership change."
+          ]
+        },
+        "expected": {
+          "tuple": {
+            "action": "new",
+            "capabilityId": "shared-presentation-package",
+            "path": "specs/shared-presentation-package.md"
+          }
+        }
+      },
+      {
+        "id": "authorized-new-to-companion",
+        "input": {
+          "body": "A separate audit package was proposed; the maintainer may refine ownership before publication.",
+          "proposal": {
+            "action": "new",
+            "capabilityId": "shared-presentation-package",
+            "path": "specs/shared-presentation-package.md",
+            "reason": "The source and package publication responsibilities require this selected owning target."
+          },
+          "answers": [
+            "Change the unpublished proposal: The required action is companion, capabilityId household-identity, path specs/household-audit.md. Preserve every other registered owner and publication. This changes specification acceptance only. Maintainer owns the review; no runtime permissions, compatibility or data-retention policy changes are requested. Do not retain the independent package proposal."
+          ]
+        },
+        "expected": {
+          "tuple": {
+            "action": "companion",
+            "capabilityId": "household-identity",
+            "path": "specs/household-audit.md"
+          }
+        }
+      },
+      {
+        "id": "authorized-companion-to-update",
+        "input": {
+          "body": "An audit companion was proposed; the maintainer may refine ownership before publication.",
+          "proposal": {
+            "action": "companion",
+            "capabilityId": "household-identity",
+            "path": "specs/household-audit.md",
+            "reason": "The source and package publication responsibilities require this selected owning target."
+          },
+          "answers": [
+            "Change the unpublished proposal: The required action is update, capabilityId household-identity, path specs/household-administration.md. Preserve every other registered owner and publication. This changes specification acceptance only. Maintainer owns the review; no runtime permissions, compatibility or data-retention policy changes are requested. Update that registered companion instead of creating another document."
+          ]
+        },
+        "expected": {
+          "tuple": {
+            "action": "update",
+            "capabilityId": "household-identity",
+            "path": "specs/household-administration.md"
+          }
+        }
+      },
+      {
+        "id": "ambiguous-existing-owner",
+        "input": {
+          "body": "Add acceptance criteria to an existing publication, but household-identity or application-experience could own them. No owner or target has been selected. Ask the maintainer to choose the publication before drafting."
+        },
+        "expected": {
+          "ownershipQuestion": true
+        }
+      },
+      {
+        "id": "contradictory-owner-path",
+        "input": {
+          "body": "Update specs/household-administration.md under delivery, although that path may belong to another catalog owner. Do not silently override either value: ask the maintainer to resolve this ownership conflict before drafting."
+        },
+        "expected": {
+          "ownershipQuestion": true
+        }
+      }
+    ],
+    "cohortRevision": {
+      "at": "2026-11-04T07:45:18.810496+00:00",
+      "precedingCohort": [
+        "candidate-1",
+        "candidate-2",
+        "candidate-3"
+      ],
+      "precedingScores": [
+        {
+          "cases": 12,
+          "correct": 12,
+          "invalid": 0,
+          "passed": true
+        },
+        {
+          "cases": 12,
+          "correct": 11,
+          "invalid": 1,
+          "passed": false
+        },
+        {
+          "cases": 12,
+          "correct": 12,
+          "invalid": 0,
+          "passed": true
+        }
+      ],
+      "declaredTrials": [
+        "revised-1",
+        "revised-2",
+        "revised-3"
+      ],
+      "change": "General explicit action/owner/path consistency self-check: update only registered owner/path; companion only known owner/unregistered path; new only both absent. Never relabel after parser rejection.",
+      "unchanged": [
+        "12 case descriptor and expectations",
+        "scorer",
+        "per-trial 12/12 correctness and zero invalid plans",
+        "aggregate all three trials",
+        "model/provider/effort",
+        "immutable source fixture",
+        "actual use-case capture and SDK query port"
+      ],
+      "sourceSnapshot": "candidate-v1-source"
+    },
+    "trials": [
+      {
+        "id": "baseline-1",
+        "predictionsSha256": "41c5d72c3fdf1736219ed5d40ff0c477a9a93287caf34e108885a87c54dcf90e",
+        "identity": {
+          "at": "2026-11-04T07:10:29.770Z",
+          "variant": "baseline-1",
+          "fixtureCommit": "76c0b6a95776b094290cfb9be66dfa449261aed1",
+          "sourceHashes": {
+            "src/application/usecases/sdd/pre_branch_sdd_gate_use_case.ts": "a01d2902ce27d93e6596b0c8c358b6a78137284443ccb4b818de2855e634fd96",
+            "src/domain/pre_branch_sdd.ts": "636db20b18cd7b694c2d68e2d5fc53f5387daae90bcb231c98c2c2534d6125c3",
+            "src/data/repository/ai/findings_agent_adapter.ts": "2bdbcc4a104fa3898d8906139ba7b543df2c07dca69cc199708b89261a574509",
+            "src/infrastructure/composition/agent_capability_composition_root.ts": "501ff73a38aa8cb6c78bc21b34f679538df4104f3c3eaea9578648830f82a889"
+          },
+          "requestsSha256": "de592f02774bf999b446b663b80b8492b9b8b88e019699b345c4bbbf9a4ede27",
+          "descriptorSha256": "5f06dfedc06ef1bf9ae355306f53aec9e6a6ab596117a6b36cd284f6d590b4e4",
+          "node": "v24.20.0",
+          "typescript": "5.9.3",
+          "configuration": {
+            "provider": "codex",
+            "model": "gpt-6-luna",
+            "effort": "medium",
+            "executable": "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
+          },
+          "fullProviderStdinCaptured": false
+        },
+        "observations": [
+          {
+            "id": "existing-companion-update",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-administration.md"
+            },
+            "questionIds": [
+              "Q1"
+            ]
+          },
+          {
+            "id": "independent-new-package",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "new",
+              "capabilityId": "shared-presentation-package",
+              "path": "specs/shared-presentation-package.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3",
+              "Q4",
+              "Q5"
+            ]
+          },
+          {
+            "id": "genuine-new-companion",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "companion",
+              "capabilityId": "household-identity",
+              "path": "specs/household-audit.md"
+            },
+            "questionIds": []
+          },
+          {
+            "id": "existing-primary-update",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-identity.md"
+            },
+            "questionIds": []
+          },
+          {
+            "id": "resumed-existing-update",
+            "correct": false,
+            "error": "companion-path-registered",
+            "tuple": {
+              "action": "companion",
+              "capabilityId": "delivery",
+              "path": "specs/delivery.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3"
+            ]
+          },
+          {
+            "id": "resumed-new-package",
+            "correct": false,
+            "error": null,
+            "tuple": {
+              "action": "companion",
+              "capabilityId": "application-experience",
+              "path": "specs/presentation-package.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3",
+              "Q4"
+            ]
+          },
+          {
+            "id": "resumed-new-companion",
+            "correct": false,
+            "error": "Invalid blocking SDD question Q1.",
+            "tuple": {
+              "action": "companion",
+              "capabilityId": "household-identity",
+              "path": "specs/household-audit-publication.md"
+            },
+            "questionIds": [
+              "Q2",
+              "Q3",
+              "Q4"
+            ]
+          },
+          {
+            "id": "third-round-new-package",
+            "correct": false,
+            "error": null,
+            "tuple": {
+              "action": "new",
+              "capabilityId": "presentation-package",
+              "path": "specs/presentation-package.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3",
+              "Q4",
+              "Q5",
+              "Q6",
+              "Q7"
+            ]
+          },
+          {
+            "id": "authorized-new-to-companion",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "companion",
+              "capabilityId": "household-identity",
+              "path": "specs/household-audit.md"
+            },
+            "questionIds": []
+          },
+          {
+            "id": "authorized-companion-to-update",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-administration.md"
+            },
+            "questionIds": []
+          },
+          {
+            "id": "ambiguous-existing-owner",
+            "correct": false,
+            "error": "The SDD analysis has an invalid owner, path, or reason.",
+            "tuple": {
+              "action": "update",
+              "capabilityId": "",
+              "path": ""
+            },
+            "questionIds": [
+              "Q1"
+            ]
+          },
+          {
+            "id": "contradictory-owner-path",
+            "correct": false,
+            "error": "companion-path-registered",
+            "tuple": {
+              "action": "companion",
+              "capabilityId": "household-identity",
+              "path": "specs/household-administration.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2"
+            ]
+          }
+        ],
+        "legacyKeywordScore": {
+          "cases": 12,
+          "correct": 6,
+          "invalid": 4,
+          "passed": false
+        },
+        "semanticScore": {
+          "cases": 12,
+          "correct": 6,
+          "invalid": 4,
+          "passed": false
+        },
+        "semanticAssessmentSha256": "3319eb275d4283fc29d74cc9a3ad9cd1a75e00c0d75b3f819e57c5a2e36d32ca",
+        "semanticScoringSourceSha256": "b8bea9b1ab82d48e4e5d06234c5d9ac60e371201132bf00dbecae3da85beca70"
+      },
+      {
+        "id": "baseline-2",
+        "predictionsSha256": "3c38249e3ba571d1850249821bdbbac71f57af9cce05f755c3301c2220423bd4",
+        "identity": {
+          "at": "2026-11-04T07:13:40.627Z",
+          "variant": "baseline-2",
+          "fixtureCommit": "76c0b6a95776b094290cfb9be66dfa449261aed1",
+          "sourceHashes": {
+            "src/application/usecases/sdd/pre_branch_sdd_gate_use_case.ts": "a01d2902ce27d93e6596b0c8c358b6a78137284443ccb4b818de2855e634fd96",
+            "src/domain/pre_branch_sdd.ts": "636db20b18cd7b694c2d68e2d5fc53f5387daae90bcb231c98c2c2534d6125c3",
+            "src/data/repository/ai/findings_agent_adapter.ts": "2bdbcc4a104fa3898d8906139ba7b543df2c07dca69cc199708b89261a574509",
+            "src/infrastructure/composition/agent_capability_composition_root.ts": "501ff73a38aa8cb6c78bc21b34f679538df4104f3c3eaea9578648830f82a889"
+          },
+          "requestsSha256": "de592f02774bf999b446b663b80b8492b9b8b88e019699b345c4bbbf9a4ede27",
+          "descriptorSha256": "5f06dfedc06ef1bf9ae355306f53aec9e6a6ab596117a6b36cd284f6d590b4e4",
+          "node": "v24.20.0",
+          "typescript": "5.9.3",
+          "configuration": {
+            "provider": "codex",
+            "model": "gpt-6-luna",
+            "effort": "medium",
+            "executable": "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
+          },
+          "fullProviderStdinCaptured": false
+        },
+        "observations": [
+          {
+            "id": "existing-companion-update",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-administration.md"
+            },
+            "questionIds": [
+              "Q1"
+            ]
+          },
+          {
+            "id": "independent-new-package",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "new",
+              "capabilityId": "shared-presentation-package",
+              "path": "specs/shared-presentation-package.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3",
+              "Q4",
+              "Q5",
+              "Q6",
+              "Q7",
+              "Q8"
+            ]
+          },
+          {
+            "id": "genuine-new-companion",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "companion",
+              "capabilityId": "household-identity",
+              "path": "specs/household-audit.md"
+            },
+            "questionIds": []
+          },
+          {
+            "id": "existing-primary-update",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-identity.md"
+            },
+            "questionIds": [
+              "Q1"
+            ]
+          },
+          {
+            "id": "resumed-existing-update",
+            "correct": false,
+            "error": "companion-path-registered",
+            "tuple": {
+              "action": "companion",
+              "capabilityId": "delivery",
+              "path": "specs/delivery.md"
+            },
+            "questionIds": [
+              "Q1"
+            ]
+          },
+          {
+            "id": "resumed-new-package",
+            "correct": false,
+            "error": null,
+            "tuple": {
+              "action": "new",
+              "capabilityId": "presentation-package",
+              "path": "specs/presentation-package.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3",
+              "Q4",
+              "Q5",
+              "Q6"
+            ]
+          },
+          {
+            "id": "resumed-new-companion",
+            "correct": false,
+            "error": null,
+            "tuple": {
+              "action": "companion",
+              "capabilityId": "household-identity",
+              "path": "specs/household-audit-publication.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3",
+              "Q4",
+              "Q5",
+              "Q6",
+              "Q7"
+            ]
+          },
+          {
+            "id": "third-round-new-package",
+            "correct": false,
+            "error": null,
+            "tuple": {
+              "action": "new",
+              "capabilityId": "presentation-package",
+              "path": "specs/presentation-package.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3"
+            ]
+          },
+          {
+            "id": "authorized-new-to-companion",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "companion",
+              "capabilityId": "household-identity",
+              "path": "specs/household-audit.md"
+            },
+            "questionIds": []
+          },
+          {
+            "id": "authorized-companion-to-update",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-administration.md"
+            },
+            "questionIds": []
+          },
+          {
+            "id": "ambiguous-existing-owner",
+            "correct": false,
+            "error": "The SDD analysis has an invalid owner, path, or reason.",
+            "tuple": {
+              "action": "update",
+              "capabilityId": "",
+              "path": ""
+            },
+            "questionIds": [
+              "Q1"
+            ]
+          },
+          {
+            "id": "contradictory-owner-path",
+            "correct": false,
+            "error": "companion-path-registered",
+            "tuple": {
+              "action": "companion",
+              "capabilityId": "delivery",
+              "path": "specs/delivery.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3",
+              "Q4",
+              "Q5",
+              "Q6",
+              "Q7",
+              "Q8"
+            ]
+          }
+        ],
+        "legacyKeywordScore": {
+          "cases": 12,
+          "correct": 6,
+          "invalid": 3,
+          "passed": false
+        },
+        "semanticScore": {
+          "cases": 12,
+          "correct": 6,
+          "invalid": 3,
+          "passed": false
+        },
+        "semanticAssessmentSha256": "edfbc4005fb4b5b778237a9f8f043ca298a2aa346f45301e8561297006668f98",
+        "semanticScoringSourceSha256": "b8bea9b1ab82d48e4e5d06234c5d9ac60e371201132bf00dbecae3da85beca70"
+      },
+      {
+        "id": "baseline-3",
+        "predictionsSha256": "5284798a1a8624b67783bfa99357aec7c0f504692eafbf7f9411524b8cfe298a",
+        "identity": {
+          "at": "2026-11-04T07:16:44.822Z",
+          "variant": "baseline-3",
+          "fixtureCommit": "76c0b6a95776b094290cfb9be66dfa449261aed1",
+          "sourceHashes": {
+            "src/application/usecases/sdd/pre_branch_sdd_gate_use_case.ts": "a01d2902ce27d93e6596b0c8c358b6a78137284443ccb4b818de2855e634fd96",
+            "src/domain/pre_branch_sdd.ts": "636db20b18cd7b694c2d68e2d5fc53f5387daae90bcb231c98c2c2534d6125c3",
+            "src/data/repository/ai/findings_agent_adapter.ts": "2bdbcc4a104fa3898d8906139ba7b543df2c07dca69cc199708b89261a574509",
+            "src/infrastructure/composition/agent_capability_composition_root.ts": "501ff73a38aa8cb6c78bc21b34f679538df4104f3c3eaea9578648830f82a889"
+          },
+          "requestsSha256": "de592f02774bf999b446b663b80b8492b9b8b88e019699b345c4bbbf9a4ede27",
+          "descriptorSha256": "5f06dfedc06ef1bf9ae355306f53aec9e6a6ab596117a6b36cd284f6d590b4e4",
+          "node": "v24.20.0",
+          "typescript": "5.9.3",
+          "configuration": {
+            "provider": "codex",
+            "model": "gpt-6-luna",
+            "effort": "medium",
+            "executable": "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
+          },
+          "fullProviderStdinCaptured": false
+        },
+        "observations": [
+          {
+            "id": "existing-companion-update",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-administration.md"
+            },
+            "questionIds": [
+              "Q1"
+            ]
+          },
+          {
+            "id": "independent-new-package",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "new",
+              "capabilityId": "shared-presentation-package",
+              "path": "specs/shared-presentation-package.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3",
+              "Q4"
+            ]
+          },
+          {
+            "id": "genuine-new-companion",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "companion",
+              "capabilityId": "household-identity",
+              "path": "specs/household-audit.md"
+            },
+            "questionIds": [
+              "Q1"
+            ]
+          },
+          {
+            "id": "existing-primary-update",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-identity.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2"
+            ]
+          },
+          {
+            "id": "resumed-existing-update",
+            "correct": false,
+            "error": "companion-path-registered",
+            "tuple": {
+              "action": "companion",
+              "capabilityId": "delivery",
+              "path": "specs/delivery.md"
+            },
+            "questionIds": []
+          },
+          {
+            "id": "resumed-new-package",
+            "correct": false,
+            "error": null,
+            "tuple": {
+              "action": "new",
+              "capabilityId": "presentation-package",
+              "path": "specs/presentation-package.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3",
+              "Q4"
+            ]
+          },
+          {
+            "id": "resumed-new-companion",
+            "correct": false,
+            "error": null,
+            "tuple": {
+              "action": "companion",
+              "capabilityId": "household-identity",
+              "path": "specs/household-audit-publication.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3",
+              "Q4",
+              "Q5"
+            ]
+          },
+          {
+            "id": "third-round-new-package",
+            "correct": false,
+            "error": null,
+            "tuple": {
+              "action": "new",
+              "capabilityId": "reusable-presentation",
+              "path": "specs/reusable-presentation.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3",
+              "Q4",
+              "Q5"
+            ]
+          },
+          {
+            "id": "authorized-new-to-companion",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "companion",
+              "capabilityId": "household-identity",
+              "path": "specs/household-audit.md"
+            },
+            "questionIds": []
+          },
+          {
+            "id": "authorized-companion-to-update",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-administration.md"
+            },
+            "questionIds": []
+          },
+          {
+            "id": "ambiguous-existing-owner",
+            "correct": false,
+            "error": "The SDD analysis has an invalid owner, path, or reason.",
+            "tuple": {
+              "action": "update",
+              "capabilityId": "",
+              "path": ""
+            },
+            "questionIds": [
+              "Q1"
+            ]
+          },
+          {
+            "id": "contradictory-owner-path",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-administration.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2"
+            ]
+          }
+        ],
+        "legacyKeywordScore": {
+          "cases": 12,
+          "correct": 7,
+          "invalid": 2,
+          "passed": false
+        },
+        "semanticScore": {
+          "cases": 12,
+          "correct": 7,
+          "invalid": 2,
+          "passed": false
+        },
+        "semanticAssessmentSha256": "e15377156f03dc2d8561b7a04e84145348f71822063c27a011a75161e9f67f1e",
+        "semanticScoringSourceSha256": "b8bea9b1ab82d48e4e5d06234c5d9ac60e371201132bf00dbecae3da85beca70"
+      },
+      {
+        "id": "candidate-1",
+        "predictionsSha256": "fc329479c5f171f03922311b96a675c7afd2a267d2a62d9479d53b17804817eb",
+        "identity": {
+          "at": "2026-11-04T07:32:37.194Z",
+          "variant": "candidate-1",
+          "fixtureCommit": "76c0b6a95776b094290cfb9be66dfa449261aed1",
+          "sourceHashes": {
+            "src/application/usecases/sdd/pre_branch_sdd_gate_use_case.ts": "40428f01885c6227862a2c6474a96c5520f6f002448159dfd2e036b5d77d8604",
+            "src/domain/pre_branch_sdd.ts": "636db20b18cd7b694c2d68e2d5fc53f5387daae90bcb231c98c2c2534d6125c3",
+            "src/data/repository/ai/findings_agent_adapter.ts": "2bdbcc4a104fa3898d8906139ba7b543df2c07dca69cc199708b89261a574509",
+            "src/infrastructure/composition/agent_capability_composition_root.ts": "501ff73a38aa8cb6c78bc21b34f679538df4104f3c3eaea9578648830f82a889",
+            "src/application/policies/sdd_ownership_prompt_policy.ts": "db2b02387d64190ec42d1ddc9fc61c6bb78a34020d3716d4baede4aa520a7b9a"
+          },
+          "requestsSha256": "b15074f686fa01aea481847cd0dbf9ee49f5d885c492466efcf7ece6344a8d6a",
+          "descriptorSha256": "5f06dfedc06ef1bf9ae355306f53aec9e6a6ab596117a6b36cd284f6d590b4e4",
+          "node": "v24.20.0",
+          "typescript": "5.9.3",
+          "configuration": {
+            "provider": "codex",
+            "model": "gpt-6-luna",
+            "effort": "medium",
+            "executable": "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
+          },
+          "fullProviderStdinCaptured": false
+        },
+        "observations": [
+          {
+            "id": "existing-companion-update",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-administration.md"
+            },
+            "questionIds": []
+          },
+          {
+            "id": "independent-new-package",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "new",
+              "capabilityId": "shared-presentation-package",
+              "path": "specs/shared-presentation-package.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3"
+            ]
+          },
+          {
+            "id": "genuine-new-companion",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "companion",
+              "capabilityId": "household-identity",
+              "path": "specs/household-audit.md"
+            },
+            "questionIds": [
+              "Q1"
+            ]
+          },
+          {
+            "id": "existing-primary-update",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-identity.md"
+            },
+            "questionIds": []
+          },
+          {
+            "id": "resumed-existing-update",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-administration.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3",
+              "Q4",
+              "Q5",
+              "Q6",
+              "Q7",
+              "Q8"
+            ]
+          },
+          {
+            "id": "resumed-new-package",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "new",
+              "capabilityId": "shared-presentation-package",
+              "path": "specs/shared-presentation-package.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3",
+              "Q4"
+            ]
+          },
+          {
+            "id": "resumed-new-companion",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "companion",
+              "capabilityId": "household-identity",
+              "path": "specs/household-audit.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3",
+              "Q4",
+              "Q5"
+            ]
+          },
+          {
+            "id": "third-round-new-package",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "new",
+              "capabilityId": "shared-presentation-package",
+              "path": "specs/shared-presentation-package.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3",
+              "Q4",
+              "Q5",
+              "Q6",
+              "Q7",
+              "Q8"
+            ]
+          },
+          {
+            "id": "authorized-new-to-companion",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "companion",
+              "capabilityId": "household-identity",
+              "path": "specs/household-audit.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3"
+            ]
+          },
+          {
+            "id": "authorized-companion-to-update",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-administration.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3",
+              "Q4",
+              "Q5",
+              "Q6",
+              "Q7",
+              "Q8"
+            ]
+          },
+          {
+            "id": "ambiguous-existing-owner",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "application-experience",
+              "path": "specs/application-experience.md"
+            },
+            "questionIds": [
+              "Q1"
+            ]
+          },
+          {
+            "id": "contradictory-owner-path",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-administration.md"
+            },
+            "questionIds": [
+              "Q1"
+            ]
+          }
+        ],
+        "legacyKeywordScore": {
+          "cases": 12,
+          "correct": 12,
+          "invalid": 0,
+          "passed": true
+        },
+        "semanticScore": {
+          "cases": 12,
+          "correct": 12,
+          "invalid": 0,
+          "passed": true
+        },
+        "semanticAssessmentSha256": "bd0bbd0609ce1fc295cbb6b125e04ed3b7a1f1c0903a6e834b73d17d7cb933ce",
+        "semanticScoringSourceSha256": "b8bea9b1ab82d48e4e5d06234c5d9ac60e371201132bf00dbecae3da85beca70"
+      },
+      {
+        "id": "candidate-2",
+        "predictionsSha256": "d4d4cdecde6a894c442b3a600ebd740d41a398846120208dae3f0ba7e1194794",
+        "identity": {
+          "at": "2026-11-04T07:36:01.269Z",
+          "variant": "candidate-2",
+          "fixtureCommit": "76c0b6a95776b094290cfb9be66dfa449261aed1",
+          "sourceHashes": {
+            "src/application/usecases/sdd/pre_branch_sdd_gate_use_case.ts": "40428f01885c6227862a2c6474a96c5520f6f002448159dfd2e036b5d77d8604",
+            "src/domain/pre_branch_sdd.ts": "636db20b18cd7b694c2d68e2d5fc53f5387daae90bcb231c98c2c2534d6125c3",
+            "src/data/repository/ai/findings_agent_adapter.ts": "2bdbcc4a104fa3898d8906139ba7b543df2c07dca69cc199708b89261a574509",
+            "src/infrastructure/composition/agent_capability_composition_root.ts": "501ff73a38aa8cb6c78bc21b34f679538df4104f3c3eaea9578648830f82a889",
+            "src/application/policies/sdd_ownership_prompt_policy.ts": "db2b02387d64190ec42d1ddc9fc61c6bb78a34020d3716d4baede4aa520a7b9a"
+          },
+          "requestsSha256": "b15074f686fa01aea481847cd0dbf9ee49f5d885c492466efcf7ece6344a8d6a",
+          "descriptorSha256": "5f06dfedc06ef1bf9ae355306f53aec9e6a6ab596117a6b36cd284f6d590b4e4",
+          "node": "v24.20.0",
+          "typescript": "5.9.3",
+          "configuration": {
+            "provider": "codex",
+            "model": "gpt-6-luna",
+            "effort": "medium",
+            "executable": "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
+          },
+          "fullProviderStdinCaptured": false
+        },
+        "observations": [
+          {
+            "id": "existing-companion-update",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-administration.md"
+            },
+            "questionIds": []
+          },
+          {
+            "id": "independent-new-package",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "new",
+              "capabilityId": "shared-presentation-package",
+              "path": "specs/shared-presentation-package.md"
+            },
+            "questionIds": []
+          },
+          {
+            "id": "genuine-new-companion",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "companion",
+              "capabilityId": "household-identity",
+              "path": "specs/household-audit.md"
+            },
+            "questionIds": []
+          },
+          {
+            "id": "existing-primary-update",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-identity.md"
+            },
+            "questionIds": [
+              "Q1"
+            ]
+          },
+          {
+            "id": "resumed-existing-update",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-administration.md"
+            },
+            "questionIds": []
+          },
+          {
+            "id": "resumed-new-package",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "new",
+              "capabilityId": "shared-presentation-package",
+              "path": "specs/shared-presentation-package.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3",
+              "Q4",
+              "Q5"
+            ]
+          },
+          {
+            "id": "resumed-new-companion",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "companion",
+              "capabilityId": "household-identity",
+              "path": "specs/household-audit.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3",
+              "Q4",
+              "Q5",
+              "Q6",
+              "Q7",
+              "Q8"
+            ]
+          },
+          {
+            "id": "third-round-new-package",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "new",
+              "capabilityId": "shared-presentation-package",
+              "path": "specs/shared-presentation-package.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3",
+              "Q4"
+            ]
+          },
+          {
+            "id": "authorized-new-to-companion",
+            "correct": false,
+            "error": "update-owner-mismatch",
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-audit.md"
+            },
+            "questionIds": [
+              "Q1"
+            ]
+          },
+          {
+            "id": "authorized-companion-to-update",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-administration.md"
+            },
+            "questionIds": []
+          },
+          {
+            "id": "ambiguous-existing-owner",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "application-experience",
+              "path": "specs/application-experience.md"
+            },
+            "questionIds": [
+              "Q1"
+            ]
+          },
+          {
+            "id": "contradictory-owner-path",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-administration.md"
+            },
+            "questionIds": [
+              "Q1"
+            ]
+          }
+        ],
+        "legacyKeywordScore": {
+          "cases": 12,
+          "correct": 11,
+          "invalid": 1,
+          "passed": false
+        },
+        "semanticScore": {
+          "cases": 12,
+          "correct": 11,
+          "invalid": 1,
+          "passed": false
+        },
+        "semanticAssessmentSha256": "263c6b073b55eca648d21f1ddabeb6139587396c016f2f855b9a2fbf27715165",
+        "semanticScoringSourceSha256": "b8bea9b1ab82d48e4e5d06234c5d9ac60e371201132bf00dbecae3da85beca70"
+      },
+      {
+        "id": "candidate-3",
+        "predictionsSha256": "ae41e8f9a70368c5ccd0cb65e7c267bec25b6cf524a57e53276c11967bf896e3",
+        "identity": {
+          "at": "2026-11-04T07:39:02.848Z",
+          "variant": "candidate-3",
+          "fixtureCommit": "76c0b6a95776b094290cfb9be66dfa449261aed1",
+          "sourceHashes": {
+            "src/application/usecases/sdd/pre_branch_sdd_gate_use_case.ts": "40428f01885c6227862a2c6474a96c5520f6f002448159dfd2e036b5d77d8604",
+            "src/domain/pre_branch_sdd.ts": "636db20b18cd7b694c2d68e2d5fc53f5387daae90bcb231c98c2c2534d6125c3",
+            "src/data/repository/ai/findings_agent_adapter.ts": "2bdbcc4a104fa3898d8906139ba7b543df2c07dca69cc199708b89261a574509",
+            "src/infrastructure/composition/agent_capability_composition_root.ts": "501ff73a38aa8cb6c78bc21b34f679538df4104f3c3eaea9578648830f82a889",
+            "src/application/policies/sdd_ownership_prompt_policy.ts": "db2b02387d64190ec42d1ddc9fc61c6bb78a34020d3716d4baede4aa520a7b9a"
+          },
+          "requestsSha256": "b15074f686fa01aea481847cd0dbf9ee49f5d885c492466efcf7ece6344a8d6a",
+          "descriptorSha256": "5f06dfedc06ef1bf9ae355306f53aec9e6a6ab596117a6b36cd284f6d590b4e4",
+          "node": "v24.20.0",
+          "typescript": "5.9.3",
+          "configuration": {
+            "provider": "codex",
+            "model": "gpt-6-luna",
+            "effort": "medium",
+            "executable": "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
+          },
+          "fullProviderStdinCaptured": false
+        },
+        "observations": [
+          {
+            "id": "existing-companion-update",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-administration.md"
+            },
+            "questionIds": []
+          },
+          {
+            "id": "independent-new-package",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "new",
+              "capabilityId": "shared-presentation-package",
+              "path": "specs/shared-presentation-package.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3",
+              "Q4",
+              "Q5",
+              "Q6",
+              "Q7",
+              "Q8"
+            ]
+          },
+          {
+            "id": "genuine-new-companion",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "companion",
+              "capabilityId": "household-identity",
+              "path": "specs/household-audit.md"
+            },
+            "questionIds": [
+              "Q1"
+            ]
+          },
+          {
+            "id": "existing-primary-update",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-identity.md"
+            },
+            "questionIds": []
+          },
+          {
+            "id": "resumed-existing-update",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-administration.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3",
+              "Q4",
+              "Q5",
+              "Q6",
+              "Q7",
+              "Q8"
+            ]
+          },
+          {
+            "id": "resumed-new-package",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "new",
+              "capabilityId": "shared-presentation-package",
+              "path": "specs/shared-presentation-package.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3",
+              "Q4",
+              "Q5"
+            ]
+          },
+          {
+            "id": "resumed-new-companion",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "companion",
+              "capabilityId": "household-identity",
+              "path": "specs/household-audit.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3",
+              "Q4",
+              "Q5",
+              "Q6",
+              "Q7",
+              "Q8"
+            ]
+          },
+          {
+            "id": "third-round-new-package",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "new",
+              "capabilityId": "shared-presentation-package",
+              "path": "specs/shared-presentation-package.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3",
+              "Q4",
+              "Q5"
+            ]
+          },
+          {
+            "id": "authorized-new-to-companion",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "companion",
+              "capabilityId": "household-identity",
+              "path": "specs/household-audit.md"
+            },
+            "questionIds": []
+          },
+          {
+            "id": "authorized-companion-to-update",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-administration.md"
+            },
+            "questionIds": []
+          },
+          {
+            "id": "ambiguous-existing-owner",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-identity.md"
+            },
+            "questionIds": [
+              "Q1"
+            ]
+          },
+          {
+            "id": "contradictory-owner-path",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-administration.md"
+            },
+            "questionIds": [
+              "Q1"
+            ]
+          }
+        ],
+        "legacyKeywordScore": {
+          "cases": 12,
+          "correct": 12,
+          "invalid": 0,
+          "passed": true
+        },
+        "semanticScore": {
+          "cases": 12,
+          "correct": 12,
+          "invalid": 0,
+          "passed": true
+        },
+        "semanticAssessmentSha256": "390b75cad44d075b3ca6f65221febaad5735a25b3ea80f4a26dd4766c619b7bf",
+        "semanticScoringSourceSha256": "b8bea9b1ab82d48e4e5d06234c5d9ac60e371201132bf00dbecae3da85beca70"
+      },
+      {
+        "id": "revised-1",
+        "predictionsSha256": "2713a4c79d47fef62a9c32862a6702dc131aefd68fcb802607a68475b96a0c69",
+        "identity": {
+          "at": "2026-11-04T07:45:36.642Z",
+          "variant": "revised-1",
+          "fixtureCommit": "76c0b6a95776b094290cfb9be66dfa449261aed1",
+          "sourceHashes": {
+            "src/application/usecases/sdd/pre_branch_sdd_gate_use_case.ts": "40428f01885c6227862a2c6474a96c5520f6f002448159dfd2e036b5d77d8604",
+            "src/domain/pre_branch_sdd.ts": "636db20b18cd7b694c2d68e2d5fc53f5387daae90bcb231c98c2c2534d6125c3",
+            "src/data/repository/ai/findings_agent_adapter.ts": "2bdbcc4a104fa3898d8906139ba7b543df2c07dca69cc199708b89261a574509",
+            "src/infrastructure/composition/agent_capability_composition_root.ts": "501ff73a38aa8cb6c78bc21b34f679538df4104f3c3eaea9578648830f82a889",
+            "src/application/policies/sdd_ownership_prompt_policy.ts": "5ce9c76dd2114b7f2067c0324964eb28e94fb6e7545b43ee7dd9d59c3c70b60a"
+          },
+          "requestsSha256": "2850b0ca068617c9e62555ed52679a6ead0b9634fb2fcf67b26abbdd80b921eb",
+          "descriptorSha256": "5f06dfedc06ef1bf9ae355306f53aec9e6a6ab596117a6b36cd284f6d590b4e4",
+          "node": "v24.20.0",
+          "typescript": "5.9.3",
+          "configuration": {
+            "provider": "codex",
+            "model": "gpt-6-luna",
+            "effort": "medium",
+            "executable": "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
+          },
+          "fullProviderStdinCaptured": false
+        },
+        "observations": [
+          {
+            "id": "existing-companion-update",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-administration.md"
+            },
+            "questionIds": []
+          },
+          {
+            "id": "independent-new-package",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "new",
+              "capabilityId": "shared-presentation-package",
+              "path": "specs/shared-presentation-package.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3",
+              "Q4",
+              "Q5"
+            ]
+          },
+          {
+            "id": "genuine-new-companion",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "companion",
+              "capabilityId": "household-identity",
+              "path": "specs/household-audit.md"
+            },
+            "questionIds": [
+              "Q1"
+            ]
+          },
+          {
+            "id": "existing-primary-update",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-identity.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3",
+              "Q4",
+              "Q5",
+              "Q6"
+            ]
+          },
+          {
+            "id": "resumed-existing-update",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-administration.md"
+            },
+            "questionIds": []
+          },
+          {
+            "id": "resumed-new-package",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "new",
+              "capabilityId": "shared-presentation-package",
+              "path": "specs/shared-presentation-package.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3",
+              "Q4",
+              "Q5",
+              "Q6",
+              "Q7",
+              "Q8"
+            ]
+          },
+          {
+            "id": "resumed-new-companion",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "companion",
+              "capabilityId": "household-identity",
+              "path": "specs/household-audit.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3",
+              "Q4"
+            ]
+          },
+          {
+            "id": "third-round-new-package",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "new",
+              "capabilityId": "shared-presentation-package",
+              "path": "specs/shared-presentation-package.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3",
+              "Q4",
+              "Q5",
+              "Q6"
+            ]
+          },
+          {
+            "id": "authorized-new-to-companion",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "companion",
+              "capabilityId": "household-identity",
+              "path": "specs/household-audit.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3",
+              "Q4",
+              "Q5",
+              "Q6",
+              "Q7",
+              "Q8"
+            ]
+          },
+          {
+            "id": "authorized-companion-to-update",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-administration.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3",
+              "Q4",
+              "Q5",
+              "Q6",
+              "Q7",
+              "Q8"
+            ]
+          },
+          {
+            "id": "ambiguous-existing-owner",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-identity.md"
+            },
+            "questionIds": [
+              "Q1"
+            ]
+          },
+          {
+            "id": "contradictory-owner-path",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-administration.md"
+            },
+            "questionIds": [
+              "Q1"
+            ]
+          }
+        ],
+        "legacyKeywordScore": {
+          "cases": 12,
+          "correct": 12,
+          "invalid": 0,
+          "passed": true
+        },
+        "semanticScore": {
+          "cases": 12,
+          "correct": 12,
+          "invalid": 0,
+          "passed": true
+        },
+        "semanticAssessmentSha256": "e55ea7494b8ba1019ef3a201f9c9e965ca135e47a36a00eb4fc215d11d042574",
+        "semanticScoringSourceSha256": "b8bea9b1ab82d48e4e5d06234c5d9ac60e371201132bf00dbecae3da85beca70"
+      },
+      {
+        "id": "revised-2",
+        "predictionsSha256": "47d1b646dfba0b86bf906323e18268272c72742c8118a898f0d4115d174e0f09",
+        "identity": {
+          "at": "2026-11-04T07:48:28.616Z",
+          "variant": "revised-2",
+          "fixtureCommit": "76c0b6a95776b094290cfb9be66dfa449261aed1",
+          "sourceHashes": {
+            "src/application/usecases/sdd/pre_branch_sdd_gate_use_case.ts": "40428f01885c6227862a2c6474a96c5520f6f002448159dfd2e036b5d77d8604",
+            "src/domain/pre_branch_sdd.ts": "636db20b18cd7b694c2d68e2d5fc53f5387daae90bcb231c98c2c2534d6125c3",
+            "src/data/repository/ai/findings_agent_adapter.ts": "2bdbcc4a104fa3898d8906139ba7b543df2c07dca69cc199708b89261a574509",
+            "src/infrastructure/composition/agent_capability_composition_root.ts": "501ff73a38aa8cb6c78bc21b34f679538df4104f3c3eaea9578648830f82a889",
+            "src/application/policies/sdd_ownership_prompt_policy.ts": "5ce9c76dd2114b7f2067c0324964eb28e94fb6e7545b43ee7dd9d59c3c70b60a"
+          },
+          "requestsSha256": "2850b0ca068617c9e62555ed52679a6ead0b9634fb2fcf67b26abbdd80b921eb",
+          "descriptorSha256": "5f06dfedc06ef1bf9ae355306f53aec9e6a6ab596117a6b36cd284f6d590b4e4",
+          "node": "v24.20.0",
+          "typescript": "5.9.3",
+          "configuration": {
+            "provider": "codex",
+            "model": "gpt-6-luna",
+            "effort": "medium",
+            "executable": "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
+          },
+          "fullProviderStdinCaptured": false
+        },
+        "observations": [
+          {
+            "id": "existing-companion-update",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-administration.md"
+            },
+            "questionIds": [
+              "Q1"
+            ]
+          },
+          {
+            "id": "independent-new-package",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "new",
+              "capabilityId": "shared-presentation-package",
+              "path": "specs/shared-presentation-package.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3",
+              "Q4",
+              "Q5",
+              "Q6",
+              "Q7",
+              "Q8"
+            ]
+          },
+          {
+            "id": "genuine-new-companion",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "companion",
+              "capabilityId": "household-identity",
+              "path": "specs/household-audit.md"
+            },
+            "questionIds": [
+              "Q1"
+            ]
+          },
+          {
+            "id": "existing-primary-update",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-identity.md"
+            },
+            "questionIds": [
+              "Q1"
+            ]
+          },
+          {
+            "id": "resumed-existing-update",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-administration.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3",
+              "Q4",
+              "Q5",
+              "Q6",
+              "Q7",
+              "Q8"
+            ]
+          },
+          {
+            "id": "resumed-new-package",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "new",
+              "capabilityId": "shared-presentation-package",
+              "path": "specs/shared-presentation-package.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3",
+              "Q4"
+            ]
+          },
+          {
+            "id": "resumed-new-companion",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "companion",
+              "capabilityId": "household-identity",
+              "path": "specs/household-audit.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3",
+              "Q4",
+              "Q5",
+              "Q6",
+              "Q7",
+              "Q8"
+            ]
+          },
+          {
+            "id": "third-round-new-package",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "new",
+              "capabilityId": "shared-presentation-package",
+              "path": "specs/shared-presentation-package.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3",
+              "Q4",
+              "Q5",
+              "Q6"
+            ]
+          },
+          {
+            "id": "authorized-new-to-companion",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "companion",
+              "capabilityId": "household-identity",
+              "path": "specs/household-audit.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3",
+              "Q4"
+            ]
+          },
+          {
+            "id": "authorized-companion-to-update",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-administration.md"
+            },
+            "questionIds": [
+              "Q1"
+            ]
+          },
+          {
+            "id": "ambiguous-existing-owner",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "application-experience",
+              "path": "specs/application-experience.md"
+            },
+            "questionIds": [
+              "Q1"
+            ]
+          },
+          {
+            "id": "contradictory-owner-path",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-administration.md"
+            },
+            "questionIds": [
+              "Q1"
+            ]
+          }
+        ],
+        "legacyKeywordScore": {
+          "cases": 12,
+          "correct": 12,
+          "invalid": 0,
+          "passed": true
+        },
+        "semanticScore": {
+          "cases": 12,
+          "correct": 12,
+          "invalid": 0,
+          "passed": true
+        },
+        "semanticAssessmentSha256": "e3dc9d42758ae1396bdb2640a549a3ac183868ca48e6c3e0cc6d4440ea7cca3f",
+        "semanticScoringSourceSha256": "b8bea9b1ab82d48e4e5d06234c5d9ac60e371201132bf00dbecae3da85beca70"
+      },
+      {
+        "id": "revised-3",
+        "predictionsSha256": "b1c92dcf6c6cdd478b03f713f2d31db97cdf4445dddb95ea50f3fec8db9cd1cf",
+        "identity": {
+          "at": "2026-11-04T07:52:02.983Z",
+          "variant": "revised-3",
+          "fixtureCommit": "76c0b6a95776b094290cfb9be66dfa449261aed1",
+          "sourceHashes": {
+            "src/application/usecases/sdd/pre_branch_sdd_gate_use_case.ts": "40428f01885c6227862a2c6474a96c5520f6f002448159dfd2e036b5d77d8604",
+            "src/domain/pre_branch_sdd.ts": "636db20b18cd7b694c2d68e2d5fc53f5387daae90bcb231c98c2c2534d6125c3",
+            "src/data/repository/ai/findings_agent_adapter.ts": "2bdbcc4a104fa3898d8906139ba7b543df2c07dca69cc199708b89261a574509",
+            "src/infrastructure/composition/agent_capability_composition_root.ts": "501ff73a38aa8cb6c78bc21b34f679538df4104f3c3eaea9578648830f82a889",
+            "src/application/policies/sdd_ownership_prompt_policy.ts": "5ce9c76dd2114b7f2067c0324964eb28e94fb6e7545b43ee7dd9d59c3c70b60a"
+          },
+          "requestsSha256": "2850b0ca068617c9e62555ed52679a6ead0b9634fb2fcf67b26abbdd80b921eb",
+          "descriptorSha256": "5f06dfedc06ef1bf9ae355306f53aec9e6a6ab596117a6b36cd284f6d590b4e4",
+          "node": "v24.20.0",
+          "typescript": "5.9.3",
+          "configuration": {
+            "provider": "codex",
+            "model": "gpt-6-luna",
+            "effort": "medium",
+            "executable": "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
+          },
+          "fullProviderStdinCaptured": false
+        },
+        "observations": [
+          {
+            "id": "existing-companion-update",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-administration.md"
+            },
+            "questionIds": []
+          },
+          {
+            "id": "independent-new-package",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "new",
+              "capabilityId": "shared-presentation-package",
+              "path": "specs/shared-presentation-package.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3"
+            ]
+          },
+          {
+            "id": "genuine-new-companion",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "companion",
+              "capabilityId": "household-identity",
+              "path": "specs/household-audit.md"
+            },
+            "questionIds": []
+          },
+          {
+            "id": "existing-primary-update",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-identity.md"
+            },
+            "questionIds": []
+          },
+          {
+            "id": "resumed-existing-update",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-administration.md"
+            },
+            "questionIds": []
+          },
+          {
+            "id": "resumed-new-package",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "new",
+              "capabilityId": "shared-presentation-package",
+              "path": "specs/shared-presentation-package.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3",
+              "Q4",
+              "Q5",
+              "Q6",
+              "Q7",
+              "Q8"
+            ]
+          },
+          {
+            "id": "resumed-new-companion",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "companion",
+              "capabilityId": "household-identity",
+              "path": "specs/household-audit.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3",
+              "Q4",
+              "Q5",
+              "Q6"
+            ]
+          },
+          {
+            "id": "third-round-new-package",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "new",
+              "capabilityId": "shared-presentation-package",
+              "path": "specs/shared-presentation-package.md"
+            },
+            "questionIds": [
+              "Q1",
+              "Q2",
+              "Q3",
+              "Q4",
+              "Q5",
+              "Q6",
+              "Q7",
+              "Q8"
+            ]
+          },
+          {
+            "id": "authorized-new-to-companion",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "companion",
+              "capabilityId": "household-identity",
+              "path": "specs/household-audit.md"
+            },
+            "questionIds": []
+          },
+          {
+            "id": "authorized-companion-to-update",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-administration.md"
+            },
+            "questionIds": [
+              "Q1"
+            ]
+          },
+          {
+            "id": "ambiguous-existing-owner",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "application-experience",
+              "path": "specs/application-experience.md"
+            },
+            "questionIds": [
+              "Q1"
+            ]
+          },
+          {
+            "id": "contradictory-owner-path",
+            "correct": true,
+            "error": null,
+            "tuple": {
+              "action": "update",
+              "capabilityId": "household-identity",
+              "path": "specs/household-administration.md"
+            },
+            "questionIds": [
+              "Q1"
+            ]
+          }
+        ],
+        "legacyKeywordScore": {
+          "cases": 12,
+          "correct": 12,
+          "invalid": 0,
+          "passed": true
+        },
+        "semanticScore": {
+          "cases": 12,
+          "correct": 12,
+          "invalid": 0,
+          "passed": true
+        },
+        "semanticAssessmentSha256": "3002e9c49508885f8b415b698e1655b64001df746a61407e815cf3c17bc2291a",
+        "semanticScoringSourceSha256": "b8bea9b1ab82d48e4e5d06234c5d9ac60e371201132bf00dbecae3da85beca70"
+      }
+    ],
+    "artifactIdentities": {
+      "qualification-freeze.json": {
+        "sha256": "6cb0d5af04bff295bb4303536bb979e4f821047794a7c5a0e598a2f409d9604f",
+        "bytes": 1218
+      },
+      "ownership-cases.json": {
+        "sha256": "5f06dfedc06ef1bf9ae355306f53aec9e6a6ab596117a6b36cd284f6d590b4e4",
+        "bytes": 9175
+      },
+      "baseline-analysis-requests.json": {
+        "sha256": "de592f02774bf999b446b663b80b8492b9b8b88e019699b345c4bbbf9a4ede27",
+        "bytes": 263046
+      },
+      "candidate-analysis-requests.json": {
+        "sha256": "b15074f686fa01aea481847cd0dbf9ee49f5d885c492466efcf7ece6344a8d6a",
+        "bytes": 293613
+      },
+      "revised-analysis-requests.json": {
+        "sha256": "2850b0ca068617c9e62555ed52679a6ead0b9634fb2fcf67b26abbdd80b921eb",
+        "bytes": 300765
+      },
+      "original-control.cjs": {
+        "sha256": "29a0f79fe846bd0205e202df5a2ef4d8898af37996295e74cfc2c19743ceb95f",
+        "bytes": 3108
+      },
+      "capture-smoke.cjs": {
+        "sha256": "6f3694923fcf9b97dd707a64c796106e3c4e5cc938ac375da7c0ab75fff88039",
+        "bytes": 3718
+      }
+    },
+    "optionalDriver": "quality/sdd/ownership-qualification.cjs",
+    "limits": [
+      "Actual SDK use-case capture with in-memory SCM/comment/authorization ports; then actual SDK query composition and SourceSnapshot execution with Codex gpt-6-luna medium.",
+      "Scripted stop responses create question history for request capture, never model predictions. Expected verdicts remain outside model requests.",
+      "Only the owned fictional Git tree is executed; no consumer implementation, draft or branch publication is executed.",
+      "Full provider stdin is not captured. Requests, predictions, raw responses, failed trials and source identities are retained locally with these hashes.",
+      "Three declared trials per distinct runtime; every case must pass within each trial and cohort. No case, expected verdict, floor, model or source fixture changed after baseline.",
+      "No general accuracy, native run replay or whole-consumer acceptance claim."
+    ],
+    "conclusion": {
+      "baseline": {
+        "correct": 19,
+        "cases": 36,
+        "invalid": 9,
+        "passed": false
+      },
+      "firstCandidate": {
+        "correct": 35,
+        "cases": 36,
+        "invalid": 1,
+        "passed": false
+      },
+      "revisedCandidate": {
+        "correct": 36,
+        "cases": 36,
+        "invalid": 0,
+        "passed": true
+      },
+      "scope": "Frozen authored classification acceptance only; no hidden native payload replay or consumer publication."
+    },
+    "versionedDriverSafetyGuards": "Exact clean baseline preparation guard; explicit offline assessment replaces broad keyword auto-acceptance. Source/runtime/fixture/request capture unchanged; no new model queries during rescoring.",
+    "semanticAssessmentEvidence": "quality/sdd/evidence/issue-856-ownership-assessments.json",
+    "legacyScorerLimitation": "The original broad-keyword check was insufficient. Legacy scores alone are not proof of focused questions; explicit agent semantic assessments now bind every retained ownership question and all nine trials are re-scored. Model runtime, reference decisions and raw responses unchanged.",
+    "legacyScorerNegativeControls": {
+      "sourceHead": "19396c58d4dd3604bb893d688a80b9be091fd20d",
+      "file": "quality/sdd/ownership-qualification.cjs",
+      "expressionSha256": "c30e8ec80c057cfa4483433469af31f767348dfd8a518402b86389f1d7dd4f85",
+      "observations": [
+        {
+          "text": "What publication date is planned?",
+          "legacyAccepted": true
+        },
+        {
+          "text": "Which path should hold the screenshots?",
+          "legacyAccepted": true
+        }
+      ],
+      "scope": "Actual retained scoring expression with two authored unrelated questions. No model/provider, consumer or publication execution. These are the same two new unit-regression scenarios, not added model cases."
+    },
+    "modelSourceHashesUnchangedAfterFinding": {
+      "src/application/usecases/sdd/pre_branch_sdd_gate_use_case.ts": "40428f01885c6227862a2c6474a96c5520f6f002448159dfd2e036b5d77d8604",
+      "src/domain/pre_branch_sdd.ts": "636db20b18cd7b694c2d68e2d5fc53f5387daae90bcb231c98c2c2534d6125c3",
+      "src/data/repository/ai/findings_agent_adapter.ts": "2bdbcc4a104fa3898d8906139ba7b543df2c07dca69cc199708b89261a574509",
+      "src/infrastructure/composition/agent_capability_composition_root.ts": "501ff73a38aa8cb6c78bc21b34f679538df4104f3c3eaea9578648830f82a889",
+      "src/application/policies/sdd_ownership_prompt_policy.ts": "5ce9c76dd2114b7f2067c0324964eb28e94fb6e7545b43ee7dd9d59c3c70b60a"
+    },
+    "absentResponseFixReplay": {
+      "allTrials": [
+        {
+          "variant": "baseline-1",
+          "cases": 12,
+          "correct": 6,
+          "invalid": 4,
+          "passed": false
+        },
+        {
+          "variant": "baseline-2",
+          "cases": 12,
+          "correct": 6,
+          "invalid": 3,
+          "passed": false
+        },
+        {
+          "variant": "baseline-3",
+          "cases": 12,
+          "correct": 7,
+          "invalid": 2,
+          "passed": false
+        },
+        {
+          "variant": "candidate-1",
+          "cases": 12,
+          "correct": 12,
+          "invalid": 0,
+          "passed": true
+        },
+        {
+          "variant": "candidate-2",
+          "cases": 12,
+          "correct": 11,
+          "invalid": 1,
+          "passed": false
+        },
+        {
+          "variant": "candidate-3",
+          "cases": 12,
+          "correct": 12,
+          "invalid": 0,
+          "passed": true
+        },
+        {
+          "variant": "revised-1",
+          "cases": 12,
+          "correct": 12,
+          "invalid": 0,
+          "passed": true
+        },
+        {
+          "variant": "revised-2",
+          "cases": 12,
+          "correct": 12,
+          "invalid": 0,
+          "passed": true
+        },
+        {
+          "variant": "revised-3",
+          "cases": 12,
+          "correct": 12,
+          "invalid": 0,
+          "passed": true
+        }
+      ],
+      "retainedPredictionAndScoreFilesIntact": 18,
+      "providerQueries": 0,
+      "missingResponsesObservedInHistoricalTrials": 0,
+      "method": "Actual exported qualification assessor with the unchanged real SDK domain parser and explicit question policy; every retained prediction replayed. Missing/invalid new input behavior tested separately in eleven regressions."
+    },
+    "workingBranchCohortDeclaration": {
+      "at": "2026-11-04T09:46:20.754994+00:00",
+      "beforeProductionEdit": true,
+      "finding": 4465844736,
+      "source": {
+        "src/application/usecases/sdd/pre_branch_sdd_gate_use_case.ts": "40428f01885c6227862a2c6474a96c5520f6f002448159dfd2e036b5d77d8604",
+        "src/domain/pre_branch_sdd.ts": "636db20b18cd7b694c2d68e2d5fc53f5387daae90bcb231c98c2c2534d6125c3",
+        "src/data/repository/ai/findings_agent_adapter.ts": "2bdbcc4a104fa3898d8906139ba7b543df2c07dca69cc199708b89261a574509",
+        "src/infrastructure/composition/agent_capability_composition_root.ts": "501ff73a38aa8cb6c78bc21b34f679538df4104f3c3eaea9578648830f82a889",
+        "src/application/policies/sdd_ownership_prompt_policy.ts": "5ce9c76dd2114b7f2067c0324964eb28e94fb6e7545b43ee7dd9d59c3c70b60a"
+      },
+      "plan": {
+        "baselineTrials": [
+          "baseline-1",
+          "baseline-2",
+          "baseline-3"
+        ],
+        "fixedTrials": [
+          "candidate-1",
+          "candidate-2",
+          "candidate-3"
+        ],
+        "cases": 15,
+        "thresholds": "Every resolved tuple correct, focused ownership decision for ambiguity/conflict, zero schema/semantic-invalid plans in EACH trial and cohort; explicit agent assessments required. No sample selection, reference changes or lowered floors.",
+        "unchangedOriginalCases": 12,
+        "newWorkingCases": 3,
+        "newWorkingTiming": "Existing issue branch becomes configured after the first unpublished question card.",
+        "configuration": {
+          "provider": "codex",
+          "model": "gpt-6-luna",
+          "effort": "medium"
+        },
+        "firstPresentVariants": "Unit regressions cover branch present from initial analysis and later rounds; after fixing, capture request equivalence for those histories without claiming their baseline model was replayed."
+      },
+      "driverSha256": "e0b666e086127f58bc06ce3d01024c7a2ad983823b464b978c399d9e1b0778da",
+      "driverAdaptations": [
+        "Separate artifact namespace and fifteen-case frozen descriptor",
+        "Existing branch in in-memory SCM/ancestry ports, validated against the owned Git alias",
+        "Working branch introduced after first question card",
+        "Scoring cardinality equals frozen descriptor length; explicit semantic policy and reference tuples unchanged"
+      ],
+      "originalDescriptorUnchanged": "5f06dfedc06ef1bf9ae355306f53aec9e6a6ab596117a6b36cd284f6d590b4e4"
+    },
+    "workingBranchBaselineCaptureEquivalence": {
+      "originalTwelveRequestsIdentical": true,
+      "newWorkingRequests": 3,
+      "newWorkingRequestsHaveProposal": false,
+      "sourceHashes": {
+        "src/application/usecases/sdd/pre_branch_sdd_gate_use_case.ts": "40428f01885c6227862a2c6474a96c5520f6f002448159dfd2e036b5d77d8604",
+        "src/domain/pre_branch_sdd.ts": "636db20b18cd7b694c2d68e2d5fc53f5387daae90bcb231c98c2c2534d6125c3",
+        "src/data/repository/ai/findings_agent_adapter.ts": "2bdbcc4a104fa3898d8906139ba7b543df2c07dca69cc199708b89261a574509",
+        "src/infrastructure/composition/agent_capability_composition_root.ts": "501ff73a38aa8cb6c78bc21b34f679538df4104f3c3eaea9578648830f82a889",
+        "src/application/policies/sdd_ownership_prompt_policy.ts": "5ce9c76dd2114b7f2067c0324964eb28e94fb6e7545b43ee7dd9d59c3c70b60a"
+      }
+    },
+    "workingBranchEvidence": "quality/sdd/evidence/issue-856-working-branch.json",
+    "workingBranchFinal": {
+      "finalScores": [
+        {
+          "cases": 15,
+          "correct": 15,
+          "invalid": 0,
+          "passed": true
+        },
+        {
+          "cases": 15,
+          "correct": 15,
+          "invalid": 0,
+          "passed": true
+        },
+        {
+          "cases": 15,
+          "correct": 15,
+          "invalid": 0,
+          "passed": true
+        }
+      ],
+      "finalTotalCorrect": 45,
+      "finalCases": 45,
+      "invalid": 0,
+      "allSourcesUnchanged": {
+        "src/application/usecases/sdd/pre_branch_sdd_gate_use_case.ts": "9a92e7d0edf33f22c6bf86710d96045185b868bbcdb242bda63f5789eab662e2",
+        "src/domain/pre_branch_sdd.ts": "636db20b18cd7b694c2d68e2d5fc53f5387daae90bcb231c98c2c2534d6125c3",
+        "src/data/repository/ai/findings_agent_adapter.ts": "2bdbcc4a104fa3898d8906139ba7b543df2c07dca69cc199708b89261a574509",
+        "src/infrastructure/composition/agent_capability_composition_root.ts": "501ff73a38aa8cb6c78bc21b34f679538df4104f3c3eaea9578648830f82a889",
+        "src/application/policies/sdd_ownership_prompt_policy.ts": "29549b47fe6a97e4df801725d493ee9fe5073cc9bbeac8d267fa755da7c1c200"
+      },
+      "allPreviousCohortsRetained": true,
+      "floorsUnchanged": true
+    }
+  },
+  "initialLocalSuite": {
+    "numPassedTestSuites": 900,
+    "numFailedTestSuites": 0,
+    "numPassedTests": 17649,
+    "numFailedTests": 0,
+    "numPendingTests": 35,
+    "success": true,
+    "coverage": {
+      "lines": {
+        "total": 34947,
+        "covered": 34346,
+        "skipped": 0,
+        "pct": 98.28
+      },
+      "statements": {
+        "total": 40814,
+        "covered": 39839,
+        "skipped": 0,
+        "pct": 97.61
+      },
+      "functions": {
+        "total": 7289,
+        "covered": 7153,
+        "skipped": 0,
+        "pct": 98.13
+      },
+      "branches": {
+        "total": 34447,
+        "covered": 32976,
+        "skipped": 0,
+        "pct": 95.72
+      },
+      "branchesTrue": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "changedRuntime": {
+      "coverable": 14,
+      "hit": 14,
+      "miss": 0,
+      "partial": 0
+    },
+    "extension": {
+      "tests": 267,
+      "files": 30,
+      "coveragePercent": {
+        "lines": 100,
+        "statements": 100,
+        "branches": 100,
+        "functions": 100
+      }
+    },
+    "newPurePolicy": "100% lines/statements/branches/functions; exhaustive coverage budget added without lowering any threshold.",
+    "sourceHead": "19396c58d4dd3604bb893d688a80b9be091fd20d",
+    "scope": "Initial full qualification before scorer remediation; post-finding full suite pending."
+  },
+  "nativeCommitFailureAt42db": {
+    "code": "agent.failed",
+    "reason": "Progress result reported 85% although its own complete ledger had two requirements, two supported, zero missing and zero unknown, after one complete reassessment. Guard correctly rejected publication.",
+    "retryable": true,
+    "response": "Keep contract and labels intact. The next source correction will start one fresh complete assessment; no relaxation or manual progress publication."
+  },
+  "previousLocalSuiteAt42db": {
+    "numPassedTestSuites": 901,
+    "numFailedTestSuites": 0,
+    "numPassedTests": 17678,
+    "numFailedTests": 0,
+    "numPendingTests": 35,
+    "success": true,
+    "coverage": {
+      "lines": {
+        "total": 34960,
+        "covered": 34359,
+        "skipped": 0,
+        "pct": 98.28
+      },
+      "statements": {
+        "total": 40835,
+        "covered": 39860,
+        "skipped": 0,
+        "pct": 97.61
+      },
+      "functions": {
+        "total": 7292,
+        "covered": 7156,
+        "skipped": 0,
+        "pct": 98.13
+      },
+      "branches": {
+        "total": 34474,
+        "covered": 33003,
+        "skipped": 0,
+        "pct": 95.73
+      },
+      "branchesTrue": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "changedRuntime": {
+      "coverable": 27,
+      "hit": 27,
+      "miss": 0,
+      "partial": 0
+    },
+    "extension": {
+      "tests": 267,
+      "files": 30,
+      "coveragePercent": {
+        "lines": 100,
+        "statements": 100,
+        "branches": 100,
+        "functions": 100
+      }
+    }
+  },
+  "previousLocalSuiteAt4d": {
+    "numPassedTestSuites": 902,
+    "numFailedTestSuites": 0,
+    "numPassedTests": 17689,
+    "numFailedTests": 0,
+    "numPendingTests": 35,
+    "success": true,
+    "coverage": {
+      "lines": {
+        "total": 34960,
+        "covered": 34359,
+        "skipped": 0,
+        "pct": 98.28
+      },
+      "statements": {
+        "total": 40835,
+        "covered": 39861,
+        "skipped": 0,
+        "pct": 97.61
+      },
+      "functions": {
+        "total": 7292,
+        "covered": 7156,
+        "skipped": 0,
+        "pct": 98.13
+      },
+      "branches": {
+        "total": 34474,
+        "covered": 33004,
+        "skipped": 0,
+        "pct": 95.73
+      },
+      "branchesTrue": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "changedRuntime": {
+      "coverable": 27,
+      "hit": 27,
+      "miss": 0,
+      "partial": 0
+    },
+    "extension": {
+      "tests": 267,
+      "files": 30,
+      "coveragePercent": {
+        "lines": 100,
+        "statements": 100,
+        "branches": 100,
+        "functions": 100
+      }
+    }
+  },
+  "localSuite": {
+    "numPassedTestSuites": 902,
+    "numFailedTestSuites": 0,
+    "numPassedTests": 17704,
+    "numFailedTests": 0,
+    "numPendingTests": 35,
+    "success": true,
+    "coverage": {
+      "lines": {
+        "total": 34962,
+        "covered": 34361,
+        "skipped": 0,
+        "pct": 98.28
+      },
+      "statements": {
+        "total": 40837,
+        "covered": 39863,
+        "skipped": 0,
+        "pct": 97.61
+      },
+      "functions": {
+        "total": 7292,
+        "covered": 7156,
+        "skipped": 0,
+        "pct": 98.13
+      },
+      "branches": {
+        "total": 34478,
+        "covered": 33008,
+        "skipped": 0,
+        "pct": 95.73
+      },
+      "branchesTrue": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "changedRuntime": {
+      "coverable": 31,
+      "hit": 31,
+      "miss": 0,
+      "partial": 0
+    },
+    "extension": {
+      "tests": 267,
+      "files": 30,
+      "coveragePercent": {
+        "lines": 100,
+        "statements": 100,
+        "branches": 100,
+        "functions": 100
+      }
+    },
+    "stableFullRun": {
+      "files": 19,
+      "hashesUnchanged": true,
+      "manifestSha256": "ed4ddbfd04b5875c121df4c453a4a48749906da76038afd1a776c7c81fbaeab6"
+    }
+  }
+}

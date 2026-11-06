@@ -20,7 +20,7 @@ export function memoryStore() {
 }
 export function context(route = 'https://github.com/octo/example/issues/42'): RuntimeContext {
     return { page: pageIdentity(route)!, epochs: { route: 1, object: 1, settings: 0, credential: 0 },
-        settings: DEFAULT_SETTINGS, paused: false, repositoryId: '7' };
+        settings: { ...DEFAULT_SETTINGS, bindings: DEFAULT_SETTINGS.center.bindings }, paused: false, repositoryId: '7' };
 }
 export function deferred<T>() {
     let resolve!: (value: T) => void; let reject!: (error: unknown) => void;

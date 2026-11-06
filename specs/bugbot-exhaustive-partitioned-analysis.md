@@ -50,9 +50,9 @@ useful findings, yet defects in omitted files remain invisible. The status is
 honest, but the product cannot provide complete review confidence while a prompt
 packing artifact decides which changed files the model can inspect.
 
-### 2.2 Current behavior
+### 2.2 Behavior before partitioning
 
-1. GitHub returns up to 1,000 changed-file records for the canonical PR.
+1. The adapter read up to 1,000 changed-file records for the canonical PR.
 2. Ignored paths are removed.
 3. Each patch is truncated after 12,000 characters.
 4. File sections are packed into one 64,000-character block in provider order.
@@ -70,7 +70,7 @@ packing artifact decides which changed files the model can inspect.
 - `analyze_bugbot_revision_use_case.ts` performs exactly one reviewer query.
 - PR #400 supplied 44 changed files; the final review retained 14, omitted 30,
   and truncated four patches even though GitHub pagination was complete.
-- GitHub provider pagination remains separately bounded at 10 pages x 100 files.
+- [Context selection and budgeting](./bugbot-context-selection-and-budgeting.md) records the current GitHub pagination bound and coverage checks.
 - Unknowns: no repository evidence proves that any provider/model reads content
   it was not supplied or explicitly assigned to inspect.
 
@@ -122,7 +122,7 @@ analysis detects every defect.
    A leading `**/` matches both the repository root and any nested prefix, so
    documented patterns such as `**/node_modules/**` cannot leak root-level
    files into the review plan.
-3. It does not remove GitHub's 1,000-file provider-read ceiling.
+3. GitHub's 3,000-file provider-read ceiling bounds the canonical input. The source-bound framed profile has its own file and proof limits.
 4. It does not auto-merge, change severity policy, or increase the publication
    comment limit.
 5. It does not make prompt, fragment, partition, or concurrency safety ceilings
@@ -759,3 +759,12 @@ token scope, secret, or public input.
 - Follow-up outside scope: provider APIs that omit changed files beyond their
   enumeration limit require PR splitting or a separately specified local-diff
   authority contract.
+
+## Large-diff source-bound extension — #839
+
+[Source-bound framed review](./bugbot-source-bound-framed-review.md) defines the
+separate closed profile beyond the ordinary envelope. Its complete immutable
+source inventory, two sequential frames, live target-ref fences and exact
+coverage receipts supersede the ordinary over-cap remediation for eligible
+workloads. Ordinary planning, conversation/history limits, resolution ownership,
+public configuration and approval controls retain their existing contracts.

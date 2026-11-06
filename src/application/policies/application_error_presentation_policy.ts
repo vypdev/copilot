@@ -1,3 +1,6 @@
+import { BUGBOT_REVIEW_RESOURCE_LABELS, BUGBOT_REVIEW_UNIT_LABELS } from './bugbot_review_diagnostic_labels';
+import { progressInventoryPresentation } from '../../domain/progress_inventory_diagnostic';
+import { progressPartitionLengthPresentation } from '../../domain/progress_partition_length_failure';
 import { progressBinaryEvidencePresentation } from '../../domain/progress_binary_evidence_diagnostic';
 import { issueWorkflowDiagnosticPresentation } from '../../domain/issue_workflow_diagnostic';
 import { isCopilotCommandValidationReason } from '../../domain/copilot_command_validation';
@@ -14,6 +17,11 @@ import {
 // This trusted destination is inserted after localization, never supplied by a body or translation.
 const STORED_CONFIGURATION_RECOVERY_URL = 'https://docs.page/vypdev/copilot/security-operations/operations/troubleshooting#unsupported-stored-configuration';
 const BRANCH_SYNC_CATALOG_RECOVERY_URL = 'https://docs.page/vypdev/copilot/security-operations/operations/troubleshooting#branch-sync-catalog-compatibility';
+const BRANCH_SYNC_PUBLICATION_RECOVERY_URL = 'https://docs.page/vypdev/copilot/security-operations/operations/troubleshooting#branch-sync-workflow-write-recovery';
+
+import { sourceContextDiagnostic } from '../../domain/agent_source_snapshot';
+import { assignmentDiagnosticPresentation } from './issue_assignment_diagnostic_presentation';
+import { progressCapacityPresentation } from './progress_capacity_presentation_policy';
 
 export interface ApplicationErrorPresentation {
     readonly impact: string;
@@ -39,7 +47,24 @@ export function buildApplicationErrorPresentation(
     const descriptor = error.recovery
         ? `error.recovery.${error.recovery.id}` as const
         : `error.${error.code}` as const;
-    const variables = error.recovery?.id === 'progress-binary-evidence-unavailable'
+    const variables = error.recovery?.id === 'progress-evidence-capacity-exceeded'
+        ? progressCapacityPresentation(error.recovery.variables, message)
+        : error.recovery?.id === 'sdd-draft-response-too-short'
+        ? { ...error.recovery.variables, observed: error.recovery.variables.observed === 'unavailable'
+            ? message('error.label.draftLengthUnavailable') : error.recovery.variables.observed }
+        : error.recovery?.id === 'issue-assignment-failed'
+        ? assignmentDiagnosticPresentation(error.recovery.variables, error.code, message)
+        : error.recovery?.id === 'sdd-source-context-unavailable'
+        ? { ...sourceContextDiagnostic(error.recovery.variables) }
+        : error.recovery?.id === 'progress-partition-length-invalid'
+        ? progressPartitionLengthPresentation(error.recovery.variables)
+        : error.recovery?.id === 'bugbot-review-incomplete'
+        ? { ...error.recovery.variables, countKind: error.recovery.variables.countKind === 'at-least' ? '≥' : '=',
+            resource: message(`error.label.${BUGBOT_REVIEW_RESOURCE_LABELS[error.recovery.variables.resource]}`),
+            unit: message(`error.label.${BUGBOT_REVIEW_UNIT_LABELS[error.recovery.variables.unit]}`) }
+        : error.recovery?.id === 'progress-inventory-incomplete'
+        ? progressInventoryPresentation(error.recovery.variables)
+        : error.recovery?.id === 'progress-binary-evidence-unavailable'
         ? progressBinaryEvidencePresentation(error.recovery.variables)
         : error.recovery?.id === 'issue-workflow-admission-blocked'
         ? issueWorkflowDiagnosticPresentation(error.recovery.variables)
@@ -47,6 +72,15 @@ export function buildApplicationErrorPresentation(
         ? commandValidationPresentationVariables(error.recovery.id, (error.recovery.variables as Readonly<Record<string, unknown>>).command)
         : error.recovery?.id === 'branch-sync-verification-failed'
         ? { ...error.recovery.variables, syncCommand: '/copilot sync-branch' }
+        : error.recovery?.id === 'branch-sync-workflow-write-required' || error.recovery?.id === 'branch-sync-publication-failed'
+        ? {
+            reason: error.recovery.variables.reason, originalSha: error.recovery.variables.originalSha,
+            candidateSha: error.recovery.variables.candidateSha, observedSha: error.recovery.variables.observedSha,
+            pushStatus: message(error.recovery.variables.pushAttempted ? 'error.label.syncPushAttempted' : 'error.label.syncPushNotAttempted'),
+            remoteStatus: message(error.recovery.variables.remoteState === 'unchanged' ? 'error.label.syncRemoteUnchanged'
+                : error.recovery.variables.remoteState === 'changed' ? 'error.label.syncRemoteChanged' : 'error.label.syncRemoteUnverified'),
+            publicationGuide: BRANCH_SYNC_PUBLICATION_RECOVERY_URL, syncCommand: '/copilot sync-branch',
+        }
         : error.recovery?.id === 'branch-sync-catalog-incompatible'
         ? { ...error.recovery.variables, syncCommand: '/copilot sync-branch', catalogGuide: BRANCH_SYNC_CATALOG_RECOVERY_URL }
         : error.recovery?.id.startsWith('stored-configuration-')

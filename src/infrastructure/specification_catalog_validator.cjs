@@ -237,7 +237,7 @@ function renderCatalog(catalog) {
     '# Product capability specification catalog',
     '',
     '> Generated from [`catalog.json`](./catalog.json). Do not edit this table by hand.',
-    '> Run `pnpm run generate:specifications` after changing catalog metadata.',
+    '> Regenerate this view after metadata changes using verified repository specification tooling.',
     '',
     'This catalog answers which product contract owns a capability and where its',
     'implementation, verification, workflow, and user-documentation evidence lives.',
@@ -258,7 +258,9 @@ function renderCatalog(catalog) {
     '   behavior or an architecture boundary changes.',
     '3. Use repository-relative paths in `catalog.json`; each path is validated and every',
     '   top-level product SDD must have exactly one capability owner.',
-    '4. Run `pnpm run validate:specifications` in local and CI validation.',
+    '4. Validate specification structure, catalog ownership/evidence, and this generated',
+    '   view with tooling verified for the selected repository. Command declarations',
+    '   and structural validation are not proof that product tests have executed.',
     '',
   ].join('\n');
 }
@@ -328,7 +330,7 @@ function main(argv = process.argv.slice(2), root = DEFAULT_ROOT) {
     return;
   }
   if (normalizeCheckoutLineEndings(current) !== rendered) {
-    console.error(`${CATALOG_MARKDOWN} is stale; run pnpm run generate:specifications.`);
+    console.error(`${CATALOG_MARKDOWN} is stale; regenerate it with this SDK entrypoint's --write option, then rerun validation.`);
     process.exitCode = 1;
     return;
   }

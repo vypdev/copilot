@@ -4,13 +4,15 @@ import { buildAgentPrompt } from '../agent_prompt_policy';
 import { interpretFindingsResponse } from '../agent_findings_response_policy';
 import type { FindingsQueryPort, FindingsQueryRequest } from '../../../application/ports/agent_findings_ports';
 import { AgentCapabilityAdapter } from './agent_capability_adapter';
+import { sourceSnapshotForSddQuery, sourceSnapshotPrompt } from '../../../application/policies/agent_source_snapshot_policy';
 
 export class FindingsAgentAdapter extends AgentCapabilityAdapter implements FindingsQueryPort {
     async query(request: FindingsQueryRequest): Promise<string | Record<string, unknown> | undefined> {
+        const sourceSnapshot = sourceSnapshotForSddQuery(request);
         const options = request.options ?? {};
         const schemaName = options.schemaName ?? 'response';
         const promptText = buildAgentPrompt(
-            request.prompt,
+            `${sourceSnapshot ? sourceSnapshotPrompt(sourceSnapshot) : ''}${request.prompt}`,
             options.expectJson ?? false,
             options.schema,
             schemaName,
@@ -23,7 +25,9 @@ export class FindingsAgentAdapter extends AgentCapabilityAdapter implements Find
             configuration: request.configuration,
             prompt: promptText,
             capability: 'findings',
+            ...(request.signal ? { signal: request.signal } : {}),
             ...(options.expectJson && options.schema ? { outputSchema: options.schema } : {}),
+            ...(sourceSnapshot ? { sourceSnapshot } : {}),
             mapCliOutput: (output) => {
                 if (options.expectJson && options.schema) {
                     const phase = progressResponsePhaseForSchema(schemaName);

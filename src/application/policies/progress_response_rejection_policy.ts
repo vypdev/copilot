@@ -1,3 +1,4 @@
+import { isProgressScopeCapacityFacts, type ProgressScopeCapacityFacts } from '../../domain/progress_response_diagnostic';
 import { validateAgentOutputLocale, agentOutputLocaleFailureMessage } from './agent_output_locale_policy';
 import type { ProgressResponsePhase } from '../../domain/progress_response_diagnostic';
 import { ApplicationError } from '../errors/application_error';
@@ -18,4 +19,12 @@ export function progressResponsePayload(response: unknown, locale: string, phase
     if (response === undefined) throw new ApplicationError(code, agentOutputLocaleFailureMessage(validation));
     throw progressResponseRejected({ phase, reason: validation.reason,
         field: validation.reason === 'response-not-object' ? '$' : '$.outputLocale', requirementId: 'none', sourceLineId: 'none' }, code);
+}
+
+
+export function progressScopeCapacityRejected(facts: ProgressScopeCapacityFacts): ApplicationError {
+    if (!isProgressScopeCapacityFacts(facts)) throw new TypeError('Progress scope capacity diagnostic is invalid.');
+    return new ApplicationError('agent.failed',
+        `Progress scope result was rejected (scope-clause-limit; ${facts.clauseKind}: ${facts.observed}; limit ${facts.limit}; source ${facts.sourceLineId}). Existing progress was retained.`,
+        { recovery: { id: 'progress-scope-clause-limit', variables: facts } });
 }

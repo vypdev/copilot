@@ -11,7 +11,9 @@ describe('complete untrusted progress prompt data', () => {
     });
     it('enforces bytes rather than UTF-16 length and refuses truncation', () => {
         expect(renderProgressPromptData('🧪é', 'progress.issue-lines', 6)).toContain('🧪é');
-        expect(() => renderProgressPromptData('🧪é', 'progress.issue-lines', 5)).toThrow('Progress evidence exceeds');
+        expect(() => renderProgressPromptData('🧪é', 'progress.issue-lines', 5)).toThrow(expect.objectContaining({ code: 'validation.evidence-too-large', recovery: {
+            id: 'progress-evidence-capacity-exceeded', variables: expect.objectContaining({ phase: 'input', dimension: 'input-text-bytes', observedCount: 6, supportedLimit: 5 }),
+        } }));
     });
     it('frames every complete source line beyond the generic field limit with the trusted policy', () => {
         const source = JSON.stringify([{ id: 'L1', quote: 'Context. '.repeat(2000) }, { id: 'L2', quote: `Excluded: device execution. ${hostile}` }]);
@@ -22,6 +24,8 @@ describe('complete untrusted progress prompt data', () => {
         expect(prompt).not.toContain('[untrusted content truncated]');
     });
     it('rejects oversized classification input without producing a partial prompt', () => {
-        expect(() => getProgressScopePrompt('x'.repeat(AGENT_PROMPT_MAX_BYTES + 1), 'en-US')).toThrow('Progress evidence exceeds');
+        expect(() => getProgressScopePrompt('x'.repeat(AGENT_PROMPT_MAX_BYTES + 1), 'en-US')).toThrow(expect.objectContaining({ code: 'validation.evidence-too-large', recovery: {
+            id: 'progress-evidence-capacity-exceeded', variables: expect.objectContaining({ phase: 'scope', dimension: 'input-text-bytes', observedCount: AGENT_PROMPT_MAX_BYTES + 1, supportedLimit: AGENT_PROMPT_MAX_BYTES }),
+        } }));
     });
 });

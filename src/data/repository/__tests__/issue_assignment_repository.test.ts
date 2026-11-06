@@ -23,7 +23,7 @@ describe('IssueAssignmentRepository', () => {
         mockGet.mockResolvedValueOnce({ data: { assignees: null } }).mockRejectedValueOnce(new Error('API error'));
         const repository = new IssueAssignmentRepository(new OctokitIssueAssignmentClientAdapter());
         await expect(repository.getCurrentAssignees('o', 'r', 1, 't')).resolves.toEqual([]);
-        await expect(repository.getCurrentAssignees('o', 'r', 1, 't')).rejects.toThrow('API error');
+        await expect(repository.getCurrentAssignees('o', 'r', 1, 't')).rejects.toMatchObject({ code: 'unexpected', operation: 'read-assignees', providerStatus: 'http-unavailable' });
     });
 
     it('skips empty assignments and maps updated assignees', async () => {

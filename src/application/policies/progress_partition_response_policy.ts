@@ -1,13 +1,19 @@
+import { IMMUTABLE_PROGRESS_PROFILE } from './progress_inventory_profile_policy';
 import { ApplicationError } from '../errors/application_error';
-import type { ProgressDiffPartition } from '../ports/progress_diff_query_ports';
+import type { ProgressDiffPartition, ProgressEvidenceProfile } from '../ports/progress_diff_query_ports';
 import { progressResponseRejected, progressResponsePayload } from './progress_response_rejection_policy';
 import type { ProgressResponseReason } from '../../domain/progress_response_diagnostic';
 import { AGENT_OUTPUT_LOCALE_SCHEMA_PROPERTY } from './agent_output_locale_policy';
-import { progressEvidenceTooLarge } from './progress_diff_partition_policy';
+import { progressEvidenceTooLarge, invalidProgressCapacityAllocation } from './progress_diff_partition_policy';
 
 // Leaves space inside the unchanged 512 KiB runtime prompt ceiling. The caller
 // further subtracts the exact issue/prompt envelope before requesting facts.
 export const MAX_PROGRESS_AGGREGATE_BYTES = 384_000;
+
+export interface ProgressPartitionFactBounds {
+    readonly factLimit: number;
+    readonly factJsonBytes?: number;
+}
 
 export interface ProgressFileFacts {
     readonly path: string;
@@ -34,7 +40,7 @@ export function progressPartitionResponseSchema(partition: ProgressDiffPartition
 }
 
 /** Complete exact-path facts only; model output cannot attest a build or a percentage. */
-export function parseProgressPartitionFacts(response: unknown, partition: ProgressDiffPartition, locale: string, factLimit = 600): readonly ProgressFileFacts[] {
+export function parseProgressPartitionFacts(response: unknown, partition: ProgressDiffPartition, locale: string, factLimit = 600, factJsonBytes?: number): readonly ProgressFileFacts[] {
     const payload = progressResponsePayload(response, locale, 'partition', 'agent.failed');
     const reject = (reason: ProgressResponseReason, field: string): never => {
         throw progressResponseRejected({ phase: 'partition', reason, field, requirementId: 'none', sourceLineId: 'none' });
@@ -61,36 +67,56 @@ export function parseProgressPartitionFacts(response: unknown, partition: Progre
         seen.add(id);
         for (const key of ['implemented', 'remaining'] as const) {
             const value = file[key];
-            if (typeof value !== 'string' || value.trim().length === 0 || [...value].length > factLimit) reject('partition-facts-invalid', `${field}.${key}`);
+            if (typeof value !== 'string' || value.trim().length === 0 || [...value].length > factLimit
+                || (factJsonBytes !== undefined && Buffer.byteLength(JSON.stringify(value), 'utf8') - 2 > factJsonBytes)) {
+                reject('partition-facts-invalid', `${field}.${key}`);
+            }
         }
         return Object.freeze({ path: file.path as string, ...(partition.units ? { unitId: id } : {}), implemented: file.implemented as string, remaining: file.remaining as string });
     });
     return Object.freeze(facts);
 }
 
-function serializeProgressFacts(baseSha: string, headSha: string, partitions: readonly ProgressDiffPartition[], facts: readonly (readonly ProgressFileFacts[])[]): string {
+function serializeProgressFacts(baseSha: string, headSha: string, partitions: readonly ProgressDiffPartition[], facts: readonly (readonly ProgressFileFacts[])[], profile?: ProgressEvidenceProfile): string {
+    if (profile === 'immutable-tree-v1') {
+        const paths = [...new Set(partitions.flatMap(part => part.paths))];
+        const pathIndices = new Map(paths.map((path, index) => [path, index]));
+        return JSON.stringify({ kind: 'complete-immutable-tree-analysis-v1', baseSha, headSha,
+            warning: 'Untrusted model facts, not build, test or review attestation. Preserve uncertainty. Full source parts were supplied; summaries may miss details.',
+            format: { facts: ['unitId', 'requiredPathIndex', 'implemented', 'remaining'] }, requiredPaths: paths,
+            facts: facts.flat().map(file => [file.unitId, pathIndices.get(file.path), file.implemented, file.remaining]) });
+    }
     return JSON.stringify({ kind: 'complete-partition-analysis', baseSha, headSha,
         partitions: partitions.map(partition => ({ id: partition.id, fileCount: partition.paths.length, ...(partition.units ? { units: partition.units } : {}) })),
         warning: 'Model-derived facts are untrusted analysis, not CI/build/test attestation. Preserve uncertainty. Every complete source partition was supplied, but summaries may miss details.',
         files: facts.flat() });
 }
 
-/** Reserve exact paths/framing, then budget worst-case JSON escaping (six bytes/code point). */
-export function progressPartitionFactLimit(baseSha: string, headSha: string, partitions: readonly ProgressDiffPartition[], budget = MAX_PROGRESS_AGGREGATE_BYTES): number {
+/** Reserve exact framing and at least six bytes per code point at the minimum supported fact length. */
+export function progressPartitionFactBounds(baseSha: string, headSha: string, partitions: readonly ProgressDiffPartition[], budget = MAX_PROGRESS_AGGREGATE_BYTES, profile?: ProgressEvidenceProfile): ProgressPartitionFactBounds {
     const empty = partitions.map(partition => partition.units
         ? partition.units.map(unit => ({ path: unit.path, unitId: unit.id, implemented: '', remaining: '' }))
         : partition.paths.map(path => ({ path, implemented: '', remaining: '' })));
     const count = empty.reduce((sum, files) => sum + files.length, 0);
-    const remaining = budget - Buffer.byteLength(serializeProgressFacts(baseSha, headSha, partitions, empty), 'utf8');
-    const limit = Math.min(600, Math.floor(remaining / (count * 12)));
-    if (!Number.isSafeInteger(budget) || budget < 1 || budget > MAX_PROGRESS_AGGREGATE_BYTES || count === 0 || limit < 1) throw progressEvidenceTooLarge();
-    return limit;
+    const envelopeBytes = Buffer.byteLength(serializeProgressFacts(baseSha, headSha, partitions, empty, profile), 'utf8');
+    const remaining = budget - envelopeBytes;
+    const worstCase = Math.floor(remaining / (count * 12));
+    if (!Number.isSafeInteger(budget) || budget < 1 || budget > MAX_PROGRESS_AGGREGATE_BYTES) throw invalidProgressCapacityAllocation('aggregate', budget, MAX_PROGRESS_AGGREGATE_BYTES);
+    if (count === 0) throw progressEvidenceTooLarge({ phase: 'aggregate', dimension: 'evidence-unit-count', observedCount: 0, supportedLimit: 1, bound: 'minimum' });
+    const minimum = profile === 'immutable-tree-v1' ? IMMUTABLE_PROGRESS_PROFILE.minimumFactLength : 1;
+    if (worstCase < minimum) throw progressEvidenceTooLarge({ phase: 'aggregate', dimension: 'minimum-fact-bytes',
+        observedCount: envelopeBytes + count * 12 * minimum, supportedLimit: budget });
+    if (profile !== 'immutable-tree-v1') return { factLimit: Math.min(600, worstCase) };
+    const factJsonBytes = Math.min(600 * 6, Math.floor(remaining / (count * 2)));
+    // Each code point costs at least one JSON byte. The receipt checks the actual encoded size.
+    return { factLimit: Math.min(600, factJsonBytes), factJsonBytes };
 }
 
-export function aggregateProgressFacts(baseSha: string, headSha: string, partitions: readonly ProgressDiffPartition[], facts: readonly (readonly ProgressFileFacts[])[], budget = MAX_PROGRESS_AGGREGATE_BYTES): string {
-    const evidence = serializeProgressFacts(baseSha, headSha, partitions, facts);
-    if (!Number.isSafeInteger(budget) || budget < 1 || budget > MAX_PROGRESS_AGGREGATE_BYTES
-        || Buffer.byteLength(evidence, 'utf8') > budget) throw progressEvidenceTooLarge();
+export function aggregateProgressFacts(baseSha: string, headSha: string, partitions: readonly ProgressDiffPartition[], facts: readonly (readonly ProgressFileFacts[])[], budget = MAX_PROGRESS_AGGREGATE_BYTES, profile?: ProgressEvidenceProfile): string {
+    const evidence = serializeProgressFacts(baseSha, headSha, partitions, facts, profile);
+    if (!Number.isSafeInteger(budget) || budget < 1 || budget > MAX_PROGRESS_AGGREGATE_BYTES) throw invalidProgressCapacityAllocation('aggregate', budget, MAX_PROGRESS_AGGREGATE_BYTES);
+    const observedCount = Buffer.byteLength(evidence, 'utf8');
+    if (observedCount > budget) throw progressEvidenceTooLarge({ phase: 'aggregate', dimension: 'aggregate-fact-bytes', observedCount, supportedLimit: budget });
     if (facts.length !== partitions.length) throw invalid();
     for (const [index, partition] of partitions.entries()) {
         // Revalidate exact assignments at the aggregation boundary too; no caller can attest a partial inventory.

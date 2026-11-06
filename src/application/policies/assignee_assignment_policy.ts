@@ -19,6 +19,10 @@ export function resolveAssigneeTarget(context: AssigneeAssignmentContext): Assig
     return { number: context.number, desiredCount: context.desiredAssigneesCount };
 }
 
+export function isValidAssigneeCount(value: unknown): value is number {
+    return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 10;
+}
+
 function isEligibleCreator(creator: string, projectMembers: readonly string[], currentMembers: readonly string[]): boolean {
     if (!creator) return false;
     const identity = creator.toLowerCase();
@@ -47,5 +51,6 @@ export function calculateRemainingAssignees(
 
 export function selectConfirmedAssignees(requestedMembers: readonly string[], assignedMembers: readonly string[]): string[] {
     const requestedIdentities = new Set(requestedMembers.map((member) => member.toLowerCase()));
-    return assignedMembers.filter((member) => requestedIdentities.has(member.toLowerCase()));
+    return [...new Map(assignedMembers.filter((member) => requestedIdentities.has(member.toLowerCase()))
+        .map(member => [member.toLowerCase(), member])).values()];
 }

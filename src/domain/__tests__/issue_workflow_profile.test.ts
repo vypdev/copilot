@@ -160,6 +160,26 @@ describe('issue workflow profile', () => {
     });
   });
 
+  it('admits actual Feature Form headings after literal Markdown examples', () => {
+    const body = [
+      '### Description of the idea or improvement',
+      '',
+      'Use `<!--` literally.',
+      '',
+      '    ```',
+      '    ### Expected impact',
+      '',
+      '### Current limitations or challenges',
+      'There is a real limitation.',
+      '',
+      '### Expected impact',
+      'There is a real impact.',
+    ].join('\n');
+    expect(classifyIssueWorkflow(['feature'], ALL_ISSUE_WORKFLOWS, {}, body)).toEqual({
+      status: 'eligible', kind: 'feature',
+    });
+  });
+
   it('rejects duplicate headings and empty required help content', () => {
     expect(classifyIssueWorkflow(
       ['help'],

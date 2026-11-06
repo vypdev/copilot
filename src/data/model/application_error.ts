@@ -1,7 +1,15 @@
+import { isBranchSyncPublicationDiagnostic, type BranchSyncPublicationDiagnostic } from '../../domain/branch_sync_publication';
+import { isBugbotReviewBlockFacts, type BugbotReviewBlockFacts } from '../../domain/bugbot/framed_review';
+import { isProgressScopeCapacityFacts, type ProgressScopeCapacityFacts } from '../../domain/progress_response_diagnostic';
+import { normalizeProgressCompletionDiagnostic, type ProgressCompletionDiagnostic } from '../../domain/progress_completion_diagnostic';
+import { isProgressInventoryDiagnostic, type ProgressInventoryDiagnostic } from '../../domain/progress_inventory_diagnostic';
+import { normalizeProgressCapacityDiagnostic, type ProgressCapacityDiagnostic } from '../../domain/progress_capacity_diagnostic';
 import { isProgressResponseDiagnosticFacts, type ProgressResponseDiagnosticFacts } from '../../domain/progress_response_diagnostic';
+import { isProgressPartitionLengthDiagnostic, type ProgressPartitionLengthDiagnostic } from '../../domain/progress_partition_length_failure';
 import { isProgressBinaryEvidenceFacts, type ProgressBinaryEvidenceFacts } from '../../domain/progress_binary_evidence_diagnostic';
 import { isIssueWorkflowDiagnostic, type IssueWorkflowDiagnosticFacts } from '../../domain/issue_workflow_diagnostic';
 import { isChangeSizeReconciliationFacts, type ChangeSizeReconciliationFacts } from '../../domain/change_size_reconciliation';
+import { isIssueAssignmentDiagnostic, type IssueAssignmentDiagnostic } from '../../domain/issue_assignment_diagnostic';
 import { COPILOT_COMMAND_VALIDATION_REASONS, isCopilotCommandValidationReason, isValidCopilotCommandValidation, type CopilotCommandValidationReason } from '../../domain/copilot_command_validation';
 import type { CopilotCommandName } from '../../domain/copilot_command';
 import { CLOSED_ISSUE_RESULTS, CLOSED_ISSUE_PHASES, CLOSED_ISSUE_REASONS, type ClosedIssueReconciliationFacts } from '../../domain/closed_issue_reconciliation';
@@ -10,6 +18,8 @@ import { APPROVAL_EVIDENCE_PERMISSIONS, APPROVAL_EVIDENCE_REASONS, type Approval
 import { BRANCH_SYNC_VALIDATION_CODES, type BranchSyncValidationCode } from '../../domain/branch_sync_validation';
 import { isBranchSyncVerificationFailure, type BranchSyncVerificationFailure } from '../../domain/verification_failure';
 import { isBranchSyncCatalogDiagnostic, type BranchSyncCatalogDiagnostic } from '../../domain/branch_sync_catalog_diagnostic';
+import { isSddSourceContextDiagnostic, type SddSourceContextDiagnostic } from '../../domain/agent_source_snapshot';
+import { isSddDraftMinimumDiagnostic, type SddDraftMinimumDiagnostic } from '../../domain/sdd_validation_diagnostic';
 
 export type ApplicationErrorKind =
     | 'configuration'
@@ -59,10 +69,14 @@ export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'branch-sync-resolution-invalid',
     'branch-sync-verification-failed',
     'branch-sync-catalog-incompatible',
+    'branch-sync-workflow-write-required',
+    'branch-sync-publication-failed',
     'sdd-draft-size-exceeded',
+    'sdd-draft-response-too-short',
     'sdd-catalog-unsupported-profile',
     'sdd-catalog-format-invalid',
     'sdd-catalog-missing-trusted-source',
+    'sdd-source-context-unavailable',
     'sdd-draft-format-invalid',
     'sdd-draft-case-identity-invalid',
     'sdd-draft-case-budget-invalid',
@@ -74,9 +88,18 @@ export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'closed-issue-reconciliation-failed',
     'approval-evidence-read-failed',
     'change-size-reconciliation-failed',
+    'issue-assignment-failed',
+    'issue-assignment-count-invalid',
     'issue-workflow-admission-blocked',
     'progress-binary-evidence-unavailable',
+    'progress-inventory-incomplete',
+    'progress-evidence-capacity-exceeded',
+    'bugbot-review-incomplete',
     'progress-result-contract-invalid',
+    'progress-partition-length-invalid',
+    'progress-assessment-capacity-exceeded',
+    'progress-scope-clause-limit',
+    'progress-completion-recovery-exhausted',
     'stored-configuration-schema-missing',
     'stored-configuration-schema-unsupported',
     'stored-configuration-invalid',
@@ -92,9 +115,18 @@ interface ApplicationErrorRecoveryVariables extends Readonly<Record<CopilotComma
     readonly 'closed-issue-reconciliation-failed': ClosedIssueReconciliationFacts;
     readonly 'approval-evidence-read-failed': ApprovalEvidenceDiagnostic;
     readonly 'change-size-reconciliation-failed': ChangeSizeReconciliationFacts;
+    readonly 'issue-assignment-failed': IssueAssignmentDiagnostic;
+    readonly 'issue-assignment-count-invalid': Readonly<Record<string, never>>;
     readonly 'issue-workflow-admission-blocked': IssueWorkflowDiagnosticFacts;
     readonly 'progress-binary-evidence-unavailable': ProgressBinaryEvidenceFacts;
+    readonly 'progress-inventory-incomplete': ProgressInventoryDiagnostic;
+    readonly 'progress-evidence-capacity-exceeded': ProgressCapacityDiagnostic;
+    readonly 'bugbot-review-incomplete': BugbotReviewBlockFacts;
     readonly 'progress-result-contract-invalid': ProgressResponseDiagnosticFacts;
+    readonly 'progress-partition-length-invalid': ProgressPartitionLengthDiagnostic;
+    readonly 'progress-assessment-capacity-exceeded': ProgressResponseDiagnosticFacts;
+    readonly 'progress-scope-clause-limit': ProgressScopeCapacityFacts;
+    readonly 'progress-completion-recovery-exhausted': ProgressCompletionDiagnostic;
 
     readonly 'pull-request-link-restored': Readonly<Record<string, never>>;
     readonly 'pull-request-link-base-retained': Readonly<Record<string, never>>;
@@ -108,10 +140,14 @@ interface ApplicationErrorRecoveryVariables extends Readonly<Record<CopilotComma
     readonly 'branch-sync-resolution-invalid': Readonly<{ validationCode: BranchSyncValidationCode; command: '/copilot sync-branch' }>;
     readonly 'branch-sync-verification-failed': BranchSyncVerificationFailure;
     readonly 'branch-sync-catalog-incompatible': BranchSyncCatalogDiagnostic & Readonly<{ abort: 'completed' | 'unverified' }>;
+    readonly 'branch-sync-workflow-write-required': BranchSyncPublicationDiagnostic;
+    readonly 'branch-sync-publication-failed': BranchSyncPublicationDiagnostic;
     readonly 'sdd-draft-size-exceeded': Readonly<Record<string, never>>;
+    readonly 'sdd-draft-response-too-short': SddDraftMinimumDiagnostic;
     readonly 'sdd-catalog-unsupported-profile': Readonly<Record<string, never>>;
     readonly 'sdd-catalog-format-invalid': Readonly<Record<string, never>>;
     readonly 'sdd-catalog-missing-trusted-source': Readonly<Record<string, never>>;
+    readonly 'sdd-source-context-unavailable': SddSourceContextDiagnostic;
     readonly 'sdd-draft-format-invalid': Readonly<Record<string, never>>;
     readonly 'sdd-draft-case-identity-invalid': Readonly<Record<string, never>>;
     readonly 'sdd-draft-case-budget-invalid': Readonly<Record<string, never>>;
@@ -234,7 +270,7 @@ export const APPLICATION_ERROR_METADATA: Readonly<Record<ApplicationErrorCode, A
     'validation.evidence-too-large': {
         kind: 'validation', retryable: false,
         impact: 'Progress could not be assessed within the fixed evidence limits.',
-        action: 'Inspect the complete comparison and reported capacity. Supported multipart recovery continues automatically. If interrupted, rerun the current managed source; an identical over-limit comparison cannot gain capacity.',
+        action: 'Inspect the complete comparison and available capacity facts. Bounded multipart continuation is invocation-local; this capacity failure stops the attempt. Retrying unchanged over-limit evidence cannot increase capacity. Preserve complete acceptance and evidence, and report unsupported workloads with the run link.',
         retainedState: 'Existing progress labels and published assessments were preserved.',
     },
     'workflow.invalid-event': {
@@ -340,6 +376,14 @@ export class ApplicationError extends Error {
         this.action = metadata.action;
         this.retainedState = options.recovery?.id === 'change-size-reconciliation-failed'
             ? 'Completed effects were retained; the failed and later size operations remain unverified.'
+            : options.recovery?.id === 'issue-assignment-failed'
+            ? 'Verified assignments and independently completed effects were retained; the failed assignment operation remains unverified.'
+            : options.recovery?.id === 'issue-assignment-count-invalid'
+            ? 'No assignment operation was attempted; independently completed lifecycle effects were retained.'
+            : options.recovery?.id === 'sdd-draft-response-too-short'
+            ? 'Existing answers, selected ownership and published specifications were retained; this attempt published no specification or branch.'
+            : options.recovery?.id === 'progress-evidence-capacity-exceeded'
+            ? 'Existing progress labels and assessments were preserved. No partial progress was published; independent completed workflow effects remain in their own results.'
             : options.recovery?.id === 'deployment-publication-context-missing'
             ? PRESERVED_STATE
             : metadata.retainedState;
@@ -385,6 +429,8 @@ const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readon
     'approval-evidence-read-failed': Object.freeze(['operation', 'reason', 'permission']),
     'issue-workflow-admission-blocked': Object.freeze(['kind', 'reason', 'fields']),
     'change-size-reconciliation-failed': Object.freeze(['operation', 'issueNumber', 'targetNumber', 'projectIndex', 'verifiedOperations', 'pendingProjectSizes', 'providerStatus', 'providerReference']),
+    'issue-assignment-failed': Object.freeze(['targetNumber', 'desiredCount', 'stage', 'operation', 'providerStatus', 'assigneeRead', 'observedAssignees', 'confirmedAssignments', 'remainingAssignments', 'mutation']),
+    'issue-assignment-count-invalid': Object.freeze([]),
 
     'pull-request-link-restored': Object.freeze([]),
     'pull-request-link-base-retained': Object.freeze([]),
@@ -398,10 +444,14 @@ const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readon
     'branch-sync-resolution-invalid': Object.freeze(['validationCode', 'command']),
     'branch-sync-verification-failed': Object.freeze(['stage', 'reason', 'command', 'commandIndex', 'childSha', 'restoration']),
     'branch-sync-catalog-incompatible': Object.freeze(['phase', 'profile', 'field', 'capabilityNumber', 'abort']),
+    'branch-sync-workflow-write-required': Object.freeze(['reason', 'remoteState', 'originalSha', 'candidateSha', 'observedSha', 'pushAttempted']),
+    'branch-sync-publication-failed': Object.freeze(['reason', 'remoteState', 'originalSha', 'candidateSha', 'observedSha', 'pushAttempted']),
     'sdd-draft-size-exceeded': Object.freeze([]),
+    'sdd-draft-response-too-short': Object.freeze(['minimum', 'observed', 'attempts']),
     'sdd-catalog-unsupported-profile': Object.freeze([]),
     'sdd-catalog-format-invalid': Object.freeze([]),
     'sdd-catalog-missing-trusted-source': Object.freeze([]),
+    'sdd-source-context-unavailable': Object.freeze(['sourceCommit', 'phase', 'reason']),
     'sdd-draft-format-invalid': Object.freeze([]),
     'sdd-draft-case-identity-invalid': Object.freeze([]),
     'sdd-draft-case-budget-invalid': Object.freeze([]),
@@ -409,7 +459,14 @@ const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readon
     'sdd-draft-repository-path-invalid': Object.freeze([]),
 
     'progress-binary-evidence-unavailable': Object.freeze(['paths', 'pathCount']),
+    'progress-inventory-incomplete': Object.freeze(['profile', 'reason', 'observedCount', 'supportedLimit', 'countKind', 'paths']),
+    'progress-evidence-capacity-exceeded': Object.freeze(['phase', 'dimension', 'unit', 'bound', 'observedCount', 'supportedLimit', 'countKind', 'context']),
+    'bugbot-review-incomplete': Object.freeze(['profile', 'countKind', 'resource', 'observed', 'limit', 'unit']),
     'progress-result-contract-invalid': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
+    'progress-partition-length-invalid': Object.freeze(['partitionId', 'filePath', 'unitId', 'field', 'maximum', 'observed']),
+    'progress-assessment-capacity-exceeded': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
+    'progress-scope-clause-limit': Object.freeze(['clauseKind', 'observed', 'limit', 'sourceLineId']),
+    'progress-completion-recovery-exhausted': Object.freeze(['reportedProgress', 'requirementCount', 'supportedCount', 'missingCount', 'unknownCount']),
     'deployment-publication-context-missing': Object.freeze([]),
     'workspace-changes-rejected': Object.freeze([]),
 });
@@ -427,6 +484,18 @@ function normalizeApplicationErrorRecovery(
     if (actualKeys.length !== expectedKeys.length
         || actualKeys.some((key, index) => key !== expectedKeys[index])) {
         throw new TypeError(`Application error recovery variables are invalid for ${recovery.id}.`);
+    }
+    if (recovery.id === 'progress-completion-recovery-exhausted') {
+        return Object.freeze({ id: recovery.id, variables: normalizeProgressCompletionDiagnostic(variables) });
+    }
+    if (recovery.id === 'progress-evidence-capacity-exceeded') {
+        return Object.freeze({ id: recovery.id, variables: normalizeProgressCapacityDiagnostic(variables) });
+    }
+    if (recovery.id === 'sdd-source-context-unavailable' && !isSddSourceContextDiagnostic(variables)) {
+        throw new TypeError('SDD source context diagnostic is invalid.');
+    }
+    if (recovery.id === 'sdd-draft-response-too-short' && !isSddDraftMinimumDiagnostic(variables)) {
+        throw new TypeError('SDD minimum response diagnostic is invalid.');
     }
     if (isCopilotCommandValidationReason(recovery.id)
         && !isValidCopilotCommandValidation(recovery.id, variables.command)) {
@@ -468,6 +537,12 @@ function normalizeApplicationErrorRecovery(
     if (recovery.id === 'branch-sync-verification-failed' && !isBranchSyncVerificationFailure(variables)) {
         throw new TypeError('Branch synchronization verification diagnostic is invalid.');
     }
+    if (recovery.id === 'branch-sync-workflow-write-required' || recovery.id === 'branch-sync-publication-failed') {
+        if (!isBranchSyncPublicationDiagnostic(variables) || variables.remoteState === 'published'
+            || (recovery.id === 'branch-sync-workflow-write-required') !== (variables.reason === 'workflow-write-required')) {
+            throw new TypeError('Branch synchronization publication diagnostic is invalid.');
+        }
+    }
     if (recovery.id === 'branch-sync-catalog-incompatible') {
         const { abort, ...diagnostic } = variables;
         if (!isBranchSyncCatalogDiagnostic(diagnostic) || !['completed', 'unverified'].includes(String(abort))) {
@@ -488,11 +563,22 @@ function normalizeApplicationErrorRecovery(
             || APPROVAL_EVIDENCE_PERMISSIONS[variables.operation as keyof typeof APPROVAL_EVIDENCE_PERMISSIONS] !== variables.permission)) {
         throw new TypeError('Approval evidence diagnostic is invalid.');
     }
+    if (recovery.id === 'progress-assessment-capacity-exceeded'
+        && (!isProgressResponseDiagnosticFacts(variables) || variables.phase !== 'assessment' || variables.reason !== 'assessment-text-limit')) {
+        throw new TypeError('Progress assessment capacity diagnostic is invalid.');
+    }
+    if (recovery.id === 'progress-scope-clause-limit' && !isProgressScopeCapacityFacts(variables)) throw new TypeError('Progress scope capacity diagnostic is invalid.');
     if (recovery.id === 'progress-result-contract-invalid' && !isProgressResponseDiagnosticFacts(variables)) throw new TypeError('Progress response diagnostic is invalid.');
+    if (recovery.id === 'progress-partition-length-invalid' && !isProgressPartitionLengthDiagnostic(variables)) throw new TypeError('Progress part length diagnostic is invalid.');
+    if (recovery.id === 'bugbot-review-incomplete' && !isBugbotReviewBlockFacts(variables)) throw new TypeError('Bugbot review diagnostic is invalid.');
+    if (recovery.id === 'progress-inventory-incomplete' && !isProgressInventoryDiagnostic(variables)) throw new TypeError('Progress inventory diagnostic is invalid.');
     if (recovery.id === 'progress-binary-evidence-unavailable' && !isProgressBinaryEvidenceFacts(variables)) throw new TypeError('Progress binary evidence diagnostic is invalid.');
     if (recovery.id === 'issue-workflow-admission-blocked' && !isIssueWorkflowDiagnostic(variables)) throw new TypeError('Issue admission diagnostic is invalid.');
     if (recovery.id === 'change-size-reconciliation-failed' && !isChangeSizeReconciliationFacts(variables)) {
         throw new TypeError('Change size reconciliation diagnostic is invalid.');
+    }
+    if (recovery.id === 'issue-assignment-failed' && !isIssueAssignmentDiagnostic(variables)) {
+        throw new TypeError('Issue assignment diagnostic is invalid.');
     }
     return Object.freeze({
         id: recovery.id,

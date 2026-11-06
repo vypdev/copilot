@@ -34,7 +34,7 @@ export function buildBugbotReviewInput(
     param: BugbotReviewOperationContext,
     context: BugbotContext,
     assignment?: BugbotPromptPartitionAssignment,
-): { readonly prompt: string; readonly hasLiteralWitnesses: boolean } {
+): { readonly prompt: string; readonly hasLiteralWitnesses: boolean; readonly requiresCandidateVerification: boolean } {
     const headBranch = param.target.headBranch || 'unknown';
     const baseBranch = param.target.baseBranch;
     const previousBlock = !assignment || assignment.partition.ownsResolution
@@ -63,7 +63,13 @@ export function buildBugbotReviewInput(
     });
 
     const literalEvidence = assignment ? undefined : legacyPythonWitnesses(changes);
+    const diffBlock = assignment?.partition.block ?? [context.reviewDiffBlock, literalEvidence?.block].filter(Boolean).join('\n\n');
+    const reviewedFiles = assignment?.partition.files ?? changes.map(change => change.filename);
+    const hasLiteralWitnesses = assignment ? assignment.partition.hasPythonLiteralWitnesses === true : literalEvidence!.hasWitnesses;
+    const requiresCandidateVerification = hasLiteralWitnesses || (diffBlock.length > 0 && reviewedFiles.some(path => /\.py$/iu.test(path)));
     const prompt = getBugbotPrompt({
+        reviewContextProfile: assignment?.partition.framed ? 'framed-v1' : undefined,
+        pythonSyntaxProfile: [...changes.map(change => change.filename), ...(assignment?.partition.files ?? [])].some(path => /\.py$/iu.test(path)) ? 'python' : '',
         projectContextInstruction: 'Read code (respect ignores), README/docs and rules/conventions (.cursor/rules, CONTRIBUTING, guidelines).',
         owner: param.repository.owner,
         repo: param.repository.name,
@@ -80,7 +86,7 @@ export function buildBugbotReviewInput(
         ignoreBlock,
         coverageBlock: buildCoverageBlock(context, assignment?.partition),
         previousBlock,
-        diffBlock: assignment?.partition.block ?? [context.reviewDiffBlock, literalEvidence?.block].filter(Boolean).join('\n\n'),
+        diffBlock,
         reviewConversationBlock: context.reviewConversationBlock,
         rulesBlock: context.reviewRulesBlock,
         effortBlock: `**Review effort:** ${resolvedEffort}. ${resolvedEffort === 'high' ? 'Perform deeper cross-file and adversarial analysis.' : resolvedEffort === 'low' ? 'Prioritize high-signal changed-code defects and avoid speculative breadth.' : 'Balance depth/latency; limit false positives.'}`,
@@ -90,7 +96,7 @@ export function buildBugbotReviewInput(
             ? param.locale.pullRequest
             : param.locale.issue ?? param.locale.pullRequest,
     });
-    return { prompt, hasLiteralWitnesses: assignment ? assignment.partition.hasPythonLiteralWitnesses === true : literalEvidence!.hasWitnesses };
+    return { prompt, hasLiteralWitnesses, requiresCandidateVerification };
 }
 
 function legacyPythonWitnesses(changes: readonly { readonly filename: string; readonly patch?: string | null }[]): { readonly block: string; readonly hasWitnesses: boolean } {
@@ -122,7 +128,7 @@ function buildCoverageBlock(
                 `retained=${source.itemsRetained}`,
                 ...(source.omittedItems > 0 ? [`omitted=${source.omittedItems}`] : []),
                 ...(source.truncatedItems > 0 ? [`truncated=${source.truncatedItems}`] : []),
-                ...(source.providerLimitReached ? ['provider page limit reached; additional older records are uncounted'] : []),
+                ...(source.providerLimitReached ? ['provider page limit reached'] : []),
             ];
             return `- ${source.source}: ${details.join(', ')}`;
         });
@@ -178,6 +184,14 @@ function buildChangeScopeInstruction(
 function buildPartitionInstruction(partition: BugbotReviewDiffPartition): string {
     return [
         '**Partition integrity contract:**',
+        ...(partition.framed ? [
+            `- Return reviewed_base_sha exactly as ${partition.framed.baseSha}.`,
+            `- Return review_manifest_digest exactly as ${partition.framed.manifestDigest}.`,
+            `- Return review_frame_id exactly as ${partition.framed.frameId}.`,
+            `- Return review_coverage_digest exactly as ${partition.framed.coverageDigest}.`,
+            `- Return reviewed_fragment_ids exactly as this ordered JSON array: ${JSON.stringify(partition.framed.fragmentIds)}.`,
+            '- Do not substitute a prior invocation, another frame or a partial fragment set.',
+        ] : []),
         `- Return partition_id exactly as \`${partition.id}\`.`,
         `- Return reviewed_head_sha exactly as \`${partition.headSha}\`.`,
         `- This is partition ${partition.ordinal}/${partition.total} with ${partition.fragmentCount} assigned ${partition.fragmentCount === 1 ? 'fragment' : 'fragments'}.`,
@@ -189,7 +203,7 @@ function buildPartitionInstruction(partition: BugbotReviewDiffPartition): string
 }
 
 function buildPartitionOutputContract(partition: BugbotReviewDiffPartition): string {
-    return `**Output:** Return a JSON object with "outputLocale", "partition_id" (exactly "${partition.id}"), "reviewed_head_sha" (exactly "${partition.headSha}"), "findings" (new/current problems from this assigned partition), and "resolved_findings" (objects containing an exact retained prior finding id and either "fixed" or "obsolete"). Always return both arrays.${partition.ownsResolution ? ' Never resolve an id that was not included in the previous-findings list.' : ' Return an empty resolved_findings array because this partition is not the resolution owner.'}`;
+    return `${partition.framed ? '**Framed output:** Include all five exact source/coverage fields required by the partition integrity contract. ' : ''}**Output:** Return a JSON object with "outputLocale", "partition_id" (exactly "${partition.id}"), "reviewed_head_sha" (exactly "${partition.headSha}"), "findings" (new/current problems from this assigned partition), and "resolved_findings" (objects containing an exact retained prior finding id and either "fixed" or "obsolete"). Always return both arrays.${partition.ownsResolution ? ' Never resolve an id that was not included in the previous-findings list.' : ' Return an empty resolved_findings array because this partition is not the resolution owner.'}`;
 }
 
 function normalizedObjectId(value: unknown): string | undefined {

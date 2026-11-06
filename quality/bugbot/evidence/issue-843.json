@@ -1,0 +1,241 @@
+{
+  "schemaVersion": 1,
+  "issue": 843,
+  "base": "6ff1eebd0485d68c1198fc96ad6bd430b8a03b23",
+  "kind": "deterministic prompt delivery; no live model",
+  "limitations": [
+    "Synthetic bodies of reported lengths; not historical consumer source text or exact omitted source IDs.",
+    "The after transport fixture plans source assignments; separate integration tests verify real immutable Git and fake receipt responses.",
+    "No claim about model reasoning, consumer execution, personal author endorsement, or automatic approval."
+  ],
+  "before": [
+    {
+      "name": "eight-length-controlled-PR15",
+      "inputLengths": [
+        4355,
+        2250,
+        5585,
+        4128,
+        6512,
+        6001,
+        1584,
+        13278
+      ],
+      "counts": {
+        "retained": 3,
+        "omitted": 5,
+        "truncated": 0
+      },
+      "promptChars": 35856,
+      "sourceTailsInActualPrompt": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true
+      ],
+      "blockSha256": "70e474d7813fda8b18d26aef107ca3a6256946e32ee9adb0a045ea62584e7066",
+      "promptSha256": "b2c8df2c851f5161d78780b0b8e38eaf4fbd53c254a52963c336177c2827f4c5"
+    },
+    {
+      "name": "single-length-controlled-PR19",
+      "inputLengths": [
+        38305
+      ],
+      "counts": {
+        "retained": 1,
+        "omitted": 0,
+        "truncated": 1
+      },
+      "promptChars": 17438,
+      "sourceTailsInActualPrompt": [
+        false
+      ],
+      "blockSha256": "c3775f877cf3f27f5a98983cac66e18a7c2f41a2bc482c5d64a12aef03feed93",
+      "promptSha256": "07bcb5243a2d7a4005e7585d0fd5edaab0ed6b4c70fac935e7c9f0251811fc80"
+    },
+    {
+      "name": "two-length-controlled-PR22",
+      "inputLengths": [
+        17718,
+        17929
+      ],
+      "counts": {
+        "retained": 1,
+        "omitted": 1,
+        "truncated": 0
+      },
+      "promptChars": 32155,
+      "sourceTailsInActualPrompt": [
+        false,
+        true
+      ],
+      "blockSha256": "6ff9191aa0473e0ea6bc099f9ff3854cf40d8a76db18c1d5faf9d9ac2992a51d",
+      "promptSha256": "a2f48fe2dc18c662894b0d19619cf169476a469189eada5185c61fd7117a3150"
+    }
+  ],
+  "after": [
+    {
+      "name": "eight-length-controlled-PR15",
+      "inputLengths": [
+        4355,
+        2250,
+        5585,
+        4128,
+        6512,
+        6001,
+        1584,
+        13278
+      ],
+      "counts": {
+        "retained": 8,
+        "omitted": 0,
+        "truncated": 0
+      },
+      "prompts": [
+        {
+          "partition": 1,
+          "nativeEnvelopeBytes": 126278,
+          "sourceTailsInActualPrompt": [
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true
+          ],
+          "allNormalizedBodiesReconstructed": [
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true
+          ],
+          "promptSha256": "5e2d0758e1b54baeff1219a36e2165ca9f2f480a50f4c3a6cc33e134ec0427a3"
+        },
+        {
+          "partition": 2,
+          "nativeEnvelopeBytes": 126207,
+          "sourceTailsInActualPrompt": [
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true
+          ],
+          "allNormalizedBodiesReconstructed": [
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true
+          ],
+          "promptSha256": "f52230d896db3d84369a95f3b471b66e802a3c9c2263be3798fbf22bddccee3c"
+        }
+      ]
+    },
+    {
+      "name": "single-length-controlled-PR19",
+      "inputLengths": [
+        38305
+      ],
+      "counts": {
+        "retained": 1,
+        "omitted": 0,
+        "truncated": 0
+      },
+      "prompts": [
+        {
+          "partition": 1,
+          "nativeEnvelopeBytes": 116491,
+          "sourceTailsInActualPrompt": [
+            true
+          ],
+          "allNormalizedBodiesReconstructed": [
+            true
+          ],
+          "promptSha256": "288fcdbdf81750e1439f615cbce0bb256dd2ff371d15e715fe892cfe8e5717fc"
+        },
+        {
+          "partition": 2,
+          "nativeEnvelopeBytes": 116420,
+          "sourceTailsInActualPrompt": [
+            true
+          ],
+          "allNormalizedBodiesReconstructed": [
+            true
+          ],
+          "promptSha256": "cbaf4f8688dea2810c31162811ae3f9697a0cbffa43e82ced8642101b7775323"
+        }
+      ]
+    },
+    {
+      "name": "two-length-controlled-PR22",
+      "inputLengths": [
+        17718,
+        17929
+      ],
+      "counts": {
+        "retained": 2,
+        "omitted": 0,
+        "truncated": 0
+      },
+      "prompts": [
+        {
+          "partition": 1,
+          "nativeEnvelopeBytes": 114218,
+          "sourceTailsInActualPrompt": [
+            true,
+            true
+          ],
+          "allNormalizedBodiesReconstructed": [
+            true,
+            true
+          ],
+          "promptSha256": "4a53a48d1f734a0ccd7ad0c40713492ced2a46890b3b9353f4fe74ad22d1117c"
+        },
+        {
+          "partition": 2,
+          "nativeEnvelopeBytes": 114147,
+          "sourceTailsInActualPrompt": [
+            true,
+            true
+          ],
+          "allNormalizedBodiesReconstructed": [
+            true,
+            true
+          ],
+          "promptSha256": "4265b37c28162ae80aa9f0e3dac3de8b70f503662e60892b0f7d63113c86b962"
+        }
+      ]
+    }
+  ],
+  "reproduceWith": [
+    "src/application/policies/__tests__/bugbot_complete_conversation_policy.test.ts",
+    "src/application/usecases/steps/commit/__tests__/bugbot_complete_conversation.integration.test.ts",
+    "src/prompts/__tests__/bugbot_complete_conversation.test.ts"
+  ],
+  "sourceSha256": {
+    "src/application/policies/bugbot_complete_conversation_policy.ts": "c1a9c88ec3e5cc9fa587680956ab165694544e79f6fdefdbd3ea18b5c302e139",
+    "src/application/policies/bugbot_conversation_packing_policy.ts": "1f822bf95caac1b969b8309b49c41cb74aad0bbaaee4c7362b519049de7b1383",
+    "src/application/usecases/steps/commit/bugbot/bugbot_review_context.ts": "139568293fd41a6e7bf33d6c44dd034122d7364bb6152ba1815ec61157af717e",
+    "src/application/usecases/steps/commit/bugbot/load_bugbot_context_use_case.ts": "a9f2f8e8d3faacead90c1336ea2fe3bad25615ade160c3ff0ccbe3b8cddb42d8",
+    "src/application/usecases/steps/commit/bugbot/build_bugbot_prompt.ts": "8923fb557a52e87598a9252c602f74cd0597200a4b6e61c44120847ffd5c82cb",
+    "src/prompts/bugbot.ts": "cd1f462b946de67e04fdade407958d63bbd78b19d295b6e4b9e1199b96da07c5",
+    "src/prompts/fill.ts": "89b15cac94d39076b0fd61d795d844071e05458b2389e06eddccf41c45c29661"
+  }
+}

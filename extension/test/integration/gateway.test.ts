@@ -6,6 +6,9 @@ import { DEFAULT_SETTINGS } from '../../src/domain/settings.ts';
 import { BrowserCancellation } from '../../src/adapters/browser/cancellation.ts';
 import { memoryStore, sessionHarness, CONNECTED, PAGE, deferred } from '../fixtures/runtime.ts';
 import type { ReadResult } from '../../src/application/read_ports.ts';
+import { TemporaryPauseReader } from '../../src/application/temporary_pause_reader.ts';
+
+import { emptyPreferenceAdmission } from '../fixtures/page_configuration.ts';
 
 const origin = 'chrome-extension://test/';
 const extension = { id: 'test', url: `${origin}runtime.html` };
@@ -15,7 +18,7 @@ function harness() {
     const ports = { currentTab: vi.fn(async (): Promise<{ url: string; incognito: boolean; active: boolean; windowId?: number }> => ({ url: PAGE.route, incognito: false, active: true, windowId: 1 })),
         openSettings: vi.fn(async (_windowId: number) => undefined),
         cancellation: () => new BrowserCancellation(), online: () => true, notify: vi.fn() };
-    const gateway = new MessageGateway('test', origin, settings, h.service, ports);
+    const gateway = new MessageGateway('test', origin, settings, h.service, ports, undefined, undefined, undefined, new TemporaryPauseReader(memoryStore().port, async () => true), emptyPreferenceAdmission(h));
     const connect = () => gateway.handle({ version: 1, method: 'session.connect', secret: CONNECTED.secret, repository: CONNECTED.repository }, extension);
     return { ...h, local, settings, ports, gateway, connect };
 }
@@ -27,7 +30,7 @@ it('github-browser-extension-runtime-C25/github-browser-extension-runtime-C26 re
     expect(h.reader.read).not.toHaveBeenCalled(); expect(h.local.port.get).not.toHaveBeenCalled();
 });
 it('github-browser-extension-runtime-C17 manages only exact extension connection/settings/disconnect methods with no secret in returned values', async () => {
-    const h = harness(); expect(await h.gateway.handle({ version: 1, method: 'settings.read' }, sender)).toMatchObject({ state: 'ready' });
+    const h = harness(); expect(await h.gateway.handle({ version: 1, method: 'settings.read' }, extension)).toMatchObject({ state: 'ready' });
     expect(await h.connect()).toMatchObject({ state: 'connected' });
     expect(JSON.stringify(h.local.values.get(SETTINGS_KEY))).not.toContain(CONNECTED.secret);
     expect(await h.gateway.handle({ version: 1, method: 'session.status' }, extension)).toMatchObject({ state: 'connected' });
@@ -71,7 +74,7 @@ it('github-browser-extension-runtime-C18 future settings or persistence failure 
         expect(h.service.status().state).toBe('disconnected');
     }
     const h = harness(); vi.mocked(h.local.port.get).mockRejectedValue(new Error('private'));
-    expect(await h.gateway.handle({ version: 1, method: 'settings.read' }, sender)).toMatchObject({ state: 'unavailable' });
+    expect(await h.gateway.handle({ version: 1, method: 'settings.read' }, extension)).toMatchObject({ state: 'unavailable' });
 });
 it('github-browser-extension-runtime-C23 bounds per-tab leases and refuses unbounded sender fanout', async () => {
     const h = harness();
