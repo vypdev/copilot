@@ -1,5 +1,7 @@
 import type { ConnectionOutcome } from './named_sessions.ts';
 import { workspaceReviewChanges } from './workspace_review.ts';
+import { validProfileSelection, type ProfileSelection } from './center_profiles.ts';
+import { profileChanges } from './profile_change.ts';
 import type { CenterClientView } from './center_client_view.ts';
 import type { CenterLocation } from './center_routes.ts';
 import type { CenterReview, ReviewChange } from './center_review.ts';
@@ -46,11 +48,32 @@ export function settingsReviewChanges(before: unknown, after: unknown, copy: Cen
         : typeof value === 'string' && path.join('/') === 'center/onboarding' && Object.hasOwn(welcome.steps, value) ? welcome.steps[value as keyof typeof welcome.steps]
             : typeof value === 'string' && localized.has(path[path.length - 1]) && Object.hasOwn(fields, value) ? fields[value]
                 : typeof value === 'object' && value !== null ? copy.messages.inherit : String(value);
+    const profileSelection = (value: unknown): ProfileSelection | null => {
+        if (!record(value) || !record(value.center)) return null;
+        const selection = { profiles: value.center.profiles, selected: value.center.selected };
+        return validProfileSelection(selection) ? selection : null;
+    };
+    const previous = profileSelection(before); const incoming = profileSelection(after);
+    let profileRows: ReviewChange[] | null = null;
+    if (previous && incoming) {
+        profileRows = profileChanges(previous, incoming).map(row => {
+            const field = row.field.startsWith('feature:') ? `${copy.routes.features} › ${row.field.slice('feature:'.length)}` : label([row.field]);
+            return { id: `center/profiles/${row.profileId}/${row.field}`, label: `${copy.routes.profiles} › ${row.profileId} › ${field}`,
+                before: text(row.before ?? undefined, [row.field]), after: text(row.after ?? undefined, [row.field]) };
+        });
+        const retainedOrder = (left: ProfileSelection, right: ProfileSelection) => left.profiles
+            .filter(profile => right.profiles.some(candidate => candidate.id === profile.id)).map(profile => profile.id).join(', ');
+        const beforeOrder = retainedOrder(previous, incoming); const afterOrder = retainedOrder(incoming, previous);
+        if (beforeOrder !== afterOrder) profileRows.push({ id: 'center/profile-order', label: copy.routes.profiles, before: beforeOrder, after: afterOrder });
+    }
     function walk(old: unknown, next: unknown, path: readonly string[]): void {
-        if (workspace && path.join('/') === 'center/workspaces') { changes.push(...workspace); return; }
-        if (workspace && path.join('/') === 'center/selectedWorkspace') return;
+        const key = path.join('/');
+        if (workspace && key === 'center/workspaces') { changes.push(...workspace); return; }
+        if (workspace && key === 'center/selectedWorkspace') return;
+        if (profileRows && key === 'center/profiles') { changes.push(...profileRows); return; }
+        if (profileRows && key === 'center/selected') return;
         if (old === next) return;
-        if (path.join('/') === 'center/bindings') {
+        if (key === 'center/bindings') {
             const before = old as readonly CenterBinding[]; const after = next as readonly CenterBinding[];
             for (const command of CENTER_COMMANDS) {
                 const left = before.find(binding => binding.command === command)?.binding;

@@ -5,6 +5,7 @@ import { flushSync, tick } from 'svelte';
 import { ready, render, button, change, navigate, save } from '../fixtures/center_app_dom.ts';
 import { SETTINGS_KEY } from '../../src/application/settings_repository.ts';
 import { DEFAULT_SETTINGS } from '../../src/domain/settings.ts';
+import type { CenterProfile } from '../../src/domain/center_profiles.ts';
 
 it('mounts the actual localized application with all closed routes and saves a single atomic appearance preview through the native gateway', async () => {
     const h = await render(); expect(document.documentElement.lang).toBe('es'); expect(document.title).toBe('Centro de control de Copilot');
@@ -47,6 +48,21 @@ it('creates, selects and edits an actual local profile without granting a connec
     const result = await h.native.repository.read(); expect(result.settings.center.selected).toEqual(['work']);
     expect(result.settings.center.profiles).toEqual([{ id: 'work', name: 'Work', scope: { kind: 'global' }, preferences: { density: 'compact' } }]);
     expect(result.settings.repositories).toEqual({});
+});
+it('reviews only the removed profile when another selected profile shifts into its place', async () => {
+    const first: CenterProfile = { id: 'first', name: 'First profile', scope: { kind: 'global' }, preferences: { density: 'compact' } };
+    const second: CenterProfile = { id: 'second', name: 'Second profile', scope: { kind: 'host', host: 'github.com' }, preferences: {} };
+    const center = { ...DEFAULT_SETTINGS.center, profiles: [first, second], selected: ['first', 'second'] };
+    const h = await render('profiles', false, { ...DEFAULT_SETTINGS, center });
+    const removal = () => document.querySelector<HTMLButtonElement>('.cards li:first-child button:last-child');
+    await ready(() => removal()?.disabled === false); removal()!.click();
+    await ready(() => !!document.querySelector('#settings-review-heading'));
+    const review = document.querySelector('[aria-labelledby="settings-review-heading"]')!;
+    expect(review.textContent).toContain('First profile');
+    expect(review.textContent).not.toMatch(/Second profile|second/u);
+    expect((await h.native.repository.read()).settings.center).toEqual(center);
+    await save();
+    expect((await h.native.repository.read()).settings.center).toMatchObject({ profiles: [second], selected: ['second'] });
 });
 it('keeps observers read-only until an explicit native takeover', async () => {
     const h = await render('appearance', true); await ready(() => !!document.querySelector('#center-theme'));

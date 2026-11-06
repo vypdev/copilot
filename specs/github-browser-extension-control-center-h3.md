@@ -282,7 +282,10 @@ at the same exact scope. Removing a profile also removes its selection, while
 deselection retains the authored profile. Moving a selected profile into a scope
 with another selected profile is invalid until the user reviews a nonconflicting
 choice. Every preview enumerates the complete semantic delta, including removed
-overrides returning to inheritance and explicit false values. Repeating a
+overrides returning to inheritance and explicit false values. Profile and
+selection effects use the local profile identifier so a shifted list position
+cannot change which record the review describes. A change to the relative order
+of retained profiles has its own before and after row. Repeating a
 semantically unchanged choice produces no write. Planning copies validated input
 and never mutates storage; application confirmation must still bind the plan to
 the current revision. `extension/test/contracts/profile_change.test.ts` exercises
@@ -1115,7 +1118,7 @@ or human acceptance, and modified executable branches remain100% covered.
 
 The historical 160-case H3 risk baseline is a starting minimum, not the complete
 acceptance threshold. Every additive minimum below is mandatory. The cumulative
-minimum is **936 distinct H3 risk cases: 160 baseline + 776 additions**. Reaching
+minimum is **939 distinct H3 risk cases: 160 baseline + 779 additions**. Reaching
 160 alone cannot satisfy H3. The original 56 CENTER catalog cases, the 56-case
 implementation inventory above and the full 803-case product catalog remain
 separately required; their execution does not offset an additive minimum.
@@ -1159,7 +1162,8 @@ separately required; their execution does not offset an additive minimum.
 | Session provenance locale fallback | 1 | `session_preference_provenance.test.ts` requires the complete English explanation when an unsupported locale matches an inherited key |
 | Concurrent protected revocation | 3 | New connection admission during one removal, overlapping removals and active revocation failure in `named_session_revocation.test.ts` |
 | Optional identity verification isolation | 2 | Independent scheduled read and cache witness survive retirement, and the optional response leaves no retained ETag |
-| **Total** | **936** | **160 + 776; every row is required** |
+| Profile identity in reviews | 3 | Mounted removal with a retained neighbor, mixed import changes and independent list order |
+| **Total** | **939** | **160 + 779; every row is required** |
 
 The companion session-preferences specification also requires its 160 scoped
 cases. H3 acceptance requires both the owning milestone ledger and the scoped
