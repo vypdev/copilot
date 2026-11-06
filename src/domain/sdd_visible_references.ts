@@ -1,4 +1,10 @@
 import { Parser } from 'commonmark';
+import { projectMarkdownVisibility } from './markdown_visibility';
+
+/** Excludes examples and hidden records from the contract. */
+export function visibleSddContract(source: string): string {
+  return projectMarkdownVisibility(source).structural.join('\n');
+}
 
 export type SddReferencePart = Readonly<{ kind: 'text' | 'code'; value: string }>;
 export interface SddVisibleReferences {

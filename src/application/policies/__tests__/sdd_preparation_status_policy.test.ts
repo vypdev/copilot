@@ -108,7 +108,9 @@ describe('safe SDD blocked/recovered presentation', () => {
     expect(() => renderSddPreparationFailure({ issueNumber: 42, error: failure(), diagnostic: { ...diagnostic(), raw: 'PRIVATE' } as never })).toThrow();
     expect(() => renderSddPreparationFailure({ issueNumber: 42, error: failure(), attempts: 3 as never })).toThrow();
     expect(() => new SddDraftPreparationFailure(diagnostic(), 3 as never)).toThrow();
-    expect(() => new SddDraftPreparationFailure(diagnostic(), 1)).toThrow();
+    const rejectedBeforeRepair = new SddDraftPreparationFailure(diagnostic(), 1);
+    expect(rejectedBeforeRepair.attempts).toBe(1);
+    expect(rejectedBeforeRepair.message).not.toContain('after one bounded repair');
     expect(JSON.stringify(failure())).not.toMatch(/PRIVATE|markdown|prompt/u);
     expect(new SddDraftPreparationFailure({ reason: 'response-shape', phase: 'response',
       facts: [{ detail: 'response-shape', section: 0 }] }, 1).recovery).toBeUndefined();

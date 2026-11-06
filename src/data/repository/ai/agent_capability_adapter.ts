@@ -29,6 +29,7 @@ export abstract class AgentCapabilityAdapter {
         mapCliOutput: (output: string) => T;
         outputSchema?: Record<string, unknown>;
         sourceSnapshot?: AgentSourceSnapshot;
+        signal?: AbortSignal;
     }): Promise<T | undefined> {
         const taskConfiguration = getValidatedAgentConfiguration(request.configuration, request.capability);
         let output: string;
@@ -38,6 +39,7 @@ export abstract class AgentCapabilityAdapter {
             prompt: applyAgentEffortInstruction(request.prompt, taskConfiguration.effort),
             timeoutMs: AGENT_REQUEST_TIMEOUT_MS,
             capability: request.capability,
+            ...(request.signal ? { signal: request.signal } : {}),
             ...(request.outputSchema ? { outputSchema: request.outputSchema } : {}),
             ...(request.sourceSnapshot ? { sourceSnapshot: request.sourceSnapshot } : {}),
             });

@@ -70,6 +70,7 @@ describe('shared capability repository bindings', () => {
       issueNumber: 8,
       branchManagementEmoji: '🌿',
       labelFacts: labels,
+      preserveIssueTitle: true,
     });
     await port.updatePullRequestTitle({
       pullRequestTitle: 'Pull request',
@@ -81,7 +82,7 @@ describe('shared capability repository bindings', () => {
 
     expect(getTitle).toHaveBeenCalledWith('acme', 'demo', 8, 'secret');
     expect(updateTitleIssueFormat).toHaveBeenCalledWith(
-      'acme', 'demo', '1.0.0', 'Issue', 8, '🌿', labels, 'secret',
+      'acme', 'demo', '1.0.0', 'Issue', 8, '🌿', labels, 'secret', true,
     );
     expect(updateTitlePullRequestFormat).toHaveBeenCalledWith(
       'acme', 'demo', 'Pull request', 'Issue', 8, 9, '', labels, 'secret',

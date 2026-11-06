@@ -1,21 +1,23 @@
+import { requireSddCapacity, sddBytes, SDD_RESOURCES } from './sdd_resource_budget';
 import type { SddValidationFact } from './sdd_validation_diagnostic';
 import { SddDraftFormatFailure } from './pre_branch_sdd';
 import { appendSddReferenceContext, buildSddReferenceIndex, hasBlockedSddAncestor, isKnownSddRepositoryReference, isSddFileRole, isSafeSddRepositoryPath as safePath,
-  isSddNonFileNotation, sddReferencePrefix, type SddRepositoryInventory } from './sdd_repository_reference';
+  isSddNonFileNotation, sddReferencePrefix, type SddReferenceIndex, type SddRepositoryInventory } from './sdd_repository_reference';
 export type { SddRepositoryInventory } from './sdd_repository_reference';
-import { readSddVisibleReferences } from './sdd_visible_references';
+import { readSddVisibleReferences, visibleSddContract } from './sdd_visible_references';
 import { countSddShorthandCaseReferences } from './sdd_case_reference';
+import { SDD_REQUIREMENT_ID, SDD_REQUIREMENT_ID_INSTRUCTIONS, validateSddRequirementReservations,
+  type SddRequirementReservations } from './sdd_requirement_identity';
 
 export type SddConsistencyReason = 'case-identity' | 'case-budget' | 'requirement-mapping' | 'repository-path';
 export interface SddOwnerDocument { readonly path: string; readonly markdown: string }
 
 const CASE = /\b(?:[A-Za-z][A-Za-z0-9]*-)+C\d+\b/gu;
 const CASE_ID = /^(?:[A-Za-z][A-Za-z0-9]*-)+C\d+$/u;
-const REQUIREMENT_ID = /^[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)+$/u;
 
 /** Generated candidates use visible tables; retained legacy owners are never reformatted. */
 export const SDD_CONSISTENCY_PROMPT = `Consistency contract for the final assembled proposed draft/appendix (not the retained owner):
-In section 4 include one table: Requirement | Behavior. Give every goal a stable hyphenated requirement ID, such as G-01. Its alphabetic prefix must have at least one hyphen-separated alphanumeric segment; unseparated G1 and G01 are invalid.
+In section 4 include one table: Requirement | Behavior. Give every goal a stable requirement ID. ${SDD_REQUIREMENT_ID_INSTRUCTIONS}
 In section 14 include one budget table: Area | Minimum distinct cases | Behaviors/risks covered; positive integers and one Total.
 Also in section 14 include one inventory table: Case ID | Area | Requirements | Scenario.
 Each row is one distinct executable case with a fully qualified ID: one or more hyphen-separated namespace segments of letters/digits, each starting with a letter, followed by -C and decimal digits, such as capability-change-C01. Keep that exact case-ID grammar in both drafts and repairs. Each row has one exact budget area, comma-separated requirement IDs and an observable scenario. Never use shorthand C01, ranges or redefine an ID found in any owning SDD. Reference retained baseline cases in prose using their full IDs; count only the new inventory. Ordinary technical designators in prose, scenario text or non-case columns are not acceptance-case references solely because they resemble short IDs; preserve their original terminology. Case-reference fields, explicit references and adjacent case-ID lists still require full identities.
@@ -39,33 +41,6 @@ function assertRequirementsCovered(counts: readonly number[]): void {
   const missing = counts.filter(count => count === 0).length;
   if (missing) fail('requirement-mapping', { detail: 'requirement-coverage', section: 17, expected: 0, observed: missing },
     [{ detail: 'requirement-coverage', section: 4, row: counts.indexOf(0) + 1, expected: 1, observed: 0 }]);
-}
-
-/** Excludes examples and hidden records from the contract. */
-function visible(source: string): string {
-  let fence: string | undefined;
-  let comment = false;
-  return source.replace(/\r\n/gu, '\n').split('\n').map(line => {
-    const boundary = /^\s*(`{3,}|~{3,})/u.exec(line);
-    if (fence) {
-      // Comment syntax inside code is literal; only the original line can close it.
-      if (boundary && boundary[1][0] === fence[0] && boundary[1].length >= fence.length
-        && /^ {0,3}(?:`+|~+)[ \t]*$/u.test(line)) fence = undefined;
-      return '';
-    }
-    if (!comment && boundary) { fence = boundary[1]; return ''; }
-    let result = '';
-    let offset = 0;
-    while (offset < line.length) {
-      const marker = comment ? '-->' : '<!--';
-      const next = line.indexOf(marker, offset);
-      if (next < 0) return result + (comment ? '' : line.slice(offset));
-      if (!comment) result += line.slice(offset, next) + ' ';
-      offset = next + marker.length;
-      comment = !comment;
-    }
-    return result;
-  }).join('\n');
 }
 
 function clean(value: string): string { return value.trim().replace(/^(?:\*\*|__|`)(.*?)(?:\*\*|__|`)$/u, '$1').trim(); }
@@ -115,7 +90,7 @@ export function renderSddNavigation(markdown: string, publicationPath: string): 
   const prefix = /\{\{\s*SDD_FILE_NAVIGATION\b/iu;
   if (!prefix.test(markdown)) return markdown;
   if (!safePath(publicationPath) || markdown.split(slot).length !== 2) fail('repository-path', { detail: 'path-link', section: 0 });
-  const source = visible(markdown);
+  const source = visibleSddContract(markdown);
   const placed = section(source, 15, 'repository-path').split('\n').filter(line => {
     if (/^(?: {4}| {0,3}\t)/u.test(line)) return false;
     const index = line.indexOf(slot);
@@ -145,7 +120,7 @@ export function renderSddFileLinks(markdown: string, publicationPath: string): s
   const pattern = /\{\{SDD_FILE_LINK:([^{}\r\n`]*)\}\}/gu;
   const tokens = [...markdown.matchAll(pattern)];
   if (!tokens.length) fail('repository-path', { detail: 'path-link', section: 0 });
-  const declared = new Set(table(visible(markdown), 15, ['Path', 'Change'], 'repository-path').map(row => row[0]));
+  const declared = new Set(table(visibleSddContract(markdown), 15, ['Path', 'Change'], 'repository-path').map(row => row[0]));
   let cursor = 0, result = '';
   for (const token of tokens) {
     const target = token[1], begin = token.index, end = begin + token[0].length;
@@ -187,10 +162,28 @@ function sddFileDestination(target: string, publicationPath: string): string {
   } catch { return fail('repository-path', { detail: 'path-link', section: 0 }); }
 }
 
+/** Check the canonical graph before prose generation and use it again for exact publication. */
+export function sddRequirementCaseEdges(requirementIds: readonly string[], cases: readonly (readonly string[])[]): ReadonlyMap<string, ReadonlySet<string>> {
+  const edges = new Map(requirementIds.map(id => [id, new Set<string>()]));
+  let edgeCount = 0, traceBytes = 0;
+  for (const [index, [id, , links]] of cases.entries()) {
+    const linkedRequirements = ids(links, SDD_REQUIREMENT_ID, 'requirement-mapping', 14);
+    requireSddCapacity('assembly', 'edges', SDD_RESOURCES.edges, edgeCount += linkedRequirements.length);
+    requireSddCapacity('assembly', 'bytes', SDD_RESOURCES.artifactBytes, traceBytes += (sddBytes(id) + 2) * linkedRequirements.length);
+    for (const requirement of linkedRequirements) {
+      const linked = edges.get(requirement);
+      if (!linked) fail('requirement-mapping', { detail: 'requirement-reference', section: 14, row: index + 1, expected: 0, observed: 1 });
+      linked.add(id);
+    }
+  }
+  assertRequirementsCovered([...edges.values()].map(links => links.size));
+  return edges;
+}
+
 /** Never repairs definitions or contradictory supplied tables; the writer independently revalidates. */
 export function renderSddDerivedTables(markdown: string): string {
   if (!markdown.includes(BUDGET_SLOT) && !markdown.includes(TRACEABILITY_SLOT)) return markdown;
-  const source = visible(markdown);
+  const source = visibleSddContract(markdown);
   let normalized = markdown;
   for (const [slot, number, reason] of [
     [BUDGET_SLOT, 14, 'case-budget'], [TRACEABILITY_SLOT, 17, 'requirement-mapping'],
@@ -203,40 +196,66 @@ export function renderSddDerivedTables(markdown: string): string {
     normalized = normalized.replace(wrapped, slot);
   }
   const requirements = table(source, 4, ['Requirement', 'Behavior'], 'requirement-mapping').map(row => row[0]);
-  uniqueIdentifiers(requirements, REQUIREMENT_ID, 'requirement-mapping', 4);
+  uniqueIdentifiers(requirements, SDD_REQUIREMENT_ID, 'requirement-mapping', 4);
   const cases = table(source, 14, ['Case ID', 'Area', 'Requirements', 'Scenario'], 'case-identity');
+  requireSddCapacity('assembly', 'rows', SDD_RESOURCES.rows, cases.length + requirements.length);
   const caseIds = cases.map(row => row[0]);
   uniqueIdentifiers(caseIds, CASE_ID, 'case-identity', 14);
   const counts = new Map<string, number>();
-  const edges = new Map(requirements.map(id => [id, [] as string[]]));
-  for (const [index, [id, area, links]] of cases.entries()) {
+  for (const [, area] of cases) {
     if (area === 'Total') fail('case-budget', { detail: 'budget-area', section: 14 });
     counts.set(area, (counts.get(area) ?? 0) + 1);
-    for (const requirement of ids(links, REQUIREMENT_ID, 'requirement-mapping', 14)) {
-      const linked = edges.get(requirement);
-      if (!linked) fail('requirement-mapping', { detail: 'requirement-reference', section: 14, row: index + 1, expected: 0, observed: 1 });
-      linked.push(id);
-    }
   }
-  assertRequirementsCovered([...edges.values()].map(links => links.length));
+  const edges = sddRequirementCaseEdges(requirements, cases);
   const budget = ['| Area | Minimum distinct cases | Behaviors/risks covered |', '|---|---:|---|',
     ...[...counts].map(([area, count]) => `| ${area} | ${count} | Observable scenarios in the case inventory. |`),
     `| Total | ${cases.length} | Distinct inventory cases; repeated executions do not add cases. |`].join('\n');
   const traceability = ['| Requirement | Cases |', '|---|---|',
-    ...[...edges].map(([requirement, links]) => `| ${requirement} | ${links.join(', ')} |`)].join('\n');
+    ...[...edges].map(([requirement, links]) => `| ${requirement} | ${[...links].join(', ')} |`)].join('\n');
   return normalized.replace(BUDGET_SLOT, () => budget).replace(TRACEABILITY_SLOT, () => traceability);
+}
+
+/** Read canonical definitions from immutable owners, including previously appended sections. */
+export function reservedSddRequirements(documents: readonly SddOwnerDocument[]): SddRequirementReservations {
+  requireSddCapacity('owner', 'bytes', SDD_RESOURCES.sourceBytes, documents.reduce((total, doc) => total + sddBytes(doc.markdown), 0));
+  const definitions = new Map<string, Set<string>>();
+  let count = 0;
+  for (const doc of documents) {
+    const lines = visibleSddContract(doc.markdown).split('\n');
+    for (let index = 0; index + 1 < lines.length; index++) {
+      const cells = (line: string) => line.trim().replace(/^\||\|$/gu, '').split('|').map(clean);
+      const header = cells(lines[index]);
+      if (!/^\s*\|/u.test(lines[index]) || header.length !== 2 || header[0] !== 'Requirement' || header[1] !== 'Behavior') continue;
+      const separator = cells(lines[index + 1]);
+      if (separator.length !== 2 || !separator.every(cell => /^:?-{3,}:?$/u.test(cell))) continue;
+      index += 2;
+      while (index < lines.length && /^\s*\|/u.test(lines[index])) {
+        const row = cells(lines[index++]);
+        if (row.length !== 2 || !SDD_REQUIREMENT_ID.test(row[0]) || !row[1]) continue;
+        requireSddCapacity('owner', 'identities', SDD_RESOURCES.ownerIdentities, ++count);
+        const meanings = definitions.get(row[0]) ?? new Set<string>();
+        meanings.add(row[1]);
+        definitions.set(row[0], meanings);
+      }
+      index--;
+    }
+  }
+  return definitions;
 }
 
 export function reservedSddCaseIds(documents: readonly SddOwnerDocument[]): string[] {
   const reserved = new Set<string>();
+  requireSddCapacity('owner', 'bytes', SDD_RESOURCES.sourceBytes, documents.reduce((total, doc) => total + sddBytes(doc.markdown), 0));
+  let expansions = 0;
   for (const document of documents) {
-    const source = visible(document.markdown);
+    const source = visibleSddContract(document.markdown);
     const qualified = source.match(CASE) ?? [];
     const namespaces = new Set(qualified.map(id => id.slice(0, id.lastIndexOf('-C') + 2)));
     for (const id of qualified) reserved.add(id);
     // Legacy inventories often qualify C01 and abbreviate the remaining rows.
     // Reserve every plausible namespace instead of silently assigning an alias a new meaning.
     for (const match of source.matchAll(/(?<![\w-])C(\d+)\b/gu)) {
+      requireSddCapacity('owner', 'identities', SDD_RESOURCES.ownerIdentities, expansions += namespaces.size);
       for (const namespace of namespaces) reserved.add(`${namespace}${match[1]}`);
     }
     for (const match of source.matchAll(/\bC(\d+)\s*[-–—]\s*C?(\d+)\b/gu)) {
@@ -245,11 +264,13 @@ export function reservedSddCaseIds(documents: readonly SddOwnerDocument[]): stri
       if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || end < start || end - start > 1000) {
         throw new Error('An owning SDD case range cannot be reconciled within the fixed bound; review the baseline before retrying.');
       }
+      requireSddCapacity('owner', 'identities', SDD_RESOURCES.ownerIdentities, expansions += (end - start + 1) * namespaces.size);
       for (let number = start; number <= end; number++) {
         for (const namespace of namespaces) reserved.add(`${namespace}${String(number).padStart(match[1].length, '0')}`);
       }
     }
   }
+  requireSddCapacity('owner', 'identities', SDD_RESOURCES.ownerIdentities, reserved.size);
   return [...reserved].sort();
 }
 
@@ -259,7 +280,7 @@ export function suppliedSddCaseIds(inputs: readonly string[], owners: readonly S
   const supplied = new Set<string>();
   const add = (id: string) => { if (CASE_ID.test(id) && !reserved.has(id)) supplied.add(id); };
   for (const input of inputs) {
-    const lines = visible(input).split('\n');
+    const lines = visibleSddContract(input).split('\n');
     for (let index = 0; index < lines.length; index++) {
       const line = lines[index];
       // Quoted and indented examples are not operative definitions.
@@ -290,9 +311,18 @@ export function suppliedSddCaseIds(inputs: readonly string[], owners: readonly S
 /** References and renamed aliases cannot stand in for supplied inventory definitions. */
 export function validateSuppliedSddCaseIds(markdown: string, supplied: readonly string[]): void {
   if (!supplied.length) return;
-  const defined = new Set(table(visible(markdown), 14, ['Case ID', 'Area', 'Requirements', 'Scenario'], 'case-identity').map(row => row[0]));
+  const defined = new Set(table(visibleSddContract(markdown), 14, ['Case ID', 'Area', 'Requirements', 'Scenario'], 'case-identity').map(row => row[0]));
   const observed = supplied.filter(id => defined.has(id)).length;
   if (observed !== supplied.length) fail('case-identity', { detail: 'case-identity', section: 14, expected: supplied.length, observed });
+}
+
+/** Also checks a prose unit before assembly, so the owning unit can be repaired once. */
+export function validateSddCaseReferences(source: string, defined: ReadonlySet<string>, reserved: ReadonlySet<string>): void {
+  const shorthand = countSddShorthandCaseReferences(source);
+  if (shorthand) fail('case-identity', { detail: 'case-shorthand', section: 0, expected: 0, observed: shorthand });
+  for (const [id] of source.matchAll(CASE)) {
+    if (!defined.has(id) && !reserved.has(id)) fail('case-identity', { detail: 'case-reference', section: 0 });
+  }
 }
 
 export function validateSddDraftConsistency(
@@ -301,19 +331,20 @@ export function validateSddDraftConsistency(
   inventory: SddRepositoryInventory,
   sddPath: string,
 ): void {
-  const source = visible(markdown);
+  const source = visibleSddContract(markdown);
   const requirements = table(source, 4, ['Requirement', 'Behavior'], 'requirement-mapping');
   const requirementIds = requirements.map(row => row[0]);
-  uniqueIdentifiers(requirementIds, REQUIREMENT_ID, 'requirement-mapping', 4);
+  uniqueIdentifiers(requirementIds, SDD_REQUIREMENT_ID, 'requirement-mapping', 4);
+  validateSddRequirementReservations(requirements, reservedSddRequirements(owners));
   const cases = table(source, 14, ['Case ID', 'Area', 'Requirements', 'Scenario'], 'case-identity');
+  requireSddCapacity('assembly', 'rows', SDD_RESOURCES.rows, cases.length + requirements.length);
   const caseIds = cases.map(row => row[0]);
   const reserved = new Set(reservedSddCaseIds(owners));
   uniqueIdentifiers(caseIds, CASE_ID, 'case-identity', 14);
-  const shorthand = countSddShorthandCaseReferences(source);
-  if (shorthand) fail('case-identity', { detail: 'case-shorthand', section: 0, expected: 0, observed: shorthand });
-  if (caseIds.some(id => reserved.has(id))) fail('case-identity', { detail: 'case-reserved', section: 14, expected: 0, observed: caseIds.filter(id => reserved.has(id)).length });
+  const collisions = caseIds.filter(id => reserved.has(id)).length;
+  if (collisions) fail('case-identity', { detail: 'case-reserved', section: 14, expected: 0, observed: collisions });
   // References to existing owner cases are allowed, but cannot count as newly defined cases.
-  if ([...source.matchAll(CASE)].some(([id]) => !caseIds.includes(id) && !reserved.has(id))) fail('case-identity', { detail: 'case-reference', section: 0 });
+  validateSddCaseReferences(source, new Set(caseIds), reserved);
 
   const budget = table(source, 14, ['Area', 'Minimum distinct cases', 'Behaviors/risks covered'], 'case-budget');
   const counts = new Map<string, number>();
@@ -329,19 +360,19 @@ export function validateSddDraftConsistency(
   if (total !== caseIds.length) fail('case-budget', { detail: 'budget-total', section: 14, expected: caseIds.length, ...(total !== undefined && total <= 100_000 ? { observed: total } : {}) });
   const sum = [...counts.values()].reduce((value, count) => value + count, 0);
   if (sum !== total) fail('case-budget', { detail: 'budget-total', section: 14, expected: total, ...(sum <= 100_000 ? { observed: sum } : {}) });
-  const unknownAreas = cases.filter(row => !counts.has(row[1])).length;
-  if (unknownAreas) fail('case-budget', { detail: 'budget-area', section: 14, expected: 0, observed: unknownAreas });
-  for (const [area, count] of counts) if (cases.filter(row => row[1] === area).length !== count) fail('case-budget', { detail: 'budget-distribution', section: 14, expected: count, observed: cases.filter(row => row[1] === area).length });
-
-  const edges = new Map(requirementIds.map(id => [id, new Set<string>()]));
-  for (const [index, [id, , links]] of cases.entries()) {
-    for (const requirement of ids(links, REQUIREMENT_ID, 'requirement-mapping', 14)) {
-      const linked = edges.get(requirement);
-      if (!linked) fail('requirement-mapping', { detail: 'requirement-reference', section: 14, row: index + 1, expected: 0, observed: 1 });
-      linked.add(id);
-    }
+  const observedCounts = new Map<string, number>();
+  let unknownAreas = 0;
+  for (const [, area] of cases) {
+    if (counts.has(area)) observedCounts.set(area, (observedCounts.get(area) ?? 0) + 1);
+    else unknownAreas++;
   }
-  assertRequirementsCovered([...edges.values()].map(links => links.size));
+  if (unknownAreas) fail('case-budget', { detail: 'budget-area', section: 14, expected: 0, observed: unknownAreas });
+  for (const [area, count] of counts) {
+    const observed = observedCounts.get(area) ?? 0;
+    if (observed !== count) fail('case-budget', { detail: 'budget-distribution', section: 14, expected: count, observed });
+  }
+
+  const edges = sddRequirementCaseEdges(requirementIds, cases);
   const traceability = table(source, 17, ['Requirement', 'Cases'], 'requirement-mapping');
   const seen = new Set<string>();
   for (const [requirement, links] of traceability) {
@@ -349,7 +380,12 @@ export function validateSddDraftConsistency(
     const actual = ids(links, CASE_ID, 'requirement-mapping', 17);
     if (!expected || seen.has(requirement)) fail('requirement-mapping', { detail: 'traceability-requirement', section: 17, row: seen.size + 1, expected: 0, observed: 1 });
     if (expected.size !== actual.length) fail('requirement-mapping', { detail: 'traceability-links', section: 17, row: seen.size + 1, expected: expected.size, observed: actual.length });
-    const mismatch = [...expected].filter(id => !actual.includes(id)).length + actual.filter(id => !expected.has(id)).length;
+    let mismatch = 0;
+    for (const id of actual) {
+      if (!expected.has(id)) mismatch++;
+    }
+    // The validated sets have equal cardinality, so each unexpected edge also displaces an expected edge.
+    mismatch *= 2;
     if (mismatch) fail('requirement-mapping', { detail: 'traceability-membership', section: 17, row: seen.size + 1, expected: 0, observed: mismatch });
     seen.add(requirement);
   }
@@ -375,14 +411,19 @@ function validatePaths(source: string, inventory: SddRepositoryInventory, sddPat
       proposed.add(file);
     } else if (!['update', 'reference'].includes(change) || !inventory.files.has(file)) fail('repository-path', { detail: 'path-operation', section: 15, row: seen.size });
   }
-  const referenceIndex = buildSddReferenceIndex(inventory, proposed);
-  // CommonMark replaces NUL with U+FFFD. Never let that normalization establish
-  // another repository identity from unsafe visible source spelling.
-  if (source.includes('\0')) fail('repository-path', { detail: 'path-reference', section: 0 }, [{ detail: 'path-reference-unsafe', section: 0 }]);
   // These exact two-cell rows have already received strict declaration checks.
   // Do not reinterpret their file identities as prose suffixes or Markdown links.
   const referenceSource = source.split('\n').map(line => declarationRows.has(line) ? ' '.repeat(line.length) : line).join('\n');
-  const references = readSddVisibleReferences(referenceSource);
+  validateSddRepositoryReferences(referenceSource, sddPath, buildSddReferenceIndex(inventory, proposed));
+}
+
+/** Check visible unit or document references using the selected Git tree and proposed paths. */
+export function validateSddRepositoryReferences(source: string, sddPath: string, referenceIndex: SddReferenceIndex): void {
+  const { inventory, proposed } = referenceIndex;
+  // CommonMark replaces NUL with U+FFFD. Never let that normalization establish
+  // another repository identity from unsafe visible source spelling.
+  if (source.includes('\0')) fail('repository-path', { detail: 'path-reference', section: 0 }, [{ detail: 'path-reference-unsafe', section: 0 }]);
+  const references = readSddVisibleReferences(source);
   type Origin = 'path-inline-reference' | 'path-prose-reference' | 'path-link-reference';
   const reject = (origin: Origin, ordinal: number, detail: 'path-reference-unsafe' | 'path-reference-blocked' | 'path-reference-missing' | 'path-reference-directory') =>
     fail('repository-path', { detail: 'path-reference', section: 0 },
