@@ -16,7 +16,8 @@ export class BrowserPauseTargets {
             const url = new URL(tab.url);
             if (url.origin !== 'https://github.com' || url.username || url.password) return null;
             const source = url.origin + url.pathname; const page = pageIdentity(source);
-            const label = page?.repository ? `${page.repository}${page.number === null ? '' : ` · #${page.number}`}` : null;
+            // Safari's generated background page can misdecode raw non-ASCII characters.
+            const label = page?.repository ? `${page.repository}${page.number === null ? '' : ` \u00b7 #${page.number}`}` : null;
             return deepFreeze({ tabId, source, label: label && label.length <= 240 ? label : null });
         } catch { return null; }
     }

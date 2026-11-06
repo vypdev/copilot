@@ -26,6 +26,8 @@ it('bexh1-foundation-C23 builds actual declared target assets whose content entr
     await validateArtifactSet(path.join(temporary, 'first'));
     expect(first.evidence).toBe('development-build-only');
     expect(first.sourceRevision).toMatch(/^[a-f0-9]{40}$/u);
+    const safariBackground = await readFile(path.join(temporary, 'first/safari/background.js'), 'utf8');
+    expect(Buffer.byteLength(safariBackground)).toBe(safariBackground.length);
     for (const target of TARGETS) {
         const files = await readTarget(path.join(temporary, 'first', target));
         expect([...files.keys()].sort()).toEqual([...new Set(['background.js', 'content.js', 'manifest.json', 'runtime.css', 'runtime.html', 'runtime.js',
