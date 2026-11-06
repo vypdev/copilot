@@ -40,7 +40,7 @@ export type StagedRolloutHoldReason = typeof STAGED_ROLLOUT_HOLD_REASONS[number]
 type StagedRolloutDecision =
     | { readonly kind: 'ordinary' }
     | { readonly kind: 'held'; readonly reason: StagedRolloutHoldReason }
-    | { readonly kind: 'candidate'; readonly headSha: string; readonly reviewId: string; readonly author: string };
+    | { readonly kind: 'candidate'; readonly headSha: string; readonly reviewId: string; readonly author: string; readonly locale: string };
 
 export function isStagedRolloutDeclaration(body: string): boolean {
     return /^Copilot-Stage-Rollout\b/iu.test(body.trimStart());
@@ -76,5 +76,5 @@ export function decideStagedRollout(
         || githubUsersMatch(review.author.login, scope.botLogin)) {
         return { kind: 'held', reason: 'unauthorized' };
     }
-    return { kind: 'candidate', headSha, reviewId: review.id, author: review.author.login };
+    return { kind: 'candidate', headSha, reviewId: review.id, author: review.author.login, locale: scope.locale };
 }

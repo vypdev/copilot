@@ -61639,7 +61639,7 @@ class RetireProgressUseCase {
                     && marker.identity.target.number === context.issueNumber && marker.identity.key === 'work'
                     ? (0, retired_progress_presentation_policy_1.buildRetiredProgressComment)(comment.body, context.locale, initial.reason)
                     : (0, staged_rollout_presentation_policy_1.retireStagedRolloutCard)(comment.body, context.issueNumber, context.locale, initial.reason);
-                return body === undefined ? [] : [{ card: comment, body }];
+                return body === undefined ? [] : [{ commentId: comment.id, originalBody: comment.body, body }];
             });
             remaining = Math.min(cards.length, 3000);
             if (cards.length > 20)
@@ -61650,11 +61650,11 @@ class RetireProgressUseCase {
                 if (!nativeClosed || fresh.reason !== initial.reason || fresh.deploymentCompletion === 'pending')
                     throw stale();
             };
-            for (const { card, body } of cards) {
+            for (const { commentId, originalBody, body } of cards) {
                 const verified = await (0, verify_closed_issue_card_retirement_1.verifyClosedIssueCardRetirement)({ issueNumber: context.issueNumber,
-                    commentId: card.id, author: context.trustedBotLogin, originalBody: card.body ?? '', finalBody: body,
+                    commentId, author: context.trustedBotLogin, originalBody, finalBody: body,
                     freshness: this.cardFreshness, verifyClosed, onUpdated: () => { retired++; }, phase: value => { phase = value; },
-                    update: () => this.comments.updateComment(context.issueNumber, card.id, body) });
+                    update: () => this.comments.updateComment(context.issueNumber, commentId, body) });
                 superseded || (superseded = verified.superseded);
                 remaining--;
             }
@@ -78336,8 +78336,7 @@ async function reconcileStagedRolloutAfterMerge(request, ports, read, removeLabe
     catch {
         return result({ state: 'held', reason: 'evidence-unavailable' });
     }
-    const { headSha, reviewId } = decision;
-    const locale = scope?.locale ?? 'en-US';
+    const { headSha, reviewId, locale } = decision;
     const projection = {
         kind: 'staged-rollout', pullNumber,
         repositoryUrl: ports.publicationTarget.repositoryUrl,
@@ -104939,7 +104938,7 @@ function decideStagedRollout(evidence, scope, issueNumber) {
         || (0, github_user_policy_1.githubUsersMatch)(review.author.login, scope.botLogin)) {
         return { kind: 'held', reason: 'unauthorized' };
     }
-    return { kind: 'candidate', headSha, reviewId: review.id, author: review.author.login };
+    return { kind: 'candidate', headSha, reviewId: review.id, author: review.author.login, locale: scope.locale };
 }
 
 

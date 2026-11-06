@@ -7,9 +7,11 @@ import { reconcileStatusCard } from '../steps/common/status_card_publication_wor
 import { replyRequestBodyDigest } from '../../../domain/reply_request_digest';
 import type { NativeIssueCompletionFacts } from '../../../domain/issue_completion';
 import { DEFAULT_COPILOT_LIFECYCLE_LABELS } from '../../../domain/copilot_lifecycle';
-import { StagedRolloutReviewRepository } from '../../../data/repository/pull_request/staged_rollout_review_repository';
+import { StagedRolloutReviewRepository, type StagedRolloutGitHubClient } from '../../../data/repository/pull_request/staged_rollout_review_repository';
 import type { IssueCommentPublicationTarget } from '../../ports/issue_lifecycle_ports';
 import { buildActionSummary } from '../../policies/action_summary_policy';
+import { Result } from '../../../data/model/result';
+import { STAGED_ROLLOUT_RESULT } from '../../policies/staged_rollout_presentation_policy';
 import { parsePublicationMarker } from '../../policies/publication_identity_policy';
 
 const owner = 'vypdev';
@@ -22,6 +24,7 @@ const pullNumber = 108;
 const completedLabels = { lifecycle: DEFAULT_COPILOT_LIFECYCLE_LABELS, protectedLabels: ['chore', 'branched'] };
 const mergedAt = '2026-10-27T00:05:06Z';
 const botLogin = 'vypbot';
+type PermissionResponse = ReturnType<StagedRolloutGitHubClient['rest']['repos']['getCollaboratorPermissionLevel']>;
 
 const review = () => ({
     body: 'Copilot-Stage-Rollout: #85', fullDatabaseId: '5660051354', state: 'COMMENTED',
@@ -29,7 +32,7 @@ const review = () => ({
     commit: { oid: headSha }, author: { login: 'efraespada', __typename: 'User' },
 });
 
-function fixture() {
+function fixture(locale = 'en-US') {
     const issue = {
         number: issueNumber,
         state: 'open' as NativeIssueCompletionFacts['state'],
@@ -81,7 +84,9 @@ function fixture() {
     };
     const page = () => ({ repository: { ...repo, defaultBranchRef: { name: 'master' }, pullRequest: pull } });
     const graphql = jest.fn(async (_query: string, _variables?: Record<string, unknown>): Promise<unknown> => page());
-    const permission = jest.fn(async () => ({ data: { role_name: 'admin', user: { login: 'efraespada', type: 'User' } } }));
+    const permission = jest.fn(
+        async (): PermissionResponse => ({ data: { role_name: 'admin', user: { login: 'efraespada', type: 'User' } } }),
+    );
     const reviews = new StagedRolloutReviewRepository({
         graphql: async <T>(query: string, variables?: Record<string, unknown>) => await graphql(query, variables) as T,
         rest: { repos: { getCollaboratorPermissionLevel: permission } },
@@ -94,11 +99,11 @@ function fixture() {
         timeline.some(comment => comment.id === witness.commentId && comment.user?.login === witness.author
             && replyRequestBodyDigest(comment.body ?? '') === witness.bodyDigest),
     });
-    const nativeContext = { issueNumber, locale: 'en-US', trustedBotLogin: botLogin, completionLabels: completedLabels };
+    const nativeContext = { issueNumber, locale, trustedBotLogin: botLogin, completionLabels: completedLabels };
     const issueClosed = new ReconcileClosedIssueUseCase(new ReconcileClosedIssueMetadataUseCase({ forIssue }), retire);
     const closeContext = {
         issueNumber, pullRequestNumber: pullNumber, completionLabels: completedLabels,
-        stagedRollout: { headSha, botLogin, branchTypes: ['feature', 'bugfix', 'docs', 'chore'], integrationBranch: 'develop', locale: 'en-US' },
+        stagedRollout: { headSha, botLogin, branchTypes: ['feature', 'bugfix', 'docs', 'chore'], integrationBranch: 'develop', locale },
     };
     const merge = () => runPullRequestWorkflow({
         action: 'closed', closed: true, merged: true, opened: false, synchronize: false,
@@ -158,6 +163,7 @@ describe('staged rollout through the merged pull request workflow', () => {
         expect(summary).toContain('The PR merged and acceptance remains in the issue');
         expect(summary).toContain('Re-run failed jobs for this workflow run');
         expect(summary).not.toContain('PRIVATE_PROVIDER_TEXT');
+        expect(f.summary(results, 'es-ES')).toContain('Vuelve a ejecutar los jobs fallidos de esta ejecución.');
     });
 
     it('rollout-I735-C04 adopts the existing card after a lost create response', async () => {
@@ -208,6 +214,7 @@ describe('staged rollout through the merged pull request workflow', () => {
             expect(results[0]).toMatchObject({ success: true, errors: [], payload: { state: 'held', reason: 'invalid-declaration' } });
             expect(f.summary(results)).toContain('Review the open issue and record acceptance there before closing it.');
             expect(f.summary(results)).not.toContain('Re-run failed jobs');
+            expect(f.summary(results, 'es-ES')).toContain('Revisa la issue abierta y registra allí la aceptación');
             expect(f.close).not.toHaveBeenCalled();
             expect(f.addLabel).not.toHaveBeenCalled();
             expect(f.comments.addComment).not.toHaveBeenCalled();
@@ -221,21 +228,25 @@ describe('staged rollout through the merged pull request workflow', () => {
         expect(f.permission).not.toHaveBeenCalled();
     });
 
-    it.each(['write role', 'application bot', 'authenticated automation account'])('rollout-I735-C08 rejects %s', async scenario => {
+    it.each(['write role', 'application bot', 'authenticated automation account', 'missing permission user', 'missing permission login', 'wrong permission user'])('rollout-I735-C08 rejects %s', async scenario => {
         const f = fixture();
         if (scenario === 'write role') f.permission.mockResolvedValueOnce({ data: { role_name: 'write', user: { login: 'efraespada', type: 'User' } } });
+        if (scenario === 'missing permission user') f.permission.mockResolvedValueOnce({ data: { role_name: 'admin' } });
+        if (scenario === 'missing permission login') f.permission.mockResolvedValueOnce({ data: { role_name: 'admin', user: { type: 'User' } } });
+        if (scenario === 'wrong permission user') f.permission.mockResolvedValueOnce({ data: { role_name: 'admin', user: { login: 'other-user', type: 'User' } } });
         if (scenario === 'application bot') f.pull.reviews.nodes[0].author.__typename = 'Bot';
         if (scenario === 'authenticated automation account') f.pull.reviews.nodes[0].author.login = botLogin;
         expect((await f.merge())[0].payload).toMatchObject({ state: 'held', reason: 'unauthorized' });
         expect(f.issue.state).toBe('open');
     });
 
-    it.each(['commit', 'event-head', 'late', 'edited', 'dismissed', 'pending'] as const)(
+    it.each(['commit', 'no commit', 'event-head', 'late', 'edited', 'dismissed', 'pending'] as const)(
         'rollout-I735-C09 rejects invalid native review evidence (%s)',
         async scenario => {
             const f = fixture();
             const current = f.pull.reviews.nodes[0];
             if (scenario === 'commit') current.commit.oid = 'b'.repeat(40);
+            if (scenario === 'no commit') Object.assign(current, { commit: null });
             if (scenario === 'event-head') f.closeContext.stagedRollout.headSha = 'b'.repeat(40);
             if (scenario === 'late') current.submittedAt = mergedAt;
             if (scenario === 'edited') current.lastEditedAt = '2026-10-26T23:42:00Z';
@@ -298,9 +309,10 @@ describe('staged rollout through the merged pull request workflow', () => {
         expect(f.timeline).toHaveLength(1);
     });
 
-    it.each(['fork', 'default', 'other-base', 'release', 'closing-keyword', 'inline-keyword'])('rollout-I735-C14 holds unsupported %s scope', async scenario => {
+    it.each(['fork', 'deleted fork', 'default', 'other-base', 'release', 'closing-keyword', 'inline-keyword'])('rollout-I735-C14 holds unsupported %s scope', async scenario => {
         const f = fixture();
         if (scenario === 'fork') f.pull.headRepository = { nameWithOwner: 'someone/vaultstadio' };
+        if (scenario === 'deleted fork') Object.assign(f.pull, { headRepository: null });
         if (scenario === 'default') f.pull.baseRefName = 'master';
         if (scenario === 'other-base') f.pull.baseRefName = 'unrelated';
         if (scenario === 'release') f.pull.headRefName = 'release/85-release';
@@ -391,6 +403,7 @@ describe('staged rollout through the merged pull request workflow', () => {
         const results = await f.merge();
         expect(results[0]).toMatchObject({ success: false, payload: { state: 'held', reason: 'evidence-unavailable' } });
         expect(f.summary(results)).toContain('Restore access to the evidence and re-run failed jobs');
+        expect(f.summary(results, 'es-ES')).toContain('Restaura el acceso a la evidencia y vuelve a ejecutar los jobs fallidos');
         expect(f.close).not.toHaveBeenCalled();
     });
 
@@ -410,4 +423,101 @@ describe('staged rollout through the merged pull request workflow', () => {
         expect((await f.merge())[0].payload).toMatchObject({ state: 'held', reason: 'evidence-unavailable' });
         expect(f.close).not.toHaveBeenCalled();
     });
+    it('keeps Spanish rollout guidance and archives it in the issue locale', async () => {
+        const f = fixture('es-ES');
+        await f.merge();
+        expect(f.timeline[0].body).toContain('## Rollout pendiente');
+        expect(f.timeline[0].body).toContain('Evidencia de la declaración');
+        expect(f.timeline[0].body).toContain('Completa la lista de aceptación');
+        f.issue.state = 'closed';
+        f.issue.reason = 'completed';
+        await f.nativeClose();
+        expect(f.timeline[0].body).toContain('## Rollout archivado');
+        expect(f.timeline[0].body).toContain('Seguimiento antes del cierre');
+        expect(f.timeline[0].body).toContain('La lista de aceptación y la evidencia siguen en la conversación.');
+    });
+
+    it('ignores comments with missing ownership or a malformed rollout key', async () => {
+        const f = fixture();
+        await f.merge();
+        const body = f.timeline[0].body!;
+        f.timeline[0].user = undefined;
+        f.add(body.replace('key="pr:108"', 'key="pr:0"'));
+        f.pull.reviews.nodes = [];
+        await f.merge();
+        expect(f.issue.state).toBe('closed');
+        expect(f.comments.updateComment).not.toHaveBeenCalled();
+    });
+
+    it('keeps the issue open when the saved card has no verifiable author', async () => {
+        const f = fixture();
+        f.comments.listIssueComments.mockResolvedValueOnce([])
+            .mockImplementationOnce(async () => [...f.timeline])
+            .mockImplementationOnce(async () => f.timeline.map(comment => ({ id: comment.id, body: comment.body })));
+        expect((await f.merge())[0].payload).toMatchObject({ state: 'registration-failed' });
+        expect(f.issue.state).toBe('open');
+        expect(f.close).not.toHaveBeenCalled();
+    });
+
+    it('preserves native completion when the issue closes after card verification', async () => {
+        const f = fixture();
+        f.labels.add('100%');
+        f.comments.listIssueComments.mockResolvedValueOnce([])
+            .mockImplementationOnce(async () => [...f.timeline])
+            .mockImplementationOnce(async () => {
+                f.issue.state = 'closed';
+                f.issue.reason = 'completed';
+                return [...f.timeline];
+            });
+        expect((await f.merge())[0].payload).toMatchObject({ state: 'registration-failed' });
+        expect(f.close).not.toHaveBeenCalled();
+        expect(f.labels.has('100%')).toBe(true);
+    });
+
+    it('uses ordinary completion for a merge without a bot identity or declaration', async () => {
+        const f = fixture();
+        Object.assign(f.closeContext.stagedRollout, { botLogin: undefined });
+        f.pull.reviews.nodes = [];
+        await f.merge();
+        expect(f.close).toHaveBeenCalledTimes(1);
+        expect(f.comments.addComment).not.toHaveBeenCalled();
+    });
+
+    it.each(['foreign repository', 'missing review node', 'changed PR between pages', 'too many review pages'])(
+        'keeps the issue open with incomplete provider evidence (%s)',
+        async scenario => {
+            const f = fixture();
+            if (scenario === 'foreign repository') {
+                f.graphql.mockResolvedValueOnce({ repository: { ...f.page().repository, nameWithOwner: 'someone/vaultstadio' } });
+            }
+            if (scenario === 'missing review node') Object.assign(f.pull.reviews, { nodes: [null] });
+            if (scenario === 'changed PR between pages') {
+                f.graphql.mockResolvedValueOnce({ repository: { ...f.page().repository, pullRequest: {
+                    ...f.pull, headRefOid: 'b'.repeat(40), reviews: { nodes: [], pageInfo: { hasNextPage: true, endCursor: 'next-page' } },
+                } } });
+            }
+            if (scenario === 'too many review pages') {
+                let page = 0;
+                f.graphql.mockImplementation(async () => ({ repository: { ...f.page().repository, pullRequest: {
+                    ...f.pull, reviews: { nodes: [], pageInfo: { hasNextPage: true, endCursor: `page-${++page}` } },
+                } } }));
+            }
+            expect((await f.merge())[0]).toMatchObject({ success: false, payload: { state: 'held', reason: 'evidence-unavailable' } });
+            expect(f.close).not.toHaveBeenCalled();
+            if (scenario === 'too many review pages') expect(f.graphql).toHaveBeenCalledTimes(10);
+        },
+    );
+
+    it('omits summary rows with unverified target or outcome data', () => {
+        const f = fixture();
+        const result = (payload: unknown) => new Result({ id: STAGED_ROLLOUT_RESULT, success: true, payload });
+        const summary = f.summary([
+            result({ issueNumber: 0, pullNumber, state: 'pending' }),
+            result({ issueNumber, pullNumber: 0, state: 'pending' }),
+            result({ issueNumber, pullNumber, state: 'held', reason: 'unrecognized-reason' }),
+        ]);
+        expect(summary).not.toContain('| Staged rollout |');
+        expect(summary).not.toContain('unrecognized-reason');
+    });
+
 });

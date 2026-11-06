@@ -68,8 +68,7 @@ export async function reconcileStagedRolloutAfterMerge(
         return result({ state: 'held', reason: 'evidence-unavailable' });
     }
 
-    const { headSha, reviewId } = decision;
-    const locale = scope?.locale ?? 'en-US';
+    const { headSha, reviewId, locale } = decision;
     const projection: StagedRolloutCardProjection = {
         kind: 'staged-rollout', pullNumber,
         repositoryUrl: ports.publicationTarget.repositoryUrl,

@@ -63,7 +63,7 @@ export class RetireProgressUseCase implements ParamUseCase<RetireProgressContext
           && marker.identity.target.number === context.issueNumber && marker.identity.key === 'work'
           ? buildRetiredProgressComment(comment.body, context.locale, initial.reason)
           : retireStagedRolloutCard(comment.body, context.issueNumber, context.locale, initial.reason);
-        return body === undefined ? [] : [{ card: comment, body }];
+        return body === undefined ? [] : [{ commentId: comment.id, originalBody: comment.body, body }];
       });
       remaining = Math.min(cards.length, 3_000);
       if (cards.length > 20) throw stale();
@@ -72,11 +72,11 @@ export class RetireProgressUseCase implements ParamUseCase<RetireProgressContext
         const fresh = await read();
         if (!nativeClosed || fresh.reason !== initial.reason || fresh.deploymentCompletion === 'pending') throw stale();
       };
-      for (const { card, body } of cards) {
+      for (const { commentId, originalBody, body } of cards) {
         const verified = await verifyClosedIssueCardRetirement({ issueNumber: context.issueNumber,
-          commentId: card.id, author: context.trustedBotLogin, originalBody: card.body ?? '', finalBody: body,
+          commentId, author: context.trustedBotLogin, originalBody, finalBody: body,
           freshness: this.cardFreshness, verifyClosed, onUpdated: () => { retired++; }, phase: value => { phase = value; },
-          update: () => this.comments.updateComment(context.issueNumber, card.id, body) });
+          update: () => this.comments.updateComment(context.issueNumber, commentId, body) });
         superseded ||= verified.superseded;
         remaining--;
       }
