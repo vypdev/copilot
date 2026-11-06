@@ -5,18 +5,40 @@ import type { Message } from '../domain/protocol.ts';
 import type { StoragePort } from './runtime_ports.ts';
 import type { CancellationOwner, ReadCancellation, SessionPorts } from './read_ports.ts';
 import { ReadScheduler, type ScheduledRead } from './read_scheduler.ts';
+import { SharedReadCancellation } from './shared_read_cancellation.ts';
 import { protectedMutation } from './protected_mutation.ts';
 import { sessionStep, sessionCredential, type SessionMutationTrace } from './session_observation_ports.ts';
 
 export const SESSION_KEY = 'copilot.connection.v1';
 export type SessionStatus = { readonly state: 'disconnected' | 'connected' | 'unavailable' | 'revalidating' | 'limited' | 'cooldown' | 'budget'; readonly epoch: number; readonly retryAt?: number };
 export interface RestorationScope { readonly cancellation: ReadCancellation; current(): boolean }
+const restorationCurrent = (scope: RestorationScope): boolean => !scope.cancellation.aborted && scope.current();
+
+class RestorationWaiters implements RestorationScope {
+    readonly cancellation = new SharedReadCancellation();
+    private readonly scopes = new Set<() => boolean>();
+    join(scope: RestorationScope): (() => void) | null {
+        const leave = this.cancellation.join(scope.cancellation);
+        if (!leave) return null;
+        const current = () => restorationCurrent(scope);
+        this.scopes.add(current);
+        const detach = scope.cancellation.onAbort(() => { this.scopes.delete(current); });
+        return () => { detach(); this.scopes.delete(current); leave(); };
+    }
+    current(): boolean {
+        if ([...this.scopes].some(current => current())) return true;
+        this.cancellation.abort();
+        return false;
+    }
+}
+
 export class ProtectedSessionService {
     private epoch = 0;
     private retryAt: number | undefined;
     private connection: ProtectedSession | undefined;
     private cancellation: CancellationOwner;
     private initialization: Promise<void> | undefined;
+    private restoration: RestorationWaiters | undefined;
     private persistence: Promise<unknown> = Promise.resolve();
     private state: SessionStatus['state'] = 'disconnected';
     constructor(private readonly store: StoragePort, private readonly scheduler: ReadScheduler, private readonly ports: SessionPorts) {
@@ -50,15 +72,38 @@ export class ProtectedSessionService {
     }
     async start(scope?: RestorationScope): Promise<void> {
         const epoch = this.epoch;
-        this.initialization ??= this.restore(scope);
-        const pending = this.initialization;
-        await pending;
-        // A fresh eligible request may retry; the scheduler retains cooldown/budget and no loop is started here.
-        if (scope && epoch === this.epoch && this.initialization === pending && !this.connection) this.initialization = undefined;
+        let leave: (() => void) | undefined;
+        if (scope) {
+            if (!restorationCurrent(scope)) return;
+            // Drain an abandoned attempt before reserving the same scheduler keys again.
+            while (this.restoration?.cancellation.aborted) {
+                await this.initialization;
+                if (epoch !== this.epoch || !restorationCurrent(scope)) return;
+            }
+            const restoration = this.restoration ?? (this.initialization ? undefined : new RestorationWaiters());
+            if (restoration) {
+                const joined = restoration.join(scope);
+                if (!joined) return;
+                leave = joined;
+                if (!this.restoration) {
+                    this.restoration = restoration;
+                    // Publish the shared attempt before an adapter can reenter start().
+                    this.initialization = Promise.resolve().then(() => {
+                        if (epoch === this.epoch) return this.restore(restoration);
+                    }).finally(() => { this.restoration = undefined; });
+                }
+            }
+        }
+        const pending = this.initialization ??= this.restore();
+        try {
+            await pending;
+            // A fresh eligible request may retry while the scheduler retains cooldown and budget.
+            if (scope && epoch === this.epoch && this.initialization === pending && !this.connection) this.initialization = undefined;
+        } finally { leave?.(); }
     }
     private async restore(scope?: RestorationScope): Promise<void> {
         const epoch = this.epoch;
-        const current = () => epoch === this.epoch && (!scope || !scope.cancellation.aborted && scope.current());
+        const current = () => epoch === this.epoch && (!scope || restorationCurrent(scope));
         if (!current()) return;
         this.state = 'revalidating';
         const cancellation = this.ports.cancellation();

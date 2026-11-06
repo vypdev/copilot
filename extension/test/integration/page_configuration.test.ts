@@ -25,6 +25,20 @@ it('a valid cold selection restores once and applies the freshly verified profil
     expect(h.reader.read).toHaveBeenCalledTimes(2); expect(await h.call(PAGE)).toMatchObject({ state: 'current' });
     expect(h.reader.read).toHaveBeenCalledTimes(3);
 });
+it('releasing one native tab leaves a second admitted tab connected through the same restoration', async () => {
+    const h = pageConfigurationFixture(scopedSettings()); h.cold();
+    const viewer = deferred<ReadResult>(); vi.mocked(h.reader.read).mockReturnValueOnce(viewer.promise);
+    const start = vi.spyOn(h.service, 'start');
+    const first = h.call(); await vi.waitFor(() => expect(h.reader.read).toHaveBeenCalledTimes(1));
+    const second = h.call(CONFIG, { ...pageSender, tab: { ...pageSender.tab, id: 2 } });
+    await vi.waitFor(() => expect(start).toHaveBeenCalledTimes(2));
+    await h.call({ version: 1, method: 'page.release', generation: 1 });
+    expect(vi.mocked(h.reader.read).mock.calls[0][2].aborted).toBe(false);
+    viewer.resolve({ state: 'ok', etag: '', bytes: 1, data: { id: '1', login: 'octo' } });
+    expect(await first).toMatchObject({ state: 'stale' });
+    expect(await second).toMatchObject({ state: 'ready', connected: true, settings: { density: 'compact' } });
+    expect(vi.mocked(h.reader.read).mock.calls.map(([request]) => request.type)).toEqual(['viewer', 'repository']);
+});
 it.each(['global', 'host', 'account', 'organization', 'repository'] as const)('a %s profile pause blocks cold restoration and cannot be cleared by a narrower false preference', async kind => {
     const settings = scopedSettings(); const scope = kind === 'global' ? { kind } : kind === 'host' ? { kind, host: 'github.com' as const }
         : kind === 'account' ? { kind, host: 'github.com' as const, accountId: '1' }

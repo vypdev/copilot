@@ -1,6 +1,7 @@
 import { expect, it, vi } from 'vitest';
 import { BrowserCancellation } from '../../src/adapters/browser/cancellation.ts';
 import type { ScheduledRead } from '../../src/application/read_scheduler.ts';
+import type { ReadResult } from '../../src/application/read_ports.ts';
 import { SESSION_KEY } from '../../src/application/protected_session.ts';
 import { sessionHarness, CONNECTED, PAGE, deferred, requestResult } from '../fixtures/runtime.ts';
 
@@ -103,6 +104,87 @@ it('a page departure while restoration checks native protection retains the cred
     const cancellation = new BrowserCancellation(); const restore = h.service.start({ cancellation, current: () => true });
     await vi.waitFor(() => expect(h.ports.permitted).toHaveBeenCalledTimes(1)); cancellation.abort(); permission.resolve(true); await restore;
     expect(h.reader.read).not.toHaveBeenCalled(); expect(h.values.get(SESSION_KEY)).toEqual(CONNECTED); expect(h.service.status().state).toBe('disconnected');
+});
+it.each(['cancellation', 'scope replacement'] as const)('%s of one page preserves a joined restoration for another page', async retirement => {
+    const h = sessionHarness(); h.values.set(SESSION_KEY, CONNECTED);
+    const viewer = deferred<ReadResult>(); vi.mocked(h.reader.read).mockReturnValueOnce(viewer.promise);
+    const firstCancellation = new BrowserCancellation(); let firstCurrent = true;
+    const first = h.service.start({ cancellation: firstCancellation, current: () => firstCurrent });
+    await vi.waitFor(() => expect(h.reader.read).toHaveBeenCalledTimes(1));
+    const second = h.service.start({ cancellation: new BrowserCancellation(), current: () => true });
+    if (retirement === 'cancellation') firstCancellation.abort(); else firstCurrent = false;
+    viewer.resolve(requestResult({ type: 'viewer' }));
+    await Promise.all([first, second]);
+    expect(h.service.verifiedIdentity()).toMatchObject({ viewerId: '1', repositoryId: '7' });
+    expect(vi.mocked(h.reader.read).mock.calls.map(([request]) => request.type)).toEqual(['viewer', 'repository']);
+    expect(h.port.set).toHaveBeenCalledWith(SESSION_KEY, CONNECTED);
+});
+it('a still-current page starts restoration after the last earlier waiter cancels', async () => {
+    const h = sessionHarness(); h.values.set(SESSION_KEY, CONNECTED);
+    const permission = deferred<boolean>(); h.ports.permitted.mockReturnValueOnce(permission.promise);
+    const cancellation = new BrowserCancellation();
+    const first = h.service.start({ cancellation, current: () => true });
+    await vi.waitFor(() => expect(h.ports.permitted).toHaveBeenCalledTimes(1)); cancellation.abort();
+    const later = h.service.start({ cancellation: new BrowserCancellation(), current: () => true });
+    permission.resolve(true);
+    await Promise.all([first, later]);
+    expect(h.service.verifiedIdentity()).toMatchObject({ viewerId: '1', repositoryId: '7' });
+    expect(vi.mocked(h.reader.read).mock.calls.map(([request]) => request.type)).toEqual(['viewer', 'repository']);
+});
+it.each(['page cancellation', 'session revoke'] as const)('%s fences a newcomer waiting for an abandoned restoration to drain', async retirement => {
+    const h = sessionHarness(); h.values.set(SESSION_KEY, CONNECTED);
+    const permission = deferred<boolean>(); h.ports.permitted.mockReturnValueOnce(permission.promise);
+    const firstCancellation = new BrowserCancellation(); const laterCancellation = new BrowserCancellation();
+    const first = h.service.start({ cancellation: firstCancellation, current: () => true });
+    await vi.waitFor(() => expect(h.ports.permitted).toHaveBeenCalledTimes(1)); firstCancellation.abort();
+    const later = h.service.start({ cancellation: laterCancellation, current: () => true });
+    if (retirement === 'page cancellation') laterCancellation.abort(); else await h.service.revoke();
+    permission.resolve(true);
+    await Promise.all([first, later]);
+    expect(h.reader.read).not.toHaveBeenCalled();
+    expect(h.service.verifiedIdentity()).toBeNull();
+    expect(h.values.has(SESSION_KEY)).toBe(retirement === 'page cancellation');
+});
+it('a reentrant native protection check joins the already reserved restoration', async () => {
+    const h = sessionHarness(); h.values.set(SESSION_KEY, CONNECTED);
+    const join = () => h.service.start({ cancellation: new BrowserCancellation(), current: () => true });
+    let reentrant: Promise<void> | undefined;
+    h.ports.protected.mockImplementationOnce(async () => { reentrant = join(); return true; });
+    await join(); await reentrant;
+    expect(h.ports.protected).toHaveBeenCalledOnce();
+    expect(h.reader.read).toHaveBeenCalledTimes(2);
+    expect(h.service.status().state).toBe('connected');
+});
+it('the last page can cancel a reserved restoration before it touches native protection', async () => {
+    const h = sessionHarness(); h.values.set(SESSION_KEY, CONNECTED);
+    const cancellation = new BrowserCancellation();
+    const restoring = h.service.start({ cancellation, current: () => true });
+    cancellation.abort(); await restoring;
+    expect(h.ports.protected).not.toHaveBeenCalled();
+    expect(h.reader.read).not.toHaveBeenCalled();
+    expect(h.values.get(SESSION_KEY)).toEqual(CONNECTED);
+});
+it('synchronous revocation fences a reserved restoration before native work starts', async () => {
+    const h = sessionHarness(); h.values.set(SESSION_KEY, CONNECTED);
+    const restoring = h.service.start({ cancellation: new BrowserCancellation(), current: () => true });
+    await Promise.all([restoring, h.service.revoke()]);
+    expect(h.ports.protected).not.toHaveBeenCalled();
+    expect(h.reader.read).not.toHaveBeenCalled();
+    expect(h.service.status().state).toBe('disconnected');
+    expect(h.values.has(SESSION_KEY)).toBe(false);
+});
+it('a held restoration bounds scoped consumers and keeps its admitted transport shared', async () => {
+    const h = sessionHarness(); h.values.set(SESSION_KEY, CONNECTED);
+    const permission = deferred<boolean>(); h.ports.permitted.mockReturnValueOnce(permission.promise);
+    const join = () => h.service.start({ cancellation: new BrowserCancellation(), current: () => true });
+    const admitted = Array.from({ length: 128 }, join);
+    await join();
+    expect(h.reader.read).not.toHaveBeenCalled();
+    permission.resolve(true);
+    await Promise.all(admitted);
+    await join();
+    expect(h.service.verifiedIdentity()).toMatchObject({ viewerId: '1', repositoryId: '7' });
+    expect(vi.mocked(h.reader.read).mock.calls.map(([request]) => request.type)).toEqual(['viewer', 'repository']);
 });
 it.each(['cancellation', 'scope replacement'] as const)('%s during the final restore permission check fences activation', async retirement => {
     const h = sessionHarness(); h.values.set(SESSION_KEY, CONNECTED);
