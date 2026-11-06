@@ -31,6 +31,7 @@ export interface IssueWorkflowRouteContext {
   readonly cleanIssueBranches: boolean;
   readonly branchRequired: boolean;
   readonly sddRequired?: boolean;
+  readonly preserveSddTitle?: boolean;
   readonly sddPublished?: boolean;
   readonly branchName?: string;
   readonly issueNumber?: number;
@@ -176,7 +177,7 @@ export async function runIssueWorkflow(
   const reconciledTitle = titleContext.kind === 'issue'
     ? {
       ...titleContext,
-      ...(context.sddRequired ? { preserveIssueTitle: true } : {}),
+      ...(context.sddRequired || context.preserveSddTitle ? { preserveIssueTitle: true } : {}),
       ...(ports.workflowSteps.reconcileBranchReadiness
         ? { labelFacts: { ...titleContext.labelFacts, containsBranchedLabel: branchReady } } : {}),
     }

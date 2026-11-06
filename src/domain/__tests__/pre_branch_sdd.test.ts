@@ -8,7 +8,6 @@ import {
   renderSddGateRecord,
   validateSddMarkdown,
   composeSddUpdate,
-  recoverSddUpdate,
   normalizeSddIssueTitle,
   retainSddAnswers,
   SddOwnerFormatFailure,
@@ -40,32 +39,23 @@ describe('pre-branch SDD policy', () => {
     const appendix = validDocument('Change', 'x'.repeat(24_000));
     const published = composeSddUpdate(owner, appendix);
     expect(published.startsWith(owner)).toBe(true);
-    expect(recoverSddUpdate(owner, published)).toBe(appendix);
+    expect(published).toContain(appendix.split('\n').at(-1));
   });
 
-  it.each([1800, 18000])('recovers a valid %i-character appendix without counting the publication newline', size => {
+  it.each([1800, 18000])('composes a valid %i-character appendix without truncation', size => {
     const owner = validDocument('Owner');
     const content = '# Change\n## 1. Executive summary\n## 4. Goals\n## 8. Clean Architecture\n## 14. Testing strategy\n3 distinct cases\n## 16. Acceptance\n';
     const published = composeSddUpdate(owner, content.padEnd(size, 'x'));
-    const recovered = recoverSddUpdate(owner, published)!;
-    expect(recovered).toHaveLength(size);
-    expect(composeSddUpdate(owner, recovered)).toBe(published);
+    expect(published.startsWith(owner)).toBe(true);
+    expect(published.endsWith('x'.repeat(size - content.length) + '\n')).toBe(true);
   });
 
-  it('recovers minimum-length candidates whose outer whitespace was normalized during composition', () => {
+  it('normalizes only the outer whitespace of a minimum-length appendix', () => {
     const owner = validDocument('Owner');
     const content = '# Change\n## 1. Executive summary\n## 4. Goals\n## 8. Clean Architecture\n## 14. Testing strategy\n3 distinct cases\n## 16. Acceptance\n';
     const published = composeSddUpdate(owner, content.padEnd(1800, ' '));
-    expect(composeSddUpdate(owner, recoverSddUpdate(owner, published)!)).toBe(published);
-  });
-
-  it('rejects recovery when the published bytes do not preserve the owning prefix', () => {
-    expect(recoverSddUpdate(validDocument('Owner'), validDocument('Replaced owner'))).toBeUndefined();
-  });
-
-  it('rejects recovery when normalization cannot reproduce the published bytes exactly', () => {
-    const owner = validDocument('Owner');
-    expect(recoverSddUpdate(owner, `${composeSddUpdate(owner, validDocument('Change'))}\n`)).toBeUndefined();
+    expect(published.startsWith(owner)).toBe(true);
+    expect(published.endsWith('### 16. Acceptance\n')).toBe(true);
   });
 
   it('retains every original byte of a large owner, including trailing whitespace', () => {
@@ -73,7 +63,7 @@ describe('pre-branch SDD policy', () => {
     const appendix = validDocument('Change', 'y'.repeat(20_000));
     const published = composeSddUpdate(owner, appendix);
     expect(published.startsWith(owner)).toBe(true);
-    expect(recoverSddUpdate(owner, published)).toBe(appendix);
+    expect(published).toContain(appendix.split('\n').at(-1));
   });
 
   it('enforces the measured composed-artifact byte envelope without truncation', () => {
@@ -121,6 +111,10 @@ describe('pre-branch SDD policy', () => {
     expect(parseSddAnswer('Q1: Keep existing behavior', 'Q1')).toBeUndefined();
     expect(parseSddAnswer('SDD Q2: New behavior', 'Q1')).toBeUndefined();
     expect(parseSddAnswer('SDD Q1: no', 'Q1')).toBeUndefined();
+    expect(parseSddAnswer('```md\nSDD Q1: Example only\n```', 'Q1')).toBeUndefined();
+    expect(parseSddAnswer('<!--\nSDD Q1: Hidden example\n-->', 'Q1')).toBeUndefined();
+    expect(parseSddAnswer('    SDD Q1: Indented example', 'Q1')).toBeUndefined();
+    expect(parseSddAnswer('SDD Q1: First choice\nSDD Q1: Other choice', 'Q1')).toBeUndefined();
   });
   it('roundtrips a bounded question card and rejects another issue number', () => {
     const record: SddGateRecord = {

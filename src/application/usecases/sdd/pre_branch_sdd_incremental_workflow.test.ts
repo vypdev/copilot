@@ -56,7 +56,9 @@ describe('bounded incremental SDD drafting (#763)', () => {
     expect(result).toContain('| impact-C1024 | Functional | PAY-01 | Verify independent scenario 1024 and retain the agreed behavior. |');
     expect(query).toHaveBeenCalledTimes(6);
     expect(query.mock.calls[0][0].prompt).toContain('Canonical cases table: 1024 rows retained by the host.');
-    expect(query.mock.calls[0][0].prompt).not.toContain('Verify independent scenario 1024');
+    expect(query.mock.calls.every(([request]) => !request.prompt.includes('Verify independent scenario 1024'))).toBe(true);
+    expect(query.mock.calls[1][0].prompt).toContain('Verify independent scenario 1');
+    expect(query.mock.calls[1][0].prompt).toContain('1024 rows retained by the host');
     expect(query.mock.calls.every(([request]) => request.sourceSnapshot.baseSha === 'a'.repeat(40))).toBe(true);
   });
 
@@ -176,6 +178,21 @@ describe('bounded incremental SDD drafting (#763)', () => {
     expect(query.mock.calls[2][0].prompt).toContain('Return only the JSON for unit prose-1.');
     expect(result).toContain('| alloc-C1 | Functional | SDD-I42-U1-R1 |');
     expect(result).toContain('| SDD-I42-U1-R1 | alloc-C1 |');
+  });
+
+  it('905: keeps a repaired unit identity already used by a later accepted unit', async () => {
+    const original = { unitId: 'inventory-1',
+      requirements: [['@1', 'First new obligation.'], ['@2', 'Second new obligation.']],
+      cases: [['local-C1', 'Policy', '@1', 'Observe the first new obligation.']], paths: [] };
+    const next = { unitId: 'inventory-2', requirements: [['SDD-I42-U1-R1', 'First new obligation.']],
+      cases: [['later-C1', 'Policy', 'SDD-I42-U1-R1', 'Exercise the same requirement independently.']], paths: [] };
+    const query = jest.fn(async ({ prompt }) => reply(prompt)).mockResolvedValueOnce(original).mockResolvedValueOnce(next)
+      .mockResolvedValueOnce({ ...original, cases: [...original.cases, ['local-C2', 'Policy', '@2', 'Observe the second new obligation.']] });
+    const result = await run([fixture(1), 'A second source unit describing the same contract.'], query);
+    expect(query).toHaveBeenCalledTimes(8);
+    expect(result).toContain('| SDD-I42-U1-R1 | local-C1, later-C1 |');
+    expect(result).not.toContain('SDD-I42-U1-R1-1');
+    expect(result).toContain('| SDD-I42-U1-R2 | local-C2 |');
   });
 
   it('905: reserves canonical identities and assigns the same collision-free ID on replay', () => {

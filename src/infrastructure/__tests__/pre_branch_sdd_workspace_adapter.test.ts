@@ -138,10 +138,10 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
     expect(git(repo, 'ls-remote', '--heads', 'origin', branch)).toBe('');
 
     git(repo, 'push', 'origin', 'develop:refs/heads/' + branch);
-    const sha = await workspace.publish(branch, prepared);
+    const sha = await workspace.publish(branch, prepared, async () => {});
     expect(git(repo, 'rev-parse', sha + '^')).toBe(snapshot.baseSha);
     expect(await workspace.verifyPublication(branch, snapshot.baseSha, sha, plan.path)).toBe(true);
-    expect(await workspace.recoverPublished(branch, prepared)).toBe(sha);
+    expect(await workspace.verifyPublication(branch, prepared.baseSha, sha, prepared.plan.path)).toBe(true);
     expect(git(repo, 'ls-remote', '--heads', 'origin', branch).split('\t')[0]).toBe(sha);
     expect(fs.readFileSync(ownerPath, 'utf8')).toBe(owner);
     expect(execute).toHaveBeenCalledTimes(1);
@@ -192,9 +192,9 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
     const branch = 'feature/42-large-update';
     expect(git(repo, 'ls-remote', '--heads', 'origin', branch)).toBe('');
     git(repo, 'push', 'origin', 'develop:refs/heads/' + branch);
-    const published = await workspace.publish(branch, prepared);
+    const published = await workspace.publish(branch, prepared, async () => {});
     expect(await workspace.verifyPublication(branch, snapshot.baseSha, published, plan.path)).toBe(true);
-    expect(await workspace.recoverPublished(branch, prepared)).toBe(published);
+    expect(await workspace.verifyPublication(branch, prepared.baseSha, published, prepared.plan.path)).toBe(true);
     expect((await workspace.readSdd(published, plan.path))?.startsWith(owner)).toBe(true);
     expect(git(repo, 'diff-tree', '--no-commit-id', '--name-only', '-r', published)).toBe(plan.path);
   });
@@ -215,9 +215,9 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
       const prepared = await workspace.validateDraft(snapshot, selected, markdown);
       expect(prepared.markdown).toContain(prose); expect(prepared.markdown.match(/^\| entry-prose-C\d+ \|/gm)).toHaveLength(48);
       git(repo, 'push', 'origin', 'develop:refs/heads/feature/42-change');
-      const sha = await workspace.publish('feature/42-change', prepared);
+      const sha = await workspace.publish('feature/42-change', prepared, async () => {});
       expect(await workspace.verifyPublication('feature/42-change', snapshot.baseSha, sha, selected.path)).toBe(true);
-      if (scenario === 'replay') expect(await workspace.recoverPublished('feature/42-change', prepared)).toBe(sha);
+      if (scenario === 'replay') expect(await workspace.verifyPublication('feature/42-change', prepared.baseSha, sha, prepared.plan.path)).toBe(true);
       expect(git(repo, 'show', sha + ':' + selected.path)).toContain(prose);
     }
     expect(fs.readFileSync(path.join(repo, plan.path), 'utf8')).toBe(before);
@@ -351,25 +351,47 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
     expect(git(repo, 'status', '--porcelain')).toBe('');
   });
 
-  it('does not recover an Action-looking commit that replaced the immutable owner', async () => {
+  it.each(['move', 'delete'] as const)('refuses to publish if the linked ref changes during the intent callback (%s)', async change => {
     const workspace = new PreBranchSddWorkspaceAdapter(repo);
     const snapshot = await workspace.loadSnapshot('develop');
     const prepared = await workspace.validateDraft(snapshot, plan, draft());
-    fs.writeFileSync(path.join(repo, plan.path), draft());
-    git(repo, 'add', plan.path);
-    git(repo, '-c', 'user.email=41898282+github-actions[bot]@users.noreply.github.com', 'commit', '-m', `docs(sdd): specify issue contract in ${plan.path}`);
-    git(repo, 'push', 'origin', 'HEAD:refs/heads/feature/42-change');
-    expect(await workspace.recoverPublished('feature/42-change', prepared)).toBeUndefined();
+    const branch = 'feature/42-change';
+    git(repo, 'push', 'origin', 'develop:refs/heads/' + branch);
+    let expected: string | undefined;
+    await expect(workspace.publish(branch, prepared, async commit => {
+      expected = commit;
+      expect(git(repo, 'ls-remote', 'origin', 'refs/heads/' + branch)).toBe(snapshot.baseSha + '\trefs/heads/' + branch);
+      if (change === 'delete') git(repo, 'push', 'origin', ':refs/heads/' + branch);
+      else {
+        git(repo, 'commit', '--allow-empty', '-m', 'Competing execution');
+        git(repo, 'push', 'origin', 'HEAD:refs/heads/' + branch);
+      }
+    })).rejects.toThrow('stale info');
+    expect(expected).toMatch(/^[a-f0-9]{40}$/u);
+    const actual = git(repo, 'ls-remote', 'origin', 'refs/heads/' + branch);
+    expect(actual).toBe(change === 'delete' ? '' : git(repo, 'rev-parse', 'HEAD') + '\trefs/heads/' + branch);
   });
 
-  it('does not recover publication when revalidation returns different document bytes', async () => {
+  it('reads immutable objects even if the local checkout has a Git replacement ref', async () => {
+    const workspace = new PreBranchSddWorkspaceAdapter(repo);
+    const baseline = await workspace.loadSnapshot('develop');
+    const original = await workspace.readSdd(baseline.baseSha, plan.path);
+    fs.writeFileSync(path.join(repo, plan.path), '# Foreign owner\n');
+    git(repo, 'add', plan.path); git(repo, 'commit', '-m', 'Foreign local replacement');
+    git(repo, 'replace', baseline.baseSha, git(repo, 'rev-parse', 'HEAD'));
+    expect(git(repo, 'show', baseline.baseSha + ':' + plan.path)).toBe('# Foreign owner');
+    expect(await workspace.readSdd(baseline.baseSha, plan.path)).toBe(original);
+  });
+
+  it('withholds the Git push if persisting the exact intent fails', async () => {
     const workspace = new PreBranchSddWorkspaceAdapter(repo);
     const snapshot = await workspace.loadSnapshot('develop');
     const prepared = await workspace.validateDraft(snapshot, plan, draft());
-    git(repo, 'push', 'origin', 'develop:refs/heads/feature/42-change');
-    await workspace.publish('feature/42-change', prepared);
-    jest.spyOn(workspace, 'validateDraft').mockResolvedValue({ ...prepared, markdown: '# Altered validation result' });
-    expect(await workspace.recoverPublished('feature/42-change', prepared)).toBeUndefined();
+    const branch = 'feature/42-change';
+    git(repo, 'push', 'origin', 'develop:refs/heads/' + branch);
+    await expect(workspace.publish(branch, prepared, async () => { throw new Error('Issue API unavailable'); }))
+      .rejects.toThrow('Issue API unavailable');
+    expect(await workspace.readSourceRevision(branch)).toBe(snapshot.baseSha);
   });
 
   it.each([
@@ -405,7 +427,7 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
     const expected = action === 'update' ? [plan.path] : ['specs/CATALOG.md', 'specs/catalog.json', selected.path];
     expect(prepared.changedPaths).toEqual(expected);
     git(repo, 'push', 'origin', 'develop:refs/heads/feature/42-change');
-    const sha = await workspace.publish('feature/42-change', prepared);
+    const sha = await workspace.publish('feature/42-change', prepared, async () => {});
     expect(await workspace.verifyPublication('feature/42-change', snapshot.baseSha, sha, selected.path)).toBe(true);
     expect(git(repo, 'diff-tree', '--no-commit-id', '--name-only', '-r', sha).split('\n').sort()).toEqual(expected);
     expect(git(repo, 'status', '--porcelain')).toBe('');
@@ -442,7 +464,7 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
     expect(prepared.changedPaths).toEqual(expected);
     expect(prepared.markdown).toContain('Status: Draft');
     git(repo, 'push', 'origin', 'develop:refs/heads/feature/42-change');
-    const sha = await workspace.publish('feature/42-change', prepared);
+    const sha = await workspace.publish('feature/42-change', prepared, async () => {});
     expect(await workspace.verifyPublication('feature/42-change', snapshot.baseSha, sha, selected.path)).toBe(true);
     const published = JSON.parse(git(repo, 'show', sha + ':specs/catalog.json'));
     expect(published.review).toEqual(source.review);
@@ -533,10 +555,9 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
     expect(git(repo, 'branch', '--list', 'feature/42-change')).toBe('');
     git(repo, 'push', 'origin', 'develop:refs/heads/feature/42-change');
 
-    const commitSha = await workspace.publish('feature/42-change', prepared);
+    const commitSha = await workspace.publish('feature/42-change', prepared, async () => {});
     expect(await workspace.verifyPublication('feature/42-change', snapshot.baseSha, commitSha, plan.path)).toBe(true);
-    expect(await workspace.recoverPublished('feature/42-change', prepared)).toBe(commitSha);
-    expect(await workspace.recoverPublished('feature/42-change', { ...prepared, markdown: `${prepared.markdown}\nregenerated draft` })).toBe(commitSha);
+    expect(await workspace.verifyPublication('feature/42-change', prepared.baseSha, commitSha, prepared.plan.path)).toBe(true);
     expect(git(repo, 'diff-tree', '--no-commit-id', '--name-only', '-r', commitSha)).toBe(plan.path);
     expect(git(repo, 'rev-parse', `${commitSha}^`)).toBe(snapshot.baseSha);
   });
@@ -550,7 +571,7 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
     expect(prepared.markdown.startsWith(owner)).toBe(true);
     expect(prepared.markdown).not.toContain('\r');
     git(repo, 'push', 'origin', 'develop:refs/heads/feature/42-change');
-    const sha = await workspace.publish('feature/42-change', prepared);
+    const sha = await workspace.publish('feature/42-change', prepared, async () => {});
     expect(await workspace.verifyPublication('feature/42-change', snapshot.baseSha, sha, plan.path)).toBe(true);
   });
 
@@ -563,7 +584,7 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
     const hook = path.join(hooks, 'pre-commit');
     fs.writeFileSync(hook, '#!/bin/sh\nexit 1\n', { mode: 0o755 });
 
-    const commitSha = await workspace.publish('feature/42-change', prepared);
+    const commitSha = await workspace.publish('feature/42-change', prepared, async () => {});
 
     expect(await workspace.verifyPublication('feature/42-change', snapshot.baseSha, commitSha, plan.path)).toBe(true);
     expect(git(repo, 'config', 'core.hooksPath')).toBe(hooks);
@@ -578,7 +599,7 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
     const prepared = await workspace.validateDraft(snapshot, plan, narrower);
     git(repo, 'push', 'origin', 'develop:refs/heads/feature/42-change');
 
-    const commitSha = await workspace.publish('feature/42-change', prepared);
+    const commitSha = await workspace.publish('feature/42-change', prepared, async () => {});
     const published = git(repo, 'show', `${commitSha}:${plan.path}`);
 
     expect(published.startsWith(previous.trimEnd())).toBe(true);
@@ -596,8 +617,8 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
     git(repo, 'add', 'src/index.ts');
     git(repo, 'commit', '-m', 'unrelated code');
     git(repo, 'push', 'origin', 'feature/42-change');
-    await expect(workspace.publish('feature/42-change', prepared)).rejects.toThrow('already contains commits');
-    await expect(workspace.recoverPublished('feature/42-change', prepared)).resolves.toBeUndefined();
+    await expect(workspace.publish('feature/42-change', prepared, async () => {})).rejects.toThrow('already contains commits');
+    expect(await workspace.verifyPublication('feature/42-change', snapshot.baseSha, git(repo, 'rev-parse', 'HEAD'), plan.path)).toBe(false);
   });
 
   it('rejects a draft whose selected SDD path is already owned by another action', async () => {
@@ -628,9 +649,9 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
     expect(JSON.parse(prepared.catalogJson!).capabilities[0].specs).toEqual([plan.path, companion.path]);
     git(repo, 'push', 'origin', 'develop:refs/heads/feature/42-change');
 
-    const commitSha = await workspace.publish('feature/42-change', prepared);
+    const commitSha = await workspace.publish('feature/42-change', prepared, async () => {});
     expect(git(repo, 'diff-tree', '--no-commit-id', '--name-only', '-r', commitSha).split('\n').sort()).toEqual(prepared.changedPaths);
-    expect(await workspace.recoverPublished('feature/42-change', prepared)).toBe(commitSha);
+    expect(await workspace.verifyPublication('feature/42-change', prepared.baseSha, commitSha, prepared.plan.path)).toBe(true);
   });
 
   windowsIt('does not replace a competing new SDD created at the atomic link boundary', async () => {
@@ -673,8 +694,8 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
     expect(prepared.changedPaths).toEqual(['specs/CATALOG.md', 'specs/catalog.json', proposal.path]);
     git(repo, 'push', 'origin', 'develop:refs/heads/feature/42-change');
 
-    const commitSha = await workspace.publish('feature/42-change', prepared);
-    expect(await workspace.recoverPublished('feature/42-change', prepared)).toBe(commitSha);
+    const commitSha = await workspace.publish('feature/42-change', prepared, async () => {});
+    expect(await workspace.verifyPublication('feature/42-change', prepared.baseSha, commitSha, prepared.plan.path)).toBe(true);
     expect(JSON.parse(git(repo, 'show', `${commitSha}:specs/catalog.json`)).capabilities).toHaveLength(2);
   });
 
@@ -686,16 +707,22 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
     expect(git(repo, 'branch', '--list', 'feature/42-change')).toBe('');
   });
 
-  it('does not recover a matching-looking first commit authored outside the Action', async () => {
+  it('rejects a foreign first commit in place of the exact prepared commit even with forged bot metadata', async () => {
     const workspace = new PreBranchSddWorkspaceAdapter(repo);
     const snapshot = await workspace.loadSnapshot('develop');
     const prepared = await workspace.validateDraft(snapshot, plan, draft());
-    git(repo, 'checkout', '-b', 'feature/42-change');
-    fs.writeFileSync(path.join(repo, plan.path), prepared.markdown);
+    const branch = 'feature/42-change';
+    git(repo, 'push', 'origin', 'develop:refs/heads/' + branch);
+    let expected = '';
+    await expect(workspace.publish(branch, prepared, async commit => {
+      expected = commit;
+      throw new Error('Interrupted before push');
+    })).rejects.toThrow('Interrupted before push');
+    fs.writeFileSync(path.join(repo, plan.path), prepared.markdown + '\nForeign bytes\n');
     git(repo, 'add', '--', plan.path);
-    git(repo, 'commit', '-m', `docs(sdd): specify issue contract in ${plan.path}`);
-    git(repo, 'push', 'origin', 'feature/42-change');
-    expect(await workspace.recoverPublished('feature/42-change', prepared)).toBeUndefined();
+    git(repo, '-c', 'user.email=41898282+github-actions[bot]@users.noreply.github.com', 'commit', '-m', `docs(sdd): specify issue contract in ${plan.path}`);
+    git(repo, 'push', 'origin', 'HEAD:refs/heads/' + branch);
+    expect(await workspace.verifyPublication(branch, snapshot.baseSha, expected, plan.path)).toBe(false);
   });
 
   fileSymlinkIt('rejects a symlinked generated catalog before writing metadata', async () => {

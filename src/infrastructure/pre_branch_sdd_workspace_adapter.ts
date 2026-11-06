@@ -14,7 +14,7 @@ import type {
   SddCatalogSnapshot,
   SddPreparedDraft,
 } from '../application/ports/pre_branch_sdd_ports';
-import { composeSddUpdate, recoverSddUpdate, isSafeSddPath, validateSddMarkdown, type SddPlan } from '../domain/pre_branch_sdd';
+import { composeSddUpdate, isSafeSddPath, validateSddMarkdown, type SddPlan } from '../domain/pre_branch_sdd';
 import { validateSddDraftConsistency, type SddRepositoryInventory, type SddOwnerDocument } from '../domain/sdd_draft_consistency';
 import { buildGitAuthenticationEnvironment } from './git_authentication_environment';
 import { withoutGitHooks } from './git_hook_isolation';
@@ -36,15 +36,27 @@ export class PreBranchSddWorkspaceAdapter implements PreBranchSddWorkspacePort {
   constructor(private readonly repositoryRoot: string = process.cwd(), private readonly token: string = '') {}
 
   async loadSnapshot(baseBranch: string): Promise<SddCatalogSnapshot> {
-    return this.readSnapshotAtSha(await this.readSourceRevision(baseBranch));
+    const baseSha = await this.readSourceRevision(baseBranch);
+    await this.ensureRemoteCommit(baseSha);
+    return this.readSnapshotAtSha(baseSha);
   }
 
   async readSourceRevision(baseBranch: string): Promise<string> {
     assertBranch(baseBranch);
-    await this.git(['fetch', 'origin', baseBranch], this.repositoryRoot, this.token);
-    const baseSha = (await this.git(['rev-parse', 'FETCH_HEAD'])).trim();
+    const ref = 'refs/heads/' + baseBranch;
+    const result = (await this.git(['ls-remote', '--exit-code', '--refs', 'origin', ref], this.repositoryRoot, this.token)).trim();
+    const [baseSha, matchedRef] = result.split('\t');
     assertSha(baseSha);
+    if (matchedRef !== ref) throw new Error('The exact SDD source ref could not be verified.');
     return baseSha;
+  }
+
+  private async ensureRemoteCommit(sha: string): Promise<void> {
+    try {
+      await this.git(['cat-file', '-e', sha + '^{commit}']);
+    } catch {
+      await this.git(['fetch', '--no-write-fetch-head', 'origin', sha], this.repositoryRoot, this.token);
+    }
   }
 
   async loadSnapshotAtCommit(commitSha: string): Promise<SddCatalogSnapshot> {
@@ -196,15 +208,15 @@ export class PreBranchSddWorkspaceAdapter implements PreBranchSddWorkspacePort {
     }
   }
 
-  async publish(branchName: string, prepared: SddPreparedDraft): Promise<string> {
+  async publish(branchName: string, prepared: SddPreparedDraft, beforePush: (commitSha: string) => Promise<void>): Promise<string> {
     assertBranch(branchName);
     assertSha(prepared.baseSha);
     if (!isSafeSddPath(prepared.plan.path)) throw new Error('SDD path is unsafe.');
-    await this.git(['fetch', 'origin', branchName], this.repositoryRoot, this.token);
-    const currentSha = (await this.git(['rev-parse', 'FETCH_HEAD'])).trim();
+    const currentSha = await this.readSourceRevision(branchName);
     if (currentSha !== prepared.baseSha) {
       throw new Error(`Linked branch ${branchName} already contains commits; its first SDD commit cannot be rewritten.`);
     }
+    await this.ensureRemoteCommit(currentSha);
     const root = await this.addDetachedWorktree(currentSha);
     try {
       assertSpecDirectory(root);
@@ -226,56 +238,19 @@ export class PreBranchSddWorkspaceAdapter implements PreBranchSddWorkspacePort {
       ], root));
       const commitSha = (await this.git(['rev-parse', 'HEAD'], root)).trim();
       assertSha(commitSha);
-      await this.git(['push', 'origin', `HEAD:refs/heads/${branchName}`], root, this.token);
-      const verified = await this.verifyPublication(branchName, prepared.baseSha, commitSha, prepared.plan.path);
-      if (!verified) throw new Error('The SDD commit was pushed but could not be verified remotely. Retry on the same branch.');
+      const parents = (await this.git(['show', '-s', '--format=%P', commitSha], root)).trim();
+      if (parents !== prepared.baseSha) throw new Error('The staged SDD commit does not have the exact prepared parent.');
+      await beforePush(commitSha);
+      const ref = 'refs/heads/' + branchName;
+      // The lease can only advance the exact parent to its direct child.
+      await withoutGitHooks(emptyHooks => this.git([
+        '-c', `core.hooksPath=${emptyHooks}`,
+        'push', '--force-with-lease=' + ref + ':' + prepared.baseSha, 'origin', commitSha + ':' + ref,
+      ], root, this.token));
       return commitSha;
     } finally {
       await this.removeWorktree(root);
     }
-  }
-
-  async recoverPublished(branchName: string, prepared: SddPreparedDraft): Promise<string | undefined> {
-    assertBranch(branchName);
-    assertSha(prepared.baseSha);
-    if (!isSafeSddPath(prepared.plan.path)) return undefined;
-    await this.git(['fetch', 'origin', branchName], this.repositoryRoot, this.token);
-    const remoteSha = (await this.git(['rev-parse', 'FETCH_HEAD'])).trim();
-    if (remoteSha === prepared.baseSha) return undefined;
-    let descendants: string[];
-    try {
-      descendants = (await this.git(['rev-list', '--reverse', `${prepared.baseSha}..${remoteSha}`])).trim().split('\n').filter(Boolean);
-    } catch {
-      return undefined;
-    }
-    const first = descendants[0];
-    if (!first || !await this.verifyPublication(branchName, prepared.baseSha, first, prepared.plan.path)) return undefined;
-    const [author, subject] = await Promise.all([
-      this.git(['show', '-s', '--format=%ae', first]),
-      this.git(['show', '-s', '--format=%s', first]),
-    ]);
-    if (author.trim() !== '41898282+github-actions[bot]@users.noreply.github.com'
-      || subject.trim() !== `docs(sdd): specify issue contract in ${prepared.plan.path}`) return undefined;
-    const content = await this.readSdd(first, prepared.plan.path);
-    if (content === undefined) return undefined;
-    const snapshot = await this.readSnapshotAtSha(prepared.baseSha);
-    let newCapability: SddCatalogCapability | undefined;
-    if (prepared.plan.action === 'new') {
-      const raw = await this.git(['show', `${first}:specs/catalog.json`]);
-      newCapability = (JSON.parse(raw) as Catalog).capabilities.find(capability => capability.id === prepared.plan.capabilityId);
-    }
-    const originalOwner = prepared.plan.action === 'update' ? await this.readSdd(prepared.baseSha, prepared.plan.path) : undefined;
-    if (prepared.plan.action === 'update' && originalOwner === undefined) return undefined;
-    const candidate = originalOwner !== undefined ? recoverSddUpdate(originalOwner, content) : content;
-    if (!candidate) return undefined;
-    const recovered = await this.validateDraft(snapshot, prepared.plan, candidate, newCapability);
-    const expected = originalOwner !== undefined ? composeSddUpdate(originalOwner, candidate) : content;
-    if (recovered.markdown !== expected) return undefined;
-    const committedPaths = (await this.git(['diff-tree', '--no-commit-id', '--name-only', '-r', first])).trim().split('\n').filter(Boolean).sort();
-    if (committedPaths.join('\n') !== recovered.changedPaths.join('\n')) return undefined;
-    if (recovered.catalogJson && await this.git(['show', `${first}:specs/catalog.json`]) !== recovered.catalogJson) return undefined;
-    if (recovered.catalogMarkdown && await this.git(['show', `${first}:specs/CATALOG.md`]) !== recovered.catalogMarkdown) return undefined;
-    return first;
   }
 
   async verifyPublication(branchName: string, baseSha: string, commitSha: string, sddPath: string): Promise<boolean> {
@@ -283,15 +258,11 @@ export class PreBranchSddWorkspaceAdapter implements PreBranchSddWorkspacePort {
     assertSha(baseSha);
     assertSha(commitSha);
     if (!isSafeSddPath(sddPath)) return false;
-    await this.git(['fetch', 'origin', branchName], this.repositoryRoot, this.token);
-    const remoteSha = (await this.git(['rev-parse', 'FETCH_HEAD'])).trim();
-    const parent = (await this.git(['rev-parse', `${commitSha}^`])).trim();
-    if (parent !== baseSha) return false;
-    try {
-      await this.git(['merge-base', '--is-ancestor', commitSha, remoteSha]);
-    } catch {
-      return false;
-    }
+    const remoteSha = await this.readSourceRevision(branchName);
+    await this.ensureRemoteCommit(remoteSha);
+    if (!await this.isAncestor(commitSha, remoteSha).catch(() => false)) return false;
+    const parents = (await this.git(['show', '-s', '--format=%P', commitSha])).trim();
+    if (parents !== baseSha) return false;
     const paths = (await this.git(['diff-tree', '--no-commit-id', '--name-only', '-r', commitSha])).trim().split('\n').filter(Boolean);
     return paths.includes(sddPath)
       && paths.every(candidate => [sddPath, 'specs/catalog.json', 'specs/CATALOG.md'].includes(candidate));
@@ -336,7 +307,7 @@ export class PreBranchSddWorkspaceAdapter implements PreBranchSddWorkspacePort {
   private async addDetachedWorktree(sha: string): Promise<string> {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'copilot-sdd-'));
     try {
-      await this.git(['worktree', 'add', '--detach', root, sha]);
+      await withoutGitHooks(emptyHooks => this.git(['-c', `core.hooksPath=${emptyHooks}`, 'worktree', 'add', '--detach', root, sha]));
       return root;
     } catch (error) {
       fs.rmSync(root, { recursive: true, force: true });
@@ -364,9 +335,10 @@ export class PreBranchSddWorkspaceAdapter implements PreBranchSddWorkspacePort {
     const env = token ? buildGitAuthenticationEnvironment(token, baseEnvironment) : baseEnvironment;
     const { stdout } = await runFile('git', args, {
       cwd,
-      env,
+      env: { ...env, GIT_NO_REPLACE_OBJECTS: '1' },
       encoding: 'buffer',
       maxBuffer: 10 * 1024 * 1024,
+      timeout: 60_000,
     });
     return stdout;
   }

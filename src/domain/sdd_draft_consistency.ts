@@ -4,7 +4,7 @@ import { SddDraftFormatFailure } from './pre_branch_sdd';
 import { appendSddReferenceContext, buildSddReferenceIndex, hasBlockedSddAncestor, isKnownSddRepositoryReference, isSddFileRole, isSafeSddRepositoryPath as safePath,
   isSddNonFileNotation, sddReferencePrefix, type SddReferenceIndex, type SddRepositoryInventory } from './sdd_repository_reference';
 export type { SddRepositoryInventory } from './sdd_repository_reference';
-import { readSddVisibleReferences } from './sdd_visible_references';
+import { readSddVisibleReferences, visibleSddContract } from './sdd_visible_references';
 import { countSddShorthandCaseReferences } from './sdd_case_reference';
 import { SDD_REQUIREMENT_ID, SDD_REQUIREMENT_ID_INSTRUCTIONS, validateSddRequirementReservations,
   type SddRequirementReservations } from './sdd_requirement_identity';
@@ -41,33 +41,6 @@ function assertRequirementsCovered(counts: readonly number[]): void {
   const missing = counts.filter(count => count === 0).length;
   if (missing) fail('requirement-mapping', { detail: 'requirement-coverage', section: 17, expected: 0, observed: missing },
     [{ detail: 'requirement-coverage', section: 4, row: counts.indexOf(0) + 1, expected: 1, observed: 0 }]);
-}
-
-/** Excludes examples and hidden records from the contract. */
-export function visibleSddContract(source: string): string {
-  let fence: string | undefined;
-  let comment = false;
-  return source.replace(/\r\n/gu, '\n').split('\n').map(line => {
-    const boundary = /^\s*(`{3,}|~{3,})/u.exec(line);
-    if (fence) {
-      // Comment syntax inside code is literal; only the original line can close it.
-      if (boundary && boundary[1][0] === fence[0] && boundary[1].length >= fence.length
-        && /^ {0,3}(?:`+|~+)[ \t]*$/u.test(line)) fence = undefined;
-      return '';
-    }
-    if (!comment && boundary) { fence = boundary[1]; return ''; }
-    let result = '';
-    let offset = 0;
-    while (offset < line.length) {
-      const marker = comment ? '-->' : '<!--';
-      const next = line.indexOf(marker, offset);
-      if (next < 0) return result + (comment ? '' : line.slice(offset));
-      if (!comment) result += line.slice(offset, next) + ' ';
-      offset = next + marker.length;
-      comment = !comment;
-    }
-    return result;
-  }).join('\n');
 }
 
 function clean(value: string): string { return value.trim().replace(/^(?:\*\*|__|`)(.*?)(?:\*\*|__|`)$/u, '$1').trim(); }

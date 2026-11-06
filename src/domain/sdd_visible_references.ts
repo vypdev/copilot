@@ -1,5 +1,32 @@
 import { Parser } from 'commonmark';
 
+/** Excludes examples and hidden records from the contract. */
+export function visibleSddContract(source: string): string {
+  let fence: string | undefined;
+  let comment = false;
+  return source.replace(/\r\n/gu, '\n').split('\n').map(line => {
+    const boundary = /^\s*(`{3,}|~{3,})/u.exec(line);
+    if (fence) {
+      // Comment syntax inside code is literal; only the original line can close it.
+      if (boundary && boundary[1][0] === fence[0] && boundary[1].length >= fence.length
+        && /^ {0,3}(?:`+|~+)[ \t]*$/u.test(line)) fence = undefined;
+      return '';
+    }
+    if (!comment && boundary) { fence = boundary[1]; return ''; }
+    let result = '';
+    let offset = 0;
+    while (offset < line.length) {
+      const marker = comment ? '-->' : '<!--';
+      const next = line.indexOf(marker, offset);
+      if (next < 0) return result + (comment ? '' : line.slice(offset));
+      if (!comment) result += line.slice(offset, next) + ' ';
+      offset = next + marker.length;
+      comment = !comment;
+    }
+    return result;
+  }).join('\n');
+}
+
 export type SddReferencePart = Readonly<{ kind: 'text' | 'code'; value: string }>;
 export interface SddVisibleReferences {
   readonly destinations: readonly string[];

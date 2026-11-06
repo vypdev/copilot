@@ -1,3 +1,4 @@
+import { readSddSelectionAnswer } from '../../policies/sdd_selection_policy';
 import { blockingSddQuestions } from '../../../domain/sdd_clarification';
 import { createHash } from 'node:crypto';
 import { decideIssueStart } from '../../../domain/issue_start_policy';
@@ -94,7 +95,8 @@ export class SddEvidenceQueryUseCase {
     private async pendingQuestions(context: SddEvidenceQueryContext, comments: readonly SddQueryComment[], record: SddGateRecord, cardId: number,
         authorizations: Map<string, Promise<boolean>>): Promise<string[]> {
         const pending: string[] = [];
-        const cutoff = Math.max(cardId, ...(record.answers ?? []).map(answer => answer.commentId));
+        const reviewCommentId = record.selection?.kind === 'seed' ? record.selection.reviewCommentId ?? 0 : 0;
+        const cutoff = Math.max(cardId, reviewCommentId, ...(record.answers ?? []).map(answer => answer.commentId));
         for (const question of blockingSddQuestions(record.plan.questions)) {
             const retained = (record.answers ?? []).filter(answer => {
                 const provenance = answer as typeof answer & { readonly round?: number; readonly questionText?: string };
@@ -107,7 +109,10 @@ export class SddEvidenceQueryUseCase {
                 for (const comment of [...comments].sort((a, b) => b.id - a.id)) {
                     if (!Number.isSafeInteger(comment.id) || comment.id <= cutoff || !comment.user?.login
                         || comment.user.login.toLowerCase() === context.trustedBotLogin.toLowerCase()
-                        || !comment.body || !parseSddAnswer(comment.body, question.id)) continue;
+                        || !comment.body) continue;
+                    const answer = record.selection ? readSddSelectionAnswer(comment.body, record.selection)
+                        : parseSddAnswer(comment.body, question.id);
+                    if (!answer) continue;
                     if (await this.authorized(context, question.owner, comment.user.login, authorizations)) { answered = true; break; }
                 }
             }

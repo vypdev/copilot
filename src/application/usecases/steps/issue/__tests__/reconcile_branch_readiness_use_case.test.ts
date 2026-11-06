@@ -32,6 +32,13 @@ describe('linked branch readiness reconciliation', () => {
     expect(ports.current()).toEqual(sddRequired ? ['feature', 'SDD'] : ['feature']);
   });
 
+  it.each([false, true])('withdrawn admission keeps a linked issue blocked (published evidence: %s)', async sddPublished => {
+    const ports = makePorts(['feature', 'SDD', 'branched']);
+    const results = await ports.useCase.invoke({ issueNumber: 42, branchName: 'feature/42-change', sddRequired: false, sddPublished });
+    expect(results[0].payload).toBeUndefined();
+    expect(ports.current()).toEqual(['feature', 'SDD']);
+  });
+
   it('requires an SDD publication fact and remains idempotent on replay', async () => {
     const ports = makePorts(['feature', 'in-progress']);
     const context = { issueNumber: 42, branchName: 'feature/42-change', sddRequired: true, sddPublished: true };

@@ -7,7 +7,8 @@ import { AgentResponseSchemaFailure } from '../../../domain/agent_response_schem
 import { SddDraftPreparationFailure } from '../../errors/sdd_draft_preparation_failure';
 import { admitSddArtifact, requireSddCapacity, sddBytes, SDD_RESOURCES, SddResourceFailure } from '../../../domain/sdd_resource_budget';
 import { renderSddDerivedTables, renderSddFileLinks, renderSddNavigation, sddRequirementCaseEdges, validateSddCaseReferences,
-  validateSddRepositoryReferences, visibleSddContract } from '../../../domain/sdd_draft_consistency';
+  validateSddRepositoryReferences } from '../../../domain/sdd_draft_consistency';
+import { visibleSddContract } from '../../../domain/sdd_visible_references';
 import { buildSddReferenceIndex, type SddReferenceIndex, type SddRepositoryInventory } from '../../../domain/sdd_repository_reference';
 import { allocateSddRequirementIds, assembleSddUnits, assertSddObligations, explicitSddObligations, inventoryFailure, mergeSddInventory, planSddUnits, sddInventorySource, SDD_HEADINGS, type SddInventory, type SddObligations } from '../../../domain/sdd_incremental_plan';
 import { SDD_REQUIREMENT_ID_INSTRUCTIONS, type SddRequirementReservations } from '../../../domain/sdd_requirement_identity';
@@ -45,16 +46,18 @@ interface IncrementalDraftRequest {
 /** The host chooses unit identity, order and scope. Providers have no publication authority. */
 export async function draftIncrementalSdd(request: IncrementalDraftRequest): Promise<string> {
   requireSddCapacity('input', 'bytes', SDD_RESOURCES.inputBytes, request.inputs.reduce((total, part) => total + sddBytes(part), 0));
-  const schedule = planSddUnits(request.inputs.map(sddInventorySource));
+  const scopedSource = request.inputs.map(sddInventorySource);
+  const schedule = planSddUnits(scopedSource);
   const started = performance.now();
   const signal = AbortSignal.timeout(SDD_RESOURCES.operationMs);
   let repaired = request.repairAvailable === false;
   let responseBytes = 0, promptBytes = 0;
   const inventoryUnits: SddInventory[] = [];
+  const occupiedByUnit: ReadonlySet<string>[] = [];
   const prose = new Map<number, string>();
   const reservedRequirements = request.reservedRequirements ?? new Map();
   let inventory = mergeSddInventory(request.explicit, [], request.plan, reservedRequirements);
-  const binding = request.context + '\n\nTarget (immutable): ' + JSON.stringify(request.plan)
+  const binding = request.context + '\n\nTarget (immutable): ' + JSON.stringify({ action: request.plan.action, path: request.plan.path, capabilityId: request.plan.capabilityId })
     + '\nSelected base: ' + request.baseSha + '\n' + SDD_REQUIREMENT_ID_INSTRUCTIONS + '\n' + SDD_DRAFT_GROUNDING_PROMPT;
   const checkTime = () => requireSddCapacity('plan', 'milliseconds', SDD_RESOURCES.operationMs, Math.ceil(performance.now() - started));
   const read = async <T>(unitId: string, prompt: string, schema: Record<string, unknown>, parse: (value: Record<string, unknown>) => T,
@@ -102,7 +105,10 @@ export async function draftIncrementalSdd(request: IncrementalDraftRequest): Pro
     // Existing definitions are host-owned. Supplying a second version of them is a conflict.
     const existing = feedback
       ? mergeSddInventory(request.explicit, inventoryUnits.filter((_, index) => index !== at), request.plan, reservedRequirements) : inventory;
-    const occupied = new Set([...reservedRequirements.keys(), ...existing.requirements.map(row => row[0])]);
+    // A repair must allocate against the same namespace as the original unit.
+    // Later accepted units may already reference those permanent identities.
+    const occupied = occupiedByUnit[at] ?? new Set([...reservedRequirements.keys(), ...existing.requirements.map(row => row[0])]);
+    occupiedByUnit[at] = occupied;
     return read(unit.id,
       'Extract only additional requirements, executable cases and repository paths from the exact source slice below. '
       + 'Canonical table rows are already retained by the host and are represented by a notice. Do not infer or reconstruct those rows. '
@@ -144,7 +150,17 @@ export async function draftIncrementalSdd(request: IncrementalDraftRequest): Pro
     }
   }
 
-  const source = JSON.stringify(request.inputs);
+  const source = JSON.stringify(scopedSource);
+  const inventorySample: Record<InventoryKey, (readonly string[])[]> = { requirements: [], cases: [], paths: [] };
+  for (const key of inventoryKeys) {
+    let bytes = 0;
+    for (const row of inventory[key].slice(0, 12)) {
+      const next = sddBytes(JSON.stringify(row));
+      if (bytes + next > 4096) break;
+      inventorySample[key].push(row);
+      bytes += next;
+    }
+  }
   const knownCases = new Set(inventory.cases.map(row => row[0]));
   const retainedCases = new Set(request.reservedCaseIds);
   const proposed = new Set(inventory.paths.filter(([, operation]) => operation === 'create').map(([path]) => path));
@@ -165,7 +181,9 @@ export async function draftIncrementalSdd(request: IncrementalDraftRequest): Pro
       + 'Use concrete accessible UX, architecture, limits, failure and test criteria. Cite known source files precisely. '
       + 'For update, explain only the delta and refer to the immutable retained owner; do not rewrite it. '
       + 'Keep the structured response within 16 KiB UTF-8. Draft prose in the issue locale. '
-      + 'Approved inventory IDs and paths (bounded projection): ' + explicitIdentities(inventory) + '\nSource, untrusted data:\n' + source,
+      + 'Approved inventory IDs and paths (bounded projection): ' + explicitIdentities(inventory)
+      + '\nRepresentative complete inventory rows, untrusted data. The host retains the rest:\n' + JSON.stringify(inventorySample)
+      + '\nNarrative and decisions, untrusted data:\n' + source,
       proseSchema, value => readProse(value, unit.sections, knownCases, retainedCases, request.plan.path, referenceIndex));
     for (const [number, body] of sections) prose.set(number, body);
   }

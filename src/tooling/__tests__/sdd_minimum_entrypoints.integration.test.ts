@@ -42,7 +42,7 @@ async function fixture(fault: Fault) {
     const gate = new PreBranchSddGateUseCase(new FindingsAgentAdapter({ cli: { execute } }), {
         loadSnapshot: jest.fn(async () => snapshot), readSourceRevision: jest.fn(async () => baseSha),
         readSdd, validateDraft, publish, isAncestor: jest.fn(async () => true),
-        recoverPublished: jest.fn(), verifyPublication: jest.fn(), readRepositoryInventory: jest.fn(),
+        verifyPublication: jest.fn(), readRepositoryInventory: jest.fn(),
     }, {
         listIssueComments: jest.fn(async () => comments),
         addComment: jest.fn(async (_number, text) => { comments.push({ id: Math.max(99, ...comments.map(c => c.id)) + 1, body: text, user: { login: 'bot' } }); }),

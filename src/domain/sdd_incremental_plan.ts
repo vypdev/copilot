@@ -1,7 +1,7 @@
 import { admitSddArtifact, requireSddCapacity, sddBytes, SDD_RESOURCES } from './sdd_resource_budget';
 import { SddDraftFormatFailure, type SddPlan } from './pre_branch_sdd';
 import { isSafeSddRepositoryPath } from './sdd_repository_reference';
-import { visibleSddContract } from './sdd_draft_consistency';
+import { visibleSddContract } from './sdd_visible_references';
 import { validateSddRequirementIds, validateSddRequirementReservations,
   type SddRequirementReservations } from './sdd_requirement_identity';
 

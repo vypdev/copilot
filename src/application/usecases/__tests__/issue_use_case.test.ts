@@ -278,6 +278,15 @@ describe("IssueUseCase", () => {
     expect(publish).not.toHaveBeenCalled();
   });
 
+  it('keeps the material title while a pre-branch SDD feature is paused', async () => {
+    const begin = jest.fn();
+    const param = minimalExecution({ preBranchSdd: true, issueWorkflowKind: 'feature',
+      issueStartDecision: { started: false, branchRequired: false, sddRequired: false, helpRequired: false } });
+    await createUseCase(undefined, { begin } as never).invoke(param);
+    expect(mockUpdateTitleInvoke).toHaveBeenCalledWith(expect.objectContaining({ preserveIssueTitle: true }));
+    expect(begin).not.toHaveBeenCalled();
+  });
+
   it('waits for SDD answers without preparing a branch or deployment', async () => {
     const begin = jest.fn().mockResolvedValue({ status: 'waiting', results: [new Result({ id: 'PreBranchSddGateUseCase', success: true, executed: true })] });
     const publish = jest.fn();

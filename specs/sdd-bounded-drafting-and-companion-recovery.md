@@ -193,6 +193,8 @@ appendix above 70,000 characters. Provider runs on the pinned candidate through
 the normal managed Action remain a separate acceptance gate.
 
 
+Canonical input tables remain in the host inventory. Prose calls receive the remaining narrative, admitted identity projection and up to twelve complete sample rows per table within a 4 KiB allowance per table. They cannot redefine the retained tables. This keeps repeated prompt bytes proportional when the case inventory dominates. The benchmark in `quality/sdd/benchmark-763.cjs` records prompt/response bytes, calls, planning and assembly time, validation, Git publication, peak process RSS, and optional measured Codex token usage. Its fixture data are synthetic. The exact candidate and run evidence live in PR #906.
+
 ## 8. Clean Architecture
 
 ### 8.1 Responsibilities and dependency direction
@@ -222,8 +224,9 @@ flowchart LR
 - Application contracts: immutable operation identity, evidence snapshot, planned units, candidate result, closed diagnostic, authorized recovery decision and publication result.
 - Semantic ports: immutable source inventory/read, bounded candidate generation, issue authorization lookup, durable card upsert, exact publication validation and publication.
 - Durable state/schema ownership: existing issue/workflow state and durable card mechanisms; any new persisted decision schema requires versioning and replay rules.
-- Concurrency/idempotency: bind every transition to issue digest and selected base; compare-and-set operation state; deduplicate card updates and publication by stable operation identity.
-- Trusted inputs: verified catalog, immutable tree metadata, authenticated actor and authorized answer. Issue text, comments, provider output and repository content are untrusted data.
+- Concurrency and idempotency. The native issue workflow serializes its mutation lane. Withdrawing admission removes branch readiness and retains the SDD obligation while the issue is stopped. The Action rechecks current issue facts before declaring publication ready. The Action stages the exact bytes and commits locally, then persists the prepared commit SHA and its exact parent in the bot-owned card before any push. It checks the current card, issue, admission, source revision, linked ref and any maintainer selection at the push boundary. The Git lease only allows the prepared direct child to advance its exact parent. A deleted or moved ref rejects the push.
+- Recovery evidence. After an interrupted push or GitHub status update, verify that the recorded commit is reachable from the exact linked branch and has the recorded parent. Recover the same first publication or revision without drafting or pushing again. When the reconciled card is not yet visible, stop after one reconciliation attempt and use the original workflow to retry. The commit SHA binds the tree and catalog bytes. Commit author and subject are display metadata.
+- Trusted inputs include the verified catalog, immutable tree metadata, authenticated actor and authorized answer. Issue text, comments, provider output and repository content are untrusted data.
 - Provider error mapping: transport/token exhaustion remains a provider failure; malformed schema/content remains malformed; code-point response ceiling, UTF-16 Markdown limits and byte measurements are separate.
 - Publication encoding: immutable owners must decode as UTF-8 without losing bytes. Validation and publication compare each staged blob with the exact prepared bytes before a commit can be pushed. A Git attributes rule that changes those bytes blocks before branch creation.
 
@@ -307,10 +310,11 @@ Errors follow impact, cause, action, retained state. A size diagnosis requires a
 
 ## 11. Security, permissions, and privacy
 
-1. Require authenticated maintainer authorization for seed use and ownership transitions; bind decisions cryptographically or through trusted workflow state to issue digest, base, capability and proposal.
-2. Treat all issue text, comments, repository files and provider responses as untrusted data; never interpret them as workflow instructions or executable commands.
-3. Do not log/store rejected provider output, secrets, private source excerpts or unnecessary personal data. Persist only bounded digests, safe counts, classifications and provenance needed for audit.
-4. Reject replay, forgery, path traversal, symlink escape, cross-capability selection and stale decisions; enforce least-privilege workflow permissions.
+1. Require an authenticated maintainer for seed use and companion recovery. Bind new receipts to the canonical GitHub issue URL, issue digest, base, capability, path and selected draft or proposal. A single standalone command provides the decision. Quoted, fenced, repeated and mixed commands grant no authority. A malformed seed block stops before provider invocation.
+2. Resolve Git refs by exact remote name, ignore local replacement objects, disable Git hooks for automated checkout and publication, and reject stale head updates at the exact ref. GitHub issue state and Git ref updates are separate services. The Action checks issue state and permissions immediately before the leased push.
+3. Treat all issue text, comments, repository files and provider responses as untrusted data; never interpret them as workflow instructions or executable commands.
+4. Do not log/store rejected provider output, secrets, private source excerpts or unnecessary personal data. Persist only bounded digests, safe counts, classifications and provenance needed for audit.
+5. Reject replay, forgery, path traversal, symlink escape, cross-capability selection and stale decisions; enforce least-privilege workflow permissions.
 
 ## 12. Observability and operational UX
 
@@ -318,7 +322,7 @@ User-facing state comes from the durable card. Job Summary records operation ID,
 
 ## 13. Compatibility, migration, rollout, and rollback
 
-Existing in-flight operations retain their pinned base, issue digest and established SDD path. No configuration migration is expected; any new decision-state schema must accept absent legacy state as “no authorization” and reject unknown values safely. Roll out behind existing gate behavior only after deterministic regression coverage. Rollback disables new planning/recovery behavior while preserving published Drafts and ownership evidence; never undo or duplicate an irreversible first publication. No release or deployment is authorized by this specification.
+Published legacy cards retain their authoritative branch, first commit and any verified revision. Legacy numbered questions and valid receipts still work against their original issue, base, and owner. New receipts additionally bind the issue URL. A legacy pending card can retry from its unchanged base. If its linked ref advanced without a recorded prepared commit, an authorized maintainer must review the branch and run history before resuming. No configuration migration is required. Roll out behind existing gate behavior only after deterministic regression coverage. Rollback disables new planning/recovery behavior while preserving published Drafts and ownership evidence; never undo or duplicate an irreversible first publication. No release or deployment is authorized by this specification.
 
 ## 14. Testing strategy
 
@@ -326,13 +330,13 @@ Existing owner contracts and case budgets remain intact by reference, including 
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain/configuration/pure planning | 9 | Observable scenarios in the case inventory. |
-| State/application/idempotency/races | 9 | Observable scenarios in the case inventory. |
-| Adapters/provider contracts | 6 | Observable scenarios in the case inventory. |
+| Domain/configuration/pure planning | 10 | Observable scenarios in the case inventory. |
+| State/application/idempotency/races | 13 | Observable scenarios in the case inventory. |
+| Adapters/provider contracts | 8 | Observable scenarios in the case inventory. |
 | Workflows/setup/schema | 3 | Observable scenarios in the case inventory. |
 | UI/UX/localization/sanitization | 4 | Observable scenarios in the case inventory. |
-| Integration/security/migration | 9 | Observable scenarios in the case inventory. |
-| Total | 40 | Distinct inventory cases. Repeated executions do not add cases. |
+| Integration/security/migration | 12 | Observable scenarios in the case inventory. |
+| Total | 50 | Distinct inventory cases. Repeated executions do not add cases. |
 
 | Case ID | Area | Requirements | Scenario |
 |---|---|---|---|
@@ -376,6 +380,16 @@ Existing owner contracts and case budgets remain intact by reference, including 
 | sdd-bounded-drafting-C38 | State/application/idempotency/races | SDD-BDR-11 | New, update and companion preparation validate before branch creation. |
 | sdd-bounded-drafting-C39 | State/application/idempotency/races | SDD-BDR-07, SDD-BDR-11 | A legacy card removes circular questions and preserves the numbers and authorization of genuine decisions. |
 | sdd-bounded-drafting-C40 | Integration/security/migration | SDD-BDR-07, SDD-BDR-11 | A verified linked branch retains its owner. Failed publication or an unrelated ref leaves implementation blocked. |
+| sdd-bounded-drafting-C41 | Domain/configuration/pure planning | SDD-BDR-10 | A repaired unit retains an allocated ID referenced by a later accepted unit. |
+| sdd-bounded-drafting-C42 | State/application/idempotency/races | SDD-BDR-11 | A mixed external and circular question retains the external merge clause. |
+| sdd-bounded-drafting-C43 | State/application/idempotency/races | SDD-BDR-11 | A genuine security approval remains blocking when its question mentions branch creation. |
+| sdd-bounded-drafting-C44 | State/application/idempotency/races | SDD-BDR-07 | Issue edits or withdrawn admission block the push or withhold branch readiness when a commit was already pushed. |
+| sdd-bounded-drafting-C45 | State/application/idempotency/races | SDD-BDR-07 | A persisted prepared commit recovers after a pushed commit and interrupted card update. |
+| sdd-bounded-drafting-C46 | Adapters/provider contracts | SDD-BDR-07 | A moved or deleted remote ref rejects the exact parent lease and remains intact. |
+| sdd-bounded-drafting-C47 | Adapters/provider contracts | SDD-BDR-07 | A local Git replacement ref cannot change the owner bytes selected by immutable SHA. |
+| sdd-bounded-drafting-C48 | Integration/security/migration | SDD-BDR-05 | Partial, duplicated and fenced seed blocks never reach the provider. |
+| sdd-bounded-drafting-C49 | Integration/security/migration | SDD-BDR-05 | A quoted, duplicated, fenced or foreign-repository receipt cannot authorize a publication. |
+| sdd-bounded-drafting-C50 | Integration/security/migration | SDD-BDR-07 | An advanced legacy pending ref or a commit with forged bot metadata cannot establish publication. |
 
 The verified Jest global thresholds are 90% lines and statements, 88% functions and 82% branches. Existing per-module budgets and applicable CI checks remain part of acceptance. New pure planning policy must achieve at least 90% branch coverage and 100% decision-table row coverage. Changed modules must meet repository thresholds without reducing their baseline. Use deterministic clocks, IDs and fakes; no real waits or live services. Test structured contracts and semantics as well as golden presentation fixtures. Workflow checks parse schemas and paths, not prose grep. Manual UX evidence: maintainers verify proposal clarity and card readability on narrow screen and supported light/dark themes.
 
@@ -440,7 +454,8 @@ Use a disposable consumer repository with the candidate Action pinned to its exa
 12. Given a planned SDD above the legacy 70,000-unit threshold within the qualified operational budgets, when the default path runs, then it autonomously composes and publishes the complete validated result.
 13. Given a provider unit that drops an explicit case, source-span obligation or file operation, when trusted code aggregates the units, then coverage verification blocks the candidate and preserves every retained obligation.
 14. Given an invalid requirement ID or a new local handle, the gate reports invalid syntax or allocates a canonical ID and derives its reciprocal links. An authorized seed cannot redefine a reserved ID.
-15. Given the Domus #25 clarification shape, the gate retains the external merge decision and proceeds after authorized evidence without asking about its own future managed branch. Verified publication and linkage still govern implementation.
+15. Given the Domus #25 clarification shape, including a question with both a real prerequisite and a separate future-branch clause, the gate retains the genuine decision and proceeds after authorized evidence. Verified publication and linkage still govern implementation.
+16. Given an interrupted publication, the Action reconciles the recorded prepared commit, or stops for review when the linked branch lacks that exact evidence. Git author and subject fields grant no authority.
 
 ## 17. Requirements traceability
 
@@ -450,13 +465,13 @@ Use a disposable consumer repository with the candidate Action pinned to its exa
 | SDD-BDR-02 | sdd-bounded-drafting-C01, sdd-bounded-drafting-C02, sdd-bounded-drafting-C16, sdd-bounded-drafting-C24, sdd-bounded-drafting-C27, sdd-bounded-drafting-C29, sdd-bounded-drafting-C30 |
 | SDD-BDR-03 | sdd-bounded-drafting-C03, sdd-bounded-drafting-C10, sdd-bounded-drafting-C11, sdd-bounded-drafting-C12, sdd-bounded-drafting-C27, sdd-bounded-drafting-C32 |
 | SDD-BDR-04 | sdd-bounded-drafting-C15, sdd-bounded-drafting-C20, sdd-bounded-drafting-C31 |
-| SDD-BDR-05 | sdd-bounded-drafting-C05, sdd-bounded-drafting-C06, sdd-bounded-drafting-C17, sdd-bounded-drafting-C23, sdd-bounded-drafting-C28, sdd-bounded-drafting-C36 |
+| SDD-BDR-05 | sdd-bounded-drafting-C05, sdd-bounded-drafting-C06, sdd-bounded-drafting-C17, sdd-bounded-drafting-C23, sdd-bounded-drafting-C28, sdd-bounded-drafting-C36, sdd-bounded-drafting-C48, sdd-bounded-drafting-C49 |
 | SDD-BDR-06 | sdd-bounded-drafting-C18, sdd-bounded-drafting-C19, sdd-bounded-drafting-C20, sdd-bounded-drafting-C21 |
-| SDD-BDR-07 | sdd-bounded-drafting-C07, sdd-bounded-drafting-C08, sdd-bounded-drafting-C09, sdd-bounded-drafting-C15, sdd-bounded-drafting-C22, sdd-bounded-drafting-C24, sdd-bounded-drafting-C25, sdd-bounded-drafting-C26, sdd-bounded-drafting-C31, sdd-bounded-drafting-C32, sdd-bounded-drafting-C39, sdd-bounded-drafting-C40 |
+| SDD-BDR-07 | sdd-bounded-drafting-C07, sdd-bounded-drafting-C08, sdd-bounded-drafting-C09, sdd-bounded-drafting-C15, sdd-bounded-drafting-C22, sdd-bounded-drafting-C24, sdd-bounded-drafting-C25, sdd-bounded-drafting-C26, sdd-bounded-drafting-C31, sdd-bounded-drafting-C32, sdd-bounded-drafting-C39, sdd-bounded-drafting-C40, sdd-bounded-drafting-C44, sdd-bounded-drafting-C45, sdd-bounded-drafting-C46, sdd-bounded-drafting-C47, sdd-bounded-drafting-C50 |
 | SDD-BDR-08 | sdd-bounded-drafting-C03, sdd-bounded-drafting-C10, sdd-bounded-drafting-C13, sdd-bounded-drafting-C29, sdd-bounded-drafting-C32 |
 | SDD-BDR-09 | sdd-bounded-drafting-C27, sdd-bounded-drafting-C28, sdd-bounded-drafting-C29, sdd-bounded-drafting-C30, sdd-bounded-drafting-C31 |
-| SDD-BDR-10 | sdd-bounded-drafting-C33, sdd-bounded-drafting-C34, sdd-bounded-drafting-C35, sdd-bounded-drafting-C36 |
-| SDD-BDR-11 | sdd-bounded-drafting-C37, sdd-bounded-drafting-C38, sdd-bounded-drafting-C39, sdd-bounded-drafting-C40 |
+| SDD-BDR-10 | sdd-bounded-drafting-C33, sdd-bounded-drafting-C34, sdd-bounded-drafting-C35, sdd-bounded-drafting-C36, sdd-bounded-drafting-C41 |
+| SDD-BDR-11 | sdd-bounded-drafting-C37, sdd-bounded-drafting-C38, sdd-bounded-drafting-C39, sdd-bounded-drafting-C40, sdd-bounded-drafting-C42, sdd-bounded-drafting-C43 |
 
 ## 18. Implementation sequence
 

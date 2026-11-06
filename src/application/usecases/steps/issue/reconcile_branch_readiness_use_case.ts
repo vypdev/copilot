@@ -29,7 +29,7 @@ export class ReconcileBranchReadinessUseCase {
       const evidence = context.branchName
         ? await this.linkedBranch.getLinkedBranch(context.issueNumber, context.branchName)
         : undefined;
-      const ready = branchIsReady({
+      const ready = started && branchIsReady({
         linkedBranchExists: Boolean(evidence),
         sddRequired: context.sddRequired,
         sddPublished: context.sddPublished,
@@ -37,21 +37,22 @@ export class ReconcileBranchReadinessUseCase {
       });
       const hasLabel = current.some(label => label.toLowerCase() === BRANCH_READY_LABEL);
       const hasSddLabel = current.some(label => label.toLowerCase() === SDD_REQUIRED_LABEL.toLowerCase());
-      if (ready !== hasLabel || context.sddRequired !== hasSddLabel) {
+      const keepSddLabel = context.sddRequired || (!started && hasSddLabel);
+      if (ready !== hasLabel || keepSddLabel !== hasSddLabel) {
         const next = current.filter(label => label.toLowerCase() !== BRANCH_READY_LABEL
           && label.toLowerCase() !== SDD_REQUIRED_LABEL.toLowerCase());
         if (ready) next.push(BRANCH_READY_LABEL);
-        if (context.sddRequired) next.push(SDD_REQUIRED_LABEL);
+        if (keepSddLabel) next.push(SDD_REQUIRED_LABEL);
         await this.labels.setLabels(context.issueNumber, next);
       }
       return [new Result({
         id: this.taskId,
         success: true,
-        executed: ready !== hasLabel || context.sddRequired !== hasSddLabel,
+        executed: ready !== hasLabel || keepSddLabel !== hasSddLabel,
         steps: ready
           ? [`Linked branch ${evidence!.name} is verified at ${evidence!.headSha}; implementation may begin.`]
           : hasLabel
-            ? ['The branched label was removed because the exact linked branch or required SDD commit is not verified.']
+            ? ['The branched label was removed because active admission, branch linkage or required SDD publication is unavailable.']
             : started && context.branchName
               ? ['Branch readiness is pending verification.']
               : [],
@@ -59,11 +60,9 @@ export class ReconcileBranchReadinessUseCase {
       })];
     } catch (error) {
       const semanticError = toApplicationError(error, 'provider.unavailable', 'Unable to verify linked branch readiness.');
-      if (current?.some(label => label.toLowerCase() === BRANCH_READY_LABEL
-        || (!context.sddRequired && label.toLowerCase() === SDD_REQUIRED_LABEL.toLowerCase()))) {
+      if (current?.some(label => label.toLowerCase() === BRANCH_READY_LABEL)) {
         try {
-          await this.labels.setLabels(context.issueNumber, current.filter(label => label.toLowerCase() !== BRANCH_READY_LABEL
-            && (context.sddRequired || label.toLowerCase() !== SDD_REQUIRED_LABEL.toLowerCase())));
+          await this.labels.setLabels(context.issueNumber, current.filter(label => label.toLowerCase() !== BRANCH_READY_LABEL));
         } catch {
           // Keep the original verification failure; the retry will reconcile the label.
         }

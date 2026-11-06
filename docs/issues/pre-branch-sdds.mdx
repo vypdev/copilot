@@ -586,10 +586,13 @@ questions, then posts a receipt bound to the draft, issue, base and exact path.
 Reply `SDD Q1: use seed <receipt>` to select it or
 `SDD Q1: generate <receipt>` to use normal generation. A material edit to the
 issue or a change to the base invalidates the previous seed receipt. The
-Action can update its own title decoration without changing the receipt.
+Action can update its own title decoration without changing the receipt, including while the issue is paused.
 After a material change, post a fresh review request for the current draft or
 explicitly choose generation from the existing card. Copilot rechecks the
-maintainer's permission and the selection before publication.
+maintainer's permission and the selection before publication. Post each
+review or selection as a separate plain-text comment. The receipt belongs to
+this repository and issue. Correct or remove incomplete, duplicated or fenced
+seed markers before restarting preparation.
 
 An unselected seed is excluded from generation. A selected seed passes the same
 case, mapping, path, composition, catalog and publication checks. If it fails,
@@ -600,6 +603,18 @@ before completing its response. No draft or branch is published for that failed
 generation, and the answered plan is retained. Review the provider diagnostic and rerun after the underlying limit or provider failure has been addressed. This is a different limit
 from a request timeout or a GitHub permission failure; the Action does not
 silently change models, credentials, or the admission policy.
+
+### Recovering an interrupted publication
+
+The Action records the exact prepared Git commit in the issue card before
+pushing. Rerun the original issue workflow if the commit was pushed and the
+status card is still pending. The Action verifies that same commit on the
+linked branch and reconciles readiness. If an older pending card has no
+prepared commit and the linked branch advanced, have a maintainer review the
+branch and run history before resuming. If an accepted clarification changes before publication, record
+the current decision in the issue and restart preparation on the same issue.
+The first published commit remains
+the baseline for later revisions. Removing `in-progress` pauses readiness and retains the SDD obligation until work resumes or an authorized maintainer reclassifies the issue.
 
 ### Additional clarification rounds
 

@@ -27,6 +27,33 @@ private repository content. Use the exact incident inputs for a separate
 private regression. Local bare Git publication and provider probes do not
 substitute for GitHub Actions publication evidence.
 
+## Scalability benchmark (#763)
+
+Run the benchmark from the exact candidate checkout with the repository
+Node and pnpm dependencies installed. Every invocation builds a synthetic
+owner, canonical requirements and cases, and a disposable local Git remote.
+
+```sh
+node quality/sdd/benchmark-763.cjs 12 4096
+node quality/sdd/benchmark-763.cjs 400 100820
+node quality/sdd/benchmark-763.cjs 1024 100820
+node quality/sdd/benchmark-763.cjs 2048 100820
+node quality/sdd/benchmark-763.cjs 1024 512000
+node quality/sdd/benchmark-763.cjs 4096 100820
+```
+
+The first argument counts requirements, cases and reciprocal edges. The second
+sets the retained owner's UTF-8 bytes. The last two commands exercise controlled
+publication and input budget failures. The scripted provider isolates host
+planning, assembly and validation costs. Peak RSS includes Node and the
+TypeScript loader. Git publication includes verifying the exact local remote
+commit. Set `SDD_BENCH_CODEX_EXECUTABLE` to an authenticated official Codex
+executable to measure real provider time and token counters for up to 400
+synthetic cases. That mode reads only usage counters and the structured
+answer from CLI events. It emits no prompts, rejected responses or source
+content in its measurement output. GitHub Actions timing and linked-branch
+effects are separate evidence.
+
 ## Historical ownership qualification (#856)
 
 `ownership-qualification.cjs` preserves the optional, issue-specific #856 campaign.

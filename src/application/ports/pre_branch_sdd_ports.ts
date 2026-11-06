@@ -29,7 +29,6 @@ export interface PreBranchSddWorkspacePort {
   readSdd(baseSha: string, path: string): Promise<string | undefined>;
   readRepositoryInventory(baseSha: string): Promise<SddRepositoryInventory>;
   validateDraft(snapshot: SddCatalogSnapshot, plan: SddPlan, markdown: string, newCapability?: SddCatalogCapability): Promise<SddPreparedDraft>;
-  publish(branchName: string, prepared: SddPreparedDraft): Promise<string>;
-  recoverPublished(branchName: string, prepared: SddPreparedDraft): Promise<string | undefined>;
+  publish(branchName: string, prepared: SddPreparedDraft, beforePush: (commitSha: string) => Promise<void>): Promise<string>;
   verifyPublication(branchName: string, preparedBaseSha: string, commitSha: string, path: string): Promise<boolean>;
 }

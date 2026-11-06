@@ -1,3 +1,4 @@
+import { visibleSddContract } from './sdd_visible_references';
 import { SDD_QUESTION_KINDS, type SddQuestionKind } from './sdd_clarification';
 import { admitSddArtifact, requireSddCapacity, sddBytes, SDD_RESOURCES } from './sdd_resource_budget';
 import { SddCatalogCompatibilityFailure, isSddCatalogOwnerPath, type SddCatalogCapability } from './sdd_catalog_compatibility';
@@ -30,11 +31,12 @@ export interface SddAnswer {
   /** Legacy records may lack question provenance; never infer it from reused Q IDs. */
   readonly round?: number;
   readonly questionText?: string;
+  readonly questionOwner?: SddAnswerOwner;
 }
 
 export type SddSelection =
-  | { readonly kind: 'seed'; readonly receipt: string; readonly seedHash: string; readonly reviewCommentId?: number; readonly newCapability?: SddCatalogCapability }
-  | { readonly kind: 'companion'; readonly receipt: string; readonly retainedPath: string };
+  | { readonly kind: 'seed'; readonly receipt: string; readonly seedHash: string; readonly issueScope?: string; readonly reviewCommentId?: number; readonly newCapability?: SddCatalogCapability }
+  | { readonly kind: 'companion'; readonly receipt: string; readonly issueScope?: string; readonly retainedPath: string };
 
 export interface SddGateRecord {
   readonly version: 1;
@@ -47,6 +49,7 @@ export interface SddGateRecord {
   readonly answers?: readonly SddAnswer[];
   readonly selection?: SddSelection;
   readonly selectionArtifact?: string;
+  readonly publication?: Readonly<{ baseSha: string; commitSha: string }>;
   readonly branchName?: string;
   readonly commitSha?: string;
   readonly revisionSha?: string;
@@ -183,6 +186,13 @@ export function readSddGateRecord(body: string | null | undefined, issueNumber: 
     if (value.revisionSha !== undefined && (typeof value.revisionSha !== 'string' || !SHA.test(value.revisionSha))) return undefined;
     if (value.revisionBaseSha !== undefined && (typeof value.revisionBaseSha !== 'string' || !SHA.test(value.revisionBaseSha))) return undefined;
     if (value.revisionSha && !value.revisionBaseSha) return undefined;
+    if (value.publication !== undefined && (!isRecord(value.publication)
+      || Object.keys(value.publication).length !== 2 || value.phase !== 'awaiting-answer'
+      || typeof value.branchName !== 'string' || (value.plan.questions as unknown[]).length !== 0
+      || typeof value.publication.baseSha !== 'string' || !SHA.test(value.publication.baseSha)
+      || value.publication.baseSha !== (value.commitSha ? value.revisionBaseSha : value.baseSha)
+      || typeof value.publication.commitSha !== 'string' || !SHA.test(value.publication.commitSha)
+      || value.publication.baseSha === value.publication.commitSha)) return undefined;
     if ((value.revisionSha || value.revisionBaseSha) && !value.commitSha) return undefined;
     if (value.answers !== undefined && (!Array.isArray(value.answers) || value.answers.length > 24
       || value.answers.some((answer: unknown) => !isRecord(answer)
@@ -190,6 +200,7 @@ export function readSddGateRecord(body: string | null | undefined, issueNumber: 
         || typeof answer.author !== 'string' || answer.author.length > 100
         || !Number.isInteger(answer.commentId) || (answer.commentId as number) <= 0
         || typeof answer.text !== 'string' || answer.text.length > 3000
+        || (answer.questionOwner !== undefined && !['issue-author', 'maintainer'].includes(String(answer.questionOwner)))
         || ((answer.round !== undefined || answer.questionText !== undefined)
           && (!Number.isInteger(answer.round) || (answer.round as number) < 1 || (answer.round as number) > 3
             || typeof answer.questionText !== 'string' || answer.questionText.length < 12 || answer.questionText.length > 1000))))) return undefined;
@@ -201,14 +212,16 @@ export function readSddGateRecord(body: string | null | undefined, issueNumber: 
 
 function validSddSelection(value: unknown): boolean {
   if (!isRecord(value) || typeof value.receipt !== 'string' || !DIGEST.test(value.receipt)) return false;
+  if (value.issueScope !== undefined && (typeof value.issueScope !== 'string' || value.issueScope.length > 2048
+    || !/^https:\/\/[^/?#@]+\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/issues\/[1-9]\d*$/u.test(value.issueScope))) return false;
   if (value.kind === 'seed') {
-    return Object.keys(value).every(key => ['kind', 'receipt', 'seedHash', 'reviewCommentId', 'newCapability'].includes(key))
+    return Object.keys(value).every(key => ['kind', 'receipt', 'seedHash', 'issueScope', 'reviewCommentId', 'newCapability'].includes(key))
       && (value.reviewCommentId === undefined || (typeof value.reviewCommentId === 'number'
         && Number.isSafeInteger(value.reviewCommentId) && value.reviewCommentId > 0))
       && typeof value.seedHash === 'string' && DIGEST.test(value.seedHash)
       && (value.newCapability === undefined || (isRecord(value.newCapability) && JSON.stringify(value.newCapability).length <= 16_384));
   }
-  return value.kind === 'companion' && Object.keys(value).length === 3
+  return value.kind === 'companion' && Object.keys(value).every(key => ['kind', 'receipt', 'retainedPath', 'issueScope'].includes(key))
     && typeof value.retainedPath === 'string' && isSafeSddPath(value.retainedPath);
 }
 
@@ -218,8 +231,8 @@ export function renderSddGateRecord(record: SddGateRecord, locale = 'en-US', iss
   if (record.phase === 'published') {
     const links = sddPublicationLinks(record, issueUrl, spanish);
     return spanish
-      ? `## Estado del SDD\n\n**Estado actual:** El SDD está publicado; la implementación puede empezar tras verificar la rama.\n\n**SDD:** \`${record.plan.path}\` · **Rama:** \`${record.branchName}\` · **Primer commit:** \`${record.commitSha}\`${record.revisionSha ? ` · **Revisión:** \`${record.revisionSha}\`` : ''}${links}\n\n${marker}`
-      : `## SDD work status\n\n**Current status:** The SDD is published; implementation can begin after branch verification.\n\n**SDD:** \`${record.plan.path}\` · **Branch:** \`${record.branchName}\` · **First commit:** \`${record.commitSha}\`${record.revisionSha ? ` · **Revision:** \`${record.revisionSha}\`` : ''}${links}\n\n${marker}`;
+      ? `## Estado del SDD\n\n**Estado actual:** El SDD está publicado. La implementación requiere una admisión activa y una rama verificada.\n\n**SDD:** \`${record.plan.path}\` · **Rama:** \`${record.branchName}\` · **Primer commit:** \`${record.commitSha}\`${record.revisionSha ? ` · **Revisión:** \`${record.revisionSha}\`` : ''}${links}\n\n${marker}`
+      : `## SDD work status\n\n**Current status:** The SDD is published. Implementation requires active admission and verified branch readiness.\n\n**SDD:** \`${record.plan.path}\` · **Branch:** \`${record.branchName}\` · **First commit:** \`${record.commitSha}\`${record.revisionSha ? ` · **Revision:** \`${record.revisionSha}\`` : ''}${links}\n\n${marker}`;
   }
   const questions = record.plan.questions.map(question =>
     `- **${question.id} · ${question.owner === 'maintainer' ? (spanish ? 'Mantenimiento' : 'Maintainer') : (spanish ? 'Autor de la issue' : 'Issue author')}:** ${sanitize(question.text)}${question.suggestion ? `\n  ${spanish ? 'Respuesta sugerida' : 'Suggested answer'}: ${sanitize(question.suggestion)}` : ''}`,
@@ -272,9 +285,11 @@ export function isSddAnswerComment(body: string): boolean {
 }
 
 export function parseSddAnswer(body: string, questionId: string): string | undefined {
-  const line = body.split(/\r?\n/).find(candidate => new RegExp(`^\\s*SDD\\s+${questionId}:\\s*`, 'i').test(candidate));
-  if (!line) return undefined;
-  const text = line.replace(new RegExp(`^\\s*SDD\\s+${questionId}:\\s*`, 'i'), '').trim();
+  if (!/^Q[1-8]$/u.test(questionId)) return undefined;
+  const prefix = new RegExp(`^ {0,3}SDD[ \t]+${questionId}:[ \t]*`, 'i');
+  const lines = visibleSddContract(body).split('\n').filter(candidate => prefix.test(candidate));
+  if (lines.length !== 1) return undefined;
+  const text = lines[0].replace(prefix, '').trim();
   return text.length >= 3 && text.length <= 3000 ? text : undefined;
 }
 
@@ -380,7 +395,7 @@ export function composeSddUpdate(existing: string, change: string): string {
     throw error;
   }
   validateSddMarkdown(change);
-  const appendix = shiftSddHeadings(change, 1).trim();
+  const appendix = indentSddHeadings(change).trim();
   const prefix = sddAppendixPrefix(existing);
   requireSddCapacity('publication', 'bytes', SDD_RESOURCES.artifactBytes, sddBytes(prefix) + sddBytes(appendix) + 1);
   const merged = `${prefix}${appendix}\n`;
@@ -393,19 +408,7 @@ function sddAppendixPrefix(existing: string): string {
   return existing.endsWith('\n') ? existing + '\n' : existing + '\n\n';
 }
 
-/** Recover the exact appendix and support the older whitespace-normalizing publication format. */
-export function recoverSddUpdate(existing: string, published: string): string | undefined {
-  const current = sddAppendixPrefix(existing);
-  const legacy = existing.trimEnd() + '\n\n';
-  const prefix = published.startsWith(current) ? current : published.startsWith(legacy) ? legacy : undefined;
-  if (!prefix) return undefined;
-  const change = shiftSddHeadings(published.slice(prefix.length), -1).trim().padEnd(SDD_MIN_DRAFT_CHARACTERS, '\n');
-  const exact = composeSddUpdate(existing, change);
-  const reconstructed = prefix === current ? exact : legacy + exact.slice(current.length);
-  return reconstructed === published ? change : undefined;
-}
-
-function shiftSddHeadings(source: string, direction: 1 | -1): string {
+function indentSddHeadings(source: string): string {
   let fence: string | undefined;
   return source.split('\n').map(line => {
     const boundary = line.match(/^\s*(`{3,}|~{3,})/);
@@ -415,8 +418,7 @@ function shiftSddHeadings(source: string, direction: 1 | -1): string {
       return line;
     }
     if (fence) return line;
-    return direction === 1 ? (/^#{1,5} /.test(line) ? `#${line}` : line)
-      : (/^#{2,6} /.test(line) ? line.slice(1) : line);
+    return /^#{1,5} /.test(line) ? `#${line}` : line;
   }).join('\n');
 }
 

@@ -45,8 +45,10 @@ function harness(presentation?: ConstructorParameters<typeof PreBranchSddGateUse
   const isAncestor = jest.fn().mockResolvedValue(true);
   const readSdd = jest.fn().mockResolvedValue('# Existing SDD');
   const validateDraft = jest.fn().mockResolvedValue(prepared);
-  const publish = jest.fn().mockResolvedValue(commitSha);
-  const recoverPublished = jest.fn().mockResolvedValue(undefined);
+  const publish = jest.fn(async (_branch, _draft, beforePush: (sha: string) => Promise<void>) => {
+    await beforePush(commitSha);
+    return commitSha;
+  });
   const verifyPublication = jest.fn().mockResolvedValue(true);
   const addComment = jest.fn(async (_issue: number, body: string) => { comments.push({ id: Math.max(99, ...comments.map(comment => comment.id)) + 1, body, user: { login: 'copilot[bot]' } }); });
   const updateComment = jest.fn(async (_issue: number, id: number, body: string) => {
@@ -61,7 +63,7 @@ function harness(presentation?: ConstructorParameters<typeof PreBranchSddGateUse
   const getLinkedBranch = jest.fn().mockResolvedValue({ name: 'feature/42-change', headSha: baseSha });
   const useCase = new PreBranchSddGateUseCase(
     { query },
-    { loadSnapshot, isAncestor, readSdd, validateDraft, publish, recoverPublished, verifyPublication,
+    { loadSnapshot, isAncestor, readSdd, validateDraft, publish, verifyPublication,
       readRepositoryInventory: jest.fn().mockResolvedValue({ files: new Set([plan.path]), directories: new Set(['specs']), blocked: new Set() }),
       ...(revisionReader ? { readSourceRevision } : {}) },
     { listIssueComments: jest.fn(async () => comments), addComment, updateComment },
@@ -72,7 +74,7 @@ function harness(presentation?: ConstructorParameters<typeof PreBranchSddGateUse
     { getLinkedBranch },
     presentation,
   );
-  return { useCase, comments, query, loadSnapshot, readSourceRevision, isAncestor, readSdd, validateDraft, publish, recoverPublished, verifyPublication, addComment, updateComment, setLabels, isActorAllowedToModifyFiles, getDescription, getTitle, getLinkedBranch, labels: () => labels };
+  return { useCase, comments, query, loadSnapshot, readSourceRevision, isAncestor, readSdd, validateDraft, publish, verifyPublication, addComment, updateComment, setLabels, isActorAllowedToModifyFiles, getDescription, getTitle, getLinkedBranch, labels: () => labels };
 }
 
 function incrementalReply({ prompt }: { prompt: string }, caseId = 'payments-change-C01') {
@@ -94,7 +96,7 @@ describe('PreBranchSddGateUseCase', () => {
     suggestion: 'Confirm the managed branch is available before implementation.' };
   const prerequisite = { id: 'Q1', owner: 'maintainer',
     text: 'Has PR24 merged and does its tree match the reviewed head?',
-    kind: 'external-prerequisite' };
+    kind: 'external-prerequisite' } as const;
 
   it('860: removes the original circular Q2 while waiting for the actual prerequisite merge', async () => {
     const h = harness();
@@ -113,6 +115,39 @@ describe('PreBranchSddGateUseCase', () => {
     expect((await h.useCase.begin(context())).status).toBe('drafted');
     expect(h.publish).not.toHaveBeenCalled();
     expect(h.labels()).not.toContain('branched');
+  });
+
+  it('860: keeps the external merge and strips a separate circular clause in the same question', async () => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null, questions: [{
+      ...prerequisite, text: 'Has PR24 merged and has the Action published its exact managed branch?',
+      suggestion: 'Confirm both the merge and the future managed branch.',
+    }] });
+    expect((await h.useCase.begin(context())).status).toBe('waiting');
+    const record = readSddGateRecord(h.comments[0].body, 42);
+    expect(record?.plan.questions[0]).toEqual({ ...prerequisite, text: 'Has PR24 merged?' });
+    expect(h.comments[0].body).not.toContain('managed branch');
+  });
+
+  it('860: rewrites a mixed question already in an owned card without changing its ID', async () => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...plan, questions: [prerequisite], newCapability: null });
+    expect((await h.useCase.begin(context())).status).toBe('waiting');
+    const prior = readSddGateRecord(h.comments[0].body, 42)!;
+    h.comments[0].body = renderSddGateRecord({ ...prior, plan: { ...prior.plan, questions: [{
+      ...prerequisite, text: 'Has PR24 merged and has the Action published its exact managed branch?',
+    }] } });
+    expect((await h.useCase.begin(context())).status).toBe('waiting');
+    expect(readSddGateRecord(h.comments[0].body, 42)?.plan.questions).toEqual([{ ...prerequisite, text: 'Has PR24 merged?' }]);
+    expect(h.query).toHaveBeenCalledTimes(1);
+  });
+
+  it('860: keeps a real approval that is needed before creating the managed branch', async () => {
+    const h = harness();
+    const text = 'Does security need to sign off before the managed branch can be created?';
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null, questions: [{ ...question, text, kind: 'action-postcondition' }] });
+    expect((await h.useCase.begin(context())).status).toBe('waiting');
+    expect(readSddGateRecord(h.comments[0].body, 42)?.plan.questions[0].text).toBe(text);
   });
 
   it.each(['update', 'companion', 'new'] as const)('860: drafts before an Action-managed branch exists for %s', async action => {
@@ -214,6 +249,44 @@ describe('PreBranchSddGateUseCase', () => {
     h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: writerDraft('# Autonomous') });
     expect((await h.useCase.begin(request)).status).toBe('drafted');
     expect(h.query.mock.calls.every(([request]) => !request.prompt.includes(secretWitness))).toBe(true);
+  });
+
+  it.each(['partial', 'duplicate', 'fenced'] as const)('keeps a %s seed block out of all provider prompts', async shape => {
+    const h = harness();
+    const open = '<!-- copilot:sdd-seed -->', close = '<!-- /copilot:sdd-seed -->';
+    const literal = open + '\nPRIVATE_SEED_WITNESS\n' + close;
+    const seed = shape === 'partial' ? open + '\nPRIVATE_SEED_WITNESS' : shape === 'duplicate' ? literal + '\n' + literal
+      : '\x60\x60\x60md\n' + literal + '\n\x60\x60\x60';
+    const request = { ...context(), issueBody: context().issueBody + '\n' + seed };
+    h.getDescription.mockResolvedValue(request.issueBody);
+    expect((await h.useCase.begin(request)).status).toBe('blocked');
+    expect(h.query).not.toHaveBeenCalled();
+    expect(JSON.stringify(h.comments)).not.toContain('PRIVATE_SEED_WITNESS');
+  });
+
+  it('rejects a quoted, fenced, duplicated or foreign-repository seed decision', async () => {
+    const h = harness();
+    const seed = sddConsistencyFixture('payments-change', plan.path, 'update').trimEnd() + '\n';
+    const request = { ...context(), issueUrl: 'https://github.com/example/first/issues/42',
+      issueBody: context().issueBody + '\n<!-- copilot:sdd-seed -->\n' + seed + '<!-- /copilot:sdd-seed -->' };
+    h.getDescription.mockResolvedValue(request.issueBody);
+    const command = 'SDD Q1: review seed ' + createHash('sha256').update(seed).digest('hex');
+    h.comments.push({ id: 101, user: { login: 'maintainer' }, body: command });
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null });
+    expect((await h.useCase.begin(request)).status).toBe('waiting');
+    const card = h.comments.find(comment => comment.user.login === 'copilot[bot]')!;
+    const choice = readSddGateRecord(card.body, 42)?.selection;
+    expect(choice?.issueScope).toBe(request.issueUrl);
+    const use = 'SDD Q1: use seed ' + choice!.receipt;
+    for (const [index, body] of ['> ' + use, '\x60\x60\x60\n' + use + '\n\x60\x60\x60', use + '\n' + use, '    ' + use].entries()) {
+      h.comments.push({ id: 103 + index, user: { login: 'maintainer' }, body });
+      expect((await h.useCase.begin(request)).status).toBe('waiting');
+    }
+    h.comments.push({ id: 107, user: { login: 'maintainer' }, body: use });
+    expect((await h.useCase.begin({ ...request, issueUrl: 'https://github.com/example/second/issues/42' })).status).toBe('blocked');
+    expect(h.validateDraft).not.toHaveBeenCalled();
+    expect((await h.useCase.begin(request)).status).toBe('drafted');
+    expect(h.query).toHaveBeenCalledTimes(1);
   });
 
   it.each(['publish', 'revoked', 'stale-base', 'stale-title', 'use-autonomous', 'withdraw-stale'] as const)('763: handles seed selection and %s through the managed gate', async scenario => {
@@ -435,7 +508,7 @@ describe('PreBranchSddGateUseCase', () => {
     expect(request.sourceSnapshot.baseSha).toBe(changed);
     expect(request.prompt).not.toContain('PRIOR_ONLY_WORKING_WITNESS');
     expect(request.prompt).not.toContain('Unpublished ownership proposal (round');
-    expect(h.recoverPublished).not.toHaveBeenCalled();
+    expect(h.verifyPublication).not.toHaveBeenCalled();
   });
 
   it('856: a published SDD owner keeps precedence over another configured working branch', async () => {
@@ -463,7 +536,7 @@ describe('PreBranchSddGateUseCase', () => {
     let workingSha = baseSha;
     h.loadSnapshot.mockImplementation(async branch => ({ ...snapshot, baseSha: branch === workingBranch ? workingSha : parentSha }));
     h.getLinkedBranch.mockImplementation(async () => ({ name: workingBranch, headSha: workingSha }));
-    h.publish.mockImplementation(async () => { workingSha = commitSha; return commitSha; });
+    h.publish.mockImplementation(async (_branch, _draft, beforePush) => { await beforePush(commitSha); workingSha = commitSha; return commitSha; });
     h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: writerDraft('# Accepted draft') });
     const draft = await h.useCase.begin(ctx);
     if (draft.status !== 'drafted') throw new Error('Expected validated draft on the existing issue branch');
@@ -531,8 +604,9 @@ describe('PreBranchSddGateUseCase', () => {
       if (change === 'unauthorized-answer') h.isActorAllowedToModifyFiles.mockResolvedValue(false);
       h.comments.push({ id: 101, body: change === 'unanswered' ? 'This is not a numbered SDD answer.' : 'SDD Q1: PRIOR_ONLY_WITNESS_APPROVAL', user: { login: 'maintainer' } });
       h.query.mockResolvedValueOnce({ ...plan, questions: [question], newCapability: null });
-      expect((await h.useCase.begin(next)).status).toBe('waiting');
-      if (change === 'unauthorized-answer' || change === 'unanswered') {
+      expect((await h.useCase.begin(next)).status).toBe(change === 'wrong-issue' ? 'blocked' : 'waiting');
+      if (change === 'wrong-issue') expect(h.query).toHaveBeenCalledTimes(1);
+      else if (change === 'unauthorized-answer' || change === 'unanswered') {
         expect(h.query).toHaveBeenCalledTimes(1);
         expect(readSddGateRecord(h.comments[0].body, 42)!.plan.path).toBe(newPlan.path);
       } else {
@@ -1004,15 +1078,109 @@ describe('PreBranchSddGateUseCase', () => {
     h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: writerDraft('# Draft') });
     const draft = await h.useCase.begin(context());
     if (draft.status !== 'drafted') throw new Error('Expected validated draft');
-    h.publish.mockRejectedValueOnce(new Error('transport failed after push'));
+    h.publish.mockImplementationOnce(async (_branch, _draft, beforePush) => {
+      await beforePush(commitSha);
+      throw new Error('transport failed after push');
+    });
     await h.useCase.publish(context(), draft, 'feature/42-change');
     h.query.mockClear();
     h.loadSnapshot.mockResolvedValue({ ...snapshot, baseSha: commitSha });
-    h.recoverPublished.mockResolvedValue(commitSha);
     const recovered = await h.useCase.begin(context());
     expect(recovered.status).toBe('published');
     expect(h.query).not.toHaveBeenCalled();
     expect(h.publish).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not publish if another run changes the issue while the intent is being persisted', async () => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: writerDraft('# Draft') });
+    const draft = await h.useCase.begin(context());
+    if (draft.status !== 'drafted') throw new Error('Expected validated draft');
+    const add = h.addComment.getMockImplementation()!;
+    const gitPush = jest.fn();
+    h.addComment.mockImplementationOnce(async (issue, body) => {
+      await add(issue, body);
+      h.getDescription.mockResolvedValue('New issue scope');
+    });
+    h.publish.mockImplementationOnce(async (_branch, _draft, beforePush) => {
+      await beforePush(commitSha);
+      gitPush();
+      return commitSha;
+    });
+    expect((await h.useCase.publish(context(), draft, 'feature/42-change')).status).toBe('blocked');
+    expect(gitPush).not.toHaveBeenCalled();
+    expect(h.verifyPublication).not.toHaveBeenCalled();
+    expect(readSddGateRecord(h.comments[0].body, 42)?.publication?.commitSha).toBe(commitSha);
+  });
+
+  it.each(['edit', 'revoke'] as const)('blocks drafting when an accepted answer changes during generation (%s)', async change => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...plan, questions: [question], newCapability: null });
+    expect((await h.useCase.begin(context())).status).toBe('waiting');
+    const answer = { id: 101, body: 'SDD Q1: Keep existing behavior.', user: { login: 'maintainer' } };
+    h.comments.push(answer);
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockImplementationOnce(async () => {
+      if (change === 'edit') answer.body = 'SDD Q1: Change the decided behavior.';
+      else h.isActorAllowedToModifyFiles.mockResolvedValue(false);
+      return { markdown: writerDraft('# Draft') };
+    });
+    expect((await h.useCase.begin(context())).status).toBe('blocked');
+    expect(h.publish).not.toHaveBeenCalled();
+    expect(h.labels()).not.toContain('branched');
+  });
+
+  it('does not publish after a maintainer withdraws the start label during generation', async () => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockImplementationOnce(async () => {
+      await h.setLabels(42, ['feature', 'SDD']);
+      return { markdown: writerDraft('# Draft') };
+    });
+    expect((await h.useCase.begin(context())).status).toBe('blocked');
+    expect(h.publish).not.toHaveBeenCalled();
+  });
+
+  it('bounds reconciliation if GitHub keeps returning the old pending card', async () => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: writerDraft('# Draft') });
+    const draft = await h.useCase.begin(context());
+    if (draft.status !== 'drafted') throw new Error('Expected validated draft');
+    h.publish.mockImplementationOnce(async (_branch, _draft, beforePush) => {
+      await beforePush(commitSha);
+      throw new Error('Connection dropped after the Git push');
+    });
+    await h.useCase.publish(context(), draft, 'feature/42-change');
+    h.loadSnapshot.mockResolvedValue({ ...snapshot, baseSha: commitSha });
+    h.updateComment.mockClear();
+    h.updateComment.mockResolvedValue(undefined);
+    expect((await h.useCase.begin(context())).status).toBe('blocked');
+    expect(h.updateComment).toHaveBeenCalledTimes(1);
+    expect(h.publish).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the exact pushed commit pending if the issue changes before readiness', async () => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: writerDraft('# Draft') });
+    const draft = await h.useCase.begin(context());
+    if (draft.status !== 'drafted') throw new Error('Expected validated draft');
+    h.publish.mockImplementationOnce(async (_branch, _draft, beforePush) => {
+      await beforePush(commitSha);
+      h.getDescription.mockResolvedValue('New issue scope after Git accepted the commit');
+      return commitSha;
+    });
+    expect((await h.useCase.publish(context(), draft, 'feature/42-change')).status).toBe('blocked');
+    expect(readSddGateRecord(h.comments[0].body, 42)).toMatchObject({ phase: 'awaiting-answer', publication: { commitSha } });
+    expect(h.verifyPublication).toHaveBeenCalledWith('feature/42-change', baseSha, commitSha, plan.path);
+  });
+
+  it('blocks an advanced legacy pending branch without treating commit metadata as authority', async () => {
+    const h = harness();
+    h.comments.push({ id: 100, user: { login: 'copilot[bot]' },
+      body: renderSddGateRecord({ version: 1, issueNumber: 42, phase: 'awaiting-answer', issueDigest: 'd'.repeat(64),
+        plan, baseSha, round: 1, branchName: 'feature/42-change' }) });
+    h.loadSnapshot.mockResolvedValue({ ...snapshot, baseSha: commitSha });
+    expect((await h.useCase.begin(context())).status).toBe('blocked');
+    expect(h.query).not.toHaveBeenCalled();
+    expect(h.verifyPublication).not.toHaveBeenCalled();
   });
 
   it('replays questions on the configured working branch without claiming an SDD publication link', async () => {
@@ -1174,8 +1342,7 @@ describe('PreBranchSddGateUseCase', () => {
     if (draft.status !== 'drafted') throw new Error('expected draft');
     const outcome = await h.useCase.publish(context(), draft, 'feature/42-change');
     expect(outcome).toMatchObject({ status: 'published', branchName: 'feature/42-change', commitSha });
-    expect(h.recoverPublished).toHaveBeenCalledWith('feature/42-change', prepared);
-    expect(h.publish).toHaveBeenCalledWith('feature/42-change', prepared);
+    expect(h.publish).toHaveBeenCalledWith('feature/42-change', prepared, expect.any(Function));
     expect(h.verifyPublication).toHaveBeenCalledWith('feature/42-change', baseSha, commitSha, plan.path);
     expect(h.comments).toHaveLength(1);
     expect(h.comments[0].body).toContain(commitSha);
@@ -1187,10 +1354,12 @@ describe('PreBranchSddGateUseCase', () => {
     h.query.mockResolvedValueOnce({ markdown: writerDraft('# New SDD content') });
     const draft = await h.useCase.begin(context());
     if (draft.status !== 'drafted') throw new Error('expected draft');
-    h.recoverPublished.mockResolvedValue(commitSha);
-    const outcome = await h.useCase.publish(context(), draft, 'feature/42-change');
+    h.updateComment.mockRejectedValueOnce(new Error('Status update interrupted'));
+    expect((await h.useCase.publish(context(), draft, 'feature/42-change')).status).toBe('blocked');
+    h.loadSnapshot.mockResolvedValue({ ...snapshot, baseSha: commitSha });
+    const outcome = await h.useCase.begin(context());
     expect(outcome.status).toBe('published');
-    expect(h.publish).not.toHaveBeenCalled();
+    expect(h.publish).toHaveBeenCalledTimes(1);
   });
 
   it('reuses a verified published SDD without another agent call or timeline card', async () => {
@@ -1320,7 +1489,13 @@ describe('PreBranchSddGateUseCase', () => {
     if (revision.status !== 'drafted') throw new Error('expected revision draft');
     expect(revision.record).toMatchObject({ branchName: 'feature/42-change', commitSha });
     const revisionSha = 'c'.repeat(40);
-    h.publish.mockResolvedValueOnce(revisionSha);
+    h.publish.mockImplementationOnce(async (_branch, _draft, beforePush) => {
+      await beforePush(revisionSha);
+      h.loadSnapshot.mockImplementation(async (branch: string) => branch === 'feature/42-change'
+        ? { ...snapshot, baseSha: revisionSha } : snapshot);
+      h.getLinkedBranch.mockResolvedValue({ name: 'feature/42-change', headSha: revisionSha });
+      return revisionSha;
+    });
     const published = await h.useCase.publish(revisedContext, revision, 'feature/42-change');
     expect(published).toMatchObject({ status: 'published', commitSha: revisionSha });
     expect(h.comments[0].body).toContain(revisionSha);
@@ -1553,7 +1728,11 @@ describe('SDD diagnostic retention and recovery (#714)', () => {
     const draft = await h.useCase.begin(context());
     if (draft.status !== 'drafted') throw new Error('Expected validated draft');
     const update = h.updateComment.getMockImplementation()!;
-    h.updateComment.mockRejectedValue(new Error('PRIVATE_PROVIDER_ERROR'));
+    const diagnosticId = h.comments.find(comment => comment.body.includes('copilot:sdd-analysis-status:v1'))?.id;
+    h.updateComment.mockImplementation(async (issue, id, body) => {
+      if (id === diagnosticId) throw new Error('PRIVATE_PROVIDER_ERROR');
+      await update(issue, id, body);
+    });
     const result = await h.useCase.publish(context(), draft, 'feature/42-change');
     expect(result.status).toBe('published');
     expect(result.results).toEqual(expect.arrayContaining([expect.objectContaining({ success: false,
@@ -1661,7 +1840,8 @@ describe('SDD diagnostic retention and recovery (#714)', () => {
     const draft = await h.useCase.begin(context());
     if (draft.status !== 'drafted') throw new Error('Expected validated draft');
     const revision = { ...draft, record: { ...draft.record, branchName: 'feature/42-change', commitSha: baseSha } };
-    h.publish.mockImplementation(async () => {
+    h.publish.mockImplementation(async (_branch, _draft, beforePush) => {
+      await beforePush(commitSha);
       h.loadSnapshot.mockResolvedValue({ ...snapshot, baseSha: foreignAdvance ? 'd'.repeat(40) : commitSha });
       return commitSha;
     });
@@ -1669,7 +1849,8 @@ describe('SDD diagnostic retention and recovery (#714)', () => {
     const result = await h.useCase.publish(context(), revision, 'feature/42-change');
     expect(result.status).toBe('blocked');
     if (foreignAdvance) {
-      expect(h.comments).toHaveLength(0);
+      expect(h.comments).toHaveLength(1);
+      expect(readSddGateRecord(h.comments[0].body, 42)?.publication?.commitSha).toBe(commitSha);
       expect(result.results.flatMap(result => result.errors)).toEqual(expect.arrayContaining([expect.objectContaining({ code: 'workflow.stale' })]));
     } else {
       expect(h.comments.find(comment => comment.body.includes('copilot:sdd-analysis-status:v1'))?.body).toContain('publication needs recovery');
