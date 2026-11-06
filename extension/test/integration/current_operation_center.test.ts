@@ -10,8 +10,17 @@ import { SETTINGS_KEY } from '../../src/application/settings_repository.ts';
 import { privacyCopy } from '../../src/domain/privacy_copy.ts';
 
 it.each(['en', 'es', 'fr', 'pt'])('the actual %s center reports reviewed and canonically saved preferences independently from off history', async locale => {
-    const f = await fixture(locale); change('center-theme', 'dark'); button(f.centerCopy.messages.preview).click();
+    const f = await fixture(locale); const previewReply = deferred<void>(); const send = f.app.port.send.getMockImplementation()!;
+    f.app.port.send.mockImplementation(async message => {
+        const result = await send(message);
+        if (message.method === 'center.preview') await previewReply.promise;
+        return result;
+    });
+    change('center-theme', 'dark'); button(f.centerCopy.messages.preview).click();
     await ready(() => operationText().includes(f.opCopy.stages.reviewed)); expect(operationText()).toContain(f.opCopy.retained.untracked);
+    expect(document.querySelector('#settings-review-heading')).toBeNull(); previewReply.resolve();
+    await ready(() => [...document.querySelectorAll<HTMLButtonElement>('[aria-labelledby="settings-review-heading"] button')]
+        .some(control => !control.disabled && control.textContent?.trim() === f.reviewCopy.confirm));
     button(f.reviewCopy.confirm).click(); await ready(() => operationText().includes(f.opCopy.stages.settled)); expect(f.port.set).toHaveBeenCalledOnce();
     expect(f.documents.has('diagnostics')).toBe(false); expect(operationText()).toContain(f.opCopy.target); expect(f.app.browser.api.permissions.request).not.toHaveBeenCalled();
 });
