@@ -1,5 +1,6 @@
 import type { GithubClientPort } from '../../../../infrastructure/github/ports/github_client_provider_port';
 import type { GithubIssueTitleClient } from '../../../../infrastructure/github/ports/github_issue_provider_ports';
+import { normalizeSddIssueTitle } from '../../../../domain/pre_branch_sdd';
 import { Labels } from '../../../model/labels';
 import { IssueTitleRepository } from '../issue_title_repository';
 
@@ -43,6 +44,44 @@ describe('IssueTitleRepository', () => {
         });
         expect(client.getClient).toHaveBeenCalledWith('token');
     });
+
+    it('preserves the material SDD title when updating Action decoration', async () => {
+        const labels = createLabels();
+        labels.currentIssueLabels = [labels.feature];
+        const title = 'SDD qualification: maintainer-authorized draft (café)';
+        const formatted = await repository.updateTitleIssueFormat(
+            'owner', 'repo', '', title, 42, '✨', labels, 'token', true,
+        );
+        expect(formatted).toBe('✨ - ' + title);
+        expect(normalizeSddIssueTitle(formatted!)).toBe(normalizeSddIssueTitle(title));
+        expect(normalizeSddIssueTitle(formatted!.replace('café', 'cafe'))).not.toBe(title);
+        await expect(repository.updateTitleIssueFormat(
+            'owner', 'repo', '', formatted!, 42, '✨', labels, 'token', true,
+        )).resolves.toBeUndefined();
+        expect(update).toHaveBeenCalledTimes(1);
+    });
+
+    it.each(['🔥 - Keep this wording', '1.2.3 - Keep this wording', '- Keep this wording'])(
+        'preserves the user-authored title prefix in %s across decoration changes',
+        async title => {
+            const labels = createLabels();
+            labels.currentIssueLabels = [labels.feature];
+            const formatted = await repository.updateTitleIssueFormat(
+                'owner', 'repo', '', title, 42, '🧑‍💻', labels, 'token', true,
+            );
+            expect(formatted).toBe('✨ - ' + title);
+            expect(normalizeSddIssueTitle(formatted!)).toBe(normalizeSddIssueTitle(title));
+            labels.currentIssueLabels = [labels.feature, 'branched'];
+            const linked = await repository.updateTitleIssueFormat(
+                'owner', 'repo', '', formatted!, 42, '🧑‍💻', labels, 'token', true,
+            );
+            expect(linked).toBe('✨🧑‍💻 - ' + title);
+            labels.currentIssueLabels = [labels.feature];
+            await expect(repository.updateTitleIssueFormat(
+                'owner', 'repo', '', linked!, 42, '🧑‍💻', labels, 'token', true,
+            )).resolves.toBe('✨ - ' + title);
+        },
+    );
 
     it('does not call GitHub when the formatted title is unchanged', async () => {
         const labels = createLabels();

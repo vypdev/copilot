@@ -47,13 +47,11 @@ Grounding permits read-only inspection of definitions, without executing project
 commands or disclosing secret-bearing script bodies. Source admission, the
 existing single repair, freshness checks and publication boundaries still apply.
 
-When an existing SDD owns the change, automated drafting adds a proposed change
-appendix while preserving the previous contract verbatim. Each appendix is
-limited to 18,000 characters and the complete SDD to 70,000. If the document
-would exceed that limit, use a companion SDD before branch creation or review
-and integrate existing proposals as a normal contributor on the linked branch.
-Publication retries keep the validated owner and do not consume another
-clarification round. Review the generated specification before implementation.
+When an existing SDD owns the change, Copilot keeps its exact bytes and appends the
+validated delta. Large inputs are drafted in bounded units. Copilot assembles the
+complete document before checking ownership, cases, paths and publication. An
+update that exceeds the final publication budget can produce a concrete companion
+proposal under the same capability before branch creation.
 
 The numeric test budget may use the canonical template table in section 14.
 Each allocation must be a positive integer and the single `Total` must equal
@@ -209,9 +207,10 @@ the section-17 aggregate is retained and an additional section-4 data-row fact
 locates the first goal without a case. The goal identifier and rejected text
 are withheld. Derived-slot failures distinguish the number of raw occurrences
 from a unique slot that is not alone on a visible line in its required section.
-The repair still regenerates a complete candidate for the same owner and
-answers, and every publication check runs again. A second failure remains
-blocked; provider or cancellation failures do not enter content repair.
+The repair replaces the responsible unit when the validation check identifies
+it. The gate then assembles the complete candidate and runs every publication
+check again. A second failure remains blocked; provider or cancellation failures
+do not enter content repair.
 
 The diagnostic feature retains only fixed checks and bounded numeric facts.
 It does not publish the rejected Markdown, case/requirement identifiers,
@@ -222,8 +221,8 @@ GitHub may retain its prior revisions. A retry replaces its current facts.
 Workflow logs follow the repository's existing retention; if a run has expired,
 retry this same issue to obtain a fresh bounded attempt and safe diagnostics.
 
-The limits are fixed: at most two drafting attempts per invocation (one shared
-eligible size/format repair), eight diagnostic facts, bounded coordinates/counts
+The gate allows one repair per drafting invocation, shared across eligible
+resource and format failures. It keeps eight diagnostic facts, bounded coordinates/counts
 and a 16,000-character diagnostic card. The card never truncates a requirement
 or turns a rejected draft into acceptance. If localized copy exceeds its card
 bound, the complete card falls back to reviewed English with an explicit note.
@@ -436,6 +435,12 @@ validation policy.
 
 ## Issue flow
 
+Clarification covers unresolved product decisions and external prerequisites,
+including a prerequisite pull request whose merge or reviewed tree still needs
+confirmation. The Action prepares and verifies the linked branch as part of
+publication. Wait for the verified SDD and linked branch before starting source
+implementation.
+
 1. Open an admitted issue with a feature type or `contract-change`, then add `in-progress`.
 2. The Action adds `SDD`, analyzes the issue against the catalog, and posts one **SDD work status** comment. If it finds blocking questions, it waits in `state:specifying` without drafting a document or creating a branch.
 3. Answer each question in an issue comment using `SDD Q1: your answer`, `SDD Q2: your answer`, and so on. The issue author answers questions assigned to the author; a repository member answers maintainer questions. A comment can answer several numbered questions. The Action ignores answers from other accounts.
@@ -502,16 +507,16 @@ cannot authorize a branch or `branched` label.
 
 ### Draft validation recovery
 
-Drafting aims for a complete compact document: about 6,000 characters for an
-update appendix or 10,000 for a new/companion SDD. These targets leave room for
-the provider to complete its structured response; they do not remove resolved
-requirements or change the acceptance limits below. Codex receives a compatible
-closed JSON shape; Copilot enforces the complete original string-length schema
-locally before any document reaches the writer.
+Copilot uses one bounded response for compact scopes. For larger scopes it plans
+inventory units from the admitted issue and answers, then drafts canonical section
+groups. Copilot retains explicit table rows, case identities, and path operations
+and derives the budget and reciprocal requirement links. A compact response that
+exhausts its unit budget can switch to the incremental plan as the one repair.
+The separate units in a plan are ordinary generation calls.
 
 #### Undersized draft response
 
-The Markdown response must contain at least **1,800 Unicode code points**.
+A compact Markdown response must contain at least **1,800 Unicode code points**.
 `validation.invalid-input` with `sdd-draft-response-too-short` identifies a
 drafting response below that minimum. The card and final error show the minimum
 and draft attempt, plus a measured count when available. A local adapter
@@ -535,42 +540,82 @@ their own identities; no rejected candidate is published or downloadable.
 
 #### Size and format repair
 
-The provider writes the requirements and explicit case inventory once. Copilot
-calculates the final area counts, total and reciprocal requirement links before
-validating the document. Every resolved acceptance minimum and scenario must
-remain in the inventory; the compact target is advisory, and the hard character
-limit also applies after the calculated tables are inserted.
+Use hyphenated requirement IDs such as `G-01` in an issue table or a
+maintainer draft. Copilot assigns IDs to new requirements in incremental
+generation and derives their reciprocal case links. When citing an existing
+requirement, keep its recorded ID and definition. Use a distinct ID for a
+different behavior. The recovery card identifies the first invalid or
+conflicting row.
 
-Assembly never changes case IDs, scenarios, requirement edges, supplied tables
-or paths to make a contradiction pass. Malformed definitions, colliding IDs,
-uncovered requirements and invalid paths still block publication. Existing
-complete drafts retain their bytes and checks. Structural consistency does not
-establish completeness or runtime acceptance; human review remains required.
+Copilot checks provider output, assembly, and the exact composed artifact
+separately. The managed drafting path admits up to 32 planned units, one shared
+repair, 16 KiB of structured response per unit, 512 KiB of aggregate structured
+responses, and a 512 KiB UTF-8 publication. It also bounds the source evidence,
+elapsed time, table rows, and reciprocal links. These budgets replace the former
+18,000- and 70,000-character document ceilings. A genuine provider token or
+transport failure keeps its own diagnosis.
 
-Copilot limits proposed update appendices to 18,000 characters and complete new
-or companion specifications to 70,000. If a generated draft exceeds its limit,
-it tries one concise regeneration for the same owner and answers. Missing
-required sections or a numeric test budget can use that same single attempt.
-Case identity, per-area case budgets, requirement mappings and repository paths
-share that attempt too. A repeated failure gives a specific recovery message:
-choose distinct full IDs, reconcile each area's cases, repair both directions
-of the mappings, or correct the paths and explicitly proposed files. No further
-generation or publication occurs in that run. Review the named contract and
-retry the same issue workflow; answered questions and historical commits remain.
-Proposed files must also be compatible with one another: a file cannot be the
-parent directory of another proposed file, in either declaration order or at
-any nesting depth. Sibling files and distinct pathname prefixes remain valid.
-All validation and freshness checks still apply. If the second draft still fails,
-no draft is published; existing answers and SDDs are retained. Retry with a proportional
-change or an approved companion specification.
+Check the stage and unit on the owned recovery card. Each prose unit checks
+file citations against the selected Git tree. If Copilot can identify the unit
+that introduced a bad citation, case reference, or inventory row, the one repair
+replaces that unit and retains the others. The complete artifact still passes
+all checks. The gate also checks that Git stages the exact validated
+SDD and catalog bytes; if repository attributes transform them, correct the
+attributes and retry. If an independent delta fits as a companion and the existing
+owner cannot accept it within the publication budget, the card names the proposed
+path, retained owner, and the exact maintainer reply. Accept it with
+`SDD Q1: accept companion <receipt>`. The proposed path remains under the same
+capability and is checked against the selected base. An existing linked
+publication keeps its owner and first commit.
+
+#### Optional maintainer draft
+
+Add a complete Markdown draft to the issue body between these standalone lines.
+
+```text
+<!-- copilot:sdd-seed -->
+[complete Markdown draft]
+<!-- /copilot:sdd-seed -->
+```
+
+Calculate the SHA-256 of the block contents with LF line endings and one LF
+immediately before the closing marker. A maintainer posts
+`SDD Q1: review seed <sha256>`. To offer a seed on the first run, post this
+request before starting the issue. Copilot resolves the owner and any other
+questions, then posts a receipt bound to the draft, issue, base and exact path.
+Reply `SDD Q1: use seed <receipt>` to select it or
+`SDD Q1: generate <receipt>` to use normal generation. A material edit to the
+issue or a change to the base invalidates the previous seed receipt. The
+Action can update its own title decoration without changing the receipt, including while the issue is paused.
+After a material change, post a fresh review request for the current draft or
+explicitly choose generation from the existing card. Copilot rechecks the
+maintainer's permission and the selection before publication. Post each
+review or selection as a separate plain-text comment. The receipt belongs to
+this repository and issue. Correct or remove incomplete, duplicated or fenced
+seed markers before restarting preparation.
+
+An unselected seed is excluded from generation. A selected seed passes the same
+case, mapping, path, composition, catalog and publication checks. If it fails,
+review the diagnostic or select generation from the current card.
 
 If the Action log reports `reported-output-token-limit`, the provider stopped
 before completing its response. No draft or branch is published for that failed
-generation, and the answered plan is retained. Update Copilot to use the compact
-targets and native-schema compatibility, then rerun the same issue workflow. If it still fails, review concise
-coverage of the resolved scope before another run. This is a different limit
+generation, and the answered plan is retained. Review the provider diagnostic and rerun after the underlying limit or provider failure has been addressed. This is a different limit
 from a request timeout or a GitHub permission failure; the Action does not
-silently change models, credentials, native JSON shape or hard document limits.
+silently change models, credentials, or the admission policy.
+
+### Recovering an interrupted publication
+
+The Action records the exact prepared Git commit before pushing. Independent
+records preserve the winning commit if issue and comment workflows overlap.
+Use the latest Action status card for current readiness. Rerun the original issue workflow if the commit was pushed and the
+status card is still pending. The Action verifies that same commit on the
+linked branch and reconciles readiness. If an older pending card has no
+prepared commit and the linked branch advanced, have a maintainer review the
+branch and run history before resuming. If an accepted clarification changes before publication, record
+the current decision in the issue and restart preparation on the same issue.
+The first published commit remains
+the baseline for later revisions. Removing `in-progress` pauses readiness and retains the SDD obligation until work resumes or an authorized maintainer reclassifies the issue.
 
 ### Additional clarification rounds
 

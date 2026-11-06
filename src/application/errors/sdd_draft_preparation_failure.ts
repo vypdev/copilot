@@ -14,7 +14,7 @@ export class SddDraftPreparationFailure extends ApplicationError {
   readonly diagnostic: SddValidationDiagnostic;
   constructor(diagnostic: SddValidationDiagnostic, readonly attempts: 1 | 2) {
     const normalized = normalizeSddValidationDiagnostic(diagnostic);
-    if ((attempts !== 1 && attempts !== 2) || (attempts === 1 && normalized.reason !== 'response-shape' && normalized.reason !== 'response-minimum')) {
+    if (attempts !== 1 && attempts !== 2) {
       throw new TypeError('Invalid bounded SDD attempt count.');
     }
     const id = RECOVERY[normalized.reason];
@@ -22,10 +22,11 @@ export class SddDraftPreparationFailure extends ApplicationError {
       ? { id: 'sdd-draft-response-too-short', variables: { minimum: normalized.facts[0].expected!,
         observed: normalized.facts[0].observed ?? 'unavailable', attempts } }
       : id ? { id, variables: {} } : undefined;
+    const repair = attempts === 2 ? ' after one bounded repair' : '';
     const message = normalized.reason === 'response-shape' ? 'The drafting agent returned no SDD Markdown.'
       : normalized.reason === 'response-minimum' ? 'The SDD drafting response is shorter than the required minimum.'
-      : normalized.reason === 'size' ? 'The SDD draft exceeded its size limit after one bounded repair.'
-        : `The SDD draft still violates its ${normalized.reason} format contract after one bounded repair.`;
+      : normalized.reason === 'size' ? `The SDD draft exceeded its size limit${repair}.`
+        : `The SDD draft violates its ${normalized.reason} format contract${repair}.`;
     super('validation.invalid-input', message, recovery ? { recovery } : {});
     this.diagnostic = normalized;
   }

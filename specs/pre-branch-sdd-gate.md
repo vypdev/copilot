@@ -12,6 +12,12 @@
 
 Live dogfooding on 2026-10-10 (#454) exposed a runner checkout hook that required `node` from the service PATH and prevented the already validated SDD commit. SDD publication now uses an empty hooks directory for that single Git invocation; contributor hook configuration is retained. The Action's own SDD and catalog validation remains mandatory before staging and publication. Subsequent review found that a generated update had replaced the owning capability's previous contract with the new feature's scope. Automated updates now preserve the existing owner verbatim and append a proposed change. Publication retries reuse their validated owner without spending another clarification round. These protections bring the minimum budget to 72.
 
+
+The managed drafting and publication resource limits, optional maintainer
+selection, and companion recovery in [issue #763](./sdd-bounded-drafting-and-companion-recovery.md)
+supersede the historical document-size limits recorded below. The gate retains
+the existing authorization, ownership, readiness, and first-publication checks.
+
 ## 1. Executive summary
 
 The [immutable source-context companion](pre-branch-sdd-source-context.md) binds

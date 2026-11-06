@@ -24,6 +24,19 @@ export function resolveIssueTitleEmoji(labels: TitleLabelFacts, branchManagement
     return resolveTitleEmoji(labels, branchManagementEmoji);
 }
 
+/** Remove only decorations this issue type can receive, including during readiness transitions. */
+export function stripIssueTitleDecoration(title: string, version: string, labels: TitleLabelFacts, branchManagementEmoji: string): string {
+    const trimmed = title.trim();
+    const typeEmoji = firstMatchingEmoji(TYPE_RULES, labels);
+    const baseEmoji = typeEmoji ?? resolveTitleEmoji(labels, '');
+    const decorated = typeEmoji ? [typeEmoji + branchManagementEmoji, baseEmoji] : [baseEmoji];
+    const prefix = decorated.map(emoji => emoji + ' - ').find(value => trimmed.startsWith(value));
+    if (!prefix) return trimmed;
+    const material = trimmed.slice(prefix.length);
+    const versionPrefix = version + ' - ';
+    return version && material.startsWith(versionPrefix) ? material.slice(versionPrefix.length) : material;
+}
+
 export function resolvePullRequestTitleEmoji(labels: TitleLabelFacts, branchManagementEmoji: string): string {
     return resolveTitleEmoji(labels, branchManagementEmoji);
 }

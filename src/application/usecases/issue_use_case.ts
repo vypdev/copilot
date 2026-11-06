@@ -22,7 +22,7 @@ import {
   type RecommendStepsOutcome,
 } from './push_single_action_contexts';
 import type { BranchConfigurationPatch } from './issue_workflow_context';
-import { ISSUE_START_LABEL } from '../../domain/issue_start_policy';
+import { CONTRACT_CHANGE_LABEL, ISSUE_START_LABEL, SDD_REQUIRED_LABEL } from '../../domain/issue_start_policy';
 import type { PreBranchSddGateUseCase } from './sdd/pre_branch_sdd_gate_use_case';
 
 export class IssueUseCase implements ParamUseCase<Execution, Result[]> {
@@ -117,6 +117,8 @@ function buildIssueWorkflowAdmissionResult(
 
 function projectIssueWorkflowRouteContext(param: Execution): IssueWorkflowRouteContext {
   const started = param.issueStartDecision.started;
+  const preserveSddTitle = param.preBranchSdd && (param.issueWorkflowKind === 'feature'
+    || param.labels.currentIssueLabels.some(label => [CONTRACT_CHANGE_LABEL, SDD_REQUIRED_LABEL.toLowerCase()].includes(label.toLowerCase())));
   const startEvent = param.issue.labeled && param.issue.labelAdded === ISSUE_START_LABEL;
   const recommendation = !started || (!startEvent && !param.issue.descriptionEdited && !param.issue.opened)
     ? undefined
@@ -130,6 +132,7 @@ function projectIssueWorkflowRouteContext(param: Execution): IssueWorkflowRouteC
     started,
     reopened: param.eventName === 'issues' && param.inputs?.action === 'reopened',
     sddRequired: param.issueStartDecision.sddRequired,
+    preserveSddTitle,
     issueNumber: param.issue.number,
     branchName: param.currentConfiguration.workingBranch,
     sddContext: param.issueStartDecision.sddRequired ? {

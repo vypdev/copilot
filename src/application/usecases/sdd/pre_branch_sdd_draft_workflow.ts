@@ -11,6 +11,7 @@ import {
 import { AgentResponseLengthFailure } from '../../../domain/agent_response_length_failure';
 import { AgentResponseSchemaFailure } from '../../../domain/agent_response_schema_failure';
 import { renderSddDerivedTables, renderSddFileLinks, renderSddNavigation, SDD_CONSISTENCY_PROMPT, SDD_DERIVED_TABLES_PROMPT, SDD_FILE_LINKS_PROMPT } from '../../../domain/sdd_draft_consistency';
+import { sddBytes, SDD_RESOURCES } from '../../../domain/sdd_resource_budget';
 import type { AgentSourceSnapshot } from '../../../domain/agent_source_snapshot';
 import { SDD_DRAFT_GROUNDING_PROMPT } from '../../policies/sdd_draft_grounding_policy';
 
@@ -22,8 +23,9 @@ export async function draftSddMarkdown(
   prompt: string,
   validate?: (markdown: string) => Promise<void>,
   sourceSnapshot?: AgentSourceSnapshot,
+  replaceOversized?: () => Promise<string>,
 ): Promise<string> {
-  const maximum = plan.action === 'update' ? SDD_MAX_UPDATE_CHARACTERS : SDD_MAX_DRAFT_CHARACTERS;
+  const maximum = replaceOversized ? SDD_RESOURCES.unitBytes : plan.action === 'update' ? SDD_MAX_UPDATE_CHARACTERS : SDD_MAX_DRAFT_CHARACTERS;
   const target = Math.min(10_000, Math.floor(maximum / 3));
   const schema = {
     type: 'object',
@@ -51,6 +53,7 @@ export async function draftSddMarkdown(
       // Only the exact local schema's maximum-length rejection is recoverable.
       // Provider failures and other schema violations retain their original identity.
       if (!(error instanceof AgentResponseLengthFailure) || error.path !== '$.markdown' || error.maximum !== maximum) throw error;
+      if (attempt === 0 && replaceOversized) return replaceOversized();
       problem = 'size';
       diagnostic = { reason: 'size', phase: 'response', facts: [{ detail: 'size-limit', section: 0, expected: maximum }] };
       continue;
@@ -60,7 +63,8 @@ export async function draftSddMarkdown(
       throw new SddDraftPreparationFailure({ reason: 'response-shape', phase: 'response', facts: [{ detail: 'response-shape', section: 0 }] }, attempt === 0 ? 1 : 2);
     }
     const markdown = (value as { markdown: string }).markdown;
-    if (markdown.length > maximum) {
+    if (markdown.length > maximum || (replaceOversized && sddBytes(JSON.stringify(value)) > maximum)) {
+      if (attempt === 0 && replaceOversized) return replaceOversized();
       problem = 'size';
       diagnostic = { reason: 'size', phase: 'response', facts: [{ detail: 'size-limit', section: 0, expected: maximum }] };
       continue;
@@ -70,8 +74,9 @@ export async function draftSddMarkdown(
     let assembledCandidate = false;
     try {
       const assembled = renderSddNavigation(renderSddFileLinks(renderSddDerivedTables(markdown), plan.path), plan.path);
-      if (assembled.length > maximum) {
-        problem = 'size';
+      if (assembled.length > maximum || (replaceOversized && sddBytes(assembled) > maximum)) {
+        if (attempt === 0 && replaceOversized) return replaceOversized();
+      problem = 'size';
         diagnostic = { reason: 'size', phase: 'assembly', facts: [{ detail: 'size-limit', section: 0, expected: maximum }] };
         continue;
       }

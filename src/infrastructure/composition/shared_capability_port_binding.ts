@@ -141,6 +141,7 @@ export function bindIssueTitle(
       input.branchManagementEmoji,
       input.labelFacts,
       binding.token,
+      input.preserveIssueTitle,
     ),
     updatePullRequestTitle: (input) => port.updateTitlePullRequestFormat(
       binding.owner,

@@ -27,7 +27,7 @@ async function fixture(fault: Fault) {
     const plan = { action: 'update', path: 'specs/payments.md', capabilityId: 'payments', reason: 'A reviewed change to the registered payments contract.', newCapability: null };
     const execute = jest.fn(async (request: { prompt: string; sourceSnapshot?: AgentSourceSnapshot }) => {
         if (request.sourceSnapshot?.phase === 'analysis') return JSON.stringify({ ...plan,
-            questions: awaiting ? [{ id: 'Q1', text: 'Should the existing owner and requirements remain?', owner: 'issue-author', suggestion: null }] : [] });
+            questions: awaiting ? [{ id: 'Q1', text: 'Should the existing owner and requirements remain?', owner: 'issue-author', suggestion: null, kind: 'product-decision' }] : [] });
         if (fault === 'provider') throw new ApplicationError('provider.unavailable', 'Provider unavailable.', {
             correlationId: '6f173f89-96a3-4fc8-b90e-4f8f48e0e319', cause: new Error('PRIVATE_PROVIDER_CAUSE'),
         });
@@ -42,7 +42,7 @@ async function fixture(fault: Fault) {
     const gate = new PreBranchSddGateUseCase(new FindingsAgentAdapter({ cli: { execute } }), {
         loadSnapshot: jest.fn(async () => snapshot), readSourceRevision: jest.fn(async () => baseSha),
         readSdd, validateDraft, publish, isAncestor: jest.fn(async () => true),
-        recoverPublished: jest.fn(), verifyPublication: jest.fn(),
+        verifyPublication: jest.fn(), readRepositoryInventory: jest.fn(),
     }, {
         listIssueComments: jest.fn(async () => comments),
         addComment: jest.fn(async (_number, text) => { comments.push({ id: Math.max(99, ...comments.map(c => c.id)) + 1, body: text, user: { login: 'bot' } }); }),
