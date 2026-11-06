@@ -74309,12 +74309,15 @@ async function reconcileStagedRolloutAfterMerge(request, ports, read, removeLabe
     const { issueNumber, pullRequestNumber: pullNumber, stagedRollout: scope } = request;
     const botLogin = scope?.botLogin ?? '';
     const result = (status, executed = false) => {
-        const success = status.state === 'pending';
-        const steps = status.state === 'held'
-            ? ['Staged rollout declaration was held. Review operational acceptance on the original issue.']
-            : status.state === 'registration-failed'
-                ? ['Rollout registration could not be verified. Re-run failed jobs for this workflow run.']
-                : ['Preparatory PR merged. Operational acceptance remains on the open issue.'];
+        const evidenceUnavailable = status.state === 'held' && status.reason === 'evidence-unavailable';
+        const success = status.state !== 'registration-failed' && !evidenceUnavailable;
+        const steps = evidenceUnavailable
+            ? ['Rollout evidence could not be verified. Restore access and re-run failed jobs for this workflow run.']
+            : status.state === 'held'
+                ? ['Staged rollout declaration was held. Review operational acceptance on the original issue.']
+                : status.state === 'registration-failed'
+                    ? ['Rollout registration could not be verified. Re-run failed jobs for this workflow run.']
+                    : ['Preparatory PR merged. Operational acceptance remains on the open issue.'];
         return new result_1.Result({
             id: staged_rollout_presentation_policy_1.STAGED_ROLLOUT_RESULT, success, executed, steps,
             ...(!success ? { errors: [new application_error_1.ApplicationError('workflow.failed', steps[0])] } : {}),

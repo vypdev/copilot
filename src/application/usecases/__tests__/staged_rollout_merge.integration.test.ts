@@ -204,7 +204,10 @@ describe('staged rollout through the merged pull request workflow', () => {
         async body => {
             const f = fixture();
             f.pull.reviews.nodes[0].body = body;
-            expect((await f.merge())[0]).toMatchObject({ success: false, payload: { state: 'held', reason: 'invalid-declaration' } });
+            const results = await f.merge();
+            expect(results[0]).toMatchObject({ success: true, errors: [], payload: { state: 'held', reason: 'invalid-declaration' } });
+            expect(f.summary(results)).toContain('Review the open issue and record acceptance there before closing it.');
+            expect(f.summary(results)).not.toContain('Re-run failed jobs');
             expect(f.close).not.toHaveBeenCalled();
             expect(f.addLabel).not.toHaveBeenCalled();
             expect(f.comments.addComment).not.toHaveBeenCalled();
@@ -303,7 +306,7 @@ describe('staged rollout through the merged pull request workflow', () => {
         if (scenario === 'release') f.pull.headRefName = 'release/85-release';
         if (scenario === 'closing-keyword') f.pull.body += '\n\nCloses #85';
         if (scenario === 'inline-keyword') f.pull.body += '\n\nThe preparatory change fixes #85.';
-        expect((await f.merge())[0].payload).toMatchObject({ state: 'held', reason: 'unsupported-scope' });
+        expect((await f.merge())[0]).toMatchObject({ success: true, errors: [], payload: { state: 'held', reason: 'unsupported-scope' } });
         expect(f.issue.state).toBe('open');
     });
 
@@ -386,7 +389,7 @@ describe('staged rollout through the merged pull request workflow', () => {
         const f = fixture();
         f.graphql.mockRejectedValueOnce(new Error('access denied'));
         const results = await f.merge();
-        expect(results[0].payload).toMatchObject({ state: 'held', reason: 'evidence-unavailable' });
+        expect(results[0]).toMatchObject({ success: false, payload: { state: 'held', reason: 'evidence-unavailable' } });
         expect(f.summary(results)).toContain('Restore access to the evidence and re-run failed jobs');
         expect(f.close).not.toHaveBeenCalled();
     });

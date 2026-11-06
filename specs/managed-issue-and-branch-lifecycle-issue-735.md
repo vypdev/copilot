@@ -273,7 +273,9 @@ Errors follow impact -> cause -> action -> retained state. A successful PR merge
 - User-facing state: `Rollout pending`, `Declaration held`, or `Registration failed`; issue remains open for staged/held cases.
 - Job Summary: show decision, exact issue/PR links, validated merged head, reason code, card result, and safe recovery action. Do not expose raw review content.
 - Logs/correlation: correlate repository, issue, PR, workflow run, and stable card key; avoid secrets and untrusted raw Markdown.
-- Pending dependency versus failure: operational acceptance pending is a product state, not a workflow failure; card registration failure is a workflow failure requiring same-job retry.
+- Pending acceptance and a policy hold on an invalid, unauthorized or unsupported
+  declaration are product decisions. They do not fail the job. Unavailable
+  evidence and card registration failure fail the job so the operator can rerun it.
 - Rate limits: bounded provider retries; ambiguous writes reconcile by key before another mutation.
 - Noise: update the one owned card; no per-replay comments; failure summaries bounded as in section 9.3.
 
@@ -357,6 +359,8 @@ it with `pnpm run validate:specifications`.
 2. Given a qualifying pre-merge maintainer review declaring the exact managed issue and an eligible merged PR, when the merge event is handled, then the original issue stays open and assigned with its full checklist and one keyed Rollout pending card.
 3. Given a malformed, mismatched, stale, conflicting, unauthorized, edited, dismissed, post-merge, wrong-head, or unverifiable declaration, when the event is handled, then Copilot does not complete the named issue or report 100%, and provides a safe next action.
 4. Given card publication fails before registration, when the job ends, then the issue remains open and the summary names the same failed merge job as retry action.
+   Invalid or unsupported declarations report a policy hold without failing the
+   job. Unavailable provider evidence fails the job with a retry action.
 5. Given the card was created but the response was lost, when the same job is retried, then Copilot adopts the existing card and does not create a duplicate.
 6. Given duplicate delivery or older progress work, when it is processed after staged registration, then the card and open issue remain in Rollout pending state without new publication or 100% progress.
 7. Given a declaration naming one issue among multiple linked issues, when the PR merges, then only the exact resolved issue is staged and other issues retain their existing processing behavior.
