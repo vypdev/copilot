@@ -1,4 +1,4 @@
-import { lstat, readFile, writeFile } from 'node:fs/promises';
+import { lstat, open, readFile } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import path from 'node:path';
 import ts from 'typescript';
@@ -39,7 +39,7 @@ export function normalizeSafariProject(format: SafariProjectFormat, source: unkn
     return JSON.stringify(parsed.config, null, 2) + '\n';
 }
 async function projectStat(file: string) {
-    try { return await lstat(file); }
+    try { return await lstat(file, { bigint: true }); }
     catch (error) { if ((error as NodeJS.ErrnoException | null)?.code === 'ENOENT') return null; throw error; }
 }
 export async function prepareSafariProject(project: string, kind: SafariContainerKind = 'h2'): Promise<SafariProjectFormat> {
@@ -48,11 +48,18 @@ export async function prepareSafariProject(project: string, kind: SafariContaine
     const present = files.filter(value => value.stat !== null);
     if (present.length !== 1) throw new Error('prerequisite:safari-project-missing-or-ambiguous');
     const selected = present[0];
-    // lstat never follows a symlink; only the generated regular file is writable.
-    if (!selected.stat!.isFile()) throw new Error('prerequisite:safari-project-not-regular');
-    if (selected.stat!.size > MAX_SAFARI_PROJECT_BYTES) throw new Error('prerequisite:safari-project-size');
-    const source = await readFile(selected.file, 'utf8');
+    const inspected = selected.stat!;
+    if (!inspected.isFile()) throw new Error('prerequisite:safari-project-not-regular');
+    if (inspected.size > BigInt(MAX_SAFARI_PROJECT_BYTES)) throw new Error('prerequisite:safari-project-size');
+    const source = await readFile(selected.file, { encoding: 'utf8', flag: constants.O_RDONLY | constants.O_NOFOLLOW });
     const normalized = normalizeSafariProject(selected.format, source, kind);
-    await writeFile(selected.file, normalized, { encoding: 'utf8', flag: constants.O_WRONLY | constants.O_TRUNC | constants.O_NOFOLLOW });
+    // Open without truncation so the descriptor can be checked before mutating the scratch file.
+    const handle = await open(selected.file, constants.O_WRONLY | constants.O_NOFOLLOW);
+    try {
+        const opened = await handle.stat({ bigint: true });
+        if (!opened.isFile() || opened.dev !== inspected.dev || opened.ino !== inspected.ino) throw new Error('prerequisite:safari-project-not-regular');
+        await handle.writeFile(normalized, 'utf8');
+        await handle.truncate(Buffer.byteLength(normalized));
+    } finally { await handle.close(); }
     return selected.format;
 }

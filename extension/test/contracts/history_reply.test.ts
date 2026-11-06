@@ -34,6 +34,12 @@ it('accepts unknown collection/metadata and unavailable retained data without in
     expect(decodeHistoryDocument(change(value, 'writer.observedRevision', 0))).toBeNull();
     expect(decodeHistoryDocument(change(value, 'writer.issue', 'none'))).toBeNull();
 });
+it.each([['on', null], ['off', null], ['unknown', true], ['unknown', false]])(
+    'rejects a collection preference of %s paired with a contradictory global pause %s', async (preference, globallyPaused) => {
+        const f = await historyWireExamples(); const value = structuredClone(f.off);
+        Object.assign(value.collection, { preference, globallyPaused });
+        expect(decodeHistoryDocument(value)).toBeNull();
+    });
 it('preserves independent historical restriction acknowledgements without joining them to current policy', async () => {
     const f = await historyWireExamples(); const value = change(f.off, 'collection.restriction', {
         acknowledgement: 'unknown', observation: 'paused', policyRevision: 2, sourceCurrentAtObservation: false,

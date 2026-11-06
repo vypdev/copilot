@@ -157,7 +157,11 @@ export class CollectionCoordinator implements SettingsWriteEffects {
         const write = {}; this.writes.add(write); this.readGeneration = {};
         const stamps = { diagnostics: this.slots.diagnostics.epoch, recents: this.slots.recents.epoch };
         const preparations: Partial<Record<JournalKind, CollectionPreparation>> = {};
-        if (!before.paused && after.paused) this.globalStop = true;
+        if (before.paused !== after.paused && (after.paused || settingsOperationId(operationId))) {
+            // The reviewed resume already read a durable pause inside the preference queue.
+            // Fresh preferences are still required before admitting any collection.
+            this.globalStop = after.paused;
+        }
         if (before.paused !== after.paused || KINDS.some(kind => before.center[kind] !== after.center[kind])) this.preferences = null;
         for (const kind of KINDS) {
             if (before.center[kind] !== after.center[kind]) this.slots[kind].blocked = true;

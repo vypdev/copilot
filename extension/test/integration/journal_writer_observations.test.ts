@@ -24,6 +24,16 @@ it.each([false, true])('a late failed prime cannot erase a newer canonical obser
     const reading = f.writer.prime('diagnostics'); await Promise.resolve(); f.writer.observe('diagnostics', empty(2)); wait.resolve(); await reading;
     expect(f.writer.state('diagnostics')).toMatchObject({ epoch: 0, observedRevision: 2, incomplete: false });
 });
+it('a prime queued before a newer observation cannot reset admission with a stale snapshot', async () => {
+    const f = await journalWriterFixture(true, false);
+    vi.mocked(f.native.execute).mockResolvedValueOnce({ state: 'ready', snapshot: empty(1) });
+    const reading = f.writer.prime('diagnostics');
+    expect(f.writer.observe('diagnostics', empty(2))).toBe(true);
+    await reading;
+    expect(f.writer.state('diagnostics')).toMatchObject({ epoch: 0, observedRevision: 2, incomplete: false });
+    expect(f.writer.admit('diagnostics', writerFact(), () => true)).not.toBeNull();
+    await f.writer.flush();
+});
 it('invalid clocks and disposal during a prime do not expose or retain late provider data', async () => {
     const f = await journalWriterFixture(); f.writerPorts.now.mockReturnValue(NaN); await f.writer.prime('diagnostics');
     expect(f.native.execute).not.toHaveBeenCalled(); expect(f.writer.state('diagnostics').issue).toBe('clock-invalid');

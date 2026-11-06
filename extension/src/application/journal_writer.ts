@@ -84,8 +84,8 @@ export class JournalWriter {
     prime(kind: JournalKind): Promise<void> {
         try { if (this.disposed || this.ports.mayRun(kind) !== true) return Promise.resolve(); } catch { return Promise.resolve(); }
         const value = this.slots[kind];
+        const generation = value.generation;
         value.loading ??= Promise.resolve().then(async () => {
-            const generation = value.generation;
             try {
                 const now = this.time(); if (now === null) { this.drop(kind, 'clock-invalid'); return; }
                 const result = await this.store.execute(kind, { type: 'read', now }, () => !this.disposed);

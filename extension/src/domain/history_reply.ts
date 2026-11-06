@@ -15,7 +15,7 @@ function restriction(value: unknown): boolean {
 function collection(value: unknown, kind: JournalKind): value is CollectionState {
     return exact(value, ['kind', 'preference', 'globallyPaused', 'policy', 'policyRevision', 'collecting', 'sessionBlocked', 'busy', 'restriction'])
         && value.kind === kind && ['on', 'off', 'unknown'].includes(value.preference as string)
-        && (value.globallyPaused === null || typeof value.globallyPaused === 'boolean')
+        && (value.preference === 'unknown' ? value.globallyPaused === null : typeof value.globallyPaused === 'boolean')
         && ['active', 'paused', 'future', 'corrupt', 'unavailable'].includes(value.policy as string)
         && (value.policy === 'active' || value.policy === 'paused' ? natural(value.policyRevision) : value.policyRevision === null)
         && typeof value.collecting === 'boolean' && typeof value.sessionBlocked === 'boolean' && typeof value.busy === 'boolean'
