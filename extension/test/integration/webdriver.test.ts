@@ -1,28 +1,8 @@
 import { afterEach, expect, it, vi } from 'vitest';
-const mocks = vi.hoisted(() => ({ spawn: vi.fn(), listenFailure: false, closeFailure: false }));
-vi.mock('node:child_process', async original => ({ ...await original<object>(), spawn: mocks.spawn }));
-vi.mock('node:net', () => ({ createServer: () => {
-    let error: (value: Error) => void;
-    return { once: (_name: string, listener: typeof error) => { error = listener; },
-        listen: (_port: number, _host: string, ready: () => void) => { if (mocks.listenFailure) error(new Error('listen-failed')); else ready(); },
-        address: () => ({ port: 31337 }), close: (done: (error?: Error) => void) => done(mocks.closeFailure ? new Error('close-failed') : undefined) };
-} }));
-import { NativeDriver, freePort, pauseDriver } from '../../tooling/webdriver.mts';
+import { artifacts, mocks, transport, settingsTransport } from '../fixtures/native_driver_transport.ts';
+import { freePort, pauseDriver } from '../../tooling/webdriver.mts';
 
-const artifacts = '/isolated/artifacts';
 afterEach(() => { mocks.listenFailure = false; mocks.closeFailure = false; vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
-function transport(target: 'chrome' | 'firefox' | 'firefox-esr' | 'safari' = 'chrome') {
-    const child = { exitCode: null as number | null, on: vi.fn(), kill: vi.fn() }; mocks.spawn.mockReturnValue(child);
-    let windows = 0;
-    const send = vi.fn(async (url: string, options: RequestInit) => {
-        const value = url.endsWith('/window') && options.method === 'GET' ? 'initial-blank' : url.endsWith('/window/new') ? { handle: `owned-tab-${++windows}` } : url.endsWith('/webextension') ? { extension: 'owned-extension-id' } : url.endsWith('/session') && options.method === 'POST' ? { sessionId: 'owned-test-session', capabilities: { browserName: target } }
-            : url.endsWith('/execute/sync') ? 'sync-result' : url.endsWith('/execute/async') ? 'async-result' : {};
-        return new Response(JSON.stringify({ value }), { headers: { 'content-type': 'application/json' } });
-    });
-    vi.stubGlobal('fetch', send);
-    const driver = new NativeDriver({ target, binary: '/isolated/browser', driver: '/isolated/driver', artifact: artifacts }, async () => undefined);
-    return { child, send, driver };
-}
 it('allocates only a loopback port and reports listen/close failure instead of proceeding', async () => {
     expect(await freePort()).toBe(31337); mocks.listenFailure = true; await expect(freePort()).rejects.toThrow('listen-failed');
     mocks.listenFailure = false; mocks.closeFailure = true; await expect(freePort()).rejects.toThrow('close-failed');
@@ -90,24 +70,6 @@ it('native Safari extension replies accept only the bounded documented identifie
     }
 });
 
-function settingsTransport(target: 'chrome' | 'safari' = 'chrome') {
-    const h = transport(target); const base = h.send.getMockImplementation()!;
-    const state = { clicked: false, element: 'settings/button', handles: ['fixture'], url: 'chrome-extension://test/runtime.html', ready: 'complete',
-        clickError: '', clickStatus: 200, handlesDelay: 0, loadsDelay: 0 };
-    h.send.mockImplementation(async (url: string, options: RequestInit) => {
-        let value: unknown;
-        if (url.endsWith('/window/handles')) value = state.clicked && state.handlesDelay-- <= 0 ? state.handles : ['fixture'];
-        else if (url.endsWith('/element')) value = { 'element-6066-11e4-a52e-4f735466cecf': state.element };
-        else if (url.endsWith('/click')) {
-            state.clicked = true;
-            return new Response(JSON.stringify({ value: state.clickError ? { error: state.clickError, message: 'private-provider-output' } : null }), { status: state.clickStatus });
-        } else if (url.endsWith('/url') && options.method === 'GET') value = state.loadsDelay-- > 0 ? 'about:blank' : state.url;
-        else if (url.endsWith('/execute/sync')) value = state.ready;
-        else return base(url, options);
-        return new Response(JSON.stringify({ value }));
-    });
-    return { ...h, state };
-}
 it('a real settings click follows only its newly added native context after bounded event delivery and load', async () => {
     const h = settingsTransport(); await h.driver.start(); h.state.handles = ['fixture', 'settings']; h.state.handlesDelay = 1; h.state.loadsDelay = 1;
     expect(await h.driver.openRuntimeOptions()).toBe('chrome-extension://test/runtime.html');
@@ -115,6 +77,38 @@ it('a real settings click follows only its newly added native context after boun
     expect(click[0]).toContain('/element/settings%2Fbutton/click');
     expect(h.send.mock.calls.some(([url, options]) => url.endsWith('/window') && options.body === JSON.stringify({ handle: 'settings' }))).toBe(true);
     await h.driver.close();
+});
+it.each([1, 2])('an ESR settings button replaced %i times before activation is located afresh and opens exactly one native context', async staleClicks => {
+    const h = settingsTransport('firefox-esr'); await h.driver.start(); h.state.staleClicks = staleClicks; h.state.handles = ['fixture', 'settings'];
+    expect(await h.driver.openRuntimeOptions()).toContain('/runtime.html');
+    expect(h.state.clicked).toBe(true); expect(h.state.references).toBe(staleClicks + 1);
+    expect(h.send.mock.calls.filter(([url]) => url.endsWith('/click')).at(-1)?.[0]).toContain(`/replacement%2F${staleClicks}/click`);
+    expect(h.send.mock.calls.filter(([url, options]) => url.endsWith('/window') && options.body === JSON.stringify({ handle: 'settings' }))).toHaveLength(1);
+    await h.driver.close();
+});
+it('repeated native button retirement exhausts the bounded retry without inventing an activation or opening a context', async () => {
+    const h = settingsTransport('firefox-esr'); await h.driver.start(); h.state.staleClicks = 3;
+    await expect(h.driver.openRuntimeOptions()).rejects.toThrow(':404:stale element reference');
+    expect(h.state.clicked).toBe(false); expect(h.state.references).toBe(3); await h.driver.close();
+});
+it.each([[500, 'stale element reference'], [404, 'element click intercepted'], [404, 'stale element reference:other']] as const)('native click error %i %s is never replayed as element retirement', async (status, error) => {
+    const h = settingsTransport('firefox-esr'); await h.driver.start(); h.state.clickStatus = status; h.state.clickError = error;
+    await expect(h.driver.openRuntimeOptions()).rejects.toThrow(`:${status}:${error}`);
+    expect(h.send.mock.calls.filter(([url]) => url.endsWith('/click'))).toHaveLength(1); await h.driver.close();
+});
+it('a retired button followed by a malformed new reference fails before activating either control', async () => {
+    const h = settingsTransport('firefox-esr'); await h.driver.start(); h.state.staleClicks = 1; const send = h.send.getMockImplementation()!;
+    h.send.mockImplementation(async (url, options) => url.endsWith('/element') && h.state.references === 1
+        ? new Response(JSON.stringify({ value: {} })) : send(url, options));
+    await expect(h.driver.openRuntimeOptions()).rejects.toThrow('runtime-options-element');
+    expect(h.state.clicked).toBe(false); expect(h.send.mock.calls.filter(([url]) => url.endsWith('/click'))).toHaveLength(1); await h.driver.close();
+});
+it('an untyped response decoder failure cannot be mistaken for a safe rejected click or retried', async () => {
+    const h = settingsTransport('firefox-esr'); await h.driver.start(); const send = h.send.getMockImplementation()!;
+    h.send.mockImplementation(async (url, options) => url.endsWith('/click')
+        ? { json: async () => { throw 'unknown-native-outcome'; } } as unknown as Response : send(url, options));
+    await expect(h.driver.openRuntimeOptions()).rejects.toBe('unknown-native-outcome');
+    expect(h.send.mock.calls.filter(([url]) => url.endsWith('/click'))).toHaveLength(1); await h.driver.close();
 });
 it('Safari recovers a replaced source context only when exactly one new native view exists and cleans up from its owned blank view', async () => {
     const h = settingsTransport('safari'); await h.driver.start();
@@ -158,4 +152,27 @@ it('native fixture focus clicks only the authored inert heading before inspectin
     const find = h.send.mock.calls.find(([url]) => url.endsWith('/element'))!;
     expect(JSON.parse(String(find[1].body))).toEqual({ using: 'css selector', value: 'main > h1' });
     expect(h.state.clicked).toBe(true); await h.driver.close();
+});
+
+it('public native page controls bind to the owned current session and cannot issue commands before start or after cleanup', async () => {
+    const h = transport(); await expect(h.driver.page.click('#owned')).rejects.toThrow('session-not-started');
+    expect(h.send).not.toHaveBeenCalled(); await h.driver.start(); const base = h.send.getMockImplementation()!;
+    h.send.mockImplementation(async (url: string, options: RequestInit) => url.endsWith('/element')
+        ? new Response(JSON.stringify({ value: { 'element-6066-11e4-a52e-4f735466cecf': 'owned/element' } })) : base(url, options));
+    await h.driver.page.click('#owned');
+    expect(h.send.mock.calls.some(([url]) => url.endsWith('/session/owned-test-session/element/owned%2Felement/click'))).toBe(true);
+    await h.driver.close(); const calls = h.send.mock.calls.length;
+    await expect(h.driver.page.click('#owned')).rejects.toThrow('session-not-started'); expect(h.send).toHaveBeenCalledTimes(calls);
+});
+it('explicit visible Chrome and Firefox sessions retain their isolated artifacts while omitting only headless switches', async () => {
+    for (const target of ['chrome', 'firefox'] as const) {
+        const h = transport(target, true); await h.driver.start();
+        const start = JSON.parse(String(h.send.mock.calls.find(([url]) => url.endsWith('/session'))![1].body));
+        const capabilities = start.capabilities.alwaysMatch;
+        const options = capabilities[target === 'chrome' ? 'goog:chromeOptions' : 'moz:firefoxOptions'];
+        expect(options.binary).toBe('/isolated/browser'); expect(options.args.some((value: string) => value.includes('headless'))).toBe(false);
+        if (target === 'chrome') expect(options.args).toContain(`--load-extension=${artifacts}`);
+        else expect(h.send.mock.calls.some(([url]) => url.endsWith('/moz/addon/install'))).toBe(true);
+        await h.driver.close(); expect(h.child.kill).toHaveBeenCalledOnce();
+    }
 });

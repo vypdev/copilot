@@ -1,4 +1,3 @@
-import ts from 'typescript';
 import { isDeepStrictEqual } from 'node:util';
 import { readdir, readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
@@ -7,29 +6,34 @@ import { targetManifest } from '../src/infrastructure/target_manifests.ts';
 import { TARGETS, type BrowserTarget } from '../src/domain/target.ts';
 import { RUNTIME_HTML } from './static_assets.mts';
 import { FoundationGateError } from './gate_error.mts';
+import { CENTER_CHUNK, validateJavaScript } from './javascript_validation.mts';
+import { validateStyles } from './style_validation.mts';
 
-export const ASSETS = ['background.js', 'content.js', 'manifest.json', 'runtime.html', 'runtime.js'] as const;
+export const ASSETS = ['background.js', 'content.js', 'manifest.json', 'runtime.css', 'runtime.html', 'runtime.js'] as const;
 
 export function assetHashes(files: ReadonlyMap<string, string>): Record<string, string> {
-    return Object.fromEntries(ASSETS.map(file => [file, createHash('sha256').update(files.get(file)!).digest('hex')]));
+    return Object.fromEntries([...files.keys()].sort().map(file => [file, createHash('sha256').update(files.get(file)!).digest('hex')]));
 }
 
 function readReceipt(raw: string): Record<string, unknown> {
     let value: unknown;
     try { value = JSON.parse(raw); } catch { throw new FoundationGateError('receipt: malformed JSON'); }
     const object = (item: unknown): item is Record<string, unknown> => item !== null && typeof item === 'object' && !Array.isArray(item);
-    if (!object(value) || Buffer.byteLength(raw) > 16 * 1024
+    if (!object(value) || Buffer.byteLength(raw) > 128 * 1024
         || !isDeepStrictEqual(Object.keys(value).sort(), ['evidence', 'schemaVersion', 'sourceRevision', 'sourceTreeSha256', 'targets'])
         || value.schemaVersion !== 1 || value.evidence !== 'development-build-only'
         || typeof value.sourceRevision !== 'string' || !/^[a-f0-9]{40}$(?![\s\S])/u.test(value.sourceRevision)
         || typeof value.sourceTreeSha256 !== 'string' || !/^[a-f0-9]{64}$(?![\s\S])/u.test(value.sourceTreeSha256)
         || !object(value.targets) || !isDeepStrictEqual(Object.keys(value.targets).sort(), [...TARGETS])
         || raw !== `${JSON.stringify(value, null, 2)}\n`) throw new FoundationGateError('receipt: invalid closed metadata');
-    return value.targets;
+    return value;
 }
 
-export function validateTarget(target: BrowserTarget, files: ReadonlyMap<string, string>): void {
-    if (!isDeepStrictEqual([...files.keys()].sort(), [...ASSETS])) throw new FoundationGateError(`${target}: undeclared-or-missing-asset`);
+function validateTargetShape(target: BrowserTarget, files: ReadonlyMap<string, string>): readonly string[] {
+    const chunks = [...files.keys()].filter(name => CENTER_CHUNK.test(name));
+    if (files.size > 96 || ASSETS.some(name => !files.has(name)) || files.size !== ASSETS.length + chunks.length
+        || [...files.values()].reduce((total, text) => total + Buffer.byteLength(text), 0) > 8 * 1024 * 1024) throw new FoundationGateError(`${target}: undeclared-or-missing-asset`);
+    if (new Set(chunks.map(name => name.slice(-19, -3))).size > 1) throw new FoundationGateError(`${target}: mixed-source-chunks`);
     const raw = files.get('manifest.json')!;
     let manifest: unknown;
     try { manifest = JSON.parse(raw); } catch { throw new FoundationGateError(`${target}: malformed-manifest`); }
@@ -37,27 +41,32 @@ export function validateTarget(target: BrowserTarget, files: ReadonlyMap<string,
         throw new FoundationGateError(`${target}: manifest-drift (permissions, hosts, identity, background or canonical JSON)`);
     }
     if (files.get('runtime.html') !== RUNTIME_HTML) throw new FoundationGateError(`${target}: runtime-page-drift`);
-    for (const name of ['background.js', 'content.js', 'runtime.js']) {
-        const text = files.get(name)!;
-        if (Buffer.byteLength(text) > 1024 * 1024) throw new FoundationGateError(`${target}/${name}: bundle-size`);
-        const syntax = ts.transpileModule(text, { fileName: name, reportDiagnostics: true,
-            compilerOptions: { target: ts.ScriptTarget.ES2022, allowJs: true } }).diagnostics!;
-        if (syntax.length) throw new FoundationGateError(`${target}/${name}: bundle-syntax`);
-        const source = ts.createSourceFile(name, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
-        const forbidden = new Set(['eval', 'Function', 'require', 'process', 'Buffer', '__dirname', '__filename',
-            'module', 'XMLHttpRequest', 'WebSocket']);
-        if (name !== 'background.js') forbidden.add('fetch');
-        if (name === 'background.js') forbidden.add('document');
-        function visit(node: ts.Node): void {
-            if ((ts.isIdentifier(node) && forbidden.has(node.text))
-                || ts.isImportDeclaration(node) || ts.isExportDeclaration(node)
-                || (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword)) {
-                throw new FoundationGateError(`${target}/${name}: forbidden-executable-or-runtime`);
-            }
-            ts.forEachChild(node, visit);
-        }
-        visit(source);
-    }
+    return chunks;
+}
+function validateTargetCode(target: BrowserTarget, files: ReadonlyMap<string, string>, chunks: readonly string[]): void {
+    validateStyles(`${target}/runtime.css`, files.get('runtime.css')!);
+    const graph = new Map<string, readonly string[]>();
+    for (const name of ['background.js', 'content.js', 'runtime.js', ...chunks]) graph.set(name, validateJavaScript(target, name, files.get(name)!, files));
+    const reached = new Set<string>();
+    const visit = (name: string): void => { if (reached.has(name)) return; reached.add(name); for (const child of graph.get(name)!) visit(child); };
+    visit('runtime.js');
+    if (chunks.some(name => !reached.has(name))) throw new FoundationGateError(`${target}: unreachable-center-chunk`);
+}
+// Reuse only successful checks of identical immutable bytes under these exact policies.
+// This fixed process-local bound stores no source, receipt claims, paths or failed results.
+const codeProofs = new Map<string, { javascript: typeof validateJavaScript; styles: typeof validateStyles }>();
+function validateTargetCodeOnce(target: BrowserTarget, files: ReadonlyMap<string, string>, chunks: readonly string[]): void {
+    const key = createHash('sha256').update(JSON.stringify([target, assetHashes(files)])).digest('hex');
+    const proof = codeProofs.get(key);
+    if (proof?.javascript === validateJavaScript && proof.styles === validateStyles) return;
+    validateTargetCode(target, files, chunks);
+    codeProofs.delete(key);
+    if (codeProofs.size === 12) codeProofs.delete(codeProofs.keys().next().value!);
+    codeProofs.set(key, { javascript: validateJavaScript, styles: validateStyles });
+}
+export function validateTarget(target: BrowserTarget, files: ReadonlyMap<string, string>): void {
+    const snapshot = new Map(files);
+    validateTargetCodeOnce(target, snapshot, validateTargetShape(target, snapshot));
 }
 
 export async function readTarget(directory: string): Promise<Map<string, string>> {
@@ -78,9 +87,16 @@ export async function validateArtifactSet(directory: string): Promise<void> {
         throw new FoundationGateError('artifact-set: incomplete or unexpected target set');
     }
     const recorded = readReceipt(await readFile(path.join(directory, 'receipt.json'), 'utf8'));
+    const admitted: { target: BrowserTarget; files: ReadonlyMap<string, string>; chunks: readonly string[] }[] = [];
     for (const target of TARGETS) {
         const files = await readTarget(path.join(directory, target));
-        validateTarget(target, files);
-        if (!isDeepStrictEqual(recorded[target], assetHashes(files))) throw new FoundationGateError(`${target}: receipt-hash-mismatch`);
+        const chunks = validateTargetShape(target, files);
+        const hashes = recorded.targets as Record<string, unknown>;
+        if (!isDeepStrictEqual(hashes[target], assetHashes(files))) throw new FoundationGateError(`${target}: receipt-hash-mismatch`);
+        if ([...files.keys()].filter(name => CENTER_CHUNK.test(name)).some(name => !name.endsWith(`${(recorded.sourceTreeSha256 as string).slice(0, 16)}.js`))) throw new FoundationGateError(`${target}: chunk-source-mismatch`);
+        admitted.push({ target, files, chunks });
     }
+    // Receipt hashes alone never authorize code: require fresh checks or an exact prior proof.
+    // Reject mismatched metadata for every target before repeatedly parsing a large local catalog.
+    for (const { target, files, chunks } of admitted) validateTargetCodeOnce(target, files, chunks);
 }

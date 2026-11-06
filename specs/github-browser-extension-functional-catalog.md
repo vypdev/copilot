@@ -421,6 +421,16 @@ The JSON feature entry is the exact requirement -> feature/use case -> case IDs 
 
 These are work waves, not alternative product scopes or reduced release tiers.
 
+The complete manual VoiceOver and final visual/interaction review belongs to
+[H12 #713](https://github.com/vypdev/copilot/issues/713), once all extension UI
+has its intended final form (maintainer decision, 2026-11-01). Intermediate
+milestones retain automatic accessibility, keyboard/focus, localization, layout
+and native functional validation and fix observed defects as they arise. Carry
+unverified human results forward explicitly; an interim merge cannot certify
+final accessibility or replace the required 72 human task observations. The
+[H3 sequencing decision](github-browser-extension-control-center-h3.md#25-milestone-acceptance-and-final-human-ui-review)
+records the distinction for the local center.
+
 ## 19. Definition of Done
 
 - [ ] All 150 catalog functions are implemented with documented defaults and honest availability states.

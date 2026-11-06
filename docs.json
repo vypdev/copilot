@@ -340,6 +340,46 @@
           "icon": "code"
         },
         {
+          "title": "Local control center",
+          "href": "/browser-extension/configuration",
+          "icon": "code"
+        },
+        {
+          "title": "Feature inventory",
+          "href": "/browser-extension/features",
+          "icon": "code"
+        },
+        {
+          "title": "Browser permissions and privacy",
+          "href": "/browser-extension/permissions",
+          "icon": "shield"
+        },
+        {
+          "title": "Local data and privacy",
+          "href": "/browser-extension/privacy",
+          "icon": "shield"
+        },
+        {
+          "title": "Local activity and history",
+          "href": "/browser-extension/local-history",
+          "icon": "clock"
+        },
+        {
+          "title": "Local navigation shortcuts",
+          "href": "/browser-extension/shortcuts",
+          "icon": "terminal"
+        },
+        {
+          "title": "Welcome, updates and recovery",
+          "href": "/browser-extension/onboarding",
+          "icon": "book"
+        },
+        {
+          "title": "Browser extension troubleshooting",
+          "href": "/browser-extension/troubleshooting",
+          "icon": "book"
+        },
+        {
           "title": "Testing",
           "href": "/development/testing",
           "icon": "vial"

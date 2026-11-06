@@ -464,6 +464,18 @@ not completed inventory functions or the complete H3 local center. Current
 connection is one explicitly selected read-role session (within the product's
 five-identity ceiling); multi-identity selection/profile UI remains H3 work.
 
+The in-progress H3 composition now installs the named-session and reviewed center
+gateway. In that composition, retained H2 `session.connect`/`settings.write`
+requests are rejected; an old view cannot bypass the current named selection or
+controller. It must reopen current options. Explicit legacy Disconnect remains
+an absolute local safety action clearing all protected connection records while
+preserving authored preferences. Standalone H2 test compositions retain their
+original protocol; historical tests do not establish H3 acceptance. The existing
+GET decoder additionally accepts verified optional owner identity for scoped
+preference previews, excluding unrelated provider fields. Missing old owner
+metadata never supplies an organization identity. H2 source-bound browser
+receipts do not prove this H3 contract on the changed input tree.
+
 Settings v1 has `schemaVersion`, optimistic `revision`, `features`, `density`,
 `locale`, `theme`, `shortcuts`, `paused` and numeric-ID `repositories`. Defaults,
 64 KiB, 100 repository overrides and 20 bounded saved views are enforced by

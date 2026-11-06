@@ -21,10 +21,24 @@ Chrome/Firefox/ESR binaries, native harness commands, Safari containing-app
 prerequisites and failure receipts, and the [runtime preview](../docs/browser-extension/runtime.mdx)
 for connection/privacy/recovery. Never use real credentials in automated tests.
 
+Prepare the current H3 Safari app with `pnpm run build:safari:center:extension`
+after building the development set. It uses the separate `.tmp/safari-h3`
+workspace and preserves the registered H2 rollback. Both legacy PBX and Xcode27.2
+JSONC projects are supported; `attempt.json` distinguishes the current failed or
+verified preparation from the last `container.json` receipt. Native-browser and
+human acceptance are separate from this local ad-hoc build.
+
 Each development target has `manifest.json`, `background.js`, `content.js`,
-`runtime.html` and `runtime.js`; `dist/receipt.json` binds the revision, input-tree
+`runtime.html`, `runtime.js`, `runtime.css` and declared packaged center chunks;
+`dist/receipt.json` binds the revision, input-tree
 and recomputed asset hashes. Executed content/options/background expose the same
 nonsecret input digest so an old cached bundle cannot satisfy native acceptance.
 Outputs are ignored and excluded from the Action/CLI npm package. Build evidence,
 deterministic harness tests, actual loaded-browser receipts and complete product
 acceptance are separate facts.
+
+H3 mounts a local Svelte center over revision-bound previews. Its current
+appearance, language, profile and data routes are development work; unfinished
+sections are labelled explicitly. The named read-session manager now uses protected storage and verified numeric
+identities. Complete inventory and repository/workspace/profile flows,
+all CENTER cases and new native/human evidence remain required before H3 closes.

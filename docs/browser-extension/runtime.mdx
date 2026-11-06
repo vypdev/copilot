@@ -1,14 +1,14 @@
 ---
 title: Browser runtime preview
-description: Development installation, optional read sessions, privacy and recovery for the H2 browser runtime.
+description: Development installation, read runtime, separate optional role management and privacy recovery.
 ---
 
 # Browser runtime preview
 
-This is the private H2 engineering preview, version 0.1.0. It supplies the shared
-runtime and a small health/connection surface while the complete extension is
-being implemented. The full feature catalog, local control center and setup
-journeys remain required; this page makes no store or complete-product claim.
+This private development preview, version 0.1.0, combines the H2 runtime foundation
+with the H3 local center work. Full milestone, native-browser and human acceptance
+remain outstanding. The complete feature catalog and setup journeys remain
+required; this page makes no store or complete-product claim.
 
 ```text
 Load a development target → open an eligible GitHub page → inspect runtime health
@@ -20,6 +20,20 @@ The preview never posts comments, submits drafts, approves/merges, triggers the
 Action, invokes a model or changes repository configuration.
 
 ## Install for local development
+
+A helper exception is separate from unavailable settings. A failed runtime panel
+must not stop independently enabled page shortcuts. The failing helper waits for
+a fresh verified configuration lease; ordinary repeated page events do not
+continuously retry it. Use the browser's extension toolbar/options and the
+[recovery guide](/browser-extension/onboarding) if its own panel cannot open.
+Reloading or a fresh admitted configuration checks eligibility again and does not
+change your profiles or grants.
+
+The content lifetime retains at most100 closed helper/reason records in memory,
+without errors, URLs, identities, code or draft contents. They are cleared when
+the document runtime is disposed and are separate from future opt-in persistent
+diagnostic/activity history. This engineering boundary is not a complete feature
+diagnostics experience or evidence of H3 native-browser acceptance.
 
 Follow [build and native-browser instructions](/development/browser-extension).
 Chrome uses the unpacked Chrome target, Firefox uses its temporary add-on path,
@@ -37,9 +51,9 @@ browsing and Enterprise/mobile hosts are unsupported.
 ## Optional read session
 
 Standalone health needs no credential or API host grant. To read a selected
-repository, open runtime settings, enter `owner/name` and your own selected-
-repository fine-grained read credential, then choose **Connect read access for
-this session**. GitHub Metadata, Issues read or Pull requests read is sufficient
+repository, open **Connections**, leave **Read selected repository** as the credential
+purpose, enter a unique session name, `owner/name` and your own selected-repository
+fine-grained read credential, then choose **Authorize and connect**. GitHub Metadata, Issues read or Pull requests read is sufficient
 for the H2 native projections as applicable; broader future Action projections
 are not activated by this preview. Never enter a bot/deployment/workflow token.
 
@@ -56,14 +70,36 @@ Manual reads obey a 10-second cooldown. When a quota or provider limit applies,
 the panel shows the next allowed local date/time; wait before reading again.
 Hidden/inactive/offline pages cannot read.
 
+## Separate optional roles
+
+The H3 [Connections manager](/browser-extension/configuration#optional-github-roles)
+can save separate optional issue-triage and Actions-operation identities. All
+roles share five protected entries, with one independent read selection and two
+optional selections. Saving a writer does not connect reading, restore a read
+credential or select that optional role. Verify and select it explicitly in its
+native row review. Its account/repository identity is separate from unverified
+write permissions; actual issue/run operation controls are not available yet.
+
+Only the selected read credential can serve page activity GETs. A writer is never
+saved into the active read key or returned to content scripts. Browser permission
+removal cancels verification and queues protected forgetting; a late result cannot
+resurrect a removed identity. Background restart loses hot verification, while
+supported session storage may retain a selection as **Stored**. Forgetting or
+disconnecting local sessions does not revoke a token at GitHub.
+
 ## Pause, settings and privacy
 
 Versioned preferences remain in browser-local nonsecret storage. The core
 supports global/numeric-repository overrides, immutable revisions, pause,
-atomic migration and one previous nonsecret rollback. Full feature/profile/
-import/export/rollback editing belongs to the upcoming local center. H2's
-packaged page exposes the read-session journey; developer configuration uses
-the tested repository port, not arbitrary page scripts.
+atomic migration and one previous nonsecret rollback. The H3 development
+[local center](/browser-extension/configuration) now supplies reviewed profile,
+appearance, import/export and reset/rollback journeys. Its complete milestone
+acceptance is still pending. Content receives only effective rendering settings,
+with source and page identity checked before application, never the complete
+personal profile or session collections. Density affects the owned runtime
+panel; a selected profile pause stops effects and actual reads. A background
+restart checks inherited pauses before restoration HTTP; positive scoped
+preferences require reverified identity on an active, visible, online page.
 
 Settings are limited to 64 KiB, 100 repository overrides and 20 saved views per
 repository (2,000 characters each). Unknown features/enums/authority fields are
@@ -79,13 +115,26 @@ or background suspension. Scheduling quotas/timestamps remain protected session
 state. A browser restart requires explicit reconnect; session loss is a clear
 disconnect. Background restart revalidates permission and native identity.
 
-**Disconnect this session** invalidates the credential generation before aborting
-work and clearing protected state. Observed logout/different viewer, revoked API
+**Disconnect selected session** in Connections invalidates the read credential
+generation before aborting its work and removing that selected local entry.
+Separate optional selections keep their own documented state; **Forget all
+protected sessions** removes every local credential purpose after confirmation. Observed logout/different viewer, revoked API
 site access or 401 does the same. It does not revoke a PAT at GitHub: use native
 GitHub settings for provider revocation. A protected-storage failure is explicit;
 disable/restart the extension/browser if it cannot confirm local cleanup.
 
+The development H3 service verifies protected saves and removals with one local
+read after the native attempt. Acknowledgement alone does not prove persistence;
+an exact saved record or actual absence can establish the result even if the
+response was lost. A failed read or different record leaves that desired result
+unconfirmed. No write or removal is automatically repeated. The [activity guide](/browser-extension/local-history) explains the separate
+current-operation and optional history views of these observations.
+
 ## Recovery
+
+Use the [local-center troubleshooting guide](/browser-extension/troubleshooting)
+for a decision path covering settings, sessions, pauses, missing references and
+uncertain changes.
 
 | State | Meaning | Next action | Retained state |
 |---|---|---|---|
@@ -100,6 +149,22 @@ Missing/future settings show a disabled recovery diagnostic and a local settings
 button. A missing anchor disables only that helper. Native editors, draft bytes,
 selection and focus remain owned by GitHub. Do not infer success from a missing
 panel or treat an unavailable source as zero findings.
+
+The H3 development panel now remains visible while paused. **Why these
+preferences?** separates all applicable saved pauses, emergency and this-tab
+pauses, current-process restrictions, verified scope availability, network state
+and the read session. Pending native work withholds native pause values as
+unknown. A newer or invalid native record is preserved. A connected session for
+another page is shown as unavailable for this page, not disconnected.
+
+**Recheck local state** makes one metadata-only inspection. It cannot restore a
+credential, call GitHub, read activity, clear extra precaution or replay a change.
+While checking, old values and the read button are unavailable. Waiting states
+show a known future deadline in the selected locale, otherwise an instruction to
+wait. Offline, paused, unknown and wrong-scope states disable connected reads.
+**Runtime settings** still opens local recovery. Same-page inspection preserves
+expanded details and extension-owned focus; it does not move focus from a native
+editor. Route/account changes discard the former page's explanation.
 
 The interface has complete English, Spanish, French and Portuguese runtime copy,
 keyboard labels and textual states. The full product's human assistive technology,
@@ -119,6 +184,88 @@ selected read session. An older attempt cannot mix its credential or repository
 with the newer identity, or overwrite its status after a late permission result.
 
 This also applies while connection preferences are being saved: an older failed
-save or permission check cannot disconnect the newer session. Leaving a page or
-reloading the same URL cancels that page's pending background read through the
-browser's native navigation events.
+save or permission check cannot disconnect the newer session. Leaving a GitHub
+page or reloading the same URL cancels that page's pending background read
+through the browser's native navigation events.
+
+The local center has a separate document lifetime. Moving between its sections
+keeps the same native connection and editing window, including unsaved drafts.
+Tab loading events alone do not close it: Chrome also reports loading during
+some same-document navigation. Closing or reloading the actual document retires
+its connection. A background restart can also disconnect it; keeping an options
+tab open does not keep the background alive indefinitely.
+
+When the background cannot be reached, editing becomes unavailable. Choose
+**Read current settings** to reconnect and inspect current facts. A pending
+preview becomes stale; an already submitted save remains uncertain until its
+exact receipt and values are read back. A saved fact is preserved across a later
+failed read. No reconnect repeats a mutation or restores a credential implicitly.
+See [center recovery](/browser-extension/troubleshooting) and
+[local data and privacy](/browser-extension/privacy).
+
+
+## Bring a helper sample to the local center
+
+Opening **Runtime settings** or a configured center shortcut captures the admitted
+visible page's closed health ring before the new options tab hides the page.
+**Diagnostics** and **Help** show this historical sample independently of current
+settings availability. **Read source sample** rereads only background metadata;
+it never queries the hidden page, retries a helper or requests GitHub access.
+An unavailable source cannot be presented as an empty healthy sample.
+
+The sample shows capture time, the helpers held at capture and earlier closed
+reasons with their original observation scope. It contains no original fault
+timestamps, page/repository/account identity, URLs, contents or raw exceptions.
+At most100 reasons remain in each of at most eight native option-tab samples for
+five minutes. Reads do not extend that lifetime. Background restart or native tab
+removal retires the sample. It is outside generated-history clear and preferences.
+
+With already-verified diagnostic consent/generation, only the latest reason per
+fixed helper may be observed in diagnostic history at this explicit capture.
+The content ring itself remains memory-only; the full ring is not backfilled.
+History retention failure does not block opening or erase the current sample.
+These source flows still require full source-bound native/human H3 acceptance.
+
+### The saved repository moved
+
+Use [repository address recovery](configuration#recover-a-renamed-or-transferred-repository)
+in the local center to verify a new `owner/name` against the saved numeric
+identity. Automatic redirect following is intentionally unavailable. A reused
+old name with a different repository ID is rejected, even if the credential can
+read it. An uncertain response keeps the address draft and requires an explicit
+session read and new review; it does not start an automatic retry. The current
+canonical session and the earlier operation's observation remain separate facts.
+
+### A workspace reference is unavailable
+
+Read saved references in **Repositories → Manage workspaces**. This inspection
+is local; it does not reconnect or verify an account. A disconnected/removed
+session or an imported unbound slot keeps its authored position without showing
+old private metadata. Edit membership to choose a currently saved session. Use
+the separate explicit verification button to select that read identity.
+
+For an H2 **previous session**, verify it once to establish a unique local
+reference before adding it. This retains the same numeric account/repository
+and read purpose; simply opening the group or session list never starts
+verification. A failed or stale preference save keeps its draft and source;
+inspect current settings before another review. Unknown/future center data is
+preserved rather than replaced with an invented empty group.
+
+### Temporary preferences restrict the current session
+
+Use **Repositories → Temporary session preferences** in the development center.
+The page separates observed temporary choices, effective inherited preferences
+and the exact operation's submission, acknowledgement and native observation.
+An unavailable source is not an empty or resumed state. A cold positive temporary
+pause can prevent restoration without inspecting a credential; its source remains
+unverified until actual native verification. Enabling choices apply only to the
+matching currently verified selected connection and GitHub account/repository.
+
+**Why these preferences?** on GitHub names the preference operation, native
+document availability and generic scope separately from emergency/tab pauses.
+A retained positive pause after a connection-list change stays restricted until
+explicit review; it cannot silently resume because a different entry was removed.
+Read the current state, preserve any draft, and review clearing the override or
+adopting the observed state when appropriate. Never retry an unknown write merely
+because its current values match. A later inspection cannot certify that older
+operation. See the [configuration journey](configuration#temporary-session-preferences).

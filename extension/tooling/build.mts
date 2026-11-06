@@ -1,4 +1,5 @@
-import { build as viteBuild } from 'vite';
+import { build as viteBuild, type InlineConfig } from 'vite';
+import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { mkdir, mkdtemp, readFile, rename, rm, writeFile, lstat } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
@@ -30,10 +31,16 @@ export interface BuildReceipt {
 }
 const digest = (value: string) => createHash('sha256').update(value).digest('hex');
 
-export async function bundleTarget(packageRoot: string, target: BrowserTarget, output: string, sourceTree = 'unbundled'): Promise<void> {
-    for (const entry of ['background', 'content', 'runtime'] as const) {
-        await viteBuild({ configFile: false, root: packageRoot, publicDir: false, logLevel: 'silent',
-            define: { __COPILOT_SOURCE_TREE__: JSON.stringify(sourceTree) },
+// Fresh arrays matter: compiler plugins may extend resolution conditions in place.
+const productionEnvironment = (sourceTree: string): InlineConfig => ({
+    mode: 'production', envFile: false,
+    resolve: { conditions: ['module', 'browser', 'production'] },
+    define: { 'process.env.NODE_ENV': JSON.stringify('production'), __COPILOT_SOURCE_TREE__: JSON.stringify(sourceTree) },
+});
+
+export async function bundleTarget(packageRoot: string, target: BrowserTarget, output: string, sourceTree: string): Promise<void> {
+    for (const entry of ['background', 'content'] as const) {
+        await viteBuild({ ...productionEnvironment(sourceTree), configFile: false, root: packageRoot, publicDir: false, logLevel: 'silent',
             build: { outDir: output, emptyOutDir: false, copyPublicDir: false, minify: false,
                 target: TARGET_POLICY[target].syntax, sourcemap: false,
                 lib: { entry: path.join(packageRoot, `src/infrastructure/${entry}_entry.ts`),
@@ -43,6 +50,13 @@ export async function bundleTarget(packageRoot: string, target: BrowserTarget, o
             },
         });
     }
+    await viteBuild({ ...productionEnvironment(sourceTree), configFile: false, root: packageRoot, publicDir: false, logLevel: 'silent',
+        plugins: [svelte({ configFile: false, compilerOptions: { dev: false } })],
+        build: { outDir: output, emptyOutDir: false, copyPublicDir: false, minify: false, cssCodeSplit: false,
+            target: TARGET_POLICY[target].syntax, sourcemap: false,
+            lib: { entry: path.join(packageRoot, 'src/infrastructure/runtime_entry.ts'), formats: ['es'], fileName: () => 'runtime.js', cssFileName: 'runtime' },
+            rolldownOptions: { output: { chunkFileNames: `center-[name]-${sourceTree.slice(0, 16)}.js` } },
+        } });
     await writeFile(path.join(output, 'runtime.html'), RUNTIME_HTML);
 }
 
@@ -59,7 +73,7 @@ export async function buildDevelopmentSet(root: string, output: string, bundle: 
         validateArchitecture(root, sources);
         const metadata = [...sources.entries()];
         for (const file of ['package.json', 'pnpm-workspace.yaml', 'pnpm-lock.yaml', 'extension/package.json',
-            'extension/tsconfig.json']) metadata.push([file, await readFile(path.join(root, file), 'utf8')]);
+            'extension/tsconfig.json', 'extension/tsconfig.svelte.json']) metadata.push([file, await readFile(path.join(root, file), 'utf8')]);
         for (const entry of await readSources(root, ['extension/tooling'])) metadata.push(entry);
         const sourceRevision = environment.revision ? environment.revision()
             : execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();

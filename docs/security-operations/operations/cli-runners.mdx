@@ -78,7 +78,13 @@ node scripts/verify-agent-clis.cjs
 The verifier checks the selected launcher, interpreter, and package entry point before invoking help, version, or login status. It rejects files with unsafe ownership or write access, including Windows ACLs that grant modification to another principal. It reports executable availability, headless help status, and sanitized credential state. A successful help check is not proof that a provider/model request is authenticated; use an authorized smoke test for that.
 
 The Setup Platform Smoke workflow runs fixture and package tests on hosted
-Ubuntu, macOS, and Windows for pull requests. Its persistent self-hosted macOS/Ubuntu Codex
+Ubuntu, macOS, and Windows for pull requests. Hosted Windows reports repository
+coverage and browser extension coverage in separate steps. Vitest runs the full
+extension suite in two worker threads with per-file isolation, an isolated npm
+cache and the existing coverage thresholds. Its 80-minute step budget leaves
+time for diagnostics within the 120-minute job budget. If the runner can finish
+post-failure steps, it preserves the extension test log for one day. The
+persistent self-hosted macOS/Ubuntu Codex
 matrix runs only when manually dispatched from the protected `master` branch;
 dispatching a PR branch, `develop`, or tag skips that matrix. A result from `master` or an
 older PR commit does not verify the current PR head on those service runners.

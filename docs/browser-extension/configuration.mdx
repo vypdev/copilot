@@ -1,0 +1,676 @@
+---
+title: Local control center
+description: Review local preferences, keep drafts safe and manage profile and backup changes in the development extension.
+---
+
+# Local control center
+
+The H3 development build opens a local control center from the extension toolbar,
+the browser's extension options, or the runtime settings button on an eligible
+GitHub page. Preferences stay in this browser. No GitHub write, Action run or
+model request is started by opening the center.
+
+H3 is still in progress. Appearance, language, profiles, purpose-bound sessions,
+preference data and local navigation flows are present in development source and
+being verified. Copilot integration and shared setup keep their distinct later
+milestones. The full product, remaining CENTER acceptance
+cases and new native-browser and accessibility evidence remain required.
+
+For keyboard navigation, screen readers, language, appearance and browser zoom,
+see [accessibility help](#use-the-center-with-a-keyboard-or-assistive-technology).
+
+**Features** now searches the [complete 150-function inventory](/browser-extension/features)
+with localized details, implementation milestones, personal favorites and
+per-feature effective preference sources. The inventory keeps future work visible
+and distinguishes a saved preference from implemented functionality or granted
+access.
+
+**Privacy** provides a [browser permission and privacy inspector](/browser-extension/permissions).
+It queries only the three declared native scopes, explains retention and native
+revocation, and separates browser access from a selected GitHub read identity.
+Inspecting that identity is a separate explicit action that may contact GitHub.
+The native inspector remains available when saved settings cannot be read.
+
+The development source also provides a reviewed
+[temporary API response clear](#clear-temporary-api-responses) in Privacy.
+This independent control keeps preferences, credentials and existing activity.
+
+Optional Activity/Diagnostics collection remains under development. Its source
+now separates saved intent from actual consent policy: importing or restoring an
+enabled preference will not itself start collection. Disabling it first attempts
+the policy pause, then saves the off preference even if that pause is unavailable.
+The retained start/stop service now verifies those phases independently, keeps
+partial results and requires a fresh review after relevant state changes. Its
+localized activation, history, clear and exact-JSON export screens are now wired
+through a typed native client. Collection stays off by default. The actual center
+now captures accepted local destinations under verified consent, with profile
+details removed and uncertain delivery disclosed separately. Preference operations
+now expose independent current-window progress and optional redacted history,
+including acknowledgement versus verified saving. Session operations now retain
+separate active-connection, repository preference, vault and cleanup facts.
+Start/stop operations now also show their preference, prerequisite pause and activation independently. Explicit clears also separate their native attempt, acknowledgement and canonical read. Helper samples now have a source-checked pre-open handoff and separate readonly view. Complete native/human acceptance remains outstanding. See the
+[local activity guide](/browser-extension/local-history) and
+[privacy and retention details](/browser-extension/permissions).
+
+**Shortcuts** reviews [four bounded local navigation assignments](/browser-extension/shortcuts)
+with the global enabled preference. Draft clearing, duplicate detection,
+protected typing and current native context checks remain separate from browser
+or system conflict uncertainty. Saving a combination never certifies delivery.
+
+## Clear temporary API responses
+
+1. Open **Privacy** and choose **Review clearing temporary API responses**.
+2. Read the scope. It covers Copilot's temporary API responses in this browser
+   profile, across its credential purposes. It does not clear browser history,
+   browser caches or GitHub page content.
+3. Choose **Keep cache** to cancel, or **Clear temporary responses** to confirm.
+   Opening the review does not clear anything.
+4. Read the result before closing the review. Confirmed clearing removes cached
+   responses and ETags and cancels their old pending reads. A later explicit read
+   can cache new responses again.
+
+Saved preferences, credentials, existing activity, request budgets and cooldowns
+are kept. Clearing does not call GitHub, reconnect or request permission. Optional
+diagnostic history receives only a closed operation fact under existing consent;
+collection stays off unless separately enabled. This control can work with
+future or corrupt preferences without migrating or replacing them, but it still
+requires the current editing session.
+
+If the response is lost, select **Read this operation's result**. Closing its
+review keeps that result action available in the same current view. Result
+inspection never repeats the clear. If it reports no submitted clear, **Keep
+cache** explicitly cancels that unsubmitted review. An expired result, replaced
+editing session or restarted background cannot establish the earlier outcome.
+A new review is a separate operation, not a way to prove the previous one ran.
+See [uncertain cache results](/browser-extension/troubleshooting#temporary-api-cache-result-is-unknown).
+
+The controls are present in development source. Full H3 acceptance, including
+native-browser and human accessibility checks for the final package, remains
+required before publication.
+
+## Use your local workspace
+
+**Work** brings together your saved favorites, selected profiles and authored
+repository groups. Favorites keep your chosen order and open their localized
+feature guides, including implementation availability. Select favorites in
+**Features**. Use **Profiles**, **Repository groups** and **Shortcuts** to review
+the corresponding saved choices through their existing controls.
+
+A selected profile or local group describes an authored preference. Its scope
+and connection availability are checked in their applicable tools. A group's
+saved reference count does not certify that those connections are available.
+Opening Work performs no GitHub request, credential selection or permission
+request. GitHub work queues and cross-repository attention belong to
+[H6/#707](https://github.com/vypdev/copilot/issues/707).
+
+## Review local attention
+
+**Attention** lists saved choices that may need local review: a global pause,
+incomplete onboarding, or a selected profile that saves a pause. Each item opens
+the precise existing local control. Profile pause items still require review of
+when that profile's scope applies. Opening an item does not release the pause.
+
+An empty list describes only this saved revision's local configuration. Inspect
+GitHub tasks, permissions and connection health in their own tools. **Privacy**,
+**Connections** and **Diagnostics** remain directly linked. These views work
+offline without a CLI. A later confirmed settings revision refreshes them; an
+observer can navigate them without claiming editing control.
+
+## Find Copilot and shared setup tools
+
+**Copilot** links to current connection, access, diagnostics and feature tools,
+then the canonical guides for its planned integration capabilities. Its actual
+repository status, command drafts and Action handoff remain owned by
+[H9/#710](https://github.com/vypdev/copilot/issues/710).
+
+**Setup** links to current profile, data, privacy and onboarding tools, then the
+canonical shared-setup guides and [H11/#712](https://github.com/vypdev/copilot/issues/712).
+Shared repository setup will use that milestone's shared engine and reviewed
+authority. These local pages perform no Action run, CLI invocation, grant or
+repository change. Their capability guides describe implementation scope rather
+than report a live repository status.
+
+If preferences are future, corrupt or unavailable, use the direct **Recovery**
+link. The center preserves that source and avoids inventing an empty workspace.
+Feature discovery, Privacy and recovery/help remain independently available.
+Existing separately consented recent-destination capture may record the closed
+local route; opening these views does not enable collection or retain their
+authored labels. Complete final-source native and human H3 acceptance remains
+required before publication.
+
+## Change a preference
+
+1. Open **Appearance** or **Language**.
+2. Choose your values. The interface continues using the saved values while
+   you edit the draft.
+3. Select **Review change**. Read the complete before-and-after comparison.
+4. Select **Confirm change** to save, or **Cancel change** to retain the saved
+   configuration. Canceling a review keeps your local form draft for editing.
+5. The review reports the observed outcome separately from the proposed change's
+   scope. A cancelled or uncertain result never promises that the change will
+   apply. Close the review to keep working.
+
+**Last observed operation** keeps the last proved progress separately from
+the editable form and optional history. Its read-only metadata remains available
+when settings cannot be read. An unknown save is not automatically retried;
+**Read current settings** can establish its exact retained result. The
+[local activity guide](/browser-extension/local-history#inspect-the-last-observed-operation)
+explains its five-minute lifetime, private targets and independent history retention.
+
+Appearance reviews theme, density, text size, motion and contrast together in
+one change. **Follow browser** selects one complete language resource from
+English, Spanish, French or Portuguese, falling back to English for other
+languages. A language change takes effect after confirmation.
+
+## Use the center with a keyboard or assistive technology
+
+Use the first **Skip to content** link to move past navigation. Tab and
+Shift+Tab move between links and controls; Enter follows a link or activates a
+button, and Space activates a focused button or checkbox. Native select menus
+use the browser's standard arrow-key behavior. Keep the visible focus outline
+in view. These controls work without enabling custom extension shortcuts.
+
+On macOS, which links and buttons receive Tab focus also depends on browser and
+system keyboard navigation. Safari supports Option+Tab for webpage links and
+an Advanced setting named **Press Tab to highlight each item on a webpage**.
+Use the browser's own accessibility guidance if Tab skips controls; the center
+does not change system settings. See [Safari keyboard navigation](https://support.apple.com/guide/safari/keyboard-shortcuts-and-gestures-cpsh003/mac)
+and [Firefox accessibility features](https://support.mozilla.org/en-US/kb/accessibility-features-firefox).
+
+Reviewing a preference opens an in-page comparison with a named heading and
+status. Read the before-and-after values, then choose **Confirm change** or
+**Cancel change**. Cancellation keeps your form draft. **Close review** returns
+to editing. An uncertain result offers **Read current settings** rather than
+another confirmation. When leaving an unsaved draft, **Keep editing** and
+**Discard draft and leave** are separate choices. Do not assume Escape saves,
+cancels or undoes an operation; use its named control.
+
+With a screen reader, use the navigation and main landmarks, page headings,
+field labels and review/status messages. A disabled control may require the
+current editing window, readable settings or an available capability. Inspect
+the adjacent explanation or [recovery guidance](#recover-safely). If a control
+has no usable label, the focus becomes trapped, a result is not announced or a
+layout hides an action, record the browser/version, route and steps to reproduce.
+Exclude credentials and private repository data from the report.
+
+If the background becomes unavailable while you are using a control, the center
+moves focus to **Read current settings** and associates the recovery explanation
+with that button. Your unsaved form stays in place. Activate the button to read
+fresh settings before reviewing your change again; this does not save or repeat
+a previous change. A successful background read preserves the control you were
+using. Updates to the same review keep your place instead of returning to its
+heading. A newer focus choice or another page keeps its own focus.
+
+### Choose language, appearance and zoom
+
+In **Language**, choose English, Spanish, French, Portuguese or **Follow
+browser**, then review and confirm. Follow browser uses a complete English
+resource when the browser language is unsupported. This changes the local
+center, independently of the Action's source language.
+
+In **Appearance**, review theme, density, text size, motion and contrast:
+
+- Choose **Light**, **Dark** or **Follow GitHub** for the theme. In the standalone
+  center, Follow GitHub follows the browser's preferred color scheme.
+- Choose **Large** text or comfortable density for more space.
+- Choose **Reduced** motion to suppress the center's animations and transitions;
+  the operating system's reduced-motion preference is also respected.
+- Choose **High** contrast for stronger borders. Native forced-color settings
+  remain respected.
+
+Use the browser's page zoom independently of those saved preferences. Its menu
+shows the current percentage; at 200%, check both navigation and the full review.
+A narrow window stacks navigation above the main content. On Chrome and Firefox,
+Command++/Command+− on macOS or Ctrl++/Ctrl+− on other desktop systems adjusts
+page zoom. Use the browser menu to restore your previous value. See
+[Chrome zoom help](https://support.google.com/chrome/answer/96810?hl=en&co=GENIE.Platform%3DDesktop)
+and [Firefox zoom help](https://support.mozilla.org/en-US/kb/font-size-and-zoom-increase-size-of-web-pages).
+If a control is clipped or requires page-level sideways scrolling, report that
+route and zoom level rather than resetting your saved preferences.
+
+These instructions describe the controls and recovery paths. They do not
+certify the complete assistive-technology and native-browser acceptance matrix.
+
+## Keep control of your draft
+
+One open window edits; other windows show **Read-only window**. Select **Take
+control of editing** deliberately when you want to move editing to another
+window. Old previews then require a fresh review. Taking control does not grant
+an account connection or browser permission.
+
+Leaving a page with an unsaved draft offers **Keep editing** or **Discard draft
+and leave**. Reading the current settings retains your draft. If another window
+has saved a newer revision, compare its saved values with your draft before
+discarding or starting a new review; an older draft cannot overwrite that
+revision silently.
+
+While a confirmed write is in progress, navigation cannot undo it. If the
+result is uncertain, select **Read current settings**. The center reconciles an
+exact saved result when it can; it never repeats the write automatically.
+
+## Use profiles
+
+Open **Profiles**, supply a local identifier and name, choose a scope and review
+the preferences. A local identifier starts with a lowercase letter and contains
+up to 48 lowercase letters, digits or hyphens. Names contain up to 60 characters.
+Creating a profile with an existing identifier is rejected; open that profile
+to edit it instead. You can retain up to ten profiles.
+
+Expand **All feature overrides** and filter by feature name or ID. Choose **Yes**
+or **No** to set an override, or **Inherit** to remove it. Filtering keeps your
+choices in the draft. Review and confirm the changes before they are saved.
+
+**Inherit** leaves that value to the surrounding preferences. The saved-preference preview resolves a selected profile only in its matching
+context; creating one does not select it. Selecting
+another profile for the same scope replaces that selection. A pause remains
+stronger than an enabled preference. Removing a selected profile is also a
+reviewed change. The preview groups the preferences and selection it stops
+supplying under the removed profile's local identifier. When an import changes
+the relative order of retained profiles, the review shows the order separately.
+
+Choose account, organization and repository scopes from identities in your
+saved read sessions. Changing account clears dependent choices. Organization
+scope is offered only when the repository response supplies a validated
+organization owner. An existing profile whose identity is unavailable remains
+labelled as a saved scope; editing it preserves that scope.
+
+**Effective saved preferences** shows density, shortcuts and pause with the
+winning default, global, repository or named-profile source. Only the currently
+connected selected identity contributes account/organization/repository scope.
+Without it, personal and github.com preferences remain available. The GitHub
+runtime now uses the same resolver. It checks the current account and both the
+canonical repository route and numeric repository identity before applying a
+repository profile. A different repository keeps its own preferences. Density
+changes the extension panel's spacing; later feature switches do not claim that
+their implementations are already available. The development H3 center has
+separate temporary preference and emergency/tab controls. Feature details expose the winning
+saved source for every registered feature in the selected verified context.
+Profiles never connect an account or authorize an Action command.
+
+A pause stops enhancements and API reads, including session restoration. The
+required runtime section remains available for local explanation and recovery.
+**Why these preferences?** shows the effective density, shortcuts and generic
+winning scope. **All feature preferences** lazily lists all 150 registered
+preferences; this does not mean all functions are implemented or eligible here.
+It omits private profile names and identities. The private local center still
+shows the authored names when managing profiles.
+
+Saved pauses are listed independently of emergency, this-tab and current-process
+restrictions. Unknown native state or unverified scope is labelled explicitly.
+**Recheck local state** inspects local metadata without restoring credentials,
+reading GitHub activity or retrying an operation. It preserves expanded details
+and owned focus on the same page; typing in GitHub is never interrupted. Open
+the local center from **Runtime settings** or the extension toolbar to review a
+change. Reading a clear state does not itself grant connected access.
+After a background restart, a retained matching identity can conservatively
+keep its scoped pause; it cannot enable other preferences until reverified.
+Use the local center to review that pause, including after an ownership change.
+Unpaused restoration occurs only for the matching connected repository on an
+active, visible, online page. Leaving the page cancels its work and retains the
+credential; return and observe the existing cooldown before retrying. Invalid
+or incompatible configuration leaves a disabled recovery panel. Reload old
+GitHub tabs after updating the development package.
+
+## Connect a selected repository
+
+Open **Connections** and read the current sessions. Local enhancements work
+without a connection. For an optional read session:
+
+1. Supply a unique session name, a repository as `owner/name`, and an appropriate
+   repository read credential in the password field.
+2. Select **Authorize and connect** and decide whether to grant the browser's
+   optional GitHub API permission. The password field clears immediately.
+3. Review the verified GitHub account and repository. Names are display labels;
+   the connection uses the verified numeric identities.
+
+Keep up to five named sessions, for example **Work** and **Personal**. One read identity and two optional-purpose identities can be selected
+independently. Only the selected read identity serves page activity reads. **Verify and select** rereads an existing entry's
+identities before switching. If verification fails, the candidate remains
+disconnected. The previous connection does not continue silently.
+
+Credentials and private identities remain in protected session storage, separate
+from preferences, profiles, exports and rollback. The browser may clear that
+storage when its session ends. An existing H2 connection appears as **GitHub**;
+it gains no new permission by appearing in the manager. This connection reads
+one selected repository; it does not authorize GitHub writes or setup operations.
+
+**Remove session** asks for confirmation before deleting that local protected
+credential. **Disconnect selected session** removes the selected local entry and
+its credential. Neither action revokes the credential at GitHub. Removing an
+inactive entry keeps the currently selected session. Revoking the browser's API
+permission clears all protected sessions and cancels their outstanding work.
+
+**Forget all protected sessions** offers a separate confirmation to remove all
+local protected sessions, including an unreadable record. It preserves your
+preferences and does not revoke credentials at GitHub. If the browser cannot
+establish that deletion succeeded, keep the error visible and read the current
+state before deciding how to recover. If another connection change reports a
+conflict while removal is in progress, wait for removal to finish and read the
+current sessions before reviewing a new change.
+
+If a response is uncertain, select **Read current sessions** to inspect the
+actual result. Do not repeat Connect automatically. **Last observed operation** lists each actual active-credential, repository-preference and named-session storage attempt independently. A returned session view does not prove every effect succeeded. A verified direct response clears the submitted form; if that response is lost, inspect current sessions before deciding what to do next. Permission denial, changed
+editing ownership and unavailable protected storage leave an explicit recovery
+message. Session inspection and disconnect remain available even when saved
+preferences need recovery. The development **Repositories** route also offers **Pause this repository**,
+**Remove this repository’s pause** and **Review repository preference reset**.
+Each uses the normal complete preview and confirmation. Reset preserves the
+read credential; removing a repository pause cannot release an inherited global
+pause. These actions wait while a separate connection form has an unfinished
+draft. Full workspaces and rename recovery remain
+in progress.
+
+## Optional GitHub roles
+
+**Connections** has one shared limit of five named sessions, including reading,
+issue triage and Actions operations. **Read selected repository** is the default.
+Each saved credential has one fixed purpose and one selected repository; adding
+a field to an old read request cannot promote it to a writer.
+
+```text
+Choose purpose → authorize browser API access → verify account and repository
+→ save protected session → review the exact identity → explicitly select its purpose
+```
+
+To prepare an optional role:
+
+1. Choose **Issue triage** or **Actions operations**. Read its permission guidance
+   and availability. Issue/run operation controls are not available yet; storing
+   a role does not enable them or perform a GitHub write.
+2. Enter a unique local name, `owner/repository` and your own separate
+   fine-grained GitHub personal token for that selected repository. The optional
+   roles accept the `github_pat_` family; its format does not prove permissions.
+   Never enter a setup, bot, provider or deployment credential.
+3. Choose **Authorize and connect**. The native password clears before waiting
+   for browser approval. The background verifies only the GitHub account and
+   repository, then saves the protected identity. It does not change the selected
+   read identity, enable repository reading or select the new optional role.
+4. In that saved row, choose **Review selection**. Check its purpose, account and
+   repository, then choose **Verify and select this identity**. A changed source
+   requires closing the old review and choosing from current sessions again.
+
+There are separate optional selections for issue triage and Actions. Each can be
+**Disabled**, a **Stored selection**, or have its account/repository **verified
+for this selection**. A selected read account can differ from an optional-role
+account. Verify the displayed identity deliberately; a role selection alone is
+never authority to perform a future operation. That operation must check its
+own account, target, permissions and reviewed intent.
+
+**Disable this purpose** clears its selection while keeping the named credential
+and other roles. **Remove session** deletes that exact protected entry after
+confirmation. **Forget all protected sessions** removes all purposes and the
+active read key through its separate confirmation. None revokes the token at
+GitHub or resets personal settings. A credential already retained under another
+purpose cannot be reused for a new purpose; create a separately scoped token.
+
+If verification or native saving is uncertain, read current sessions. The review
+retains the uncertain operation separately; a later matching row is not proof
+of its outcome. It offers no automatic repeat or inverse. Leaving closes only
+local forms and never undoes previously requested or saved native changes.
+**Discard connection draft** clears an unsubmitted form, including its password,
+and restores the read-purpose default.
+
+Credentials, selections and their native schema are protected browser-session
+data, excluded from preferences, exports, rollback and generated history.
+Background restart can retain the selection as **Stored**, without its old
+in-memory verification. Browser restart can clear sessions entirely. Adding or
+changing a session/role retires prior enabling temporary session preferences;
+an existing positive pause still needs its own explicit review.
+
+The first optional-role mutation upgrades the known read-session vault in place
+to its purpose-aware format. Older or unsupported builds must preserve an
+unreadable vault. Reopen a compatible build to recover it; choose explicit
+forgetting/reconnection only if you intend to remove those credentials.
+
+## Export, import, reset and rollback
+
+In **Your data**, **Export local preferences** downloads
+`copilot-preferences.json`. It includes your preference values, authored profile
+names, workspace labels, saved searches and selections. Keep the file somewhere
+appropriate for those personal labels. Connection grants, credentials and private
+runtime/session data are excluded; it is not an account or session backup.
+Exporting leaves your saved settings and current connection unchanged.
+
+Import accepts one supported UTF-8 JSON preference file of at most 64 KiB.
+Select **Review imported preferences**, inspect the comparison, then confirm or
+cancel. A malformed or newer unsupported file is rejected without changing the
+saved settings. Imported preferences cannot grant a connection or release an
+existing pause. The original file remains yours to keep or remove.
+If another window changes settings after the preview, the import stops with a
+conflict. Read the latest settings and create a new review; selecting or reading
+the file does not save it.
+
+Reset offers global preferences, profiles, appearance or all local preferences.
+**Review previous preferences** offers the retained prior configuration when
+available. Both require the same explicit confirmation. Rollback is a new
+reviewed change; it does not restore a credential or a connection grant.
+A storage or quota error can leave an uncertain outcome. Use **Read current
+settings** and inspect the retained state; the reset is not repeated automatically.
+
+When confirmation or cancellation removes the button you were using, the
+settled review moves focus to its next action with the result as an accessible
+description. **Close review** follows a saved or cancelled result; **Read current
+settings** comes first when the outcome needs checking. Focus does not activate
+either action. Switching windows, navigating elsewhere or choosing another
+control keeps your newer focus choice.
+
+## Reopen an older options window
+
+After the center upgrade, an old options window cannot connect or write
+preferences through the former direct commands. Reopen options from the
+extension toolbar and use the current reviewed flow. An explicit Disconnect
+from an old window still clears all local protected connection sessions; your
+profiles and preferences remain intact. It does not revoke credentials at GitHub.
+
+## Recover safely
+
+Use [Welcome, updates and recovery](/browser-extension/onboarding) to resume
+reviewed progress and inspect the native development package. Help, About and
+Recovery remain available even when settings cannot be read. Welcome explains
+selected local profiles and access; it grants neither and does not certify
+product readiness.
+
+| Message or state | Next action |
+|---|---|
+| Another window saved changes | Read current settings and compare with the retained draft. |
+| Preview or editing session expired | Read current settings, then prepare a fresh review. |
+| Could not confirm whether saving succeeded | Read current settings; do not assume either success or cancellation. |
+| Page and background belong to different builds | Reload the extension and reopen its options. |
+| Saved settings require a newer extension | Update to a compatible build. The stored data is preserved. |
+| Saved settings still need migration | Keep the stored data. Resolve the storage problem, then read current settings to check or retry the supported migration. Editing remains disabled until it succeeds. |
+| Saved settings cannot be read safely | Preserve the stored data and consult troubleshooting before resetting anything. |
+
+Full replacement of a query-bearing or unknown initial options destination opens
+the fixed local recovery page before creating an editing session. Rejected URL
+contents are not forwarded to the background.
+If a later address fragment is unknown or malformed, the center follows the
+normal unsaved-work guard before opening the local Recovery address. If Recovery
+is already open, it corrects the address immediately and keeps
+your current keyboard focus, unsaved work and any pending navigation decision.
+The browser can disconnect editing when an address leaves the accepted route
+set. Use **Read current settings** to reconnect before reviewing changes again;
+correcting the address does not silently restore editing authority or resend a
+previous change.
+
+See the [runtime privacy and recovery guide](/browser-extension/runtime) and
+the [contributor verification guide](/development/browser-extension). Build or
+mounted-DOM test success alone is not evidence that the extension has passed
+its real Chrome, Firefox or Safari journeys.
+
+## Recover a renamed or transferred repository
+
+In the development control center, open **Connections** or **Repositories**,
+choose the saved session and select **Recover a renamed repository**. Enter the
+new `owner/name`, review the saved session and proposed address, then choose
+**Verify new address**. No verification runs while you type or review.
+
+The extension checks that both the account and numeric repository identity still
+match the saved read session. A verified new address updates its protected
+canonical name and current organization. It grants no new permission or write
+access and leaves personal preferences unchanged. It does not automatically
+follow a redirect from an old repository name.
+
+If another repository now occupies the old name, its different identity cannot
+replace your saved target. Failed verification leaves the candidate disconnected
+and preserves the previous named session. Its local credential has not thereby
+been revoked at GitHub; use the explicit forgetting controls if removal is your
+goal.
+
+When completion is uncertain, the address draft stays visible. **Read current
+sessions**, inspect the result and review again before deciding whether another
+verification is needed. Reading never repeats verification or proves what an
+earlier missing response meant. A changed session list requires a fresh review;
+a missing or different saved identity keeps confirmation unavailable. **Discard
+address draft** leaves the protected record alone. Normal navigation also offers
+keep editing or discard, including between these two session routes.
+
+## Workspaces and saved repository references
+
+In the development center, open **Repositories → Manage workspaces**. Create a
+local identifier and name, choose saved reference entries, then review and
+confirm the complete change. You can keep up to **10 groups of 20 references**;
+the separate limit of **5 protected read sessions** still applies. Selecting a
+group organizes personal references. It does not connect repositories, change
+feature settings or release an inherited pause.
+
+Only group names, local identifiers and opaque reference IDs persist in these
+preferences. Repository/account names and credentials remain in protected
+sessions. The grouped view labels saved metadata and the independently selected
+connected read session separately. Reading saved references is local and cannot
+start GitHub verification. **Verify and select this read session** is a separate
+explicit action.
+
+A removed/disconnected session leaves an unavailable slot in the authored group.
+Edit the group to replace that reference with a chosen saved session; the
+extension never guesses by repository name. A previous H2 session has a fixed
+legacy alias. Use the offered verification first to establish a unique local
+reference for it; no password or additional browser grant is requested by that
+existing-session verification.
+
+Every edit, selection, removal and workspace-only reset uses the normal retained
+preview and confirmation. The preview includes names, ordering, membership and
+selection changes, including removals. The preview and saved view display
+repository names only for available read references. Other references appear as
+unavailable slots. Cancellation keeps your draft. A changed
+revision or unknown save requires inspection before another decision; no write
+is retried automatically. Workspace-only reset preserves other preferences,
+pauses and protected sessions. The normal rollback restores the previous
+preference revision when available.
+
+The nested center schema is now **2**, inside root settings schema **2**. An
+exact valid nested schema 1 gains empty groups and no selection without changing
+its old preferences. Future/corrupt or oversized data stays preserved and
+uneditable until recovered; it is never treated as an empty saved collection.
+The shared **64 KiB** preference limit applies in addition to collection bounds.
+
+### Temporary restriction lifetimes
+
+Saved global, repository and profile pauses remain separate from temporary
+browser-session restrictions. An emergency restriction takes precedence over a
+tab restriction; releasing either must preserve every other active pause.
+Temporary pause state belongs to protected browser-session storage, outside
+settings export, import and rollback. A worker restart must not clear it.
+Browser restart or extension reload can end that browser-session lifetime;
+use a saved pause when you need persistence beyond it.
+
+The current H3 admission foundation checks this state before credential
+restoration and GitHub reads. An unavailable, corrupt or newer pause document
+blocks those reads and preserves the document. It never means that a resume
+succeeded. The development local center now exposes **Repositories → Temporary
+pauses**, also linked from Profiles and Privacy. These native controls stay
+available with an authorized local editor even if ordinary saved preferences
+are unavailable, corrupt, newer than this package or still loading.
+
+An unconfirmed native pause change also has an extra precaution in the running
+extension. Pending changes block connected reads; an uncertain result keeps
+that precaution. Reading the current pause record or saving another pause does
+not clear it. The recovery contract requires explicitly reviewing and adopting
+the exact observed state. Adoption keeps every emergency/tab restriction in
+that state and every saved preference pause; it does not prove an earlier
+acknowledgement. This extra precaution has the running process's lifetime,
+distinct from a confirmed native browser-session pause. **Review observed
+pauses** shows the exact scopes before ending only that extra precaution. It
+never removes an emergency, tab or saved preference pause.
+
+The development background now retains each emergency, tab or adoption review
+for five minutes. Confirmation selects that exact review; a repeated request
+returns its outcome rather than writing again. A tab reload or ownership change
+retires the review. A confirmed effect can remain after control has been lost;
+its outcome must distinguish those facts from permission to continue editing.
+
+Eligible tab choices use existing GitHub access and show a repository/object
+label, without titles or full URLs. Private and unavailable tabs are excluded;
+the list is limited to 128 native candidates. Closing a tab ends that tab's
+scope without releasing emergency or other tab pauses. When a pause change is
+already saving, the extension waits for that change before cleaning up. Failed
+cleanup can leave an unavailable scope for explicit removal; it never resumes
+another tab. These
+controls show a complete before/after review before confirmation. A local filter
+searches safe labels and tab IDs without saving or sending the query. Missing
+paused tabs keep generic IDs and an unavailable label; they are not silently
+resumed.
+
+An unknown delivery offers **Inspect result**, using that same retained operation
+without repeating confirmation. Reading the current state cannot certify the
+older response. Cancel a preview to leave it unsubmitted. Leaving an already
+completed or unknown operation keeps its native effects; no inverse change is
+automatic. Another window, a tab reload or a changed package can retire the
+review. Native and human H3 acceptance and the remaining
+H3 capabilities are still pending.
+
+## Temporary session preferences
+
+Open **Profiles → Temporary session preferences** or the same link under
+**Repositories**. The native page shows the current verified saved connection,
+account and repository. Opening it does not reconnect or contact GitHub.
+
+```text
+Read current preferences → edit inherited values → review before/after
+ → confirm once → inspect native acknowledgement and observation
+```
+
+Leave **Inherit** selected unless you want a temporary override. You can choose
+comfortable/compact density, local shortcuts, a positive pause and individual
+preferences for all150 registered features. The local feature filter preserves
+hidden choices and sends no query. These preferences do not establish feature
+availability or authorize connected access. A false pause cannot remove a true
+pause inherited from saved preferences, an emergency or a tab.
+
+Temporary values use protected browser-session memory. They survive ordinary
+background suspension and are excluded from persistent profiles, settings exports,
+sync and rollback. Closing the browser, disabling/reloading the extension or the
+browser clearing that storage can end them. See the native
+[Chrome storage](https://developer.chrome.com/docs/extensions/reference/api/storage)
+and [Firefox session storage](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/storage/session)
+references; the development package must also pass each browser's native checks.
+
+Changing a saved connection retires enabling overrides. An earlier positive pause
+for the same selected account/repository remains a labelled retained restriction
+until explicitly reviewed. A different actual selection makes the old record
+inactive. A recreated background must verify the current native selection before
+applying density, shortcuts or feature choices; retained metadata grants nothing.
+In the runtime explanation, **Document read** confirms the browser-session
+document was readable. The separate scope row tells you whether any temporary
+preferences apply to the current context.
+
+If the source changes while you edit, the draft stays visible. Choose **Use current
+source for this draft** to target it explicitly, or **Discard draft and load observed
+values** to replace local edits. Review the complete before/after values before
+confirmation. **Review clearing temporary preferences** removes only this
+override, leaving inherited preferences and independent native pauses applicable.
+An observer can inspect but must explicitly take control before editing.
+
+An unknown response is never replayed. **Inspect this operation** asks about the
+same retained operation without another write. A later matching document does not
+prove that older result. Extra precaution remains until a separate **Review adopting
+the observed state** operation adopts the exact current document. That adoption
+neither writes the preference document nor clears emergency/tab precaution.
+Known native clear/adoption remains available when saved preferences are unreadable;
+their effective values are then shown as unavailable. Newer or malformed temporary
+documents are preserved for recovery instead of replaced with empty defaults.
+
+Profiles, repository preferences and workspace read choices use saved read
+identities only. Optional write identities remain separate, including when their
+verification is current. A retained reference to another purpose stays unavailable
+for read actions; its authored slot or scope is preserved. See the
+[recovery guide](/browser-extension/troubleshooting#a-profile-scope-or-workspace-reference-is-missing).

@@ -5,26 +5,37 @@ import type { GitHubReadPort, ReadCancellation, ReadResult } from './read_ports.
 
 import { SharedReadCancellation } from './shared_read_cancellation.ts';
 
-interface CacheEntry { readonly result: Extract<ReadResult, { state: 'ok' }>; readonly expires: number; readonly epoch: number }
+interface CacheEntry { readonly result: Extract<ReadResult, { state: 'ok' }>; readonly expires: number; readonly epoch: object }
 export type ScheduledRead = (ReadResult & { readonly retryAt?: number }) | { readonly state: 'inactive' | 'cooldown' | 'budget' | 'busy' | 'storage-unavailable'; readonly bytes: 0; readonly retryAt?: number };
 export class ReadScheduler {
     private state: ScheduleState | undefined;
     private readonly pending = new Map<string, { task: Promise<ScheduledRead>; cancellation: SharedReadCancellation }>();
     private readonly cache = new Map<string, CacheEntry>();
     private gate: Promise<unknown> = Promise.resolve();
-    private epoch = 0;
+    private epoch: object = {};
+    private readonly cacheWitnesses = new WeakMap<object, object>();
     constructor(private readonly store: StoragePort, private readonly reader: GitHubReadPort,
         private readonly now: () => number, private readonly jitter: () => number) {}
-    invalidate(): void { this.epoch++; this.cache.clear(); for (const entry of this.pending.values()) entry.cancellation.abort(); }
+    invalidate(): void { this.epoch = {}; this.cache.clear(); for (const entry of this.pending.values()) entry.cancellation.abort(); }
+    /** Opaque worker-local witness; contains no cache key, body, identity or scheduling authority. */
+    captureApiCache(): Readonly<object> {
+        const witness = Object.freeze({}); this.cacheWitnesses.set(witness, this.epoch); return witness;
+    }
+    apiCacheCurrent(witness: Readonly<object>): boolean { return this.cacheWitnesses.get(witness) === this.epoch; }
+    clearApiCache(witness: Readonly<object>, current: () => boolean): boolean {
+        if (!this.apiCacheCurrent(witness)) return false;
+        try { if (current() !== true || !this.apiCacheCurrent(witness)) return false; } catch { return false; }
+        this.invalidate(); return true;
+    }
     async run(key: string, repository: string, request: ReadRequest, secret: string, cancellation: ReadCancellation,
-        activity: Activity): Promise<ScheduledRead> {
+        activity: Activity, options: { readonly cacheResponse?: boolean } = {}): Promise<ScheduledRead> {
         if (cancellation.aborted) return { state: 'aborted', bytes: 0 };
         if (!readActivityAllowed(!!secret, activity)) return { state: 'inactive', bytes: 0 };
         const duplicate = this.pending.get(key);
         if (duplicate) return this.consume(duplicate, cancellation);
         if (this.pending.size >= 2) return { state: 'busy', bytes: 0 };
         const shared = new SharedReadCancellation(); const release = shared.join(cancellation)!;
-        const task = this.execute(key, repository, request, secret, shared, activity, this.epoch);
+        const task = this.execute(key, repository, request, secret, shared, activity, this.epoch, options.cacheResponse !== false);
         const entry = { task, cancellation: shared }; this.pending.set(key, entry);
         try { const result = await task; return cancellation.aborted ? { state: 'aborted', bytes: 0 } : result; }
         finally { release(); shared.dispose(); this.pending.delete(key); }
@@ -36,7 +47,7 @@ export class ReadScheduler {
         finally { release(); }
     }
     private async execute(key: string, repository: string, request: ReadRequest, secret: string, cancellation: ReadCancellation,
-        activity: Activity, epoch: number): Promise<ScheduledRead> {
+        activity: Activity, epoch: object, cacheResponse: boolean): Promise<ScheduledRead> {
         const reserve = this.gate.then(async () => {
             if (!this.state) {
                 const persisted = await this.store.get('copilot.schedule.v1');
@@ -58,7 +69,7 @@ export class ReadScheduler {
             ...(decision === 'budget' ? { retryAt: this.state!.started + 3600000 } : decision === 'cooldown'
                 ? { retryAt: Math.max(this.state!.started, this.state!.blockedUntil, this.state!.targets[key] ?? 0) } : {}) };
         if (cancellation.aborted || epoch !== this.epoch) return { state: 'aborted', bytes: 0 };
-        const cached = this.cache.get(key);
+        const cached = cacheResponse ? this.cache.get(key) : undefined;
         if (cached && cached.epoch === epoch && cached.expires > this.now() && !activity.manual) return cached.result;
         const result = await this.reader.read(request, secret, cancellation, cached?.result.etag);
         if (cancellation.aborted || epoch !== this.epoch) return { state: 'aborted', bytes: 0 };
@@ -77,6 +88,7 @@ export class ReadScheduler {
             this.cache.set(key, { ...cached, expires: this.now() + 60000 });
             return cached.result;
         }
+        if (!cacheResponse) return result;
         if (result.state === 'ok') {
             if (this.cache.size >= 128) this.cache.delete(this.cache.keys().next().value!);
             let bytes = [...this.cache.values()].reduce((total, entry) => total + entry.result.bytes, 0);

@@ -1,16 +1,85 @@
 import { DEFAULT_SETTINGS, loadSettings, validSettings, type Settings, type SettingsLoad } from '../domain/settings.ts';
-import { deepFreeze, record } from '../domain/value.ts';
+import { sameSettingsContent, settingsOperationId, settingsSnapshot } from '../domain/settings_operation.ts';
+import { deepFreeze, keys, natural, record } from '../domain/value.ts';
 import type { StoragePort } from './runtime_ports.ts';
+import type { SettingsCommit, SettingsInspection, SettingsReceipt } from './settings_transaction_ports.ts';
+import { SettingsMutationQueue, type SettingsMutationReservation } from './settings_mutation_queue.ts';
+import { settingsWriteScope, type SettingsWriteEffects } from './settings_write_effects.ts';
+import { protectedMutation, type ProtectedMutationTrace } from './protected_mutation.ts';
+import type { ObserveCollectionPolicy } from './collection_policy_observation_ports.ts';
 
 export const SETTINGS_KEY = 'copilot.settings.v1';
-interface Envelope { readonly current: unknown; readonly previous?: unknown }
+interface Envelope { readonly current: unknown; readonly previous?: unknown; readonly operation?: SettingsReceipt }
+function isEnvelope(value: unknown): value is Record<string, unknown> {
+    return record(value) && Object.hasOwn(value, 'current') && keys(value, ['current', 'previous', 'operation']);
+}
+/** The migration write was attempted; callers may inspect its observed result without retrying it. */
+export class SettingsMigrationError extends Error {
+    constructor() { super('settings-migration-unavailable'); }
+}
 export class SettingsRepository {
-    private queue: Promise<unknown> = Promise.resolve();
-    constructor(private readonly storage: StoragePort) {}
+    private readonly mutations = new SettingsMutationQueue();
+    constructor(private readonly storage: StoragePort, private readonly effects?: SettingsWriteEffects) {}
+    reserveMutations(): SettingsMutationReservation | null { return this.mutations.reserve(); }
     async read(): Promise<SettingsLoad> {
         const value = await this.storage.get(SETTINGS_KEY);
-        const current = record(value) && Object.hasOwn(value, 'current') ? value.current : value;
+        const current = isEnvelope(value) ? value.current : value;
         return loadSettings(current);
+    }
+    async inspect(): Promise<SettingsInspection> {
+        const value = await this.storage.get(SETTINGS_KEY);
+        const envelope = isEnvelope(value) ? value : null;
+        const loaded = loadSettings(envelope ? envelope.current : value);
+        const previous = loadSettings(envelope?.previous);
+        const receipt = envelope?.operation;
+        const operation = loaded.state === 'ready' && record(receipt) && keys(receipt, ['id', 'beforeRevision'])
+            && Object.keys(receipt).length === 2 && settingsOperationId(receipt.id) && natural(receipt.beforeRevision)
+            && loaded.settings.revision === receipt.beforeRevision + 1
+            ? { id: receipt.id, beforeRevision: receipt.beforeRevision } : null;
+        return { loaded, operation, rollback: envelope?.previous !== undefined && previous.state === 'ready' ? previous.settings : null };
+    }
+    /** One operation receipt and the complete current/rollback pair share one atomic storage set. */
+    commit(value: unknown, expectedRevision: number, id: string, current: () => boolean, submitted?: () => void, observePolicy?: ObserveCollectionPolicy): Promise<SettingsCommit> {
+        const admitted = settingsSnapshot(value);
+        if (!settingsOperationId(id) || !natural(expectedRevision) || !admitted) return Promise.resolve({ state: 'invalid' });
+        return this.mutations.run(async (): Promise<SettingsCommit> => {
+            const eligible = () => { try { return current() === true; } catch { return false; } };
+            let inspected: SettingsInspection;
+            try { inspected = await this.inspect(); } catch { return { state: 'unavailable' }; }
+            if (!eligible()) return { state: 'stale' };
+            if (inspected.loaded.state !== 'ready' || inspected.loaded.migrated) return { state: 'invalid' };
+            const before = inspected.loaded.settings;
+            const next = { ...admitted, revision: expectedRevision + 1 };
+            if (!validSettings(next)) return { state: 'invalid' };
+            if (inspected.operation?.id === id) {
+                return inspected.operation.beforeRevision === expectedRevision && sameSettingsContent(before, next)
+                    ? { state: 'replayed', revision: before.revision } : { state: 'invalid' };
+            }
+            if (before.revision !== expectedRevision) return { state: 'conflict' };
+            const envelope: Envelope = { current: deepFreeze(JSON.parse(JSON.stringify(next)) as Settings), previous: before,
+                operation: { id, beforeRevision: expectedRevision } };
+            const scope = await settingsWriteScope(this.effects, before, envelope.current as Settings, eligible, id, observePolicy);
+            try {
+                if (!eligible()) return { state: 'stale' };
+                if (!scope.allowed) return { state: 'unavailable' };
+                let acknowledgement: 'accepted' | 'unknown' = 'accepted';
+                let attempt: Promise<void> | undefined;
+                try { attempt = this.storage.set(SETTINGS_KEY, envelope); } catch { acknowledgement = 'unknown'; }
+                try { submitted?.(); } catch { /* Submission observation cannot alter the native attempt or its outcome. */ }
+                try { await attempt; } catch { acknowledgement = 'unknown'; }
+                // Read even after an acknowledgement; partial or missing persistence is never success.
+                try {
+                    const observed = await this.inspect();
+                    if (observed.loaded.state === 'ready' && observed.operation?.id === id
+                        && observed.operation.beforeRevision === expectedRevision && sameSettingsContent(observed.loaded.settings, next)) {
+                        return { state: 'committed', revision: next.revision, acknowledgement, current: eligible() };
+                    }
+                    return { state: 'unknown', acknowledgement, observedRevision: observed.loaded.state === 'ready' ? observed.loaded.settings.revision : null,
+                        observation: observed.loaded.state !== 'ready' ? 'unavailable'
+                            : sameSettingsContent(observed.loaded.settings, before) ? 'unchanged' : 'changed' };
+                } catch { return { state: 'unknown', acknowledgement, observedRevision: null, observation: 'unavailable' }; }
+            } finally { scope.release(); }
+        });
     }
     write(value: unknown, expectedRevision: number): Promise<Settings> {
         return this.update(settings => {
@@ -20,31 +89,46 @@ export class SettingsRepository {
     }
     /** Serialize application mutations against the latest complete settings envelope. */
     update(change: (settings: Settings) => unknown, current: () => boolean = () => true): Promise<Settings> {
-        const operation = this.queue.then(async () => {
+        return this.change(change, current, false);
+    }
+    /** Native session opt-in: verify complete persistence independently from its secondary observer. */
+    updateObserved(change: (settings: Settings) => unknown, current: () => boolean, trace?: ProtectedMutationTrace): Promise<Settings> {
+        return this.change(change, current, true, trace);
+    }
+    private change(change: (settings: Settings) => unknown, current: () => boolean, canonical: boolean, trace?: ProtectedMutationTrace): Promise<Settings> {
+        return this.mutations.run(async () => {
             const loaded = await this.read();
             if (loaded.state !== 'ready' || !current()) throw new Error('settings-conflict-or-invalid');
-            const value = change(loaded.settings);
-            if (loaded.settings.revision >= Number.MAX_SAFE_INTEGER || !validSettings(value)) throw new Error('settings-conflict-or-invalid');
+            const value = settingsSnapshot(change(loaded.settings));
+            if (loaded.settings.revision >= Number.MAX_SAFE_INTEGER || !value) throw new Error('settings-conflict-or-invalid');
             const next = deepFreeze({ ...value, revision: loaded.settings.revision + 1 });
             const envelope: Envelope = { current: next, previous: loaded.settings };
-            // One storage operation atomically publishes current + one nonsecret rollback.
-            await this.storage.set(SETTINGS_KEY, envelope);
-            return next;
+            const scope = await settingsWriteScope(this.effects, loaded.settings, next, current);
+            try {
+                if (!current()) throw new Error('settings-conflict-or-invalid');
+                if (!scope.allowed) throw new Error('settings-collection-unavailable');
+                // One storage operation atomically publishes current + one nonsecret rollback.
+                if (canonical) {
+                    const result = await protectedMutation(() => this.storage.set(SETTINGS_KEY, envelope), async () => {
+                        const observed = await this.inspect(); return observed.loaded.state === 'ready' && !observed.loaded.migrated && sameSettingsContent(observed.loaded.settings, next);
+                    }, trace);
+                    if (result.observation !== 'committed') throw new Error('settings-write-unconfirmed');
+                } else await this.storage.set(SETTINGS_KEY, envelope);
+                return next;
+            } finally { scope.release(); }
         });
-        this.queue = operation.catch(() => undefined);
-        return operation;
     }
     initialize(): Promise<SettingsLoad> {
-        const operation = this.queue.then(async () => {
+        return this.mutations.run(async () => {
             const loaded = await this.read();
             if (loaded.state === 'ready' && loaded.migrated) {
-                const previous = await this.storage.get(SETTINGS_KEY);
-                await this.storage.set(SETTINGS_KEY, { current: loaded.settings, previous });
+                const stored = await this.storage.get(SETTINGS_KEY);
+                const previous = isEnvelope(stored) ? stored.current : stored;
+                try { await this.storage.set(SETTINGS_KEY, { current: loaded.settings, previous }); }
+                catch { throw new SettingsMigrationError(); }
             }
             return loaded;
         });
-        this.queue = operation.catch(() => undefined);
-        return operation;
     }
     async rollback(expectedRevision: number): Promise<Settings> {
         const envelope = await this.storage.get(SETTINGS_KEY);

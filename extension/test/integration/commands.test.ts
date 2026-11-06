@@ -15,7 +15,7 @@ it('the public validation command performs two actual clean builds and reports t
     const output = vi.fn(); await main(['validate'], root, output);
     expect(output).toHaveBeenCalledWith(expect.stringContaining('two clean reproducible builds'));
     expect(output).toHaveBeenCalledWith(expect.stringContaining('Browser loading remains unverified'));
-});
+}, 120_000);
 it('rejects undeclared command/output overrides and incompatible runtimes before effects', async () => {
     await expect(main([])).rejects.toThrow('Usage');
     await expect(main(['build', '--output=/tmp/arbitrary'])).rejects.toThrow('Usage');

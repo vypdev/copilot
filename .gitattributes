@@ -1,6 +1,9 @@
 # Vite bundles are generated, minified artifacts; inspect their Svelte sources instead.
 build/web/assets/*.js -diff -whitespace
 
+# ncc vendor indentation is generated. Keep every other whitespace and conflict-marker check.
+build/deployment_recovery/index.js whitespace=-space-before-tab
+
 # Generated text must keep its canonical LF bytes on Windows checkouts.
 specs/CATALOG.md text eol=lf
 .copilot/repository-profile.json text eol=lf

@@ -1,14 +1,14 @@
 import { inventoryFixture, addedFiles } from '../../../data/repository/__tests__/support/immutable_progress_inventory_fixture';
 import { bindProgressEvidence, frameProgressEvidence, validateFramedProgressEvidence as validate } from '../progress_evidence_protocol_policy';
-import { framedProgressFactLimit, aggregateProgressReceipts, parseProgressPartitionReceipt } from '../progress_partition_receipt_policy';
+import { framedProgressFactBounds, aggregateProgressReceipts, parseProgressPartitionReceipt } from '../progress_partition_receipt_policy';
 import type { ProgressDiffEvidence } from '../../ports/progress_diff_query_ports';
 type Multipart=Extract<ProgressDiffEvidence,{kind:'partitioned'}>;
 let original:Multipart;
 beforeAll(async()=>{const result=await inventoryFixture({},addedFiles(600)).read();if(result.kind!=='partitioned')throw Error();original=result;});
 const clone=():any=>JSON.parse(JSON.stringify(original));
 const bound=():Multipart=>bindProgressEvidence(original,'issue','scope','en-US') as Multipart;
-const receipts=(diff:Multipart,prose='Source.')=>diff.partitions.map(part=>parseProgressPartitionReceipt({outputLocale:'en-US',partitionId:part.id,
-    files:part.units!.map(unit=>({unitId:unit.id,path:unit.path,implemented:prose,remaining:prose}))},part,'en-US',600));
+const receipts=(diff:Multipart,prose='Source.',limit=600,factJsonBytes?:number)=>diff.partitions.map(part=>parseProgressPartitionReceipt({outputLocale:'en-US',partitionId:part.id,
+    files:part.units!.map(unit=>({unitId:unit.id,path:unit.path,implemented:prose,remaining:prose}))},part,'en-US',limit,factJsonBytes));
 
 function reframe(edit:(diff:any)=>void):()=>unknown {
     const diff=clone();edit(diff);
@@ -35,10 +35,60 @@ describe('complete immutable source and receipt protocol', () => {
     it('binds new-profile request identity to the full issue', () => { const other=bindProgressEvidence(original,'changed issue','scope','en-US') as Multipart;expect(other.partitions[0].id).not.toBe(bound().partitions[0].id); });
     it('binds new-profile request identity to the acceptance scope', () => { const other=bindProgressEvidence(original,'issue','changed scope','en-US') as Multipart;expect(other.partitions[0].id).not.toBe(bound().partitions[0].id); });
     it('binds new-profile request identity to the target locale', () => { const other=bindProgressEvidence(original,'issue','scope','es-ES') as Multipart;expect(other.partitions[0].id).not.toBe(bound().partitions[0].id); });
-    it('reserves at least sixteen code points per facts field', () => { expect(framedProgressFactLimit(bound(),384000)).toBeGreaterThanOrEqual(16); });
-    it('rejects inadequate aggregate capacity before model admission', () => { expect(()=>framedProgressFactLimit(bound(),1000)).toThrow(); });
-    it('projects validated exact-path facts into compact explicit unit tuples', () => { const d=bound(),text=aggregateProgressReceipts(d,receipts(d),384000);const final=JSON.parse(text);expect(final.analysis.kind).toBe('complete-immutable-tree-analysis-v1');expect(final.analysis.facts).toHaveLength(600);expect(final.analysis.assignments[0]).toEqual([d.partitions[0].units![0].id,0]);expect(text).not.toContain('recoveredContent'); });
-    it('admits worst-case JSON escaping within the preflight facts budget', () => { const d=bound(),limit=framedProgressFactLimit(d,384000),text=aggregateProgressReceipts(d,receipts(d,'\u0001'.repeat(limit)),384000);expect(Buffer.byteLength(text)).toBeLessThanOrEqual(384000); });
+    it('reserves at least sixteen code points per facts field', () => { expect(framedProgressFactBounds(bound(),384000).factLimit).toBeGreaterThanOrEqual(16); });
+    it('rejects inadequate aggregate capacity before model admission', () => { expect(()=>framedProgressFactBounds(bound(),1000)).toThrow(); });
+    it('projects the complete inventory once and binds every tuple to its exact returned path', () => {
+        const diff = bound(), values = receipts(diff);
+        const reordered = values.map(receipt => ({ ...receipt, files: [...receipt.files].reverse() }));
+        const text = aggregateProgressReceipts(diff, reordered, 384000);
+        const { analysis, protocol, sources } = JSON.parse(text);
+        expect(analysis.kind).toBe('complete-immutable-tree-analysis-v1');
+        expect(analysis.format.facts).toEqual(['unitId', 'requiredPathIndex', 'implemented', 'remaining']);
+        expect(analysis.requiredPaths).toEqual(diff.protocol!.requiredPaths);
+        expect(protocol.requiredPaths).toBeUndefined();
+        expect(protocol.manifestDigest).toBe(diff.protocol!.manifestDigest);
+        expect(sources.map((source: { requestId: string }) => source.requestId)).toEqual(values.map(receipt => receipt.requestId));
+        expect(analysis.facts.map(([unitId, index, implemented, remaining]: [string, number, string, string]) =>
+            ({ unitId, path: analysis.requiredPaths[index], implemented, remaining }))).toEqual(reordered.flatMap(receipt => receipt.files));
+        expect(text).not.toContain('recoveredContent');
+    });
+    it('admits 21-code-point facts with the same constrained budget that previously admitted 19', () => {
+        const diff = bound(), budget = 201_200;
+        const { factLimit: limit, factJsonBytes } = framedProgressFactBounds(diff, budget);
+        const fact = 'Falta probar el flujo';
+        expect([...fact]).toHaveLength(21);
+        expect(limit).toBeGreaterThanOrEqual(21);
+        const text = aggregateProgressReceipts(diff, receipts(diff, fact, limit, factJsonBytes), budget);
+        expect(Buffer.byteLength(text)).toBeLessThanOrEqual(budget);
+        expect(JSON.parse(text).analysis.facts).toHaveLength(600);
+    });
+    it('admits 42-code-point facts and exact UTF-8 boundaries within the original 24-point byte allocation', () => {
+        const diff = bound();
+        const withSingleByteFacts = aggregateProgressReceipts(diff, receipts(diff, 'x'), 384000);
+        const budget = Buffer.byteLength(withSingleByteFacts) + 600 * 2 * (24 * 6 - 1);
+        const { factLimit, factJsonBytes } = framedProgressFactBounds(diff, budget);
+        expect({ factLimit, factJsonBytes }).toEqual({ factLimit: 144, factJsonBytes: 144 });
+        const prose = 'Platform test timeouts extended for checks';
+        expect([...prose]).toHaveLength(42);
+        for (const fact of [prose, 'x'.repeat(factLimit), '🧪'.repeat(factJsonBytes! / 4)]) {
+            const text = aggregateProgressReceipts(diff, receipts(diff, fact, factLimit, factJsonBytes), budget);
+            expect(Buffer.byteLength(text)).toBeLessThanOrEqual(budget);
+        }
+    });
+    it('admits the original worst-case escaped fact and rejects an overflow before forming a receipt', () => {
+        const diff = bound(), budget = 384000;
+        const { factLimit, factJsonBytes } = framedProgressFactBounds(diff, budget);
+        const escapedLimit = Math.floor(factJsonBytes! / 6);
+        const text = aggregateProgressReceipts(diff, receipts(diff, '\u0001'.repeat(escapedLimit), factLimit, factJsonBytes), budget);
+        expect(Buffer.byteLength(text)).toBeLessThanOrEqual(budget);
+        expect(escapedLimit + 1).toBeLessThanOrEqual(factLimit);
+        for (const fact of ['\u0001'.repeat(escapedLimit + 1), '🧪'.repeat(Math.floor(factJsonBytes! / 4) + 1)]) {
+            expect(() => receipts(diff, fact, factLimit, factJsonBytes)).toThrow(expect.objectContaining({
+                recovery: { id: 'progress-result-contract-invalid', variables: expect.objectContaining({ phase: 'partition',
+                    reason: 'partition-facts-invalid', field: '$.files[0].implemented' }) },
+            }));
+        }
+    });
     it('rejects omitted receipt sets at aggregation', () => { const d=bound();expect(()=>aggregateProgressReceipts(d,receipts(d).slice(1),384000)).toThrow(); });
     it('rejects reordered receipt sets at aggregation', () => { const d=bound();expect(()=>aggregateProgressReceipts(d,receipts(d).reverse(),384000)).toThrow(); });
     it('rejects duplicate receipt identities at aggregation', () => { const d=bound(),r=receipts(d);expect(()=>aggregateProgressReceipts(d,[r[0],r[0]],384000)).toThrow(); });

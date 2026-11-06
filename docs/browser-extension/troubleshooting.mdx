@@ -1,0 +1,187 @@
+---
+title: Troubleshooting the local center
+description: Recover settings, sessions and local activity while preserving drafts, saved changes and purpose boundaries.
+---
+
+# Troubleshooting the local center
+
+Open the extension's browser options or choose **Runtime settings** on an eligible
+GitHub page. **Help**, **About** and **Recovery** remain available when preferences
+cannot be read. These development builds still require their complete native
+browser and accessibility acceptance; use a compatible package from the documented
+[development procedure](/development/browser-extension).
+
+```text
+Read the current state → inspect the exact affected scope and any saved result
+ → preserve your draft → review a new change only when it is needed
+```
+
+Reading current state does not repeat a change. Leaving a page or closing a review
+cannot undo a write that was already requested or saved.
+
+## Find the next action
+
+| What you see | What to do | What stays intact |
+|---|---|---|
+| A feature belongs to a later milestone | Open its details in **Features** and inspect its availability | Its saved preference cannot grant permissions or install the implementation |
+| **Read-only window** | Use the current editing window, or explicitly **Take control of editing** | Drafts remain local; old previews require a new review |
+| Settings read is unavailable | Choose **Read current settings** when the current request finishes | Retained preferences are preserved without claiming they are current |
+| Settings require a newer extension | Install a compatible package and reopen options | The newer record is preserved without downgrade |
+| Settings are unreadable or migration is blocked | Preserve the record, resolve the browser storage problem and use **Recovery** | No default replacement or automatic reset is performed |
+| The page and background belong to different builds | Reload the extension through the browser, then reopen its options | Do not repeat pending changes merely because the old page stopped responding |
+| Another window saved a newer revision | Read and compare it with your draft before reviewing again | An old draft cannot silently overwrite the newer revision |
+| A change has an unknown result | Inspect its retained operation and current saved state | No automatic retry or inverse change is issued |
+
+For the normal journeys, see [local configuration](/browser-extension/configuration)
+and [welcome, updates and recovery](/browser-extension/onboarding).
+
+## The background disconnected while the center stayed open
+
+Moving between center sections keeps your editing session. A browser background
+restart, extension reload or closed document can retire its native connection.
+The center then disables editing and retains your local draft. It does not keep
+the background alive with periodic messages.
+
+Choose **Read current settings** to establish a fresh connection. Compare the
+current settings with the retained draft before creating a new review. An old
+preview cannot be confirmed through the new connection. If a save was already
+submitted, read its result before deciding what to do next: a missing response
+does not prove the save failed. A later read failure does not undo a save that
+was already observed. Reconnecting never repeats the mutation automatically. A repeated browser delivery also cannot repeat your confirmed save. If the connection
+receives conflicting data, editing retires and the same explicit read/review
+recovery applies.
+
+## An uncertain save or clear
+
+Inspect **Last observed operation** and, when enabled, **Activity**. Submission,
+acknowledgement and observed completion are separate facts. A request can be saved
+even if its response is lost. A later failed read does not undo that saved result.
+
+For a settings review, **Read current settings** may reconcile an exact retained
+result. A generic current-session read does not certify the completion of an
+earlier optional-role selection. Its open review keeps the uncertain result;
+inspect the actual selection before deciding whether another request is needed.
+
+The same rule applies to history clears, pauses and credential removal: an
+unconfirmed deletion is not an empty or successfully cleared scope. Do not repeat
+it automatically. The [activity guide](/browser-extension/local-history) explains
+the scope and lifetime of current-operation evidence separately from optional
+history retention.
+
+## A connection or optional role is unavailable
+
+In **Connections**, inspect the read selection, **Issue triage** and **Actions
+operations** separately. Up to five named entries share one capacity. Adding an
+optional identity leaves that purpose unselected. Selecting it verifies the
+account and repository; it does not prove write permissions or enable future
+issue/run operation controls.
+
+1. Read current sessions and check the exact purpose, account and repository.
+2. If a retained optional selection is **Stored**, explicitly review and verify
+   it again when needed. Background restart does not retain current verification.
+3. Check the browser's optional API access in **Privacy**. A browser grant and a
+   GitHub credential are separate requirements.
+4. If GitHub requires waiting, observe the displayed deadline before trying again.
+   An unavailable response does not establish that a private repository is absent.
+
+The password field clears when submitted. After denial or failure, re-enter it
+only when deliberately starting a new attempt. Never use setup, bot or provider
+secrets here. See [credential purposes](/browser-extension/configuration#optional-github-roles)
+and [permissions](/browser-extension/permissions).
+
+**Forget all protected sessions** is a separate confirmed local removal, including
+an unreadable protected record. It keeps preferences and does not revoke a token
+at GitHub. If local deletion cannot be confirmed, use the browser's disable
+controls and revoke the credential at GitHub when appropriate. An older build
+cannot be used to downgrade a newer session record.
+
+## A profile scope or workspace reference is missing
+
+Profiles, repository preferences and workspace read actions use saved read
+identities. A saved or verified optional write identity cannot fill those choices.
+An existing opaque workspace slot that points to another purpose stays missing;
+it has no read-selection action and keeps its original position for editing.
+An existing profile scope is retained as unavailable rather than relabelled from
+an optional write account.
+
+Read saved references, then explicitly choose a current read identity when editing
+membership. Do not replace an unavailable identity merely because another entry
+has the same display name. Imported references remain unbound until deliberately
+edited. An H2 **previous session** must first be verified into its own local
+reference. These inspections cannot reconnect a session or grant access.
+
+For a renamed or transferred repository, use the separate
+[address recovery journey](/browser-extension/configuration#recover-a-renamed-or-transferred-repository).
+The verified numeric identity must match; reusing an old name for a different
+repository cannot inherit the former private context.
+
+## The GitHub runtime stays paused
+
+Open **Why these preferences?**. Saved global, profile and repository pauses,
+emergency pauses, this-tab pauses and temporary session restrictions are separate.
+Removing one pause cannot release the others. A disconnected or wrong-account
+context cannot activate scoped enabling choices.
+
+**Recheck local state** inspects metadata without restoring credentials, calling
+GitHub or repeating an operation. An unknown native state remains restricted.
+Temporary positive pauses can conservatively survive a session-list change until
+explicit review; do not treat a matching current value as proof that an earlier
+uncertain request completed. Use the corresponding reviewed controls in
+[configuration](/browser-extension/configuration#temporary-session-preferences).
+
+Reload old GitHub tabs after updating a development package. Protected GitHub
+login, token, billing, security and administration pages intentionally offer no
+runtime helper. Standalone local configuration remains available through the
+browser's extension options.
+
+## Temporary API cache result is unknown
+
+In **Privacy**, use **Read this operation's result** after a lost response. This
+reads the retained result of that review; it does not repeat clearing or call
+GitHub. Closing the review keeps result inspection available in the same current
+view. A confirmed result remains historical: new explicit reads can cache new
+responses after the clear.
+
+If the result says no clear had been submitted, choose **Keep cache** to cancel
+that unsubmitted review. Do not infer an earlier clear from an empty cache, a
+changed setting or a successful new review. An expired record, replaced editing
+session or restarted background can make the earlier result unavailable. The
+interface must keep that uncertainty visible. A new review is a separate explicit
+choice, never an automatic retry or proof of the earlier outcome.
+
+A pending review or full retained capacity can report busy. Inspect the previous
+result and explicitly cancel an unsubmitted review, or wait for its five-minute
+expiry. Do not disconnect or remove credentials to clear temporary responses;
+those are separate controls. Future/corrupt preferences can stay preserved while
+this independent native control runs. See the
+[fixed cache scope](/browser-extension/configuration#clear-temporary-api-responses).
+
+## Diagnose or reset only the chosen scope
+
+Work and Attention describe saved local choices. An empty local review list is
+limited to that revision; inspect GitHub tasks, grants and connection status in
+their dedicated tools. A selected paused profile still requires its scope to
+match before it applies. Copilot and Setup link to useful current local tools
+and their specific implementation plans; those pages do not imply that a later
+integration engine is running.
+
+When a local route reports future or corrupt preferences, follow its direct
+**Recovery** link. The prior source remains preserved. Do not interpret missing
+workspace details as an empty saved workspace, and use a compatible extension
+version or the reviewed recovery guidance rather than an automatic reset.
+
+**Diagnostics** separates current feature availability, helper samples and optional
+retained diagnostic history. Reading a historical sample cannot retry its source
+helper. Later implementation milestones and missing permissions remain explicit
+reasons rather than a successful empty result.
+
+In **Your data** or the applicable **Privacy** control, review the exact scope before
+confirming a clear, reset or rollback. Preferences, credentials, authored groups,
+temporary restrictions and generated history have separate controls. An imported
+backup cannot restore a credential, grant access or release a safety pause.
+Canceling a preview keeps the saved state and any retained draft.
+
+For support, use the nonsecret package version and page source shown in **About**.
+Do not attach credentials, raw storage, private repository contents or an
+unreviewed preference backup. The [engineering guide](/development/browser-extension)
+keeps build receipts, loaded-browser evidence and human acceptance distinct.

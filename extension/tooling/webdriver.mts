@@ -3,6 +3,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createServer } from 'node:net';
+import { NativePage } from './webdriver_page.mts';
 
 export interface BrowserDriver {
     readonly capabilities: Record<string, unknown>;
@@ -13,7 +14,10 @@ export interface BrowserDriver {
     evaluateAsync<T>(script: string, args?: unknown[]): Promise<T>;
     close(): Promise<void>;
 }
-export interface DriverConfiguration { readonly target: 'chrome' | 'firefox' | 'firefox-esr' | 'safari'; readonly binary: string; readonly driver: string; readonly artifact: string }
+export interface DriverConfiguration {
+    readonly target: 'chrome' | 'firefox' | 'firefox-esr' | 'safari'; readonly binary: string;
+    readonly driver: string; readonly artifact: string; readonly visible?: true;
+}
 export async function freePort(): Promise<number> {
     const server = createServer();
     return new Promise((resolve, reject) => {
@@ -31,6 +35,10 @@ export class NativeDriver implements BrowserDriver {
     private child: ChildProcess | undefined;
     private temporary = '';
     private endpoint = '';
+    readonly page = new NativePage((method, route, body) => {
+        if (!this.session) return Promise.reject(new Error('webdriver:page:session-not-started'));
+        return this.command(method, `/session/${this.session}${route}`, body);
+    });
     capabilities: Record<string, unknown> = {};
     private readonly configuration: DriverConfiguration;
     private readonly pause: (milliseconds: number) => Promise<void>;
@@ -59,11 +67,11 @@ export class NativeDriver implements BrowserDriver {
             if (!ready) throw new Error('prerequisite:webdriver-unavailable');
             const firefox = this.configuration.target.startsWith('firefox');
             const alwaysMatch: Record<string, unknown> = { browserName: safari ? 'safari' : firefox ? 'firefox' : 'chrome' };
-            if (firefox) alwaysMatch['moz:firefoxOptions'] = { binary: this.configuration.binary, args: ['-headless'], prefs: {
+            if (firefox) alwaysMatch['moz:firefoxOptions'] = { binary: this.configuration.binary, args: this.configuration.visible === true ? [] : ['-headless'], prefs: {
                 'extensions.webextensions.uuids': JSON.stringify({ 'copilot-foundation-dev@extensions.invalid': '00000000-0000-4000-8000-000000000703' }),
             } };
             else if (!safari) alwaysMatch['goog:chromeOptions'] = { binary: this.configuration.binary, enableExtensionTargets: true,
-                args: ['--headless=new', '--no-first-run', '--no-default-browser-check',
+                args: [...(this.configuration.visible === true ? [] : ['--headless=new']), '--no-first-run', '--no-default-browser-check',
                     `--user-data-dir=${path.join(this.temporary, 'profile')}`, `--load-extension=${this.configuration.artifact}`,
                     `--disable-extensions-except=${this.configuration.artifact}`] };
             const session = await this.command<{ sessionId: string; capabilities: Record<string, unknown> }>('POST', '/session', { capabilities: { alwaysMatch } });
@@ -98,12 +106,8 @@ export class NativeDriver implements BrowserDriver {
     async openRuntimeOptions(): Promise<string> {
         const route = `/session/${this.session}`;
         const before = await this.command<string[]>('GET', `${route}/window/handles`);
-        const reference = await this.command<Record<string, unknown>>('POST', `${route}/element`,
-            { using: 'css selector', value: '[data-copilot-open-settings]' });
-        const element = reference['element-6066-11e4-a52e-4f735466cecf'];
-        if (typeof element !== 'string' || !element || element.length > 512) throw new Error('assertion:runtime-options-element');
         let transitionFailure: unknown;
-        try { await this.command('POST', `${route}/element/${encodeURIComponent(element)}/click`, {}); }
+        try { await this.clickRuntimeSettings(route); }
         catch (error) {
             // Safari may replace the source context while opening the extension page.
             if (this.configuration.target !== 'safari' || !String(error).endsWith(':404:no such window')) throw error;
@@ -125,6 +129,22 @@ export class NativeDriver implements BrowserDriver {
             await this.pause(100);
         }
         throw new Error('assertion:runtime-options-load-incomplete');
+    }
+    private async clickRuntimeSettings(route: string): Promise<void> {
+        for (let attempt = 0; ; attempt++) {
+            const reference = await this.command<Record<string, unknown>>('POST', `${route}/element`,
+                { using: 'css selector', value: '[data-copilot-open-settings]' });
+            const element = reference['element-6066-11e4-a52e-4f735466cecf'];
+            if (typeof element !== 'string' || !element || element.length > 512) throw new Error('assertion:runtime-options-element');
+            const clickRoute = `${route}/element/${encodeURIComponent(element)}/click`;
+            try { await this.command('POST', clickRoute, {}); return; }
+            catch (error) {
+                // W3C stale-element rejection occurs before activation. Resolve this one control again,
+                // at most twice; never replay a click with an unknown outcome or another native failure.
+                const stale = `webdriver:${clickRoute.replace(this.session, 'session')}:404:stale element reference`;
+                if (attempt === 2 || !(error instanceof Error) || error.message !== stale) throw error;
+            }
+        }
     }
     evaluate<T>(script: string, args: unknown[] = []): Promise<T> { return this.command('POST', `/session/${this.session}/execute/sync`, { script, args }); }
     evaluateAsync<T>(script: string, args: unknown[] = []): Promise<T> { return this.command('POST', `/session/${this.session}/execute/async`, { script, args }); }

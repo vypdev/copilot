@@ -52,3 +52,24 @@ it('application preference mutations serialize against current settings instead 
     const second = repository.update(settings => ({ ...settings, repositories: { ...settings.repositories, '8': { connected: true } } }));
     await first; expect(await second).toMatchObject({ revision: 2, repositories: { '7': { connected: true }, '8': { connected: true } } });
 });
+
+it('H3 migrates an H2 envelope once and retains its exact prior current record as usable rollback', async () => {
+    const { center: _center, ...base } = DEFAULT_SETTINGS;
+    const legacy = { ...base, schemaVersion: 1, revision: 8, density: 'compact' };
+    const h = memoryStore(); h.values.set(SETTINGS_KEY, { current: legacy, previous: { historic: true } });
+    const repository = new SettingsRepository(h.port);
+    expect(await repository.initialize()).toMatchObject({ state: 'ready', migrated: true, settings: { schemaVersion: 2, revision: 8 } });
+    expect(h.values.get(SETTINGS_KEY)).toMatchObject({ current: { schemaVersion: 2 }, previous: legacy });
+    expect(await repository.initialize()).toMatchObject({ migrated: false }); expect(h.port.set).toHaveBeenCalledTimes(1);
+    expect(await repository.rollback(8)).toMatchObject({ schemaVersion: 2, revision: 9, density: 'compact' });
+});
+
+it('H3 migration quota failure retains the entire original H2 envelope for an explicit retry', async () => {
+    const { center: _center, ...base } = DEFAULT_SETTINGS;
+    const envelope = { current: { ...base, schemaVersion: 1, revision: 8 }, previous: { historic: true } };
+    const h = memoryStore(); h.values.set(SETTINGS_KEY, envelope); const repository = new SettingsRepository(h.port);
+    vi.mocked(h.port.set).mockRejectedValueOnce(new Error('quota'));
+    await expect(repository.initialize()).rejects.toThrow('settings-migration-unavailable'); expect(h.values.get(SETTINGS_KEY)).toEqual(envelope);
+    expect(await repository.initialize()).toMatchObject({ state: 'ready', migrated: true });
+    expect(h.values.get(SETTINGS_KEY)).toMatchObject({ previous: envelope.current });
+});

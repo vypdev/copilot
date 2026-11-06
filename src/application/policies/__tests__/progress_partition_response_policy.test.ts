@@ -1,4 +1,4 @@
-import { aggregateProgressFacts, MAX_PROGRESS_AGGREGATE_BYTES, progressPartitionFactLimit, parseProgressPartitionFacts, progressPartitionResponseSchema } from '../progress_partition_response_policy';
+import { aggregateProgressFacts, MAX_PROGRESS_AGGREGATE_BYTES, progressPartitionFactBounds, parseProgressPartitionFacts, progressPartitionResponseSchema } from '../progress_partition_response_policy';
 import { MAX_PROGRESS_EVIDENCE_BYTES, partitionProgressDiff } from '../progress_diff_partition_policy';
 
 const part = { id: 'progress-1-of-2', paths: ['src/a.ts', 'src/b.ts'], evidence: 'immutable' };
@@ -55,15 +55,15 @@ describe('complete progress partition facts', () => {
         expect(evidence.warning).toContain('not CI/build/test attestation');
     });
     it.each([0, -1, NaN, MAX_PROGRESS_AGGREGATE_BYTES + 1, 1])('rejects invalid or insufficient aggregate budgets %s before extraction', budget => {
-        expect(() => progressPartitionFactLimit('a', 'b', [part], budget)).toThrow(expect.objectContaining({ code: 'validation.evidence-too-large' }));
+        expect(() => progressPartitionFactBounds('a', 'b', [part], budget)).toThrow(expect.objectContaining({ code: 'validation.evidence-too-large' }));
     });
     it('rejects an empty assignment before deriving a fact limit', () => {
-        expect(() => progressPartitionFactLimit('a', 'b', [{ ...part, paths: [] }])).toThrow();
+        expect(() => progressPartitionFactBounds('a', 'b', [{ ...part, paths: [] }])).toThrow();
     });
     it('enforces a smaller planned fact length at schema and parsing boundaries', () => {
         expect(progressPartitionResponseSchema(part, 20)).toMatchObject({ properties: { files: { items: { properties: { implemented: { maxLength: 20 } } } } } });
         expect(() => parseProgressPartitionFacts(response(), part, 'en-US', 20)).toThrow();
-        expect(progressPartitionFactLimit('a', 'b', [part])).toBe(600);
+        expect(progressPartitionFactBounds('a', 'b', [part]).factLimit).toBe(600);
     });
     it.each([NaN, MAX_PROGRESS_AGGREGATE_BYTES + 1, 0])('does not let an invalid aggregation budget bypass the fixed ceiling: %s', budget => {
         expect(() => aggregateProgressFacts('a', 'b', [part], [facts()], budget)).toThrow();
@@ -75,7 +75,7 @@ describe('complete progress partition facts', () => {
         const paths = Array.from({ length: 299 }, (_, i) => `src/${i}-${'x'.repeat(800)}.ts`);
         const diff = partitionProgressDiff('a', 'b', paths.map(path => ({ path, status: 'modified', additions: 1, deletions: 0, patch: 'x'.repeat(1500) })));
         if (diff.kind !== 'partitioned') throw new Error('Expected complete multipart fixture');
-        const limit = progressPartitionFactLimit('a', 'b', diff.partitions);
+        const { factLimit: limit } = progressPartitionFactBounds('a', 'b', diff.partitions);
         const batches = diff.partitions.map(partition => parseProgressPartitionFacts({ outputLocale: 'en-US', partitionId: partition.id,
             files: partition.paths.map(path => ({ path, implemented: '\u0000'.repeat(limit), remaining: '\u0000'.repeat(limit) })) }, partition, 'en-US', limit));
         const evidence = aggregateProgressFacts('a', 'b', diff.partitions, batches);

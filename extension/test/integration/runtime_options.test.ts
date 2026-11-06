@@ -1,7 +1,7 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { JSDOM } from 'jsdom';
 import { startOptions } from '../../src/infrastructure/options_runtime.ts';
-import { RUNTIME_HTML } from '../../tooling/static_assets.mts';
+import { LEGACY_OPTIONS_HTML as RUNTIME_HTML } from '../fixtures/legacy_options.ts';
 import { browserFixture } from '../fixtures/browser.ts';
 import { deferred } from '../fixtures/runtime.ts';
 

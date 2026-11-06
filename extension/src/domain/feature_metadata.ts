@@ -1,0 +1,15 @@
+import { NAV } from './feature_metadata_nav.ts';
+import { CODE } from './feature_metadata_code.ts';
+import { REVIEW } from './feature_metadata_review.ts';
+import { ISSUE } from './feature_metadata_issue.ts';
+import { SEARCH } from './feature_metadata_search.ts';
+import { NOTIFY } from './feature_metadata_notify.ts';
+import { CI } from './feature_metadata_ci.ts';
+import { RELEASE } from './feature_metadata_release.ts';
+import { WORK } from './feature_metadata_work.ts';
+import { COPILOT } from './feature_metadata_copilot.ts';
+import { CENTER } from './feature_metadata_center.ts';
+import { SETUP } from './feature_metadata_setup.ts';
+import { deepFreeze } from './value.ts';
+import type { FeatureMetadata } from './feature_metadata_types.ts';
+export const FEATURE_METADATA: readonly FeatureMetadata[] = deepFreeze([...NAV, ...CODE, ...REVIEW, ...ISSUE, ...SEARCH, ...NOTIFY, ...CI, ...RELEASE, ...WORK, ...COPILOT, ...CENTER, ...SETUP]);

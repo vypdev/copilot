@@ -1,0 +1,270 @@
+---
+title: Browser permissions and privacy
+description: Inspect browser access, understand separate GitHub credential purposes and find native revocation controls without granting access.
+---
+
+# Browser permissions and privacy
+
+Open **Privacy** in the [local control center](/browser-extension/configuration)
+to inspect access in this development build. The page can inspect browser
+permissions even when saved preferences are unreadable or configuration cannot
+open. A read-only center window can also inspect them.
+
+H3 remains in progress. This inspector is one implemented subflow; the complete
+permission, credential-role, retention and native-browser acceptance requirements
+still apply. Its results do not certify the rest of the product.
+
+For storage lifetimes, exports and the distinction between pause, forget, clear
+and reset, see [local data and privacy](/browser-extension/privacy).
+
+## Inspect browser access
+
+Opening Privacy makes one local native check of these three declared capabilities:
+
+| Capability | Fixed query | What the observation means |
+|---|---|---|
+| Local storage | `storage` | The browser reports the extension's named storage permission. It does not prove a future storage operation will succeed. |
+| GitHub pages | `https://github.com/*` | The browser reports the declared site scope. Actual page eligibility and native site/profile controls still apply. |
+| GitHub API | `https://api.github.com/*` | The browser reports the optional API site scope. It does not validate a GitHub credential or authorize an API operation. |
+
+Each card gives its scope, source, current reported status, retention and native
+revocation path. **Granted** and **Not granted** are native boolean results.
+**Unknown** means a check failed or did not return a valid result. **Unsupported**
+means this browser context does not expose the query API. A manifest declaration
+or enabled preference never becomes a grant by itself.
+
+**Read browser permissions** repeats these fixed native queries. Opening this
+page or checking browser access does not request a grant, read GitHub, change
+preferences or start an Action. Results stay in the open page's memory; they are
+not exported or saved.
+
+There is one pending batch of three queries at most. After five seconds without
+a complete response, the page reports an unknown timeout. The browser calls may
+still be pending, so refresh stays unavailable until they finish. Late timed-out
+results cannot become grants. Close and reopen the page if its native context
+remains unresponsive; there is no automatic failure retry loop.
+
+Leaving Privacy, hiding the page, moving focus away, native permission events
+and closing the center retire old observations. Returning to the foreground or
+Privacy checks current browser access again. Permission events depend on native
+API support; a fresh explicit check remains available.
+
+## Inspect the selected GitHub read identity
+
+The selected read identity is separate from browser access. Select **Read
+selected GitHub identity (may contact GitHub)** deliberately to use the existing
+protected connection service. The page does not make this read automatically.
+A native center session must be available, with no other active operation or
+settings review. Use **Connections** to manage read and optional-purpose sessions.
+
+An admitted result displays only the selected github.com account and repository.
+It does not list other saved sessions, their private local labels or credentials.
+An unavailable or retired result remains unknown. A verified disconnected result
+is shown separately from unknown access. Losing current native API access hides
+the retained private identity until it can be checked again.
+
+The connection's read purpose describes what this extension service uses. It
+does not prove that the provider credential has no other entitlements. Review
+and revoke those separately in [GitHub credential settings](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens).
+Future extension GitHub writes and CLI pairing remain unavailable here; this
+inspector does not create a write identity or CLI session.
+
+## Separate optional credential purposes
+
+The [Connections manager](/browser-extension/configuration#optional-github-roles)
+can retain user-owned selected-repository credentials for reading, issue triage
+and Actions operations. All purposes share five protected session entries. An
+optional credential is saved separately and stays unselected until its exact-row
+review and fresh identity verification. Selecting or disabling it leaves the
+read credential and personal preferences independent.
+
+Browser API permission, GitHub identity, a retained selection and provider write
+authorization are different facts. Only account/repository GETs verify an
+optional identity; token syntax, repository visibility and successful reads do
+not prove write grants. Every future operation must validate its own permission,
+current target and review. Issue/run write controls remain unavailable in this
+development stage; saving a role makes no GitHub change.
+
+Never provide setup/bot/provider secrets or an installation/Apply capability.
+Setup credential entry and privileged execution stay with the CLI. Content
+scripts cannot read, create or select these native roles. No read credential is
+silently reused under a write purpose, and no writer is saved into the active
+read key. Credentials, selections and private labels are excluded from preference
+backups and generated diagnostics. The native store is session-scoped, not an
+advertised encrypted vault or a persistent token remembrance feature.
+
+**Disable this purpose** clears only the optional selection. **Remove session**
+and **Forget all protected sessions** remove native credential data after their
+own confirmations; provider revocation is separate. An unconfirmed native
+removal remains unconfirmed. Read current sessions and use native disable or
+provider revocation when cleanup cannot be established.
+
+## Revoke access in the browser
+
+- **Chrome:** open Extensions → Manage extensions → Copilot → Details and
+  review Site access. Optional GitHub API access is separate from page access.
+- **Firefox:** open Add-ons and themes → Extensions → Copilot → Permissions.
+  Review optional access and remove it in the browser's controls.
+- **Safari on macOS:** open Settings → Extensions, select Copilot and review
+  website access and the relevant profile. Native approval can be temporary;
+  a coarse scope result does not replace Safari's current site decision.
+
+Disabling or removing the extension is another native control. Local data
+retention and deletion behavior must be considered separately. After changing
+access, return to Privacy and check current browser permissions. A provider-side
+credential revocation also requires a fresh connection read.
+
+## Understand retention
+
+**Privacy → Review clearing temporary API responses** is an independent reviewed
+control in the H3 development source. It clears this extension background's
+temporary API responses and ETags across credential purposes, and aborts old
+pending reads. Preview, cancellation and result inspection make no HTTP request.
+Confirmed clearing keeps credentials, authored preferences, existing generated
+history, request budgets and cooldowns. It neither clears browser history or
+browser HTTP caches nor removes content from GitHub pages. New explicit reads
+can cache responses again. Follow the
+[review and result flow](/browser-extension/configuration#clear-temporary-api-responses).
+
+Its retained review/result uses worker memory for five minutes, with one pending
+review per editor and at most 32 combined review/result records. No cached body,
+key, identity, entry count, operation selector or witness is displayed or exported.
+Unknown results are inspected explicitly without another clearing attempt. A
+restart or lost editing source retires the earlier authority; it cannot certify
+what happened. Existing optional consent controls any new redacted diagnostic
+fact. Full native/human product acceptance remains outstanding.
+
+Nonsecret settings belong to local preferences. Credential material and private
+API evidence stay in the extension's protected session storage, with no fallback
+to local preferences. The inspector neither reads credential material nor saves
+its permission report. This extension package requests no browser history
+permission and has no telemetry collector.
+
+The GitHub runtime receives generic source labels, verified-scope availability
+and independent pause/connection facts. It receives no private profile names or
+IDs, other tabs' IDs, native operation selectors or credential material. A local
+recheck reads metadata only; it cannot reconnect, request access, retry a native
+change or release a pause. Unknown facts remain unknown. Source, page identity
+and generation checks retire stale explanations before the next view is used.
+
+Use **Your data** for the implemented reviewed preference export/import
+and recovery operations; these are separate from this read-only report. Inspect
+the [feature inventory](/browser-extension/features) for the remaining product
+capabilities and their implementation milestones. Do not treat future retention
+or optional write controls as available because their descriptions are visible.
+
+Optional generated history is still under development. Its typed Activity,
+Diagnostics and Privacy controls now provide independent reads, reviewed
+start/stop/clear and exact-JSON export. Consented recent destinations are now
+composed from accepted local-center navigation. Preference operations now supply
+redacted observations from the native service. Session operations now have their own ordered storage observations. Start/stop operations separately show preference publication, prerequisite pause and activation. Explicit clears also separate their native attempt, acknowledgement and canonical read. Helper samples now have a source-checked pre-open handoff and separate readonly view. Full native/human acceptance remains outstanding. See the
+[local history guide](/browser-extension/local-history).
+The defaults remain off: redacted diagnostics/operation facts at most 200
+entries, recent extension destinations at most 50, both for seven days. Each collection also fits within 64 KiB of its exact exported JSON, so older generated entries can leave sooner. Stopping
+collection and explicitly clearing retained history are separate actions. Exact
+private targets, credentials, authored notes and browser history are outside that
+generated-data journal. Its presence in source does not change current collection
+or grant any permission.
+
+The retention design distinguishes generated entries from the small generation,
+revision and clock controls that prevent old writes from returning after clear.
+Those controls, and the last consent receipt, persist until native extension-data
+removal. A reviewed history clear removes entries and retains the disclosed safety
+controls. These screens are present in development source; complete product
+acceptance remains outstanding.
+
+The separate **Last observed operation** view uses temporary background memory,
+with one entry per native window, at most eight, for five minutes from first
+observation. Its exact profile label, repository target or session label is captured only for
+that operation and never enters generated history or export. Source loss,
+replacement, expiry or shutdown retires it; later reads cannot reconstruct it.
+Clearing generated history does not clear this current-operation memory, saved
+preferences or credentials. Last-operation inspection performs no preference,
+history-store or provider read and grants no authority.
+
+The consent flow also distinguishes a pause in the current background process
+from a confirmed durable stop. If policy storage fails, an observed off preference
+can still stop future collection. If neither restriction can be saved, a process
+pause cannot promise protection after restart; the completed interface must make
+that failure explicit and offer browser-level extension disablement. Reading
+state does not automatically retry a write or activate an imported preference.
+The source's retained start/stop service also checks the exact saved intent and
+policy receipt before admitting collection. A later stop cannot be absorbed into
+an older activation. Replayed operation results describe what was observed then;
+the current collection view remains a separate fact. The mounted controls now
+expose these independent facts; operation/diagnostic producers and complete native
+and human evidence remain outstanding. The background now
+shares the preference safeguards with a closed reviewed-control channel. It may
+initialize local control metadata while capture is off; that does not create
+activity entries or grant any browser permission.
+
+The pending implementation also separates a successful action from successful
+history retention. If storage cannot establish which record was written, the
+history is incomplete; matching a similar record or repeating an uncertain write
+would give misleading evidence. The bounded application writer now enforces that
+rule. The screens now consume its independent state. Recent destinations come
+only from admitted current views or accepted navigation, with consent already
+known. Off/unknown visits are never backfilled, hidden navigation is not captured,
+and lost responses are never resent automatically. Profile detail is stripped
+before delivery. A read-only window may record its own consented routes without
+gaining authored mutation access. Missing delivery is disclosed separately from
+retained entries; operation and diagnostic producers remain under development.
+
+### Recovering a saved repository address
+
+Renaming recovery reuses only the chosen protected repository-read session. The
+new address is not an authorization: fresh account and numeric repository IDs
+must match. It cannot select a host, endpoint, credential purpose or write role,
+and it never relaxes redirect handling or asks for another browser grant. If the
+existing permission is no longer available, verification cannot establish the
+candidate. Review the current browser permission/session state before another
+explicit attempt. The named record remains separate from preferences and
+backups; failure is not proof of credential revocation at GitHub.
+
+## Workspace references and backups
+
+Workspace names are authored personal state. Their membership stores opaque
+local session references, not copied account/repository names, server evidence
+or credentials. Private labels resolve only from currently admitted protected
+session summaries; after disconnect/removal they are unavailable. An unresolved
+slot remains in the authored group until you explicitly edit it.
+
+Preference backups include authored group names, local IDs and reference slots.
+Import deliberately makes **every imported association unbound**, even for a
+backup from the same installation. Group names and slot order remain; explicitly
+choose local saved sessions to restore associations. A coinciding ID or the
+fixed old H2 alias cannot silently choose another account/repository. Import,
+group selection and metadata inspection do not grant access or start HTTP.
+
+Only an explicit verification/selection can activate a chosen saved read
+session. Group names/private labels are absent from redacted operation history;
+current source-bound operation detail may show the authored group being
+reviewed. Workspace reset removes groups alone. Forgetting protected sessions
+removes their private bindings while leaving authored groups intact.
+
+
+The development **Repositories → Temporary pauses** page reads native state
+independently from saved preferences. An observer can inspect that state; only
+the current native editor can request a scoped review or its retained result.
+It does not restore a read credential, ask for new grants or call GitHub. The
+renderer never receives reusable native ownership or operation selectors. A
+changed owner/package or selected native target retires its review. Tab signals
+carry only an opaque native ID and retirement flag, without URLs or titles.
+Confirmed scopes have browser-session lifetime; extra precaution for uncertain
+effects has worker lifetime and is removed only by explicit observed-state
+adoption. Saved pauses remain separate.
+
+Temporary session preferences have a separate protected browser-session document
+and a separate operation guard. The native page infers the selected materialized
+connection and current verification; callers cannot provide a target, credential,
+grant or replacement snapshot. Ordinary inspection performs no reconnect or API
+request. Only effective scalar preferences and generic scope/availability facts
+reach GitHub content; private names, native selection IDs, revisions and operation
+selectors stay in the native center. Settings backups/reset do not include this
+document, and generated history does not backfill authored overrides.
+
+Clearing or adopting these preferences cannot release the emergency/tab owner’s
+precaution. Likewise, adopting native pauses cannot release an unknown preference
+operation. Newer, malformed or inaccessible documents prevent connected effects
+while retaining their data. These controls add no permission, endpoint or Action
+approval. See [Temporary session preferences](configuration#temporary-session-preferences).

@@ -3,7 +3,7 @@ import { projectProgressContext } from '../../push_single_action_contexts';
 import { Ai } from '../../../../data/model/ai';
 import type { Execution } from '../../../../data/model/execution';
 import { partitionProgressDiff, progressEvidenceTooLarge, type ProgressDiffChange } from '../../../policies/progress_diff_partition_policy';
-import { progressPartitionFactLimit } from '../../../policies/progress_partition_response_policy';
+import { progressPartitionFactBounds } from '../../../policies/progress_partition_response_policy';
 import { AGENT_PROMPT_MAX_BYTES } from '../../../../domain/agent_execution_plan';
 import { progressScopeSourceLines } from '../../../policies/progress_scope_policy';
 import { getProgressScopePrompt } from '../../../../prompts/progress_scope';
@@ -88,7 +88,7 @@ describe('atomic complete multipart progress', () => {
     it('assesses a complete 299-file aggregate larger than 256 kB without dropping paths or publishing per-part progress', async () => {
         const paths = Array.from({ length: 299 }, (_, i) => `src/${i}.ts`);
         const f = fixture(paths.map(path => ({ path, status: 'modified', additions: 1, deletions: 0, patch: 'x'.repeat(1500) })));
-        let index = 0; const limit = progressPartitionFactLimit(base, head, f.diff.partitions);
+        let index = 0; const { factLimit: limit } = progressPartitionFactBounds(base, head, f.diff.partitions);
         f.query.mockImplementation(async request => {
             expect(f.setProgressLabel).not.toHaveBeenCalled();
             if (request.options?.schemaName === 'progress_scope') return { outputLocale: 'en-US', lines: [{ id: 'L1', kind: 'required' }] };
