@@ -64,7 +64,7 @@ export function sameCollectionFact(a: CollectionFact, b: CollectionFact): boolea
 }
 export function collectionFactTransition(before: CollectionFact, after: CollectionFact): boolean {
     const policy = (a: CollectionPolicyObservation, b: CollectionPolicyObservation) => sameCollectionPolicy(a, b)
-        || a.phase === 'not-observed' || a.phase === 'submitted' && b.phase === 'observed';
+        || a.phase === 'not-observed' || a.phase === 'submitted' && b.phase === 'observed' && b.acknowledgement !== 'not-attempted';
     const preference = sameCollectionPreference(before.preference, after.preference) || before.preference.phase === 'not-observed'
         || before.preference.phase === 'submitted' && after.preference.phase === 'settled';
     return before.collection === after.collection && before.action === after.action && before.preferenceRequired === after.preferenceRequired

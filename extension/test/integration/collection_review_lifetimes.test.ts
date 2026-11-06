@@ -32,7 +32,7 @@ it.each(['forward', 'backward'])('expires an unsubmitted plan when time moves %s
 it('an editor or credential epoch move retires a retained plan', async () => {
     const f = collectionReviewsFixture(); const preview = await collectionPreview(f); f.ports.review.fence.mockReturnValue({ controllerEpoch: 2, credentialEpoch: 1 });
     expect(await f.reviews.confirm(preview.operationId, COLLECTION_OWNER)).toEqual({ state: 'stale' });
-    expect(f.reviews.cancel(preview.operationId, COLLECTION_OWNER)).toEqual({ state: 'stale' }); expect(f.port.set).not.toHaveBeenCalled();
+    expect(f.reviews.cancel(preview.operationId, COLLECTION_OWNER)).toEqual({ state: 'expired' }); expect(f.port.set).not.toHaveBeenCalled();
 });
 it('a confirmed cancel removes only an unsubmitted retained plan', async () => {
     const f = collectionReviewsFixture(); const preview = await collectionPreview(f);

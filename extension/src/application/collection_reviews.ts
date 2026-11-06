@@ -48,8 +48,18 @@ export class CollectionReviews {
             && fence.controllerEpoch === record.fence.controllerEpoch && fence.credentialEpoch === record.fence.credentialEpoch;
     }
     private prune(now: number): void {
-        for (const [id, value] of this.pending) if (now < value.createdAt || now >= value.expiresAt) { this.pending.delete(id); reportCollection(value.trace, 'blocked'); }
+        for (const [id, value] of this.pending) if (now < value.createdAt || now >= value.expiresAt) this.retirePending(id);
         for (const [id, value] of this.completed) if (now < value.createdAt || now >= value.expiresAt) this.completed.delete(id);
+    }
+    private retirePending(id: string): void {
+        const value = this.pending.get(id);
+        if (!value) return;
+        this.pending.delete(id); reportCollection(value.trace, 'blocked');
+    }
+    private atCapacity(): boolean {
+        if (this.pending.size + this.running.size < 16) return false;
+        for (const [id, value] of this.pending) if (!this.current(value)) this.retirePending(id);
+        return this.pending.size + this.running.size >= 16;
     }
     private used(id: string): boolean {
         return [...this.pending.values(), ...this.completed.values(), ...Array.from(this.running.values(), value => value.record)]
@@ -60,7 +70,7 @@ export class CollectionReviews {
         const now = this.time(); const fence = this.fence(owner);
         if (!fence) return { state: 'denied' };
         if (now === null || !natural(now + TTL)) return { state: 'unavailable' };
-        this.prune(now); if (this.pending.size + this.running.size >= 16) return { state: 'busy' };
+        this.prune(now); if (this.atCapacity()) return { state: 'busy' };
         const bound = { owner, fence, createdAt: now, expiresAt: now + TTL, generation: this.generation };
         try {
             const inspected = await this.repository.inspect();
@@ -82,7 +92,7 @@ export class CollectionReviews {
             const id = this.ports.identifier(); const policyId = this.ports.identifier();
             if (!settingsOperationId(id) || !settingsOperationId(policyId) || id === policyId || this.used(id) || this.used(policyId)
                 || inspected.operation?.id === id || capture.policy?.receipt?.id === policyId) return { state: 'unavailable' };
-            if (this.pending.size + this.running.size >= 16) return { state: 'busy' };
+            if (this.atCapacity()) return { state: 'busy' };
             if (!this.current(bound)) return { state: 'stale' };
             const retained: Pending = { ...bound, id, policyId, kind, action, before, capture, trace: null };
             this.pending.set(id, retained);
@@ -128,7 +138,7 @@ export class CollectionReviews {
         const running = this.running.get(id); const record = running?.record ?? this.pending.get(id) ?? this.completed.get(id);
         if (!record) return { state: 'expired' };
         if (record.owner !== owner) return { state: 'denied' };
-        if (!this.current(record)) return { state: 'stale' };
+        if (!this.current(record)) { this.retirePending(id); return { state: 'stale' }; }
         return running ?? record;
     }
 }

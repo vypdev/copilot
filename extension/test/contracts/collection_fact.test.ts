@@ -58,6 +58,15 @@ it('phase progression can coalesce independent submitted and canonical observati
     expect(mergeCollectionFact(before, after)).toEqual(after); expect(mergeCollectionFact(after, { ...after, pause: submitted })).toBeNull();
     expect(mergeCollectionFact(after, { ...after, pause: { ...paused, observation: 'unavailable', revision: null, attributed: false } })).toBeNull();
 });
+it.each(['pause', 'activation'] as const)('a %s observation cannot erase an already recorded native submission', phase => {
+    const before = { ...running(), [phase]: submitted };
+    const skipped = { ...running(), [phase]: { ...submitted, phase: 'observed', acknowledgement: 'not-attempted' } } as CollectionFact;
+    expect(validCollectionFact(skipped)).toBe(true);
+    expect(mergeCollectionFact(running(), skipped)).toEqual(skipped);
+    expect(mergeCollectionFact(before, skipped)).toBeNull();
+    const observed = { ...running(), [phase]: { ...submitted, phase: 'observed' } } as CollectionFact;
+    expect(mergeCollectionFact(before, observed)).toEqual(observed);
+});
 it('captured intent, phase identity, incomplete disclosure and confirmation cannot regress', () => {
     const before = { ...running(), incomplete: true };
     for (const after of [{ ...before, incomplete: false }, { ...before, action: 'stop' }, { ...before, collection: 'recents' },

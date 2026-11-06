@@ -2,12 +2,47 @@ import { expect, it, vi } from 'vitest';
 import { activeCollectionPolicy } from '../fixtures/collection_policy.ts';
 import { collectionReviewsFixture, collectionPreview, collectionConfirm, COLLECTION_OWNER } from '../fixtures/collection_reviews.ts';
 import { deferred } from '../fixtures/runtime.ts';
+import { collectionSettings } from '../fixtures/collection_coordinator.ts';
 
-it('retains at most sixteen pending/running plans and releases capacity only after cancel or completion', async () => {
+it('retains at most sixteen current pending/running plans and releases capacity after cancellation', async () => {
     const f = collectionReviewsFixture(); const plans = [];
     for (let i = 0; i < 16; i++) plans.push(await collectionPreview(f));
     expect(await f.reviews.preview('diagnostics', 'start', COLLECTION_OWNER)).toEqual({ state: 'busy' });
     f.reviews.cancel(plans[0].operationId, COLLECTION_OWNER); expect((await collectionPreview(f)).state).toBe('preview');
+    expect(f.port.set).not.toHaveBeenCalled();
+});
+it('a new review reclaims stale pending plans before their five-minute expiry', async () => {
+    const f = collectionReviewsFixture(); const plans = [];
+    for (let i = 0; i < 16; i++) plans.push(await collectionPreview(f));
+    f.ports.review.fence.mockReturnValue({ controllerEpoch: 1, credentialEpoch: 2 });
+    expect(await f.reviews.preview('diagnostics', 'start', COLLECTION_OWNER)).toMatchObject({ state: 'preview' });
+    for (const plan of plans) expect(f.reviews.inspect(plan.operationId, COLLECTION_OWNER)).toEqual({ state: 'expired' });
+    expect(f.port.set).not.toHaveBeenCalled();
+});
+it('a delayed preview reclaims stale plans belonging to an older editor at the final capacity check', async () => {
+    const f = collectionReviewsFixture(); const another = 'd'.repeat(32); let epoch = 1;
+    f.ports.review.fence.mockImplementation(owner => ({ controllerEpoch: owner === COLLECTION_OWNER ? epoch : 1, credentialEpoch: 1 }));
+    const inspect = f.repository.inspect.bind(f.repository); const gate = deferred<Awaited<ReturnType<typeof inspect>>>();
+    vi.spyOn(f.repository, 'inspect').mockReturnValueOnce(gate.promise);
+    const delayed = f.reviews.preview('diagnostics', 'start', another);
+    for (let i = 0; i < 16; i++) await collectionPreview(f);
+    epoch = 2; gate.resolve(await inspect());
+    expect(await delayed).toMatchObject({ state: 'preview' }); expect(f.port.set).not.toHaveBeenCalled();
+});
+it('a stale running plan retains its capacity until its operation settles', async () => {
+    const f = collectionReviewsFixture(collectionSettings(true)); const another = 'd'.repeat(32); let epoch = 1;
+    f.ports.review.fence.mockImplementation(owner => ({ controllerEpoch: owner === COLLECTION_OWNER ? epoch : 1, credentialEpoch: 1 }));
+    const plan = await collectionPreview(f); const inspect = f.repository.inspect.bind(f.repository);
+    const entered = deferred<void>(); const release = deferred<void>();
+    vi.spyOn(f.repository, 'inspect').mockImplementationOnce(async () => { entered.resolve(); await release.promise; return inspect(); });
+    const running = f.reviews.confirm(plan.operationId, COLLECTION_OWNER); await entered.promise;
+    try {
+        epoch = 2; expect(f.reviews.cancel(plan.operationId, COLLECTION_OWNER)).toEqual({ state: 'stale' });
+        for (let i = 0; i < 15; i++) expect(await f.reviews.preview('recents', 'start', another)).toMatchObject({ state: 'preview' });
+        expect(await f.reviews.preview('recents', 'start', another)).toEqual({ state: 'busy' });
+    } finally { release.resolve(); }
+    expect(await running).toMatchObject({ state: 'settled', reason: 'stale' });
+    expect(await f.reviews.preview('recents', 'start', another)).toMatchObject({ state: 'preview' });
     expect(f.port.set).not.toHaveBeenCalled();
 });
 it('rechecks capacity when a delayed seventeenth preview returns after sixteen other plans', async () => {
