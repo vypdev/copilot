@@ -28,7 +28,9 @@ function policy(value: unknown): boolean {
     return exact(value, ['acknowledgement', 'observation', 'revision', 'attributed'])
         && ['not-attempted', 'not-applied', 'accepted', 'unknown'].includes(value.acknowledgement as string)
         && ['active', 'paused', 'unavailable'].includes(value.observation as string)
-        && (value.observation === 'unavailable' ? value.revision === null : natural(value.revision)) && typeof value.attributed === 'boolean';
+        && (value.observation === 'unavailable' ? value.revision === null : natural(value.revision))
+        && typeof value.attributed === 'boolean'
+        && (!value.attributed || (value.observation !== 'unavailable' && value.acknowledgement !== 'not-attempted'));
 }
 function outcome(value: unknown): value is CollectionOutcome {
     if (!record(value)) return false;

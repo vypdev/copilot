@@ -37,6 +37,18 @@ it('retains truthful partial, already-saved, unattempted and unknown facts inste
     expect(decodeCollectionOutcome({ ...partial, preference: { state: 'not-attempted', revision: -1 } })).toBeNull();
     expect(decodeCollectionOutcome(change(partial, 'policy.revision', 1))).toBeNull();
 });
+it.each([
+    { acknowledgement: 'accepted', observation: 'unavailable', revision: null },
+    { acknowledgement: 'not-attempted', observation: 'active', revision: 1 },
+])('rejects attribution without an observed and attempted policy effect: $acknowledgement, $observation', async policy => {
+    const { started } = await historyWireExamples();
+    const attributed = { ...started, policy: { ...policy, attributed: true } };
+    expect(decodeCollectionOutcome(attributed)).toBeNull();
+    expect(decodeCollectionInspection(attributed)).toBeNull();
+    const unverified = { ...started, policy: { ...policy, attributed: false } };
+    expect(decodeCollectionOutcome(unverified)).toEqual(unverified);
+    expect(decodeCollectionInspection(unverified)).toEqual(unverified);
+});
 it.each(['invalid', 'denied', 'stale', 'expired', 'unavailable', 'busy', 'future', 'corrupt', 'migration-required', 'conflict', 'globally-paused', 'pause-unconfirmed', 'exhausted'])(
     'accepts the explicit %s issue without accepting undocumented data', state => {
         expect(decodeCollectionPreview({ state })).toEqual({ state }); expect(decodeCollectionOutcome({ state })).toEqual({ state });

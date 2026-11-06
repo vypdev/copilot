@@ -1116,8 +1116,8 @@ or human acceptance, and modified executable branches remain100% covered.
 
 ### Cumulative risk budget
 
-The cumulative minimum is **1,157 distinct H3 risk cases**. It comprises the
-160-case baseline and 997 mandatory additions. The original 56 CENTER catalog
+The cumulative minimum is **1,159 distinct H3 risk cases**. It comprises the
+160-case baseline and 999 mandatory additions. The original 56 CENTER catalog
 cases, the 56-case implementation inventory above and the full 803-case product
 catalog remain separately required. Their execution cannot offset an additive
 minimum.
@@ -1142,6 +1142,7 @@ minimum.
 | Repository relocation | 34 | Explicit relocation refinement, with separate closed-wire, application, mounted review and transport allocations |
 | Temporary pauses | 64 | Native temporary-pause foundation |
 | Local journal | 56 | Consent, canonical writes and retention refinement |
+| Collection reply attribution | 2 | `collection_reply.test.ts` covers unavailable observations and unattempted effects in confirmation and retained inspection replies |
 | Named sessions | 120 | Closed protocol, owners and composed named read-session journeys |
 | Purpose-isolated credential roles | 210 | [Credential role manager testing strategy](github-browser-extension-credential-roles.md#14-testing-strategy), including the two optional identity verification isolation cases |
 | Private API cache clearing | 15 | Cache-clear additional risk inventory |
@@ -1163,7 +1164,7 @@ minimum.
 | Concurrent protected revocation | 3 | New connection admission during one removal, overlapping removals and active revocation failure in `named_session_revocation.test.ts` |
 | Shared protected-session restoration | 10 | `session_races.test.ts` covers nine admission, cancellation, supersession, revocation, reentry and capacity cases. `page_configuration.test.ts` covers one composed native-tab release case. |
 | Profile identity in reviews | 3 | Mounted removal with a retained neighbor, mixed import changes and independent list order |
-| **Total** | **1,157** | **160 baseline + 997 additions. Every row is required.** |
+| **Total** | **1,159** | **160 baseline + 999 additions. Every row is required.** |
 
 The companion session-preferences specification also requires its 160 scoped
 cases. H3 acceptance requires both the owning milestone ledger and the scoped
