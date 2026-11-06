@@ -282,6 +282,27 @@ describe('staged rollout through the merged pull request workflow', () => {
         expect(f.issue.state).toBe('open');
     });
 
+    it('rollout-I735-C08 holds a missing reviewer permission record without suggesting a retry', async () => {
+        const f = fixture();
+        f.permission.mockRejectedValueOnce({ status: 404 });
+        const results = await f.merge();
+        expect(results[0]).toMatchObject({ success: true, payload: { state: 'held', reason: 'unauthorized' } });
+        expect(f.summary(results)).toContain('Review the open issue and record acceptance there before closing it.');
+        expect(f.summary(results)).not.toContain('Re-run failed jobs');
+        expect(f.issue.state).toBe('open');
+        expect(f.timeline).toHaveLength(0);
+    });
+
+    it.each([403, 429, 503])('offers recovery when the reviewer permission lookup fails with %s', async status => {
+        const f = fixture();
+        f.permission.mockRejectedValueOnce({ status });
+        const results = await f.merge();
+        expect(results[0]).toMatchObject({ success: false, payload: { state: 'held', reason: 'evidence-unavailable' } });
+        expect(f.summary(results)).toContain('Restore access to the evidence and re-run failed jobs');
+        expect(f.issue.state).toBe('open');
+        expect(f.timeline).toHaveLength(0);
+    });
+
     it.each(['commit', 'no commit', 'event-head', 'late', 'edited', 'dismissed', 'pending'] as const)(
         'rollout-I735-C09 rejects invalid native review evidence (%s)',
         async scenario => {

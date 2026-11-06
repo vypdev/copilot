@@ -96362,6 +96362,7 @@ exports.StagedRolloutReviewRepository = void 0;
 const application_error_1 = __nccwpck_require__(75999);
 const staged_rollout_1 = __nccwpck_require__(92865);
 const github_user_policy_1 = __nccwpck_require__(84403);
+const github_error_policy_1 = __nccwpck_require__(58791);
 const MERGED_REVIEW_QUERY = `query StagedRolloutReviews($owner: String!, $repo: String!, $number: Int!, $cursor: String) {
     repository(owner: $owner, name: $repo) {
         nameWithOwner defaultBranchRef { name }
@@ -96431,12 +96432,21 @@ class StagedRolloutReviewRepository {
         throw unavailable();
     }
     async isMaintainer(login) {
-        const { data } = await this.client.rest.repos.getCollaboratorPermissionLevel({
-            owner: this.owner, repo: this.repo, username: login, request: { redirect: 'error' },
-        });
-        if (data.user?.type !== 'User' || !(0, github_user_policy_1.githubUsersMatch)(data.user.login ?? '', login))
-            return false;
-        return data.role_name === 'admin' || data.role_name === 'maintain';
+        try {
+            const { data } = await this.client.rest.repos.getCollaboratorPermissionLevel({
+                owner: this.owner, repo: this.repo, username: login, request: { redirect: 'error' },
+            });
+            if (data.user?.type !== 'User' || !(0, github_user_policy_1.githubUsersMatch)(data.user.login ?? '', login))
+                return false;
+            return data.role_name === 'admin' || data.role_name === 'maintain';
+        }
+        catch (error) {
+            // The merge path has already verified the repository and review.
+            // A missing reviewer permission record grants no current role.
+            if ((0, github_error_policy_1.isGithubNotFound)(error))
+                return false;
+            throw error;
+        }
     }
 }
 exports.StagedRolloutReviewRepository = StagedRolloutReviewRepository;

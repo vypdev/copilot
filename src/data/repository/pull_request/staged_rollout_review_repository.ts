@@ -3,6 +3,7 @@ import type { StagedRolloutReviewPort } from '../../../application/ports/staged_
 import { isStagedRolloutDeclaration, type StagedRolloutEvidence, type StagedRolloutReview } from '../../../domain/staged_rollout';
 import { githubUsersMatch } from '../../../domain/github_user_policy';
 import type { GithubGraphqlTransportClient } from '../../../infrastructure/github/ports/github_graphql_transport_port';
+import { isGithubNotFound } from '../github/github_error_policy';
 
 export interface StagedRolloutGitHubClient extends GithubGraphqlTransportClient {
     readonly rest: { readonly repos: { getCollaboratorPermissionLevel(parameters: {
@@ -106,11 +107,18 @@ export class StagedRolloutReviewRepository implements StagedRolloutReviewPort {
     }
 
     async isMaintainer(login: string): Promise<boolean> {
-        const { data } = await this.client.rest.repos.getCollaboratorPermissionLevel({
-            owner: this.owner, repo: this.repo, username: login, request: { redirect: 'error' },
-        });
-        if (data.user?.type !== 'User' || !githubUsersMatch(data.user.login ?? '', login)) return false;
-        return data.role_name === 'admin' || data.role_name === 'maintain';
+        try {
+            const { data } = await this.client.rest.repos.getCollaboratorPermissionLevel({
+                owner: this.owner, repo: this.repo, username: login, request: { redirect: 'error' },
+            });
+            if (data.user?.type !== 'User' || !githubUsersMatch(data.user.login ?? '', login)) return false;
+            return data.role_name === 'admin' || data.role_name === 'maintain';
+        } catch (error) {
+            // The merge path has already verified the repository and review.
+            // A missing reviewer permission record grants no current role.
+            if (isGithubNotFound(error)) return false;
+            throw error;
+        }
     }
 }
 

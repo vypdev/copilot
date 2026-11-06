@@ -191,7 +191,7 @@ flowchart LR
   stale 100% if the rollout card appeared during that write. GitHub issue and
   comment mutations are separate provider operations.
 - Trusted and untrusted inputs: GitHub review bodies, comments, PR descriptions, issue text, labels, event payloads, and provider error text are untrusted. GitHub identity/role and review/commit association are provider facts but must be freshly validated.
-- Provider error mapping: distinguish not found/permission denied/rate limit/transient/network ambiguity from invalid declaration. A lost create response requires lookup before retrying create.
+- Provider error mapping: a missing reviewer permission record after verifying the merged PR and review is a policy hold for an unauthorized declaration. Permission API access, rate limit, and transient failures remain unavailable evidence with a retry action. A lost create response requires lookup before retrying create.
 
 ### 8.3 Executable architecture constraints
 
@@ -311,7 +311,7 @@ Minimum budget counts only the new companion inventory below; retained baseline 
 | rollout-I735-C05 | State/application/idempotency | SDD-I735-R5, SDD-I735-R6 | Duplicate merge delivery performs no new card publication and preserves current issue state. |
 | rollout-I735-C06 | Domain/configuration/pure planning | SDD-I735-R2, SDD-I735-R8 | Free PR prose, including a `Refs` line, has no staged authorization effect. |
 | rollout-I735-C07 | Domain/configuration/pure planning | SDD-I735-R2, SDD-I735-R3 | Malformed or issue-mismatched declaration holds Copilot completion and 100%. |
-| rollout-I735-C08 | Security/abuse | SDD-I735-R2, SDD-I735-R8 | Insufficient maintainer role or bot-authored declaration holds completion. |
+| rollout-I735-C08 | Security/abuse | SDD-I735-R2, SDD-I735-R8 | Insufficient or missing maintainer role or bot-authored declaration holds completion; permission lookup access and service failures remain retryable. |
 | rollout-I735-C09 | Security/abuse | SDD-I735-R2, SDD-I735-R8 | Wrong merged head, post-merge submission, edited review, or dismissed review is rejected and holds completion. |
 | rollout-I735-C10 | Domain/configuration/pure planning | SDD-I735-R1, SDD-I735-R3 | A declaration for one managed issue does not stage or change processing of unrelated linked issues. |
 | rollout-I735-C11 | State/application/idempotency | SDD-I735-R4, SDD-I735-R6 | Older progress work cannot replace the keyed Rollout pending card or project merge as 100%. |
