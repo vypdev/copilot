@@ -78323,6 +78323,8 @@ async function reconcileStagedRolloutAfterMerge(request, ports, read, removeLabe
         decision = (0, staged_rollout_1.decideStagedRollout)(evidence, scope, issueNumber);
         if (decision.kind === 'ordinary') {
             const inventory = botLogin && await ports.comments.listIssueComments(issueNumber);
+            // The issue owns operational acceptance. A later PR for the same
+            // issue cannot complete a registered rollout, regardless of card key.
             if (inventory && (0, staged_rollout_presentation_policy_1.hasActiveStagedRolloutCard)(inventory, issueNumber, botLogin)) {
                 return result({ state: 'pending' });
             }
@@ -104910,11 +104912,19 @@ function isStagedRolloutDeclaration(body) {
     return /^Copilot-Stage-Rollout\b/iu.test(body.trimStart());
 }
 function decideStagedRollout(evidence, scope, issueNumber) {
-    const [review, ...others] = evidence.reviews.filter(candidate => isStagedRolloutDeclaration(candidate.body));
-    if (!review)
+    const declarations = evidence.reviews.filter(candidate => isStagedRolloutDeclaration(candidate.body));
+    if (!declarations.length)
         return { kind: 'ordinary' };
-    if (others.length)
+    const headSha = (0, git_object_id_1.canonicalGitObjectId)(evidence.headSha);
+    // An older commit can never authorize this merge. Keep declarations whose
+    // commit is unknown in the conflict set so incomplete evidence fails closed.
+    const candidates = declarations.length === 1 ? declarations : declarations.filter(declaration => {
+        const reviewHead = (0, git_object_id_1.canonicalGitObjectId)(declaration.commitSha);
+        return !reviewHead || reviewHead === headSha;
+    });
+    if (candidates.length !== 1)
         return { kind: 'held', reason: 'conflicting-declarations' };
+    const [review] = candidates;
     if (review.body.trim() !== `Copilot-Stage-Rollout: #${issueNumber}`) {
         return { kind: 'held', reason: 'invalid-declaration' };
     }
@@ -104924,7 +104934,6 @@ function decideStagedRollout(evidence, scope, issueNumber) {
         || (0, pull_request_closing_reference_1.hasClosingKeywordForIssue)(evidence.body, evidence.repository, issueNumber)) {
         return { kind: 'held', reason: 'unsupported-scope' };
     }
-    const headSha = (0, git_object_id_1.canonicalGitObjectId)(evidence.headSha);
     const mergedAt = Date.parse(evidence.mergedAt);
     const submittedAt = Date.parse(review.submittedAt ?? '');
     if (!headSha || headSha !== (0, git_object_id_1.canonicalGitObjectId)(scope.headSha) || headSha !== (0, git_object_id_1.canonicalGitObjectId)(review.commitSha)

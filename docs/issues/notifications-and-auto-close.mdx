@@ -140,7 +140,10 @@ assignees on that issue.
    changes**, selects **Comment**, and submits a review whose entire body is
    `Copilot-Stage-Rollout: #85`. Use the managed issue number for that PR.
    Confirm that the submitted review is on the exact head that will merge.
-   If the head changes, remove the older declaration and submit a fresh review.
+   If the head changes, submit one fresh review on the new head before merging.
+   Copilot can disregard a declaration tied to a different commit. Multiple
+   declarations on the merged head, or a competing declaration with an unknown
+   commit, hold completion.
 3. After the merge, open the original issue. Assign it to the operator who will
    finish the checklist and record the required evidence.
 
@@ -155,7 +158,8 @@ for a maintainer to review before closing.
 
 The card links to the merged PR and its qualifying review. An earlier progress
 estimate describes the implementation comparison. While the rollout card is
-active, Copilot pauses new progress assessments on that issue.
+active, Copilot pauses new progress assessments and keeps that issue open
+when a later ordinary PR for the same issue merges.
 
 For the VaultStadio example, the checklist requires the reviewed revision on
 trusted main, separate activation approval, and a successful official non-no-op
@@ -170,9 +174,10 @@ archives the tracking card. [VaultStadio issue #85](https://github.com/vypdev/va
 | **Registration failed** | In the merge workflow run, select **Re-run failed jobs**. The original issue still holds the checklist. A retry finds and reuses a card that GitHub already created. |
 | **Declaration held** | Open the linked issue and review the reason in the Job Summary. Restore access and rerun for unavailable evidence. An invalid declaration is a policy hold. Record and review operational acceptance on the original issue before closing it. |
 
-A regular merge with no declaration follows the existing close flow. A review
-submitted after merge cannot authorize that merge retroactively. GitHub native
-closure rules still apply to the default branch.
+A regular merge with no declaration follows the existing close flow when the
+issue has no active rollout. A review submitted after merge cannot authorize
+that merge retroactively. GitHub native closure rules still apply to the
+default branch.
 
 ## Auto-close by inactivity
 

@@ -18,7 +18,7 @@ the corresponding implementation and merge-route fixture.
 
 A maintainer may declare, through a qualifying GitHub PR review submitted before merge, that a preparatory PR completes implementation work while operational acceptance remains pending. Copilot then keeps the original managed issue open, assignable, and intact as the sole rollout tracker. It publishes one status card tied to the merged PR and reports “Rollout pending”; it does not mark the issue 100% complete. After reviewing evidence and completing the issue's existing checklist, a maintainer closes the issue through the existing native close and reconciliation path.
 
-When there is no declaration or active rollout card, ordinary close-on-merge behavior applies. A recognizable but invalid, stale, conflicting, unauthorized, or unverifiable declaration fails closed: Copilot does not perform merge-driven completion or publish 100%, and the issue remains actionable with a safe next step. This declaration grants no merge, deployment, activation, release, approval, or branch-protection authority.
+When there is no declaration or active rollout card, ordinary close-on-merge behavior applies. A declaration tied to a previous head can be replaced by one qualifying review on the merged head. If no qualifying replacement resolves the stale declaration, or the declaration is invalid, conflicting, unauthorized, or unverifiable, Copilot holds merge-driven completion and 100% progress. The issue remains actionable with a safe next step. This declaration grants no merge, deployment, activation, release, approval, or branch-protection authority.
 
 ```text
 Managed issue + qualifying reviewed declaration -> preparatory PR merged -> issue remains open with Rollout pending card -> maintainer records operational evidence -> native issue close and reconciliation
@@ -61,11 +61,11 @@ Maintainers and assignees need a supported way to merge a prerequisite implement
 | Requirement | Behavior |
 |---|---|
 | SDD-I735-R1 | A valid staged declaration defers only Copilot's merge-driven completion for the exact distinct managed issue it names; that issue remains open, assigned, and retains its acceptance checklist. |
-| SDD-I735-R2 | A declaration is valid only when a human GitHub review author has a current repository maintainer/admin role, the exact managed issue is named, and the review is submitted before merge, tied to the exact merged PR head, unedited, undismissed, and unconflicted. |
+| SDD-I735-R2 | A declaration is valid only when a human GitHub review author has a current repository maintainer/admin role, the exact managed issue is named, and the review is submitted before merge, tied to the exact merged PR head, unedited, undismissed, and unconflicted. A new qualifying review supersedes declarations demonstrably tied to a different head. |
 | SDD-I735-R3 | Staging is limited to regular same-repository managed PRs merged into the configured non-default development branch without an explicit closing keyword for the issue; invalid or unverifiable declarations hold Copilot completion and 100%. |
 | SDD-I735-R4 | A staged merge publishes or updates one issue status card keyed to the preparatory PR with “Rollout pending,” the merged PR link, and a next action to finish the existing checklist and record evidence. |
 | SDD-I735-R5 | Card publication is idempotent; a retry after a lost create response adopts the same card, while publication failure identifies the same failed merge job as recovery. |
-| SDD-I735-R6 | Staged state cannot be overwritten by stale progress refresh; duplicate, replay, manual close, and reopen events preserve current native state and evidence. |
+| SDD-I735-R6 | Staged state cannot be overwritten by stale progress refresh or by a later ordinary merge for the same issue; duplicate, replay, manual close, and reopen events preserve current native state and evidence. |
 | SDD-I735-R7 | Human acceptance closes the original issue through existing native close and reconciliation behavior; no follow-up issue is created. |
 | SDD-I735-R8 | Declaration content and workflow output are treated as untrusted data; the declaration grants no merge, activation, deployment, release, approval, or protection-bypass authority. |
 
@@ -125,7 +125,8 @@ Text equivalent: managed issue and PR -> qualifying review and eligible merge ->
 
 ### 6.2 Alternative paths
 
-- No declaration or active rollout card: preserve ordinary close-on-merge behavior. An already registered rollout continues to own completion on the open issue.
+- No declaration or active rollout card: preserve ordinary close-on-merge behavior. An active card keeps the exact issue open for operational acceptance even if a later ordinary PR for that issue merges.
+- PR head changes: submit a fresh review on the new head. Copilot can disregard an earlier declaration only when its commit is known and differs from the merged head. Multiple candidates on the merged head or a competing declaration with no known commit hold completion. An older declaration alone still holds completion.
 - Multiple managed issues: declaration applies only to its exact distinct issue; each other issue follows its own existing link and completion behavior. It cannot alter issue selection.
 - Malformed, mismatched, unauthorized, bot-authored, stale, edited, dismissed, conflicting, or unverifiable declaration: keep the named managed issue open, do not mark it complete, and give a safe next action to review the existing issue and handle acceptance there.
 - Unsupported repository/branch scope: hold Copilot completion for the declared managed issue and report the scope reason. Never treat unsupported context as authorization.
@@ -136,7 +137,7 @@ Text equivalent: managed issue and PR -> qualifying review and eligible merge ->
 
 | State | Entered when | User-visible meaning | Allowed next states | Recovery/owner |
 |---|---|---|---|---|
-| Ordinary completion | No recognizable staged declaration | Existing merge completion rules apply | Existing lifecycle states | Existing lifecycle owner |
+| Ordinary completion | No recognizable staged declaration or active rollout on the issue | Existing merge completion rules apply | Existing lifecycle states | Existing lifecycle owner |
 | Declaration held | Recognizable declaration fails validation or cannot be verified | No Copilot completion; maintainer review needed | Retry verification or native acceptance/close | Maintainer; workflow reports reason |
 | Rollout pending | Valid declaration and card registration succeed | Issue remains open; post-merge checklist is actionable | Rollout pending, natively completed, reopened | Assignee/maintainer |
 | Registration failed | Valid staged decision but status card publication failed | Issue remains open; registration incomplete | Rollout pending after same-job retry | Operator retries failed merge job |
@@ -293,13 +294,13 @@ Minimum budget counts only the new companion inventory below; retained baseline 
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| State/application/idempotency | 5 | Observable scenarios in the case inventory. |
+| State/application/idempotency | 6 | Observable scenarios in the case inventory. |
 | Workflows/setup/schema | 2 | Observable scenarios in the case inventory. |
 | Adapters/provider contracts | 1 | Observable scenarios in the case inventory. |
 | Domain/configuration/pure planning | 3 | Observable scenarios in the case inventory. |
-| Security/abuse | 2 | Observable scenarios in the case inventory. |
+| Security/abuse | 3 | Observable scenarios in the case inventory. |
 | Integration/security/migration | 1 | Observable scenarios in the case inventory. |
-| Total | 14 | Distinct inventory cases; repeated executions do not add cases. |
+| Total | 16 | Distinct inventory cases; repeated executions do not add cases. |
 
 | Case ID | Area | Requirements | Scenario |
 |---|---|---|---|
@@ -317,6 +318,8 @@ Minimum budget counts only the new companion inventory below; retained baseline 
 | rollout-I735-C12 | Integration/security/migration | SDD-I735-R7 | Manual acceptance closes the original issue through existing reconciliation and preserves recorded evidence. |
 | rollout-I735-C13 | State/application/idempotency | SDD-I735-R6 | Replay after manual closure or reopen preserves current native issue state and evidence. |
 | rollout-I735-C14 | Workflows/setup/schema | SDD-I735-R3, SDD-I735-R8 | Staged declaration outside same-repository, regular PR, non-default integration-branch scope holds Copilot completion. |
+| rollout-I735-C15 | Security/abuse | SDD-I735-R2, SDD-I735-R8 | A fresh qualifying exact-head review can replace a known prior-head declaration; an unknown commit, same-head conflict, or unauthorized fresh review holds completion. |
+| rollout-I735-C16 | State/application/idempotency | SDD-I735-R4, SDD-I735-R6 | A later ordinary PR for the same issue leaves its existing active card, checklist, assignees, and open state intact. |
 
 The repository coverage gates remain in force. The changed close step retains
 its 95% line and 90% branch floor. The rollout declaration policy shares the native completion policy’s exhaustive
@@ -355,9 +358,9 @@ it with `pnpm run validate:specifications`.
 
 ## 16. Acceptance
 
-1. Given an ordinary managed PR with no staged declaration, when it merges, then existing close-on-merge and reconciliation behavior completes normally.
+1. Given an ordinary managed PR with no staged declaration or active rollout on its issue, when it merges, then existing close-on-merge and reconciliation behavior completes normally.
 2. Given a qualifying pre-merge maintainer review declaring the exact managed issue and an eligible merged PR, when the merge event is handled, then the original issue stays open and assigned with its full checklist and one keyed Rollout pending card.
-3. Given a malformed, mismatched, stale, conflicting, unauthorized, edited, dismissed, post-merge, wrong-head, or unverifiable declaration, when the event is handled, then Copilot does not complete the named issue or report 100%, and provides a safe next action.
+3. Given a malformed, mismatched, conflicting, unauthorized, edited, dismissed, post-merge, wrong-head, or unverifiable declaration without a qualifying replacement on the merged head, when the event is handled, then Copilot does not complete the named issue or report 100%, and provides a safe next action.
 4. Given card publication fails before registration, when the job ends, then the issue remains open and the summary names the same failed merge job as retry action.
    Invalid or unsupported declarations report a policy hold without failing the
    job. Unavailable provider evidence fails the job with a retry action.
@@ -368,19 +371,21 @@ it with `pnpm run validate:specifications`.
 9. Given a declaration on a cross-repository PR, default-branch merge, non-regular PR, or PR with native closing syntax, when Copilot evaluates it, then staged completion is held or existing native semantics apply as specified, without granting activation or protection authority.
 10. Given the pending card is viewed on a narrow screen or with a screen reader, then textual status, required action, progress, and descriptive links remain understandable without Mermaid or emoji.
 11. Given the user documentation is reviewed, then it explains exact declaration syntax, default close behavior, staged recovery, and evidence expectations without implying that candidate success proves operational acceptance.
+12. Given a prior declaration tied to an older head and a fresh qualifying review on the merged head, when the PR merges, then Copilot uses the fresh review and links it from the pending card.
+13. Given an active rollout card and a later ordinary PR for the same issue, when that PR merges, then the issue remains open and assigned with the original rollout card and acceptance checklist.
 
 ## 17. Requirements traceability
 
 | Requirement | Cases |
 |---|---|
 | SDD-I735-R1 | rollout-I735-C01, rollout-I735-C02, rollout-I735-C10 |
-| SDD-I735-R2 | rollout-I735-C06, rollout-I735-C07, rollout-I735-C08, rollout-I735-C09 |
+| SDD-I735-R2 | rollout-I735-C06, rollout-I735-C07, rollout-I735-C08, rollout-I735-C09, rollout-I735-C15 |
 | SDD-I735-R3 | rollout-I735-C07, rollout-I735-C10, rollout-I735-C14 |
-| SDD-I735-R4 | rollout-I735-C02, rollout-I735-C11 |
+| SDD-I735-R4 | rollout-I735-C02, rollout-I735-C11, rollout-I735-C16 |
 | SDD-I735-R5 | rollout-I735-C03, rollout-I735-C04, rollout-I735-C05 |
-| SDD-I735-R6 | rollout-I735-C01, rollout-I735-C05, rollout-I735-C11, rollout-I735-C13 |
+| SDD-I735-R6 | rollout-I735-C01, rollout-I735-C05, rollout-I735-C11, rollout-I735-C13, rollout-I735-C16 |
 | SDD-I735-R7 | rollout-I735-C12 |
-| SDD-I735-R8 | rollout-I735-C06, rollout-I735-C08, rollout-I735-C09, rollout-I735-C14 |
+| SDD-I735-R8 | rollout-I735-C06, rollout-I735-C08, rollout-I735-C09, rollout-I735-C14, rollout-I735-C15 |
 
 ## 18. Implementation sequence
 

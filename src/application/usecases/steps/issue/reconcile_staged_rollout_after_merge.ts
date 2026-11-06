@@ -57,6 +57,8 @@ export async function reconcileStagedRolloutAfterMerge(
         decision = decideStagedRollout(evidence, scope, issueNumber);
         if (decision.kind === 'ordinary') {
             const inventory = botLogin && await ports.comments.listIssueComments(issueNumber);
+            // The issue owns operational acceptance. A later PR for the same
+            // issue cannot complete a registered rollout, regardless of card key.
             if (inventory && hasActiveStagedRolloutCard(inventory, issueNumber, botLogin)) {
                 return result({ state: 'pending' });
             }

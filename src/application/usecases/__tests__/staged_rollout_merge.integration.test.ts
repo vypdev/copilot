@@ -60,7 +60,7 @@ function fixture(locale = 'en-US') {
     const addLabel = jest.fn(async (label: string) => { labels.add(label); });
     const removeLabel = jest.fn(async (label: string) => { labels.delete(label); });
     const forIssue = jest.fn((_number: number) => ({ read, close, addLabel, removeLabel }));
-    const readPullRequest = jest.fn(async () => ({ number: pullNumber, state: 'closed' as const, merged: true }));
+    const readPullRequest = jest.fn(async (number: number) => ({ number, state: 'closed' as const, merged: true }));
     const timeline: IssueCommentPublicationTarget[] = [];
     const add = (body: string, login = botLogin) => { timeline.push({ id: timeline.length + 100, body, user: { login } }); };
     const comments = {
@@ -132,6 +132,22 @@ describe('staged rollout through the merged pull request workflow', () => {
         expect(f.issue).toMatchObject({ state: 'closed', reason: 'completed' });
         expect([...f.labels]).toEqual(['chore', 'branched', 'unrelated', '100%']);
         expect(f.comments.addComment).not.toHaveBeenCalled();
+    });
+
+    it('rollout-I735-C16 preserves pending acceptance when a later ordinary PR merges for the same issue', async () => {
+        const f = fixture();
+        await f.merge();
+        const issue = structuredClone(f.issue);
+        const card = structuredClone(f.timeline[0]);
+        f.pull.number = f.closeContext.pullRequestNumber = 109;
+        f.pull.reviews.nodes = [];
+
+        const results = await f.merge();
+        expect(results[0]).toMatchObject({ success: true, payload: { state: 'pending', issueNumber, pullNumber: 109 } });
+        expect(f.issue).toEqual(issue);
+        expect(f.timeline).toEqual([card]);
+        expect(f.close).not.toHaveBeenCalled();
+        expect(f.labels.has('100%')).toBe(false);
     });
 
     it('rollout-I735-C02 keeps the VaultStadio checklist and assignee on the original open issue', async () => {
@@ -221,11 +237,37 @@ describe('staged rollout through the merged pull request workflow', () => {
         },
     );
 
-    it('holds conflicting declarations without choosing a reviewer', async () => {
+    it.each(['current head', 'unavailable head'] as const)('holds conflicting declarations with %s without choosing a reviewer', async conflict => {
         const f = fixture();
-        f.pull.reviews.nodes.push({ ...review(), fullDatabaseId: '5660051355' });
+        const other = { ...review(), fullDatabaseId: '5660051355' };
+        if (conflict === 'unavailable head') Object.assign(other, { commit: null });
+        f.pull.reviews.nodes.push(other);
         expect((await f.merge())[0].payload).toMatchObject({ state: 'held', reason: 'conflicting-declarations' });
         expect(f.permission).not.toHaveBeenCalled();
+    });
+
+    it.each(['COMMENTED', 'DISMISSED'] as const)(
+        'rollout-I735-C15 uses a fresh exact-head review in place of a prior %s review',
+        async state => {
+            const f = fixture();
+            const prior = { ...review(), state, commit: { oid: 'b'.repeat(40) } };
+            const fresh = { ...review(), fullDatabaseId: '5660051355', submittedAt: '2026-10-26T23:40:00Z' };
+            f.pull.reviews.nodes = [prior, fresh];
+            expect((await f.merge())[0].payload).toMatchObject({ state: 'pending', headSha, commentId: 100 });
+            expect(f.permission).toHaveBeenCalledTimes(1);
+            expect(f.timeline[0].body).toContain('pullrequestreview-5660051355');
+            expect(f.timeline[0].body).not.toContain('pullrequestreview-5660051354');
+            expect(f.close).not.toHaveBeenCalled();
+        },
+    );
+
+    it('holds a replacement on the current head when the new reviewer lacks authority', async () => {
+        const f = fixture();
+        f.pull.reviews.nodes.unshift({ ...review(), fullDatabaseId: '5660051353', commit: { oid: 'b'.repeat(40) } });
+        f.permission.mockResolvedValueOnce({ data: { role_name: 'write', user: { login: 'efraespada', type: 'User' } } });
+        expect((await f.merge())[0].payload).toMatchObject({ state: 'held', reason: 'unauthorized' });
+        expect(f.issue.state).toBe('open');
+        expect(f.timeline).toHaveLength(0);
     });
 
     it.each(['write role', 'application bot', 'authenticated automation account', 'missing permission user', 'missing permission login', 'wrong permission user'])('rollout-I735-C08 rejects %s', async scenario => {

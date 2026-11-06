@@ -51,9 +51,17 @@ export function decideStagedRollout(
     scope: StagedRolloutMergeScope | undefined,
     issueNumber: number,
 ): StagedRolloutDecision {
-    const [review, ...others] = evidence.reviews.filter(candidate => isStagedRolloutDeclaration(candidate.body));
-    if (!review) return { kind: 'ordinary' };
-    if (others.length) return { kind: 'held', reason: 'conflicting-declarations' };
+    const declarations = evidence.reviews.filter(candidate => isStagedRolloutDeclaration(candidate.body));
+    if (!declarations.length) return { kind: 'ordinary' };
+    const headSha = canonicalGitObjectId(evidence.headSha);
+    // An older commit can never authorize this merge. Keep declarations whose
+    // commit is unknown in the conflict set so incomplete evidence fails closed.
+    const candidates = declarations.length === 1 ? declarations : declarations.filter(declaration => {
+        const reviewHead = canonicalGitObjectId(declaration.commitSha);
+        return !reviewHead || reviewHead === headSha;
+    });
+    if (candidates.length !== 1) return { kind: 'held', reason: 'conflicting-declarations' };
+    const [review] = candidates;
     if (review.body.trim() !== `Copilot-Stage-Rollout: #${issueNumber}`) {
         return { kind: 'held', reason: 'invalid-declaration' };
     }
@@ -63,7 +71,6 @@ export function decideStagedRollout(
         || hasClosingKeywordForIssue(evidence.body, evidence.repository, issueNumber)) {
         return { kind: 'held', reason: 'unsupported-scope' };
     }
-    const headSha = canonicalGitObjectId(evidence.headSha);
     const mergedAt = Date.parse(evidence.mergedAt);
     const submittedAt = Date.parse(review.submittedAt ?? '');
     if (!headSha || headSha !== canonicalGitObjectId(scope.headSha) || headSha !== canonicalGitObjectId(review.commitSha)
