@@ -51,6 +51,10 @@ export class ApiCacheReviews {
     private report(record: Review, state: ApiCacheFactState): void {
         try { record.observe?.(state); } catch { /* Secondary observation cannot change or repeat primary clearing. */ }
     }
+    private block(record: Review): ApiCacheOutcome {
+        record.result = Object.freeze({ state: 'stale' });
+        this.report(record, 'blocked'); return record.result;
+    }
     private prune(now: number): void {
         for (const [id, record] of [...this.records]) if (now < record.createdAt || now >= record.expiresAt) {
             this.records.delete(id); if (!record.result) this.report(record, 'blocked');
@@ -66,7 +70,12 @@ export class ApiCacheReviews {
         const fence = this.fence(owner); if (!fence) return { state: 'denied' };
         const now = this.time(); if (now === null) return { state: 'unavailable' };
         const generation = this.generation; this.prune(now);
-        if (this.records.size >= 32 || [...this.records.values()].some(value => value.owner === owner && !value.result)) return { state: 'busy' };
+        if (this.records.size >= 32) return { state: 'busy' };
+        const previous = [...this.records.values()].find(value => value.owner === owner && !value.result);
+        if (previous) {
+            if (this.witness(previous)) return { state: 'busy' };
+            if (this.records.get(previous.id) === previous) this.block(previous);
+        }
         let id: string; let witness: Readonly<object>;
         try {
             id = this.ports.identifier();
@@ -112,7 +121,7 @@ export class ApiCacheReviews {
         if (this.preparing) return { state: 'busy' };
         const record = this.lookup(id, owner); if ('state' in record) return record;
         if (record.result) return record.result;
-        if (!this.witness(record)) { record.result = Object.freeze({ state: 'stale' }); this.report(record, 'blocked'); return record.result; }
+        if (!this.witness(record)) return this.block(record);
         // An observer may synchronously re-enter; reserve this attempt before its first notification.
         record.result = Object.freeze({ state: 'unknown' }); this.report(record, 'submitted');
         if (!this.witness(record)) { record.result = Object.freeze({ state: 'stale' }); this.report(record, 'not-applied'); return record.result; }

@@ -36,6 +36,24 @@ it('bexh3-cache-C05 source movement, foreign owner or a replacement cache cannot
         expect(f.cache.clear).not.toHaveBeenCalled(); expect(f.observed).toEqual(cause === 'cache' ? ['reviewed', 'blocked'] : ['reviewed']);
     }
 });
+it.each(['controller', 'credential', 'cache'] as const)('a retired %s context can be replaced by a fresh cache preview', cause => {
+    const f = apiCacheReviewsFixture(); const previous = f.preview();
+    if (cause === 'controller') f.source({ controllerEpoch: 2, credentialEpoch: 2 });
+    if (cause === 'credential') f.source({ controllerEpoch: 1, credentialEpoch: 3 });
+    if (cause === 'cache') f.scheduler.invalidate();
+    expect(f.reviews.inspect(previous.operationId, CACHE_OWNER)).toEqual({ state: 'stale' });
+    const fresh = f.preview(); expect(fresh.operationId).not.toBe(previous.operationId);
+    expect(f.reviews.inspect(fresh.operationId, CACHE_OWNER)).toEqual({ state: 'not-submitted' });
+    expect(f.reviews.confirm(previous.operationId, CACHE_OWNER)).toEqual({ state: 'stale' });
+    expect(f.observed).toEqual(['reviewed', 'blocked', 'reviewed']); expect(f.cache.clear).not.toHaveBeenCalled();
+});
+it('a witness that retires the entire review owner during replacement blocks only once', () => {
+    const f = apiCacheReviewsFixture(); const previous = f.preview();
+    f.cache.current.mockImplementationOnce(() => { f.reviews.invalidate(); return false; });
+    expect(f.reviews.preview(CACHE_OWNER)).toEqual({ state: 'stale' });
+    expect(f.reviews.inspect(previous.operationId, CACHE_OWNER)).toEqual({ state: 'expired' });
+    expect(f.observed).toEqual(['reviewed', 'blocked']); expect(f.cache.clear).not.toHaveBeenCalled();
+});
 it('bexh3-cache-C06 expiry, backward clock, live ID collision and bounded capacity fail closed without evicting a retained result', () => {
     const f = apiCacheReviewsFixture(); const expired = f.preview(); f.advanceReview(300000);
     expect(f.reviews.confirm(expired.operationId, CACHE_OWNER)).toEqual({ state: 'expired' }); expect(f.cache.clear).not.toHaveBeenCalled();
