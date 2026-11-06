@@ -49,7 +49,8 @@ export interface SddGateRecord {
   readonly answers?: readonly SddAnswer[];
   readonly selection?: SddSelection;
   readonly selectionArtifact?: string;
-  readonly publication?: Readonly<{ baseSha: string; commitSha: string }>;
+  readonly proposedCapability?: SddCatalogCapability;
+  readonly publication?: Readonly<{ baseSha: string; commitSha: string; decisionCutoff?: number }>;
   readonly branchName?: string;
   readonly commitSha?: string;
   readonly revisionSha?: string;
@@ -175,6 +176,8 @@ export function readSddGateRecord(body: string | null | undefined, issueNumber: 
       return undefined;
     }
     if (value.selection !== undefined && !validSddSelection(value.selection)) return undefined;
+    if (value.proposedCapability !== undefined && (value.phase !== 'awaiting-answer' || value.plan.action !== 'new'
+      || !isRecord(value.proposedCapability) || JSON.stringify(value.proposedCapability).length > 16_384)) return undefined;
     if (value.selectionArtifact !== undefined
       && (!value.selection || typeof value.selectionArtifact !== 'string' || !DIGEST.test(value.selectionArtifact))) return undefined;
     if (value.phase === 'published'
@@ -187,7 +190,10 @@ export function readSddGateRecord(body: string | null | undefined, issueNumber: 
     if (value.revisionBaseSha !== undefined && (typeof value.revisionBaseSha !== 'string' || !SHA.test(value.revisionBaseSha))) return undefined;
     if (value.revisionSha && !value.revisionBaseSha) return undefined;
     if (value.publication !== undefined && (!isRecord(value.publication)
-      || Object.keys(value.publication).length !== 2 || value.phase !== 'awaiting-answer'
+      || Object.keys(value.publication).some(key => !['baseSha', 'commitSha', 'decisionCutoff'].includes(key))
+      || (value.publication.decisionCutoff !== undefined && (typeof value.publication.decisionCutoff !== 'number'
+        || !Number.isSafeInteger(value.publication.decisionCutoff) || value.publication.decisionCutoff < 1))
+      || value.phase !== 'awaiting-answer'
       || typeof value.branchName !== 'string' || (value.plan.questions as unknown[]).length !== 0
       || typeof value.publication.baseSha !== 'string' || !SHA.test(value.publication.baseSha)
       || value.publication.baseSha !== (value.commitSha ? value.revisionBaseSha : value.baseSha)

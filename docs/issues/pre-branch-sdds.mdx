@@ -606,8 +606,9 @@ silently change models, credentials, or the admission policy.
 
 ### Recovering an interrupted publication
 
-The Action records the exact prepared Git commit in the issue card before
-pushing. Rerun the original issue workflow if the commit was pushed and the
+The Action records the exact prepared Git commit before pushing. Independent
+records preserve the winning commit if issue and comment workflows overlap.
+Use the latest Action status card for current readiness. Rerun the original issue workflow if the commit was pushed and the
 status card is still pending. The Action verifies that same commit on the
 linked branch and reconciles readiness. If an older pending card has no
 prepared commit and the linked branch advanced, have a maintainer review the

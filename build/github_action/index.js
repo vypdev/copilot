@@ -64098,6 +64098,7 @@ const pre_branch_sdd_incremental_workflow_1 = __nccwpck_require__(29983);
 const sdd_incremental_plan_1 = __nccwpck_require__(41495);
 const sdd_resource_budget_1 = __nccwpck_require__(15236);
 const sdd_selection_policy_1 = __nccwpck_require__(87851);
+const MAX_PENDING_PUBLICATIONS = 8;
 const ANALYSIS_SCHEMA = {
     type: 'object',
     properties: {
@@ -64173,11 +64174,11 @@ class PreBranchSddGateUseCase {
             if (card && retainedBranch && intent && snapshot.baseSha !== intent.baseSha) {
                 if (!reconcilePublication)
                     throw new application_error_1.ApplicationError('workflow.stale', 'The reconciled SDD card is not visible yet. Retry the same workflow.');
-                if (!await this.workspace.verifyPublication(retainedBranch, intent.baseSha, intent.commitSha, card.record.plan.path)
-                    || !await this.linkedBranch.getLinkedBranch(context.issueNumber, retainedBranch)) {
-                    throw new Error('The linked branch does not contain the exact prepared SDD commit. Maintainer recovery is required.');
+                const winner = await this.findPublishedIntent(context, allComments, card.record, retainedBranch, intent.baseSha);
+                if (!winner || !await this.linkedBranch.getLinkedBranch(context.issueNumber, retainedBranch)) {
+                    throw new Error('The linked branch does not contain an exact prepared SDD commit. Maintainer recovery is required.');
                 }
-                const published = completeSddPublication(card.record, retainedBranch, intent.baseSha, intent.commitSha);
+                const published = winner;
                 await this.writeCard(context.issueNumber, card.id, published, context.issueLocale, context.issueUrl);
                 return this.prepare(context, false);
             }
@@ -64259,7 +64260,7 @@ class PreBranchSddGateUseCase {
                                 { id: 'Q1', owner: 'maintainer', text: 'Confirm the current SDD publication selection.' },
                             ] } }
                     : pending;
-                const currentAnswers = await this.collectAnswers(answerRecord, card.id, allComments, context);
+                const currentAnswers = await this.collectAnswers(answerRecord, pending.publication?.decisionCutoff ?? card.id, allComments, context);
                 if (currentAnswers.length < answerRecord.plan.questions.length) {
                     await this.writePreparationRecovered(context, 'waiting', failureSource);
                     return { status: 'waiting', results: [this.result(true, true, 'Waiting for the numbered SDD answers; no draft or branch was created.')] };
@@ -64277,7 +64278,8 @@ class PreBranchSddGateUseCase {
                 && Boolean(card.record.branchName) && card.record.plan.questions.length === 0;
             const selectedRecord = acceptedSelection || publicationRetry ? card?.record : undefined;
             const analysis = selectedRecord ? { ...selectedRecord.plan, questions: [],
-                newCapability: selectedRecord.selection?.kind === 'seed' ? selectedRecord.selection.newCapability : null } : await this.agent.query({
+                newCapability: selectedRecord.selection?.kind === 'seed'
+                    ? selectedRecord.selection.newCapability : selectedRecord.proposedCapability ?? null } : await this.agent.query({
                 configuration: context.agentConfiguration,
                 agentId: 'pre-branch-sdd-analysis',
                 sourceSnapshot: { kind: 'pre-branch-sdd', phase: 'analysis', baseSha: snapshot.baseSha },
@@ -64413,8 +64415,10 @@ class PreBranchSddGateUseCase {
                 throw new Error('The SDD writer returned no validated draft.');
             await this.assertFresh(context, snapshot.baseSha, sourceBranch);
             await this.assertDecisionsCurrent(context, record);
-            return { status: 'drafted', prepared, record: record.selection
-                    ? { ...record, selectionArtifact: (0, sdd_selection_policy_1.sddArtifactDigest)(prepared.markdown) } : record, ...(card ? { cardId: card.id, cardBody } : {}), results: [this.result(true, true, `Validated ${plan.path} before branch publication.`)] };
+            const publicationRecord = { ...record,
+                ...(record.selection ? { selectionArtifact: (0, sdd_selection_policy_1.sddArtifactDigest)(prepared.markdown) }
+                    : newCapability ? { proposedCapability: newCapability } : {}) };
+            return { status: 'drafted', prepared, record: publicationRecord, ...(card ? { cardId: card.id, cardBody } : {}), results: [this.result(true, true, `Validated ${plan.path} before branch publication.`)] };
         }
         catch (error) {
             if ((error instanceof sdd_catalog_compatibility_1.SddCatalogCompatibilityFailure || error instanceof sdd_trusted_catalog_failure_1.SddTrustedCatalogMissingFailure) && error.sourceCommit) {
@@ -64450,19 +64454,34 @@ class PreBranchSddGateUseCase {
             const commitSha = await this.workspace.publish(branchName, draft.prepared, async (preparedCommit) => {
                 await this.assertFresh(context, failureSource.sha, failureSource.branch);
                 await this.assertDecisionsCurrent(context, draft.record);
-                const current = latestOwnedCard(await this.comments.listIssueComments(context.issueNumber), context.issueNumber, context.tokenUser);
+                const timeline = await this.comments.listIssueComments(context.issueNumber);
+                const current = latestOwnedCard(timeline, context.issueNumber, context.tokenUser);
                 if (current?.id !== draft.cardId || current?.body !== draft.cardBody) {
                     throw new application_error_1.ApplicationError('workflow.stale', 'The SDD gate record changed before publication.');
                 }
+                const decisionCutoff = current?.record.publication?.decisionCutoff ?? current?.id;
                 pending = {
                     ...draft.record, branchName,
                     ...(draft.record.commitSha ? { revisionBaseSha: draft.prepared.baseSha } : {}),
-                    publication: { baseSha: draft.prepared.baseSha, commitSha: preparedCommit },
+                    publication: { baseSha: draft.prepared.baseSha, commitSha: preparedCommit,
+                        ...(decisionCutoff !== undefined ? { decisionCutoff } : {}) },
                 };
                 const expectedBody = (0, pre_branch_sdd_1.renderSddGateRecord)(pending, context.issueLocale, context.issueUrl);
-                await this.writeCard(context.issueNumber, cardId, pending, context.issueLocale, context.issueUrl);
+                if (current?.body !== expectedBody) {
+                    const outstanding = ownedGateComments(timeline, context.tokenUser)
+                        .filter(comment => {
+                        const record = (0, pre_branch_sdd_1.readSddGateRecord)(comment.body, context.issueNumber);
+                        return record?.branchName === branchName && record.publication?.baseSha === draft.prepared.baseSha;
+                    }).length;
+                    if (outstanding >= MAX_PENDING_PUBLICATIONS) {
+                        throw new application_error_1.ApplicationError('workflow.stale', 'The SDD branch has too many pending publication attempts. Maintainer recovery is required.');
+                    }
+                    // GitHub comment updates have no compare-and-set. Each distinct
+                    // prepared commit needs its own durable record before it may push.
+                    await this.writeCard(context.issueNumber, undefined, pending, context.issueLocale, context.issueUrl);
+                }
                 const saved = latestOwnedCard(await this.comments.listIssueComments(context.issueNumber), context.issueNumber, context.tokenUser);
-                if (!saved || saved.body !== expectedBody || (cardId !== undefined && saved.id !== cardId)) {
+                if (!saved || saved.body !== expectedBody) {
                     throw new application_error_1.ApplicationError('workflow.stale', 'The exact SDD publication record could not be confirmed.');
                 }
                 cardId = saved.id;
@@ -64518,6 +64537,26 @@ class PreBranchSddGateUseCase {
             }
             return { status: 'blocked', results: [failure] };
         }
+    }
+    async findPublishedIntent(context, comments, latest, branch, baseSha) {
+        const checked = new Set();
+        for (const comment of ownedGateComments(comments, context.tokenUser)) {
+            const record = (0, pre_branch_sdd_1.readSddGateRecord)(comment.body, context.issueNumber);
+            if (!record || record.branchName !== branch)
+                continue;
+            const candidateBase = record.publication?.baseSha ?? record.revisionBaseSha ?? record.baseSha;
+            const commitSha = record.publication?.commitSha ?? record.revisionSha ?? record.commitSha;
+            const first = record.publication ? record.commitSha : record.revisionSha ? record.commitSha : undefined;
+            if (!commitSha || candidateBase !== baseSha || first !== latest.commitSha || checked.has(commitSha))
+                continue;
+            if (checked.size >= MAX_PENDING_PUBLICATIONS)
+                return undefined;
+            checked.add(commitSha);
+            if (await this.workspace.verifyPublication(branch, baseSha, commitSha, record.plan.path)) {
+                return record.phase === 'published' ? record : completeSddPublication(record, branch, baseSha, commitSha);
+            }
+        }
+        return undefined;
     }
     async findSeedReview(context, comments, cutoff, hash) {
         for (const comment of [...comments].sort((a, b) => b.id - a.id)) {
@@ -64735,10 +64774,13 @@ class PreBranchSddGateUseCase {
     }
 }
 exports.PreBranchSddGateUseCase = PreBranchSddGateUseCase;
-function latestOwnedCard(comments, issueNumber, botLogin) {
-    const candidates = comments.filter(comment => comment.user?.login?.toLowerCase() === botLogin.toLowerCase()
+function ownedGateComments(comments, botLogin) {
+    return comments.filter(comment => comment.user?.login?.toLowerCase() === botLogin.toLowerCase()
         && (comment.body?.includes(pre_branch_sdd_1.SDD_GATE_MARKER) || /^## (?:SDD work status|Estado del SDD)\s*$/mu.test(comment.body ?? '')))
         .sort((a, b) => b.id - a.id);
+}
+function latestOwnedCard(comments, issueNumber, botLogin) {
+    const candidates = ownedGateComments(comments, botLogin);
     const latest = candidates[0];
     if (!latest)
         return undefined;
@@ -64752,7 +64794,7 @@ function latestOwnedCard(comments, issueNumber, botLogin) {
     return { id: latest.id, body, record };
 }
 function completeSddPublication(record, branchName, baseSha, commitSha) {
-    const { publication: _publication, ...retained } = record;
+    const { publication: _publication, proposedCapability: _proposal, ...retained } = record;
     return {
         ...retained, phase: 'published', branchName, commitSha: record.commitSha ?? commitSha,
         ...(record.commitSha ? { revisionSha: commitSha, revisionBaseSha: baseSha } : {}),
@@ -92015,6 +92057,9 @@ function readSddGateRecord(body, issueNumber) {
         }
         if (value.selection !== undefined && !validSddSelection(value.selection))
             return undefined;
+        if (value.proposedCapability !== undefined && (value.phase !== 'awaiting-answer' || value.plan.action !== 'new'
+            || !isRecord(value.proposedCapability) || JSON.stringify(value.proposedCapability).length > 16384))
+            return undefined;
         if (value.selectionArtifact !== undefined
             && (!value.selection || typeof value.selectionArtifact !== 'string' || !DIGEST.test(value.selectionArtifact)))
             return undefined;
@@ -92033,7 +92078,10 @@ function readSddGateRecord(body, issueNumber) {
         if (value.revisionSha && !value.revisionBaseSha)
             return undefined;
         if (value.publication !== undefined && (!isRecord(value.publication)
-            || Object.keys(value.publication).length !== 2 || value.phase !== 'awaiting-answer'
+            || Object.keys(value.publication).some(key => !['baseSha', 'commitSha', 'decisionCutoff'].includes(key))
+            || (value.publication.decisionCutoff !== undefined && (typeof value.publication.decisionCutoff !== 'number'
+                || !Number.isSafeInteger(value.publication.decisionCutoff) || value.publication.decisionCutoff < 1))
+            || value.phase !== 'awaiting-answer'
             || typeof value.branchName !== 'string' || value.plan.questions.length !== 0
             || typeof value.publication.baseSha !== 'string' || !SHA.test(value.publication.baseSha)
             || value.publication.baseSha !== (value.commitSha ? value.revisionBaseSha : value.baseSha)
