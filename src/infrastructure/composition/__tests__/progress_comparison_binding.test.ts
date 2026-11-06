@@ -5,7 +5,14 @@ import { createCheckProgressCompositionRoot } from '../check_progress_compositio
 jest.mock('@actions/github', () => ({ getOctokit: jest.fn() }));
 jest.mock('../../../application/usecases/actions/check_progress_use_case', () => ({ CheckProgressUseCase: jest.fn() }));
 jest.mock('../agent_capability_composition_root', () => ({ createFindingsQueryPort: () => ({ query: jest.fn() }) }));
-jest.mock('../issue_completion_composition_root', () => ({ createNativeStatusReadPort: () => ({ readIssue: jest.fn() }) }));
+const mockReadIssue = jest.fn();
+const mockRemoveLabel = jest.fn();
+jest.mock('../issue_completion_composition_root', () => ({
+    ...jest.requireActual('../issue_completion_composition_root'),
+    createIssueCompletionRepository: () => ({
+        readIssue: mockReadIssue, readPullRequest: jest.fn(), removeLabel: mockRemoveLabel,
+    }),
+}));
 
 it('binds both progress evidence queries to one repository/credential and exposes only frozen read capabilities', async () => {
     const base = 'a'.repeat(40), head = 'b'.repeat(40);
@@ -31,4 +38,18 @@ it('binds both progress evidence queries to one repository/credential and expose
     });
     expect(compareCommits).toHaveBeenCalledWith({ owner: 'tenant', repo: 'project', base, head, per_page: 1, page: 1 });
     expect(github.getOctokit).toHaveBeenCalledWith('fixture-private-token');
+});
+
+it('binds rollout recovery to the exact issue and removes only stale 100% from open work', async () => {
+    const binding = { owner: 'tenant', repository: 'project', token: 'fixture-private-token' };
+    createCheckProgressCompositionRoot(binding);
+    const fence = jest.mocked(CheckProgressUseCase).mock.lastCall?.[9];
+    expect(Object.keys(fence!)).toEqual(['listIssueComments', 'removeFullProgressLabel']);
+    expect(Object.isFrozen(fence)).toBe(true);
+    mockReadIssue.mockResolvedValueOnce({ number: 42, state: 'open', labels: ['100%', 'external'] })
+        .mockResolvedValueOnce({ number: 42, state: 'closed', labels: ['100%'] });
+    await fence!.removeFullProgressLabel(42);
+    await fence!.removeFullProgressLabel(42);
+    expect(mockRemoveLabel).toHaveBeenCalledTimes(1);
+    expect(mockRemoveLabel).toHaveBeenCalledWith(42, '100%');
 });

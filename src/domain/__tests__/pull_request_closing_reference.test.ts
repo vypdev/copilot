@@ -1,4 +1,4 @@
-import { hasExplicitClosingReference, shouldPreserveClosingReference } from '../pull_request_closing_reference';
+import { hasClosingKeywordForIssue, hasExplicitClosingReference, shouldPreserveClosingReference } from '../pull_request_closing_reference';
 import { MANAGED_PULL_REQUEST_DESCRIPTION_START as START, MANAGED_PULL_REQUEST_DESCRIPTION_END as END,
   type PullRequestDescriptionMode } from '../pull_request_description';
 import { createPendingPullRequestLink, attachPendingPullRequestLink, type PullRequestLinkIdentity } from '../pull_request_issue_link_state';
@@ -57,4 +57,12 @@ it.each(scenarios)('grounds $name in raw source and replacement ownership', scen
   expect(hasExplicitClosingReference(scenario.body, identity.repository, issueNumber)).toBe(scenario.has);
   expect(shouldPreserveClosingReference(scenario.body, scenario.mode ?? 'replace', { ...identity, ...scenario.identity }, issueNumber))
     .toBe(scenario.preserve ?? scenario.has);
+});
+
+it.each([
+  ['This fixes OWNER/REPO#42.', true],
+  ['This fixes foreign/repo#42.', false],
+  ['Discuss the example `Closes OWNER/REPO#42`.', false],
+])('evaluates a staged closing keyword in %s', (body, closesIssue) => {
+  expect(hasClosingKeywordForIssue(body, identity.repository, 42)).toBe(closesIssue);
 });

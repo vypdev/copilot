@@ -32,6 +32,7 @@ export interface ProgressContext {
   readonly includeReasoning: boolean;
   readonly targetLocale: string;
   readonly sourceHeadSha?: string;
+  readonly trustedBotLogin?: string;
 }
 
 export interface RecommendStepsContext {
@@ -294,6 +295,7 @@ export function projectProgressContext(source: PushSingleActionContextSource): P
     includeReasoning: source.ai.getAiIncludeReasoning(),
     targetLocale: source.locale.issue,
     ...(sourceHeadSha ? { sourceHeadSha } : {}),
+    ...(source.tokenUser ? { trustedBotLogin: source.tokenUser } : {}),
   });
 }
 

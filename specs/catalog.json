@@ -1979,14 +1979,16 @@
       "status": "as-built-baseline",
       "scope": "Convert typed issues into traceable work branches, project state, and lifecycle state",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-11-03",
+      "lastVerified": "2026-11-06",
       "specs": [
         "specs/managed-issue-and-branch-lifecycle.md",
-        "specs/issue-assignment-failure-recovery.md"
+        "specs/issue-assignment-failure-recovery.md",
+        "specs/managed-issue-and-branch-lifecycle-issue-735.md"
       ],
       "workflows": [
         ".github/workflows/copilot_issue.yml",
-        ".github/workflows/copilot_commit.yml"
+        ".github/workflows/copilot_commit.yml",
+        ".github/workflows/copilot_pull_request.yml"
       ],
       "entrypoints": [
         "src/application/usecases/issue_use_case.ts",
@@ -2044,7 +2046,12 @@
         "src/data/model/application_error.ts",
         "src/application/policies/application_error_message_catalog.ts",
         "src/application/policies/application_error_presentation_policy.ts",
-        "src/application/policies/issue_assignment_diagnostic_presentation.ts"
+        "src/application/policies/issue_assignment_diagnostic_presentation.ts",
+        "src/domain/staged_rollout.ts",
+        "src/application/ports/staged_rollout_ports.ts",
+        "src/application/usecases/steps/issue/reconcile_staged_rollout_after_merge.ts",
+        "src/data/repository/pull_request/staged_rollout_review_repository.ts",
+        "src/application/policies/staged_rollout_presentation_policy.ts"
       ],
       "tests": [
         "src/application/usecases/__tests__/issue_pull_request_context_projection.test.ts",
@@ -2084,7 +2091,9 @@
         "src/application/usecases/steps/issue/__tests__/assign_members_to_issue_use_case.test.ts",
         "src/data/repository/__tests__/organization_members_repository.test.ts",
         "src/data/repository/__tests__/issue_assignment_repository.test.ts",
-        "src/application/policies/__tests__/application_error_presentation_policy.test.ts"
+        "src/application/policies/__tests__/application_error_presentation_policy.test.ts",
+        "src/application/usecases/__tests__/staged_rollout_merge.integration.test.ts",
+        "src/application/usecases/actions/__tests__/check_progress_use_case.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-management.mdx",

@@ -33,6 +33,10 @@ Comment this on an issue or PR:
 
 This starts a read-only analysis when the mention matches the bot account. It does not edit files, commit, or push. You can write the request in English, Spanish, or another language supported by the configured locale/agent flow.
 
+For [staged rollout](./notifications-and-auto-close#staged-rollout-after-a-preparatory-merge),
+submit the typed declaration as a GitHub PR review. Conversation comments and
+PR description references give readers context.
+
 ## Explicit commands
 
 Commands are recognized at the beginning of a comment, case-insensitively. The complete command is limited to 2,000 characters. Prose requests such as implement, plan, explain and remember may exceed twenty words; structured commands retain the twenty-argument limit. They are deterministic and easier to audit in automation logs.

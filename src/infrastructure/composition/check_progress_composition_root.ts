@@ -1,5 +1,5 @@
 import { ProgressComparisonSourceRepository } from '../../data/repository/progress_comparison_source_repository';
-import { createNativeStatusReadPort } from './issue_completion_composition_root';
+import { bindNativeStatusRead, createIssueCompletionRepository } from './issue_completion_composition_root';
 import { ProgressDiffRepository } from '../../data/repository/progress_diff_repository';
 import { createBranchClient, createBranchComparisonClient, createProgressObjectClient, createProgressComparisonClient } from './github_branch_client_factory';
 import { createIssueContentClient, createIssueLabelsClient } from './github_issue_client_factory';
@@ -14,7 +14,7 @@ import { BranchLifecycleRepository } from "../../data/repository/branch_lifecycl
 import { PullRequestLifecycleRepository } from "../../data/repository/pull_request/pull_request_lifecycle_repository";
 import { GithubPublicationSourceRepository } from '../../data/repository/github_publication_source_repository';
 import type { RepositoryCredentialBinding } from './shared_capability_port_binding';
-import { bindIssueDescriptionQuery, bindPublicationSourceQuery } from './shared_capability_port_binding';
+import { bindIssueCommentQuery, bindIssueDescriptionQuery, bindPublicationSourceQuery } from './shared_capability_port_binding';
 import { bindIssueLabels } from './lifecycle_capability_port_binding';
 import { bindBranchListQuery, bindIssueProgress, bindPullRequestBranchQuery } from './push_single_action_capability_port_binding';
 
@@ -22,6 +22,7 @@ export function createCheckProgressCompositionRoot(binding: RepositoryCredential
     const labels = new IssueLabelRepository(createIssueLabelsClient());
     const content = new IssueContentRepository(createIssueContentClient());
     const diff = new ProgressDiffRepository(createBranchComparisonClient(), createProgressObjectClient());
+    const issueCompletion = createIssueCompletionRepository(binding);
     const comparisonSource = new ProgressComparisonSourceRepository(createProgressComparisonClient());
     return new CheckProgressUseCase(
         bindIssueDescriptionQuery(content, binding),
@@ -34,8 +35,17 @@ export function createCheckProgressCompositionRoot(binding: RepositoryCredential
         bindBranchListQuery(new BranchLifecycleRepository(createBranchClient()), binding),
         bindPullRequestBranchQuery(new PullRequestLifecycleRepository(createPullRequestLifecycleClient()), binding),
         createFindingsQueryPort(),
-        bindPublicationSourceQuery(new GithubPublicationSourceRepository(createBranchClient()), binding, createNativeStatusReadPort(binding)),
+        bindPublicationSourceQuery(new GithubPublicationSourceRepository(createBranchClient()), binding, bindNativeStatusRead(issueCompletion)),
         Object.freeze({ getDiff: (baseSha: string, headSha: string) => diff.getDiff(binding.owner, binding.repository, baseSha, headSha, binding.token) }),
         Object.freeze({ getSource: (branch: string) => comparisonSource.getSource(binding.owner, binding.repository, branch, binding.token) }),
+        Object.freeze({
+            ...bindIssueCommentQuery(content, binding),
+            removeFullProgressLabel: async (issueNumber: number) => {
+                const current = await issueCompletion.readIssue(issueNumber);
+                if (current.state === 'open' && current.labels.includes('100%')) {
+                    await issueCompletion.removeLabel(issueNumber, '100%');
+                }
+            },
+        }),
     );
 }

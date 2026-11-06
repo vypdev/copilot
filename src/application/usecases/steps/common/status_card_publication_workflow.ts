@@ -6,6 +6,7 @@ import { buildDuplicateMarker, parsePublicationMarker } from '../../../policies/
 import { resolveStaticPublicationCatalog, type PublicationMessageCatalog } from '../../../policies/publication_message_catalog';
 import { renderSemanticStatus, type SemanticStatusIntent } from '../../../policies/semantic_result_publication_policy';
 import type { BoundPublicationSourceQueryPort } from '../../../ports/publication_freshness_ports';
+import { hasActiveStagedRolloutCard } from '../../../policies/staged_rollout_presentation_policy';
 import { ApplicationError } from '../../../errors/application_error';
 import { cleanupDuplicateComment } from './duplicate_comment_cleanup_workflow';
 
@@ -30,15 +31,19 @@ export async function reconcileStatusCard(
     context: StatusCardPublicationContext,
     comments: BoundIssueCommentPublicationPort,
     sourceQuery?: BoundPublicationSourceQueryPort,
+    nativeFence?: () => Promise<boolean>,
 ): Promise<StatusCardPublicationOutcome> {
     if (!context.botLogin.trim()) return unchangedOutcome();
-    if (!await sourceIsCurrent(context.intent, sourceQuery)) return staleSourceOutcome();
+    const isCurrent = async () => (!nativeFence || await nativeFence()) && await sourceIsCurrent(context.intent, sourceQuery);
+    if (!await isCurrent()) return staleSourceOutcome();
     const target = context.intent.identity.target;
     const rendered = renderSemanticStatus(context.intent, context.catalog);
-    let owned = ownedCards(await comments.listIssueComments(target.number), context.intent.identity, context.botLogin);
+    const inventory = await comments.listIssueComments(target.number);
+    if (context.intent.projection.kind === 'progress' && hasActiveStagedRolloutCard(inventory, target.number, context.botLogin)) return staleSourceOutcome();
+    let owned = ownedCards(inventory, context.intent.identity, context.botLogin);
     let effect: StatusCardPublicationOutcome['effect'] = 'unchanged';
     if (owned.length === 0) {
-        if (!await sourceIsCurrent(context.intent, sourceQuery)) return staleSourceOutcome();
+        if (!await isCurrent()) return staleSourceOutcome();
         await comments.addComment(target.number, rendered);
         effect = 'created';
         owned = ownedCards(await comments.listIssueComments(target.number), context.intent.identity, context.botLogin);
@@ -51,8 +56,9 @@ export async function reconcileStatusCard(
 
     const [canonical, ...duplicates] = owned.sort((left, right) => left.id - right.id);
     const canonicalMarker = parsePublicationMarker(canonical.body);
-    if (canonicalMarker?.digest !== context.intent.digest) {
-        if (!await sourceIsCurrent(context.intent, sourceQuery)) {
+    if (canonicalMarker?.digest !== context.intent.digest
+        || context.intent.projection.kind === 'staged-rollout' && canonical.body !== rendered) {
+        if (!await isCurrent()) {
             return staleSourceOutcome(canonical.id);
         }
         await comments.updateComment(target.number, canonical.id, rendered);
@@ -66,7 +72,7 @@ export async function reconcileStatusCard(
             issueNumber: target.number,
             duplicateCommentId: duplicate.id,
             compactBody: duplicatePointer(context, canonical.id),
-        }, comments, () => sourceIsCurrent(context.intent, sourceQuery));
+        }, comments, isCurrent);
         if (cleanup === 'stale') {
             return staleSourceOutcome(
                 canonical.id,

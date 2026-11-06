@@ -1,3 +1,4 @@
+import type { StagedRolloutMergeScope } from '../../domain/staged_rollout';
 import type { AgentConfiguration } from '../../domain/agent';
 import type { ProjectReference } from '../ports/project_board_link_ports';
 import type { SelectedIssueType } from '../ports/issue_management_ports';
@@ -20,6 +21,7 @@ export interface IssueNumberContext {
 export interface CloseIssueAfterMergeContext extends IssueNumberContext {
   readonly pullRequestNumber: number;
   readonly completionLabels: IssueCompletionLabelConfiguration;
+  readonly stagedRollout?: StagedRolloutMergeScope;
 }
 
 export interface UpdateIssueTypeContext extends IssueNumberContext {

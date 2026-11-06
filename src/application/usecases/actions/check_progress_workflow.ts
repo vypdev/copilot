@@ -11,12 +11,19 @@ import { buildProgressSummaryMessage } from './progress_summary_builder';
 import { analyzeProgress, type ProgressAnalysisDependencies } from './progress_analysis_workflow';
 import { ApplicationError, toApplicationError } from '../../errors/application_error';
 import type { BoundPublicationSourceQueryPort } from '../../ports/publication_freshness_ports';
+import type { BoundIssueCommentQueryPort } from '../../ports/issue_lifecycle_ports';
+import { hasActiveStagedRolloutCard } from '../../policies/staged_rollout_presentation_policy';
 import { buildStaleSourcePublicationPayload } from '../../policies/publication_outcome_policy';
+
+export interface ProgressRolloutFence extends BoundIssueCommentQueryPort {
+    removeFullProgressLabel(issueNumber: number): Promise<void>;
+}
 
 export interface CheckProgressWorkflowDependencies extends ProgressAnalysisDependencies {
     issueLabelsPort: BoundIssueLabelsPort;
     issueProgressPort: BoundIssueProgressPort;
     pullRequestRepository: BoundPullRequestBranchQueryPort;
+    rolloutFence?: ProgressRolloutFence;
 }
 
 /** Publishes a completed progress assessment after the analysis workflow succeeds. */
@@ -33,6 +40,11 @@ export async function runCheckProgressWorkflow(
         if (param.issueNumber > 0 && await dependencies.publicationSourceQuery.isIssueOpen(param.issueNumber) !== true) {
             throw new ApplicationError('workflow.stale', 'Progress analysis requires a verified open issue. Existing state retained.');
         }
+        const rolloutPending = async (issueNumber: number) => param.trustedBotLogin && dependencies.rolloutFence
+            && hasActiveStagedRolloutCard(await dependencies.rolloutFence.listIssueComments(issueNumber), issueNumber, param.trustedBotLogin);
+        const skipped = () => [new Result({ id: taskId, success: true, executed: false,
+            steps: ['Progress estimation deferred while the original issue tracks staged rollout.'] })];
+        if (param.issueNumber > 0 && await rolloutPending(param.issueNumber)) return skipped();
         const analysis = await analyzeProgress(param, taskId, dependencies);
         if (analysis.kind === 'failure') return [analysis.result];
         if (analysis.kind === 'stale-source') {
@@ -57,6 +69,7 @@ export async function runCheckProgressWorkflow(
             return [buildStaleSourceResult(taskId, branch, sourceHeadSha)];
         }
 
+        if (await rolloutPending(issueNumber)) return skipped();
         if (progress === 0) {
             return [buildZeroProgressResult(
                 taskId,
@@ -71,7 +84,16 @@ export async function runCheckProgressWorkflow(
             )];
         }
 
-        await persistProgress(param, issueNumber, branch, progress, dependencies);
+        await dependencies.issueProgressPort.setProgressLabel(issueNumber, progress);
+        // The label write and rollout comment are separate GitHub operations.
+        // Repair a stale 100% if registration won the race during this write.
+        if (dependencies.rolloutFence && await rolloutPending(issueNumber)) {
+            await dependencies.rolloutFence.removeFullProgressLabel(issueNumber);
+            return skipped();
+        }
+        await syncProgressLabelsToOpenPullRequests(
+            branch, progress, dependencies.issueLabelsPort, dependencies.pullRequestRepository,
+        );
         return [buildProgressResult(
             taskId,
             issueNumber,
@@ -151,22 +173,6 @@ function buildZeroProgressResult(
             baseSha,
         },
     });
-}
-
-async function persistProgress(
-    param: ProgressContext,
-    issueNumber: number,
-    branch: string,
-    progress: number,
-    dependencies: CheckProgressWorkflowDependencies,
-): Promise<void> {
-    await dependencies.issueProgressPort.setProgressLabel(issueNumber, progress);
-    await syncProgressLabelsToOpenPullRequests(
-        branch,
-        progress,
-        dependencies.issueLabelsPort,
-        dependencies.pullRequestRepository,
-    );
 }
 
 function buildProgressResult(

@@ -41,6 +41,8 @@ import {
     type ImplementationPlan,
 } from '../../domain/implementation_plan';
 
+import { renderStagedRolloutCard, type StagedRolloutCardProjection } from './staged_rollout_presentation_policy';
+
 export type PlanPublicationProjection = { readonly kind: 'plan'; readonly plan: ImplementationPlan };
 
 export interface ProgressPublicationProjection {
@@ -52,7 +54,7 @@ export interface ProgressPublicationProjection {
     readonly developmentBranch?: string;
 }
 
-export type SemanticStatusProjection = PlanPublicationProjection | ProgressPublicationProjection;
+export type SemanticStatusProjection = PlanPublicationProjection | ProgressPublicationProjection | StagedRolloutCardProjection;
 export type SemanticStatusIntent = StatusPublicationIntent<SemanticStatusProjection>;
 
 type BranchSyncReplyProjection =
@@ -382,6 +384,7 @@ export function renderSemanticStatus(
     intent: SemanticStatusIntent,
     messages: PublicationMessageCatalog = resolveStaticPublicationCatalog(intent.locale).catalog,
 ): string {
+    if (intent.projection.kind === 'staged-rollout') return renderStagedRolloutCard({ ...intent, projection: intent.projection });
     const marker = buildPublicationMarker(intent);
     if (intent.projection.kind === 'plan') {
         return `${marker}\n\n${renderImplementationPlanCard(intent.projection.plan, messages)}`;
