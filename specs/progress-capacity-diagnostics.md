@@ -527,6 +527,14 @@ The complete immutable-tree collector introduced by #838 is included in v3.10.9.
 A new 344-file regression verifies every pinned content unit beyond the 300-file
 compare prefix. This qualifies the existing SDK path; it does not claim a fresh
 consumer run or authorize a consumer merge.
+An additional read-only replay of the original #903 base/head using the current
+collector passes the compare ceiling, then stops at the actual next boundary:
+`docs/evidence/ha-select-multiple-reference.json`, 2,689,933 bytes versus the fixed
+2,097,152-byte per-blob maximum, after 87 native reads. It reports nonretryable
+`validation.evidence-too-large` / `progress-inventory-incomplete`, reason
+`blob-size`, with the exact safe path. Zero model calls and zero writes occurred.
+That proves the generic provider-outage diagnosis is corrected; it does not
+establish that this over-limit consumer comparison can be fully assessed.
 
 Minimum additional budget: **25 distinct cases**: 7 inventory-size capacity
 controls (1/32/33/64/108/128/256), 4 field admission/fence cases, 1 complete Commit
