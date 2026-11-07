@@ -98,6 +98,21 @@ it('CommitScope916-C06 assesses 33 distinct obligations in two bounded groups th
     expect(f.finalOutputs.map(output => output.requirements.length)).toEqual([32, 1]);
     expect(f.setProgressLabel).toHaveBeenCalledTimes(1); expect(f.setLabels).toHaveBeenCalledTimes(1);
 });
+it('CommitScope916-C10 retains progress when complete valid batches exceed the actual aggregate text budget', async () => {
+    const f = scenario(), answer = f.query.getMockImplementation()!;
+    f.query.mockImplementation(async request => {
+        const response = await answer(request) as any;
+        if (response.requirements) {
+            const limit = (request.options!.schema as any).properties.requirements.items.properties.summary.maxLength;
+            response.requirements.forEach((fact: any) => { fact.summary = 's'.repeat(limit); fact.remaining = 'r'.repeat(limit); });
+        }
+        return response;
+    });
+    const results = await f.invoke();
+    expect(results.at(-1)).toMatchObject({ success: false, errors: [expect.objectContaining({ recovery: expect.objectContaining({ variables: expect.objectContaining({ reason: 'aggregate-capacity' }) }) })] });
+    expect(f.finalOutputs).toHaveLength(2); retained(f);
+    expect(selectSemanticStatusIntents({ locale: 'en-US', results })).toEqual([]);
+});
 it('CommitScope916-C17 replays the original Domus body and complete immutable comparison through Commit', async () => {
     expect(fixtureBytes.toString('hex')).toBe(fixtureText.replace(/\s/gu, ''));
     expect(Buffer.from(fixtureText, 'utf8').includes(0)).toBe(false);

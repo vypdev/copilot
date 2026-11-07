@@ -772,3 +772,26 @@ describe('semantic result publication policy', () => {
     })).toEqual([]);
   });
 });
+
+describe('scoped progress publication identity', () => {
+  const scope = 'b'.repeat(64), wideHead = 'c'.repeat(64);
+  it.each([
+    { name: 'legacy SHA-1', head: SOURCE_HEAD, scope: undefined, version: `head:${SOURCE_HEAD}` },
+    { name: 'scoped SHA-1', head: SOURCE_HEAD, scope, version: `head:${SOURCE_HEAD}:scope:${scope}` },
+    { name: 'legacy SHA-256', head: wideHead, scope: undefined, version: `head:${wideHead}` },
+  ])('renders the bounded $name identity', value => {
+    const [intent] = selectSemanticStatusIntents({ locale: 'en-US', results: [new Result({ id: 'CheckProgressUseCase', success: true, executed: true,
+      payload: { issueNumber: 42, progress: 50, summary: 'Source reviewed.', branch: 'feature/42', sourceHeadSha: value.head, scopeManifestDigest: value.scope } })] });
+    expect(intent.sourceVersion).toBe(value.version);
+    expect(intent.sourceVersion.length).toBeLessThanOrEqual(128);
+    expect(renderSemanticStatus(intent)).toContain(`source="${value.version}"`);
+  });
+  it.each([
+    { name: 'malformed scope', head: SOURCE_HEAD, scope: 'invalid' },
+    { name: 'nonstring scope', head: SOURCE_HEAD, scope: 7 },
+    { name: 'over-envelope scoped SHA-256', head: wideHead, scope },
+  ])('withholds a $name before rendering', value => {
+    expect(selectSemanticStatusIntents({ locale: 'en-US', results: [new Result({ id: 'CheckProgressUseCase', success: true, executed: true,
+      payload: { issueNumber: 42, progress: 50, summary: 'Source reviewed.', branch: 'feature/42', sourceHeadSha: value.head, scopeManifestDigest: value.scope } })] })).toEqual([]);
+  });
+});

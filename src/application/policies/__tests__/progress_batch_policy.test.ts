@@ -122,6 +122,18 @@ it('CommitScope916-C11 rejects an exclusively generated comparison before constr
     const diff = partitionProgressDiff(base, head, [{ path: 'build/index.js', status: 'modified', additions: 1, deletions: 0, evidence: 'generated-metadata-only' }]);
     expect(() => createProgressScopeManifest(f.input, diff)).toThrow(expect.objectContaining({ recovery: expect.objectContaining({ variables: expect.objectContaining({ reason: 'evidence-missing' }) }) }));
 });
+it('CommitScope916-C11 rejects a generated citation again at aggregate publication eligibility', () => {
+    const f = fixture(1);
+    const diff = partitionProgressDiff(base, head, [{ path: 'build/index.js', status: 'modified', additions: 1, deletions: 0, evidence: 'generated-metadata-only' },
+        { path: 'src/product.ts', status: 'modified', additions: 1, deletions: 0, patch: '+source' }]);
+    const manifest = createProgressScopeManifest(f.input, diff), batches = planProgressAssessmentBatches(manifest);
+    const response = { ...f.output(), manifestDigest: manifest.digest, batchId: batches[0].id };
+    const receipt = parseProgressAssessmentReceipt(response, manifest, batches[0], f.extraction.anchors, 'en-US', false);
+    const { digest: _digest, ...body } = structuredClone(receipt);
+    const forged = { ...body, citations: [['build/index.js']] };
+    const altered = { ...forged, digest: createHash('sha256').update(JSON.stringify(forged)).digest('hex') };
+    expect(() => aggregateProgressAssessmentReceipts(manifest, batches, [altered])).toThrow();
+});
 it('CommitScope916-C11 freezes source authority and accepted evidence before further async calls', () => {
     const f = fixture();
     expect(Object.isFrozen(f.manifest.scope.requirements[0].sources)).toBe(true);
@@ -159,7 +171,23 @@ it('CommitScope916-C03 preserves a mandatory draft-only obligation and its origi
     expect(() => parseProgressScopeWithAnchors({ ...response, lines: [response.lines[0], { ...response.lines[1], sameAs: 'L2' }] }, source, 'en-US', PROGRESS_BATCH_PROFILE))
         .toThrow(expect.objectContaining({ recovery: expect.objectContaining({ variables: expect.objectContaining({ reason: 'scope-classification-invalid', sourceLineId: 'L2' }) }) }));
 });
-it('CommitScope916-C10 allocates both publication fields across all batches before requests', () => {
+it('CommitScope916-C10 accepts uneven fact lengths when the complete publication fields fit', () => {
+    const f = fixture(128);
+    const receipts = f.batches.map((batch, index) => {
+        const response = f.output(index), schema = progressBatchResponseSchema(f.manifest, batch, f.extraction.anchors, true);
+        const limit = schema.properties.requirements.items.properties.summary.maxLength;
+        if (index === 0) {
+            expect(limit).toBeGreaterThan(100);
+            response.requirements[0].summary = '😀'.repeat(limit);
+            response.requirements[0].remaining = 'r'.repeat(limit);
+        }
+        return f.receipt(index, response);
+    });
+    const aggregate = aggregateProgressAssessmentReceipts(f.manifest, f.batches, receipts);
+    expect([...aggregate.summary].length).toBeLessThanOrEqual(8000);
+    expect([...aggregate.remaining].length).toBeLessThanOrEqual(8000);
+});
+it('CommitScope916-C10 rejects the actual aggregate when individually valid batches exceed its publication field budget', () => {
     const f = fixture(128);
     const receipts = f.batches.map((batch, index) => {
         const response = f.output(index), schema = progressBatchResponseSchema(f.manifest, batch, f.extraction.anchors, true);
@@ -167,9 +195,7 @@ it('CommitScope916-C10 allocates both publication fields across all batches befo
         response.requirements.forEach(fact => { fact.summary = '😀'.repeat(limit); fact.remaining = 'r'.repeat(limit); });
         return f.receipt(index, response);
     });
-    const aggregate = aggregateProgressAssessmentReceipts(f.manifest, f.batches, receipts);
-    expect([...aggregate.summary].length).toBeLessThanOrEqual(8000);
-    expect([...aggregate.remaining].length).toBeLessThanOrEqual(8000);
+    expect(() => aggregateProgressAssessmentReceipts(f.manifest, f.batches, receipts)).toThrow(expect.objectContaining({ recovery: expect.objectContaining({ variables: expect.objectContaining({ reason: 'aggregate-capacity' }) }) }));
 });
 it.each(['null', 'json', 'identity', 'path', 'duplicate', 'empty'])('CommitScope916-C11 rejects %s native evidence before it can admit citations', mode => {
     const f = fixture(1);

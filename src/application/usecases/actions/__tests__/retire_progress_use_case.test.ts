@@ -33,6 +33,17 @@ describe('terminal progress retirement', () => {
     expect(f.stored[0].body).toContain('does not certify');
     expect(result).toMatchObject({ success: true, executed: true, payload: { nativeClosed: true, retiredCards: 1 } });
   });
+  it('retires a scoped batch assessment in place and keeps retirement idempotent', async () => {
+    const scope = 'b'.repeat(64);
+    const scoped = warning.replace(`head:${'a'.repeat(40)}`, `head:${'a'.repeat(40)}:scope:${scope}`);
+    const f = fixture(scoped);
+    const [result] = await f.useCase.invoke(context);
+    expect(result).toMatchObject({ success: true, payload: { retiredCards: 1 } });
+    expect(f.stored[0].body).toContain('historical'); expect(f.stored[0].body).toContain(`> scope:${scope}`);
+    expect(parsePublicationMarker(f.stored[0].body)?.identity).toEqual(parsePublicationMarker(scoped)?.identity);
+    await f.useCase.invoke(context);
+    expect(f.comments.updateComment).toHaveBeenCalledTimes(1);
+  });
   it('uses complete Spanish copy for a closed not-planned issue without claiming completion', async () => {
     const f = fixture(); f.issues.readIssue.mockResolvedValue({ number: 42, state: 'closed', reason: 'not_planned', labels: [] });
     await f.useCase.invoke({ ...context, locale: 'es-ES' });

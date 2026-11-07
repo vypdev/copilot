@@ -46981,8 +46981,8 @@ function progressBatchDisplayScope(batch, compact) {
     return compact ? { ...batch.scope, requirements: batch.scope.requirements.map(requirement => ({ ...requirement,
             quote: requirement.sources.map(source => (source.origin === 'draft' ? 'SDD ' : '') + source.id).join(', ') })) } : batch.scope;
 }
-/** Allocate the unchanged publication field across the complete inventory before querying any batch. */
-function aggregateFactLimit(manifest, compact) {
+/** Reserve every source reference and guide concise prose across the complete inventory. */
+function aggregateFactTarget(manifest, compact) {
     const display = progressBatchDisplayScope({ id: '', ordinal: 0, scope: manifest.scope }, compact);
     const fixed = display.requirements.reduce((sum, requirement) => sum + [...(0, progress_assessment_capacity_policy_1.progressAssessmentPrefix)(requirement)].length, Math.max(0, display.requirements.length - 1));
     const limit = Math.min(progress_assessment_capacity_policy_1.MAX_PROGRESS_FACT_POINTS, Math.floor((progress_assessment_capacity_policy_1.MAX_PROGRESS_ASSESSMENT_POINTS - fixed) / display.requirements.length));
@@ -46992,20 +46992,21 @@ function aggregateFactLimit(manifest, compact) {
 }
 function progressBatchResponseSchema(manifest, batch, anchors, compact) {
     const schema = (0, progress_scope_policy_1.scopedProgressResponseSchema)(progressBatchDisplayScope(batch, compact), anchors);
-    const factLimit = aggregateFactLimit(manifest, compact);
+    const factTarget = aggregateFactTarget(manifest, compact);
+    const description = `Aim for at most ${factTarget} Unicode code points. Each complete publication field has 8000 points shared across all ${manifest.scope.requirements.length} requirements.`;
     return { ...schema, properties: { ...schema.properties,
             manifestDigest: { type: 'string', enum: [manifest.digest] }, batchId: { type: 'string', enum: [batch.id] },
             headSha: { type: 'string', enum: [manifest.headSha] },
             requirements: { ...schema.properties.requirements, items: { ...schema.properties.requirements.items,
                     properties: { ...schema.properties.requirements.items.properties,
-                        summary: { ...schema.properties.requirements.items.properties.summary, maxLength: factLimit },
-                        remaining: { ...schema.properties.requirements.items.properties.remaining, maxLength: factLimit },
+                        summary: { ...schema.properties.requirements.items.properties.summary, description },
+                        remaining: { ...schema.properties.requirements.items.properties.remaining, description },
                         citations: { type: 'array', minItems: 1, maxItems: 8,
                             items: { type: 'string', enum: manifest.evidence.filter(reference => !reference.generated).map(reference => reference.id) } } },
                     required: [...schema.properties.requirements.items.required, 'citations'] } } },
         required: [...schema.required, 'manifestDigest', 'batchId', 'headSha'] };
 }
-function readProgressAssessmentEvidence(response, manifest, batch, locale) {
+function readProgressAssessmentEvidence(response, manifest, batch, locale, anchors, compact) {
     const payload = (0, progress_response_rejection_policy_1.progressResponsePayload)(response, locale, 'assessment');
     const fail = (reason, requirementId = 'none') => { throw (0, progress_batch_rejection_policy_1.progressBatchRejected)(reason, { batch: batch.ordinal, requirementId }); };
     if (!exact(payload, ['outputLocale', 'progress', 'requirements', 'manifestDigest', 'batchId', 'headSha'])
@@ -47018,17 +47019,15 @@ function readProgressAssessmentEvidence(response, manifest, batch, locale) {
         fail('receipt-coverage', missing?.id);
     }
     const citations = [];
+    const factLimit = (0, progress_assessment_capacity_policy_1.progressAssessmentFactLimit)(progressBatchDisplayScope(batch, compact).requirements, anchors);
     const facts = payload.requirements.map(value => {
         if (!record(value) || !exact(value, ['id', 'status', 'evidence', 'summary', 'remaining', 'citations']))
             return fail('receipt-coverage');
         const id = batch.scope.requirements.find(requirement => requirement.id === value.id)?.id;
         if (!id)
             return fail('receipt-coverage');
-        if (manifest.scope.requirements.length > 32) {
-            const limit = aggregateFactLimit(manifest, true);
-            if ([value.summary, value.remaining].some(text => typeof text === 'string' && [...text].length > limit))
-                fail('aggregate-capacity', id);
-        }
+        if (compact && [value.summary, value.remaining].some(text => typeof text === 'string' && [...text].length > factLimit))
+            fail('aggregate-capacity', id);
         if (!Array.isArray(value.citations) || value.citations.length < 1 || value.citations.length > 8
             || new Set(value.citations).size !== value.citations.length)
             return fail('evidence-missing', id);
@@ -47044,7 +47043,7 @@ function readProgressAssessmentEvidence(response, manifest, batch, locale) {
     return { payload: { outputLocale: payload.outputLocale, progress: payload.progress, requirements: facts }, citations };
 }
 function parseProgressAssessmentReceipt(response, manifest, batch, anchors, locale, compact) {
-    const { payload, citations } = readProgressAssessmentEvidence(response, manifest, batch, locale);
+    const { payload, citations } = readProgressAssessmentEvidence(response, manifest, batch, locale, anchors, compact);
     const facts = payload.requirements;
     const result = (0, progress_scope_policy_1.parseScopedProgressResponse)({ outputLocale: payload.outputLocale, progress: payload.progress, requirements: facts }, locale, progressBatchDisplayScope(batch, compact), anchors);
     const indices = batch.scope.requirements.map(requirement => facts.findIndex(fact => fact.id === requirement.id));
@@ -47066,7 +47065,7 @@ function aggregateProgressAssessmentReceipts(manifest, batches, receipts) {
         if (receipt.requirementIds.length !== batch.scope.requirements.length
             || receipt.requirementIds.some((id, index) => id !== batch.scope.requirements[index].id)
             || receipt.citations.length !== receipt.requirementIds.length
-            || receipt.citations.some(citations => !citations.length || citations.some(id => !manifest.evidence.some(reference => reference.id === id && reference.headSha === manifest.headSha)))) {
+            || receipt.citations.some(citations => !citations.length || citations.some(id => !manifest.evidence.some(reference => reference.id === id && reference.headSha === manifest.headSha && !reference.generated)))) {
             throw (0, progress_batch_rejection_policy_1.progressBatchRejected)('receipt-coverage', { batch: batch.ordinal });
         }
         const previous = accepted.get(receipt.batchId);
@@ -50460,7 +50459,7 @@ const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 const archiveStart = '<!-- copilot:progress-archive schema="1" -->';
 const archiveEnd = '<!-- /copilot:progress-archive -->';
 const head = '(?:[a-f0-9]{40}|[a-f0-9]{64})';
-const activeSource = new RegExp(`^head:(${head})$`, 'u');
+const activeSource = new RegExp(`^head:(${head})(?::scope:([a-f0-9]{64}))?$`, 'u');
 const closedSource = new RegExp(`^closed:(?:completed|not_planned|duplicate|unknown):head:(${head})$`, 'u');
 /** Preserve the last assessment as inert history; native closure is a separate fact. */
 function buildRetiredProgressComment(body, locale, reason) {
@@ -50480,6 +50479,8 @@ function buildRetiredProgressComment(body, locale, reason) {
         if (!assessment)
             return undefined;
         archive = (0, github_comment_publication_policy_1.escapeHtml)((0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(assessment, 12000)).split('\n').map(line => `> ${line}`).join('\n');
+        if (active[2])
+            archive = `> scope:${active[2]}\n> \n${archive}`;
     }
     else if (closed) {
         if (body.split(archiveStart).length !== 2 || body.split(archiveEnd).length !== 2 || !body.endsWith(archiveEnd))
@@ -51818,7 +51819,7 @@ function progressIntent(id, payload, locale) {
         return undefined;
     const progress = Math.max(0, Math.min(100, Math.round(payload.progress)));
     const scopeDigest = typeof payload.scopeManifestDigest === 'string' && /^[a-f0-9]{64}$/u.test(payload.scopeManifestDigest) ? payload.scopeManifestDigest : undefined;
-    if (payload.scopeManifestDigest !== undefined && !scopeDigest)
+    if (payload.scopeManifestDigest !== undefined && (!scopeDigest || sourceHeadSha.length !== 40))
         return undefined;
     const projection = Object.freeze({
         kind: 'progress',
@@ -61191,7 +61192,7 @@ async function analyzeProgressBatches(context, issueDescription, captured, diff,
         + 'A citation is its exact unitId in the complete comparison facts, or its exact path when no unitId is supplied. A SHA echo alone is insufficient. '
         + 'Every outcome requires a non-generated source observation. Missing or uncertain outcomes require a traceable source observation supporting that outcome. '
         + 'Do not infer contents of unprovided unchanged files or external verification. Preserve uncertainty and all qualifiers. Return no partial inventory. '
-        + `Use one short factual phrase per summary and remaining string. Each string has a hard limit of ${schema.properties.requirements.items.properties.summary.maxLength} Unicode code points, counting spaces and punctuation. Keep the complete requirement inventory and source citations.`;
+        + `Use one short factual phrase per summary and remaining string. Each string has a hard limit of ${schema.properties.requirements.items.properties.summary.maxLength} Unicode code points, counting spaces and punctuation. ${schema.properties.requirements.items.properties.summary.description} Keep the complete requirement inventory and source citations.`;
     const groups = Buffer.byteLength(acceptanceScope, 'utf8') <= progress_scope_policy_1.MAX_PROGRESS_SCOPE_BYTES
         ? [{ acceptanceScope, batches }]
         : batches.map(batch => ({ acceptanceScope: scopeData(batch.scope), batches: [batch] }));
@@ -61218,7 +61219,7 @@ async function analyzeProgressBatches(context, issueDescription, captured, diff,
             let acceptedResponse;
             const receiptAgent = { query: async (request) => {
                     const response = await boundedAgent.query(request);
-                    const { payload } = (0, progress_batch_policy_1.readProgressAssessmentEvidence)(response, manifest, batch, context.targetLocale);
+                    const { payload } = (0, progress_batch_policy_1.readProgressAssessmentEvidence)(response, manifest, batch, context.targetLocale, anchors, compact);
                     acceptedResponse = response;
                     return payload;
                 } };

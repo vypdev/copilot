@@ -53,6 +53,8 @@ describe('Codex native output schema compatibility', () => {
     it.each([15_000, 15_001])('projects a long enum only above the native Unicode boundary of %i points', points => {
         const values = Array.from({ length: 251 }, (_, index) => String(index).padStart(59, 'x'));
         values[0] += '🧪'.repeat(points - 251 * 59);
+        expect(values.reduce((total, value) => total + [...value].length, 0)).toBe(points);
+        expect(values.reduce((total, value) => total + value.length, 0)).toBeGreaterThan(points);
         const value = { type: 'string', enum: values };
         const schema = object({ value, identity: { type: 'string', enum: ['host-id'] } });
         expect(projectCodexOutputSchema(schema)).toEqual(object({ value: points === 15_000 ? schema.properties.value : { type: 'string' }, identity: schema.properties.identity }));

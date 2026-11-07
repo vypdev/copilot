@@ -409,10 +409,13 @@ fixture's 50 percent response exercises the protocol. It does not establish
 consumer implementation progress. Historical rejection and candidate results
 remain distinct evidence on the implementation PR.
 
-The host allocates each batch's fact length against the complete 8,000-point
-publication field before assessment requests. Valid bounded batch facts therefore
-share one aggregate publication budget. Each assessment prompt states the resolved
-per-field Unicode limit in its final receipt instructions. Incomplete estimates
+Each receipt retains the existing per-assessment fact and 8,000-point field
+envelopes. The host reserves all original source references and minimum facts
+before requests and supplies a preferred per-requirement text target. Individual
+facts may vary within their assessment envelope. The reducer checks the actual
+complete summary and remaining projections against 8,000 Unicode points each.
+An oversized aggregate retains previous progress. Each assessment prompt states
+its hard per-fact limit and the shared aggregate target. Incomplete estimates
 retain their card value and use percentage labels capped at 95 percent, preserving the completion
 invariant across the issue and PR label adapters.
 
@@ -450,4 +453,5 @@ non-generated evidence IDs. The complete comparison and host manifest retain
 generated metadata as supplemental context. A comparison containing exclusively
 generated metadata has no admissible primary citation and retains previous
 progress before an assessment request. The host also rejects forged generated
-citations from an alternate query port.
+citations from an alternate query port and repeats that check during aggregate
+publication eligibility, including receipts with recomputed digests.

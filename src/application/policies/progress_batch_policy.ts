@@ -10,7 +10,7 @@ import { scopedProgressResponseSchema, parseScopedProgressResponse, progressScop
 import { progressResponsePayload } from './progress_response_rejection_policy';
 import { validateFramedProgressEvidence } from './progress_evidence_protocol_policy';
 import { isProgressEvidencePath } from '../../domain/progress_evidence_path';
-import { MAX_PROGRESS_ASSESSMENT_POINTS, MAX_PROGRESS_FACT_POINTS, progressAssessmentPrefix } from './progress_assessment_capacity_policy';
+import { MAX_PROGRESS_ASSESSMENT_POINTS, MAX_PROGRESS_FACT_POINTS, progressAssessmentFactLimit, progressAssessmentPrefix } from './progress_assessment_capacity_policy';
 
 export const PROGRESS_BATCH_PROFILE = Object.freeze({ sourceLines: 32, clauses: 256, bytes: 262_144,
     assessmentClauses: 32, calls: 120, milliseconds: 1_800_000 });
@@ -127,8 +127,8 @@ export function progressBatchDisplayScope(batch: ProgressAssessmentBatch, compac
     return compact ? { ...batch.scope, requirements: batch.scope.requirements.map(requirement => ({ ...requirement,
         quote: requirement.sources!.map(source => (source.origin === 'draft' ? 'SDD ' : '') + source.id).join(', ') })) } : batch.scope;
 }
-/** Allocate the unchanged publication field across the complete inventory before querying any batch. */
-function aggregateFactLimit(manifest: ProgressScopeManifest, compact: boolean): number {
+/** Reserve every source reference and guide concise prose across the complete inventory. */
+function aggregateFactTarget(manifest: ProgressScopeManifest, compact: boolean): number {
     const display = progressBatchDisplayScope({ id: '', ordinal: 0, scope: manifest.scope }, compact);
     const fixed = display.requirements.reduce((sum, requirement) => sum + [...progressAssessmentPrefix(requirement)].length,
         Math.max(0, display.requirements.length - 1));
@@ -138,14 +138,15 @@ function aggregateFactLimit(manifest: ProgressScopeManifest, compact: boolean): 
 }
 export function progressBatchResponseSchema(manifest: ProgressScopeManifest, batch: ProgressAssessmentBatch, anchors: ProgressScopeAnchors, compact: boolean) {
     const schema = scopedProgressResponseSchema(progressBatchDisplayScope(batch, compact), anchors);
-    const factLimit = aggregateFactLimit(manifest, compact);
+    const factTarget = aggregateFactTarget(manifest, compact);
+    const description = `Aim for at most ${factTarget} Unicode code points. Each complete publication field has 8000 points shared across all ${manifest.scope.requirements.length} requirements.`;
     return { ...schema, properties: { ...schema.properties,
         manifestDigest: { type: 'string', enum: [manifest.digest] }, batchId: { type: 'string', enum: [batch.id] },
         headSha: { type: 'string', enum: [manifest.headSha] },
         requirements: { ...schema.properties.requirements, items: { ...schema.properties.requirements.items,
             properties: { ...schema.properties.requirements.items.properties,
-                summary: { ...schema.properties.requirements.items.properties.summary, maxLength: factLimit },
-                remaining: { ...schema.properties.requirements.items.properties.remaining, maxLength: factLimit },
+                summary: { ...schema.properties.requirements.items.properties.summary, description },
+                remaining: { ...schema.properties.requirements.items.properties.remaining, description },
                 citations: { type: 'array', minItems: 1, maxItems: 8,
                     items: { type: 'string', enum: manifest.evidence.filter(reference => !reference.generated).map(reference => reference.id) } } },
             required: [...schema.properties.requirements.items.required, 'citations'] } } },
@@ -160,7 +161,8 @@ export interface ProgressAssessmentReceipt {
     readonly result: ReturnType<typeof parseScopedProgressResponse>;
     readonly digest: string;
 }
-export function readProgressAssessmentEvidence(response: unknown, manifest: ProgressScopeManifest, batch: ProgressAssessmentBatch, locale: string) {
+export function readProgressAssessmentEvidence(response: unknown, manifest: ProgressScopeManifest, batch: ProgressAssessmentBatch, locale: string,
+    anchors: ProgressScopeAnchors, compact: boolean) {
     const payload = progressResponsePayload(response, locale, 'assessment');
     const fail = (reason: ProgressBatchReason, requirementId = 'none'): never => { throw progressBatchRejected(reason, { batch: batch.ordinal, requirementId }); };
     if (!exact(payload, ['outputLocale', 'progress', 'requirements', 'manifestDigest', 'batchId', 'headSha'])
@@ -171,14 +173,12 @@ export function readProgressAssessmentEvidence(response: unknown, manifest: Prog
         fail('receipt-coverage', missing?.id);
     }
     const citations: (readonly string[])[] = [];
+    const factLimit = progressAssessmentFactLimit(progressBatchDisplayScope(batch, compact).requirements, anchors);
     const facts = (payload.requirements as unknown[]).map(value => {
         if (!record(value) || !exact(value, ['id', 'status', 'evidence', 'summary', 'remaining', 'citations'])) return fail('receipt-coverage');
         const id = batch.scope.requirements.find(requirement => requirement.id === value.id)?.id;
         if (!id) return fail('receipt-coverage');
-        if (manifest.scope.requirements.length > 32) {
-            const limit = aggregateFactLimit(manifest, true);
-            if ([value.summary, value.remaining].some(text => typeof text === 'string' && [...text].length > limit)) fail('aggregate-capacity', id);
-        }
+        if (compact && [value.summary, value.remaining].some(text => typeof text === 'string' && [...text].length > factLimit)) fail('aggregate-capacity', id);
         if (!Array.isArray(value.citations) || value.citations.length < 1 || value.citations.length > 8
             || new Set(value.citations).size !== value.citations.length) return fail('evidence-missing', id);
         for (const citation of value.citations) {
@@ -193,7 +193,7 @@ export function readProgressAssessmentEvidence(response: unknown, manifest: Prog
 }
 export function parseProgressAssessmentReceipt(response: unknown, manifest: ProgressScopeManifest, batch: ProgressAssessmentBatch,
     anchors: ProgressScopeAnchors, locale: string, compact: boolean): ProgressAssessmentReceipt {
-    const { payload, citations } = readProgressAssessmentEvidence(response, manifest, batch, locale);
+    const { payload, citations } = readProgressAssessmentEvidence(response, manifest, batch, locale, anchors, compact);
     const facts = payload.requirements;
     const result = parseScopedProgressResponse({ outputLocale: payload.outputLocale, progress: payload.progress, requirements: facts }, locale, progressBatchDisplayScope(batch, compact), anchors);
     const indices = batch.scope.requirements.map(requirement => facts.findIndex(fact => fact.id === requirement.id));
@@ -213,7 +213,7 @@ export function aggregateProgressAssessmentReceipts(manifest: ProgressScopeManif
         if (receipt.requirementIds.length !== batch.scope.requirements.length
             || receipt.requirementIds.some((id, index) => id !== batch.scope.requirements[index].id)
             || receipt.citations.length !== receipt.requirementIds.length
-            || receipt.citations.some(citations => !citations.length || citations.some(id => !manifest.evidence.some(reference => reference.id === id && reference.headSha === manifest.headSha)))) {
+            || receipt.citations.some(citations => !citations.length || citations.some(id => !manifest.evidence.some(reference => reference.id === id && reference.headSha === manifest.headSha && !reference.generated)))) {
             throw progressBatchRejected('receipt-coverage', { batch: batch.ordinal });
         }
         const previous = accepted.get(receipt.batchId);

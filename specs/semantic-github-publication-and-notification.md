@@ -1553,7 +1553,16 @@ active progress. A denied or raced read leaves the prior card unchanged.
 
 `retired_progress_presentation_policy` recognizes an exact current progress
 marker/head (40- or 64-character Git object ID) or its own terminal archive.
-It renders deterministic English/Spanish copy and inert quoted historical text.
+The scoped active marker `head:<40-character-sha>:scope:<64-character-digest>`
+introduced by #916 also retires through this owner. The historical archive retains the complete
+scope digest as an inert quoted technical reference. The existing terminal marker
+retains the evaluated head within the shared 128-character identity envelope.
+Replay and native reason/locale changes preserve that scope reference once.
+Reopening with a fresh scoped assessment updates the same card. Six additional
+deterministic cases cover the four native reasons, the real retirement use case
+and the normal publication route after reopening. Six publication identity cases
+cover legacy heads, scoped identity and malformed or over-envelope combinations.
+Retirement renders deterministic English/Spanish copy and inert quoted historical text.
 Mentions, slash commands, workflow controls, HTML and secret-like content remain
 neutralized. Other valid locales use complete English fallback; retirement
 never starts a localization/model request. This static cleanup is distinct from

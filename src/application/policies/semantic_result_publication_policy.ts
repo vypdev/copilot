@@ -563,7 +563,7 @@ function progressIntent(id: string, payload: Record<string, unknown>, locale: st
         || !branch) return undefined;
     const progress = Math.max(0, Math.min(100, Math.round(payload.progress)));
     const scopeDigest = typeof payload.scopeManifestDigest === 'string' && /^[a-f0-9]{64}$/u.test(payload.scopeManifestDigest) ? payload.scopeManifestDigest : undefined;
-    if (payload.scopeManifestDigest !== undefined && !scopeDigest) return undefined;
+    if (payload.scopeManifestDigest !== undefined && (!scopeDigest || sourceHeadSha.length !== 40)) return undefined;
     const projection = Object.freeze<ProgressPublicationProjection>({
         kind: 'progress',
         progress,
