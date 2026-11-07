@@ -411,8 +411,9 @@ remain distinct evidence on the implementation PR.
 
 The host allocates each batch's fact length against the complete 8,000-point
 publication field before assessment requests. Valid bounded batch facts therefore
-share one aggregate publication budget. Incomplete estimates retain their card
-value and use percentage labels capped at 95 percent, preserving the completion
+share one aggregate publication budget. Each assessment prompt states the resolved
+per-field Unicode limit in its final receipt instructions. Incomplete estimates
+retain their card value and use percentage labels capped at 95 percent, preserving the completion
 invariant across the issue and PR label adapters.
 
 Classification receipts bind their assigned span IDs to a source snapshot digest,

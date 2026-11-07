@@ -75,18 +75,22 @@ export async function analyzeProgressBatches(context: ProgressContext, issueDesc
     const batches = planProgressAssessmentBatches(manifest);
     const compact = batches.length > 1;
     const acceptanceScope = scopeData(scope);
-    const promptFor = (batch: typeof batches[number], diffEvidence: string) => getCheckProgressPrompt({ ...parameters,
+    const promptFor = (batch: typeof batches[number], diffEvidence: string, schema: ReturnType<typeof progressBatchResponseSchema>) => getCheckProgressPrompt({ ...parameters,
         acceptanceScope: scopeData(batch.scope), diffEvidence }) + '\n\nSame-head assessment receipt contract\n' + renderProgressPromptData(JSON.stringify({ manifestDigest: manifest.digest,
         batchId: batch.id, headSha: manifest.headSha, evidenceDictionary: manifest.evidence.map(reference => reference.id) }), 'progress.comparison', 262_144, 'assessment')
         + '\nReturn these exact manifestDigest, batchId and headSha fields. Each requirement must cite one to eight exact evidenceDictionary IDs in citations. '
         + 'A citation is its exact unitId in the complete comparison facts, or its exact path when no unitId is supplied. A SHA echo alone is insufficient. '
         + 'Every outcome requires a non-generated source observation. Missing or uncertain outcomes require a traceable source observation supporting that outcome. '
-        + 'Do not infer contents of unprovided unchanged files or external verification. Preserve uncertainty and all qualifiers. Return no partial inventory.';
+        + 'Do not infer contents of unprovided unchanged files or external verification. Preserve uncertainty and all qualifiers. Return no partial inventory. '
+        + `Use one short factual phrase per summary and remaining string. Each string has a hard limit of ${schema.properties.requirements.items.properties.summary.maxLength} Unicode code points, counting spaces and punctuation. Keep the complete requirement inventory and source citations.`;
     const groups = Buffer.byteLength(acceptanceScope, 'utf8') <= MAX_PROGRESS_SCOPE_BYTES
         ? [{ acceptanceScope, batches }]
         : batches.map(batch => ({ acceptanceScope: scopeData(batch.scope), batches: [batch] }));
     const plans = capacity(() => groups.map(group => {
-        const planned = group.batches.map(batch => ({ batch, schema: progressBatchResponseSchema(manifest, batch, anchors, compact), prompt: promptFor(batch, '') }));
+        const planned = group.batches.map(batch => {
+            const schema = progressBatchResponseSchema(manifest, batch, anchors, compact);
+            return { batch, schema, prompt: promptFor(batch, '', schema) };
+        });
         const budget = Math.min(...planned.map(({ prompt, schema }) => progressAggregateBudget(prompt, schema, context.agentConfiguration.effort)));
         const boundDiff = bindProgressEvidence(diff, issueDescription, group.acceptanceScope, context.targetLocale);
         planProgressDiffPrompts(boundDiff, context, issueDescription, budget, group.acceptanceScope);
@@ -98,7 +102,7 @@ export async function analyzeProgressBatches(context: ProgressContext, issueDesc
     for (const [index, plan] of plans.entries()) {
         logInfo(`Collecting complete comparison evidence for scope group ${index + 1} of ${plans.length}; verified ${receipts.length} of ${batches.length} acceptance batches. Previous progress is retained.`);
         const evidence = await summarizeProgressDiff(plan.boundDiff, context, issueDescription, boundedAgent, plan.budget, plan.acceptanceScope);
-        const requests = plan.planned.map(({ batch, schema }) => ({ batch, schema, prompt: promptFor(batch, evidence) }));
+        const requests = plan.planned.map(({ batch, schema }) => ({ batch, schema, prompt: promptFor(batch, evidence, schema) }));
         capacity(() => requests.forEach(({ prompt, schema }) => remainingProgressAssessmentPromptBytes(prompt, schema, context.agentConfiguration.effort)));
         for (const { batch, schema, prompt } of requests) {
             let acceptedResponse: unknown;

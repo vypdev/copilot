@@ -45,6 +45,7 @@ function scenario(body = Array.from({ length: 33 }, (_, index) => `Implement uni
                     : properties.path.enum.map((path: string) => ({ path, implemented: 'Present.', remaining: 'Unknown.' })) };
         }
         const properties = schema.properties.requirements.items.properties;
+        expect(request.prompt).toContain(`Each string has a hard limit of ${properties.summary.maxLength} Unicode code points, counting spaces and punctuation.`);
         const response = { outputLocale: 'en-US', progress: 50, manifestDigest: schema.properties.manifestDigest.enum[0],
             batchId: schema.properties.batchId.enum[0], headSha: schema.properties.headSha.enum[0], requirements: properties.id.enum.map((id: string) => ({ id,
                 status: 'verification-unknown', evidence: 'external-unverified', summary: 'Source reviewed.', remaining: 'Execution unverified.', citations: [properties.citations.items.enum[0]] })) };

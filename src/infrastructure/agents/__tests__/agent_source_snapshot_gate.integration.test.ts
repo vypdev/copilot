@@ -31,7 +31,7 @@ it.each([
     const cli = new AgentCliClient({ prepare(request) {
         const native = f.planner().prepare({ ...request, cwd: f.root }); admitted.push(native);
         const response = responses.shift(); if (!response) throw new Error('Unexpected extra model call');
-        const script = `const fs=require('node:fs'); if(fs.readFileSync('.git/HEAD','utf8').trim()!==${JSON.stringify(f.selected)} || fs.readFileSync('specs/payments.md','utf8')!==${JSON.stringify(f.files['specs/payments.md'].toString())})process.exit(8); else process.stdout.write(${JSON.stringify(JSON.stringify(response))});`;
+        const script = `const fs=require('node:fs'); process.stdin.resume(); process.stdin.on('end',()=>{if(fs.readFileSync('.git/HEAD','utf8').trim()!==${JSON.stringify(f.selected)} || fs.readFileSync('specs/payments.md','utf8')!==${JSON.stringify(f.files['specs/payments.md'].toString())})process.exit(8); else process.stdout.write(${JSON.stringify(JSON.stringify(response))});});`;
         return { ...native, executable: process.execPath, launcherArgv: [], argv: ['-e', script], promptMode: 'stdin', outputProtocol: 'plain-text' };
     } }, { observe: fact => { observations.push(fact); } });
     const comments: { id: number; body: string; user: { login: string } }[] = [];
