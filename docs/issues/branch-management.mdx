@@ -286,8 +286,16 @@ recovery. Issue-body/open-state, native owning PR/target, base and head checks
 still run before publication. Publication failures retain their actual completed
 effects and error classification; writes are never automatically replayed.
 
+Commit can reconcile a maintainer SDD seed after the Action verifies its
+selection and publication on the linked branch. Repeated scope shares the
+verified requirement's identity. Draft-only requirements remain mandatory, and
+the assessment retains the original lines and linked case scenarios. When the
+selection, publication or assessed revision cannot be verified, Commit retains
+existing progress and reports `progress-sdd-seed-unverified`. Confirm the draft
+and publication before rerunning Commit.
+
 `progress-scope-clause-limit` reports a completely validated human classification
-that selected more than 32 required/uncertain lines or more than 32 exclusions.
+that selected more than 32 distinct required/uncertain clauses or more than 32 exclusions.
 Its closed facts give the exact selected count, fixed limit, clause kind and
 first crossing physical source line. Generated state cannot consume that budget.
 A fresh valid classification may help; genuine over-limit human scope still

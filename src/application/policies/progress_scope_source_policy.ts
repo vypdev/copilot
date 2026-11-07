@@ -1,13 +1,20 @@
+import type { ProgressSddPublication } from '../ports/progress_sdd_seed_ports';
 import { CONFIGURATION_SCHEMA_VERSION, readConfigurationBlock } from '../../domain/configuration_markers';
 import { ApplicationError } from '../errors/application_error';
 import { progressEvidenceTooLarge } from './progress_diff_partition_policy';
 import { progressResponseRejected } from './progress_response_rejection_policy';
 
-export interface ProgressScopeSourceLine { readonly id: string; readonly quote: string }
+export interface ProgressScopeSourceLine { readonly id: string; readonly quote: string; readonly origin?: 'issue' | 'draft' }
+export interface ProgressSddScopeSource {
+    readonly publication: ProgressSddPublication;
+    readonly required: ReadonlySet<string>;
+    readonly evidence: ReadonlyMap<string, readonly ProgressScopeSourceLine[]>;
+}
 export interface ProgressScopeSource {
     readonly lines: readonly ProgressScopeSourceLine[];
     readonly totalLines: number;
     readonly operationalLines: number;
+    readonly draft?: ProgressSddScopeSource;
 }
 
 /** Bound and account for every original line before selecting human-owned scope. */

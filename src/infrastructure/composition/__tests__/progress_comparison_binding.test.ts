@@ -1,3 +1,5 @@
+import { BugbotIssueCommentQueryRepository } from '../../../data/repository/issue/bugbot_issue_comment_query_repository';
+
 import * as github from '@actions/github';
 import { CheckProgressUseCase } from '../../../application/usecases/actions/check_progress_use_case';
 import { createCheckProgressCompositionRoot } from '../check_progress_composition_root';
@@ -52,4 +54,21 @@ it('binds rollout recovery to the exact issue and removes only stale 100% from o
     await fence!.removeFullProgressLabel(42);
     expect(mockRemoveLabel).toHaveBeenCalledTimes(1);
     expect(mockRemoveLabel).toHaveBeenCalledWith(42, '100%');
+});
+
+it('binds the SDD selection inventory to the same repository and credential', async () => {
+    const list = jest.spyOn(BugbotIssueCommentQueryRepository.prototype, 'listBugbotIssueCommentsBounded')
+        .mockResolvedValueOnce({ items: [], coverage: { source: 'issue-comments', status: 'partial', pagesFetched: 1,
+            itemsFetched: 0, itemsRetained: 0, omittedItems: 1, truncatedItems: 0, limitReached: true } });
+    try {
+        const binding = { owner: 'tenant', repository: 'project', token: 'fixture-private-token' };
+        createCheckProgressCompositionRoot(binding);
+        const query = jest.mocked(CheckProgressUseCase).mock.lastCall?.[10];
+        await expect(query!({ issueNumber: 42, issueBody: 'Issue', issueKind: 'feature', trustedBotLogin: 'bot',
+            branch: 'feature/42-change', headSha: 'a'.repeat(40), seed: 'draft', seedHash: 'b'.repeat(64) }))
+            .rejects.toMatchObject({ recovery: { id: 'progress-sdd-seed-unverified', variables: {} } });
+        expect(list).toHaveBeenCalledWith('tenant', 'project', 42, 'fixture-private-token');
+    } finally {
+        list.mockRestore();
+    }
 });

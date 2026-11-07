@@ -259,6 +259,11 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     action: 'Inspect the original issue and the supported assessment protocol. The unchanged 8,000-code-point field limit must include every citation and a nonempty fact. Details: phase {phase}, reason {reason}, field {field}, requirement {requirementId}, original issue line {sourceLineId}. none means no verified identity is available. An identical retry cannot add capacity; preserve every requirement and verification gate when reviewing a supported protocol.',
     retainedState: 'Existing progress labels and published assessments were preserved. No partial result or passing verification is authorized.',
   }),
+  'progress-sdd-seed-unverified': Object.freeze({
+    impact: 'Commit could not verify the selected SDD draft for this issue and head.',
+    action: 'Check the draft markers and confirm the current selection and verified SDD publication on the linked branch, then rerun Commit.',
+    retainedState: 'Existing progress was retained.',
+  }),
   'progress-scope-clause-limit': Object.freeze({
     impact: 'The complete human scope classification selected {observed} {clauseKind} lines; the supported limit is {limit}. Progress was not published.',
     action: 'Inspect the original human scope and classifier result at source {sourceLineId}, phase scope. A fresh valid classification may help; do not remove requirements, promote generated state or raise limits to pass. Genuine over-limit human scope requires a reviewed supported protocol.',
@@ -466,6 +471,11 @@ const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     impact: 'Las citas originales de los requisitos no caben en una evaluación de progreso completa; no se consultó evidencia ni evaluación después de clasificar el alcance.',
     action: 'Inspecciona la issue original y el protocolo de evaluación admitido. El límite fijo de 8,000 puntos de código por campo debe incluir cada cita y un dato no vacío. Detalles: fase {phase}, motivo {reason}, campo {field}, requisito {requirementId}, línea original de la issue {sourceLineId}. none indica que no hay una identidad verificada. Repetir el intento no añade capacidad; conserva todos los requisitos y controles de verificación al revisar un protocolo compatible.',
     retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas. No se autoriza un resultado parcial ni una verificación aprobada.',
+  }),
+  'progress-sdd-seed-unverified': Object.freeze({
+    impact: 'Commit no pudo verificar el borrador de SDD seleccionado para esta issue y revisión.',
+    action: 'Comprueba los marcadores del borrador y confirma la selección y la publicación verificada del SDD en la rama vinculada. Después, vuelve a ejecutar Commit.',
+    retainedState: 'Se conservó el progreso anterior.',
   }),
   'progress-scope-clause-limit': Object.freeze({
     impact: 'La clasificación completa del alcance humano seleccionó {observed} líneas de tipo {clauseKind}; el límite admitido es {limit}. No se publicó el progreso.',

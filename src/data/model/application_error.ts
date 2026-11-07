@@ -99,6 +99,7 @@ export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'progress-partition-length-invalid',
     'progress-assessment-capacity-exceeded',
     'progress-scope-clause-limit',
+    'progress-sdd-seed-unverified',
     'progress-completion-recovery-exhausted',
     'stored-configuration-schema-missing',
     'stored-configuration-schema-unsupported',
@@ -125,6 +126,7 @@ interface ApplicationErrorRecoveryVariables extends Readonly<Record<CopilotComma
     readonly 'progress-result-contract-invalid': ProgressResponseDiagnosticFacts;
     readonly 'progress-partition-length-invalid': ProgressPartitionLengthDiagnostic;
     readonly 'progress-assessment-capacity-exceeded': ProgressResponseDiagnosticFacts;
+    readonly 'progress-sdd-seed-unverified': Readonly<Record<string, never>>;
     readonly 'progress-scope-clause-limit': ProgressScopeCapacityFacts;
     readonly 'progress-completion-recovery-exhausted': ProgressCompletionDiagnostic;
 
@@ -465,6 +467,7 @@ const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readon
     'progress-result-contract-invalid': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
     'progress-partition-length-invalid': Object.freeze(['partitionId', 'filePath', 'unitId', 'field', 'maximum', 'observed']),
     'progress-assessment-capacity-exceeded': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
+    'progress-sdd-seed-unverified': Object.freeze([]),
     'progress-scope-clause-limit': Object.freeze(['clauseKind', 'observed', 'limit', 'sourceLineId']),
     'progress-completion-recovery-exhausted': Object.freeze(['reportedProgress', 'requirementCount', 'supportedCount', 'missingCount', 'unknownCount']),
     'deployment-publication-context-missing': Object.freeze([]),

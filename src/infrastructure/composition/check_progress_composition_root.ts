@@ -1,3 +1,8 @@
+import { createProgressSddSeedQuery } from '../../application/usecases/sdd/read_progress_sdd_seed';
+import { BugbotIssueCommentQueryRepository } from '../../data/repository/issue/bugbot_issue_comment_query_repository';
+import { PreBranchSddWorkspaceAdapter } from '../pre_branch_sdd_workspace_adapter';
+import { createGraphqlTransportClient } from './github_project_client_factory';
+import { createSddEvidenceReadPorts } from './sdd_evidence_composition_root';
 import { ProgressComparisonSourceRepository } from '../../data/repository/progress_comparison_source_repository';
 import { bindNativeStatusRead, createIssueCompletionRepository } from './issue_completion_composition_root';
 import { ProgressDiffRepository } from '../../data/repository/progress_diff_repository';
@@ -24,6 +29,15 @@ export function createCheckProgressCompositionRoot(binding: RepositoryCredential
     const diff = new ProgressDiffRepository(createBranchComparisonClient(), createProgressObjectClient());
     const issueCompletion = createIssueCompletionRepository(binding);
     const comparisonSource = new ProgressComparisonSourceRepository(createProgressComparisonClient());
+    const comments = new BugbotIssueCommentQueryRepository(createGraphqlTransportClient());
+    const workspace = new PreBranchSddWorkspaceAdapter(process.cwd(), binding.token);
+    const sddReads = createSddEvidenceReadPorts(binding, {
+        async listIssueComments(issueNumber) {
+            const result = await comments.listBugbotIssueCommentsBounded(binding.owner, binding.repository, issueNumber, binding.token);
+            return { value: result.items, coverage: result.coverage };
+        },
+    }, workspace);
+    const repositoryUrl = new URL(`/${binding.owner}/${binding.repository}`, process.env.GITHUB_SERVER_URL ?? 'https://github.com').href;
     return new CheckProgressUseCase(
         bindIssueDescriptionQuery(content, binding),
         bindIssueLabels(labels, binding),
@@ -47,5 +61,6 @@ export function createCheckProgressCompositionRoot(binding: RepositoryCredential
                 }
             },
         }),
+        createProgressSddSeedQuery({ ...sddReads, workspace }, repositoryUrl),
     );
 }

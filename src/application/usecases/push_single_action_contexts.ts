@@ -25,6 +25,8 @@ export interface DeploymentPublicationContext {
 
 export interface ProgressContext {
   readonly issueNumber: number;
+  readonly issueKind?: string;
+  readonly profileDigest?: string;
   readonly pushedBranch: string;
   readonly developmentBranch: string;
   readonly branchTypes: readonly string[];
@@ -144,6 +146,8 @@ export type IssueCommentActionContext =
     };
 
 export interface PushSingleActionContextSource {
+  readonly issueWorkflowKind?: string;
+  readonly issueWorkflowProfileDigest?: string;
   readonly isPullRequest?: boolean;
   readonly owner: string;
   readonly repo: string;
@@ -281,6 +285,8 @@ export function projectProgressContext(source: PushSingleActionContextSource): P
   const sourceHeadSha = canonicalGitObjectId(source.inputs?.after);
   return Object.freeze({
     issueNumber: source.issueNumber,
+    ...(source.issueWorkflowKind ? { issueKind: source.issueWorkflowKind } : {}),
+    ...(source.issueWorkflowProfileDigest ? { profileDigest: source.issueWorkflowProfileDigest } : {}),
     pushedBranch: source.commit.branch,
     developmentBranch: source.branches.development || 'develop',
     branchTypes: Object.freeze([

@@ -1,3 +1,4 @@
+import { expectsPublishedProgressSeed } from '../sdd/read_progress_sdd_seed';
 import { selectProgressComparisonSource, sameProgressComparisonSource } from '../../policies/progress_comparison_source_policy';
 import type { ProgressComparisonSource } from '../../ports/progress_comparison_source_ports';
 import { Result } from '../../../data/model/result';
@@ -40,12 +41,17 @@ export async function runCheckProgressWorkflow(
         if (param.issueNumber > 0 && await dependencies.publicationSourceQuery.isIssueOpen(param.issueNumber) !== true) {
             throw new ApplicationError('workflow.stale', 'Progress analysis requires a verified open issue. Existing state retained.');
         }
-        const rolloutPending = async (issueNumber: number) => param.trustedBotLogin && dependencies.rolloutFence
-            && hasActiveStagedRolloutCard(await dependencies.rolloutFence.listIssueComments(issueNumber), issueNumber, param.trustedBotLogin);
+        const bot = param.trustedBotLogin;
+        const readComments = async (issueNumber: number) => bot && dependencies.rolloutFence
+            ? dependencies.rolloutFence.listIssueComments(issueNumber) : [];
+        const rolloutPending = async (issueNumber: number) => bot
+            && hasActiveStagedRolloutCard(await readComments(issueNumber), issueNumber, bot);
         const skipped = () => [new Result({ id: taskId, success: true, executed: false,
             steps: ['Progress estimation deferred while the original issue tracks staged rollout.'] })];
-        if (param.issueNumber > 0 && await rolloutPending(param.issueNumber)) return skipped();
-        const analysis = await analyzeProgress(param, taskId, dependencies);
+        const initialComments = param.issueNumber > 0 ? await readComments(param.issueNumber) : [];
+        if (bot && hasActiveStagedRolloutCard(initialComments, param.issueNumber, bot)) return skipped();
+        const publishedSeedExpected = Boolean(bot && expectsPublishedProgressSeed(initialComments, param.issueNumber, bot));
+        const analysis = await analyzeProgress(param, taskId, dependencies, publishedSeedExpected);
         if (analysis.kind === 'failure') return [analysis.result];
         if (analysis.kind === 'stale-source') {
             logInfo(`Progress analysis omitted: ${analysis.branch} no longer points at the event source.`);
@@ -60,6 +66,7 @@ export async function runCheckProgressWorkflow(
         if (await dependencies.issueDescriptionQueryPort.getDescription(issueNumber) !== issueDescription) {
             throw new ApplicationError('workflow.stale', 'Issue acceptance scope changed during progress assessment. Existing progress was retained.');
         }
+        await analysis.verifyScopePublication?.();
         const currentSource = selectProgressComparisonSource(
             await dependencies.progressComparisonSourceQuery.getSource(branch), developmentBranch, branch, sourceHeadSha);
         if (!sameProgressComparisonSource(comparisonSource, currentSource)
