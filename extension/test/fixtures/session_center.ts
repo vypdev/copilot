@@ -19,10 +19,10 @@ export async function sessionCenterFixture(locale: CenterLocale = 'en', active =
     native.port.send.mockImplementation(async input => ({ ...await f.call(structuredClone(input)) as object, sourceTree: native.port.sourceTree }));
     app = await render('connections', false, undefined, true, native, locale);
     const copy = connectionCopy(locale); const op = operationCopy(locale); const center = centerCopy('auto', locale); const session = sessionCopy(locale);
-    await ready(() => !!document.querySelector('#connection-name') && !button(copy.connect).disabled);
+    await ready(() => !!document.querySelector('#connection-name') && !button(copy.connect).matches(':disabled'));
     return { ...f, app, copy, op, center, session, bridge,
         fill: (name = 'Work') => { change('connection-name', name); change('connection-repository', CONNECTION_INPUT.repository); change('connection-secret', CONNECTION_INPUT.secret); },
-        connect: async (name = 'Work') => { change('connection-name', name); change('connection-repository', CONNECTION_INPUT.repository); change('connection-secret', CONNECTION_INPUT.secret); button(copy.connect).click(); await ready(() => document.querySelector('[data-current-operation] [data-session-effects]')?.textContent?.includes(session.results.ready) === true && !button(copy.connect).disabled
+        connect: async (name = 'Work') => { change('connection-name', name); change('connection-repository', CONNECTION_INPUT.repository); change('connection-secret', CONNECTION_INPUT.secret); button(copy.connect).click(); await ready(() => document.querySelector('[data-current-operation] [data-session-effects]')?.textContent?.includes(session.results.ready) === true && !button(copy.connect).matches(':disabled')
             && document.querySelector<HTMLInputElement>('#connection-name')?.value === ''); } };
 }
 export const sessionOperationText = () => document.querySelector('[data-current-operation]')?.textContent ?? '';
