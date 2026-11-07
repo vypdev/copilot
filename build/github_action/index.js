@@ -48804,7 +48804,7 @@ function progressEvidenceReferences(diff) {
             references.push(Object.freeze({ id, path: change.path, ...(typeof change.unitId === 'string' ? { unitId: change.unitId } : {}), headSha: diff.headSha, generated: change.evidence === 'generated-metadata-only' }));
         }
     }
-    if (!references.length || new Set(references.map(reference => reference.id)).size !== references.length)
+    if (!references.some(reference => !reference.generated) || new Set(references.map(reference => reference.id)).size !== references.length)
         throw (0, progress_batch_rejection_policy_1.progressBatchRejected)('evidence-missing');
     return Object.freeze(references);
 }
@@ -48862,7 +48862,7 @@ function progressBatchResponseSchema(manifest, batch, anchors, compact) {
                         summary: { ...schema.properties.requirements.items.properties.summary, maxLength: factLimit },
                         remaining: { ...schema.properties.requirements.items.properties.remaining, maxLength: factLimit },
                         citations: { type: 'array', minItems: 1, maxItems: 8,
-                            items: { type: 'string', enum: manifest.evidence.map(reference => reference.id) } } },
+                            items: { type: 'string', enum: manifest.evidence.filter(reference => !reference.generated).map(reference => reference.id) } } },
                     required: [...schema.properties.requirements.items.required, 'citations'] } } },
         required: [...schema.required, 'manifestDigest', 'batchId', 'headSha'] };
 }
@@ -59237,7 +59237,7 @@ async function analyzeProgressBatches(context, issueDescription, captured, diff,
     const acceptanceScope = scopeData(scope);
     const promptFor = (batch, diffEvidence, schema) => (0, prompts_1.getCheckProgressPrompt)({ ...parameters,
         acceptanceScope: scopeData(batch.scope), diffEvidence }) + '\n\nSame-head assessment receipt contract\n' + (0, progress_scope_1.renderProgressPromptData)(JSON.stringify({ manifestDigest: manifest.digest,
-        batchId: batch.id, headSha: manifest.headSha, evidenceDictionary: manifest.evidence.map(reference => reference.id) }), 'progress.comparison', 262144, 'assessment')
+        batchId: batch.id, headSha: manifest.headSha, evidenceDictionary: manifest.evidence.filter(reference => !reference.generated).map(reference => reference.id) }), 'progress.comparison', 262144, 'assessment')
         + '\nReturn these exact manifestDigest, batchId and headSha fields. Each requirement must cite one to eight exact evidenceDictionary IDs in citations. '
         + 'A citation is its exact unitId in the complete comparison facts, or its exact path when no unitId is supplied. A SHA echo alone is insufficient. '
         + 'Every outcome requires a non-generated source observation. Missing or uncertain outcomes require a traceable source observation supporting that outcome. '

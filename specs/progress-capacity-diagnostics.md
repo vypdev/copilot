@@ -444,3 +444,10 @@ schema. The existing Codex projection omits a native enum that exceeds its
 250 values. Exact local membership and same-head citation validation still apply
 to every response. `specs/agent-execution-policy-hardening.md` records the shared
 provider adaptation and its deterministic boundary cases.
+
+The assessment response schema and receipt prompt expose only admitted
+non-generated evidence IDs. The complete comparison and host manifest retain
+generated metadata as supplemental context. A comparison containing exclusively
+generated metadata has no admissible primary citation and retains previous
+progress before an assessment request. The host also rejects forged generated
+citations from an alternate query port.

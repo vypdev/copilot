@@ -46,6 +46,8 @@ function scenario(body = Array.from({ length: 33 }, (_, index) => `Implement uni
         }
         const properties = schema.properties.requirements.items.properties;
         expect(request.prompt).toContain(`Each string has a hard limit of ${properties.summary.maxLength} Unicode code points, counting spaces and punctuation.`);
+        expect(request.prompt).toContain(JSON.stringify({ manifestDigest: schema.properties.manifestDigest.enum[0], batchId: schema.properties.batchId.enum[0],
+            headSha: schema.properties.headSha.enum[0], evidenceDictionary: properties.citations.items.enum }));
         const response = { outputLocale: 'en-US', progress: 50, manifestDigest: schema.properties.manifestDigest.enum[0],
             batchId: schema.properties.batchId.enum[0], headSha: schema.properties.headSha.enum[0], requirements: properties.id.enum.map((id: string) => ({ id,
                 status: 'verification-unknown', evidence: 'external-unverified', summary: 'Source reviewed.', remaining: 'Execution unverified.', citations: [properties.citations.items.enum[0]] })) };
@@ -69,6 +71,22 @@ function scenario(body = Array.from({ length: 33 }, (_, index) => `Implement uni
     return { state, query, setProgressLabel, setLabels, finalOutputs, invoke: () => commit.invoke(input) };
 }
 const retained = (value: ReturnType<typeof scenario>) => { expect(value.setProgressLabel).not.toHaveBeenCalled(); expect(value.setLabels).not.toHaveBeenCalled(); };
+
+it('CommitScope916-C11 offers only admitted source citations when the comparison also contains generated metadata', async () => {
+    const diff = partitionProgressDiff(base, head, [{ path: 'build/index.js', status: 'modified', additions: 1, deletions: 0, evidence: 'generated-metadata-only' },
+        { path: 'src/product.ts', status: 'modified', additions: 1, deletions: 0, patch: '+source' }]);
+    const f = scenario('Implement source behavior.', diff), results = await f.invoke();
+    expect(results.at(-1)).toMatchObject({ success: true, payload: { progress: 50 } });
+    expect(f.finalOutputs[0].requirements[0].citations).toEqual(['src/product.ts']);
+    expect(f.setProgressLabel).toHaveBeenCalledTimes(1);
+});
+it('CommitScope916-C11 retains progress when the complete comparison supplies only generated metadata', async () => {
+    const diff = partitionProgressDiff(base, head, [{ path: 'build/index.js', status: 'modified', additions: 1, deletions: 0, evidence: 'generated-metadata-only' }]);
+    const f = scenario('Implement source behavior.', diff), results = await f.invoke();
+    expect(results.at(-1)).toMatchObject({ success: false, errors: [expect.objectContaining({ recovery: expect.objectContaining({ variables: expect.objectContaining({ reason: 'evidence-missing' }) }) })] });
+    expect(f.query).toHaveBeenCalledTimes(1); expect(f.finalOutputs).toHaveLength(0);
+    retained(f); expect(selectSemanticStatusIntents({ locale: 'en-US', results })).toEqual([]);
+});
 
 it('CommitScope916-C06 assesses 33 distinct obligations in two bounded groups through Commit', async () => {
     const f = scenario(), results = await f.invoke();

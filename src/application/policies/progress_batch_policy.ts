@@ -93,7 +93,7 @@ export function progressEvidenceReferences(diff: ProgressDiffEvidence): readonly
             references.push(Object.freeze({ id, path: change.path, ...(typeof change.unitId === 'string' ? { unitId: change.unitId } : {}), headSha: diff.headSha, generated: change.evidence === 'generated-metadata-only' }));
         }
     }
-    if (!references.length || new Set(references.map(reference => reference.id)).size !== references.length) throw progressBatchRejected('evidence-missing');
+    if (!references.some(reference => !reference.generated) || new Set(references.map(reference => reference.id)).size !== references.length) throw progressBatchRejected('evidence-missing');
     return Object.freeze(references);
 }
 export function createProgressScopeManifest(input: Omit<ProgressScopeManifest, 'version' | 'digest' | 'issueDigest' | 'evidence' | 'evidenceDigest' | 'sourceInventory'> & { issueDescription: string; capturedSource: ProgressScopeSource; classifications: ReturnType<typeof parseProgressScopeClassifications> }, diff: ProgressDiffEvidence): ProgressScopeManifest {
@@ -147,7 +147,7 @@ export function progressBatchResponseSchema(manifest: ProgressScopeManifest, bat
                 summary: { ...schema.properties.requirements.items.properties.summary, maxLength: factLimit },
                 remaining: { ...schema.properties.requirements.items.properties.remaining, maxLength: factLimit },
                 citations: { type: 'array', minItems: 1, maxItems: 8,
-                    items: { type: 'string', enum: manifest.evidence.map(reference => reference.id) } } },
+                    items: { type: 'string', enum: manifest.evidence.filter(reference => !reference.generated).map(reference => reference.id) } } },
             required: [...schema.properties.requirements.items.required, 'citations'] } } },
         required: [...schema.required, 'manifestDigest', 'batchId', 'headSha'] };
 }

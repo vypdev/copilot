@@ -107,10 +107,20 @@ it('CommitScope916-C10 checks elapsed time after an in-flight query and before p
 });
 it('CommitScope916-C11 rejects generated metadata as support for implementation', () => {
     const f = fixture(1);
-    const diff = partitionProgressDiff(base, head, [{ path: 'build/index.js', status: 'modified', additions: 1, deletions: 0, evidence: 'generated-metadata-only' }]);
+    const diff = partitionProgressDiff(base, head, [{ path: 'build/index.js', status: 'modified', additions: 1, deletions: 0, evidence: 'generated-metadata-only' },
+        { path: 'src/product.ts', status: 'modified', additions: 1, deletions: 0, patch: '+source' }]);
     const manifest = createProgressScopeManifest(f.input, diff), [batch] = planProgressAssessmentBatches(manifest);
+    expect(manifest.evidence).toHaveLength(2);
+    expect(progressBatchResponseSchema(manifest, batch, f.extraction.anchors, false).properties.requirements.items.properties.citations.items.enum).toEqual(['src/product.ts']);
     const response = { ...f.output(), progress: 100, manifestDigest: manifest.digest, batchId: batch.id, requirements: [{ ...f.output().requirements[0], status: 'supported', evidence: 'source-only', remaining: null, citations: [manifest.evidence[0].id] }] };
     expect(() => parseProgressAssessmentReceipt(response, manifest, batch, f.extraction.anchors, 'en-US', false)).toThrow();
+    response.requirements[0].citations = ['src/product.ts'];
+    expect(parseProgressAssessmentReceipt(response, manifest, batch, f.extraction.anchors, 'en-US', false).result.progress).toBe(100);
+});
+it('CommitScope916-C11 rejects an exclusively generated comparison before constructing a native assessment schema', () => {
+    const f = fixture(1);
+    const diff = partitionProgressDiff(base, head, [{ path: 'build/index.js', status: 'modified', additions: 1, deletions: 0, evidence: 'generated-metadata-only' }]);
+    expect(() => createProgressScopeManifest(f.input, diff)).toThrow(expect.objectContaining({ recovery: expect.objectContaining({ variables: expect.objectContaining({ reason: 'evidence-missing' }) }) }));
 });
 it('CommitScope916-C11 freezes source authority and accepted evidence before further async calls', () => {
     const f = fixture();

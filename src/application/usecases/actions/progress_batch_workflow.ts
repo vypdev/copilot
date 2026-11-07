@@ -77,7 +77,7 @@ export async function analyzeProgressBatches(context: ProgressContext, issueDesc
     const acceptanceScope = scopeData(scope);
     const promptFor = (batch: typeof batches[number], diffEvidence: string, schema: ReturnType<typeof progressBatchResponseSchema>) => getCheckProgressPrompt({ ...parameters,
         acceptanceScope: scopeData(batch.scope), diffEvidence }) + '\n\nSame-head assessment receipt contract\n' + renderProgressPromptData(JSON.stringify({ manifestDigest: manifest.digest,
-        batchId: batch.id, headSha: manifest.headSha, evidenceDictionary: manifest.evidence.map(reference => reference.id) }), 'progress.comparison', 262_144, 'assessment')
+        batchId: batch.id, headSha: manifest.headSha, evidenceDictionary: manifest.evidence.filter(reference => !reference.generated).map(reference => reference.id) }), 'progress.comparison', 262_144, 'assessment')
         + '\nReturn these exact manifestDigest, batchId and headSha fields. Each requirement must cite one to eight exact evidenceDictionary IDs in citations. '
         + 'A citation is its exact unitId in the complete comparison facts, or its exact path when no unitId is supplied. A SHA echo alone is insufficient. '
         + 'Every outcome requires a non-generated source observation. Missing or uncertain outcomes require a traceable source observation supporting that outcome. '
