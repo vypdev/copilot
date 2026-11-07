@@ -4,6 +4,28 @@ const capacity = () => progressCapacityDiagnostic({ phase: 'source', dimension: 
 const context = () => ({ kind: 'comparison', baseSha: 'a'.repeat(40), headSha: 'b'.repeat(40), manifestDigest: 'c'.repeat(64), sourceLineId: 'none',
     requiredPathsDigest: 'd'.repeat(64), reviewedPathsDigest: 'e'.repeat(64), uncoveredPathsDigest: 'f'.repeat(64),
     requiredPathCount: 2, reviewedPathCount: 0, uncoveredPathCount: 2, paths: ['src/a.ts', 'src/b.ts'] });
+const assessment = () => ({ kind: 'assessment', requirementCount: 128, batch: 2, requirementId: 'R33' });
+
+it('Issue925 copies and freezes the closed assessment context without rejected prose', () => {
+    const source = assessment(), normalized = normalizeProgressCapacityContext(source);
+    source.requirementId = 'PRIVATE_TEXT';
+    expect(normalized).toEqual({ kind: 'assessment', requirementCount: 128, batch: 2, requirementId: 'R33' });
+    expect(Object.isFrozen(normalized)).toBe(true);
+});
+it.each([
+    ['requirementCount', 0], ['requirementCount', 257], ['requirementCount', 1.5], ['requirementCount', NaN],
+    ['batch', -1], ['batch', 129], ['batch', '2'], ['requirementId', '@all PRIVATE_TEXT'], ['extra', 'PRIVATE_TEXT'],
+])('Issue925 rejects invalid assessment context %s %#', (field, value) => {
+    expect(() => normalizeProgressCapacityContext({ ...assessment(), [field]: value })).toThrow(TypeError);
+});
+it('Issue925 reserves batch zero for complete reduction and prevents attribution to one requirement', () => {
+    const input = { phase: 'aggregate' as const, dimension: 'assessment-summary-points' as const, observedCount: 8001, supportedLimit: 8000 };
+    expect(progressCapacityDiagnostic({ ...input, context: { kind: 'assessment', requirementCount: 128, batch: 0, requirementId: 'none' } }).context).toMatchObject({ batch: 0 });
+    expect(() => normalizeProgressCapacityContext({ ...assessment(), batch: 0 })).toThrow(TypeError);
+    expect(() => progressCapacityDiagnostic({ ...input, context: assessment() as never })).toThrow(TypeError);
+    expect(() => progressCapacityDiagnostic({ ...input, phase: 'assessment', context: { kind: 'assessment', requirementCount: 128, batch: 0, requirementId: 'none' } })).toThrow(TypeError);
+    expect(() => normalizeProgressCapacityDiagnostic({ ...capacity(), context: assessment() })).toThrow(TypeError);
+});
 
 it.each(Object.entries(PROGRESS_CAPACITY_DIMENSIONS))('admits the closed %s boundary with its declared unit/phase', (dimension, rule) => {
     const bound = rule.bounds[0];

@@ -25,7 +25,7 @@ export function progressAssessmentFactLimit(requirements: readonly Requirement[]
         const sourceLineId = requirementId !== 'none' && isProgressSourceLineId(anchors[id]) ? anchors[id] : 'none';
         throw new ApplicationError('validation.evidence-too-large', 'Original progress citations cannot fit the unchanged assessment text limits. Existing progress was retained.', {
             recovery: { id: 'progress-assessment-capacity-exceeded', variables: {
-                phase: 'assessment', reason: 'assessment-text-limit', field: `$.requirements[${index}].summary`, requirementId, sourceLineId,
+                phase: 'assessment', reason: 'assessment-text-limit', field: index < 32 ? `$.requirements[${index}].summary` : '$.requirements', requirementId, sourceLineId,
             } },
         });
     }

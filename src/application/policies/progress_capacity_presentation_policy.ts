@@ -9,6 +9,7 @@ const PHASES: Readonly<Record<ProgressCapacityPhase, Label>> = {
 };
 const UNITS: Readonly<Record<ProgressCapacityUnit, Label>> = { bytes: 'capacityBytes', parts: 'capacityParts', lines: 'capacityLines', 'code-points': 'capacityPoints', units: 'capacityUnits' };
 const DIMENSIONS: Readonly<Record<ProgressCapacityDimension, Label>> = {
+    'assessment-summary-points': 'capacityAssessmentSummary', 'assessment-remaining-points': 'capacityAssessmentRemaining',
     'source-unit-bytes': 'capacitySourceUnit', 'source-part-bytes': 'capacitySourcePart', 'source-part-count': 'capacityPartCount',
     'source-unit-count': 'capacitySourceUnitCount',
     'source-manifest-bytes': 'capacityManifest', 'source-line-count': 'capacityLineCount', 'source-line-points': 'capacityLinePoints',
@@ -28,6 +29,7 @@ export function progressCapacityPresentation(input: ProgressCapacityDiagnostic, 
         { observedCount, supportedLimit, countKind, unit: label(UNITS[facts.unit]) });
     const source = facts.context;
     const context = source.kind === 'unavailable' ? label('capacityContextUnavailable')
+        : source.kind === 'assessment' ? label('capacityAssessmentContext', source)
         : source.kind === 'source-line' ? label('capacitySourceLine', { sourceLineId: source.sourceLineId })
             : label('capacityComparison', { baseSha: source.baseSha, headSha: source.headSha, requiredPathsDigest: source.requiredPathsDigest,
                 reviewedPathsDigest: source.reviewedPathsDigest, uncoveredPathsDigest: source.uncoveredPathsDigest,
