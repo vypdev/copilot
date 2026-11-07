@@ -50100,9 +50100,12 @@ function reconcileProgressSddScope(source, seed, publication) {
     const evidence = new Map();
     const index = new Map(source.lines.map(line => [line.id, line]));
     const seedLines = seed.seed.split('\n');
-    const draftLine = (number) => {
-        const line = index.get('L' + (seed.startLine + number));
-        if (!line || line.quote !== seedLines[number - 1].trim())
+    const firstDraftLine = seed.openingMarkerLine + 1;
+    const draftLine = (draftLineNumber) => {
+        const draftLineOffset = draftLineNumber - 1;
+        const issueLineNumber = firstDraftLine + draftLineOffset;
+        const line = index.get('L' + issueLineNumber);
+        if (!line || line.quote !== seedLines[draftLineOffset].trim())
             throw progressSddSeedUnavailable();
         return { ...line, origin: 'draft' };
     };
@@ -50125,9 +50128,9 @@ function reconcileProgressSddScope(source, seed, publication) {
     }
     const lines = source.lines.flatMap(line => {
         const number = Number(line.id.slice(1));
-        if (number === seed.startLine || number === seed.endLine || cases.has(line.id))
+        if (number === seed.openingMarkerLine || number === seed.closingMarkerLine || cases.has(line.id))
             return [];
-        if (number > seed.startLine && number < seed.endLine)
+        if (number >= firstDraftLine && number < seed.closingMarkerLine)
             return [{ ...line, origin: 'draft' }];
         const canonical = exactGoal.get(line.quote);
         const original = { ...line, origin: 'issue' };
@@ -52756,7 +52759,10 @@ function readSddSeed(body) {
         throw new application_error_1.ApplicationError('validation.invalid-input', 'Use exactly one complete SDD seed block with standalone opening and closing markers, or remove the seed markers.');
     }
     const seed = lines.slice(open + 1, close).join('\n') + '\n';
-    return { scope: [...lines.slice(0, open), ...lines.slice(close + 1)].join('\n'), seed, hash: sddArtifactDigest(seed), startLine: open + 1, endLine: close + 1 };
+    return {
+        scope: [...lines.slice(0, open), ...lines.slice(close + 1)].join('\n'), seed, hash: sddArtifactDigest(seed),
+        openingMarkerLine: open + 1, closingMarkerLine: close + 1,
+    };
 }
 function isSddSeedReview(body, seedHash) {
     return new RegExp('^SDD Q1: review seed (' + SHA256 + ')$', 'iu').exec(body.trimEnd())?.[1].toLowerCase() === seedHash;

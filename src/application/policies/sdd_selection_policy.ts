@@ -9,7 +9,7 @@ const start = '<!-- copilot:sdd-seed -->';
 const end = '<!-- /copilot:sdd-seed -->';
 
 export type SddSeedInput = { scope: string; seed?: undefined; hash?: undefined }
-  | { scope: string; seed: string; hash: string; startLine: number; endLine: number };
+  | { scope: string; seed: string; hash: string; openingMarkerLine: number; closingMarkerLine: number };
 
 export function readSddSeed(body: string): SddSeedInput {
   const normalized = body.replace(/\r\n?/gu, '\n');
@@ -23,7 +23,10 @@ export function readSddSeed(body: string): SddSeedInput {
     throw new ApplicationError('validation.invalid-input', 'Use exactly one complete SDD seed block with standalone opening and closing markers, or remove the seed markers.');
   }
   const seed = lines.slice(open + 1, close).join('\n') + '\n';
-  return { scope: [...lines.slice(0, open), ...lines.slice(close + 1)].join('\n'), seed, hash: sddArtifactDigest(seed), startLine: open + 1, endLine: close + 1 };
+  return {
+    scope: [...lines.slice(0, open), ...lines.slice(close + 1)].join('\n'), seed, hash: sddArtifactDigest(seed),
+    openingMarkerLine: open + 1, closingMarkerLine: close + 1,
+  };
 }
 
 export function isSddSeedReview(body: string, seedHash: string): boolean {

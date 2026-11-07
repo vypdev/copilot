@@ -112,7 +112,8 @@ it('reproduces the released source inventory and preserves all 12 original case 
     expect(original.lines.find(line => line.id === 'L109')?.quote).toContain('domus-shared-nav-C12');
     expect(sddArtifactDigest(published)).toBe(artifact);
     expect(scoped.lines).toHaveLength(99);
-    expect(scoped.draft?.required.size).toBe(6);
+    expect(seed).toMatchObject({ openingMarkerLine: 17, closingMarkerLine: 160 });
+    expect(scoped.draft?.required).toEqual(new Set(['L45', 'L46', 'L47', 'L48', 'L49', 'L50']));
     expect(scoped.lines.some(line => line.id === 'L109')).toBe(false);
     const simulated = new Set(['L11', 'L40', 'L60', 'L64', 'L68', 'L72', 'L76', 'L80', 'L84', 'L88', 'L92', 'L113', 'L143', 'L155', 'L168', 'L26']);
     for (const id of scoped.draft!.required) simulated.add(id);

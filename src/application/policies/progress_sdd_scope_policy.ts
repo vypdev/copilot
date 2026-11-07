@@ -17,9 +17,12 @@ export function reconcileProgressSddScope(source: ProgressScopeSource, seed: Ext
     const evidence = new Map<string, ProgressScopeSourceLine[]>();
     const index = new Map(source.lines.map(line => [line.id, line]));
     const seedLines = seed.seed.split('\n');
-    const draftLine = (number: number): ProgressScopeSourceLine => {
-        const line = index.get('L' + (seed.startLine + number));
-        if (!line || line.quote !== seedLines[number - 1].trim()) throw progressSddSeedUnavailable();
+    const firstDraftLine = seed.openingMarkerLine + 1;
+    const draftLine = (draftLineNumber: number): ProgressScopeSourceLine => {
+        const draftLineOffset = draftLineNumber - 1;
+        const issueLineNumber = firstDraftLine + draftLineOffset;
+        const line = index.get('L' + issueLineNumber);
+        if (!line || line.quote !== seedLines[draftLineOffset].trim()) throw progressSddSeedUnavailable();
         return { ...line, origin: 'draft' };
     };
     const cases = new Set<string>();
@@ -40,8 +43,8 @@ export function reconcileProgressSddScope(source: ProgressScopeSource, seed: Ext
     }
     const lines = source.lines.flatMap<ProgressScopeSourceLine>(line => {
         const number = Number(line.id.slice(1));
-        if (number === seed.startLine || number === seed.endLine || cases.has(line.id)) return [];
-        if (number > seed.startLine && number < seed.endLine) return [{ ...line, origin: 'draft' as const }];
+        if (number === seed.openingMarkerLine || number === seed.closingMarkerLine || cases.has(line.id)) return [];
+        if (number >= firstDraftLine && number < seed.closingMarkerLine) return [{ ...line, origin: 'draft' as const }];
         const canonical = exactGoal.get(line.quote);
         const original = { ...line, origin: 'issue' as const };
         if (canonical) {
