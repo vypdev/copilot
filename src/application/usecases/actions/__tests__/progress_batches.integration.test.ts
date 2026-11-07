@@ -1,7 +1,7 @@
 import { ApplicationError } from '../../../errors/application_error';
 import { analyzeProgressBatches } from '../progress_batch_workflow';
 import { captureProgressScopeSource } from '../../../policies/progress_scope_source_policy';
-import { selectSemanticStatusIntents } from '../../../policies/semantic_result_publication_policy';
+import { renderSemanticStatus, selectSemanticStatusIntents } from '../../../policies/semantic_result_publication_policy';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
@@ -131,6 +131,10 @@ it('CommitScope916-C17 replays the original Domus body and complete immutable co
     expect(outcomes).toHaveLength(108); expect(new Set(outcomes.map(value => value.id)).size).toBe(108);
     expect(f.finalOutputs.every(output => output.headSha === fixture.head && output.requirements.every((value: any) => value.citations.length > 0))).toBe(true);
     expect(f.finalOutputs.map(output => output.requirements.length)).toEqual([32, 32, 32, 12]); expect(f.query).toHaveBeenCalledTimes(30); expect(f.setProgressLabel).toHaveBeenCalledTimes(1);
+    const [intent] = selectSemanticStatusIntents({ locale: 'en-US', results });
+    const card = renderSemanticStatus(intent);
+    expect(card).not.toContain('[untrusted content truncated]');
+    for (const outcome of outcomes) expect(card).toContain(`[${outcome.id}]`);
 });
 it.each(['head', 'manifest', 'batch', 'missing-citation', 'foreign-citation', 'missing-requirement', 'foreign-requirement', 'duplicate-requirement'])(
     'CommitScope916-C11/C12/C13 rejects %s in the final batch before any progress write', async mode => {

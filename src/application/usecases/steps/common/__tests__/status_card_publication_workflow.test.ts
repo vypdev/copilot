@@ -41,6 +41,19 @@ const currentSource = (...heads: string[]) => {
 };
 
 describe('status card publication workflow', () => {
+  it('writes every admitted same-head requirement in the complete scoped progress card', async () => {
+    const summary = Array.from({ length: 108 }, (_, i) => `[R${i + 1}] L${i + 1} — Source behavior reviewed.`).join('\n');
+    const remaining = Array.from({ length: 108 }, (_, i) => `[R${i + 1}] L${i + 1} — Verify required execution.`).join('\n');
+    const [value] = selectSemanticStatusIntents({ locale: 'en-US', results: [new Result({ id: 'CheckProgressUseCase', success: true, executed: true,
+      payload: { issueNumber: 7, progress: 50, summary, remaining, branch: 'feature/work', sourceHeadSha: SOURCE_HEAD, scopeManifestDigest: 'c'.repeat(64) } })] });
+    const repository = ports();
+    await expect(reconcileStatusCard(context(value), repository, currentSource())).resolves.toMatchObject({ effect: 'created' });
+    const body = repository.comments[0].body!;
+    expect(body).toContain(summary); expect(body).toContain(remaining);
+    expect(body.match(/\[R\d+\]/gu)).toHaveLength(216);
+    expect(body).not.toContain('[untrusted content truncated]');
+  });
+
   it('creates and discovers one canonical card', async () => {
     const repository = ports();
     await expect(reconcileStatusCard(context(), repository, currentSource())).resolves.toEqual({

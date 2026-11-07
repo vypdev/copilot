@@ -47259,7 +47259,10 @@ const secret_redaction_1 = __nccwpck_require__(254);
 function sanitizeAgentMarkdown(raw, maxLength = 12000) {
     if (typeof raw !== 'string')
         return '';
-    const bounded = (0, untrusted_content_1.createUntrustedContent)((0, secret_redaction_1.redactKnownEnvironmentSecrets)((0, secret_redaction_1.redactSecretLikeValues)(raw)), 'agent.comment.output', maxLength).text;
+    const redacted = (0, secret_redaction_1.redactKnownEnvironmentSecrets)((0, secret_redaction_1.redactSecretLikeValues)(raw));
+    // Complete projections have already passed their owner's capacity gate.
+    const limit = maxLength === 'complete' ? Math.max(12000, redacted.normalize('NFKC').length) : maxLength;
+    const bounded = (0, untrusted_content_1.createUntrustedContent)(redacted, 'agent.comment.output', limit).text;
     return neutralizeGithubControls(bounded);
 }
 /**
@@ -53260,6 +53263,7 @@ const github_publication_1 = __nccwpck_require__(35793);
 const github_user_policy_1 = __nccwpck_require__(84403);
 const result_1 = __nccwpck_require__(73817);
 const github_comment_publication_policy_1 = __nccwpck_require__(72712);
+const progress_assessment_capacity_policy_1 = __nccwpck_require__(67329);
 const publication_identity_policy_1 = __nccwpck_require__(45403);
 const publication_message_catalog_1 = __nccwpck_require__(34223);
 const copilot_interaction_policy_1 = __nccwpck_require__(90108);
@@ -53517,16 +53521,17 @@ function renderSemanticStatus(intent, messages = (0, publication_message_catalog
         return `${marker}\n\n${renderImplementationPlanCard(intent.projection.plan, messages)}`;
     }
     const progress = intent.projection.progress;
+    const completeAssessment = intent.sourceVersion.includes(':scope:');
     const state = progress <= 0 ? 'not-started' : progress >= 100 ? 'complete' : 'in-progress';
     const lines = [
         marker,
         '',
         `## ${messages.progress}: ${progress}% — ${messages.progressState[state]}`,
         '',
-        `> **${messages.currentStatus}:** ${(0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(intent.projection.summary, 1500).trim()}`,
+        `> **${messages.currentStatus}:** ${(0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(intent.projection.summary, completeAssessment ? 'complete' : 1500).trim()}`,
     ];
     if (progress < 100 && intent.projection.remaining?.trim()) {
-        lines.push('', `**${messages.next}:** ${(0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(intent.projection.remaining, 3000).trim()}`);
+        lines.push('', `**${messages.next}:** ${(0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(intent.projection.remaining, completeAssessment ? 'complete' : 3000).trim()}`);
     }
     else if (progress >= 100) {
         lines.push('', messages.noActionRequired);
@@ -53683,6 +53688,9 @@ function progressIntent(id, payload, locale) {
     const progress = Math.max(0, Math.min(100, Math.round(payload.progress)));
     const scopeDigest = typeof payload.scopeManifestDigest === 'string' && /^[a-f0-9]{64}$/u.test(payload.scopeManifestDigest) ? payload.scopeManifestDigest : undefined;
     if (payload.scopeManifestDigest !== undefined && (!scopeDigest || sourceHeadSha.length !== 40))
+        return undefined;
+    if (scopeDigest && [payload.summary, typeof payload.remaining === 'string' ? payload.remaining : '']
+        .some(text => [...text].length > progress_assessment_capacity_policy_1.MAX_PROGRESS_ASSESSMENT_POINTS))
         return undefined;
     const projection = Object.freeze({
         kind: 'progress',

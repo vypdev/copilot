@@ -397,6 +397,9 @@ the existing publication fence. Both public assessment fields remain bounded
 at 8,000 Unicode points. Larger aggregates display one canonical original source
 location per requirement. The manifest and assessment requests retain every
 original source, alias, case reference, qualifier and publication authority.
+The scoped-card selector repeats the 8,000-point field guards. Its renderer
+sanitizes the complete admitted projections, including supplementary Unicode
+and normalization expansion, so the displayed card preserves every assessed ID.
 
 `progress-batch-retained` provides closed reasons, verified and expected batch
 counts, the failing assignment and a safe requirement ID. Incomplete attempts

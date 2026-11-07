@@ -775,6 +775,24 @@ describe('semantic result publication policy', () => {
 
 describe('scoped progress publication identity', () => {
   const scope = 'b'.repeat(64), wideHead = 'c'.repeat(64);
+  it.each(['en-US', 'es-ES'])('preserves both complete 8,000-point assessment fields in %s', locale => {
+    const summary = '😀'.repeat(7_992) + '[Rfinal]', remaining = 'r'.repeat(7_992) + '[Rfinal]';
+    const [intent] = selectSemanticStatusIntents({ locale, results: [new Result({ id: 'CheckProgressUseCase', success: true, executed: true,
+      payload: { issueNumber: 42, progress: 50, summary, remaining, branch: 'feature/42', sourceHeadSha: SOURCE_HEAD, scopeManifestDigest: scope } })] });
+    const body = renderSemanticStatus(intent);
+    expect(body).toContain(summary); expect(body).toContain(remaining);
+    expect(body).not.toContain('[untrusted content truncated]');
+  });
+  it.each(['summary', 'remaining'])('withholds a scoped assessment with an over-budget %s at publication selection', field => {
+    expect(selectSemanticStatusIntents({ locale: 'en-US', results: [new Result({ id: 'CheckProgressUseCase', success: true, executed: true,
+      payload: { issueNumber: 42, progress: 50, summary: 'Reviewed.', remaining: 'Verify.', [field]: '😀'.repeat(8_001),
+        branch: 'feature/42', sourceHeadSha: SOURCE_HEAD, scopeManifestDigest: scope } })] })).toEqual([]);
+  });
+  it('retains the bounded legacy progress presentation', () => {
+    const [intent] = selectSemanticStatusIntents({ locale: 'en-US', results: [new Result({ id: 'CheckProgressUseCase', success: true, executed: true,
+      payload: { issueNumber: 42, progress: 50, summary: 's'.repeat(1_501), remaining: 'r'.repeat(3_001), branch: 'feature/42', sourceHeadSha: SOURCE_HEAD } })] });
+    expect(renderSemanticStatus(intent).match(/\[untrusted content truncated\]/gu)).toHaveLength(2);
+  });
   it.each([
     { name: 'legacy SHA-1', head: SOURCE_HEAD, scope: undefined, version: `head:${SOURCE_HEAD}` },
     { name: 'scoped SHA-1', head: SOURCE_HEAD, scope, version: `head:${SOURCE_HEAD}:scope:${scope}` },

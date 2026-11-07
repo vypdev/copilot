@@ -2824,7 +2824,10 @@ const secret_redaction_1 = __nccwpck_require__(254);
 function sanitizeAgentMarkdown(raw, maxLength = 12000) {
     if (typeof raw !== 'string')
         return '';
-    const bounded = (0, untrusted_content_1.createUntrustedContent)((0, secret_redaction_1.redactKnownEnvironmentSecrets)((0, secret_redaction_1.redactSecretLikeValues)(raw)), 'agent.comment.output', maxLength).text;
+    const redacted = (0, secret_redaction_1.redactKnownEnvironmentSecrets)((0, secret_redaction_1.redactSecretLikeValues)(raw));
+    // Complete projections have already passed their owner's capacity gate.
+    const limit = maxLength === 'complete' ? Math.max(12000, redacted.normalize('NFKC').length) : maxLength;
+    const bounded = (0, untrusted_content_1.createUntrustedContent)(redacted, 'agent.comment.output', limit).text;
     return neutralizeGithubControls(bounded);
 }
 /**

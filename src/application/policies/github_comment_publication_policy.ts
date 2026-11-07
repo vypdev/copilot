@@ -5,12 +5,15 @@ import { redactKnownEnvironmentSecrets, redactSecretLikeValues } from '../../uti
  * Model output is untrusted too. Keep useful Markdown, but neutralize the
  * GitHub automation surfaces that could create side effects when published.
  */
-export function sanitizeAgentMarkdown(raw: unknown, maxLength = 12_000): string {
+export function sanitizeAgentMarkdown(raw: unknown, maxLength: number | 'complete' = 12_000): string {
     if (typeof raw !== 'string') return '';
+    const redacted = redactKnownEnvironmentSecrets(redactSecretLikeValues(raw));
+    // Complete projections have already passed their owner's capacity gate.
+    const limit = maxLength === 'complete' ? Math.max(12_000, redacted.normalize('NFKC').length) : maxLength;
     const bounded = createUntrustedContent(
-        redactKnownEnvironmentSecrets(redactSecretLikeValues(raw)),
+        redacted,
         'agent.comment.output',
-        maxLength,
+        limit,
     ).text;
     return neutralizeGithubControls(bounded);
 }
