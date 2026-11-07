@@ -167,9 +167,13 @@ export function parseScopedProgressResponse(response: unknown, locale: string, s
         function text(value: unknown): value is string { return typeof value === 'string' && value.trim().length > 0 && [...value].length <= MAX_FACT; }
         if (!text(fact.summary)) reject('requirement-summary-invalid', `${field}.summary`, id);
         if (fact.status === 'supported') {
-            if (fact.remaining !== null) reject('requirement-remaining-invalid', `${field}.remaining`, id);
+            if (fact.remaining !== null) reject('requirement-remaining-null-required', `${field}.remaining`, id);
             if (fact.evidence !== 'source-only') reject('requirement-evidence-mismatch', `${field}.evidence`, id);
-        } else if (!text(fact.remaining)) reject('requirement-remaining-invalid', `${field}.remaining`, id);
+        } else {
+            if (typeof fact.remaining !== 'string') reject('requirement-remaining-string-required', `${field}.remaining`, id);
+            else if (!fact.remaining.trim()) reject('requirement-remaining-blank', `${field}.remaining`, id);
+            else if ([...fact.remaining].length > MAX_FACT) reject('requirement-remaining-too-long', `${field}.remaining`, id);
+        }
         return { id, status: fact.status, summary: fact.summary as string, remaining: fact.remaining as string | null };
     });
     const ordered = scope.requirements.map(requirement => ({ requirement, fact: entries.find(entry => entry.id === requirement.id)! }));

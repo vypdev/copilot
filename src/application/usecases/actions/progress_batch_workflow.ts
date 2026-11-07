@@ -133,6 +133,7 @@ export async function analyzeProgressBatches(context: ProgressContext, issueDesc
         bounded.verify();
         return aggregateProgressAssessmentReceipts(manifest, batches, receipts);
     };
+    logInfo(`Reducing complete same-head assessment: ${scope.requirements.length} requirements, ${receipts.length} of ${batches.length} verified batches; summary and remaining each have an 8000-Unicode-code-point publication limit.`);
     const attemptResult = verifyAssessment();
     logInfo(`Complete same-head acceptance evidence verified: ${scope.requirements.length} requirements, ${receipts.length} of ${batches.length} batches, ${bounded.calls()} of ${PROGRESS_BATCH_PROFILE.calls} calls. Publication identity ${manifest.digest}.`);
     return { attemptResult, scopeManifestDigest: manifest.digest, verifyAssessment };

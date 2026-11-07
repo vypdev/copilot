@@ -69,7 +69,7 @@ it.each([
     ['duplicate', 'requirement-id-duplicate', '$.requirements[1].id', 'R3', 'L3'],
     ['outside', 'schema-enum', '$.requirements[0].id', 'none', 'none'],
     ['evidence', 'requirement-evidence-mismatch', '$.requirements[0].evidence', 'R3', 'L3'],
-    ['remaining', 'requirement-remaining-invalid', '$.requirements[0].remaining', 'R3', 'L3'],
+    ['remaining', 'requirement-remaining-null-required', '$.requirements[0].remaining', 'R3', 'L3'],
     ['unknown-field', 'schema-additional', '$.requirements[0]', 'R3', 'L3'],
 ])('rejects completed %s results with relevant verified detail and no progress mutation', async (mode, reason, field, requirementId, sourceLineId) => {
     const f = scenario(output => {

@@ -100,7 +100,7 @@ it('CommitScope916-C06 assesses 33 distinct obligations in two bounded groups th
     expect(f.finalOutputs.map(output => output.requirements.length)).toEqual([32, 1]);
     expect(f.setProgressLabel).toHaveBeenCalledTimes(1); expect(f.setLabels).toHaveBeenCalledTimes(1);
 });
-it('CommitScope916-C10 retains progress when complete valid batches exceed the actual aggregate text budget', async () => {
+it('Issue925 publishes one complete assessment when every batch uses its maximum admitted text', async () => {
     const f = scenario(), answer = f.query.getMockImplementation()!;
     f.query.mockImplementation(async request => {
         const response = await answer(request) as any;
@@ -111,9 +111,13 @@ it('CommitScope916-C10 retains progress when complete valid batches exceed the a
         return response;
     });
     const results = await f.invoke();
-    expect(results.at(-1)).toMatchObject({ success: false, errors: [expect.objectContaining({ recovery: expect.objectContaining({ variables: expect.objectContaining({ reason: 'aggregate-capacity' }) }) })] });
-    expect(f.finalOutputs).toHaveLength(2); retained(f);
-    expect(selectSemanticStatusIntents({ locale: 'en-US', results })).toEqual([]);
+    expect(results.at(-1)).toMatchObject({ success: true, payload: { progress: 50 } });
+    expect(f.finalOutputs).toHaveLength(2);
+    expect(f.setProgressLabel).toHaveBeenCalledTimes(1);
+    const [intent] = selectSemanticStatusIntents({ locale: 'en-US', results });
+    const card = renderSemanticStatus(intent);
+    expect(card).not.toContain('[untrusted content truncated]');
+    for (const response of f.finalOutputs) for (const fact of response.requirements) expect(card).toContain(`[${fact.id}]`);
 });
 it('CommitScope916-C17 replays the original Domus body and complete immutable comparison through Commit', async () => {
     expect(fixtureBytes.toString('hex')).toBe(fixtureText.replace(/\s/gu, ''));

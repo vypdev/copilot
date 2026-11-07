@@ -413,13 +413,14 @@ fixture's 50 percent response exercises the protocol. It does not establish
 consumer implementation progress. Historical rejection and candidate results
 remain distinct evidence on the implementation PR.
 
-Each receipt retains the existing per-assessment fact and 8,000-point field
-envelopes. The host reserves canonical display references and minimum facts
-before requests and supplies a preferred per-requirement text target. Individual
-facts may vary within their assessment envelope. The reducer checks the actual
+Each receipt retains the existing 8,000-point field envelope. The host reserves
+canonical display references, all separators and minimum facts across the whole
+inventory before requests. The derived shared per-fact allocation is a hard
+limit in both the response schema and host receipt admission. Facts can vary in
+length within this allocation. The reducer independently checks the actual
 complete summary and remaining projections against 8,000 Unicode points each.
-An oversized aggregate retains previous progress. Each assessment prompt states
-its hard per-fact limit and the shared aggregate target. Incomplete estimates
+An oversized response retains previous progress. Each assessment prompt states
+its hard per-fact limit and the shared aggregate allocation. Incomplete estimates
 retain their card value and use percentage labels capped at 95 percent, preserving the completion
 invariant across the issue and PR label adapters.
 
@@ -459,3 +460,90 @@ generated metadata has no admissible primary citation and retains previous
 progress before an assessment request. The host also rejects forged generated
 citations from an alternate query port and repeats that check during aggregate
 publication eligibility, including receipts with recomputed digests.
+
+## 22. Aggregate allocation and related response diagnostics — #925 / #887
+
+Observed evidence: [#925](https://github.com/vypdev/copilot/issues/925) records
+four accepted same-head batches followed by `aggregate-capacity` on v3.10.9.
+The original private response lengths remain unknown. A deterministic 128-outcome
+regression on baseline `8275a4f28` reproduces the defect by filling all four
+schemas to their admitted lengths: receipt admission succeeds, reduction fails.
+This fixture establishes the capacity mismatch, not the historical response text.
+
+The pure capacity owner MUST calculate `min(800, floor((8000 - framing) / N))`
+from all N canonical requirement references and N−1 newlines. Every batch MUST
+use this same maximum for summary and nonnull remaining in its schema, prompt
+and host admission. The complete reducer MUST retain the independent 8,000-point
+fence. Compact references retain their original source and all aliases in the
+manifest. All admitted maximum-length facts therefore fit simultaneously.
+Unused prose allocation is not borrowed by another requirement. This replaces
+the previous advisory target; it adds no setting, override, storage or query.
+Direct legacy parser callers keep their complete-field validation behavior.
+
+```text
+complete inventory → reserve every reference/newline → derive shared fact cap
+ → bounded schemas → validate complete receipts → recheck full fields/freshness
+ → one existing progress card, or retain the previous assessment
+```
+
+Text equivalent: allocation happens before requests and admission, while complete
+evidence and current-source checks still control publication. Existing 120-call,
+30-minute and bounded completion-repair budgets remain unchanged. A failed native
+schema or alternate-port response never counts as an accepted receipt. No new
+automatic repair or partial checkpoint is added.
+
+Capacity diagnostics MUST identify summary versus remaining, measured and allowed
+Unicode-point counts, complete requirement count, and the host-known batch and
+requirement. Complete reduction uses batch 0 and requirement `none`. Only closed
+numeric facts/validated IDs are public; rejected model text is never included.
+The existing `progress-evidence-capacity-exceeded` descriptor and English/Spanish
+surfaces carry these facts, without new comments. Example failed view:
+
+```text
+Progress was not assessed: progress remaining field during final-assessment planning.
+Measured or required: 50 Unicode code points; maximum available: 49 (exact).
+Complete inventory: 128 requirements. Batch: 2; requirement: R33.
+Existing progress labels and assessments were preserved. No partial progress was published.
+```
+
+Pending remains “Assessing acceptance batch 2 of 4; verified 1. Previous progress
+is retained.” Complete remains one current-head card containing every requirement
+ID. A capacity failure requires inspecting the reported bound and using the
+reviewed runtime; retaining previous progress is the only partial-attempt result.
+Independent completed workflow effects keep their own result. Existing plain text,
+locale fallback, sanitization, narrow-layout and notification rules apply.
+
+Related [#887](https://github.com/vypdev/copilot/issues/887) did not retain the
+rejected remaining value. Current semantic diagnostics MUST distinguish a
+supported requirement requiring null, a missing/unknown requirement requiring a
+string, whitespace-only remaining, and remaining above 800 code points. Keep the
+verified requirement/physical-line anchor, old coarse reason for historical
+records, and all evidence/completion rules. Do not infer the historical value's
+kind from its previous coarse code. A malformed value still produces zero writes.
+
+Related [#903](https://github.com/vypdev/copilot/issues/903) ran old source
+`3e7ceea08e6131360e026937d1c0cc1b120472e0`; its actual log pins that revision.
+The complete immutable-tree collector introduced by #838 is included in v3.10.9.
+A new 344-file regression verifies every pinned content unit beyond the 300-file
+compare prefix. This qualifies the existing SDK path; it does not claim a fresh
+consumer run or authorize a consumer merge.
+
+Minimum additional budget: **25 distinct cases**: 7 inventory-size capacity
+controls (1/32/33/64/108/128/256), 4 field admission/fence cases, 1 complete Commit
+publication, 1 global source-anchor capacity case, 11 closed-context cases, and
+1 exact 344-file compatibility control. Additionally require 5 semantic remaining
+classifications and native no-write integration. Existing architecture/privacy,
+coverage thresholds and all earlier budgets remain enforced; changed executable
+lines require full coverage without misses or partials. English/Spanish failure
+views are checked for counts, safe context and absence of rejected prose.
+
+Traceability: shared allocation and fences map to `progress_batch_policy.test.ts`,
+`progress_batches.integration.test.ts` and `progress_assessment_capacity_policy.test.ts`;
+closed context/privacy map to `progress_capacity_diagnostic.test.ts`; #887 maps to
+`progress_rejection_diagnostics.test.ts` and `progress_result_rejection.integration.test.ts`;
+#903 maps to `complete_progress_diff_repository.test.ts`. Update branch-management,
+error-reference, troubleshooting, README and catalog evidence together. Definition
+of Done includes these cases, specification/docs validation, normal hooks, shipped
+bundles, full CI, exact-head Codecov and complete review without active findings.
+Rollout follows the ordinary reviewed PR and separate release process. Rollback
+restores the prior source/bundles without migrating persisted progress.

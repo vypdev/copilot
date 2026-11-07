@@ -6,6 +6,14 @@ const native = () => fixture({},addedFiles());
 function changes(diff: ProgressDiffEvidence): any[] { if(diff.kind!=='partitioned')throw Error('expected framed evidence');return diff.partitions.flatMap(part=>JSON.parse(part.evidence).changes); }
 
 describe('complete progress collection at the compare ceiling', () => {
+    it('Issue903 recovers all 344 immutable files without treating the capped compare prefix as complete', async () => {
+        const f = fixture({}, addedFiles(344)), result = await f.read();
+        expect(f.data.files).toHaveLength(300);
+        expect(changes(result).map(change => change.path)).toEqual(Object.keys(addedFiles(344)));
+        expect(changes(result).at(-1).recoveredContent.text).toBe('export const value343 = 343;\n');
+        expect(result).toMatchObject({ kind: 'partitioned', baseSha: base, headSha: head, protocol: { version: 'immutable-tree-v1', unitCount: 344 } });
+        expect(f.compareCommits).toHaveBeenCalledTimes(2);
+    });
     it('collects 301 complete files instead of assessing the first 300', async () => { const result=await native().read();expect(changes(result)).toHaveLength(301);expect(changes(result).at(-1).path).toBe('src/file-0300.ts'); });
     it('keeps generated bundles metadata-only under their existing exception', async () => { const f=fixture({}, {...addedFiles(), 'build/github_action/index.js':Buffer.alloc(10_000_000).toString()});const result=changes(await f.read()).find(c=>c.path==='build/github_action/index.js');expect(result).toMatchObject({evidence:'generated-metadata-only'});expect(result).not.toHaveProperty('recoveredContent'); });
     it('keeps the generated specification index metadata-only', async () => { const f=fixture({}, {...addedFiles(), 'specs/CATALOG.md':'generated'});expect(changes(await f.read()).find(c=>c.path==='specs/CATALOG.md')).toMatchObject({evidence:'generated-metadata-only'}); });

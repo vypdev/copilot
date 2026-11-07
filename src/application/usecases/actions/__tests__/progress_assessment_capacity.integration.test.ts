@@ -46,9 +46,12 @@ it('retains state when the native model exceeds its newly derived field ceiling'
     expect(result).toMatchObject({ success: false, errors: [expect.objectContaining({ recovery: { id: 'progress-result-contract-invalid', variables: expect.objectContaining({ reason: 'schema-string-long', field: '$.requirements[0].summary', requirementId: 'R1', sourceLineId: 'L1' }) } })] });
     expect(f.execute).toHaveBeenCalledTimes(2); retained(f);
 });
-it.each(['summary', 'remaining'] as const)('retains state and rejects an oversized combined %s from an alternate port that ignores schema', async field => {
+it.each(['summary', 'remaining'] as const)('retains state and rejects an oversized %s fact from an alternate port that ignores schema', async field => {
     const f = fixture(false, 20, false); f.setRogue(field); const result = (await f.invoke())[0];
-    expect(result).toMatchObject({ success: false, errors: [expect.objectContaining({ code: 'agent.failed', recovery: { id: 'progress-result-contract-invalid', variables: expect.objectContaining({ reason: 'assessment-text-limit', field: `$.requirements[9].${field}`, requirementId: 'R19', sourceLineId: 'L19' }) } })] });
+    expect(result).toMatchObject({ success: false, errors: [expect.objectContaining({ code: 'validation.evidence-too-large', recovery: { id: 'progress-evidence-capacity-exceeded', variables: expect.objectContaining({
+        phase: 'assessment', dimension: `assessment-${field}-points`, observedCount: 800,
+        context: { kind: 'assessment', requirementCount: 32, batch: 1, requirementId: 'R1' },
+    }) } })] });
     expect(f.query).toHaveBeenCalledTimes(2); retained(f);
 });
 it('requires a fresh complete assessment after rejection instead of publishing or reusing partial facts', async () => {

@@ -127,3 +127,10 @@ it('keeps a standalone legacy capacity failure useful when no source map was cap
     const error = caught(() => progressAssessmentFactLimit(scope(32, 'q'.repeat(1190)).requirements));
     expect(error).toMatchObject({ retryable: false, recovery: { variables: { requirementId: 'R7', sourceLineId: 'none' } } });
 });
+it('Issue925 preserves a verified global requirement past the local 32-entry response index range', () => {
+    const s = scope(128, 'q'.repeat(100));
+    const error = caught(() => progressAssessmentFactLimit(s.requirements, Object.fromEntries(s.requirements.map(r => [r.id, `L${r.id.slice(1)}`]))));
+    expect(error).toMatchObject({ code: 'validation.evidence-too-large', recovery: { variables: {
+        field: '$.requirements', requirementId: 'R73', sourceLineId: 'L73',
+    } } });
+});

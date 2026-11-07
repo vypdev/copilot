@@ -5,7 +5,7 @@
       "id": "github-communication-experience",
       "title": "Semantic GitHub communication and repository localization",
       "status": "implemented",
-      "scope": "English-default, localized, semantic, bounded and idempotent product messages across GitHub and repository-aware operator surfaces; complete acceptance batches and cards with stable source identities, verified published SDD provenance and same-head requirement evidence before Commit progress publication",
+      "scope": "English-default, localized, semantic, bounded and idempotent product messages across GitHub and repository-aware operator surfaces; complete acceptance batches and cards with stable source identities, verified published SDD provenance, shared complete-inventory text allocation, precise response diagnostics and same-head requirement evidence before Commit progress publication",
       "owner": "Copilot maintainers",
       "lastVerified": "2026-11-07",
       "specs": [
