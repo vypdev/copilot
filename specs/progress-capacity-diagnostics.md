@@ -394,8 +394,9 @@ One ledger covers at most 120 agent calls and 1,800,000 elapsed milliseconds,
 including the existing bounded repairs. The same-head receipt gate requires a
 complete compatible outcome for every obligation before aggregate reduction and
 the existing publication fence. Both public assessment fields remain bounded
-at 8,000 Unicode points. Larger aggregates use compact original source references
-while the host retains their full original text and authority.
+at 8,000 Unicode points. Larger aggregates display one canonical original source
+location per requirement. The manifest and assessment requests retain every
+original source, alias, case reference, qualifier and publication authority.
 
 `progress-batch-retained` provides closed reasons, verified and expected batch
 counts, the failing assignment and a safe requirement ID. Incomplete attempts
@@ -410,7 +411,7 @@ consumer implementation progress. Historical rejection and candidate results
 remain distinct evidence on the implementation PR.
 
 Each receipt retains the existing per-assessment fact and 8,000-point field
-envelopes. The host reserves all original source references and minimum facts
+envelopes. The host reserves canonical display references and minimum facts
 before requests and supplies a preferred per-requirement text target. Individual
 facts may vary within their assessment envelope. The reducer checks the actual
 complete summary and remaining projections against 8,000 Unicode points each.

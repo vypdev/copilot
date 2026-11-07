@@ -124,10 +124,12 @@ export function planProgressAssessmentBatches(manifest: ProgressScopeManifest, s
     }));
 }
 export function progressBatchDisplayScope(batch: ProgressAssessmentBatch, compact: boolean): ProgressScope {
-    return compact ? { ...batch.scope, requirements: batch.scope.requirements.map(requirement => ({ ...requirement,
-        quote: requirement.sources!.map(source => (source.origin === 'draft' ? 'SDD ' : '') + source.id).join(', ') })) } : batch.scope;
+    return compact ? { ...batch.scope, requirements: batch.scope.requirements.map(requirement => {
+        const source = requirement.sources![0];
+        return { ...requirement, quote: (source.origin === 'draft' ? 'SDD ' : '') + source.id };
+    }) } : batch.scope;
 }
-/** Reserve every source reference and guide concise prose across the complete inventory. */
+/** Reserve every canonical source reference and guide concise prose across the complete inventory. */
 function aggregateFactTarget(manifest: ProgressScopeManifest, compact: boolean): number {
     const display = progressBatchDisplayScope({ id: '', ordinal: 0, scope: manifest.scope }, compact);
     const fixed = display.requirements.reduce((sum, requirement) => sum + [...progressAssessmentPrefix(requirement)].length,

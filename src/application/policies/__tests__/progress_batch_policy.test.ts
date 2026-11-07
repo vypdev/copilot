@@ -4,7 +4,7 @@ import { captureProgressScopeSource } from '../progress_scope_source_policy';
 import { parseProgressScopeWithAnchors, parseProgressScopeClassifications } from '../progress_scope_policy';
 import { partitionProgressDiff } from '../progress_diff_partition_policy';
 import { aggregateProgressAssessmentReceipts, createProgressScopeManifest, parseProgressAssessmentReceipt, planProgressAssessmentBatches,
-    PROGRESS_BATCH_PROFILE, progressGroups, progressBatchResponseSchema, progressScopeSnapshotDigest, progressClassificationBinding, progressClassificationResponseSchema, parseProgressClassificationReceipt } from '../progress_batch_policy';
+    PROGRESS_BATCH_PROFILE, progressGroups, progressBatchDisplayScope, progressBatchResponseSchema, progressScopeSnapshotDigest, progressClassificationBinding, progressClassificationResponseSchema, parseProgressClassificationReceipt } from '../progress_batch_policy';
 import { boundProgressBatchAgent } from '../progress_batch_query_policy';
 import { isProgressBatchDiagnostic } from '../../../domain/progress_batch_diagnostic';
 import { resolveStaticApplicationErrorCatalog } from '../application_error_message_catalog';
@@ -167,6 +167,10 @@ it('CommitScope916-C03 preserves a mandatory draft-only obligation and its origi
     const { scope } = parseProgressScopeWithAnchors(response, source, 'en-US', PROGRESS_BATCH_PROFILE);
     expect(scope.requirements[0]).toMatchObject({ id: 'R2', sources: [requirement, caseLine] });
     expect(scope.publication).toEqual(publication);
+    const display = progressBatchDisplayScope({ id: 'fixture', ordinal: 1, scope }, true);
+    expect(display.requirements[0].quote).toBe('SDD L2');
+    expect(display.requirements[0].sources).toEqual([requirement, caseLine]);
+    expect(scope.requirements[0].quote).toBe(requirement.quote);
     expect(() => parseProgressScopeWithAnchors({ ...response, lines: [response.lines[0], { ...response.lines[1], kind: 'context' }] }, source, 'en-US', PROGRESS_BATCH_PROFILE)).toThrow();
     expect(() => parseProgressScopeWithAnchors({ ...response, lines: [response.lines[0], { ...response.lines[1], sameAs: 'L2' }] }, source, 'en-US', PROGRESS_BATCH_PROFILE))
         .toThrow(expect.objectContaining({ recovery: expect.objectContaining({ variables: expect.objectContaining({ reason: 'scope-classification-invalid', sourceLineId: 'L2' }) }) }));
@@ -277,10 +281,16 @@ it('reserves source identity and complete classification overhead inside the man
     expect(Buffer.byteLength(JSON.stringify(scope))).toBeLessThan(PROGRESS_BATCH_PROFILE.bytes);
     expect(() => createProgressScopeManifest({ ...f.input, issueDescription: lines.map(line => line.quote).join('\n'), capturedSource: { ...f.source, lines }, scope }, f.diff)).toThrow();
 });
-it('reserves the complete compact citation layout before admitting any assessment schema', () => {
+it('keeps all source aliases in the manifest while budgeting one canonical display reference', () => {
     const f = fixture(256), scope = { ...f.input.scope, requirements: f.input.scope.requirements.map(requirement => ({ ...requirement, sources: [...requirement.sources!, ...f.source.lines.slice(0, 9)] })) };
     const manifest = createProgressScopeManifest({ ...f.input, scope }, f.diff), batches = planProgressAssessmentBatches(manifest);
-    expect(() => progressBatchResponseSchema(manifest, batches[0], f.extraction.anchors, true)).toThrow();
+    expect(() => progressBatchResponseSchema(manifest, batches[0], f.extraction.anchors, true)).not.toThrow();
+    expect(manifest.scope.requirements[0].sources).toHaveLength(10);
+    expect(progressBatchDisplayScope(batches[0], true).requirements[0]).toMatchObject({ quote: 'L1', sources: manifest.scope.requirements[0].sources });
+});
+it('reserves the complete original citation layout when compact display is disabled', () => {
+    const f = fixture(256);
+    expect(() => progressBatchResponseSchema(f.manifest, f.batches[0], f.extraction.anchors, false)).toThrow();
 });
 it('rechecks the aggregate field budget independently of receipt digests', () => {
     const f = fixture(), { digest: _digest, ...body } = structuredClone(f.receipt());
