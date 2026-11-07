@@ -19,7 +19,8 @@
         "specs/progress-capacity-diagnostics.md",
         "specs/progress-scope-source-ownership.md",
         "specs/progress-partition-response-recovery.md",
-        "specs/final-progress-completion-recovery.md"
+        "specs/final-progress-completion-recovery.md",
+        "specs/batched-progress-scope.md"
       ],
       "workflows": [
         ".github/workflows/copilot_issue.yml",
