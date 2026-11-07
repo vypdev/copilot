@@ -8,7 +8,10 @@ const SHA256 = '[a-f0-9]{64}';
 const start = '<!-- copilot:sdd-seed -->';
 const end = '<!-- /copilot:sdd-seed -->';
 
-export function readSddSeed(body: string): { scope: string; seed?: string; hash?: string } {
+export type SddSeedInput = { scope: string; seed?: undefined; hash?: undefined }
+  | { scope: string; seed: string; hash: string; openingMarkerLine: number; closingMarkerLine: number };
+
+export function readSddSeed(body: string): SddSeedInput {
   const normalized = body.replace(/\r\n?/gu, '\n');
   const lines = normalized.split('\n');
   const open = lines.indexOf(start), close = lines.indexOf(end);
@@ -20,7 +23,10 @@ export function readSddSeed(body: string): { scope: string; seed?: string; hash?
     throw new ApplicationError('validation.invalid-input', 'Use exactly one complete SDD seed block with standalone opening and closing markers, or remove the seed markers.');
   }
   const seed = lines.slice(open + 1, close).join('\n') + '\n';
-  return { scope: [...lines.slice(0, open), ...lines.slice(close + 1)].join('\n'), seed, hash: sddArtifactDigest(seed) };
+  return {
+    scope: [...lines.slice(0, open), ...lines.slice(close + 1)].join('\n'), seed, hash: sddArtifactDigest(seed),
+    openingMarkerLine: open + 1, closingMarkerLine: close + 1,
+  };
 }
 
 export function isSddSeedReview(body: string, seedHash: string): boolean {

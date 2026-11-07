@@ -173,15 +173,31 @@ attestations. An execution requirement without independent evidence remains
 unverified, rather than becoming a successful test claim. A percentage is an
 estimate; it does not replace review, CI, coverage or approval gates.
 
-Every source line must be accounted for exactly once, including unchanged acceptance criteria; an omitted or duplicated source identifier rejects the entire interpretation. Ambiguous lines remain required verification uncertainty and cannot be marked complete. The issue-only interpretation admits at most 1,024 nonempty source lines, with at most 32 required/uncertain lines and 32 exclusion
-lines, each a complete trimmed source line of at most 1,200 Unicode code points.
-Its serialized form is limited to 64,000 UTF-8 bytes, reserved before the first
-request within the existing runtime ceiling. Nothing is silently shortened to
-fit. One scope request precedes the existing complete evidence and final
-assessment requests. An invalid source identifier, incomplete classification, extra/missing requirement identity,
-contradictory result, oversized output or changed issue body retains existing
-progress. Inspect the run, clarify ambiguous acceptance scope when needed and
-rerun against current evidence. Existing head and native-open checks still apply.
+Commit accounts for every human source span exactly once. It classifies up to
+1,024 nonempty lines in groups of 32, with at most 1,200 Unicode code points per
+line. Required and uncertain obligations receive stable identities from their
+original physical lines. Exclusions, qualifiers and verified SDD case references
+remain in the frozen manifest.
+
+The aggregate admits at most 256 obligations and 256 exclusions. Each assessment
+contains at most 32 obligations and 64,000 UTF-8 bytes of acceptance scope. The
+human scope and identity projection has a 262,144-byte limit. Existing immutable
+comparison limits remain applicable. The complete attempt permits 120 agent
+calls, including bounded repairs, and 30 minutes. The runtime preflights complete
+prompts against its existing 524,288-byte envelope.
+
+Every outcome must cite admitted comparison evidence from the same evaluated
+head. The manifest binds the repository, full issue snapshot, owning PR, base,
+head and selected SDD publication. A reported SHA without a valid source or unit
+reference cannot establish evidence. A missing implementation can be assessed
+with a substantiated observation. A missing evidence receipt prevents publication.
+
+All batches must finish before the host reduces their results and rechecks the
+issue, SDD authority, PR ownership and Git refs. Compatible duplicates converge
+on one semantic publication identity. A stale, incomplete, conflicting or
+oversized attempt retains previous progress. Inspect the run and retry against
+current complete evidence. Incomplete estimates keep percentage labels at or
+below 95 percent, while the progress card retains the assessed estimate.
 
 Scope interpretation and assessment prose are model-derived. Exhaustive source classification, exact citations and
 identity validation cannot prove that natural language was interpreted correctly
@@ -286,17 +302,40 @@ recovery. Issue-body/open-state, native owning PR/target, base and head checks
 still run before publication. Publication failures retain their actual completed
 effects and error classification; writes are never automatically replayed.
 
-`progress-scope-clause-limit` reports a completely validated human classification
-that selected more than 32 required/uncertain lines or more than 32 exclusions.
-Its closed facts give the exact selected count, fixed limit, clause kind and
-first crossing physical source line. Generated state cannot consume that budget.
-A fresh valid classification may help; genuine over-limit human scope still
-requires a reviewed supported protocol. Do not delete requirements, promote
-derived metadata or raise limits to get a passing result. The complete original
-body remains the freshness authority: even a state-only edit invalidates an
-in-flight assessment. No automatic semantic repair or extra model call is added.
+Commit can reconcile a maintainer SDD seed after the Action verifies its
+selection and publication on the linked branch. Repeated scope shares the
+verified requirement's identity. Draft-only requirements remain mandatory, and
+the assessment retains the original lines and linked case scenarios. When the
+selection, publication or assessed revision cannot be verified, Commit retains
+existing progress and reports `progress-sdd-seed-unverified`. Confirm the draft
+and publication before rerunning Commit.
+
+Larger batched cards show one canonical source location per requirement, such as
+`L17` or `SDD L42`. The frozen manifest and assessment requests retain every
+original source, alias, case reference and qualifier. Both complete published
+text fields must fit their 8,000-code-point budgets. Scoped cards render every
+admitted assessment line after secret redaction and GitHub-control sanitization.
+
+`progress-batch-retained` identifies an incomplete or incompatible batch attempt.
+The Check and Job Summary show verified and expected batches, the failing batch,
+a safe requirement ID and the reason. For example, “Progress retained. Verified
+2 of 3 batches. R17 has no evidence for the evaluated head.” Previous labels and
+the progress card remain available. Resolve the reported evidence or capacity
+condition before starting a complete retry.
+
+Older single-assessment runs can report `progress-scope-clause-limit` for more
+than 32 classified obligations or exclusions. Current Commit uses the bounded
+batch protocol. Operational state cannot add requirements, and a full issue-body
+edit still invalidates an in-flight attempt.
 
 ## Completion after a PR merge
+
+For an eligible preparatory PR into the configured non-default development
+branch, a maintainer can [declare a staged rollout](./notifications-and-auto-close#staged-rollout-after-a-preparatory-merge).
+The issue stays assignable while acceptance is pending. The workflow credential
+needs access to read PR reviews, check repository collaborator roles, and write
+comments on the managed issue. If tracking registration fails, rerun the failed
+jobs from the merge run.
 
 Native issue closure owns completion. Copilot clears obsolete managed active,
 waiting, temporary activity and old percentage labels with selective operations.

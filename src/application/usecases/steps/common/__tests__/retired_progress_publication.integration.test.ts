@@ -46,6 +46,17 @@ it('updates the same historical card only after reopening and a fresh branch ass
   expect(await reconcileStatusCard(context, f.comments, f.source)).toMatchObject({ effect: 'updated', canonicalCommentId: 81 });
   expect(f.comments.updateComment).toHaveBeenCalledWith(42, 81, renderSemanticStatus(intent)); expect(f.comments.addComment).not.toHaveBeenCalled();
 });
+it('reopens a retired scoped batch assessment through the normal publication identity', async () => {
+  const scope = 'b'.repeat(64);
+  const scoped = selectSemanticStatusIntents({ locale: 'en-US', results: [new Result({ id: 'CheckProgressUseCase', success: true, executed: true,
+    payload: { issueNumber: 42, progress: 98, summary: 'A fresh assessment', branch: 'feature/42', sourceHeadSha: sha, scopeManifestDigest: scope } })] })[0];
+  const historical = buildRetiredProgressComment(renderSemanticStatus(scoped), 'en-US', 'completed')!;
+  expect(historical).toContain(`> scope:${scope}`);
+  const f = fixture([{ id: 81, body: historical, user: { login: 'bot' } }]);
+  expect(await reconcileStatusCard({ ...context, intent: scoped }, f.comments, f.source)).toMatchObject({ effect: 'updated', canonicalCommentId: 81 });
+  expect(f.comments.updateComment).toHaveBeenCalledWith(42, 81, renderSemanticStatus(scoped));
+  expect(f.comments.addComment).not.toHaveBeenCalled();
+});
 it.each(['closed', 'foreign', 'open'] as const)('binds a frozen read-only native %s capability to the exact issue', async kind => {
   const readIssue = jest.fn(async () => ({ number: kind === 'foreign' ? 43 : 42, state: kind === 'closed' ? 'closed' as const : 'open' as const,
     reason: kind === 'closed' ? 'completed' as const : 'reopened' as const, labels: [] }));

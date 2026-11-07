@@ -24,7 +24,10 @@ export interface DeploymentPublicationContext {
 }
 
 export interface ProgressContext {
+  readonly repositoryIdentity?: string;
   readonly issueNumber: number;
+  readonly issueKind?: string;
+  readonly profileDigest?: string;
   readonly pushedBranch: string;
   readonly developmentBranch: string;
   readonly branchTypes: readonly string[];
@@ -32,6 +35,7 @@ export interface ProgressContext {
   readonly includeReasoning: boolean;
   readonly targetLocale: string;
   readonly sourceHeadSha?: string;
+  readonly trustedBotLogin?: string;
 }
 
 export interface RecommendStepsContext {
@@ -143,6 +147,8 @@ export type IssueCommentActionContext =
     };
 
 export interface PushSingleActionContextSource {
+  readonly issueWorkflowKind?: string;
+  readonly issueWorkflowProfileDigest?: string;
   readonly isPullRequest?: boolean;
   readonly owner: string;
   readonly repo: string;
@@ -279,7 +285,10 @@ export function projectDeploymentOrchestrationContext(
 export function projectProgressContext(source: PushSingleActionContextSource): ProgressContext {
   const sourceHeadSha = canonicalGitObjectId(source.inputs?.after);
   return Object.freeze({
+    repositoryIdentity: source.owner + '/' + source.repo,
     issueNumber: source.issueNumber,
+    ...(source.issueWorkflowKind ? { issueKind: source.issueWorkflowKind } : {}),
+    ...(source.issueWorkflowProfileDigest ? { profileDigest: source.issueWorkflowProfileDigest } : {}),
     pushedBranch: source.commit.branch,
     developmentBranch: source.branches.development || 'develop',
     branchTypes: Object.freeze([
@@ -294,6 +303,7 @@ export function projectProgressContext(source: PushSingleActionContextSource): P
     includeReasoning: source.ai.getAiIncludeReasoning(),
     targetLocale: source.locale.issue,
     ...(sourceHeadSha ? { sourceHeadSha } : {}),
+    ...(source.tokenUser ? { trustedBotLogin: source.tokenUser } : {}),
   });
 }
 

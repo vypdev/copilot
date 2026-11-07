@@ -7,12 +7,13 @@ import { ApplicationError } from '../../../errors/application_error';
 import type { CloseIssueAfterMergeContext } from '../../issue_workflow_context';
 import { parsePositiveSafeInteger } from '../../../../domain/positive_integer_policy';
 import type { ParamUseCase } from '../../base/param_usecase';
+import { reconcileStagedRolloutAfterMerge, type StagedRolloutPorts } from './reconcile_staged_rollout_after_merge';
 import { deferredDeploymentCompletionResult } from '../../actions/deferred_deployment_completion';
 
 /** Native completion first, selective metadata second; retained effects survive partial failures. */
 export class CloseIssueAfterMergingUseCase implements ParamUseCase<CloseIssueAfterMergeContext, Result[]> {
     readonly taskId = 'CloseIssueAfterMergingUseCase';
-    constructor(private readonly issues: BoundIssueCompletionPort) {}
+    constructor(private readonly issues: BoundIssueCompletionPort, private readonly stagedRollout?: StagedRolloutPorts) {}
 
     async invoke(param: CloseIssueAfterMergeContext): Promise<Result[]> {
         const number = parsePositiveSafeInteger(param.issueNumber);
@@ -36,8 +37,17 @@ export class CloseIssueAfterMergingUseCase implements ParamUseCase<CloseIssueAft
             if (facts.deploymentCompletion === 'pending') return [deferredDeploymentCompletionResult(this.taskId, facts, true)];
             if (facts.state === 'open' && facts.reason === 'reopened') throw stale();
             if (facts.state === 'open') {
-                closedThisRun = await target.close();
-                facts = await read();
+                if (this.stagedRollout) {
+                    const rollout = await reconcileStagedRolloutAfterMerge(param, this.stagedRollout, read, target.removeLabel);
+                    if (rollout) return [rollout];
+                    facts = await read();
+                    if (facts.deploymentCompletion === 'pending') return [deferredDeploymentCompletionResult(this.taskId, facts, true)];
+                    if (facts.reason === 'reopened') throw stale();
+                }
+                if (facts.state === 'open') {
+                    closedThisRun = await target.close();
+                    facts = await read();
+                }
             }
             nativeClosed = facts.state === 'closed';
             if (!nativeClosed || closedThisRun && facts.reason !== 'completed') throw stale();

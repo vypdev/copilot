@@ -1,10 +1,11 @@
+import { withProgressEvidence } from './support/progress_batch_response';
 import { CheckProgressUseCase } from '../check_progress_use_case';
 import { framed, clone, BASE, HEAD, type Multipart } from '../../../policies/__tests__/fixtures/framed_progress_fixture';
 import type { FindingsQueryRequest } from '../../../ports/agent_findings_ports';
 import { buildAgentPrompt } from '../../../policies/agent_prompt_envelope_policy';
 import { AGENT_PROMPT_MAX_BYTES } from '../../../../domain/agent_execution_plan';
 
-const context = { issueNumber: 1, pushedBranch: 'feature/1-work', developmentBranch: 'develop', branchTypes: ['feature'],
+const context = { repositoryIdentity: 'owner/repo', issueNumber: 1, pushedBranch: 'feature/1-work', developmentBranch: 'develop', branchTypes: ['feature'],
     agentConfiguration: { provider: 'codex' as const, model: 'fixture-model' }, includeReasoning: false, targetLocale: 'en-US' };
 function scenario(source: Multipart = clone(framed())) {
     const setProgressLabel = jest.fn(), setLabels = jest.fn(); let partIndex = 0;
@@ -26,7 +27,7 @@ function scenario(source: Multipart = clone(framed())) {
     };
     const query = jest.fn(answer), getDescription = jest.fn(async () => state.issue);
     const useCase = new CheckProgressUseCase({ getDescription }, { getLabels: async () => [], setLabels }, { setProgressLabel },
-        { getListOfBranches: async () => [] }, { getOpenPullRequestNumbersByHeadBranch: async () => [] }, { query },
+        { getListOfBranches: async () => [] }, { getOpenPullRequestNumbersByHeadBranch: async () => [] }, { query: async request => withProgressEvidence(await query(request), request.options?.schema) },
         { isIssueOpen: async () => state.open, getBranchHeadSha: async branch => branch === 'develop' ? state.base : state.head },
         { getDiff: async () => source }, { getSource: async () => ({ kind: 'none' }) });
     return { state, source, query, answer, captured, setProgressLabel, setLabels, invoke: () => useCase.invoke(context) };

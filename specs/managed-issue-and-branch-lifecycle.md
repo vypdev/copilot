@@ -9,6 +9,10 @@
 - Required review gates: product UX, architecture, testing, documentation, security/operations
 - Open decisions blocking readiness: none for the baseline
 
+The [staged rollout companion](./managed-issue-and-branch-lifecycle-issue-735.md)
+defines the merge-time deferral for preparatory PRs and the evidence required
+before the original issue is closed.
+
 ## 1. Executive summary
 
 After a maintainer adds `in-progress`, Copilot turns an admitted typed issue into traceable work: it normalizes

@@ -1,3 +1,4 @@
+import { withProgressEvidence, progressComparisonFixture } from './support/progress_batch_response';
 /**
  * Integration-style tests for CheckProgressUseCase with the OpenCode-based flow.
  * Covers edge cases: missing AI config, no issue/branch/description, AI returns undefined/invalid
@@ -9,6 +10,7 @@ import { ProgressDiffRepository } from '../../../../data/repository/progress_dif
 import { Ai } from '../../../../data/model/ai';
 import type { Execution } from '../../../../data/model/execution';
 import { projectProgressContext } from '../../push_single_action_contexts';
+import { buildPublicationMarker } from '../../../policies/publication_identity_policy';
 import type { AgentQueryResult } from '../../../ports/agent_query_ports';
 
 jest.mock('../../../../utils/logger', () => ({
@@ -74,6 +76,8 @@ function baseParam(overrides: Record<string, unknown> = {}): Execution {
 }
 
 describe('CheckProgressUseCase', () => {
+  const listIssueComments = jest.fn();
+  const removeFullProgressLabel = jest.fn();
   let useCase: CheckProgressUseCase;
   let invoke: (param: Execution) => ReturnType<CheckProgressUseCase['invoke']>;
 
@@ -84,9 +88,10 @@ describe('CheckProgressUseCase', () => {
       { setProgressLabel: mockSetProgressLabel },
       { getListOfBranches: mockGetListOfBranches },
       { getOpenPullRequestNumbersByHeadBranch: mockGetOpenPullRequestNumbersByHeadBranch },
-      { query: localizedProgress },
+      { query: async request => withProgressEvidence(await localizedProgress(request), request.options?.schema) },
       { isIssueOpen: jest.fn(async () => true), getBranchHeadSha: mockGetBranchHeadSha },
-      { getDiff: mockGetDiff }, { getSource: jest.fn(async () => ({ kind: 'none' as const })) }
+      { getDiff: mockGetDiff }, { getSource: jest.fn(async () => ({ kind: 'none' as const })) },
+      { listIssueComments, removeFullProgressLabel }
     );
     invoke = (param) => useCase.invoke(projectProgressContext(param));
     mockGetDescription.mockReset();
@@ -98,8 +103,46 @@ describe('CheckProgressUseCase', () => {
     mockGetBranchHeadSha.mockReset();
     mockGetBranchHeadSha.mockImplementation(async branch => branch === 'develop' ? BASE_HEAD : SOURCE_HEAD);
     mockGetDiff.mockReset();
-    mockGetDiff.mockImplementation(async (baseSha, headSha) => ({ baseSha, headSha, evidence: 'PINNED_SOURCE_PATCH' }));
+    mockGetDiff.mockImplementation(async (baseSha, headSha) => progressComparisonFixture(baseSha, headSha, 'PINNED_SOURCE_PATCH'));
     mockAskAgent.mockReset();
+    listIssueComments.mockReset().mockResolvedValue([]);
+    removeFullProgressLabel.mockReset().mockResolvedValue(undefined);
+  });
+
+  const pendingRollout = () => ({
+    id: 50, user: { login: 'vypbot' }, body: buildPublicationMarker({
+      identity: { topic: 'staged-rollout', target: { kind: 'issue', number: 123 }, key: 'pr:42' },
+      sourceVersion: `head:${SOURCE_HEAD}:review:73`, digest: 'abcdabcd',
+    }),
+  });
+
+  it('skips stale progress before model analysis when an owned rollout card is active', async () => {
+    listIssueComments.mockResolvedValue([pendingRollout()]);
+    const [result] = await invoke(baseParam({ tokenUser: 'vypbot' }));
+    expect(result).toMatchObject({ success: true, executed: false });
+    expect(mockAskAgent).not.toHaveBeenCalled();
+    expect(mockSetProgressLabel).not.toHaveBeenCalled();
+  });
+
+  it('stops percentage publication when rollout is registered during analysis', async () => {
+    listIssueComments.mockResolvedValueOnce([]).mockResolvedValueOnce([pendingRollout()]);
+    mockGetDescription.mockResolvedValue('Issue body');
+    mockAskAgent.mockResolvedValue({ progress: 100, summary: 'Candidate implementation' });
+    const [result] = await invoke(baseParam({ tokenUser: 'vypbot' }));
+    expect(mockAskAgent).toHaveBeenCalledTimes(1);
+    expect(result).toMatchObject({ success: true, executed: false });
+    expect(mockSetProgressLabel).not.toHaveBeenCalled();
+  });
+
+  it('repairs a stale completion label when rollout is registered during the label write', async () => {
+    listIssueComments.mockResolvedValueOnce([]).mockResolvedValueOnce([]).mockResolvedValueOnce([pendingRollout()]);
+    mockGetDescription.mockResolvedValue('Issue body');
+    mockAskAgent.mockResolvedValue({ progress: 100, summary: 'Candidate implementation' });
+    const [result] = await invoke(baseParam({ tokenUser: 'vypbot' }));
+    expect(mockSetProgressLabel).toHaveBeenCalledWith(123, 100);
+    expect(removeFullProgressLabel).toHaveBeenCalledWith(123);
+    expect(mockGetOpenPullRequestNumbersByHeadBranch).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ success: true, executed: false });
   });
 
   it('returns error when AI config is missing (no server URL)', async () => {

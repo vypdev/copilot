@@ -21,7 +21,7 @@ it.each([
     ['phase', 'PRIVATE_PHASE'], ['phase', null], ['reason', 'PRIVATE_REASON'], ['reason', 'scope-budget'],
     ['field', '$.PRIVATE_MODEL_FIELD'], ['field', '$.requirements[32].id'], ['field', '$.requirements[00].id'],
     ['field', '$.requirements[0].id\n'], ['field', '$.requirements[0].id<script>'],
-    ['requirementId', 'R0'], ['requirementId', 'R33'], ['requirementId', 'r1'], ['requirementId', 'R01'],
+    ['requirementId', 'R0'], ['requirementId', 'R524290'], ['requirementId', 'r1'], ['requirementId', 'R01'],
     ['requirementId', 'R2\n'], ['requirementId', '@all'], ['requirementId', 2],
     ['sourceLineId', 'L0'], ['sourceLineId', 'L524290'], ['sourceLineId', 'l7'], ['sourceLineId', 'L07'],
     ['sourceLineId', 'L7\n'], ['sourceLineId', 'PRIVATE_SOURCE'],
@@ -55,7 +55,7 @@ it('does not infer requirement IDs from scope classification positions', () => {
     expect(isProgressResponseDiagnosticFacts({ ...facts('scope'), sourceLineId: 'none' })).toBe(true);
 });
 it.each([
-    ['R1', true, false], ['R32', true, false], ['R33', false, false], ['L1', false, true], ['L1024', false, true],
+    ['R1', true, false], ['R32', true, false], ['R33', true, false], ['R524289', true, false], ['R524290', false, false], ['L1', false, true], ['L1024', false, true],
     ['L524289', false, true], ['L524290', false, false], ['R01', false, false], ['R1\n', false, false], ['L1\n', false, false], [null, false, false],
 ])('recognizes only canonical host identities %#', (value, requirement, line) => {
     expect(isProgressRequirementId(value)).toBe(requirement); expect(isProgressSourceLineId(value)).toBe(line);

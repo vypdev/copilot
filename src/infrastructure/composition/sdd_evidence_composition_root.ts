@@ -14,7 +14,8 @@ import { bindActorAuthorization, bindIssueLabels } from './lifecycle_capability_
 import { bindIssueDescriptionQuery } from './shared_capability_port_binding';
 
 /** No provisioning, mutation, agent or approval capability crosses this binding. */
-export function createSddEvidenceReadPorts(binding: BugbotScmBinding, comments: Pick<BoundBugbotContextReadPorts, 'listIssueComments'>): SddEvidenceReadPorts {
+export function createSddEvidenceReadPorts(binding: BugbotScmBinding, comments: Pick<BoundBugbotContextReadPorts, 'listIssueComments'>,
+    workspace = new PreBranchSddWorkspaceAdapter(process.cwd(), binding.token)): SddEvidenceReadPorts {
     const titles = createIssueMetadataCompositionRoot();
     const branches = new LinkedBranchReadinessRepository(createGraphqlTransportClient());
     return bindSddEvidenceReadPorts({
@@ -28,7 +29,7 @@ export function createSddEvidenceReadPorts(binding: BugbotScmBinding, comments: 
             getLinkedBranch: (issueNumber, name) => branches.getLinkedBranch(binding.owner, binding.repository, issueNumber, name, binding.token),
             getHistoricalLinkedBranch: (issueNumber, name) => branches.getHistoricalLinkedBranch(binding.owner, binding.repository, issueNumber, name, binding.token),
         },
-        workspace: new PreBranchSddWorkspaceAdapter(process.cwd(), binding.token),
+        workspace,
     });
 }
 

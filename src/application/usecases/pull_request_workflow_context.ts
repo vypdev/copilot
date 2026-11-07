@@ -99,7 +99,14 @@ export interface PullRequestWorkflowContextSource {
     readonly desiredAssigneesCount: number;
     readonly desiredReviewersCount: number;
   };
-  readonly branches: { readonly defaultBranch: string };
+  readonly branches: {
+    readonly defaultBranch: string;
+    readonly development?: string;
+    readonly featureTree?: string;
+    readonly bugfixTree?: string;
+    readonly docsTree?: string;
+    readonly choreTree?: string;
+  };
   readonly labels: {
     readonly sizeLabels: readonly string[];
     readonly sizeXxl?: string;
@@ -181,6 +188,15 @@ export function projectPullRequestWorkflowStepContexts(
       }),
       issueNumber: source.issueNumber,
       pullRequestNumber: source.pullRequest.number,
+      ...(source.pullRequest.headSha ? { stagedRollout: Object.freeze({
+        headSha: source.pullRequest.headSha,
+        integrationBranch: source.branches.development,
+        branchTypes: Object.freeze([
+          source.branches.featureTree, source.branches.bugfixTree, source.branches.docsTree, source.branches.choreTree,
+        ].filter((type): type is string => Boolean(type))),
+        botLogin: source.tokenUser,
+        locale: source.locale.issue ?? 'en-US',
+      }) } : {}),
     }),
   });
 }

@@ -23,7 +23,7 @@ export type ProgressResponseDiagnosticFacts = Readonly<{
     sourceLineId: string;
 }>;
 const fieldPatterns = Object.freeze({
-    scope: /^\$(?:\.outputLocale|\.lines(?:\[(0|[1-9]\d{0,3})\](?:\.(?:id|kind))?)?)?$/u,
+    scope: /^\$(?:\.outputLocale|\.lines(?:\[(0|[1-9]\d{0,3})\](?:\.(?:id|kind|sameAs))?)?)?$/u,
     partition: /^\$(?:\.outputLocale|\.partitionId|\.files(?:\[(0|[1-9]\d{0,3})\](?:\.(?:path|unitId|implemented|remaining))?)?)?$/u,
     assessment: /^\$(?:\.outputLocale|\.progress|\.requirements(?:\[(0|[1-9]\d{0,3})\](?:\.(?:id|status|evidence|summary|remaining))?)?)?$/u,
 });
@@ -33,7 +33,7 @@ function knownId(value: unknown, prefix: string, maximum: number): value is stri
     const match = value.match(/^([RL])([1-9]\d{0,5})$/u);
     return match !== null && match[0] === value && match[1] === prefix && Number(match[2]) <= maximum;
 }
-export const isProgressRequirementId = (value: unknown): value is string => knownId(value, 'R', 32);
+export const isProgressRequirementId = (value: unknown): value is string => knownId(value, 'R', AGENT_PROMPT_MAX_BYTES + 1);
 export const isProgressSourceLineId = (value: unknown): value is string => knownId(value, 'L', AGENT_PROMPT_MAX_BYTES + 1);
 
 export function isProgressResponseField(phase: ProgressResponsePhase, value: unknown): value is string {

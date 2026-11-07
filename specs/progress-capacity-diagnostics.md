@@ -378,3 +378,84 @@ Invocation-local continuation and explicit bounded incapacity are selected;
 durable checkpointing, unchecked larger limits and reduced coherent scope are
 excluded. The original exact failed dimension remains unknown until evidence
 establishes it. SDK regressions must retain that provenance distinction.
+
+## 21. Acceptance batch profile and publication eligibility — #916
+
+`specs/batched-progress-scope.md` defines the reviewed finite extension. Each
+classification request owns up to 32 source lines. An attempt supports up to
+256 obligations and 256 exclusions, with 32 obligations per assessment. The
+human scope and identity projection has a 262,144-byte ceiling. The admitted
+native evidence ledger retains the existing immutable comparison profile and
+its independent source, unit, byte and recovery limits. Request acceptance data
+retains the 64,000-byte envelope. Complete native prompt preflight remains
+524,288 bytes, including schema and framing.
+
+One ledger covers at most 120 agent calls and 1,800,000 elapsed milliseconds,
+including the existing bounded repairs. The same-head receipt gate requires a
+complete compatible outcome for every obligation before aggregate reduction and
+the existing publication fence. Both public assessment fields remain bounded
+at 8,000 Unicode points. Larger aggregates display one canonical original source
+location per requirement. The manifest and assessment requests retain every
+original source, alias, case reference, qualifier and publication authority.
+The scoped-card selector repeats the 8,000-point field guards. Its renderer
+sanitizes the complete admitted projections, including supplementary Unicode
+and normalization expansion, so the displayed card preserves every assessed ID.
+
+`progress-batch-retained` provides closed reasons, verified and expected batch
+counts, the failing assignment and a safe requirement ID. Incomplete attempts
+retain previous progress. Capacity does not authorize publication of a subset.
+The original direct single-assessment capacity diagnostic remains available.
+
+Measured deterministic Domus replay classifies 300 human lines in 10 requests,
+retains all 157 paths and 16 comparison parts, and assesses 108 fixture obligations
+in four groups. It uses 30 agent-port calls with zero real model calls. The
+fixture's 50 percent response exercises the protocol. It does not establish
+consumer implementation progress. Historical rejection and candidate results
+remain distinct evidence on the implementation PR.
+
+Each receipt retains the existing per-assessment fact and 8,000-point field
+envelopes. The host reserves canonical display references and minimum facts
+before requests and supplies a preferred per-requirement text target. Individual
+facts may vary within their assessment envelope. The reducer checks the actual
+complete summary and remaining projections against 8,000 Unicode points each.
+An oversized aggregate retains previous progress. Each assessment prompt states
+its hard per-fact limit and the shared aggregate target. Incomplete estimates
+retain their card value and use percentage labels capped at 95 percent, preserving the completion
+invariant across the issue and PR label adapters.
+
+Classification receipts bind their assigned span IDs to a source snapshot digest,
+assignment identity and evaluated head. The final manifest retains the complete
+classified span inventory in original source order. Every classification batch
+receives complete human context, including published draft case qualifiers, while
+its response schema owns only its assigned IDs. Requirement evidence cites an
+admitted regular source observation. Generated metadata remains supplemental
+comparison context. Source and receipt reordering preserve the aggregate identity.
+
+Evidence extraction shares its complete comparison facts when the whole acceptance
+view fits the existing 64,000-byte request envelope. Larger coherent views use
+bounded requirement groups against the same frozen comparison. Every group retains
+all assigned requirements, exclusions and comparison parts. The host preflights the
+entire repeated-evidence plan against the same 120-call limit before collecting
+those facts. The pinned Domus fixture retains the shared 30-call path.
+
+Citation arrays use the provider-compatible native array shape with `minItems`
+and `maxItems`. The host enforces citation uniqueness and same-head resolution
+before accepting any receipt. The deterministic native-projection regression
+excludes the unsupported `uniqueItems` keyword while duplicate citations still
+reject the whole attempt. A minimal native schema probe reproduced the provider
+rejection with that keyword and accepted the same closed shape without it.
+
+Large evidence dictionaries retain their complete enum in the host acceptance
+schema. The existing Codex projection omits a native enum that exceeds its
+1,000-value request budget or the 15,000-point string budget for enums with over
+250 values. Exact local membership and same-head citation validation still apply
+to every response. `specs/agent-execution-policy-hardening.md` records the shared
+provider adaptation and its deterministic boundary cases.
+
+The assessment response schema and receipt prompt expose only admitted
+non-generated evidence IDs. The complete comparison and host manifest retain
+generated metadata as supplemental context. A comparison containing exclusively
+generated metadata has no admissible primary citation and retains previous
+progress before an assessment request. The host also rejects forged generated
+citations from an alternate query port and repeats that check during aggregate
+publication eligibility, including receipts with recomputed digests.

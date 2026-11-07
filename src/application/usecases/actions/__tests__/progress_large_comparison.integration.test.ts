@@ -1,3 +1,4 @@
+import { withProgressEvidence } from './support/progress_batch_response';
 import { createHash } from 'node:crypto';
 import { CheckProgressUseCase } from '../check_progress_use_case';
 import { largeProgressFixture } from '../../../../data/repository/__tests__/fixtures/large_progress_fixture';
@@ -6,7 +7,7 @@ import type { ProgressDiffEvidence } from '../../../ports/progress_diff_query_po
 import type { FindingsQueryPort, FindingsQueryRequest } from '../../../ports/agent_findings_ports';
 
 const issue = 'Produce the complete specification package.\nDo not infer successful project execution from source.';
-const context = { issueNumber: 1, pushedBranch: 'feature/1-work', developmentBranch: 'develop', branchTypes: ['feature'],
+const context = { repositoryIdentity: 'owner/repo', issueNumber: 1, pushedBranch: 'feature/1-work', developmentBranch: 'develop', branchTypes: ['feature'],
   agentConfiguration: { provider: 'codex' as const, model: 'fixture-model' }, includeReasoning: false, targetLocale: 'en-US' };
 const sha = (text: string) => createHash('sha256').update(text).digest('hex');
 const properties = (schema: unknown) => (schema as { properties: Record<string, unknown> }).properties;
@@ -36,7 +37,7 @@ function scenario(corrupt = false) {
     return { outputLocale: 'en-US', progress: 100, requirements: [{ id: 'R1', status: 'supported', evidence: 'source-only', summary: 'The complete source package was supplied.', remaining: null }] };
   });
   const useCase = new CheckProgressUseCase({ getDescription: async () => issue }, { getLabels: async () => [], setLabels }, { setProgressLabel },
-    { getListOfBranches: async () => [] }, { getOpenPullRequestNumbersByHeadBranch: async () => [] }, { query } as FindingsQueryPort,
+    { getListOfBranches: async () => [] }, { getOpenPullRequestNumbersByHeadBranch: async () => [] }, { query: async request => withProgressEvidence(await query(request), request.options?.schema) } as FindingsQueryPort,
     { isIssueOpen: async () => true, getBranchHeadSha: async (branch: string) => branch === 'develop' ? BASE : HEAD }, { getDiff }, { getSource: async () => ({ kind: 'none' }) });
   return { source, query, useCase, setProgressLabel, setLabels, getDiff: () => diff, partCount: () => parts };
 }

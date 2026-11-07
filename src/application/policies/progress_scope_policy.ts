@@ -1,4 +1,5 @@
-import { progressScopeSourceLines, type ProgressScopeSourceLine } from './progress_scope_source_policy';
+import { progressBatchRejected } from './progress_batch_rejection_policy';
+import { captureProgressScopeSource, type ProgressScopeSource, type ProgressScopeSourceLine } from './progress_scope_source_policy';
 export { progressScopeSourceLines, type ProgressScopeSourceLine } from './progress_scope_source_policy';
 import { progressScopeCapacityRejected, progressResponseRejected, progressResponsePayload } from './progress_response_rejection_policy';
 import { isProgressRequirementId, isProgressSourceLineId, type ProgressResponseReason } from '../../domain/progress_response_diagnostic';
@@ -10,19 +11,20 @@ import { ProgressCompletionMismatch } from '../errors/progress_completion_mismat
 export const MAX_PROGRESS_SCOPE_BYTES = 64_000;
 export const MAX_PROGRESS_SCOPE_CLAUSES = 32;
 const MAX_FACT = MAX_PROGRESS_FACT_POINTS;
-export interface ProgressScopeClause { readonly id: string; readonly quote: string; readonly uncertain?: true }
+export interface ProgressScopeClause { readonly id: string; readonly quote: string; readonly uncertain?: true; readonly sources?: readonly ProgressScopeSourceLine[] }
 export type ProgressScopeAnchors = Readonly<Record<string, string>>;
 export interface ProgressScopeExtraction { readonly scope: ProgressScope; readonly anchors: ProgressScopeAnchors }
-export interface ProgressScope { readonly requirements: readonly ProgressScopeClause[]; readonly exclusions: readonly ProgressScopeClause[] }
+export interface ProgressScope { readonly requirements: readonly ProgressScopeClause[]; readonly exclusions: readonly ProgressScopeClause[]; readonly publication?: NonNullable<ProgressScopeSource['draft']>['publication'] }
 
-export function progressScopeResponseSchema(lines: readonly ProgressScopeSourceLine[]) {
+export function progressScopeResponseSchema(lines: readonly ProgressScopeSourceLine[], required?: ReadonlySet<string>) {
     return { type: 'object', additionalProperties: false,
         properties: { outputLocale: AGENT_OUTPUT_LOCALE_SCHEMA_PROPERTY,
             lines: { type: 'array', minItems: lines.length, maxItems: lines.length,
                 items: { type: 'object', additionalProperties: false,
                     properties: { id: { type: 'string', enum: lines.map(line => line.id) },
-                        kind: { type: 'string', enum: ['required', 'excluded', 'context', 'uncertain'] } },
-                    required: ['id', 'kind'] } } }, required: ['outputLocale', 'lines'] } as const;
+                        kind: { type: 'string', enum: ['required', 'excluded', 'context', 'uncertain'] },
+                        ...(required ? { sameAs: { type: 'string', enum: ['none', ...required] } } : {}) },
+                    required: required ? ['id', 'kind', 'sameAs'] : ['id', 'kind'] } } }, required: ['outputLocale', 'lines'] } as const;
 }
 
 function exactKeys(value: Record<string, unknown>, keys: readonly string[]): boolean {
@@ -32,10 +34,10 @@ export function parseProgressScope(response: unknown, issue: string, locale: str
     return parseProgressScopeWithAnchors(response, issue, locale).scope;
 }
 
-/** Retains host physical-line identities separately; scope/model JSON is unchanged. */
-export function parseProgressScopeWithAnchors(response: unknown, issue: string, locale: string): ProgressScopeExtraction {
+/** Validate each assignment independently before accepting it into the complete inventory. */
+export function parseProgressScopeClassifications(response: unknown, captured: ProgressScopeSource, locale: string) {
     const payload = progressResponsePayload(response, locale, 'scope');
-    const source = progressScopeSourceLines(issue);
+    const { lines: source, draft } = captured;
     const reject = (reason: ProgressResponseReason, field: string, id: unknown = 'none'): never => {
         throw progressResponseRejected({ phase: 'scope', reason, field, requirementId: 'none',
             sourceLineId: isProgressSourceLineId(id) && source.some(line => line.id === id) ? id : 'none' });
@@ -49,31 +51,67 @@ export function parseProgressScopeWithAnchors(response: unknown, issue: string, 
         reject('scope-incomplete', '$.lines', missing?.id);
     }
     const seen = new Set<string>();
-    const classified = input.map((entry: unknown, index) => {
+    return input.map((entry: unknown, index) => {
         const field = `$.lines[${index}]`;
         if (!entry || typeof entry !== 'object' || Array.isArray(entry)) reject('scope-entry-invalid', field);
         const item = entry as Record<string, unknown>;
-        if (!exactKeys(item, ['id', 'kind'])) reject('scope-source-id-invalid', field, item.id);
+        if (!exactKeys(item, draft ? ['id', 'kind', 'sameAs'] : ['id', 'kind'])) reject('scope-source-id-invalid', field, item.id);
         if (typeof item.id !== 'string' || !source.some(line => line.id === item.id)) reject('scope-source-id-invalid', `${field}.id`);
         const id = item.id as string;
         if (seen.has(id)) reject('scope-source-id-duplicate', `${field}.id`, id);
         seen.add(id);
         if (!['required', 'excluded', 'context', 'uncertain'].includes(item.kind as string)) reject('scope-classification-invalid', `${field}.kind`, id);
-        return { id, kind: item.kind };
+        if (draft) {
+            const fixed = draft.required.has(id);
+            if (fixed && item.kind !== 'required') reject('scope-classification-invalid', `${field}.kind`, id);
+            if (item.sameAs !== 'none' && (fixed || item.kind !== 'required' || typeof item.sameAs !== 'string' || !draft.required.has(item.sameAs))) {
+                reject('scope-classification-invalid', `${field}.sameAs`, id);
+            }
+        }
+        return { id, kind: item.kind, ...(draft ? { sameAs: item.sameAs } : {}) };
     });
+}
+
+/** The legacy envelope remains available to callers that request a single assessment. */
+export function parseProgressScopeWithAnchors(response: unknown, issue: string | ProgressScopeSource, locale: string,
+    batchProfile?: { readonly clauses: number; readonly bytes: number }): ProgressScopeExtraction {
+    const captured = typeof issue === 'string' ? captureProgressScopeSource(issue) : issue;
+    const { lines: source, draft } = captured;
+    const classified = parseProgressScopeClassifications(response, captured, locale);
+    const reject = (reason: ProgressResponseReason, field: string): never => {
+        throw progressResponseRejected({ phase: 'scope', reason, field, requirementId: 'none', sourceLineId: 'none' });
+    };
+    const classifications = new Map(classified.map(item => [item.id, item]));
+    const aliases = new Map<string, ProgressScopeSourceLine[]>();
+    for (const line of source) {
+        const target = classifications.get(line.id)!.sameAs;
+        if (typeof target === 'string' && target !== 'none') {
+            const matches = aliases.get(target) ?? [];
+            matches.push(line);
+            aliases.set(target, matches);
+        }
+    }
     const anchors: Record<string, string> = {};
     function clauses(kinds: readonly string[], prefix: string): readonly ProgressScopeClause[] {
-        const selected = source.filter(line => kinds.includes(classified.find(item => item.id === line.id)!.kind as string));
-        if (selected.length > MAX_PROGRESS_SCOPE_CLAUSES) throw progressScopeCapacityRejected({ clauseKind: prefix === 'R' ? 'required-or-uncertain' : 'excluded', observed: selected.length, limit: 32, sourceLineId: selected[MAX_PROGRESS_SCOPE_CLAUSES].id });
+        const selected = source.filter(line => {
+            const item = classifications.get(line.id)!;
+            return (item.sameAs === undefined || item.sameAs === 'none') && kinds.includes(item.kind as string);
+        });
+        const limit = batchProfile?.clauses ?? MAX_PROGRESS_SCOPE_CLAUSES;
+        if (selected.length > limit) {
+            if (batchProfile) throw progressBatchRejected('scope-capacity');
+            throw progressScopeCapacityRejected({ clauseKind: prefix === 'R' ? 'required-or-uncertain' : 'excluded', observed: selected.length, limit: 32, sourceLineId: selected[MAX_PROGRESS_SCOPE_CLAUSES].id });
+        }
         return Object.freeze(selected.map((line, index) => {
-            const id = `${prefix}${index + 1}`; anchors[id] = line.id;
+            const id = `${prefix}${batchProfile ? line.id.slice(1) : index + 1}`; anchors[id] = line.id;
             return Object.freeze({ id, quote: line.quote,
-                ...(classified.find(item => item.id === line.id)!.kind === 'uncertain' ? { uncertain: true as const } : {}) });
+                ...(classifications.get(line.id)!.kind === 'uncertain' ? { uncertain: true as const } : {}),
+                ...(draft || batchProfile ? { sources: [{ ...line, origin: line.origin ?? 'issue' }, ...draft?.evidence.get(line.id) ?? [], ...aliases.get(line.id) ?? []] } : {}) });
         }));
     }
-    const scope = Object.freeze({ requirements: clauses(['required', 'uncertain'], 'R'), exclusions: clauses(['excluded'], 'X') });
+    const scope = Object.freeze({ requirements: clauses(['required', 'uncertain'], 'R'), exclusions: clauses(['excluded'], 'X'), ...(draft ? { publication: draft.publication } : {}) });
     if (scope.requirements.length === 0) reject('scope-no-requirements', '$.lines');
-    if (Buffer.byteLength(JSON.stringify(scope), 'utf8') > MAX_PROGRESS_SCOPE_BYTES) reject('scope-budget', '$.lines');
+    if (Buffer.byteLength(JSON.stringify(scope), 'utf8') > (batchProfile?.bytes ?? MAX_PROGRESS_SCOPE_BYTES)) reject('scope-budget', '$.lines');
     return Object.freeze({ scope, anchors: Object.freeze(anchors) });
 }
 

@@ -1,3 +1,4 @@
+import { withProgressEvidence } from './support/progress_batch_response';
 import { CheckProgressUseCase } from '../check_progress_use_case';
 import { FindingsAgentAdapter } from '../../../../data/repository/ai/findings_agent_adapter';
 import type { AgentCliPort } from '../../../../infrastructure/agents/ports/agent_provider_ports';
@@ -6,7 +7,7 @@ import { partitionProgressDiff } from '../../../policies/progress_diff_partition
 import { largeCompleteProgressFixture } from '../../../../data/repository/__tests__/support/large_complete_progress_fixture';
 
 const BASE = 'a'.repeat(40), HEAD = 'b'.repeat(40);
-const context = { issueNumber: 830, pushedBranch: 'bugfix/830-work', developmentBranch: 'develop', branchTypes: ['bugfix'],
+const context = { repositoryIdentity: 'owner/repo', issueNumber: 830, pushedBranch: 'bugfix/830-work', developmentBranch: 'develop', branchTypes: ['bugfix'],
     agentConfiguration: { provider: 'codex' as const, model: 'fixture-model' }, includeReasoning: false, targetLocale: 'en-US' };
 function scenario(mode: 'success' | 'final-exhausted' | 'part-exhausted' | 'escaped-fact', completeSource?: ReturnType<typeof largeCompleteProgressFixture>) {
     let diff: ProgressDiffEvidence;
@@ -46,7 +47,7 @@ function scenario(mode: 'success' | 'final-exhausted' | 'part-exhausted' | 'esca
     });
     const useCase = new CheckProgressUseCase({ getDescription: async () => 'Implement first source requirement.\nImplement second source requirement.' },
         { getLabels: async () => [], setLabels }, { setProgressLabel }, { getListOfBranches: async () => [] },
-        { getOpenPullRequestNumbersByHeadBranch: async () => [] }, new FindingsAgentAdapter({ cli: { execute } }),
+        { getOpenPullRequestNumbersByHeadBranch: async () => [] }, new FindingsAgentAdapter({ cli: { execute: async request => withProgressEvidence(await execute(request), request.outputSchema) } }),
         { isIssueOpen: async () => true, getBranchHeadSha: async branch => branch === 'develop' ? BASE : HEAD },
         { getDiff }, { getSource: async () => ({ kind: 'none' }) });
     return { invoke: () => useCase.invoke(context), execute, getDiff, setProgressLabel, setLabels, requests, partCalls, finalCalls: () => finalCalls, diff: () => diff };

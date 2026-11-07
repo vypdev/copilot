@@ -1,6 +1,6 @@
 import { logDebugInfo } from '../../../utils/logger';
 import type { IssueLabelsPort } from '../../../application/ports/issue_management_ports';
-import { PROGRESS_LABEL_PATTERN } from '../../../application/policies/progress_labels';
+import { PROGRESS_LABEL_PATTERN, progressLabelPercent } from '../../../application/policies/progress_labels';
 
 export class IssueProgressLabelRepository {
     constructor(private readonly issueLabelRepository: Pick<IssueLabelsPort, 'getLabels' | 'setLabels'>) {}
@@ -12,7 +12,7 @@ export class IssueProgressLabelRepository {
         progress: number,
         token: string,
     ): Promise<void> => {
-        const rounded = Math.min(100, Math.max(0, Math.round(progress / 5) * 5));
+        const rounded = progressLabelPercent(progress);
         const newLabel = `${rounded}%`;
         const current = await this.issueLabelRepository.getLabels(owner, repository, issueNumber, token);
         const withoutProgress = current.filter(name => !PROGRESS_LABEL_PATTERN.test(name));

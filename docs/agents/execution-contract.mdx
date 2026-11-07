@@ -70,8 +70,11 @@ The hard maxima are 15 minutes, 512 KiB of prompt bytes, and 4 MiB of combined p
 
 For Codex, the native schema preserves that closed JSON shape while string
 length bounds are enforced locally from the complete original schema. This
-provider compatibility projection also covers nested and nullable strings;
-it does not change numeric/array bounds, required fields or local acceptance.
+projection covers nested and nullable strings. Native enums share a fixed
+1,000-value request budget. Enums exceeding that remaining budget, or containing
+over 250 values and over 15,000 Unicode string points, stay in the complete local
+schema. Every returned value still requires exact local enum membership. Native
+numeric/array bounds, required fields and closed objects retain their constraints.
 
 Every product-facing read-only task also receives the canonical effective
 `targetLocale` and must return the exact same tag in required `outputLocale`

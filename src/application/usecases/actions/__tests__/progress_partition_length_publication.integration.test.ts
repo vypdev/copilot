@@ -1,3 +1,4 @@
+import { withProgressEvidence } from './support/progress_batch_response';
 import { CheckProgressUseCase } from '../check_progress_use_case';
 import { framed, clone, BASE, HEAD } from '../../../policies/__tests__/fixtures/framed_progress_fixture';
 import { FindingsAgentAdapter } from '../../../../data/repository/ai/findings_agent_adapter';
@@ -6,7 +7,7 @@ import { interpretProgressAgentOutput } from '../../../../data/repository/progre
 import { completeInventoryScenario } from './fixtures/complete_inventory_workflow_fixture';
 import { largeCompleteProgressFixture } from '../../../../data/repository/__tests__/support/large_complete_progress_fixture';
 
-const context = { issueNumber: 830, pushedBranch: 'bugfix/830-output', developmentBranch: 'develop', branchTypes: ['bugfix'],
+const context = { repositoryIdentity: 'owner/repo', issueNumber: 830, pushedBranch: 'bugfix/830-output', developmentBranch: 'develop', branchTypes: ['bugfix'],
     agentConfiguration: { provider: 'codex' as const, model: 'fixture-model' }, includeReasoning: false, targetLocale: 'en-US' };
 function scenario(mode: 'recover' | 'persistent' | 'stale') {
     const source = clone(framed()), units = source.partitions.flatMap(part => part.units!), calls = new Map<string, number>();
@@ -28,7 +29,7 @@ function scenario(mode: 'recover' | 'persistent' | 'stale') {
         if (mode === 'stale') state.head = 'c'.repeat(40);
         return JSON.stringify({ outputLocale: 'en-US', progress: 100, requirements: [{ id: 'R1', status: 'supported', evidence: 'source-only', summary: 'Required source is present.', remaining: null }] });
     });
-    const native = new FindingsAgentAdapter({ cli: { execute } });
+    const native = new FindingsAgentAdapter({ cli: { execute: async request => withProgressEvidence(await execute(request), request.outputSchema) } });
     const useCase = new CheckProgressUseCase({ getDescription: async () => 'Implement both files.' }, { getLabels: async () => [], setLabels }, { setProgressLabel },
         { getListOfBranches: async () => [] }, { getOpenPullRequestNumbersByHeadBranch: async () => [] }, native,
         { isIssueOpen: async () => true, getBranchHeadSha: async branch => branch === 'develop' ? BASE : state.head },

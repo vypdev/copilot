@@ -1,3 +1,4 @@
+import { withProgressEvidence, progressComparisonFixture } from './support/progress_batch_response';
 import { CheckProgressUseCase } from '../check_progress_use_case';
 import { FindingsAgentAdapter } from '../../../../data/repository/ai/findings_agent_adapter';
 import type { AgentCliPort } from '../../../../infrastructure/agents/ports/agent_provider_ports';
@@ -14,7 +15,7 @@ import { remainingProgressPromptBytes } from '../../../policies/progress_prompt_
 
 const BASE = 'a'.repeat(40), HEAD = 'b'.repeat(40);
 const issue = 'Implement the first scoped source change.\nImplement the second scoped source change.';
-const context = { issueNumber: 853, pushedBranch: 'bugfix/853-work', developmentBranch: 'develop', branchTypes: ['bugfix'],
+const context = { repositoryIdentity: 'owner/repo', issueNumber: 853, pushedBranch: 'bugfix/853-work', developmentBranch: 'develop', branchTypes: ['bugfix'],
     agentConfiguration: { provider: 'codex' as const, model: 'fixture-model' }, includeReasoning: false, targetLocale: 'en-US' };
 function output(progress = 100, uncertain = false) {
     return { outputLocale: 'en-US', progress, requirements: ['R1', 'R2'].map((id, index) => ({ id,
@@ -45,8 +46,8 @@ function scenario(responses: unknown[], uncertain = false, diff?: ProgressDiffEv
         const response = responses[Math.min(finals.length - 1, responses.length - 1)];
         return typeof response === 'string' ? response : JSON.stringify(response);
     });
-    const getDiff = jest.fn(async () => diff ?? { kind: 'single' as const, baseSha: BASE, headSha: HEAD, evidence: 'Complete pinned source delta.' });
-    const native = new FindingsAgentAdapter({ cli: { execute } });
+    const getDiff = jest.fn(async () => diff ?? progressComparisonFixture(BASE, HEAD, 'Complete pinned source delta.'));
+    const native = new FindingsAgentAdapter({ cli: { execute: async request => withProgressEvidence(await execute(request), request.outputSchema) } });
     const useCase = new CheckProgressUseCase({ getDescription: async () => state.body }, { getLabels: async () => [], setLabels },
         { setProgressLabel }, { getListOfBranches: async () => [] }, { getOpenPullRequestNumbersByHeadBranch: publicationTargets }, native,
         { isIssueOpen: async () => state.open, getBranchHeadSha: async branch => branch === 'develop' ? state.base : state.head },

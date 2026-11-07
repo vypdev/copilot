@@ -5,9 +5,9 @@
       "id": "github-communication-experience",
       "title": "Semantic GitHub communication and repository localization",
       "status": "implemented",
-      "scope": "English-default, localized, semantic, bounded, and idempotent product messages across GitHub and repository-aware operator surfaces",
+      "scope": "English-default, localized, semantic, bounded and idempotent product messages across GitHub and repository-aware operator surfaces; complete acceptance batches and cards with stable source identities, verified published SDD provenance and same-head requirement evidence before Commit progress publication",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-11-04",
+      "lastVerified": "2026-11-07",
       "specs": [
         "specs/semantic-github-publication-and-notification.md",
         "specs/repository-locale-and-localization.md",
@@ -19,7 +19,8 @@
         "specs/progress-capacity-diagnostics.md",
         "specs/progress-scope-source-ownership.md",
         "specs/progress-partition-response-recovery.md",
-        "specs/final-progress-completion-recovery.md"
+        "specs/final-progress-completion-recovery.md",
+        "specs/batched-progress-scope.md"
       ],
       "workflows": [
         ".github/workflows/copilot_issue.yml",
@@ -83,6 +84,7 @@
         "src/application/policies/publication_outcome_policy.ts",
         "src/application/policies/publication_message_catalog.ts",
         "src/application/policies/semantic_result_publication_policy.ts",
+        "src/application/policies/github_comment_publication_policy.ts",
         "src/application/policies/agent_response_schemas.ts",
         "src/application/usecases/actions/recommend_steps_result_policy.ts",
         "src/application/usecases/actions/publish_issue_comment_workflow.ts",
@@ -129,6 +131,9 @@
         "src/application/usecases/actions/check_progress_workflow.ts",
         "src/application/usecases/actions/check_progress_use_case.ts",
         "src/application/usecases/actions/progress_analysis_workflow.ts",
+        "src/application/usecases/sdd/read_progress_sdd_seed.ts",
+        "src/application/policies/progress_sdd_scope_policy.ts",
+        "src/application/ports/progress_sdd_seed_ports.ts",
         "src/data/repository/github_publication_source_repository.ts",
         "src/infrastructure/composition/check_progress_composition_root.ts",
         "src/data/repository/issue/issue_content_repository.ts",
@@ -227,7 +232,12 @@
         "src/application/policies/progress_capacity_context_policy.ts",
         "src/application/policies/progress_capacity_source_context_policy.ts",
         "src/application/policies/progress_capacity_messages.ts",
-        "src/application/policies/progress_capacity_presentation_policy.ts"
+        "src/application/policies/progress_capacity_presentation_policy.ts",
+        "src/domain/progress_batch_diagnostic.ts",
+        "src/application/policies/progress_batch_policy.ts",
+        "src/application/policies/progress_batch_query_policy.ts",
+        "src/application/policies/progress_batch_rejection_policy.ts",
+        "src/application/usecases/actions/progress_batch_workflow.ts"
       ],
       "tests": [
         "src/domain/__tests__/implementation_plan.test.ts",
@@ -253,6 +263,7 @@
         "src/application/policies/__tests__/publication_outcome_policy.test.ts",
         "src/application/policies/__tests__/publication_message_catalog.test.ts",
         "src/application/policies/__tests__/semantic_result_publication_policy.test.ts",
+        "src/application/policies/__tests__/github_comment_publication_policy.test.ts",
         "src/application/policies/__tests__/action_summary_policy.test.ts",
         "src/application/policies/__tests__/branch_sync_notification_policy.test.ts",
         "src/application/policies/__tests__/inactivity_message_catalog.test.ts",
@@ -386,6 +397,7 @@
         "src/application/policies/__tests__/progress_scope_ownership.test.ts",
         "src/application/policies/__tests__/progress_scope_capacity_diagnostic.test.ts",
         "src/application/usecases/actions/__tests__/progress_scope_ownership.integration.test.ts",
+        "src/application/usecases/actions/__tests__/progress_sdd_seed.integration.test.ts",
         "src/application/policies/__tests__/progress_partition_length_policy.test.ts",
         "src/application/policies/__tests__/progress_partition_length_presentation.test.ts",
         "src/data/repository/__tests__/progress_partition_length_failure.test.ts",
@@ -404,7 +416,11 @@
         "src/application/policies/__tests__/progress_capacity_public.test.ts",
         "src/application/policies/__tests__/progress_capacity_profiles.test.ts",
         "src/application/usecases/actions/__tests__/progress_capacity.integration.test.ts",
-        "src/data/repository/__tests__/progress_capacity_adapter.test.ts"
+        "src/data/repository/__tests__/progress_capacity_adapter.test.ts",
+        "src/application/policies/__tests__/progress_batch_policy.test.ts",
+        "src/application/usecases/actions/__tests__/progress_batches.integration.test.ts",
+        "src/application/usecases/actions/__tests__/fixtures/domus-29-immutable-replay.json.gz.hex",
+        "src/application/usecases/actions/__tests__/support/progress_batch_response.ts"
       ],
       "documentation": [
         "docs/configuration.mdx",
@@ -1979,14 +1995,16 @@
       "status": "as-built-baseline",
       "scope": "Convert typed issues into traceable work branches, project state, and lifecycle state",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-11-03",
+      "lastVerified": "2026-11-06",
       "specs": [
         "specs/managed-issue-and-branch-lifecycle.md",
-        "specs/issue-assignment-failure-recovery.md"
+        "specs/issue-assignment-failure-recovery.md",
+        "specs/managed-issue-and-branch-lifecycle-issue-735.md"
       ],
       "workflows": [
         ".github/workflows/copilot_issue.yml",
-        ".github/workflows/copilot_commit.yml"
+        ".github/workflows/copilot_commit.yml",
+        ".github/workflows/copilot_pull_request.yml"
       ],
       "entrypoints": [
         "src/application/usecases/issue_use_case.ts",
@@ -2044,7 +2062,12 @@
         "src/data/model/application_error.ts",
         "src/application/policies/application_error_message_catalog.ts",
         "src/application/policies/application_error_presentation_policy.ts",
-        "src/application/policies/issue_assignment_diagnostic_presentation.ts"
+        "src/application/policies/issue_assignment_diagnostic_presentation.ts",
+        "src/domain/staged_rollout.ts",
+        "src/application/ports/staged_rollout_ports.ts",
+        "src/application/usecases/steps/issue/reconcile_staged_rollout_after_merge.ts",
+        "src/data/repository/pull_request/staged_rollout_review_repository.ts",
+        "src/application/policies/staged_rollout_presentation_policy.ts"
       ],
       "tests": [
         "src/application/usecases/__tests__/issue_pull_request_context_projection.test.ts",
@@ -2084,7 +2107,9 @@
         "src/application/usecases/steps/issue/__tests__/assign_members_to_issue_use_case.test.ts",
         "src/data/repository/__tests__/organization_members_repository.test.ts",
         "src/data/repository/__tests__/issue_assignment_repository.test.ts",
-        "src/application/policies/__tests__/application_error_presentation_policy.test.ts"
+        "src/application/policies/__tests__/application_error_presentation_policy.test.ts",
+        "src/application/usecases/__tests__/staged_rollout_merge.integration.test.ts",
+        "src/application/usecases/actions/__tests__/check_progress_use_case.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-management.mdx",
@@ -2762,9 +2787,9 @@
       "id": "agent-runtime",
       "title": "Agent runtime, provider, model, and role routing",
       "status": "implemented",
-      "scope": "Resolve, provision, authenticate, authorize, and execute only the agent roles reachable by a run",
+      "scope": "Resolve, provision, authenticate, authorize, and execute only the agent roles reachable by a run, with provider-compatible native schemas and exact local acceptance",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-11-02",
+      "lastVerified": "2026-11-07",
       "specs": [
         "specs/agent-runtime-provider-and-model-routing.md",
         "specs/agent-execution-policy-hardening.md"

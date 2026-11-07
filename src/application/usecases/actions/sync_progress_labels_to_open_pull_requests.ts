@@ -1,4 +1,4 @@
-import { PROGRESS_LABEL_PATTERN } from '../../../application/policies/progress_labels';
+import { PROGRESS_LABEL_PATTERN, progressLabelPercent } from '../../../application/policies/progress_labels';
 import type { BoundIssueLabelsPort } from '../../../application/ports/issue_management_ports';
 import type { BoundPullRequestBranchQueryPort } from '../../../application/ports/pull_request_branch_ports';
 import { logInfo } from '../../ports/logging_ports';
@@ -9,7 +9,7 @@ export async function syncProgressLabelsToOpenPullRequests(
   issueRepository: BoundIssueLabelsPort,
   pullRequestRepository: BoundPullRequestBranchQueryPort,
 ): Promise<void> {
-  const roundedProgress = Math.min(100, Math.max(0, Math.round(progress / 5) * 5));
+  const roundedProgress = progressLabelPercent(progress);
   const newProgressLabel = `${roundedProgress}%`;
   const pullRequestNumbers = await pullRequestRepository.getOpenPullRequestNumbersByHeadBranch(
     branch,

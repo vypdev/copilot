@@ -1,3 +1,4 @@
+import { isProgressBatchDiagnostic, type ProgressBatchDiagnostic } from '../../domain/progress_batch_diagnostic';
 import { isBranchSyncPublicationDiagnostic, type BranchSyncPublicationDiagnostic } from '../../domain/branch_sync_publication';
 import { isBugbotReviewBlockFacts, type BugbotReviewBlockFacts } from '../../domain/bugbot/framed_review';
 import { isProgressScopeCapacityFacts, type ProgressScopeCapacityFacts } from '../../domain/progress_response_diagnostic';
@@ -99,6 +100,8 @@ export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'progress-partition-length-invalid',
     'progress-assessment-capacity-exceeded',
     'progress-scope-clause-limit',
+    'progress-sdd-seed-unverified',
+    'progress-batch-retained',
     'progress-completion-recovery-exhausted',
     'stored-configuration-schema-missing',
     'stored-configuration-schema-unsupported',
@@ -125,6 +128,8 @@ interface ApplicationErrorRecoveryVariables extends Readonly<Record<CopilotComma
     readonly 'progress-result-contract-invalid': ProgressResponseDiagnosticFacts;
     readonly 'progress-partition-length-invalid': ProgressPartitionLengthDiagnostic;
     readonly 'progress-assessment-capacity-exceeded': ProgressResponseDiagnosticFacts;
+    readonly 'progress-sdd-seed-unverified': Readonly<Record<string, never>>;
+    readonly 'progress-batch-retained': ProgressBatchDiagnostic;
     readonly 'progress-scope-clause-limit': ProgressScopeCapacityFacts;
     readonly 'progress-completion-recovery-exhausted': ProgressCompletionDiagnostic;
 
@@ -465,6 +470,8 @@ const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readon
     'progress-result-contract-invalid': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
     'progress-partition-length-invalid': Object.freeze(['partitionId', 'filePath', 'unitId', 'field', 'maximum', 'observed']),
     'progress-assessment-capacity-exceeded': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
+    'progress-batch-retained': Object.freeze(['reason', 'verified', 'expected', 'batch', 'requirementId']),
+    'progress-sdd-seed-unverified': Object.freeze([]),
     'progress-scope-clause-limit': Object.freeze(['clauseKind', 'observed', 'limit', 'sourceLineId']),
     'progress-completion-recovery-exhausted': Object.freeze(['reportedProgress', 'requirementCount', 'supportedCount', 'missingCount', 'unknownCount']),
     'deployment-publication-context-missing': Object.freeze([]),
@@ -567,6 +574,7 @@ function normalizeApplicationErrorRecovery(
         && (!isProgressResponseDiagnosticFacts(variables) || variables.phase !== 'assessment' || variables.reason !== 'assessment-text-limit')) {
         throw new TypeError('Progress assessment capacity diagnostic is invalid.');
     }
+    if (recovery.id === 'progress-batch-retained' && !isProgressBatchDiagnostic(variables)) throw new TypeError('Progress batch diagnostic is invalid.');
     if (recovery.id === 'progress-scope-clause-limit' && !isProgressScopeCapacityFacts(variables)) throw new TypeError('Progress scope capacity diagnostic is invalid.');
     if (recovery.id === 'progress-result-contract-invalid' && !isProgressResponseDiagnosticFacts(variables)) throw new TypeError('Progress response diagnostic is invalid.');
     if (recovery.id === 'progress-partition-length-invalid' && !isProgressPartitionLengthDiagnostic(variables)) throw new TypeError('Progress part length diagnostic is invalid.');

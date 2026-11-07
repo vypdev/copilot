@@ -28,6 +28,17 @@ describe('historical progress presentation', () => {
   it('supports an exact SHA-256 Git object ID', () => {
     expect(buildRetiredProgressComment(active.replace('a'.repeat(40), 'b'.repeat(64)), 'en-US', 'completed')).toContain(`head:${'b'.repeat(64)}`);
   });
+  it.each(['completed', 'not_planned', 'duplicate', 'unknown'] as const)('retires scoped progress on %s closure while preserving its manifest reference', reason => {
+    const scope = 'b'.repeat(64);
+    const scoped = active.replace(`head:${'a'.repeat(40)}`, `head:${'a'.repeat(40)}:scope:${scope}`);
+    const body = buildRetiredProgressComment(scoped, 'en-US', reason)!;
+    expect(body).toContain('historical'); expect(body).toContain(`> scope:${scope}`);
+    expect(parsePublicationMarker(body)?.sourceVersion).toBe(`closed:${reason}:head:${'a'.repeat(40)}`);
+    expect(buildRetiredProgressComment(body, 'en-US', reason)).toBe(body);
+    const changed = buildRetiredProgressComment(body, 'es-ES', 'not_planned')!;
+    expect(changed).toContain(`> scope:${scope}`); expect(changed).toContain('96%');
+    expect(changed.match(new RegExp(scope, 'gu'))).toHaveLength(1);
+  });
   it('neutralizes mentions, commands, controls and HTML in historical content', () => {
     const body = buildRetiredProgressComment(marker + '\n\n@someone\n/copilot fix\n::error::bad\n<details><script>bad</script></details>', 'en-US', 'completed')!;
     expect(body).not.toContain('@someone'); expect(body).not.toContain('\n/copilot');

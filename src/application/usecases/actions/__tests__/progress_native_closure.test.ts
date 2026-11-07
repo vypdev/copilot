@@ -1,3 +1,4 @@
+import { withProgressEvidence, progressComparisonFixture } from './support/progress_batch_response';
 /**
  * Integration-style tests for CheckProgressUseCase with the OpenCode-based flow.
  * Covers edge cases: missing AI config, no issue/branch/description, AI returns undefined/invalid
@@ -84,7 +85,7 @@ describe('native progress closure races', () => {
       { setProgressLabel: mockSetProgressLabel },
       { getListOfBranches: mockGetListOfBranches },
       { getOpenPullRequestNumbersByHeadBranch: mockGetOpenPullRequestNumbersByHeadBranch },
-      { query: localizedProgress },
+      { query: async request => withProgressEvidence(await localizedProgress(request), request.options?.schema) },
       { isIssueOpen: mockIsIssueOpen, getBranchHeadSha: mockGetBranchHeadSha },
       { getDiff: mockGetDiff }, { getSource: jest.fn(async () => ({ kind: 'none' as const })) }
     );
@@ -99,7 +100,7 @@ describe('native progress closure races', () => {
     mockGetBranchHeadSha.mockReset();
     mockGetBranchHeadSha.mockImplementation(async branch => branch === 'develop' ? BASE_HEAD : SOURCE_HEAD);
     mockGetDiff.mockReset();
-    mockGetDiff.mockImplementation(async (baseSha, headSha) => ({ baseSha, headSha, evidence: 'PINNED_SOURCE_PATCH' }));
+    mockGetDiff.mockImplementation(async (baseSha, headSha) => progressComparisonFixture(baseSha, headSha, 'PINNED_SOURCE_PATCH'));
     mockAskAgent.mockReset();
   });
 
@@ -122,7 +123,7 @@ describe('native progress closure races', () => {
     const source = { getBranchHeadSha: mockGetBranchHeadSha };
     const denied = new CheckProgressUseCase({ getDescription: mockGetDescription }, { getLabels: mockGetLabels, setLabels: mockSetLabels },
       { setProgressLabel: mockSetProgressLabel }, { getListOfBranches: mockGetListOfBranches },
-      { getOpenPullRequestNumbersByHeadBranch: mockGetOpenPullRequestNumbersByHeadBranch }, { query: localizedProgress }, source, { getDiff: mockGetDiff }, { getSource: jest.fn(async () => ({ kind: 'none' as const })) });
+      { getOpenPullRequestNumbersByHeadBranch: mockGetOpenPullRequestNumbersByHeadBranch }, { query: async request => withProgressEvidence(await localizedProgress(request), request.options?.schema) }, source, { getDiff: mockGetDiff }, { getSource: jest.fn(async () => ({ kind: 'none' as const })) });
     const results = await denied.invoke(projectProgressContext(baseParam()));
     expect(results[0].errors[0]).toMatchObject({ code: 'configuration.unsupported' });
     expect(mockAskAgent).not.toHaveBeenCalled(); expect(mockGetDescription).not.toHaveBeenCalled();

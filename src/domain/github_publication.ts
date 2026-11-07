@@ -1,6 +1,7 @@
 export const PUBLICATION_TOPICS = [
     'plan',
     'progress',
+    'staged-rollout',
     'branch-sync',
     'bugbot',
     'release',
