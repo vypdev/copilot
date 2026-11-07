@@ -378,3 +378,54 @@ Invocation-local continuation and explicit bounded incapacity are selected;
 durable checkpointing, unchecked larger limits and reduced coherent scope are
 excluded. The original exact failed dimension remains unknown until evidence
 establishes it. SDK regressions must retain that provenance distinction.
+
+## 21. Acceptance batch profile and publication eligibility — #916
+
+`specs/batched-progress-scope.md` defines the reviewed finite extension. Each
+classification request owns up to 32 source lines. An attempt supports up to
+256 obligations and 256 exclusions, with 32 obligations per assessment. The
+human scope and identity projection has a 262,144-byte ceiling. The admitted
+native evidence ledger retains the existing immutable comparison profile and
+its independent source, unit, byte and recovery limits. Request acceptance data
+retains the 64,000-byte envelope. Complete native prompt preflight remains
+524,288 bytes, including schema and framing.
+
+One ledger covers at most 120 agent calls and 1,800,000 elapsed milliseconds,
+including the existing bounded repairs. The same-head receipt gate requires a
+complete compatible outcome for every obligation before aggregate reduction and
+the existing publication fence. Both public assessment fields remain bounded
+at 8,000 Unicode points. Larger aggregates use compact original source references
+while the host retains their full original text and authority.
+
+`progress-batch-retained` provides closed reasons, verified and expected batch
+counts, the failing assignment and a safe requirement ID. Incomplete attempts
+retain previous progress. Capacity does not authorize publication of a subset.
+The original direct single-assessment capacity diagnostic remains available.
+
+Measured deterministic Domus replay classifies 300 human lines in 10 requests,
+retains all 157 paths and 16 comparison parts, and assesses 108 fixture obligations
+in four groups. It uses 30 agent-port calls with zero real model calls. The
+fixture's 50 percent response exercises the protocol. It does not establish
+consumer implementation progress. Historical rejection and candidate results
+remain distinct evidence on the implementation PR.
+
+The host allocates each batch's fact length against the complete 8,000-point
+publication field before assessment requests. Valid bounded batch facts therefore
+share one aggregate publication budget. Incomplete estimates retain their card
+value and use percentage labels capped at 95 percent, preserving the completion
+invariant across the issue and PR label adapters.
+
+Classification receipts bind their assigned span IDs to a source snapshot digest,
+assignment identity and evaluated head. The final manifest retains the complete
+classified span inventory in original source order. Every classification batch
+receives complete human context, including published draft case qualifiers, while
+its response schema owns only its assigned IDs. Requirement evidence cites an
+admitted regular source observation. Generated metadata remains supplemental
+comparison context. Source and receipt reordering preserve the aggregate identity.
+
+Evidence extraction shares its complete comparison facts when the whole acceptance
+view fits the existing 64,000-byte request envelope. Larger coherent views use
+bounded requirement groups against the same frozen comparison. Every group retains
+all assigned requirements, exclusions and comparison parts. The host preflights the
+entire repeated-evidence plan against the same 120-call limit before collecting
+those facts. The pinned Domus fixture retains the shared 30-call path.

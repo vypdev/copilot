@@ -1,3 +1,4 @@
+import { withProgressEvidence } from './support/progress_batch_response';
 import { CheckProgressUseCase } from '../check_progress_use_case';
 import { projectProgressContext } from '../../push_single_action_contexts';
 import { Ai } from '../../../../data/model/ai';
@@ -36,7 +37,7 @@ function fixture() {
     });
     const useCase = new CheckProgressUseCase({ getDescription }, { getLabels: jest.fn(async () => []), setLabels }, { setProgressLabel },
         { getListOfBranches: jest.fn(async () => []) }, { getOpenPullRequestNumbersByHeadBranch: jest.fn(async () => []) },
-        { query }, { isIssueOpen, getBranchHeadSha }, { getDiff }, { getSource });
+        { query: async request => withProgressEvidence(await query(request), request.options?.schema) }, { isIssueOpen, getBranchHeadSha }, { getDiff }, { getSource });
     return { paths, diff, context, query, getDescription, getDiff, getSource, getBranchHeadSha, isIssueOpen, setProgressLabel, setLabels, invoke: () => useCase.invoke(context) };
 }
 function unmutated(f: ReturnType<typeof fixture>) { expect(f.setProgressLabel).not.toHaveBeenCalled(); expect(f.setLabels).not.toHaveBeenCalled(); }

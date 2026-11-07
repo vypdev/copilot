@@ -264,6 +264,11 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     action: 'Check the draft markers and confirm the current selection and verified SDD publication on the linked branch, then rerun Commit.',
     retainedState: 'Existing progress was retained.',
   }),
+  'progress-batch-retained': Object.freeze({
+    impact: 'Progress retained. Verified {verified} of {expected} batches. Complete evidence for the evaluated head is required.',
+    action: 'Inspect the current run and requirement {requirementId}, batch {batch}, reason {reason}. Resolve missing or mismatched evidence and retry a complete assessment within the fixed budget.',
+    retainedState: 'Existing progress labels and published assessments were preserved. No partial percentage was authorized.',
+  }),
   'progress-scope-clause-limit': Object.freeze({
     impact: 'The complete human scope classification selected {observed} {clauseKind} lines; the supported limit is {limit}. Progress was not published.',
     action: 'Inspect the original human scope and classifier result at source {sourceLineId}, phase scope. A fresh valid classification may help; do not remove requirements, promote generated state or raise limits to pass. Genuine over-limit human scope requires a reviewed supported protocol.',
@@ -476,6 +481,11 @@ const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     impact: 'Commit no pudo verificar el borrador de SDD seleccionado para esta issue y revisión.',
     action: 'Comprueba los marcadores del borrador y confirma la selección y la publicación verificada del SDD en la rama vinculada. Después, vuelve a ejecutar Commit.',
     retainedState: 'Se conservó el progreso anterior.',
+  }),
+  'progress-batch-retained': Object.freeze({
+    impact: 'Progreso conservado. Se verificaron {verified} de {expected} lotes. Se exige evidencia completa de la revisión evaluada.',
+    action: 'Inspecciona la ejecución y el requisito {requirementId}, lote {batch}, motivo {reason}. Resuelve la evidencia ausente o incompatible y repite la evaluación completa dentro del presupuesto fijo.',
+    retainedState: 'Se conservaron las etiquetas y evaluaciones de progreso anteriores. No se autorizó un porcentaje parcial.',
   }),
   'progress-scope-clause-limit': Object.freeze({
     impact: 'La clasificación completa del alcance humano seleccionó {observed} líneas de tipo {clauseKind}; el límite admitido es {limit}. No se publicó el progreso.',

@@ -5,7 +5,7 @@
       "id": "github-communication-experience",
       "title": "Semantic GitHub communication and repository localization",
       "status": "implemented",
-      "scope": "English-default, localized, semantic, bounded, and idempotent product messages across GitHub and repository-aware operator surfaces; reconcile selected and verified SDD draft scope in Commit with immutable publication and case provenance",
+      "scope": "English-default, localized, semantic, bounded and idempotent product messages across GitHub and repository-aware operator surfaces; complete acceptance batches with stable source identities, verified published SDD provenance and same-head requirement evidence before Commit progress publication",
       "owner": "Copilot maintainers",
       "lastVerified": "2026-11-07",
       "specs": [
@@ -231,7 +231,12 @@
         "src/application/policies/progress_capacity_context_policy.ts",
         "src/application/policies/progress_capacity_source_context_policy.ts",
         "src/application/policies/progress_capacity_messages.ts",
-        "src/application/policies/progress_capacity_presentation_policy.ts"
+        "src/application/policies/progress_capacity_presentation_policy.ts",
+        "src/domain/progress_batch_diagnostic.ts",
+        "src/application/policies/progress_batch_policy.ts",
+        "src/application/policies/progress_batch_query_policy.ts",
+        "src/application/policies/progress_batch_rejection_policy.ts",
+        "src/application/usecases/actions/progress_batch_workflow.ts"
       ],
       "tests": [
         "src/domain/__tests__/implementation_plan.test.ts",
@@ -409,7 +414,11 @@
         "src/application/policies/__tests__/progress_capacity_public.test.ts",
         "src/application/policies/__tests__/progress_capacity_profiles.test.ts",
         "src/application/usecases/actions/__tests__/progress_capacity.integration.test.ts",
-        "src/data/repository/__tests__/progress_capacity_adapter.test.ts"
+        "src/data/repository/__tests__/progress_capacity_adapter.test.ts",
+        "src/application/policies/__tests__/progress_batch_policy.test.ts",
+        "src/application/usecases/actions/__tests__/progress_batches.integration.test.ts",
+        "src/application/usecases/actions/__tests__/fixtures/domus-29-immutable-replay.json.gz.hex",
+        "src/application/usecases/actions/__tests__/support/progress_batch_response.ts"
       ],
       "documentation": [
         "docs/configuration.mdx",

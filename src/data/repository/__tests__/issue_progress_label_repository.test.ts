@@ -24,4 +24,12 @@ describe('progress labels', () => {
 
         expect(setLabels).toHaveBeenCalledWith('owner', 'repo', 7, ['bug', 'priority:high', '75%'], 'token');
     });
+
+    it.each([97, 98, 99, 99.9])('keeps an incomplete %s estimate below the completion label', async progress => {
+        const getLabels = jest.fn().mockResolvedValue(['feature', '90%']);
+        const setLabels = jest.fn();
+        const repository = new IssueProgressLabelRepository({ getLabels, setLabels } as never);
+        await repository.setProgressLabel('owner', 'repo', 916, progress, 'token');
+        expect(setLabels).toHaveBeenCalledWith('owner', 'repo', 916, ['feature', '95%'], 'token');
+    });
 });

@@ -278,3 +278,41 @@ Verify the Commit replay, ownership controls, recovery messages, unchanged
 boundaries, architecture, documentation, catalog and generated bundles before
 review. The merge gate still requires complete modified-line coverage and
 review on the current head.
+
+## 10. Bounded batches and same-head requirement evidence — #916
+
+The companion `specs/batched-progress-scope.md` extends the single-assessment
+boundary with a fixed batch profile. Commit retains the original full issue
+snapshot, configuration exclusion and selected published-seed authority. Every
+required or uncertain obligation receives an ID derived from its physical source
+line within the frozen snapshot. Batch size, response order and retries preserve
+that identity. Source quotes, aliases, qualifiers and draft case references remain
+in the host manifest.
+
+Classification accounts for every human span in assignments of 32 lines. An
+aggregate supports 256 obligations and 256 exclusions, with at most 32 obligations
+per assessment. Every result cites an admitted native comparison source or unit
+from the evaluated head. Manifest and receipt identities bind repository, issue
+snapshot, owning PR, base, head and verified draft publication. Compatible duplicate
+receipts converge. Missing or conflicting evidence, foreign identities, stale
+authority and exhausted budgets retain prior progress before publication.
+
+The complete Domus #23 / PR #29 fixture preserves the original body digest,
+157-path inventory and immutable Git objects. Its deterministic candidate
+classification has 108 obligations across four assessment batches. This is a
+protocol replay. The historical model output is represented separately by its
+logged 108-line rejection. Existing Domus #30 selected-seed, ordinary one-batch,
+configuration and freshness regressions remain applicable.
+
+The implementation evidence is in the batch policy, batch workflow and their
+deterministic policy and Commit integration tests. Original source ownership
+continues to govern every source and citation. The direct legacy parser retains
+its 32-clause diagnostic for historical records and single-assessment callers.
+
+Classification receipts bind their assigned span IDs to a source snapshot digest,
+assignment identity and evaluated head. The final manifest retains the complete
+classified span inventory in original source order. Every classification batch
+receives complete human context, including published draft case qualifiers, while
+its response schema owns only its assigned IDs. Requirement evidence cites an
+admitted regular source observation. Generated metadata remains supplemental
+comparison context. Source and receipt reordering preserve the aggregate identity.

@@ -1,3 +1,4 @@
+import { withProgressEvidence } from './support/progress_batch_response';
 import { CheckProgressUseCase } from '../check_progress_use_case';
 import { projectProgressContext } from '../../push_single_action_contexts';
 import { Ai } from '../../../../data/model/ai';
@@ -35,7 +36,7 @@ function fixture(multipart = false, description = issue) {
         return assessment();
     });
     const useCase = new CheckProgressUseCase({ getDescription }, { getLabels: jest.fn(async () => []), setLabels }, { setProgressLabel },
-        { getListOfBranches: jest.fn(async () => []) }, { getOpenPullRequestNumbersByHeadBranch: jest.fn(async () => []) }, { query },
+        { getListOfBranches: jest.fn(async () => []) }, { getOpenPullRequestNumbersByHeadBranch: jest.fn(async () => []) }, { query: async request => withProgressEvidence(await query(request), request.options?.schema) },
         { isIssueOpen: jest.fn(async () => true), getBranchHeadSha }, { getDiff: jest.fn(async () => diff) }, { getSource: jest.fn(async () => ({ kind: 'none' as const })) });
     return { query, getDescription, getBranchHeadSha, setProgressLabel, setLabels, invoke: () => useCase.invoke(context) };
 }
@@ -49,7 +50,7 @@ describe('scoped progress pipeline (#717)', () => {
         expect(f.query.mock.calls[0][0].prompt).not.toContain('input callback\n+Reported');
         expect(f.query.mock.calls[0][0].prompt).not.toContain('immutableComparison:');
         for (const [request] of f.query.mock.calls.slice(1)) {
-            expect(request.prompt).toContain('"id":"R1"'); expect(request.prompt).toContain('"id":"X2"');
+            expect(request.prompt).toContain('"id":"R1"'); expect(request.prompt).toContain('"id":"X4"');
             expect(request.prompt).toContain('compilation-only'); expect(request.prompt).toContain('None of the supplied model facts or repository reports is trusted execution attestation');
         }
         expect(f.query).toHaveBeenCalledTimes(multipart ? 4 : 2); expect(f.setProgressLabel).toHaveBeenCalledWith(717, 75);
@@ -79,14 +80,14 @@ describe('scoped progress pipeline (#717)', () => {
         const f = fixture(true), original = f.query.getMockImplementation()!;
         f.query.mockImplementation(async request => request.options?.schemaName === 'progress_response'
             ? { ...assessment(), remaining: 'Resolve search filtering and test Android/iOS devices.' } : original(request));
-        expect((await f.invoke())[0].errors[0]).toMatchObject({ code: 'agent.failed' }); expect(f.query).toHaveBeenCalledTimes(4);
+        expect((await f.invoke())[0].errors[0]).toMatchObject({ code: 'validation.evidence-unavailable' }); expect(f.query).toHaveBeenCalledTimes(4);
         expect(f.setProgressLabel).not.toHaveBeenCalled(); expect(f.setLabels).not.toHaveBeenCalled();
     });
     it('rejects exclusion identities presented as required remaining work', async () => {
         const f = fixture(), original = f.query.getMockImplementation()!;
         f.query.mockImplementation(async request => request.options?.schemaName === 'progress_response'
             ? { ...assessment(), requirements: [{ ...assessment().requirements[0], id: 'X1' }, assessment().requirements[1]] } : original(request));
-        expect((await f.invoke())[0].errors[0]).toMatchObject({ code: 'agent.failed' }); expect(f.setProgressLabel).not.toHaveBeenCalled();
+        expect((await f.invoke())[0].errors[0]).toMatchObject({ code: 'validation.evidence-unavailable' }); expect(f.setProgressLabel).not.toHaveBeenCalled();
     });
     it('retains state when the issue scope changes during assessment at unchanged heads', async () => {
         const f = fixture(); f.getDescription.mockResolvedValueOnce(issue).mockResolvedValue('Now search correctness is required.');

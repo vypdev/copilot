@@ -857,7 +857,7 @@ closed diagnostic contract. Source-line/classifier clause limits and per-file
 partition fact limits are separate reasons; diagnose the actual phase first.
 
 
-### Progress scope rejects a generated plan or exceeds 32 clauses
+### Progress scope or batch evidence cannot be verified
 
 Use the current reviewed runtime before retrying. Copilot separates one valid
 persisted configuration block from human acceptance using its storage scanner;
@@ -872,10 +872,19 @@ contains the unchanged verified SDD on the linked branch. Resolve any stale or
 ambiguous selection or publication through the SDD workflow before rerunning
 Commit. The existing progress stays available while this evidence is checked.
 
-When `progress-scope-clause-limit` remains, inspect its exact selected count,
-clause kind and first crossing original line. A new valid classification can
-help with a model interpretation error. Real scope beyond 32 distinct required/uncertain
-clauses or 32 exclusions remains unsupported by the current protocol. Keep the
-complete requirement and verification contract while reviewing a supported
-protocol. Existing progress is retained; no partial assessment, invented
-completion, automatic repair, CI attestation or merge approval is implied.
+For `progress-batch-retained`, inspect the verified batch count, failing batch,
+requirement ID and reason in the Check or Job Summary. Confirm that every required
+and uncertain obligation has a receipt and an admitted source or unit reference
+from the evaluated head. Check issue and SDD authority, owning PR, base and head
+for changes. Resolve missing, foreign or conflicting evidence before rerunning
+a complete attempt. Partial receipts never authorize a percentage.
+
+The fixed profile supports 256 obligations, 256 exclusions and 32 obligations per
+assessment. It permits 120 agent calls including repairs and 30 minutes per
+attempt. Existing source, comparison, prompt and publication byte limits also
+apply. Retrying identical over-limit input cannot increase capacity.
+
+Historical v3.10.8 runs can report `progress-scope-clause-limit` at 32 clauses.
+Domus PR #29 is the pinned regression for that boundary. Current Commit publishes
+a complete, current, same-head aggregate. Independent CI, review and approval
+retain their existing gates.

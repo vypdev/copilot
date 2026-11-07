@@ -562,6 +562,8 @@ function progressIntent(id: string, payload: Record<string, unknown>, locale: st
         || !sourceHeadSha
         || !branch) return undefined;
     const progress = Math.max(0, Math.min(100, Math.round(payload.progress)));
+    const scopeDigest = typeof payload.scopeManifestDigest === 'string' && /^[a-f0-9]{64}$/u.test(payload.scopeManifestDigest) ? payload.scopeManifestDigest : undefined;
+    if (payload.scopeManifestDigest !== undefined && !scopeDigest) return undefined;
     const projection = Object.freeze<ProgressPublicationProjection>({
         kind: 'progress',
         progress,
@@ -575,7 +577,7 @@ function progressIntent(id: string, payload: Record<string, unknown>, locale: st
             : {}),
     });
     return Object.freeze({
-        ...statusIntent('progress', payload.issueNumber, 'work', `head:${sourceHeadSha}`, locale, projection),
+        ...statusIntent('progress', payload.issueNumber, 'work', scopeDigest ? `head:${sourceHeadSha}:scope:${scopeDigest}` : `head:${sourceHeadSha}`, locale, projection),
         sourceGuard: Object.freeze({ kind: 'branch-head', branch, sha: sourceHeadSha }),
     });
 }

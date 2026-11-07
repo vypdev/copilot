@@ -23,6 +23,17 @@ describe('complete untrusted progress prompt data', () => {
         expect(prompt).toContain(`\n${source}\n[END_UNTRUSTED_DATA_2]`);
         expect(prompt).not.toContain('[untrusted content truncated]');
     });
+    it('preserves canonical SDD requirements in legacy and batched assignments', () => {
+        const source = JSON.stringify([{ id: 'L1', quote: 'Preserve the original qualifier.' }]);
+        const required = new Set(['L1']);
+        const legacy = getProgressScopePrompt(source, 'en-US', required);
+        expect(legacy).toContain('Classify each listed canonical requirement as required: ["L1"]');
+        expect(legacy).toContain('Only distinct required or uncertain clauses count toward the 32-clause limit.');
+        const batch = getProgressScopePrompt(source, 'en-US', required, { ordinal: 2, total: 3, aggregateLimit: 256 });
+        expect(batch).toContain('Classify each listed canonical requirement owned by this assignment as required: ["L1"]');
+        expect(batch).toContain('Distinct assigned clauses are retained in the complete bounded aggregate.');
+        expect(batch).toContain('This request owns source assignment 2 of 3.');
+    });
     it('rejects oversized classification input without producing a partial prompt', () => {
         expect(() => getProgressScopePrompt('x'.repeat(AGENT_PROMPT_MAX_BYTES + 1), 'en-US')).toThrow(expect.objectContaining({ code: 'validation.evidence-too-large', recovery: {
             id: 'progress-evidence-capacity-exceeded', variables: expect.objectContaining({ phase: 'scope', dimension: 'input-text-bytes', observedCount: AGENT_PROMPT_MAX_BYTES + 1, supportedLimit: AGENT_PROMPT_MAX_BYTES }),

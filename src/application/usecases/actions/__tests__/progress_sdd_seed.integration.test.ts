@@ -1,3 +1,4 @@
+import { withProgressEvidence } from './support/progress_batch_response';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Ai } from '../../../../data/model/ai';
@@ -79,7 +80,7 @@ function fixture(description = body, bindSeedQuery = true, includePublishedCard 
     const progress = new CheckProgressUseCase({ getDescription: async () => description },
         { getLabels: async () => [], setLabels: jest.fn() }, { setProgressLabel },
         { getListOfBranches: async () => [] }, { getOpenPullRequestNumbersByHeadBranch: async () => [] },
-        new FindingsAgentAdapter({ cli: { execute } }),
+        new FindingsAgentAdapter({ cli: { execute: async request => withProgressEvidence(await execute(request), request.outputSchema) } }),
         { isIssueOpen: async () => true, getBranchHeadSha: async ref => ref === 'develop' ? base : head },
         { getDiff: async () => partitionProgressDiff(base, head, [{ path: 'src/app.ts', status: 'modified', additions: 1, deletions: 0, patch: '+source' }]) },
         { getSource: async () => ({ kind: 'none' }) },
@@ -137,12 +138,13 @@ it('runs Commit through the authorized publication and complete simulated assess
     expect(f.reads.workspace.verifyPublication).toHaveBeenCalledWith(branch, base, publication, path);
     expect(f.reads.workspace.isAncestor).toHaveBeenCalledWith(publication, head);
     const classifier = f.execute.mock.calls[0][0].prompt;
-    expect(classifier).not.toContain('domus-shared-nav-C12');
+    expect(classifier).toContain('domus-shared-nav-C12');
+    expect(f.execute.mock.calls.filter(([request]) => (request.outputSchema as any).properties.lines).every(([request]) => !(request.outputSchema as any).properties.lines.items.properties.id.enum.includes('L109'))).toBe(true);
     expect(classifier).not.toContain('copilot-configuration-start');
-    const assessment = f.execute.mock.calls[1][0].prompt;
+    const assessment = f.execute.mock.calls.find(([request]) => (request.outputSchema as any).properties.requirements)![0].prompt;
     expect(assessment).toContain(artifact);
-    expect(assessment).toContain('"id":"L109","quote":"| domus-shared-nav-C12');
-    expect(assessment).toContain('"id":"L11","quote":');
+    expect(assessment).toContain('"id":"L109","origin":"draft"');
+    expect(assessment).toContain('"id":"L11","origin":"issue"');
     expect((result.payload as { summary: string }).summary.match(/\[R\d+\]/gu)).toHaveLength(20);
 });
 
@@ -197,28 +199,27 @@ it('retains progress when SDD authority changes during assessment', async () => 
     const f = fixture();
     f.readSeed.mockResolvedValueOnce(evidence).mockResolvedValueOnce({ ...evidence, cardId: evidence.cardId + 1 });
     expect((await f.run()).success).toBe(false);
-    expect(f.execute).toHaveBeenCalledTimes(2);
+    expect(f.execute.mock.calls.filter(([request]) => (request.outputSchema as any).properties.requirements)).toHaveLength(1);
     expect(f.setProgressLabel).not.toHaveBeenCalled();
 });
 
-it('keeps 33 distinct clauses blocked in Commit even with a verified draft', async () => {
-    const issue = [...Array.from({ length: 27 }, (_, index) => `Retain record ${index + 1}.`), body].join('\n');
-    const f = fixture(issue);
+it('assesses 33 distinct issue obligations together with a verified draft in bounded batches', async () => {
+    const issue = [...Array.from({ length: 33 }, (_, index) => `Retain record ${index + 1}.`), body].join('\n');
+    const f = fixture(issue), answer = f.execute.getMockImplementation()!;
     f.readSeed.mockResolvedValue(evidence);
-    f.execute.mockImplementationOnce(async request => {
+    f.execute.mockImplementation(async request => {
         const schema = request.outputSchema as Record<string, any>;
-        const properties = schema.properties.lines.items.properties;
-        const canonical = properties.sameAs.enum.slice(1);
-        const lines = properties.id.enum.map((id: string, index: number) => ({
-            id, kind: index < 27 || canonical.includes(id) ? 'required' : 'context', sameAs: 'none',
-        }));
-        return JSON.stringify({ outputLocale: 'en-US', lines });
+        if (!schema.properties.lines) return answer(request);
+        const properties = schema.properties.lines.items.properties, canonical = properties.sameAs.enum.slice(1);
+        return JSON.stringify({ outputLocale: 'en-US', lines: properties.id.enum.map((id: string) => ({
+            id, kind: Number(id.slice(1)) <= 33 || canonical.includes(id) ? 'required' : 'context', sameAs: 'none',
+        })) });
     });
-    expect(await f.run()).toMatchObject({ success: false, errors: [expect.objectContaining({
-        recovery: { id: 'progress-scope-clause-limit', variables: { clauseKind: 'required-or-uncertain', observed: 33, limit: 32, sourceLineId: 'L77' } },
-    })] });
-    expect(f.execute).toHaveBeenCalledTimes(1);
-    expect(f.setProgressLabel).not.toHaveBeenCalled();
+    expect(await f.run()).toMatchObject({ success: true, payload: { progress: 50 } });
+    const assessments = f.execute.mock.calls.filter(([request]) => (request.outputSchema as any).properties.requirements);
+    expect(assessments).toHaveLength(2);
+    expect(assessments.every(([request]) => (request.outputSchema as any).properties.requirements.maxItems <= 32)).toBe(true);
+    expect(f.setProgressLabel).toHaveBeenCalledTimes(1);
 });
 
 it('keeps ordinary issue scope and Action configuration separate without looking up an SDD', async () => {

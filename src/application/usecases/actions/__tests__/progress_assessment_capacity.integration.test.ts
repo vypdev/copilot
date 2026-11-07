@@ -1,10 +1,11 @@
+import { withProgressEvidence } from './support/progress_batch_response';
 import { CheckProgressUseCase } from '../check_progress_use_case';
 import { FindingsAgentAdapter } from '../../../../data/repository/ai/findings_agent_adapter';
 import { partitionProgressDiff } from '../../../policies/progress_diff_partition_policy';
 import { progressScopeSourceLines } from '../../../policies/progress_scope_policy';
 
 const base = 'a'.repeat(40), head = 'b'.repeat(40);
-const context = { issueNumber: 829, pushedBranch: 'bugfix/829-fixture', developmentBranch: 'develop', branchTypes: ['bugfix'],
+const context = { repositoryIdentity: 'owner/repo', issueNumber: 829, pushedBranch: 'bugfix/829-fixture', developmentBranch: 'develop', branchTypes: ['bugfix'],
     agentConfiguration: { provider: 'codex' as const, model: 'fixture' }, includeReasoning: false, targetLocale: 'en-US' };
 function fixture(multipart = false, quoteSize = 20, native = true) {
     const issue = Array.from({ length: 32 }, () => 'q'.repeat(quoteSize)).join('\n\n');
@@ -20,7 +21,7 @@ function fixture(multipart = false, quoteSize = 20, native = true) {
     };
     const execute = jest.fn(async (request: { outputSchema?: unknown }) => JSON.stringify(output(request.outputSchema as Record<string, any>)));
     const query = jest.fn(async (request: { options?: { schema?: unknown } }) => output(request.options!.schema as Record<string, any>));
-    const agent = native ? new FindingsAgentAdapter({ cli: { execute } }) : { query };
+    const agent = native ? new FindingsAgentAdapter({ cli: { execute: async request => withProgressEvidence(await execute(request), request.outputSchema) } }) : { query: async (request: any) => withProgressEvidence(await query(request), request.options?.schema) };
     const useCase = new CheckProgressUseCase({ getDescription: async () => issue }, { getLabels: async () => [], setLabels }, { setProgressLabel },
         { getListOfBranches: async () => [] }, { getOpenPullRequestNumbersByHeadBranch: async () => [] }, agent,
         { isIssueOpen: async () => true, getBranchHeadSha: async branch => branch === 'develop' ? base : head }, { getDiff: async () => diff }, { getSource: async () => ({ kind: 'none' }) });
@@ -37,7 +38,7 @@ it.each([false, true])('runs all source evidence and all 32 requirements within 
 });
 it.each([false, true])('rejects impossible host citations after scope and before any evidence/final query, multipart=%s', async multipart => {
     const f = fixture(multipart, 1190), result = (await f.invoke())[0];
-    expect(result).toMatchObject({ success: false, errors: [expect.objectContaining({ code: 'validation.evidence-too-large', retryable: false, recovery: { id: 'progress-assessment-capacity-exceeded', variables: expect.objectContaining({ requirementId: 'R7', sourceLineId: 'L13' }) } })] });
+    expect(result).toMatchObject({ success: false, errors: [expect.objectContaining({ code: 'validation.evidence-too-large', retryable: false, recovery: { id: 'progress-assessment-capacity-exceeded', variables: expect.objectContaining({ requirementId: 'R13', sourceLineId: 'L13' }) } })] });
     expect(f.execute).toHaveBeenCalledTimes(1); retained(f);
 });
 it('retains state when the native model exceeds its newly derived field ceiling', async () => {
@@ -47,7 +48,7 @@ it('retains state when the native model exceeds its newly derived field ceiling'
 });
 it.each(['summary', 'remaining'] as const)('retains state and rejects an oversized combined %s from an alternate port that ignores schema', async field => {
     const f = fixture(false, 20, false); f.setRogue(field); const result = (await f.invoke())[0];
-    expect(result).toMatchObject({ success: false, errors: [expect.objectContaining({ code: 'agent.failed', recovery: { id: 'progress-result-contract-invalid', variables: expect.objectContaining({ reason: 'assessment-text-limit', field: `$.requirements[9].${field}`, requirementId: 'R10', sourceLineId: 'L19' }) } })] });
+    expect(result).toMatchObject({ success: false, errors: [expect.objectContaining({ code: 'agent.failed', recovery: { id: 'progress-result-contract-invalid', variables: expect.objectContaining({ reason: 'assessment-text-limit', field: `$.requirements[9].${field}`, requirementId: 'R19', sourceLineId: 'L19' }) } })] });
     expect(f.query).toHaveBeenCalledTimes(2); retained(f);
 });
 it('requires a fresh complete assessment after rejection instead of publishing or reusing partial facts', async () => {

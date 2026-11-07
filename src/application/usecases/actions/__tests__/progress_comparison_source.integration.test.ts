@@ -1,3 +1,4 @@
+import { withProgressEvidence } from './support/progress_batch_response';
 import { CheckProgressUseCase } from '../check_progress_use_case';
 import { projectProgressContext } from '../../push_single_action_contexts';
 import { Ai } from '../../../../data/model/ai';
@@ -34,7 +35,7 @@ function fixture(source: ProgressPullRequestSource = native(), binaries = true) 
     });
     const context=projectProgressContext({owner:'owner',repo:'repo',issueNumber:727,tokens:{token:'token'},locale:{repository:'en-US',issue:'en-US',pullRequest:'en-US'},
         ai:new Ai('http://localhost:4096','opencode/model',false,[],false,'low',20),commit:{branch},inputs:{after:HEAD},branches:{main:'master',development:'develop',featureTree:'feature',bugfixTree:'bugfix',hotfixTree:'hotfix',releaseTree:'release',docsTree:'docs',choreTree:'chore'}}as unknown as Execution);
-    const useCase=new CheckProgressUseCase({getDescription},{getLabels:jest.fn(async()=>[]),setLabels},{setProgressLabel},{getListOfBranches:jest.fn(async()=>[])},{getOpenPullRequestNumbersByHeadBranch:jest.fn(async()=>[])},{query},{isIssueOpen,getBranchHeadSha},{getDiff},{getSource});
+    const useCase=new CheckProgressUseCase({getDescription},{getLabels:jest.fn(async()=>[]),setLabels},{setProgressLabel},{getListOfBranches:jest.fn(async()=>[])},{getOpenPullRequestNumbersByHeadBranch:jest.fn(async()=>[])},{query:async request=>withProgressEvidence(await query(request),request.options?.schema)},{isIssueOpen,getBranchHeadSha},{getDiff},{getSource});
     return{...objects,context,taskPaths,binaryPaths,compareCommits,getDiff,getSource,getBranchHeadSha,getDescription,query,setProgressLabel,setLabels,invoke:()=>useCase.invoke(context),
         select:(value:ProgressPullRequestSource)=>{selection=value;},moveHead:()=>{head='d'.repeat(40);},moveBase:()=>{productionHead='e'.repeat(40);},close:()=>{open=false;},editIssue:()=>{description+=' Changed requirements.';}};
 }
@@ -86,7 +87,7 @@ describe('native PR comparison and inherited binaries',()=>{
     });
     it.each([undefined,{}, {getSource:42}])('requires a native comparison capability rather than assuming absence %#',async sourceQuery=>{
         const f=fixture(),query=jest.fn(),getDiff=jest.fn();
-        const useCase=new CheckProgressUseCase({}as never,{}as never,{}as never,{}as never,{}as never,{query},{}as never,{getDiff},sourceQuery as never);
+        const useCase=new CheckProgressUseCase({}as never,{}as never,{}as never,{}as never,{}as never,{query:async request=>withProgressEvidence(await query(request),request.options?.schema)},{}as never,{getDiff},sourceQuery as never);
         expect((await useCase.invoke(f.context))[0].errors[0]).toMatchObject({code:'configuration.unsupported'});expect(query).not.toHaveBeenCalled();expect(getDiff).not.toHaveBeenCalled();
     });
     it('rechecks native PR ownership after the acceptance-scope reread',async()=>{

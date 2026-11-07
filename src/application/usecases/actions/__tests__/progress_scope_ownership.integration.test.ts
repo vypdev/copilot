@@ -1,9 +1,10 @@
+import { withProgressEvidence } from './support/progress_batch_response';
 import { CheckProgressUseCase } from '../check_progress_use_case';
 import { FindingsAgentAdapter } from '../../../../data/repository/ai/findings_agent_adapter';
 import { partitionProgressDiff } from '../../../policies/progress_diff_partition_policy';
 
 const base = 'a'.repeat(40), head = 'b'.repeat(40);
-const context = { issueNumber: 828, pushedBranch: 'bugfix/828-fixture', developmentBranch: 'develop', branchTypes: ['bugfix'],
+const context = { repositoryIdentity: 'owner/repo', issueNumber: 828, pushedBranch: 'bugfix/828-fixture', developmentBranch: 'develop', branchTypes: ['bugfix'],
     agentConfiguration: { provider: 'codex' as const, model: 'fixture' }, includeReasoning: false, targetLocale: 'en-US' };
 const state = (json = JSON.stringify({ schemaVersion: 3, recommendationState: { implementationPlan: { steps: Array.from({ length: 40 }, (_, i) => ({ title: `GENERATED_ONLY_${i}` })) } } }, null, 2)) => `<!-- copilot-configuration-start\n${json}\ncopilot-configuration-end -->`;
 const body = 'Provide the complete identity API and safe errors.\n' + state() + '\nPreserve compatibility-only limits.';
@@ -16,7 +17,7 @@ function fixture(description = body, multipart = false) {
         const schema = request.outputSchema as Record<string, any>;
         if (schema.properties.lines) {
             expect(request.prompt).not.toContain('GENERATED_ONLY_');
-            const lines = schema.properties.lines.items.properties.id.enum.map((id: string, i: number) => ({ id, kind: mode === 'exclude' && i ? 'excluded' : 'required' }));
+            const lines = schema.properties.lines.items.properties.id.enum.map((id: string, i: number) => ({ id, kind: mode === 'exclude' && id !== 'L1' ? 'excluded' : 'required' }));
             if (mode === 'inject') lines[0].id = 'L4';
             if (mode === 'omit') lines.pop();
             return JSON.stringify({ outputLocale: 'en-US', lines });
@@ -25,7 +26,7 @@ function fixture(description = body, multipart = false) {
         return JSON.stringify({ outputLocale: 'en-US', progress: 50, requirements: schema.properties.requirements.items.properties.id.enum.map((id: string) => ({ id, status: 'verification-unknown', evidence: 'external-unverified', summary: 'Source present.', remaining: 'Independent verification needed.' })) });
     });
     const useCase = new CheckProgressUseCase({ getDescription }, { getLabels: async () => [], setLabels }, { setProgressLabel },
-        { getListOfBranches: async () => [] }, { getOpenPullRequestNumbersByHeadBranch: async () => [] }, new FindingsAgentAdapter({ cli: { execute } }),
+        { getListOfBranches: async () => [] }, { getOpenPullRequestNumbersByHeadBranch: async () => [] }, new FindingsAgentAdapter({ cli: { execute: async request => withProgressEvidence(await execute(request), request.outputSchema) } }),
         { isIssueOpen: async () => true, getBranchHeadSha: async branch => branch === 'develop' ? base : head }, { getDiff: async () => diff }, { getSource: async () => ({ kind: 'none' }) });
     return { invoke: () => useCase.invoke(context), execute, getDescription, setProgressLabel, setLabels, mode: (value: typeof mode) => { mode = value; } };
 }
@@ -62,9 +63,10 @@ it('starts a fresh complete attempt after a state-only freshness rejection', asy
     expect((await f.invoke())[0].success).toBe(false); retained(f);
     expect((await f.invoke())[0].success).toBe(true); expect(f.execute).toHaveBeenCalledTimes(4); expect(f.setProgressLabel).toHaveBeenCalledTimes(1);
 });
-it.each(['required', 'excluded'] as const)('keeps genuine human %s over-limit scope blocked with exact counts', async kind => {
-    const description = (kind === 'excluded' ? ['Required.', ...Array(33).fill('Excluded.')] : Array(33).fill('Required.')).join('\n') + '\n' + state();
+it.each(['required', 'excluded'] as const)('keeps human %s scope beyond the aggregate capacity blocked', async kind => {
+    const obligations = Array.from({ length: 257 }, (_, index) => `Distinct ${kind} obligation ${index + 1}.`);
+    const description = (kind === 'excluded' ? ['Required.', ...obligations] : obligations).join('\n') + '\n' + state();
     const f = fixture(description); if (kind === 'excluded') f.mode('exclude');
-    expect((await f.invoke())[0]).toMatchObject({ success: false, errors: [expect.objectContaining({ recovery: { id: 'progress-scope-clause-limit', variables: { clauseKind: kind === 'excluded' ? 'excluded' : 'required-or-uncertain', observed: 33, limit: 32, sourceLineId: kind === 'excluded' ? 'L34' : 'L33' } } })] });
-    expect(f.execute).toHaveBeenCalledTimes(1); retained(f);
+    expect((await f.invoke())[0]).toMatchObject({ success: false, errors: [expect.objectContaining({ recovery: expect.objectContaining({ id: 'progress-batch-retained', variables: expect.objectContaining({ reason: 'scope-capacity' }) }) })] });
+    expect(f.execute).toHaveBeenCalledTimes(9); retained(f);
 });
