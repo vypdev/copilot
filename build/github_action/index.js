@@ -41538,6 +41538,11 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
         action: 'Inspect part {partitionId}, file {filePath}, unit {unitId}, field {field}: observed {observed} Unicode code points; maximum {maximum}. The replacement must satisfy the unchanged schema. Do not remove files, truncate facts, relax acceptance or bypass verification.',
         retainedState: 'Existing progress labels and assessments were preserved. No partial percentage or passing verification was published; execution and optional check-publication failures remain separate.',
     }),
+    'progress-assessment-length-invalid': Object.freeze({
+        impact: 'An acceptance field still exceeds its unchanged response limit after one complete replacement; progress was not published.',
+        action: 'Inspect phase assessment, requirement {requirementId}, original source {sourceLineId}, field {field}: observed {observed} Unicode code points; maximum {maximum}. Start a fresh complete assessment when the provider can satisfy the unchanged schema. Preserve every requirement and citation; do not truncate facts, raise limits or bypass verification.',
+        retainedState: 'Existing progress labels and published assessments were preserved. No partial percentage was published. Verification, review, coverage and approval remain independent gates.',
+    }),
     'progress-completion-recovery-exhausted': Object.freeze({
         impact: 'The final progress result still contradicted completion after one complete reassessment; progress was not published.',
         action: 'Inspect the complete pinned comparison and final facts: phase assessment, field $.progress, reported {reportedProgress}%, requirements {requirementCount}, supported {supportedCount}, missing {missingCount}, unknown {unknownCount}. Start a fresh complete assessment when the provider can satisfy the unchanged contract. These are model observations, not independent execution or approval evidence.',
@@ -41753,6 +41758,11 @@ const SPANISH_RECOVERY_CONTENT = Object.freeze({
         impact: 'Una parte del progreso sigue superando el límite de respuesta tras una sustitución acotada; no se publicó el progreso.',
         action: 'Inspecciona la parte {partitionId}, archivo {filePath}, unidad {unitId}, campo {field}: observado {observed} puntos de código Unicode; máximo {maximum}. La sustitución debe cumplir el mismo esquema. No elimines archivos, recortes los hechos, relajes la aceptación ni eludas la verificación.',
         retainedState: 'Se conservaron las etiquetas y evaluaciones de progreso. No se publicó ningún porcentaje parcial ni verificación aprobada; los fallos de ejecución y de publicación del check opcional siguen siendo independientes.',
+    }),
+    'progress-assessment-length-invalid': Object.freeze({
+        impact: 'Un campo de aceptación sigue superando su límite de respuesta tras una sustitución completa; no se publicó el progreso.',
+        action: 'Inspecciona la fase assessment, requisito {requirementId}, fuente original {sourceLineId}, campo {field}: observado {observed} puntos de código Unicode; máximo {maximum}. Inicia una evaluación completa nueva cuando el proveedor pueda cumplir el mismo esquema. Conserva todos los requisitos y citas; no recortes hechos, aumentes límites ni eludas la verificación.',
+        retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas. No se publicó ningún porcentaje parcial. Verificación, revisión, cobertura y aprobación siguen siendo controles independientes.',
     }),
     'progress-completion-recovery-exhausted': Object.freeze({
         impact: 'El resultado final siguió contradiciendo la completitud después de una reevaluación completa; no se publicó el progreso.',
@@ -48710,6 +48720,65 @@ function progressAssessmentFactLimit(requirements, anchors = {}) {
 
 /***/ }),
 
+/***/ 60334:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PROGRESS_ASSESSMENT_LENGTH_HINT_MAX_BYTES = void 0;
+exports.bindProgressAssessmentLength = bindProgressAssessmentLength;
+exports.reservedProgressAssessmentLengthPrompt = reservedProgressAssessmentLengthPrompt;
+exports.progressAssessmentLengthRepairPrompt = progressAssessmentLengthRepairPrompt;
+exports.progressAssessmentLengthRejected = progressAssessmentLengthRejected;
+const progress_assessment_length_failure_1 = __nccwpck_require__(79736);
+const progress_response_diagnostic_1 = __nccwpck_require__(56289);
+const agent_output_locale_policy_1 = __nccwpck_require__(30601);
+const application_error_1 = __nccwpck_require__(75999);
+const record = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+const own = (value, key) => record(value) && Object.prototype.hasOwnProperty.call(value, key) ? value[key] : undefined;
+exports.PROGRESS_ASSESSMENT_LENGTH_HINT_MAX_BYTES = 256;
+const PREFIX = '\n\nThe previous completed acceptance response exceeded an unchanged text bound. Return one complete replacement for the SAME pinned batch, evidence, requirement IDs and locale using the unchanged schema. Keep every summary and remaining within its existing limit; preserve missing and uncertain requirements. Do not drop entries, repeat rejected prose, invent verification or force completion. These closed measurements describe the rejected output, not implementation or execution evidence.\n[BEGIN_PREVIOUS_MODEL_LENGTH_FACTS]\n';
+const SUFFIX = '\n[END_PREVIOUS_MODEL_LENGTH_FACTS]';
+/** Bind current assignments and source anchors, never a host array position or returned prose. */
+function bindProgressAssessmentLength(error, schema, scope, anchors, sourceLineIds, locale) {
+    if (!(error instanceof progress_assessment_length_failure_1.ProgressAssessmentLengthFailure) || !(0, progress_response_diagnostic_1.isProgressResponseDiagnosticFacts)(error.facts))
+        return null;
+    const captured = error.detailsFor(schema);
+    if (!record(captured))
+        return null;
+    const { outputLocale, ...details } = captured;
+    if (!(0, progress_assessment_length_failure_1.isProgressAssessmentLengthFacts)(details) || error.facts.phase !== 'assessment' || error.facts.reason !== 'schema-string-long'
+        || error.facts.field !== details.field || error.facts.requirementId !== details.requirementId)
+        return null;
+    const location = details.field.match(/\[(\d+)\]\.(summary|remaining)$/u);
+    const definition = own(own(schema, 'properties'), 'requirements'), fields = own(own(definition, 'items'), 'properties');
+    const ids = own(own(fields, 'id'), 'enum'), count = scope.requirements.length, sourceLineId = anchors?.[details.requirementId];
+    if (Number(location[1]) >= count || !Array.isArray(ids) || ids.length !== count || !scope.requirements.every(requirement => ids.includes(requirement.id))
+        || !scope.requirements.some(requirement => requirement.id === details.requirementId)
+        || own(definition, 'minItems') !== count || own(definition, 'maxItems') !== count
+        || own(own(fields, location[2]), 'maxLength') !== details.maximum
+        || !(0, progress_response_diagnostic_1.isProgressSourceLineId)(sourceLineId) || !sourceLineIds?.includes(sourceLineId)
+        || error.facts.sourceLineId !== 'none' && error.facts.sourceLineId !== sourceLineId
+        || (0, agent_output_locale_policy_1.validateAgentOutputLocale)({ outputLocale }, locale).kind !== 'valid')
+        return null;
+    return Object.freeze({ ...details, sourceLineId });
+}
+function reservedProgressAssessmentLengthPrompt(prompt) {
+    return prompt + PREFIX + ' '.repeat(exports.PROGRESS_ASSESSMENT_LENGTH_HINT_MAX_BYTES) + SUFFIX;
+}
+function progressAssessmentLengthRepairPrompt(prompt, facts) {
+    if (!(0, progress_assessment_length_failure_1.isProgressAssessmentLengthDiagnostic)(facts))
+        throw new TypeError('Progress assessment length diagnostic is invalid.');
+    return prompt + PREFIX + JSON.stringify(facts) + SUFFIX;
+}
+function progressAssessmentLengthRejected(facts) {
+    return new application_error_1.ApplicationError('agent.failed', 'A progress acceptance fact still exceeds its unchanged limit after one complete replacement; existing progress was retained.', { recovery: { id: 'progress-assessment-length-invalid', variables: facts } });
+}
+
+
+/***/ }),
+
 /***/ 81400:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -50030,6 +50099,7 @@ const agent_output_locale_policy_1 = __nccwpck_require__(30601);
 const progress_diff_partition_policy_1 = __nccwpck_require__(70628);
 const progress_partition_response_policy_1 = __nccwpck_require__(30025);
 const progress_completion_recovery_policy_1 = __nccwpck_require__(93325);
+const progress_assessment_length_policy_1 = __nccwpck_require__(60334);
 exports.PROGRESS_PROMPT_FRAMING_RESERVE_BYTES = 1024;
 /** Counts exactly the security/schema/task envelope used by the native adapter. */
 function remainingProgressPromptBytes(prompt, task, schema, effort, dimension = 'native-prompt-bytes') {
@@ -50052,7 +50122,7 @@ function progressAggregateBudget(promptWithoutEvidence, schema, effort) {
 /** Both original and worst complete final replacement fit before any scope request is admitted. */
 function remainingProgressAssessmentPromptBytes(prompt, schema, effort) {
     remainingProgressPromptBytes(prompt, 'progress', schema, effort);
-    return remainingProgressPromptBytes((0, progress_completion_recovery_policy_1.reservedProgressCompletionPrompt)(prompt), 'progress', schema, effort, 'native-prompt-reserve-bytes');
+    return Math.min(remainingProgressPromptBytes((0, progress_completion_recovery_policy_1.reservedProgressCompletionPrompt)(prompt), 'progress', schema, effort, 'native-prompt-reserve-bytes'), remainingProgressPromptBytes((0, progress_assessment_length_policy_1.reservedProgressAssessmentLengthPrompt)(prompt), 'progress', schema, effort, 'native-prompt-reserve-bytes'));
 }
 
 
@@ -59588,6 +59658,7 @@ const application_error_1 = __nccwpck_require__(75999);
 const progress_completion_mismatch_1 = __nccwpck_require__(6519);
 const progress_completion_recovery_policy_1 = __nccwpck_require__(93325);
 const progress_prompt_capacity_policy_1 = __nccwpck_require__(19337);
+const progress_assessment_length_policy_1 = __nccwpck_require__(60334);
 const logging_ports_1 = __nccwpck_require__(6152);
 const progress_response_1 = __nccwpck_require__(64264);
 const query_progress_result_workflow_1 = __nccwpck_require__(33658);
@@ -59598,11 +59669,19 @@ function freezeSnapshot(value) {
     }
     return value;
 }
-/** Query failures never enter the parse-only catch; rejected prose stays inside this ended call. */
+/** Only attributable native length failures enter recovery; completion still has a parse-only catch. */
 async function evaluate(agent, request, context) {
-    const response = await (0, query_progress_result_workflow_1.queryProgressResult)(agent, request, { phase: 'assessment',
-        requirementIds: context.scope.requirements.map(requirement => requirement.id),
-        sourceLineIds: context.sourceLineIds, anchors: context.anchors });
+    let response;
+    try {
+        response = await agent.query(request);
+    }
+    catch (error) {
+        const facts = (0, progress_assessment_length_policy_1.bindProgressAssessmentLength)(error, request.options?.schema, context.scope, context.anchors, context.sourceLineIds, context.targetLocale);
+        if (facts)
+            return { kind: 'length', facts };
+        return (0, query_progress_result_workflow_1.rethrowProgressQueryFailure)(error, { phase: 'assessment', requirementIds: context.scope.requirements.map(requirement => requirement.id),
+            sourceLineIds: context.sourceLineIds, anchors: context.anchors });
+    }
     try {
         return { kind: 'valid', result: (0, progress_response_1.parseProgressResponse)(response, context.targetLocale, context.scope, context.anchors) };
     }
@@ -59625,11 +59704,17 @@ async function queryProgressAssessment(agent, request, context) {
     const first = await evaluate(agent, captured.request, captured.context);
     if (first.kind === 'valid')
         return first.result;
-    (0, logging_ports_1.logInfo)('Reassessing one inconsistent completed progress estimate using the same complete pinned evidence. Previous progress is retained.');
-    const replacement = { ...captured.request, prompt: (0, progress_completion_recovery_policy_1.progressCompletionRepairPrompt)(captured.request.prompt, first.facts) };
+    (0, logging_ports_1.logInfo)(first.kind === 'length'
+        ? 'A progress acceptance fact exceeded its unchanged response limit. Requesting one complete replacement for the same pinned batch; previous progress is retained.'
+        : 'Reassessing one inconsistent completed progress estimate using the same complete pinned evidence. Previous progress is retained.');
+    const replacement = { ...captured.request, prompt: first.kind === 'length'
+            ? (0, progress_assessment_length_policy_1.progressAssessmentLengthRepairPrompt)(captured.request.prompt, first.facts)
+            : (0, progress_completion_recovery_policy_1.progressCompletionRepairPrompt)(captured.request.prompt, first.facts) };
     const second = await evaluate(agent, replacement, captured.context);
     if (second.kind === 'valid')
         return second.result;
+    if (second.kind === 'length')
+        throw (0, progress_assessment_length_policy_1.progressAssessmentLengthRejected)(second.facts);
     throw new application_error_1.ApplicationError('agent.failed', 'Progress completion remained inconsistent after one complete reassessment. Existing progress was retained.', { correlationId: second.correlationId, recovery: { id: 'progress-completion-recovery-exhausted', variables: second.facts } });
 }
 
@@ -76441,6 +76526,7 @@ const progress_inventory_diagnostic_1 = __nccwpck_require__(44048);
 const progress_capacity_diagnostic_1 = __nccwpck_require__(43919);
 const progress_response_diagnostic_2 = __nccwpck_require__(56289);
 const progress_partition_length_failure_1 = __nccwpck_require__(59292);
+const progress_assessment_length_failure_1 = __nccwpck_require__(79736);
 const progress_binary_evidence_diagnostic_1 = __nccwpck_require__(90364);
 const issue_workflow_diagnostic_1 = __nccwpck_require__(14347);
 const change_size_reconciliation_1 = __nccwpck_require__(25304);
@@ -76494,6 +76580,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'bugbot-review-incomplete',
     'progress-result-contract-invalid',
     'progress-partition-length-invalid',
+    'progress-assessment-length-invalid',
     'progress-assessment-capacity-exceeded',
     'progress-scope-clause-limit',
     'progress-sdd-seed-unverified',
@@ -76758,6 +76845,7 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'bugbot-review-incomplete': Object.freeze(['profile', 'countKind', 'resource', 'observed', 'limit', 'unit']),
     'progress-result-contract-invalid': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
     'progress-partition-length-invalid': Object.freeze(['partitionId', 'filePath', 'unitId', 'field', 'maximum', 'observed']),
+    'progress-assessment-length-invalid': Object.freeze(['requirementId', 'sourceLineId', 'field', 'maximum', 'observed']),
     'progress-assessment-capacity-exceeded': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
     'progress-batch-retained': Object.freeze(['reason', 'verified', 'expected', 'batch', 'requirementId']),
     'progress-sdd-seed-unverified': Object.freeze([]),
@@ -76868,6 +76956,8 @@ function normalizeApplicationErrorRecovery(recovery) {
         throw new TypeError('Progress response diagnostic is invalid.');
     if (recovery.id === 'progress-partition-length-invalid' && !(0, progress_partition_length_failure_1.isProgressPartitionLengthDiagnostic)(variables))
         throw new TypeError('Progress part length diagnostic is invalid.');
+    if (recovery.id === 'progress-assessment-length-invalid' && !(0, progress_assessment_length_failure_1.isProgressAssessmentLengthDiagnostic)(variables))
+        throw new TypeError('Progress assessment length diagnostic is invalid.');
     if (recovery.id === 'bugbot-review-incomplete' && !(0, framed_review_1.isBugbotReviewBlockFacts)(variables))
         throw new TypeError('Bugbot review diagnostic is invalid.');
     if (recovery.id === 'progress-inventory-incomplete' && !(0, progress_inventory_diagnostic_1.isProgressInventoryDiagnostic)(variables))
@@ -85236,6 +85326,7 @@ const progress_response_diagnostic_1 = __nccwpck_require__(56289);
 const agent_json_parser_1 = __nccwpck_require__(19951);
 const agent_json_schema_validator_1 = __nccwpck_require__(52663);
 const progress_partition_length_failure_1 = __nccwpck_require__(75966);
+const progress_assessment_length_failure_1 = __nccwpck_require__(4024);
 /** Existing application-owned schema names, never names read from model output. */
 function progressResponsePhaseForSchema(name) {
     if (name === 'progress_scope')
@@ -85292,10 +85383,77 @@ function interpretProgressAgentOutput(text, phase, schema) {
         const facts = { phase,
             reason: error instanceof agent_response_length_failure_1.AgentResponseLengthFailure ? 'schema-string-long' : `schema-${error.reason}`,
             field, requirementId: phase === 'assessment' ? id : 'none', sourceLineId: phase === 'scope' ? id : 'none' };
-        const length = error instanceof agent_response_length_failure_1.AgentResponseLengthFailure ? (0, progress_partition_length_failure_1.partitionLengthFailure)(error, facts, parsed, schema) : undefined;
+        const length = error instanceof agent_response_length_failure_1.AgentResponseLengthFailure
+            ? (0, progress_partition_length_failure_1.partitionLengthFailure)(error, facts, parsed, schema) ?? (0, progress_assessment_length_failure_1.assessmentLengthFailure)(error, facts, parsed, schema) : undefined;
         throw length ?? new progress_response_diagnostic_1.ProgressResponseContractFailure(facts);
     }
     return parsed;
+}
+
+
+/***/ }),
+
+/***/ 4024:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.assessmentLengthFailure = assessmentLengthFailure;
+const progress_assessment_length_failure_1 = __nccwpck_require__(79736);
+const locale_1 = __nccwpck_require__(15386);
+const agent_json_schema_validator_1 = __nccwpck_require__(52663);
+const record = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+const own = (value, key) => record(value) && Object.prototype.hasOwnProperty.call(value, key) ? value[key] : undefined;
+/** Extracts only measured scalars and an ID admitted by this exact completed native request. */
+function assessmentLengthFailure(error, facts, parsed, schema) {
+    const location = facts.field.match(/^\$\.requirements\[(0|[1-9]\d?)\]\.(summary|remaining)$/u);
+    if (facts.phase !== 'assessment' || facts.reason !== 'schema-string-long' || error.path !== facts.field || !location)
+        return;
+    const definition = own(own(schema, 'properties'), 'requirements'), fields = own(own(definition, 'items'), 'properties');
+    if (!record(own(fields, 'summary')) || !record(own(fields, 'remaining')))
+        return;
+    const rows = parsed.requirements;
+    if (!Array.isArray(rows) || rows.length !== own(definition, 'minItems') || rows.length !== own(definition, 'maxItems'))
+        return;
+    const row = rows[Number(location[1])], field = location[2], ids = own(own(fields, 'id'), 'enum');
+    if (!record(row)
+        || !Array.isArray(ids) || !ids.includes(row.id) || row.id !== facts.requirementId)
+        return;
+    const value = row[field], maximum = own(own(fields, field), 'maxLength');
+    if (typeof value !== 'string' || maximum !== error.maximum || typeof parsed.outputLocale !== 'string')
+        return;
+    const details = { requirementId: facts.requirementId, field: facts.field, maximum: error.maximum, observed: [...value].length };
+    if (!(0, progress_assessment_length_failure_1.isProgressAssessmentLengthFacts)(details))
+        return;
+    let outputLocale;
+    try {
+        outputLocale = (0, locale_1.canonicalizeLocaleTag)(parsed.outputLocale);
+    }
+    catch {
+        return;
+    }
+    if (outputLocale !== parsed.outputLocale)
+        return;
+    // Validate the complete batch and its receipts before attributing the failure.
+    // Only these two length checks are deferred; publication still uses the original schema.
+    const shape = structuredClone(schema);
+    const shapedRequirements = own(own(shape, 'properties'), 'requirements');
+    const textFields = own(own(shapedRequirements, 'items'), 'properties');
+    delete textFields.summary.maxLength;
+    delete textFields.remaining.maxLength;
+    try {
+        (0, agent_json_schema_validator_1.assertAgentResponseSchema)(parsed, shape);
+    }
+    catch {
+        return;
+    }
+    const present = rows.map(value => own(value, 'id'));
+    if (new Set(present).size !== ids.length || !ids.every(id => present.includes(id)))
+        return;
+    if (rows.some(value => { const citations = own(value, 'citations'); return Array.isArray(citations) && new Set(citations).size !== citations.length; }))
+        return;
+    return new progress_assessment_length_failure_1.ProgressAssessmentLengthFailure(facts, { ...details, outputLocale }, schema);
 }
 
 
@@ -93680,6 +93838,67 @@ function boundedTitle(title) {
     if (/[\uD800-\uDBFF]$/u.test(value))
         value = value.slice(0, -1);
     return value;
+}
+
+
+/***/ }),
+
+/***/ 79736:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (receiver, state, value, kind, f) {
+    if (kind === "m") throw new TypeError("Private method is not writable");
+    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a setter");
+    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot write private member to an object whose class did not declare it");
+    return (kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value)), value;
+};
+var __classPrivateFieldIn = (this && this.__classPrivateFieldIn) || function(state, receiver) {
+    if (receiver === null || (typeof receiver !== "object" && typeof receiver !== "function")) throw new TypeError("Cannot use 'in' operator on non-object");
+    return typeof state === "function" ? receiver === state : state.has(receiver);
+};
+var __classPrivateFieldGet = (this && this.__classPrivateFieldGet) || function (receiver, state, kind, f) {
+    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a getter");
+    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot read private member from an object whose class did not declare it");
+    return kind === "m" ? f : kind === "a" ? f.call(receiver) : f ? f.value : state.get(receiver);
+};
+var _ProgressAssessmentLengthFailure_details, _ProgressAssessmentLengthFailure_schema;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ProgressAssessmentLengthFailure = void 0;
+exports.isProgressAssessmentLengthFacts = isProgressAssessmentLengthFacts;
+exports.isProgressAssessmentLengthDiagnostic = isProgressAssessmentLengthDiagnostic;
+const progress_response_diagnostic_1 = __nccwpck_require__(56289);
+/** Completed native output supplied these closed measurements; the application still owns binding. */
+class ProgressAssessmentLengthFailure extends progress_response_diagnostic_1.ProgressResponseContractFailure {
+    constructor(facts, details, schema) {
+        super(facts);
+        _ProgressAssessmentLengthFailure_details.set(this, void 0);
+        _ProgressAssessmentLengthFailure_schema.set(this, void 0);
+        __classPrivateFieldSet(this, _ProgressAssessmentLengthFailure_details, Object.freeze({ ...details }), "f");
+        __classPrivateFieldSet(this, _ProgressAssessmentLengthFailure_schema, schema, "f");
+    }
+    detailsFor(schema) {
+        return __classPrivateFieldIn(_ProgressAssessmentLengthFailure_schema, this) && schema === __classPrivateFieldGet(this, _ProgressAssessmentLengthFailure_schema, "f") ? __classPrivateFieldGet(this, _ProgressAssessmentLengthFailure_details, "f") : undefined;
+    }
+}
+exports.ProgressAssessmentLengthFailure = ProgressAssessmentLengthFailure;
+_ProgressAssessmentLengthFailure_details = new WeakMap(), _ProgressAssessmentLengthFailure_schema = new WeakMap();
+function isProgressAssessmentLengthFacts(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return false;
+    const facts = value;
+    return Object.keys(facts).sort().join(',') === 'field,maximum,observed,requirementId'
+        && (0, progress_response_diagnostic_1.isProgressRequirementId)(facts.requirementId) && (0, progress_response_diagnostic_1.isProgressResponseField)('assessment', facts.field)
+        && /\.(?:summary|remaining)$/u.test(facts.field)
+        && typeof facts.maximum === 'number' && Number.isSafeInteger(facts.maximum) && facts.maximum >= 1 && facts.maximum <= 800
+        && typeof facts.observed === 'number' && Number.isSafeInteger(facts.observed) && facts.observed > facts.maximum;
+}
+function isProgressAssessmentLengthDiagnostic(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return false;
+    const { sourceLineId, ...facts } = value;
+    return (0, progress_response_diagnostic_1.isProgressSourceLineId)(sourceLineId) && isProgressAssessmentLengthFacts(facts);
 }
 
 
