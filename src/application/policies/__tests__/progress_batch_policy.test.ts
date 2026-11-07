@@ -10,6 +10,7 @@ import { isProgressBatchDiagnostic } from '../../../domain/progress_batch_diagno
 import { resolveStaticApplicationErrorCatalog } from '../application_error_message_catalog';
 import { buildApplicationErrorPresentation } from '../application_error_presentation_policy';
 import { progressBatchRejected } from '../progress_batch_rejection_policy';
+import { ApplicationError } from '../../errors/application_error';
 
 const base = 'a'.repeat(40), head = 'b'.repeat(40);
 function fixture(count = 33) {
@@ -254,6 +255,11 @@ it('CommitScope916-C10 preserves an in-budget provider error and identifies an e
 it.each([undefined, null, [], {}, { reason: 'foreign' }, { verified: 2, expected: 1, batch: 0, reason: 'receipt-coverage', requirementId: 'R1' },
     { verified: 0, expected: 1, batch: -1, reason: 'receipt-coverage', requirementId: 'R1' }])('CommitScope916-C20 rejects malformed diagnostic facts %#', value => {
     expect(isProgressBatchDiagnostic(value)).toBe(false);
+});
+it('CommitScope916-C20 rejects impossible batch coverage at the semantic error boundary', () => {
+    expect(() => new ApplicationError('validation.evidence-unavailable', 'Owned batch diagnostic.', {
+        recovery: { id: 'progress-batch-retained', variables: { reason: 'receipt-coverage', verified: 3, expected: 2, batch: 2, requirementId: 'R17' } },
+    })).toThrow('Progress batch diagnostic is invalid.');
 });
 it('CommitScope916-C01/C02 binds classification receipts and their complete source inventory to the final manifest', () => {
     const f = fixture(), snapshot = progressScopeSnapshotDigest({ repository: f.input.repository, issueNumber: f.input.issueNumber,
