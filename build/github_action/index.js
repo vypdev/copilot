@@ -48856,7 +48856,7 @@ function aggregateFactTarget(manifest, compact) {
 function progressBatchResponseSchema(manifest, batch, anchors, compact) {
     const schema = (0, progress_scope_policy_1.scopedProgressResponseSchema)(progressBatchDisplayScope(batch, compact), anchors);
     const factTarget = aggregateFactTarget(manifest, compact);
-    const description = `Aim for at most ${factTarget} Unicode code points. Each complete publication field has 8000 points shared across all ${manifest.scope.requirements.length} requirements.`;
+    const description = `Keep each fact within its ${factTarget}-Unicode-code-point aggregate allocation. Use one short factual phrase. Each complete publication field has 8000 points shared across all ${manifest.scope.requirements.length} requirements.`;
     return { ...schema, properties: { ...schema.properties,
             manifestDigest: { type: 'string', enum: [manifest.digest] }, batchId: { type: 'string', enum: [batch.id] },
             headSha: { type: 'string', enum: [manifest.headSha] },
@@ -59245,7 +59245,8 @@ async function analyzeProgressBatches(context, issueDescription, captured, diff,
         + 'A citation is its exact unitId in the complete comparison facts, or its exact path when no unitId is supplied. A SHA echo alone is insufficient. '
         + 'Every outcome requires a non-generated source observation. Missing or uncertain outcomes require a traceable source observation supporting that outcome. '
         + 'Do not infer contents of unprovided unchanged files or external verification. Preserve uncertainty and all qualifiers. Return no partial inventory. '
-        + `Use one short factual phrase per summary and remaining string. Each string has a hard limit of ${schema.properties.requirements.items.properties.summary.maxLength} Unicode code points, counting spaces and punctuation. ${schema.properties.requirements.items.properties.summary.description} Keep the complete requirement inventory and source citations.`;
+        + `Use one short factual phrase per summary and remaining string. Each string has a hard limit of ${schema.properties.requirements.items.properties.summary.maxLength} Unicode code points, counting spaces and punctuation. ${schema.properties.requirements.items.properties.summary.description} `
+        + 'The citations array carries the exact source IDs. Keep paths, IDs, source quotes and background out of summary and remaining. State the observed behavior or verification needed concisely. Keep the complete requirement inventory and source citations.';
     const groups = Buffer.byteLength(acceptanceScope, 'utf8') <= progress_scope_policy_1.MAX_PROGRESS_SCOPE_BYTES
         ? [{ acceptanceScope, batches }]
         : batches.map(batch => ({ acceptanceScope: scopeData(batch.scope), batches: [batch] }));

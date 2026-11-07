@@ -141,7 +141,7 @@ function aggregateFactTarget(manifest: ProgressScopeManifest, compact: boolean):
 export function progressBatchResponseSchema(manifest: ProgressScopeManifest, batch: ProgressAssessmentBatch, anchors: ProgressScopeAnchors, compact: boolean) {
     const schema = scopedProgressResponseSchema(progressBatchDisplayScope(batch, compact), anchors);
     const factTarget = aggregateFactTarget(manifest, compact);
-    const description = `Aim for at most ${factTarget} Unicode code points. Each complete publication field has 8000 points shared across all ${manifest.scope.requirements.length} requirements.`;
+    const description = `Keep each fact within its ${factTarget}-Unicode-code-point aggregate allocation. Use one short factual phrase. Each complete publication field has 8000 points shared across all ${manifest.scope.requirements.length} requirements.`;
     return { ...schema, properties: { ...schema.properties,
         manifestDigest: { type: 'string', enum: [manifest.digest] }, batchId: { type: 'string', enum: [batch.id] },
         headSha: { type: 'string', enum: [manifest.headSha] },

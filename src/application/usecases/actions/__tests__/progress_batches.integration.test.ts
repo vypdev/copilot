@@ -46,6 +46,8 @@ function scenario(body = Array.from({ length: 33 }, (_, index) => `Implement uni
         }
         const properties = schema.properties.requirements.items.properties;
         expect(request.prompt).toContain(`Each string has a hard limit of ${properties.summary.maxLength} Unicode code points, counting spaces and punctuation.`);
+        expect(request.prompt).toContain(properties.summary.description);
+        expect(request.prompt).toContain('Keep paths, IDs, source quotes and background out of summary and remaining.');
         expect(request.prompt).toContain(JSON.stringify({ manifestDigest: schema.properties.manifestDigest.enum[0], batchId: schema.properties.batchId.enum[0],
             headSha: schema.properties.headSha.enum[0], evidenceDictionary: properties.citations.items.enum }));
         const response = { outputLocale: 'en-US', progress: 50, manifestDigest: schema.properties.manifestDigest.enum[0],
