@@ -206,3 +206,75 @@ they do not count toward this change's test budget or independently prove live
 model causality. Normative source ownership and acceptance remain in this SDD and
 the issue. The existing shared comments are untouched; any concise replacement
 requires explicit human permission and per-comment concurrency checks.
+
+## 9. Selected and published maintainer drafts
+
+[Issue #910](https://github.com/vypdev/copilot/issues/910) extends the Commit
+source contract. The original source guards still cover the entire issue.
+When it contains an SDD seed, Commit must verify the exact seed hash, issue
+identity and maintainer selection against the Action-owned publication card.
+The recorded SDD commit must belong to the linked branch and be an ancestor
+of the assessed head. Its artifact hash and the SDD bytes at that head must
+agree with the deterministic publication of the selected seed. An owner update
+must preserve its original bytes. Commit rechecks publication authority and the
+full issue snapshot before changing progress. An Action card that records a
+published selected seed also prevents progress if the issue no longer contains
+that seed.
+
+```text
+Issue and pinned head → verify selection and published bytes → classify unique scope
+→ assess linked case evidence and complete comparison → recheck authority → progress
+```
+
+Commit classifies the candidate scope only after the issue and head are bound to
+the verified publication. The explicit requirement rows are mandatory. Each
+structured case row keeps its original physical line and scenario under the
+requirements it covers. An exact restatement of a unique goal shares that
+goal's identity. The classifier may associate an entire equivalent line with
+a verified goal while preserving its exact text and origin. A line with an
+independent obligation or uncertain equivalence keeps its own classification.
+Exclusions retain their own classification. The unchanged bounds are 32
+distinct required or uncertain clauses and 32 exclusions. The assessment
+receives the verified publication identity, physical issue lines and linked
+scenarios as source context. Every linked qualifier and scenario must be
+accounted for when assessing its requirement.
+
+| Commit state | Visible result and next step |
+|---|---|
+| Pending | Verifies the selected publication and the complete comparison. Existing progress remains available. |
+| Selection or publication cannot be verified | `progress-sdd-seed-unverified` retains existing progress. Confirm the draft selection and SDD on the linked branch, then rerun Commit. |
+| Assessment stops after source verification | Shows the existing scope or evidence diagnostic, including the first crossing original line for over-capacity scope. |
+| Complete | Updates the existing progress result on the verified head. Case definitions remain scope evidence and CI execution is established independently. |
+
+The existing SDD publication policy owns seed parsing, selection receipts,
+table assembly and owner composition. Commit reads the complete native
+comment inventory and the exact linked Git source through read capabilities.
+It uses the shared Markdown table parser to locate requirement and case rows.
+The existing diagnostics present the failure in English or Spanish with the
+standard locale fallback. No new configuration or persisted state is needed.
+
+| Regression budget | Minimum distinct cases | Evidence |
+|---|---:|---|
+| Scope and provenance | 6 | Original capture and case links, exact and interpreted repeats, draft-only requirement, ambiguous alias, 33 independent obligations |
+| Commit and publication fences | 9 | Original head, missing selection, unpublished and unrelated commits, changed seed and issue, changed head artifact, current authority changes, ordinary scope |
+| Presentation | 2 | Localized actionable recovery for missing publication evidence |
+
+The original [Domus #30](https://github.com/vypdev/domus/issues/30) fixture
+records 121 nonempty lines, including 8 operational lines and 97 inside the
+seed, plus its two markers. In v3.10.8 the classifier received 113 lines and
+the first hosted run classified 39 as required or uncertain. With the verified
+amendment, Commit submits 99 candidates and attaches all 12 original case
+rows to the 6 declared requirements. The deterministic replay provides a
+complete simulated assessment on the recorded head. The hosted classification
+and the simulated assessment are separate evidence.
+
+[Domus #29](https://github.com/vypdev/domus/pull/29) also exceeded the clause
+limit. Its issue supplied a prospective companion as fenced Markdown in
+ordinary issue text. Its published card has no selected seed receipt. The
+capture and publication evidence establish a different route and do not
+establish the complete historical classifier result.
+
+Verify the Commit replay, ownership controls, recovery messages, unchanged
+boundaries, architecture, documentation, catalog and generated bundles before
+review. The merge gate still requires complete modified-line coverage and
+review on the current head.

@@ -1,0 +1,26 @@
+{
+  "title": "✨🧑‍💻 - Share Gateway presentation components and establish the Domus household navigation",
+  "comments": [
+    {
+      "id": 6693327200,
+      "user": {
+        "login": "efraespada"
+      },
+      "body": "SDD Q1: review seed 25c0ef418f9f56c4d482bcaed65e1f88b5b28a4d81f0b01939a136f8f477cf97\n"
+    },
+    {
+      "id": 6693404686,
+      "user": {
+        "login": "efraespada"
+      },
+      "body": "SDD Q1: use seed afe96935b18b2bdf0e897ac69423e39b604398bfa437d0de1a8b4ba0519351a1\n"
+    },
+    {
+      "id": 6693447714,
+      "user": {
+        "login": "vypbot"
+      },
+      "body": "## SDD work status\n\n**Current status:** The SDD is published. Implementation requires active admission and verified branch readiness.\n\n**SDD:** `specs/application-experience.md` · **Branch:** `feature/30-share-gateway-presentation-components-and-establish-the-domus-household-navigation` · **First commit:** `3ee15afc4942c7f663d09b58928513ea72c8cbcd`\n\n**Links:** [SDD](https://github.com/vypdev/domus/blob/3ee15afc4942c7f663d09b58928513ea72c8cbcd/specs/application-experience.md) · [Branch](https://github.com/vypdev/domus/tree/feature/30-share-gateway-presentation-components-and-establish-the-domus-household-navigation) · [Commit](https://github.com/vypdev/domus/commit/3ee15afc4942c7f663d09b58928513ea72c8cbcd)\n\n<!-- copilot:sdd-gate:v1\n{\"version\":1,\"issueNumber\":30,\"phase\":\"published\",\"issueDigest\":\"712867df9dcdd2af295c03935d6e1962b182656a1f8beaafcad47a0e18256235\",\"baseSha\":\"0170085f283ea5775f41e77a2f8c8d9cc69f20b7\",\"round\":1,\"plan\":{\"action\":\"update\",\"path\":\"specs/application-experience.md\",\"capabilityId\":\"application-experience\",\"reason\":\"The immutable catalog registers this exact path to application-experience. The issue author explicitly confirmed the existing owner, exact published package and Overview/Household scope in Ingress and standalone, with Gateway adoption deferred and the existing Domus presentation contract retained. Q1 is resolved; no remaining blocking ownership or product decision is established by the supplied issue and catalog.\",\"questions\":[]},\"answers\":[{\"questionId\":\"Q1\",\"author\":\"efraespada\",\"commentId\":6693368332,\"text\":\"Yes. Adopt the exact public @vypdev/ha-ui 0.1.0-next.1 for Domus Overview and Household in Ingress and standalone. Gateway adoption is a separate session. The existing Domus presentation contract bounds the change. Domus owns route selection, authorization, localized view data, drafts and household operations. The shared component provides the navigation rendering. Append this change to the registered application-experience owner and retain the prior specification.\",\"round\":1,\"questionText\":\"Should Domus adopt @vypdev/ha-ui@0.1.0-next.1 for the Overview and Household surfaces while deferring Gateway application adoption, and should this replace or be bounded by the existing Domus-owned presentation component contract?\",\"questionOwner\":\"issue-author\"},{\"questionId\":\"Q1\",\"author\":\"efraespada\",\"commentId\":6693404686,\"text\":\"use seed afe96935b18b2bdf0e897ac69423e39b604398bfa437d0de1a8b4ba0519351a1\",\"round\":1,\"questionText\":\"Review the draft and reply exactly with use seed afe96935b18b2bdf0e897ac69423e39b604398bfa437d0de1a8b4ba0519351a1 or generate afe96935b18b2bdf0e897ac69423e39b604398bfa437d0de1a8b4ba0519351a1.\",\"questionOwner\":\"maintainer\"}],\"selection\":{\"kind\":\"seed\",\"receipt\":\"afe96935b18b2bdf0e897ac69423e39b604398bfa437d0de1a8b4ba0519351a1\",\"seedHash\":\"25c0ef418f9f56c4d482bcaed65e1f88b5b28a4d81f0b01939a136f8f477cf97\",\"reviewCommentId\":6693327200,\"issueScope\":\"https://github.com/vypdev/domus/issues/30\"},\"selectionArtifact\":\"2814c90f0cba5206a07c9af9989297e364852593415fbc176842bf81c088138c\",\"branchName\":\"feature/30-share-gateway-presentation-components-and-establish-the-domus-household-navigation\",\"commitSha\":\"3ee15afc4942c7f663d09b58928513ea72c8cbcd\"}\n-->"
+    }
+  ]
+}

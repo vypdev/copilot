@@ -45,17 +45,24 @@ function assertRequirementsCovered(counts: readonly number[]): void {
 
 function clean(value: string): string { return value.trim().replace(/^(?:\*\*|__|`)(.*?)(?:\*\*|__|`)$/u, '$1').trim(); }
 
-function section(source: string, number: Exclude<SddValidationFact['section'], 0>, reason: SddConsistencyReason): string {
+function sectionRange(source: string, number: Exclude<SddValidationFact['section'], 0>, reason: SddConsistencyReason) {
   const sections = [...source.matchAll(/^## (\d+)\. [^\n]*$/gmu)];
   const matches = sections.filter(heading => Number(heading[1]) === number);
   if (matches.length !== 1) return fail(reason, { detail: 'section-count', section: number, expected: 1, observed: matches.length });
   const start = matches[0];
   const end = sections.find(heading => heading.index > start.index)?.index ?? source.length;
-  return source.slice(start.index + start[0].length, end);
+  return { start: start.index + start[0].length, end };
 }
 
-function table(source: string, number: Exclude<SddValidationFact['section'], 0>, headers: readonly string[], reason: SddConsistencyReason, rowSources?: Set<string>): string[][] {
-  const lines = section(source, number, reason).split('\n');
+function section(source: string, number: Exclude<SddValidationFact['section'], 0>, reason: SddConsistencyReason): string {
+  const { start, end } = sectionRange(source, number, reason);
+  return source.slice(start, end);
+}
+
+function table(source: string, number: Exclude<SddValidationFact['section'], 0>, headers: readonly string[], reason: SddConsistencyReason, rowSources?: Set<string>, rowLines?: number[]): string[][] {
+  const { start, end } = sectionRange(source, number, reason);
+  const lines = source.slice(start, end).split('\n');
+  const firstLine = rowLines ? source.slice(0, start).split('\n').length : 0;
   const found: string[][][] = [];
   for (let index = 0; index < lines.length; index++) {
     if (!/^\s*\|/u.test(lines[index])) continue;
@@ -71,6 +78,7 @@ function table(source: string, number: Exclude<SddValidationFact['section'], 0>,
       if (row.some(cell => !cell)) return fail(reason, { detail: 'table-empty-cell', section: number, row: rows.length + 1 });
       rows.push(row);
       rowSources?.add(lines[index]);
+      rowLines?.push(firstLine + index);
     }
     if (!rows.length) return fail(reason, { detail: 'table-empty', section: number, observed: 0 });
     found.push(rows);
@@ -178,6 +186,22 @@ export function sddRequirementCaseEdges(requirementIds: readonly string[], cases
   }
   assertRequirementsCovered([...edges.values()].map(links => links.size));
   return edges;
+}
+
+/** Keep the original physical row identities used by the accepted requirement/case graph. */
+export function readSddAcceptanceRows(markdown: string) {
+  const source = visibleSddContract(markdown);
+  const requirementLines: number[] = [], caseLines: number[] = [];
+  const requirements = table(source, 4, ['Requirement', 'Behavior'], 'requirement-mapping', undefined, requirementLines);
+  const cases = table(source, 14, ['Case ID', 'Area', 'Requirements', 'Scenario'], 'case-identity', undefined, caseLines);
+  const requirementIds = requirements.map(([id]) => id);
+  uniqueIdentifiers(requirementIds, SDD_REQUIREMENT_ID, 'requirement-mapping', 4);
+  uniqueIdentifiers(cases.map(([id]) => id), CASE_ID, 'case-identity', 14);
+  const edges = sddRequirementCaseEdges(requirementIds, cases);
+  const lineByCase = new Map(cases.map(([id], index) => [id, caseLines[index]]));
+  return requirements.map(([id, behavior], index) => ({
+    behavior, line: requirementLines[index], cases: [...edges.get(id)!].map(caseId => lineByCase.get(caseId)!),
+  }));
 }
 
 /** Never repairs definitions or contradictory supplied tables; the writer independently revalidates. */
