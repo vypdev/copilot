@@ -5,6 +5,11 @@ export const PROGRESS_LABEL_PERCENTS = [
     55, 60, 65, 70, 75, 80, 85, 90, 95, 100,
 ] as const;
 
+export function progressLabelPercent(progress: number): number {
+    const rounded = Math.min(100, Math.max(0, Math.round(progress / 5) * 5));
+    return progress < 100 ? Math.min(95, rounded) : rounded;
+}
+
 export function progressPercentToColor(percent: number): string {
     const p = Math.min(100, Math.max(0, percent));
     let r: number, g: number, b: number;

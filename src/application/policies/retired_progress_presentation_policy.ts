@@ -5,7 +5,7 @@ import { escapeHtml, sanitizeAgentMarkdown } from './github_comment_publication_
 const archiveStart = '<!-- copilot:progress-archive schema="1" -->';
 const archiveEnd = '<!-- /copilot:progress-archive -->';
 const head = '(?:[a-f0-9]{40}|[a-f0-9]{64})';
-const activeSource = new RegExp(`^head:(${head})$`, 'u');
+const activeSource = new RegExp(`^head:(${head})(?::scope:([a-f0-9]{64}))?$`, 'u');
 const closedSource = new RegExp(`^closed:(?:completed|not_planned|duplicate|unknown):head:(${head})$`, 'u');
 
 /** Preserve the last assessment as inert history; native closure is a separate fact. */
@@ -23,6 +23,7 @@ export function buildRetiredProgressComment(body: string, locale: string, reason
     const assessment = body.slice(body.indexOf('-->') + 3).trim();
     if (!assessment) return undefined;
     archive = escapeHtml(sanitizeAgentMarkdown(assessment, 12_000)).split('\n').map(line => `> ${line}`).join('\n');
+    if (active[2]) archive = `> scope:${active[2]}\n> \n${archive}`;
   } else if (closed) {
     if (body.split(archiveStart).length !== 2 || body.split(archiveEnd).length !== 2 || !body.endsWith(archiveEnd)) return undefined;
     archive = body.slice(body.indexOf(archiveStart) + archiveStart.length, body.lastIndexOf(archiveEnd)).trim();

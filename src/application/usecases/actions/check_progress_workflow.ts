@@ -58,7 +58,7 @@ export async function runCheckProgressWorkflow(
             return [buildStaleSourceResult(taskId, analysis.branch, analysis.sourceHeadSha)];
         }
 
-        const { attemptResult, issueNumber, issueDescription, branch, developmentBranch, baseSha, sourceHeadSha, comparisonSource } = analysis;
+        const { attemptResult, issueNumber, issueDescription, branch, developmentBranch, baseSha, sourceHeadSha, comparisonSource, scopeManifestDigest } = analysis;
         const { progress, summary, reasoning, remaining } = attemptResult;
         logProgressAssessment(progress, summary, reasoning, remaining);
 
@@ -77,6 +77,7 @@ export async function runCheckProgressWorkflow(
         }
 
         if (await rolloutPending(issueNumber)) return skipped();
+        analysis.verifyAssessment();
         if (progress === 0) {
             return [buildZeroProgressResult(
                 taskId,
@@ -88,6 +89,7 @@ export async function runCheckProgressWorkflow(
                 sourceHeadSha,
                 comparisonSource,
                 baseSha,
+                scopeManifestDigest,
             )];
         }
 
@@ -113,6 +115,7 @@ export async function runCheckProgressWorkflow(
             sourceHeadSha,
             comparisonSource,
             baseSha,
+            scopeManifestDigest,
         )];
     } catch (error) {
         const semanticError = toApplicationError(error, 'workflow.failed', `Unable to complete ${taskId}.`);
@@ -158,6 +161,7 @@ function buildZeroProgressResult(
     sourceHeadSha: string,
     comparisonSource: ProgressComparisonSource,
     baseSha: string,
+    scopeManifestDigest: string,
 ): Result {
     const message = 'Progress detection returned 0%. This may be due to a model error or no changes detected. Consider re-running the check.';
     logError(message);
@@ -178,6 +182,7 @@ function buildZeroProgressResult(
             comparisonBaseBranch: comparisonSource.baseBranch,
             comparisonSource,
             baseSha,
+            scopeManifestDigest,
         },
     });
 }
@@ -194,6 +199,7 @@ function buildProgressResult(
     sourceHeadSha: string,
     comparisonSource: ProgressComparisonSource,
     baseSha: string,
+    scopeManifestDigest: string,
 ): Result {
     return new Result({
         id: taskId,
@@ -212,6 +218,7 @@ function buildProgressResult(
             comparisonBaseBranch: comparisonSource.baseBranch,
             comparisonSource,
             baseSha,
+            scopeManifestDigest,
         },
     });
 }

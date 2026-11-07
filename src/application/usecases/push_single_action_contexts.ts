@@ -24,6 +24,7 @@ export interface DeploymentPublicationContext {
 }
 
 export interface ProgressContext {
+  readonly repositoryIdentity?: string;
   readonly issueNumber: number;
   readonly issueKind?: string;
   readonly profileDigest?: string;
@@ -284,6 +285,7 @@ export function projectDeploymentOrchestrationContext(
 export function projectProgressContext(source: PushSingleActionContextSource): ProgressContext {
   const sourceHeadSha = canonicalGitObjectId(source.inputs?.after);
   return Object.freeze({
+    repositoryIdentity: source.owner + '/' + source.repo,
     issueNumber: source.issueNumber,
     ...(source.issueWorkflowKind ? { issueKind: source.issueWorkflowKind } : {}),
     ...(source.issueWorkflowProfileDigest ? { profileDigest: source.issueWorkflowProfileDigest } : {}),

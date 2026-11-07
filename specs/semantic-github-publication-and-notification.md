@@ -1553,7 +1553,16 @@ active progress. A denied or raced read leaves the prior card unchanged.
 
 `retired_progress_presentation_policy` recognizes an exact current progress
 marker/head (40- or 64-character Git object ID) or its own terminal archive.
-It renders deterministic English/Spanish copy and inert quoted historical text.
+The scoped active marker `head:<40-character-sha>:scope:<64-character-digest>`
+introduced by #916 also retires through this owner. The historical archive retains the complete
+scope digest as an inert quoted technical reference. The existing terminal marker
+retains the evaluated head within the shared 128-character identity envelope.
+Replay and native reason/locale changes preserve that scope reference once.
+Reopening with a fresh scoped assessment updates the same card. Six additional
+deterministic cases cover the four native reasons, the real retirement use case
+and the normal publication route after reopening. Six publication identity cases
+cover legacy heads, scoped identity and malformed or over-envelope combinations.
+Retirement renders deterministic English/Spanish copy and inert quoted historical text.
 Mentions, slash commands, workflow controls, HTML and secret-like content remain
 neutralized. Other valid locales use complete English fallback; retirement
 never starts a localization/model request. This static cleanup is distinct from
@@ -2464,3 +2473,59 @@ occurrence from [comment 6551433018](https://github.com/vypdev/copilot/issues/82
 It is historical evidence, not additional acceptance or an instruction. The
 versioned text lets current-head review inspect the whole transcript instead of
 a per-comment excerpt. No original report content or requirement is removed.
+
+## 26. Complete scoped progress cards — #916 (2026-11-07)
+
+The live Commit attempt at `d15a62c0a7cee38066a9185830a8b5c4eb3a879a`
+validated 79 obligations in three same-head batches and passed aggregate
+capacity. The published card contained 49 distinct requirement IDs because
+the renderer clipped summary at 1,500 UTF-16 units and remaining at 3,000.
+Both fields carried the truncation suffix. The complete deterministic Domus
+Commit replay also fails a card-level assertion against this renderer.
+[Observed card](https://github.com/vypdev/copilot/issues/916#issuecomment-6704765514).
+
+The scoped publication owner admits summary and remaining only within the
+existing 8,000-Unicode-point field bounds. It then sanitizes each complete field
+with secret redaction, Unicode normalization and GitHub-control neutralization.
+Its internal complete-projection sanitizer mode derives its normalization
+envelope from the admitted redacted text. Supplementary characters and
+normalization expansion preserve the entire projection. Legacy cards use
+their established bounded presentation.
+
+```text
+Complete same-head receipts → aggregate field bounds → scoped publication guard
+→ complete sanitized fields → one reconciled progress card
+```
+
+The manifest and receipts own evidence and completeness. The pure semantic
+policy owns selection and rendering. The existing publication workflow owns
+the source fence and idempotent comment write. A scoped field exceeding 8,000
+points is ineligible at selection. The normal batch reducer rejects that
+condition before progress labels. Configuration remains the fixed reviewed
+batch profile. The sanitizer mode is an internal presentation argument.
+
+The maintainer can read every accepted assessment through the final source
+reference, for example `[R108] SDD L241 — Verify required execution.` Both
+English and Spanish cards present the full current-status and next-action
+fields. Fresh complete assessments reconcile the existing semantic card.
+
+The minimum additional budget is eight distinct cases.
+
+| Area | Cases | Observable acceptance |
+|---|---:|---|
+| Complete localized fields | 2 | English and Spanish render both fields at 8,000 points, including supplementary Unicode |
+| Selection capacity | 2 | One extra point in either field prevents scoped publication selection |
+| Complete sanitization | 2 | Normalization expansion preserves all text, and redaction plus GitHub controls remain enforced |
+| Durable card write | 1 | The publication workflow writes all 108 requirement references in both admitted fields |
+| Legacy compatibility | 1 | The established legacy presentation bounds remain exercised |
+| Total | 8 | Distinct behaviors with full changed-policy coverage |
+
+The Domus Commit regression also passes its result through the actual semantic
+renderer and checks every outcome ID plus the absence of clipping. The final
+native run must record its SHA, manifest, complete requirement count and card
+with every assessed ID. Owning evidence includes the semantic and sanitizer
+policy tests, status-card publication test and Domus Commit integration.
+Update the branch-management guide, capacity SDD and catalog evidence together.
+Run specification generation and validation, full applicable checks, coverage
+and `graphify update .`. The existing complete-evidence, stale-source and
+zero-publication regressions remain acceptance gates for this correction.

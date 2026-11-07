@@ -1,3 +1,4 @@
+import { withProgressEvidence } from '../support/progress_batch_response';
 import { CheckProgressUseCase } from '../../check_progress_use_case';
 import { inventoryFixture, addedFiles, inventoryBase as base, inventoryHead as head } from '../../../../../data/repository/__tests__/support/immutable_progress_inventory_fixture';
 import type { ProgressDiffEvidence } from '../../../../ports/progress_diff_query_ports';
@@ -5,7 +6,7 @@ import type { FindingsQueryRequest } from '../../../../ports/agent_findings_port
 import type { ProgressPullRequestSource } from '../../../../ports/progress_comparison_source_ports';
 import { AGENT_PROMPT_MAX_BYTES } from '../../../../../domain/agent_execution_plan';
 import { buildAgentPrompt, applyAgentEffortInstruction } from '../../../../policies/agent_prompt_envelope_policy';
-export const inventoryContext = { issueNumber:838,pushedBranch:'bugfix/838-work',developmentBranch:'develop',branchTypes:['bugfix'],
+export const inventoryContext = { repositoryIdentity:'owner/repo',issueNumber:838,pushedBranch:'bugfix/838-work',developmentBranch:'develop',branchTypes:['bugfix'],
     agentConfiguration:{provider:'codex' as const,model:'fixture-model',effort:'low'},includeReasoning:false,targetLocale:'en-US' };
 export function completeInventoryScenario(source = inventoryFixture({}, addedFiles()), owningPr = true) {
     let diff: ProgressDiffEvidence | undefined, partCount = 0;
@@ -30,7 +31,7 @@ export function completeInventoryScenario(source = inventoryFixture({}, addedFil
     };
     const query=jest.fn(answer);
     const useCase=new CheckProgressUseCase({getDescription:async()=>state.issue},{getLabels:async()=>[],setLabels},{setProgressLabel},
-        {getListOfBranches:async()=>[]},{getOpenPullRequestNumbersByHeadBranch:async()=>[]},{query},
+        {getListOfBranches:async()=>[]},{getOpenPullRequestNumbersByHeadBranch:async()=>[]},{query:async request=>withProgressEvidence(await query(request),request.options?.schema)},
         {isIssueOpen:async()=>state.open,getBranchHeadSha:async branch=>branch==='develop'?state.base:state.head},{getDiff},{getSource});
     return{source,state,getSource,getDiff,query,answer,setProgressLabel,setLabels,captures,diff:()=>diff,parts:()=>partCount,invoke:()=>useCase.invoke(inventoryContext)};
 }

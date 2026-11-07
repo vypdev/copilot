@@ -1,3 +1,4 @@
+import { withProgressEvidence, progressComparisonFixture } from './support/progress_batch_response';
 /**
  * Integration-style tests for CheckProgressUseCase with the OpenCode-based flow.
  * Covers edge cases: missing AI config, no issue/branch/description, AI returns undefined/invalid
@@ -87,7 +88,7 @@ describe('CheckProgressUseCase', () => {
       { setProgressLabel: mockSetProgressLabel },
       { getListOfBranches: mockGetListOfBranches },
       { getOpenPullRequestNumbersByHeadBranch: mockGetOpenPullRequestNumbersByHeadBranch },
-      { query: localizedProgress },
+      { query: async request => withProgressEvidence(await localizedProgress(request), request.options?.schema) },
       { isIssueOpen: jest.fn(async () => true), getBranchHeadSha: mockGetBranchHeadSha },
       { getDiff: mockGetDiff }, { getSource: jest.fn(async () => ({ kind: 'none' as const })) },
       { listIssueComments, removeFullProgressLabel }
@@ -102,7 +103,7 @@ describe('CheckProgressUseCase', () => {
     mockGetBranchHeadSha.mockReset();
     mockGetBranchHeadSha.mockImplementation(async branch => branch === 'develop' ? BASE_HEAD : SOURCE_HEAD);
     mockGetDiff.mockReset();
-    mockGetDiff.mockImplementation(async (baseSha, headSha) => ({ baseSha, headSha, evidence: 'PINNED_SOURCE_PATCH' }));
+    mockGetDiff.mockImplementation(async (baseSha, headSha) => progressComparisonFixture(baseSha, headSha, 'PINNED_SOURCE_PATCH'));
     mockAskAgent.mockReset();
     listIssueComments.mockReset().mockResolvedValue([]);
     removeFullProgressLabel.mockReset().mockResolvedValue(undefined);

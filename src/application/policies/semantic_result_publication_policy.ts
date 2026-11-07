@@ -8,6 +8,7 @@ import { githubUsersMatch } from '../../domain/github_user_policy';
 import type { Result } from '../../data/model/result';
 import { getResultPayload } from '../../data/model/result';
 import { sanitizeAgentMarkdown } from './github_comment_publication_policy';
+import { MAX_PROGRESS_ASSESSMENT_POINTS } from './progress_assessment_capacity_policy';
 import {
     buildPublicationMarker,
     buildPublicationReplyMarker,
@@ -390,16 +391,17 @@ export function renderSemanticStatus(
         return `${marker}\n\n${renderImplementationPlanCard(intent.projection.plan, messages)}`;
     }
     const progress = intent.projection.progress;
+    const completeAssessment = intent.sourceVersion.includes(':scope:');
     const state = progress <= 0 ? 'not-started' : progress >= 100 ? 'complete' : 'in-progress';
     const lines = [
         marker,
         '',
         `## ${messages.progress}: ${progress}% — ${messages.progressState[state]}`,
         '',
-        `> **${messages.currentStatus}:** ${sanitizeAgentMarkdown(intent.projection.summary, 1_500).trim()}`,
+        `> **${messages.currentStatus}:** ${sanitizeAgentMarkdown(intent.projection.summary, completeAssessment ? 'complete' : 1_500).trim()}`,
     ];
     if (progress < 100 && intent.projection.remaining?.trim()) {
-        lines.push('', `**${messages.next}:** ${sanitizeAgentMarkdown(intent.projection.remaining, 3_000).trim()}`);
+        lines.push('', `**${messages.next}:** ${sanitizeAgentMarkdown(intent.projection.remaining, completeAssessment ? 'complete' : 3_000).trim()}`);
     } else if (progress >= 100) {
         lines.push('', messages.noActionRequired);
     }
@@ -562,6 +564,10 @@ function progressIntent(id: string, payload: Record<string, unknown>, locale: st
         || !sourceHeadSha
         || !branch) return undefined;
     const progress = Math.max(0, Math.min(100, Math.round(payload.progress)));
+    const scopeDigest = typeof payload.scopeManifestDigest === 'string' && /^[a-f0-9]{64}$/u.test(payload.scopeManifestDigest) ? payload.scopeManifestDigest : undefined;
+    if (payload.scopeManifestDigest !== undefined && (!scopeDigest || sourceHeadSha.length !== 40)) return undefined;
+    if (scopeDigest && [payload.summary, typeof payload.remaining === 'string' ? payload.remaining : '']
+        .some(text => [...text].length > MAX_PROGRESS_ASSESSMENT_POINTS)) return undefined;
     const projection = Object.freeze<ProgressPublicationProjection>({
         kind: 'progress',
         progress,
@@ -575,7 +581,7 @@ function progressIntent(id: string, payload: Record<string, unknown>, locale: st
             : {}),
     });
     return Object.freeze({
-        ...statusIntent('progress', payload.issueNumber, 'work', `head:${sourceHeadSha}`, locale, projection),
+        ...statusIntent('progress', payload.issueNumber, 'work', scopeDigest ? `head:${sourceHeadSha}:scope:${scopeDigest}` : `head:${sourceHeadSha}`, locale, projection),
         sourceGuard: Object.freeze({ kind: 'branch-head', branch, sha: sourceHeadSha }),
     });
 }

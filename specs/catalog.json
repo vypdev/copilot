@@ -5,7 +5,7 @@
       "id": "github-communication-experience",
       "title": "Semantic GitHub communication and repository localization",
       "status": "implemented",
-      "scope": "English-default, localized, semantic, bounded, and idempotent product messages across GitHub and repository-aware operator surfaces; reconcile selected and verified SDD draft scope in Commit with immutable publication and case provenance",
+      "scope": "English-default, localized, semantic, bounded and idempotent product messages across GitHub and repository-aware operator surfaces; complete acceptance batches and cards with stable source identities, verified published SDD provenance and same-head requirement evidence before Commit progress publication",
       "owner": "Copilot maintainers",
       "lastVerified": "2026-11-07",
       "specs": [
@@ -19,7 +19,8 @@
         "specs/progress-capacity-diagnostics.md",
         "specs/progress-scope-source-ownership.md",
         "specs/progress-partition-response-recovery.md",
-        "specs/final-progress-completion-recovery.md"
+        "specs/final-progress-completion-recovery.md",
+        "specs/batched-progress-scope.md"
       ],
       "workflows": [
         ".github/workflows/copilot_issue.yml",
@@ -83,6 +84,7 @@
         "src/application/policies/publication_outcome_policy.ts",
         "src/application/policies/publication_message_catalog.ts",
         "src/application/policies/semantic_result_publication_policy.ts",
+        "src/application/policies/github_comment_publication_policy.ts",
         "src/application/policies/agent_response_schemas.ts",
         "src/application/usecases/actions/recommend_steps_result_policy.ts",
         "src/application/usecases/actions/publish_issue_comment_workflow.ts",
@@ -230,7 +232,12 @@
         "src/application/policies/progress_capacity_context_policy.ts",
         "src/application/policies/progress_capacity_source_context_policy.ts",
         "src/application/policies/progress_capacity_messages.ts",
-        "src/application/policies/progress_capacity_presentation_policy.ts"
+        "src/application/policies/progress_capacity_presentation_policy.ts",
+        "src/domain/progress_batch_diagnostic.ts",
+        "src/application/policies/progress_batch_policy.ts",
+        "src/application/policies/progress_batch_query_policy.ts",
+        "src/application/policies/progress_batch_rejection_policy.ts",
+        "src/application/usecases/actions/progress_batch_workflow.ts"
       ],
       "tests": [
         "src/domain/__tests__/implementation_plan.test.ts",
@@ -256,6 +263,7 @@
         "src/application/policies/__tests__/publication_outcome_policy.test.ts",
         "src/application/policies/__tests__/publication_message_catalog.test.ts",
         "src/application/policies/__tests__/semantic_result_publication_policy.test.ts",
+        "src/application/policies/__tests__/github_comment_publication_policy.test.ts",
         "src/application/policies/__tests__/action_summary_policy.test.ts",
         "src/application/policies/__tests__/branch_sync_notification_policy.test.ts",
         "src/application/policies/__tests__/inactivity_message_catalog.test.ts",
@@ -408,7 +416,11 @@
         "src/application/policies/__tests__/progress_capacity_public.test.ts",
         "src/application/policies/__tests__/progress_capacity_profiles.test.ts",
         "src/application/usecases/actions/__tests__/progress_capacity.integration.test.ts",
-        "src/data/repository/__tests__/progress_capacity_adapter.test.ts"
+        "src/data/repository/__tests__/progress_capacity_adapter.test.ts",
+        "src/application/policies/__tests__/progress_batch_policy.test.ts",
+        "src/application/usecases/actions/__tests__/progress_batches.integration.test.ts",
+        "src/application/usecases/actions/__tests__/fixtures/domus-29-immutable-replay.json.gz.hex",
+        "src/application/usecases/actions/__tests__/support/progress_batch_response.ts"
       ],
       "documentation": [
         "docs/configuration.mdx",
@@ -2775,9 +2787,9 @@
       "id": "agent-runtime",
       "title": "Agent runtime, provider, model, and role routing",
       "status": "implemented",
-      "scope": "Resolve, provision, authenticate, authorize, and execute only the agent roles reachable by a run",
+      "scope": "Resolve, provision, authenticate, authorize, and execute only the agent roles reachable by a run, with provider-compatible native schemas and exact local acceptance",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-11-02",
+      "lastVerified": "2026-11-07",
       "specs": [
         "specs/agent-runtime-provider-and-model-routing.md",
         "specs/agent-execution-policy-hardening.md"

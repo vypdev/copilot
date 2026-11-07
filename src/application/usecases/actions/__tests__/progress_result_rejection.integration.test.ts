@@ -1,3 +1,4 @@
+import { withProgressEvidence, progressComparisonFixture } from './support/progress_batch_response';
 import type { ProgressDiffEvidence } from '../../../ports/progress_diff_query_ports';
 import { partitionProgressDiff } from '../../../policies/progress_diff_partition_policy';
 import { CheckProgressUseCase } from '../check_progress_use_case';
@@ -11,7 +12,7 @@ import { parseProgressScope, parseProgressScopeWithAnchors, parseScopedProgressR
 
 const BASE = 'a'.repeat(40), HEAD = 'b'.repeat(40);
 const issue = 'Implement the source.\n\nImplement the source.\n\nContext: execution is separately verified.';
-const context = { issueNumber: 1, pushedBranch: 'feature/1-work', developmentBranch: 'develop', branchTypes: ['feature'],
+const context = { repositoryIdentity: 'owner/repo', issueNumber: 1, pushedBranch: 'feature/1-work', developmentBranch: 'develop', branchTypes: ['feature'],
     agentConfiguration: { provider: 'codex' as const, model: 'fixture-model' }, includeReasoning: false, targetLocale: 'en-US' };
 const scopeOutput = () => ({ outputLocale: 'en-US', lines: [{ id: 'L3', kind: 'required' }, { id: 'L5', kind: 'context' }, { id: 'L1', kind: 'required' }] });
 const finalOutput = () => ({ outputLocale: 'en-US', progress: 100, requirements: ['R2', 'R1'].map(id => ({
@@ -32,11 +33,11 @@ function scenario(edit: (output: Output) => unknown = output => output, source =
         }
         const output = edit(finalOutput()); const text = typeof output === 'string' ? output : JSON.stringify(output); outputs.push(text); return text;
     });
-    const native = new FindingsAgentAdapter({ cli: { execute } });
+    const native = new FindingsAgentAdapter({ cli: { execute: async request => withProgressEvidence(await execute(request), request.outputSchema) } });
     const useCase = new CheckProgressUseCase({ getDescription: async () => state.body }, { getLabels: async () => [], setLabels }, { setProgressLabel },
         { getListOfBranches: async () => [] }, { getOpenPullRequestNumbersByHeadBranch: async () => [] }, native,
         { isIssueOpen: async () => state.open, getBranchHeadSha: async branch => branch === 'develop' ? state.base : state.head },
-        { getDiff: async () => diff ?? ({ kind: 'single' as const, baseSha: BASE, headSha: HEAD, evidence: 'Complete owned source patch.' }) }, { getSource: async () => ({ kind: 'none' }) });
+        { getDiff: async () => diff ?? progressComparisonFixture(BASE, HEAD, 'Complete owned source patch.') }, { getSource: async () => ({ kind: 'none' }) });
     return { invoke: () => useCase.invoke(context), execute, native, useCase, state, setProgressLabel, setLabels, outputs };
 }
 const unchanged = (f: ReturnType<typeof scenario>) => { expect(f.setProgressLabel).not.toHaveBeenCalled(); expect(f.setLabels).not.toHaveBeenCalled(); };
@@ -54,27 +55,27 @@ it('uses physical line anchors beyond the nonempty-line count without narrowing 
     const output = { outputLocale: 'en-US', progress: 100, requirements: [{ id: 'R1', status: 'supported', evidence: 'PRIVATE_BAD_VALUE', summary: 'Source.', remaining: null }] };
     expect(() => parseScopedProgressResponse(output, 'en-US', extraction.scope, extraction.anchors)).toThrow(expect.objectContaining({ recovery: expect.objectContaining({ variables: expect.objectContaining({ sourceLineId: 'L1101' }) }) }));
 });
-it('binds a native enum failure to R2/L3 despite response reorder and repeated issue quotes', async () => {
+it('binds a native enum failure to R3/L3 despite response reorder and repeated issue quotes', async () => {
     const f = scenario(output => { output.requirements[0].evidence = 'PRIVATE_MODEL_EVIDENCE'; return output; });
     const result = (await f.invoke())[0];
     expect(result.errors[0]).toMatchObject({ code: 'agent.failed', recovery: { id: 'progress-result-contract-invalid', variables: {
-        phase: 'assessment', reason: 'schema-enum', field: '$.requirements[0].evidence', requirementId: 'R2', sourceLineId: 'L3',
+        phase: 'assessment', reason: 'schema-enum', field: '$.requirements[0].evidence', requirementId: 'R3', sourceLineId: 'L3',
     } } });
     expect(JSON.stringify(result)).not.toContain('PRIVATE_MODEL_EVIDENCE'); expect(f.execute).toHaveBeenCalledTimes(2); unchanged(f);
 });
 it.each([
     ['missing-id', 'schema-required', '$.requirements[0].id', 'none', 'none'],
-    ['missing-requirement', 'schema-array-short', '$.requirements', 'R2', 'L3'],
-    ['duplicate', 'requirement-id-duplicate', '$.requirements[1].id', 'R2', 'L3'],
+    ['missing-requirement', 'schema-array-short', '$.requirements', 'R3', 'L3'],
+    ['duplicate', 'requirement-id-duplicate', '$.requirements[1].id', 'R3', 'L3'],
     ['outside', 'schema-enum', '$.requirements[0].id', 'none', 'none'],
-    ['evidence', 'requirement-evidence-mismatch', '$.requirements[0].evidence', 'R2', 'L3'],
-    ['remaining', 'requirement-remaining-invalid', '$.requirements[0].remaining', 'R2', 'L3'],
-    ['unknown-field', 'schema-additional', '$.requirements[0]', 'R2', 'L3'],
+    ['evidence', 'requirement-evidence-mismatch', '$.requirements[0].evidence', 'R3', 'L3'],
+    ['remaining', 'requirement-remaining-invalid', '$.requirements[0].remaining', 'R3', 'L3'],
+    ['unknown-field', 'schema-additional', '$.requirements[0]', 'R3', 'L3'],
 ])('rejects completed %s results with relevant verified detail and no progress mutation', async (mode, reason, field, requirementId, sourceLineId) => {
     const f = scenario(output => {
         if (mode === 'missing-id') delete (output.requirements[0] as Partial<Output['requirements'][number]>).id;
         if (mode === 'missing-requirement') output.requirements.shift();
-        if (mode === 'duplicate') output.requirements[1].id = 'R2';
+        if (mode === 'duplicate') output.requirements[1].id = 'R3';
         if (mode === 'outside') output.requirements[0].id = 'PRIVATE_UNKNOWN_REQUIREMENT';
         if (mode === 'evidence') output.requirements[0].evidence = 'external-unverified';
         if (mode === 'remaining') output.requirements[0].remaining = 'PRIVATE_RETURNED_REMAINING';
