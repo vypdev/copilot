@@ -209,3 +209,52 @@ it('github-communication-experience-change-C156: a late oversized part prevents 
     expect((await f.invoke())[0].success).toBe(false);
     expect(f.execute).not.toHaveBeenCalled(); expect(f.setProgressLabel).not.toHaveBeenCalled();
 });
+
+it('github-communication-experience-change-C167: native batched length recovery retains every multipart receipt and publishes only once', async () => {
+    const diff = partitionProgressDiff(BASE, HEAD, ['a.ts', 'b.ts'].map(path => ({ path, status: 'modified', additions: 1, deletions: 0, patch: 'x'.repeat(150_000) })));
+    const first = output(); first.requirements[0].summary = 'PRIVATE_REJECTED_' + '🧪'.repeat(801);
+    const f = scenario([first, output()], false, diff);
+    expect((await f.invoke())[0]).toMatchObject({ success: true, payload: { progress: 100 } });
+    expect(f.finals).toHaveLength(2); expect(f.execute).toHaveBeenCalledTimes(5);
+    expect(f.getDiff).toHaveBeenCalledTimes(1); expect(f.setProgressLabel).toHaveBeenCalledTimes(1);
+    expect(f.finals[1].replace(/\n\nThe previous completed acceptance response[\s\S]*?\[END_PREVIOUS_MODEL_LENGTH_FACTS\]/u, '')).toBe(f.finals[0]);
+    expect(f.finals[1]).not.toContain('PRIVATE_REJECTED_');
+    const requests = f.execute.mock.calls.filter(([request]) => (request.outputSchema as any).properties.requirements);
+    expect(requests[1][0].outputSchema).toBe(requests[0][0].outputSchema);
+    expect(requests[0][0].outputSchema).toHaveProperty('properties.requirements.items.properties.citations');
+});
+
+it.each([
+    ['github-communication-experience-change-C179', 'head'], ['github-communication-experience-change-C179', 'base'],
+    ['github-communication-experience-change-C179', 'target'], ['github-communication-experience-change-C179', 'owner'],
+    ['github-communication-experience-change-C180', 'body'],
+    ['github-communication-experience-change-C180', 'closed'],
+] as const)(
+    '%s: %s drift during length replacement prevents all publication', async (_id, field) => {
+        const first = output(); first.requirements[0].summary = 's'.repeat(801);
+        const f = scenario([first, output()]), execute = f.execute.getMockImplementation()!;
+        f.execute.mockImplementation(async request => {
+            const result = await execute(request);
+            if (f.finals.length === 2) {
+                if (field === 'head' || field === 'base') f.state[field] = 'f'.repeat(40);
+                if (field === 'target') f.state.native = { ...f.state.native, baseBranch: 'other-target' } as ProgressPullRequestSource;
+                if (field === 'owner') f.state.native = { ...f.state.native, number: 99 } as ProgressPullRequestSource;
+                if (field === 'body') f.state.body += '\nNew requirement.';
+                if (field === 'closed') f.state.open = false;
+            }
+            return result;
+        });
+        const result = (await f.invoke())[0];
+        if (field === 'body') expect(result.errors[0].code).toBe('workflow.stale');
+        else expect(result.executed).toBe(false);
+        expect(f.finals).toHaveLength(2);
+        expect(f.setProgressLabel).not.toHaveBeenCalled(); expect(f.setLabels).not.toHaveBeenCalled();
+    });
+
+it.each(['manifestDigest', 'batchId', 'headSha'] as const)(
+    'github-communication-experience-change-C172: foreign native %s keeps length rejection terminal without publication', async field => {
+        const first = { ...output(), [field]: 'foreign' }; first.requirements[0].summary = 's'.repeat(801);
+        const f = scenario([first, output()]), result = (await f.invoke())[0];
+        expect(result).toMatchObject({ success: false, errors: [{ recovery: { id: 'progress-result-contract-invalid' } }] });
+        expect(f.finals).toHaveLength(1); expect(f.setProgressLabel).not.toHaveBeenCalled(); expect(f.setLabels).not.toHaveBeenCalled();
+    });

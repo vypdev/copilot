@@ -300,12 +300,20 @@ part failure stops before any final query. The existing capacities
 also reserve the entire replacement before the first model query; source and
 fact budgets never grow, and no source units are dropped.
 
-There are at most two final queries. If the replacement is still inconsistent,
+Each acceptance batch uses at most two final queries. If the replacement is still inconsistent,
 `progress-completion-recovery-exhausted` reports its five numeric facts while
 retaining published progress. Inspect the linked run and complete comparison;
 start a fresh full assessment only when the provider can meet the same contract.
 Provider failures and invalid JSON, schema, locale or evidence do not enter this
-recovery. Issue-body/open-state, native owning PR/target, base and head checks
+completion recovery. A completed native `summary` or `remaining` length rejection
+may use the same single allowance only when its measured facts bind to the exact
+captured schema, batch receipts, citations, requirement, source anchor and locale,
+and the rest of the complete schema validates. It preserves the full batch and
+unchanged limits. Persistent length reports `progress-assessment-length-invalid`
+with requirement/source IDs, field, maximum and observed Unicode point count.
+Length and completion failures cannot each allocate a replacement: there are
+still at most two final queries for a batch. No provisional batches publish.
+Issue-body/open-state, native owning PR/target, base and head checks
 still run before publication. Publication failures retain their actual completed
 effects and error classification; writes are never automatically replayed.
 

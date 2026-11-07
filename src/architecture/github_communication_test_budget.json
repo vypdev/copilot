@@ -7,7 +7,7 @@
       "id": "semantic-github-publication",
       "spec": "specs/semantic-github-publication-and-notification.md",
       "requiredCases": 135,
-      "allocatedCases": 1099,
+      "allocatedCases": 1117,
       "files": [
         {
           "path": "src/domain/__tests__/github_publication.test.ts",
@@ -352,6 +352,18 @@
         {
           "path": "src/application/usecases/actions/__tests__/progress_scope_ownership.integration.test.ts",
           "qualifyingCases": 6
+        },
+        {
+          "path": "src/application/usecases/actions/__tests__/progress_assessment_length_recovery.test.ts",
+          "qualifyingCases": 7
+        },
+        {
+          "path": "src/application/policies/__tests__/progress_assessment_length_policy.test.ts",
+          "qualifyingCases": 8
+        },
+        {
+          "path": "src/data/repository/__tests__/progress_assessment_length_failure.test.ts",
+          "qualifyingCases": 3
         }
       ]
     },
@@ -359,7 +371,7 @@
       "id": "repository-locale-localization",
       "spec": "specs/repository-locale-and-localization.md",
       "requiredCases": 146,
-      "allocatedCases": 183,
+      "allocatedCases": 187,
       "files": [
         {
           "path": "src/actions/__tests__/github_action_locale_inputs.test.ts",
@@ -452,6 +464,10 @@
         {
           "path": "src/application/usecases/__tests__/comment_automation_use_case.test.ts",
           "qualifyingCases": 20
+        },
+        {
+          "path": "src/application/policies/__tests__/progress_assessment_length_presentation.test.ts",
+          "qualifyingCases": 4
         }
       ]
     }

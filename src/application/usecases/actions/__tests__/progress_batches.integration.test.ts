@@ -15,6 +15,7 @@ import { partitionProgressDiff } from '../../../policies/progress_diff_partition
 import type { ProgressDiffEvidence } from '../../../ports/progress_diff_query_ports';
 import type { FindingsQueryRequest } from '../../../ports/agent_findings_ports';
 import { assertAgentResponseSchema } from '../../../../data/repository/agent_json_schema_validator';
+import { interpretProgressAgentOutput } from '../../../../data/repository/progress_agent_response_policy';
 
 const base = 'a'.repeat(40), head = 'b'.repeat(40);
 const fixtureText = readFileSync(join(__dirname, 'fixtures/domus-29-immutable-replay.json.gz.hex'), 'utf8');
@@ -119,6 +120,22 @@ it('Issue925 publishes one complete assessment when every batch uses its maximum
     expect(card).not.toContain('[untrusted content truncated]');
     for (const response of f.finalOutputs) for (const fact of response.requirements) expect(card).toContain(`[${fact.id}]`);
 });
+it('github-communication-experience-change-C181: exhausted length in a later batch discards every provisional receipt', async () => {
+    const f = scenario(), answer = f.query.getMockImplementation()!;
+    f.query.mockImplementation(async request => {
+        const response = await answer(request) as any;
+        if (response.requirements && f.finalOutputs.length >= 2) {
+            const schema: any = request.options!.schema;
+            response.requirements[0].remaining = '🧪'.repeat(schema.properties.requirements.items.properties.remaining.maxLength + 1);
+            return interpretProgressAgentOutput(JSON.stringify(response), 'assessment', schema);
+        }
+        return response;
+    });
+    const results = await f.invoke();
+    expect(results.at(-1)).toMatchObject({ success: false, errors: [{ recovery: { id: 'progress-assessment-length-invalid', variables: { requirementId: 'R33', sourceLineId: 'L33' } } }] });
+    expect(f.finalOutputs).toHaveLength(3); retained(f);
+    expect(selectSemanticStatusIntents({ locale: 'en-US', results })).toEqual([]);
+});
 it('CommitScope916-C17 replays the original Domus body and complete immutable comparison through Commit', async () => {
     expect(fixtureBytes.toString('hex')).toBe(fixtureText.replace(/\s/gu, ''));
     expect(Buffer.from(fixtureText, 'utf8').includes(0)).toBe(false);
@@ -139,6 +156,28 @@ it('CommitScope916-C17 replays the original Domus body and complete immutable co
     const card = renderSemanticStatus(intent);
     expect(card).not.toContain('[untrusted content truncated]');
     for (const outcome of outcomes) expect(card).toContain(`[${outcome.id}]`);
+});
+it('github-communication-experience-change-C167: the archived Domus inventory retains all 108 requirements through native batch-length recovery', async () => {
+    const diff = await domusComparison(), f = scenario(fixture.body, diff), answer = f.query.getMockImplementation()!;
+    f.query.mockImplementation(async request => {
+        const response = await answer(request) as any;
+        if (response.requirements) {
+            const schema: any = request.options!.schema;
+            if (f.finalOutputs.length === 1) response.requirements[0].summary = '🧪'.repeat(schema.properties.requirements.items.properties.summary.maxLength + 1);
+            return interpretProgressAgentOutput(JSON.stringify(response), 'assessment', schema);
+        }
+        return response;
+    });
+    const results = await f.invoke();
+    expect(results.at(-1)).toMatchObject({ success: true, payload: { progress: 50, sourceHeadSha: fixture.head } });
+    expect(f.query).toHaveBeenCalledTimes(31); expect(f.finalOutputs).toHaveLength(5);
+    const accepted = f.finalOutputs.slice(1).flatMap(output => output.requirements);
+    expect(accepted).toHaveLength(108); expect(new Set(accepted.map(value => value.id)).size).toBe(108);
+    expect(accepted.every(value => value.citations.length > 0)).toBe(true);
+    expect(f.setProgressLabel).toHaveBeenCalledTimes(1); expect(f.setLabels).toHaveBeenCalledTimes(1);
+    const card = renderSemanticStatus(selectSemanticStatusIntents({ locale: 'en-US', results })[0]);
+    for (const value of accepted) expect(card).toContain(`[${value.id}]`);
+    expect(card).not.toContain('[untrusted content truncated]');
 });
 it.each(['head', 'manifest', 'batch', 'missing-citation', 'foreign-citation', 'missing-requirement', 'foreign-requirement', 'duplicate-requirement'])(
     'CommitScope916-C11/C12/C13 rejects %s in the final batch before any progress write', async mode => {

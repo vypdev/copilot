@@ -840,6 +840,9 @@
             "src/domain/progress_completion_diagnostic.ts",
             "src/application/errors/progress_completion_mismatch.ts",
             "src/application/policies/progress_completion_recovery_policy.ts",
+            "src/domain/progress_assessment_length_failure.ts",
+            "src/data/repository/progress_assessment_length_failure.ts",
+            "src/application/policies/progress_assessment_length_policy.ts",
             "src/application/usecases/actions/query_progress_assessment_workflow.ts"
           ],
           "mode": "each",

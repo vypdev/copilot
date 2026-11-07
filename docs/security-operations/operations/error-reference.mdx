@@ -181,9 +181,9 @@ Existing execution/transport classification and retryability remain unchanged.
 A later optional Check Run 403 is secondary and retains the primary failure and
 correlation reference.
 
-For a final completion contradiction only, the host makes one complete read-only
+For an eligible final completion contradiction, the host makes one complete read-only
 reassessment after all other checks pass. Both full prompt envelopes are admitted
-before the first model request. No third query, source recollection, partial
+before the first model request. Each acceptance batch has one allowance. No third query, source recollection, partial
 assessment publication or write retry is allowed. If the second final response
 still contradicts completion, `agent.failed` has recovery
 `progress-completion-recovery-exhausted`, with exactly five numeric observations
@@ -214,6 +214,42 @@ start a fresh complete assessment when the provider can satisfy the unchanged
 contract. Existing labels and assessments remain. Verification, review, coverage
 and approval are independent gates. Malformed output, provider interruption and
 other semantic failures retain their own error and do not receive this recovery.
+
+A completed acceptance response exceeding its current `summary` or `remaining`
+schema bound can use that same single replacement allowance. Native measurements
+must bind to the exact captured schema, current batch receipts and citations,
+requirement, source anchor and locale. The host checks the rest of the complete
+schema before admitting recovery. Neither length nor completion recovery can
+allocate a third query, including when the two failure kinds alternate.
+
+If the replacement still exceeds a fact bound, `agent.failed` uses
+`progress-assessment-length-invalid` with exactly five closed observations:
+
+{/* progress-assessment-length-example */}
+```json
+{
+  "code": "agent.failed",
+  "correlationId": "11111111-1111-4111-8111-111111111111",
+  "recovery": {
+    "id": "progress-assessment-length-invalid",
+    "variables": {
+      "requirementId": "R11",
+      "sourceLineId": "L11",
+      "field": "$.requirements[0].remaining",
+      "maximum": 54,
+      "observed": 62
+    }
+  }
+}
+```
+
+These counts are illustrative Unicode code points, not the unavailable rejected
+Domus prose or its actual lengths. Inspect the named fact and unchanged limit in
+the linked run. A fresh complete assessment can help when the provider can meet
+that contract. Existing progress remains; provisional batches are never published.
+No rejected prose, clipping, enlarged limits, omitted requirements or source
+recollection enters the correction. Foreign identities, incomplete output,
+infrastructure failures and other invalid contracts retain their own errors.
 
 For `assessment-text-limit`, the host reports the first source-ordered aggregate
 overflow and its actual response-array summary/remaining field. Every full

@@ -41,10 +41,15 @@ it.each([false, true])('rejects impossible host citations after scope and before
     expect(result).toMatchObject({ success: false, errors: [expect.objectContaining({ code: 'validation.evidence-too-large', retryable: false, recovery: { id: 'progress-assessment-capacity-exceeded', variables: expect.objectContaining({ requirementId: 'R13', sourceLineId: 'L13' }) } })] });
     expect(f.execute).toHaveBeenCalledTimes(1); retained(f);
 });
-it('retains state when the native model exceeds its newly derived field ceiling', async () => {
+it('retains state after one complete replacement still exceeds its newly derived native field ceiling', async () => {
     const f = fixture(); f.setRogue('schema'); const result = (await f.invoke())[0];
-    expect(result).toMatchObject({ success: false, errors: [expect.objectContaining({ recovery: { id: 'progress-result-contract-invalid', variables: expect.objectContaining({ reason: 'schema-string-long', field: '$.requirements[0].summary', requirementId: 'R1', sourceLineId: 'L1' }) } })] });
-    expect(f.execute).toHaveBeenCalledTimes(2); retained(f);
+    const schema = f.execute.mock.calls[1][0].outputSchema as any;
+    const maximum = schema.properties.requirements.items.properties.summary.maxLength;
+    expect(result).toMatchObject({ success: false, errors: [expect.objectContaining({ recovery: { id: 'progress-assessment-length-invalid', variables: {
+        field: '$.requirements[0].summary', requirementId: 'R1', sourceLineId: 'L1', maximum, observed: maximum + 1,
+    } } })] });
+    expect(maximum).toBeLessThan(800); expect(f.execute).toHaveBeenCalledTimes(3);
+    expect(f.execute.mock.calls[2][0].outputSchema).toBe(schema); retained(f);
 });
 it.each(['summary', 'remaining'] as const)('retains state and rejects an oversized %s fact from an alternate port that ignores schema', async field => {
     const f = fixture(false, 20, false); f.setRogue(field); const result = (await f.invoke())[0];

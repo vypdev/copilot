@@ -5,9 +5,12 @@ import { progressCompletionCountsMatchScope, progressCompletionRepairPrompt } fr
 import { remainingProgressAssessmentPromptBytes } from '../../policies/progress_prompt_capacity_policy';
 import type { ProgressScope, ProgressScopeAnchors } from '../../policies/progress_scope_policy';
 import type { ProgressCompletionDiagnostic } from '../../../domain/progress_completion_diagnostic';
+import type { ProgressAssessmentLengthDiagnostic } from '../../../domain/progress_assessment_length_failure';
+import type { AgentQueryResult } from '../../ports/agent_query_ports';
+import { bindProgressAssessmentLength, progressAssessmentLengthRepairPrompt, progressAssessmentLengthRejected } from '../../policies/progress_assessment_length_policy';
 import { logInfo } from '../../ports/logging_ports';
 import { parseProgressResponse, type ProgressAttemptResult } from './progress_response';
-import { queryProgressResult } from './query_progress_result_workflow';
+import { rethrowProgressQueryFailure } from './query_progress_result_workflow';
 
 interface AssessmentContext {
     readonly scope: ProgressScope;
@@ -16,6 +19,7 @@ interface AssessmentContext {
     readonly sourceLineIds: readonly string[];
 }
 type Outcome = { readonly kind: 'valid'; readonly result: ProgressAttemptResult }
+    | { readonly kind: 'length'; readonly facts: ProgressAssessmentLengthDiagnostic }
     | { readonly kind: 'mismatch'; readonly facts: ProgressCompletionDiagnostic; readonly correlationId: string };
 
 function freezeSnapshot<T>(value: T): T {
@@ -26,11 +30,16 @@ function freezeSnapshot<T>(value: T): T {
     return value;
 }
 
-/** Query failures never enter the parse-only catch; rejected prose stays inside this ended call. */
+/** Only attributable native length failures enter recovery; completion still has a parse-only catch. */
 async function evaluate(agent: FindingsQueryPort, request: FindingsQueryRequest, context: AssessmentContext): Promise<Outcome> {
-    const response = await queryProgressResult(agent, request, { phase: 'assessment',
-        requirementIds: context.scope.requirements.map(requirement => requirement.id),
-        sourceLineIds: context.sourceLineIds, anchors: context.anchors });
+    let response: AgentQueryResult;
+    try { response = await agent.query(request); }
+    catch (error) {
+        const facts = bindProgressAssessmentLength(error, request.options?.schema, context.scope, context.anchors, context.sourceLineIds, context.targetLocale);
+        if (facts) return { kind: 'length', facts };
+        return rethrowProgressQueryFailure(error, { phase: 'assessment', requirementIds: context.scope.requirements.map(requirement => requirement.id),
+            sourceLineIds: context.sourceLineIds, anchors: context.anchors });
+    }
     try { return { kind: 'valid', result: parseProgressResponse(response, context.targetLocale, context.scope, context.anchors) }; }
     catch (error) {
         if (!(error instanceof ProgressCompletionMismatch)) throw error;
@@ -51,10 +60,15 @@ export async function queryProgressAssessment(agent: FindingsQueryPort, request:
     remainingProgressAssessmentPromptBytes(captured.request.prompt, captured.request.options.schema, captured.request.configuration?.effort);
     const first = await evaluate(agent, captured.request, captured.context);
     if (first.kind === 'valid') return first.result;
-    logInfo('Reassessing one inconsistent completed progress estimate using the same complete pinned evidence. Previous progress is retained.');
-    const replacement = { ...captured.request, prompt: progressCompletionRepairPrompt(captured.request.prompt, first.facts) };
+    logInfo(first.kind === 'length'
+        ? 'A progress acceptance fact exceeded its unchanged response limit. Requesting one complete replacement for the same pinned batch; previous progress is retained.'
+        : 'Reassessing one inconsistent completed progress estimate using the same complete pinned evidence. Previous progress is retained.');
+    const replacement = { ...captured.request, prompt: first.kind === 'length'
+        ? progressAssessmentLengthRepairPrompt(captured.request.prompt, first.facts)
+        : progressCompletionRepairPrompt(captured.request.prompt, first.facts) };
     const second = await evaluate(agent, replacement, captured.context);
     if (second.kind === 'valid') return second.result;
+    if (second.kind === 'length') throw progressAssessmentLengthRejected(second.facts);
     throw new ApplicationError('agent.failed', 'Progress completion remained inconsistent after one complete reassessment. Existing progress was retained.',
         { correlationId: second.correlationId, recovery: { id: 'progress-completion-recovery-exhausted', variables: second.facts } });
 }
