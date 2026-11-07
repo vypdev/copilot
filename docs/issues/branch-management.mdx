@@ -207,6 +207,13 @@ verification nor a newly disclosed defect justifies inventing a requirement.
 Fact lengths use Unicode code points consistently in the provider schema, local
 response validation and progress parser, so supplementary characters share the
 same boundary. The evidence and runtime ceilings still count UTF-8 bytes.
+Before querying, the host reserves every canonical reference and separator from
+the complete requirement inventory. It divides the remaining 8,000-point field
+budget across all requirements, with a maximum of 800 points per fact. Every
+batch schema and receipt check uses this same hard allocation. Shorter facts do
+not transfer their unused allocation to another requirement. This ensures that
+all admitted batches fit together, even when every fact uses its full allowance.
+The complete-field and freshness checks still run before publication.
 
 If source evidence is missing or any part fails, the Action retains the current progress and reports that it could not assess the revision. A single file, the final aggregate or a comparison exceeding the fixed part budget reports `validation.evidence-too-large` with Retryable: No; inspect the pinned comparison and reported supported capacity. Native multipart recovery continues automatically within its fixed totals; after interruption, rerun the current source for a fresh complete attempt. Retrying identical over-limit evidence cannot add capacity. It also retains state if either head or the issue body changes while the assessment is running. Inspect the run before retrying; an unavailable assessment is not proof of 0% completion.
 

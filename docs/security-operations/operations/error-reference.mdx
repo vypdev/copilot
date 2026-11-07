@@ -335,6 +335,22 @@ receipts, call or time budget and aggregate capacity. Inspect the current run,
 resolve the condition and start a complete assessment. Previous labels and
 published progress remain available.
 
+`progress-evidence-capacity-exceeded` identifies an over-limit summary or
+remaining fact, or a complete projected field, with its measured and allowed
+Unicode-point counts. Its assessment context includes the full requirement
+count, host-known batch and requirement ID. Batch 0 and requirement `none` mean
+complete reduction. No rejected text is retained. All batches use the same
+complete-inventory allocation; an alternate query port cannot admit longer facts.
+
+Semantic remaining rejections distinguish `requirement-remaining-null-required`
+(supported requires null), `requirement-remaining-string-required` (missing or
+unknown requires text), `requirement-remaining-blank` (whitespace only), and
+`requirement-remaining-too-long` (above 800 Unicode points). Original requirement
+and source-line anchors remain visible. The historical
+`requirement-remaining-invalid` code does not establish which violation occurred.
+Native schema errors retain their schema reason. Inspect the original requirement
+and the named rule; preserve all scope, evidence and verification gates.
+
 `progress-scope-clause-limit` remains the diagnostic for the legacy direct
 single-assessment parser and historical runs. Current Commit supports bounded
 batches of 32 obligations within its reviewed aggregate profile. Malformed

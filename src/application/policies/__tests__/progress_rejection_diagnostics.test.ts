@@ -19,8 +19,23 @@ const request = { configuration: { provider: 'codex' as const, model: 'fixture-m
 it('retains strict semantic rejection with the actual field and verified requirement ID', () => {
     const response = result(); response.requirements[1].remaining = 'Still missing.';
     expect(thrown(() => parseScopedProgressResponse(response, 'en-US', scope))).toMatchObject({ code: 'agent.failed', recovery: {
-        id: 'progress-result-contract-invalid', variables: variables('assessment', 'requirement-remaining-invalid', '$.requirements[1].remaining', 'R2'),
+        id: 'progress-result-contract-invalid', variables: variables('assessment', 'requirement-remaining-null-required', '$.requirements[1].remaining', 'R2'),
     } });
+});
+it.each([
+    ['supported', 'PRIVATE_TEXT', 'requirement-remaining-null-required'],
+    ['missing', null, 'requirement-remaining-string-required'],
+    ['missing', 17, 'requirement-remaining-string-required'],
+    ['verification-unknown', ' \n\t', 'requirement-remaining-blank'],
+    ['verification-unknown', '😀'.repeat(801), 'requirement-remaining-too-long'],
+] as const)('Issue887 diagnoses %s remaining with safe reason %s', (status, remaining, reason) => {
+    const response = result();
+    Object.assign(response.requirements[1], { status, remaining });
+    const error = thrown(() => parseScopedProgressResponse(response, 'en-US', scope, { R2: 'L15' }));
+    expect(error).toMatchObject({ recovery: { id: 'progress-result-contract-invalid', variables: {
+        ...variables('assessment', reason, '$.requirements[1].remaining', 'R2'), sourceLineId: 'L15',
+    } } });
+    expect(JSON.stringify(error)).not.toMatch(/PRIVATE_TEXT|😀/u);
 });
 it('keeps the unchanged successful result shape', () => {
     expect(parseScopedProgressResponse(result(), 'en-US', scope)).toEqual({ progress: 100,

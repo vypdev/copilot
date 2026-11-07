@@ -12,7 +12,9 @@ export const PROGRESS_RESPONSE_REASONS = Object.freeze({
         'partition-file-invalid', 'partition-unit-invalid', 'partition-facts-invalid'] as const),
     assessment: Object.freeze([...schemaReasons, 'requirements-incomplete', 'progress-invalid', 'requirement-shape-invalid', 'requirement-id-invalid',
         'requirement-id-duplicate', 'scope-uncertain', 'requirement-status-invalid', 'requirement-evidence-invalid', 'requirement-summary-invalid',
-        'requirement-remaining-invalid', 'requirement-evidence-mismatch', 'progress-completion-mismatch', 'assessment-text-limit'] as const),
+        'requirement-remaining-invalid', 'requirement-remaining-null-required', 'requirement-remaining-string-required',
+        'requirement-remaining-blank', 'requirement-remaining-too-long',
+        'requirement-evidence-mismatch', 'progress-completion-mismatch', 'assessment-text-limit'] as const),
 });
 export type ProgressResponseReason = typeof PROGRESS_RESPONSE_REASONS[ProgressResponsePhase][number];
 export type ProgressResponseDiagnosticFacts = Readonly<{

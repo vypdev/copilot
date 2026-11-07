@@ -83,6 +83,16 @@ export declare const PROGRESS_CAPACITY_DIMENSIONS: Readonly<{
         unit: ProgressCapacityUnit;
         bounds: readonly ProgressCapacityBound[];
     }>;
+    'assessment-summary-points': Readonly<{
+        phases: readonly ProgressCapacityPhase[];
+        unit: ProgressCapacityUnit;
+        bounds: readonly ProgressCapacityBound[];
+    }>;
+    'assessment-remaining-points': Readonly<{
+        phases: readonly ProgressCapacityPhase[];
+        unit: ProgressCapacityUnit;
+        bounds: readonly ProgressCapacityBound[];
+    }>;
     'invalid-allocation': Readonly<{
         phases: readonly ProgressCapacityPhase[];
         unit: ProgressCapacityUnit;
@@ -95,6 +105,11 @@ export type ProgressCapacityContext = Readonly<{
 }> | Readonly<{
     kind: 'source-line';
     sourceLineId: string;
+}> | Readonly<{
+    kind: 'assessment';
+    requirementCount: number;
+    batch: number;
+    requirementId: string;
 }> | Readonly<{
     kind: 'comparison';
     baseSha: string;

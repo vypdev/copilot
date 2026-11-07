@@ -19,6 +19,11 @@
 
 For example, a maintainer starts an admitted issue with `in-progress`. Copilot creates and verifies its branch. A developer or an authorized bot request contributes changes on that exact branch. A linked PR receives review findings and runs the repository's checks. After an authorized merge, a separately launched release can promote the accepted production commit and reconcile it into development.
 
+Commit progress assessments reserve publication space for the complete requirement
+inventory before assigning text to each batch. Every accepted batch shares that
+hard allocation, and progress publishes only after complete same-head evidence
+and freshness checks. See [progress assessment and limits](https://docs.page/vypdev/copilot/issues/branch-management).
+
 ```mermaid
 flowchart LR
   I[Issue and plan] --> B[Verified working branch]

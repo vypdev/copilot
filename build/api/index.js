@@ -2894,7 +2894,7 @@ function progressAssessmentFactLimit(requirements, anchors = {}) {
         const sourceLineId = requirementId !== 'none' && (0, progress_response_diagnostic_1.isProgressSourceLineId)(anchors[id]) ? anchors[id] : 'none';
         throw new application_error_1.ApplicationError('validation.evidence-too-large', 'Original progress citations cannot fit the unchanged assessment text limits. Existing progress was retained.', {
             recovery: { id: 'progress-assessment-capacity-exceeded', variables: {
-                    phase: 'assessment', reason: 'assessment-text-limit', field: `$.requirements[${index}].summary`, requirementId, sourceLineId,
+                    phase: 'assessment', reason: 'assessment-text-limit', field: index < 32 ? `$.requirements[${index}].summary` : '$.requirements', requirementId, sourceLineId,
                 } },
         });
     }
@@ -3346,12 +3346,18 @@ function parseScopedProgressResponse(response, locale, scope, anchors = {}) {
             reject('requirement-summary-invalid', `${field}.summary`, id);
         if (fact.status === 'supported') {
             if (fact.remaining !== null)
-                reject('requirement-remaining-invalid', `${field}.remaining`, id);
+                reject('requirement-remaining-null-required', `${field}.remaining`, id);
             if (fact.evidence !== 'source-only')
                 reject('requirement-evidence-mismatch', `${field}.evidence`, id);
         }
-        else if (!text(fact.remaining))
-            reject('requirement-remaining-invalid', `${field}.remaining`, id);
+        else {
+            if (typeof fact.remaining !== 'string')
+                reject('requirement-remaining-string-required', `${field}.remaining`, id);
+            else if (!fact.remaining.trim())
+                reject('requirement-remaining-blank', `${field}.remaining`, id);
+            else if ([...fact.remaining].length > MAX_FACT)
+                reject('requirement-remaining-too-long', `${field}.remaining`, id);
+        }
         return { id, status: fact.status, summary: fact.summary, remaining: fact.remaining };
     });
     const ordered = scope.requirements.map(requirement => ({ requirement, fact: entries.find(entry => entry.id === requirement.id) }));
@@ -9784,6 +9790,8 @@ exports.PROGRESS_CAPACITY_DIMENSIONS = Object.freeze({
     'minimum-fact-bytes': rule(['aggregate'], 'bytes'),
     'evidence-unit-count': rule(['aggregate'], 'units', ['minimum']),
     'aggregate-fact-bytes': rule(['aggregate'], 'bytes'),
+    'assessment-summary-points': rule(['assessment', 'aggregate'], 'code-points'),
+    'assessment-remaining-points': rule(['assessment', 'aggregate'], 'code-points'),
     'invalid-allocation': rule(['input', 'source', 'scope', 'partition', 'aggregate', 'assessment'], 'bytes', ['unavailable']),
 });
 const record = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -9807,6 +9815,15 @@ function normalizeProgressCapacityContext(value) {
         if (!exact(value, ['kind', 'sourceLineId']) || !(0, progress_response_diagnostic_1.isProgressSourceLineId)(value.sourceLineId))
             return invalid();
         return Object.freeze({ kind: 'source-line', sourceLineId: value.sourceLineId });
+    }
+    if (value.kind === 'assessment') {
+        if (!exact(value, ['kind', 'requirementCount', 'batch', 'requirementId'])
+            || !count(value.requirementCount) || value.requirementCount < 1 || value.requirementCount > 256
+            || !count(value.batch) || value.batch > value.requirementCount
+            || !(value.requirementId === 'none' || (0, progress_response_diagnostic_1.isProgressRequirementId)(value.requirementId))
+            || (value.batch === 0 && value.requirementId !== 'none'))
+            return invalid();
+        return Object.freeze({ kind: 'assessment', requirementCount: value.requirementCount, batch: value.batch, requirementId: value.requirementId });
     }
     if (value.kind !== 'comparison' || !exact(value, ['kind', 'baseSha', 'headSha', 'manifestDigest', 'requiredPathsDigest',
         'reviewedPathsDigest', 'uncoveredPathsDigest', 'requiredPathCount', 'reviewedPathCount', 'uncoveredPathCount', 'paths', 'sourceLineId'])
@@ -9846,6 +9863,9 @@ function normalizeProgressCapacityDiagnostic(value) {
         && (value.bound === 'minimum' ? value.observedCount >= value.supportedLimit : value.observedCount <= value.supportedLimit))
         return invalid();
     const context = normalizeProgressCapacityContext(value.context);
+    if (context.kind === 'assessment' && (!['assessment-summary-points', 'assessment-remaining-points'].includes(dimension)
+        || (value.phase === 'aggregate' ? context.batch !== 0 : context.batch === 0)))
+        return invalid();
     const sourceLineId = context.kind === 'source-line' || context.kind === 'comparison' ? context.sourceLineId : 'none';
     if (sourceLineId !== 'none' && (value.phase !== 'scope'
         || !['source-line-count', 'source-line-points'].includes(dimension)))
@@ -10037,7 +10057,9 @@ exports.PROGRESS_RESPONSE_REASONS = Object.freeze({
         'partition-file-invalid', 'partition-unit-invalid', 'partition-facts-invalid']),
     assessment: Object.freeze([...schemaReasons, 'requirements-incomplete', 'progress-invalid', 'requirement-shape-invalid', 'requirement-id-invalid',
         'requirement-id-duplicate', 'scope-uncertain', 'requirement-status-invalid', 'requirement-evidence-invalid', 'requirement-summary-invalid',
-        'requirement-remaining-invalid', 'requirement-evidence-mismatch', 'progress-completion-mismatch', 'assessment-text-limit']),
+        'requirement-remaining-invalid', 'requirement-remaining-null-required', 'requirement-remaining-string-required',
+        'requirement-remaining-blank', 'requirement-remaining-too-long',
+        'requirement-evidence-mismatch', 'progress-completion-mismatch', 'assessment-text-limit']),
 });
 const fieldPatterns = Object.freeze({
     scope: /^\$(?:\.outputLocale|\.lines(?:\[(0|[1-9]\d{0,3})\](?:\.(?:id|kind|sameAs))?)?)?$/u,

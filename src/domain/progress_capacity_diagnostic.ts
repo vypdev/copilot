@@ -1,5 +1,5 @@
 import { isProgressEvidencePath } from './progress_evidence_path';
-import { isProgressSourceLineId } from './progress_response_diagnostic';
+import { isProgressSourceLineId, isProgressRequirementId } from './progress_response_diagnostic';
 
 export type ProgressCapacityPhase = 'input' | 'source' | 'scope' | 'partition' | 'aggregate' | 'assessment';
 export type ProgressCapacityUnit = 'bytes' | 'parts' | 'lines' | 'code-points' | 'units';
@@ -24,12 +24,15 @@ export const PROGRESS_CAPACITY_DIMENSIONS = Object.freeze({
     'minimum-fact-bytes': rule(['aggregate'], 'bytes'),
     'evidence-unit-count': rule(['aggregate'], 'units', ['minimum']),
     'aggregate-fact-bytes': rule(['aggregate'], 'bytes'),
+    'assessment-summary-points': rule(['assessment', 'aggregate'], 'code-points'),
+    'assessment-remaining-points': rule(['assessment', 'aggregate'], 'code-points'),
     'invalid-allocation': rule(['input', 'source', 'scope', 'partition', 'aggregate', 'assessment'], 'bytes', ['unavailable']),
 });
 export type ProgressCapacityDimension = keyof typeof PROGRESS_CAPACITY_DIMENSIONS;
 export type ProgressCapacityContext =
     | Readonly<{ kind: 'unavailable' }>
     | Readonly<{ kind: 'source-line'; sourceLineId: string }>
+    | Readonly<{ kind: 'assessment'; requirementCount: number; batch: number; requirementId: string }>
     | Readonly<{
         kind: 'comparison'; baseSha: string; headSha: string; manifestDigest: string; sourceLineId: string;
         requiredPathsDigest: string; reviewedPathsDigest: string; uncoveredPathsDigest: string;
@@ -75,6 +78,14 @@ export function normalizeProgressCapacityContext(value: unknown): ProgressCapaci
         if (!exact(value, ['kind', 'sourceLineId']) || !isProgressSourceLineId(value.sourceLineId)) return invalid();
         return Object.freeze({ kind: 'source-line', sourceLineId: value.sourceLineId });
     }
+    if (value.kind === 'assessment') {
+        if (!exact(value, ['kind', 'requirementCount', 'batch', 'requirementId'])
+            || !count(value.requirementCount) || value.requirementCount < 1 || value.requirementCount > 256
+            || !count(value.batch) || value.batch > value.requirementCount
+            || !(value.requirementId === 'none' || isProgressRequirementId(value.requirementId))
+            || (value.batch === 0 && value.requirementId !== 'none')) return invalid();
+        return Object.freeze({ kind: 'assessment', requirementCount: value.requirementCount, batch: value.batch, requirementId: value.requirementId });
+    }
     if (value.kind !== 'comparison' || !exact(value, ['kind', 'baseSha', 'headSha', 'manifestDigest', 'requiredPathsDigest',
         'reviewedPathsDigest', 'uncoveredPathsDigest', 'requiredPathCount', 'reviewedPathCount', 'uncoveredPathCount', 'paths', 'sourceLineId'])
         || !oid(value.baseSha) || !oid(value.headSha) || !(value.manifestDigest === 'none' || digest(value.manifestDigest))
@@ -110,6 +121,8 @@ export function normalizeProgressCapacityDiagnostic(value: unknown): ProgressCap
     if (typeof value.observedCount === 'number' && typeof value.supportedLimit === 'number'
         && (value.bound === 'minimum' ? value.observedCount >= value.supportedLimit : value.observedCount <= value.supportedLimit)) return invalid();
     const context = normalizeProgressCapacityContext(value.context);
+    if (context.kind === 'assessment' && (!['assessment-summary-points', 'assessment-remaining-points'].includes(dimension)
+        || (value.phase === 'aggregate' ? context.batch !== 0 : context.batch === 0))) return invalid();
     const sourceLineId = context.kind === 'source-line' || context.kind === 'comparison' ? context.sourceLineId : 'none';
     if (sourceLineId !== 'none' && (value.phase !== 'scope'
         || !['source-line-count', 'source-line-points'].includes(dimension))) return invalid();

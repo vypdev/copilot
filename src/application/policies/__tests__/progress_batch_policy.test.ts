@@ -11,6 +11,7 @@ import { resolveStaticApplicationErrorCatalog } from '../application_error_messa
 import { buildApplicationErrorPresentation } from '../application_error_presentation_policy';
 import { progressBatchRejected } from '../progress_batch_rejection_policy';
 import { ApplicationError } from '../../errors/application_error';
+import { assertAgentResponseSchema } from '../../../data/repository/agent_json_schema_validator';
 
 const base = 'a'.repeat(40), head = 'b'.repeat(40);
 function fixture(count = 33) {
@@ -28,6 +29,20 @@ function fixture(count = 33) {
     const receipt = (index = 0, response = output(index)) => parseProgressAssessmentReceipt(response, manifest, batches[index], extraction.anchors, 'en-US', count > 32);
     return { source, extraction, diff, input, manifest, batches, output, receipt };
 }
+it.each([1, 32, 33, 64, 108, 128, 256])('Issue925 reserves complete publication capacity for %i requirements in every admitted batch schema', count => {
+    const f = fixture(count);
+    const receipts = f.batches.map((batch, index) => {
+        const response = f.output(index), schema = progressBatchResponseSchema(f.manifest, batch, f.extraction.anchors, count > 32);
+        const limit = schema.properties.requirements.items.properties.summary.maxLength;
+        response.requirements.forEach(fact => { fact.summary = '😀'.repeat(limit); fact.remaining = 'r'.repeat(limit); });
+        return f.receipt(index, response);
+    });
+    const aggregate = aggregateProgressAssessmentReceipts(f.manifest, f.batches, receipts);
+    expect([...aggregate.summary].length).toBeLessThanOrEqual(8000);
+    expect([...aggregate.remaining].length).toBeLessThanOrEqual(8000);
+    for (const requirement of f.manifest.scope.requirements) expect(aggregate.summary).toContain(`[${requirement.id}]`);
+    expect(receipts.flatMap(receipt => receipt.citations)).toHaveLength(count);
+});
 it('CommitScope916-C01 accounts for every assigned span and rejects missing or duplicate spans', () => {
     const f = fixture();
     for (const lines of progressGroups(f.source.lines, 16)) {
@@ -182,7 +197,7 @@ it('CommitScope916-C10 accepts uneven fact lengths when the complete publication
         const response = f.output(index), schema = progressBatchResponseSchema(f.manifest, batch, f.extraction.anchors, true);
         const limit = schema.properties.requirements.items.properties.summary.maxLength;
         if (index === 0) {
-            expect(limit).toBeGreaterThan(100);
+            expect(limit).toBeGreaterThan(1);
             response.requirements[0].summary = '😀'.repeat(limit);
             response.requirements[0].remaining = 'r'.repeat(limit);
         }
@@ -192,15 +207,31 @@ it('CommitScope916-C10 accepts uneven fact lengths when the complete publication
     expect([...aggregate.summary].length).toBeLessThanOrEqual(8000);
     expect([...aggregate.remaining].length).toBeLessThanOrEqual(8000);
 });
-it('CommitScope916-C10 rejects the actual aggregate when individually valid batches exceed its publication field budget', () => {
+it.each(['summary', 'remaining'] as const)('Issue925 rejects an old batch-local %s allowance before accepting a receipt', field => {
     const f = fixture(128);
-    const receipts = f.batches.map((batch, index) => {
-        const response = f.output(index), schema = progressBatchResponseSchema(f.manifest, batch, f.extraction.anchors, true);
-        const limit = schema.properties.requirements.items.properties.summary.maxLength;
-        response.requirements.forEach(fact => { fact.summary = '😀'.repeat(limit); fact.remaining = 'r'.repeat(limit); });
-        return f.receipt(index, response);
-    });
-    expect(() => aggregateProgressAssessmentReceipts(f.manifest, f.batches, receipts)).toThrow(expect.objectContaining({ recovery: expect.objectContaining({ variables: expect.objectContaining({ reason: 'aggregate-capacity' }) }) }));
+    const response = f.output(), schema = progressBatchResponseSchema(f.manifest, f.batches[0], f.extraction.anchors, true);
+    const limit = schema.properties.requirements.items.properties[field].maxLength;
+    response.requirements[0][field] = '😀'.repeat(limit + 1);
+    expect(() => assertAgentResponseSchema(response, schema)).toThrow();
+    expect(() => f.receipt(0, response)).toThrow(expect.objectContaining({ recovery: { id: 'progress-evidence-capacity-exceeded', variables: expect.objectContaining({
+        phase: 'assessment', dimension: `assessment-${field}-points`, observedCount: limit + 1, supportedLimit: limit, unit: 'code-points',
+    }) } }));
+});
+it.each(['summary', 'remaining'] as const)('Issue925 rechecks the complete %s boundary independently of receipt digests', field => {
+    const f = fixture(1), { digest: _digest, ...body } = structuredClone(f.receipt());
+    body.result[field] = '😀'.repeat(8001);
+    const altered = { ...body, digest: createHash('sha256').update(JSON.stringify(body)).digest('hex') };
+    const error = (() => { try { aggregateProgressAssessmentReceipts(f.manifest, f.batches, [altered]); } catch (value) { return value; } })();
+    expect(error).toMatchObject({ recovery: { id: 'progress-evidence-capacity-exceeded', variables: {
+        phase: 'aggregate', dimension: `assessment-${field}-points`, observedCount: 8001, supportedLimit: 8000, unit: 'code-points',
+        context: { kind: 'assessment', requirementCount: 1, batch: 0, requirementId: 'none' },
+    } } });
+    for (const locale of ['en-US', 'es-ES']) {
+        const view = buildApplicationErrorPresentation(error as ApplicationError, resolveStaticApplicationErrorCatalog(locale).message);
+        const digits = view.impact.replace(/[,.\s]/gu, '');
+        expect(digits).toContain('8001'); expect(digits).toContain('8000');
+        expect(view.impact).toContain('1'); expect(view.impact).not.toContain('😀');
+    }
 });
 it.each(['null', 'json', 'identity', 'path', 'duplicate', 'empty'])('CommitScope916-C11 rejects %s native evidence before it can admit citations', mode => {
     const f = fixture(1);

@@ -316,3 +316,17 @@ receives complete human context, including published draft case qualifiers, whil
 its response schema owns only its assigned IDs. Requirement evidence cites an
 admitted regular source observation. Generated metadata remains supplemental
 comparison context. Source and receipt reordering preserve the aggregate identity.
+
+## 11. Remaining-field rejection detail — #887 / #925
+
+Semantic response diagnostics distinguish `requirement-remaining-null-required`
+for supported outcomes, `requirement-remaining-string-required` for missing or
+unknown outcomes with a nonstring value, `requirement-remaining-blank`, and
+`requirement-remaining-too-long` above the existing 800-code-point ceiling.
+Preserve original requirement/physical-line attribution and the legacy coarse
+reason for historical records. Native schema failures keep their own schema
+reason. No rejected value is copied into diagnostic facts, and no completion,
+evidence, locale, freshness or publication guard is relaxed. Five distinct
+classification controls and the native no-write regression cover these rules;
+the complete allocation/diagnostic/rollout contract is in section 22 of
+`progress-capacity-diagnostics.md`.

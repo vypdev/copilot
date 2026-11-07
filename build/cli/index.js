@@ -46838,7 +46838,7 @@ function progressAssessmentFactLimit(requirements, anchors = {}) {
         const sourceLineId = requirementId !== 'none' && (0, progress_response_diagnostic_1.isProgressSourceLineId)(anchors[id]) ? anchors[id] : 'none';
         throw new application_error_1.ApplicationError('validation.evidence-too-large', 'Original progress citations cannot fit the unchanged assessment text limits. Existing progress was retained.', {
             recovery: { id: 'progress-assessment-capacity-exceeded', variables: {
-                    phase: 'assessment', reason: 'assessment-text-limit', field: `$.requirements[${index}].summary`, requirementId, sourceLineId,
+                    phase: 'assessment', reason: 'assessment-text-limit', field: index < 32 ? `$.requirements[${index}].summary` : '$.requirements', requirementId, sourceLineId,
                 } },
         });
     }
@@ -46878,6 +46878,7 @@ const progress_response_rejection_policy_1 = __nccwpck_require__(43023);
 const progress_evidence_protocol_policy_1 = __nccwpck_require__(37124);
 const progress_evidence_path_1 = __nccwpck_require__(25887);
 const progress_assessment_capacity_policy_1 = __nccwpck_require__(67329);
+const progress_capacity_failure_1 = __nccwpck_require__(6457);
 exports.PROGRESS_BATCH_PROFILE = Object.freeze({ sourceLines: 32, clauses: 256, bytes: 262144,
     assessmentClauses: 32, calls: 120, milliseconds: 1800000 });
 const digest = (value) => (0, node_crypto_1.createHash)('sha256').update(JSON.stringify(value)).digest('hex');
@@ -46986,26 +46987,22 @@ function progressBatchDisplayScope(batch, compact) {
             return { ...requirement, quote: (source.origin === 'draft' ? 'SDD ' : '') + source.id };
         }) } : batch.scope;
 }
-/** Reserve every canonical source reference and guide concise prose across the complete inventory. */
-function aggregateFactTarget(manifest, compact) {
+/** One hard allocation reserves every source reference, separator and nonempty fact. */
+function aggregateFactLimit(manifest, compact, anchors) {
     const display = progressBatchDisplayScope({ id: '', ordinal: 0, scope: manifest.scope }, compact);
-    const fixed = display.requirements.reduce((sum, requirement) => sum + [...(0, progress_assessment_capacity_policy_1.progressAssessmentPrefix)(requirement)].length, Math.max(0, display.requirements.length - 1));
-    const limit = Math.min(progress_assessment_capacity_policy_1.MAX_PROGRESS_FACT_POINTS, Math.floor((progress_assessment_capacity_policy_1.MAX_PROGRESS_ASSESSMENT_POINTS - fixed) / display.requirements.length));
-    if (limit < 1)
-        throw (0, progress_batch_rejection_policy_1.progressBatchRejected)('aggregate-capacity');
-    return limit;
+    return (0, progress_assessment_capacity_policy_1.progressAssessmentFactLimit)(display.requirements, anchors);
 }
 function progressBatchResponseSchema(manifest, batch, anchors, compact) {
     const schema = (0, progress_scope_policy_1.scopedProgressResponseSchema)(progressBatchDisplayScope(batch, compact), anchors);
-    const factTarget = aggregateFactTarget(manifest, compact);
-    const description = `Keep each fact within its ${factTarget}-Unicode-code-point aggregate allocation. Use one short factual phrase. Each complete publication field has 8000 points shared across all ${manifest.scope.requirements.length} requirements.`;
+    const factLimit = aggregateFactLimit(manifest, compact, anchors);
+    const description = `Each fact has a hard ${factLimit}-Unicode-code-point aggregate allocation. Use one short factual phrase. Each complete publication field has 8000 points shared across all ${manifest.scope.requirements.length} requirements.`;
     return { ...schema, properties: { ...schema.properties,
             manifestDigest: { type: 'string', enum: [manifest.digest] }, batchId: { type: 'string', enum: [batch.id] },
             headSha: { type: 'string', enum: [manifest.headSha] },
             requirements: { ...schema.properties.requirements, items: { ...schema.properties.requirements.items,
                     properties: { ...schema.properties.requirements.items.properties,
-                        summary: { ...schema.properties.requirements.items.properties.summary, description },
-                        remaining: { ...schema.properties.requirements.items.properties.remaining, description },
+                        summary: { ...schema.properties.requirements.items.properties.summary, maxLength: factLimit, description },
+                        remaining: { ...schema.properties.requirements.items.properties.remaining, maxLength: factLimit, description },
                         citations: { type: 'array', minItems: 1, maxItems: 8,
                             items: { type: 'string', enum: manifest.evidence.filter(reference => !reference.generated).map(reference => reference.id) } } },
                     required: [...schema.properties.requirements.items.required, 'citations'] } } },
@@ -47024,15 +47021,22 @@ function readProgressAssessmentEvidence(response, manifest, batch, locale, ancho
         fail('receipt-coverage', missing?.id);
     }
     const citations = [];
-    const factLimit = (0, progress_assessment_capacity_policy_1.progressAssessmentFactLimit)(progressBatchDisplayScope(batch, compact).requirements, anchors);
+    const factLimit = aggregateFactLimit(manifest, compact, anchors);
     const facts = payload.requirements.map(value => {
         if (!record(value) || !exact(value, ['id', 'status', 'evidence', 'summary', 'remaining', 'citations']))
             return fail('receipt-coverage');
         const id = batch.scope.requirements.find(requirement => requirement.id === value.id)?.id;
         if (!id)
             return fail('receipt-coverage');
-        if (compact && [value.summary, value.remaining].some(text => typeof text === 'string' && [...text].length > factLimit))
-            fail('aggregate-capacity', id);
+        for (const field of ['summary', 'remaining']) {
+            const text = value[field];
+            if (typeof text === 'string' && [...text].length > factLimit)
+                throw new progress_capacity_failure_1.ProgressCapacityFailure({
+                    phase: 'assessment', dimension: field === 'summary' ? 'assessment-summary-points' : 'assessment-remaining-points',
+                    observedCount: [...text].length, supportedLimit: factLimit,
+                    context: { kind: 'assessment', requirementCount: manifest.scope.requirements.length, batch: batch.ordinal, requirementId: id },
+                });
+        }
         if (!Array.isArray(value.citations) || value.citations.length < 1 || value.citations.length > 8
             || new Set(value.citations).size !== value.citations.length)
             return fail('evidence-missing', id);
@@ -47088,8 +47092,14 @@ function aggregateProgressAssessmentReceipts(manifest, batches, receipts) {
     const progress = Math.round(ordered.reduce((sum, receipt) => sum + receipt.result.progress * receipt.requirementIds.length, 0) / ids.length);
     const text = (field) => ordered.map(receipt => receipt.result[field]).filter(Boolean).join('\n');
     const summary = text('summary'), remaining = text('remaining');
-    if ([summary, remaining].some(value => [...value].length > progress_assessment_capacity_policy_1.MAX_PROGRESS_ASSESSMENT_POINTS))
-        throw (0, progress_batch_rejection_policy_1.progressBatchRejected)('aggregate-capacity', { verified: accepted.size, expected: batches.length });
+    for (const [field, value] of [['summary', summary], ['remaining', remaining]]) {
+        if ([...value].length > progress_assessment_capacity_policy_1.MAX_PROGRESS_ASSESSMENT_POINTS)
+            throw new progress_capacity_failure_1.ProgressCapacityFailure({
+                phase: 'aggregate', dimension: field === 'summary' ? 'assessment-summary-points' : 'assessment-remaining-points',
+                observedCount: [...value].length, supportedLimit: progress_assessment_capacity_policy_1.MAX_PROGRESS_ASSESSMENT_POINTS,
+                context: { kind: 'assessment', requirementCount: ids.length, batch: 0, requirementId: 'none' },
+            });
+    }
     return Object.freeze({ progress: remaining ? Math.min(99, progress) : 100, summary, remaining, reasoning: '', publicationId: manifest.digest });
 }
 
@@ -47228,11 +47238,13 @@ exports.ENGLISH_PROGRESS_CAPACITY_LABELS = {
     capacityAggregateEnvelope: 'receipt envelope and minimum payload reservation', capacityMinimumFacts: 'minimum complete fact reservation',
     capacityUnitCount: 'evidence-unit count', capacityAggregateFacts: 'complete aggregate facts', capacityInvalidAllocation: 'invalid capacity allocation',
     capacitySourceUnitCount: 'source-unit count',
+    capacityAssessmentSummary: 'progress summary field', capacityAssessmentRemaining: 'progress remaining field',
     capacityMaximumMeasurement: 'Measured or required: {observedCount} {unit}; maximum available: {supportedLimit} {unit} ({countKind}).',
     capacityMinimumMeasurement: 'Measured: {observedCount} {unit}; minimum required: {supportedLimit} {unit} ({countKind}).',
     capacityUnavailableMeasurement: 'Usage and applicable allocation are unavailable.',
     capacityContextUnavailable: 'Source and path-coverage context are unavailable.',
     capacitySourceLine: 'Original physical source line: {sourceLineId}.',
+    capacityAssessmentContext: 'Complete inventory: {requirementCount} requirements. Batch: {batch}; requirement: {requirementId}. Batch 0 identifies complete reduction; none means no single requirement is attributed.',
     capacityManifestUnavailable: 'not available at this boundary', capacityNoPaths: 'no uncovered paths',
     capacityComparison: 'Pinned comparison: {baseSha} → {headSha}. Required-path inventory: {requiredPathsDigest}; source manifest: {manifestDigest}. Accepted progress path receipts: {reviewedPathCount}/{requiredPathCount}; uncovered: {uncoveredPathCount}. Receipt-path inventory: {reviewedPathsDigest}; uncovered-path inventory: {uncoveredPathsDigest}. Paths: {paths}.',
 };
@@ -47249,11 +47261,13 @@ exports.SPANISH_PROGRESS_CAPACITY_LABELS = {
     capacityAggregateEnvelope: 'envoltura de recibos y reserva mínima de contenido', capacityMinimumFacts: 'reserva mínima de hechos completos',
     capacityUnitCount: 'cantidad de unidades de evidencia', capacityAggregateFacts: 'hechos completos del agregado', capacityInvalidAllocation: 'asignación de capacidad no válida',
     capacitySourceUnitCount: 'cantidad de unidades de origen',
+    capacityAssessmentSummary: 'campo de resumen del progreso', capacityAssessmentRemaining: 'campo de trabajo pendiente del progreso',
     capacityMaximumMeasurement: 'Medido o requerido: {observedCount} {unit}; máximo disponible: {supportedLimit} {unit} ({countKind}).',
     capacityMinimumMeasurement: 'Medido: {observedCount} {unit}; mínimo requerido: {supportedLimit} {unit} ({countKind}).',
     capacityUnavailableMeasurement: 'El uso y la asignación aplicable no están disponibles.',
     capacityContextUnavailable: 'El contexto de origen y cobertura de rutas no está disponible.',
     capacitySourceLine: 'Línea física de origen: {sourceLineId}.',
+    capacityAssessmentContext: 'Inventario completo: {requirementCount} requisitos. Lote: {batch}; requisito: {requirementId}. El lote 0 identifica la reducción completa; none indica que no se atribuye a un único requisito.',
     capacityManifestUnavailable: 'no disponible en este límite', capacityNoPaths: 'ninguna ruta sin cubrir',
     capacityComparison: 'Comparación fijada: {baseSha} → {headSha}. Inventario de rutas requeridas: {requiredPathsDigest}; manifiesto de origen: {manifestDigest}. Recibos de rutas de progreso aceptados: {reviewedPathCount}/{requiredPathCount}; sin cubrir: {uncoveredPathCount}. Inventario de rutas con recibo: {reviewedPathsDigest}; inventario de rutas sin cubrir: {uncoveredPathsDigest}. Rutas: {paths}.',
 };
@@ -47289,6 +47303,7 @@ const PHASES = {
 };
 const UNITS = { bytes: 'capacityBytes', parts: 'capacityParts', lines: 'capacityLines', 'code-points': 'capacityPoints', units: 'capacityUnits' };
 const DIMENSIONS = {
+    'assessment-summary-points': 'capacityAssessmentSummary', 'assessment-remaining-points': 'capacityAssessmentRemaining',
     'source-unit-bytes': 'capacitySourceUnit', 'source-part-bytes': 'capacitySourcePart', 'source-part-count': 'capacityPartCount',
     'source-unit-count': 'capacitySourceUnitCount',
     'source-manifest-bytes': 'capacityManifest', 'source-line-count': 'capacityLineCount', 'source-line-points': 'capacityLinePoints',
@@ -47306,13 +47321,14 @@ function progressCapacityPresentation(input, message) {
     const measurement = label(facts.bound === 'minimum' ? 'capacityMinimumMeasurement' : facts.bound === 'maximum' ? 'capacityMaximumMeasurement' : 'capacityUnavailableMeasurement', { observedCount, supportedLimit, countKind, unit: label(UNITS[facts.unit]) });
     const source = facts.context;
     const context = source.kind === 'unavailable' ? label('capacityContextUnavailable')
-        : source.kind === 'source-line' ? label('capacitySourceLine', { sourceLineId: source.sourceLineId })
-            : label('capacityComparison', { baseSha: source.baseSha, headSha: source.headSha, requiredPathsDigest: source.requiredPathsDigest,
-                reviewedPathsDigest: source.reviewedPathsDigest, uncoveredPathsDigest: source.uncoveredPathsDigest,
-                manifestDigest: source.manifestDigest === 'none' ? label('capacityManifestUnavailable') : source.manifestDigest,
-                requiredPathCount: source.requiredPathCount, reviewedPathCount: source.reviewedPathCount, uncoveredPathCount: source.uncoveredPathCount,
-                paths: source.paths.length ? source.paths.map(progress_evidence_path_1.renderProgressEvidencePath).join('; ') : label('capacityNoPaths') })
-                + (source.sourceLineId === 'none' ? '' : ` ${label('capacitySourceLine', { sourceLineId: source.sourceLineId })}`);
+        : source.kind === 'assessment' ? label('capacityAssessmentContext', source)
+            : source.kind === 'source-line' ? label('capacitySourceLine', { sourceLineId: source.sourceLineId })
+                : label('capacityComparison', { baseSha: source.baseSha, headSha: source.headSha, requiredPathsDigest: source.requiredPathsDigest,
+                    reviewedPathsDigest: source.reviewedPathsDigest, uncoveredPathsDigest: source.uncoveredPathsDigest,
+                    manifestDigest: source.manifestDigest === 'none' ? label('capacityManifestUnavailable') : source.manifestDigest,
+                    requiredPathCount: source.requiredPathCount, reviewedPathCount: source.reviewedPathCount, uncoveredPathCount: source.uncoveredPathCount,
+                    paths: source.paths.length ? source.paths.map(progress_evidence_path_1.renderProgressEvidencePath).join('; ') : label('capacityNoPaths') })
+                    + (source.sourceLineId === 'none' ? '' : ` ${label('capacitySourceLine', { sourceLineId: source.sourceLineId })}`);
     return Object.freeze({ phase: label(PHASES[facts.phase]), dimension: label(DIMENSIONS[facts.dimension]), measurement, context });
 }
 
@@ -48465,12 +48481,18 @@ function parseScopedProgressResponse(response, locale, scope, anchors = {}) {
             reject('requirement-summary-invalid', `${field}.summary`, id);
         if (fact.status === 'supported') {
             if (fact.remaining !== null)
-                reject('requirement-remaining-invalid', `${field}.remaining`, id);
+                reject('requirement-remaining-null-required', `${field}.remaining`, id);
             if (fact.evidence !== 'source-only')
                 reject('requirement-evidence-mismatch', `${field}.evidence`, id);
         }
-        else if (!text(fact.remaining))
-            reject('requirement-remaining-invalid', `${field}.remaining`, id);
+        else {
+            if (typeof fact.remaining !== 'string')
+                reject('requirement-remaining-string-required', `${field}.remaining`, id);
+            else if (!fact.remaining.trim())
+                reject('requirement-remaining-blank', `${field}.remaining`, id);
+            else if ([...fact.remaining].length > MAX_FACT)
+                reject('requirement-remaining-too-long', `${field}.remaining`, id);
+        }
         return { id, status: fact.status, summary: fact.summary, remaining: fact.remaining };
     });
     const ordered = scope.requirements.map(requirement => ({ requirement, fact: entries.find(entry => entry.id === requirement.id) }));
@@ -61254,6 +61276,7 @@ async function analyzeProgressBatches(context, issueDescription, captured, diff,
         bounded.verify();
         return (0, progress_batch_policy_1.aggregateProgressAssessmentReceipts)(manifest, batches, receipts);
     };
+    (0, logging_ports_1.logInfo)(`Reducing complete same-head assessment: ${scope.requirements.length} requirements, ${receipts.length} of ${batches.length} verified batches; summary and remaining each have an 8000-Unicode-code-point publication limit.`);
     const attemptResult = verifyAssessment();
     (0, logging_ports_1.logInfo)(`Complete same-head acceptance evidence verified: ${scope.requirements.length} requirements, ${receipts.length} of ${batches.length} batches, ${bounded.calls()} of ${progress_batch_policy_1.PROGRESS_BATCH_PROFILE.calls} calls. Publication identity ${manifest.digest}.`);
     return { attemptResult, scopeManifestDigest: manifest.digest, verifyAssessment };
@@ -102885,6 +102908,8 @@ exports.PROGRESS_CAPACITY_DIMENSIONS = Object.freeze({
     'minimum-fact-bytes': rule(['aggregate'], 'bytes'),
     'evidence-unit-count': rule(['aggregate'], 'units', ['minimum']),
     'aggregate-fact-bytes': rule(['aggregate'], 'bytes'),
+    'assessment-summary-points': rule(['assessment', 'aggregate'], 'code-points'),
+    'assessment-remaining-points': rule(['assessment', 'aggregate'], 'code-points'),
     'invalid-allocation': rule(['input', 'source', 'scope', 'partition', 'aggregate', 'assessment'], 'bytes', ['unavailable']),
 });
 const record = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -102908,6 +102933,15 @@ function normalizeProgressCapacityContext(value) {
         if (!exact(value, ['kind', 'sourceLineId']) || !(0, progress_response_diagnostic_1.isProgressSourceLineId)(value.sourceLineId))
             return invalid();
         return Object.freeze({ kind: 'source-line', sourceLineId: value.sourceLineId });
+    }
+    if (value.kind === 'assessment') {
+        if (!exact(value, ['kind', 'requirementCount', 'batch', 'requirementId'])
+            || !count(value.requirementCount) || value.requirementCount < 1 || value.requirementCount > 256
+            || !count(value.batch) || value.batch > value.requirementCount
+            || !(value.requirementId === 'none' || (0, progress_response_diagnostic_1.isProgressRequirementId)(value.requirementId))
+            || (value.batch === 0 && value.requirementId !== 'none'))
+            return invalid();
+        return Object.freeze({ kind: 'assessment', requirementCount: value.requirementCount, batch: value.batch, requirementId: value.requirementId });
     }
     if (value.kind !== 'comparison' || !exact(value, ['kind', 'baseSha', 'headSha', 'manifestDigest', 'requiredPathsDigest',
         'reviewedPathsDigest', 'uncoveredPathsDigest', 'requiredPathCount', 'reviewedPathCount', 'uncoveredPathCount', 'paths', 'sourceLineId'])
@@ -102947,6 +102981,9 @@ function normalizeProgressCapacityDiagnostic(value) {
         && (value.bound === 'minimum' ? value.observedCount >= value.supportedLimit : value.observedCount <= value.supportedLimit))
         return invalid();
     const context = normalizeProgressCapacityContext(value.context);
+    if (context.kind === 'assessment' && (!['assessment-summary-points', 'assessment-remaining-points'].includes(dimension)
+        || (value.phase === 'aggregate' ? context.batch !== 0 : context.batch === 0)))
+        return invalid();
     const sourceLineId = context.kind === 'source-line' || context.kind === 'comparison' ? context.sourceLineId : 'none';
     if (sourceLineId !== 'none' && (value.phase !== 'scope'
         || !['source-line-count', 'source-line-points'].includes(dimension)))
@@ -103138,7 +103175,9 @@ exports.PROGRESS_RESPONSE_REASONS = Object.freeze({
         'partition-file-invalid', 'partition-unit-invalid', 'partition-facts-invalid']),
     assessment: Object.freeze([...schemaReasons, 'requirements-incomplete', 'progress-invalid', 'requirement-shape-invalid', 'requirement-id-invalid',
         'requirement-id-duplicate', 'scope-uncertain', 'requirement-status-invalid', 'requirement-evidence-invalid', 'requirement-summary-invalid',
-        'requirement-remaining-invalid', 'requirement-evidence-mismatch', 'progress-completion-mismatch', 'assessment-text-limit']),
+        'requirement-remaining-invalid', 'requirement-remaining-null-required', 'requirement-remaining-string-required',
+        'requirement-remaining-blank', 'requirement-remaining-too-long',
+        'requirement-evidence-mismatch', 'progress-completion-mismatch', 'assessment-text-limit']),
 });
 const fieldPatterns = Object.freeze({
     scope: /^\$(?:\.outputLocale|\.lines(?:\[(0|[1-9]\d{0,3})\](?:\.(?:id|kind|sameAs))?)?)?$/u,
