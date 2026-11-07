@@ -232,7 +232,7 @@ part is queried. The replacement preserves all source, schema and uncertainty;
 it never includes the rejected prose. No other part-validation or execution
 failure starts this recovery.
 
-A separate final-response recovery allows one complete final reassessment after
+A separate final-response recovery allows one complete reassessment per acceptance batch after
 the host has validated every field, locale, scope identity,
 status/evidence relation and full cited projection and found only a completion
 contradiction: 100% requires every requirement to be supported, and every
@@ -258,6 +258,18 @@ Part and final-response allowances are independent: each eligible part may be
 replaced once, and the validated complete aggregate may receive one final
 reassessment. A persistent part failure never enters the final stage. A final
 failure cannot restart accepted parts or recollect the comparison.
+
+That same final-response allowance also covers a completed native `summary` or
+`remaining` length rejection attributable to the exact captured schema, batch
+receipts, citations, requirement, source anchor and locale. The rest of the full
+schema must validate before recovery is admitted. The correction adds only the
+verified requirement/source IDs, field, maximum and observed Unicode point count;
+it preserves all evidence and uncertainty. Both possible correction envelopes
+are reserved before model work, using the existing 256-byte hint allocation.
+Length and completion failures share one replacement; alternating them never
+permits a third query. Repeated length reports `progress-assessment-length-invalid`
+with those five safe facts. Any failed or stale batch retains published progress
+and discards the complete provisional aggregate. No setting or capacity changes.
 
 If a part replacement still exceeds the fact limit,
 `progress-partition-length-invalid` identifies the verified part, path, source

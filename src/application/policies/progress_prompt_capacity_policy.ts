@@ -4,6 +4,7 @@ import { productFacingAgentQueryOptions } from './agent_output_locale_policy';
 import { progressEvidenceTooLarge } from './progress_diff_partition_policy';
 import { MAX_PROGRESS_AGGREGATE_BYTES } from './progress_partition_response_policy';
 import { reservedProgressCompletionPrompt } from './progress_completion_recovery_policy';
+import { reservedProgressAssessmentLengthPrompt } from './progress_assessment_length_policy';
 import type { ProgressCapacityPhase } from '../../domain/progress_capacity_diagnostic';
 
 export const PROGRESS_PROMPT_FRAMING_RESERVE_BYTES = 1_024;
@@ -33,5 +34,8 @@ export function progressAggregateBudget(promptWithoutEvidence: string, schema: S
 /** Both original and worst complete final replacement fit before any scope request is admitted. */
 export function remainingProgressAssessmentPromptBytes(prompt: string, schema: Schema, effort?: string): number {
     remainingProgressPromptBytes(prompt, 'progress', schema, effort);
-    return remainingProgressPromptBytes(reservedProgressCompletionPrompt(prompt), 'progress', schema, effort, 'native-prompt-reserve-bytes');
+    return Math.min(
+        remainingProgressPromptBytes(reservedProgressCompletionPrompt(prompt), 'progress', schema, effort, 'native-prompt-reserve-bytes'),
+        remainingProgressPromptBytes(reservedProgressAssessmentLengthPrompt(prompt), 'progress', schema, effort, 'native-prompt-reserve-bytes'),
+    );
 }

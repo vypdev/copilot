@@ -5,7 +5,7 @@
       "id": "github-communication-experience",
       "title": "Semantic GitHub communication and repository localization",
       "status": "implemented",
-      "scope": "English-default, localized, semantic, bounded and idempotent product messages across GitHub and repository-aware operator surfaces; complete acceptance batches and cards with stable source identities, verified published SDD provenance, shared complete-inventory text allocation, precise response diagnostics and same-head requirement evidence before Commit progress publication",
+      "scope": "English-default, localized, semantic, bounded and idempotent product messages across GitHub and repository-aware operator surfaces; complete acceptance batches and cards with stable source identities, verified published SDD provenance, shared complete-inventory text allocation, precise response diagnostics and same-head requirement evidence before Commit progress publication; shared bounded complete-batch recovery for attributable completed acceptance-field length or completion failures",
       "owner": "Copilot maintainers",
       "lastVerified": "2026-11-07",
       "specs": [
@@ -237,7 +237,10 @@
         "src/application/policies/progress_batch_policy.ts",
         "src/application/policies/progress_batch_query_policy.ts",
         "src/application/policies/progress_batch_rejection_policy.ts",
-        "src/application/usecases/actions/progress_batch_workflow.ts"
+        "src/application/usecases/actions/progress_batch_workflow.ts",
+        "src/domain/progress_assessment_length_failure.ts",
+        "src/data/repository/progress_assessment_length_failure.ts",
+        "src/application/policies/progress_assessment_length_policy.ts"
       ],
       "tests": [
         "src/domain/__tests__/implementation_plan.test.ts",
@@ -420,7 +423,11 @@
         "src/application/policies/__tests__/progress_batch_policy.test.ts",
         "src/application/usecases/actions/__tests__/progress_batches.integration.test.ts",
         "src/application/usecases/actions/__tests__/fixtures/domus-29-immutable-replay.json.gz.hex",
-        "src/application/usecases/actions/__tests__/support/progress_batch_response.ts"
+        "src/application/usecases/actions/__tests__/support/progress_batch_response.ts",
+        "src/application/usecases/actions/__tests__/progress_assessment_length_recovery.test.ts",
+        "src/application/policies/__tests__/progress_assessment_length_policy.test.ts",
+        "src/application/policies/__tests__/progress_assessment_length_presentation.test.ts",
+        "src/data/repository/__tests__/progress_assessment_length_failure.test.ts"
       ],
       "documentation": [
         "docs/configuration.mdx",

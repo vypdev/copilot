@@ -7,6 +7,7 @@ import { isProgressInventoryDiagnostic, type ProgressInventoryDiagnostic } from 
 import { normalizeProgressCapacityDiagnostic, type ProgressCapacityDiagnostic } from '../../domain/progress_capacity_diagnostic';
 import { isProgressResponseDiagnosticFacts, type ProgressResponseDiagnosticFacts } from '../../domain/progress_response_diagnostic';
 import { isProgressPartitionLengthDiagnostic, type ProgressPartitionLengthDiagnostic } from '../../domain/progress_partition_length_failure';
+import { isProgressAssessmentLengthDiagnostic, type ProgressAssessmentLengthDiagnostic } from '../../domain/progress_assessment_length_failure';
 import { isProgressBinaryEvidenceFacts, type ProgressBinaryEvidenceFacts } from '../../domain/progress_binary_evidence_diagnostic';
 import { isIssueWorkflowDiagnostic, type IssueWorkflowDiagnosticFacts } from '../../domain/issue_workflow_diagnostic';
 import { isChangeSizeReconciliationFacts, type ChangeSizeReconciliationFacts } from '../../domain/change_size_reconciliation';
@@ -98,6 +99,7 @@ export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'bugbot-review-incomplete',
     'progress-result-contract-invalid',
     'progress-partition-length-invalid',
+    'progress-assessment-length-invalid',
     'progress-assessment-capacity-exceeded',
     'progress-scope-clause-limit',
     'progress-sdd-seed-unverified',
@@ -127,6 +129,7 @@ interface ApplicationErrorRecoveryVariables extends Readonly<Record<CopilotComma
     readonly 'bugbot-review-incomplete': BugbotReviewBlockFacts;
     readonly 'progress-result-contract-invalid': ProgressResponseDiagnosticFacts;
     readonly 'progress-partition-length-invalid': ProgressPartitionLengthDiagnostic;
+    readonly 'progress-assessment-length-invalid': ProgressAssessmentLengthDiagnostic;
     readonly 'progress-assessment-capacity-exceeded': ProgressResponseDiagnosticFacts;
     readonly 'progress-sdd-seed-unverified': Readonly<Record<string, never>>;
     readonly 'progress-batch-retained': ProgressBatchDiagnostic;
@@ -469,6 +472,7 @@ const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readon
     'bugbot-review-incomplete': Object.freeze(['profile', 'countKind', 'resource', 'observed', 'limit', 'unit']),
     'progress-result-contract-invalid': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
     'progress-partition-length-invalid': Object.freeze(['partitionId', 'filePath', 'unitId', 'field', 'maximum', 'observed']),
+    'progress-assessment-length-invalid': Object.freeze(['requirementId', 'sourceLineId', 'field', 'maximum', 'observed']),
     'progress-assessment-capacity-exceeded': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
     'progress-batch-retained': Object.freeze(['reason', 'verified', 'expected', 'batch', 'requirementId']),
     'progress-sdd-seed-unverified': Object.freeze([]),
@@ -578,6 +582,7 @@ function normalizeApplicationErrorRecovery(
     if (recovery.id === 'progress-scope-clause-limit' && !isProgressScopeCapacityFacts(variables)) throw new TypeError('Progress scope capacity diagnostic is invalid.');
     if (recovery.id === 'progress-result-contract-invalid' && !isProgressResponseDiagnosticFacts(variables)) throw new TypeError('Progress response diagnostic is invalid.');
     if (recovery.id === 'progress-partition-length-invalid' && !isProgressPartitionLengthDiagnostic(variables)) throw new TypeError('Progress part length diagnostic is invalid.');
+    if (recovery.id === 'progress-assessment-length-invalid' && !isProgressAssessmentLengthDiagnostic(variables)) throw new TypeError('Progress assessment length diagnostic is invalid.');
     if (recovery.id === 'bugbot-review-incomplete' && !isBugbotReviewBlockFacts(variables)) throw new TypeError('Bugbot review diagnostic is invalid.');
     if (recovery.id === 'progress-inventory-incomplete' && !isProgressInventoryDiagnostic(variables)) throw new TypeError('Progress inventory diagnostic is invalid.');
     if (recovery.id === 'progress-binary-evidence-unavailable' && !isProgressBinaryEvidenceFacts(variables)) throw new TypeError('Progress binary evidence diagnostic is invalid.');

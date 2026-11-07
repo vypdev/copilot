@@ -61,6 +61,28 @@ it('session operation metadata remains inspectable when current local preference
     await ready(() => document.querySelector('main .revision') === null); const reads = f.settingsPort.get.mock.calls.length; button(f.op.read).click();
     await ready(() => text().includes(f.op.status.ready)); expect(text()).toContain(f.session.effects['save-vault']); expect(f.settingsPort.get).toHaveBeenCalledTimes(reads);
 });
+it('the connection fixture waits for a follow-up canonical read to release the disabled form', async () => {
+    const f = await fixture(); const send = f.app.port.send.getMockImplementation()!;
+    const entered = deferred<void>(); const gate = deferred<void>(); let reads = 0; let settled = false;
+    f.app.port.send.mockImplementation(async message => {
+        const value = await send(message);
+        if (message.method === 'center.read' && ++reads === 2) { entered.resolve(); await gate.promise; }
+        return value;
+    });
+    const connecting = f.connect().then(() => { settled = true; });
+    try {
+        await entered.promise;
+        // Let the already-started connection readiness poll observe the held read.
+        let observations = 0; await ready(() => ++observations > 1);
+        expect(document.querySelector<HTMLInputElement>('#connection-name')?.value).toBe('');
+        expect(button(f.copy.connect).disabled).toBe(false);
+        expect(button(f.copy.connect).matches(':disabled')).toBe(true);
+        expect(button(f.center.messages.refresh).disabled).toBe(true);
+        expect(settled).toBe(false);
+    } finally { gate.resolve(); await connecting; }
+    expect(button(f.copy.connect).matches(':disabled')).toBe(false);
+    expect(button(f.center.messages.refresh).disabled).toBe(false);
+});
 it('operation-only refresh does not inspect the provider, reread history or reset the three permission observations', async () => {
     const f = await fixture(); await f.connect(); await navigate('privacy'); await ready(() => !!document.querySelector('[data-permission-status]'));
     // Both serial initial collection reads must settle before measuring an independent operation-only refresh.
