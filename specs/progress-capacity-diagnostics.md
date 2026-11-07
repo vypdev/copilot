@@ -429,3 +429,17 @@ bounded requirement groups against the same frozen comparison. Every group retai
 all assigned requirements, exclusions and comparison parts. The host preflights the
 entire repeated-evidence plan against the same 120-call limit before collecting
 those facts. The pinned Domus fixture retains the shared 30-call path.
+
+Citation arrays use the provider-compatible native array shape with `minItems`
+and `maxItems`. The host enforces citation uniqueness and same-head resolution
+before accepting any receipt. The deterministic native-projection regression
+excludes the unsupported `uniqueItems` keyword while duplicate citations still
+reject the whole attempt. A minimal native schema probe reproduced the provider
+rejection with that keyword and accepted the same closed shape without it.
+
+Large evidence dictionaries retain their complete enum in the host acceptance
+schema. The existing Codex projection omits a native enum that exceeds its
+1,000-value request budget or the 15,000-point string budget for enums with over
+250 values. Exact local membership and same-head citation validation still apply
+to every response. `specs/agent-execution-policy-hardening.md` records the shared
+provider adaptation and its deterministic boundary cases.

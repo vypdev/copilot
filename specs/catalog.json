@@ -2785,9 +2785,9 @@
       "id": "agent-runtime",
       "title": "Agent runtime, provider, model, and role routing",
       "status": "implemented",
-      "scope": "Resolve, provision, authenticate, authorize, and execute only the agent roles reachable by a run",
+      "scope": "Resolve, provision, authenticate, authorize, and execute only the agent roles reachable by a run, with provider-compatible native schemas and exact local acceptance",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-11-02",
+      "lastVerified": "2026-11-07",
       "specs": [
         "specs/agent-runtime-provider-and-model-routing.md",
         "specs/agent-execution-policy-hardening.md"

@@ -41,6 +41,43 @@ describe('Codex native output schema compatibility', () => {
         expect(projectCodexOutputSchema(schema)).toEqual(schema);
     });
 
+    it('shares the 1000-value native enum budget across nested properties and array items', () => {
+        const first = Array.from({ length: 995 }, (_, index) => `v${index}`);
+        const overflow = { type: 'string', enum: ['last'] };
+        const schema = object({ first: { type: 'string', enum: first }, rows: { type: 'array', items: { type: 'integer', enum: [1, 2, 3, 4, 5] } },
+            overflow });
+        expect(projectCodexOutputSchema(schema)).toEqual(object({ first: schema.properties.first, rows: schema.properties.rows, overflow: { type: 'string' } }));
+        expect(overflow.enum).toEqual(['last']);
+    });
+
+    it.each([15_000, 15_001])('projects a long enum only above the native Unicode boundary of %i points', points => {
+        const values = Array.from({ length: 251 }, (_, index) => String(index).padStart(59, 'x'));
+        values[0] += '🧪'.repeat(points - 251 * 59);
+        const value = { type: 'string', enum: values };
+        const schema = object({ value, identity: { type: 'string', enum: ['host-id'] } });
+        expect(projectCodexOutputSchema(schema)).toEqual(object({ value: points === 15_000 ? schema.properties.value : { type: 'string' }, identity: schema.properties.identity }));
+        expect(value.enum).toBe(values);
+    });
+
+    it('preserves long small enums and projects an oversized numeric enum', () => {
+        const schema = object({ text: { type: 'string', enum: ['x'.repeat(15_001)] }, value: { type: 'integer', enum: Array.from({ length: 1001 }, (_, index) => index) } });
+        expect(projectCodexOutputSchema(schema)).toEqual(object({ text: schema.properties.text, value: { type: 'integer' } }));
+    });
+
+    it('keeps exact local membership validation after projecting a complete large evidence dictionary', async () => {
+        const schema = object({ citation: { type: 'string', enum: Array.from({ length: 1024 }, (_, index) => `source-${index}`) } });
+        const execute = jest.fn().mockImplementation(async request => {
+            const policy = buildCodexExecutionPolicy({ configuration: request.configuration, capability: request.capability,
+                workspace: '/workspace', runtimeDirectory: '/runtime', outputSchema: request.outputSchema });
+            expect(JSON.parse(policy.artifacts[0].contents)).toEqual(object({ citation: { type: 'string' } }));
+            expect(request.outputSchema).toBe(schema);
+            return JSON.stringify({ citation: 'foreign-source' });
+        });
+        await expect(new FindingsAgentAdapter({ cli: { execute } }).query({ configuration: { provider: 'codex', modelProvider: 'openai', model: 'model' },
+            agentId: 'fixture', prompt: 'Complete immutable dictionary', options: { expectJson: true, schema } })).rejects.toThrow('outside the allowed enum');
+        expect(execute).toHaveBeenCalledTimes(1);
+    });
+
     it('rejects a loose original contract before producing a native projection', () => {
         expect(() => projectCodexOutputSchema({ ...object({ markdown: { type: 'string' } }), required: [] }))
             .toThrow('must require every property');

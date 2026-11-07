@@ -40467,13 +40467,22 @@ function tomlString(value) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.projectCodexOutputSchema = projectCodexOutputSchema;
 const strict_output_schema_policy_1 = __nccwpck_require__(56743);
-/** Keep string-size acceptance local; Codex's native decoder receives the compatible closed shape. */
+/** Keep decoder-incompatible constraints local while retaining the closed native shape. */
 function projectCodexOutputSchema(schema) {
     (0, strict_output_schema_policy_1.assertStrictOutputSchema)(schema);
-    return projectNode(schema);
+    return projectNode(schema, { remainingEnumValues: 1000 });
 }
-function projectNode(schema) {
+function projectNode(schema, budget) {
     const projected = { ...schema };
+    if (Array.isArray(schema.enum)) {
+        const stringPoints = schema.enum.reduce((total, value) => total + (typeof value === 'string' ? [...value].length : 0), 0);
+        if (schema.enum.length > budget.remainingEnumValues || (schema.enum.length > 250 && stringPoints > 15000)) {
+            delete projected.enum;
+        }
+        else {
+            budget.remainingEnumValues -= schema.enum.length;
+        }
+    }
     const types = typeof schema.type === 'string' ? [schema.type] : schema.type;
     if (types.includes('string')) {
         delete projected.minLength;
@@ -40481,10 +40490,10 @@ function projectNode(schema) {
     }
     if (types.includes('object')) {
         projected.properties = Object.fromEntries(Object.entries(schema.properties)
-            .map(([name, nested]) => [name, projectNode(nested)]));
+            .map(([name, nested]) => [name, projectNode(nested, budget)]));
     }
     if (types.includes('array'))
-        projected.items = projectNode(schema.items);
+        projected.items = projectNode(schema.items, budget);
     return projected;
 }
 
@@ -48852,7 +48861,7 @@ function progressBatchResponseSchema(manifest, batch, anchors, compact) {
                     properties: { ...schema.properties.requirements.items.properties,
                         summary: { ...schema.properties.requirements.items.properties.summary, maxLength: factLimit },
                         remaining: { ...schema.properties.requirements.items.properties.remaining, maxLength: factLimit },
-                        citations: { type: 'array', minItems: 1, maxItems: 8, uniqueItems: true,
+                        citations: { type: 'array', minItems: 1, maxItems: 8,
                             items: { type: 'string', enum: manifest.evidence.map(reference => reference.id) } } },
                     required: [...schema.properties.requirements.items.required, 'citations'] } } },
         required: [...schema.required, 'manifestDigest', 'batchId', 'headSha'] };

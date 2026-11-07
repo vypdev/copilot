@@ -2,7 +2,7 @@
 
 - Status: Implemented — automated gates complete; controlled provider smoke remains external
 - Date: 2026-09-11
-- Last updated: 2026-10-17
+- Last updated: 2026-11-07
 - Catalog capability ID: `agent-runtime`
 - Last verified: 2026-09-12 in the P1-C implementation worktree
 - Owners: Copilot maintainers and security reviewers
@@ -421,14 +421,19 @@ array defines its item schema. Optional values are represented by a required
 nullable field, never by omitting the property. An incompatible schema is a
 local planning error and cannot reach the provider.
 
-The Codex policy projects that validated contract into a native-compatible
-schema by omitting only string `minLength`/`maxLength` at schema nodes, including
-nullable strings and strings nested in object properties or array items. It
-MUST preserve literal property names, required lists, closed objects, type/enum
-constraints and numeric/array bounds. It MUST NOT mutate the caller's original
-schema: every returned response still undergoes all original local acceptance
-checks. This is a fixed provider adaptation, not an application/SDD exception
-or configurable relaxation. OpenCode and Cursor policies remain unchanged.
+The Codex policy projects the validated contract into a native-compatible schema.
+String `minLength` and `maxLength` remain local, including nullable strings and
+strings nested in object properties or array items. Native enum properties share
+a 1,000-value request budget in schema traversal order. An enum exceeding the
+remaining budget, or containing more than 250 values and over 15,000 Unicode
+string points, remains exclusively in the original local acceptance schema.
+Other enum properties retain their native constraint. Projection preserves literal
+property names, required lists, closed objects, types and numeric/array bounds.
+It MUST preserve the caller's original schema and every original acceptance check,
+including exact enum membership. This fixed provider adaptation applies to the
+complete same-head evidence dictionaries introduced by #916. Its five additional
+deterministic cases cover global enum accounting, Unicode boundaries, small long
+enums, numeric dictionaries and rejection through the real findings adapter.
 
 Controlled configuration sets web search disabled, multi-agent disabled,
 skill dependency installation disabled, history persistence none, workspace
@@ -666,7 +671,7 @@ source-context budget before reaching its former 30-minute limit during extensio
 coverage. The Windows allocation covers that remaining work and deferred cleanup;
 it does not alter the SDK's operation deadlines or reduce verification scope.
 
-This SDD owns at least **48 distinct cases**; parameterized provider/role rows
+This SDD owns at least **53 distinct cases**; parameterized provider/role rows
 count separately only when authority/argv differs.
 
 | Area | Minimum cases | Required risks |
@@ -680,8 +685,8 @@ count separately only when authority/argv differs.
 | Integration/security | 2 | effective sandbox matrix and env/credential isolation |
 | Output rejection diagnostics | 8 | Six closed local causes, forged-diagnostic suppression, real-child observer propagation; existing size fixtures retain both stream assertions |
 | Terminal process diagnostics | 8 | Exact output-token-limit line, prose/other-reason rejection, split/large/evicted tail cases, actual child privacy/cleanup, fixed logger propagation |
-| Codex native string-bound compatibility | 8 | Immutable input, nested/nullable strings, literal keyword property names, unchanged string constraints, numeric/array bounds, loose-schema rejection and real adapter minimum/maximum acceptance |
-| **Total** | **48** | no double counting |
+| Codex native decoder compatibility | 13 | Immutable input, nested/nullable strings, literal property names, unchanged local constraints, numeric/array bounds, loose-schema rejection, global enum and Unicode budgets, and real adapter length/membership acceptance |
+| **Total** | **53** | no double counting |
 
 All provider plan, role authority, executable, and runtime-manifest policies require
 100% enumerated branch coverage. Changed process/provider modules require 95%
@@ -795,7 +800,7 @@ and full local acceptance therefore remain separate responsibilities. The
 official [Structured Outputs guide](https://developers.openai.com/api/docs/guides/structured-outputs)
 documents a provider-specific schema subset; the reproduction is the evidence
 for this adaptation, not a universal claim that length keywords always fail.
-See `codex_output_schema_policy.ts` and its eight risk-derived cases. The
+See `codex_output_schema_policy.ts` and its thirteen risk-derived cases. The
 pre-branch gate continues to use its unchanged full application schema and
 publication proofs.
 

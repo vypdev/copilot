@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { projectCodexOutputSchema } from '../agent_execution/codex_output_schema_policy';
 import { captureProgressScopeSource } from '../progress_scope_source_policy';
 import { parseProgressScopeWithAnchors, parseProgressScopeClassifications } from '../progress_scope_policy';
 import { partitionProgressDiff } from '../progress_diff_partition_policy';
@@ -129,6 +130,9 @@ it('CommitScope916-C09 supplies strict native same-head and citation response sc
     expect(schema.properties.headSha.enum).toEqual([head]);
     expect(schema.properties.requirements.items.properties.citations.minItems).toBe(1);
     expect(schema.properties.requirements.maxItems).toBe(32);
+    const native = projectCodexOutputSchema(schema) as typeof schema;
+    expect(Object.keys(native.properties.requirements.items.properties.citations).sort()).toEqual(['items', 'maxItems', 'minItems', 'type']);
+    expect(native.properties.requirements.items.properties.citations).toEqual(schema.properties.requirements.items.properties.citations);
 });
 
 it('CommitScope916-C03 preserves a mandatory draft-only obligation and its original case reference', () => {

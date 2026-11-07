@@ -146,7 +146,7 @@ export function progressBatchResponseSchema(manifest: ProgressScopeManifest, bat
             properties: { ...schema.properties.requirements.items.properties,
                 summary: { ...schema.properties.requirements.items.properties.summary, maxLength: factLimit },
                 remaining: { ...schema.properties.requirements.items.properties.remaining, maxLength: factLimit },
-                citations: { type: 'array', minItems: 1, maxItems: 8, uniqueItems: true,
+                citations: { type: 'array', minItems: 1, maxItems: 8,
                     items: { type: 'string', enum: manifest.evidence.map(reference => reference.id) } } },
             required: [...schema.properties.requirements.items.required, 'citations'] } } },
         required: [...schema.required, 'manifestDigest', 'batchId', 'headSha'] };
