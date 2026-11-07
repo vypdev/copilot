@@ -142,6 +142,8 @@ it('CommitScope916-C03 preserves a mandatory draft-only obligation and its origi
     expect(scope.requirements[0]).toMatchObject({ id: 'R2', sources: [requirement, caseLine] });
     expect(scope.publication).toEqual(publication);
     expect(() => parseProgressScopeWithAnchors({ ...response, lines: [response.lines[0], { ...response.lines[1], kind: 'context' }] }, source, 'en-US', PROGRESS_BATCH_PROFILE)).toThrow();
+    expect(() => parseProgressScopeWithAnchors({ ...response, lines: [response.lines[0], { ...response.lines[1], sameAs: 'L2' }] }, source, 'en-US', PROGRESS_BATCH_PROFILE))
+        .toThrow(expect.objectContaining({ recovery: expect.objectContaining({ variables: expect.objectContaining({ reason: 'scope-classification-invalid', sourceLineId: 'L2' }) }) }));
 });
 it('CommitScope916-C10 allocates both publication fields across all batches before requests', () => {
     const f = fixture(128);

@@ -33,6 +33,9 @@ describe('complete untrusted progress prompt data', () => {
         expect(batch).toContain('Classify each listed canonical requirement owned by this assignment as required: ["L1"]');
         expect(batch).toContain('Distinct assigned clauses are retained in the complete bounded aggregate.');
         expect(batch).toContain('This request owns source assignment 2 of 3.');
+        expect(batch).toContain('Every listed canonical requirement must use sameAs "none"');
+        expect(batch).toContain('Never alias a canonical requirement to itself or another ID.');
+        expect(batch).toContain('Context, excluded and uncertain entries must also use sameAs "none".');
     });
     it('rejects oversized classification input without producing a partial prompt', () => {
         expect(() => getProgressScopePrompt('x'.repeat(AGENT_PROMPT_MAX_BYTES + 1), 'en-US')).toThrow(expect.objectContaining({ code: 'validation.evidence-too-large', recovery: {
