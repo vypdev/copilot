@@ -1,9 +1,9 @@
 # Bounded Progress Partition Response Recovery
 
 - Status: Implemented candidate; remote acceptance pending
-- Date: 2026-11-02
+- Date: 2026-11-08
 - Catalog capability ID: `github-communication-experience`
-- Last verified: 2026-11-02 local full validation; remote acceptance pending
+- Last verified: 2026-11-08 controlled provider qualification; native consumer acceptance pending
 - Owners: Copilot maintainers
 - Scope: One bounded replacement for a completed, attributable over-length file fact, preserving the complete immutable comparison and all output limits.
 - Related issues/PRs: [#830](https://github.com/vypdev/copilot/issues/830), [#852](https://github.com/vypdev/copilot/pull/852), [#837](https://github.com/vypdev/copilot/pull/837)
@@ -17,7 +17,7 @@ file description exceeds its unchanged output limit. For a completed and
 host-bound length rejection, request one concise replacement for that same part.
 Every part and final assessment still require normal validation before any
 progress publication. Persistent overflow MUST report its exact part, file,
-unit, field and observed/maximum Unicode code-point counts without model prose.
+unit, field and observed/maximum Unicode code-point or JSON UTF-8 byte counts without model prose.
 
 ```text
 Complete immutable comparison → part response → validate → one bounded replacement if eligible → validate every part → final assessment → normal publication, or retain prior progress.
@@ -69,6 +69,19 @@ remain intact; no percentage is published.
 - No external API or protocol change is proposed. The actual rejected prose
   and original generated length were not exposed by those historic diagnostics.
 
+- Domus #937 run 42437017801 pinned SDK `e915577459df03786d6ab39bdab08cdbcf043f7f`.
+  Its 176-path framed-v1 comparison rejected part 1 at 116/113 Unicode points
+  after one replacement, before final assessment. The framed-v1 planner still
+  reserved six JSON bytes per code point, while immutable-tree-v1 already used
+  exact per-field JSON bytes. The rejected prose is unavailable.
+- A new controlled provider qualification of the original frozen public Domus
+  comparison regenerated all 217 source units in 17 parts and assessed 169
+  requirements in six batches: 23 new provider calls, no replacements, zero real
+  writes. Its new plan admitted 600 points and 681 JSON bytes per field; the
+  largest returned fact used 48 points/bytes. A content audit of all 217 accepted
+  facts found complete phrases and preserved execution uncertainty. This is
+  controlled qualification, not a native current-head consumer Check.
+
 ### 2.4 Retrospective classification
 
 Not applicable: this is a prospective recovery companion, not an as-built claim.
@@ -95,7 +108,8 @@ locale, field and selected bound. Array position alone never proves identity.
 | PL-03 | Preflight original and replacement prompts for every part before the first model request; keep all capacities unchanged. |
 | PL-04 | Validate every receipt and final assessment; failed, stale or canceled work never publishes a partial percentage or mutates old progress. |
 | PL-05 | Expose precise localized operator facts for persistent attributable overflow without raw output, guessed names or extra comments. |
-| PL-06 | Preserve legacy/framed/immutable-tree, non-progress schema behavior, review, approval and coverage gates. |
+| PL-06 | Preserve legacy/framed/immutable-tree completeness, non-progress schema behavior, review, approval and coverage gates. |
+| PL-07 | Plan exact per-field encoded JSON bytes for both framed profiles within unchanged aggregate/prompt ceilings; validate all ordinary fields before byte recovery and revalidate every receipt quota at aggregation. |
 
 No truncation, model-message regex recovery, source omission, extra source
 collection, new flag, credential grant, approval exemption, release or deploy
@@ -129,13 +143,19 @@ once, validate all provisional results, then use normal publication or stop.
 1. Plan every original and replacement prompt against the unchanged runtime
    envelope and scope reserve, before any progress model call.
 2. Query the original part through the existing read-only semantic port.
-3. Only a typed completed-output length failure with exact current identity,
-   locale and maximum may enter replacement. Do not infer eligibility from text.
+3. Only a typed completed-output size failure with exact current identity,
+   locale and maximum may enter replacement. Before measuring byte-only overflow,
+   validate the complete ordinary response, including both fact fields, point
+   limits, locale, unique IDs and exact assignments. Never infer eligibility from text.
 4. Request the same complete source and schema with a fixed concise-response
    instruction. Never include the rejected body in that prompt.
 5. Revalidate the replacement normally, including exact unique assignments and
    protocol/source receipts. Earlier accepted parts stay provisional in memory.
-6. A second attributable overflow reports its own actual file and counts. An
+6. Unicode and JSON-byte failures share the same single allowance. A mixed second
+   failure reports that second dimension, without a third query. Capture source,
+   schema and model configuration before the first await; preserve the original
+   AbortSignal for both queries. A second attributable overflow reports its own
+   actual file and counts. An
    unrelated schema, locale, execution or cancellation failure keeps its category.
 
 The final assessment prompt MUST state the existing completion equivalence in
@@ -188,8 +208,13 @@ share a schema whose code-point maximum uses the field's byte allocation and
 the unchanged 600-point ceiling. Receipt admission counts the actual encoded
 bytes, including escapes, within that allocation. A short localized phrase
 guides generation while the host measures bytes. This admits every fact within the former six-byte-derived bound
-and gives ordinary prose more room. The legacy and framed-v1 profiles keep the
-six-byte calculation for their schema maximum. Source/frame/
+and gives ordinary prose more room. The framed-v1 profile now uses this same exact JSON-byte plan. Only legacy
+unframed requests keep the six-byte calculation. The new allocation is selected
+before any query, with the same 384,000 aggregate JSON bytes, 512 KiB prompt
+ceiling, profile minima and absolute 600-point limit. It never retroactively
+widens an admitted schema: a request already admitted at 113 points still
+rejects 116 points in its replacement. Both framed profiles instruct complete
+short phrases and enforce the separate encoded-byte quota without clipping. Source/frame/
 part/aggregate limits, final-assessment scope, prompt ceiling, execution
 configuration and cancellation deadlines are unchanged and not configurable here.
 
@@ -230,6 +255,8 @@ Impact: A progress part still exceeds its response limit after one bounded
 replacement; progress was not published.
 Action: Inspect part part-7, file src/example.ts, unit unit-21,
 field $.files[0].implemented: observed 618 Unicode code points; maximum 600.
+Do not automatically repeat an unchanged comparison. Qualify a corrected
+Copilot build before one fresh complete assessment.
 Retained state: Existing progress labels and assessments were preserved.
 ```
 
@@ -265,18 +292,23 @@ commands, grants or credentials. Do not log the rejected fact to count it.
 Emit at most one fixed recovery-state log record per replaced part, with no
 captured error or returned text. Persistent failures expose the validated bound
 identities, field and numeric counts through the shared error presentation and use
-`progress-partition-length-invalid`; other rejections keep existing IDs.
+`progress-partition-length-invalid` for Unicode points or
+`progress-partition-bytes-invalid` for JSON UTF-8 bytes; other rejections keep existing IDs.
 Existing correlation and run navigation remain. This flow creates no comment,
 extra notification or optional check, and cannot turn partial progress into
-approval. Retryability of a fresh attempt remains separate from the exhausted
-single replacement within the current attempt.
+approval. Both exhausted size errors are nonretryable. Do not automatically repeat an
+unchanged full comparison. Inspect the named fact and qualify a corrected build
+before one fresh assessment. Generic agent/provider retryability is unchanged.
+A safe admission record exposes only validated requirement IDs, uncertainty
+flags and manifest digest, enabling comparison of fresh classification results
+without logging source prose or forcing a historic classification count.
 
 ## 13. Compatibility, migration, rollout, and rollback
 
 No stored-state or response-schema migration. Both framed profiles keep exact
 source and receipt validation. The immutable final model input has a compact
-host-authored layout with the same complete inventory. Legacy, framed-v1,
-single-part and non-progress tasks keep their established behavior. Rebuild Action/CLI/API bundles normally. Deploying
+host-authored layout with the same complete inventory. Legacy unframed, single-part and non-progress tasks preserve their contracts;
+framed-v1 changes only new allocation planning and bounded byte recovery. Rebuild Action/CLI/API bundles normally. Deploying
 or releasing those bundles is outside this work. Rollback restores immediate
 rejection while preserving prior progress; no credentials or data need repair.
 
@@ -284,15 +316,15 @@ rejection while preserving prior progress; no credentials or data need repair.
 
 | Area | Minimum distinct cases | Risks |
 |---|---:|---|
-| Pure identity/bound policy | 9 | Current versus foreign part/path/unit/locale, malformed facts, unchanged limit |
-| Application/state/replacement | 8 | Both fact fields, first/later part, persistent overflow, provider/cancel failure, no third call |
-| Adapter/schema | 8 | Code-point count, exact schema identity, missing/unsafe metadata, unrelated task compatibility |
-| Whole-prompt capacity | 4 | Original/replacement reserve, later-part preflight, zero calls on overflow, single-part compatibility |
-| Product presentation | 4 | English/Spanish facts, no raw output, closed variables and escaped text |
-| Complete publication integration | 3 | Successful complete aggregation, failure retains labels, stale result never publishes |
+| Pure identity/bound policy | 17 | Current versus foreign part/path/unit/locale, malformed facts, unchanged limit |
+| Application/state/replacement | 15 | Both fact fields, first/later part, persistent overflow, provider/cancel failure, no third call |
+| Adapter/schema | 10 | Code-point count, exact schema identity, missing/unsafe metadata, unrelated task compatibility |
+| Whole-prompt capacity | 5 | Original/replacement reserve, later-part preflight, zero calls on overflow, single-part compatibility |
+| Product presentation | 6 | English/Spanish facts, no raw output, closed variables and escaped text |
+| Complete publication integration | 7 | Successful complete aggregation, failure retains labels, stale result never publishes |
 | Part/final recovery composition | 4 | Independent single allowances, complete immutable inventory through late failure, no final query after exhausted part or rejected escaped fact |
 | Immutable aggregate capacity | 4 | Compact exact tuple projection, 21 points in the old 19-point budget, 42 points and exact ASCII and four-byte Unicode boundaries in the old 24-point budget, escaped byte overflow rejected at receipt admission |
-| **Total** | **44** | Original 36 cases, 4 composed-stage cases and 4 immutable capacity cases |
+| **Total** | **68** | Original 44 cases plus 24 source-size allocation/recovery cases |
 
 The four composition cases live in
 `src/application/usecases/actions/__tests__/progress_recovery_composition.integration.test.ts`:
@@ -302,12 +334,27 @@ The four composition cases live in
 | progress-partition-composition-C01 | PL-02, PL-04, PL-06 | A legacy multipart response uses one part replacement and one final reassessment, preserves both independent allowances and publishes once after all six queries finish. |
 | progress-partition-composition-C02 | PL-02, PL-04, PL-06 | The 887-path, 952-unit, 6,503,131-byte immutable fixture repairs its last part, then rejects two contradictory final estimates with exact exhaustion counts, unchanged source-read counts and no publication. |
 | progress-partition-composition-C03 | PL-02, PL-04, PL-06 | A second attributable part overflow terminates after two part queries; no final query or publication occurs. |
-| progress-partition-composition-C04 | PL-03, PL-04, PL-06 | A fact inside the schema point limit exceeds its escaped byte allocation. No receipt, replacement, final query or publication follows. |
+| progress-partition-composition-C04 | PL-03, PL-04, PL-06 | A fact inside the schema point limit exceeds its escaped byte allocation. One same-source replacement also fails; no accepted receipt, final query or publication follows. |
 
 These integration cases add to this companion's budget; they do not double-count
 or replace the final controller's separately owned 40-case acceptance inventory.
 `immutable_progress_protocol_policy.test.ts` covers the four immutable capacity
 cases, including acceptance at the old worst-case escape boundary.
+
+
+The 24 additional cases use `progress-partition-size-C01`–`C24`. C01–C18 and
+C23–C24 live in `progress_partition_byte_recovery.test.ts`; C19–C22 live in
+`progress_partition_byte_publication.integration.test.ts`. Each declaration
+counts once; parameterized samples do not inflate the budget.
+
+| Cases | Requirements | Observable contract |
+|---|---|---|
+| C01, C04–C06, C15–C18 | PL-01, PL-06, PL-07 | Exact new framed allocation; old worst-case escape boundary retained; Spanish/CJK/astral and JSON escapes measured; closed bounded carrier; host binding; forged receipt quotas rejected; full useful ASCII facts retained. |
+| C02–C03, C07–C09, C11–C12 | PL-01, PL-02, PL-04, PL-07 | Native byte-only replacement; admitted 113-point schema unchanged; same complete source/configuration; persistent and mixed overflow share one allowance; captured state resists caller mutation; provider/cancellation and signal preserved. |
+| C10, C14 | PL-01, PL-06, PL-07 | Every ordinary field validates before byte attribution; unframed no-quota compatibility. |
+| C13 | PL-03, PL-07 | Invalid byte allocation causes zero queries. |
+| C19–C22 | PL-02, PL-04, PL-06, PL-07 | Complete one-publication success, later byte failure before final stage, freshness rejection with zero publication, safe classification ID/uncertainty audit log. |
+| C23–C24 | PL-05, PL-06, PL-07 | Real documentation JSON round-trip; localized exact units/fallback; both exhausted dimensions stop unchanged retries; generic errors unchanged. |
 
 Require 100% new pure-policy branches and every modified coverable line with no
 partials in Codecov against the correct live base. Preserve repository-wide
@@ -341,7 +388,11 @@ weaken their requirements.
 7. A repaired part followed by a repaired final assessment publishes once; a
    persistent part failure never enters the final stage, while final exhaustion
    retains all complete source facts without rereading or repeating parts.
-8. A previously 19-point immutable fixture admits 21-point facts within the
+8. A framed request derives a fresh exact byte allocation without growing any
+   aggregate ceiling. Unicode, UTF-8 and JSON escaping boundaries validate;
+   an existing 113-point schema never accepts 116 points. Byte and point failures
+   share one replacement; exhausted size failures stop unchanged rerun loops.
+9. A previously 19-point immutable fixture admits 21-point facts within the
    same byte ceiling. Every reordered tuple maps back to its validated unit and
    path. With a former 24-point budget, 42-point ordinary prose and the exact
    single-byte and four-byte Unicode boundaries fit. The old worst-case escape boundary also
@@ -357,6 +408,7 @@ weaken their requirements.
 | PL-03 | Complete prompt planner | Capacity and zero-query fixtures | Contributor/recovery guide |
 | PL-04 | Existing aggregate/freshness/publication | Complete CheckProgress integration and composition-C01/C02/C03/C04 | Progress guide |
 | PL-05 | Recovery normalizer and existing catalogs | English/Spanish semantic output and sanitization | Error reference |
+| PL-07 | Exact allocation, byte policy, query snapshot and aggregate owners | size-C01–C24, complete native adapter/publication paths | Execution contract and byte error reference |
 | PL-06 | Existing protocol and architecture owners | Legacy/framed/immutable, composition-C01/C02/C03/C04, full suites, bundles and Codecov | This companion and original recovery owner |
 
 ## 18. Implementation sequence
@@ -368,7 +420,7 @@ Graphify, normal bundles/hooks and current-head remote review.
 
 ## 19. Definition of Done
 
-- [ ] Every requirement has executable acceptance and all 44 risk cases pass.
+- [ ] Every requirement has executable acceptance and all 68 risk cases pass.
 - [ ] Inward dependencies, semantic ports and module budgets pass.
 - [ ] Source, response, prompt, configuration, deadline and publication gates remain.
 - [ ] Localized primary states, exact diagnostics and sanitization pass.

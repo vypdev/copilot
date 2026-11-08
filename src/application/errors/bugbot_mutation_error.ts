@@ -1,3 +1,4 @@
+import { pullRequestReviewProviderCode } from '../policies/pull_request_review_provider_code_policy';
 import { ApplicationError, type ApplicationErrorCode } from './application_error';
 import { PullRequestReviewOperationError, type PullRequestReviewOperation } from '../ports/pull_request_review_errors';
 
@@ -21,11 +22,7 @@ export function bugbotMutationError(cause: unknown, stage: BugbotMutationDiagnos
   if (cause instanceof BugbotMutationError) return cause;
   const provider = cause instanceof PullRequestReviewOperationError ? cause : undefined;
   const status = provider?.providerStatus;
-  const errorCode = status === 401 ? 'authorization.credential-invalid' : status === 403 ? 'authorization.denied'
-    : status === 404 ? 'provider.not-found' : status === 409 ? 'provider.conflict'
-      : status === 429 ? 'provider.rate-limited'
-        : status === 408 || status === 425 ? 'provider.unavailable'
-          : status && status < 500 ? 'provider.contract-invalid' : 'provider.unavailable';
+  const errorCode = pullRequestReviewProviderCode(status);
   const first = findingIds[0];
   return new BugbotMutationError(Object.freeze({
     stage, operation: provider?.operation ?? fallback,

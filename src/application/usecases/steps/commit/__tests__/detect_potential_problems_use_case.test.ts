@@ -1,3 +1,4 @@
+import { PullRequestReviewOperationError } from '../../../../ports/pull_request_review_errors';
 /**
  * Unit tests for DetectPotentialProblemsUseCase (bugbot on push).
  * Covers: skip when OpenCode/issue missing, prompt with/without previous findings,
@@ -779,6 +780,61 @@ describe("DetectPotentialProblemsUseCase", () => {
     expect(results[0].success).toBe(false);
     expect(mockAskAgent).not.toHaveBeenCalled();
     expect(mockCreateReviewWithComments).not.toHaveBeenCalled();
+  });
+
+  it('freshness-C11: fails the completed zero-candidate analysis before publication with safe provider facts', async () => {
+    mockGetChangedFiles.mockResolvedValue([{ filename: 'src/bar.ts', status: 'modified' }]);
+    mockGetFilesWithFirstDiffLine.mockResolvedValue([{ path: 'src/bar.ts', firstLine: 5 }]);
+    mockGetFilesWithDiffLocations.mockResolvedValue([{ path: 'src/bar.ts', firstLine: 5, lines: [5] }]);
+    const failure = new PullRequestReviewOperationError('get-head-sha', { providerStatus: 403, providerReference: 'AB12:CD34' });
+    failure.message = 'PRIVATE_PROVIDER_RESPONSE';
+    mockAskAgent.mockImplementation(async () => {
+      mockGetPullRequestHeadSha.mockRejectedValueOnce(failure);
+      return { findings: [], resolved_findings: [] };
+    });
+    const [result] = await invokeUseCase(useCase, baseParam({ issueNumber: -1, isPullRequest: true,
+      eventName: 'pull_request', inputs: { eventName: 'pull_request', pull_request: {} },
+      pullRequest: { number: 100, head: 'feature/head', action: 'synchronize' } }));
+    expect(result.success).toBe(false);
+    expect(result.errors[0]).toMatchObject({ code: 'authorization.denied', retryable: false,
+      recovery: { id: 'bugbot-freshness-before-publication', variables: { operation: 'get-head-sha',
+        providerStatus: 'http-403', providerReference: 'AB12:CD34', reason: 'provider-request-failed' } } });
+    expect(mockAskAgent).toHaveBeenCalledTimes(1); expect(mockGetPullRequestHeadSha).toHaveBeenCalledTimes(2);
+    expect(mockCreateReviewWithComments).not.toHaveBeenCalled(); expect(mockAddComment).not.toHaveBeenCalled();
+    expect(mockUpdatePullRequestReviewComment).not.toHaveBeenCalled(); expect(mockResolvePullRequestReviewThread).not.toHaveBeenCalled();
+    expect(JSON.stringify(result)).not.toContain('PRIVATE_PROVIDER_RESPONSE');
+  });
+
+  it('freshness-C12: retains a completed finding write when the post-publication freshness read fails', async () => {
+    mockGetChangedFiles.mockResolvedValue([{ filename: 'src/bar.ts', status: 'modified' }]);
+    mockGetFilesWithFirstDiffLine.mockResolvedValue([{ path: 'src/bar.ts', firstLine: 5 }]);
+    mockGetFilesWithDiffLocations.mockResolvedValue([{ path: 'src/bar.ts', firstLine: 5, lines: [5] }]);
+    mockAskAgent.mockResolvedValue({ findings: [{ id: 'freshness-finding', title: 'Missing validation',
+      description: 'Validate this input.', file: 'src/bar.ts', line: 5 }], resolved_findings: [] });
+    const published = jest.fn(async () => { mockGetPullRequestHeadSha.mockRejectedValueOnce(
+      new PullRequestReviewOperationError('get-head-sha', { providerStatus: 503 })); });
+    mockCreateReviewWithComments.mockImplementation(published); mockAddComment.mockImplementation(published);
+    const [result] = await invokeUseCase(useCase, baseParam({ issueNumber: -1, isPullRequest: true,
+      eventName: 'pull_request', inputs: { eventName: 'pull_request', pull_request: {} },
+      pullRequest: { number: 100, head: 'feature/head', action: 'synchronize' } }));
+    expect(result.success).toBe(false); expect(published).toHaveBeenCalledTimes(1);
+    expect(result.errors[0]).toMatchObject({ code: 'provider.unavailable', retryable: true,
+      recovery: { id: 'bugbot-freshness-after-publication', variables: { operation: 'get-head-sha',
+        providerStatus: 'http-503', providerReference: 'unavailable', reason: 'provider-request-failed' } } });
+    expect(mockAskAgent).toHaveBeenCalledTimes(1); expect(mockGetPullRequestHeadSha).toHaveBeenCalledTimes(3);
+    expect(mockUpdatePullRequestReviewComment).not.toHaveBeenCalled(); expect(mockResolvePullRequestReviewThread).not.toHaveBeenCalled();
+    const persisted = mockCreateReviewWithComments.mock.calls[0][5];
+    expect(persisted).toHaveLength(1);
+    mockListPullRequestReviewComments.mockResolvedValue([{ id: 777, identity: 'PRRC_777', authorLogin: 'bot',
+      body: persisted[0].body, path: 'src/bar.ts', line: 5 }]);
+    mockCreateReviewWithComments.mockResolvedValue(undefined); mockAddComment.mockResolvedValue({ id: 888 });
+    const readsBefore = mockGetPullRequestHeadSha.mock.calls.length;
+    const [recovered] = await invokeUseCase(useCase, baseParam({ issueNumber: -1, isPullRequest: true,
+      eventName: 'pull_request', inputs: { eventName: 'pull_request', pull_request: {} },
+      pullRequest: { number: 100, head: 'feature/head', action: 'synchronize' } }));
+    expect(recovered.success).toBe(true); expect(mockAskAgent).toHaveBeenCalledTimes(2);
+    expect(mockGetPullRequestHeadSha.mock.calls.length).toBeGreaterThanOrEqual(readsBefore + 3);
+    expect(mockCreateReviewWithComments.mock.calls.filter(args => args[5].length > 0)).toHaveLength(1);
   });
 
   it("discards analysis when the PR head changes while the agent is running", async () => {

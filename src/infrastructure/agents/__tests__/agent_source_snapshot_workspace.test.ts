@@ -124,7 +124,8 @@ it('source-context-C38: elapsed admission cannot reset the original monotonic de
 });
 it.each(['success', 'failure', 'cancel', 'timeout'] as const)('source-context-C46/source-context-C53: native %s child uses the selected cwd and cleans all owned state', async outcome => {
     const plan = prepare(), receipt = join(fixture.directory, `native-${outcome}.json`), controller = new AbortController();
-    const script = `const fs=require('node:fs'); fs.writeFileSync(${JSON.stringify(receipt)},JSON.stringify({cwd:process.cwd(),raw:fs.readFileSync('raw.txt','hex'),head:fs.readFileSync('.git/HEAD','utf8')})); ${outcome === 'failure' ? 'process.exitCode=75;' : outcome === 'cancel' || outcome === 'timeout' ? 'setInterval(()=>{},1000);' : 'process.stdout.write("native-ok");'}`;
+    // Complete prompt delivery before this fixture exits; otherwise EPIPE races the intended exit-75 classification.
+    const script = `let prompt=''; process.stdin.setEncoding('utf8'); process.stdin.on('data',chunk=>prompt+=chunk); process.stdin.on('end',()=>{ if(prompt!=='Read.') throw Error('Unexpected fixture prompt'); const fs=require('node:fs'); fs.writeFileSync(${JSON.stringify(receipt)},JSON.stringify({cwd:process.cwd(),raw:fs.readFileSync('raw.txt','hex'),head:fs.readFileSync('.git/HEAD','utf8')})); ${outcome === 'failure' ? 'process.exitCode=75;' : outcome === 'cancel' || outcome === 'timeout' ? 'setInterval(()=>{},1000);' : 'process.stdout.write("native-ok");'} });`;
     const native = { ...plan, executable: process.execPath, launcherArgv: [], argv: ['-e', script], promptMode: 'stdin' as const,
         outputProtocol: 'plain-text' as const, timeoutMs: outcome === 'timeout' ? 5000 : plan.timeoutMs };
     const result = runAgentCli(native, 'Read.', controller.signal);

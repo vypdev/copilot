@@ -16,6 +16,7 @@ import type { ProgressDiffEvidence } from '../../../ports/progress_diff_query_po
 import type { FindingsQueryRequest } from '../../../ports/agent_findings_ports';
 import { assertAgentResponseSchema } from '../../../../data/repository/agent_json_schema_validator';
 import { interpretProgressAgentOutput } from '../../../../data/repository/progress_agent_response_policy';
+import { assessmentWireFixture } from './fixtures/progress_assessment_wire_fixture';
 
 const base = 'a'.repeat(40), head = 'b'.repeat(40);
 const fixtureText = readFileSync(join(__dirname, 'fixtures/domus-29-immutable-replay.json.gz.hex'), 'utf8');
@@ -46,17 +47,20 @@ function scenario(body = Array.from({ length: 33 }, (_, index) => `Implement uni
                     : properties.path.enum.map((path: string) => ({ path, implemented: 'Present.', remaining: 'Unknown.' })) };
         }
         const properties = schema.properties.requirements.items.properties;
-        expect(request.prompt).toContain(`Each string has a hard limit of ${properties.summary.maxLength} Unicode code points, counting spaces and punctuation.`);
-        expect(request.prompt).toContain(properties.summary.description);
+        if (!properties.assessment) {
+            expect(request.prompt).toContain(`Each string has a hard limit of ${properties.summary.maxLength} Unicode code points, counting spaces and punctuation.`);
+            expect(request.prompt).toContain(properties.summary.description);
+        } else expect(request.prompt).toContain('Complete closed-fact assessment protocol');
         expect(request.prompt).toContain('Keep paths, IDs, source quotes and background out of summary and remaining.');
         expect(request.prompt).toContain(JSON.stringify({ manifestDigest: schema.properties.manifestDigest.enum[0], batchId: schema.properties.batchId.enum[0],
             headSha: schema.properties.headSha.enum[0], evidenceDictionary: properties.citations.items.enum }));
         const response = { outputLocale: 'en-US', progress: 50, manifestDigest: schema.properties.manifestDigest.enum[0],
             batchId: schema.properties.batchId.enum[0], headSha: schema.properties.headSha.enum[0], requirements: properties.id.enum.map((id: string) => ({ id,
                 status: 'verification-unknown', evidence: 'external-unverified', summary: 'Source reviewed.', remaining: 'Execution unverified.', citations: [properties.citations.items.enum[0]] })) };
-        assertAgentResponseSchema(response, schema, 'progress_response');
-        finalOutputs.push(response);
-        return response;
+        const wire = assessmentWireFixture(response, schema);
+        assertAgentResponseSchema(wire, schema, 'progress_response');
+        finalOutputs.push(wire);
+        return wire;
     });
     const check = new CheckProgressUseCase({ getDescription: async () => state.body }, { getLabels: async () => [], setLabels }, { setProgressLabel },
         { getListOfBranches: async () => [] }, { getOpenPullRequestNumbersByHeadBranch: async () => [29] }, { query },
@@ -101,8 +105,8 @@ it('CommitScope916-C06 assesses 33 distinct obligations in two bounded groups th
     expect(f.finalOutputs.map(output => output.requirements.length)).toEqual([32, 1]);
     expect(f.setProgressLabel).toHaveBeenCalledTimes(1); expect(f.setLabels).toHaveBeenCalledTimes(1);
 });
-it('Issue925 publishes one complete assessment when every batch uses its maximum admitted text', async () => {
-    const f = scenario(), answer = f.query.getMockImplementation()!;
+it('Issue925 preserves the maximum admitted narrative allocation on the ordinary 32-requirement path', async () => {
+    const f = scenario(Array.from({ length: 32 }, (_, index) => `Implement unique obligation ${index + 1}.`).join('\n')), answer = f.query.getMockImplementation()!;
     f.query.mockImplementation(async request => {
         const response = await answer(request) as any;
         if (response.requirements) {
@@ -113,26 +117,26 @@ it('Issue925 publishes one complete assessment when every batch uses its maximum
     });
     const results = await f.invoke();
     expect(results.at(-1)).toMatchObject({ success: true, payload: { progress: 50 } });
-    expect(f.finalOutputs).toHaveLength(2);
+    expect(f.finalOutputs).toHaveLength(1);
     expect(f.setProgressLabel).toHaveBeenCalledTimes(1);
     const [intent] = selectSemanticStatusIntents({ locale: 'en-US', results });
     const card = renderSemanticStatus(intent);
     expect(card).not.toContain('[untrusted content truncated]');
     for (const response of f.finalOutputs) for (const fact of response.requirements) expect(card).toContain(`[${fact.id}]`);
 });
-it('github-communication-experience-change-C181: exhausted length in a later batch discards every provisional receipt', async () => {
+it('github-communication-experience-change-C181: exhausted completion in a later closed-fact batch discards every provisional receipt', async () => {
     const f = scenario(), answer = f.query.getMockImplementation()!;
     f.query.mockImplementation(async request => {
         const response = await answer(request) as any;
         if (response.requirements && f.finalOutputs.length >= 2) {
             const schema: any = request.options!.schema;
-            response.requirements[0].remaining = '🧪'.repeat(schema.properties.requirements.items.properties.remaining.maxLength + 1);
+            response.requirements.forEach((fact: Record<string, unknown>) => { fact.assessment = 'supported'; });
             return interpretProgressAgentOutput(JSON.stringify(response), 'assessment', schema);
         }
         return response;
     });
     const results = await f.invoke();
-    expect(results.at(-1)).toMatchObject({ success: false, errors: [{ recovery: { id: 'progress-assessment-length-invalid', variables: { requirementId: 'R33', sourceLineId: 'L33' } } }] });
+    expect(results.at(-1)).toMatchObject({ success: false, errors: [{ recovery: { id: 'progress-completion-recovery-exhausted', variables: { requirementCount: 1, supportedCount: 1 } } }] });
     expect(f.finalOutputs).toHaveLength(3); retained(f);
     expect(selectSemanticStatusIntents({ locale: 'en-US', results })).toEqual([]);
 });
@@ -157,13 +161,13 @@ it('CommitScope916-C17 replays the original Domus body and complete immutable co
     expect(card).not.toContain('[untrusted content truncated]');
     for (const outcome of outcomes) expect(card).toContain(`[${outcome.id}]`);
 });
-it('github-communication-experience-change-C167: the archived Domus inventory retains all 108 requirements through native batch-length recovery', async () => {
+it('github-communication-experience-change-C167: the archived Domus inventory retains all 108 requirements through one complete closed-fact correction', async () => {
     const diff = await domusComparison(), f = scenario(fixture.body, diff), answer = f.query.getMockImplementation()!;
     f.query.mockImplementation(async request => {
         const response = await answer(request) as any;
         if (response.requirements) {
             const schema: any = request.options!.schema;
-            if (f.finalOutputs.length === 1) response.requirements[0].summary = '🧪'.repeat(schema.properties.requirements.items.properties.summary.maxLength + 1);
+            if (f.finalOutputs.length === 1) response.requirements.forEach((fact: Record<string, unknown>) => { fact.assessment = 'supported'; });
             return interpretProgressAgentOutput(JSON.stringify(response), 'assessment', schema);
         }
         return response;

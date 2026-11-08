@@ -32592,14 +32592,34 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
         action: 'Inspect the original requirement and response schema. Details: phase {phase}, reason {reason}, field {field}, requirement {requirementId}, original issue line {sourceLineId}. none means no verified identity is available. A fresh attempt may help when the provider can satisfy the unchanged contract; do not relax acceptance or verification.',
         retainedState: 'Existing progress labels and published assessments were preserved. An optional check-publication warning is a separate result.',
     }),
+    'progress-partition-bytes-invalid': Object.freeze({
+        impact: 'A source-part fact still exceeds its JSON UTF-8 allocation after one replacement; progress was not published.',
+        action: 'Inspect part {partitionId}, file {filePath}, unit {unitId}, field {field}: observed {observed} JSON UTF-8 bytes; maximum {maximum}, excluding enclosing quotes. Do not automatically repeat the unchanged comparison. Qualify a corrected build against the pinned sources before one fresh complete assessment.',
+        retainedState: 'Prior progress labels and assessments were preserved. No partial percentage or passing verification was published; source freshness, review and coverage remain independent gates.',
+    }),
     'progress-partition-length-invalid': Object.freeze({
         impact: 'A progress part still exceeds its response limit after one bounded replacement; progress was not published.',
-        action: 'Inspect part {partitionId}, file {filePath}, unit {unitId}, field {field}: observed {observed} Unicode code points; maximum {maximum}. The replacement must satisfy the unchanged schema. Do not remove files, truncate facts, relax acceptance or bypass verification.',
+        action: 'Inspect part {partitionId}, file {filePath}, unit {unitId}, field {field}: observed {observed} Unicode code points; maximum {maximum}. Do not automatically repeat the unchanged comparison. Qualify a corrected build against the pinned sources before one fresh complete assessment. Preserve every file, source unit and verification gate.',
         retainedState: 'Existing progress labels and assessments were preserved. No partial percentage or passing verification was published; execution and optional check-publication failures remain separate.',
+    }),
+    'bugbot-freshness-before-publication': Object.freeze({
+        impact: 'Bugbot could not confirm the current PR before publication: operation {operation}, status {providerStatus}, reason {reason}, provider reference {providerReference}.',
+        action: 'Inspect the named operation and error code; repair provider access or response before rechecking from the current head. Completed analysis alone is not a fresh review. Keep source identity and reconciliation checks enabled.',
+        retainedState: 'This evaluation published no new finding mutations. Prior findings and resolutions were retained; no passing current review was authorized.',
+    }),
+    'bugbot-freshness-after-publication': Object.freeze({
+        impact: 'Bugbot could not confirm the current PR after publication: operation {operation}, status {providerStatus}, reason {reason}, provider reference {providerReference}.',
+        action: 'Inspect the named operation and error code; repair the provider cause and recheck the current head and persisted findings. Reconciliation must retain completed effects without duplicating them. Do not infer a clean review or roll back completed writes.',
+        retainedState: 'Finding mutations may already have completed. Existing effects were retained; this evaluation did not authorize a passing current review or repeat publication.',
+    }),
+    'bugbot-partition-query-exhausted': Object.freeze({
+        impact: 'A completed Bugbot partition response remained invalid after {attempts} attempts; the review was not published.',
+        action: 'Inspect response reason {reason} and the current run. Qualify the provider output contract before a fresh complete review. This diagnostic describes completed response validation, not an execution infrastructure failure.',
+        retainedState: 'Prior findings and resolutions were preserved. No partial review was published. Source freshness and complete-review gates remain required.',
     }),
     'progress-assessment-length-invalid': Object.freeze({
         impact: 'An acceptance field still exceeds its unchanged response limit after one complete replacement; progress was not published.',
-        action: 'Inspect phase assessment, requirement {requirementId}, original source {sourceLineId}, field {field}: observed {observed} Unicode code points; maximum {maximum}. Start a fresh complete assessment when the provider can satisfy the unchanged schema. Preserve every requirement and citation; do not truncate facts, raise limits or bypass verification.',
+        action: 'Inspect phase assessment, requirement {requirementId}, original source {sourceLineId}, field {field}: observed {observed} Unicode code points; maximum {maximum}. Do not automatically repeat the unchanged comparison. Validate a corrected Copilot build against the pinned source before starting one fresh complete assessment. Preserve every requirement and citation; do not truncate facts, raise limits or bypass verification.',
         retainedState: 'Existing progress labels and published assessments were preserved. No partial percentage was published. Verification, review, coverage and approval remain independent gates.',
     }),
     'progress-completion-recovery-exhausted': Object.freeze({
@@ -32722,6 +32742,16 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
         action: 'Run {command} to let the configured fixer resolve eligible conflicts, or use --dry-run to inspect the merge without publishing it.',
         retainedState: 'No synchronization commit was pushed; remote branches were preserved.',
     }),
+    'branch-sync-sensitive-paths': Object.freeze({
+        impact: 'Automatic branch synchronization stopped: {sensitiveCount} protected paths occur among {conflictCount} conflicts.',
+        action: 'Review the conflicted paths in the workflow log and use the authorized maintainer recovery for protected files. After an approved source update, inspect {command} --dry-run. Repeating unchanged conflicts does not change this policy.',
+        retainedState: 'No fixer, repository verifier or synchronization push was invoked; existing remote heads were preserved.',
+    }),
+    'branch-sync-conflict-limit': Object.freeze({
+        impact: 'Automatic branch synchronization stopped: {conflictCount} conflicts exceed the limit of {limit}.',
+        action: 'Reduce the conflicted set through reviewed source changes or authorized maintainer recovery, then inspect {command} --dry-run. Repeating the unchanged command cannot reduce this set.',
+        retainedState: 'No fixer, repository verifier or synchronization push was invoked; existing remote heads were preserved.',
+    }),
     'branch-sync-fixer-unavailable': Object.freeze({
         impact: 'Branch synchronization stopped because the merge has conflicts and no fixer agent is configured.',
         action: 'Configure a supported fixer and retry {command}; use --dry-run to inspect the merge without publishing it.',
@@ -32813,14 +32843,34 @@ const SPANISH_RECOVERY_CONTENT = Object.freeze({
         action: 'Inspecciona el requisito original y el esquema de respuesta. Detalles: fase {phase}, motivo {reason}, campo {field}, requisito {requirementId}, línea original de la issue {sourceLineId}. none indica que no hay una identidad verificada. Un nuevo intento puede ayudar si el proveedor cumple el contrato sin cambiarlo; no relajes la aceptación ni la verificación.',
         retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas. Un aviso de publicación del check opcional corresponde a otro resultado.',
     }),
+    'progress-partition-bytes-invalid': Object.freeze({
+        impact: 'Un hecho de una parte sigue superando su asignación JSON UTF-8 tras una sustitución; no se publicó el progreso.',
+        action: 'Inspecciona la parte {partitionId}, archivo {filePath}, unidad {unitId}, campo {field}: observado {observed} bytes JSON UTF-8; máximo {maximum}, sin las comillas exteriores. No repitas automáticamente la comparación sin cambios. Valida una compilación corregida con las fuentes fijadas antes de una evaluación nueva completa.',
+        retainedState: 'Se conservaron las etiquetas y evaluaciones anteriores. No se publicó un porcentaje parcial ni una verificación aprobada; los controles de fuente vigente, revisión y cobertura siguen siendo independientes.',
+    }),
     'progress-partition-length-invalid': Object.freeze({
         impact: 'Una parte del progreso sigue superando el límite de respuesta tras una sustitución acotada; no se publicó el progreso.',
-        action: 'Inspecciona la parte {partitionId}, archivo {filePath}, unidad {unitId}, campo {field}: observado {observed} puntos de código Unicode; máximo {maximum}. La sustitución debe cumplir el mismo esquema. No elimines archivos, recortes los hechos, relajes la aceptación ni eludas la verificación.',
+        action: 'Inspecciona la parte {partitionId}, archivo {filePath}, unidad {unitId}, campo {field}: observado {observed} puntos de código Unicode; máximo {maximum}. No repitas automáticamente la comparación sin cambios. Valida una compilación corregida con las fuentes fijadas antes de una evaluación nueva completa. Conserva todos los archivos, hechos y controles de verificación.',
         retainedState: 'Se conservaron las etiquetas y evaluaciones de progreso. No se publicó ningún porcentaje parcial ni verificación aprobada; los fallos de ejecución y de publicación del check opcional siguen siendo independientes.',
+    }),
+    'bugbot-freshness-before-publication': Object.freeze({
+        impact: 'Bugbot no pudo confirmar la PR actual antes de publicar: operación {operation}, estado {providerStatus}, motivo {reason}, referencia del proveedor {providerReference}.',
+        action: 'Inspecciona la operación y el código de error; corrige el acceso o la respuesta del proveedor antes de revisar el head actual. Completar el análisis no confirma la vigencia de la revisión. Mantén los controles de identidad y reconciliación.',
+        retainedState: 'Esta evaluación no publicó cambios nuevos en los findings. Se conservaron los hallazgos y resoluciones anteriores; no se autorizó una revisión actual aprobada.',
+    }),
+    'bugbot-freshness-after-publication': Object.freeze({
+        impact: 'Bugbot no pudo confirmar la PR actual después de publicar: operación {operation}, estado {providerStatus}, motivo {reason}, referencia del proveedor {providerReference}.',
+        action: 'Inspecciona la operación y el código de error; corrige la causa y vuelve a comprobar el head y los findings persistidos. La reconciliación debe conservar los efectos completados sin duplicarlos. No deduzcas una revisión limpia ni reviertas publicaciones completadas.',
+        retainedState: 'Es posible que ya se hayan completado cambios en los findings. Se conservaron los efectos existentes; esta evaluación no autorizó una revisión actual aprobada ni la repetición de publicaciones.',
+    }),
+    'bugbot-partition-query-exhausted': Object.freeze({
+        impact: 'La respuesta completada de una partición de Bugbot siguió siendo inválida tras {attempts} intentos; no se publicó la revisión.',
+        action: 'Inspecciona el motivo de respuesta {reason} y la ejecución actual. Valida el contrato de salida del proveedor antes de una revisión completa nueva. Este diagnóstico describe la validación de una respuesta completada, no un fallo de infraestructura de ejecución.',
+        retainedState: 'Se conservaron los hallazgos y resoluciones anteriores. No se publicó una revisión parcial. Siguen siendo obligatorios los controles de fuente vigente y revisión completa.',
     }),
     'progress-assessment-length-invalid': Object.freeze({
         impact: 'Un campo de aceptación sigue superando su límite de respuesta tras una sustitución completa; no se publicó el progreso.',
-        action: 'Inspecciona la fase assessment, requisito {requirementId}, fuente original {sourceLineId}, campo {field}: observado {observed} puntos de código Unicode; máximo {maximum}. Inicia una evaluación completa nueva cuando el proveedor pueda cumplir el mismo esquema. Conserva todos los requisitos y citas; no recortes hechos, aumentes límites ni eludas la verificación.',
+        action: 'Inspecciona la fase assessment, requisito {requirementId}, fuente original {sourceLineId}, campo {field}: observado {observed} puntos de código Unicode; máximo {maximum}. No repitas automáticamente la misma comparación. Valida una compilación corregida de Copilot con la fuente fijada antes de iniciar una evaluación completa nueva. Conserva todos los requisitos y citas; no recortes hechos, aumentes límites ni eludas la verificación.',
         retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas. No se publicó ningún porcentaje parcial. Verificación, revisión, cobertura y aprobación siguen siendo controles independientes.',
     }),
     'progress-completion-recovery-exhausted': Object.freeze({
@@ -32942,6 +32992,16 @@ const SPANISH_RECOVERY_CONTENT = Object.freeze({
         impact: 'La sincronización se detuvo porque el merge tiene conflictos y --no-agent desactiva la resolución automática.',
         action: 'Ejecuta {command} para que el fixer configurado resuelva los conflictos admitidos, o usa --dry-run para inspeccionar el merge sin publicarlo.',
         retainedState: 'No se publicó ningún commit de sincronización; se conservaron las ramas remotas.',
+    }),
+    'branch-sync-sensitive-paths': Object.freeze({
+        impact: 'La sincronización automática se detuvo: hay {sensitiveCount} rutas protegidas entre {conflictCount} conflictos.',
+        action: 'Revisa las rutas en el registro del workflow y utiliza la recuperación autorizada de mantenedores para archivos protegidos. Tras un cambio de origen aprobado, inspecciona {command} --dry-run. Repetir los mismos conflictos no cambia esta política.',
+        retainedState: 'No se invocaron el agente corrector, los verificadores del repositorio ni la publicación de sincronización; se conservaron las referencias remotas.',
+    }),
+    'branch-sync-conflict-limit': Object.freeze({
+        impact: 'La sincronización automática se detuvo: {conflictCount} conflictos superan el límite de {limit}.',
+        action: 'Reduce los conflictos mediante cambios revisados o una recuperación autorizada de mantenedores; después inspecciona {command} --dry-run. Repetir el mismo comando no reduce este conjunto.',
+        retainedState: 'No se invocaron el agente corrector, los verificadores del repositorio ni la publicación de sincronización; se conservaron las referencias remotas.',
     }),
     'branch-sync-fixer-unavailable': Object.freeze({
         impact: 'La sincronización se detuvo porque el merge tiene conflictos y no hay un fixer configurado.',
@@ -34039,6 +34099,8 @@ var _ApplicationError_cause;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = exports.APPLICATION_ERROR_RECOVERY_IDS = void 0;
 exports.isApplicationErrorCorrelationId = isApplicationErrorCorrelationId;
+const review_freshness_failure_1 = __nccwpck_require__(9004);
+const response_failure_1 = __nccwpck_require__(4286);
 const progress_batch_diagnostic_1 = __nccwpck_require__(9486);
 const branch_sync_publication_1 = __nccwpck_require__(7857);
 const framed_review_1 = __nccwpck_require__(3750);
@@ -34072,6 +34134,8 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'bugbot-review-blocks-pending',
     'branch-sync-agent-disabled',
     'branch-sync-fixer-unavailable',
+    'branch-sync-sensitive-paths',
+    'branch-sync-conflict-limit',
     'branch-sync-resolution-invalid',
     'branch-sync-verification-failed',
     'branch-sync-catalog-incompatible',
@@ -34102,7 +34166,11 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'bugbot-review-incomplete',
     'progress-result-contract-invalid',
     'progress-partition-length-invalid',
+    'progress-partition-bytes-invalid',
     'progress-assessment-length-invalid',
+    'bugbot-partition-query-exhausted',
+    'bugbot-freshness-before-publication',
+    'bugbot-freshness-after-publication',
     'progress-assessment-capacity-exceeded',
     'progress-scope-clause-limit',
     'progress-sdd-seed-unverified',
@@ -34345,6 +34413,8 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'bugbot-review-blocks-pending': Object.freeze(['pendingCount']),
     'branch-sync-agent-disabled': Object.freeze(['command']),
     'branch-sync-fixer-unavailable': Object.freeze(['command']),
+    'branch-sync-sensitive-paths': Object.freeze(['command', 'conflictCount', 'sensitiveCount']),
+    'branch-sync-conflict-limit': Object.freeze(['command', 'conflictCount', 'limit']),
     'branch-sync-resolution-invalid': Object.freeze(['validationCode', 'command']),
     'branch-sync-verification-failed': Object.freeze(['stage', 'reason', 'command', 'commandIndex', 'childSha', 'restoration']),
     'branch-sync-catalog-incompatible': Object.freeze(['phase', 'profile', 'field', 'capabilityNumber', 'abort']),
@@ -34366,7 +34436,11 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'progress-evidence-capacity-exceeded': Object.freeze(['phase', 'dimension', 'unit', 'bound', 'observedCount', 'supportedLimit', 'countKind', 'context']),
     'bugbot-review-incomplete': Object.freeze(['profile', 'countKind', 'resource', 'observed', 'limit', 'unit']),
     'progress-result-contract-invalid': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
+    'progress-partition-bytes-invalid': Object.freeze(['partitionId', 'filePath', 'unitId', 'field', 'maximum', 'observed']),
     'progress-partition-length-invalid': Object.freeze(['partitionId', 'filePath', 'unitId', 'field', 'maximum', 'observed']),
+    'bugbot-partition-query-exhausted': Object.freeze(['reason', 'attempts']),
+    'bugbot-freshness-before-publication': Object.freeze(['operation', 'providerStatus', 'providerReference', 'reason']),
+    'bugbot-freshness-after-publication': Object.freeze(['operation', 'providerStatus', 'providerReference', 'reason']),
     'progress-assessment-length-invalid': Object.freeze(['requirementId', 'sourceLineId', 'field', 'maximum', 'observed']),
     'progress-assessment-capacity-exceeded': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
     'progress-batch-retained': Object.freeze(['reason', 'verified', 'expected', 'batch', 'requirementId']),
@@ -34429,9 +34503,21 @@ function normalizeApplicationErrorRecovery(recovery) {
             || variables.pendingCount < 1)) {
         throw new TypeError('Application error recovery pending count is invalid.');
     }
-    if ((recovery.id === 'branch-sync-agent-disabled' || recovery.id === 'branch-sync-fixer-unavailable' || recovery.id === 'branch-sync-resolution-invalid')
+    if ((recovery.id === 'branch-sync-agent-disabled' || recovery.id === 'branch-sync-fixer-unavailable' || recovery.id === 'branch-sync-sensitive-paths' || recovery.id === 'branch-sync-conflict-limit' || recovery.id === 'branch-sync-resolution-invalid')
         && variables.command !== '/copilot sync-branch') {
         throw new TypeError('Application error recovery synchronization command is invalid.');
+    }
+    if (recovery.id === 'branch-sync-sensitive-paths' || recovery.id === 'branch-sync-conflict-limit') {
+        const count = variables.conflictCount;
+        if (typeof count !== 'number' || !Number.isSafeInteger(count) || count < 1) {
+            throw new TypeError('Branch synchronization conflict count is invalid.');
+        }
+        if (recovery.id === 'branch-sync-sensitive-paths'
+            ? typeof variables.sensitiveCount !== 'number' || !Number.isSafeInteger(variables.sensitiveCount)
+                || variables.sensitiveCount < 1 || variables.sensitiveCount > count
+            : count <= 20 || variables.limit !== 20) {
+            throw new TypeError('Branch synchronization refusal counts are invalid.');
+        }
     }
     if (recovery.id === 'branch-sync-resolution-invalid'
         && !branch_sync_validation_1.BRANCH_SYNC_VALIDATION_CODES.some(code => code === variables.validationCode)) {
@@ -34476,10 +34562,14 @@ function normalizeApplicationErrorRecovery(recovery) {
         throw new TypeError('Progress scope capacity diagnostic is invalid.');
     if (recovery.id === 'progress-result-contract-invalid' && !(0, progress_response_diagnostic_2.isProgressResponseDiagnosticFacts)(variables))
         throw new TypeError('Progress response diagnostic is invalid.');
+    if (recovery.id === 'progress-partition-bytes-invalid' && !(0, progress_partition_length_failure_1.isProgressPartitionByteDiagnostic)(variables))
+        throw new TypeError('Progress partition byte diagnostic is invalid.');
     if (recovery.id === 'progress-partition-length-invalid' && !(0, progress_partition_length_failure_1.isProgressPartitionLengthDiagnostic)(variables))
         throw new TypeError('Progress part length diagnostic is invalid.');
     if (recovery.id === 'progress-assessment-length-invalid' && !(0, progress_assessment_length_failure_1.isProgressAssessmentLengthDiagnostic)(variables))
         throw new TypeError('Progress assessment length diagnostic is invalid.');
+    if (recovery.id === 'bugbot-partition-query-exhausted' && !(0, response_failure_1.isBugbotPartitionQueryDiagnostic)(variables))
+        throw new TypeError('Bugbot partition query diagnostic is invalid.');
     if (recovery.id === 'bugbot-review-incomplete' && !(0, framed_review_1.isBugbotReviewBlockFacts)(variables))
         throw new TypeError('Bugbot review diagnostic is invalid.');
     if (recovery.id === 'progress-inventory-incomplete' && !(0, progress_inventory_diagnostic_1.isProgressInventoryDiagnostic)(variables))
@@ -34493,6 +34583,10 @@ function normalizeApplicationErrorRecovery(recovery) {
     }
     if (recovery.id === 'issue-assignment-failed' && !(0, issue_assignment_diagnostic_1.isIssueAssignmentDiagnostic)(variables)) {
         throw new TypeError('Issue assignment diagnostic is invalid.');
+    }
+    if ((recovery.id === 'bugbot-freshness-before-publication' || recovery.id === 'bugbot-freshness-after-publication')
+        && !(0, review_freshness_failure_1.isBugbotFreshnessDiagnostic)(variables)) {
+        throw new TypeError('Bugbot freshness diagnostic is invalid.');
     }
     return Object.freeze({
         id: recovery.id,
@@ -35495,6 +35589,59 @@ function isBugbotReviewBlockFacts(value) {
 function bugbotReviewResourceUnit(resource) {
     return resource.endsWith('Utf16') ? 'UTF-16 code units'
         : resource.endsWith('Bytes') ? 'UTF-8 bytes' : resource === 'gitReads' ? 'operations' : 'items';
+}
+
+
+/***/ }),
+
+/***/ 4286:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BugbotResponseFailure = exports.BUGBOT_RESPONSE_FAILURE_REASONS = void 0;
+exports.isBugbotPartitionQueryDiagnostic = isBugbotPartitionQueryDiagnostic;
+/** Content-free reasons for a completed Bugbot response, never process or provider guesses. */
+exports.BUGBOT_RESPONSE_FAILURE_REASONS = Object.freeze(['json-invalid', 'schema-type', 'schema-enum', 'schema-string-short',
+    'schema-string-long', 'schema-number-finite', 'schema-number-min', 'schema-number-max', 'schema-array-short',
+    'schema-array-long', 'schema-required', 'schema-additional', 'verification-invalid']);
+function isBugbotPartitionQueryDiagnostic(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return false;
+    const facts = value;
+    return Object.keys(facts).sort().join(',') === 'attempts,reason' && facts.attempts === 3
+        && exports.BUGBOT_RESPONSE_FAILURE_REASONS.some(reason => reason === facts.reason);
+}
+class BugbotResponseFailure extends Error {
+    constructor(reason) {
+        super('A completed Bugbot response did not satisfy its structured contract.');
+        this.reason = reason;
+        if (!exports.BUGBOT_RESPONSE_FAILURE_REASONS.some(known => known === reason))
+            throw new TypeError('Bugbot response reason is invalid.');
+    }
+}
+exports.BugbotResponseFailure = BugbotResponseFailure;
+
+
+/***/ }),
+
+/***/ 9004:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.isBugbotFreshnessDiagnostic = isBugbotFreshnessDiagnostic;
+function isBugbotFreshnessDiagnostic(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return false;
+    const v = value;
+    return (v.operation === 'get-head-sha' || v.operation === 'get-source-bound-pr')
+        && typeof v.providerStatus === 'string' && /^(?:http-unavailable|http-[45][0-9]{2})$/u.test(v.providerStatus)
+        && typeof v.providerReference === 'string' && /^[A-Za-z0-9:-]{1,64}$/u.test(v.providerReference)
+        && (v.reason === 'provider-request-failed' || v.reason === 'response-invalid')
+        && (v.reason !== 'response-invalid' || v.providerStatus === 'http-unavailable');
 }
 
 
@@ -37765,8 +37912,9 @@ function progressInventoryPresentation(facts) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ProgressPartitionLengthFailure = void 0;
+exports.ProgressPartitionByteFailure = exports.ProgressPartitionLengthFailure = void 0;
 exports.isProgressPartitionLengthDiagnostic = isProgressPartitionLengthDiagnostic;
+exports.isProgressPartitionByteDiagnostic = isProgressPartitionByteDiagnostic;
 exports.progressPartitionLengthPresentation = progressPartitionLengthPresentation;
 const progress_response_diagnostic_1 = __nccwpck_require__(6289);
 const progress_evidence_path_1 = __nccwpck_require__(5887);
@@ -37783,19 +37931,37 @@ function text(value, maximum) {
 }
 /** Closed operator facts; string counts are code points, never raw prose or body bytes. */
 function isProgressPartitionLengthDiagnostic(value) {
+    return isPartitionSizeDiagnostic(value, 600);
+}
+/** Exact JSON UTF-8 bytes excluding quotes, with no widening of the legacy point diagnostic. */
+function isProgressPartitionByteDiagnostic(value) {
+    return isPartitionSizeDiagnostic(value, 3600) && value.observed <= 3600;
+}
+function isPartitionSizeDiagnostic(value, maximumLimit) {
     if (!value || typeof value !== 'object' || Array.isArray(value))
         return false;
     const v = value;
     return Object.keys(v).sort().join(',') === 'field,filePath,maximum,observed,partitionId,unitId'
         && text(v.partitionId, 256) && (0, progress_evidence_path_1.isProgressEvidencePath)(v.filePath) && text(v.unitId, 256)
         && (0, progress_response_diagnostic_1.isProgressResponseField)('partition', v.field) && /\.(?:implemented|remaining)$/u.test(v.field)
-        && typeof v.maximum === 'number' && Number.isSafeInteger(v.maximum) && v.maximum >= 1 && v.maximum <= 600
+        && typeof v.maximum === 'number' && Number.isSafeInteger(v.maximum) && v.maximum >= 1 && v.maximum <= maximumLimit
         && typeof v.observed === 'number' && Number.isSafeInteger(v.observed) && v.observed > v.maximum;
 }
 function progressPartitionLengthPresentation(facts) {
     return Object.freeze({ ...facts, partitionId: (0, progress_evidence_path_1.renderProgressEvidencePath)(facts.partitionId), filePath: (0, progress_evidence_path_1.renderProgressEvidencePath)(facts.filePath),
         unitId: (0, progress_evidence_path_1.renderProgressEvidencePath)(facts.unitId), field: (0, progress_evidence_path_1.renderProgressEvidencePath)(facts.field) });
 }
+/** Only closed host measurements survive this rejection, never the returned prose. */
+class ProgressPartitionByteFailure extends Error {
+    constructor(details) {
+        super('A complete progress source fact exceeds its allocated JSON UTF-8 bytes.');
+        const { outputLocale: _locale, ...facts } = details;
+        if (!isProgressPartitionByteDiagnostic(facts))
+            throw new TypeError('Progress partition byte diagnostic is invalid.');
+        this.details = Object.freeze({ ...details });
+    }
+}
+exports.ProgressPartitionByteFailure = ProgressPartitionByteFailure;
 
 
 /***/ }),
@@ -37830,7 +37996,7 @@ exports.PROGRESS_RESPONSE_REASONS = Object.freeze({
 const fieldPatterns = Object.freeze({
     scope: /^\$(?:\.outputLocale|\.lines(?:\[(0|[1-9]\d{0,3})\](?:\.(?:id|kind|sameAs))?)?)?$/u,
     partition: /^\$(?:\.outputLocale|\.partitionId|\.files(?:\[(0|[1-9]\d{0,3})\](?:\.(?:path|unitId|implemented|remaining))?)?)?$/u,
-    assessment: /^\$(?:\.outputLocale|\.progress|\.requirements(?:\[(0|[1-9]\d{0,3})\](?:\.(?:id|status|evidence|summary|remaining))?)?)?$/u,
+    assessment: /^\$(?:\.outputLocale|\.progress|\.requirements(?:\[(0|[1-9]\d{0,3})\](?:\.(?:id|status|evidence|summary|remaining|assessment))?)?)?$/u,
 });
 const maxIndex = Object.freeze({ scope: 1023, partition: 511, assessment: 31 });
 function knownId(value, prefix, maximum) {

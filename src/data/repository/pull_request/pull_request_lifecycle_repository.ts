@@ -1,3 +1,5 @@
+import { PullRequestReviewOperationError } from '../../../application/ports/pull_request_review_errors';
+import { toPullRequestReviewOperationError } from './pull_request_review_error_metadata';
 import { canonicalGitObjectId } from '../../../domain/git_object_id';
 import { logDebugInfo, logError } from "../../../utils/logger";
 import type { PullRequestDescriptionDetails } from '../../../application/ports/pull_request_description_ports';
@@ -44,15 +46,8 @@ export class PullRequestLifecycleRepository implements PullRequestHeadShaPort {
         pullRequestNumber: number,
         token: string,
     ): Promise<BugbotPullRequestIdentity> => {
-        const octokit = this.githubClient.getClient(token);
         try {
-            if (!octokit.rest.pulls.get) throw new Error('Pull-request identity query is not available.');
-            const { data } = await octokit.rest.pulls.get({
-                owner,
-                repo: repository,
-                pull_number: pullRequestNumber,
-            });
-            return toBugbotPullRequestIdentity(data);
+            return await this.readBugbotPullRequestIdentity(owner, repository, pullRequestNumber, token);
         } catch (error) {
             const semanticError = toApplicationError(
                 error,
@@ -64,20 +59,36 @@ export class PullRequestLifecycleRepository implements PullRequestHeadShaPort {
         }
     };
 
+    private async readBugbotPullRequestIdentity(owner: string, repository: string, pullRequestNumber: number,
+        token: string): Promise<BugbotPullRequestIdentity> {
+        const octokit = this.githubClient.getClient(token);
+        if (!octokit.rest.pulls.get) throw new Error('Pull-request identity query is not available.');
+        const { data } = await octokit.rest.pulls.get({ owner, repo: repository, pull_number: pullRequestNumber });
+        try { return toBugbotPullRequestIdentity(data); }
+        catch { throw new PullRequestReviewOperationError('get-source-bound-pr', { providerFailure: 'response-invalid' }); }
+    }
+
     /** Large reviews additionally pin the current target branch, independently of cached PR base.sha. */
     getBugbotSourceBoundPullRequestIdentity = async (
         owner: string, repository: string, pullRequestNumber: number, token: string,
     ): Promise<BugbotPullRequestIdentity> => {
-        const identity = await this.getBugbotPullRequestIdentity(owner, repository, pullRequestNumber, token);
-        if (!identity.baseRef) throw new ApplicationError('provider.contract-invalid', 'The canonical pull request has no verified base ref.');
-        const git = this.githubClient.getClient(token).rest.git;
-        if (!git) throw new ApplicationError('configuration.unsupported', 'The source-bound branch identity query is unavailable.');
-        const result = await git.getRef({ owner, repo: repository, ref: `heads/${identity.baseRef}` });
-        const sha = canonicalGitObjectId(result.data.object?.sha);
-        if (result.data.ref !== `refs/heads/${identity.baseRef}` || result.data.object?.type !== 'commit' || !sha) {
-            throw new ApplicationError('provider.contract-invalid', 'The live target branch identity could not be verified.');
+        try {
+            const identity = await this.readBugbotPullRequestIdentity(owner, repository, pullRequestNumber, token);
+            if (!identity.baseRef) throw new ApplicationError('provider.contract-invalid', 'The canonical pull request has no verified base ref.');
+            const git = this.githubClient.getClient(token).rest.git;
+            if (!git) throw new ApplicationError('configuration.unsupported', 'The source-bound branch identity query is unavailable.');
+            const result = await git.getRef({ owner, repo: repository, ref: `heads/${identity.baseRef}` });
+            const sha = canonicalGitObjectId(result.data?.object?.sha);
+            if (result.data?.ref !== `refs/heads/${identity.baseRef}` || result.data?.object?.type !== 'commit' || !sha) {
+                throw new ApplicationError('provider.contract-invalid', 'The live target branch identity could not be verified.');
+            }
+            return { ...identity, baseRefSha: sha };
+        } catch (error) {
+            if (error instanceof ApplicationError || error instanceof PullRequestReviewOperationError) throw error;
+            const diagnostic = toPullRequestReviewOperationError(error, 'get-source-bound-pr');
+            if (diagnostic.providerStatus === undefined && diagnostic.providerReference === undefined) throw error;
+            throw diagnostic;
         }
-        return { ...identity, baseRefSha: sha };
     };
 
     findOpenBugbotPullRequestsByExactHead = async (
@@ -309,12 +320,12 @@ function toBugbotPullRequestIdentity(value: {
     const headOwner = value.head?.repo?.owner?.login?.trim();
     const headName = typeof value.head?.repo?.name === 'string' ? value.head.repo.name.trim() : undefined;
     const headRef = value.head?.ref?.trim();
-    const headSha = value.head?.sha?.trim().toLowerCase();
+    const headSha = canonicalGitObjectId(value.head?.sha);
     if (!Number.isSafeInteger(number) || Number(number) <= 0
         || (state !== 'open' && state !== 'closed')
         || typeof value.draft !== 'boolean'
         || !baseOwner || !baseName || !headOwner || !headRef
-        || !headSha || !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(headSha)) {
+        || !headSha) {
         throw new Error('Pull-request identity response is incomplete or invalid.');
     }
     const repositoryId = value.base?.repo?.id;

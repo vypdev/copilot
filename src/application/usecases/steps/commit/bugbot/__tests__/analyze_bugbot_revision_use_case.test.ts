@@ -468,7 +468,7 @@ describe('generated-source verification in full native analysis', () => {
     const telemetry = new BugbotReviewTelemetry(operation());
     const query = jest.fn(async (request: FindingsQueryRequest) => request.agentId === 'bugbot-literal-candidate-verification'
       ? { outputLocale: 'en-US', findings: [] } : { ...attestedResponse(request.prompt, 1), findings: [candidate] });
-    await expect(analyzeBugbotRevision(operation(), context(plan.partitions), { agent: { query }, telemetry })).rejects.toThrow('verification');
+    await expect(analyzeBugbotRevision(operation(), context(plan.partitions), { agent: { query }, telemetry })).rejects.toMatchObject({ code: 'agent.failed', retryable: false, recovery: { id: 'bugbot-partition-query-exhausted', variables: { reason: 'verification-invalid', attempts: 3 } } });
     expect(telemetry.snapshot('failed')).toEqual(expect.objectContaining({ completedAnalysisPartitions: 0, failedAnalysisPartitionOrdinal: 1 }));
     expect(query).toHaveBeenCalledTimes(6);
   });

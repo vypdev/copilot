@@ -843,7 +843,8 @@
             "src/domain/progress_assessment_length_failure.ts",
             "src/data/repository/progress_assessment_length_failure.ts",
             "src/application/policies/progress_assessment_length_policy.ts",
-            "src/application/usecases/actions/query_progress_assessment_workflow.ts"
+            "src/application/usecases/actions/query_progress_assessment_workflow.ts",
+            "src/application/policies/progress_compact_assessment_policy.ts"
           ],
           "mode": "each",
           "thresholdProfile": "exhaustive"
@@ -1386,7 +1387,8 @@
             "src/domain/progress_partition_length_failure.ts",
             "src/application/policies/progress_partition_length_policy.ts",
             "src/data/repository/progress_partition_length_failure.ts",
-            "src/application/usecases/actions/query_progress_partition_workflow.ts"
+            "src/application/usecases/actions/query_progress_partition_workflow.ts",
+            "src/application/policies/progress_partition_byte_policy.ts"
           ],
           "mode": "each",
           "thresholdProfile": "exhaustive"
@@ -1528,6 +1530,37 @@
         }
       ],
       "successMessage": "SDD ownership question assessment: PASS (100% lines/statements/functions/branches)"
+    },
+    {
+      "name": "Bugbot partition response diagnostics",
+      "missingEntryLabel": "Bugbot partition response diagnostics",
+      "rules": [
+        {
+          "files": [
+            "src/domain/bugbot/response_failure.ts",
+            "src/application/errors/bugbot_verification_response_failure.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        }
+      ],
+      "successMessage": "Bugbot partition response diagnostics: PASS (pure closed facts and typed semantic rejection100% all metrics)"
+    },
+    {
+      "name": "Review freshness diagnostics",
+      "missingEntryLabel": "review freshness diagnostic",
+      "rules": [
+        {
+          "mode": "each",
+          "files": [
+            "src/domain/bugbot/review_freshness_failure.ts",
+            "src/application/errors/bugbot_freshness_error.ts",
+            "src/application/policies/pull_request_review_provider_code_policy.ts"
+          ],
+          "thresholdProfile": "exhaustive"
+        }
+      ],
+      "successMessage": "review freshness diagnostic coverage: PASS (100% statements, branches, functions and lines)"
     }
   ]
 }

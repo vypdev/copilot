@@ -56,7 +56,7 @@ export function buildApplicationErrorPresentation(
         ? assignmentDiagnosticPresentation(error.recovery.variables, error.code, message)
         : error.recovery?.id === 'sdd-source-context-unavailable'
         ? { ...sourceContextDiagnostic(error.recovery.variables) }
-        : error.recovery?.id === 'progress-partition-length-invalid'
+        : error.recovery?.id === 'progress-partition-length-invalid' || error.recovery?.id === 'progress-partition-bytes-invalid'
         ? progressPartitionLengthPresentation(error.recovery.variables)
         : error.recovery?.id === 'bugbot-review-incomplete'
         ? { ...error.recovery.variables, countKind: error.recovery.variables.countKind === 'at-least' ? '≥' : '=',

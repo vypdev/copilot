@@ -5,6 +5,7 @@ import { interpretProgressAgentOutput } from '../../../../data/repository/progre
 import type { FindingsQueryRequest } from '../../../ports/agent_findings_ports';
 import { ApplicationError } from '../../../errors/application_error';
 import * as logging from '../../../ports/logging_ports';
+import { assessmentWireFixture } from './fixtures/progress_assessment_wire_fixture';
 
 afterEach(() => jest.restoreAllMocks());
 
@@ -19,20 +20,26 @@ function fixture(field: 'summary' | 'remaining') {
         evidence: field === 'remaining' && index === 0 ? 'contradictory' : 'source-only',
         summary: 'The complete pinned source was inspected.', remaining: field === 'remaining' && index === 0 ? 'The requirement is still missing.' : null as string | null,
     })) });
-    return { request, context, output };
+    const interpret = (actualRequest: FindingsQueryRequest, response: ReturnType<typeof output>) => interpretProgressAgentOutput(
+        JSON.stringify(assessmentWireFixture(response, actualRequest.options!.schema!, scope.requirements.filter(r => 'uncertain' in r && r.uncertain === true).map(r => r.id))),
+        'assessment', actualRequest.options!.schema!);
+    return { request, context, output, interpret };
 }
 
 it.each([
     ['github-communication-experience-change-C165', 'summary'],
     ['github-communication-experience-change-C166', 'remaining'],
-] as const)('%s: one native %s length rejection receives a complete unchanged-schema replacement', async (_id, field) => {
+] as const)('%s: one native %s length rejection receives a complete bounded closed-fact replacement', async (_id, field) => {
     const f = fixture(field), first = f.output(); first.requirements[0][field] = 'PRIVATE_REJECTED_' + '🧪'.repeat(801);
-    const query = jest.fn(async (request: FindingsQueryRequest): Promise<Record<string, unknown>> => interpretProgressAgentOutput(
-        JSON.stringify(query.mock.calls.length === 1 ? first : f.output()), 'assessment', request.options!.schema!));
+    const query = jest.fn(async (request: FindingsQueryRequest): Promise<Record<string, unknown>> => f.interpret(request,
+        query.mock.calls.length === 1 ? first : f.output()));
     const result = await queryProgressAssessment({ query }, f.request, f.context);
     expect(result.progress).toBe(field === 'remaining' ? 50 : 100);
     expect(query).toHaveBeenCalledTimes(2);
-    expect(query.mock.calls[1][0].options).toBe(query.mock.calls[0][0].options);
+    const firstSchema = query.mock.calls[0][0].options!.schema as ReturnType<typeof progressResponseSchema>;
+    const nextSchema = query.mock.calls[1][0].options!.schema as ReturnType<typeof progressResponseSchema>;
+    expect(nextSchema.properties.requirements.items.properties.id).toBe(firstSchema.properties.requirements.items.properties.id);
+    expect(nextSchema.properties.requirements.items.properties).toHaveProperty('assessment');
     expect(query.mock.calls[1][0].configuration).toBe(query.mock.calls[0][0].configuration);
     expect(query.mock.calls[1][0].prompt).toContain('R11');
     expect(query.mock.calls[1][0].prompt).toContain('L11');
@@ -46,17 +53,24 @@ it.each([
 ] as const)(
     '%s: %s shares one allowance and exposes only the terminal safe facts', async (_id, mode) => {
         const f = fixture('summary');
+        if (mode === 'length-length') {
+            // The tiny legacy profile cannot fit the closed label catalog and retains its old repair path.
+            const schema = f.request.options!.schema as ReturnType<typeof progressResponseSchema>;
+            Object.assign(schema.properties.requirements.items.properties.summary, { maxLength: 8 });
+            Object.assign(schema.properties.requirements.items.properties.remaining, { maxLength: 8 });
+        }
         const query = jest.fn(async (request: FindingsQueryRequest) => {
             const response = f.output(), second = query.mock.calls.length === 2;
+            if (mode === 'length-length') response.requirements.forEach(fact => { fact.summary = 'OK'; });
             if (mode === 'length-completion' && second || mode === 'completion-length' && !second) response.progress = 70;
             else response.requirements[second ? 1 : 0].summary = 'PRIVATE_REJECTED_' + '🧪'.repeat(second ? 900 : 801);
-            return interpretProgressAgentOutput(JSON.stringify(response), 'assessment', request.options!.schema!);
+            return f.interpret(request, response);
         });
         const failure = await queryProgressAssessment({ query }, f.request, f.context).catch(error => error as ApplicationError);
         expect(failure).toBeInstanceOf(ApplicationError); expect(query).toHaveBeenCalledTimes(2);
         expect((failure as ApplicationError).recovery).toMatchObject(mode === 'length-completion'
             ? { id: 'progress-completion-recovery-exhausted', variables: { reportedProgress: 70 } }
-            : { id: 'progress-assessment-length-invalid', variables: { requirementId: 'R12', sourceLineId: 'L12', field: '$.requirements[1].summary', maximum: 800, observed: 917 } });
+            : { id: 'progress-assessment-length-invalid', variables: { requirementId: 'R12', sourceLineId: 'L12', field: '$.requirements[1].summary', maximum: mode === 'length-length' ? 8 : 800, observed: 917 } });
         expect(JSON.stringify(failure)).not.toContain('PRIVATE_REJECTED_');
     });
 
@@ -67,7 +81,7 @@ it('github-communication-experience-change-C166: replacing remaining length pres
     const query = jest.fn(async (request: FindingsQueryRequest) => {
         const response = structuredClone(valid);
         if (query.mock.calls.length === 1) response.requirements[0].remaining = '🧪'.repeat(801);
-        return interpretProgressAgentOutput(JSON.stringify(response), 'assessment', request.options!.schema!);
+        return f.interpret(request, response);
     });
     const result = await queryProgressAssessment({ query }, f.request, f.context);
     expect(result).toMatchObject({ progress: 50, remaining: expect.stringContaining('[R11]') });
@@ -80,7 +94,7 @@ it.each(['provider.unavailable', 'workflow.cancelled'] as const)(
         const query = jest.fn(async (request: FindingsQueryRequest) => {
             if (query.mock.calls.length === 2) throw failure;
             const response = f.output(); response.requirements[0].summary = 's'.repeat(801);
-            return interpretProgressAgentOutput(JSON.stringify(response), 'assessment', request.options!.schema!);
+            return f.interpret(request, response);
         });
         await expect(queryProgressAssessment({ query }, f.request, f.context)).rejects.toBe(failure);
         expect(query).toHaveBeenCalledTimes(2);
@@ -89,14 +103,16 @@ it.each(['provider.unavailable', 'workflow.cancelled'] as const)(
 it('github-communication-experience-change-C173: length recovery uses captured state despite caller mutation', async () => {
     const f = fixture('summary'), expected = structuredClone(f.request), valid = f.output();
     const query = jest.fn(async (request: FindingsQueryRequest) => {
-        expect(request.options).toEqual(expected.options); expect(request.configuration).toEqual(expected.configuration);
+        if (query.mock.calls.length === 1) expect(request.options).toEqual(expected.options);
+        else expect(request.options!.schema).toHaveProperty('properties.requirements.items.properties.assessment');
+        expect(request.configuration).toEqual(expected.configuration);
         if (query.mock.calls.length === 1) {
             f.request.configuration!.model = 'foreign'; f.context.scope.requirements[0].id = 'R99';
             f.context.anchors.R11 = 'L99'; f.context.sourceLineIds[0] = 'L99'; f.context.targetLocale = 'es-ES';
             f.request.options!.schema = {}; const response = structuredClone(valid); response.requirements[0].summary = 's'.repeat(801);
-            return interpretProgressAgentOutput(JSON.stringify(response), 'assessment', request.options!.schema!);
+            return f.interpret(request, response);
         }
-        return valid;
+        return f.interpret(request, valid);
     });
     expect((await queryProgressAssessment({ query }, f.request, f.context)).progress).toBe(100);
     expect(query.mock.calls[1][0].prompt).toContain('L11'); expect(Object.isFrozen(f.request)).toBe(false);
@@ -107,7 +123,7 @@ it('github-communication-experience-change-C174: returned order selects the actu
     const query = jest.fn(async (request: FindingsQueryRequest) => {
         const response = f.output(); response.requirements.reverse();
         if (query.mock.calls.length === 1) response.requirements[0].summary = 's'.repeat(801);
-        return interpretProgressAgentOutput(JSON.stringify(response), 'assessment', request.options!.schema!);
+        return f.interpret(request, response);
     });
     expect((await queryProgressAssessment({ query }, f.request, f.context)).progress).toBe(100);
     expect(query.mock.calls[1][0].prompt).toContain('"requirementId":"R12"');
@@ -118,7 +134,7 @@ it('github-communication-experience-change-C183: length recovery logs one fixed 
     const f = fixture('summary'), log = jest.spyOn(logging, 'logInfo').mockImplementation(() => undefined);
     const query = jest.fn(async (request: FindingsQueryRequest) => {
         const response = f.output(); if (query.mock.calls.length === 1) response.requirements[0].summary = 'PRIVATE_@all /copilot deploy' + 's'.repeat(801);
-        return interpretProgressAgentOutput(JSON.stringify(response), 'assessment', request.options!.schema!);
+        return f.interpret(request, response);
     });
     await queryProgressAssessment({ query }, f.request, f.context);
     expect(log).toHaveBeenCalledTimes(1);

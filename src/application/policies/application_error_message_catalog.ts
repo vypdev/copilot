@@ -279,14 +279,34 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     action: 'Inspect the original requirement and response schema. Details: phase {phase}, reason {reason}, field {field}, requirement {requirementId}, original issue line {sourceLineId}. none means no verified identity is available. A fresh attempt may help when the provider can satisfy the unchanged contract; do not relax acceptance or verification.',
     retainedState: 'Existing progress labels and published assessments were preserved. An optional check-publication warning is a separate result.',
   }),
+  'progress-partition-bytes-invalid': Object.freeze({
+    impact: 'A source-part fact still exceeds its JSON UTF-8 allocation after one replacement; progress was not published.',
+    action: 'Inspect part {partitionId}, file {filePath}, unit {unitId}, field {field}: observed {observed} JSON UTF-8 bytes; maximum {maximum}, excluding enclosing quotes. Do not automatically repeat the unchanged comparison. Qualify a corrected build against the pinned sources before one fresh complete assessment.',
+    retainedState: 'Prior progress labels and assessments were preserved. No partial percentage or passing verification was published; source freshness, review and coverage remain independent gates.',
+  }),
   'progress-partition-length-invalid': Object.freeze({
     impact: 'A progress part still exceeds its response limit after one bounded replacement; progress was not published.',
-    action: 'Inspect part {partitionId}, file {filePath}, unit {unitId}, field {field}: observed {observed} Unicode code points; maximum {maximum}. The replacement must satisfy the unchanged schema. Do not remove files, truncate facts, relax acceptance or bypass verification.',
+    action: 'Inspect part {partitionId}, file {filePath}, unit {unitId}, field {field}: observed {observed} Unicode code points; maximum {maximum}. Do not automatically repeat the unchanged comparison. Qualify a corrected build against the pinned sources before one fresh complete assessment. Preserve every file, source unit and verification gate.',
     retainedState: 'Existing progress labels and assessments were preserved. No partial percentage or passing verification was published; execution and optional check-publication failures remain separate.',
+  }),
+  'bugbot-freshness-before-publication': Object.freeze({
+    impact: 'Bugbot could not confirm the current PR before publication: operation {operation}, status {providerStatus}, reason {reason}, provider reference {providerReference}.',
+    action: 'Inspect the named operation and error code; repair provider access or response before rechecking from the current head. Completed analysis alone is not a fresh review. Keep source identity and reconciliation checks enabled.',
+    retainedState: 'This evaluation published no new finding mutations. Prior findings and resolutions were retained; no passing current review was authorized.',
+  }),
+  'bugbot-freshness-after-publication': Object.freeze({
+    impact: 'Bugbot could not confirm the current PR after publication: operation {operation}, status {providerStatus}, reason {reason}, provider reference {providerReference}.',
+    action: 'Inspect the named operation and error code; repair the provider cause and recheck the current head and persisted findings. Reconciliation must retain completed effects without duplicating them. Do not infer a clean review or roll back completed writes.',
+    retainedState: 'Finding mutations may already have completed. Existing effects were retained; this evaluation did not authorize a passing current review or repeat publication.',
+  }),
+  'bugbot-partition-query-exhausted': Object.freeze({
+    impact: 'A completed Bugbot partition response remained invalid after {attempts} attempts; the review was not published.',
+    action: 'Inspect response reason {reason} and the current run. Qualify the provider output contract before a fresh complete review. This diagnostic describes completed response validation, not an execution infrastructure failure.',
+    retainedState: 'Prior findings and resolutions were preserved. No partial review was published. Source freshness and complete-review gates remain required.',
   }),
   'progress-assessment-length-invalid': Object.freeze({
     impact: 'An acceptance field still exceeds its unchanged response limit after one complete replacement; progress was not published.',
-    action: 'Inspect phase assessment, requirement {requirementId}, original source {sourceLineId}, field {field}: observed {observed} Unicode code points; maximum {maximum}. Start a fresh complete assessment when the provider can satisfy the unchanged schema. Preserve every requirement and citation; do not truncate facts, raise limits or bypass verification.',
+    action: 'Inspect phase assessment, requirement {requirementId}, original source {sourceLineId}, field {field}: observed {observed} Unicode code points; maximum {maximum}. Do not automatically repeat the unchanged comparison. Validate a corrected Copilot build against the pinned source before starting one fresh complete assessment. Preserve every requirement and citation; do not truncate facts, raise limits or bypass verification.',
     retainedState: 'Existing progress labels and published assessments were preserved. No partial percentage was published. Verification, review, coverage and approval remain independent gates.',
   }),
   'progress-completion-recovery-exhausted': Object.freeze({
@@ -410,6 +430,16 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     action: 'Run {command} to let the configured fixer resolve eligible conflicts, or use --dry-run to inspect the merge without publishing it.',
     retainedState: 'No synchronization commit was pushed; remote branches were preserved.',
   }),
+  'branch-sync-sensitive-paths': Object.freeze({
+    impact: 'Automatic branch synchronization stopped: {sensitiveCount} protected paths occur among {conflictCount} conflicts.',
+    action: 'Review the conflicted paths in the workflow log and use the authorized maintainer recovery for protected files. After an approved source update, inspect {command} --dry-run. Repeating unchanged conflicts does not change this policy.',
+    retainedState: 'No fixer, repository verifier or synchronization push was invoked; existing remote heads were preserved.',
+  }),
+  'branch-sync-conflict-limit': Object.freeze({
+    impact: 'Automatic branch synchronization stopped: {conflictCount} conflicts exceed the limit of {limit}.',
+    action: 'Reduce the conflicted set through reviewed source changes or authorized maintainer recovery, then inspect {command} --dry-run. Repeating the unchanged command cannot reduce this set.',
+    retainedState: 'No fixer, repository verifier or synchronization push was invoked; existing remote heads were preserved.',
+  }),
   'branch-sync-fixer-unavailable': Object.freeze({
     impact: 'Branch synchronization stopped because the merge has conflicts and no fixer agent is configured.',
     action: 'Configure a supported fixer and retry {command}; use --dry-run to inspect the merge without publishing it.',
@@ -502,14 +532,34 @@ const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     action: 'Inspecciona el requisito original y el esquema de respuesta. Detalles: fase {phase}, motivo {reason}, campo {field}, requisito {requirementId}, línea original de la issue {sourceLineId}. none indica que no hay una identidad verificada. Un nuevo intento puede ayudar si el proveedor cumple el contrato sin cambiarlo; no relajes la aceptación ni la verificación.',
     retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas. Un aviso de publicación del check opcional corresponde a otro resultado.',
   }),
+  'progress-partition-bytes-invalid': Object.freeze({
+    impact: 'Un hecho de una parte sigue superando su asignación JSON UTF-8 tras una sustitución; no se publicó el progreso.',
+    action: 'Inspecciona la parte {partitionId}, archivo {filePath}, unidad {unitId}, campo {field}: observado {observed} bytes JSON UTF-8; máximo {maximum}, sin las comillas exteriores. No repitas automáticamente la comparación sin cambios. Valida una compilación corregida con las fuentes fijadas antes de una evaluación nueva completa.',
+    retainedState: 'Se conservaron las etiquetas y evaluaciones anteriores. No se publicó un porcentaje parcial ni una verificación aprobada; los controles de fuente vigente, revisión y cobertura siguen siendo independientes.',
+  }),
   'progress-partition-length-invalid': Object.freeze({
     impact: 'Una parte del progreso sigue superando el límite de respuesta tras una sustitución acotada; no se publicó el progreso.',
-    action: 'Inspecciona la parte {partitionId}, archivo {filePath}, unidad {unitId}, campo {field}: observado {observed} puntos de código Unicode; máximo {maximum}. La sustitución debe cumplir el mismo esquema. No elimines archivos, recortes los hechos, relajes la aceptación ni eludas la verificación.',
+    action: 'Inspecciona la parte {partitionId}, archivo {filePath}, unidad {unitId}, campo {field}: observado {observed} puntos de código Unicode; máximo {maximum}. No repitas automáticamente la comparación sin cambios. Valida una compilación corregida con las fuentes fijadas antes de una evaluación nueva completa. Conserva todos los archivos, hechos y controles de verificación.',
     retainedState: 'Se conservaron las etiquetas y evaluaciones de progreso. No se publicó ningún porcentaje parcial ni verificación aprobada; los fallos de ejecución y de publicación del check opcional siguen siendo independientes.',
+  }),
+  'bugbot-freshness-before-publication': Object.freeze({
+    impact: 'Bugbot no pudo confirmar la PR actual antes de publicar: operación {operation}, estado {providerStatus}, motivo {reason}, referencia del proveedor {providerReference}.',
+    action: 'Inspecciona la operación y el código de error; corrige el acceso o la respuesta del proveedor antes de revisar el head actual. Completar el análisis no confirma la vigencia de la revisión. Mantén los controles de identidad y reconciliación.',
+    retainedState: 'Esta evaluación no publicó cambios nuevos en los findings. Se conservaron los hallazgos y resoluciones anteriores; no se autorizó una revisión actual aprobada.',
+  }),
+  'bugbot-freshness-after-publication': Object.freeze({
+    impact: 'Bugbot no pudo confirmar la PR actual después de publicar: operación {operation}, estado {providerStatus}, motivo {reason}, referencia del proveedor {providerReference}.',
+    action: 'Inspecciona la operación y el código de error; corrige la causa y vuelve a comprobar el head y los findings persistidos. La reconciliación debe conservar los efectos completados sin duplicarlos. No deduzcas una revisión limpia ni reviertas publicaciones completadas.',
+    retainedState: 'Es posible que ya se hayan completado cambios en los findings. Se conservaron los efectos existentes; esta evaluación no autorizó una revisión actual aprobada ni la repetición de publicaciones.',
+  }),
+  'bugbot-partition-query-exhausted': Object.freeze({
+    impact: 'La respuesta completada de una partición de Bugbot siguió siendo inválida tras {attempts} intentos; no se publicó la revisión.',
+    action: 'Inspecciona el motivo de respuesta {reason} y la ejecución actual. Valida el contrato de salida del proveedor antes de una revisión completa nueva. Este diagnóstico describe la validación de una respuesta completada, no un fallo de infraestructura de ejecución.',
+    retainedState: 'Se conservaron los hallazgos y resoluciones anteriores. No se publicó una revisión parcial. Siguen siendo obligatorios los controles de fuente vigente y revisión completa.',
   }),
   'progress-assessment-length-invalid': Object.freeze({
     impact: 'Un campo de aceptación sigue superando su límite de respuesta tras una sustitución completa; no se publicó el progreso.',
-    action: 'Inspecciona la fase assessment, requisito {requirementId}, fuente original {sourceLineId}, campo {field}: observado {observed} puntos de código Unicode; máximo {maximum}. Inicia una evaluación completa nueva cuando el proveedor pueda cumplir el mismo esquema. Conserva todos los requisitos y citas; no recortes hechos, aumentes límites ni eludas la verificación.',
+    action: 'Inspecciona la fase assessment, requisito {requirementId}, fuente original {sourceLineId}, campo {field}: observado {observed} puntos de código Unicode; máximo {maximum}. No repitas automáticamente la misma comparación. Valida una compilación corregida de Copilot con la fuente fijada antes de iniciar una evaluación completa nueva. Conserva todos los requisitos y citas; no recortes hechos, aumentes límites ni eludas la verificación.',
     retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas. No se publicó ningún porcentaje parcial. Verificación, revisión, cobertura y aprobación siguen siendo controles independientes.',
   }),
   'progress-completion-recovery-exhausted': Object.freeze({
@@ -632,6 +682,16 @@ const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     impact: 'La sincronización se detuvo porque el merge tiene conflictos y --no-agent desactiva la resolución automática.',
     action: 'Ejecuta {command} para que el fixer configurado resuelva los conflictos admitidos, o usa --dry-run para inspeccionar el merge sin publicarlo.',
     retainedState: 'No se publicó ningún commit de sincronización; se conservaron las ramas remotas.',
+  }),
+  'branch-sync-sensitive-paths': Object.freeze({
+    impact: 'La sincronización automática se detuvo: hay {sensitiveCount} rutas protegidas entre {conflictCount} conflictos.',
+    action: 'Revisa las rutas en el registro del workflow y utiliza la recuperación autorizada de mantenedores para archivos protegidos. Tras un cambio de origen aprobado, inspecciona {command} --dry-run. Repetir los mismos conflictos no cambia esta política.',
+    retainedState: 'No se invocaron el agente corrector, los verificadores del repositorio ni la publicación de sincronización; se conservaron las referencias remotas.',
+  }),
+  'branch-sync-conflict-limit': Object.freeze({
+    impact: 'La sincronización automática se detuvo: {conflictCount} conflictos superan el límite de {limit}.',
+    action: 'Reduce los conflictos mediante cambios revisados o una recuperación autorizada de mantenedores; después inspecciona {command} --dry-run. Repetir el mismo comando no reduce este conjunto.',
+    retainedState: 'No se invocaron el agente corrector, los verificadores del repositorio ni la publicación de sincronización; se conservaron las referencias remotas.',
   }),
   'branch-sync-fixer-unavailable': Object.freeze({
     impact: 'La sincronización se detuvo porque el merge tiene conflictos y no hay un fixer configurado.',

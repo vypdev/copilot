@@ -20,11 +20,13 @@ it('rejects another attempt before producing a receipt', () => {
 it('requires a bound source before reserving aggregate space', () => {
     expect(() => framedProgressFactBudget(framed(), MAX_PROGRESS_AGGREGATE_BYTES)).toThrow('(source-manifest-identity)');
 });
-it('subtracts all receipt metadata before calculating the worst-case prose limit', () => {
+it('subtracts all receipt metadata before allocating exact escaped JSON bytes', () => {
     const diff = bound(); const budget = framedProgressFactBudget(diff, 5_000);
     expect(budget).toBeGreaterThan(0); expect(budget).toBeLessThan(5_000);
-    const { factLimit: limit } = framedProgressFactBounds(diff, 5_000); expect(limit).toBeGreaterThan(0); expect(limit).toBeLessThan(600);
-    const values = receipts(diff).map(receipt => ({ ...receipt, files: receipt.files.map(file => ({ ...file, implemented: '\u0000'.repeat(limit), remaining: '\u0000'.repeat(limit) })) }));
+    const { factLimit: limit, factJsonBytes } = framedProgressFactBounds(diff, 5_000); expect(limit).toBeGreaterThan(0); expect(limit).toBeLessThanOrEqual(600);
+    expect(factJsonBytes).toBeGreaterThan(0); expect(factJsonBytes).toBeLessThanOrEqual(3_600);
+    const escapedPoints = Math.floor(factJsonBytes! / 6);
+    const values = receipts(diff).map(receipt => ({ ...receipt, files: receipt.files.map(file => ({ ...file, implemented: '\u0000'.repeat(escapedPoints), remaining: '\u0000'.repeat(escapedPoints) })) }));
     expect(Buffer.byteLength(aggregateProgressReceipts(diff, values, 5_000))).toBeLessThanOrEqual(5_000);
 });
 it.each([0, 1, -1, NaN, MAX_PROGRESS_AGGREGATE_BYTES + 1])('rejects insufficient metadata budget %s before requests', budget => {

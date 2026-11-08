@@ -1,6 +1,9 @@
 // @vitest-environment jsdom
 // @vitest-environment-options {"url":"https://extension.test/runtime.html"}
-import { expect, it, vi } from 'vitest';
+import { expect, it, vi, type MockInstance } from 'vitest';
+import { CenterClient, type CenterClientPort } from '../../src/application/center_client.ts';
+import { RecentsClient } from '../../src/application/recents_client.ts';
+import { deferred } from '../fixtures/runtime.ts';
 import { tick } from 'svelte';
 import { renderHistory, historyButton, historyReview } from '../fixtures/history_center_dom.ts';
 import { ready, navigate, button, change } from '../fixtures/center_app_dom.ts';
@@ -10,11 +13,14 @@ import { CENTER_SENDER } from '../fixtures/center.ts';
 function entries(f: Awaited<ReturnType<typeof renderHistory>>) {
     return (f.documents.get('recents') as { entries?: { fact: { route: string; featureId?: string } }[] } | undefined)?.entries ?? [];
 }
-async function captured(f: Awaited<ReturnType<typeof renderHistory>>): Promise<void> {
+async function captured(f: Awaited<ReturnType<typeof renderHistory>>, captures: MockInstance<RecentsClient['refresh']>): Promise<void> {
     await vi.waitFor(async () => {
         const calls = f.app.port.send.mock.calls; const index = calls.map(([m], i) => m.method === 'center.recents.capture' ? i : -1).filter(i => i >= 0).at(-1) ?? -1; expect(index).toBeGreaterThanOrEqual(0);
         const result = await f.app.port.send.mock.results[index].value as { permit?: string }; expect(result.permit).toMatch(/^visit-/u);
-    }); await tick();
+    });
+    // Native delivery precedes permit adoption; await the existing read without requesting another capture.
+    await Promise.all(captures.mock.results.map(result => { expect(result.type).toBe('return'); return result.value; }));
+    await tick();
 }
 it('an initially opted-in actual application records only its admitted first current view', async () => {
     const f = await renderHistory('privacy', 'en', activeRecents); await ready(() => entries(f).length === 1);
@@ -22,10 +28,31 @@ it('an initially opted-in actual application records only its admitted first cur
     expect(f.app.browser.api.permissions.request).not.toHaveBeenCalled(); expect(f.port.set).not.toHaveBeenCalled();
 });
 it('off startup and accepted off navigation cannot be retrospectively added after enabling collection', async () => {
+    const captures = vi.spyOn(RecentsClient.prototype, 'refresh');
+    const entered = deferred<void>(); const release = deferred<void>();
+    const proto = CenterClient.prototype as unknown as {
+        request(message: Parameters<CenterClientPort['send']>[0], secondary?: boolean): Promise<Record<string, unknown> | null>;
+    };
+    const request = proto.request;
+    vi.spyOn(proto, 'request').mockImplementation(async function (this: typeof proto, message, secondary) {
+        const body = await request.call(this, message, secondary);
+        if (message.method === 'center.recents.capture' && typeof body?.permit === 'string') {
+            entered.resolve(); await release.promise;
+        }
+        return body;
+    });
     const f = await renderHistory(); await navigate('work'); await navigate('activity'); expect(entries(f)).toHaveLength(0);
     await ready(() => !historyButton('recents', f.copy.text.enable).disabled, 'recents consent review is enabled');
     historyButton('recents', f.copy.text.enable).click(); await historyReview(); button(f.copy.text.confirm).click();
-    await ready(() => document.querySelector('.history-review')?.textContent?.includes(f.copy.reasons.done) === true); await captured(f); button(f.copy.text.close).click(); await ready(() => !document.querySelector('.history-review'));
+    await ready(() => document.querySelector('.history-review')?.textContent?.includes(f.copy.reasons.done) === true);
+    let settled = false; const waiting = captured(f, captures).then(() => { settled = true; });
+    try {
+        await entered.promise;
+        let observations = 0; await ready(() => ++observations > 1);
+        expect(settled).toBe(false);
+        expect(entries(f)).toHaveLength(0);
+    } finally { release.resolve(); await waiting; }
+    button(f.copy.text.close).click(); await ready(() => !document.querySelector('.history-review'));
     expect(entries(f)).toHaveLength(0); await navigate('appearance'); await ready(() => entries(f).length === 1);
     expect(entries(f).map(row => row.fact.route)).toEqual(['appearance']);
 });

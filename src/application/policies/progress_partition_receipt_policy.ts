@@ -40,9 +40,11 @@ export function framedProgressFactBounds(diff: Partitioned, budget: number): Pro
 /** A complete exact-once receipt set is required again at the final boundary. */
 export function aggregateProgressReceipts(diff: Partitioned, receipts: readonly ProgressPartitionReceipt[], budget: number): string {
     const factBudget = framedProgressFactBudget(diff, budget);
+    const bounds = progressPartitionFactBounds(diff.baseSha, diff.headSha, diff.partitions, factBudget, diff.protocol!.version);
     if (receipts.length !== diff.partitions.length) throw progressProtocolRejected('response-inventory');
     for (const [index, part] of diff.partitions.entries()) {
         if (!receipts[index] || receipts[index].requestId !== part.id) throw progressProtocolRejected('response-identity');
+        parseProgressPartitionFacts({ outputLocale: 'en-US', partitionId: part.id, files: receipts[index].files }, part, 'en-US', bounds.factLimit, bounds.factJsonBytes);
     }
     const analysis = aggregateProgressFacts(diff.baseSha, diff.headSha, diff.partitions, receipts.map(receipt => receipt.files), factBudget, diff.protocol!.version);
     return prefix(diff) + analysis + '}';

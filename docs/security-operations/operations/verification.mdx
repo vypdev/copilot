@@ -400,6 +400,19 @@ To roll back, set `VERIFICATION_SETUP=false` and provision dependencies before
 Copilot in the same job. The unreleased `.copilot/verification-setup.mjs` prototype
 is superseded; it is not executed or installed by this contract.
 
+### SDK native JDK acceptance input
+
+The SDK's Linux native acceptance fixture downloads its reviewed Temurin
+17.0.21+9 archive once per job through the official release-asset API, verifies
+the architecture-specific SHA-256 and verifies it again before each private
+installation. `actions/setup-java` uses `distribution: jdkfile` and
+`force-download: true` to unpack the same verified bytes inside the approved
+tool cache. This avoids repeated external downloads without accepting a hosted
+cache alias. The shared archive is retired after verification, including failure
+paths. Runtime isolation, private profiles, native post steps and the five-minute
+setup deadline remain in force. This is an SDK acceptance-fixture choice;
+consumer runtime provisioning remains repository-owned.
+
 ## Reused credential evidence
 
 The reuse journey performs GET-only inspection of trusted installed health

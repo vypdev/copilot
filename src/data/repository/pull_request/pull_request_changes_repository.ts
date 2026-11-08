@@ -1,3 +1,4 @@
+import { PullRequestReviewOperationError } from '../../../application/ports/pull_request_review_errors';
 import { toPullRequestReviewOperationError } from './pull_request_review_error_metadata';
 import { logError } from "../../../utils/logger";
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
@@ -193,10 +194,11 @@ export class PullRequestChangesRepository {
                 repo: repository,
                 pull_number: pullNumber,
             });
-            if (!data.head?.sha) {
-                throw new Error(`Pull request #${pullNumber} did not return a head commit SHA.`);
+            const headSha = canonicalGitObjectId(data?.head?.sha);
+            if (headSha === undefined) {
+                throw new PullRequestReviewOperationError('get-head-sha', { providerFailure: 'response-invalid' });
             }
-            return data.head.sha;
+            return headSha;
         } catch (error) {
             logError(toApplicationError(error, 'provider.unavailable', 'Unable to read the pull request head SHA.'));
             throw toPullRequestReviewOperationError(error, "get-head-sha");

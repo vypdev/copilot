@@ -71,6 +71,36 @@ function runAtApplicationErrorBoundary(operation) {
 
 /***/ }),
 
+/***/ 6562:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.bugbotFreshnessError = bugbotFreshnessError;
+const application_error_1 = __nccwpck_require__(5999);
+const pull_request_review_errors_1 = __nccwpck_require__(6445);
+const pull_request_review_provider_code_policy_1 = __nccwpck_require__(4484);
+function bugbotFreshnessError(cause, boundary, operation, invalidResponse = false) {
+    const provider = cause instanceof pull_request_review_errors_1.PullRequestReviewOperationError ? cause : undefined;
+    const semantic = cause instanceof application_error_1.ApplicationError ? cause : undefined;
+    const candidate = provider?.providerStatus;
+    const status = typeof candidate === 'number' && Number.isInteger(candidate) && candidate >= 400 && candidate <= 599 ? candidate : undefined;
+    const invalid = invalidResponse || semantic?.code === 'provider.contract-invalid' || (provider?.providerFailure === 'response-invalid' && status === undefined);
+    const reference = provider?.providerReference;
+    const diagnostic = Object.freeze({ operation,
+        providerStatus: !invalid && status ? `http-${status}` : 'http-unavailable',
+        providerReference: typeof reference === 'string' && /^[A-Za-z0-9:-]{1,64}$/u.test(reference) ? reference : 'unavailable',
+        reason: invalid ? 'response-invalid' : 'provider-request-failed' });
+    return new application_error_1.ApplicationError(semantic?.code ?? (invalid ? 'provider.contract-invalid' : (0, pull_request_review_provider_code_policy_1.pullRequestReviewProviderCode)(status)), 'Bugbot could not confirm the current pull request identity.', { cause,
+        ...(semantic ? { correlationId: semantic.correlationId, retryable: semantic.retryable } : {}), recovery: {
+            id: boundary === 'after-publication' ? 'bugbot-freshness-after-publication' : 'bugbot-freshness-before-publication', variables: diagnostic
+        } });
+}
+
+
+/***/ }),
+
 /***/ 2937:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -79,6 +109,7 @@ function runAtApplicationErrorBoundary(operation) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BugbotMutationError = void 0;
 exports.bugbotMutationError = bugbotMutationError;
+const pull_request_review_provider_code_policy_1 = __nccwpck_require__(4484);
 const application_error_1 = __nccwpck_require__(5999);
 const pull_request_review_errors_1 = __nccwpck_require__(6445);
 class BugbotMutationError extends application_error_1.ApplicationError {
@@ -93,11 +124,7 @@ function bugbotMutationError(cause, stage, findingIds, fallback, affectedCount =
         return cause;
     const provider = cause instanceof pull_request_review_errors_1.PullRequestReviewOperationError ? cause : undefined;
     const status = provider?.providerStatus;
-    const errorCode = status === 401 ? 'authorization.credential-invalid' : status === 403 ? 'authorization.denied'
-        : status === 404 ? 'provider.not-found' : status === 409 ? 'provider.conflict'
-            : status === 429 ? 'provider.rate-limited'
-                : status === 408 || status === 425 ? 'provider.unavailable'
-                    : status && status < 500 ? 'provider.contract-invalid' : 'provider.unavailable';
+    const errorCode = (0, pull_request_review_provider_code_policy_1.pullRequestReviewProviderCode)(status);
     const first = findingIds[0];
     return new BugbotMutationError(Object.freeze({
         stage, operation: provider?.operation ?? fallback,
@@ -107,6 +134,26 @@ function bugbotMutationError(cause, stage, findingIds, fallback, affectedCount =
         providerReference: provider?.providerReference ?? 'unavailable', errorCode,
     }));
 }
+
+
+/***/ }),
+
+/***/ 2486:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BugbotVerificationResponseFailure = void 0;
+const application_error_1 = __nccwpck_require__(5999);
+/** Host-validated candidate proof rejection; distinct from agent execution and capacity failures. */
+class BugbotVerificationResponseFailure extends application_error_1.ApplicationError {
+    constructor(message) {
+        super('agent.failed', message);
+        this.reason = 'verification-invalid';
+    }
+}
+exports.BugbotVerificationResponseFailure = BugbotVerificationResponseFailure;
 
 
 /***/ }),
@@ -1405,6 +1452,7 @@ exports.literalVerificationId = literalVerificationId;
 exports.assertLiteralVerificationPrompt = assertLiteralVerificationPrompt;
 exports.assertLiteralVerificationResponse = assertLiteralVerificationResponse;
 exports.applyLiteralVerification = applyLiteralVerification;
+const bugbot_verification_response_failure_1 = __nccwpck_require__(2486);
 const node_crypto_1 = __nccwpck_require__(6005);
 const application_error_1 = __nccwpck_require__(5999);
 exports.MAX_LITERAL_VERIFICATION_CANDIDATES = 20;
@@ -1483,7 +1531,7 @@ function originalCandidates(candidates) {
     return originals;
 }
 function invalidVerification() {
-    return new application_error_1.ApplicationError('agent.failed', 'Generated-source verification is incomplete or changed candidate identity, file, anchor or proof. Recheck the exact source; no clean result was verified.');
+    return new bugbot_verification_response_failure_1.BugbotVerificationResponseFailure('Generated-source verification is incomplete or changed candidate identity, file, anchor or proof. Recheck the exact source; no clean result was verified.');
 }
 
 
@@ -3599,6 +3647,24 @@ function stableSerialize(value) {
 
 /***/ }),
 
+/***/ 4484:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.pullRequestReviewProviderCode = pullRequestReviewProviderCode;
+/** Operates only on the sanitized optional HTTP status from the review port. */
+function pullRequestReviewProviderCode(status) {
+    return status === 401 ? 'authorization.credential-invalid' : status === 403 ? 'authorization.denied'
+        : status === 404 ? 'provider.not-found' : status === 409 ? 'provider.conflict'
+            : status === 429 ? 'provider.rate-limited' : status === 408 || status === 425 ? 'provider.unavailable'
+                : status && status < 500 ? 'provider.contract-invalid' : 'provider.unavailable';
+}
+
+
+/***/ }),
+
 /***/ 5069:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -3756,6 +3822,7 @@ const ERROR_MESSAGES = {
     "get-comment": "Unable to get the pull request review comment.",
     "list-files": "Unable to list pull request changed files.",
     "get-head-sha": "Unable to get the pull request head commit.",
+    "get-source-bound-pr": "Unable to get the source-bound pull request identity.",
     "publish-comments": "Failed to publish pull request review comments.",
     "update-comment": "Unable to update the pull request review comment.",
     "update-review": "Unable to update the pull request review summary.",
@@ -3777,6 +3844,8 @@ class PullRequestReviewOperationError extends Error {
         super(buildMessage(operation, context));
         this.name = "PullRequestReviewOperationError";
         this.operation = operation;
+        if (context?.providerFailure === 'response-invalid')
+            this.providerFailure = context.providerFailure;
         const status = context?.providerStatus;
         if (typeof status === 'number' && Number.isInteger(status) && status >= 400 && status <= 599) {
             this.providerStatus = status;
@@ -4426,6 +4495,10 @@ function isBot(author, botLogin) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.isLoadedBugbotRevisionSuperseded = isLoadedBugbotRevisionSuperseded;
 exports.hasNewerBugbotRevision = hasNewerBugbotRevision;
+const application_error_1 = __nccwpck_require__(5999);
+const git_object_id_1 = __nccwpck_require__(8623);
+const pull_request_review_errors_1 = __nccwpck_require__(6445);
+const bugbot_freshness_error_1 = __nccwpck_require__(6562);
 const framed_review_1 = __nccwpck_require__(3750);
 const bugbot_framed_identity_policy_1 = __nccwpck_require__(7628);
 function isLoadedBugbotRevisionSuperseded(context, expectedHeadSha) {
@@ -4433,17 +4506,28 @@ function isLoadedBugbotRevisionSuperseded(context, expectedHeadSha) {
         && context.prContext.prHeadSha.toLowerCase() !== expectedHeadSha;
 }
 /** Re-reads the remote head immediately before publication to close the analysis race window. */
-async function hasNewerBugbotRevision(context, ports) {
+async function hasNewerBugbotRevision(context, ports, boundary = 'before-publication') {
     if (!context.prContext || !context.canonicalPullRequest)
         return false;
-    if (context.reviewFramedSource) {
-        if (!ports.getSourceBoundPullRequest)
-            throw new framed_review_1.BugbotReviewCompletenessError('capability');
-        const current = await ports.getSourceBoundPullRequest(context.canonicalPullRequest.number);
-        return !(0, bugbot_framed_identity_policy_1.sameBugbotFramedPullRequest)(context.canonicalPullRequest, current);
+    const operation = context.reviewFramedSource ? 'get-source-bound-pr' : 'get-head-sha';
+    try {
+        if (context.reviewFramedSource) {
+            if (!ports.getSourceBoundPullRequest)
+                throw new framed_review_1.BugbotReviewCompletenessError('capability');
+            const current = await ports.getSourceBoundPullRequest(context.canonicalPullRequest.number);
+            return !(0, bugbot_framed_identity_policy_1.sameBugbotFramedPullRequest)(context.canonicalPullRequest, current);
+        }
+        const currentHead = (0, git_object_id_1.canonicalGitObjectId)(await ports.getPullRequestHeadSha(context.canonicalPullRequest.number));
+        if (currentHead === undefined)
+            throw (0, bugbot_freshness_error_1.bugbotFreshnessError)(undefined, boundary, operation, true);
+        return currentHead !== context.prContext.prHeadSha.toLowerCase();
     }
-    const currentHead = await ports.getPullRequestHeadSha(context.canonicalPullRequest.number);
-    return currentHead !== undefined && currentHead.toLowerCase() !== context.prContext.prHeadSha.toLowerCase();
+    catch (error) {
+        if (error instanceof pull_request_review_errors_1.PullRequestReviewOperationError || (error instanceof application_error_1.ApplicationError && !error.recovery
+            && (error.kind === 'provider' || error.kind === 'authorization')))
+            throw (0, bugbot_freshness_error_1.bugbotFreshnessError)(error, boundary, operation);
+        throw error;
+    }
 }
 
 
@@ -5998,6 +6082,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.queryBugbotFindings = queryBugbotFindings;
 exports.buildBugbotPartitionQueryRequest = buildBugbotPartitionQueryRequest;
 exports.queryBugbotPartitionFindings = queryBugbotPartitionFindings;
+const bugbot_verification_response_failure_1 = __nccwpck_require__(2486);
+const response_failure_1 = __nccwpck_require__(4286);
 const framed_review_1 = __nccwpck_require__(3750);
 const bugbot_framed_receipt_policy_1 = __nccwpck_require__(4411);
 const agent_task_policy_1 = __nccwpck_require__(5712);
@@ -6058,6 +6144,9 @@ async function queryBugbotPartitionFindings(repository, configuration, prompt, t
                 : validation.payload;
         }
         catch (error) {
+            if (attempt === MAX_PARTITION_QUERY_ATTEMPTS && (error instanceof response_failure_1.BugbotResponseFailure || error instanceof bugbot_verification_response_failure_1.BugbotVerificationResponseFailure)) {
+                throw new application_error_1.ApplicationError('agent.failed', 'The completed Bugbot partition responses failed completed-response validation after three attempts.', { retryable: false, recovery: { id: 'bugbot-partition-query-exhausted', variables: { reason: error.reason, attempts: 3 } } });
+            }
             if (attempt === MAX_PARTITION_QUERY_ATTEMPTS || (error instanceof framed_review_1.BugbotReviewCompletenessError && error.facts.resource !== 'receipt'))
                 throw error;
             (0, logging_ports_1.logInfo)(`Bugbot reviewer retrying one partition query (${attempt + 1}/${MAX_PARTITION_QUERY_ATTEMPTS}) after unusable agent output.`);
@@ -6667,6 +6756,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildLiteralVerificationSchema = buildLiteralVerificationSchema;
 exports.buildLiteralVerificationPrompt = buildLiteralVerificationPrompt;
 exports.verifyGeneratedLiteralFindings = verifyGeneratedLiteralFindings;
+const bugbot_verification_response_failure_1 = __nccwpck_require__(2486);
 const schema_1 = __nccwpck_require__(6808);
 const bugbot_literal_verification_policy_1 = __nccwpck_require__(7802);
 const untrusted_content_1 = __nccwpck_require__(7057);
@@ -6797,7 +6887,7 @@ function record(value) {
     return value;
 }
 function invalidOutput() {
-    return new application_error_1.ApplicationError('agent.failed', 'Generated-source candidate verification returned incomplete or invalid evidence. Recheck the exact source; no clean review was verified.');
+    return new bugbot_verification_response_failure_1.BugbotVerificationResponseFailure('Generated-source candidate verification returned incomplete or invalid evidence. Recheck the exact source; no clean review was verified.');
 }
 
 
@@ -6982,7 +7072,7 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
         const resolutionErrors = await telemetry.measure('publication', () => (0, apply_detected_findings_1.applyDetectedFindings)(reviewContext, context, prepared, dependencies.scm.publication, dependencies.scm.resolution, catalog));
-        if (await telemetry.measure('post-publication-freshness', () => (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context))) {
+        if (await telemetry.measure('post-publication-freshness', () => (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context, 'after-publication'))) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
         const presentation = await telemetry.measure('projection', () => reconcileReviewState({
@@ -7248,6 +7338,8 @@ var _ApplicationError_cause;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = exports.APPLICATION_ERROR_RECOVERY_IDS = void 0;
 exports.isApplicationErrorCorrelationId = isApplicationErrorCorrelationId;
+const review_freshness_failure_1 = __nccwpck_require__(9004);
+const response_failure_1 = __nccwpck_require__(4286);
 const progress_batch_diagnostic_1 = __nccwpck_require__(9486);
 const branch_sync_publication_1 = __nccwpck_require__(7857);
 const framed_review_1 = __nccwpck_require__(3750);
@@ -7281,6 +7373,8 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'bugbot-review-blocks-pending',
     'branch-sync-agent-disabled',
     'branch-sync-fixer-unavailable',
+    'branch-sync-sensitive-paths',
+    'branch-sync-conflict-limit',
     'branch-sync-resolution-invalid',
     'branch-sync-verification-failed',
     'branch-sync-catalog-incompatible',
@@ -7311,7 +7405,11 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'bugbot-review-incomplete',
     'progress-result-contract-invalid',
     'progress-partition-length-invalid',
+    'progress-partition-bytes-invalid',
     'progress-assessment-length-invalid',
+    'bugbot-partition-query-exhausted',
+    'bugbot-freshness-before-publication',
+    'bugbot-freshness-after-publication',
     'progress-assessment-capacity-exceeded',
     'progress-scope-clause-limit',
     'progress-sdd-seed-unverified',
@@ -7554,6 +7652,8 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'bugbot-review-blocks-pending': Object.freeze(['pendingCount']),
     'branch-sync-agent-disabled': Object.freeze(['command']),
     'branch-sync-fixer-unavailable': Object.freeze(['command']),
+    'branch-sync-sensitive-paths': Object.freeze(['command', 'conflictCount', 'sensitiveCount']),
+    'branch-sync-conflict-limit': Object.freeze(['command', 'conflictCount', 'limit']),
     'branch-sync-resolution-invalid': Object.freeze(['validationCode', 'command']),
     'branch-sync-verification-failed': Object.freeze(['stage', 'reason', 'command', 'commandIndex', 'childSha', 'restoration']),
     'branch-sync-catalog-incompatible': Object.freeze(['phase', 'profile', 'field', 'capabilityNumber', 'abort']),
@@ -7575,7 +7675,11 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'progress-evidence-capacity-exceeded': Object.freeze(['phase', 'dimension', 'unit', 'bound', 'observedCount', 'supportedLimit', 'countKind', 'context']),
     'bugbot-review-incomplete': Object.freeze(['profile', 'countKind', 'resource', 'observed', 'limit', 'unit']),
     'progress-result-contract-invalid': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
+    'progress-partition-bytes-invalid': Object.freeze(['partitionId', 'filePath', 'unitId', 'field', 'maximum', 'observed']),
     'progress-partition-length-invalid': Object.freeze(['partitionId', 'filePath', 'unitId', 'field', 'maximum', 'observed']),
+    'bugbot-partition-query-exhausted': Object.freeze(['reason', 'attempts']),
+    'bugbot-freshness-before-publication': Object.freeze(['operation', 'providerStatus', 'providerReference', 'reason']),
+    'bugbot-freshness-after-publication': Object.freeze(['operation', 'providerStatus', 'providerReference', 'reason']),
     'progress-assessment-length-invalid': Object.freeze(['requirementId', 'sourceLineId', 'field', 'maximum', 'observed']),
     'progress-assessment-capacity-exceeded': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
     'progress-batch-retained': Object.freeze(['reason', 'verified', 'expected', 'batch', 'requirementId']),
@@ -7638,9 +7742,21 @@ function normalizeApplicationErrorRecovery(recovery) {
             || variables.pendingCount < 1)) {
         throw new TypeError('Application error recovery pending count is invalid.');
     }
-    if ((recovery.id === 'branch-sync-agent-disabled' || recovery.id === 'branch-sync-fixer-unavailable' || recovery.id === 'branch-sync-resolution-invalid')
+    if ((recovery.id === 'branch-sync-agent-disabled' || recovery.id === 'branch-sync-fixer-unavailable' || recovery.id === 'branch-sync-sensitive-paths' || recovery.id === 'branch-sync-conflict-limit' || recovery.id === 'branch-sync-resolution-invalid')
         && variables.command !== '/copilot sync-branch') {
         throw new TypeError('Application error recovery synchronization command is invalid.');
+    }
+    if (recovery.id === 'branch-sync-sensitive-paths' || recovery.id === 'branch-sync-conflict-limit') {
+        const count = variables.conflictCount;
+        if (typeof count !== 'number' || !Number.isSafeInteger(count) || count < 1) {
+            throw new TypeError('Branch synchronization conflict count is invalid.');
+        }
+        if (recovery.id === 'branch-sync-sensitive-paths'
+            ? typeof variables.sensitiveCount !== 'number' || !Number.isSafeInteger(variables.sensitiveCount)
+                || variables.sensitiveCount < 1 || variables.sensitiveCount > count
+            : count <= 20 || variables.limit !== 20) {
+            throw new TypeError('Branch synchronization refusal counts are invalid.');
+        }
     }
     if (recovery.id === 'branch-sync-resolution-invalid'
         && !branch_sync_validation_1.BRANCH_SYNC_VALIDATION_CODES.some(code => code === variables.validationCode)) {
@@ -7685,10 +7801,14 @@ function normalizeApplicationErrorRecovery(recovery) {
         throw new TypeError('Progress scope capacity diagnostic is invalid.');
     if (recovery.id === 'progress-result-contract-invalid' && !(0, progress_response_diagnostic_2.isProgressResponseDiagnosticFacts)(variables))
         throw new TypeError('Progress response diagnostic is invalid.');
+    if (recovery.id === 'progress-partition-bytes-invalid' && !(0, progress_partition_length_failure_1.isProgressPartitionByteDiagnostic)(variables))
+        throw new TypeError('Progress partition byte diagnostic is invalid.');
     if (recovery.id === 'progress-partition-length-invalid' && !(0, progress_partition_length_failure_1.isProgressPartitionLengthDiagnostic)(variables))
         throw new TypeError('Progress part length diagnostic is invalid.');
     if (recovery.id === 'progress-assessment-length-invalid' && !(0, progress_assessment_length_failure_1.isProgressAssessmentLengthDiagnostic)(variables))
         throw new TypeError('Progress assessment length diagnostic is invalid.');
+    if (recovery.id === 'bugbot-partition-query-exhausted' && !(0, response_failure_1.isBugbotPartitionQueryDiagnostic)(variables))
+        throw new TypeError('Bugbot partition query diagnostic is invalid.');
     if (recovery.id === 'bugbot-review-incomplete' && !(0, framed_review_1.isBugbotReviewBlockFacts)(variables))
         throw new TypeError('Bugbot review diagnostic is invalid.');
     if (recovery.id === 'progress-inventory-incomplete' && !(0, progress_inventory_diagnostic_1.isProgressInventoryDiagnostic)(variables))
@@ -7702,6 +7822,10 @@ function normalizeApplicationErrorRecovery(recovery) {
     }
     if (recovery.id === 'issue-assignment-failed' && !(0, issue_assignment_diagnostic_1.isIssueAssignmentDiagnostic)(variables)) {
         throw new TypeError('Issue assignment diagnostic is invalid.');
+    }
+    if ((recovery.id === 'bugbot-freshness-before-publication' || recovery.id === 'bugbot-freshness-after-publication')
+        && !(0, review_freshness_failure_1.isBugbotFreshnessDiagnostic)(variables)) {
+        throw new TypeError('Bugbot freshness diagnostic is invalid.');
     }
     return Object.freeze({
         id: recovery.id,
@@ -8399,6 +8523,38 @@ function bugbotReviewResourceUnit(resource) {
 
 /***/ }),
 
+/***/ 4286:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BugbotResponseFailure = exports.BUGBOT_RESPONSE_FAILURE_REASONS = void 0;
+exports.isBugbotPartitionQueryDiagnostic = isBugbotPartitionQueryDiagnostic;
+/** Content-free reasons for a completed Bugbot response, never process or provider guesses. */
+exports.BUGBOT_RESPONSE_FAILURE_REASONS = Object.freeze(['json-invalid', 'schema-type', 'schema-enum', 'schema-string-short',
+    'schema-string-long', 'schema-number-finite', 'schema-number-min', 'schema-number-max', 'schema-array-short',
+    'schema-array-long', 'schema-required', 'schema-additional', 'verification-invalid']);
+function isBugbotPartitionQueryDiagnostic(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return false;
+    const facts = value;
+    return Object.keys(facts).sort().join(',') === 'attempts,reason' && facts.attempts === 3
+        && exports.BUGBOT_RESPONSE_FAILURE_REASONS.some(reason => reason === facts.reason);
+}
+class BugbotResponseFailure extends Error {
+    constructor(reason) {
+        super('A completed Bugbot response did not satisfy its structured contract.');
+        this.reason = reason;
+        if (!exports.BUGBOT_RESPONSE_FAILURE_REASONS.some(known => known === reason))
+            throw new TypeError('Bugbot response reason is invalid.');
+    }
+}
+exports.BugbotResponseFailure = BugbotResponseFailure;
+
+
+/***/ }),
+
 /***/ 3994:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -8463,6 +8619,27 @@ function resolveBugbotReviewEffort(configured, complexity) {
     if (complexity.files <= 2 && changedLines <= 80)
         return 'low';
     return 'default';
+}
+
+
+/***/ }),
+
+/***/ 9004:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.isBugbotFreshnessDiagnostic = isBugbotFreshnessDiagnostic;
+function isBugbotFreshnessDiagnostic(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return false;
+    const v = value;
+    return (v.operation === 'get-head-sha' || v.operation === 'get-source-bound-pr')
+        && typeof v.providerStatus === 'string' && /^(?:http-unavailable|http-[45][0-9]{2})$/u.test(v.providerStatus)
+        && typeof v.providerReference === 'string' && /^[A-Za-z0-9:-]{1,64}$/u.test(v.providerReference)
+        && (v.reason === 'provider-request-failed' || v.reason === 'response-invalid')
+        && (v.reason !== 'response-invalid' || v.providerStatus === 'http-unavailable');
 }
 
 
@@ -10065,8 +10242,9 @@ function progressInventoryPresentation(facts) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ProgressPartitionLengthFailure = void 0;
+exports.ProgressPartitionByteFailure = exports.ProgressPartitionLengthFailure = void 0;
 exports.isProgressPartitionLengthDiagnostic = isProgressPartitionLengthDiagnostic;
+exports.isProgressPartitionByteDiagnostic = isProgressPartitionByteDiagnostic;
 exports.progressPartitionLengthPresentation = progressPartitionLengthPresentation;
 const progress_response_diagnostic_1 = __nccwpck_require__(6289);
 const progress_evidence_path_1 = __nccwpck_require__(5887);
@@ -10083,19 +10261,37 @@ function text(value, maximum) {
 }
 /** Closed operator facts; string counts are code points, never raw prose or body bytes. */
 function isProgressPartitionLengthDiagnostic(value) {
+    return isPartitionSizeDiagnostic(value, 600);
+}
+/** Exact JSON UTF-8 bytes excluding quotes, with no widening of the legacy point diagnostic. */
+function isProgressPartitionByteDiagnostic(value) {
+    return isPartitionSizeDiagnostic(value, 3600) && value.observed <= 3600;
+}
+function isPartitionSizeDiagnostic(value, maximumLimit) {
     if (!value || typeof value !== 'object' || Array.isArray(value))
         return false;
     const v = value;
     return Object.keys(v).sort().join(',') === 'field,filePath,maximum,observed,partitionId,unitId'
         && text(v.partitionId, 256) && (0, progress_evidence_path_1.isProgressEvidencePath)(v.filePath) && text(v.unitId, 256)
         && (0, progress_response_diagnostic_1.isProgressResponseField)('partition', v.field) && /\.(?:implemented|remaining)$/u.test(v.field)
-        && typeof v.maximum === 'number' && Number.isSafeInteger(v.maximum) && v.maximum >= 1 && v.maximum <= 600
+        && typeof v.maximum === 'number' && Number.isSafeInteger(v.maximum) && v.maximum >= 1 && v.maximum <= maximumLimit
         && typeof v.observed === 'number' && Number.isSafeInteger(v.observed) && v.observed > v.maximum;
 }
 function progressPartitionLengthPresentation(facts) {
     return Object.freeze({ ...facts, partitionId: (0, progress_evidence_path_1.renderProgressEvidencePath)(facts.partitionId), filePath: (0, progress_evidence_path_1.renderProgressEvidencePath)(facts.filePath),
         unitId: (0, progress_evidence_path_1.renderProgressEvidencePath)(facts.unitId), field: (0, progress_evidence_path_1.renderProgressEvidencePath)(facts.field) });
 }
+/** Only closed host measurements survive this rejection, never the returned prose. */
+class ProgressPartitionByteFailure extends Error {
+    constructor(details) {
+        super('A complete progress source fact exceeds its allocated JSON UTF-8 bytes.');
+        const { outputLocale: _locale, ...facts } = details;
+        if (!isProgressPartitionByteDiagnostic(facts))
+            throw new TypeError('Progress partition byte diagnostic is invalid.');
+        this.details = Object.freeze({ ...details });
+    }
+}
+exports.ProgressPartitionByteFailure = ProgressPartitionByteFailure;
 
 
 /***/ }),
@@ -10130,7 +10326,7 @@ exports.PROGRESS_RESPONSE_REASONS = Object.freeze({
 const fieldPatterns = Object.freeze({
     scope: /^\$(?:\.outputLocale|\.lines(?:\[(0|[1-9]\d{0,3})\](?:\.(?:id|kind|sameAs))?)?)?$/u,
     partition: /^\$(?:\.outputLocale|\.partitionId|\.files(?:\[(0|[1-9]\d{0,3})\](?:\.(?:path|unitId|implemented|remaining))?)?)?$/u,
-    assessment: /^\$(?:\.outputLocale|\.progress|\.requirements(?:\[(0|[1-9]\d{0,3})\](?:\.(?:id|status|evidence|summary|remaining))?)?)?$/u,
+    assessment: /^\$(?:\.outputLocale|\.progress|\.requirements(?:\[(0|[1-9]\d{0,3})\](?:\.(?:id|status|evidence|summary|remaining|assessment))?)?)?$/u,
 });
 const maxIndex = Object.freeze({ scope: 1023, partition: 511, assessment: 31 });
 function knownId(value, prefix, maximum) {

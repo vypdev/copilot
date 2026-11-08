@@ -17,9 +17,9 @@ export function bindProgressPartitionLength(error: unknown, part: ProgressDiffPa
     return Object.freeze(details);
 }
 export function progressPartitionRepairPrompt(prompt: string): string {
-    return `${prompt}\n\nThe previous completed response exceeded the unchanged character limit for a file fact. Produce one concise replacement for this same complete immutable part, with the exact assigned identities and output locale. Both implemented and remaining must satisfy the existing per-field limit. Preserve uncertainty. Do not drop files or source units, invent evidence, repeat the old response, or change the schema. Return only the requested JSON.`;
+    return `${prompt}\n\nThe previous completed response exceeded the unchanged character limit for a file fact. Produce one concise replacement for this same complete immutable part, with the exact assigned identities and output locale. Both implemented and remaining must satisfy the existing per-field code-point and JSON UTF-8 byte limits shown in the original request. Preserve uncertainty. Do not drop files or source units, invent evidence, repeat the old response, or change the schema. Return only the requested JSON.`;
 }
 export function progressPartitionLengthRejected(details: ProgressPartitionLengthDiagnostic): ApplicationError {
     return new ApplicationError('agent.failed', 'A progress part still exceeds its unchanged fact bound after one replacement; existing progress was retained.',
-        { recovery: { id: 'progress-partition-length-invalid', variables: details } });
+        { retryable: false, recovery: { id: 'progress-partition-length-invalid', variables: details } });
 }

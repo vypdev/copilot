@@ -51,5 +51,5 @@ it('retains the existing fact ceiling and never inserts a rejected body in the r
     const prompt = progressPartitionRepairPrompt('Complete pinned source.'); expect(prompt).toContain('Complete pinned source.');
     expect(prompt).toContain('same complete immutable part'); expect(prompt).not.toContain('PRIVATE_RESPONSE');
     const rejected = progressPartitionLengthRejected(diagnostic()); expect(rejected.code).toBe('agent.failed');
-    expect(rejected.recovery).toEqual({ id: 'progress-partition-length-invalid', variables: diagnostic() }); expect(rejected.retryable).toBe(true);
+    expect(rejected.recovery).toEqual({ id: 'progress-partition-length-invalid', variables: diagnostic() }); expect(rejected.retryable).toBe(false);
 });

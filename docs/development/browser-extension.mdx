@@ -674,7 +674,13 @@ verify frozen installation with engine checking when updating the lockfile.
 The native ESR CI step verifies both downloaded archives before extraction or
 execution. Firefox's pinned SHA-256 comes from Mozilla's release SHA256SUMS;
 geckodriver's comes from its official GitHub release asset digest. A mismatch
-stops the step. Update version, URL and reviewed upstream digest together.
+stops the step. The Linux geckodriver download uses the public GitHub API release
+asset ID `483347579`, with `Accept: application/octet-stream`, for the same pinned
+v0.37.1 archive. The named release route returned repeated HTTP 504 in run
+42469201584; the API route returned bytes matching the existing reviewed digest.
+Each attempt has a 10-second connection and 60-second transfer limit, with at
+most two retries. No credential or alternate binary is used. Update version,
+asset ID, URL and reviewed upstream digest together.
 
 
 The native harness clicks the same settings button as a user, then follows exactly

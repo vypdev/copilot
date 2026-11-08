@@ -163,7 +163,7 @@ export async function runDetectPotentialProblemsWorkflow(
             catalog,
         ));
         if (await telemetry.measure('post-publication-freshness', () =>
-            hasNewerBugbotRevision(context, dependencies.scm.context))) {
+            hasNewerBugbotRevision(context, dependencies.scm.context, 'after-publication'))) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
         const presentation = await telemetry.measure('projection', () =>
