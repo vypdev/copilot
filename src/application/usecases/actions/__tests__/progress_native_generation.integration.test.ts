@@ -20,7 +20,7 @@ const captured = readFixture('domus-29-native-937.json.gz.hex');
 const fixture = captured.data;
 afterEach(() => jest.restoreAllMocks());
 
-async function scenario(moveHead = false) {
+async function scenario(moveHead = false, repetition?: 'correct' | 'exhaust' | 'stale') {
     const native = (path: string) => {
         expect(Object.prototype.hasOwnProperty.call(fixture.nativeObjects, path)).toBe(true);
         return { data: fixture.nativeObjects[path] };
@@ -38,6 +38,7 @@ async function scenario(moveHead = false) {
     expect(diff.protocol!.requiredPaths).toHaveLength(175); expect(diff.partitions).toHaveLength(17);
     const setProgressLabel = jest.fn(), setLabels = jest.fn(), assessed: string[] = [];
     let currentHead = fixture.head;
+    const attempts = new Map<string, number>();
     const execute = jest.fn(async request => {
         expect(setProgressLabel).not.toHaveBeenCalled(); expect(setLabels).not.toHaveBeenCalled();
         const schema = request.outputSchema, p = schema.properties;
@@ -59,9 +60,14 @@ async function scenario(moveHead = false) {
         expect(projected).not.toHaveProperty('summary'); expect(projected).not.toHaveProperty('remaining');
         assessed.push(...fields.id.enum);
         if (moveHead && fields.id.enum.length === 9) currentHead = 'c'.repeat(40);
+        const batchId = p.batchId.enum[0], attempt = (attempts.get(batchId) ?? 0) + 1;
+        attempts.set(batchId, attempt);
+        const repeated = repetition === 'exhaust' ? fields.id.enum.length === 9 : Boolean(repetition) && assessed.length === 32;
+        if (repetition === 'stale' && attempt === 2) currentHead = 'c'.repeat(40);
         return JSON.stringify(assessmentWireFixture({ outputLocale: 'en-US', progress: 25, manifestDigest: p.manifestDigest.enum[0], batchId: p.batchId.enum[0], headSha: p.headSha.enum[0],
-            requirements: fields.id.enum.map((id: string) => ({ id, status: 'verification-unknown', evidence: 'external-unverified',
-                summary: 'Source reviewed.', remaining: 'Verification needed.', citations: [fields.citations.items.enum[0]] })) }, schema));
+            requirements: fields.id.enum.map((id: string, index: number) => ({ id, status: 'verification-unknown', evidence: 'external-unverified',
+                summary: 'Source reviewed.', remaining: 'Verification needed.', citations: repeated && index === 0
+                    ? [fields.citations.items.enum[0], fields.citations.items.enum[0]] : [fields.citations.items.enum[0]] })) }, schema));
     });
     const agent = new FindingsAgentAdapter({ cli: { execute } });
     const check = new CheckProgressUseCase({ getDescription: async () => original.body }, { getLabels: async () => [], setLabels }, { setProgressLabel },
@@ -70,7 +76,7 @@ async function scenario(moveHead = false) {
         { getSource: async () => ({ kind: 'pull-request', number: 29, headSha: currentHead, baseBranch: 'develop' }) });
     const results = await check.invoke({ repositoryIdentity: fixture.repository, issueNumber: 23, pushedBranch: fixture.branch, developmentBranch: 'develop', branchTypes: ['feature'],
         agentConfiguration: { provider: 'codex', modelProvider: 'openai', model: 'deterministic-fixture' }, includeReasoning: false, targetLocale: 'en-US' });
-    return { results, setProgressLabel, setLabels, assessed, execute };
+    return { results, setProgressLabel, setLabels, assessed, execute, attempts };
 }
 
 it('github-communication-experience-change-C188: current Domus immutable inventory reaches one complete eligible publication with native generation bounds', async () => {
@@ -93,6 +99,39 @@ it('github-communication-experience-change-C188: current Domus immutable invento
 it('github-communication-experience-change-C189: native generation success for all current Domus requirements cannot bypass the exact-head publication fence', async () => {
     const f = await scenario(true);
     expect(f.assessed).toHaveLength(169);
+    expect(f.results.at(-1)).toMatchObject({ success: false, errors: [expect.objectContaining({ code: 'workflow.stale' })] });
+    expect(f.setProgressLabel).not.toHaveBeenCalled(); expect(f.setLabels).not.toHaveBeenCalled();
+});
+
+it('inventory1-C11: native citation correction preserves all 169 original Domus requirements and 17 source parts before one publication', async () => {
+    const f = await scenario(false, 'correct');
+    expect(createHash('sha256').update(original.body).digest('hex')).toBe(fixture.bodyDigest);
+    expect(f.results.at(-1)).toMatchObject({ success: true, payload: { progress: 25, sourceHeadSha: fixture.head } });
+    expect(f.execute).toHaveBeenCalledTimes(34);
+    expect(f.execute.mock.calls.filter(([request]) => request.outputSchema.properties.files)).toHaveLength(17);
+    expect(f.attempts.size).toBe(6); expect([...f.attempts.values()]).toEqual([2, 1, 1, 1, 1, 1]);
+    expect(f.assessed).toHaveLength(201); expect(new Set(f.assessed).size).toBe(169);
+    const payload = f.results.at(-1)!.payload as { summary: string; remaining: string };
+    for (const id of new Set(f.assessed)) {
+        expect(payload.summary.split(`[${id}]`)).toHaveLength(2); expect(payload.remaining.split(`[${id}]`)).toHaveLength(2);
+    }
+    expect(f.setProgressLabel).toHaveBeenCalledTimes(1); expect(f.setLabels).toHaveBeenCalledTimes(1);
+});
+
+it('inventory1-C12: native late-batch citation exhaustion retains every provisional batch and publishes nothing', async () => {
+    const f = await scenario(false, 'exhaust');
+    expect(f.execute).toHaveBeenCalledTimes(34); expect(new Set(f.assessed).size).toBe(169);
+    expect([...f.attempts.values()]).toEqual([1, 1, 1, 1, 1, 2]);
+    expect(f.results.at(-1)).toMatchObject({ success: false, errors: [expect.objectContaining({
+        code: 'validation.evidence-unavailable', retryable: false,
+        recovery: { id: 'progress-batch-retained', variables: expect.objectContaining({ reason: 'evidence-duplicate', batch: 6, verified: 5, expected: 6 }) },
+    })] });
+    expect(f.setProgressLabel).not.toHaveBeenCalled(); expect(f.setLabels).not.toHaveBeenCalled();
+});
+
+it('inventory1-C13: successful native citation correction cannot bypass source drift at publication', async () => {
+    const f = await scenario(false, 'stale');
+    expect(f.execute).toHaveBeenCalledTimes(34); expect(new Set(f.assessed).size).toBe(169);
     expect(f.results.at(-1)).toMatchObject({ success: false, errors: [expect.objectContaining({ code: 'workflow.stale' })] });
     expect(f.setProgressLabel).not.toHaveBeenCalled(); expect(f.setLabels).not.toHaveBeenCalled();
 });

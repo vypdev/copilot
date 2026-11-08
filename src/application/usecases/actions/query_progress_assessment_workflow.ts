@@ -13,6 +13,9 @@ import { parseProgressResponse, type ProgressAttemptResult } from './progress_re
 import { rethrowProgressQueryFailure } from './query_progress_result_workflow';
 import { compactProgressAssessmentPlan, compactProgressAssessmentPrompt, decodeCompactProgressAssessment,
     type CompactProgressAssessmentPlan } from '../../policies/progress_compact_assessment_policy';
+import { bindProgressCitationRepetition, progressCitationRepairPrompt } from '../../policies/progress_citation_recovery_policy';
+import type { ProgressCitationRepetitionDiagnostic } from '../../../domain/progress_citation_repetition';
+import { progressBatchRejected } from '../../policies/progress_batch_rejection_policy';
 
 interface AssessmentContext {
     readonly scope: ProgressScope;
@@ -23,6 +26,7 @@ interface AssessmentContext {
 }
 type Outcome = { readonly kind: 'valid'; readonly result: ProgressAttemptResult }
     | { readonly kind: 'length'; readonly facts: ProgressAssessmentLengthDiagnostic }
+    | { readonly kind: 'repetition'; readonly facts: ProgressCitationRepetitionDiagnostic }
     | { readonly kind: 'mismatch'; readonly facts: ProgressCompletionDiagnostic; readonly correlationId: string };
 
 function freezeSnapshot<T>(value: T): T {
@@ -35,7 +39,7 @@ function freezeSnapshot<T>(value: T): T {
 
 /** Only attributable native length failures enter recovery; completion still has a parse-only catch. */
 async function evaluate(agent: FindingsQueryPort, request: FindingsQueryRequest, context: AssessmentContext,
-    projectResponse: (response: AgentQueryResult) => AgentQueryResult, compact?: CompactProgressAssessmentPlan): Promise<Outcome> {
+    projectResponse: (response: AgentQueryResult, schema?: Record<string, unknown>) => AgentQueryResult, compact?: CompactProgressAssessmentPlan): Promise<Outcome> {
     let response: AgentQueryResult;
     try { response = await agent.query(request); }
     catch (error) {
@@ -46,9 +50,11 @@ async function evaluate(agent: FindingsQueryPort, request: FindingsQueryRequest,
     }
     try {
         const canonical = compact ? decodeCompactProgressAssessment(response, compact, context.scope, context.anchors) : response;
-        return { kind: 'valid', result: parseProgressResponse(projectResponse(canonical), context.targetLocale, context.scope, context.anchors) };
+        return { kind: 'valid', result: parseProgressResponse(projectResponse(canonical, request.options?.schema), context.targetLocale, context.scope, context.anchors) };
     }
     catch (error) {
+        const repetition = bindProgressCitationRepetition(error, request.options?.schema, context.scope, context.anchors, context.sourceLineIds, context.targetLocale);
+        if (repetition) return { kind: 'repetition', facts: repetition };
         if (!(error instanceof ProgressCompletionMismatch)) throw error;
         const facts = error.factsFor(context.scope);
         if (!facts || !progressCompletionCountsMatchScope(facts, context.scope.requirements.length,
@@ -59,7 +65,7 @@ async function evaluate(agent: FindingsQueryPort, request: FindingsQueryRequest,
 
 /** One complete read-only replacement; this owner has no publication capability. */
 export async function queryProgressAssessment(agent: FindingsQueryPort, request: FindingsQueryRequest,
-    context: AssessmentContext, projectResponse: (response: AgentQueryResult) => AgentQueryResult = response => response): Promise<ProgressAttemptResult> {
+    context: AssessmentContext, projectResponse: (response: AgentQueryResult, schema?: Record<string, unknown>) => AgentQueryResult = response => response): Promise<ProgressAttemptResult> {
     const captured = freezeSnapshot(globalThis.structuredClone({ request, context }));
     if (!captured.request.options?.schema || captured.request.options.expectJson !== true) {
         throw new ApplicationError('configuration.unsupported', 'Final progress assessment requires its complete response schema. Existing progress was retained.');
@@ -71,18 +77,23 @@ export async function queryProgressAssessment(agent: FindingsQueryPort, request:
         ...captured.request, prompt: compactProgressAssessmentPrompt(captured.request.prompt, facts),
         options: { ...captured.request.options, schema: plan.schema },
     });
-    const first = await evaluate(agent, initialCompact ? compactRequest(initialCompact) : captured.request, captured.context, projectResponse, initialCompact);
+    const initialRequest = initialCompact ? compactRequest(initialCompact) : captured.request;
+    const first = await evaluate(agent, initialRequest, captured.context, projectResponse, initialCompact);
     if (first.kind === 'valid') return first.result;
     logInfo(first.kind === 'length'
         ? 'A progress acceptance fact exceeded its unchanged response limit. Requesting one complete replacement for the same pinned batch; previous progress is retained.'
-        : 'Reassessing one inconsistent completed progress estimate using the same complete pinned evidence. Previous progress is retained.');
+        : first.kind === 'repetition'
+            ? 'A completed progress assessment repeated a native source citation. Requesting one complete correction for the same pinned batch; previous progress is retained.'
+            : 'Reassessing one inconsistent completed progress estimate using the same complete pinned evidence. Previous progress is retained.');
     const replacementCompact = initialCompact ?? (first.kind === 'length' ? compact : undefined);
-    const replacement = replacementCompact ? compactRequest(replacementCompact, first.facts) : { ...captured.request, prompt: first.kind === 'length'
+    const replacement = first.kind === 'repetition' ? freezeSnapshot({ ...initialRequest, prompt: progressCitationRepairPrompt(initialRequest.prompt, first.facts) })
+        : replacementCompact ? compactRequest(replacementCompact, first.facts) : { ...captured.request, prompt: first.kind === 'length'
         ? progressAssessmentLengthRepairPrompt(captured.request.prompt, first.facts)
         : progressCompletionRepairPrompt(captured.request.prompt, first.facts) };
     const second = await evaluate(agent, replacement, captured.context, projectResponse, replacementCompact);
     if (second.kind === 'valid') return second.result;
     if (second.kind === 'length') throw progressAssessmentLengthRejected(second.facts);
+    if (second.kind === 'repetition') throw progressBatchRejected('evidence-duplicate', { batch: second.facts.batch, requirementId: second.facts.requirementId });
     throw new ApplicationError('agent.failed', 'Progress completion remained inconsistent after one complete reassessment. Existing progress was retained.',
         { correlationId: second.correlationId, recovery: { id: 'progress-completion-recovery-exhausted', variables: second.facts } });
 }

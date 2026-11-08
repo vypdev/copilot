@@ -169,7 +169,7 @@ it('CommitScope916-C09 supplies strict native same-head and citation response sc
     expect(schema.properties.requirements.items.properties.citations.minItems).toBe(1);
     expect(schema.properties.requirements.maxItems).toBe(32);
     const native = projectCodexOutputSchema(schema) as typeof schema;
-    expect(Object.keys(native.properties.requirements.items.properties.citations).sort()).toEqual(['items', 'maxItems', 'minItems', 'type']);
+    expect(Object.keys(native.properties.requirements.items.properties.citations).sort()).toEqual(['description', 'items', 'maxItems', 'minItems', 'type']);
     expect(native.properties.requirements.items.properties.citations).toEqual(schema.properties.requirements.items.properties.citations);
 });
 

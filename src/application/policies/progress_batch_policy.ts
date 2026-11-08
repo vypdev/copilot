@@ -12,6 +12,8 @@ import { validateFramedProgressEvidence } from './progress_evidence_protocol_pol
 import { isProgressEvidencePath } from '../../domain/progress_evidence_path';
 import { MAX_PROGRESS_ASSESSMENT_POINTS, progressAssessmentFactLimit } from './progress_assessment_capacity_policy';
 import { ProgressCapacityFailure } from '../errors/progress_capacity_failure';
+import { ProgressCompletionMismatch } from '../errors/progress_completion_mismatch';
+import { progressCitationRepetitionError } from './progress_citation_recovery_policy';
 
 export const PROGRESS_BATCH_PROFILE = Object.freeze({ sourceLines: 32, clauses: 256, bytes: 262_144,
     assessmentClauses: 32, calls: 120, milliseconds: 1_800_000 });
@@ -146,7 +148,7 @@ export function progressBatchResponseSchema(manifest: ProgressScopeManifest, bat
             properties: { ...schema.properties.requirements.items.properties,
                 summary: { ...schema.properties.requirements.items.properties.summary, maxLength: factLimit, description },
                 remaining: { ...schema.properties.requirements.items.properties.remaining, maxLength: factLimit, description },
-                citations: { type: 'array', minItems: 1, maxItems: 8,
+                citations: { type: 'array', minItems: 1, maxItems: 8, description: 'One to eight distinct admitted evidence IDs. Never repeat a citation within a requirement.',
                     items: { type: 'string', enum: manifest.evidence.filter(reference => !reference.generated).map(reference => reference.id) } } },
             required: [...schema.properties.requirements.items.required, 'citations'] } } },
         required: [...schema.required, 'manifestDigest', 'batchId', 'headSha'] };
@@ -161,7 +163,7 @@ export interface ProgressAssessmentReceipt {
     readonly digest: string;
 }
 export function readProgressAssessmentEvidence(response: unknown, manifest: ProgressScopeManifest, batch: ProgressAssessmentBatch, locale: string,
-    anchors: ProgressScopeAnchors, compact: boolean) {
+    anchors: ProgressScopeAnchors, compact: boolean, requestSchema?: Record<string, unknown>) {
     const payload = progressResponsePayload(response, locale, 'assessment');
     const fail = (reason: ProgressBatchReason, requirementId = 'none'): never => { throw progressBatchRejected(reason, { batch: batch.ordinal, requirementId }); };
     if (!exact(payload, ['outputLocale', 'progress', 'requirements', 'manifestDigest', 'batchId', 'headSha'])
@@ -172,6 +174,7 @@ export function readProgressAssessmentEvidence(response: unknown, manifest: Prog
         fail('receipt-coverage', missing?.id);
     }
     const citations: (readonly string[])[] = [];
+    let repetition: { requirementId: string; citationCount: number; distinctCount: number } | undefined;
     const factLimit = aggregateFactLimit(manifest, compact, anchors);
     const facts = (payload.requirements as unknown[]).map(value => {
         if (!record(value) || !exact(value, ['id', 'status', 'evidence', 'summary', 'remaining', 'citations'])) return fail('receipt-coverage');
@@ -185,17 +188,31 @@ export function readProgressAssessmentEvidence(response: unknown, manifest: Prog
                 context: { kind: 'assessment', requirementCount: manifest.scope.requirements.length, batch: batch.ordinal, requirementId: id },
             });
         }
-        if (!Array.isArray(value.citations) || value.citations.length < 1 || value.citations.length > 8
-            || new Set(value.citations).size !== value.citations.length) return fail('evidence-missing', id);
+        if (!Array.isArray(value.citations) || value.citations.length < 1 || value.citations.length > 8) return fail('evidence-missing', id);
         for (const citation of value.citations) {
             const reference = manifest.evidence.find(entry => entry.id === citation);
             if (!reference || reference.headSha !== manifest.headSha || reference.generated) fail('evidence-identity', id);
         }
+        const distinctCount = new Set(value.citations).size;
+        if (!repetition && distinctCount !== value.citations.length) repetition = { requirementId: id, citationCount: value.citations.length, distinctCount };
         citations.push(Object.freeze([...value.citations] as string[]));
         const { citations: _citations, ...fact } = value;
         return fact;
     });
-    return { payload: { outputLocale: payload.outputLocale, progress: payload.progress, requirements: facts }, citations };
+    const canonical = { outputLocale: payload.outputLocale, progress: payload.progress, requirements: facts };
+    if (repetition) {
+        const scope = progressBatchDisplayScope(batch, compact);
+        // A repetition is eligible only when every other native and semantic check passes.
+        // A simultaneous completion contradiction must not escape as an eligible completion result.
+        try { parseScopedProgressResponse(canonical, locale, scope, anchors); }
+        catch (error) {
+            if (error instanceof ProgressCompletionMismatch) return fail('evidence-duplicate', repetition.requirementId);
+            throw error;
+        }
+        throw progressCitationRepetitionError(progressBatchResponseSchema(manifest, batch, anchors, compact), scope, anchors, locale,
+            { ...repetition, batch: batch.ordinal, sourceLineId: anchors[repetition.requirementId] ?? 'none' }, requestSchema);
+    }
+    return { payload: canonical, citations };
 }
 export function parseProgressAssessmentReceipt(response: unknown, manifest: ProgressScopeManifest, batch: ProgressAssessmentBatch,
     anchors: ProgressScopeAnchors, locale: string, compact: boolean): ProgressAssessmentReceipt {
