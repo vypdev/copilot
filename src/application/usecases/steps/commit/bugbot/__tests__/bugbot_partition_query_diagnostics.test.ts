@@ -114,7 +114,7 @@ it('bugbot-partition-diagnostics-C10: English, regional Spanish and fallback sur
     }
     expect(error.toJSON()).toMatchObject({ recovery: { variables: { reason: 'schema-string-long', attempts: 3 } } });
     const docs = readFileSync(join(__dirname, '../../../../../../../docs/security-operations/operations/error-reference.mdx'), 'utf8');
-    const example = JSON.parse(docs.split('{/* bugbot-partition-query-example */}')[1].match(/```json\n([\s\S]*?)\n```/u)![1]);
+    const example = JSON.parse(docs.split('{/* bugbot-partition-query-example */}')[1].match(/```json\r?\n([\s\S]*?)\r?\n```/u)![1]);
     const documented = new ApplicationError(example.code, 'Safe.', { retryable: example.retryable, recovery: example.recovery });
     expect(documented.toJSON()).toMatchObject(example);
 });
