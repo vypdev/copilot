@@ -1,3 +1,4 @@
+import { BugbotVerificationResponseFailure } from '../../../../errors/bugbot_verification_response_failure';
 import type { AgentConfiguration } from '../../../../../domain/agent';
 import type { FindingsQueryPort } from '../../../../ports/agent_findings_ports';
 import type { BugbotFinding } from '../../../../../domain/bugbot/finding';
@@ -132,5 +133,5 @@ function record(value: unknown): Record<string, unknown> {
 }
 
 function invalidOutput(): ApplicationError {
-  return new ApplicationError('agent.failed', 'Generated-source candidate verification returned incomplete or invalid evidence. Recheck the exact source; no clean review was verified.');
+  return new BugbotVerificationResponseFailure( 'Generated-source candidate verification returned incomplete or invalid evidence. Recheck the exact source; no clean review was verified.');
 }

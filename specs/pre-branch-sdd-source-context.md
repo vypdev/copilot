@@ -483,3 +483,22 @@ history, hook/filter execution or changing the canonical root. A host-only file
 fact interface was rejected because existing read-only provider tools need a real
 bounded repository view. Git official documentation linked in sections 6 and 11
 supports the chosen primitives. No copied third-party code is involved.
+
+
+### Native fixture prompt delivery (2026-11-08, #937 qualification)
+
+SDK CI job 128700045989 rejected source-context-C46/C53's failure fixture:
+expected exit-75 retryability, observed a nonretryable process error. The fixture
+could exit without reading stdin, so prompt delivery could lose a scheduling
+race to child exit. A controlled 150 ms pause of the parent immediately after
+spawn reproduced the same failure with the original fixture. No production
+execution or retry policy changed.
+
+The native fixture MUST consume and check the exact `Read.` prompt through EOF
+before writing its selected-source receipt and taking its success, exit-75,
+cancellation or timeout path. The identical scheduling probe then passes; all
+23 source-workspace cases pass. Preserve the existing exit-75 retryability,
+original deadline, cancellation, exact selected bytes/cwd, complete cleanup and
+canonical-anchor assertions. No arbitrary wait is added to the fixture. The
+four existing parameterized outcomes retain their case IDs and counts; this
+clarifies their admission precondition without adding a product test case.

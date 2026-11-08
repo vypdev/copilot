@@ -42,5 +42,5 @@ export function progressAssessmentLengthRepairPrompt(prompt: string, facts: Prog
 }
 export function progressAssessmentLengthRejected(facts: ProgressAssessmentLengthDiagnostic): ApplicationError {
     return new ApplicationError('agent.failed', 'A progress acceptance fact still exceeds its unchanged limit after one complete replacement; existing progress was retained.',
-        { recovery: { id: 'progress-assessment-length-invalid', variables: facts } });
+        { retryable: false, recovery: { id: 'progress-assessment-length-invalid', variables: facts } });
 }

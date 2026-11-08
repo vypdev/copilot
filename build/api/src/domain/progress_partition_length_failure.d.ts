@@ -17,4 +17,12 @@ export declare class ProgressPartitionLengthFailure extends ProgressResponseCont
 }
 /** Closed operator facts; string counts are code points, never raw prose or body bytes. */
 export declare function isProgressPartitionLengthDiagnostic(value: unknown): value is ProgressPartitionLengthDiagnostic;
+export type ProgressPartitionByteDiagnostic = ProgressPartitionLengthDiagnostic;
+/** Exact JSON UTF-8 bytes excluding quotes, with no widening of the legacy point diagnostic. */
+export declare function isProgressPartitionByteDiagnostic(value: unknown): value is ProgressPartitionByteDiagnostic;
 export declare function progressPartitionLengthPresentation(facts: ProgressPartitionLengthDiagnostic): Readonly<Record<string, string | number>>;
+/** Only closed host measurements survive this rejection, never the returned prose. */
+export declare class ProgressPartitionByteFailure extends Error {
+    readonly details: ProgressPartitionLengthContext;
+    constructor(details: ProgressPartitionLengthContext);
+}

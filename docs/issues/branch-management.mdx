@@ -277,15 +277,23 @@ acceptance or dropping verification. Process/transport failures retain their
 own status and retry guidance. A later optional check-publication warning remains
 a separate outcome and cannot replace the primary rejection.
 
-For an overlong file fact, Copilot verifies the current immutable part, path and
-source unit, locale and schema limit before requesting one replacement for that
-complete part. Every original and replacement envelope is checked before the
-first part query. A valid replacement continues the complete comparison without
-recollecting or omitting source. Persistent overflow identifies
-`progress-partition-length-invalid`, the verified part/path/unit and response
-field, and the maximum and observed Unicode code-point counts. Legacy parts use
-unit `none`. No rejected prose is copied, clipped or accepted; no third query or
-partial progress update follows. Other invalid output retains its usual error.
+For an over-bound file fact, Copilot verifies the current immutable part,
+path/unit, locale and schema before requesting one replacement of that complete
+part. Every original and replacement envelope is checked before the first query.
+Both framed profiles plan exact per-field encoded JSON bytes within the same
+aggregate ceiling and 600-point maximum. Existing admitted schemas never widen;
+unframed requests keep their allocation. All ordinary fields validate before a
+byte-only rejection can request recovery, and aggregation checks every quota.
+
+Unicode and encoded-byte failures share one replacement. Persistent overflow
+identifies `progress-partition-length-invalid` in Unicode code points or
+`progress-partition-bytes-invalid` in JSON UTF-8 bytes, with the verified
+part/path/unit, field, maximum and observed count. Legacy units use `none`.
+No rejected prose is copied, clipped or accepted; no third query or partial
+progress update follows. Both exhausted size outcomes are nonretryable. Do not
+automatically repeat an unchanged comparison; inspect the named fact and qualify
+a corrected Copilot build before one fresh assessment. Other invalid output,
+provider failures and cancellation retain their usual categories.
 
 A separate final-stage recovery allows a read-only replacement of the final response when
 all other validation succeeds but its percentage contradicts completion. Copilot
@@ -311,6 +319,10 @@ captured schema, batch receipts, citations, requirement, source anchor and local
 and the rest of the complete schema validates. It preserves the full batch and
 unchanged limits. Persistent length reports `progress-assessment-length-invalid`
 with requirement/source IDs, field, maximum and observed Unicode point count.
+That exhausted attempt is non-retryable. Do not automatically rerun an unchanged
+comparison; validate a corrected Copilot build against the same frozen source
+before starting one fresh assessment. The run records the actual requirement
+count, batch count and per-text allocation before collecting comparison facts.
 Length and completion failures cannot each allocate a replacement: there are
 still at most two final queries for a batch. No provisional batches publish.
 Issue-body/open-state, native owning PR/target, base and head checks

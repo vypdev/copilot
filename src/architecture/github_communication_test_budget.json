@@ -7,7 +7,7 @@
       "id": "semantic-github-publication",
       "spec": "specs/semantic-github-publication-and-notification.md",
       "requiredCases": 135,
-      "allocatedCases": 1117,
+      "allocatedCases": 1201,
       "files": [
         {
           "path": "src/domain/__tests__/github_publication.test.ts",
@@ -364,6 +364,42 @@
         {
           "path": "src/data/repository/__tests__/progress_assessment_length_failure.test.ts",
           "qualifyingCases": 3
+        },
+        {
+          "path": "src/application/usecases/actions/__tests__/progress_native_generation.integration.test.ts",
+          "qualifyingCases": 2
+        },
+        {
+          "path": "src/application/policies/__tests__/progress_compact_assessment_policy.test.ts",
+          "qualifyingCases": 20
+        },
+        {
+          "path": "src/application/policies/__tests__/progress_partition_byte_recovery.test.ts",
+          "qualifyingCases": 20
+        },
+        {
+          "path": "src/application/usecases/actions/__tests__/progress_partition_byte_publication.integration.test.ts",
+          "qualifyingCases": 4
+        },
+        {
+          "path": "src/tooling/__tests__/generated_artifact_merge_policy.test.ts",
+          "qualifyingCases": 3
+        },
+        {
+          "path": "src/application/usecases/steps/commit/bugbot/__tests__/bugbot_partition_query_diagnostics.test.ts",
+          "qualifyingCases": 15
+        },
+        {
+          "path": "src/application/usecases/branch_sync/__tests__/branch_sync_refusal_diagnostics.test.ts",
+          "qualifyingCases": 8
+        },
+        {
+          "path": "src/application/policies/__tests__/bugbot_freshness_diagnostics.test.ts",
+          "qualifyingCases": 10
+        },
+        {
+          "path": "src/application/usecases/steps/commit/__tests__/detect_potential_problems_use_case.test.ts",
+          "qualifyingCases": 2
         }
       ]
     },
@@ -371,7 +407,7 @@
       "id": "repository-locale-localization",
       "spec": "specs/repository-locale-and-localization.md",
       "requiredCases": 146,
-      "allocatedCases": 187,
+      "allocatedCases": 189,
       "files": [
         {
           "path": "src/actions/__tests__/github_action_locale_inputs.test.ts",
@@ -467,7 +503,7 @@
         },
         {
           "path": "src/application/policies/__tests__/progress_assessment_length_presentation.test.ts",
-          "qualifyingCases": 4
+          "qualifyingCases": 6
         }
       ]
     }

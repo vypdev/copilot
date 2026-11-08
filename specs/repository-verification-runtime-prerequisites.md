@@ -681,3 +681,36 @@ The bounded copied-venv lookup follows Python's documented
 [venv layout and base home](https://docs.python.org/3.11/library/venv.html).
 The path checks account for the Linux loader's
 [list separators and dynamic string tokens](https://man7.org/linux/man-pages/man8/ld.so.8.html).
+
+
+## Checksum-bound native JDK input — issue #937
+
+Two native Ubuntu attempts failed while repeatedly downloading the same Temurin
+archive: an HTTP 504 before installation, then another 504 that consumed the
+five-minute setup deadline during phase 3. This is external provisioning failure;
+it does not justify accepting an out-of-cache hosted alias, extending deadlines,
+disabling verifiers or changing the reviewed Java version/vendor.
+
+Download the official Temurin 17.0.21+9 input once per Linux job through the public
+release-asset API. X64 uses asset 666563450 with SHA-256
+`8b9b611d917e3dfd8419d3566b5949226f69b052fed7e109c1368add1dfe8711`;
+ARM64 uses asset 677974585 with SHA-256
+`3e4eca7ead088f080af1476007decf010a240a1eb4e1e78c54fa32fbcc347084`.
+Unsupported architectures fail. Curl keeps bounded transfer/retry limits and
+checksum mismatch is fatal. Recheck the checksum before every private setup;
+`actions/setup-java@v6`, `distribution: jdkfile`, `java-version: 17.0.21` and
+`force-download: true` extract a real install inside the approved tool cache.
+The downloaded archive is an input, never an executable bootstrap. Retire only
+its fixed owned path after the native protocol, including failures. Keep all
+private homes, JVM/Gradle/Python verifiers, platform selections, post actions and
+timeouts unchanged. Consumer workflows receive no automatic installer change.
+
+Allocate **one additional native-provisioning contract case**,
+`native-jdk-input-C01`, outside the semantic-publication ledger. Parse both workflow
+jobs and the emitted composite; assert both architecture bindings, fatal checksum
+checks before forced installation, a shared fixed input path and unconditional
+retirement after protocol completion. The real native Linux matrix must also
+execute all phases on the resulting commit; static assertions alone do not prove
+runtime readiness. Update the runtime guide and owning catalog, regenerate the
+catalog and run all existing workflow/specification checks. Rollback restores
+the old downloader only; cache-alias rejection and the setup deadline remain.

@@ -10,7 +10,8 @@ it('localizes current status, exact facts, action and retained progress in both 
         expect(view.impact).toContain(locale === 'en-US' ? 'one bounded replacement' : 'una sustitución acotada');
         for (const value of ['part-7', 'src/example.ts', 'unit-21', '$.files[0].implemented', '600', '618']) expect(view.action).toContain(value);
         expect(view.retainedState).toContain(locale === 'en-US' ? 'preserved' : 'conservaron');
-        expect(view.action).toContain(locale === 'en-US' ? 'unchanged schema' : 'mismo esquema');
+        expect(view.action).toContain(locale === 'en-US' ? 'Do not automatically repeat' : 'No repitas automáticamente');
+        expect(view.action).toContain(locale === 'en-US' ? 'Qualify a corrected build' : 'Valida una compilación corregida');
     }
 });
 it('preserves JSON facts and one correlation identity across terminal, Markdown and catalog fallback', () => {

@@ -1,3 +1,7 @@
+import { ApplicationError } from '../../../../errors/application_error';
+import { canonicalGitObjectId } from '../../../../../domain/git_object_id';
+import { PullRequestReviewOperationError } from '../../../../ports/pull_request_review_errors';
+import { bugbotFreshnessError, type BugbotFreshnessBoundary } from '../../../../errors/bugbot_freshness_error';
 import { BugbotReviewCompletenessError } from '../../../../../domain/bugbot/framed_review';
 import { sameBugbotFramedPullRequest } from '../../../../policies/bugbot_framed_identity_policy';
 import type { BugbotContextPorts } from '../../../../ports/bugbot_context_ports';
@@ -12,13 +16,22 @@ export function isLoadedBugbotRevisionSuperseded(context: BugbotContext, expecte
 export async function hasNewerBugbotRevision(
     context: BugbotContext,
     ports: BugbotContextPorts,
+    boundary: BugbotFreshnessBoundary = 'before-publication',
 ): Promise<boolean> {
     if (!context.prContext || !context.canonicalPullRequest) return false;
-    if (context.reviewFramedSource) {
-        if (!ports.getSourceBoundPullRequest) throw new BugbotReviewCompletenessError('capability');
-        const current = await ports.getSourceBoundPullRequest(context.canonicalPullRequest.number);
-        return !sameBugbotFramedPullRequest(context.canonicalPullRequest, current);
+    const operation = context.reviewFramedSource ? 'get-source-bound-pr' : 'get-head-sha';
+    try {
+        if (context.reviewFramedSource) {
+            if (!ports.getSourceBoundPullRequest) throw new BugbotReviewCompletenessError('capability');
+            const current = await ports.getSourceBoundPullRequest(context.canonicalPullRequest.number);
+            return !sameBugbotFramedPullRequest(context.canonicalPullRequest, current);
+        }
+        const currentHead = canonicalGitObjectId(await ports.getPullRequestHeadSha(context.canonicalPullRequest.number));
+        if (currentHead === undefined) throw bugbotFreshnessError(undefined, boundary, operation, true);
+        return currentHead !== context.prContext.prHeadSha.toLowerCase();
+    } catch (error) {
+        if (error instanceof PullRequestReviewOperationError || (error instanceof ApplicationError && !error.recovery
+            && (error.kind === 'provider' || error.kind === 'authorization'))) throw bugbotFreshnessError(error, boundary, operation);
+        throw error;
     }
-    const currentHead = await ports.getPullRequestHeadSha(context.canonicalPullRequest.number);
-    return currentHead !== undefined && currentHead.toLowerCase() !== context.prContext.prHeadSha.toLowerCase();
 }

@@ -4,6 +4,14 @@ build/web/assets/*.js -diff -whitespace
 # ncc vendor indentation is generated. Keep every other whitespace and conflict-marker check.
 build/deployment_recovery/index.js whitespace=-space-before-tab
 
+# Two-sided generated edits require canonical rebuilding before sync verification.
+# Keep normal text diffs, whitespace validation and clean one-sided updates.
+build/github_action/index.js merge=binary
+build/cli/index.js merge=binary
+build/api/index.js merge=binary
+build/deployment_recovery/index.js merge=binary
+build/api/**/*.d.ts merge=binary
+
 # Generated text must keep its canonical LF bytes on Windows checkouts.
 specs/CATALOG.md text eol=lf
 .copilot/repository-profile.json text eol=lf

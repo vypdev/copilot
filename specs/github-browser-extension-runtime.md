@@ -599,6 +599,16 @@ The Linux native ESR fixture compares the downloaded Firefox and geckodriver
 archives with pinned upstream SHA-256 values before extracting either archive.
 The trusted expected values come from Mozilla's release SHA256SUMS and the
 geckodriver GitHub release asset digest; a mismatch is a hard failure.
+The 2026-11-08 qualification of #920 observed repeated HTTP 504 on the named
+v0.37.1 download route (run 42469201584). The public release API asset
+`483347579` returned the same archive, SHA-256
+`e815130ea95983e162ae91843b48d3a3ce991735635fce83a647afde21e09f7e`.
+CI uses that immutable asset ID with an octet-stream accept header, 10-second
+connection limit, 60-second transfer limit and the existing two retries. Both
+archive hashes MUST still pass before either extraction. All existing native
+browser cases, coverage, isolation and job limits remain mandatory; transport
+qualification adds no product test case or acceptance exemption.
+
 
 
 ### Native settings navigation contract (2026-10-26)

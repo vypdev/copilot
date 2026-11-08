@@ -44,10 +44,27 @@ it('github-communication-experience-change-C184: documented length metadata roun
     const doc = readFileSync(join(process.cwd(), 'docs/security-operations/operations/error-reference.mdx'), 'utf8');
     const block = doc.match(/\{\/\* progress-assessment-length-example \*\/\}\s*```json\s*([\s\S]*?)```/u);
     expect(block).not.toBeNull(); const example = JSON.parse(block![1]);
-    const error = new ApplicationError(example.code, 'Documented safe exhaustion.', { correlationId: example.correlationId, recovery: example.recovery });
+    const error = new ApplicationError(example.code, 'Documented safe exhaustion.', { correlationId: example.correlationId, recovery: example.recovery, retryable: example.retryable });
     expect(error.toJSON()).toMatchObject(example); expect(buildApplicationErrorPresentation(error).action).toContain('62');
     const completion = new ApplicationError('agent.failed', 'Existing completion exhaustion.', { recovery: {
         id: 'progress-completion-recovery-exhausted', variables: { reportedProgress: 70, requirementCount: 1, supportedCount: 1, missingCount: 0, unknownCount: 0 },
     } });
     expect(buildApplicationErrorPresentation(completion).action).toContain('reported 70%');
+});
+
+it('github-communication-experience-change-C185: exhausted generation is blocked without changing generic provider retryability', () => {
+    const error = progressAssessmentLengthRejected(facts);
+    expect(error.retryable).toBe(false);
+    expect(error.toJSON()).toMatchObject({ code: 'agent.failed', retryable: false, recovery: { id: 'progress-assessment-length-invalid', variables: facts } });
+    expect(new ApplicationError('agent.failed', 'Independent provider error.').retryable).toBe(true);
+});
+
+it.each([
+    { id: 'github-communication-experience-change-C186', locale: 'en-US', stop: 'Do not automatically repeat the unchanged comparison', action: 'Validate a corrected Copilot build' },
+    { id: 'github-communication-experience-change-C187', locale: 'es-ES', stop: 'No repitas automáticamente la misma comparación', action: 'Valida una compilación corregida de Copilot' },
+])('$id: $locale gives a bounded operational recovery action', ({ locale, stop, action }) => {
+    const view = buildApplicationErrorPresentation(progressAssessmentLengthRejected(facts), resolveStaticApplicationErrorCatalog(locale).message);
+    expect(view.action).toContain(stop); expect(view.action).toContain(action);
+    expect(view.action).toContain('R11'); expect(view.action).toContain('L11');
+    expect(view.action).not.toContain('PRIVATE_');
 });

@@ -1243,3 +1243,69 @@ coverage, build/package/web/types/lint, documentation/workflow/specification
 contracts, Graphify and normal commit hooks. Fresh exact-head CI, every platform,
 Codecov actual diff and complete review without active findings gate the
 authorized develop merge. No release or consumer adoption is authorized here.
+
+
+## Generated merge inputs — issue #937
+
+The Action combination of PRs #938 and #939 prepared only two conflicts, then
+passed every configured verifier. Canonical rebuilding changed automatically
+text-merged ncc outputs after staging, so the unchanged `unstaged-changes` fence
+correctly aborted publication (run 42473727507). Treating generated text as source
+had hidden the regeneration work from the fixer's admitted path list.
+
+The SDK repository declares `merge=binary` for its four checked-in ncc entry
+bundles and `build/api/**/*.d.ts`. Keep text diffs and all existing whitespace
+rules. When both sides modify these artifacts, Git exposes explicit conflicts;
+resolve admitted source conflicts, run the existing offline canonical build,
+inspect its complete output and return only changes inside the original conflict
+list. The Action stages these resolutions before verification. An unlisted
+change, altered index, stale head or post-verification mutation still aborts.
+No generic conflict permission, staging-after-verification or consumer attribute
+installation is added. Ordinary source merging and one-sided generated changes
+keep their existing behavior. Remove the attributes to roll back this repository
+policy; the strict verifier fence must remain.
+
+Flow: two-sided generated edits → explicit conflict paths → source resolution
+and canonical regeneration → trusted staging → unchanged full verification →
+head/index checks → normal Action publication. A failed boundary returns the
+existing closed diagnostic and publishes no synchronization commit.
+
+Allocate **three additional distinct cases** in
+`generated_artifact_merge_policy.test.ts`: C01 covers all four bundles and
+repeatable canonical output, C02 covers nested API declarations, C03 covers
+ordinary disjoint source merging and clean one-sided generated changes. These
+are real owned temporary Git repositories with no remote, isolated configuration
+and disabled fixture hooks. Both generated-conflict cases must fail before the
+attributes are installed; all three must pass afterward. Retain the existing
+real-Git tests rejecting verification mutation and protected-index changes.
+Allocate these three cases once in the semantic-publication ledger; matrix
+executions and existing guard cases add no new allocation. Update contributor
+and branch-sync documentation, catalog evidence and generated catalog, run the
+specification validator, and require a fresh Action-owned combination plus the
+normal exact-head CI, coverage and review gates before claiming publication.
+
+
+## Eligible-conflict refusal diagnostics — issues #911 and #937
+
+The original Domus #911 job reports ten conflicts including a workflow, then
+returns generic retryable workflow.failed without invoking the fixer. The current
+eligibility policy still refuses sensitive paths and over-20 conflict sets, but
+omits structured recovery for these two reasons. Preserve both safety refusals;
+carry a closed reason and counts into the existing error UI instead of losing
+that decision during formatting. Expose no raw path or provider prose.
+
+Add separate protected-path and conflict-limit recovery variants, complete English
+and Spanish messages, fixed command guidance and nonretryable refusal. Preserve
+--no-agent, missing fixer, dry-run, abort, original heads and publication fences.
+The flow is preview → eligibility decision → safe abort → reason/count/action;
+ineligible sets invoke no model, verifier, author lookup or push. An already
+failed abort must not claim restoration; these variants claim only no publication.
+
+Allocate **eight additional distinct regression declarations**: the original ten
+Domus paths, the 21-path refusal, pre-existing option/configuration precedence,
+protected-path and count privacy, complete bilingual rendering, descriptor
+rejection, full-use-case zero-effects/abort, and fresh eligible recovery. Existing
+coverage and actual Git mutation guards remain required and are not recounted.
+Update branch-sync/operator/error guides, catalog evidence and the semantic
+publication ledger together. No new configuration or permission is introduced;
+rollback removes the new presentation while retaining the safety refusal.

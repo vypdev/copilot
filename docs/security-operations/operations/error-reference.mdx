@@ -223,12 +223,14 @@ schema before admitting recovery. Neither length nor completion recovery can
 allocate a third query, including when the two failure kinds alternate.
 
 If the replacement still exceeds a fact bound, `agent.failed` uses
-`progress-assessment-length-invalid` with exactly five closed observations:
+`progress-assessment-length-invalid`, marks this exhausted attempt non-retryable,
+and preserves exactly five closed observations:
 
 {/* progress-assessment-length-example */}
 ```json
 {
   "code": "agent.failed",
+  "retryable": false,
   "correlationId": "11111111-1111-4111-8111-111111111111",
   "recovery": {
     "id": "progress-assessment-length-invalid",
@@ -245,8 +247,9 @@ If the replacement still exceeds a fact bound, `agent.failed` uses
 
 These counts are illustrative Unicode code points, not the unavailable rejected
 Domus prose or its actual lengths. Inspect the named fact and unchanged limit in
-the linked run. A fresh complete assessment can help when the provider can meet
-that contract. Existing progress remains; provisional batches are never published.
+the linked run. Do not automatically repeat an unchanged complete comparison.
+Validate a corrected Copilot build against the same pinned source and then start
+one fresh complete assessment. Existing progress remains; provisional batches are never published.
 No rejected prose, clipping, enlarged limits, omitted requirements or source
 recollection enters the correction. Foreign identities, incomplete output,
 infrastructure failures and other invalid contracts retain their own errors.
@@ -266,22 +269,55 @@ progress and cannot authorize a passing verification. Inspect the exact original
 scope and review a supported assessment protocol while preserving acceptance.
 See [progress text capacity](./troubleshooting#progress-assessment-text-capacity).
 
-### Progress part response length
+### Progress part response size
 
-An overlong file fact with a verified current part/path/unit, locale and schema
-limit receives one replacement for the same complete immutable part. Every
-original and replacement request is capacity-checked before the first part
-query. Source evidence, identities, uncertainty and strict validation remain
-unchanged. Provider, cancellation, locale and other schema failures retain their
-own classifications and do not start this recovery.
+A completed file fact with a verified current part/path/unit, locale and schema
+may receive one replacement for the same complete immutable part. Both framed
+profiles plan exact JSON UTF-8 bytes within unchanged aggregate and prompt
+ceilings and the absolute 600-code-point limit. New planning never widens a
+schema already admitted for an attempt. Every original and replacement request
+is preflighted. All ordinary fields, identities and point limits validate before
+byte-only overflow can use recovery; source evidence and strict validation stay.
+Provider, cancellation, locale and other schema failures retain their categories.
 
-Persistent overflow reports `agent.failed` with
-`progress-partition-length-invalid`: part, path, unit, response field, maximum
-and observed Unicode code-point count. `none` means the legacy part has no unit
-identity. Paths are inert reversible JSON code spans; raw model output is never
-shown. Inspect that fact in the linked run. There is no third part query, no
-clipping, and no partial update to labels or the previous assessment. A later
-optional Check Run warning remains a separate outcome.
+Persistent overflow reports `agent.failed` with one of:
+
+- `progress-partition-length-invalid`: maximum and observed Unicode code points.
+- `progress-partition-bytes-invalid`: maximum and observed encoded JSON UTF-8
+  bytes per field, including escaping and excluding the surrounding quotes.
+
+Both expose the same verified part, path, unit and response field. `none` means
+the legacy part has no unit identity. Paths are inert reversible JSON code spans;
+raw model output is never shown. Unicode and byte overflow share the same one
+replacement, including mixed failures. There is no third query, clipping or
+partial update. Both exhausted outcomes have `retryable: false`: do not
+automatically repeat an unchanged full comparison. Inspect the named fact in
+the linked run and qualify a corrected Copilot build before one fresh assessment.
+Generic agent/provider retryability remains unchanged. An optional Check Run
+warning remains a separate outcome.
+
+The following is an illustrative real public recovery record; these counts are
+not measurements of a historical rejected fact.
+
+{/* progress-partition-bytes-example */}
+
+```json
+{
+  "code": "agent.failed",
+  "retryable": false,
+  "recovery": {
+    "id": "progress-partition-bytes-invalid",
+    "variables": {
+      "partitionId": "part-owned",
+      "filePath": "a.ts",
+      "unitId": "none",
+      "field": "$.files[0].implemented",
+      "maximum": 678,
+      "observed": 700
+    }
+  }
+}
+```
 
 ## Optional Check Run publication not confirmed
 
@@ -417,3 +453,75 @@ rate-limit evidence or a 429 uses `provider.rate-limited`; recognized transport,
 For 404, check access and target; private-resource absence cannot be inferred.
 Raw assignment-provider exceptions are discarded after their safe classification.
 See [assignment recovery](/issues/assignees-and-projects#recover-an-assignment-failure).
+
+
+## Bugbot completed-response exhaustion
+
+`bugbot-partition-query-exhausted` means that completed Bugbot output still failed
+strict JSON, the original schema or candidate-proof validation on the third partition attempt. It carries
+only a closed `reason` and the fixed `attempts: 3`, and marks that exhausted
+attempt non-retryable. The reason describes response validation; process,
+provider, locale and source failures retain independent diagnostics. Historical
+generic `agent.failed` results cannot be retrospectively classified.
+
+{/* bugbot-partition-query-example */}
+
+```json
+{
+  "code": "agent.failed",
+  "retryable": false,
+  "recovery": {
+    "id": "bugbot-partition-query-exhausted",
+    "variables": { "reason": "schema-string-long", "attempts": 3 }
+  }
+}
+```
+
+The allowed reasons are `json-invalid`, `schema-type`, `schema-enum`,
+`schema-string-short`, `schema-string-long`, `schema-number-finite`,
+`schema-number-min`, `schema-number-max`, `schema-array-short`,
+`schema-array-long`, `schema-required`, `schema-additional` and `verification-invalid`. The last reason identifies rejected candidate proof; detection and verification share the original partition allowance. No rejected
+response, arbitrary key, path, provider stderr or value is retained. Qualify the
+provider's output contract before one fresh complete review. Prior findings and
+resolutions are preserved; all original complete-review and freshness gates
+still apply. See [Bugbot failures](/bugbot/failure-scenarios).
+
+
+## Conflict eligibility and review freshness
+
+`branch-sync-sensitive-paths` reports protected-path and total conflict counts;
+`branch-sync-conflict-limit` reports the total and unchanged 20-path automated
+limit. Both are nonretryable refusals before fixer, verifier or push. Review the
+original conflict list in the job and use authorized maintainer recovery; after
+an approved source update inspect `/copilot sync-branch --dry-run`. Public error
+operands contain no raw protected paths.
+
+`bugbot-freshness-before-publication` and `bugbot-freshness-after-publication`
+identify the trusted read operation, sanitized HTTP status/reference and closed
+reason. Missing metadata remains `http-unavailable`; it is not an inferred HTTP
+status. Invalid head responses fail closed with `provider.contract-invalid`.
+Known 401/403, 404, 409, 429, other client-contract and unavailable responses retain
+their distinct existing error categories. Unknown exceptions and source-completeness
+errors retain their own behavior. No extra read or automatic publication retry
+is introduced.
+
+Before-publication failure authorizes no new finding mutations. A later failure
+may follow completed writes: retain them, inspect the actual current head and
+reconcile persisted findings when recovering. Analysis completion alone is not
+current-review success. Selected structured fields from an actual error:
+
+```json
+{
+  "code": "authorization.denied",
+  "retryable": false,
+  "recovery": {
+    "id": "bugbot-freshness-before-publication",
+    "variables": {
+      "operation": "get-head-sha",
+      "providerStatus": "http-403",
+      "providerReference": "AB12:CD34",
+      "reason": "provider-request-failed"
+    }
+  }
+}
+```

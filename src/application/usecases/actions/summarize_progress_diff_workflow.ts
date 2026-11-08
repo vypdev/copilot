@@ -24,7 +24,7 @@ export function planProgressDiffPrompts(diff: ProgressDiffEvidence, context: Pro
         : progressPartitionFactBounds(diff.baseSha, diff.headSha, diff.partitions, aggregateBudget);
     const { factLimit, factJsonBytes } = bounds;
     const factGuidance = factJsonBytes === undefined ? ` (each <=${factLimit} Unicode code points).`
-        : `. Aim for two to four words per field. Use the target locale and plain text without control characters. Skip filenames already in the JSON.
+        : `. Each field also has a hard maximum of ${factLimit} Unicode code points. Aim for two to four words per field. Use the target locale and plain text without control characters. Skip filenames already in the JSON.
 Keep the style as brief as “Timeout extended” or “Windows unverified” when supported by the assigned source. For generated metadata use the local equivalents of “Generated” and “Unverified”.
 Each fact must fit ${factJsonBytes} UTF-8 bytes when encoded as JSON, excluding the enclosing quotes.`;
     const prompts = diff.partitions.map(partition => `${UNTRUSTED_CONTENT_POLICY}
@@ -64,7 +64,7 @@ export async function summarizeProgressDiff(diff: ProgressDiffEvidence, context:
         logInfo(`Assessing progress evidence part ${index + 1} of ${diff.partitions.length}, round ${Math.floor(index / MAX_PROGRESS_PARTITIONS) + 1} of ${Math.ceil(diff.partitions.length / MAX_PROGRESS_PARTITIONS)}.`);
         const response = await queryProgressPartition(agent, { configuration: context.agentConfiguration, agentId: AGENT_PLAN, prompt: prompts[index],
             options: { ...productFacingAgentQueryOptions('progress-partition', progressPartitionResponseSchema(partition, factLimit)),
-                includeReasoning: context.includeReasoning } }, partition, factLimit, context.targetLocale);
+                includeReasoning: context.includeReasoning } }, partition, factLimit, context.targetLocale, factJsonBytes);
         if (diff.protocol) receipts.push(parseProgressPartitionReceipt(response, partition, context.targetLocale, factLimit, factJsonBytes));
         else facts.push(parseProgressPartitionFacts(response, partition, context.targetLocale, factLimit));
     }

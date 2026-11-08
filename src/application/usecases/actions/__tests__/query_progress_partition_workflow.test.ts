@@ -28,7 +28,7 @@ it('changes only the fixed prompt suffix while preserving configuration, exact s
     const valid = { ...value, files: [{ path: 'a.ts', implemented: 'Source.', remaining: 'Unverified.' }] };
     const query = jest.fn().mockRejectedValueOnce(overflow()).mockResolvedValue(valid);
     await expect(call(query)).resolves.toBe(valid);
-    expect(query.mock.calls[0][0]).toBe(request); expect(query.mock.calls[1][0]).toEqual({ ...request, prompt: progressPartitionRepairPrompt(request.prompt) });
+    expect(query.mock.calls[0][0]).toEqual(request); expect(query.mock.calls[0][0]).not.toBe(request); expect(query.mock.calls[1][0]).toEqual({ ...request, prompt: progressPartitionRepairPrompt(request.prompt) });
     expect(request.prompt).toBe('Complete immutable source.');
 });
 it('keeps a second unrelated schema rejection separate from an exhausted length repair', async () => {
