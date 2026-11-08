@@ -14,6 +14,15 @@ function inert(): void {
     expect(document.querySelector('form')).toBe(null); expect(document.querySelector('[data-feature-favorite]')).toBe(null);
     expect(document.querySelector('[data-feature-source]')).toBe(null);
 }
+// A rendered document precedes completion of its native read. Both the next
+// refresh and any editable intent require the toolbar to become available again.
+const currentReadReady = () => document.querySelector('main')?.getAttribute('aria-busy') === 'false'
+    && !button('Consultar configuración actual').matches(':disabled');
+async function rereadCurrent(predicate: () => boolean): Promise<void> {
+    await ready(currentReadReady);
+    button('Consultar configuración actual').click();
+    await ready(() => currentReadReady() && predicate());
+}
 it.each([{ schemaVersion: 99 }, { schemaVersion: 2, broken: true }])('bexh3-center-C25 preserves complete discovery when saved data is incompatible: %j', async initial => {
     const h = await render('features', false, initial, false); await ready(() => !!document.querySelector('#inventory-search'));
     expect(document.querySelector('#inventory-results')!.textContent).toContain('150 resultados'); expect(items()).toHaveLength(25);
@@ -63,10 +72,7 @@ it.each(['en', 'es', 'fr', 'pt'] as const)('explains unknown preferences using n
 it('restores editable saved preferences only after an explicit successful current read', async () => {
     const h = await render('features/BEX-NAV-01', false, { schemaVersion: 99 }, false);
     await ready(() => !!document.querySelector('[data-inventory-unknown]')); h.native.values.set(SETTINGS_KEY, DEFAULT_SETTINGS);
-    button('Consultar configuración actual').click();
-    // The current document is rendered before the native read releases editability.
-    await ready(() => !!document.querySelector('#feature-global-preference')
-        && document.querySelector('main')?.getAttribute('aria-busy') === 'false'
+    await rereadCurrent(() => !!document.querySelector('#feature-global-preference')
         && document.querySelector<HTMLFieldSetElement>('form fieldset')?.disabled === false);
     expect(document.querySelector('[data-inventory-unknown]')).toBe(null); expect(document.querySelector('[data-feature-source]')!.textContent).toContain('predeterminado');
     expect(document.querySelector<HTMLFieldSetElement>('form fieldset')!.disabled).toBe(false); expect(h.native.port.set).not.toHaveBeenCalled();
@@ -76,8 +82,8 @@ it('retires stored favorites, profile names and personal filters when a new curr
         profiles: [{ id: 'private', name: 'Private saved profile', scope: { kind: 'global' }, preferences: {} }] } };
     const h = await render('features', false, initial); await ready(() => !!document.querySelector('#inventory-search'));
     change('inventory-profile', 'private'); await ready(() => items().length === 0);
-    h.native.values.set(SETTINGS_KEY, { schemaVersion: 99 }); button('Consultar configuración actual').click();
-    await ready(() => personalFilters().every(select => select.disabled)); expect(items()).toHaveLength(25);
+    h.native.values.set(SETTINGS_KEY, { schemaVersion: 99 });
+    await rereadCurrent(() => personalFilters().every(select => select.disabled)); expect(items()).toHaveLength(25);
     expect(document.body.textContent).not.toContain('Private saved profile'); expect(personalFilters().every(select => select.value === '')).toBe(true); inert();
     change('inventory-search', 'BEX-NAV-01'); await ready(() => items().length === 1);
     expect(h.native.port.set).not.toHaveBeenCalled();
@@ -85,14 +91,14 @@ it('retires stored favorites, profile names and personal filters when a new curr
 it('keeps an authored override inert during unknown settings and preserves its original revision fence after recovery', async () => {
     const h = await render('features/BEX-NAV-01'); await ready(() => !!document.querySelector('#feature-global-preference'));
     change('feature-global-preference', 'disabled'); h.native.values.set(SETTINGS_KEY, { schemaVersion: 99 });
-    button('Consultar configuración actual').click(); await ready(() => !!document.querySelector('[data-inventory-unknown]'));
+    await rereadCurrent(() => !!document.querySelector('[data-inventory-unknown]'));
     const form = document.querySelector('form')!;
     expect(document.querySelector<HTMLFieldSetElement>('form fieldset')!.disabled).toBe(true);
     expect(document.querySelector<HTMLSelectElement>('#feature-global-preference')!.value).toBe('disabled');
     form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     expect(h.port.send.mock.calls.some(([m]) => m.method === 'center.preview')).toBe(false);
     h.native.values.set(SETTINGS_KEY, { ...DEFAULT_SETTINGS, revision: 1, features: { 'BEX-NAV-01': true } });
-    button('Consultar configuración actual').click(); await ready(() => document.querySelector<HTMLFieldSetElement>('form fieldset')?.disabled === false);
+    await rereadCurrent(() => document.querySelector<HTMLFieldSetElement>('form fieldset')?.disabled === false);
     expect(document.querySelector<HTMLSelectElement>('#feature-global-preference')!.value).toBe('disabled');
     form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     await ready(() => h.port.send.mock.calls.some(([m]) => m.method === 'center.preview'));
@@ -103,7 +109,7 @@ it('keeps an authored override inert during unknown settings and preserves its o
 it('updates an untouched preference form from a successful external revision before authoring a new intent', async () => {
     const h = await render('features/BEX-NAV-01'); await ready(() => !!document.querySelector('#feature-global-preference'));
     h.native.values.set(SETTINGS_KEY, { ...DEFAULT_SETTINGS, revision: 1, features: { 'BEX-NAV-01': false } });
-    button('Consultar configuración actual').click(); await ready(() => document.querySelector<HTMLSelectElement>('#feature-global-preference')?.value === 'disabled');
+    await rereadCurrent(() => document.querySelector<HTMLSelectElement>('#feature-global-preference')?.value === 'disabled');
     change('feature-global-preference', 'enabled'); document.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     await ready(() => !!document.querySelector('#settings-review-heading'));
     const preview = h.port.send.mock.calls.find(([m]) => m.method === 'center.preview')![0];
@@ -116,7 +122,7 @@ it('rereads current connection context only after an explicit compatible recover
     expect(h.port.send.mock.calls.some(([message]) => message.method === 'center.connections.read')).toBe(false);
     const profile = { id: 'work', name: 'Work', scope: { kind: 'repository', host: 'github.com', accountId: '1', repositoryId: '7' }, preferences: { features: { 'BEX-NAV-01': false } } };
     h.native.values.set(SETTINGS_KEY, { ...DEFAULT_SETTINGS, center: { ...DEFAULT_SETTINGS.center, profiles: [profile], selected: ['work'] } });
-    button('Consultar configuración actual').click(); await ready(() => document.querySelector('[data-feature-source] a')?.textContent === 'Work');
+    await rereadCurrent(() => document.querySelector('[data-feature-source] a')?.textContent === 'Work');
     expect(document.body.textContent).toContain('company/example');
     expect(h.port.send.mock.calls.filter(([message]) => message.method === 'center.connections.read')).toHaveLength(1);
     expect(document.querySelector('[data-feature-setting]')!.textContent).toContain('desactivada');
