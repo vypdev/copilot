@@ -63,7 +63,11 @@ it.each(['en', 'es', 'fr', 'pt'] as const)('explains unknown preferences using n
 it('restores editable saved preferences only after an explicit successful current read', async () => {
     const h = await render('features/BEX-NAV-01', false, { schemaVersion: 99 }, false);
     await ready(() => !!document.querySelector('[data-inventory-unknown]')); h.native.values.set(SETTINGS_KEY, DEFAULT_SETTINGS);
-    button('Consultar configuración actual').click(); await ready(() => !!document.querySelector('#feature-global-preference'));
+    button('Consultar configuración actual').click();
+    // The current document is rendered before the native read releases editability.
+    await ready(() => !!document.querySelector('#feature-global-preference')
+        && document.querySelector('main')?.getAttribute('aria-busy') === 'false'
+        && document.querySelector<HTMLFieldSetElement>('form fieldset')?.disabled === false);
     expect(document.querySelector('[data-inventory-unknown]')).toBe(null); expect(document.querySelector('[data-feature-source]')!.textContent).toContain('predeterminado');
     expect(document.querySelector<HTMLFieldSetElement>('form fieldset')!.disabled).toBe(false); expect(h.native.port.set).not.toHaveBeenCalled();
 });
