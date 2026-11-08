@@ -3339,7 +3339,7 @@
       "status": "proposed",
       "scope": "Complete proposed desktop product: 150 required functions, local center, Action integration, shared setup and 803 product cases. H1 establishes builds; H2 implements shared runtime/session/settings/GET services and exact native-browser harnesses. Full product/core acceptance and signed delivery remain separate gates.",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-31",
+      "lastVerified": "2026-11-08",
       "specs": [
         "specs/github-browser-extension.md",
         "specs/github-browser-extension-action-integration.md",
