@@ -1,3 +1,4 @@
+import { type BugbotFreshnessDiagnostic } from '../../domain/bugbot/review_freshness_failure';
 import { type BugbotPartitionQueryDiagnostic } from '../../domain/bugbot/response_failure';
 import { type ProgressBatchDiagnostic } from '../../domain/progress_batch_diagnostic';
 import { type BranchSyncPublicationDiagnostic } from '../../domain/branch_sync_publication';
@@ -24,7 +25,7 @@ import { type SddSourceContextDiagnostic } from '../../domain/agent_source_snaps
 import { type SddDraftMinimumDiagnostic } from '../../domain/sdd_validation_diagnostic';
 export type ApplicationErrorKind = 'configuration' | 'authorization' | 'provider' | 'agent' | 'validation' | 'workflow' | 'unknown';
 export type ApplicationErrorCode = 'configuration.invalid' | 'configuration.unsupported' | 'authorization.denied' | 'authorization.credential-invalid' | 'provider.not-found' | 'provider.conflict' | 'provider.rate-limited' | 'provider.unavailable' | 'provider.contract-invalid' | 'agent.policy-rejected' | 'agent.failed' | 'locale.output-invalid' | 'locale.translation-failed' | 'validation.invalid-input' | 'validation.evidence-too-large' | 'validation.evidence-unavailable' | 'workflow.invalid-event' | 'workflow.stale' | 'workflow.cancelled' | 'workflow.failed' | 'workflow.presentation-pending' | 'timeout' | 'unexpected';
-export declare const APPLICATION_ERROR_RECOVERY_IDS: readonly ["comment-command-length", "comment-command-name-missing", "comment-command-name-unknown", "comment-command-argument-count", "comment-command-arguments-unexpected", "comment-command-arguments-missing", "comment-command-finding-quoting", "comment-command-review-format", "comment-command-review-effort", "comment-command-review-boolean", "comment-command-review-option", "comment-command-sync-option", "comment-command-sync-parent", "pull-request-link-restored", "pull-request-link-base-retained", "pull-request-link-reference-retained", "pull-request-link-base-and-reference-retained", "managed-branch-enrichment-failed", "inactivity-explanation-failed", "bugbot-review-blocks-pending", "branch-sync-agent-disabled", "branch-sync-fixer-unavailable", "branch-sync-resolution-invalid", "branch-sync-verification-failed", "branch-sync-catalog-incompatible", "branch-sync-workflow-write-required", "branch-sync-publication-failed", "sdd-draft-size-exceeded", "sdd-draft-response-too-short", "sdd-catalog-unsupported-profile", "sdd-catalog-format-invalid", "sdd-catalog-missing-trusted-source", "sdd-source-context-unavailable", "sdd-draft-format-invalid", "sdd-draft-case-identity-invalid", "sdd-draft-case-budget-invalid", "sdd-draft-requirement-mapping-invalid", "sdd-draft-repository-path-invalid", "deployment-publication-context-missing", "workspace-changes-rejected", "closed-issue-reconciliation-failed", "approval-evidence-read-failed", "change-size-reconciliation-failed", "issue-assignment-failed", "issue-assignment-count-invalid", "issue-workflow-admission-blocked", "progress-binary-evidence-unavailable", "progress-inventory-incomplete", "progress-evidence-capacity-exceeded", "bugbot-review-incomplete", "progress-result-contract-invalid", "progress-partition-length-invalid", "progress-partition-bytes-invalid", "progress-assessment-length-invalid", "bugbot-partition-query-exhausted", "progress-assessment-capacity-exceeded", "progress-scope-clause-limit", "progress-sdd-seed-unverified", "progress-batch-retained", "progress-completion-recovery-exhausted", "stored-configuration-schema-missing", "stored-configuration-schema-unsupported", "stored-configuration-invalid"];
+export declare const APPLICATION_ERROR_RECOVERY_IDS: readonly ["comment-command-length", "comment-command-name-missing", "comment-command-name-unknown", "comment-command-argument-count", "comment-command-arguments-unexpected", "comment-command-arguments-missing", "comment-command-finding-quoting", "comment-command-review-format", "comment-command-review-effort", "comment-command-review-boolean", "comment-command-review-option", "comment-command-sync-option", "comment-command-sync-parent", "pull-request-link-restored", "pull-request-link-base-retained", "pull-request-link-reference-retained", "pull-request-link-base-and-reference-retained", "managed-branch-enrichment-failed", "inactivity-explanation-failed", "bugbot-review-blocks-pending", "branch-sync-agent-disabled", "branch-sync-fixer-unavailable", "branch-sync-sensitive-paths", "branch-sync-conflict-limit", "branch-sync-resolution-invalid", "branch-sync-verification-failed", "branch-sync-catalog-incompatible", "branch-sync-workflow-write-required", "branch-sync-publication-failed", "sdd-draft-size-exceeded", "sdd-draft-response-too-short", "sdd-catalog-unsupported-profile", "sdd-catalog-format-invalid", "sdd-catalog-missing-trusted-source", "sdd-source-context-unavailable", "sdd-draft-format-invalid", "sdd-draft-case-identity-invalid", "sdd-draft-case-budget-invalid", "sdd-draft-requirement-mapping-invalid", "sdd-draft-repository-path-invalid", "deployment-publication-context-missing", "workspace-changes-rejected", "closed-issue-reconciliation-failed", "approval-evidence-read-failed", "change-size-reconciliation-failed", "issue-assignment-failed", "issue-assignment-count-invalid", "issue-workflow-admission-blocked", "progress-binary-evidence-unavailable", "progress-inventory-incomplete", "progress-evidence-capacity-exceeded", "bugbot-review-incomplete", "progress-result-contract-invalid", "progress-partition-length-invalid", "progress-partition-bytes-invalid", "progress-assessment-length-invalid", "bugbot-partition-query-exhausted", "bugbot-freshness-before-publication", "bugbot-freshness-after-publication", "progress-assessment-capacity-exceeded", "progress-scope-clause-limit", "progress-sdd-seed-unverified", "progress-batch-retained", "progress-completion-recovery-exhausted", "stored-configuration-schema-missing", "stored-configuration-schema-unsupported", "stored-configuration-invalid"];
 export type ApplicationErrorRecoveryId = typeof APPLICATION_ERROR_RECOVERY_IDS[number];
 interface ApplicationErrorRecoveryVariables extends Readonly<Record<CopilotCommandValidationReason, Readonly<{
     command: CopilotCommandName;
@@ -57,6 +58,8 @@ interface ApplicationErrorRecoveryVariables extends Readonly<Record<CopilotComma
     readonly 'progress-partition-bytes-invalid': ProgressPartitionByteDiagnostic;
     readonly 'progress-assessment-length-invalid': ProgressAssessmentLengthDiagnostic;
     readonly 'bugbot-partition-query-exhausted': BugbotPartitionQueryDiagnostic;
+    readonly 'bugbot-freshness-before-publication': BugbotFreshnessDiagnostic;
+    readonly 'bugbot-freshness-after-publication': BugbotFreshnessDiagnostic;
     readonly 'progress-assessment-capacity-exceeded': ProgressResponseDiagnosticFacts;
     readonly 'progress-sdd-seed-unverified': Readonly<Record<string, never>>;
     readonly 'progress-batch-retained': ProgressBatchDiagnostic;
@@ -80,6 +83,16 @@ interface ApplicationErrorRecoveryVariables extends Readonly<Record<CopilotComma
     }>;
     readonly 'branch-sync-fixer-unavailable': Readonly<{
         command: '/copilot sync-branch';
+    }>;
+    readonly 'branch-sync-sensitive-paths': Readonly<{
+        command: '/copilot sync-branch';
+        conflictCount: number;
+        sensitiveCount: number;
+    }>;
+    readonly 'branch-sync-conflict-limit': Readonly<{
+        command: '/copilot sync-branch';
+        conflictCount: number;
+        limit: 20;
     }>;
     readonly 'branch-sync-resolution-invalid': Readonly<{
         validationCode: BranchSyncValidationCode;

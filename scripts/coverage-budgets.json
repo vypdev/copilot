@@ -1545,6 +1545,22 @@
         }
       ],
       "successMessage": "Bugbot partition response diagnostics: PASS (pure closed facts and typed semantic rejection100% all metrics)"
+    },
+    {
+      "name": "Review freshness diagnostics",
+      "missingEntryLabel": "review freshness diagnostic",
+      "rules": [
+        {
+          "mode": "each",
+          "files": [
+            "src/domain/bugbot/review_freshness_failure.ts",
+            "src/application/errors/bugbot_freshness_error.ts",
+            "src/application/policies/pull_request_review_provider_code_policy.ts"
+          ],
+          "thresholdProfile": "exhaustive"
+        }
+      ],
+      "successMessage": "review freshness diagnostic coverage: PASS (100% statements, branches, functions and lines)"
     }
   ]
 }

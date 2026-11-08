@@ -8,6 +8,7 @@ export type PullRequestReviewOperation =
   | "get-comment"
   | "list-files"
   | "get-head-sha"
+  | "get-source-bound-pr"
   | "publish-comments"
   | "update-comment"
   | "update-review"
@@ -16,6 +17,7 @@ export type PullRequestReviewOperation =
   | "mark-resolved";
 
 export interface PullRequestReviewErrorContext {
+  readonly providerFailure?: 'response-invalid';
   readonly providerStatus?: number;
   readonly providerReference?: string;
   failedCount?: number;
@@ -32,6 +34,7 @@ const ERROR_MESSAGES: Record<PullRequestReviewOperation, string> = {
   "get-comment": "Unable to get the pull request review comment.",
   "list-files": "Unable to list pull request changed files.",
   "get-head-sha": "Unable to get the pull request head commit.",
+  "get-source-bound-pr": "Unable to get the source-bound pull request identity.",
   "publish-comments": "Failed to publish pull request review comments.",
   "update-comment": "Unable to update the pull request review comment.",
   "update-review": "Unable to update the pull request review summary.",
@@ -56,6 +59,7 @@ function buildMessage(
 }
 
 export class PullRequestReviewOperationError extends Error {
+  readonly providerFailure?: 'response-invalid';
   readonly operation: PullRequestReviewOperation;
   readonly providerStatus?: number;
   readonly providerReference?: string;
@@ -67,6 +71,7 @@ export class PullRequestReviewOperationError extends Error {
     super(buildMessage(operation, context));
     this.name = "PullRequestReviewOperationError";
     this.operation = operation;
+    if (context?.providerFailure === 'response-invalid') this.providerFailure = context.providerFailure;
     const status = context?.providerStatus;
     if (typeof status === 'number' && Number.isInteger(status) && status >= 400 && status <= 599) {
       this.providerStatus = status;

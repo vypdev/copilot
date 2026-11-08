@@ -485,3 +485,43 @@ response, arbitrary key, path, provider stderr or value is retained. Qualify the
 provider's output contract before one fresh complete review. Prior findings and
 resolutions are preserved; all original complete-review and freshness gates
 still apply. See [Bugbot failures](/bugbot/failure-scenarios).
+
+
+## Conflict eligibility and review freshness
+
+`branch-sync-sensitive-paths` reports protected-path and total conflict counts;
+`branch-sync-conflict-limit` reports the total and unchanged 20-path automated
+limit. Both are nonretryable refusals before fixer, verifier or push. Review the
+original conflict list in the job and use authorized maintainer recovery; after
+an approved source update inspect `/copilot sync-branch --dry-run`. Public error
+operands contain no raw protected paths.
+
+`bugbot-freshness-before-publication` and `bugbot-freshness-after-publication`
+identify the trusted read operation, sanitized HTTP status/reference and closed
+reason. Missing metadata remains `http-unavailable`; it is not an inferred HTTP
+status. Invalid head responses fail closed with `provider.contract-invalid`.
+Known 401/403, 404, 409, 429, other client-contract and unavailable responses retain
+their distinct existing error categories. Unknown exceptions and source-completeness
+errors retain their own behavior. No extra read or automatic publication retry
+is introduced.
+
+Before-publication failure authorizes no new finding mutations. A later failure
+may follow completed writes: retain them, inspect the actual current head and
+reconcile persisted findings when recovering. Analysis completion alone is not
+current-review success. Selected structured fields from an actual error:
+
+```json
+{
+  "code": "authorization.denied",
+  "retryable": false,
+  "recovery": {
+    "id": "bugbot-freshness-before-publication",
+    "variables": {
+      "operation": "get-head-sha",
+      "providerStatus": "http-403",
+      "providerReference": "AB12:CD34",
+      "reason": "provider-request-failed"
+    }
+  }
+}
+```

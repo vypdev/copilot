@@ -32602,6 +32602,16 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
         action: 'Inspect part {partitionId}, file {filePath}, unit {unitId}, field {field}: observed {observed} Unicode code points; maximum {maximum}. Do not automatically repeat the unchanged comparison. Qualify a corrected build against the pinned sources before one fresh complete assessment. Preserve every file, source unit and verification gate.',
         retainedState: 'Existing progress labels and assessments were preserved. No partial percentage or passing verification was published; execution and optional check-publication failures remain separate.',
     }),
+    'bugbot-freshness-before-publication': Object.freeze({
+        impact: 'Bugbot could not confirm the current PR before publication: operation {operation}, status {providerStatus}, reason {reason}, provider reference {providerReference}.',
+        action: 'Inspect the named operation and error code; repair provider access or response before rechecking from the current head. Completed analysis alone is not a fresh review. Keep source identity and reconciliation checks enabled.',
+        retainedState: 'This evaluation published no new finding mutations. Prior findings and resolutions were retained; no passing current review was authorized.',
+    }),
+    'bugbot-freshness-after-publication': Object.freeze({
+        impact: 'Bugbot could not confirm the current PR after publication: operation {operation}, status {providerStatus}, reason {reason}, provider reference {providerReference}.',
+        action: 'Inspect the named operation and error code; repair the provider cause and recheck the current head and persisted findings. Reconciliation must retain completed effects without duplicating them. Do not infer a clean review or roll back completed writes.',
+        retainedState: 'Finding mutations may already have completed. Existing effects were retained; this evaluation did not authorize a passing current review or repeat publication.',
+    }),
     'bugbot-partition-query-exhausted': Object.freeze({
         impact: 'A completed Bugbot partition response remained invalid after {attempts} attempts; the review was not published.',
         action: 'Inspect response reason {reason} and the current run. Qualify the provider output contract before a fresh complete review. This diagnostic describes completed response validation, not an execution infrastructure failure.',
@@ -32732,6 +32742,16 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
         action: 'Run {command} to let the configured fixer resolve eligible conflicts, or use --dry-run to inspect the merge without publishing it.',
         retainedState: 'No synchronization commit was pushed; remote branches were preserved.',
     }),
+    'branch-sync-sensitive-paths': Object.freeze({
+        impact: 'Automatic branch synchronization stopped: {sensitiveCount} protected paths occur among {conflictCount} conflicts.',
+        action: 'Review the conflicted paths in the workflow log and use the authorized maintainer recovery for protected files. After an approved source update, inspect {command} --dry-run. Repeating unchanged conflicts does not change this policy.',
+        retainedState: 'No fixer, repository verifier or synchronization push was invoked; existing remote heads were preserved.',
+    }),
+    'branch-sync-conflict-limit': Object.freeze({
+        impact: 'Automatic branch synchronization stopped: {conflictCount} conflicts exceed the limit of {limit}.',
+        action: 'Reduce the conflicted set through reviewed source changes or authorized maintainer recovery, then inspect {command} --dry-run. Repeating the unchanged command cannot reduce this set.',
+        retainedState: 'No fixer, repository verifier or synchronization push was invoked; existing remote heads were preserved.',
+    }),
     'branch-sync-fixer-unavailable': Object.freeze({
         impact: 'Branch synchronization stopped because the merge has conflicts and no fixer agent is configured.',
         action: 'Configure a supported fixer and retry {command}; use --dry-run to inspect the merge without publishing it.',
@@ -32832,6 +32852,16 @@ const SPANISH_RECOVERY_CONTENT = Object.freeze({
         impact: 'Una parte del progreso sigue superando el límite de respuesta tras una sustitución acotada; no se publicó el progreso.',
         action: 'Inspecciona la parte {partitionId}, archivo {filePath}, unidad {unitId}, campo {field}: observado {observed} puntos de código Unicode; máximo {maximum}. No repitas automáticamente la comparación sin cambios. Valida una compilación corregida con las fuentes fijadas antes de una evaluación nueva completa. Conserva todos los archivos, hechos y controles de verificación.',
         retainedState: 'Se conservaron las etiquetas y evaluaciones de progreso. No se publicó ningún porcentaje parcial ni verificación aprobada; los fallos de ejecución y de publicación del check opcional siguen siendo independientes.',
+    }),
+    'bugbot-freshness-before-publication': Object.freeze({
+        impact: 'Bugbot no pudo confirmar la PR actual antes de publicar: operación {operation}, estado {providerStatus}, motivo {reason}, referencia del proveedor {providerReference}.',
+        action: 'Inspecciona la operación y el código de error; corrige el acceso o la respuesta del proveedor antes de revisar el head actual. Completar el análisis no confirma la vigencia de la revisión. Mantén los controles de identidad y reconciliación.',
+        retainedState: 'Esta evaluación no publicó cambios nuevos en los findings. Se conservaron los hallazgos y resoluciones anteriores; no se autorizó una revisión actual aprobada.',
+    }),
+    'bugbot-freshness-after-publication': Object.freeze({
+        impact: 'Bugbot no pudo confirmar la PR actual después de publicar: operación {operation}, estado {providerStatus}, motivo {reason}, referencia del proveedor {providerReference}.',
+        action: 'Inspecciona la operación y el código de error; corrige la causa y vuelve a comprobar el head y los findings persistidos. La reconciliación debe conservar los efectos completados sin duplicarlos. No deduzcas una revisión limpia ni reviertas publicaciones completadas.',
+        retainedState: 'Es posible que ya se hayan completado cambios en los findings. Se conservaron los efectos existentes; esta evaluación no autorizó una revisión actual aprobada ni la repetición de publicaciones.',
     }),
     'bugbot-partition-query-exhausted': Object.freeze({
         impact: 'La respuesta completada de una partición de Bugbot siguió siendo inválida tras {attempts} intentos; no se publicó la revisión.',
@@ -32962,6 +32992,16 @@ const SPANISH_RECOVERY_CONTENT = Object.freeze({
         impact: 'La sincronización se detuvo porque el merge tiene conflictos y --no-agent desactiva la resolución automática.',
         action: 'Ejecuta {command} para que el fixer configurado resuelva los conflictos admitidos, o usa --dry-run para inspeccionar el merge sin publicarlo.',
         retainedState: 'No se publicó ningún commit de sincronización; se conservaron las ramas remotas.',
+    }),
+    'branch-sync-sensitive-paths': Object.freeze({
+        impact: 'La sincronización automática se detuvo: hay {sensitiveCount} rutas protegidas entre {conflictCount} conflictos.',
+        action: 'Revisa las rutas en el registro del workflow y utiliza la recuperación autorizada de mantenedores para archivos protegidos. Tras un cambio de origen aprobado, inspecciona {command} --dry-run. Repetir los mismos conflictos no cambia esta política.',
+        retainedState: 'No se invocaron el agente corrector, los verificadores del repositorio ni la publicación de sincronización; se conservaron las referencias remotas.',
+    }),
+    'branch-sync-conflict-limit': Object.freeze({
+        impact: 'La sincronización automática se detuvo: {conflictCount} conflictos superan el límite de {limit}.',
+        action: 'Reduce los conflictos mediante cambios revisados o una recuperación autorizada de mantenedores; después inspecciona {command} --dry-run. Repetir el mismo comando no reduce este conjunto.',
+        retainedState: 'No se invocaron el agente corrector, los verificadores del repositorio ni la publicación de sincronización; se conservaron las referencias remotas.',
     }),
     'branch-sync-fixer-unavailable': Object.freeze({
         impact: 'La sincronización se detuvo porque el merge tiene conflictos y no hay un fixer configurado.',
@@ -34059,6 +34099,7 @@ var _ApplicationError_cause;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = exports.APPLICATION_ERROR_RECOVERY_IDS = void 0;
 exports.isApplicationErrorCorrelationId = isApplicationErrorCorrelationId;
+const review_freshness_failure_1 = __nccwpck_require__(9004);
 const response_failure_1 = __nccwpck_require__(4286);
 const progress_batch_diagnostic_1 = __nccwpck_require__(9486);
 const branch_sync_publication_1 = __nccwpck_require__(7857);
@@ -34093,6 +34134,8 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'bugbot-review-blocks-pending',
     'branch-sync-agent-disabled',
     'branch-sync-fixer-unavailable',
+    'branch-sync-sensitive-paths',
+    'branch-sync-conflict-limit',
     'branch-sync-resolution-invalid',
     'branch-sync-verification-failed',
     'branch-sync-catalog-incompatible',
@@ -34126,6 +34169,8 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'progress-partition-bytes-invalid',
     'progress-assessment-length-invalid',
     'bugbot-partition-query-exhausted',
+    'bugbot-freshness-before-publication',
+    'bugbot-freshness-after-publication',
     'progress-assessment-capacity-exceeded',
     'progress-scope-clause-limit',
     'progress-sdd-seed-unverified',
@@ -34368,6 +34413,8 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'bugbot-review-blocks-pending': Object.freeze(['pendingCount']),
     'branch-sync-agent-disabled': Object.freeze(['command']),
     'branch-sync-fixer-unavailable': Object.freeze(['command']),
+    'branch-sync-sensitive-paths': Object.freeze(['command', 'conflictCount', 'sensitiveCount']),
+    'branch-sync-conflict-limit': Object.freeze(['command', 'conflictCount', 'limit']),
     'branch-sync-resolution-invalid': Object.freeze(['validationCode', 'command']),
     'branch-sync-verification-failed': Object.freeze(['stage', 'reason', 'command', 'commandIndex', 'childSha', 'restoration']),
     'branch-sync-catalog-incompatible': Object.freeze(['phase', 'profile', 'field', 'capabilityNumber', 'abort']),
@@ -34392,6 +34439,8 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'progress-partition-bytes-invalid': Object.freeze(['partitionId', 'filePath', 'unitId', 'field', 'maximum', 'observed']),
     'progress-partition-length-invalid': Object.freeze(['partitionId', 'filePath', 'unitId', 'field', 'maximum', 'observed']),
     'bugbot-partition-query-exhausted': Object.freeze(['reason', 'attempts']),
+    'bugbot-freshness-before-publication': Object.freeze(['operation', 'providerStatus', 'providerReference', 'reason']),
+    'bugbot-freshness-after-publication': Object.freeze(['operation', 'providerStatus', 'providerReference', 'reason']),
     'progress-assessment-length-invalid': Object.freeze(['requirementId', 'sourceLineId', 'field', 'maximum', 'observed']),
     'progress-assessment-capacity-exceeded': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
     'progress-batch-retained': Object.freeze(['reason', 'verified', 'expected', 'batch', 'requirementId']),
@@ -34454,9 +34503,21 @@ function normalizeApplicationErrorRecovery(recovery) {
             || variables.pendingCount < 1)) {
         throw new TypeError('Application error recovery pending count is invalid.');
     }
-    if ((recovery.id === 'branch-sync-agent-disabled' || recovery.id === 'branch-sync-fixer-unavailable' || recovery.id === 'branch-sync-resolution-invalid')
+    if ((recovery.id === 'branch-sync-agent-disabled' || recovery.id === 'branch-sync-fixer-unavailable' || recovery.id === 'branch-sync-sensitive-paths' || recovery.id === 'branch-sync-conflict-limit' || recovery.id === 'branch-sync-resolution-invalid')
         && variables.command !== '/copilot sync-branch') {
         throw new TypeError('Application error recovery synchronization command is invalid.');
+    }
+    if (recovery.id === 'branch-sync-sensitive-paths' || recovery.id === 'branch-sync-conflict-limit') {
+        const count = variables.conflictCount;
+        if (typeof count !== 'number' || !Number.isSafeInteger(count) || count < 1) {
+            throw new TypeError('Branch synchronization conflict count is invalid.');
+        }
+        if (recovery.id === 'branch-sync-sensitive-paths'
+            ? typeof variables.sensitiveCount !== 'number' || !Number.isSafeInteger(variables.sensitiveCount)
+                || variables.sensitiveCount < 1 || variables.sensitiveCount > count
+            : count <= 20 || variables.limit !== 20) {
+            throw new TypeError('Branch synchronization refusal counts are invalid.');
+        }
     }
     if (recovery.id === 'branch-sync-resolution-invalid'
         && !branch_sync_validation_1.BRANCH_SYNC_VALIDATION_CODES.some(code => code === variables.validationCode)) {
@@ -34522,6 +34583,10 @@ function normalizeApplicationErrorRecovery(recovery) {
     }
     if (recovery.id === 'issue-assignment-failed' && !(0, issue_assignment_diagnostic_1.isIssueAssignmentDiagnostic)(variables)) {
         throw new TypeError('Issue assignment diagnostic is invalid.');
+    }
+    if ((recovery.id === 'bugbot-freshness-before-publication' || recovery.id === 'bugbot-freshness-after-publication')
+        && !(0, review_freshness_failure_1.isBugbotFreshnessDiagnostic)(variables)) {
+        throw new TypeError('Bugbot freshness diagnostic is invalid.');
     }
     return Object.freeze({
         id: recovery.id,
@@ -35557,6 +35622,27 @@ class BugbotResponseFailure extends Error {
     }
 }
 exports.BugbotResponseFailure = BugbotResponseFailure;
+
+
+/***/ }),
+
+/***/ 9004:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.isBugbotFreshnessDiagnostic = isBugbotFreshnessDiagnostic;
+function isBugbotFreshnessDiagnostic(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return false;
+    const v = value;
+    return (v.operation === 'get-head-sha' || v.operation === 'get-source-bound-pr')
+        && typeof v.providerStatus === 'string' && /^(?:http-unavailable|http-[45][0-9]{2})$/u.test(v.providerStatus)
+        && typeof v.providerReference === 'string' && /^[A-Za-z0-9:-]{1,64}$/u.test(v.providerReference)
+        && (v.reason === 'provider-request-failed' || v.reason === 'response-invalid')
+        && (v.reason !== 'response-invalid' || v.providerStatus === 'http-unavailable');
+}
 
 
 /***/ }),

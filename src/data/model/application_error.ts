@@ -1,3 +1,4 @@
+import { isBugbotFreshnessDiagnostic, type BugbotFreshnessDiagnostic } from '../../domain/bugbot/review_freshness_failure';
 import { isBugbotPartitionQueryDiagnostic, type BugbotPartitionQueryDiagnostic } from '../../domain/bugbot/response_failure';
 import { isProgressBatchDiagnostic, type ProgressBatchDiagnostic } from '../../domain/progress_batch_diagnostic';
 import { isBranchSyncPublicationDiagnostic, type BranchSyncPublicationDiagnostic } from '../../domain/branch_sync_publication';
@@ -69,6 +70,8 @@ export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'bugbot-review-blocks-pending',
     'branch-sync-agent-disabled',
     'branch-sync-fixer-unavailable',
+    'branch-sync-sensitive-paths',
+    'branch-sync-conflict-limit',
     'branch-sync-resolution-invalid',
     'branch-sync-verification-failed',
     'branch-sync-catalog-incompatible',
@@ -103,6 +106,8 @@ export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'progress-partition-bytes-invalid',
     'progress-assessment-length-invalid',
     'bugbot-partition-query-exhausted',
+    'bugbot-freshness-before-publication',
+    'bugbot-freshness-after-publication',
     'progress-assessment-capacity-exceeded',
     'progress-scope-clause-limit',
     'progress-sdd-seed-unverified',
@@ -135,6 +140,8 @@ interface ApplicationErrorRecoveryVariables extends Readonly<Record<CopilotComma
     readonly 'progress-partition-bytes-invalid': ProgressPartitionByteDiagnostic;
     readonly 'progress-assessment-length-invalid': ProgressAssessmentLengthDiagnostic;
     readonly 'bugbot-partition-query-exhausted': BugbotPartitionQueryDiagnostic;
+    readonly 'bugbot-freshness-before-publication': BugbotFreshnessDiagnostic;
+    readonly 'bugbot-freshness-after-publication': BugbotFreshnessDiagnostic;
     readonly 'progress-assessment-capacity-exceeded': ProgressResponseDiagnosticFacts;
     readonly 'progress-sdd-seed-unverified': Readonly<Record<string, never>>;
     readonly 'progress-batch-retained': ProgressBatchDiagnostic;
@@ -150,6 +157,8 @@ interface ApplicationErrorRecoveryVariables extends Readonly<Record<CopilotComma
     readonly 'bugbot-review-blocks-pending': Readonly<{ pendingCount: number }>;
     readonly 'branch-sync-agent-disabled': Readonly<{ command: '/copilot sync-branch' }>;
     readonly 'branch-sync-fixer-unavailable': Readonly<{ command: '/copilot sync-branch' }>;
+    readonly 'branch-sync-sensitive-paths': Readonly<{ command: '/copilot sync-branch'; conflictCount: number; sensitiveCount: number }>;
+    readonly 'branch-sync-conflict-limit': Readonly<{ command: '/copilot sync-branch'; conflictCount: number; limit: 20 }>;
     readonly 'branch-sync-resolution-invalid': Readonly<{ validationCode: BranchSyncValidationCode; command: '/copilot sync-branch' }>;
     readonly 'branch-sync-verification-failed': BranchSyncVerificationFailure;
     readonly 'branch-sync-catalog-incompatible': BranchSyncCatalogDiagnostic & Readonly<{ abort: 'completed' | 'unverified' }>;
@@ -454,6 +463,8 @@ const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readon
     'bugbot-review-blocks-pending': Object.freeze(['pendingCount']),
     'branch-sync-agent-disabled': Object.freeze(['command']),
     'branch-sync-fixer-unavailable': Object.freeze(['command']),
+    'branch-sync-sensitive-paths': Object.freeze(['command', 'conflictCount', 'sensitiveCount']),
+    'branch-sync-conflict-limit': Object.freeze(['command', 'conflictCount', 'limit']),
     'branch-sync-resolution-invalid': Object.freeze(['validationCode', 'command']),
     'branch-sync-verification-failed': Object.freeze(['stage', 'reason', 'command', 'commandIndex', 'childSha', 'restoration']),
     'branch-sync-catalog-incompatible': Object.freeze(['phase', 'profile', 'field', 'capabilityNumber', 'abort']),
@@ -479,6 +490,8 @@ const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readon
     'progress-partition-bytes-invalid': Object.freeze(['partitionId', 'filePath', 'unitId', 'field', 'maximum', 'observed']),
     'progress-partition-length-invalid': Object.freeze(['partitionId', 'filePath', 'unitId', 'field', 'maximum', 'observed']),
     'bugbot-partition-query-exhausted': Object.freeze(['reason', 'attempts']),
+    'bugbot-freshness-before-publication': Object.freeze(['operation', 'providerStatus', 'providerReference', 'reason']),
+    'bugbot-freshness-after-publication': Object.freeze(['operation', 'providerStatus', 'providerReference', 'reason']),
     'progress-assessment-length-invalid': Object.freeze(['requirementId', 'sourceLineId', 'field', 'maximum', 'observed']),
     'progress-assessment-capacity-exceeded': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
     'progress-batch-retained': Object.freeze(['reason', 'verified', 'expected', 'batch', 'requirementId']),
@@ -544,9 +557,21 @@ function normalizeApplicationErrorRecovery(
             || variables.pendingCount < 1)) {
         throw new TypeError('Application error recovery pending count is invalid.');
     }
-    if ((recovery.id === 'branch-sync-agent-disabled' || recovery.id === 'branch-sync-fixer-unavailable' || recovery.id === 'branch-sync-resolution-invalid')
+    if ((recovery.id === 'branch-sync-agent-disabled' || recovery.id === 'branch-sync-fixer-unavailable' || recovery.id === 'branch-sync-sensitive-paths' || recovery.id === 'branch-sync-conflict-limit' || recovery.id === 'branch-sync-resolution-invalid')
         && variables.command !== '/copilot sync-branch') {
         throw new TypeError('Application error recovery synchronization command is invalid.');
+    }
+    if (recovery.id === 'branch-sync-sensitive-paths' || recovery.id === 'branch-sync-conflict-limit') {
+        const count = variables.conflictCount;
+        if (typeof count !== 'number' || !Number.isSafeInteger(count) || count < 1) {
+            throw new TypeError('Branch synchronization conflict count is invalid.');
+        }
+        if (recovery.id === 'branch-sync-sensitive-paths'
+            ? typeof variables.sensitiveCount !== 'number' || !Number.isSafeInteger(variables.sensitiveCount)
+                || variables.sensitiveCount < 1 || variables.sensitiveCount > count
+            : count <= 20 || variables.limit !== 20) {
+            throw new TypeError('Branch synchronization refusal counts are invalid.');
+        }
     }
     if (recovery.id === 'branch-sync-resolution-invalid'
         && !BRANCH_SYNC_VALIDATION_CODES.some(code => code === variables.validationCode)) {
@@ -601,6 +626,10 @@ function normalizeApplicationErrorRecovery(
     }
     if (recovery.id === 'issue-assignment-failed' && !isIssueAssignmentDiagnostic(variables)) {
         throw new TypeError('Issue assignment diagnostic is invalid.');
+    }
+    if ((recovery.id === 'bugbot-freshness-before-publication' || recovery.id === 'bugbot-freshness-after-publication')
+        && !isBugbotFreshnessDiagnostic(variables)) {
+        throw new TypeError('Bugbot freshness diagnostic is invalid.');
     }
     return Object.freeze({
         id: recovery.id,

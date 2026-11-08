@@ -905,3 +905,20 @@ no partial publication authority and no guessed attribution for historical #920.
 Rollback removes the additive carrier/mapping/recovery variant and localized
 copy together; it leaves old comments, findings, provider failures and source
 assignments intact. No tag, release or deployment is authorized by this SDD.
+
+
+## Freshness-provider boundary follow-up — #870/#937
+
+The semantic-publication owner's post-analysis freshness amendment owns twelve
+new distinct regression declarations; the branch-sync owner owns eight more for
+#911. These allocations are counted once in the shared communication ledger.
+Both legacy head reads and source-bound PR/live-base reads retain their existing
+request counts. Capture known HTTP status/reference at the provider boundary;
+unknown provider exceptions retain their previous behavior. Decode missing,
+malformed and null-sentinel heads as invalid responses, retain specific semantic
+errors, distinguish before/after publication, and revalidate/reconcile actual
+persisted effects on recovery. The full-workflow case executes a completed write,
+failed freshness read and successful fresh recovery without a duplicate finding.
+This adds no model query, mutation retry, public configuration, timeout change or
+relaxation of complete source, receipt, coverage or current-head checks. Owning
+contract: [post-analysis freshness failure evidence](./semantic-github-publication-and-notification.md#post-analysis-freshness-failure-evidence--issues-870-and-937).

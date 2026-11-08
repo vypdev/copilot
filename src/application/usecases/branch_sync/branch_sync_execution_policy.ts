@@ -38,11 +38,13 @@ export function branchSyncConflictEligibilityFailure(
     };
   }
   if (preparation.conflictPaths.length > MAX_AGENT_CONFLICT_PATHS) {
-    return { reason: `The merge has ${preparation.conflictPaths.length} conflicted files; the automated limit is ${MAX_AGENT_CONFLICT_PATHS}.` };
+    return { reason: `The merge has ${preparation.conflictPaths.length} conflicted files; the automated limit is ${MAX_AGENT_CONFLICT_PATHS}.`,
+      recovery: { id: 'branch-sync-conflict-limit', variables: { command: '/copilot sync-branch', conflictCount: preparation.conflictPaths.length, limit: 20 } } };
   }
   const sensitive = preparation.conflictPaths.filter(isSensitiveWorkspacePath);
   return sensitive.length > 0
-    ? { reason: `Automated conflict resolution is not allowed for sensitive paths: ${sensitive.join(", ")}.` }
+    ? { reason: `Automated conflict resolution is not allowed for sensitive paths (${sensitive.length} of ${preparation.conflictPaths.length} conflicts).`,
+        recovery: { id: 'branch-sync-sensitive-paths', variables: { command: '/copilot sync-branch', conflictCount: preparation.conflictPaths.length, sensitiveCount: sensitive.length } } }
     : undefined;
 }
 
@@ -90,14 +92,16 @@ export function failedBranchSyncResult(reason: string, cause?: unknown, recovery
   const catalogCode = recovery?.id === 'branch-sync-catalog-incompatible'
     ? (['legacy-evidence', 'native', 'ambiguous'].includes(recovery.variables.profile) ? 'configuration.unsupported' : 'configuration.invalid')
     : undefined;
+  const refusalCode = recovery?.id === 'branch-sync-sensitive-paths' ? 'authorization.denied'
+    : recovery?.id === 'branch-sync-conflict-limit' ? 'validation.invalid-input' : undefined;
   return new Result({
     id: BRANCH_SYNC_TASK_ID,
     success: false,
     executed: true,
     steps: [reason],
     errors: [cause === undefined
-      ? new ApplicationError(catalogCode ?? 'workflow.failed', reason, { recovery,
-        ...(catalogCode || recovery?.id === 'branch-sync-verification-failed' ? { retryable: false } : {}) })
+      ? new ApplicationError(catalogCode ?? refusalCode ?? 'workflow.failed', reason, { recovery,
+        ...(catalogCode || refusalCode || recovery?.id === 'branch-sync-verification-failed' ? { retryable: false } : {}) })
       : toApplicationError(cause, 'workflow.failed', reason, { recovery })],
   });
 }

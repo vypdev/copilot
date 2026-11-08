@@ -242,7 +242,14 @@
         "src/data/repository/progress_assessment_length_failure.ts",
         "src/application/policies/progress_assessment_length_policy.ts",
         "src/application/policies/progress_compact_assessment_policy.ts",
-        "src/application/policies/progress_partition_byte_policy.ts"
+        "src/application/policies/progress_partition_byte_policy.ts",
+        "src/domain/bugbot/review_freshness_failure.ts",
+        "src/application/errors/bugbot_freshness_error.ts",
+        "src/application/policies/pull_request_review_provider_code_policy.ts",
+        "src/application/ports/pull_request_review_errors.ts",
+        "src/application/usecases/steps/commit/bugbot/bugbot_review_freshness.ts",
+        "src/data/repository/pull_request/pull_request_lifecycle_repository.ts",
+        "src/data/repository/pull_request/pull_request_changes_repository.ts"
       ],
       "tests": [
         "src/domain/__tests__/implementation_plan.test.ts",
@@ -435,7 +442,9 @@
         "src/application/policies/__tests__/progress_compact_assessment_policy.test.ts",
         "src/application/usecases/actions/__tests__/fixtures/progress_assessment_wire_fixture.ts",
         "src/application/policies/__tests__/progress_partition_byte_recovery.test.ts",
-        "src/application/usecases/actions/__tests__/progress_partition_byte_publication.integration.test.ts"
+        "src/application/usecases/actions/__tests__/progress_partition_byte_publication.integration.test.ts",
+        "src/application/policies/__tests__/bugbot_freshness_diagnostics.test.ts",
+        "src/data/repository/__tests__/bugbot_source_bound_identity_repository.test.ts"
       ],
       "documentation": [
         "docs/configuration.mdx",
@@ -2379,7 +2388,12 @@
         "src/data/repository/agent_findings_response_policy.ts",
         "src/data/model/application_error.ts",
         "src/application/policies/application_error_message_catalog.ts",
-        "src/application/errors/bugbot_verification_response_failure.ts"
+        "src/application/errors/bugbot_verification_response_failure.ts",
+        "src/domain/bugbot/review_freshness_failure.ts",
+        "src/application/errors/bugbot_freshness_error.ts",
+        "src/application/policies/pull_request_review_provider_code_policy.ts",
+        "src/application/ports/pull_request_review_errors.ts",
+        "src/application/usecases/steps/commit/bugbot/bugbot_review_freshness.ts"
       ],
       "tests": [
         "src/data/repository/__tests__/pull_request_changes_repository.test.ts",
@@ -2485,7 +2499,8 @@
         "src/tooling/__tests__/bugbot_json_values.test.ts",
         "src/tooling/__tests__/fixtures/bugbot_json_value_probe.py",
         "src/tooling/__tests__/fixtures/bugbot_json_value_runner.py",
-        "src/application/usecases/steps/commit/bugbot/__tests__/bugbot_partition_query_diagnostics.test.ts"
+        "src/application/usecases/steps/commit/bugbot/__tests__/bugbot_partition_query_diagnostics.test.ts",
+        "src/application/policies/__tests__/bugbot_freshness_diagnostics.test.ts"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",
@@ -2675,7 +2690,8 @@
         "src/infrastructure/__tests__/git_push_diagnostic.test.ts",
         "src/application/policies/__tests__/branch_sync_publication_presentation.test.ts",
         "src/tooling/__tests__/branch_sync_publication_integration.test.ts",
-        "src/tooling/__tests__/generated_artifact_merge_policy.test.ts"
+        "src/tooling/__tests__/generated_artifact_merge_policy.test.ts",
+        "src/application/usecases/branch_sync/__tests__/branch_sync_refusal_diagnostics.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-synchronization.mdx",

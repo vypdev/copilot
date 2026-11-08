@@ -2529,3 +2529,37 @@ Update the branch-management guide, capacity SDD and catalog evidence together.
 Run specification generation and validation, full applicable checks, coverage
 and `graphify update .`. The existing complete-evidence, stale-source and
 zero-publication regressions remain acceptance gates for this correction.
+
+
+## Post-analysis freshness failure evidence — issues #870 and #937
+
+The original Domus #870 run completes analysis, then fails during freshness with
+an opaque provider.unavailable error. Current typed review-operation failures
+carry sanitized HTTP metadata, but the freshness boundary does not preserve it in
+the public error. A legacy head read returning no usable SHA must also never be
+accepted as a successful freshness confirmation.
+
+Capture only the trusted read operation, bounded HTTP status/reference and a closed
+failure kind before/after publication. Wrap typed review-operation failures at the
+freshness read; preserve unknown errors and completeness failures. Distinguish a
+malformed head response from a provider request failure. Keep the same one read,
+query limits, fresh-head identity comparison and no automatic mutation retry.
+A valid changed head still supersedes analysis; a malformed head fails closed.
+Before-publication failure reports no new finding publication from this attempt;
+after-publication failure retains possible completed effects and requires fresh
+identity/reconciliation before recovery. Neither completed analysis nor a retry
+permission establishes a successful current review.
+
+Allocate **twelve additional distinct regression declarations** covering closed
+facts/provider mapping, invalid metadata/privacy, legacy/framed request failures,
+malformed legacy heads, valid unchanged/changed heads, unknown/completeness error
+preservation, both publication boundaries, zero false success/duplicate writes,
+complete English/Spanish UI and the real serialized recovery shape. Matrix rows
+are not counted as additional declarations. New pure policies/guards require
+100% statements, branches, functions and lines; every prior budget remains.
+Cross-reference the eight #911 cases without counting them here again. Update
+the review failure/operator guide, error reference and owning catalog together;
+regenerate/validate specifications and retain normal hooks plus exact-head native
+CI, Codecov and review. No credentials, raw responses, URLs, new timeout or runtime
+configuration is exposed. Rollback retains the original freshness fences; it must
+not accept a missing head or roll back already completed provider effects.

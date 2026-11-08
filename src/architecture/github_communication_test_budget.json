@@ -7,7 +7,7 @@
       "id": "semantic-github-publication",
       "spec": "specs/semantic-github-publication-and-notification.md",
       "requiredCases": 135,
-      "allocatedCases": 1181,
+      "allocatedCases": 1201,
       "files": [
         {
           "path": "src/domain/__tests__/github_publication.test.ts",
@@ -388,6 +388,18 @@
         {
           "path": "src/application/usecases/steps/commit/bugbot/__tests__/bugbot_partition_query_diagnostics.test.ts",
           "qualifyingCases": 15
+        },
+        {
+          "path": "src/application/usecases/branch_sync/__tests__/branch_sync_refusal_diagnostics.test.ts",
+          "qualifyingCases": 8
+        },
+        {
+          "path": "src/application/policies/__tests__/bugbot_freshness_diagnostics.test.ts",
+          "qualifyingCases": 10
+        },
+        {
+          "path": "src/application/usecases/steps/commit/__tests__/detect_potential_problems_use_case.test.ts",
+          "qualifyingCases": 2
         }
       ]
     },

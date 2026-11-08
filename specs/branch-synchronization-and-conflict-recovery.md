@@ -1283,3 +1283,29 @@ executions and existing guard cases add no new allocation. Update contributor
 and branch-sync documentation, catalog evidence and generated catalog, run the
 specification validator, and require a fresh Action-owned combination plus the
 normal exact-head CI, coverage and review gates before claiming publication.
+
+
+## Eligible-conflict refusal diagnostics — issues #911 and #937
+
+The original Domus #911 job reports ten conflicts including a workflow, then
+returns generic retryable workflow.failed without invoking the fixer. The current
+eligibility policy still refuses sensitive paths and over-20 conflict sets, but
+omits structured recovery for these two reasons. Preserve both safety refusals;
+carry a closed reason and counts into the existing error UI instead of losing
+that decision during formatting. Expose no raw path or provider prose.
+
+Add separate protected-path and conflict-limit recovery variants, complete English
+and Spanish messages, fixed command guidance and nonretryable refusal. Preserve
+--no-agent, missing fixer, dry-run, abort, original heads and publication fences.
+The flow is preview → eligibility decision → safe abort → reason/count/action;
+ineligible sets invoke no model, verifier, author lookup or push. An already
+failed abort must not claim restoration; these variants claim only no publication.
+
+Allocate **eight additional distinct regression declarations**: the original ten
+Domus paths, the 21-path refusal, pre-existing option/configuration precedence,
+protected-path and count privacy, complete bilingual rendering, descriptor
+rejection, full-use-case zero-effects/abort, and fresh eligible recovery. Existing
+coverage and actual Git mutation guards remain required and are not recounted.
+Update branch-sync/operator/error guides, catalog evidence and the semantic
+publication ledger together. No new configuration or permission is introduced;
+rollback removes the new presentation while retaining the safety refusal.

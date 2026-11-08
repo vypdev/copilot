@@ -426,3 +426,13 @@ the synchronization with `unstaged-changes`; no synchronization commit is pushed
 An installation on the default checkout does not prepare a different temporary merge. Copilot's source workflow installs the frozen current workspace at each verification boundary, including after eligible conflict resolution. Consumer projects keep their explicit same-job provisioning or reviewed optional repository setup.
 
 If synchronization stops during verification, its existing result card identifies the phase, safe command label/ordinal, closed cause and original head. `restored` confirms the original local head after abort; `unverified` requires operator inspection before retrying. No sync commit/push is attempted after verifier failure. Repair the reported dependency graph, same-job setup/runtime or verifier, then rerun `/copilot sync-branch`; repeated blind retries do not repair missing workspace packages. See [verification and source readiness](../security-operations/operations/verification).
+
+
+## Ineligible conflict sets
+
+A protected-path conflict or a set exceeding 20 paths stops before the fixer,
+repository verifiers and synchronization push. The error identifies the refusal
+with safe counts and a supported recovery action. Existing remote heads remain;
+the message does not claim that a failed local abort restored the checkout.
+Inspect the original conflict paths in the linked job, complete an authorized
+maintainer recovery or reviewed source update, then use `/copilot sync-branch --dry-run`. Repeating the unchanged command cannot alter these safety policies.

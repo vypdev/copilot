@@ -176,3 +176,14 @@ diagnostics. A historical generic `agent.failed` result cannot establish which
 of these boundaries failed. Inspect its retained native lifecycle observations;
 a later green retry does not determine the earlier cause. See the
 [closed error reference](/security-operations/operations/error-reference).
+
+
+## Freshness read failures
+
+A review that completes analysis still must confirm the current pull request.
+Freshness failures report the read operation, bounded HTTP metadata when known,
+and whether publication had begun. A malformed or missing head is not a successful
+confirmation. Correct the named provider/response cause and recheck from the
+current source; preserve identity and reconciliation checks. Completed writes
+remain in place and must not be repeated blindly. See the
+[structured error reference](/security-operations/operations/error-reference#conflict-eligibility-and-review-freshness).
