@@ -39954,9 +39954,14 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
         action: 'Inspect the original requirement and response schema. Details: phase {phase}, reason {reason}, field {field}, requirement {requirementId}, original issue line {sourceLineId}. none means no verified identity is available. A fresh attempt may help when the provider can satisfy the unchanged contract; do not relax acceptance or verification.',
         retainedState: 'Existing progress labels and published assessments were preserved. An optional check-publication warning is a separate result.',
     }),
+    'progress-partition-bytes-invalid': Object.freeze({
+        impact: 'A source-part fact still exceeds its JSON UTF-8 allocation after one replacement; progress was not published.',
+        action: 'Inspect part {partitionId}, file {filePath}, unit {unitId}, field {field}: observed {observed} JSON UTF-8 bytes; maximum {maximum}, excluding enclosing quotes. Do not automatically repeat the unchanged comparison. Qualify a corrected build against the pinned sources before one fresh complete assessment.',
+        retainedState: 'Prior progress labels and assessments were preserved. No partial percentage or passing verification was published; source freshness, review and coverage remain independent gates.',
+    }),
     'progress-partition-length-invalid': Object.freeze({
         impact: 'A progress part still exceeds its response limit after one bounded replacement; progress was not published.',
-        action: 'Inspect part {partitionId}, file {filePath}, unit {unitId}, field {field}: observed {observed} Unicode code points; maximum {maximum}. The replacement must satisfy the unchanged schema. Do not remove files, truncate facts, relax acceptance or bypass verification.',
+        action: 'Inspect part {partitionId}, file {filePath}, unit {unitId}, field {field}: observed {observed} Unicode code points; maximum {maximum}. Do not automatically repeat the unchanged comparison. Qualify a corrected build against the pinned sources before one fresh complete assessment. Preserve every file, source unit and verification gate.',
         retainedState: 'Existing progress labels and assessments were preserved. No partial percentage or passing verification was published; execution and optional check-publication failures remain separate.',
     }),
     'progress-assessment-length-invalid': Object.freeze({
@@ -40175,9 +40180,14 @@ const SPANISH_RECOVERY_CONTENT = Object.freeze({
         action: 'Inspecciona el requisito original y el esquema de respuesta. Detalles: fase {phase}, motivo {reason}, campo {field}, requisito {requirementId}, línea original de la issue {sourceLineId}. none indica que no hay una identidad verificada. Un nuevo intento puede ayudar si el proveedor cumple el contrato sin cambiarlo; no relajes la aceptación ni la verificación.',
         retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas. Un aviso de publicación del check opcional corresponde a otro resultado.',
     }),
+    'progress-partition-bytes-invalid': Object.freeze({
+        impact: 'Un hecho de una parte sigue superando su asignación JSON UTF-8 tras una sustitución; no se publicó el progreso.',
+        action: 'Inspecciona la parte {partitionId}, archivo {filePath}, unidad {unitId}, campo {field}: observado {observed} bytes JSON UTF-8; máximo {maximum}, sin las comillas exteriores. No repitas automáticamente la comparación sin cambios. Valida una compilación corregida con las fuentes fijadas antes de una evaluación nueva completa.',
+        retainedState: 'Se conservaron las etiquetas y evaluaciones anteriores. No se publicó un porcentaje parcial ni una verificación aprobada; los controles de fuente vigente, revisión y cobertura siguen siendo independientes.',
+    }),
     'progress-partition-length-invalid': Object.freeze({
         impact: 'Una parte del progreso sigue superando el límite de respuesta tras una sustitución acotada; no se publicó el progreso.',
-        action: 'Inspecciona la parte {partitionId}, archivo {filePath}, unidad {unitId}, campo {field}: observado {observed} puntos de código Unicode; máximo {maximum}. La sustitución debe cumplir el mismo esquema. No elimines archivos, recortes los hechos, relajes la aceptación ni eludas la verificación.',
+        action: 'Inspecciona la parte {partitionId}, archivo {filePath}, unidad {unitId}, campo {field}: observado {observed} puntos de código Unicode; máximo {maximum}. No repitas automáticamente la comparación sin cambios. Valida una compilación corregida con las fuentes fijadas antes de una evaluación nueva completa. Conserva todos los archivos, hechos y controles de verificación.',
         retainedState: 'Se conservaron las etiquetas y evaluaciones de progreso. No se publicó ningún porcentaje parcial ni verificación aprobada; los fallos de ejecución y de publicación del check opcional siguen siendo independientes.',
     }),
     'progress-assessment-length-invalid': Object.freeze({
@@ -40427,7 +40437,7 @@ function buildApplicationErrorPresentation(error, message = application_error_me
                 ? (0, issue_assignment_diagnostic_presentation_1.assignmentDiagnosticPresentation)(error.recovery.variables, error.code, message)
                 : error.recovery?.id === 'sdd-source-context-unavailable'
                     ? { ...(0, agent_source_snapshot_1.sourceContextDiagnostic)(error.recovery.variables) }
-                    : error.recovery?.id === 'progress-partition-length-invalid'
+                    : error.recovery?.id === 'progress-partition-length-invalid' || error.recovery?.id === 'progress-partition-bytes-invalid'
                         ? (0, progress_partition_length_failure_1.progressPartitionLengthPresentation)(error.recovery.variables)
                         : error.recovery?.id === 'bugbot-review-incomplete'
                             ? { ...error.recovery.variables, countKind: error.recovery.variables.countKind === 'at-least' ? '≥' : '=',
@@ -48064,6 +48074,59 @@ function progressPercentToColor(percent) {
 
 /***/ }),
 
+/***/ 59427:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.assertProgressPartitionByteLimit = assertProgressPartitionByteLimit;
+exports.verifyProgressPartitionBytes = verifyProgressPartitionBytes;
+exports.bindProgressPartitionBytes = bindProgressPartitionBytes;
+exports.progressPartitionBytesRejected = progressPartitionBytesRejected;
+const progress_partition_length_failure_1 = __nccwpck_require__(59292);
+const progress_partition_response_policy_1 = __nccwpck_require__(30025);
+const agent_output_locale_policy_1 = __nccwpck_require__(30601);
+const application_error_1 = __nccwpck_require__(75999);
+function assertProgressPartitionByteLimit(byteLimit) {
+    if (byteLimit !== undefined && (!Number.isSafeInteger(byteLimit) || byteLimit < 1 || byteLimit > 3600)) {
+        throw new application_error_1.ApplicationError('configuration.unsupported', 'Progress fact byte allocation is invalid.');
+    }
+}
+/** Validate the entire ordinary contract before attributing a byte-only rejection. */
+function verifyProgressPartitionBytes(response, part, limit, locale, byteLimit) {
+    if (byteLimit === undefined)
+        return;
+    assertProgressPartitionByteLimit(byteLimit);
+    const files = (0, progress_partition_response_policy_1.parseProgressPartitionFacts)(response, part, locale, limit);
+    for (const [index, file] of files.entries()) {
+        for (const key of ['implemented', 'remaining']) {
+            const observed = Buffer.byteLength(JSON.stringify(file[key]), 'utf8') - 2;
+            if (observed > byteLimit)
+                throw new progress_partition_length_failure_1.ProgressPartitionByteFailure({ partitionId: part.id, filePath: file.path,
+                    unitId: file.unitId ?? 'none', field: `$.files[${index}].${key}`, maximum: byteLimit, observed, outputLocale: locale });
+        }
+    }
+}
+function bindProgressPartitionBytes(error, part, byteLimit, locale) {
+    if (!(error instanceof progress_partition_length_failure_1.ProgressPartitionByteFailure) || !error.details || typeof error.details !== 'object' || Array.isArray(error.details))
+        return null;
+    const { outputLocale, ...facts } = error.details;
+    if (!(0, progress_partition_length_failure_1.isProgressPartitionByteDiagnostic)(facts) || facts.maximum !== byteLimit || facts.partitionId !== part.id
+        || (0, agent_output_locale_policy_1.validateAgentOutputLocale)({ outputLocale }, locale).kind !== 'valid')
+        return null;
+    if (part.units ? !part.units.some(unit => unit.id === facts.unitId && unit.path === facts.filePath)
+        : facts.unitId !== 'none' || !part.paths.includes(facts.filePath))
+        return null;
+    return Object.freeze(facts);
+}
+function progressPartitionBytesRejected(facts) {
+    return new application_error_1.ApplicationError('agent.failed', 'A complete progress source fact still exceeds its allocated JSON UTF-8 bytes after one replacement; prior progress was retained.', { retryable: false, recovery: { id: 'progress-partition-bytes-invalid', variables: facts } });
+}
+
+
+/***/ }),
+
 /***/ 6868:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -48093,10 +48156,10 @@ function bindProgressPartitionLength(error, part, limit, locale) {
     return Object.freeze(details);
 }
 function progressPartitionRepairPrompt(prompt) {
-    return `${prompt}\n\nThe previous completed response exceeded the unchanged character limit for a file fact. Produce one concise replacement for this same complete immutable part, with the exact assigned identities and output locale. Both implemented and remaining must satisfy the existing per-field limit. Preserve uncertainty. Do not drop files or source units, invent evidence, repeat the old response, or change the schema. Return only the requested JSON.`;
+    return `${prompt}\n\nThe previous completed response exceeded the unchanged character limit for a file fact. Produce one concise replacement for this same complete immutable part, with the exact assigned identities and output locale. Both implemented and remaining must satisfy the existing per-field code-point and JSON UTF-8 byte limits shown in the original request. Preserve uncertainty. Do not drop files or source units, invent evidence, repeat the old response, or change the schema. Return only the requested JSON.`;
 }
 function progressPartitionLengthRejected(details) {
-    return new application_error_1.ApplicationError('agent.failed', 'A progress part still exceeds its unchanged fact bound after one replacement; existing progress was retained.', { recovery: { id: 'progress-partition-length-invalid', variables: details } });
+    return new application_error_1.ApplicationError('agent.failed', 'A progress part still exceeds its unchanged fact bound after one replacement; existing progress was retained.', { retryable: false, recovery: { id: 'progress-partition-length-invalid', variables: details } });
 }
 
 
@@ -48145,11 +48208,13 @@ function framedProgressFactBounds(diff, budget) {
 /** A complete exact-once receipt set is required again at the final boundary. */
 function aggregateProgressReceipts(diff, receipts, budget) {
     const factBudget = framedProgressFactBudget(diff, budget);
+    const bounds = (0, progress_partition_response_policy_1.progressPartitionFactBounds)(diff.baseSha, diff.headSha, diff.partitions, factBudget, diff.protocol.version);
     if (receipts.length !== diff.partitions.length)
         throw (0, progress_evidence_protocol_policy_1.progressProtocolRejected)('response-inventory');
     for (const [index, part] of diff.partitions.entries()) {
         if (!receipts[index] || receipts[index].requestId !== part.id)
             throw (0, progress_evidence_protocol_policy_1.progressProtocolRejected)('response-identity');
+        (0, progress_partition_response_policy_1.parseProgressPartitionFacts)({ outputLocale: 'en-US', partitionId: part.id, files: receipts[index].files }, part, 'en-US', bounds.factLimit, bounds.factJsonBytes);
     }
     const analysis = (0, progress_partition_response_policy_1.aggregateProgressFacts)(diff.baseSha, diff.headSha, diff.partitions, receipts.map(receipt => receipt.files), factBudget, diff.protocol.version);
     return prefix(diff) + analysis + '}';
@@ -48273,7 +48338,7 @@ function progressPartitionFactBounds(baseSha, headSha, partitions, budget = expo
     if (worstCase < minimum)
         throw (0, progress_diff_partition_policy_1.progressEvidenceTooLarge)({ phase: 'aggregate', dimension: 'minimum-fact-bytes',
             observedCount: envelopeBytes + count * 12 * minimum, supportedLimit: budget });
-    if (profile !== 'immutable-tree-v1')
+    if (profile === undefined)
         return { factLimit: Math.min(600, worstCase) };
     const factJsonBytes = Math.min(600 * 6, Math.floor(remaining / (count * 2)));
     // Each code point costs at least one JSON byte. The receipt checks the actual encoded size.
@@ -61448,6 +61513,7 @@ async function analyzeProgressBatches(context, issueDescription, captured, diff,
     if (minimumCalls > progress_batch_policy_1.PROGRESS_BATCH_PROFILE.calls)
         throw (0, progress_batch_policy_1.progressBatchRejected)('call-budget', { expected: batches.length });
     (0, logging_ports_1.logInfo)(`Acceptance inventory admitted: ${scope.requirements.length} requirements in ${batches.length} batches; each summary and remaining has a hard ${plans[0].planned[0].schema.properties.requirements.items.properties.summary.maxLength}-Unicode-point limit. Previous progress is retained.`);
+    (0, logging_ports_1.logInfo)(`Admitted acceptance identities for manifest ${manifest.digest} (question mark means uncertain): ${scope.requirements.map(requirement => requirement.id + (requirement.uncertain ? '?' : '')).join(', ')}.`);
     const receipts = [];
     for (const [index, plan] of plans.entries()) {
         (0, logging_ports_1.logInfo)(`Collecting complete comparison evidence for scope group ${index + 1} of ${plans.length}; verified ${receipts.length} of ${batches.length} acceptance batches. Previous progress is retained.`);
@@ -61821,26 +61887,46 @@ async function queryProgressAssessment(agent, request, context, projectResponse 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.queryProgressPartition = queryProgressPartition;
+const progress_partition_byte_policy_1 = __nccwpck_require__(59427);
 const progress_partition_length_policy_1 = __nccwpck_require__(6868);
 const query_progress_result_workflow_1 = __nccwpck_require__(33658);
 const logging_ports_1 = __nccwpck_require__(6152);
+function freezeSnapshot(value) {
+    if (value && typeof value === 'object' && !Object.isFrozen(value)) {
+        Object.freeze(value);
+        Object.values(value).forEach(freezeSnapshot);
+    }
+    return value;
+}
 /** One replacement per current part; no new source read, publication, or schema relaxation. */
-async function queryProgressPartition(agent, request, part, limit, locale) {
+async function queryProgressPartition(agent, request, part, limit, locale, factJsonBytes) {
+    (0, progress_partition_byte_policy_1.assertProgressPartitionByteLimit)(factJsonBytes);
+    const { signal, ...data } = request;
+    const captured = freezeSnapshot(globalThis.structuredClone({ request: data, part }));
+    const initial = Object.freeze({ ...captured.request, ...(signal === undefined ? {} : { signal }) });
+    const query = async (current) => {
+        const response = await agent.query(current);
+        (0, progress_partition_byte_policy_1.verifyProgressPartitionBytes)(response, captured.part, limit, locale, factJsonBytes);
+        return response;
+    };
     try {
-        return await agent.query(request);
+        return await query(initial);
     }
     catch (error) {
-        const details = (0, progress_partition_length_policy_1.bindProgressPartitionLength)(error, part, limit, locale);
-        if (!details)
+        const details = (0, progress_partition_length_policy_1.bindProgressPartitionLength)(error, captured.part, limit, locale);
+        if (!details && !(0, progress_partition_byte_policy_1.bindProgressPartitionBytes)(error, captured.part, factJsonBytes, locale))
             return (0, query_progress_result_workflow_1.rethrowProgressQueryFailure)(error, { phase: 'partition' });
         (0, logging_ports_1.logInfo)('A progress file fact exceeded its unchanged response limit. Requesting one replacement for the same complete immutable part; existing progress remains unpublished.');
         try {
-            return await agent.query({ ...request, prompt: (0, progress_partition_length_policy_1.progressPartitionRepairPrompt)(request.prompt) });
+            return await query({ ...initial, prompt: (0, progress_partition_length_policy_1.progressPartitionRepairPrompt)(initial.prompt) });
         }
         catch (replacementError) {
-            const rejected = (0, progress_partition_length_policy_1.bindProgressPartitionLength)(replacementError, part, limit, locale);
+            const rejected = (0, progress_partition_length_policy_1.bindProgressPartitionLength)(replacementError, captured.part, limit, locale);
             if (rejected)
                 throw (0, progress_partition_length_policy_1.progressPartitionLengthRejected)(rejected);
+            const bytes = (0, progress_partition_byte_policy_1.bindProgressPartitionBytes)(replacementError, captured.part, factJsonBytes, locale);
+            if (bytes)
+                throw (0, progress_partition_byte_policy_1.progressPartitionBytesRejected)(bytes);
             return (0, query_progress_result_workflow_1.rethrowProgressQueryFailure)(replacementError, { phase: 'partition' });
         }
     }
@@ -62850,7 +62936,7 @@ function planProgressDiffPrompts(diff, context, issueDescription, aggregateBudge
         : (0, progress_partition_response_policy_1.progressPartitionFactBounds)(diff.baseSha, diff.headSha, diff.partitions, aggregateBudget);
     const { factLimit, factJsonBytes } = bounds;
     const factGuidance = factJsonBytes === undefined ? ` (each <=${factLimit} Unicode code points).`
-        : `. Aim for two to four words per field. Use the target locale and plain text without control characters. Skip filenames already in the JSON.
+        : `. Each field also has a hard maximum of ${factLimit} Unicode code points. Aim for two to four words per field. Use the target locale and plain text without control characters. Skip filenames already in the JSON.
 Keep the style as brief as “Timeout extended” or “Windows unverified” when supported by the assigned source. For generated metadata use the local equivalents of “Generated” and “Unverified”.
 Each fact must fit ${factJsonBytes} UTF-8 bytes when encoded as JSON, excluding the enclosing quotes.`;
     const prompts = diff.partitions.map(partition => `${untrusted_content_1.UNTRUSTED_CONTENT_POLICY}
@@ -62889,7 +62975,7 @@ async function summarizeProgressDiff(diff, context, issueDescription, agent, agg
         (0, logging_ports_1.logInfo)(`Assessing progress evidence part ${index + 1} of ${diff.partitions.length}, round ${Math.floor(index / progress_diff_partition_policy_1.MAX_PROGRESS_PARTITIONS) + 1} of ${Math.ceil(diff.partitions.length / progress_diff_partition_policy_1.MAX_PROGRESS_PARTITIONS)}.`);
         const response = await (0, query_progress_partition_workflow_1.queryProgressPartition)(agent, { configuration: context.agentConfiguration, agentId: agent_task_policy_1.AGENT_PLAN, prompt: prompts[index],
             options: { ...(0, agent_output_locale_policy_1.productFacingAgentQueryOptions)('progress-partition', (0, progress_partition_response_policy_1.progressPartitionResponseSchema)(partition, factLimit)),
-                includeReasoning: context.includeReasoning } }, partition, factLimit, context.targetLocale);
+                includeReasoning: context.includeReasoning } }, partition, factLimit, context.targetLocale, factJsonBytes);
         if (diff.protocol)
             receipts.push((0, progress_partition_receipt_policy_1.parseProgressPartitionReceipt)(response, partition, context.targetLocale, factLimit, factJsonBytes));
         else
@@ -86067,6 +86153,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'bugbot-review-incomplete',
     'progress-result-contract-invalid',
     'progress-partition-length-invalid',
+    'progress-partition-bytes-invalid',
     'progress-assessment-length-invalid',
     'progress-assessment-capacity-exceeded',
     'progress-scope-clause-limit',
@@ -86331,6 +86418,7 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'progress-evidence-capacity-exceeded': Object.freeze(['phase', 'dimension', 'unit', 'bound', 'observedCount', 'supportedLimit', 'countKind', 'context']),
     'bugbot-review-incomplete': Object.freeze(['profile', 'countKind', 'resource', 'observed', 'limit', 'unit']),
     'progress-result-contract-invalid': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
+    'progress-partition-bytes-invalid': Object.freeze(['partitionId', 'filePath', 'unitId', 'field', 'maximum', 'observed']),
     'progress-partition-length-invalid': Object.freeze(['partitionId', 'filePath', 'unitId', 'field', 'maximum', 'observed']),
     'progress-assessment-length-invalid': Object.freeze(['requirementId', 'sourceLineId', 'field', 'maximum', 'observed']),
     'progress-assessment-capacity-exceeded': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
@@ -86441,6 +86529,8 @@ function normalizeApplicationErrorRecovery(recovery) {
         throw new TypeError('Progress scope capacity diagnostic is invalid.');
     if (recovery.id === 'progress-result-contract-invalid' && !(0, progress_response_diagnostic_2.isProgressResponseDiagnosticFacts)(variables))
         throw new TypeError('Progress response diagnostic is invalid.');
+    if (recovery.id === 'progress-partition-bytes-invalid' && !(0, progress_partition_length_failure_1.isProgressPartitionByteDiagnostic)(variables))
+        throw new TypeError('Progress partition byte diagnostic is invalid.');
     if (recovery.id === 'progress-partition-length-invalid' && !(0, progress_partition_length_failure_1.isProgressPartitionLengthDiagnostic)(variables))
         throw new TypeError('Progress part length diagnostic is invalid.');
     if (recovery.id === 'progress-assessment-length-invalid' && !(0, progress_assessment_length_failure_1.isProgressAssessmentLengthDiagnostic)(variables))
@@ -103480,8 +103570,9 @@ function progressInventoryPresentation(facts) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ProgressPartitionLengthFailure = void 0;
+exports.ProgressPartitionByteFailure = exports.ProgressPartitionLengthFailure = void 0;
 exports.isProgressPartitionLengthDiagnostic = isProgressPartitionLengthDiagnostic;
+exports.isProgressPartitionByteDiagnostic = isProgressPartitionByteDiagnostic;
 exports.progressPartitionLengthPresentation = progressPartitionLengthPresentation;
 const progress_response_diagnostic_1 = __nccwpck_require__(56289);
 const progress_evidence_path_1 = __nccwpck_require__(25887);
@@ -103498,19 +103589,37 @@ function text(value, maximum) {
 }
 /** Closed operator facts; string counts are code points, never raw prose or body bytes. */
 function isProgressPartitionLengthDiagnostic(value) {
+    return isPartitionSizeDiagnostic(value, 600);
+}
+/** Exact JSON UTF-8 bytes excluding quotes, with no widening of the legacy point diagnostic. */
+function isProgressPartitionByteDiagnostic(value) {
+    return isPartitionSizeDiagnostic(value, 3600) && value.observed <= 3600;
+}
+function isPartitionSizeDiagnostic(value, maximumLimit) {
     if (!value || typeof value !== 'object' || Array.isArray(value))
         return false;
     const v = value;
     return Object.keys(v).sort().join(',') === 'field,filePath,maximum,observed,partitionId,unitId'
         && text(v.partitionId, 256) && (0, progress_evidence_path_1.isProgressEvidencePath)(v.filePath) && text(v.unitId, 256)
         && (0, progress_response_diagnostic_1.isProgressResponseField)('partition', v.field) && /\.(?:implemented|remaining)$/u.test(v.field)
-        && typeof v.maximum === 'number' && Number.isSafeInteger(v.maximum) && v.maximum >= 1 && v.maximum <= 600
+        && typeof v.maximum === 'number' && Number.isSafeInteger(v.maximum) && v.maximum >= 1 && v.maximum <= maximumLimit
         && typeof v.observed === 'number' && Number.isSafeInteger(v.observed) && v.observed > v.maximum;
 }
 function progressPartitionLengthPresentation(facts) {
     return Object.freeze({ ...facts, partitionId: (0, progress_evidence_path_1.renderProgressEvidencePath)(facts.partitionId), filePath: (0, progress_evidence_path_1.renderProgressEvidencePath)(facts.filePath),
         unitId: (0, progress_evidence_path_1.renderProgressEvidencePath)(facts.unitId), field: (0, progress_evidence_path_1.renderProgressEvidencePath)(facts.field) });
 }
+/** Only closed host measurements survive this rejection, never the returned prose. */
+class ProgressPartitionByteFailure extends Error {
+    constructor(details) {
+        super('A complete progress source fact exceeds its allocated JSON UTF-8 bytes.');
+        const { outputLocale: _locale, ...facts } = details;
+        if (!isProgressPartitionByteDiagnostic(facts))
+            throw new TypeError('Progress partition byte diagnostic is invalid.');
+        this.details = Object.freeze({ ...details });
+    }
+}
+exports.ProgressPartitionByteFailure = ProgressPartitionByteFailure;
 
 
 /***/ }),

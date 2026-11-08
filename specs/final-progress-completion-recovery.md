@@ -337,6 +337,16 @@ Completed: use the existing completion card, native links, and verified progress
 
 Length recovery uses one fixed running message: “A progress acceptance fact exceeded its unchanged response limit. Requesting one complete replacement for the same pinned batch; previous progress is retained.” Terminal impact states that progress was not published. Its action names only phase assessment, verified R11/L11, the schema field and observed/maximum Unicode counts, then marks the exhausted length attempt non-retryable and asks for qualification of a corrected Copilot build before one fresh assessment; unchanged comparisons must not loop automatically. These IDs/counts are illustrative, not incident measurements. English and regional Spanish use the same closed registry and terminal correlation; unsupported locales fall back to English. No additional comment, interactive control, permission or configuration is introduced.
 
+Source-part generation has a separate owner:
+[bounded partition recovery](./progress-partition-response-recovery.md). Domus
+run 42437017801 failed its framed-v1 source-part bound before final assessment,
+so the closed final protocol alone did not qualify that consumer. The companion
+adds exact JSON-byte planning and the existing one shared size replacement,
+without spending or resetting final recovery. Controlled qualification regenerated
+all 217 source units and 169 requirements with zero real writes; native
+current-head consumer acceptance remains a separate required gate. Its source-ID
+admission audit is covered by companion size-C22, not counted again here.
+
 ### 9.3 Issue, PR, and comment behavior
 
 No new issue, PR, comment, label, Check, or card is created. Recovery adds at most one fixed bounded log message; one admission log separately reports the complete requirement count, batch count and hard fact allocation. Existing durable markers, titles, links, idempotent updates, labels, and Checks remain unchanged. Merge, close, or fresh replay retains existing behavior; replay recollects complete evidence.

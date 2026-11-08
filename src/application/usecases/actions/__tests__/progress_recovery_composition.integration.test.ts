@@ -82,16 +82,14 @@ it('progress-partition-composition-C03: persistent part overflow terminates with
     expect(f.getDiff).toHaveBeenCalledTimes(1); noPublication(f); expect(JSON.stringify(result)).not.toContain('PRIVATE_REJECTED');
 });
 
-it('progress-partition-composition-C04: excessive escaped bytes fail before a receipt, final query or publication', async () => {
+it('progress-partition-composition-C04: excessive escaped bytes exhaust one part replacement without a final query or publication', async () => {
     const f = scenario('escaped-fact', largeCompleteProgressFixture());
     const result = (await f.invoke())[0];
     expect(result).toMatchObject({ success: false, errors: [{ recovery: {
-        id: 'progress-result-contract-invalid', variables: {
-            phase: 'partition', reason: 'partition-facts-invalid', field: '$.files[0].remaining',
-        },
+        id: 'progress-partition-bytes-invalid', variables: expect.objectContaining({ field: '$.files[0].remaining' }),
     } }] });
-    expect(f.execute).toHaveBeenCalledTimes(2);
-    expect([...f.partCalls.values()]).toEqual([1]);
+    expect(f.execute).toHaveBeenCalledTimes(3);
+    expect([...f.partCalls.values()]).toEqual([2]);
     expect(f.finalCalls()).toBe(0);
     noPublication(f);
 }, 60000);

@@ -1387,7 +1387,8 @@
             "src/domain/progress_partition_length_failure.ts",
             "src/application/policies/progress_partition_length_policy.ts",
             "src/data/repository/progress_partition_length_failure.ts",
-            "src/application/usecases/actions/query_progress_partition_workflow.ts"
+            "src/application/usecases/actions/query_progress_partition_workflow.ts",
+            "src/application/policies/progress_partition_byte_policy.ts"
           ],
           "mode": "each",
           "thresholdProfile": "exhaustive"

@@ -269,22 +269,55 @@ progress and cannot authorize a passing verification. Inspect the exact original
 scope and review a supported assessment protocol while preserving acceptance.
 See [progress text capacity](./troubleshooting#progress-assessment-text-capacity).
 
-### Progress part response length
+### Progress part response size
 
-An overlong file fact with a verified current part/path/unit, locale and schema
-limit receives one replacement for the same complete immutable part. Every
-original and replacement request is capacity-checked before the first part
-query. Source evidence, identities, uncertainty and strict validation remain
-unchanged. Provider, cancellation, locale and other schema failures retain their
-own classifications and do not start this recovery.
+A completed file fact with a verified current part/path/unit, locale and schema
+may receive one replacement for the same complete immutable part. Both framed
+profiles plan exact JSON UTF-8 bytes within unchanged aggregate and prompt
+ceilings and the absolute 600-code-point limit. New planning never widens a
+schema already admitted for an attempt. Every original and replacement request
+is preflighted. All ordinary fields, identities and point limits validate before
+byte-only overflow can use recovery; source evidence and strict validation stay.
+Provider, cancellation, locale and other schema failures retain their categories.
 
-Persistent overflow reports `agent.failed` with
-`progress-partition-length-invalid`: part, path, unit, response field, maximum
-and observed Unicode code-point count. `none` means the legacy part has no unit
-identity. Paths are inert reversible JSON code spans; raw model output is never
-shown. Inspect that fact in the linked run. There is no third part query, no
-clipping, and no partial update to labels or the previous assessment. A later
-optional Check Run warning remains a separate outcome.
+Persistent overflow reports `agent.failed` with one of:
+
+- `progress-partition-length-invalid`: maximum and observed Unicode code points.
+- `progress-partition-bytes-invalid`: maximum and observed encoded JSON UTF-8
+  bytes per field, including escaping and excluding the surrounding quotes.
+
+Both expose the same verified part, path, unit and response field. `none` means
+the legacy part has no unit identity. Paths are inert reversible JSON code spans;
+raw model output is never shown. Unicode and byte overflow share the same one
+replacement, including mixed failures. There is no third query, clipping or
+partial update. Both exhausted outcomes have `retryable: false`: do not
+automatically repeat an unchanged full comparison. Inspect the named fact in
+the linked run and qualify a corrected Copilot build before one fresh assessment.
+Generic agent/provider retryability remains unchanged. An optional Check Run
+warning remains a separate outcome.
+
+The following is an illustrative real public recovery record; these counts are
+not measurements of a historical rejected fact.
+
+{/* progress-partition-bytes-example */}
+
+```json
+{
+  "code": "agent.failed",
+  "retryable": false,
+  "recovery": {
+    "id": "progress-partition-bytes-invalid",
+    "variables": {
+      "partitionId": "part-owned",
+      "filePath": "a.ts",
+      "unitId": "none",
+      "field": "$.files[0].implemented",
+      "maximum": 678,
+      "observed": 700
+    }
+  }
+}
+```
 
 ## Optional Check Run publication not confirmed
 

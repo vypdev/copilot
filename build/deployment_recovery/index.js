@@ -32592,9 +32592,14 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
         action: 'Inspect the original requirement and response schema. Details: phase {phase}, reason {reason}, field {field}, requirement {requirementId}, original issue line {sourceLineId}. none means no verified identity is available. A fresh attempt may help when the provider can satisfy the unchanged contract; do not relax acceptance or verification.',
         retainedState: 'Existing progress labels and published assessments were preserved. An optional check-publication warning is a separate result.',
     }),
+    'progress-partition-bytes-invalid': Object.freeze({
+        impact: 'A source-part fact still exceeds its JSON UTF-8 allocation after one replacement; progress was not published.',
+        action: 'Inspect part {partitionId}, file {filePath}, unit {unitId}, field {field}: observed {observed} JSON UTF-8 bytes; maximum {maximum}, excluding enclosing quotes. Do not automatically repeat the unchanged comparison. Qualify a corrected build against the pinned sources before one fresh complete assessment.',
+        retainedState: 'Prior progress labels and assessments were preserved. No partial percentage or passing verification was published; source freshness, review and coverage remain independent gates.',
+    }),
     'progress-partition-length-invalid': Object.freeze({
         impact: 'A progress part still exceeds its response limit after one bounded replacement; progress was not published.',
-        action: 'Inspect part {partitionId}, file {filePath}, unit {unitId}, field {field}: observed {observed} Unicode code points; maximum {maximum}. The replacement must satisfy the unchanged schema. Do not remove files, truncate facts, relax acceptance or bypass verification.',
+        action: 'Inspect part {partitionId}, file {filePath}, unit {unitId}, field {field}: observed {observed} Unicode code points; maximum {maximum}. Do not automatically repeat the unchanged comparison. Qualify a corrected build against the pinned sources before one fresh complete assessment. Preserve every file, source unit and verification gate.',
         retainedState: 'Existing progress labels and assessments were preserved. No partial percentage or passing verification was published; execution and optional check-publication failures remain separate.',
     }),
     'progress-assessment-length-invalid': Object.freeze({
@@ -32813,9 +32818,14 @@ const SPANISH_RECOVERY_CONTENT = Object.freeze({
         action: 'Inspecciona el requisito original y el esquema de respuesta. Detalles: fase {phase}, motivo {reason}, campo {field}, requisito {requirementId}, línea original de la issue {sourceLineId}. none indica que no hay una identidad verificada. Un nuevo intento puede ayudar si el proveedor cumple el contrato sin cambiarlo; no relajes la aceptación ni la verificación.',
         retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas. Un aviso de publicación del check opcional corresponde a otro resultado.',
     }),
+    'progress-partition-bytes-invalid': Object.freeze({
+        impact: 'Un hecho de una parte sigue superando su asignación JSON UTF-8 tras una sustitución; no se publicó el progreso.',
+        action: 'Inspecciona la parte {partitionId}, archivo {filePath}, unidad {unitId}, campo {field}: observado {observed} bytes JSON UTF-8; máximo {maximum}, sin las comillas exteriores. No repitas automáticamente la comparación sin cambios. Valida una compilación corregida con las fuentes fijadas antes de una evaluación nueva completa.',
+        retainedState: 'Se conservaron las etiquetas y evaluaciones anteriores. No se publicó un porcentaje parcial ni una verificación aprobada; los controles de fuente vigente, revisión y cobertura siguen siendo independientes.',
+    }),
     'progress-partition-length-invalid': Object.freeze({
         impact: 'Una parte del progreso sigue superando el límite de respuesta tras una sustitución acotada; no se publicó el progreso.',
-        action: 'Inspecciona la parte {partitionId}, archivo {filePath}, unidad {unitId}, campo {field}: observado {observed} puntos de código Unicode; máximo {maximum}. La sustitución debe cumplir el mismo esquema. No elimines archivos, recortes los hechos, relajes la aceptación ni eludas la verificación.',
+        action: 'Inspecciona la parte {partitionId}, archivo {filePath}, unidad {unitId}, campo {field}: observado {observed} puntos de código Unicode; máximo {maximum}. No repitas automáticamente la comparación sin cambios. Valida una compilación corregida con las fuentes fijadas antes de una evaluación nueva completa. Conserva todos los archivos, hechos y controles de verificación.',
         retainedState: 'Se conservaron las etiquetas y evaluaciones de progreso. No se publicó ningún porcentaje parcial ni verificación aprobada; los fallos de ejecución y de publicación del check opcional siguen siendo independientes.',
     }),
     'progress-assessment-length-invalid': Object.freeze({
@@ -34102,6 +34112,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'bugbot-review-incomplete',
     'progress-result-contract-invalid',
     'progress-partition-length-invalid',
+    'progress-partition-bytes-invalid',
     'progress-assessment-length-invalid',
     'progress-assessment-capacity-exceeded',
     'progress-scope-clause-limit',
@@ -34366,6 +34377,7 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'progress-evidence-capacity-exceeded': Object.freeze(['phase', 'dimension', 'unit', 'bound', 'observedCount', 'supportedLimit', 'countKind', 'context']),
     'bugbot-review-incomplete': Object.freeze(['profile', 'countKind', 'resource', 'observed', 'limit', 'unit']),
     'progress-result-contract-invalid': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
+    'progress-partition-bytes-invalid': Object.freeze(['partitionId', 'filePath', 'unitId', 'field', 'maximum', 'observed']),
     'progress-partition-length-invalid': Object.freeze(['partitionId', 'filePath', 'unitId', 'field', 'maximum', 'observed']),
     'progress-assessment-length-invalid': Object.freeze(['requirementId', 'sourceLineId', 'field', 'maximum', 'observed']),
     'progress-assessment-capacity-exceeded': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
@@ -34476,6 +34488,8 @@ function normalizeApplicationErrorRecovery(recovery) {
         throw new TypeError('Progress scope capacity diagnostic is invalid.');
     if (recovery.id === 'progress-result-contract-invalid' && !(0, progress_response_diagnostic_2.isProgressResponseDiagnosticFacts)(variables))
         throw new TypeError('Progress response diagnostic is invalid.');
+    if (recovery.id === 'progress-partition-bytes-invalid' && !(0, progress_partition_length_failure_1.isProgressPartitionByteDiagnostic)(variables))
+        throw new TypeError('Progress partition byte diagnostic is invalid.');
     if (recovery.id === 'progress-partition-length-invalid' && !(0, progress_partition_length_failure_1.isProgressPartitionLengthDiagnostic)(variables))
         throw new TypeError('Progress part length diagnostic is invalid.');
     if (recovery.id === 'progress-assessment-length-invalid' && !(0, progress_assessment_length_failure_1.isProgressAssessmentLengthDiagnostic)(variables))
@@ -37765,8 +37779,9 @@ function progressInventoryPresentation(facts) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ProgressPartitionLengthFailure = void 0;
+exports.ProgressPartitionByteFailure = exports.ProgressPartitionLengthFailure = void 0;
 exports.isProgressPartitionLengthDiagnostic = isProgressPartitionLengthDiagnostic;
+exports.isProgressPartitionByteDiagnostic = isProgressPartitionByteDiagnostic;
 exports.progressPartitionLengthPresentation = progressPartitionLengthPresentation;
 const progress_response_diagnostic_1 = __nccwpck_require__(6289);
 const progress_evidence_path_1 = __nccwpck_require__(5887);
@@ -37783,19 +37798,37 @@ function text(value, maximum) {
 }
 /** Closed operator facts; string counts are code points, never raw prose or body bytes. */
 function isProgressPartitionLengthDiagnostic(value) {
+    return isPartitionSizeDiagnostic(value, 600);
+}
+/** Exact JSON UTF-8 bytes excluding quotes, with no widening of the legacy point diagnostic. */
+function isProgressPartitionByteDiagnostic(value) {
+    return isPartitionSizeDiagnostic(value, 3600) && value.observed <= 3600;
+}
+function isPartitionSizeDiagnostic(value, maximumLimit) {
     if (!value || typeof value !== 'object' || Array.isArray(value))
         return false;
     const v = value;
     return Object.keys(v).sort().join(',') === 'field,filePath,maximum,observed,partitionId,unitId'
         && text(v.partitionId, 256) && (0, progress_evidence_path_1.isProgressEvidencePath)(v.filePath) && text(v.unitId, 256)
         && (0, progress_response_diagnostic_1.isProgressResponseField)('partition', v.field) && /\.(?:implemented|remaining)$/u.test(v.field)
-        && typeof v.maximum === 'number' && Number.isSafeInteger(v.maximum) && v.maximum >= 1 && v.maximum <= 600
+        && typeof v.maximum === 'number' && Number.isSafeInteger(v.maximum) && v.maximum >= 1 && v.maximum <= maximumLimit
         && typeof v.observed === 'number' && Number.isSafeInteger(v.observed) && v.observed > v.maximum;
 }
 function progressPartitionLengthPresentation(facts) {
     return Object.freeze({ ...facts, partitionId: (0, progress_evidence_path_1.renderProgressEvidencePath)(facts.partitionId), filePath: (0, progress_evidence_path_1.renderProgressEvidencePath)(facts.filePath),
         unitId: (0, progress_evidence_path_1.renderProgressEvidencePath)(facts.unitId), field: (0, progress_evidence_path_1.renderProgressEvidencePath)(facts.field) });
 }
+/** Only closed host measurements survive this rejection, never the returned prose. */
+class ProgressPartitionByteFailure extends Error {
+    constructor(details) {
+        super('A complete progress source fact exceeds its allocated JSON UTF-8 bytes.');
+        const { outputLocale: _locale, ...facts } = details;
+        if (!isProgressPartitionByteDiagnostic(facts))
+            throw new TypeError('Progress partition byte diagnostic is invalid.');
+        this.details = Object.freeze({ ...details });
+    }
+}
+exports.ProgressPartitionByteFailure = ProgressPartitionByteFailure;
 
 
 /***/ }),

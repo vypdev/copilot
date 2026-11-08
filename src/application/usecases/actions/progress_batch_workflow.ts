@@ -100,6 +100,7 @@ export async function analyzeProgressBatches(context: ProgressContext, issueDesc
     const minimumCalls = bounded.calls() + plans.reduce((sum, plan) => sum + (plan.boundDiff.kind === 'partitioned' ? plan.boundDiff.partitions.length : 0) + plan.planned.length, 0);
     if (minimumCalls > PROGRESS_BATCH_PROFILE.calls) throw progressBatchRejected('call-budget', { expected: batches.length });
     logInfo(`Acceptance inventory admitted: ${scope.requirements.length} requirements in ${batches.length} batches; each summary and remaining has a hard ${plans[0].planned[0].schema.properties.requirements.items.properties.summary.maxLength}-Unicode-point limit. Previous progress is retained.`);
+    logInfo(`Admitted acceptance identities for manifest ${manifest.digest} (question mark means uncertain): ${scope.requirements.map(requirement => requirement.id + (requirement.uncertain ? '?' : '')).join(', ')}.`);
     const receipts: ProgressAssessmentReceipt[] = [];
     for (const [index, plan] of plans.entries()) {
         logInfo(`Collecting complete comparison evidence for scope group ${index + 1} of ${plans.length}; verified ${receipts.length} of ${batches.length} acceptance batches. Previous progress is retained.`);
