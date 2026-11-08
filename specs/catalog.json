@@ -2502,7 +2502,7 @@
       "status": "implemented",
       "scope": "Observe parent drift with one localized status card and transition-only notifications, then safely merge a parent branch into a linked working branch",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-11-03",
+      "lastVerified": "2026-11-08",
       "specs": [
         "specs/branch-synchronization-and-conflict-recovery.md",
         "specs/repository-verification-runtime-prerequisites.md",
@@ -2604,7 +2604,8 @@
         "src/domain/branch_sync_publication.ts",
         "src/domain/git_push_failure.ts",
         "src/infrastructure/git_push_diagnostic.ts",
-        "src/application/policies/branch_sync_publication_messages.ts"
+        "src/application/policies/branch_sync_publication_messages.ts",
+        ".gitattributes"
       ],
       "tests": [
         "src/application/policies/__tests__/branch_sync_notification_policy.test.ts",
@@ -2667,7 +2668,8 @@
         "src/domain/__tests__/branch_sync_publication.test.ts",
         "src/infrastructure/__tests__/git_push_diagnostic.test.ts",
         "src/application/policies/__tests__/branch_sync_publication_presentation.test.ts",
-        "src/tooling/__tests__/branch_sync_publication_integration.test.ts"
+        "src/tooling/__tests__/branch_sync_publication_integration.test.ts",
+        "src/tooling/__tests__/generated_artifact_merge_policy.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-synchronization.mdx",
@@ -2676,7 +2678,8 @@
         "docs/development/architecture.mdx",
         "docs/security-operations/operations/verification.mdx",
         "docs/security-operations/operations/troubleshooting.mdx",
-        "docs/agents/repository-collaboration.mdx"
+        "docs/agents/repository-collaboration.mdx",
+        "CONTRIBUTING.md"
       ]
     },
     {

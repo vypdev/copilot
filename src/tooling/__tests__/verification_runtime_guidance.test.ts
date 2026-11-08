@@ -3,7 +3,7 @@ import path from 'node:path';
 import yaml from 'js-yaml';
 import { VERIFICATION_NATIVE_SETUP_YAML } from './fixtures/verification_native_setup_action';
 
-type Step = { id?: string; uses?: string; run?: string; env?: Record<string, string>; with?: Record<string, unknown> };
+type Step = { if?: string; id?: string; uses?: string; run?: string; env?: Record<string, string>; with?: Record<string, unknown> };
 function pythonExample(content = readFileSync(path.resolve('docs/security-operations/operations/verification.mdx'), 'utf8')): Step[] {
     for (const block of content.matchAll(/```yaml\r?\n([\s\S]*?)```/gu)) {
         const value = yaml.load(block[1]) as { runs?: { steps?: Step[] } };
@@ -46,6 +46,29 @@ describe('shipped verification runtime guidance', () => {
             expect(command.run).toContain('export LD_LIBRARY_PATH='); expect(command.run).not.toContain('GITHUB_ENV');
             expect(command.run).not.toMatch(/\$\{?LD_LIBRARY_PATH/u);
             expect(command.env?.PYTHON_EXECUTABLE).toBe('${{ steps.python.outputs.python-path }}');
+        }
+    });
+    it('native-jdk-input-C01: binds both Linux archives before every forced private installation and retires the shared input', () => {
+        const workflow = yaml.load(readFileSync(path.resolve('.github/workflows/setup_platform_smoke.yml'), 'utf8')) as { jobs: Record<string, { steps: Step[] }> };
+        const native = yaml.load(VERIFICATION_NATIVE_SETUP_YAML) as { runs: { steps: Step[] } };
+        const java = native.runs.steps.find(step => step.uses === 'actions/setup-java@v6')!;
+        const verified = native.runs.steps.find(step => step.run?.includes('sha256sum --check --strict'))!;
+        expect(java.if).toBe("runner.os == 'Linux'"); expect(verified.if).toBe(java.if);
+        expect(java.with).toMatchObject({ distribution: 'jdkfile', 'java-version': '17.0.21', 'force-download': true,
+            'jdk-file': '${{ runner.temp }}/copilot-native-temurin-17.0.21.tar.gz' });
+        expect(native.runs.steps.indexOf(verified)).toBeLessThan(native.runs.steps.indexOf(java));
+        for (const name of ['setup-platform-smoke', 'setup-self-hosted-codex-smoke']) {
+            const steps = workflow.jobs[name].steps, download = steps.find(step => step.id === 'native_jdk_archive')!;
+            expect(download.if).toBe(java.if); expect(download.run).toContain('--connect-timeout 10 --max-time 60');
+            expect(download.run).toContain('https://api.github.com/repos/adoptium/temurin17-binaries/releases/assets/$jdk_asset');
+            expect(download.run).toContain('sha256sum --check --strict'); expect(download.run).toContain('exit 1');
+            for (const [asset, checksum] of [['666563450', '8b9b611d917e3dfd8419d3566b5949226f69b052fed7e109c1368add1dfe8711'],
+                ['677974585', '3e4eca7ead088f080af1476007decf010a240a1eb4e1e78c54fa32fbcc347084']]) {
+                expect(download.run).toContain(asset); expect(download.run).toContain(checksum); expect(verified.run).toContain(checksum);
+            }
+            expect(steps.indexOf(download)).toBeLessThan(steps.findIndex(step => step.id === 'copilot_native_fixture'));
+            const retire = steps.find(step => step.run === 'rm -f -- "$RUNNER_TEMP/copilot-native-temurin-17.0.21.tar.gz"')!;
+            expect(retire.if).toContain('always()'); expect(steps.indexOf(retire)).toBeGreaterThan(steps.findIndex(step => step.id === 'verification_complete'));
         }
     });
     it('keeps loader and Python options out of all twenty native Node continuations', () => {

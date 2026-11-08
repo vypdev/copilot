@@ -47,6 +47,13 @@ pnpm run build
 - **`action.yml`** – Action metadata and input definitions.
 - **`build/`** – Compiled output (bundled JS); do not edit directly.
 
+When both branches change a checked-in ncc bundle or API declaration, `.gitattributes`
+reports an explicit conflict, even when Git could combine its text. Resolve the
+source conflicts first and regenerate the listed artifacts with `pnpm run build`
+before verification. Preserve the Action's conflict-path boundary: an unexpected
+change outside that list blocks synchronization. Verification must reproduce the
+prepared bytes; never stage its later changes to bypass that check.
+
 ## Conventions
 
 1. **TypeScript** – Prefer TypeScript; keep action and CLI buildable with `ncc`.
