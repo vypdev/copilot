@@ -167,7 +167,10 @@ it('inventory1-C07: simultaneous completion, semantic, locale and coverage defec
             if (mode === 'length') response.requirements[1].summary = 'x'.repeat(801);
             return f.interpret(request, response);
         });
-        await expect(queryProgressAssessment({ query }, f.request, f.context, f.project)).rejects.toBeDefined();
+        const error = await queryProgressAssessment({ query }, f.request, f.context, f.project).catch(error => error);
+        expect(error).toBeInstanceOf(Error);
+        if (mode === 'completion') expect(error).toMatchObject({ code: 'agent.failed', retryable: true,
+            recovery: { id: 'progress-result-contract-invalid', variables: { reason: 'progress-completion-mismatch', field: '$.progress' } } });
         expect(query).toHaveBeenCalledTimes(1);
     }
 });

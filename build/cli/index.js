@@ -47057,6 +47057,7 @@ const progress_evidence_path_1 = __nccwpck_require__(25887);
 const progress_assessment_capacity_policy_1 = __nccwpck_require__(67329);
 const progress_capacity_failure_1 = __nccwpck_require__(6457);
 const progress_completion_mismatch_1 = __nccwpck_require__(6519);
+const application_error_1 = __nccwpck_require__(75999);
 const progress_citation_recovery_policy_1 = __nccwpck_require__(88351);
 exports.PROGRESS_BATCH_PROFILE = Object.freeze({ sourceLines: 32, clauses: 256, bytes: 262144,
     assessmentClauses: 32, calls: 120, milliseconds: 1800000 });
@@ -47241,7 +47242,7 @@ function readProgressAssessmentEvidence(response, manifest, batch, locale, ancho
         }
         catch (error) {
             if (error instanceof progress_completion_mismatch_1.ProgressCompletionMismatch)
-                return fail('evidence-duplicate', repetition.requirementId);
+                throw new application_error_1.ApplicationError(error.code, error.message, { correlationId: error.correlationId, retryable: error.retryable, recovery: error.recovery });
             throw error;
         }
         throw (0, progress_citation_recovery_policy_1.progressCitationRepetitionError)(progressBatchResponseSchema(manifest, batch, anchors, compact), scope, anchors, locale, { ...repetition, batch: batch.ordinal, sourceLineId: anchors[repetition.requirementId] ?? 'none' }, requestSchema);

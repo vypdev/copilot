@@ -13,6 +13,7 @@ import { isProgressEvidencePath } from '../../domain/progress_evidence_path';
 import { MAX_PROGRESS_ASSESSMENT_POINTS, progressAssessmentFactLimit } from './progress_assessment_capacity_policy';
 import { ProgressCapacityFailure } from '../errors/progress_capacity_failure';
 import { ProgressCompletionMismatch } from '../errors/progress_completion_mismatch';
+import { ApplicationError } from '../errors/application_error';
 import { progressCitationRepetitionError } from './progress_citation_recovery_policy';
 
 export const PROGRESS_BATCH_PROFILE = Object.freeze({ sourceLines: 32, clauses: 256, bytes: 262_144,
@@ -206,7 +207,8 @@ export function readProgressAssessmentEvidence(response: unknown, manifest: Prog
         // A simultaneous completion contradiction must not escape as an eligible completion result.
         try { parseScopedProgressResponse(canonical, locale, scope, anchors); }
         catch (error) {
-            if (error instanceof ProgressCompletionMismatch) return fail('evidence-duplicate', repetition.requirementId);
+            if (error instanceof ProgressCompletionMismatch) throw new ApplicationError(error.code, error.message,
+                { correlationId: error.correlationId, retryable: error.retryable, recovery: error.recovery });
             throw error;
         }
         throw progressCitationRepetitionError(progressBatchResponseSchema(manifest, batch, anchors, compact), scope, anchors, locale,

@@ -795,6 +795,9 @@ The reader validates exact manifest/head/batch identities, complete requirement
 coverage, per-fact capacity, all citation memberships and every canonical
 semantic rule before minting correction authority. A simultaneous completion
 contradiction is a blocking combined defect, not an alternate recovery route.
+It retains its original public completion-mismatch code, recovery facts,
+retryability and correlation while losing the private correction capability;
+it MUST NOT be presented as citation exhaustion when no correction was attempted.
 Malformed native JSON/schema, invalid locale and other semantic defects retain
 their existing failure behavior.
 
@@ -950,7 +953,7 @@ integration file. The older native C188/C189 declarations remain unchanged.
 | inventory1-C04 | SDD-I944-U1-R1 | Citation/completion and length/citation sequences share one allowance and retain terminal classification. |
 | inventory1-C05 | SDD-I944-U1-R2 | Missing/foreign/stale/generated/malformed evidence and wrong identities stay blocking. |
 | inventory1-C06 | SDD-I944-U1-R1, SDD-I944-U1-R2 | Forged, serialized, older-invocation, equal-schema-clone and provider-thrown carriers cannot authorize correction. |
-| inventory1-C07 | SDD-I944-U1-R2 | Simultaneous completion, semantic, locale, coverage, schema and length defects remain ineligible. |
+| inventory1-C07 | SDD-I944-U1-R2 | Simultaneous completion, semantic, locale, coverage, schema and length defects remain ineligible; a combined completion defect retains its original public classification instead of reporting unattempted citation exhaustion. |
 | inventory1-C08 | SDD-I944-U1-R1, SDD-I944-U1-R2 | Only full frozen supported current contracts and bounded closed measurements mint origins; changed contracts/context fail. |
 | inventory1-C09 | SDD-I944-U1-R1 | Caller mutations cannot alter captured replacement context or request. |
 | inventory1-C10 | SDD-I944-U1-R1, SDD-I944-U1-R2 | Complete preflight before queries; bounded hint; fixed private logging and existing presentation; no submitted padding. |
