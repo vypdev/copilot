@@ -676,3 +676,231 @@ completion. These #937 gates remain pending until independently recorded.
 - Related specs/ADRs/issues/PRs: `specs/immutable-progress-content-recovery.md`, `specs/complete-progress-comparison-inventory.md`, and `specs/progress-scope-source-ownership.md`; prerequisite #833/#830 and extension H3 #704 remain separate.
 - Decisions and rejected alternatives: exactly one replacement rather than a general retry; closed counts rather than raw output; retain strict parsing rather than normalize percentages; unchanged model/configuration/limits/permissions; no new absolute deadline port; no automatic write replay. Reject forcing 100 from previous statuses, dropping uncertain requirements or sources, accepting provider errors as completed output, increasing capacities, adding a third query, caching partial evidence, weakening approval, or treating model claims as execution proof.
 - Follow-up work explicitly outside this spec: broader progress-planning improvements, #830 partition-length recovery, extension implementation, release and deployment. This spec includes implementation and its full CI/coverage/review acceptance; adoption into the master-pinned runtime is a separately reviewed operator transition. The reported parser/graph consistency at `3e7ceea` and catalog snapshot `9abb7882` establishes planning consistency only, not implementation or acceptance.
+
+## Proposed change: Repeated native citations pass the assessment schema then abort same head progress
+
+- Status: Draft
+- Catalog capability: github-communication-experience
+
+### 1. Executive summary
+
+This delta extends the retained final progress recovery contract to repeated citations in an otherwise valid, attributable progress response. The host will permit one complete correction under the existing allowance shared with length and completion recovery. Acceptance still requires distinct admitted source references, complete requirement coverage, exact identities, unchanged response and call/time bounds, and the existing final publication gates. If repeated citations remain after the allowance is used, progress stays unpublished and the operation returns a precise, content-free, nonretryable diagnostic.
+
+```text
+validate complete batch -> distinct admitted citations -> existing publication gates
+                         -> repeated citations -> one shared complete correction
+                                               -> valid distinct citations -> existing gates
+                                               -> repeat or other invalid evidence -> retain prior progress; stop
+```
+
+Text equivalent: only a complete response with distinct valid citations proceeds to existing gates; one repeated-citation correction may use the shared allowance, and failure retains prior progress.
+
+### 2. Problem, current behavior, and evidence
+
+#### 2.1 Problem
+
+Issue [#944](https://github.com/vypdev/copilot/issues/944) reports that repeated native citations can pass the assessment schema and then abort same-head progress at evidence validation. This creates a mismatch between wire-level acceptance and receipt-level acceptance. The reported run retained existing progress, as required, but could not complete acceptance batch 1 of 4. The original native response was not retained; repetition is an inference from the failure path, not a raw citation capture. The issue reports a deterministic synthetic counterexample and a unique-citation control, but those issue-provided results are not independent evidence from this selected source view.
+
+#### 2.2 Current behavior in the selected source
+
+1. `src/application/policies/progress_batch_policy.ts` builds `progressBatchResponseSchema` with citations as an array of 1–8 strings selected from admitted non-generated evidence IDs. The schema does not declare uniqueness.
+2. `src/data/repository/agent_json_schema_validator.ts` checks array bounds and each item against its schema; it contains no distinct-item check. Therefore schema validation alone permits repeats.
+3. `readProgressAssessmentEvidence` in `src/application/policies/progress_batch_policy.ts` requires citation arrays to contain distinct IDs and rejects repetition with `evidence-missing`. It also checks each reference exists, belongs to the current head, and is not generated. `parseProgressAssessmentReceipt` uses that evidence reader before producing a receipt.
+4. `src/application/usecases/actions/progress_batch_workflow.ts` submits each batch, reads and parses its evidence, and converts the retained-batch rejection to the existing batch diagnostic. The selected implementation shown here has no repeated-citation correction at this boundary.
+
+The compact profile is decoded by `decodeCompactProgressAssessment` in `src/application/policies/progress_compact_assessment_policy.ts`; it maps closed assessment codes to canonical fields and retains response identity fields. The selected sources do not establish that the reported native output was captured or that this issue’s counterexample was run against this revision. The issue states both prose and closed-fact profiles preserve citation arrays; verify that behavior in implementation tests before treating it as established for this revision.
+
+#### 2.3 Evidence and limits
+
+The selected source directly establishes the schema/receipt uniqueness mismatch and the evidence checks described above. The issue reports a native failure at requirement R63, acceptance batch 1 of 4, with `validation.evidence-unavailable`, reason `evidence-missing`, and prior progress retained. It also reports that a valid unique-citation control succeeds. These are incident assertions; the original response is unavailable, so exact citations and the cause in that native response remain unverified. No conclusion about a quota failure is supported by the report. The selected owner `specs/final-progress-completion-recovery.md` already specifies a single shared correction allowance for eligible final assessment failures; this delta adds repeated citations to its scope without replacing its retained requirements or cases. The neighboring evidence, scope, batching, and capacity owners remain authoritative for their existing contracts.
+
+### 3. Actors, surfaces, and terminology
+
+The affected actors and surfaces remain those in the retained owner `specs/final-progress-completion-recovery.md`: the issue author supplies progress scope, the configured model returns assessments, the host workflow validates and controls publication, and maintainers inspect a failed run and decide whether a fresh assessment is appropriate.
+
+For this delta, a **citation** is an admitted source reference attached to a requirement assessment. **Distinct citations** contain no repeated reference within that assessment. A **complete correction** is one replacement response for the entire frozen batch, using the same head, manifest, requirement identities, admitted evidence, and profile. The model supplies response data; the host owns identity, evidence admission, uniqueness validation, recovery eligibility, and publication authority.
+
+The observable outcome remains in existing CLI/API errors, Check, Job Summary, and progress publication surfaces. A terminal repeated-citation failure must identify the affected requirement and batch through the existing safe diagnostic conventions, without exposing model prose or raw response content. Existing locale handling and user-facing content conventions remain in force.
+
+### 4. Goals, non-goals, and fixed invariants
+
+#### 4.1 Goals
+
+- **SDD-I944-U1-R1:** Accept only distinct citations in an otherwise valid, attributable progress response. A repeated-citation response may use the existing single complete-batch correction allowance shared with length and completion recovery. Preserve every requirement, distinct admitted source reference, identity, response bound, the 120-call/30-minute ceiling, and the final publication gate. If repetition remains after the shared allowance is consumed, return a precise content-free nonretryable diagnostic. Do not silently deduplicate output, invent citations, accept invalid receipts, add an allowance, weaken coverage, or rerun unchanged heads until green.
+- **SDD-I944-U1-R2:** Keep missing, foreign, generated, stale, malformed, forged, or otherwise invalid evidence blocking publication. Retain complete frozen batches and never publish partial progress.
+
+#### 4.2 Non-goals
+
+- Changing source collection, scope ownership, batching, assessment semantics, publication, or any owning contract outside the repeated-citation recovery delta.
+- Replacing or re-running the reported failed native operation to obtain a green status; changing the published artifact; or authorizing a release or deployment.
+- Adding configurable or additional retries, increasing limits, expanding permissions, weakening evidence validation, or deduplicating model output automatically.
+
+#### 4.3 Fixed product and safety invariants
+
+- Citation uniqueness is a validation condition for every accepted response, regardless of prose or closed-fact wire profile. Correction must produce distinct admitted citations; the host must not repair the array by deduplication or fabricate evidence.
+- The shared allowance is consumed at most once per complete batch across repeated-citation, length, and completion recovery. Exhaustion is terminal and nonretryable; no unchanged-head loop is permitted.
+- All original requirement coverage, batch and head identities, manifest binding, freshness, evidence admission, capacity, response bounds, 120-call/30-minute ceilings, complete frozen-batch behavior, and final publication gates remain unchanged.
+- Any missing, foreign, generated, stale, malformed, forged, or otherwise invalid evidence continues to block publication. Previous progress is retained until every required batch passes all existing gates; no partial progress is published.
+
+| Requirement | Behavior |
+| --- | --- |
+| SDD-I944-U1-R1 | Accept only distinct citations in an otherwise valid, attributable progress response; recover repeated citations using the existing single complete-batch correction allowance shared with length/completion recovery, preserving every requirement, distinct admitted source reference, identity, response bound, 120-call/30-minute ceiling, and final publication gate. A repeated citation after that shared allowance is consumed produces a precise content-free, nonretryable diagnostic. Do not silently deduplicate output, invent citations, accept invalid receipts, add an allowance, weaken coverage, or rerun unchanged heads until green. |
+| SDD-I944-U1-R2 | Keep missing, foreign, generated, stale, malformed, forged, or otherwise invalid evidence blocking publication; retain complete frozen batches and do not partially publish progress. |
+
+### 5. Current versus proposed product journey
+
+#### 5. Current versus proposed product journey
+
+The immutable owner, `specs/final-progress-completion-recovery.md`, already defines complete-batch assessment, one shared correction allowance for eligible completion and length failures, and publication only after complete validation and freshness checks. This update adds repeated citations to that recovery boundary. In the affected flow, the response schema admits citation arrays with one to eight entries, while receipt validation requires distinct citations. A duplicate therefore can pass adapter schema validation and fail later as missing evidence; the consumer retains prior progress and receives a nonretryable error. The issue report’s native response was not retained, so the reported repetition remains inferred; its deterministic schema/receipt counterexample is separate evidence.
+
+Proposed journey: assess the complete assigned batch with its original identities and evidence references; if citations repeat but the response is otherwise valid and attributable, use the existing single complete-batch correction allowance, shared with length/completion recovery. Validate the correction against the same scope and publication gates. A valid unique-citation result continues through existing freshness and publication checks. A unique-citation response on the first attempt follows the current path without correction. If the allowance has already been spent, stop with a precise, content-free, nonretryable diagnostic and retain previously published progress. At no point may the host silently remove duplicates, infer or invent evidence, publish a partial batch, or retry unchanged heads until green.
+
+For operators, a blocked result should communicate the impact, cause, next action, then retained state: “Progress was not updated. The complete assessment did not verify distinct source citations for requirement R63, batch 1. Review the cited evidence and run a corrected assessment. Existing progress was retained.” Keep the requirement and batch details within the existing safe diagnostic projection; do not expose rejected response text or unverified references. A successful correction uses the existing completion and publication surfaces without an extra comment or notification. Existing locale selection and fallback remain in force.
+
+### 6. Functional behavior and state model
+
+#### 6. Functional behavior and state model
+
+This delta applies to both existing response profiles: narrative and closed-fact. The response must first satisfy its applicable schema, exact scope and batch identities, requirement coverage, locale, and all non-citation receipt checks. Citation admission then requires at least one citation per requirement, no repeated citation within a requirement, and every citation to identify admitted, non-generated evidence pinned to the current head. Each requirement and its citation set remain bound to the same complete frozen batch.
+
+A repeated citation in an otherwise valid, attributable response is an eligible correction trigger under the existing single complete-batch allowance. The replacement repeats the complete assigned batch and preserves every requirement, identity, distinct admitted source reference, response bound, and the original final publication gate. It may not normalize the rejected citation array by deduplication or carry rejected prose forward. A unique-citation response is accepted without correction. When completion or length recovery has already consumed the allowance, a subsequent repeated-citation failure is terminal: report a precise content-free, nonretryable diagnostic, retain existing progress, and do not issue another query for unchanged heads. Mixed repeated-citation and length/completion failures consume that same one allowance, never a second one.
+
+Missing, foreign, generated, stale, malformed, forged, or otherwise invalid evidence remains blocking and does not become eligible merely because citations are repeated. Preserve the existing complete frozen batches and discard provisional results if any batch or final gate fails; never partially publish. Keep the existing 120-call and 30-minute ceilings, and do not reset the attempt ledger for correction. Freshness, approval, and final publication behavior remain owned by the immutable owner and its existing contracts.
+
+The relevant current boundary is visible in `src/application/policies/progress_batch_policy.ts`: `progressBatchResponseSchema` bounds citation arrays to 1–8 admitted IDs, and `readProgressAssessmentEvidence` rejects duplicates and checks evidence identity before `parseProgressAssessmentReceipt` constructs a receipt. `src/application/usecases/actions/progress_batch_workflow.ts` owns complete-batch assessment and receipt aggregation; `src/application/usecases/actions/query_progress_assessment_workflow.ts` owns assessment-query correction. The update must connect the otherwise-valid duplicate failure to that shared bounded correction path without weakening receipt validation.
+
+### 7. User-facing configuration
+
+#### 7. User-facing configuration
+
+No new user-facing configuration is introduced. The correction allowance remains fixed at one per assessment invocation and is shared with existing eligible length/completion recovery; it is not configurable. Citation distinctness, evidence admission, complete-batch preservation, freshness checks, response bounds, the 120-call/30-minute ceilings, and the final publication gate are fixed correctness constraints.
+
+Use the existing provider, model, effort, locale, and invocation snapshot rules. Locale changes presentation only; it does not alter citation validation, evidence identity, or recovery eligibility. No persisted recovery state or migration is added. A new invocation follows the existing fresh-invocation behavior and must collect and validate its own complete evidence.
+
+### 8. Clean Architecture design
+
+#### 8. Clean Architecture design
+
+Keep the rule that citations are distinct and admitted as pure receipt-validation policy in `src/application/policies/progress_batch_policy.ts`. That policy owns citation identity checks against the immutable manifest and head; the response schema remains an adapter-facing shape constraint and must not be treated as proof that citation content is semantically valid. Preserve the existing distinction between response-schema validation in `src/data/repository/agent_json_schema_validator.ts` and host receipt validation in the application policy.
+
+The application workflow owns the one shared correction allowance and may spend it only when the complete response is otherwise attributable and valid apart from repeated citations. Reuse the existing assessment-query recovery boundary in `src/application/usecases/actions/query_progress_assessment_workflow.ts` and the batch orchestration in `src/application/usecases/actions/progress_batch_workflow.ts`. Keep provider adapters responsible for parsing and mapping responses; they must not deduplicate citations or decide recovery eligibility. Keep publication and freshness decisions with their existing owners. No provider-specific DTO, durable retry state, extra port, or new configuration is required.
+
+On correction, revalidate the complete response and every receipt from the beginning. Any invalid or stale evidence, incomplete batch, consumed allowance, or exhausted global bound returns a safe terminal failure and retains the prior published progress. Diagnostics expose only the existing closed safe facts, such as requirement and batch identity where host-verified; never log or publish rejected response content, arbitrary citation strings, or unverified identifiers.
+
+### 9. UI/UX and content contract
+
+#### 9.1 Information hierarchy
+
+For this delta, show the current batch status first, then that prior progress and complete frozen batches are retained, whether the one shared correction is running or exhausted, the next action, and sanitized diagnostic facts. Keep existing progress surfaces and publication behavior from the immutable owner `specs/final-progress-completion-recovery.md`.
+
+#### 9.2 Citation-specific content
+
+When an otherwise valid, attributable response repeats a citation, use the existing shared complete-batch correction allowance. While it runs, state that the complete batch is being reassessed and prior progress is retained. On success, report progress only after distinct admitted citations and all existing validation and publication gates pass. If the allowance is already consumed, state that progress was not published, identify the affected requirement and batch using host-verified identifiers, and give the precise nonretryable diagnostic. Tell the operator to inspect the run and qualify a corrected response before a fresh full assessment; do not recommend an unchanged-head retry loop.
+
+A response with unique admitted citations continues without correction. Do not expose rejected model prose or render it as Markdown. Keep existing locale, accessibility, responsive, and surface conventions; the diagnostic must remain understandable without color and preserve the same closed facts across supported locale rendering and fallback.
+
+#### 9.3 Existing interaction contract
+
+Create no new issue, PR, comment, label, Check, card, permission, or interactive control. Retain existing links, markers, titles, and notification budgets. Do not publish any part of a frozen batch while citation recovery is underway.
+
+### 10. Failure, recovery, and cleanup
+
+| Failure or state | User impact and retained facts | Recovery and action |
+|---|---|---|
+| Otherwise valid attributable response contains repeated citations and the shared correction allowance remains | No new progress is published; prior progress and complete frozen batches remain intact | Make exactly one complete same-batch correction using the existing allowance, preserving requirements, distinct admitted source references, identities, response bounds, the 120-call/30-minute ceilings, and the final publication gate. |
+| Repeated citations occur after the shared correction allowance is consumed, including after length/completion recovery used it | Progress remains unpublished; prior progress and frozen batches remain intact | Return a precise, content-free, nonretryable diagnostic. Do not silently deduplicate, invent citations, add an allowance, or rerun unchanged heads. |
+| Citation correction still contains repeats or another validation failure | No progress is published; retain the prior state and complete frozen batches | Do not make a third query. Report the failure through the existing safe diagnostic behavior. |
+| Evidence is missing, foreign, generated, stale, malformed, forged, or otherwise invalid | Publication remains blocked; no partial batch is published | Preserve existing evidence-validation failure behavior; citation recovery does not make invalid evidence eligible. |
+
+Errors state impact, cause, action, and retained state in that order. Discard rejected payloads under the existing cleanup rules. A correction must be complete; partial batch results are never published.
+
+### 11. Security, permissions, and privacy
+
+1. Add no credentials, network authority, write capability, permission, or model-call allowance. Citation correction is bounded by the existing shared single complete-batch allowance and the existing 120-call/30-minute ceilings.
+2. Permit correction only when the response is otherwise valid and attributable to the current complete frozen batch. Repeated citation values are invalid; the host must not normalize them by silently deduplicating. Accept only distinct references admitted by the existing evidence and receipt checks.
+3. Preserve all existing evidence fences. Missing, foreign, generated, stale, malformed, forged, or otherwise invalid evidence remains blocking and cannot be repaired by citation correction. Keep requirement coverage, identities, response bounds, and final publication gates unchanged.
+4. Do not expose raw response content, arbitrary citations, private prose, or unverified identifiers in diagnostics. Exhaustion diagnostics contain only the closed, host-verified facts needed to identify the affected requirement and batch and explain the nonretryable failure.
+5. Model output cannot establish evidence validity or authorize publication. Publish only after the entire frozen batch passes the existing checks.
+
+### 12. Observability and operational UX
+
+Retain existing progress and emit no partial-publication signal for an incomplete or rejected batch. When correction is used, report only the fixed recovery status and closed, host-verified identifiers or facts needed to diagnose the result. When the shared allowance is exhausted, report a precise content-free nonretryable diagnostic and make clear that prior progress was retained. Do not log or retain rejected model prose, add telemetry payloads, or introduce provider retries. Existing run links, correlation, and operator surfaces remain in force.
+
+### 13. Compatibility, migration, rollout, and rollback
+
+This is a bounded update to the immutable owner `specs/final-progress-completion-recovery.md`. It adds repeated citations as another eligible failure handled by the existing single complete-batch correction allowance shared with length/completion recovery. No additional allowance, stored-state migration, configuration, or release authorization is introduced.
+
+Both prose and closed-fact wire profiles must enforce distinct admitted citations. Unique-citation responses retain their existing success path. A correction must preserve requirements, distinct admitted source references, identities, response bounds, the 120-call/30-minute ceilings, complete frozen batches, and the final publication gate. Invalid evidence remains blocking. Exhaustion is terminal and nonretryable; rollback to immediate rejection retains prior progress and does not rewrite published state.
+
+### 14. Testing strategy and numeric budget
+
+Add five minimum distinct regression cases to the existing owner budget; these are new cases, not a replacement for retained cases or coverage gates. Exercise both wire profiles, valid unique and repeated citations, exhaustion after the shared correction, mixed length/completion recovery, and invalid evidence with frozen-batch retention. Keep the complete-batch correction allowance shared and singular. Assertions must verify preservation of requirements, distinct admitted source references, identities, response bounds, the existing 120-call and 30-minute ceilings, and the final publication gate. Use deterministic fixtures and assert that exhaustion yields a precise content-free, nonretryable diagnostic without silent deduplication, invented citations, another allowance, or unchanged-head reruns. Keep repository and changed-module coverage thresholds and all existing budgets in force. These cases establish structural coverage targets; they do not establish executed acceptance.
+
+| Area | Minimum distinct cases | Behaviors/risks covered |
+|---|---:|---|
+| citation recovery | 2 | Observable scenarios in the case inventory. |
+| allowance exhaustion | 1 | Observable scenarios in the case inventory. |
+| shared recovery | 1 | Observable scenarios in the case inventory. |
+| evidence validation | 1 | Observable scenarios in the case inventory. |
+| Total | 5 | Distinct inventory cases; repeated executions do not add cases. |
+
+| Case ID | Area | Requirements | Scenario |
+| --- | --- | --- | --- |
+| inventory1-C01 | citation recovery | SDD-I944-U1-R1 | For each wire profile, an otherwise valid attributable response with repeated citations uses the existing shared complete-batch correction allowance, then succeeds only with distinct admitted citations while preserving requirements, identities, response bounds, call/time ceilings, and the final publication gate. |
+| inventory1-C02 | citation recovery | SDD-I944-U1-R1 | A valid unique-citation response succeeds without correction. |
+| inventory1-C03 | allowance exhaustion | SDD-I944-U1-R1 | When a repeated-citation response occurs after the shared correction allowance is consumed, evaluation returns a precise content-free nonretryable diagnostic; it does not silently deduplicate, add an allowance, or rerun unchanged heads. |
+| inventory1-C04 | shared recovery | SDD-I944-U1-R1 | Repeated-citation recovery mixed with length/completion recovery consumes the same single complete-batch allowance. |
+| inventory1-C05 | evidence validation | SDD-I944-U1-R2 | Missing, foreign, generated, stale, malformed, or forged evidence blocks publication; complete frozen batches remain intact and no partial progress is published. |
+
+### 15. Documentation and discoverability
+
+Update the operator guidance associated with final progress assessment so maintainers can distinguish repeated-citation correction from evidence rejection, understand that correction shares the existing complete-batch allowance with length/completion recovery, and interpret the terminal content-free diagnostic. Keep the unique-citation control, both wire profiles, invalid-evidence blocking, frozen-batch retention, no-partial-publication behavior, and existing limits aligned with the contract in `specs/final-progress-completion-recovery.md`. Preserve the native incident as reported: the original response was not retained, and repetition is an inference from the failure path; the synthetic counterexample and unique-citation control are separate evidence. Do not claim a consumer rerun or implementation acceptance. Publication acceptance must separately establish that the specification satisfies required format, internal and cross-document consistency is checked, and reciprocal catalog ownership, paths, and evidence agree with the generated view; the concrete invocation or prerequisite remains unverified where it has not been inspected.
+
+| Path | Change |
+| --- | --- |
+| specs/final-progress-completion-recovery.md | update |
+
+[specs/final-progress-completion-recovery.md](final-progress-completion-recovery.md)
+
+### 16. Acceptance scenarios
+
+1. Given an otherwise valid, attributable response with unique citations, when either wire profile is evaluated, then it succeeds without correction. This is `inventory1-C02`.
+2. Given an otherwise valid, attributable response with repeated citations, when either wire profile is evaluated, then the existing shared complete-batch correction is used and evaluation succeeds only with distinct admitted citations, preserving all requirements, identities, response bounds, call/time ceilings, and the final publication gate. This is `inventory1-C01`.
+3. Given a repeated-citation response after the shared correction allowance is consumed, when evaluation rejects it, then a precise content-free nonretryable diagnostic is returned; output is not silently deduplicated, no allowance is added, and unchanged heads are not rerun. This is `inventory1-C03`.
+4. Given repeated-citation recovery combined with a length or completion failure, when the correction is applied, then both consume the same single complete-batch allowance. This is `inventory1-C04`.
+5. Given missing, foreign, generated, stale, malformed, or forged evidence, when a batch is evaluated, then publication remains blocked, complete frozen batches remain intact, and no partial progress is published. This is `inventory1-C05`.
+
+### 17. Requirements traceability
+
+SDD-I944-U1-R1 requires acceptance of only distinct citations in otherwise valid attributable responses, correction through the existing shared allowance, preservation of coverage and limits, and terminal handling after exhaustion. It is exercised by `inventory1-C01`, `inventory1-C02`, `inventory1-C03`, and `inventory1-C04`.
+
+SDD-I944-U1-R2 requires invalid evidence to remain publication-blocking with frozen complete batches and no partial progress. It is exercised by `inventory1-C05`.
+
+These mappings describe planned acceptance coverage. They do not claim the cases were implemented or executed.
+
+| Requirement | Cases |
+|---|---|
+| SDD-I944-U1-R1 | inventory1-C01, inventory1-C02, inventory1-C03, inventory1-C04 |
+| SDD-I944-U1-R2 | inventory1-C05 |
+
+### 18. Implementation sequence
+
+1. Clarify that each accepted citation must be distinct, admitted evidence, and that repetition makes an otherwise valid attributable response eligible for the existing complete-batch correction path.
+2. Apply that correction through the single allowance shared with length and completion recovery. Retain the complete frozen batch and all requirement coverage, distinct admitted references, identities, response bounds, the 120-call and 30-minute ceilings, and the final publication gate. Do not deduplicate output, fabricate citations, or accept invalid evidence.
+3. If repetition remains after the shared allowance is consumed, stop with a precise, content-free, nonretryable diagnostic. Do not retry unchanged heads or publish partial progress.
+4. Keep the immutable retained contract and cases in `specs/final-progress-completion-recovery.md`; this delta refines repeated-citation handling within that contract. Validate both wire profiles, the unique-citation control, repeated-citation recovery and exhaustion, and mixed citation/length/completion recovery using the same allowance. Verify that missing, foreign, generated, stale, malformed, or forged evidence still blocks publication and that frozen batches remain intact. Existing test budgets and coverage gates apply; concrete verification invocations and prerequisites remain unverified in this draft.
+
+### 19. Definition of Done
+
+- The specification satisfies the required format.
+- Internal and cross-document consistency is checked, including the retained recovery contract and the mapped behaviors for both wire profiles, unique citations, repeated-citation correction and exhaustion, shared allowance use, and invalid evidence.
+- Reciprocal catalog ownership, paths, and evidence agree with the generated view.
+- Product validation demonstrates that an otherwise valid repeated-citation response can recover within the existing shared complete-batch allowance, preserving coverage, identities, response bounds, the 120-call/30-minute ceiling, and the final publication gate; unique citations succeed without correction; and a repeat after allowance exhaustion produces a precise content-free nonretryable diagnostic without deduplication, added allowance, unchanged-head reruns, or partial publication.
+- Missing, foreign, generated, stale, malformed, or forged evidence continues to block publication, with complete frozen batches retained. The original native response was not retained, so native repetition is not claimed as directly captured. The issue reports a synthetic counterexample and a unique-citation control; do not treat that report as execution of this delta's validation.
+- Existing repository test budgets, coverage gates, and required review outcomes remain in force. Concrete invocation and prerequisites for product validation remain unverified.
+
+### 20. References and decisions
+
+Issue context: [#944](https://github.com/vypdev/copilot/issues/944). The issue reports that repeated citations pass adapter schema validation but fail evidence parsing, with progress retained. It explicitly says the original native response was not retained; repetition is inferred from the native failure path, while a synthetic counterexample reproduces the mismatch and a unique-citation control succeeds. This draft preserves that evidence limitation and does not assert that the native response was captured.
+
+The owning recovery contract and retained cases are in `specs/final-progress-completion-recovery.md`. The change is limited to making distinct citations explicit and routing repeated citations through the existing shared complete-batch correction allowance, while preserving evidence validation, batch retention, publication gating, and established limits. No new allowance or release authorization is implied.
