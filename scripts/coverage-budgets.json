@@ -843,7 +843,8 @@
             "src/domain/progress_assessment_length_failure.ts",
             "src/data/repository/progress_assessment_length_failure.ts",
             "src/application/policies/progress_assessment_length_policy.ts",
-            "src/application/usecases/actions/query_progress_assessment_workflow.ts"
+            "src/application/usecases/actions/query_progress_assessment_workflow.ts",
+            "src/application/policies/progress_compact_assessment_policy.ts"
           ],
           "mode": "each",
           "thresholdProfile": "exhaustive"

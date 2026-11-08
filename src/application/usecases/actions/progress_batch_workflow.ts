@@ -99,6 +99,7 @@ export async function analyzeProgressBatches(context: ProgressContext, issueDesc
     }));
     const minimumCalls = bounded.calls() + plans.reduce((sum, plan) => sum + (plan.boundDiff.kind === 'partitioned' ? plan.boundDiff.partitions.length : 0) + plan.planned.length, 0);
     if (minimumCalls > PROGRESS_BATCH_PROFILE.calls) throw progressBatchRejected('call-budget', { expected: batches.length });
+    logInfo(`Acceptance inventory admitted: ${scope.requirements.length} requirements in ${batches.length} batches; each summary and remaining has a hard ${plans[0].planned[0].schema.properties.requirements.items.properties.summary.maxLength}-Unicode-point limit. Previous progress is retained.`);
     const receipts: ProgressAssessmentReceipt[] = [];
     for (const [index, plan] of plans.entries()) {
         logInfo(`Collecting complete comparison evidence for scope group ${index + 1} of ${plans.length}; verified ${receipts.length} of ${batches.length} acceptance batches. Previous progress is retained.`);
@@ -107,17 +108,16 @@ export async function analyzeProgressBatches(context: ProgressContext, issueDesc
         capacity(() => requests.forEach(({ prompt, schema }) => remainingProgressAssessmentPromptBytes(prompt, schema, context.agentConfiguration.effort)));
         for (const { batch, schema, prompt } of requests) {
             let acceptedResponse: unknown;
-            const receiptAgent: FindingsQueryPort = { query: async request => {
-                const response = await boundedAgent.query(request);
+            const projectResponse = (response: Parameters<typeof readProgressAssessmentEvidence>[0]) => {
                 const { payload } = readProgressAssessmentEvidence(response, manifest, batch, context.targetLocale, anchors, compact);
                 acceptedResponse = response;
                 return payload;
-            } };
+            };
             logInfo(`Assessing acceptance batch ${batch.ordinal} of ${batches.length}; verified ${receipts.length}. Previous progress is retained.`);
             try {
-                await queryProgressAssessment(receiptAgent, { configuration: context.agentConfiguration, agentId: AGENT_PLAN, prompt,
+                await queryProgressAssessment(boundedAgent, { configuration: context.agentConfiguration, agentId: AGENT_PLAN, prompt,
                     options: { ...productFacingAgentQueryOptions('progress', schema), includeReasoning: context.includeReasoning } },
-                    { scope: progressBatchDisplayScope(batch, compact), anchors, targetLocale: context.targetLocale, sourceLineIds: captured.lines.map(line => line.id) });
+                    { scope: progressBatchDisplayScope(batch, compact), anchors, targetLocale: context.targetLocale, sourceLineIds: captured.lines.map(line => line.id), preferCompactFacts: compact }, projectResponse);
                 receipts.push(parseProgressAssessmentReceipt(acceptedResponse, manifest, batch, anchors, context.targetLocale, compact));
             } catch (error) {
                 if (error && typeof error === 'object' && 'recovery' in error) {

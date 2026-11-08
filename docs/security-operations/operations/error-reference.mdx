@@ -223,12 +223,14 @@ schema before admitting recovery. Neither length nor completion recovery can
 allocate a third query, including when the two failure kinds alternate.
 
 If the replacement still exceeds a fact bound, `agent.failed` uses
-`progress-assessment-length-invalid` with exactly five closed observations:
+`progress-assessment-length-invalid`, marks this exhausted attempt non-retryable,
+and preserves exactly five closed observations:
 
 {/* progress-assessment-length-example */}
 ```json
 {
   "code": "agent.failed",
+  "retryable": false,
   "correlationId": "11111111-1111-4111-8111-111111111111",
   "recovery": {
     "id": "progress-assessment-length-invalid",
@@ -245,8 +247,9 @@ If the replacement still exceeds a fact bound, `agent.failed` uses
 
 These counts are illustrative Unicode code points, not the unavailable rejected
 Domus prose or its actual lengths. Inspect the named fact and unchanged limit in
-the linked run. A fresh complete assessment can help when the provider can meet
-that contract. Existing progress remains; provisional batches are never published.
+the linked run. Do not automatically repeat an unchanged complete comparison.
+Validate a corrected Copilot build against the same pinned source and then start
+one fresh complete assessment. Existing progress remains; provisional batches are never published.
 No rejected prose, clipping, enlarged limits, omitted requirements or source
 recollection enters the correction. Foreign identities, incomplete output,
 infrastructure failures and other invalid contracts retain their own errors.

@@ -10130,7 +10130,7 @@ exports.PROGRESS_RESPONSE_REASONS = Object.freeze({
 const fieldPatterns = Object.freeze({
     scope: /^\$(?:\.outputLocale|\.lines(?:\[(0|[1-9]\d{0,3})\](?:\.(?:id|kind|sameAs))?)?)?$/u,
     partition: /^\$(?:\.outputLocale|\.partitionId|\.files(?:\[(0|[1-9]\d{0,3})\](?:\.(?:path|unitId|implemented|remaining))?)?)?$/u,
-    assessment: /^\$(?:\.outputLocale|\.progress|\.requirements(?:\[(0|[1-9]\d{0,3})\](?:\.(?:id|status|evidence|summary|remaining))?)?)?$/u,
+    assessment: /^\$(?:\.outputLocale|\.progress|\.requirements(?:\[(0|[1-9]\d{0,3})\](?:\.(?:id|status|evidence|summary|remaining|assessment))?)?)?$/u,
 });
 const maxIndex = Object.freeze({ scope: 1023, partition: 511, assessment: 31 });
 function knownId(value, prefix, maximum) {

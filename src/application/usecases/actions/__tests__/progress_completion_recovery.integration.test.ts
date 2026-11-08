@@ -1,3 +1,4 @@
+import { assessmentWireFixture } from './fixtures/progress_assessment_wire_fixture';
 import { withProgressEvidence, progressComparisonFixture } from './support/progress_batch_response';
 import { CheckProgressUseCase } from '../check_progress_use_case';
 import { FindingsAgentAdapter } from '../../../../data/repository/ai/findings_agent_adapter';
@@ -44,7 +45,7 @@ function scenario(responses: unknown[], uncertain = false, diff?: ProgressDiffEv
         }
         finals.push(request.prompt);
         const response = responses[Math.min(finals.length - 1, responses.length - 1)];
-        return typeof response === 'string' ? response : JSON.stringify(response);
+        return typeof response === 'string' ? response : JSON.stringify(assessmentWireFixture(response as Parameters<typeof assessmentWireFixture>[0], request.outputSchema!, uncertain ? ['R2'] : []));
     });
     const getDiff = jest.fn(async () => diff ?? progressComparisonFixture(BASE, HEAD, 'Complete pinned source delta.'));
     const native = new FindingsAgentAdapter({ cli: { execute: async request => withProgressEvidence(await execute(request), request.outputSchema) } });
@@ -217,10 +218,13 @@ it('github-communication-experience-change-C167: native batched length recovery 
     expect((await f.invoke())[0]).toMatchObject({ success: true, payload: { progress: 100 } });
     expect(f.finals).toHaveLength(2); expect(f.execute).toHaveBeenCalledTimes(5);
     expect(f.getDiff).toHaveBeenCalledTimes(1); expect(f.setProgressLabel).toHaveBeenCalledTimes(1);
-    expect(f.finals[1].replace(/\n\nThe previous completed acceptance response[\s\S]*?\[END_PREVIOUS_MODEL_LENGTH_FACTS\]/u, '')).toBe(f.finals[0]);
+    const task = (prompt: string) => prompt.split('BEGIN_APPLICATION_TASK\n\n')[1].split('\n\nEND_APPLICATION_TASK')[0];
+    expect(task(f.finals[1]).split('\n\nComplete closed-fact assessment protocol')[0]).toBe(task(f.finals[0]));
+    expect(f.finals[1]).toContain('Complete closed-fact assessment protocol');
     expect(f.finals[1]).not.toContain('PRIVATE_REJECTED_');
     const requests = f.execute.mock.calls.filter(([request]) => (request.outputSchema as any).properties.requirements);
-    expect(requests[1][0].outputSchema).toBe(requests[0][0].outputSchema);
+    expect(requests[1][0].outputSchema).toHaveProperty('properties.requirements.items.properties.assessment.enum');
+    expect(requests[1][0].outputSchema).not.toHaveProperty('properties.requirements.items.properties.summary');
     expect(requests[0][0].outputSchema).toHaveProperty('properties.requirements.items.properties.citations');
 });
 

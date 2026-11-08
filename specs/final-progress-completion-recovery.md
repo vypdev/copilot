@@ -1,12 +1,12 @@
 # Final Progress Assessment Recovery
 
-- Status: Issue #932 update in implementation; new recovery acceptance pending
-- Date: 2026-11-07
+- Status: Published #932 baseline; issue #937 operational generation update in validation
+- Date: 2026-11-08
 - Catalog capability ID: github-communication-experience
-- Last verified: 2026-11-07 (native RED, all new case identities, archived inventory, full root/extension coverage and local package verification complete; normal hooks and independent remote gates pending)
+- Last verified: 2026-11-08 (#932 published; #937 local closed-policy and controlled live-provider qualification complete; native consumer and remote acceptance pending)
 - Owners: Copilot maintainers
-- Scope: Define one shared bounded complete replacement for a validated completion contradiction or an attributable completed acceptance-field length rejection.
-- Related issues/PRs: https://github.com/vypdev/copilot/issues/853; https://github.com/vypdev/copilot/issues/932
+- Scope: Complete bounded semantic assessment for compact inventories and one shared replacement for a completion contradiction or attributable narrative length rejection.
+- Related issues/PRs: https://github.com/vypdev/copilot/issues/853; https://github.com/vypdev/copilot/issues/932; https://github.com/vypdev/copilot/issues/937
 - Required review gates: product UX, architecture, testing, documentation, security/operations
 - Open decisions blocking design: none. Historical #853: the Action verified first SDD commit 828a68284f4687acf7350950f553ba501926454b on the linked issue branch. Issue #932 uses the Action-created branch at base `2ecac44850af23c60bc937d52a3f995b0960bfac`; local validation and independent remote acceptance remain pending.
 
@@ -61,6 +61,35 @@ The native adapter throws a typed schema rejection before `queryProgressAssessme
 
 Primary evidence: https://github.com/vypdev/copilot/issues/932 and https://github.com/vypdev/domus/actions/runs/42339180009/attempts/6. No consumer code, acceptance scope or installation settings change in this correction.
 
+### 2.5 Published recovery and live qualification gap — issue #937
+
+The #932 implementation passed its independent gates, merged as #933, and was
+published in 3.10.11 at `0bb87c4290306255907370ff93cbe4ec5358693b` through #934/#935.
+Those gates established the recovery protocol and preservation controls; they
+did not establish live consumer acceptance. Domus attempts 7, 8 and 9 used that
+actual published runtime, completed classification and all 17 comparison parts,
+then exhausted the replacement at R11/L11 remaining: 61/54, 50/40 and 43/35
+Unicode points. No rejected prose is available or reconstructed.
+
+The historical deterministic fixture remains at head `2a35e2a3`, with 157 paths,
+16 parts and a fixed 108-line classification. The current original consumer
+head is `fbb4cfd1d8160e63a6b4d62e4ac118fb2f946a0c`, base
+`5b7bdcdee3a9e98d6669bfd34ce750ae30a8c775`, with 175 paths and 17 parts. Its human
+issue digest remains `f5c01613456235e349179026a023ad992b3d95fc427568f27c8f7e31fbf8b2d0`.
+The read-only 2026-11-08 native source campaign selected 169 required and 131
+context lines, making six acceptance batches with a 32-point hard allocation.
+This is a genuine new classification, not a reconstruction of attempts 7–9.
+
+Controlled acceptance with the intact 3.10.11 evaluator and those exact accepted
+comparison facts again exhausted at R11/L11 summary 33/32. A fresh comparison
+control independently failed 44/32. A native-pattern-only candidate passed all
+169 outcomes but its subsequent content audit found unfinished phrases. It is
+not operational acceptance. Both the bound-only and writing-margin variants were rejected after content
+audit found unfinished words. The selected correction uses closed semantic
+assessment codes and complete host-owned labels; no host truncation or wider
+allocation is permitted. The selected closed-fact candidate passed the controlled real-provider assessment for all 169 requirements in six new calls without replacement, against 27 exact frozen valid source receipts. The host rendered 3929 summary and 2697 remaining Unicode points inside the original limits. There were zero real writes; the two fake mutation calls represent one simulated semantic publication. Complete host-owned labels replace model prose by construction, with every semantic code mapped explicitly in the tests. This is not a native consumer Check: that remains separate required evidence. #920's generic Bugbot unusable-output failure is a
+separate observed boundary; its cause must not be inferred from these length facts.
+
 ## 3. Actors, surfaces, and terminology
 
 | Actor | Goal | Entry point | Visible surfaces |
@@ -85,6 +114,8 @@ A **completion contradiction** is a fully validated response whose percentage al
 | FPR-05 | Expose closed numeric completion facts or closed measured length facts with host-verified R/L anchors through compatible localized existing surfaces. |
 | FPR-06 | Deliver the complete-workload regression and independent coverage evidence required by the owning contracts. |
 | FPR-07 | Keep documentation, authority boundaries, and independent delivery gates explicit and executable. |
+| FPR-08 | Generate closed semantic facts for compact inventories and eligible length recovery; render complete bounded labels and retain every original hard allocation, receipt, scope and semantic gate. |
+| FPR-09 | Report exhausted acceptance-length generation as blocked and non-retryable for that attempt; expose admitted counts/allocation and avoid recommending indefinite unchanged full-comparison repeats. |
 
 ### 4.2 Non-goals
 
@@ -128,7 +159,7 @@ Text equivalent: preflight, collect once, validate; either publish through exist
 
 1. The existing workflow snapshots host-owned scope, source identities, locale, schema, provider, model settings, and original final request.
 2. Before any model query, the capacity owner verifies the original and worst-case complete replacement envelopes.
-3. The workflow collects scope and all evidence once, then validates the complete final response using existing rules.
+3. The workflow collects scope and all evidence once. Multi-batch assessments request closed semantic codes, decode them to the canonical host DTO, and validate all original receipts, prose bounds and semantic rules. Ordinary single-batch assessments keep their narrative request.
 4. A valid response proceeds once through the existing freshness and publication owners.
 
 ### 6.2 Alternative paths
@@ -148,7 +179,7 @@ Text equivalent: preflight, collect once, validate; either publish through exist
 | Final | Complete evidence is ready | Validating final estimate | Accepted, replacing, failed | Final assessment workflow |
 | Replacing | Host bound an eligible completed failure | One bounded reassessment is running | Accepted, exhausted, failed | Narrow application workflow |
 | Accepted | Complete result and freshness gates pass | Existing progress may publish | Published, publication failure | Existing publication owner |
-| Exhausted | Replacement also contradicts completion | Prior progress remains | Terminal | Closed diagnostic and operator replay |
+| Exhausted | Replacement also has an eligible completion or length failure | Prior progress remains | Terminal | Closed diagnostic; corrected-build qualification for length exhaustion |
 | Failed | Any unrelated failure or stale source | Existing failure behavior applies | Terminal | Existing error owner |
 
 Each invocation starts fresh; no retry allowance or rejected payload is replayed. Cancellation and partial publication retain current workflow semantics. Publication is not represented as a multi-call transaction: actual partial effects keep their existing classification.
@@ -162,6 +193,47 @@ Each invocation starts fresh; no retry allowance or rejected payload is replayed
 | Locale | Existing locale input | Existing precedence, default en-US | Existing supported locales and whole-message fallback | Existing operation snapshot |
 
 There is no new configuration, migration, or persistence. The original final request is snapshotted. Optional undefined fields remain absent/undefined. A meaningful alternative is the existing es-ES locale, which changes language but not validation or recovery. Recovery count, capacity, evidence, and approval gates are intentionally not configurable.
+
+Issue #937 adds no configuration. The host prefers the closed fact format for
+multi-batch compact inventories and can use it for the one eligible narrative
+length replacement. A native row contains its original ID, citations when
+present, and one enumerated assessment. Root locale/progress and receipt
+identities are unchanged. Each code fixes status/evidence and a remaining action
+as one coherent fact; there is no independent prose or redundant state pair to
+contradict it. The host renders complete fixed labels (at most nine Unicode
+points), then validates them against the ORIGINAL allocation and existing
+semantic parser. No overlong original result becomes accepted.
+
+| Code | Status/evidence | Summary/action |
+|---|---|---|
+| supported | supported / source-only | In source / none |
+| partial | missing / source-only | Partial / Implement |
+| missing | missing / source-only | Missing / Implement |
+| contradictory | missing / contradictory | Missing / Implement |
+| source-unverified | verification-unknown / source-only | In source / Verify |
+| partial-unverified | verification-unknown / source-only | Partial / Verify |
+| execution-unverified | verification-unknown / external-unverified | Unclear / Verify |
+| evidence-unavailable | verification-unknown / unavailable | Unclear / Get proof |
+| evidence-contradictory | verification-unknown / contradictory | Unclear / Clarify |
+| scope-unclear | verification-unknown / unavailable | Unclear / Clarify |
+
+Uncertain original scope MUST use scope-unclear. English and regional Spanish
+use whole fixed label catalogs; unsupported host label locales use the English
+fallback. The wire contains identifiers, not human sentences, and still echoes
+the exact requested outputLocale. No dynamic translation call or wider budget
+is introduced. A compatible prose contract must have the known status/evidence
+enums, text minimum one, maximum 9–800 and no additional prose constraint. Tiny
+or custom contracts retain the existing bounded text path. Existing native
+provider projection is unchanged.
+
+Before any source query, preflight reserves the original, legacy correction,
+closed initial and worst closed replacement prompt/schema envelopes, including
+256 bytes of closed hint. Model prose never enters that hint. The original
+120-call/30-minute attempt ledger, 32-entry batch, 256-requirement inventory,
+512-KiB prompt and both 8,000-point publication fields remain fixed. Length and
+completion recovery still share one replacement; no third query or write replay.
+Exhaustion changes only that length error's retryability. Other provider errors
+retain their own classification.
 
 ## 8. Clean Architecture
 
@@ -191,18 +263,18 @@ flowchart LR
 - Pure decisions: a host-created typed mismatch is eligible only after all checks other than completion equivalence pass. Binding checks counts against the current nonempty scope.
 - Application contracts: a narrow `query_progress_assessment_workflow` uses the existing query port. Query execution remains outside the parse-only completion catch. A separate query-failure boundary admits only closed attributable completed length failures; unrelated failures use the existing rejection mapper. Each evaluation returns a valid result, a completion mismatch, or a bound length outcome.
 - Semantic ports: reuse existing findings query and publication/freshness ports; add no provider-specific DTO to domain or application contracts.
-- Durable state/schema ownership: no new durable state or schema. Previous progress remains owned by the existing publication/state owner.
+- Durable state/schema ownership: no new durable state or public acceptance schema. The internal closed-fact wire is separate from the original host schema. Previous progress remains owned by the existing publication/state owner.
 - Concurrency/idempotency: reuse existing source freshness and publication idempotency; do not repeat writes automatically.
 - Trusted and untrusted inputs: scope, source identities, and numeric bounds are host-owned. Model responses, including counts, are untrusted until complete validation; they never attest execution, review, or approval.
 - Provider error mapping: unrelated provider errors preserve identity. Provider-thrown typed lookalikes cannot enter the parser-only recovery path.
 
-Snapshot a structured clone of original options/schema/configuration and freeze only that clone. Preserve the exact prompt, evidence identities, and pinned scope. Replacement changes only a fixed reviewed footer and closed validated facts. Preserve existing per-query timeout/cancellation and native outer deadline; add no deadline field or budget reset.
+Snapshot a structured clone of original options/schema/configuration and freeze only that clone. Preserve the exact prompt, evidence identities, and pinned scope. A narrative completion replacement changes only the reviewed footer and closed validated facts. An eligible narrative length replacement may additionally use the finite wire plan; a proactive compact assessment stays on that same finite wire for its one correction. The complete host acceptance schema, source, options and configuration remain unchanged. Preserve existing per-query timeout/cancellation and native outer deadline; add no deadline field or budget reset.
 
 ### 8.2.1 Complete capacity and numeric contract
 
 Before the first scope/model query, reserve the complete fixed recovery footer plus a worst-case 256-byte closed numeric hint in the reserved-scope, single and final request envelopes and aggregate budget. Closed key/scalar normalization and the executable maximum-hint test establish that bound; reserve padding is capacity accounting only and MUST NOT be sent to the provider. Preflight every late part and both complete final envelopes before admitting the first request. Preserve the existing 512 KiB runtime prompt limit, 384000-byte aggregate ceiling, 64000-byte scope limit, 32 required/uncertain and 32 excluded clauses, 1024-byte dynamic framing reserve, adaptive per-fact maximum of 800 Unicode points, and both complete 8000-point published projections including citations/separators. Preserve the immutable profile limits: 1024 paths, 4096 units, 512 units per part, 16 recovery frames, 16 MiB total recovered source, 2048 reads and 200000 tree entries. Unsupported whole input fails before queries; never clip, omit units, recollect source or raise capacities.
 
-For #932, reserve the worst of the complete completion-correction and field-length-correction envelopes before the first query. Each closed hint fits 256 UTF-8 bytes; padding is never queried. The active batched-progress contract owns larger complete inventories, the 32-entry acceptance batches and the complete-inventory text allocation. Recovery preserves each batch's exact existing schema limit, including an allocation below 800, and the global query/time ledger. No third acceptance query or new configurable retry is added.
+Reserve the worst of the original narrative, complete completion-correction, field-length-correction, initial closed-fact and closed-fact-correction envelopes, including each actual schema before the first query. Each closed hint fits 256 UTF-8 bytes; padding is never queried. The active batched-progress contract owns larger complete inventories, the 32-entry acceptance batches and the complete-inventory text allocation. Recovery preserves each batch's exact existing schema limit, including an allocation below 800, and the global query/time ledger. No third acceptance query or new configurable retry is added.
 
 The five facts are reportedProgress, requirementCount, supportedCount, missingCount and unknownCount. Counts come from exact current-scope entries only after all entry and full-projection checks pass. A typed mismatch preserves the existing safe direct-parser rejection and privately freezes those facts; a per-parse scope identity can prevent cross-scope reuse. Only a genuine completion contradiction enters the parse-only catch. The separate native-length boundary requires a private captured-schema identity, exact complete-batch receipt/citation schema validation with only summary/remaining length checks deferred, exact-once assigned IDs and application binding to original R/L anchors and locale. No rejected prose survives. Query execution remains outside the parse-only completion catch, including replacement queries. A second contradiction reports its own counts and correlation, without retaining either rejected payload across awaits.
 
@@ -263,11 +335,11 @@ Partial publication: “The assessment passed validation, but publication did no
 
 Completed: use the existing completion card, native links, and verified progress facts after all gates pass.
 
-Length recovery uses one fixed running message: “A progress acceptance fact exceeded its unchanged response limit. Requesting one complete replacement for the same pinned batch; previous progress is retained.” Terminal impact states that progress was not published. Its action names only phase assessment, verified R11/L11, the schema field and observed/maximum Unicode counts, then asks for a fresh complete assessment when the provider can satisfy the same contract. These IDs/counts are illustrative, not incident measurements. English and regional Spanish use the same closed registry and terminal correlation; unsupported locales fall back to English. No additional comment, interactive control, permission or configuration is introduced.
+Length recovery uses one fixed running message: “A progress acceptance fact exceeded its unchanged response limit. Requesting one complete replacement for the same pinned batch; previous progress is retained.” Terminal impact states that progress was not published. Its action names only phase assessment, verified R11/L11, the schema field and observed/maximum Unicode counts, then marks the exhausted length attempt non-retryable and asks for qualification of a corrected Copilot build before one fresh assessment; unchanged comparisons must not loop automatically. These IDs/counts are illustrative, not incident measurements. English and regional Spanish use the same closed registry and terminal correlation; unsupported locales fall back to English. No additional comment, interactive control, permission or configuration is introduced.
 
 ### 9.3 Issue, PR, and comment behavior
 
-No new issue, PR, comment, label, Check, or card is created. Recovery adds at most one fixed bounded log message. Existing durable markers, titles, links, idempotent updates, labels, and Checks remain unchanged. Merge, close, or fresh replay retains existing behavior; replay recollects complete evidence.
+No new issue, PR, comment, label, Check, or card is created. Recovery adds at most one fixed bounded log message; one admission log separately reports the complete requirement count, batch count and hard fact allocation. Existing durable markers, titles, links, idempotent updates, labels, and Checks remain unchanged. Merge, close, or fresh replay retains existing behavior; replay recollects complete evidence.
 
 ### 9.4 Accessibility, localization, and responsive behavior
 
@@ -297,7 +369,14 @@ Errors follow impact, cause, action, retained-state order. A terminal exhaustion
 
 ## 12. Observability and operational UX
 
-Retain existing progress state and emit at most one fixed recovery log message. Public terminal JSON and localized CLI, Check, and Summary use the closed error registry, retained-state statement, and same terminal correlation reference. Numeric facts describe a model observation, not a success metric. Queue delay remains distinct from typed completed-output failure. Add no telemetry payload, rejected-output retention, extra comments, or hidden provider retry. Existing run links and head/base context remain inspectable.
+Retain existing progress state and emit at most one fixed recovery log message plus the closed admission counts below. Public terminal JSON and localized CLI, Check, and Summary use the closed error registry, retained-state statement, and same terminal correlation reference. Numeric facts describe a model observation, not a success metric. Queue delay remains distinct from typed completed-output failure. Add no telemetry payload, rejected-output retention, extra comments, or hidden provider retry. Existing run links and head/base context remain inspectable.
+
+Before comparison queries, one fixed admission log additionally gives the actual
+requirement count, batch count and hard per-text Unicode allocation. It contains
+no model prose. Terminal length exhaustion reports `Retryable: No`; its one
+operator action is to validate a corrected Copilot build against the pinned
+source before one fresh full assessment. It MUST NOT recommend automatic
+unchanged comparison loops. English and Spanish retain the same closed facts.
 
 ## 13. Compatibility, migration, rollout, and rollback
 
@@ -306,23 +385,23 @@ owns a separate single replacement for each attributable overlong part. Those
 queries finish before this final controller starts. A final reassessment never
 repeats accepted part queries or source reads; an exhausted part never enters
 the final stage. Three additional composition cases belong to that companion's
-budget and do not replace this specification's 60 cases.
+budget and do not replace this specification's 85 cases.
 
-Valid complete and partial responses remain accepted identically. Direct parser rejection and unrelated errors preserve current codes and recovery shapes. Preserve completion exhaustion and add only the closed length exhaustion identifier. No stored-state or in-flight comparison migration is required. Adopt a reviewed runtime only through its supported path; merging `develop` alone does not change the currently observed master-pinned issue-comment runtime. Release and deployment are outside this correction. Implementation starts only after the Action-verified first SDD and linked branch, now recorded above. Rollback restores immediate rejection and retains previous progress; remove helper, diagnostic, and localized copy together without rewriting published state.
+Canonical valid complete and partial DTOs remain accepted identically. Multi-batch native requests now use finite assessment codes; eligible narrative length replacements may adopt the same wire. The native wire is internal, while the published host shape and hard bounds remain unchanged. Direct parser rejection and unrelated errors preserve current codes and recovery shapes. Preserve completion exhaustion and add only the closed length exhaustion identifier. No stored-state or in-flight comparison migration is required. Adopt a reviewed runtime only through its supported path; merging `develop` alone does not change the currently observed master-pinned issue-comment runtime. Release and deployment are outside this correction. Implementation starts only after the Action-verified first SDD and linked branch, now recorded above. Rollback restores immediate rejection and retains previous progress; remove helper, diagnostic, and localized copy together without rewriting published state.
 
 ## 14. Testing strategy
 
-The minimum is 60 distinct executable cases: the 40 original completion cases plus the 20 #932 length-recovery cases C165–C184. The original cases remain normative. All twenty new identifiers have executed assertions; full local and independent remote gate evidence remains separately required. Existing owner budgets, platform/extension cases, module/port/architecture guards, and real publication fixtures remain mandatory. New pure-policy statements, branches, functions, and lines require 100%; modified coverable lines require official correct-base Codecov 100% with zero misses or partials. Use deterministic fakes and native adapter fixtures, no real sleeps or live credentials. Golden output must be paired with semantic assertions; manual UX evidence must cover narrow, light/dark, and screen-reader readability. Independent CI, Codecov, review, and approval evidence cannot be supplied by the model or by case links.
+The minimum is 85 distinct executable cases: the 40 original completion cases, the 20 #932 length-recovery cases C165–C184, five #937 operational cases C185–C189, and twenty closed-fact cases C190–C209. The original cases remain normative. All 25 #937 identifiers have executed assertions; full local and independent remote gate evidence remains separately required. Existing owner budgets, platform/extension cases, module/port/architecture guards, and real publication fixtures remain mandatory. New pure-policy statements, branches, functions, and lines require 100%; modified coverable lines require official correct-base Codecov 100% with zero misses or partials. Use deterministic fakes and native adapter fixtures, no real sleeps or live credentials. Golden output must be paired with semantic assertions; manual UX evidence must cover narrow, light/dark, and screen-reader readability. Independent CI, Codecov, review, and approval evidence cannot be supplied by the model or by case links.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain/configuration/pure planning | 15 | Original cases plus C172, C175, C176, C177. |
-| State/application/idempotency/races | 12 | Original cases plus C168, C169, C170, C173. |
-| Adapters and provider contracts | 5 | Original cases plus C171, C174. |
+| Domain/configuration/pure planning | 28 | Original cases plus C172, C175, C176, C177, C185, C190, C194, C195, C197–C200, C203–C205, C208 and C209. |
+| State/application/idempotency/races | 13 | Original cases plus C168, C169, C170, C173 and C189. |
+| Adapters and provider contracts | 7 | Original cases plus C171, C174, C206 and C207. |
 | Workflows, permissions, schemas, and setup contracts | 11 | Original cases plus C167, C178, C181. |
-| Integration/end-to-end and compatibility/migration | 8 | Original cases plus C165, C166, C179, C180. |
-| Presentation states, links, localization, accessibility, and sanitization | 9 | Original cases plus C182, C183, C184. |
-| Total | 60 | Distinct inventory cases; repeated executions do not add cases. |
+| Integration/end-to-end and compatibility/migration | 9 | Original cases plus C165, C166, C179, C180 and C188. |
+| Presentation states, links, localization, accessibility, and sanitization | 17 | Original cases plus C182–C184, C186, C187, C191–C193, C196, C201 and C202. |
+| Total | 85 | Distinct inventory cases; repeated executions do not add cases. |
 
 | Case ID | Area | Requirements | Scenario |
 |---|---|---|---|
@@ -366,9 +445,9 @@ The minimum is 60 distinct executable cases: the 40 original completion cases pl
 | github-communication-experience-change-C162 | Presentation states, links, localization, accessibility, and sanitization | FPR-05 | Spanish regional reuse and unsupported-locale fallback preserve the same semantic facts. |
 | github-communication-experience-change-C163 | Presentation states, links, localization, accessibility, and sanitization | FPR-02, FPR-05 | Intermediate recovery logs are fixed and bounded, with no caught values or extra comments. |
 | github-communication-experience-change-C164 | Presentation states, links, localization, accessibility, and sanitization | FPR-05, FPR-07 | The documented exhaustion example round-trips through the real normalizer, renderer, and catalog owner. |
-| github-communication-experience-change-C165 | Integration/end-to-end and compatibility/migration | FPR-01, FPR-02 | A native overlong summary is replaced by one complete unchanged-schema result. |
+| github-communication-experience-change-C165 | Integration/end-to-end and compatibility/migration | FPR-01, FPR-02 | A native overlong summary is replaced by one complete closed-fact result that satisfies the original host schema. |
 | github-communication-experience-change-C166 | Integration/end-to-end and compatibility/migration | FPR-01, FPR-02 | A native overlong remaining field is replaced without promoting a genuinely missing or uncertain requirement. |
-| github-communication-experience-change-C167 | Workflows, permissions, schemas, and setup contracts | FPR-01, FPR-02, FPR-06 | Complete multipart evidence, IDs and citations survive recovery with no repeated classification or source/comparison reads and one publication. |
+| github-communication-experience-change-C167 | Workflows, permissions, schemas, and setup contracts | FPR-01, FPR-02, FPR-06 | The original 108-case multipart inventory, IDs and citations survive one coded completion correction with no repeated classification or source/comparison reads and one publication. |
 | github-communication-experience-change-C168 | State/application/idempotency/races | FPR-02, FPR-05 | A second bound length failure exhausts the allowance with its own safe measurements and no third query. |
 | github-communication-experience-change-C169 | State/application/idempotency/races | FPR-01, FPR-02 | Length followed by completion contradiction cannot allocate another replacement. |
 | github-communication-experience-change-C170 | State/application/idempotency/races | FPR-01, FPR-02 | Completion contradiction followed by length failure cannot allocate another replacement. |
@@ -382,12 +461,56 @@ The minimum is 60 distinct executable cases: the 40 original completion cases pl
 | github-communication-experience-change-C178 | Workflows, permissions, schemas, and setup contracts | FPR-01, FPR-04 | An oversized complete correction envelope rejects before any scope/model request without clipping evidence. |
 | github-communication-experience-change-C179 | Integration/end-to-end and compatibility/migration | FPR-01, FPR-02 | Head, base or PR target drift during length replacement prevents publication. |
 | github-communication-experience-change-C180 | Integration/end-to-end and compatibility/migration | FPR-01, FPR-02 | Changed or closed human source during length replacement prevents publication. |
-| github-communication-experience-change-C181 | Workflows, permissions, schemas, and setup contracts | FPR-01, FPR-02 | Exhaustion in a later acceptance batch discards provisional work and retains all previous progress. |
+| github-communication-experience-change-C181 | Workflows, permissions, schemas, and setup contracts | FPR-01, FPR-02 | Coded completion exhaustion in a later acceptance batch discards provisional work and retains all previous progress. |
 | github-communication-experience-change-C182 | Presentation states, links, localization, accessibility, and sanitization | FPR-05 | English, Spanish, fallback and JSON expose the same closed length facts and terminal correlation. |
 | github-communication-experience-change-C183 | Presentation states, links, localization, accessibility, and sanitization | FPR-02, FPR-05 | One fixed intermediate length-recovery message and the replacement prompt exclude rejected prose and commands. |
 | github-communication-experience-change-C184 | Presentation states, links, localization, accessibility, and sanitization | FPR-01, FPR-05, FPR-07 | The documented length exhaustion round-trips through the real error registry while original completion diagnostics remain compatible. |
 
 The C165–C184 requirement assignments above are reciprocal additions to section 17's existing FPR traceability; no original case is removed or renumbered.
+
+Issue #937 adds five distinct cases; the closed-fact policy adds C190–C209 below. The rejected native-pattern variant
+does not contribute acceptance cases or a provider-projection change.
+
+| Case ID | Area | Requirements | Scenario |
+|---|---|---|---|
+| github-communication-experience-change-C185 | Domain/configuration/pure planning | FPR-01, FPR-05, FPR-09 | Exhaustion is non-retryable with identical closed facts while generic provider errors retain retryability. |
+| github-communication-experience-change-C186 | Presentation | FPR-05, FPR-09 | English stops unchanged automatic repeats and names corrected-build qualification. |
+| github-communication-experience-change-C187 | Presentation | FPR-05, FPR-09 | Spanish gives the same bounded action and closed identities. |
+| github-communication-experience-change-C188 | Integration | FPR-01, FPR-06, FPR-08, FPR-09 | Current original Domus immutable objects, 169-source classification, all 17 parts and six batches pass closed-wire/schema/receipt checks and one eligible publication; the admission log reports exact counts/allocation. |
+| github-communication-experience-change-C189 | State/application/races | FPR-01, FPR-07, FPR-08 | Moving the exact head after all 169 outcomes still causes zero publication attempts. |
+
+In the 108-requirement multipart fixture, C167 and C181 retain their original identities and preservation assertions. Their injected final failure is now a coded completion contradiction because proactive finite wire requests cannot contain overlong narrative fields. C165/C166 still exercise actual narrative length to coded correction; C168 retains the tiny legacy-schema double-length terminal control and C170 completion-to-length exhaustion. The companion single-batch native C167 still starts with a genuine narrative length rejection and verifies the complete coded replacement. The capacity integration similarly injects a foreign code on that replacement to prove terminal rejection with no third call, rather than generating a prose field forbidden by the finite wire. This adaptation does not delete a case or weaken native validation.
+
+| Case ID | Area | Requirements | Scenario |
+|---|---|---|---|
+| github-communication-experience-change-C190 | Domain/configuration/pure planning | FPR-08, FPR-03 | Keeps the original full acceptance schema and binds a separate finite native shape. |
+| github-communication-experience-change-C191 | Presentation | FPR-08, FPR-03, FPR-05 | Host labels satisfy the original nine-point allocation without trimming or generative prose. |
+| github-communication-experience-change-C192 | Presentation | FPR-08, FPR-03, FPR-05 | Spanish and regional Spanish render the same complete bounded labels. |
+| github-communication-experience-change-C193 | Presentation | FPR-08, FPR-03, FPR-05 | Unsupported host label locales use one English catalog while wire locale metadata stays exact. |
+| github-communication-experience-change-C194 | Domain/configuration/pure planning | FPR-08, FPR-03 | Supported source outcomes retain null remaining and the original completion invariant. |
+| github-communication-experience-change-C195 | Domain/configuration/pure planning | FPR-08, FPR-03 | Missing outcomes remain missing with an implementation action. |
+| github-communication-experience-change-C196 | Presentation | FPR-08, FPR-03, FPR-05 | Foreign state codes fail closed without leaking the returned value. |
+| github-communication-experience-change-C197 | Domain/configuration/pure planning | FPR-08, FPR-03, FPR-05 | Redundant status/evidence/prose cannot override the single coherent assessment. |
+| github-communication-experience-change-C198 | Domain/configuration/pure planning | FPR-08, FPR-03 | Uncertain original scope requires clarification and cannot become supported. |
+| github-communication-experience-change-C199 | Domain/configuration/pure planning | FPR-08, FPR-03 | Original IDs bind independently of returned array order. |
+| github-communication-experience-change-C200 | Domain/configuration/pure planning | FPR-08, FPR-03 | Foreign, duplicate and omitted requirement identities reject the whole batch. |
+| github-communication-experience-change-C201 | Presentation | FPR-08, FPR-03, FPR-05 | Prose smuggling and unknown response fields cannot enter the closed projection. |
+| github-communication-experience-change-C202 | Presentation | FPR-08, FPR-03, FPR-05 | Wrong locale metadata is rejected before facts render. |
+| github-communication-experience-change-C203 | Domain/configuration/pure planning | FPR-08, FPR-03 | Unsupported tiny, malformed and widened bounds retain the original protocol. |
+| github-communication-experience-change-C204 | Domain/configuration/pure planning | FPR-08, FPR-03 | Extra original prose constraints cannot be bypassed by using code facts. |
+| github-communication-experience-change-C205 | Domain/configuration/pure planning | FPR-08, FPR-03 | Incompatible and incomplete schema shapes do not acquire a compact wire plan. |
+| github-communication-experience-change-C206 | Adapters and provider contracts | FPR-08, FPR-03 | Complete receipt metadata and citation dictionaries survive native schema projection. |
+| github-communication-experience-change-C207 | Adapters and provider contracts | FPR-08, FPR-03 | Decoder changes only the code representation and preserves pinned metadata/citations for host validation. |
+| github-communication-experience-change-C208 | Domain/configuration/pure planning | FPR-08, FPR-03, FPR-05, FPR-04 | Closed replacement prompts preserve complete source and reject arbitrary recovery data. |
+| github-communication-experience-change-C209 | Domain/configuration/pure planning | FPR-08, FPR-03, FPR-04 | Original and worst closed hints are finite, reserved padding never becomes a model request. |
+
+C188/C189 use deterministic assessment codes and do not certify live-provider
+content or native consumer acceptance. Controlled provider qualifications must
+record source IDs/digests, original evidence-generation calls, reused valid
+receipts, newly admitted calls, Unicode sizes, semantic audit and zero real
+writes separately. Reusing a different attempt's receipts as current authority
+is forbidden. No rejected response prose is retained.
+
 
 ## 15. Documentation and discoverability
 
@@ -439,6 +562,18 @@ Issue #932 additions:
 | `src/application/usecases/actions/__tests__/progress_batches.integration.test.ts` | update for #932 |
 | `src/architecture/github_communication_test_budget.json` | update for #932 |
 
+Issue #937 additions (all new sources are owned by this specification):
+
+| Path | Change |
+|---|---|
+| `src/application/policies/progress_compact_assessment_policy.ts` | create finite semantic plan, strict decoder, bounded labels and prompt reserve |
+| `src/application/policies/__tests__/progress_compact_assessment_policy.test.ts` | create C190–C209 |
+| `src/application/usecases/actions/__tests__/progress_native_generation.integration.test.ts` | create C188/C189 |
+| `src/application/usecases/actions/__tests__/fixtures/domus-29-native-937.json.gz.hex` | create current public immutable fixture, independently dated classification |
+| `src/application/usecases/actions/__tests__/fixtures/progress_assessment_wire_fixture.ts` | create deterministic test-only wire producer |
+| `src/application/usecases/actions/progress_batch_workflow.ts` | update proactive finite wire, full receipt projection, admission counts |
+| `src/domain/progress_response_diagnostic.ts` | update safe assessment-code field whitelist |
+
 ## 16. Acceptance
 
 1. Given an initially valid final response, when the complete assessment runs, then it uses one final query and proceeds unchanged through existing publication gates.
@@ -457,7 +592,7 @@ Issue #932 local evidence: two genuine native-policy RED regressions reproduced 
 
 Historical #853 verification (not #932 acceptance): the 40 case identities are implemented in the five new test modules in section 15. Full local verification passed 849 suites / 16,368 tests, with 35 pre-existing skips, plus 267 extension tests at 100% of all metrics. All coverage budgets and the setup ledger passed, with its 14 pre-existing human acceptance items still explicitly open. The four new runtime modules measured 100% statements, branches, functions and lines. Four genuine native-adapter contradiction/publication regressions failed before the runtime change and passed afterward. Typecheck, lint, specifications, guidance, documentation assets/contracts and workflow contracts also passed. Remote CI, full review, official correct-base Codecov and protected-path approval remain independent pending gates.
 
-12. Given an attributable completed native summary/remaining overflow, when the current request identity, other schema fields, receipts, citations, assigned IDs, R/L anchor and locale validate, then one complete unchanged-schema batch replacement may run. A second length or completion failure is terminal.
+12. Given an attributable completed native summary/remaining overflow, when the current request identity, other schema fields, receipts, citations, assigned IDs, R/L anchor and locale validate, then one complete replacement may run, optionally using finite wire codes; its canonical DTO must satisfy the unchanged original host schema. A second length or completion failure is terminal.
 13. Given any foreign receipt/schema/source or incomplete batch, when a native length rejection occurs, then no length recovery is allocated; prior progress and existing rejection remain.
 
 ## 17. Requirements traceability
@@ -472,6 +607,20 @@ Historical #853 verification (not #932 acceptance): the 40 case identities are i
 | FPR-06 | github-communication-experience-change-C153, github-communication-experience-change-C167 |
 | FPR-07 | github-communication-experience-change-C154, github-communication-experience-change-C164, github-communication-experience-change-C184 |
 
+Issue #937 reciprocal traceability:
+
+| Requirement | Cases/evidence | Documentation |
+|---|---|---|
+| FPR-01 | C185, C188, C189 and all original preservation cases | Execution contract, branch-management guide |
+| FPR-05 | C185, C186, C187 | Error reference and closed JSON example |
+| FPR-06 | C188; original/current fixtures remain distinct | This specification section 2.5 |
+| FPR-07 | C189; independent current-head gates | Branch-management guide |
+| FPR-08 | C188, C189, C190–C209; controlled provider qualification and complete label audit | Closed-fact policy, execution contract and section 7.1 |
+| FPR-03 | C190–C209 | This specification and original scope/receipt policies |
+| FPR-04 | C208, C209 | Complete native/host capacity preflight |
+| FPR-05 | C191–C193, C196, C197, C201, C202, C208 | Closed labels, privacy, locale and recovery guidance |
+| FPR-09 | C185, C186, C187, C188 | English/Spanish error catalog, error reference, branch-management guide |
+
 ## 18. Implementation sequence
 
 1. Verify the Action-selected base, linked branch, catalog evidence, and first SDD publication through the normal Action gate.
@@ -484,7 +633,17 @@ Historical #853 verification (not #932 acceptance): the 40 case identities are i
 
 ## 19. Definition of Done
 
-Historical #853 checklist below remains archival. Issue #932 requires fresh executed evidence for all C165–C184 cases, 100% new policy coverage, full root/extension verification and normal hooks, generated/validated catalog/docs, current-head complete review with zero findings, green CI on all three platforms and official correct-base Codecov with no missed or partial modified lines. Until those gates complete, #932 remains in implementation.
+The historical checklist below records implementation checkpoints. #932 completed
+its independent gates and was published in 3.10.11; that did not certify live
+consumer acceptance. #937 requires all 85 owner cases, 100% changed pure policy
+coverage, full root/extension verification and normal hooks, generated/validated
+catalog/docs, complete current-head review with zero findings, green CI on all
+three platforms and official correct-base Codecov with no misses or partials.
+Operational qualification additionally requires complete coherent provider facts
+for the original consumer scope and a successful native consumer Check using an
+explicit reviewed candidate SHA, with every original publication fence. A
+protocol-only pass, output clipped by a decoder, or deterministic fixture is not
+completion. These #937 gates remain pending until independently recorded.
 
 
 - [x] Every FPR requirement has acceptance and reciprocal case traceability.

@@ -1,3 +1,4 @@
+import { assessmentWireFixture } from './fixtures/progress_assessment_wire_fixture';
 import { withProgressEvidence } from './support/progress_batch_response';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -69,11 +70,11 @@ function fixture(description = body, bindSeedQuery = true, includePublishedCard 
             }));
             return JSON.stringify({ outputLocale: 'en-US', lines });
         }
-        return JSON.stringify({ outputLocale: 'en-US', progress: 50,
+        return JSON.stringify(assessmentWireFixture({ outputLocale: 'en-US', progress: 50,
             requirements: schema.properties.requirements.items.properties.id.enum.map((id: string) => ({
                 id, status: 'verification-unknown', evidence: 'external-unverified', summary: 'Implementation evidence observed.',
                 remaining: 'Independent verification pending.',
-            })) });
+            })) }, schema));
     });
     const setProgressLabel = jest.fn();
     const readSeed = jest.fn(createProgressSddSeedQuery(reads, repositoryUrl));

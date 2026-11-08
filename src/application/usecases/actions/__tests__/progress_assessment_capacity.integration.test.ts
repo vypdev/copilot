@@ -16,7 +16,9 @@ function fixture(multipart = false, quoteSize = 20, native = true) {
         expect(setProgressLabel).not.toHaveBeenCalled(); expect(setLabels).not.toHaveBeenCalled();
         if (schema.properties.lines) return { outputLocale: 'en-US', lines: progressScopeSourceLines(issue).map(line => ({ id: line.id, kind: 'required' })) };
         if (schema.properties.files) return { outputLocale: 'en-US', partitionId: schema.properties.partitionId.enum[0], files: schema.properties.files.items.properties.path.enum.map((path: string) => ({ path, implemented: 'Source present.', remaining: 'Verification unknown.' })) };
-        const properties = schema.properties.requirements.items.properties, limit = properties.summary.maxLength;
+        const properties = schema.properties.requirements.items.properties;
+        if (properties.assessment) return { outputLocale: 'en-US', progress: 50, requirements: properties.id.enum.map((id: string) => ({ id, assessment: rogue === 'schema' ? 'PRIVATE_INVALID_CODE' : 'execution-unverified' })) };
+        const limit = properties.summary.maxLength;
         return { outputLocale: 'en-US', progress: 50, requirements: properties.id.enum.map((id: string) => ({ id, status: 'verification-unknown', evidence: 'external-unverified', summary: 's'.repeat(rogue === 'summary' ? 800 : rogue === 'schema' ? limit + 1 : limit), remaining: 'r'.repeat(rogue === 'remaining' ? 800 : 1) })) };
     };
     const execute = jest.fn(async (request: { outputSchema?: unknown }) => JSON.stringify(output(request.outputSchema as Record<string, any>)));
@@ -41,15 +43,17 @@ it.each([false, true])('rejects impossible host citations after scope and before
     expect(result).toMatchObject({ success: false, errors: [expect.objectContaining({ code: 'validation.evidence-too-large', retryable: false, recovery: { id: 'progress-assessment-capacity-exceeded', variables: expect.objectContaining({ requirementId: 'R13', sourceLineId: 'L13' }) } })] });
     expect(f.execute).toHaveBeenCalledTimes(1); retained(f);
 });
-it('retains state after one complete replacement still exceeds its newly derived native field ceiling', async () => {
+it('retains state when a derived native length rejection is followed by an invalid closed-code replacement', async () => {
     const f = fixture(); f.setRogue('schema'); const result = (await f.invoke())[0];
     const schema = f.execute.mock.calls[1][0].outputSchema as any;
     const maximum = schema.properties.requirements.items.properties.summary.maxLength;
-    expect(result).toMatchObject({ success: false, errors: [expect.objectContaining({ recovery: { id: 'progress-assessment-length-invalid', variables: {
-        field: '$.requirements[0].summary', requirementId: 'R1', sourceLineId: 'L1', maximum, observed: maximum + 1,
+    expect(result).toMatchObject({ success: false, errors: [expect.objectContaining({ recovery: { id: 'progress-result-contract-invalid', variables: {
+        phase: 'assessment', reason: 'schema-enum', field: '$.requirements[0].assessment', requirementId: 'R1', sourceLineId: 'L1',
     } } })] });
     expect(maximum).toBeLessThan(800); expect(f.execute).toHaveBeenCalledTimes(3);
-    expect(f.execute.mock.calls[2][0].outputSchema).toBe(schema); retained(f);
+    expect(f.execute.mock.calls[2][0].outputSchema).toHaveProperty('properties.requirements.items.properties.assessment.enum');
+    expect(f.execute.mock.calls[2][0].outputSchema).not.toHaveProperty('properties.requirements.items.properties.summary');
+    expect(JSON.stringify(result)).not.toContain('PRIVATE_INVALID_CODE'); retained(f);
 });
 it.each(['summary', 'remaining'] as const)('retains state and rejects an oversized %s fact from an alternate port that ignores schema', async field => {
     const f = fixture(false, 20, false); f.setRogue(field); const result = (await f.invoke())[0];

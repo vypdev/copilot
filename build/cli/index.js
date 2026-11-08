@@ -39961,7 +39961,7 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
     }),
     'progress-assessment-length-invalid': Object.freeze({
         impact: 'An acceptance field still exceeds its unchanged response limit after one complete replacement; progress was not published.',
-        action: 'Inspect phase assessment, requirement {requirementId}, original source {sourceLineId}, field {field}: observed {observed} Unicode code points; maximum {maximum}. Start a fresh complete assessment when the provider can satisfy the unchanged schema. Preserve every requirement and citation; do not truncate facts, raise limits or bypass verification.',
+        action: 'Inspect phase assessment, requirement {requirementId}, original source {sourceLineId}, field {field}: observed {observed} Unicode code points; maximum {maximum}. Do not automatically repeat the unchanged comparison. Validate a corrected Copilot build against the pinned source before starting one fresh complete assessment. Preserve every requirement and citation; do not truncate facts, raise limits or bypass verification.',
         retainedState: 'Existing progress labels and published assessments were preserved. No partial percentage was published. Verification, review, coverage and approval remain independent gates.',
     }),
     'progress-completion-recovery-exhausted': Object.freeze({
@@ -40182,7 +40182,7 @@ const SPANISH_RECOVERY_CONTENT = Object.freeze({
     }),
     'progress-assessment-length-invalid': Object.freeze({
         impact: 'Un campo de aceptación sigue superando su límite de respuesta tras una sustitución completa; no se publicó el progreso.',
-        action: 'Inspecciona la fase assessment, requisito {requirementId}, fuente original {sourceLineId}, campo {field}: observado {observed} puntos de código Unicode; máximo {maximum}. Inicia una evaluación completa nueva cuando el proveedor pueda cumplir el mismo esquema. Conserva todos los requisitos y citas; no recortes hechos, aumentes límites ni eludas la verificación.',
+        action: 'Inspecciona la fase assessment, requisito {requirementId}, fuente original {sourceLineId}, campo {field}: observado {observed} puntos de código Unicode; máximo {maximum}. No repitas automáticamente la misma comparación. Valida una compilación corregida de Copilot con la fuente fijada antes de iniciar una evaluación completa nueva. Conserva todos los requisitos y citas; no recortes hechos, aumentes límites ni eludas la verificación.',
         retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas. No se publicó ningún porcentaje parcial. Verificación, revisión, cobertura y aprobación siguen siendo controles independientes.',
     }),
     'progress-completion-recovery-exhausted': Object.freeze({
@@ -46912,7 +46912,7 @@ function progressAssessmentLengthRepairPrompt(prompt, facts) {
     return prompt + PREFIX + JSON.stringify(facts) + SUFFIX;
 }
 function progressAssessmentLengthRejected(facts) {
-    return new application_error_1.ApplicationError('agent.failed', 'A progress acceptance fact still exceeds its unchanged limit after one complete replacement; existing progress was retained.', { recovery: { id: 'progress-assessment-length-invalid', variables: facts } });
+    return new application_error_1.ApplicationError('agent.failed', 'A progress acceptance fact still exceeds its unchanged limit after one complete replacement; existing progress was retained.', { retryable: false, recovery: { id: 'progress-assessment-length-invalid', variables: facts } });
 }
 
 
@@ -47453,6 +47453,139 @@ function progressCapacityDiffContext(diff, allPathReceiptsAccepted = false) {
     }
     return (0, progress_capacity_context_policy_1.progressComparisonCapacityContext)({ baseSha: diff.baseSha, headSha: diff.headSha, requiredPaths: required,
         reviewedPaths: diff.kind === 'partitioned' && allPathReceiptsAccepted ? required : [], ...(manifestDigest === undefined ? {} : { manifestDigest }) });
+}
+
+
+/***/ }),
+
+/***/ 32351:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.COMPACT_PROGRESS_HINT_MAX_BYTES = void 0;
+exports.compactProgressAssessmentPlan = compactProgressAssessmentPlan;
+exports.decodeCompactProgressAssessment = decodeCompactProgressAssessment;
+exports.compactProgressAssessmentPrompt = compactProgressAssessmentPrompt;
+exports.reservedCompactProgressAssessmentPrompt = reservedCompactProgressAssessmentPrompt;
+const locale_1 = __nccwpck_require__(15386);
+const progress_assessment_length_failure_1 = __nccwpck_require__(79736);
+const progress_completion_diagnostic_1 = __nccwpck_require__(75095);
+const progress_response_rejection_policy_1 = __nccwpck_require__(43023);
+const record = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+const exact = (value, keys) => Object.keys(value).sort().join(',') === [...keys].sort().join(',');
+const ASSESSMENTS = Object.freeze({
+    supported: { status: 'supported', evidence: 'source-only', summary: 'present', remaining: null },
+    partial: { status: 'missing', evidence: 'source-only', summary: 'partial', remaining: 'implementation' },
+    missing: { status: 'missing', evidence: 'source-only', summary: 'absent', remaining: 'implementation' },
+    contradictory: { status: 'missing', evidence: 'contradictory', summary: 'absent', remaining: 'implementation' },
+    'source-unverified': { status: 'verification-unknown', evidence: 'source-only', summary: 'present', remaining: 'verification' },
+    'partial-unverified': { status: 'verification-unknown', evidence: 'source-only', summary: 'partial', remaining: 'verification' },
+    'execution-unverified': { status: 'verification-unknown', evidence: 'external-unverified', summary: 'unknown', remaining: 'verification' },
+    'evidence-unavailable': { status: 'verification-unknown', evidence: 'unavailable', summary: 'unknown', remaining: 'evidence' },
+    'evidence-contradictory': { status: 'verification-unknown', evidence: 'contradictory', summary: 'unknown', remaining: 'clarification' },
+    'scope-unclear': { status: 'verification-unknown', evidence: 'unavailable', summary: 'unknown', remaining: 'clarification' },
+});
+const LABELS = Object.freeze({
+    en: Object.freeze({ summary: Object.freeze({ present: 'In source', partial: 'Partial', absent: 'Missing', unknown: 'Unclear' }),
+        remaining: Object.freeze({ implementation: 'Implement', verification: 'Verify', clarification: 'Clarify', evidence: 'Get proof' }) }),
+    es: Object.freeze({ summary: Object.freeze({ present: 'En código', partial: 'Parcial', absent: 'Falta', unknown: 'Sin datos' }),
+        remaining: Object.freeze({ implementation: 'Completar', verification: 'Verificar', clarification: 'Aclarar', evidence: 'Evidencia' }) }),
+});
+exports.COMPACT_PROGRESS_HINT_MAX_BYTES = 256;
+const PREFIX = '\n\nComplete closed-fact assessment protocol\nThe current native schema encodes status, evidence, summary and remaining as one assessment code. This protocol supersedes the earlier response example for this request only. Return the SAME complete assigned batch, every original identity and citation, with no prose fields. Codes are fixed semantic identifiers, not human sentences.\n'
+    + 'supported: fully supported by source, no remaining; partial: partly implemented with missing work; missing: implementation absent; contradictory: source behavior contradicts the requirement and needs implementation. These last three mean missing implementation.\n'
+    + 'source-unverified: implementation visible but required verification unknown; partial-unverified: partial source and unknown verification; execution-unverified: external execution unverified; evidence-unavailable: required evidence absent; evidence-contradictory: conflicting evidence needs clarification; scope-unclear: requirement needs clarification. These six mean verification-unknown. Any uncertain scope MUST use scope-unclear.\n'
+    + 'Source observations never attest test execution, review, coverage or approval. Choose the percentage after all codes: 100 only when every code is supported, otherwise below 100. Do not omit, merge or reinterpret requirements. The host renders complete short labels inside the ORIGINAL hard allocation; it never clips model prose.\n';
+const FACTS = '\n[BEGIN_CLOSED_PREVIOUS_ASSESSMENT_FACTS]\n';
+const SUFFIX = '\n[END_CLOSED_PREVIOUS_ASSESSMENT_FACTS]';
+/** A separate finite wire shape; the original schema and published text allocation remain intact. */
+function compactProgressAssessmentPlan(schema, locale) {
+    const properties = schema.properties, definition = record(properties) ? properties.requirements : undefined;
+    const items = record(definition) ? definition.items : undefined, fields = record(items) ? items.properties : undefined;
+    if (!record(properties) || !record(definition) || !record(items) || !record(fields)
+        || !record(fields.summary) || !record(fields.remaining) || !Array.isArray(items.required))
+        return undefined;
+    const required = items.required;
+    const fieldKeys = Object.keys(fields);
+    if (items.type !== 'object' || items.additionalProperties !== false
+        || fieldKeys.some(key => !['id', 'status', 'evidence', 'summary', 'remaining', 'citations'].includes(key))
+        || required.length !== fieldKeys.length || new Set(required).size !== required.length
+        || !fieldKeys.every(key => required.includes(key)))
+        return undefined;
+    if (fields.summary.type !== 'string' || !Array.isArray(fields.remaining.type)
+        || [...fields.remaining.type].sort().join(',') !== 'null,string'
+        || !['id', 'status', 'evidence', 'summary', 'remaining'].every(key => record(fields[key]) && required.includes(key)))
+        return undefined;
+    for (const [name, values] of [['status', ['supported', 'missing', 'verification-unknown']], ['evidence', ['source-only', 'external-unverified', 'unavailable', 'contradictory']]]) {
+        const field = fields[name];
+        if (field.type !== 'string' || !Array.isArray(field.enum) || [...field.enum].sort().join(',') !== [...values].sort().join(',')
+            || Object.keys(field).some(key => !['type', 'enum', 'description'].includes(key)))
+            return undefined;
+    }
+    for (const field of [fields.summary, fields.remaining]) {
+        if (field.minLength !== 1 || typeof field.maxLength !== 'number' || !Number.isSafeInteger(field.maxLength)
+            || field.maxLength < 9 || field.maxLength > 800
+            || Object.keys(field).some(key => !['type', 'minLength', 'maxLength', 'description'].includes(key)))
+            return undefined;
+    }
+    const { summary: _summary, remaining: _remaining, status: _status, evidence: _evidence, id, ...identities } = fields;
+    // Reserve the small semantic enum before a potentially large citation dictionary.
+    const codedFields = { id, assessment: { type: 'string', enum: Object.keys(ASSESSMENTS) }, ...identities };
+    const codedItems = { ...items, properties: codedFields,
+        required: [...required.filter(key => !['summary', 'remaining', 'status', 'evidence'].includes(key)), 'assessment'] };
+    return Object.freeze({ sourceSchema: schema, locale,
+        schema: { ...schema, properties: { ...properties, requirements: { ...definition, items: codedItems } } } });
+}
+/** Model metadata keeps the exact requested locale; host-owned labels use the bundled whole-catalog fallback. */
+function decodeCompactProgressAssessment(response, plan, scope, anchors) {
+    const payload = (0, progress_response_rejection_policy_1.progressResponsePayload)(response, plan.locale, 'assessment');
+    const properties = plan.schema.properties;
+    const fields = properties.requirements.items.properties;
+    const fail = (index, candidate = 'none', reason = 'requirement-shape-invalid') => {
+        const id = scope.requirements.find(requirement => requirement.id === candidate)?.id ?? 'none';
+        throw (0, progress_response_rejection_policy_1.progressResponseRejected)({ phase: 'assessment', reason, field: index < 0 ? '$.requirements' : `$.requirements[${index}].assessment`,
+            requirementId: id, sourceLineId: anchors[id] ?? 'none' });
+    };
+    if (!exact(payload, Object.keys(properties)))
+        fail(-1, 'none', 'response-shape-invalid');
+    if (!Array.isArray(payload.requirements) || payload.requirements.length !== scope.requirements.length)
+        fail(-1, 'none', 'requirements-incomplete');
+    const labels = (0, locale_1.baseLanguage)(plan.locale) === 'es' ? LABELS.es : LABELS.en;
+    const seen = new Set();
+    const requirements = payload.requirements.map((value, index) => {
+        if (!record(value) || !exact(value, Object.keys(fields)))
+            return fail(index);
+        if (typeof value.id !== 'string' || !scope.requirements.some(requirement => requirement.id === value.id))
+            return fail(index, 'none', 'requirement-id-invalid');
+        if (seen.has(value.id))
+            return fail(index, value.id, 'requirement-id-duplicate');
+        seen.add(value.id);
+        if (typeof value.assessment !== 'string' || !Object.prototype.hasOwnProperty.call(ASSESSMENTS, value.assessment))
+            return fail(index, value.id, 'requirement-summary-invalid');
+        const assessed = ASSESSMENTS[value.assessment];
+        const uncertain = scope.requirements.find(requirement => requirement.id === value.id)?.uncertain;
+        if (uncertain && value.assessment !== 'scope-unclear')
+            return fail(index, value.id, 'requirement-status-invalid');
+        const { assessment: _assessment, ...identity } = value;
+        return { ...identity, status: assessed.status, evidence: assessed.evidence,
+            summary: labels.summary[assessed.summary], remaining: assessed.remaining === null ? null : labels.remaining[assessed.remaining] };
+    });
+    return { ...payload, requirements };
+}
+function compactProgressAssessmentPrompt(prompt, facts) {
+    if (!facts)
+        return prompt + PREFIX;
+    let closed;
+    if ((0, progress_assessment_length_failure_1.isProgressAssessmentLengthDiagnostic)(facts))
+        closed = facts;
+    else
+        closed = (0, progress_completion_diagnostic_1.normalizeProgressCompletionDiagnostic)(facts);
+    return prompt + PREFIX + FACTS + JSON.stringify(closed) + SUFFIX;
+}
+function reservedCompactProgressAssessmentPrompt(prompt) {
+    return prompt + PREFIX + FACTS + ' '.repeat(exports.COMPACT_PROGRESS_HINT_MAX_BYTES) + SUFFIX;
 }
 
 
@@ -48239,6 +48372,7 @@ const progress_diff_partition_policy_1 = __nccwpck_require__(70628);
 const progress_partition_response_policy_1 = __nccwpck_require__(30025);
 const progress_completion_recovery_policy_1 = __nccwpck_require__(93325);
 const progress_assessment_length_policy_1 = __nccwpck_require__(60334);
+const progress_compact_assessment_policy_1 = __nccwpck_require__(32351);
 exports.PROGRESS_PROMPT_FRAMING_RESERVE_BYTES = 1024;
 /** Counts exactly the security/schema/task envelope used by the native adapter. */
 function remainingProgressPromptBytes(prompt, task, schema, effort, dimension = 'native-prompt-bytes') {
@@ -48261,7 +48395,8 @@ function progressAggregateBudget(promptWithoutEvidence, schema, effort) {
 /** Both original and worst complete final replacement fit before any scope request is admitted. */
 function remainingProgressAssessmentPromptBytes(prompt, schema, effort) {
     remainingProgressPromptBytes(prompt, 'progress', schema, effort);
-    return Math.min(remainingProgressPromptBytes((0, progress_completion_recovery_policy_1.reservedProgressCompletionPrompt)(prompt), 'progress', schema, effort, 'native-prompt-reserve-bytes'), remainingProgressPromptBytes((0, progress_assessment_length_policy_1.reservedProgressAssessmentLengthPrompt)(prompt), 'progress', schema, effort, 'native-prompt-reserve-bytes'));
+    const compact = (0, progress_compact_assessment_policy_1.compactProgressAssessmentPlan)(schema, 'en-US');
+    return Math.min(remainingProgressPromptBytes((0, progress_completion_recovery_policy_1.reservedProgressCompletionPrompt)(prompt), 'progress', schema, effort, 'native-prompt-reserve-bytes'), remainingProgressPromptBytes((0, progress_assessment_length_policy_1.reservedProgressAssessmentLengthPrompt)(prompt), 'progress', schema, effort, 'native-prompt-reserve-bytes'), ...(compact ? [remainingProgressPromptBytes((0, progress_compact_assessment_policy_1.reservedCompactProgressAssessmentPrompt)(prompt), 'progress', compact.schema, effort, 'native-prompt-reserve-bytes')] : []));
 }
 
 
@@ -61312,6 +61447,7 @@ async function analyzeProgressBatches(context, issueDescription, captured, diff,
     const minimumCalls = bounded.calls() + plans.reduce((sum, plan) => sum + (plan.boundDiff.kind === 'partitioned' ? plan.boundDiff.partitions.length : 0) + plan.planned.length, 0);
     if (minimumCalls > progress_batch_policy_1.PROGRESS_BATCH_PROFILE.calls)
         throw (0, progress_batch_policy_1.progressBatchRejected)('call-budget', { expected: batches.length });
+    (0, logging_ports_1.logInfo)(`Acceptance inventory admitted: ${scope.requirements.length} requirements in ${batches.length} batches; each summary and remaining has a hard ${plans[0].planned[0].schema.properties.requirements.items.properties.summary.maxLength}-Unicode-point limit. Previous progress is retained.`);
     const receipts = [];
     for (const [index, plan] of plans.entries()) {
         (0, logging_ports_1.logInfo)(`Collecting complete comparison evidence for scope group ${index + 1} of ${plans.length}; verified ${receipts.length} of ${batches.length} acceptance batches. Previous progress is retained.`);
@@ -61320,16 +61456,15 @@ async function analyzeProgressBatches(context, issueDescription, captured, diff,
         capacity(() => requests.forEach(({ prompt, schema }) => (0, progress_prompt_capacity_policy_1.remainingProgressAssessmentPromptBytes)(prompt, schema, context.agentConfiguration.effort)));
         for (const { batch, schema, prompt } of requests) {
             let acceptedResponse;
-            const receiptAgent = { query: async (request) => {
-                    const response = await boundedAgent.query(request);
-                    const { payload } = (0, progress_batch_policy_1.readProgressAssessmentEvidence)(response, manifest, batch, context.targetLocale, anchors, compact);
-                    acceptedResponse = response;
-                    return payload;
-                } };
+            const projectResponse = (response) => {
+                const { payload } = (0, progress_batch_policy_1.readProgressAssessmentEvidence)(response, manifest, batch, context.targetLocale, anchors, compact);
+                acceptedResponse = response;
+                return payload;
+            };
             (0, logging_ports_1.logInfo)(`Assessing acceptance batch ${batch.ordinal} of ${batches.length}; verified ${receipts.length}. Previous progress is retained.`);
             try {
-                await (0, query_progress_assessment_workflow_1.queryProgressAssessment)(receiptAgent, { configuration: context.agentConfiguration, agentId: agent_task_policy_1.AGENT_PLAN, prompt,
-                    options: { ...(0, agent_output_locale_policy_1.productFacingAgentQueryOptions)('progress', schema), includeReasoning: context.includeReasoning } }, { scope: (0, progress_batch_policy_1.progressBatchDisplayScope)(batch, compact), anchors, targetLocale: context.targetLocale, sourceLineIds: captured.lines.map(line => line.id) });
+                await (0, query_progress_assessment_workflow_1.queryProgressAssessment)(boundedAgent, { configuration: context.agentConfiguration, agentId: agent_task_policy_1.AGENT_PLAN, prompt,
+                    options: { ...(0, agent_output_locale_policy_1.productFacingAgentQueryOptions)('progress', schema), includeReasoning: context.includeReasoning } }, { scope: (0, progress_batch_policy_1.progressBatchDisplayScope)(batch, compact), anchors, targetLocale: context.targetLocale, sourceLineIds: captured.lines.map(line => line.id), preferCompactFacts: compact }, projectResponse);
                 receipts.push((0, progress_batch_policy_1.parseProgressAssessmentReceipt)(acceptedResponse, manifest, batch, anchors, context.targetLocale, compact));
             }
             catch (error) {
@@ -61611,6 +61746,7 @@ const progress_assessment_length_policy_1 = __nccwpck_require__(60334);
 const logging_ports_1 = __nccwpck_require__(6152);
 const progress_response_1 = __nccwpck_require__(64264);
 const query_progress_result_workflow_1 = __nccwpck_require__(33658);
+const progress_compact_assessment_policy_1 = __nccwpck_require__(32351);
 function freezeSnapshot(value) {
     if (value && typeof value === 'object' && !Object.isFrozen(value)) {
         Object.freeze(value);
@@ -61619,7 +61755,7 @@ function freezeSnapshot(value) {
     return value;
 }
 /** Only attributable native length failures enter recovery; completion still has a parse-only catch. */
-async function evaluate(agent, request, context) {
+async function evaluate(agent, request, context, projectResponse, compact) {
     let response;
     try {
         response = await agent.query(request);
@@ -61632,7 +61768,8 @@ async function evaluate(agent, request, context) {
             sourceLineIds: context.sourceLineIds, anchors: context.anchors });
     }
     try {
-        return { kind: 'valid', result: (0, progress_response_1.parseProgressResponse)(response, context.targetLocale, context.scope, context.anchors) };
+        const canonical = compact ? (0, progress_compact_assessment_policy_1.decodeCompactProgressAssessment)(response, compact, context.scope, context.anchors) : response;
+        return { kind: 'valid', result: (0, progress_response_1.parseProgressResponse)(projectResponse(canonical), context.targetLocale, context.scope, context.anchors) };
     }
     catch (error) {
         if (!(error instanceof progress_completion_mismatch_1.ProgressCompletionMismatch))
@@ -61644,22 +61781,29 @@ async function evaluate(agent, request, context) {
     }
 }
 /** One complete read-only replacement; this owner has no publication capability. */
-async function queryProgressAssessment(agent, request, context) {
+async function queryProgressAssessment(agent, request, context, projectResponse = response => response) {
     const captured = freezeSnapshot(globalThis.structuredClone({ request, context }));
     if (!captured.request.options?.schema || captured.request.options.expectJson !== true) {
         throw new application_error_1.ApplicationError('configuration.unsupported', 'Final progress assessment requires its complete response schema. Existing progress was retained.');
     }
     (0, progress_prompt_capacity_policy_1.remainingProgressAssessmentPromptBytes)(captured.request.prompt, captured.request.options.schema, captured.request.configuration?.effort);
-    const first = await evaluate(agent, captured.request, captured.context);
+    const compact = freezeSnapshot((0, progress_compact_assessment_policy_1.compactProgressAssessmentPlan)(captured.request.options.schema, captured.context.targetLocale));
+    const initialCompact = captured.context.preferCompactFacts ? compact : undefined;
+    const compactRequest = (plan, facts) => freezeSnapshot({
+        ...captured.request, prompt: (0, progress_compact_assessment_policy_1.compactProgressAssessmentPrompt)(captured.request.prompt, facts),
+        options: { ...captured.request.options, schema: plan.schema },
+    });
+    const first = await evaluate(agent, initialCompact ? compactRequest(initialCompact) : captured.request, captured.context, projectResponse, initialCompact);
     if (first.kind === 'valid')
         return first.result;
     (0, logging_ports_1.logInfo)(first.kind === 'length'
         ? 'A progress acceptance fact exceeded its unchanged response limit. Requesting one complete replacement for the same pinned batch; previous progress is retained.'
         : 'Reassessing one inconsistent completed progress estimate using the same complete pinned evidence. Previous progress is retained.');
-    const replacement = { ...captured.request, prompt: first.kind === 'length'
+    const replacementCompact = initialCompact ?? (first.kind === 'length' ? compact : undefined);
+    const replacement = replacementCompact ? compactRequest(replacementCompact, first.facts) : { ...captured.request, prompt: first.kind === 'length'
             ? (0, progress_assessment_length_policy_1.progressAssessmentLengthRepairPrompt)(captured.request.prompt, first.facts)
             : (0, progress_completion_recovery_policy_1.progressCompletionRepairPrompt)(captured.request.prompt, first.facts) };
-    const second = await evaluate(agent, replacement, captured.context);
+    const second = await evaluate(agent, replacement, captured.context, projectResponse, replacementCompact);
     if (second.kind === 'valid')
         return second.result;
     if (second.kind === 'length')
@@ -103401,7 +103545,7 @@ exports.PROGRESS_RESPONSE_REASONS = Object.freeze({
 const fieldPatterns = Object.freeze({
     scope: /^\$(?:\.outputLocale|\.lines(?:\[(0|[1-9]\d{0,3})\](?:\.(?:id|kind|sameAs))?)?)?$/u,
     partition: /^\$(?:\.outputLocale|\.partitionId|\.files(?:\[(0|[1-9]\d{0,3})\](?:\.(?:path|unitId|implemented|remaining))?)?)?$/u,
-    assessment: /^\$(?:\.outputLocale|\.progress|\.requirements(?:\[(0|[1-9]\d{0,3})\](?:\.(?:id|status|evidence|summary|remaining))?)?)?$/u,
+    assessment: /^\$(?:\.outputLocale|\.progress|\.requirements(?:\[(0|[1-9]\d{0,3})\](?:\.(?:id|status|evidence|summary|remaining|assessment))?)?)?$/u,
 });
 const maxIndex = Object.freeze({ scope: 1023, partition: 511, assessment: 31 });
 function knownId(value, prefix, maximum) {

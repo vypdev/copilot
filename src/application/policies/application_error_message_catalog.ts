@@ -286,7 +286,7 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
   }),
   'progress-assessment-length-invalid': Object.freeze({
     impact: 'An acceptance field still exceeds its unchanged response limit after one complete replacement; progress was not published.',
-    action: 'Inspect phase assessment, requirement {requirementId}, original source {sourceLineId}, field {field}: observed {observed} Unicode code points; maximum {maximum}. Start a fresh complete assessment when the provider can satisfy the unchanged schema. Preserve every requirement and citation; do not truncate facts, raise limits or bypass verification.',
+    action: 'Inspect phase assessment, requirement {requirementId}, original source {sourceLineId}, field {field}: observed {observed} Unicode code points; maximum {maximum}. Do not automatically repeat the unchanged comparison. Validate a corrected Copilot build against the pinned source before starting one fresh complete assessment. Preserve every requirement and citation; do not truncate facts, raise limits or bypass verification.',
     retainedState: 'Existing progress labels and published assessments were preserved. No partial percentage was published. Verification, review, coverage and approval remain independent gates.',
   }),
   'progress-completion-recovery-exhausted': Object.freeze({
@@ -509,7 +509,7 @@ const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
   }),
   'progress-assessment-length-invalid': Object.freeze({
     impact: 'Un campo de aceptación sigue superando su límite de respuesta tras una sustitución completa; no se publicó el progreso.',
-    action: 'Inspecciona la fase assessment, requisito {requirementId}, fuente original {sourceLineId}, campo {field}: observado {observed} puntos de código Unicode; máximo {maximum}. Inicia una evaluación completa nueva cuando el proveedor pueda cumplir el mismo esquema. Conserva todos los requisitos y citas; no recortes hechos, aumentes límites ni eludas la verificación.',
+    action: 'Inspecciona la fase assessment, requisito {requirementId}, fuente original {sourceLineId}, campo {field}: observado {observed} puntos de código Unicode; máximo {maximum}. No repitas automáticamente la misma comparación. Valida una compilación corregida de Copilot con la fuente fijada antes de iniciar una evaluación completa nueva. Conserva todos los requisitos y citas; no recortes hechos, aumentes límites ni eludas la verificación.',
     retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas. No se publicó ningún porcentaje parcial. Verificación, revisión, cobertura y aprobación siguen siendo controles independientes.',
   }),
   'progress-completion-recovery-exhausted': Object.freeze({

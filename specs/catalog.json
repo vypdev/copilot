@@ -5,9 +5,9 @@
       "id": "github-communication-experience",
       "title": "Semantic GitHub communication and repository localization",
       "status": "implemented",
-      "scope": "English-default, localized, semantic, bounded and idempotent product messages across GitHub and repository-aware operator surfaces; complete acceptance batches and cards with stable source identities, verified published SDD provenance, shared complete-inventory text allocation, precise response diagnostics and same-head requirement evidence before Commit progress publication; shared bounded complete-batch recovery for attributable completed acceptance-field length or completion failures",
+      "scope": "English-default, localized, semantic, bounded and idempotent product messages across GitHub and repository-aware operator surfaces; complete acceptance batches and cards with stable source identities, verified published SDD provenance, shared complete-inventory text allocation, precise response diagnostics and same-head requirement evidence before Commit progress publication; shared bounded complete-batch recovery for attributable completed acceptance-field length or completion failures; bounded closed-fact recovery and compact large-inventory assessment, exact original hard allocations, explicit admission counts and non-retryable length exhaustion with separate live-provider qualification",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-11-07",
+      "lastVerified": "2026-11-08",
       "specs": [
         "specs/semantic-github-publication-and-notification.md",
         "specs/repository-locale-and-localization.md",
@@ -240,7 +240,8 @@
         "src/application/usecases/actions/progress_batch_workflow.ts",
         "src/domain/progress_assessment_length_failure.ts",
         "src/data/repository/progress_assessment_length_failure.ts",
-        "src/application/policies/progress_assessment_length_policy.ts"
+        "src/application/policies/progress_assessment_length_policy.ts",
+        "src/application/policies/progress_compact_assessment_policy.ts"
       ],
       "tests": [
         "src/domain/__tests__/implementation_plan.test.ts",
@@ -427,7 +428,11 @@
         "src/application/usecases/actions/__tests__/progress_assessment_length_recovery.test.ts",
         "src/application/policies/__tests__/progress_assessment_length_policy.test.ts",
         "src/application/policies/__tests__/progress_assessment_length_presentation.test.ts",
-        "src/data/repository/__tests__/progress_assessment_length_failure.test.ts"
+        "src/data/repository/__tests__/progress_assessment_length_failure.test.ts",
+        "src/application/usecases/actions/__tests__/progress_native_generation.integration.test.ts",
+        "src/application/usecases/actions/__tests__/fixtures/domus-29-native-937.json.gz.hex",
+        "src/application/policies/__tests__/progress_compact_assessment_policy.test.ts",
+        "src/application/usecases/actions/__tests__/fixtures/progress_assessment_wire_fixture.ts"
       ],
       "documentation": [
         "docs/configuration.mdx",

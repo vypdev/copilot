@@ -27,7 +27,7 @@ export type ProgressResponseDiagnosticFacts = Readonly<{
 const fieldPatterns = Object.freeze({
     scope: /^\$(?:\.outputLocale|\.lines(?:\[(0|[1-9]\d{0,3})\](?:\.(?:id|kind|sameAs))?)?)?$/u,
     partition: /^\$(?:\.outputLocale|\.partitionId|\.files(?:\[(0|[1-9]\d{0,3})\](?:\.(?:path|unitId|implemented|remaining))?)?)?$/u,
-    assessment: /^\$(?:\.outputLocale|\.progress|\.requirements(?:\[(0|[1-9]\d{0,3})\](?:\.(?:id|status|evidence|summary|remaining))?)?)?$/u,
+    assessment: /^\$(?:\.outputLocale|\.progress|\.requirements(?:\[(0|[1-9]\d{0,3})\](?:\.(?:id|status|evidence|summary|remaining|assessment))?)?)?$/u,
 });
 const maxIndex = Object.freeze({ scope: 1_023, partition: 511, assessment: 31 });
 function knownId(value: unknown, prefix: string, maximum: number): value is string {
