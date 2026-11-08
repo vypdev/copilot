@@ -1,3 +1,4 @@
+import { isBugbotPartitionQueryDiagnostic, type BugbotPartitionQueryDiagnostic } from '../../domain/bugbot/response_failure';
 import { isProgressBatchDiagnostic, type ProgressBatchDiagnostic } from '../../domain/progress_batch_diagnostic';
 import { isBranchSyncPublicationDiagnostic, type BranchSyncPublicationDiagnostic } from '../../domain/branch_sync_publication';
 import { isBugbotReviewBlockFacts, type BugbotReviewBlockFacts } from '../../domain/bugbot/framed_review';
@@ -100,6 +101,7 @@ export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'progress-result-contract-invalid',
     'progress-partition-length-invalid',
     'progress-assessment-length-invalid',
+    'bugbot-partition-query-exhausted',
     'progress-assessment-capacity-exceeded',
     'progress-scope-clause-limit',
     'progress-sdd-seed-unverified',
@@ -130,6 +132,7 @@ interface ApplicationErrorRecoveryVariables extends Readonly<Record<CopilotComma
     readonly 'progress-result-contract-invalid': ProgressResponseDiagnosticFacts;
     readonly 'progress-partition-length-invalid': ProgressPartitionLengthDiagnostic;
     readonly 'progress-assessment-length-invalid': ProgressAssessmentLengthDiagnostic;
+    readonly 'bugbot-partition-query-exhausted': BugbotPartitionQueryDiagnostic;
     readonly 'progress-assessment-capacity-exceeded': ProgressResponseDiagnosticFacts;
     readonly 'progress-sdd-seed-unverified': Readonly<Record<string, never>>;
     readonly 'progress-batch-retained': ProgressBatchDiagnostic;
@@ -472,6 +475,7 @@ const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readon
     'bugbot-review-incomplete': Object.freeze(['profile', 'countKind', 'resource', 'observed', 'limit', 'unit']),
     'progress-result-contract-invalid': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
     'progress-partition-length-invalid': Object.freeze(['partitionId', 'filePath', 'unitId', 'field', 'maximum', 'observed']),
+    'bugbot-partition-query-exhausted': Object.freeze(['reason', 'attempts']),
     'progress-assessment-length-invalid': Object.freeze(['requirementId', 'sourceLineId', 'field', 'maximum', 'observed']),
     'progress-assessment-capacity-exceeded': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
     'progress-batch-retained': Object.freeze(['reason', 'verified', 'expected', 'batch', 'requirementId']),
@@ -583,6 +587,7 @@ function normalizeApplicationErrorRecovery(
     if (recovery.id === 'progress-result-contract-invalid' && !isProgressResponseDiagnosticFacts(variables)) throw new TypeError('Progress response diagnostic is invalid.');
     if (recovery.id === 'progress-partition-length-invalid' && !isProgressPartitionLengthDiagnostic(variables)) throw new TypeError('Progress part length diagnostic is invalid.');
     if (recovery.id === 'progress-assessment-length-invalid' && !isProgressAssessmentLengthDiagnostic(variables)) throw new TypeError('Progress assessment length diagnostic is invalid.');
+    if (recovery.id === 'bugbot-partition-query-exhausted' && !isBugbotPartitionQueryDiagnostic(variables)) throw new TypeError('Bugbot partition query diagnostic is invalid.');
     if (recovery.id === 'bugbot-review-incomplete' && !isBugbotReviewBlockFacts(variables)) throw new TypeError('Bugbot review diagnostic is invalid.');
     if (recovery.id === 'progress-inventory-incomplete' && !isProgressInventoryDiagnostic(variables)) throw new TypeError('Progress inventory diagnostic is invalid.');
     if (recovery.id === 'progress-binary-evidence-unavailable' && !isProgressBinaryEvidenceFacts(variables)) throw new TypeError('Progress binary evidence diagnostic is invalid.');

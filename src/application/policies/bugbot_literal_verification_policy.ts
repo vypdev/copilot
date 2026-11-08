@@ -1,3 +1,4 @@
+import { BugbotVerificationResponseFailure } from '../errors/bugbot_verification_response_failure';
 import type { BugbotFinding } from '../../domain/bugbot/finding';
 import { createHash } from 'node:crypto';
 import { ApplicationError } from '../errors/application_error';
@@ -83,5 +84,5 @@ function originalCandidates(candidates: readonly BugbotFinding[]): ReadonlyMap<s
 }
 
 function invalidVerification(): ApplicationError {
-  return new ApplicationError('agent.failed', 'Generated-source verification is incomplete or changed candidate identity, file, anchor or proof. Recheck the exact source; no clean result was verified.');
+  return new BugbotVerificationResponseFailure( 'Generated-source verification is incomplete or changed candidate identity, file, anchor or proof. Recheck the exact source; no clean result was verified.');
 }

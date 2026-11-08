@@ -32597,6 +32597,11 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
         action: 'Inspect part {partitionId}, file {filePath}, unit {unitId}, field {field}: observed {observed} Unicode code points; maximum {maximum}. The replacement must satisfy the unchanged schema. Do not remove files, truncate facts, relax acceptance or bypass verification.',
         retainedState: 'Existing progress labels and assessments were preserved. No partial percentage or passing verification was published; execution and optional check-publication failures remain separate.',
     }),
+    'bugbot-partition-query-exhausted': Object.freeze({
+        impact: 'A completed Bugbot partition response remained invalid after {attempts} attempts; the review was not published.',
+        action: 'Inspect response reason {reason} and the current run. Qualify the provider output contract before a fresh complete review. This diagnostic describes completed response validation, not an execution infrastructure failure.',
+        retainedState: 'Prior findings and resolutions were preserved. No partial review was published. Source freshness and complete-review gates remain required.',
+    }),
     'progress-assessment-length-invalid': Object.freeze({
         impact: 'An acceptance field still exceeds its unchanged response limit after one complete replacement; progress was not published.',
         action: 'Inspect phase assessment, requirement {requirementId}, original source {sourceLineId}, field {field}: observed {observed} Unicode code points; maximum {maximum}. Start a fresh complete assessment when the provider can satisfy the unchanged schema. Preserve every requirement and citation; do not truncate facts, raise limits or bypass verification.',
@@ -32817,6 +32822,11 @@ const SPANISH_RECOVERY_CONTENT = Object.freeze({
         impact: 'Una parte del progreso sigue superando el límite de respuesta tras una sustitución acotada; no se publicó el progreso.',
         action: 'Inspecciona la parte {partitionId}, archivo {filePath}, unidad {unitId}, campo {field}: observado {observed} puntos de código Unicode; máximo {maximum}. La sustitución debe cumplir el mismo esquema. No elimines archivos, recortes los hechos, relajes la aceptación ni eludas la verificación.',
         retainedState: 'Se conservaron las etiquetas y evaluaciones de progreso. No se publicó ningún porcentaje parcial ni verificación aprobada; los fallos de ejecución y de publicación del check opcional siguen siendo independientes.',
+    }),
+    'bugbot-partition-query-exhausted': Object.freeze({
+        impact: 'La respuesta completada de una partición de Bugbot siguió siendo inválida tras {attempts} intentos; no se publicó la revisión.',
+        action: 'Inspecciona el motivo de respuesta {reason} y la ejecución actual. Valida el contrato de salida del proveedor antes de una revisión completa nueva. Este diagnóstico describe la validación de una respuesta completada, no un fallo de infraestructura de ejecución.',
+        retainedState: 'Se conservaron los hallazgos y resoluciones anteriores. No se publicó una revisión parcial. Siguen siendo obligatorios los controles de fuente vigente y revisión completa.',
     }),
     'progress-assessment-length-invalid': Object.freeze({
         impact: 'Un campo de aceptación sigue superando su límite de respuesta tras una sustitución completa; no se publicó el progreso.',
@@ -34039,6 +34049,7 @@ var _ApplicationError_cause;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = exports.APPLICATION_ERROR_RECOVERY_IDS = void 0;
 exports.isApplicationErrorCorrelationId = isApplicationErrorCorrelationId;
+const response_failure_1 = __nccwpck_require__(4286);
 const progress_batch_diagnostic_1 = __nccwpck_require__(9486);
 const branch_sync_publication_1 = __nccwpck_require__(7857);
 const framed_review_1 = __nccwpck_require__(3750);
@@ -34103,6 +34114,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'progress-result-contract-invalid',
     'progress-partition-length-invalid',
     'progress-assessment-length-invalid',
+    'bugbot-partition-query-exhausted',
     'progress-assessment-capacity-exceeded',
     'progress-scope-clause-limit',
     'progress-sdd-seed-unverified',
@@ -34367,6 +34379,7 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'bugbot-review-incomplete': Object.freeze(['profile', 'countKind', 'resource', 'observed', 'limit', 'unit']),
     'progress-result-contract-invalid': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
     'progress-partition-length-invalid': Object.freeze(['partitionId', 'filePath', 'unitId', 'field', 'maximum', 'observed']),
+    'bugbot-partition-query-exhausted': Object.freeze(['reason', 'attempts']),
     'progress-assessment-length-invalid': Object.freeze(['requirementId', 'sourceLineId', 'field', 'maximum', 'observed']),
     'progress-assessment-capacity-exceeded': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
     'progress-batch-retained': Object.freeze(['reason', 'verified', 'expected', 'batch', 'requirementId']),
@@ -34480,6 +34493,8 @@ function normalizeApplicationErrorRecovery(recovery) {
         throw new TypeError('Progress part length diagnostic is invalid.');
     if (recovery.id === 'progress-assessment-length-invalid' && !(0, progress_assessment_length_failure_1.isProgressAssessmentLengthDiagnostic)(variables))
         throw new TypeError('Progress assessment length diagnostic is invalid.');
+    if (recovery.id === 'bugbot-partition-query-exhausted' && !(0, response_failure_1.isBugbotPartitionQueryDiagnostic)(variables))
+        throw new TypeError('Bugbot partition query diagnostic is invalid.');
     if (recovery.id === 'bugbot-review-incomplete' && !(0, framed_review_1.isBugbotReviewBlockFacts)(variables))
         throw new TypeError('Bugbot review diagnostic is invalid.');
     if (recovery.id === 'progress-inventory-incomplete' && !(0, progress_inventory_diagnostic_1.isProgressInventoryDiagnostic)(variables))
@@ -35496,6 +35511,38 @@ function bugbotReviewResourceUnit(resource) {
     return resource.endsWith('Utf16') ? 'UTF-16 code units'
         : resource.endsWith('Bytes') ? 'UTF-8 bytes' : resource === 'gitReads' ? 'operations' : 'items';
 }
+
+
+/***/ }),
+
+/***/ 4286:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BugbotResponseFailure = exports.BUGBOT_RESPONSE_FAILURE_REASONS = void 0;
+exports.isBugbotPartitionQueryDiagnostic = isBugbotPartitionQueryDiagnostic;
+/** Content-free reasons for a completed Bugbot response, never process or provider guesses. */
+exports.BUGBOT_RESPONSE_FAILURE_REASONS = Object.freeze(['json-invalid', 'schema-type', 'schema-enum', 'schema-string-short',
+    'schema-string-long', 'schema-number-finite', 'schema-number-min', 'schema-number-max', 'schema-array-short',
+    'schema-array-long', 'schema-required', 'schema-additional', 'verification-invalid']);
+function isBugbotPartitionQueryDiagnostic(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return false;
+    const facts = value;
+    return Object.keys(facts).sort().join(',') === 'attempts,reason' && facts.attempts === 3
+        && exports.BUGBOT_RESPONSE_FAILURE_REASONS.some(reason => reason === facts.reason);
+}
+class BugbotResponseFailure extends Error {
+    constructor(reason) {
+        super('A completed Bugbot response did not satisfy its structured contract.');
+        this.reason = reason;
+        if (!exports.BUGBOT_RESPONSE_FAILURE_REASONS.some(known => known === reason))
+            throw new TypeError('Bugbot response reason is invalid.');
+    }
+}
+exports.BugbotResponseFailure = BugbotResponseFailure;
 
 
 /***/ }),

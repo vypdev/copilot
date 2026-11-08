@@ -111,6 +111,26 @@ function bugbotMutationError(cause, stage, findingIds, fallback, affectedCount =
 
 /***/ }),
 
+/***/ 2486:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BugbotVerificationResponseFailure = void 0;
+const application_error_1 = __nccwpck_require__(5999);
+/** Host-validated candidate proof rejection; distinct from agent execution and capacity failures. */
+class BugbotVerificationResponseFailure extends application_error_1.ApplicationError {
+    constructor(message) {
+        super('agent.failed', message);
+        this.reason = 'verification-invalid';
+    }
+}
+exports.BugbotVerificationResponseFailure = BugbotVerificationResponseFailure;
+
+
+/***/ }),
+
 /***/ 6457:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -1405,6 +1425,7 @@ exports.literalVerificationId = literalVerificationId;
 exports.assertLiteralVerificationPrompt = assertLiteralVerificationPrompt;
 exports.assertLiteralVerificationResponse = assertLiteralVerificationResponse;
 exports.applyLiteralVerification = applyLiteralVerification;
+const bugbot_verification_response_failure_1 = __nccwpck_require__(2486);
 const node_crypto_1 = __nccwpck_require__(6005);
 const application_error_1 = __nccwpck_require__(5999);
 exports.MAX_LITERAL_VERIFICATION_CANDIDATES = 20;
@@ -1483,7 +1504,7 @@ function originalCandidates(candidates) {
     return originals;
 }
 function invalidVerification() {
-    return new application_error_1.ApplicationError('agent.failed', 'Generated-source verification is incomplete or changed candidate identity, file, anchor or proof. Recheck the exact source; no clean result was verified.');
+    return new bugbot_verification_response_failure_1.BugbotVerificationResponseFailure('Generated-source verification is incomplete or changed candidate identity, file, anchor or proof. Recheck the exact source; no clean result was verified.');
 }
 
 
@@ -5998,6 +6019,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.queryBugbotFindings = queryBugbotFindings;
 exports.buildBugbotPartitionQueryRequest = buildBugbotPartitionQueryRequest;
 exports.queryBugbotPartitionFindings = queryBugbotPartitionFindings;
+const bugbot_verification_response_failure_1 = __nccwpck_require__(2486);
+const response_failure_1 = __nccwpck_require__(4286);
 const framed_review_1 = __nccwpck_require__(3750);
 const bugbot_framed_receipt_policy_1 = __nccwpck_require__(4411);
 const agent_task_policy_1 = __nccwpck_require__(5712);
@@ -6058,6 +6081,9 @@ async function queryBugbotPartitionFindings(repository, configuration, prompt, t
                 : validation.payload;
         }
         catch (error) {
+            if (attempt === MAX_PARTITION_QUERY_ATTEMPTS && (error instanceof response_failure_1.BugbotResponseFailure || error instanceof bugbot_verification_response_failure_1.BugbotVerificationResponseFailure)) {
+                throw new application_error_1.ApplicationError('agent.failed', 'The completed Bugbot partition responses failed completed-response validation after three attempts.', { retryable: false, recovery: { id: 'bugbot-partition-query-exhausted', variables: { reason: error.reason, attempts: 3 } } });
+            }
             if (attempt === MAX_PARTITION_QUERY_ATTEMPTS || (error instanceof framed_review_1.BugbotReviewCompletenessError && error.facts.resource !== 'receipt'))
                 throw error;
             (0, logging_ports_1.logInfo)(`Bugbot reviewer retrying one partition query (${attempt + 1}/${MAX_PARTITION_QUERY_ATTEMPTS}) after unusable agent output.`);
@@ -6667,6 +6693,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildLiteralVerificationSchema = buildLiteralVerificationSchema;
 exports.buildLiteralVerificationPrompt = buildLiteralVerificationPrompt;
 exports.verifyGeneratedLiteralFindings = verifyGeneratedLiteralFindings;
+const bugbot_verification_response_failure_1 = __nccwpck_require__(2486);
 const schema_1 = __nccwpck_require__(6808);
 const bugbot_literal_verification_policy_1 = __nccwpck_require__(7802);
 const untrusted_content_1 = __nccwpck_require__(7057);
@@ -6797,7 +6824,7 @@ function record(value) {
     return value;
 }
 function invalidOutput() {
-    return new application_error_1.ApplicationError('agent.failed', 'Generated-source candidate verification returned incomplete or invalid evidence. Recheck the exact source; no clean review was verified.');
+    return new bugbot_verification_response_failure_1.BugbotVerificationResponseFailure('Generated-source candidate verification returned incomplete or invalid evidence. Recheck the exact source; no clean review was verified.');
 }
 
 
@@ -7248,6 +7275,7 @@ var _ApplicationError_cause;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = exports.APPLICATION_ERROR_RECOVERY_IDS = void 0;
 exports.isApplicationErrorCorrelationId = isApplicationErrorCorrelationId;
+const response_failure_1 = __nccwpck_require__(4286);
 const progress_batch_diagnostic_1 = __nccwpck_require__(9486);
 const branch_sync_publication_1 = __nccwpck_require__(7857);
 const framed_review_1 = __nccwpck_require__(3750);
@@ -7312,6 +7340,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'progress-result-contract-invalid',
     'progress-partition-length-invalid',
     'progress-assessment-length-invalid',
+    'bugbot-partition-query-exhausted',
     'progress-assessment-capacity-exceeded',
     'progress-scope-clause-limit',
     'progress-sdd-seed-unverified',
@@ -7576,6 +7605,7 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'bugbot-review-incomplete': Object.freeze(['profile', 'countKind', 'resource', 'observed', 'limit', 'unit']),
     'progress-result-contract-invalid': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
     'progress-partition-length-invalid': Object.freeze(['partitionId', 'filePath', 'unitId', 'field', 'maximum', 'observed']),
+    'bugbot-partition-query-exhausted': Object.freeze(['reason', 'attempts']),
     'progress-assessment-length-invalid': Object.freeze(['requirementId', 'sourceLineId', 'field', 'maximum', 'observed']),
     'progress-assessment-capacity-exceeded': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
     'progress-batch-retained': Object.freeze(['reason', 'verified', 'expected', 'batch', 'requirementId']),
@@ -7689,6 +7719,8 @@ function normalizeApplicationErrorRecovery(recovery) {
         throw new TypeError('Progress part length diagnostic is invalid.');
     if (recovery.id === 'progress-assessment-length-invalid' && !(0, progress_assessment_length_failure_1.isProgressAssessmentLengthDiagnostic)(variables))
         throw new TypeError('Progress assessment length diagnostic is invalid.');
+    if (recovery.id === 'bugbot-partition-query-exhausted' && !(0, response_failure_1.isBugbotPartitionQueryDiagnostic)(variables))
+        throw new TypeError('Bugbot partition query diagnostic is invalid.');
     if (recovery.id === 'bugbot-review-incomplete' && !(0, framed_review_1.isBugbotReviewBlockFacts)(variables))
         throw new TypeError('Bugbot review diagnostic is invalid.');
     if (recovery.id === 'progress-inventory-incomplete' && !(0, progress_inventory_diagnostic_1.isProgressInventoryDiagnostic)(variables))
@@ -8395,6 +8427,38 @@ function bugbotReviewResourceUnit(resource) {
     return resource.endsWith('Utf16') ? 'UTF-16 code units'
         : resource.endsWith('Bytes') ? 'UTF-8 bytes' : resource === 'gitReads' ? 'operations' : 'items';
 }
+
+
+/***/ }),
+
+/***/ 4286:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BugbotResponseFailure = exports.BUGBOT_RESPONSE_FAILURE_REASONS = void 0;
+exports.isBugbotPartitionQueryDiagnostic = isBugbotPartitionQueryDiagnostic;
+/** Content-free reasons for a completed Bugbot response, never process or provider guesses. */
+exports.BUGBOT_RESPONSE_FAILURE_REASONS = Object.freeze(['json-invalid', 'schema-type', 'schema-enum', 'schema-string-short',
+    'schema-string-long', 'schema-number-finite', 'schema-number-min', 'schema-number-max', 'schema-array-short',
+    'schema-array-long', 'schema-required', 'schema-additional', 'verification-invalid']);
+function isBugbotPartitionQueryDiagnostic(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return false;
+    const facts = value;
+    return Object.keys(facts).sort().join(',') === 'attempts,reason' && facts.attempts === 3
+        && exports.BUGBOT_RESPONSE_FAILURE_REASONS.some(reason => reason === facts.reason);
+}
+class BugbotResponseFailure extends Error {
+    constructor(reason) {
+        super('A completed Bugbot response did not satisfy its structured contract.');
+        this.reason = reason;
+        if (!exports.BUGBOT_RESPONSE_FAILURE_REASONS.some(known => known === reason))
+            throw new TypeError('Bugbot response reason is invalid.');
+    }
+}
+exports.BugbotResponseFailure = BugbotResponseFailure;
 
 
 /***/ }),

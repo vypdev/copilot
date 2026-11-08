@@ -1528,6 +1528,21 @@
         }
       ],
       "successMessage": "SDD ownership question assessment: PASS (100% lines/statements/functions/branches)"
+    },
+    {
+      "name": "Bugbot partition response diagnostics",
+      "missingEntryLabel": "Bugbot partition response diagnostics",
+      "rules": [
+        {
+          "files": [
+            "src/domain/bugbot/response_failure.ts",
+            "src/application/errors/bugbot_verification_response_failure.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        }
+      ],
+      "successMessage": "Bugbot partition response diagnostics: PASS (pure closed facts and typed semantic rejection100% all metrics)"
     }
   ]
 }

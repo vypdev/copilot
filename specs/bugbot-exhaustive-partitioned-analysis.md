@@ -3,7 +3,7 @@
 - Status: Implemented
 - Date: 2026-09-20
 - Catalog capability ID: `bugbot-analysis-and-autofix`
-- Last verified: 2026-09-21 on `develop`
+- Last verified: 2026-11-08 (#920 native diagnostic regression; full acceptance pending; baseline remains implemented)
 - Owners: Copilot and Bugbot maintainers
 - Scope: review every reviewable canonical pull-request diff fragment through
   bounded, attested partitions and publish one atomic aggregate result
@@ -561,17 +561,17 @@ comments remain untouched.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD owns at least **67 distinct cases**.
+This SDD owns at least **82 distinct cases** (67 baseline plus the 15 explicitly identified #920 cases below).
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain/pure planning | 35 | empty/single/multi-file, newline/hard split, UTF-16 surrogate-safe hard boundaries and pre-ignore rejection of isolated high/low surrogates, collision-free untrusted-data framing with verbatim delimiter-like patch text, individual and cumulative raw input ceilings before normalization, NFKC-expanded sanitized aggregate ceiling before section rendering, exact prompt and 64/65 partition boundaries, omitted/null/empty patch assignments, malformed change/object/filename/status/count/patch rejection even on ignored paths, root/nested leading-`**/` ignore parity, canonical SHA-1/SHA-256 head acceptance plus hostile/invalid head rejection before interpolation, full SHA-256 ID format plus content/head sensitivity, stable IDs, order, no character loss, hostile status/count metadata envelope |
-| State/application/idempotency/races | 11 | all-complete, one failure, wrong/duplicate ID, wrong SHA, resolution ownership, stale head, replay, empty canonical zero-work, partition-local recovery after agent failure or invalid attestation, bounded exhaustion without publication |
-| Agent adapter/schema contracts | 6 | required attestation, assignment-bound singleton enums, hostile wrong-identity examples in an assigned diff, same-schema retry, locale, undefined/invalid result, aggregate bounds |
+| Domain/pure planning | 37 | empty/single/multi-file, newline/hard split, UTF-16 surrogate-safe hard boundaries and pre-ignore rejection of isolated high/low surrogates, collision-free untrusted-data framing with verbatim delimiter-like patch text, individual and cumulative raw input ceilings before normalization, NFKC-expanded sanitized aggregate ceiling before section rendering, exact prompt and 64/65 partition boundaries, omitted/null/empty patch assignments, malformed change/object/filename/status/count/patch rejection even on ignored paths, root/nested leading-`**/` ignore parity, canonical SHA-1/SHA-256 head acceptance plus hostile/invalid head rejection before interpolation, full SHA-256 ID format plus content/head sensitivity, stable IDs, order, no character loss, hostile status/count metadata envelope |
+| State/application/idempotency/races | 15 | all-complete, one failure, wrong/duplicate ID, wrong SHA, resolution ownership, stale head, replay, empty canonical zero-work, partition-local recovery after agent failure or invalid attestation, bounded exhaustion without publication |
+| Agent adapter/schema contracts | 9 | required attestation, assignment-bound singleton enums, hostile wrong-identity examples in an assigned diff, same-schema retry, locale, undefined/invalid result, aggregate bounds |
 | Workflow/architecture/telemetry | 5 | concurrency two, ordered collection, no mutation before complete, positive and zero-partition plan metrics |
-| UI/UX/localization/sanitization | 4 | pending, failed, complete, hostile content/control characters |
-| Integration/security/compatibility | 6 | 44-file regression, oversized patch, provider partial, dry-run, legacy issue-only path, ignored-only canonical no-op |
-| **Total** | **67** | No double counting |
+| UI/UX/localization/sanitization | 5 | pending, failed, complete, hostile content/control characters |
+| Integration/security/compatibility | 11 | 44-file regression, oversized patch, provider partial, dry-run, legacy issue-only path, ignored-only canonical no-op |
+| **Total** | **82** | No double counting |
 
 Planner, attestation, and aggregate pure policies require 100% enumerated branch
 coverage. Changed analyzer/context modules require at least 95% lines/statements
@@ -768,3 +768,140 @@ source inventory, two sequential frames, live target-ref fences and exact
 coverage receipts supersede the ordinary over-cap remediation for eligible
 workloads. Ordinary planning, conversation/history limits, resolution ownership,
 public configuration and approval controls retain their existing contracts.
+
+
+## 21. Completed-response diagnostics — issue #920
+
+### Evidence and bounded correction
+
+Domus PR29 at `fbb4cfd1d8160e63a6b4d62e4ac118fb2f946a0c` failed review check
+128303665175 after three attempts for partition 1, four completed partitions
+out of 26 and 175 assigned files. Correlation:
+`2ef76976-eaab-42e1-8c00-126602416b25`. The retained generic `agent.failed`
+diagnostic does not establish whether JSON, schema, process or another boundary
+failed. A later unchanged-head review passed; neither that success nor #937's
+progress-length evidence identifies the historical review failure.
+
+The new native RED regression proves a diagnostic gap: malformed completed
+Bugbot output propagates as a generic parser Error after all three attempts.
+This is a controlled reproduction of missing attribution, not a reconstruction
+of the unavailable historical provider output.
+
+| Requirement | Contract |
+|---|---|
+| BQD-01 | Preserve a finite native completed-response reason through partition exhaustion, including JSON rejection and the existing typed schema reasons. |
+| BQD-02 | Keep the same three identical sequential attempts, source assignment, schema, concurrency slot, verification, aggregate and publication fences. |
+| BQD-03 | Retain no rejected prose, key, path, provider stderr or guessed historical cause; arbitrary errors and process/provider failures retain their existing classification. |
+| BQD-04 | Publish the same closed reason/attempt count through localized Check/Summary/CLI/API error surfaces and document a bounded operator action. |
+
+```mermaid
+flowchart LR
+    A[Native completed response] --> B[Strict JSON and original schema]
+    B -->|valid| C[Existing locale and attestation gates]
+    B -->|invalid| D[Content-free typed reason]
+    D --> E[Same partition allowance, at most three calls]
+    E -->|exhausted| F[Closed blocked diagnostic, no review publication]
+```
+
+Text equivalent: JSON/schema rejection has a host-created typed reason. It
+spends only the original partition allowance and can report its final reason
+without carrying any rejected content into a later query. Valid results still
+pass every original independent gate.
+
+The native response adapter recognizes only `bugbot_findings` and `bugbot_literal_candidate_verification`.
+Parsing failure becomes `json-invalid`. Existing typed validator failures map to
+`schema-type`, `schema-enum`, `schema-string-short`, `schema-string-long`,
+`schema-number-finite`, `schema-number-min`, `schema-number-max`,
+`schema-array-short`, `schema-array-long`, `schema-required` or
+`schema-additional`. Host candidate-proof rejection additionally uses `verification-invalid`, through a dedicated ApplicationError subtype that preserves its existing error code and message. Known capacity failures retain their original classification. The domain carrier stores only the reviewed reason, with a
+fixed message and no parsed response or raw error cause. Other task schemas
+retain their existing behavior. Unknown adapter faults are never relabeled as
+completed-response evidence.
+
+Only a genuine `BugbotResponseFailure` or `BugbotVerificationResponseFailure` on the third partition attempt produces
+`agent.failed` / `bugbot-partition-query-exhausted`, with exactly
+`{reason, attempts:3}` and `retryable:false`. The closed registry validates exact
+keys, the reason enum and the fixed attempt count. The diagnostic uses the
+terminal operation correlation. It does not retry aggregate validation, provider
+reads, source freshness or publication. A later valid attempt returns normally;
+only the final failed attempt supplies the terminal reason. Existing provider,
+process, locale and framed completeness failures retain their own identity and
+retryability. Structural lookalikes grant no attribution or recovery authority.
+
+No public input, capacity, timeout, credential, mutation port or persistence is
+added. Review remains atomic. Existing framed and literal-verification behavior
+is preserved. No model request, extra retry, prompt modification, response repair
+or new UI surface is introduced.
+
+### Public content and operator flow
+
+English example: “A completed Bugbot partition response remained invalid after
+3 attempts; the review was not published. Inspect response reason
+schema-string-long and the current run. Qualify the provider output contract
+before a fresh complete review.” Spanish uses the same technical reason and
+count; regional Spanish reuses the full Spanish catalog, other unsupported
+locales use the complete English catalog. Existing error layouts supply labels,
+links and the same terminal correlation. Narrow and assistive readers receive
+plain text with no color-only meaning.
+
+The retained-state copy explicitly preserves prior findings and resolutions and
+requires all source/complete-review gates. The action distinguishes completed
+response validation from execution infrastructure. It does not instruct an
+indefinite unchanged whole-review loop. The original #920 failure remains
+historically unclassified; this correction instruments future native failures.
+
+### Numeric test budget and reciprocal traceability
+
+The fifteen new declarations are distinct cases, including parameterized inputs
+counted only once. They add two pure, four application, three adapter, one
+presentation and five integration cases to section 14's preserved baseline.
+
+| Case ID | Area | Requirements | Scenario |
+|---|---|---|---|
+| bugbot-partition-diagnostics-C01 | Adapter | BQD-01, BQD-02, BQD-03 | Native malformed output exhausts three identical calls with a closed diagnostic and no rejected prose. |
+| bugbot-partition-diagnostics-C02 | Pure | BQD-01, BQD-03 | Every typed schema violation exposes only its finite reason, never the rejected key, value or path. |
+| bugbot-partition-diagnostics-C03 | Adapter | BQD-01, BQD-02 | Empty and malformed completed native response text stays distinct from execution failure. |
+| bugbot-partition-diagnostics-C04 | Application | BQD-02, BQD-03 | A usable later native response discards earlier failures without changing immutable requests. |
+| bugbot-partition-diagnostics-C05 | Application | BQD-01, BQD-02 | Exhaustion reports only the final attempt reason and never allocates a fourth query. |
+| bugbot-partition-diagnostics-C06 | Adapter | BQD-03 | Non-Bugbot response contracts retain their existing parsing and schema exceptions. |
+| bugbot-partition-diagnostics-C07 | Integration | BQD-02, BQD-03 | Native execution and provider errors retain classification, retryability and bounded attempts. |
+| bugbot-partition-diagnostics-C08 | Integration | BQD-02, BQD-03 | Locale and exact legacy attestation rejection remain independent host gates. |
+| bugbot-partition-diagnostics-C09 | Pure | BQD-01, BQD-03 | Only the exact closed final diagnostic can enter the public registry. |
+| bugbot-partition-diagnostics-C10 | Presentation | BQD-04 | English, regional Spanish and fallback surfaces preserve reason, attempts and correlation. |
+| bugbot-partition-diagnostics-C11 | Application | BQD-02, BQD-03 | Non-receipt framed completeness failures still stop immediately without retry or relabeling. |
+| bugbot-partition-diagnostics-C12 | Application | BQD-03 | Arbitrary errors and structural lookalikes never become completed-output diagnostics. |
+| bugbot-partition-diagnostics-C13 | Integration | BQD-01, BQD-02, BQD-03 | Native verification parsing shares the three paired-attempt allowance and closed cause. |
+| bugbot-partition-diagnostics-C14 | Integration | BQD-01, BQD-02, BQD-03 | Incomplete semantic candidate proof reports verification-invalid while complete adjudication remains accepted. |
+| bugbot-partition-diagnostics-C15 | Integration | BQD-01, BQD-02, BQD-03 | Known verification capacity failures never acquire a completed-output diagnostic or extra verification query. |
+
+| Requirement | Cases |
+|---|---|
+| BQD-01 | C01, C02, C03, C05, C09, C13, C14, C15 |
+| BQD-02 | C01, C03, C04, C05, C07, C08, C11, C13, C14, C15 |
+| BQD-03 | C01, C02, C04, C06, C07, C08, C09, C11, C12, C13, C14, C15 |
+| BQD-04 | C10 |
+
+### Ownership, rollout and acceptance
+
+New code: `src/domain/bugbot/response_failure.ts` and `src/application/errors/bugbot_verification_response_failure.ts`. The existing literal verification policy/workflow now expose their known semantic rejection through the subtype; their source identity, proof and capacity rules are unchanged. Changed native mapping:
+`src/data/repository/agent_findings_response_policy.ts`. Application owner:
+`src/application/usecases/steps/commit/bugbot/query_bugbot_findings.ts`. The
+existing closed error registry and English/Spanish catalog own normalization and
+presentation. The single new test module is
+`src/application/usecases/steps/commit/bugbot/__tests__/bugbot_partition_query_diagnostics.test.ts`.
+Catalog, communication test budget and generated index must be synchronized.
+
+Operator documentation updates `docs/bugbot/failure-scenarios.mdx` and
+`docs/security-operations/operations/error-reference.mdx`; the documented JSON
+example executes through the real registry in C10. All previous tests remain
+mandatory. New pure code requires 100% statements, branches, functions and
+lines; official correct-base changed coverage must have no misses or partials.
+Full root/extension, type/lint, docs/workflow/spec contracts, build/package smoke,
+normal hooks and current-head remote review/CI remain independent gates.
+
+Acceptance requires the complete native regression and controls, an exact public
+JSON round trip, localized retained-state/action assertions, no new model call,
+no partial publication authority and no guessed attribution for historical #920.
+Rollback removes the additive carrier/mapping/recovery variant and localized
+copy together; it leaves old comments, findings, provider failures and source
+assignments intact. No tag, release or deployment is authorized by this SDD.

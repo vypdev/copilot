@@ -1,3 +1,5 @@
+import { BugbotVerificationResponseFailure } from '../../../../errors/bugbot_verification_response_failure';
+import { BugbotResponseFailure } from '../../../../../domain/bugbot/response_failure';
 import { BugbotReviewCompletenessError, type BugbotFramedAssignment } from '../../../../../domain/bugbot/framed_review';
 import { matchesBugbotFramedReceipt } from '../../../../policies/bugbot_framed_receipt_policy';
 import type { AgentConfiguration } from '../../../../../domain/agent';
@@ -96,6 +98,10 @@ export async function queryBugbotPartitionFindings(
                 ? await verifyGeneratedLiteralFindings(repository, configuration, prompt, validation.payload, targetLocale, verification.observePrompt, verification.observeResponse) as Readonly<Record<string, unknown>>
                 : validation.payload;
         } catch (error) {
+            if (attempt === MAX_PARTITION_QUERY_ATTEMPTS && (error instanceof BugbotResponseFailure || error instanceof BugbotVerificationResponseFailure)) {
+                throw new ApplicationError('agent.failed', 'The completed Bugbot partition responses failed completed-response validation after three attempts.',
+                    { retryable: false, recovery: { id: 'bugbot-partition-query-exhausted', variables: { reason: error.reason, attempts: 3 } } });
+            }
             if (attempt === MAX_PARTITION_QUERY_ATTEMPTS || (error instanceof BugbotReviewCompletenessError && error.facts.resource !== 'receipt')) throw error;
             logInfo(`Bugbot reviewer retrying one partition query (${attempt + 1}/${MAX_PARTITION_QUERY_ATTEMPTS}) after unusable agent output.`);
         }

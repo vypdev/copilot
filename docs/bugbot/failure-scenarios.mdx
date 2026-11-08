@@ -158,3 +158,21 @@ heading or custom-anchor rules. Include those facts when requesting
 `/copilot recheck`; a prior confidence score does not prove the path claim.
 Keep working links intact. A missing file or fragment remains actionable, while
 unavailable source context cannot establish either failure or resolution.
+
+
+## Completed partition responses rejected
+
+If all three identical partition attempts return invalid JSON or a response that
+violates the original schema or candidate-proof validation, Bugbot reports
+`bugbot-partition-query-exhausted` with a closed `reason` and `attempts: 3`.
+For example, `schema-string-long` identifies a string-bound violation without
+revealing its text, field path or value. `json-invalid` identifies a completed
+response that could not be parsed. This terminal attempt is non-retryable;
+qualify the provider output contract before starting a fresh complete review.
+Prior findings and resolutions remain intact and no partial review publishes.
+
+Process, provider, locale, source and framed-review failures keep their existing
+diagnostics. A historical generic `agent.failed` result cannot establish which
+of these boundaries failed. Inspect its retained native lifecycle observations;
+a later green retry does not determine the earlier cause. See the
+[closed error reference](/security-operations/operations/error-reference).
