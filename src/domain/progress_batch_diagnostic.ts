@@ -1,6 +1,6 @@
 export const PROGRESS_BATCH_REASONS = [
     'source-coverage', 'scope-capacity', 'manifest-identity', 'batch-identity', 'receipt-coverage',
-    'evidence-identity', 'evidence-missing', 'receipt-conflict', 'call-budget', 'time-budget', 'aggregate-capacity',
+    'evidence-identity', 'evidence-missing', 'evidence-duplicate', 'receipt-conflict', 'call-budget', 'time-budget', 'aggregate-capacity',
 ] as const;
 export type ProgressBatchReason = typeof PROGRESS_BATCH_REASONS[number];
 export type ProgressBatchDiagnostic = Readonly<{

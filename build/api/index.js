@@ -9944,7 +9944,7 @@ exports.PROGRESS_BATCH_REASONS = void 0;
 exports.isProgressBatchDiagnostic = isProgressBatchDiagnostic;
 exports.PROGRESS_BATCH_REASONS = [
     'source-coverage', 'scope-capacity', 'manifest-identity', 'batch-identity', 'receipt-coverage',
-    'evidence-identity', 'evidence-missing', 'receipt-conflict', 'call-budget', 'time-budget', 'aggregate-capacity',
+    'evidence-identity', 'evidence-missing', 'evidence-duplicate', 'receipt-conflict', 'call-budget', 'time-budget', 'aggregate-capacity',
 ];
 function isProgressBatchDiagnostic(value) {
     if (!value || typeof value !== 'object' || Array.isArray(value))

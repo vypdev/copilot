@@ -1,14 +1,14 @@
 # Final Progress Assessment Recovery
 
-- Status: Published #932 baseline; issue #937 operational generation update in validation
+- Status: Published #932/#937 baseline (3.10.11/3.10.12); #944 repeated-citation correction under validation
 - Date: 2026-11-08
 - Catalog capability ID: github-communication-experience
-- Last verified: 2026-11-08 (#932 published; #937 local closed-policy and controlled live-provider qualification complete; native consumer and remote acceptance pending)
+- Last verified: 2026-11-08 (#937 source/release gates and candidate native consumer qualification passed; a new stable-consumer progress defect is tracked separately in #944 below)
 - Owners: Copilot maintainers
 - Scope: Complete bounded semantic assessment for compact inventories and one shared replacement for a completion contradiction or attributable narrative length rejection.
 - Related issues/PRs: https://github.com/vypdev/copilot/issues/853; https://github.com/vypdev/copilot/issues/932; https://github.com/vypdev/copilot/issues/937
 - Required review gates: product UX, architecture, testing, documentation, security/operations
-- Open decisions blocking design: none. Historical #853: the Action verified first SDD commit 828a68284f4687acf7350950f553ba501926454b on the linked issue branch. Issue #932 uses the Action-created branch at base `2ecac44850af23c60bc937d52a3f995b0960bfac`; local validation and independent remote acceptance remain pending.
+- Open decisions blocking design: none. Historical #853: the Action verified first SDD commit 828a68284f4687acf7350950f553ba501926454b on the linked issue branch. Issue #932 used the Action-created branch at base `2ecac44850af23c60bc937d52a3f995b0960bfac` and completed publication in 3.10.11. Current #944 acceptance gates are recorded in its delta below.
 
 > The Action published and verified this companion before implementation. Publication establishes the branch prerequisite, not implemented behavior or executed acceptance. Its owning capability already has the specifications `specs/immutable-progress-content-recovery.md`, `specs/complete-progress-comparison-inventory.md`, and `specs/progress-scope-source-ownership.md`. The listed contracts retain their baseline ownership; this companion specifies the bounded final-assessment correction.
 
@@ -653,7 +653,12 @@ Operational qualification additionally requires complete coherent provider facts
 for the original consumer scope and a successful native consumer Check using an
 explicit reviewed candidate SHA, with every original publication fence. A
 protocol-only pass, output clipped by a decoder, or deterministic fixture is not
-completion. These #937 gates remain pending until independently recorded.
+completion. At publication of 3.10.12 these #937 gates passed: source/release
+promotion #942 and reconciliation #943 passed current-head native review,
+three-platform CI and official changed-line coverage. Domus candidate Commit
+42508345183 and Review 42508350603 passed; this is distinct from the later
+stable-consumer Commit failure 42518152136 tracked in #944 below. Candidate
+qualification does not certify every subsequent provider response.
 
 
 - [x] Every FPR requirement has acceptance and reciprocal case traceability.
@@ -676,3 +681,384 @@ completion. These #937 gates remain pending until independently recorded.
 - Related specs/ADRs/issues/PRs: `specs/immutable-progress-content-recovery.md`, `specs/complete-progress-comparison-inventory.md`, and `specs/progress-scope-source-ownership.md`; prerequisite #833/#830 and extension H3 #704 remain separate.
 - Decisions and rejected alternatives: exactly one replacement rather than a general retry; closed counts rather than raw output; retain strict parsing rather than normalize percentages; unchanged model/configuration/limits/permissions; no new absolute deadline port; no automatic write replay. Reject forcing 100 from previous statuses, dropping uncertain requirements or sources, accepting provider errors as completed output, increasing capacities, adding a third query, caching partial evidence, weakening approval, or treating model claims as execution proof.
 - Follow-up work explicitly outside this spec: broader progress-planning improvements, #830 partition-length recovery, extension implementation, release and deployment. This spec includes implementation and its full CI/coverage/review acceptance; adoption into the master-pinned runtime is a separately reviewed operator transition. The reported parser/graph consistency at `3e7ceea` and catalog snapshot `9abb7882` establishes planning consistency only, not implementation or acceptance.
+
+## Issue #944: bounded correction for repeated native citations
+
+- Status: Implementation under validation; independent remote gates and new consumer qualification pending
+- Date: 2026-11-08
+- Owner and catalog capability: Copilot maintainers / `github-communication-experience`
+- Action-selected base: `13560d95ec643171e9c87e8e262fc7a57bb2acbb`
+- Action-published first SDD: `b20ef9d4b9b96c4782a040438c4f3e9ba25cd6d0`
+- Open design decisions: none. This change grants no release authorization.
+- Retained contract: all original 85 cases and requirements above remain normative.
+
+### 1. Executive summary
+
+An otherwise valid complete assessment that repeats an admitted citation may use
+the existing single complete-batch correction allowance shared with length and
+completion recovery. Acceptance still requires distinct admitted references,
+complete original scope, exact identities, unchanged bounds and final freshness
+and publication gates. No deduplication, additional retry or partial publication
+is introduced.
+
+```text
+complete native response -> validate every identity, fact, reference and semantic rule
+  unique citations       -> original receipt and publication gates
+  repetition only        -> one shared correction, if unused
+    valid replacement    -> original receipt and publication gates
+    repeated citation    -> non-retryable diagnostic; retain prior progress
+    other failure        -> original classification; retain prior progress
+  any other defect       -> original blocking validation; no citation correction
+```
+
+Text equivalent: repetition alone may spend one existing allowance; the complete
+replacement must pass every original gate. No failure can publish provisional
+batches or allocate a third assessment query.
+
+### 2. Problem, current behavior, and evidence
+
+Published 3.10.12 passed its source, three-platform, review and coverage gates.
+Its source was qualified in Domus at a candidate SHA before publication. After
+restoring Domus to its normal `v3` strategy, Commit run
+[42518152136](https://github.com/vypdev/domus/actions/runs/42518152136)
+downloaded published production SHA
+`d2f7523d1f2f8a302130d91f15b421e74b43632a`, completed all 17 source parts,
+then failed at R63 in acceptance batch 1/4 with `evidence-missing`. Prior
+progress was retained. Domus CI and Review on that same consumer head succeeded;
+they do not certify Commit progress.
+
+The original rejected response was not retained. Duplicate citations are an
+inference from the reached validation branch, not captured native output.
+A deterministic counterexample against the published source passes the actual
+native adapter schema and fails the receipt reader when references repeat;
+the unique-citation control succeeds. Genuine pre-fix regressions reproduced
+this abort in both narrative and closed-fact profiles. This proves a structural
+schema/host mismatch; it does not establish every detail of the unavailable
+native response.
+
+The baseline schema bounds citations to 1–8 admitted IDs without a uniqueness
+keyword; the local schema validator checks bounds and enum membership.
+The baseline receipt reader rejects repeats as missing evidence. The correction
+retains strict receipt uniqueness, makes distinctness explicit in the prompt
+and schema description, and routes only attributable repetition through the
+existing application-owned allowance. It adds no provider-specific schema
+keyword or provider behavior assumption.
+
+### 3. Actors, surfaces, and terminology
+
+The issue author owns acceptance source; the model supplies untrusted assessment
+data; the host owns scope, evidence admission, validation and publication.
+Maintainers inspect the existing CLI/API error, Commit Check and Job Summary.
+
+A citation is a host-admitted non-generated source reference pinned to the
+comparison head. A repeated citation repeats an ID within one requirement.
+The complete evidence dictionary is immutable original input; a model-selected
+citation subset is untrusted output and need not be preserved between attempts.
+No original evidence or requirement may be dropped from the replacement request.
+
+### 4. Goals, non-goals, and fixed invariants
+
+- **SDD-I944-U1-R1:** An otherwise valid attributable repeated-citation response
+  MAY spend the existing single complete-batch allowance shared with length and
+  completion recovery. The correction MUST preserve the full original request,
+  scope, evidence dictionary, profile, schema, settings and bounds. Accepted
+  citations MUST be distinct. A repeated-citation replacement MUST terminate
+  with a precise content-free nonretryable diagnostic, without normalization,
+  a third query, forced completion or unchanged-head rerun loops.
+- **SDD-I944-U1-R2:** Missing, foreign, generated, stale, malformed, forged or
+  otherwise invalid evidence MUST remain blocking. The host MUST retain prior
+  progress and all complete frozen batches as provisional and MUST NOT publish
+  partial progress. Correction MUST NOT weaken any identity, semantic, capacity,
+  global budget, freshness or publication gate.
+
+Non-goals: changing source collection, scope interpretation, acceptance semantics,
+provider permissions, workflow configuration, published artifacts or release
+versions. Existing terminal completion/provider classifications remain unchanged;
+only terminal citation repetition receives the new precise reason.
+
+### 5. Current versus proposed product journey
+
+Previously, repetition could pass the native schema and abort the complete
+operation after expensive source collection. Now a valid first result still
+uses one query. Repetition alone allows exactly one read-only complete correction
+using the same frozen batch. Success reaches the existing publication gates.
+Failure retains the published state and tells the operator to inspect the run
+and qualify a corrected response/build before a fresh full assessment.
+
+Accepted earlier batches remain provisional throughout. No comment, issue,
+label, Check, permission or notification is added. Existing links lead to the
+run, issue, comparison and documentation.
+
+### 6. Functional behavior and state model
+
+The reader validates exact manifest/head/batch identities, complete requirement
+coverage, per-fact capacity, all citation memberships and every canonical
+semantic rule before minting correction authority. A simultaneous completion
+contradiction is a blocking combined defect, not an alternate recovery route.
+It retains its original public completion-mismatch code, recovery facts,
+retryability and correlation while losing the private correction capability;
+it MUST NOT be presented as citation exhaustion when no correction was attempted.
+Malformed native JSON/schema, invalid locale and other semantic defects retain
+their existing failure behavior.
+
+For repetition alone, the reader records only requirement/source IDs, batch,
+citation count and distinct count. It never deduplicates output. Direct parser
+callers remain strict and cannot allocate a correction. Length, completion and
+citation failures share the same two-evaluation owner. A mixed sequence gets no
+third query; its terminal failure retains that failure category's classification.
+All calls remain charged to the original 120-call/30-minute ledger.
+
+### 7. User-facing configuration
+
+No new input, environment variable, setting, stored state or migration exists.
+The one correction allowance, distinctness, 1–8 citation bound, evidence fences,
+full scope, response allocations and 120-call/30-minute ceilings are fixed.
+Provider/model/effort/locale use the existing captured invocation precedence.
+Localization changes presentation, never eligibility. Existing English/Spanish
+host catalogs and whole-catalog fallback apply.
+
+### 8. Clean Architecture design
+
+```mermaid
+flowchart LR
+    Adapter[Native adapter: schema and profile] --> Owner[Application assessment owner: two evaluations]
+    Owner --> Reader[Receipt policy: all evidence and semantic gates]
+    Reader --> Facts[Domain: closed repetition measurements]
+    Reader --> Binding[Application policy: private current-request origin]
+    Binding --> Owner
+    Owner --> Batch[Batch owner: complete receipts]
+    Batch --> Publication[Existing freshness and publication owner]
+```
+
+Text equivalent: the adapter validates the wire shape; the application reader
+validates evidence and semantics and may mint a private current-request error.
+The existing two-evaluation owner consumes it. Complete receipts alone reach the
+unchanged publication owner. No domain module imports an adapter or use case.
+
+- `src/domain/progress_citation_repetition.ts` validates an exact five-field
+  diagnostic with bounded host IDs, batch 1–1024, citation count 2–8 and a smaller
+  positive distinct count. Raw references, source prose and arbitrary keys are
+  excluded.
+- `src/application/policies/progress_citation_recovery_policy.ts` owns a private
+  WeakMap binding. Minting requires the actual frozen request schema to match
+  the full supported canonical or closed-fact schema. Binding requires the same
+  schema object from this invocation plus exact captured scope, anchors, locale
+  and original source-line membership. Equal-valued schema clones and older
+  invocations cannot replay authority. Caller objects are never frozen.
+- `progress_batch_policy.ts` validates every row, including semantic validity,
+  before minting. `progress_batch_workflow.ts` supplies the actual private
+  request schema and retains a response only after evidence validation succeeds.
+- `query_progress_assessment_workflow.ts` recognizes this origin only in its
+  projection/parse catch. A provider-thrown carrier cannot allocate correction.
+  The replacement snapshots the original effective profile/request and appends
+  a fixed footer with at most 256 bytes of closed JSON. Rejected prose and
+  references are never copied.
+- `progress_prompt_capacity_policy.ts` reserves both narrative and closed-fact
+  citation correction envelopes, including the native security/schema/effort
+  envelope, before the associated first query. Existing aggregate preflight
+  also includes them before source collection. Padding is never submitted.
+
+The existing ports, composition, persistence, concurrency and publication
+capabilities do not change. Architecture/import guards, native schema fixtures,
+full root tests and workflow contracts enforce the dependency and trust fences.
+
+### 9. UI/UX and content contract
+
+The existing localized Check/Summary/CLI surface remains primary. Fixed recovery
+logging states what is happening and that prior progress is retained; it contains
+no source prose or reference IDs. Existing error projection exposes only closed
+host-verified batch/requirement facts and correlation.
+
+Representative content (illustrative R63/batch 1, not captured response data):
+
+| State | Visible content and next action |
+|---|---|
+| Pending correction | “A completed progress assessment repeated a native source citation. Requesting one complete correction for the same pinned batch; previous progress is retained.” No human action yet. |
+| Complete | Existing progress card and run link, only after every receipt and freshness gate passes. No extra recovery comment. |
+| Partial internal work | Earlier batches are provisional; previous published progress remains. The existing run shows completed/expected batch counts. |
+| Blocked/exhausted | Progress retained; `validation.evidence-unavailable`, `progress-batch-retained`, `evidence-duplicate`, verified requirement/batch, Retryable: No. Inspect the run and qualify a correction before a fresh assessment. |
+| Action required | Review the named batch and run; do not weaken evidence checks or repeatedly rerun the unchanged failed head. |
+| Canceled/provider failure | Existing classified error and correlation; previous progress retained. |
+
+No raw response Markdown, arbitrary references or mentions are rendered.
+Existing locale/fallback, narrow/mobile layout and text-first error conventions
+remain; color, diagrams and icons are not required to understand the state.
+This delta adds no new visual control; pre-existing open human UX acceptance
+items remain open and are not claimed passed by these automated tests.
+
+### 10. Failure, recovery, and cleanup
+
+| Failure | Allowance and result |
+|---|---|
+| Repetition alone on first valid native response | One complete same-profile correction; no writes. |
+| Repetition after any correction | No third query; nonretryable `evidence-duplicate`; previous progress retained. |
+| Other terminal failure after correction | Existing classification/retryability; no third query. |
+| Repetition plus another defect | No citation correction authority; original blocking validation. |
+| Foreign, forged, serialized, provider-thrown or stale origin | No citation correction authority. |
+| Call/time exhaustion or publication drift | Existing bound/freshness error; no partial publication. |
+
+Rejected output is not retained for retry or presentation. All provisional
+receipts are discarded when the operation fails. There is no write retry, new
+durable recovery record, cleanup job or secret-bearing artifact.
+
+### 11. Security, permissions, and privacy
+
+Model output cannot mint authority or attest test execution. The private origin
+requires host validation of the whole complete native contract and exact current
+request identity. No generic error names, public metadata or serialized objects
+qualify. All original evidence IDs remain input, never trusted diagnostics.
+No credentials, network authority, permissions, source execution or publication
+capability is added. Untrusted references and prose never enter correction hints,
+logs, error variables or rendered recovery messages.
+
+### 12. Observability and operational UX
+
+Use one fixed log for an eligible correction, the existing correlation and
+existing batch-retained diagnostic. No extra notification or telemetry budget
+is added. Preserve verified/expected batch counters without presenting them as
+published progress. A successful synthetic fixture is deterministic structural
+evidence; real consumer qualification requires its own immutable candidate SHA
+and native Commit result.
+
+### 13. Compatibility, rollout, and rollback
+
+Unique-citation responses and legacy no-citation contracts keep their existing
+paths. Both supported wire profiles are covered. Unsupported/changed schema
+contracts remain strict and cannot mint an origin. There is no persisted-state
+migration. Published 3.10.12 stays immutable; a subsequent release requires
+separate exact-version authorization. Rollback to immediate rejection retains
+the original progress and does not rewrite consumer state.
+
+### 14. Testing strategy and numeric budget
+
+Add **14 distinct declarations/cases**, retaining the five Action-published IDs
+and all 85 original owner cases: **99 minimum owner cases total**. Parameterized
+rows and repeated executions count once. Eleven new declarations are in
+`progress_citation_recovery.test.ts`; three are appended to the existing native
+integration file. The older native C188/C189 declarations remain unchanged.
+
+| Area | Distinct cases | Risk |
+|---|---:|---|
+| Ordinary correction/control and shared exhaustion | 4 | Profile compatibility and one allowance |
+| Invalid evidence, combined defects and origin security | 4 | No weaker evidence or replay authority |
+| Captured state, capacity/privacy and global bounds | 3 | Mutation, leakage, hidden capacity growth |
+| Native full-inventory publication integration | 3 | Lost scope, late partial publication, freshness |
+| Total | 14 | New declarations only |
+
+| Case ID | Requirements | Executable scenario |
+|---|---|---|
+| inventory1-C01 | SDD-I944-U1-R1 | Both profiles: repetition alone corrects once with identical effective schema/settings and complete original dictionary. |
+| inventory1-C02 | SDD-I944-U1-R1 | Both profiles: unique citations use one query. |
+| inventory1-C03 | SDD-I944-U1-R1 | Second repetition is precise, nonretryable, content-free and cannot create a third query or receipt. |
+| inventory1-C04 | SDD-I944-U1-R1 | Citation/completion and length/citation sequences share one allowance and retain terminal classification. |
+| inventory1-C05 | SDD-I944-U1-R2 | Missing/foreign/stale/generated/malformed evidence and wrong identities stay blocking. |
+| inventory1-C06 | SDD-I944-U1-R1, SDD-I944-U1-R2 | Forged, serialized, older-invocation, equal-schema-clone and provider-thrown carriers cannot authorize correction. |
+| inventory1-C07 | SDD-I944-U1-R2 | Simultaneous completion, semantic, locale, coverage, schema and length defects remain ineligible; a combined completion defect retains its original public classification instead of reporting unattempted citation exhaustion. |
+| inventory1-C08 | SDD-I944-U1-R1, SDD-I944-U1-R2 | Only full frozen supported current contracts and bounded closed measurements mint origins; changed contracts/context fail. |
+| inventory1-C09 | SDD-I944-U1-R1 | Caller mutations cannot alter captured replacement context or request. |
+| inventory1-C10 | SDD-I944-U1-R1, SDD-I944-U1-R2 | Complete preflight before queries; bounded hint; fixed private logging and existing presentation; no submitted padding. |
+| inventory1-C11 | SDD-I944-U1-R1, SDD-I944-U1-R2 | Actual native adapter replay: all 169 original requirements, 17 parts, 6 batches; one extra final query and one publication. |
+| inventory1-C12 | SDD-I944-U1-R2 | Last-batch repetition exhaustion retains all provisional batches and causes zero writes. |
+| inventory1-C13 | SDD-I944-U1-R2 | Successful correction cannot bypass a changed native source head. |
+| inventory1-C14 | SDD-I944-U1-R1, SDD-I944-U1-R2 | Same call/time ledger; provider and cancellation identity preserved. |
+
+New pure-policy/domain code requires 100% statements, branches, functions and
+lines; modified coverable lines require official exact-head/correct-base Codecov
+with zero misses/partials. Full repository and extension budgets remain mandatory.
+The archived immutable native fixture and original issue body remain unchanged.
+No live credentials, sleeps, omitted requirements or shortened evidence fixtures
+are used. Automated text/presentation assertions do not close unrelated human
+UX acceptance debt.
+
+### 15. Documentation and discoverability
+
+| Path | Change |
+|---|---|
+| `docs/agents/execution-contract.mdx` | Eligibility, full snapshots, shared allowance and fixed evidence/budget fences. |
+| `docs/issues/branch-management.mdx` | Operator action, nonretryable terminal citation diagnostic, retained provisional batches. |
+| `docs/security-operations/operations/error-reference.mdx` | Error reason, privacy and distinction from invalid evidence or other failure categories. |
+| `specs/final-progress-completion-recovery.md` | This delta and retained 85-case contract. |
+| `specs/catalog.json`, `specs/CATALOG.md` | Reciprocal runtime/test/document ownership and generated evidence. |
+| `src/architecture/github_communication_test_budget.json` | Fourteen additional declarations; original budget floors unchanged. |
+
+Runtime paths are listed in section 8; executable paths are
+`src/application/usecases/actions/__tests__/progress_citation_recovery.test.ts`
+and `src/application/usecases/actions/__tests__/progress_native_generation.integration.test.ts`.
+No setup/configuration/migration page needs a new input because none is added.
+
+### 16. Acceptance scenarios
+
+Given the complete unchanged native batch, unique citations pass without
+correction (C02); repetition alone corrects once in either profile (C01).
+A second repetition stops precisely without normalization or a third query (C03).
+Mixed sequences share the existing allowance (C04). Invalid evidence and combined
+defects cannot enter recovery (C05/C07). Only the host's current exact native
+request origin qualifies (C06/C08), despite caller mutation (C09). Complete
+capacity and privacy fences precede queries (C10). Full immutable native replay
+retains all source and requirements and publishes once (C11), while late
+exhaustion or freshness drift publishes nothing (C12/C13). Global ledgers and
+failure identities remain intact (C14).
+
+### 17. Requirements traceability
+
+| Requirement | Cases | Implementation and documentation |
+|---|---|---|
+| SDD-I944-U1-R1 | C01–C04, C06, C08–C11, C14 | Domain diagnostic, citation policy, assessment owner and preflight; execution contract and error reference. |
+| SDD-I944-U1-R2 | C05–C08, C10–C14 | Receipt/batch validation, private binding and existing publication fences; branch-management and error reference. |
+
+Cxx here means the preserved `inventory1-Cxx` ID in section 14. Every case maps
+back to a requirement there; catalog paths reciprocate the runtime/test evidence.
+
+### 18. Implementation sequence
+
+1. Verify the Action's admitted branch and published SDD before code changes.
+2. Capture actual native-adapter RED regressions and unique controls.
+3. Implement strict whole-response eligibility and private request binding.
+4. Extend the existing two-evaluation owner and full-envelope preflight.
+5. Add negative, mixed, mutation, budget and native publication cases.
+6. Update docs/catalog/budget and run generation and validation.
+7. Build/stage generated artifacts; pass normal hooks, all local/remote gates,
+   official changed-line coverage and complete current-head review.
+8. Qualify the reviewed immutable candidate in Domus without changing its body,
+   scope or application. A later patch publication needs separate authorization.
+
+### 19. Definition of Done
+
+- [x] Action branch/SDD gate verified before implementation.
+- [x] Genuine pre-fix native regressions captured; all 14 new case IDs have assertions.
+- [x] Focused tests pass; both new pure modules measure 100% of all four metrics.
+- [ ] Full root/extension verification, normal hooks and architecture checks pass.
+- [ ] Generated/validated catalog, documentation and workflow contracts agree.
+- [ ] All applicable current-head platform/CI checks pass; official Codecov has no changed-line misses/partials.
+- [ ] Native review is complete with zero active findings/threads.
+- [ ] New immutable-candidate Domus Commit, Review and application CI pass.
+- [ ] Only then merge the source PR under existing authorization.
+
+These unchecked outcomes are required acceptance gates, not facts established
+by declarations or synthetic success. Existing open human UX/security dependency
+debt is recorded separately and is not silently certified by this correction.
+
+Local root verification passed 921 suites / 18,313 tests with 35 pre-existing
+skips. Root coverage is 97.58% statements, 95.60% branches, 98.19% functions and
+98.28% lines; all coverage budgets passed. All six changed/new runtime modules
+measure 100% across the four metrics, including the complete batch workflow.
+The setup ledger remains 336/350 with 14 explicitly open human cases.
+Extension verification passed 385 suites / 5,289 tests with 100% statements,
+branches, functions and lines. Types, lint, build,
+package/CLI/typed-API/web-session smoke, specifications, documentation and workflow
+contracts passed. Normal hooks, remote review/CI/Codecov and new native consumer
+qualification remain independent gates and are not inferred from these local
+results. Their exact candidate receipts belong in the linked PR; this local
+checkpoint is not a rolling remote-status record.
+
+### 20. References and decisions
+
+- [Issue #944](https://github.com/vypdev/copilot/issues/944): actual native failure,
+  original response unavailable, separate deterministic mismatch/control.
+- [Release 3.10.12](https://github.com/vypdev/copilot/releases/tag/v3.10.12):
+  published immutable baseline; this delta does not change its artifact.
+- [Domus native failed Commit](https://github.com/vypdev/domus/actions/runs/42518152136):
+  observed R63 failure and retained progress, not a duplicate raw-response capture.
+- Existing owners `specs/batched-progress-scope.md` and the retained sections
+  above remain authoritative for collection, receipt, freshness and publication
+  bounds. No unknown external provider feature is relied upon.

@@ -6,7 +6,8 @@ import { MAX_PROGRESS_AGGREGATE_BYTES } from './progress_partition_response_poli
 import { reservedProgressCompletionPrompt } from './progress_completion_recovery_policy';
 import { reservedProgressAssessmentLengthPrompt } from './progress_assessment_length_policy';
 import type { ProgressCapacityPhase } from '../../domain/progress_capacity_diagnostic';
-import { compactProgressAssessmentPlan, reservedCompactProgressAssessmentPrompt } from './progress_compact_assessment_policy';
+import { compactProgressAssessmentPlan, compactProgressAssessmentPrompt, reservedCompactProgressAssessmentPrompt } from './progress_compact_assessment_policy';
+import { hasProgressCitationsSchema, reservedProgressCitationPrompt } from './progress_citation_recovery_policy';
 
 export const PROGRESS_PROMPT_FRAMING_RESERVE_BYTES = 1_024;
 
@@ -40,5 +41,9 @@ export function remainingProgressAssessmentPromptBytes(prompt: string, schema: S
         remainingProgressPromptBytes(reservedProgressCompletionPrompt(prompt), 'progress', schema, effort, 'native-prompt-reserve-bytes'),
         remainingProgressPromptBytes(reservedProgressAssessmentLengthPrompt(prompt), 'progress', schema, effort, 'native-prompt-reserve-bytes'),
         ...(compact ? [remainingProgressPromptBytes(reservedCompactProgressAssessmentPrompt(prompt), 'progress', compact.schema, effort, 'native-prompt-reserve-bytes')] : []),
+        ...(hasProgressCitationsSchema(schema as Record<string, unknown>) ? [
+            remainingProgressPromptBytes(reservedProgressCitationPrompt(prompt), 'progress', schema, effort, 'native-prompt-reserve-bytes'),
+            ...(compact ? [remainingProgressPromptBytes(reservedProgressCitationPrompt(compactProgressAssessmentPrompt(prompt)), 'progress', compact.schema, effort, 'native-prompt-reserve-bytes')] : []),
+        ] : []),
     );
 }

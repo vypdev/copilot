@@ -215,6 +215,23 @@ contract. Existing labels and assessments remain. Verification, review, coverage
 and approval are independent gates. Malformed output, provider interruption and
 other semantic failures retain their own error and do not receive this recovery.
 
+An otherwise valid complete assessment containing repeated admitted citations
+can use the same single replacement allowance as completion and length recovery.
+It must bind to the exact current frozen request, original scope, anchors, locale
+and full evidence dictionary. Correction uses the same narrative or closed-fact
+profile and unchanged schema; each final citations array must contain one to
+eight distinct admitted non-generated IDs. Missing, foreign, generated, stale,
+malformed evidence or simultaneous semantic defects remain blocking.
+
+If repetition remains on the replacement, `validation.evidence-unavailable`
+returns non-retryable `progress-batch-retained` with reason `evidence-duplicate`
+and host-verified requirement/batch identifiers. No raw citations or rejected
+prose appear in the diagnostic. Earlier accepted batches are still provisional:
+none publish when any batch fails. Inspect the linked run and qualify a corrected
+build before a fresh full assessment; do not repeatedly rerun the unchanged head.
+Other failures keep their existing error and retryability, and no third query or
+extra call/time allowance is granted.
+
 A completed acceptance response exceeding its current `summary` or `remaining`
 schema bound can use that same single replacement allowance. Native measurements
 must bind to the exact captured schema, current batch receipts and citations,
