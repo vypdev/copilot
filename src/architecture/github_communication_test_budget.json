@@ -7,7 +7,7 @@
       "id": "semantic-github-publication",
       "spec": "specs/semantic-github-publication-and-notification.md",
       "requiredCases": 135,
-      "allocatedCases": 1166,
+      "allocatedCases": 1181,
       "files": [
         {
           "path": "src/domain/__tests__/github_publication.test.ts",
@@ -384,6 +384,10 @@
         {
           "path": "src/tooling/__tests__/generated_artifact_merge_policy.test.ts",
           "qualifyingCases": 3
+        },
+        {
+          "path": "src/application/usecases/steps/commit/bugbot/__tests__/bugbot_partition_query_diagnostics.test.ts",
+          "qualifyingCases": 15
         }
       ]
     },

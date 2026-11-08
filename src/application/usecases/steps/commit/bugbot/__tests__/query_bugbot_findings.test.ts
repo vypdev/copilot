@@ -174,7 +174,7 @@ describe('generated literal verification at the native query boundary', () => {
   it('keeps the existing three-attempt partition bound including verification failures', async () => {
     const query = jest.fn().mockImplementation(request => request.agentId === 'bugbot-literal-candidate-verification'
       ? Promise.resolve({ outputLocale: 'en-US', findings: [] }) : Promise.resolve(detected));
-    await expect(queryBugbotPartitionFindings({ query }, config, 'source', 'en-US', expected, enabled)).rejects.toThrow('verification');
+    await expect(queryBugbotPartitionFindings({ query }, config, 'source', 'en-US', expected, enabled)).rejects.toMatchObject({ code: 'agent.failed', retryable: false, recovery: { id: 'bugbot-partition-query-exhausted', variables: { reason: 'verification-invalid', attempts: 3 } } });
     expect(query).toHaveBeenCalledTimes(6);
   });
 
@@ -224,7 +224,7 @@ describe('native bounded verification batch execution', () => {
       return { outputLocale: 'en-US', verification_id: properties.verification_id.enum[0],
         findings: ids.includes('candidate-199') ? [] : ids.map(id => original.find(item => item.id === id)), rejected_ids: [] };
     });
-    await expect(queryBugbotPartitionFindings({ query }, config, 'source', 'en-US', expected, { enabled: true })).rejects.toThrow('verification');
+    await expect(queryBugbotPartitionFindings({ query }, config, 'source', 'en-US', expected, { enabled: true })).rejects.toMatchObject({ code: 'agent.failed', retryable: false, recovery: { id: 'bugbot-partition-query-exhausted', variables: { reason: 'verification-invalid', attempts: 3 } } });
     expect(query).toHaveBeenCalledTimes(33);
   });
 });

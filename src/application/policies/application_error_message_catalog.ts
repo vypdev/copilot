@@ -289,6 +289,11 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     action: 'Inspect part {partitionId}, file {filePath}, unit {unitId}, field {field}: observed {observed} Unicode code points; maximum {maximum}. Do not automatically repeat the unchanged comparison. Qualify a corrected build against the pinned sources before one fresh complete assessment. Preserve every file, source unit and verification gate.',
     retainedState: 'Existing progress labels and assessments were preserved. No partial percentage or passing verification was published; execution and optional check-publication failures remain separate.',
   }),
+  'bugbot-partition-query-exhausted': Object.freeze({
+    impact: 'A completed Bugbot partition response remained invalid after {attempts} attempts; the review was not published.',
+    action: 'Inspect response reason {reason} and the current run. Qualify the provider output contract before a fresh complete review. This diagnostic describes completed response validation, not an execution infrastructure failure.',
+    retainedState: 'Prior findings and resolutions were preserved. No partial review was published. Source freshness and complete-review gates remain required.',
+  }),
   'progress-assessment-length-invalid': Object.freeze({
     impact: 'An acceptance field still exceeds its unchanged response limit after one complete replacement; progress was not published.',
     action: 'Inspect phase assessment, requirement {requirementId}, original source {sourceLineId}, field {field}: observed {observed} Unicode code points; maximum {maximum}. Do not automatically repeat the unchanged comparison. Validate a corrected Copilot build against the pinned source before starting one fresh complete assessment. Preserve every requirement and citation; do not truncate facts, raise limits or bypass verification.',
@@ -516,6 +521,11 @@ const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     impact: 'Una parte del progreso sigue superando el límite de respuesta tras una sustitución acotada; no se publicó el progreso.',
     action: 'Inspecciona la parte {partitionId}, archivo {filePath}, unidad {unitId}, campo {field}: observado {observed} puntos de código Unicode; máximo {maximum}. No repitas automáticamente la comparación sin cambios. Valida una compilación corregida con las fuentes fijadas antes de una evaluación nueva completa. Conserva todos los archivos, hechos y controles de verificación.',
     retainedState: 'Se conservaron las etiquetas y evaluaciones de progreso. No se publicó ningún porcentaje parcial ni verificación aprobada; los fallos de ejecución y de publicación del check opcional siguen siendo independientes.',
+  }),
+  'bugbot-partition-query-exhausted': Object.freeze({
+    impact: 'La respuesta completada de una partición de Bugbot siguió siendo inválida tras {attempts} intentos; no se publicó la revisión.',
+    action: 'Inspecciona el motivo de respuesta {reason} y la ejecución actual. Valida el contrato de salida del proveedor antes de una revisión completa nueva. Este diagnóstico describe la validación de una respuesta completada, no un fallo de infraestructura de ejecución.',
+    retainedState: 'Se conservaron los hallazgos y resoluciones anteriores. No se publicó una revisión parcial. Siguen siendo obligatorios los controles de fuente vigente y revisión completa.',
   }),
   'progress-assessment-length-invalid': Object.freeze({
     impact: 'Un campo de aceptación sigue superando su límite de respuesta tras una sustitución completa; no se publicó el progreso.',
