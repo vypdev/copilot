@@ -2504,7 +2504,8 @@
         "src/tooling/__tests__/fixtures/bugbot_json_value_runner.py",
         "src/application/usecases/steps/commit/bugbot/__tests__/bugbot_partition_query_diagnostics.test.ts",
         "src/application/policies/__tests__/bugbot_freshness_diagnostics.test.ts",
-        "quality/bugbot/evidence/issue-950/reproduce-controls.sh"
+        "quality/bugbot/evidence/issue-950/reproduce-controls.sh",
+        "quality/bugbot/evidence/issue-950/run-pilot.cjs"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",
@@ -2521,7 +2522,8 @@
         "docs/security-operations/operations/error-reference.mdx",
         "quality/bugbot/evidence/issue-950/preregistration.md",
         "quality/bugbot/evidence/issue-950/results.md",
-        "quality/bugbot/evidence/issue-950/traceability.md"
+        "quality/bugbot/evidence/issue-950/traceability.md",
+        "quality/bugbot/evidence/issue-950/preregistration-v2.md"
       ]
     },
     {
@@ -3318,7 +3320,8 @@
         "src/domain/approval_evidence_diagnostic.ts",
         "src/application/errors/approval_evidence_error.ts",
         "src/data/repository/pull_request/approval_evidence_read.ts",
-        "src/domain/pull_request_closing_reference.ts"
+        "src/domain/pull_request_closing_reference.ts",
+        "src/data/repository/pull_request/approval_bugbot_verification.ts"
       ],
       "tests": [
         "src/application/policies/__tests__/setup_questionnaire_policy.test.ts",

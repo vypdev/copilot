@@ -3,10 +3,10 @@
 from hashlib import sha256
 from pathlib import Path
 from tempfile import TemporaryDirectory
+import argparse
 import json
 import os
 import subprocess
-import sys
 
 
 ROOT = Path(__file__).resolve().parent
@@ -69,10 +69,28 @@ def record(repo, base, head, paths):
     }
 
 
+def materialize(repo, binding, destination):
+    destination.mkdir()
+    git(destination, "init", "-q")
+    # Shallow fetch copies the two immutable trees and does not expose upstream refs.
+    git(destination, "-c", "protocol.file.allow=always", "fetch", "-q", "--depth=1",
+        "--no-tags", repo.as_uri(), binding["head"], binding["base"])
+    git(destination, "-c", "core.hooksPath=/dev/null", "checkout", "-q", "--detach", binding["head"])
+    (destination / ".git" / "FETCH_HEAD").unlink()
+    actual = record(destination, binding["base"], binding["head"], binding["paths"])
+    if any(actual[key] != binding[key] for key in actual):
+        raise ValueError("Materialized review binding differs")
+
+
 def main():
-    if len(sys.argv) != 3:
-        raise SystemExit("Usage: python freeze-subjects.py /path/to/ha-ui /path/to/domus")
-    repositories = dict(zip(("vypdev/ha-ui", "vypdev/domus"), map(Path, sys.argv[1:])))
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("ha_ui", type=Path)
+    parser.add_argument("domus", type=Path)
+    parser.add_argument("--materialize", type=Path)
+    options = parser.parse_args()
+    repositories = {"vypdev/ha-ui": options.ha_ui, "vypdev/domus": options.domus}
+    if options.materialize:
+        options.materialize.mkdir(exist_ok=False)
     originals = {}
     subjects = {}
     with TemporaryDirectory(prefix="bugbot-950-freeze-") as scratch:
@@ -89,6 +107,8 @@ def main():
                 if binding["tree"] != subject["tree"]:
                     raise ValueError(f"Unexpected historical tree for {identifier}")
                 subjects[identifier] = binding
+                if options.materialize:
+                    materialize(repo, binding, options.materialize / identifier)
                 continue
 
             origin = subject["deriveFrom"]
@@ -112,6 +132,8 @@ def main():
             head = git(copy, "-c", "commit.gpgSign=false", "commit-tree", tree, "-p", base,
                        "-m", "Frozen pilot fixture", env={**os.environ, **identity}).decode().strip()
             subjects[identifier] = {**record(copy, base, head, paths), "mutatedBlob": blob}
+            if options.materialize:
+                materialize(copy, subjects[identifier], options.materialize / identifier)
 
     print(json.dumps(subjects, indent=2))
 

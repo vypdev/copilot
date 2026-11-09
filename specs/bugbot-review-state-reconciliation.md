@@ -1937,3 +1937,10 @@ required error or turns required success into failure.
 The proposed #950 verification gate covers retained identities before fixed, obsolete or reopened transitions. Candidate dispositions and durable finding states are separate. Inconclusive evidence, omission, failed integrity and human dismissal preserve native thread authority. The existing read-after-write projection owns observed and unknown effects during recovery.
 
 [Bugbot repository evidence verification](./bugbot-analysis-publication-and-autofix.md#bugbot-repository-evidence-verification)
+
+The finding projection and approval receipt have different lifecycles. An
+older verified finding card may remain visible after an inconclusive or failed
+attempt. The approval reader consumes the latest authoritative native
+attempt bound to the effective policy generation and exact PR comparison.
+[The #950 receipt contract](./bugbot-analysis-publication-and-autofix.md#950-approval-and-pilot-qualification-revision)
+defines the complete shape and rollout transitions.
