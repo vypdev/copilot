@@ -85,6 +85,7 @@ function verifyChain(cwd, binding, result, fixture, subject) {
     assert.match(diffExcerpt({ file: callerPath, line }, [{ filename: callerPath, patch: patch.slice(patch.indexOf('@@ ')) }]),
         /"fixed-state",[\s\S]*"fixed-pattern",[\s\S]*"fixed-replacement"/u);
     assert.match(lines.slice(line - 1, 103).join('\n'), /return ReviewTarget\([\s\S]*actions,/u);
+    assert.equal(result.budget.wiringOrigins, 4);
     assert.equal(result.budget.gitCalls, 3 + 2 * result.budget.openedFiles);
     assert(result.budget.openedFiles <= sourceLimits.openedFiles);
     assert(result.budget.sourceBytes + result.budget.discoveryBytes <= sourceLimits.scanBytes);

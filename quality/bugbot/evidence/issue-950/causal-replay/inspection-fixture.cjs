@@ -88,4 +88,16 @@ const lateAssignment = [
     '    return inspection',
 ].join('\n');
 
-module.exports = { anchor, fixture, lateAssignment, request };
+const alternateEntry = returned => `def wire(store: BetaDatabase):
+    return Inspection(store)
+
+def get_alpha():
+    return ${returned}
+
+def create(use_beta):
+    if use_beta:
+        return wire(BetaDatabase())
+    return wire(get_alpha())
+`;
+
+module.exports = { alternateEntry, anchor, fixture, lateAssignment, request };

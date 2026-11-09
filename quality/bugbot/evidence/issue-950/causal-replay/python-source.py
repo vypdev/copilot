@@ -164,6 +164,9 @@ class Source:
 
     def callers(self, module, function, owner):
         for call in module.caller_candidates(function.name, owner):
+            scope = next((node for node in module.parents_of(call) if isinstance(node, FUNCTION)), module.tree)
+            if not reaching_writes(module, scope, call, None):
+                continue
             name = dotted(call.func)
             for enclosing in (node for node in module.parents_of(call) if isinstance(node, FUNCTION)):
                 if parameter(enclosing, name[0]) or any(
@@ -277,17 +280,12 @@ def abstract_class(cls):
     return any(dotted(base)[-1:] in (("Protocol",), ("ABC",)) for base in cls.bases)
 
 
-def annotation_type(expr, module, at, variable):
-    if isinstance(expr, ast.BinOp) and isinstance(expr.op, ast.BitOr):
-        values = [node for node in (expr.left, expr.right)
-                  if not (isinstance(node, ast.Constant) and node.value is None)]
-        guarded = any(isinstance(node, ast.If) and isinstance(node.test, ast.Compare)
-                      and dotted(node.test.left) == (variable,) and len(node.test.ops) == 1
-                      and isinstance(node.test.ops[0], ast.IsNot) and isinstance(node.test.comparators[0], ast.Constant)
-                      and node.test.comparators[0].value is None
-                      and any(at in ast.walk(child) for child in node.body) for node in module.parents_of(at))
-        return dotted(values[0]) if len(values) == 1 and guarded else ()
-    return dotted(expr)
+def guarded_not_none(module, at, variable):
+    return any(isinstance(node, ast.If) and isinstance(node.test, ast.Compare)
+               and dotted(node.test.left) == (variable,) and len(node.test.ops) == 1
+               and isinstance(node.test.ops[0], ast.IsNot) and isinstance(node.test.comparators[0], ast.Constant)
+               and node.test.comparators[0].value is None
+               and any(at in ast.walk(child) for child in node.body) for node in module.parents_of(at))
 
 
 def binds(node, name):
@@ -301,9 +299,17 @@ def binds(node, name):
 
 
 def writes_name(node, name):
+    if name is None:
+        return False
     if binds(node, name):
         return True
     return not isinstance(node, DECLARATION) and any(writes_name(child, name) for child in ast.iter_child_nodes(node))
+
+
+def branches(stmt):
+    if isinstance(stmt.test, ast.Constant) and type(stmt.test.value) is bool:
+        return (stmt.body if stmt.test.value else stmt.orelse,)
+    return stmt.body, stmt.orelse
 
 
 def reaching_writes(module, function, use, name):
@@ -315,21 +321,22 @@ def reaching_writes(module, function, use, name):
     def branch_contains(statements):
         return any(stmt in ancestors for stmt in statements)
 
-    def alternatives(stmt):
-        if isinstance(stmt.test, ast.Constant) and type(stmt.test.value) is bool:
-            return (stmt.body if stmt.test.value else stmt.orelse,)
-        return stmt.body, stmt.orelse
-
     def walk(statements, reached):
         for stmt in statements:
+            if not reached:
+                break
             if stmt in ancestors:
                 if isinstance(stmt, ast.If):
                     if writes_name(stmt.test, name):
                         raise Stop("unresolved", "wiring-condition-writes")
                     for branch in (stmt.body, stmt.orelse):
                         if branch_contains(branch):
-                            return walk(branch, reached) if branch in alternatives(stmt) else ()
+                            return walk(branch, reached) if branch in branches(stmt) else ()
                     return reached
+                if isinstance(stmt, (ast.Try, ast.With)) and branch_contains(stmt.body):
+                    if isinstance(stmt, ast.With) and any(writes_name(item, name) for item in stmt.items):
+                        raise Stop("unresolved", "wiring-context-writes")
+                    return walk(stmt.body, reached)
                 if isinstance(stmt, (ast.Assign, ast.AnnAssign, ast.Expr, ast.Return)):
                     if any(isinstance(node, ast.NamedExpr) and writes_name(node, name) for node in local_walk(stmt)):
                         raise Stop("unresolved", "wiring-expression-writes")
@@ -337,14 +344,12 @@ def reaching_writes(module, function, use, name):
                     # before the assignment target is written.
                     return reached
                 raise Stop("unresolved", "wiring-control-flow-unproven")
-            if not reached:
-                break
             if isinstance(stmt, (ast.Return, ast.Raise)):
                 return ()
             if isinstance(stmt, ast.If):
                 if writes_name(stmt.test, name):
                     raise Stop("unresolved", "wiring-condition-writes")
-                reached = tuple(dict.fromkeys(write for branch in alternatives(stmt) for write in walk(branch, reached)))
+                reached = tuple(dict.fromkeys(write for branch in branches(stmt) for write in walk(branch, reached)))
                 continue
             lhs, value = assignment(stmt)
             if dotted(lhs) == (name,):
@@ -358,99 +363,130 @@ def reaching_writes(module, function, use, name):
     return walk(function.body, (None,))
 
 
-def local_origin(module, node):
+def local_origins(module, node):
     name = node.id
     for depth, function in enumerate(item for item in module.parents_of(node) if isinstance(item, FUNCTION)):
-        if any(isinstance(item, ast.Global) and name in item.names for item in local_walk(function)):
-            raise Stop("unresolved", "global-wiring-unproven")
+        if any(isinstance(item, (ast.Global, ast.Nonlocal)) and name in item.names for item in local_walk(function)):
+            raise Stop("unresolved", "nonlocal-wiring-unproven")
         param = parameter(function, name)
+        variadic = any(arg and arg.arg == name for arg in (function.args.vararg, function.args.kwarg))
         writes = any(writes_name(stmt, name) for stmt in function.body)
-        if not (param or writes):
+        if not (param or writes or variadic):
             continue
         if depth and writes:
-            # A closure's invocation can occur after later outer writes.
             raise Stop("unresolved", "closure-binding-unproven")
         reached = (None,) if depth else reaching_writes(module, function, node, name)
-        write = one(reached, "wiring-assignment-ambiguous")
-        if write is not None:
-            return write, assignment(write)[1], None
-        if param is not None:
-            return function, None, param
-        break
+        if None in reached and param is None:
+            break
+        return [(stmt, assignment(stmt)[1], None) if stmt is not None else (function, None, param)
+                for stmt in reached]
     raise Stop("unresolved", "effective-constructor-unproven")
 
 
-def concrete_class(source, module, call):
-    if not isinstance(call, ast.Call):
-        return None
-    name = dotted(call.func)
+def callable_origin(source, module, node):
+    name = dotted(node.func)
     if name and any(
         parameter(func, name[0]) or any(writes_name(stmt, name[0]) for stmt in func.body)
-        for func in module.parents_of(call) if isinstance(func, FUNCTION)
+        for func in module.parents_of(node) if isinstance(func, FUNCTION)
     ):
         raise Stop("unresolved", "constructor-shadowed")
-    resolved = source.resolve(module, name)
-    return resolved if resolved and isinstance(resolved[1], ast.ClassDef) and not abstract_class(resolved[1]) else None
+    return source.resolve(module, name)
 
 
-def entry_constructors(source, modules, function, owner, index, name, optional):
-    """Collect concrete origins proved at the call site of the annotated wiring."""
-    constructors = []
-    for module in modules:
-        for call in source.callers(module, function, owner):
-            actual = argument(call, index, name)
-            enclosing = next((node for node in module.parents_of(call) if isinstance(node, FUNCTION)), None)
-            values = [(actual, actual)]
-            if enclosing and isinstance(actual, ast.Name):
-                reached = reaching_writes(module, enclosing, actual, actual.id)
-                values = [(stmt, assignment(stmt)[1]) for stmt in reached if stmt is not None]
-                if values and None in reached:
-                    raise Stop("ambiguous", "wiring-entry-assignment-ambiguous")
-            if optional:
-                values = [(site, value) for site, value in values
-                          if not isinstance(value, ast.Constant) or value.value is not None]
-            if len(values) > 1:
-                raise Stop("ambiguous", "wiring-entry-assignment-ambiguous")
-            for site, value in values:
-                concrete = concrete_class(source, module, value)
-                if concrete:
-                    constructors.append((concrete, ((module, site), (module, call))))
-    source.hits(len(constructors))
-    return constructors
+def dataclass_field(module, cls, field):
+    # A plain dataclass constructor binds the attribute to its supplied value.
+    # An annotation on a class or parameter does not establish that value.
+    if cls.bases or cls.keywords or len(cls.decorator_list) != 1 or (
+        module.identity(dotted(cls.decorator_list[0])) != (("dataclasses",), "dataclass")
+    ):
+        raise Stop("unresolved", "wiring-field-unproven", [module.path])
+    if any(isinstance(node, ast.Attribute) and node.attr == field and isinstance(node.ctx, (ast.Store, ast.Del))
+           or isinstance(node, FUNCTION) and node.name in {field, "__init__", "__post_init__", "__getattribute__", "__getattr__"}
+           for node in ast.walk(cls)):
+        raise Stop("unresolved", "wiring-field-unproven", [module.path])
+    fields = [stmt for stmt in cls.body if isinstance(stmt, ast.AnnAssign) and isinstance(stmt.target, ast.Name)]
+    for index, definition in enumerate(fields):
+        annotation = definition.annotation.value if isinstance(definition.annotation, ast.Subscript) else definition.annotation
+        name = dotted(annotation)
+        identity = module.identity(name)
+        if definition.value is not None or name[-1:] in (("ClassVar",), ("InitVar",), ("KW_ONLY",)) or (
+            identity and identity[1] in ("ClassVar", "InitVar", "KW_ONLY")
+        ):
+            break
+        if definition.target.id == field:
+            return index, definition
+    raise Stop("unresolved", "wiring-field-unproven", [module.path])
+
+
+def can_fall_through(statements):
+    """Check normal completion for the supported factory return shapes."""
+    for stmt in statements:
+        if isinstance(stmt, (ast.Return, ast.Raise)):
+            return False
+        if isinstance(stmt, ast.If) and not any(can_fall_through(branch) for branch in branches(stmt)):
+            return False
+        if isinstance(stmt, ast.Try) and not stmt.finalbody and not (
+            can_fall_through(stmt.body) and can_fall_through(stmt.orelse)
+            or any(can_fall_through(handler.body) for handler in stmt.handlers)
+        ):
+            return False
+    return True
 
 
 def wiring_origin(source, modules, module, node, trace=(), depth=0):
-    if depth > 5:
+    if depth > 12:
         raise Stop("unresolved", "wiring-depth")
-    if isinstance(node, ast.Call):
-        resolved = concrete_class(source, module, node)
-        if resolved:
+    source.remaining()
+
+    def follow(owner, value, *proof):
+        return wiring_origin(source, modules, owner, value, trace + proof, depth + 1)
+
+    if isinstance(node, ast.Constant) and node.value is None:
+        return [(None, trace + ((module, node),))]
+    if isinstance(node, ast.Call) and (resolved := callable_origin(source, module, node)):
+        owner, definition = resolved
+        if isinstance(definition, ast.ClassDef) and not abstract_class(definition):
             return [(resolved, trace + ((module, node),))]
-    if not isinstance(node, ast.Name):
-        raise Stop("unresolved", "effective-constructor-unproven")
-    site, value, param = local_origin(module, node)
-    if value is not None:
-        return wiring_origin(source, modules, module, value, trace + ((module, site),), depth + 1)
-    index, arg = param
-    annotation = annotation_type(arg.annotation, module, node, node.id)
-    resolved = source.resolve(module, annotation)
-    if resolved and isinstance(resolved[1], ast.ClassDef) and not abstract_class(resolved[1]):
-        constructors = entry_constructors(source, modules, site, module, index, node.id, isinstance(arg.annotation, ast.BinOp))
-        if not constructors:
-            raise Stop("unresolved", "concrete-entry-constructor-unproven")
-        expected = (resolved[0].path, resolved[1].name)
-        if any((origin.path, cls.name) != expected for (origin, cls), _ in constructors):
-            raise Stop("ambiguous", "constructor-disagrees-with-wiring-type",
-                       [origin.path for (origin, _), _ in constructors])
-        imports = [module.imports[annotation[0]][2]] if annotation[0] in module.imports else []
-        return [(resolved, trace + ((module, arg),) + tuple((module, item) for item in imports) + proof)
-                for _, proof in constructors]
-    callers = [(other, call) for other in modules for call in source.callers(other, site, module)]
-    source.hits(len(callers))
-    if not callers:
-        raise Stop("unresolved", "effective-constructor-unproven")
-    return [origin for other, call in callers for origin in wiring_origin(
-        source, modules, other, argument(call, index, node.id), trace + ((module, arg), (other, call)), depth + 1)]
+        if isinstance(definition, ast.FunctionDef) and not definition.decorator_list:
+            body = list(local_walk(definition))
+            if can_fall_through(definition.body) or any(
+                isinstance(item, (ast.Yield, ast.YieldFrom)) or isinstance(item, ast.Try) and item.finalbody
+                for item in body
+            ):
+                raise Stop("unresolved", "factory-return-unproven")
+            returns = [ret for ret in body if isinstance(ret, ast.Return)
+                       and reaching_writes(owner, definition, ret.value or ret, None)]
+            if returns and all(ret.value is not None for ret in returns):
+                return [origin for ret in returns for origin in follow(owner, ret.value, (module, node), (owner, ret))]
+    if isinstance(node, ast.Attribute):
+        origins = []
+        for concrete, proof in follow(module, node.value, (module, node)):
+            if concrete is None:
+                raise Stop("unresolved", "wiring-field-receiver-unproven")
+            owner, cls = concrete
+            index, field = dataclass_field(owner, cls, node.attr)
+            call_module, constructor = proof[-1]
+            actual = argument(constructor, index, node.attr)
+            origins.extend(wiring_origin(source, modules, call_module, actual, proof + ((owner, field),), depth + 1))
+        return origins
+    if isinstance(node, ast.Name):
+        origins = []
+        for site, value, param in local_origins(module, node):
+            if value is not None:
+                origins.extend(follow(module, value, (module, site)))
+                continue
+            index, arg = param
+            callers = [(other, call) for other in modules for call in source.callers(other, site, module)]
+            source.hits(len(callers))
+            if not callers:
+                raise Stop("unresolved", "effective-constructor-unproven")
+            guarded = guarded_not_none(module, node, node.id)
+            for other, call in callers:
+                traced = follow(other, argument(call, index, node.id), (module, arg), (other, call))
+                origins.extend(origin for origin in traced if origin[0] is not None or not guarded)
+        if origins:
+            return origins
+    raise Stop("unresolved", "effective-constructor-unproven")
 
 
 def collect(source):
@@ -531,10 +567,16 @@ def collect(source):
         raise Stop("unresolved", "service-construction-unproven")
     origins = [item for module, construct in constructors for item in wiring_origin(
         source, modules, module, argument(construct, fields.index(injection), injection), ((module, construct),))]
+    if any(concrete is None for concrete, _ in origins):
+        raise Stop("unresolved", "effective-constructor-unproven")
+    source.usage["wiringOrigins"] = len(origins)
     classes = {(module.path, cls.name) for (module, cls), _ in origins}
     if len(classes) != 1:
         raise Stop("ambiguous", "effective-constructor-ambiguous", [path for path, _ in classes])
-    (store, store_cls), wiring = origins[0]
+    # Every entry origin must resolve. Return one complete, compact witness
+    # chain for the common implementation within the fixed receipt allowance.
+    (store, store_cls), wiring = min(origins, key=lambda origin: (
+        len({module.path for module, _ in origin[1]}), len(origin[1])))
     read = method(store_cls, read_method)
     outputs = [node.value for node in local_walk(read) if isinstance(node, (ast.Return, ast.Yield))]
     output = one(outputs, "transaction-return-unproven")

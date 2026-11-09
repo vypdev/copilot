@@ -2662,7 +2662,7 @@ records the durable state of a finding or native thread.
 | EV-04 | Preserve target ownership, freshness, retry safety and explicit historical transitions including human authority. |
 | EV-05 | Bound and authorize evidence reads, probes and verifier traffic. Reject forged or mismatched artifacts and prevent arbitrary execution or publication from the verifier. |
 | EV-06 | Keep GitHub results legible, localized, sanitized, auditable and compatible with durable history. |
-| EV-07 | Qualify both pilot models and all quality gates before enabling publication. Make rollback and unresolved evidence explicit. |
+| EV-07 | Compare GPT-6 Luna and GPT-6.1 Sol. Enable only an exact profile that independently meets every qualification gate and receives explicit maintainer approval. Make rollback and unresolved evidence explicit. |
 
 The design reuses the existing Bugbot capability, authorizations, candidate
 admission, projection, protection rules and comment noise budget. Merge,
@@ -3474,8 +3474,8 @@ Retain the owner’s separate approval requirements and mappings: `BBE950-R01` i
 
 ### 1. Executive summary
 
-This amendment is authoritative for candidate anchor selection, the optional
-follow-up in sections 6–8, and EV-07. It replaces the earlier anchor
+This amendment is authoritative for candidate anchor selection, evidence
+attribution, the optional follow-up in sections 6–8, and EV-07. It replaces the earlier anchor
 preservation shorthand and pilot configuration/qualification assumptions.
 The separate #950 approval receipt contract still governs the consumer.
 
@@ -3494,6 +3494,8 @@ establish evidence discovery or qualify a production profile.
 | BBE950-D01 | Admit one typed evidence round and require an evidence-bound final verdict. |
 | BBE950-D02 | Normalize the changed location before freezing candidate identity and anchor. |
 | BBE950-D03 | Qualify the exact model, effort, evidence capabilities and limits independently for each profile. |
+| BBE950-D04 | Establish effective-route attribution separately from the provenance of retrieved source. |
+| BBE950-D05 | Provide language-independent pinned Git search and reads, and evaluate the common path on a reserved non-Python pair. |
 
 ### 6. Behavior
 
@@ -3527,6 +3529,28 @@ findings and preserve unresolved history, but cannot authorize clean approval.
 On integrity failure preserve the prior verified projection and make zero
 finding, resolution or approval writes. Native run diagnostics may report failure.
 
+A source receipt proves fragment provenance through its pinned tree, blob,
+path and range. Effective-route attribution additionally needs evidence that
+links the reviewed call and value to the implementation that can execute.
+The application MUST establish each relevant reachable origin at the argument
+evaluation point. A Python annotation, declaration or literal match cannot
+prove the runtime instance. For example, if `wire(store: BetaDatabase)` has
+one caller passing `BetaDatabase()` and another passing a factory whose
+origin is unproved, return `unresolved` and identify the gap. If that factory
+demonstrably returns `AlphaDatabase()` and both routes can reach the candidate,
+return `ambiguous` unless the pinned context establishes the effective route.
+A later assignment cannot supply the earlier argument. If all relevant
+origins converge, the bounded packet may include a representative complete
+chain to the shared implementation. Report the attribution status separately
+from source receipts and identify any gaps or competing routes.
+
+An unresolved auxiliary query can coexist with a final verdict if supplied
+evidence already establishes the decisive premise and the verdict cites that
+evidence. If the missing link or competing origins leave the decisive premise
+unproved, the final verdict MUST be `inconclusive` with a cause and next step.
+An ambiguous or unresolved implementation MUST NOT be represented to the
+verifier as effective.
+
 ### 8. Clean Architecture
 
 The application owns normalization, freeze, source authority, retrieval,
@@ -3534,6 +3558,17 @@ receipt membership, budgets and the pre-write validation gate. The verifier
 judges the causal evidence in a closed session. The framed path charges both
 calls, retries and retrieval on the common ledger. The closed verifier cannot
 reach raw Git, commands, credentials, network or any mutation port.
+
+The common source adapter MUST support scoped name and literal search and
+bounded line reads against the pinned Git tree for any language. Without a
+language analyzer, the verifier receives the original packet, matching source
+fragments and their operation-, candidate- and revision-bound receipts, or
+an explicit retrieval status when the reads cannot provide them. It also
+receives any already authorized resolved dependencies and matching native CI
+from the profile. These fragments can establish a chain when they contain
+the relevant wiring, call and implementation. A match alone proves only
+where the text occurs. Static Python tracing is an additional source
+capability under the same read budget and trust boundary.
 
 ### 14. Testing strategy
 
@@ -3543,7 +3578,8 @@ reach raw Git, commands, credentials, network or any mutation port.
 | Integrity and provider writes | 4 | Forgery, foreign candidate, foreign revision, second request |
 | Anchor selection | 3 | Pytest separator, valid original, two plausible lines |
 | Qualification | 1 | Reject a profile with a failed independent gate |
-| Total | 13 | Additional deterministic cases separate from model trials |
+| Attribution and common source retrieval | 5 | Unknown origin, competing proven origins, unique proven origin, auxiliary query, language-independent read |
+| Total | 18 | Additional deterministic cases separate from model trials |
 
 | Case ID | Area | Requirements | Scenario |
 |---|---|---|---|
@@ -3559,7 +3595,12 @@ reach raw Git, commands, credentials, network or any mutation port.
 | bbe950-demand-C10 | Anchor selection | BBE950-D02 | The pytest separator selects the sole nearby causal declaration and records both positions. |
 | bbe950-demand-C11 | Anchor selection | BBE950-D02 | A substantive eligible line stays fixed even with another nearby addition. |
 | bbe950-demand-C12 | Anchor selection | BBE950-D02 | Two plausible nearby lines produce an inconclusive anchor and no inline effect. |
-| bbe950-demand-C13 | Qualification | BBE950-D03 | A passing model cannot qualify another model and a diagnostic replay cannot authorize activation. |
+| bbe950-demand-C13 | Qualification | BBE950-D03, EV-07 | A passing model cannot qualify another model or bypass explicit maintainer approval. A diagnostic replay cannot authorize activation. |
+| bbe950-demand-C14 | Attribution | BBE950-D04 | A reachable annotated wiring call has an unproved origin beside a direct constructor. The runner reports unresolved with no effective implementation receipt and the undecided premise stays inconclusive. |
+| bbe950-demand-C15 | Attribution | BBE950-D04 | The reachable factory proves a second implementation. Without route selection the runner reports ambiguity with no effective implementation receipt. |
+| bbe950-demand-C16 | Attribution | BBE950-D04 | A unique demonstrated origin resolves at argument evaluation. A later assignment or a provably unreachable alternative cannot change it. |
+| bbe950-demand-C17 | Attribution | BBE950-D04 | An unresolved auxiliary query does not block a verdict supported by decisive receipts. A missing decisive receipt yields an inconclusive verdict with a next step. |
+| bbe950-demand-C18 | Common source retrieval | BBE950-D05 | Scoped Git search and reads deliver pinned non-Python source with valid receipts and no claimed analyzer-derived attribution. |
 
 ### 15. Documentation
 
@@ -3577,8 +3618,14 @@ initial packet, using the fixed packet, an evidence-free second call and a
 second call with application-retrieved evidence. Require three repetitions of
 each original and mutant per model in the held-out pair. The recovered source
 must establish the material premise, retain the exact mutant anchor and
-preserve refutation of the original. A favorable diagnostic allows evaluation
-in full review. Activation remains disabled.
+preserve refutation of the original. The next diagnostic MUST preregister
+and run at least one reserved original/mutation pair whose decisive code is
+outside Python. Both revisions use the common Git adapter with no language
+analyzer for that pair. Record retrieval, citations, verdicts and exact
+mutant anchoring for both models across all three arms and repetitions.
+This iteration defines the criterion and runs deterministic checks. The
+reserved model comparison is pending. A favorable diagnostic allows
+evaluation in full review. Activation remains disabled.
 
 Each proposed profile must independently pass all qualification gates. Full
 review must reproduce at least three historical baseline alerts across two
@@ -3596,11 +3643,13 @@ maintainer approval. No model inherits another profile's qualification.
 |---|---|
 | BBE950-D01 | bbe950-demand-C01, bbe950-demand-C02, bbe950-demand-C03, bbe950-demand-C04, bbe950-demand-C05, bbe950-demand-C06, bbe950-demand-C07, bbe950-demand-C08, bbe950-demand-C09 |
 | BBE950-D02 | bbe950-demand-C10, bbe950-demand-C11, bbe950-demand-C12 |
-| BBE950-D03 | bbe950-demand-C13 |
+| BBE950-D03, EV-07 | bbe950-demand-C13 and independent full-review qualification |
+| BBE950-D04 | bbe950-demand-C14–C17 and [causal replay and simulated runner](../quality/bugbot/evidence/issue-950/causal-replay/origin-results.md). C17 is planned for product verification. |
+| BBE950-D05 | bbe950-demand-C18 and the reserved non-Python diagnostic in section 16. The deterministic common Git check ran and the reserved diagnostic is pending. |
 
 ### 20. References and decisions
 
 - [V4 protocol](https://github.com/vypdev/copilot/blob/19da0614f/quality/bugbot/evidence/issue-950/v4/preregistration.md)
 - [V4 results](https://github.com/vypdev/copilot/blob/a3f70858b/quality/bugbot/evidence/issue-950/v4/results.md)
 - [Sol source supplement](https://github.com/vypdev/copilot/blob/a3f70858b/quality/bugbot/evidence/issue-950/v4/sol-source-supplement/results.md)
-- The 27-issue matrix separates executed evidence from planned coverage.
+- The [27-issue matrix](../quality/bugbot/evidence/issue-950/traceability.md) separates executed controls, deterministic replay, simulated delivery and pending model evaluation.

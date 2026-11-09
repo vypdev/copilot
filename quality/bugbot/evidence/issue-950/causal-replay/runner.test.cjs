@@ -6,6 +6,8 @@ const path = require('node:path');
 const { test } = require('node:test');
 const { scenario, trial } = require('./runner.cjs');
 const { limits, receipt } = require('../tree-search/contract.cjs');
+const { git } = require('../on-demand/contract.cjs');
+const { alternateEntry, fixture: inspection, request: methodRequest } = require('./inspection-fixture.cjs');
 const { byteLength, digest } = require('../v4/verification.cjs');
 
 const prior = process.env.BUGBOT_TREE_PRIOR_SUBJECTS;
@@ -62,6 +64,15 @@ async function simulated({ row, fixture, request }, answer) {
     return { calls, events, result };
 }
 
+function record(run, calls, result) {
+    if (process.env.BUGBOT_CAUSAL_RUNNER_REPORT) {
+        appendFileSync(process.env.BUGBOT_CAUSAL_RUNNER_REPORT, JSON.stringify({
+            subject: run.row.subject, trial: run.row.trial, simulated: true, realModelCalls: 0, calls,
+            writeAttempts: result.writeAttempts, verdict: result.verdict,
+        }) + '\n');
+    }
+}
+
 for (const subject of ['T1', 'T2']) {
     test(`the next runner sends the exact initial and causal packets for ${subject}`, async () => {
         const run = fixtureRun(subject);
@@ -76,6 +87,7 @@ for (const subject of ['T1', 'T2']) {
         assert.deepEqual(second.packet.slice(0, initial.packet.length), initial.packet);
         assert.deepEqual(second.followup.request, run.request);
         assert.equal(second.followup.status, 'provided');
+        assert.equal(second.followup.budget.wiringOrigins, 4);
         assert.deepEqual(second.followup.anchor, run.fixture.anchor.selected);
         const retrieved = second.packet.slice(initial.packet.length);
         assert.equal(retrieved.length, 5);
@@ -99,12 +111,7 @@ for (const subject of ['T1', 'T2']) {
         assert.equal(result.output, 20);
         assert.equal(result.unknown, 0);
         assert.equal(events.filter(item => item.event === 'evidence-response').length, 1);
-        if (process.env.BUGBOT_CAUSAL_RUNNER_REPORT) {
-            appendFileSync(process.env.BUGBOT_CAUSAL_RUNNER_REPORT, JSON.stringify({
-                subject, trial: run.row.trial, simulated: true, realModelCalls: 0, calls,
-                writeAttempts: result.writeAttempts, verdict: result.verdict,
-            }) + '\n');
-        }
+        record(run, calls, result);
     });
 }
 
@@ -147,4 +154,51 @@ test('runner still uses pinned legacy retrieval for a non-causal literal', async
     assert.equal(calls[1].followup.links, undefined);
     assert(calls[1].packet.at(-1).text.includes('"fixed-state"'));
     assert.equal(calls[1].packet.at(-1).path, run.fixture.c.path);
+});
+
+for (const [status, returned] of [['ambiguous', 'AlphaDatabase()'], ['unresolved', 'load_database()']]) {
+    test(`the runner delivers ${status} attribution without an effective implementation receipt`, async t => {
+        const { cwd, binding, options } = inspection(t, alternateEntry(returned));
+        const { base, anchor } = options.context;
+        const excerpt = git(cwd, 'diff', '--no-ext-diff', base, binding.head, '--', anchor.path);
+        const run = {
+            row: { model: 'simulated', subject: status, repetition: 1, arm: 'on-demand', trial: `inspection-${status}` },
+            fixture: { cwd, b: { ...binding, base, diffSha256: digest(excerpt) }, excerpt, initial: [],
+                c: { id: 'inspection', path: anchor.path, line: anchor.line }, anchor: { original: anchor, selected: anchor } },
+            request: methodRequest,
+        };
+        const { calls, result } = await simulated(run, () => ({
+            verdict: 'inconclusive', citations: [], reason: 'Effective implementation is not established.',
+            nextStep: 'Identify the active entry origin.',
+        }));
+        assert.equal(result.status, 'completed', result.reason);
+        assert.equal(result.verdict, 'inconclusive');
+        assert.equal(calls.length, 2);
+        const [initial, second] = calls;
+        assert.deepEqual(initial.candidate, second.candidate);
+        assert.deepEqual(initial.packet, second.packet);
+        assert.equal(second.followup.status, status);
+        assert.deepEqual(second.followup.receiptIds, []);
+        assert.equal(second.followup.links, undefined);
+        assert.deepEqual(result.anchor.selected, anchor);
+        assert(second.packetBytes <= limits.packetBytes);
+        record(run, calls, result);
+    });
+}
+
+test('the runner can retrieve non-Python workspace source through the common Git search', async () => {
+    const run = {
+        row: { model: 'simulated', subject: 'R1', repetition: 1, arm: 'on-demand', trial: 'common-git-search' },
+        fixture: scenario('R1', prior, subjects),
+        request: { kind: 'searchTree', targets: [{ scope: '', workspace: '@domus/frontend',
+            match: 'name', query: 'playwright.entry.config.ts', start: null, end: null }] },
+    };
+    const { calls, result } = await simulated(run);
+    assert.equal(result.status, 'completed', result.reason);
+    assert.equal(calls.length, 2);
+    assert.equal(calls[1].followup.status, 'provided');
+    assert.equal(calls[1].followup.links, undefined);
+    assert.equal(calls[1].packet.at(-1).path, 'frontend/playwright.entry.config.ts');
+    assert(calls[1].packetBytes <= limits.packetBytes);
+    record(run, calls, result);
 });

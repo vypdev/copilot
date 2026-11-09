@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { retrieve } = require('./retrieve.cjs');
 const { assess, limits } = require('../tree-search/contract.cjs');
-const { anchor, fixture, lateAssignment, request } = require('./inspection-fixture.cjs');
+const { alternateEntry, anchor, fixture, lateAssignment, request } = require('./inspection-fixture.cjs');
 
 test('an assignment after the constructor call cannot identify its parameter', t => {
     const { cwd, binding, options } = fixture(t, lateAssignment);
@@ -12,6 +12,55 @@ test('an assignment after the constructor call cannot identify its parameter', t
     assert.equal(result.status, 'unresolved');
     assert.equal(result.reason, 'effective-constructor-unproven');
     assert.deepEqual(result.receipts, []);
+});
+
+test('two reachable annotated calls with concrete origins remain ambiguous', t => {
+    const { cwd, binding, options } = fixture(t, alternateEntry('AlphaDatabase()'));
+    const result = retrieve(cwd, binding, request, options);
+    assert.equal(result.status, 'ambiguous', result.reason);
+    assert.deepEqual(result.paths, ['pkg/adapters/alpha.py', 'pkg/adapters/beta.py']);
+    assert.deepEqual(result.receipts, []);
+    assert.equal(result.links, undefined);
+});
+
+test('one unresolved reachable origin prevents attribution even with a known direct constructor', t => {
+    const { cwd, binding, options } = fixture(t, alternateEntry('load_database()'));
+    const result = retrieve(cwd, binding, request, options);
+    assert.equal(result.status, 'unresolved', result.reason);
+    assert.deepEqual(result.receipts, []);
+    assert.equal(result.links, undefined);
+});
+
+test('one demonstrated implementation is sufficient when the competing call is unreachable', t => {
+    const { cwd, binding, options } = fixture(t, `def wire(store: BetaDatabase):
+    return Inspection(store)
+
+def create():
+    if False:
+        return wire(AlphaDatabase())
+    return wire(BetaDatabase())
+`);
+    const result = retrieve(cwd, binding, request, options);
+    assert.equal(result.status, 'provided', result.reason);
+    assert.deepEqual(result.anchor, anchor);
+    assert.equal(result.links.find(link => link.role === 'implementation').symbol, 'BetaRepo.active_key');
+    assert(!result.receipts.some(item => item.path.endsWith('/alpha.py')));
+});
+
+test('a transparent factory can prove an instance that differs from its caller annotation', t => {
+    const { cwd, binding, options } = fixture(t, `def wire(store: BetaDatabase):
+    return Inspection(store)
+
+def create():
+    return wire(make_database())
+
+def make_database():
+    return AlphaDatabase()
+`);
+    const result = retrieve(cwd, binding, request, options);
+    assert.equal(result.status, 'provided', result.reason);
+    assert.equal(result.links.find(link => link.role === 'implementation').symbol, 'AlphaRepo.active_key');
+    assert(result.receipts.some(item => item.text.includes('return AlphaDatabase()')));
 });
 
 test('the last prior assignment wins and a later overwrite cannot change the passed instance', t => {
@@ -43,7 +92,7 @@ test('two writes reaching the same constructor from distinct branches are ambigu
     ].join('\n'));
     const result = retrieve(cwd, binding, request, options);
     assert.equal(result.status, 'ambiguous');
-    assert.equal(result.reason, 'wiring-assignment-ambiguous');
+    assert.equal(result.reason, 'effective-constructor-ambiguous');
     assert.deepEqual(result.receipts, []);
 });
 
