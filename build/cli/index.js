@@ -95898,6 +95898,90 @@ function selectAvailableMembers(members, currentMembers, requested) {
 
 /***/ }),
 
+/***/ 425:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.readApprovalBugbotVerification = readApprovalBugbotVerification;
+const marker = /<!-- copilot-bugbot-verification:v1 ([^\r\n]{1,4096}) -->/gu;
+const counts = ['open', 'reopened', 'dismissed', 'verificationRequired', 'unknown', 'fixed', 'obsolete'];
+const receiptKeys = ['version', 'repositoryId', 'pullNumber', 'headSha', 'baseSha', 'policyDigest', 'generation',
+    'mode', 'runId', 'attempt', 'coverage', 'verification', 'publication', 'outcome', 'findingStates'];
+function readApprovalBugbotVerification(policy, scope, runs, checks) {
+    if (!positive(policy.generation) || !positive(policy.workflowId) || !positive(policy.sourceAppId)
+        || !/^[a-f0-9]{64}$/u.test(policy.policyDigest))
+        return undefined;
+    const ordered = runs.filter(run => run.workflow_id === policy.workflowId
+        && (run.head_sha === scope.headSha || run.head_sha === scope.testedMergeSha)
+        && (!Array.isArray(run.pull_requests) || run.pull_requests.length === 0
+            || run.pull_requests.some(pr => pr?.number === scope.pullNumber)))
+        .sort((left, right) => right.id - left.id || right.run_attempt - left.run_attempt);
+    const latest = ordered[0];
+    if (!latest || !positive(latest.id) || !positive(latest.run_attempt) || !positive(latest.check_suite_id)
+        || !latest.pull_requests?.some(pr => pr?.number === scope.pullNumber)
+        || latest.status !== 'completed' || latest.conclusion !== 'success'
+        || (ordered[1]?.id === latest.id && ordered[1].run_attempt === latest.run_attempt))
+        return undefined;
+    const facts = checks.flatMap(check => {
+        if (check.name !== 'Copilot / Review' || check.app?.id !== policy.sourceAppId
+            || check.head_sha !== latest.head_sha || check.check_suite?.id !== latest.check_suite_id
+            || check.status !== 'completed')
+            return [];
+        const summary = check.output?.summary;
+        if (typeof summary !== 'string' || summary.length > 65536)
+            return [];
+        const matches = [...summary.matchAll(marker)];
+        if (matches.length !== 1)
+            return [];
+        const fact = parseReceipt(matches[0][1], scope, policy, latest, check.conclusion);
+        return fact ? [fact] : [];
+    });
+    return facts.length === 1 ? facts[0] : undefined;
+}
+function parseReceipt(json, scope, policy, run, checkConclusion) {
+    let receipt;
+    try {
+        receipt = JSON.parse(json);
+    }
+    catch {
+        return undefined;
+    }
+    if (!isRecord(receipt) || !exactKeys(receipt, receiptKeys) || receipt.version !== 1
+        || receipt.repositoryId !== scope.repositoryId || receipt.pullNumber !== scope.pullNumber
+        || receipt.headSha !== scope.headSha || receipt.baseSha !== scope.baseSha
+        || receipt.policyDigest !== policy.policyDigest || receipt.generation !== policy.generation
+        || receipt.mode !== policy.mode || receipt.runId !== run.id || receipt.attempt !== run.run_attempt
+        || receipt.coverage !== 'complete' || receipt.verification !== 'complete'
+        || receipt.publication !== 'verified' || receipt.outcome !== 'complete'
+        || checkConclusion !== 'success')
+        return undefined;
+    const state = receipt.findingStates;
+    if (!isRecord(state) || !exactKeys(state, counts) || !counts.every(key => Number.isSafeInteger(state[key]) && state[key] >= 0))
+        return undefined;
+    return {
+        headSha: scope.headSha, outcome: 'complete', coverage: 'complete',
+        verificationReceipt: { runId: run.id, attempt: run.run_attempt,
+            generation: policy.generation, policyDigest: policy.policyDigest },
+        open: state.open, reopened: state.reopened, dismissed: state.dismissed,
+        verificationRequired: state.verificationRequired, unknown: state.unknown,
+    };
+}
+function positive(value) {
+    return value !== undefined && Number.isSafeInteger(value) && value > 0;
+}
+function isRecord(value) {
+    return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+}
+function exactKeys(record, keys) {
+    const actual = Object.keys(record);
+    return actual.length === keys.length && keys.every(key => actual.includes(key));
+}
+
+
+/***/ }),
+
 /***/ 96710:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -96104,6 +96188,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestApprovalRepository = void 0;
 exports.readEffectiveApprovalPolicy = readEffectiveApprovalPolicy;
 const approval_evidence_read_1 = __nccwpck_require__(9958);
+const approval_bugbot_verification_1 = __nccwpck_require__(425);
 const approval_evidence_error_1 = __nccwpck_require__(50519);
 const application_error_1 = __nccwpck_require__(75999);
 const current_base_revision_query_1 = __nccwpck_require__(68742);
@@ -96235,7 +96320,17 @@ class PullRequestApprovalRepository {
         }));
         const botId = user.data.id;
         const botCards = comments.filter((comment) => comment.user?.id === botId && /<!-- copilot-bugbot-status schema="1"/u.test(comment.body ?? ''));
-        const bugbot = botCards.length === 1 ? parseBugbotCard(botCards[0].body ?? '', headSha, target.pullNumber) : undefined;
+        const readVerificationPolicy = this.settings.readBugbotVerificationPolicy;
+        const verification = readVerificationPolicy
+            ? await (0, approval_evidence_read_1.readApprovalEvidence)('policy', () => readVerificationPolicy(target)) : undefined;
+        if (readVerificationPolicy && !verification?.requireReceipt
+            && !(verification?.requireReceipt === false && ['disabled', 'shadow'].includes(verification.mode))) {
+            throw (0, approval_evidence_error_1.approvalEvidenceError)('policy', 'invalid-response');
+        }
+        const bugbot = verification?.requireReceipt
+            ? (0, approval_bugbot_verification_1.readApprovalBugbotVerification)(verification, { repositoryId: pull.base.repo?.id ?? 0, pullNumber: pull.number,
+                headSha, baseSha, testedMergeSha }, workflowRuns, checkRuns)
+            : botCards.length === 1 ? parseBugbotCard(botCards[0].body ?? '', headSha, target.pullNumber) : undefined;
         const reviewFacts = reviews.map((review) => ({
             id: review.id,
             userId: review.user?.id ?? 0,
