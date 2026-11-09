@@ -1,0 +1,58 @@
+{
+  "T1": {
+    "issue": 918,
+    "verdict": "refuted",
+    "path": "backend/src/domus/application/recurrence_review_target.py",
+    "line": 82,
+    "decisive": {
+      "path": "backend/src/domus/infrastructure/sqlite_recurrence.py",
+      "start": 125,
+      "end": 137
+    },
+    "head": "3d890522003c2d2e7d03fa1f51b1bd84f0d0f10f",
+    "tree": "d670f43e401a26cf2c488f268e0d8b4910def2cd",
+    "side": "RIGHT"
+  },
+  "T2": {
+    "issue": 918,
+    "verdict": "confirmed",
+    "path": "backend/src/domus/application/recurrence_review_target.py",
+    "line": 82,
+    "decisive": {
+      "path": "backend/src/domus/infrastructure/sqlite_recurrence.py",
+      "start": 125,
+      "end": 136
+    },
+    "head": "8b8ad597b6831cc11dddb7a856a3d972e82acc22",
+    "tree": "10863588cb2a39a9e7760d908c14afd58121e20e",
+    "side": "RIGHT"
+  },
+  "H1": {
+    "issue": 913,
+    "verdict": "refuted",
+    "path": "frontend/src/presentation/domus-tasks.ts",
+    "line": 145,
+    "side": "RIGHT",
+    "head": "3c7d0c8b57cc6a53c611646e12a33b752d481730",
+    "tree": "1a60af28ce70708f983d439dafb23aa3418f7b6f",
+    "decisive": {
+      "path": "frontend/src/domain/tasks.ts",
+      "start": 28,
+      "end": 30
+    }
+  },
+  "H2": {
+    "issue": 913,
+    "verdict": "confirmed",
+    "path": "frontend/src/presentation/domus-tasks.ts",
+    "line": 145,
+    "side": "RIGHT",
+    "head": "20cd99868ed8c2b6595db4c804dbccab90bad17f",
+    "tree": "18e5ed14408481ccc58543e8c3fb0bbce5d19c70",
+    "decisive": {
+      "path": "frontend/src/domain/tasks.ts",
+      "start": 28,
+      "end": 30
+    }
+  }
+}

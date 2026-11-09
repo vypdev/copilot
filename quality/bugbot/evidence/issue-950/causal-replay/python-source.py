@@ -173,11 +173,13 @@ class Source:
                     dotted(assignment(node)[0]) == (name[0],) for node in local_walk(enclosing)
                 ):
                     raise Stop("unresolved", "imported-call-shadowed", [module.path])
-            if self.resolve(module, name) == (owner, function):
+            if self.resolve(module, name, call) == (owner, function):
                 yield call
 
-    def resolve(self, module, name):
-        identity = module.identity(name)
+    def resolve(self, module, name, at=None, proof=None):
+        identity, rebinding = module.effective_identity(name, at)
+        if proof is not None:
+            proof.extend((module, item) for item in rebinding)
         if not identity:
             return None
         path, symbol = identity
@@ -192,6 +194,8 @@ class Source:
                 return None
             path = paths[0]
         other = self.module(path)
+        if other is not module and other.effective_identity((symbol,))[0] not in (None, (other.path, symbol)):
+            raise Stop("unresolved", "rebound-module-export", [path])
         definitions = [node for node in other.tree.body if isinstance(node, DECLARATION) and node.name == symbol]
         if len(definitions) > 1:
             raise Stop("ambiguous", "symbol-definition-ambiguous", [path])
@@ -225,6 +229,38 @@ class Module:
         if not rest and any(isinstance(node, DECLARATION) and node.name == first for node in self.tree.body):
             return (self.path, first)
         return None
+
+    def effective_identity(self, names, at=None):
+        """Prove untouched bindings and a direct alias to an earlier stable binding."""
+        if not names:
+            return None, ()
+        name, *members = names
+        original = self.identity(names)
+        writes = [stmt for stmt in self.tree.body if writes_name(stmt, name)]
+        imported = self.imports.get(name)
+
+        def stable(stmt, binding, identifier):
+            return (binding is not None and stmt is binding[2]
+                    or isinstance(stmt, DECLARATION) and stmt.name == identifier)
+
+        if not writes:
+            return original, ()
+        if len(writes) == 1 and stable(writes[0], imported, name):
+            return original, ()
+        if len(writes) == 2 and stable(writes[0], imported, name):
+            first, alias = writes
+            lhs, value = assignment(alias)
+            top = at
+            if at is not None:
+                top = next((item for item in reversed(tuple(self.parents_of(at))) if item is not self.tree), at)
+            if dotted(lhs) == (name,) and isinstance(value, ast.Name) and (top is None or alias.lineno < top.lineno):
+                target = value.id
+                sources = [stmt for stmt in self.tree.body if writes_name(stmt, target)]
+                if len(sources) == 1 and sources[0].lineno < alias.lineno and stable(
+                    sources[0], self.imports.get(target), target
+                ):
+                    return self.identity((target, *members)), (first, sources[0], alias)
+        raise Stop("unresolved", "module-binding-unproven", [self.path])
 
     def parents_of(self, node):
         while node in self.parents:
@@ -383,14 +419,14 @@ def local_origins(module, node):
     raise Stop("unresolved", "effective-constructor-unproven")
 
 
-def callable_origin(source, module, node):
+def callable_origin(source, module, node, proof):
     name = dotted(node.func)
     if name and any(
         parameter(func, name[0]) or any(writes_name(stmt, name[0]) for stmt in func.body)
         for func in module.parents_of(node) if isinstance(func, FUNCTION)
     ):
         raise Stop("unresolved", "constructor-shadowed")
-    return source.resolve(module, name)
+    return source.resolve(module, name, node, proof)
 
 
 def dataclass_field(module, cls, field):
@@ -443,10 +479,11 @@ def wiring_origin(source, modules, module, node, trace=(), depth=0):
 
     if isinstance(node, ast.Constant) and node.value is None:
         return [(None, trace + ((module, node),))]
-    if isinstance(node, ast.Call) and (resolved := callable_origin(source, module, node)):
+    binding_proof = []
+    if isinstance(node, ast.Call) and (resolved := callable_origin(source, module, node, binding_proof)):
         owner, definition = resolved
         if isinstance(definition, ast.ClassDef) and not abstract_class(definition):
-            return [(resolved, trace + ((module, node),))]
+            return [(resolved, trace + tuple(binding_proof) + ((module, node),))]
         if isinstance(definition, ast.FunctionDef) and not definition.decorator_list:
             body = list(local_walk(definition))
             if can_fall_through(definition.body) or any(
@@ -457,7 +494,7 @@ def wiring_origin(source, modules, module, node, trace=(), depth=0):
             returns = [ret for ret in body if isinstance(ret, ast.Return)
                        and reaching_writes(owner, definition, ret.value or ret, None)]
             if returns and all(ret.value is not None for ret in returns):
-                return [origin for ret in returns for origin in follow(owner, ret.value, (module, node), (owner, ret))]
+                return [origin for ret in returns for origin in follow(owner, ret.value, *binding_proof, (module, node), (owner, ret))]
     if isinstance(node, ast.Attribute):
         origins = []
         for concrete, proof in follow(module, node.value, (module, node)):
@@ -584,7 +621,8 @@ def collect(source):
     if isinstance(output, ast.Call) and dotted(output.func)[:1] == ("self",):
         transaction = method(store_cls, dotted(output.func)[-1])
         output = one([node.value for node in local_walk(transaction) if isinstance(node, ast.Yield)], "transaction-yield-unproven")
-    unit = source.resolve(store, dotted(output.func)) if isinstance(output, ast.Call) else None
+    unit_binding = []
+    unit = source.resolve(store, dotted(output.func), output, unit_binding) if isinstance(output, ast.Call) else None
     if not unit or not isinstance(unit[1], ast.ClassDef):
         raise Stop("unresolved", "transaction-unit-unproven")
     unit_module, unit_cls = unit
@@ -592,7 +630,8 @@ def collect(source):
     bindings = [(node, assignment(node)[1]) for node in local_walk(initializer)
                 if dotted(assignment(node)[0]) == ("self", field)]
     field_binding, value = one(bindings, "adapter-assignment-unproven")
-    implementation = source.resolve(unit_module, dotted(value.func)) if isinstance(value, ast.Call) else None
+    adapter_binding = []
+    implementation = source.resolve(unit_module, dotted(value.func), value, adapter_binding) if isinstance(value, ast.Call) else None
     if not implementation or not isinstance(implementation[1], ast.ClassDef) or abstract_class(implementation[1]):
         raise Stop("unresolved", "concrete-adapter-unproven")
     adapter, adapter_cls = implementation
@@ -637,7 +676,8 @@ def collect(source):
         {"role": "wiring", "symbol": store_cls.name, "witnesses": wiring_witnesses},
         {"role": "unit", "symbol": unit_cls.name, "witnesses": [
             witness(store, read.lineno, read.end_lineno), witness(store, transaction.lineno),
-            witness(store, output.lineno), witness(unit_module, unit_cls.lineno, field_binding.end_lineno), *init_import]},
+            witness(store, output.lineno), witness(unit_module, unit_cls.lineno, field_binding.end_lineno), *init_import,
+            *(witness(module, item.lineno, item.end_lineno) for module, item in unit_binding + adapter_binding)]},
         {"role": "implementation", "symbol": adapter_cls.name + "." + body.name, "witnesses": [
             witness(adapter, adapter_cls.lineno), witness(adapter, body.lineno, body.end_lineno),
             witness(adapter, consuming_body.lineno, consuming_body.end_lineno)]},

@@ -1,0 +1,100 @@
+{
+  "H1": {
+    "binding": {
+      "base": "5b7bdcdee3a9e98d6669bfd34ce750ae30a8c775",
+      "head": "3c7d0c8b57cc6a53c611646e12a33b752d481730",
+      "tree": "1a60af28ce70708f983d439dafb23aa3418f7b6f",
+      "paths": [
+        "frontend/src/presentation/domus-tasks.ts",
+        "frontend/src/domain/tasks.ts"
+      ],
+      "diffSha256": "556e6c26f52a2940221e6eca8899213b84b2198d94b28d5f15ab67d6a11e3bf1"
+    },
+    "candidate": {
+      "id": "c-913-1",
+      "path": "frontend/src/presentation/domus-tasks.ts",
+      "line": 145,
+      "trigger": "Submit a material quantity of 1.123456 for a precision-6 material.",
+      "pathToEffect": "The advertised precision and input guard admit six digits, but the canonical quantity parser rejects the value.",
+      "impact": "The completion form rejects a quantity that its displayed precision allows."
+    },
+    "evidence": [
+      {
+        "kind": "git",
+        "head": "3c7d0c8b57cc6a53c611646e12a33b752d481730",
+        "path": "frontend/src/presentation/domus-tasks.ts",
+        "blob": "c24aa11ed87f9125a6161e7f61bcff865d28b941",
+        "start": 5,
+        "end": 7,
+        "text": "import type {TaskRecord} from '../application/task-ports';\nimport {hasTaskText, taskQuantity, TASK_PRIORITIES, TASK_TEXT_LIMITS} from '../domain/tasks';\nimport type {TaskMaterialUsage, TaskPriority} from '../domain/tasks';"
+      },
+      {
+        "kind": "git",
+        "head": "3c7d0c8b57cc6a53c611646e12a33b752d481730",
+        "path": "frontend/src/presentation/domus-tasks.ts",
+        "blob": "c24aa11ed87f9125a6161e7f61bcff865d28b941",
+        "start": 20,
+        "end": 27,
+        "text": "function quantityInput(value: string, precision: number): string | null {\n  const trimmed = value.trim();\n  if (trimmed.length > 64 || !/^[0-9]+(?:[.,][0-9]+)?$/u.test(trimmed)) return null;\n  const [whole, fraction = ''] = trimmed.replace(',', '.').split('.');\n  const integer = whole.replace(/^0+(?=[0-9])/u, ''), decimal = fraction.replace(/0+$/u, '');\n  if (decimal.length > precision) return null;\n  try {return taskQuantity(integer + (decimal ? '.' + decimal : ''));} catch {return null;}\n}"
+      },
+      {
+        "kind": "git",
+        "head": "3c7d0c8b57cc6a53c611646e12a33b752d481730",
+        "path": "frontend/src/presentation/domus-tasks.ts",
+        "blob": "c24aa11ed87f9125a6161e7f61bcff865d28b941",
+        "start": 115,
+        "end": 124,
+        "text": "  private complete(): void {\n    const work = this.view!.detail!; let materialUsages: readonly TaskMaterialUsage[] | null = null;\n    if (work.materialRecording === 'review_on_completion' && work.materials.length > 0) {\n      const usages: TaskMaterialUsage[] = [];\n      for (const material of work.materials) {\n        const quantity = quantityInput(this.quantities[material.lineId] ?? '', material.precision);\n        if (quantity === null) {this.quantityError = material.lineId; return;}\n        usages.push(Object.freeze({line_id: material.lineId, quantity}));\n      }\n      materialUsages = Object.freeze(usages);"
+      }
+    ]
+  },
+  "H2": {
+    "binding": {
+      "base": "5b7bdcdee3a9e98d6669bfd34ce750ae30a8c775",
+      "head": "20cd99868ed8c2b6595db4c804dbccab90bad17f",
+      "tree": "18e5ed14408481ccc58543e8c3fb0bbce5d19c70",
+      "paths": [
+        "frontend/src/presentation/domus-tasks.ts",
+        "frontend/src/domain/tasks.ts"
+      ],
+      "diffSha256": "f35b87669b2fd30d7daafc42fc9038b3a88885d582a959d91701ff4e482796de"
+    },
+    "candidate": {
+      "id": "c-913-1",
+      "path": "frontend/src/presentation/domus-tasks.ts",
+      "line": 145,
+      "trigger": "Submit a material quantity of 1.123456 for a precision-6 material.",
+      "pathToEffect": "The advertised precision and input guard admit six digits, but the canonical quantity parser rejects the value.",
+      "impact": "The completion form rejects a quantity that its displayed precision allows."
+    },
+    "evidence": [
+      {
+        "kind": "git",
+        "head": "20cd99868ed8c2b6595db4c804dbccab90bad17f",
+        "path": "frontend/src/presentation/domus-tasks.ts",
+        "blob": "c24aa11ed87f9125a6161e7f61bcff865d28b941",
+        "start": 5,
+        "end": 7,
+        "text": "import type {TaskRecord} from '../application/task-ports';\nimport {hasTaskText, taskQuantity, TASK_PRIORITIES, TASK_TEXT_LIMITS} from '../domain/tasks';\nimport type {TaskMaterialUsage, TaskPriority} from '../domain/tasks';"
+      },
+      {
+        "kind": "git",
+        "head": "20cd99868ed8c2b6595db4c804dbccab90bad17f",
+        "path": "frontend/src/presentation/domus-tasks.ts",
+        "blob": "c24aa11ed87f9125a6161e7f61bcff865d28b941",
+        "start": 20,
+        "end": 27,
+        "text": "function quantityInput(value: string, precision: number): string | null {\n  const trimmed = value.trim();\n  if (trimmed.length > 64 || !/^[0-9]+(?:[.,][0-9]+)?$/u.test(trimmed)) return null;\n  const [whole, fraction = ''] = trimmed.replace(',', '.').split('.');\n  const integer = whole.replace(/^0+(?=[0-9])/u, ''), decimal = fraction.replace(/0+$/u, '');\n  if (decimal.length > precision) return null;\n  try {return taskQuantity(integer + (decimal ? '.' + decimal : ''));} catch {return null;}\n}"
+      },
+      {
+        "kind": "git",
+        "head": "20cd99868ed8c2b6595db4c804dbccab90bad17f",
+        "path": "frontend/src/presentation/domus-tasks.ts",
+        "blob": "c24aa11ed87f9125a6161e7f61bcff865d28b941",
+        "start": 115,
+        "end": 124,
+        "text": "  private complete(): void {\n    const work = this.view!.detail!; let materialUsages: readonly TaskMaterialUsage[] | null = null;\n    if (work.materialRecording === 'review_on_completion' && work.materials.length > 0) {\n      const usages: TaskMaterialUsage[] = [];\n      for (const material of work.materials) {\n        const quantity = quantityInput(this.quantities[material.lineId] ?? '', material.precision);\n        if (quantity === null) {this.quantityError = material.lineId; return;}\n        usages.push(Object.freeze({line_id: material.lineId, quantity}));\n      }\n      materialUsages = Object.freeze(usages);"
+      }
+    ]
+  }
+}

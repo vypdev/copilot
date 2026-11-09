@@ -100,4 +100,10 @@ def create(use_beta):
     return wire(get_alpha())
 `;
 
-module.exports = { alternateEntry, anchor, fixture, lateAssignment, request };
+const moduleAlias = value => `BetaDatabase = ${value}
+
+def create():
+    return Inspection(BetaDatabase())
+`;
+
+module.exports = { alternateEntry, anchor, fixture, lateAssignment, moduleAlias, request };

@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { retrieve } = require('./retrieve.cjs');
 const { assess, limits } = require('../tree-search/contract.cjs');
-const { alternateEntry, anchor, fixture, lateAssignment, request } = require('./inspection-fixture.cjs');
+const { alternateEntry, anchor, fixture, lateAssignment, moduleAlias, request } = require('./inspection-fixture.cjs');
 
 test('an assignment after the constructor call cannot identify its parameter', t => {
     const { cwd, binding, options } = fixture(t, lateAssignment);
@@ -180,4 +180,23 @@ test('the existing single round validates new receipts and rejects another reque
     assert.equal(verdict.verdict, 'refuted');
     await assert.rejects(assess({ binding, receipts: [], arm: 'on-demand', acquire, ask: () => askForSource }),
         { code: 'second-request' });
+});
+
+test('a direct module alias takes the value of the imported source and cites the reassignment', t => {
+    const { cwd, binding, options } = fixture(t, moduleAlias('AlphaDatabase'));
+    const result = retrieve(cwd, binding, request, options);
+    assert.equal(result.status, 'provided', result.reason);
+    assert.deepEqual(result.anchor, anchor);
+    assert.equal(result.links.find(link => link.role === 'implementation').symbol, 'AlphaRepo.active_key');
+    assert(result.receipts.some(item => item.text.includes('BetaDatabase = AlphaDatabase')));
+    assert(!result.receipts.some(item => item.path.endsWith('/beta.py')));
+});
+
+test('a dynamic module reassignment prevents the original import from proving the constructor', t => {
+    const { cwd, binding, options } = fixture(t, moduleAlias('select_database()'));
+    const result = retrieve(cwd, binding, request, options);
+    assert.equal(result.status, 'unresolved');
+    assert.equal(result.reason, 'module-binding-unproven');
+    assert.deepEqual(result.receipts, []);
+    assert.equal(result.links, undefined);
 });

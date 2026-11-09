@@ -7,7 +7,7 @@ const { test } = require('node:test');
 const { scenario, trial } = require('./runner.cjs');
 const { limits, receipt } = require('../tree-search/contract.cjs');
 const { git } = require('../on-demand/contract.cjs');
-const { alternateEntry, fixture: inspection, request: methodRequest } = require('./inspection-fixture.cjs');
+const { alternateEntry, fixture: inspection, moduleAlias, request: methodRequest } = require('./inspection-fixture.cjs');
 const { byteLength, digest } = require('../v4/verification.cjs');
 
 const prior = process.env.BUGBOT_TREE_PRIOR_SUBJECTS;
@@ -156,13 +156,17 @@ test('runner still uses pinned legacy retrieval for a non-causal literal', async
     assert.equal(calls[1].packet.at(-1).path, run.fixture.c.path);
 });
 
-for (const [status, returned] of [['ambiguous', 'AlphaDatabase()'], ['unresolved', 'load_database()']]) {
-    test(`the runner delivers ${status} attribution without an effective implementation receipt`, async t => {
-        const { cwd, binding, options } = inspection(t, alternateEntry(returned));
+for (const [label, status, source] of [
+    ['competing origins', 'ambiguous', alternateEntry('AlphaDatabase()')],
+    ['unproved entry origin', 'unresolved', alternateEntry('load_database()')],
+    ['dynamic module binding', 'unresolved', moduleAlias('select_database()')],
+]) {
+    test(`the runner delivers ${label} as ${status} without an effective implementation receipt`, async t => {
+        const { cwd, binding, options } = inspection(t, source);
         const { base, anchor } = options.context;
         const excerpt = git(cwd, 'diff', '--no-ext-diff', base, binding.head, '--', anchor.path);
         const run = {
-            row: { model: 'simulated', subject: status, repetition: 1, arm: 'on-demand', trial: `inspection-${status}` },
+            row: { model: 'simulated', subject: status, repetition: 1, arm: 'on-demand', trial: `inspection-${label.replaceAll(' ', '-')}` },
             fixture: { cwd, b: { ...binding, base, diffSha256: digest(excerpt) }, excerpt, initial: [],
                 c: { id: 'inspection', path: anchor.path, line: anchor.line }, anchor: { original: anchor, selected: anchor } },
             request: methodRequest,

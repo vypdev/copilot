@@ -6,6 +6,7 @@ const { buildRequest, scenario } = require('../tree-search/run.cjs');
 const { assess, dryRunPorts, limits, receipt } = require('../tree-search/contract.cjs');
 const { byteLength, digest, remainingVerifierBudget } = require('../v4/verification.cjs');
 const { retrieve } = require('./retrieve.cjs');
+const { retrieve: retrieveCommon } = require('../tree-search/git-evidence.cjs');
 
 const clock = () => Math.round(performance.now());
 
@@ -23,11 +24,11 @@ function remaining(calls, elapsed) {
     return remainingVerifierBudget(calls, elapsed) && calls.length < limits.verifierCalls;
 }
 
-async function trial(row, f, journal, send, { publicationMode = 'dry-run' } = {}) {
+async function trial(row, f, journal, send, { publicationMode = 'dry-run', commonGitOnly = false, comparison } = {}) {
     if (typeof send !== 'function') throw new TypeError('An explicit verifier transport is required.');
     const calls = [], writeAttempts = [];
     const ports = dryRunPorts(name => writeAttempts.push(name));
-    const operation = digest(`causal-runner/${row.trial}/${row.arm}/${row.model}/${row.subject}/${row.repetition}`);
+    const operation = digest(comparison ?? `causal-runner/${row.trial}/${row.arm}/${row.model}/${row.subject}/${row.repetition}`);
     const candidate = f.c.id + '-' + digest(JSON.stringify([f.c, f.anchor.selected, f.b.diffSha256])).slice(0, 12);
     const binding = { operation, candidate, head: f.b.head, tree: f.b.tree, scopes: [''] };
     const receipts = [...f.initial, { kind: 'diff', path: f.c.path, text: f.excerpt,
@@ -79,7 +80,7 @@ async function trial(row, f, journal, send, { publicationMode = 'dry-run' } = {}
                 evidenceRequest = request;
                 note('evidence-requested', { request });
             },
-            acquire: request => retrieve(f.cwd, binding, request, {
+            acquire: request => commonGitOnly ? retrieveCommon(f.cwd, binding, request) : retrieve(f.cwd, binding, request, {
                 context: { base: f.b.base, anchor: f.anchor.selected },
             }),
             onEvidence: result => {
