@@ -1,0 +1,1430 @@
+{
+  "trials": 504,
+  "uniqueProviderCalls": {
+    "calls": 628,
+    "missingUsage": 147,
+    "inputTokens": 31788892,
+    "outputTokens": 248346
+  },
+  "groups": {
+    "frozen-replay/gpt-6-luna/current": {
+      "status": {
+        "completed": 31,
+        "aborted": 11
+      },
+      "totals": {
+        "severity": 17,
+        "category": 17,
+        "squaredError": 9.058100000000001,
+        "unsupported": 10,
+        "detected": 21,
+        "retained": 17,
+        "exact": 17,
+        "missedDetection": 0,
+        "missedFinal": 4,
+        "inconclusive": 0
+      },
+      "quality": {
+        "precision": 0.6296296296296297,
+        "recall": 0.8095238095238095,
+        "f1": 0.7083333333333334,
+        "exactLocation": 1.0,
+        "severity": 1.0,
+        "category": 1.0,
+        "brier": 0.3354851851851852
+      },
+      "caseOutcomes": {
+        "J1": {
+          "completed": 1,
+          "aborted": 2
+        },
+        "P1": {
+          "completed": 3
+        },
+        "X2": {
+          "exact": 2,
+          "aborted": 1
+        },
+        "M2": {
+          "exact": 3
+        },
+        "M1": {
+          "completed": 3
+        },
+        "S1": {
+          "completed": 1,
+          "aborted": 2
+        },
+        "F2": {
+          "aborted": 1,
+          "exact": 2
+        },
+        "U1": {
+          "completed": 3
+        },
+        "F1": {
+          "completed": 2,
+          "aborted": 1
+        },
+        "J2": {
+          "exact": 2,
+          "aborted": 1
+        },
+        "P2": {
+          "exact": 3
+        },
+        "U2": {
+          "exact": 3
+        },
+        "X1": {
+          "aborted": 2,
+          "completed": 1
+        },
+        "S2": {
+          "aborted": 1,
+          "exact": 2
+        }
+      },
+      "failures": {
+        "production-dry-run-failed": 11
+      },
+      "callOutcomes": {
+        "bugbot-literal-candidate-verification/completed": 13,
+        "bugbot-literal-candidate-verification/provider-turn-timeout": 44
+      },
+      "callsMissingUsage": 44,
+      "closedCallsMissingUsage": 0,
+      "sharedDetectorAttributions": 0,
+      "wallMs": {
+        "p50": 36092.5,
+        "p95": 180041,
+        "max": 180043
+      },
+      "addedWallMs": null,
+      "inputTokens": null,
+      "outputTokens": null,
+      "observedInputIncludingUnmeteredSubjects": null,
+      "grossTotalInput": 986395,
+      "cachedTotalInput": 665344,
+      "totalOutput": 9792,
+      "budgetSkipped": 0,
+      "recoveredVerificationTimeouts": 0,
+      "reanchors": {}
+    },
+    "frozen-replay/gpt-6-luna/original-context": {
+      "status": {
+        "completed": 38,
+        "aborted": 3,
+        "failed": 1
+      },
+      "totals": {
+        "severity": 7,
+        "category": 7,
+        "squaredError": 0.9200000000000002,
+        "unsupported": 1,
+        "detected": 21,
+        "retained": 7,
+        "exact": 7,
+        "missedDetection": 0,
+        "missedFinal": 14,
+        "inconclusive": 25
+      },
+      "quality": {
+        "precision": 0.875,
+        "recall": 0.3333333333333333,
+        "f1": 0.48275862068965514,
+        "exactLocation": 1.0,
+        "severity": 1.0,
+        "category": 1.0,
+        "brier": 0.11500000000000002
+      },
+      "caseOutcomes": {
+        "J1": {
+          "completed": 3
+        },
+        "P1": {
+          "aborted": 1,
+          "completed": 2
+        },
+        "X2": {
+          "inconclusive": 2,
+          "exact": 1
+        },
+        "M2": {
+          "exact": 3
+        },
+        "M1": {
+          "completed": 3
+        },
+        "S1": {
+          "aborted": 1,
+          "completed": 2
+        },
+        "F2": {
+          "exact": 3
+        },
+        "U1": {
+          "completed": 3
+        },
+        "F1": {
+          "failed": 1,
+          "completed": 2
+        },
+        "J2": {
+          "inconclusive": 3
+        },
+        "P2": {
+          "inconclusive": 3
+        },
+        "U2": {
+          "refuted": 3
+        },
+        "X1": {
+          "completed": 3
+        },
+        "S2": {
+          "inconclusive": 2,
+          "aborted": 1
+        }
+      },
+      "failures": {
+        "provider-turn-timeout": 4
+      },
+      "callOutcomes": {
+        "pilot-v4-verifier/completed": 41,
+        "pilot-v4-verifier/provider-turn-timeout": 27
+      },
+      "callsMissingUsage": 27,
+      "closedCallsMissingUsage": 27,
+      "sharedDetectorAttributions": 0,
+      "wallMs": {
+        "p50": 53926.0,
+        "p95": 90010,
+        "max": 90012
+      },
+      "addedWallMs": {
+        "p50": 53925.5,
+        "p95": 90009,
+        "max": 90011
+      },
+      "inputTokens": {
+        "p50": 7305,
+        "p95": 14458,
+        "max": 14458
+      },
+      "outputTokens": {
+        "p50": 92,
+        "p95": 180,
+        "max": 180
+      },
+      "observedInputIncludingUnmeteredSubjects": {
+        "p50": 7305,
+        "p95": 14458,
+        "max": 14458
+      },
+      "grossTotalInput": 300819,
+      "cachedTotalInput": 102144,
+      "totalOutput": 3569,
+      "budgetSkipped": 0,
+      "recoveredVerificationTimeouts": 19,
+      "reanchors": {}
+    },
+    "frozen-replay/gpt-6-luna/application-evidence": {
+      "status": {
+        "aborted": 3,
+        "completed": 38,
+        "failed": 1
+      },
+      "totals": {
+        "severity": 14,
+        "category": 14,
+        "squaredError": 0.9375000000000007,
+        "unsupported": 1,
+        "detected": 21,
+        "retained": 14,
+        "exact": 14,
+        "missedDetection": 0,
+        "missedFinal": 7,
+        "inconclusive": 0
+      },
+      "quality": {
+        "precision": 0.9333333333333333,
+        "recall": 0.6666666666666666,
+        "f1": 0.7777777777777778,
+        "exactLocation": 1.0,
+        "severity": 1.0,
+        "category": 1.0,
+        "brier": 0.06250000000000004
+      },
+      "caseOutcomes": {
+        "J1": {
+          "aborted": 1,
+          "completed": 2
+        },
+        "P1": {
+          "completed": 3
+        },
+        "X2": {
+          "aborted": 1,
+          "exact": 2
+        },
+        "M2": {
+          "exact": 3
+        },
+        "M1": {
+          "aborted": 1,
+          "completed": 2
+        },
+        "S1": {
+          "completed": 3
+        },
+        "F2": {
+          "exact": 3
+        },
+        "U1": {
+          "completed": 3
+        },
+        "F1": {
+          "completed": 2,
+          "failed": 1
+        },
+        "J2": {
+          "refuted": 3
+        },
+        "P2": {
+          "exact": 3
+        },
+        "U2": {
+          "refuted": 3
+        },
+        "X1": {
+          "completed": 3
+        },
+        "S2": {
+          "exact": 3
+        }
+      },
+      "failures": {
+        "provider-turn-timeout": 4
+      },
+      "callOutcomes": {
+        "pilot-v4-verifier/provider-turn-timeout": 33,
+        "pilot-v4-verifier/completed": 41
+      },
+      "callsMissingUsage": 33,
+      "closedCallsMissingUsage": 33,
+      "sharedDetectorAttributions": 0,
+      "wallMs": {
+        "p50": 58604.0,
+        "p95": 90012,
+        "max": 90015
+      },
+      "addedWallMs": {
+        "p50": 58604.0,
+        "p95": 90012,
+        "max": 90014
+      },
+      "inputTokens": {
+        "p50": 8645,
+        "p95": 10137,
+        "max": 10137
+      },
+      "outputTokens": {
+        "p50": 103,
+        "p95": 131,
+        "max": 131
+      },
+      "observedInputIncludingUnmeteredSubjects": {
+        "p50": 8755,
+        "p95": 17560,
+        "max": 17564
+      },
+      "grossTotalInput": 358868,
+      "cachedTotalInput": 19456,
+      "totalOutput": 4426,
+      "budgetSkipped": 0,
+      "recoveredVerificationTimeouts": 25,
+      "reanchors": {}
+    },
+    "frozen-replay/gpt-6.1-sol/current": {
+      "status": {
+        "completed": 40,
+        "aborted": 2
+      },
+      "totals": {
+        "severity": 19,
+        "category": 19,
+        "squaredError": 8.145799999999998,
+        "unsupported": 9,
+        "detected": 21,
+        "retained": 19,
+        "exact": 19,
+        "missedDetection": 0,
+        "missedFinal": 2,
+        "inconclusive": 0
+      },
+      "quality": {
+        "precision": 0.6785714285714286,
+        "recall": 0.9047619047619048,
+        "f1": 0.7755102040816326,
+        "exactLocation": 1.0,
+        "severity": 1.0,
+        "category": 1.0,
+        "brier": 0.2909214285714285
+      },
+      "caseOutcomes": {
+        "M1": {
+          "completed": 3
+        },
+        "P1": {
+          "completed": 3
+        },
+        "F2": {
+          "exact": 3
+        },
+        "S1": {
+          "completed": 3
+        },
+        "J2": {
+          "exact": 3
+        },
+        "X2": {
+          "exact": 3
+        },
+        "F1": {
+          "completed": 3
+        },
+        "U1": {
+          "completed": 3
+        },
+        "M2": {
+          "exact": 3
+        },
+        "U2": {
+          "exact": 3
+        },
+        "P2": {
+          "exact": 3
+        },
+        "X1": {
+          "completed": 3
+        },
+        "J1": {
+          "completed": 3
+        },
+        "S2": {
+          "exact": 1,
+          "aborted": 2
+        }
+      },
+      "failures": {
+        "production-dry-run-failed": 2
+      },
+      "callOutcomes": {
+        "bugbot-literal-candidate-verification/completed": 22,
+        "bugbot-literal-candidate-verification/provider-turn-timeout": 6
+      },
+      "callsMissingUsage": 6,
+      "closedCallsMissingUsage": 0,
+      "sharedDetectorAttributions": 0,
+      "wallMs": {
+        "p50": 14657.5,
+        "p95": 51508,
+        "max": 180044
+      },
+      "addedWallMs": null,
+      "inputTokens": null,
+      "outputTokens": null,
+      "observedInputIncludingUnmeteredSubjects": null,
+      "grossTotalInput": 2437523,
+      "cachedTotalInput": 1766144,
+      "totalOutput": 14679,
+      "budgetSkipped": 0,
+      "recoveredVerificationTimeouts": 0,
+      "reanchors": {}
+    },
+    "frozen-replay/gpt-6.1-sol/original-context": {
+      "status": {
+        "completed": 42
+      },
+      "totals": {
+        "severity": 3,
+        "category": 3,
+        "squaredError": 0.007500000000000014,
+        "unsupported": 0,
+        "detected": 21,
+        "retained": 3,
+        "exact": 3,
+        "missedDetection": 0,
+        "missedFinal": 18,
+        "inconclusive": 30
+      },
+      "quality": {
+        "precision": 1.0,
+        "recall": 0.14285714285714285,
+        "f1": 0.25,
+        "exactLocation": 1.0,
+        "severity": 1.0,
+        "category": 1.0,
+        "brier": 0.0025000000000000044
+      },
+      "caseOutcomes": {
+        "M1": {
+          "completed": 3
+        },
+        "P1": {
+          "completed": 3
+        },
+        "F2": {
+          "inconclusive": 3
+        },
+        "S1": {
+          "completed": 3
+        },
+        "J2": {
+          "inconclusive": 3
+        },
+        "X2": {
+          "inconclusive": 3
+        },
+        "F1": {
+          "completed": 3
+        },
+        "U1": {
+          "completed": 3
+        },
+        "M2": {
+          "inconclusive": 3
+        },
+        "U2": {
+          "exact": 3
+        },
+        "P2": {
+          "inconclusive": 3
+        },
+        "X1": {
+          "completed": 3
+        },
+        "J1": {
+          "completed": 3
+        },
+        "S2": {
+          "inconclusive": 3
+        }
+      },
+      "failures": {},
+      "callOutcomes": {
+        "pilot-v4-verifier/completed": 45
+      },
+      "callsMissingUsage": 0,
+      "closedCallsMissingUsage": 0,
+      "sharedDetectorAttributions": 0,
+      "wallMs": {
+        "p50": 7285.0,
+        "p95": 12592,
+        "max": 15849
+      },
+      "addedWallMs": {
+        "p50": 7283.5,
+        "p95": 12591,
+        "max": 15806
+      },
+      "inputTokens": {
+        "p50": 7304.5,
+        "p95": 14458,
+        "max": 14464
+      },
+      "outputTokens": {
+        "p50": 109.5,
+        "p95": 194,
+        "max": 229
+      },
+      "observedInputIncludingUnmeteredSubjects": {
+        "p50": 7304.5,
+        "p95": 14458,
+        "max": 14464
+      },
+      "grossTotalInput": 330209,
+      "cachedTotalInput": 43776,
+      "totalOutput": 5025,
+      "budgetSkipped": 0,
+      "recoveredVerificationTimeouts": 0,
+      "reanchors": {}
+    },
+    "frozen-replay/gpt-6.1-sol/application-evidence": {
+      "status": {
+        "completed": 42
+      },
+      "totals": {
+        "severity": 12,
+        "category": 12,
+        "squaredError": 0.030000000000000058,
+        "unsupported": 0,
+        "detected": 21,
+        "retained": 12,
+        "exact": 12,
+        "missedDetection": 0,
+        "missedFinal": 9,
+        "inconclusive": 9
+      },
+      "quality": {
+        "precision": 1.0,
+        "recall": 0.5714285714285714,
+        "f1": 0.7272727272727273,
+        "exactLocation": 1.0,
+        "severity": 1.0,
+        "category": 1.0,
+        "brier": 0.002500000000000005
+      },
+      "caseOutcomes": {
+        "M1": {
+          "completed": 3
+        },
+        "P1": {
+          "completed": 3
+        },
+        "F2": {
+          "exact": 3
+        },
+        "S1": {
+          "completed": 3
+        },
+        "J2": {
+          "inconclusive": 3
+        },
+        "X2": {
+          "inconclusive": 3
+        },
+        "F1": {
+          "completed": 3
+        },
+        "U1": {
+          "completed": 3
+        },
+        "M2": {
+          "exact": 3
+        },
+        "U2": {
+          "exact": 3
+        },
+        "P2": {
+          "inconclusive": 3
+        },
+        "X1": {
+          "completed": 3
+        },
+        "J1": {
+          "completed": 3
+        },
+        "S2": {
+          "exact": 3
+        }
+      },
+      "failures": {},
+      "callOutcomes": {
+        "pilot-v4-verifier/completed": 45
+      },
+      "callsMissingUsage": 0,
+      "closedCallsMissingUsage": 0,
+      "sharedDetectorAttributions": 0,
+      "wallMs": {
+        "p50": 7593.5,
+        "p95": 10604,
+        "max": 12336
+      },
+      "addedWallMs": {
+        "p50": 7592.5,
+        "p95": 10602,
+        "max": 12334
+      },
+      "inputTokens": {
+        "p50": 8731.5,
+        "p95": 17562,
+        "max": 17566
+      },
+      "outputTokens": {
+        "p50": 131.5,
+        "p95": 183,
+        "max": 186
+      },
+      "observedInputIncludingUnmeteredSubjects": {
+        "p50": 8731.5,
+        "p95": 17562,
+        "max": 17566
+      },
+      "grossTotalInput": 392189,
+      "cachedTotalInput": 19456,
+      "totalOutput": 5351,
+      "budgetSkipped": 0,
+      "recoveredVerificationTimeouts": 0,
+      "reanchors": {}
+    },
+    "full-review/gpt-6-luna/current": {
+      "status": {
+        "completed": 42
+      },
+      "totals": {
+        "severity": 13,
+        "category": 12,
+        "squaredError": 1.8652,
+        "unsupported": 2,
+        "detected": 17,
+        "retained": 16,
+        "exact": 16,
+        "missedDetection": 4,
+        "missedFinal": 5,
+        "inconclusive": 0
+      },
+      "quality": {
+        "precision": 0.8888888888888888,
+        "recall": 0.7619047619047619,
+        "f1": 0.8205128205128205,
+        "exactLocation": 1.0,
+        "severity": 0.8125,
+        "category": 0.75,
+        "brier": 0.10362222222222223
+      },
+      "caseOutcomes": {
+        "M1": {
+          "completed": 3
+        },
+        "F1": {
+          "completed": 3
+        },
+        "F2": {
+          "exact": 3
+        },
+        "X2": {
+          "exact": 2,
+          "dropped": 1
+        },
+        "U1": {
+          "completed": 3
+        },
+        "X1": {
+          "completed": 3
+        },
+        "J2": {
+          "not-detected": 3
+        },
+        "U2": {
+          "exact": 3
+        },
+        "M2": {
+          "exact": 3
+        },
+        "P2": {
+          "exact": 3
+        },
+        "S2": {
+          "exact": 2,
+          "not-detected": 1
+        },
+        "J1": {
+          "completed": 3
+        },
+        "P1": {
+          "completed": 3
+        },
+        "S1": {
+          "completed": 3
+        }
+      },
+      "failures": {},
+      "callOutcomes": {
+        "build/completed": 42,
+        "bugbot-literal-candidate-verification/completed": 11,
+        "build/provider-turn-timeout": 6
+      },
+      "callsMissingUsage": 6,
+      "closedCallsMissingUsage": 0,
+      "sharedDetectorAttributions": 0,
+      "wallMs": {
+        "p50": 58432.5,
+        "p95": 142362,
+        "max": 202553
+      },
+      "addedWallMs": null,
+      "inputTokens": null,
+      "outputTokens": null,
+      "observedInputIncludingUnmeteredSubjects": null,
+      "grossTotalInput": 5826040,
+      "cachedTotalInput": 4098560,
+      "totalOutput": 52966,
+      "budgetSkipped": 0,
+      "recoveredVerificationTimeouts": 0,
+      "reanchors": {}
+    },
+    "full-review/gpt-6-luna/original-context": {
+      "status": {
+        "completed": 42
+      },
+      "totals": {
+        "severity": 10,
+        "category": 12,
+        "squaredError": 0.9813999999999998,
+        "unsupported": 1,
+        "detected": 19,
+        "retained": 14,
+        "exact": 14,
+        "missedDetection": 2,
+        "missedFinal": 7,
+        "inconclusive": 7
+      },
+      "quality": {
+        "precision": 0.9333333333333333,
+        "recall": 0.6666666666666666,
+        "f1": 0.7777777777777778,
+        "exactLocation": 1.0,
+        "severity": 0.7142857142857143,
+        "category": 0.8571428571428571,
+        "brier": 0.06542666666666666
+      },
+      "caseOutcomes": {
+        "M1": {
+          "completed": 3
+        },
+        "F1": {
+          "completed": 3
+        },
+        "F2": {
+          "inconclusive": 3
+        },
+        "X2": {
+          "not-detected": 1,
+          "exact": 2
+        },
+        "U1": {
+          "completed": 3
+        },
+        "X1": {
+          "completed": 3
+        },
+        "J2": {
+          "exact": 3
+        },
+        "U2": {
+          "exact": 3
+        },
+        "M2": {
+          "exact": 3
+        },
+        "P2": {
+          "exact": 2,
+          "not-detected": 1
+        },
+        "S2": {
+          "inconclusive": 2,
+          "exact": 1
+        },
+        "J1": {
+          "completed": 3
+        },
+        "P1": {
+          "completed": 3
+        },
+        "S1": {
+          "completed": 3
+        }
+      },
+      "failures": {},
+      "callOutcomes": {
+        "build/completed": 42,
+        "build/provider-turn-timeout": 8,
+        "pilot-v4-verifier/completed": 22,
+        "pilot-v4-verifier/provider-turn-timeout": 2
+      },
+      "callsMissingUsage": 10,
+      "closedCallsMissingUsage": 2,
+      "sharedDetectorAttributions": 50,
+      "wallMs": {
+        "p50": 67136.5,
+        "p95": 143476,
+        "max": 258646
+      },
+      "addedWallMs": {
+        "p50": 4456.0,
+        "p95": 44101,
+        "max": 61573
+      },
+      "inputTokens": {
+        "p50": 7386.0,
+        "p95": 7669,
+        "max": 7684
+      },
+      "outputTokens": {
+        "p50": 91.5,
+        "p95": 116,
+        "max": 131
+      },
+      "observedInputIncludingUnmeteredSubjects": {
+        "p50": 7382.0,
+        "p95": 7669,
+        "max": 7684
+      },
+      "grossTotalInput": 5334599,
+      "cachedTotalInput": 3817600,
+      "totalOutput": 47673,
+      "budgetSkipped": 0,
+      "recoveredVerificationTimeouts": 2,
+      "reanchors": {}
+    },
+    "full-review/gpt-6-luna/application-evidence": {
+      "status": {
+        "completed": 41,
+        "failed": 1
+      },
+      "totals": {
+        "severity": 14,
+        "category": 13,
+        "squaredError": 0.008600000000000016,
+        "unsupported": 0,
+        "detected": 19,
+        "retained": 17,
+        "exact": 17,
+        "missedDetection": 2,
+        "missedFinal": 4,
+        "inconclusive": 1
+      },
+      "quality": {
+        "precision": 1.0,
+        "recall": 0.8095238095238095,
+        "f1": 0.8947368421052632,
+        "exactLocation": 1.0,
+        "severity": 0.8235294117647058,
+        "category": 0.7647058823529411,
+        "brier": 0.0005058823529411774
+      },
+      "caseOutcomes": {
+        "M1": {
+          "completed": 3
+        },
+        "F1": {
+          "completed": 3
+        },
+        "F2": {
+          "exact": 3
+        },
+        "X2": {
+          "not-detected": 1,
+          "exact": 2
+        },
+        "U1": {
+          "completed": 3
+        },
+        "X1": {
+          "completed": 3
+        },
+        "J2": {
+          "refuted": 1,
+          "exact": 2
+        },
+        "U2": {
+          "exact": 3
+        },
+        "M2": {
+          "exact": 3
+        },
+        "P2": {
+          "exact": 1,
+          "failed": 1,
+          "not-detected": 1
+        },
+        "S2": {
+          "exact": 3
+        },
+        "J1": {
+          "completed": 3
+        },
+        "P1": {
+          "completed": 3
+        },
+        "S1": {
+          "completed": 3
+        }
+      },
+      "failures": {
+        "provider-turn-timeout": 1
+      },
+      "callOutcomes": {
+        "build/completed": 42,
+        "build/provider-turn-timeout": 8,
+        "pilot-v4-verifier/provider-turn-timeout": 5,
+        "pilot-v4-verifier/completed": 21
+      },
+      "callsMissingUsage": 13,
+      "closedCallsMissingUsage": 5,
+      "sharedDetectorAttributions": 50,
+      "wallMs": {
+        "p50": 75141.0,
+        "p95": 159195,
+        "max": 239929
+      },
+      "addedWallMs": {
+        "p50": 4500.5,
+        "p95": 62596,
+        "max": 90020
+      },
+      "inputTokens": {
+        "p50": 8806.5,
+        "p95": 10271,
+        "max": 10271
+      },
+      "outputTokens": {
+        "p50": 110.0,
+        "p95": 165,
+        "max": 165
+      },
+      "observedInputIncludingUnmeteredSubjects": {
+        "p50": 8747,
+        "p95": 10171,
+        "max": 10271
+      },
+      "grossTotalInput": 5356366,
+      "cachedTotalInput": 3793280,
+      "totalOutput": 48021,
+      "budgetSkipped": 0,
+      "recoveredVerificationTimeouts": 3,
+      "reanchors": {}
+    },
+    "full-review/gpt-6.1-sol/current": {
+      "status": {
+        "completed": 39,
+        "aborted": 2,
+        "failed": 1
+      },
+      "totals": {
+        "severity": 17,
+        "category": 14,
+        "squaredError": 0.9806999999999999,
+        "unsupported": 1,
+        "detected": 21,
+        "retained": 20,
+        "exact": 19,
+        "missedDetection": 0,
+        "missedFinal": 1,
+        "inconclusive": 0
+      },
+      "quality": {
+        "precision": 0.9523809523809523,
+        "recall": 0.9523809523809523,
+        "f1": 0.9523809523809523,
+        "exactLocation": 0.95,
+        "severity": 0.85,
+        "category": 0.7,
+        "brier": 0.0467
+      },
+      "caseOutcomes": {
+        "M1": {
+          "completed": 3
+        },
+        "P1": {
+          "completed": 3
+        },
+        "F1": {
+          "completed": 3
+        },
+        "U1": {
+          "completed": 3
+        },
+        "P2": {
+          "exact": 3
+        },
+        "M2": {
+          "exact": 3
+        },
+        "U2": {
+          "exact": 3
+        },
+        "X1": {
+          "completed": 3
+        },
+        "S2": {
+          "exact": 2,
+          "failed": 1
+        },
+        "X2": {
+          "exact": 3
+        },
+        "J1": {
+          "completed": 3
+        },
+        "F2": {
+          "retained-other-anchor": 1,
+          "exact": 2
+        },
+        "J2": {
+          "exact": 3
+        },
+        "S1": {
+          "aborted": 2,
+          "completed": 1
+        }
+      },
+      "failures": {
+        "production-dry-run-failed": 3
+      },
+      "callOutcomes": {
+        "build/completed": 42,
+        "bugbot-literal-candidate-verification/completed": 12,
+        "build/provider-turn-timeout": 6,
+        "bugbot-literal-candidate-verification/provider-turn-timeout": 3
+      },
+      "callsMissingUsage": 9,
+      "closedCallsMissingUsage": 0,
+      "sharedDetectorAttributions": 0,
+      "wallMs": {
+        "p50": 36261.5,
+        "p95": 225034,
+        "max": 335512
+      },
+      "addedWallMs": null,
+      "inputTokens": null,
+      "outputTokens": null,
+      "observedInputIncludingUnmeteredSubjects": null,
+      "grossTotalInput": 8444363,
+      "cachedTotalInput": 6347136,
+      "totalOutput": 55162,
+      "budgetSkipped": 0,
+      "recoveredVerificationTimeouts": 0,
+      "reanchors": {}
+    },
+    "full-review/gpt-6.1-sol/original-context": {
+      "status": {
+        "completed": 40,
+        "aborted": 2
+      },
+      "totals": {
+        "severity": 3,
+        "category": 3,
+        "squaredError": 0.0,
+        "unsupported": 0,
+        "detected": 21,
+        "retained": 3,
+        "exact": 3,
+        "missedDetection": 0,
+        "missedFinal": 18,
+        "inconclusive": 18
+      },
+      "quality": {
+        "precision": 1.0,
+        "recall": 0.14285714285714285,
+        "f1": 0.25,
+        "exactLocation": 1.0,
+        "severity": 1.0,
+        "category": 1.0,
+        "brier": 0.0
+      },
+      "caseOutcomes": {
+        "M1": {
+          "completed": 3
+        },
+        "P1": {
+          "completed": 3
+        },
+        "F1": {
+          "completed": 3
+        },
+        "U1": {
+          "completed": 3
+        },
+        "P2": {
+          "inconclusive": 3
+        },
+        "M2": {
+          "inconclusive": 3
+        },
+        "U2": {
+          "exact": 3
+        },
+        "X1": {
+          "completed": 3
+        },
+        "S2": {
+          "inconclusive": 3
+        },
+        "X2": {
+          "inconclusive": 3
+        },
+        "J1": {
+          "completed": 3
+        },
+        "F2": {
+          "inconclusive": 3
+        },
+        "J2": {
+          "inconclusive": 3
+        },
+        "S1": {
+          "aborted": 2,
+          "completed": 1
+        }
+      },
+      "failures": {
+        "production-dry-run-failed": 2
+      },
+      "callOutcomes": {
+        "build/completed": 40,
+        "pilot-v4-verifier/completed": 21,
+        "build/provider-turn-timeout": 7
+      },
+      "callsMissingUsage": 7,
+      "closedCallsMissingUsage": 0,
+      "sharedDetectorAttributions": 47,
+      "wallMs": {
+        "p50": 40875.0,
+        "p95": 134090,
+        "max": 225069
+      },
+      "addedWallMs": {
+        "p50": 6099.5,
+        "p95": 8811,
+        "max": 9423
+      },
+      "inputTokens": {
+        "p50": 7364,
+        "p95": 7526,
+        "max": 7541
+      },
+      "outputTokens": {
+        "p50": 123,
+        "p95": 160,
+        "max": 167
+      },
+      "observedInputIncludingUnmeteredSubjects": {
+        "p50": 7364,
+        "p95": 7526,
+        "max": 7541
+      },
+      "grossTotalInput": 7009394,
+      "cachedTotalInput": 5349120,
+      "totalOutput": 44293,
+      "budgetSkipped": 0,
+      "recoveredVerificationTimeouts": 0,
+      "reanchors": {}
+    },
+    "full-review/gpt-6.1-sol/application-evidence": {
+      "status": {
+        "completed": 40,
+        "aborted": 2
+      },
+      "totals": {
+        "severity": 9,
+        "category": 10,
+        "squaredError": 0.0009000000000000016,
+        "unsupported": 0,
+        "detected": 21,
+        "retained": 12,
+        "exact": 12,
+        "missedDetection": 0,
+        "missedFinal": 9,
+        "inconclusive": 9
+      },
+      "quality": {
+        "precision": 1.0,
+        "recall": 0.5714285714285714,
+        "f1": 0.7272727272727273,
+        "exactLocation": 1.0,
+        "severity": 0.75,
+        "category": 0.8333333333333334,
+        "brier": 7.500000000000013e-05
+      },
+      "caseOutcomes": {
+        "M1": {
+          "completed": 3
+        },
+        "P1": {
+          "completed": 3
+        },
+        "F1": {
+          "completed": 3
+        },
+        "U1": {
+          "completed": 3
+        },
+        "P2": {
+          "inconclusive": 3
+        },
+        "M2": {
+          "exact": 3
+        },
+        "U2": {
+          "exact": 3
+        },
+        "X1": {
+          "completed": 3
+        },
+        "S2": {
+          "exact": 3
+        },
+        "X2": {
+          "inconclusive": 3
+        },
+        "J1": {
+          "completed": 3
+        },
+        "F2": {
+          "exact": 3
+        },
+        "J2": {
+          "inconclusive": 3
+        },
+        "S1": {
+          "aborted": 2,
+          "completed": 1
+        }
+      },
+      "failures": {
+        "production-dry-run-failed": 2
+      },
+      "callOutcomes": {
+        "build/completed": 40,
+        "pilot-v4-verifier/completed": 21,
+        "build/provider-turn-timeout": 7
+      },
+      "callsMissingUsage": 7,
+      "closedCallsMissingUsage": 0,
+      "sharedDetectorAttributions": 47,
+      "wallMs": {
+        "p50": 40724.5,
+        "p95": 134091,
+        "max": 225066
+      },
+      "addedWallMs": {
+        "p50": 4436.0,
+        "p95": 10494,
+        "max": 15734
+      },
+      "inputTokens": {
+        "p50": 8763,
+        "p95": 10104,
+        "max": 10111
+      },
+      "outputTokens": {
+        "p50": 149,
+        "p95": 203,
+        "max": 245
+      },
+      "observedInputIncludingUnmeteredSubjects": {
+        "p50": 8763,
+        "p95": 10104,
+        "max": 10111
+      },
+      "grossTotalInput": 7037738,
+      "cachedTotalInput": 5310208,
+      "totalOutput": 44661,
+      "budgetSkipped": 0,
+      "recoveredVerificationTimeouts": 0,
+      "reanchors": {}
+    }
+  },
+  "pairedGates": {
+    "frozen-replay/gpt-6-luna": {
+      "historicalAlerts": {
+        "c-867-1": 3,
+        "c-861a": 3,
+        "c-2f7b": 1,
+        "c-a184": 3
+      },
+      "baselineSufficient": true,
+      "complete": false,
+      "positiveAnchorsQualified": false,
+      "differences": {
+        "current": [
+          3,
+          3,
+          3
+        ],
+        "original-context": [
+          -1,
+          0,
+          1
+        ]
+      },
+      "pairedReduction": {
+        "current": false,
+        "original-context": false
+      },
+      "observedBudgetWithinLimits": false,
+      "overheadQualified": false
+    },
+    "frozen-replay/gpt-6.1-sol": {
+      "historicalAlerts": {
+        "c-861a": 3,
+        "c-867-1": 3,
+        "c-a184": 3
+      },
+      "baselineSufficient": true,
+      "complete": false,
+      "positiveAnchorsQualified": false,
+      "differences": {
+        "current": [
+          3,
+          3,
+          3
+        ],
+        "original-context": [
+          0,
+          0,
+          0
+        ]
+      },
+      "pairedReduction": {
+        "current": false,
+        "original-context": false
+      },
+      "observedBudgetWithinLimits": true,
+      "overheadQualified": true
+    },
+    "full-review/gpt-6-luna": {
+      "historicalAlerts": {
+        "c-e590": 1
+      },
+      "baselineSufficient": false,
+      "complete": false,
+      "positiveAnchorsQualified": false,
+      "differences": {
+        "current": [
+          0,
+          0,
+          2
+        ],
+        "original-context": [
+          0,
+          1,
+          0
+        ]
+      },
+      "pairedReduction": {
+        "current": false,
+        "original-context": false
+      },
+      "observedBudgetWithinLimits": true,
+      "overheadQualified": false
+    },
+    "full-review/gpt-6.1-sol": {
+      "historicalAlerts": {},
+      "baselineSufficient": false,
+      "complete": false,
+      "positiveAnchorsQualified": false,
+      "differences": {
+        "current": [
+          0,
+          0,
+          1
+        ],
+        "original-context": [
+          0,
+          0,
+          0
+        ]
+      },
+      "pairedReduction": {
+        "current": false,
+        "original-context": false
+      },
+      "observedBudgetWithinLimits": true,
+      "overheadQualified": false
+    }
+  }
+}

@@ -10,16 +10,17 @@ Bugbot separates deterministic evaluator checks from optional, cost-bearing mode
 ## Repository evidence pilot
 
 The #950 pilot measures source-and-native-CI verification without repository
-probes. It freezes paired repository cases, models and repeated attempts, keeps
-expected verdicts outside the model and records all dry-run outcomes. The v3
-retest gives each new verifier a bounded diff excerpt and records gross provider
-input separately from the prompt bytes. Its two experimental arms share the
-same detector and tool policy. Only one receives pinned caller, dependency and
-eligible CI receipts. The unchanged current arm retains production inspection.
-Pilot evidence and the separate detection corpus gate any rollout.
+probes. It freezes paired repository cases, model settings and repeated dry-run
+attempts. Expected verdicts stay with the evaluator. V4 adds four historical
+pairs, logs the verifier deadline and bounded retry separately, and checks the
+causal anchor against the reviewed diff. The two experimental arms share the
+detector response and tool policy. One also receives exact-head source and
+eligible CI evidence. The current arm retains the production review route.
+Qualification requires historical reproduction in full review, preservation of
+the genuine controls, accounted usage and the separate detection corpus.
 
 [Issue and published design](https://github.com/vypdev/copilot/issues/950) ·
-[Bounded retest and results](https://github.com/vypdev/copilot/blob/develop/quality/bugbot/evidence/issue-950/v3/results.md)
+[Expanded pilot and results](https://github.com/vypdev/copilot/blob/develop/quality/bugbot/evidence/issue-950/v4/results.md)
 
 ## JSON value regression
 
