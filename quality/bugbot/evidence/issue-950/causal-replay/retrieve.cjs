@@ -14,7 +14,8 @@ function retrieve(cwd, binding, request, { context, caps = sourceLimits } = {}) 
     const denial = requestProblem(request, binding.scopes);
     if (denial) return denial;
     if (request.kind !== 'searchTree' || !anchor?.path?.endsWith('.py')
-        || request.targets.some(target => target.workspace !== null || target.match !== 'literal')) {
+        || request.targets.some(target => target.workspace !== null || target.match !== 'literal')
+        || !request.targets.some(target => /^(?:def [A-Za-z_]\w*\(?|[A-Za-z_]\w*\()$/u.test(target.query))) {
         return literal(cwd, binding, request, { caps });
     }
     if (!oid(binding.head) || !oid(binding.tree) || !oid(context.base)

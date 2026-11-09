@@ -1,89 +1,81 @@
 'use strict';
 
 const assert = require('node:assert/strict');
-const { mkdtempSync, mkdirSync, rmSync, writeFileSync } = require('node:fs');
-const { tmpdir } = require('node:os');
-const path = require('node:path');
 const { test } = require('node:test');
 const { retrieve } = require('./retrieve.cjs');
 const { assess, limits } = require('../tree-search/contract.cjs');
-const { git } = require('../on-demand/contract.cjs');
+const { anchor, fixture, lateAssignment, request } = require('./inspection-fixture.cjs');
 
-const anchorPath = 'pkg/logic/inspection_target.py';
-const anchor = { path: anchorPath, side: 'RIGHT', line: 8 };
-const target = { scope: 'pkg', workspace: null, match: 'literal', query: 'def active_key(', start: null, end: null };
-const request = { kind: 'searchTree', targets: [target] };
+test('an assignment after the constructor call cannot identify its parameter', t => {
+    const { cwd, binding, options } = fixture(t, lateAssignment);
+    const result = retrieve(cwd, binding, request, options);
+    assert.equal(result.status, 'unresolved');
+    assert.equal(result.reason, 'effective-constructor-unproven');
+    assert.deepEqual(result.receipts, []);
+});
 
-function fixture(t, constructors) {
-    const cwd = mkdtempSync(path.join(tmpdir(), '950-causal-fixture-'));
-    t.after(() => rmSync(cwd, { recursive: true, force: true }));
-    const commit = label => git(cwd, '-c', 'core.hooksPath=/dev/null', '-c', 'commit.gpgsign=false',
-        '-c', 'user.name=Pilot', '-c', 'user.email=pilot@example.invalid', 'commit', '-qm', label);
-    const write = (name, content) => {
-        mkdirSync(path.dirname(path.join(cwd, name)), { recursive: true });
-        writeFileSync(path.join(cwd, name), content);
-    };
-    git(cwd, 'init', '-q');
-    write('README.md', 'fixture\n');
-    git(cwd, 'add', '.');
-    commit('base');
-    const base = git(cwd, 'rev-parse', 'HEAD').trim();
-    write(anchorPath, `def inspect_item(unit, key):
-    current = unit.catalog.active_key(key)
-    if current is None:
-        return ()
-    obj = unit.catalog.get(current)
-    if obj is not None:
-        chosen = ["show"]
-        return chosen
-    return ()
-`);
-    write('pkg/logic/inspection.py', `from dataclasses import dataclass
-from pkg.logic.inspection_target import inspect_item
-from pkg.ports import Transactions
+test('the last prior assignment wins and a later overwrite cannot change the passed instance', t => {
+    const { cwd, binding, options } = fixture(t, [
+        'def create():',
+        '    store = AlphaDatabase()',
+        '    store = BetaDatabase()',
+        '    inspection = Inspection(store)',
+        '    store = AlphaDatabase()',
+        '    return inspection',
+    ].join('\n'));
+    const result = retrieve(cwd, binding, request, options);
+    assert.equal(result.status, 'provided', result.reason);
+    assert.deepEqual(result.anchor, anchor);
+    assert.equal(result.links.find(link => link.role === 'implementation').symbol, 'BetaRepo.active_key');
+    const proof = result.receipts.find(item => item.path.endsWith('/runtime.py'));
+    assert.match(proof.text, /store = BetaDatabase\(\)/u);
+    assert.doesNotMatch(proof.text, /store = AlphaDatabase\(\)/u);
+});
 
-@dataclass
-class Inspection:
-    store: Transactions
+test('two writes reaching the same constructor from distinct branches are ambiguous', t => {
+    const { cwd, binding, options } = fixture(t, [
+        'def create(use_alpha):',
+        '    if use_alpha:',
+        '        store = AlphaDatabase()',
+        '    else:',
+        '        store = BetaDatabase()',
+        '    return Inspection(store)',
+    ].join('\n'));
+    const result = retrieve(cwd, binding, request, options);
+    assert.equal(result.status, 'ambiguous');
+    assert.equal(result.reason, 'wiring-assignment-ambiguous');
+    assert.deepEqual(result.receipts, []);
+});
 
-    def target(self, key):
-        with self.store.read() as unit:
-            return inspect_item(unit, key)
-`);
-    write('pkg/ports.py', `from typing import Protocol
+test('an exiting branch does not compete with the assignment reaching the constructor', t => {
+    const { cwd, binding, options } = fixture(t, [
+        'def create(stop):',
+        '    if stop:',
+        '        store = AlphaDatabase()',
+        '        return None',
+        '    else:',
+        '        store = BetaDatabase()',
+        '    return Inspection(store)',
+    ].join('\n'));
+    const result = retrieve(cwd, binding, request, options);
+    assert.equal(result.status, 'provided', result.reason);
+    assert.equal(result.links.find(link => link.role === 'implementation').symbol, 'BetaRepo.active_key');
+});
 
-class Port(Protocol):
-    def active_key(self, key): ...
-
-class Transactions(Protocol):
-    def read(self): ...
-`);
-    for (const name of ['Alpha', 'Beta']) write(`pkg/adapters/${name.toLowerCase()}.py`, `
-class ${name}Repo:
-    def active_key(self, key):
-        return key if key else None
-    def get(self, key):
-        return object()
-
-class ${name}Unit:
-    def __init__(self):
-        self.catalog = ${name}Repo()
-
-class ${name}Database:
-    def read(self):
-        yield ${name}Unit()
-`);
-    write('pkg/composition/runtime.py', `from pkg.logic.inspection import Inspection
-from pkg.adapters.alpha import AlphaDatabase
-from pkg.adapters.beta import BetaDatabase
-
-${constructors}`);
-    git(cwd, 'add', '.');
-    commit('head');
-    const binding = { operation: 'synthetic-operation', candidate: 'synthetic-candidate', scopes: [''],
-        head: git(cwd, 'rev-parse', 'HEAD').trim(), tree: git(cwd, 'rev-parse', 'HEAD^{tree}').trim() };
-    return { cwd, binding, options: { context: { base, anchor } } };
-}
+test('a local write later in a closure does not let a prior use resolve to the outer binding', t => {
+    const { cwd, binding, options } = fixture(t, [
+        'def create():',
+        '    store = AlphaDatabase()',
+        '    def inner():',
+        '        inspection = Inspection(store)',
+        '        store = BetaDatabase()',
+        '        return inspection',
+        '    return inner()',
+    ].join('\n'));
+    const result = retrieve(cwd, binding, request, options);
+    assert.equal(result.status, 'unresolved');
+    assert.deepEqual(result.receipts, []);
+});
 
 test('declaration and two implementations without an assembly link remain unresolved', t => {
     const { cwd, binding, options } = fixture(t, 'def create(store):\n    return Inspection(store)\n');
