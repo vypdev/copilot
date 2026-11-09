@@ -1,0 +1,137 @@
+{
+  "U1": {
+    "base": "d885bccf2c3152c3151471d3efaabd901429d6bd",
+    "head": "e3f49b5c540771caf68ef2f3afca799cff26f389",
+    "tree": "8eef5dfcdf6752934959bef23e3c72bbf98e4a97",
+    "paths": [
+      "packages/core/src/presentation-text.ts"
+    ],
+    "diffSha256": "3242bf377dfa76efce1367eb3c1a2f03b98ab23d1f9e914b90d6f6919455f25c"
+  },
+  "U2": {
+    "base": "e3f49b5c540771caf68ef2f3afca799cff26f389",
+    "head": "9dafa8cc09d9e83111a79e8dd3ea38a1b31ed6d1",
+    "tree": "972a4770cea3349b5679f1c4739cfa279d816822",
+    "paths": [
+      "packages/core/src/presentation-text.ts"
+    ],
+    "diffSha256": "f85e93a85dbcfb42f6f8936350156ac647894c2cb59396e22471046f59f26a5a",
+    "mutatedBlob": "6ca7f05c82d98cc5e507b284981e1344b972b816"
+  },
+  "F1": {
+    "base": "057908b8231bb9ae16142f0de060a54fc8a61552",
+    "head": "878a73b5f06629fa028a2daed87268b717765e45",
+    "tree": "79c69b29285e2c2a216cc4cb6cc1208a02d795cd",
+    "paths": [
+      "tests/containers/test_app_image.py",
+      "tests/containers/test_app_compatibility.py",
+      "tests/containers/test_edge_preview_image.py"
+    ],
+    "diffSha256": "820fe50d8f0395f594449a1df93698d0da3eaa30d407bfc65b00e7af90d8b434"
+  },
+  "F2": {
+    "base": "878a73b5f06629fa028a2daed87268b717765e45",
+    "head": "b502ce0cfa82360d73351edfabe618ce0b7c1a20",
+    "tree": "86b8490bc71bdfcddc07e7f3ca2660c3e22a862c",
+    "paths": [
+      "tests/containers/test_app_image.py",
+      "tests/containers/test_app_compatibility.py",
+      "tests/containers/test_edge_preview_image.py"
+    ],
+    "diffSha256": "33c21a1eb2f5e5abc8bcb1489b28ec1c15fbbf7b4c06c326d91f3b49eb0c67f2",
+    "mutatedBlob": "d484c6399a96c92df87edb6b1c501025949b9725"
+  },
+  "S1": {
+    "base": "5b7bdcdee3a9e98d6669bfd34ce750ae30a8c775",
+    "head": "3d890522003c2d2e7d03fa1f51b1bd84f0d0f10f",
+    "tree": "d670f43e401a26cf2c488f268e0d8b4910def2cd",
+    "paths": [
+      "backend/src/domus/application/fixed_batch_review.py"
+    ],
+    "diffSha256": "b9c96ef25e851c6b1cb7fd31b3451070801fcdea5eb53a3414c9eeea0cc1ce9a"
+  },
+  "S2": {
+    "base": "3d890522003c2d2e7d03fa1f51b1bd84f0d0f10f",
+    "head": "637e34dd382dd88e071be3e19291664f9493d123",
+    "tree": "dcc4132442c8c0b99082f4b451791d7df2346325",
+    "paths": [
+      "backend/src/domus/application/fixed_batch_review.py"
+    ],
+    "diffSha256": "a7f991d83c1bc3f5bc3e64df11ea5197527b450160ac091e32ddedf6e3da9d14",
+    "mutatedBlob": "9e0a53533790a9b6fe1072a814aaa69287a816b7"
+  },
+  "X1": {
+    "base": "a9c4b9723c66868884476743940102ada65d2db0",
+    "head": "e129e76e25deff7314efe3b72996d295cf73f7f3",
+    "tree": "c71daa5ff4f59ddfee9ee2356b6a04dc1649cb9e",
+    "paths": [
+      "backend/src/domus/infrastructure/sqlite_member_profile_schema.py",
+      "backend/src/domus/infrastructure/sqlite.py"
+    ],
+    "diffSha256": "6db56e88e772586bf744eee23102462d779dc9ac64e0d73bf849d8504232aa80"
+  },
+  "X2": {
+    "base": "e129e76e25deff7314efe3b72996d295cf73f7f3",
+    "head": "9e65fd088a52cd10ec3ca6a846959c39947ffb16",
+    "tree": "8df88b9409da3999eeae2cf333ab6bb170277399",
+    "paths": [
+      "backend/src/domus/infrastructure/sqlite_member_profile_schema.py",
+      "backend/src/domus/infrastructure/sqlite.py"
+    ],
+    "diffSha256": "28f6aa7871ffd006ca6e43b394944ff64bda54b047521db9934710f95ca0b053"
+  },
+  "M1": {
+    "base": "171244421fcc6289180bdb94bf4e7bb52a990a1b",
+    "head": "b14c308a28ecad52945a8edac6dce25ba9dfd655",
+    "tree": "45ba3df3701786d602ff082522c5bbfeadd7a72b",
+    "paths": [
+      "docs/household-administration.md"
+    ],
+    "diffSha256": "b817f2ef2f4a850f8d836c7cf07dca930c6ce3be639c79b4acf123932c0fed29"
+  },
+  "M2": {
+    "base": "b14c308a28ecad52945a8edac6dce25ba9dfd655",
+    "head": "0b288c6fef057b390708064ee32c6f21dd824fd6",
+    "tree": "4d49909351088460ee288be3afa82811880823ce",
+    "paths": [
+      "docs/household-administration.md"
+    ],
+    "diffSha256": "132358d4aa1fc8637f64d0782dc1927d5fd3be885e3f6ffd9b38afbbfcb7ea46"
+  },
+  "P1": {
+    "base": "8b1cbc110c389b9cdb6ecd11317c95abf2c4b0a9",
+    "head": "b9a2dfc8179128fb493ab49666c24967d308c979",
+    "tree": "220df819e1081b563178209afb595f03561571bd",
+    "paths": [
+      "frontend/tests/e2e/catalog.spec.ts"
+    ],
+    "diffSha256": "7f57ed834608d31343e31eaf508950c230284a2d5963e433034245144773e550"
+  },
+  "P2": {
+    "base": "b9a2dfc8179128fb493ab49666c24967d308c979",
+    "head": "122e0123a94480dd5d042b408a6c9498aeec5edc",
+    "tree": "07b8e47f0271e99be0b5282b4731aa2fc21841e1",
+    "paths": [
+      "frontend/tests/e2e/catalog.spec.ts"
+    ],
+    "diffSha256": "5527f93c9ebcf4f3d3e450c42838ee8ef972231d39b295241a5287da80c9f67a"
+  },
+  "J1": {
+    "base": "8b1cbc110c389b9cdb6ecd11317c95abf2c4b0a9",
+    "head": "127cb48647efb777be8494c40239fd048c751c72",
+    "tree": "ad8bae75701a94c8d4b6e5b515fbb2b619d27e7f",
+    "paths": [
+      "tests/python/test_image_channel.py"
+    ],
+    "diffSha256": "27e9a58573a5168e70ff3e8860328eb76ac50a7314b5de14da30ff8be159f656"
+  },
+  "J2": {
+    "base": "127cb48647efb777be8494c40239fd048c751c72",
+    "head": "f525eea60e34e33b096a0f329b82086b6b656ff4",
+    "tree": "185aa8a09850e6265263bff45a9b0ee7f000520b",
+    "paths": [
+      "tests/python/test_image_channel.py"
+    ],
+    "diffSha256": "5a9a7f6e8d721661edac998dce0b4d379300af610b6c4e19bab76ac24baf6b87"
+  }
+}

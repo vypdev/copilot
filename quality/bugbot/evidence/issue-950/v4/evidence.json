@@ -1,0 +1,633 @@
+{
+  "U1": [
+    {
+      "id": "evidence-1",
+      "kind": "git",
+      "head": "e3f49b5c540771caf68ef2f3afca799cff26f389",
+      "path": "packages/core/src/presentation-text.ts",
+      "blob": "05780aabc22ec9fbd91ed5de2cc94efa93f70638",
+      "start": 1,
+      "end": 5,
+      "text": "/** Pure inert presentation-text policy shared by component contracts. */\nexport function presentationText(value:unknown,maximum:number,empty=false):value is string {\n  if (typeof value!=='string' || (!value.trim() && !(empty && value==='')) || Array.from(value).length>maximum) return false;\n  return !/[\\u0000-\\u001f\\u007f-\\u009f\\ud800-\\udfff]/u.test(value);\n}"
+    },
+    {
+      "id": "evidence-2",
+      "kind": "git",
+      "head": "e3f49b5c540771caf68ef2f3afca799cff26f389",
+      "path": "package.json",
+      "blob": "23a47f506e02052e3c0b44c28726e93b80f75f09",
+      "start": 1,
+      "end": 14,
+      "text": "{\n  \"name\": \"ha-ui-workspace\",\n  \"private\": true,\n  \"type\": \"module\",\n  \"packageManager\": \"pnpm@10.34.0\",\n  \"engines\": {\n    \"node\": \">=24.20.0 <25\"\n  },\n  \"scripts\": {\n    \"check\": \"tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.consumers.json && svelte-check --tsconfig tsconfig.svelte-source.json && svelte-check --tsconfig tsconfig.svelte-tests.json && tsc --noEmit -p tsconfig.storybook.json\",\n    \"test\": \"vitest run --coverage && node --test tests/coverage-evidence.test.mjs\",\n    \"build\": \"pnpm -r --sort run build\",\n    \"test:package\": \"node --test tests/consumers/packed.test.ts\",\n    \"storybook\": \"storybook dev --port 6006 --no-open\","
+    },
+    {
+      "kind": "git",
+      "head": "e3f49b5c540771caf68ef2f3afca799cff26f389",
+      "path": "packages/core/src/button-contracts.ts",
+      "blob": "0c95b46eb16c732531cacbab5a4b4279396dc7d0",
+      "start": 13,
+      "end": 25,
+      "text": "function invalid():never{throw new ButtonInputError();}\nexport function buttonState(raw:unknown):ButtonState {\n const keys=['label','variant','size','loading','loadingLabel','iconOnly','pressed'];\n if(typeof raw!=='object'||raw===null||Array.isArray(raw)||!Object.hasOwn(raw,'label')||Reflect.ownKeys(raw).some(key=>typeof key!=='string'||!keys.includes(key)))invalid();\n const source=raw as Record<string,unknown>;\n function text(key:string,maximum:number,fallback:string):string{const value=source[key]===undefined?fallback:source[key];if(!presentationText(value,maximum,false))invalid();return value;}\n function flag(key:string):boolean{const value=source[key]===undefined?false:source[key];if(typeof value!=='boolean')invalid();return value;}\n function option(key:string,values:readonly string[],fallback:string):string{const value=source[key]===undefined?fallback:source[key];if(typeof value!=='string'||!values.includes(value))invalid();return value;}\n const pressed=source.pressed===undefined?null:source.pressed;if(pressed!==null&&typeof pressed!=='boolean')invalid();\n return Object.freeze({label:text('label',256,''),variant:option('variant',['primary','neutral','danger','success','warning','plain','outlined','filled'],'neutral') as ButtonVariant,size:option('size',['small','medium','large','extra-large'],'medium') as ButtonSize,loading:flag('loading'),loadingLabel:text('loadingLabel',512,'Working…'),iconOnly:flag('iconOnly'),pressed});\n}\nexport function buttonType(value:unknown):ButtonType {if(value!=='button'&&value!=='submit'&&value!=='reset')invalid();return value;}\nexport function buttonName(value:unknown):string {if(!presentationText(value,128,true))invalid();return value;}",
+      "id": "evidence-3"
+    },
+    {
+      "kind": "git",
+      "head": "e3f49b5c540771caf68ef2f3afca799cff26f389",
+      "path": "packages/core/src/contracts.ts",
+      "blob": "c0807ed4aef9b08bbe8b6678407923385c765d6b",
+      "start": 22,
+      "end": 34,
+      "text": "  readonly code = 'invalid_navigation';\n  constructor() { super('invalid_navigation'); this.name = 'NavigationInputError'; }\n}\nfunction invalid(): never { throw new NavigationInputError(); }\nfunction object(value: unknown, allowed: readonly string[], required: readonly string[]): Record<string, unknown> {\n  if (typeof value !== 'object' || value === null || Array.isArray(value)) invalid();\n  if (Object.keys(value).some(key => !allowed.includes(key)) || required.some(key => !Object.hasOwn(value, key))) invalid();\n  return value as Record<string, unknown>;\n}\nfunction text(value: unknown, maximum: number): string {\n  if (!presentationText(value, maximum)) invalid();\n  return value;\n}",
+      "id": "evidence-4"
+    },
+    {
+      "kind": "git",
+      "head": "e3f49b5c540771caf68ef2f3afca799cff26f389",
+      "path": "packages/core/src/contracts.ts",
+      "blob": "c0807ed4aef9b08bbe8b6678407923385c765d6b",
+      "start": 49,
+      "end": 55,
+      "text": "export function navigationState(raw: unknown): NavigationState {\n  const source = object(raw, ['kind', 'label', 'selected', 'items', 'scrollStartLabel', 'scrollEndLabel'], ['kind', 'label', 'selected', 'items']);\n  const kind = source.kind;\n  if (kind !== 'navigation' && kind !== 'panels') invalid();\n  const label = text(source.label, 256);\n  const input=source.items;\n  if (!Array.isArray(input) || input.length > 64) invalid();",
+      "id": "evidence-5"
+    }
+  ],
+  "U2": [
+    {
+      "id": "evidence-1",
+      "kind": "git",
+      "head": "9dafa8cc09d9e83111a79e8dd3ea38a1b31ed6d1",
+      "path": "packages/core/src/presentation-text.ts",
+      "blob": "6ca7f05c82d98cc5e507b284981e1344b972b816",
+      "start": 1,
+      "end": 5,
+      "text": "/** Pure inert presentation-text policy shared by component contracts. */\nexport function presentationText(value:unknown,maximum:number,empty=false):value is string {\n  if (typeof value!=='string' || (!value.trim() && !(empty && value==='')) || Array.from(value).length>maximum) return false;\n  return !/[\\u0000-\\u001f\\u007f-\\u009f\\ud800-\\udfff]/.test(value);\n}"
+    },
+    {
+      "id": "evidence-2",
+      "kind": "git",
+      "head": "9dafa8cc09d9e83111a79e8dd3ea38a1b31ed6d1",
+      "path": "package.json",
+      "blob": "23a47f506e02052e3c0b44c28726e93b80f75f09",
+      "start": 1,
+      "end": 14,
+      "text": "{\n  \"name\": \"ha-ui-workspace\",\n  \"private\": true,\n  \"type\": \"module\",\n  \"packageManager\": \"pnpm@10.34.0\",\n  \"engines\": {\n    \"node\": \">=24.20.0 <25\"\n  },\n  \"scripts\": {\n    \"check\": \"tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.consumers.json && svelte-check --tsconfig tsconfig.svelte-source.json && svelte-check --tsconfig tsconfig.svelte-tests.json && tsc --noEmit -p tsconfig.storybook.json\",\n    \"test\": \"vitest run --coverage && node --test tests/coverage-evidence.test.mjs\",\n    \"build\": \"pnpm -r --sort run build\",\n    \"test:package\": \"node --test tests/consumers/packed.test.ts\",\n    \"storybook\": \"storybook dev --port 6006 --no-open\","
+    },
+    {
+      "kind": "git",
+      "head": "9dafa8cc09d9e83111a79e8dd3ea38a1b31ed6d1",
+      "path": "packages/core/src/button-contracts.ts",
+      "blob": "0c95b46eb16c732531cacbab5a4b4279396dc7d0",
+      "start": 13,
+      "end": 25,
+      "text": "function invalid():never{throw new ButtonInputError();}\nexport function buttonState(raw:unknown):ButtonState {\n const keys=['label','variant','size','loading','loadingLabel','iconOnly','pressed'];\n if(typeof raw!=='object'||raw===null||Array.isArray(raw)||!Object.hasOwn(raw,'label')||Reflect.ownKeys(raw).some(key=>typeof key!=='string'||!keys.includes(key)))invalid();\n const source=raw as Record<string,unknown>;\n function text(key:string,maximum:number,fallback:string):string{const value=source[key]===undefined?fallback:source[key];if(!presentationText(value,maximum,false))invalid();return value;}\n function flag(key:string):boolean{const value=source[key]===undefined?false:source[key];if(typeof value!=='boolean')invalid();return value;}\n function option(key:string,values:readonly string[],fallback:string):string{const value=source[key]===undefined?fallback:source[key];if(typeof value!=='string'||!values.includes(value))invalid();return value;}\n const pressed=source.pressed===undefined?null:source.pressed;if(pressed!==null&&typeof pressed!=='boolean')invalid();\n return Object.freeze({label:text('label',256,''),variant:option('variant',['primary','neutral','danger','success','warning','plain','outlined','filled'],'neutral') as ButtonVariant,size:option('size',['small','medium','large','extra-large'],'medium') as ButtonSize,loading:flag('loading'),loadingLabel:text('loadingLabel',512,'Working…'),iconOnly:flag('iconOnly'),pressed});\n}\nexport function buttonType(value:unknown):ButtonType {if(value!=='button'&&value!=='submit'&&value!=='reset')invalid();return value;}\nexport function buttonName(value:unknown):string {if(!presentationText(value,128,true))invalid();return value;}",
+      "id": "evidence-3"
+    },
+    {
+      "kind": "git",
+      "head": "9dafa8cc09d9e83111a79e8dd3ea38a1b31ed6d1",
+      "path": "packages/core/src/contracts.ts",
+      "blob": "c0807ed4aef9b08bbe8b6678407923385c765d6b",
+      "start": 22,
+      "end": 34,
+      "text": "  readonly code = 'invalid_navigation';\n  constructor() { super('invalid_navigation'); this.name = 'NavigationInputError'; }\n}\nfunction invalid(): never { throw new NavigationInputError(); }\nfunction object(value: unknown, allowed: readonly string[], required: readonly string[]): Record<string, unknown> {\n  if (typeof value !== 'object' || value === null || Array.isArray(value)) invalid();\n  if (Object.keys(value).some(key => !allowed.includes(key)) || required.some(key => !Object.hasOwn(value, key))) invalid();\n  return value as Record<string, unknown>;\n}\nfunction text(value: unknown, maximum: number): string {\n  if (!presentationText(value, maximum)) invalid();\n  return value;\n}",
+      "id": "evidence-4"
+    },
+    {
+      "kind": "git",
+      "head": "9dafa8cc09d9e83111a79e8dd3ea38a1b31ed6d1",
+      "path": "packages/core/src/contracts.ts",
+      "blob": "c0807ed4aef9b08bbe8b6678407923385c765d6b",
+      "start": 49,
+      "end": 55,
+      "text": "export function navigationState(raw: unknown): NavigationState {\n  const source = object(raw, ['kind', 'label', 'selected', 'items', 'scrollStartLabel', 'scrollEndLabel'], ['kind', 'label', 'selected', 'items']);\n  const kind = source.kind;\n  if (kind !== 'navigation' && kind !== 'panels') invalid();\n  const label = text(source.label, 256);\n  const input=source.items;\n  if (!Array.isArray(input) || input.length > 64) invalid();",
+      "id": "evidence-5"
+    }
+  ],
+  "F1": [
+    {
+      "id": "evidence-1",
+      "kind": "git",
+      "head": "878a73b5f06629fa028a2daed87268b717765e45",
+      "path": "tests/containers/test_app_image.py",
+      "blob": "f457b78af7a865f9866f9a780b91cdd192b4899d",
+      "start": 122,
+      "end": 142,
+      "text": "        removed = docker(\"volume\", \"rm\", volume)\n        assert removed.returncode == 0, removed.stderr\n\n\ndef test_real_nonroot_listener_rejects_forgery_and_retains_storage_and_replay_on_restart(\n    image: str,\n    data_volume: str,\n    expected_schema: int = 10,\n) -> None:\n    name = \"domus-persistent-test-\" + uuid.uuid4().hex\n    try:\n        started = docker(\n            \"run\",\n            \"--detach\",\n            \"--init\",\n            \"--network\",\n            \"none\",\n            \"--name\",\n            name,\n            \"--volume\",\n            data_volume + \":/data\","
+    },
+    {
+      "id": "evidence-2",
+      "kind": "git",
+      "head": "878a73b5f06629fa028a2daed87268b717765e45",
+      "path": "tests/containers/test_app_compatibility.py",
+      "blob": "a3f96723a29f5ecbed06bfa197374b0b2ae81107",
+      "start": 120,
+      "end": 144,
+      "text": "    )\n    stopped(name)\n\n\n@pytest.mark.parametrize(\n    \"previous_image,old_schema\",\n    [(\"edge2\", 3), (\"edge3\", 4), (\"edge5\", 7), (\"schema8\", 8)],\n    indirect=[\"previous_image\"],\n)\ndef test_real_older_image_upgrades_replays_and_restores_its_pre_upgrade_snapshot(\n    image, previous_image, data_volume, old_schema, expected_schema=10\n):\n    old = \"domus-upgrade-old-\" + uuid.uuid4().hex\n    new = \"domus-upgrade-new-\" + uuid.uuid4().hex\n    try:\n        result = docker(\n            \"run\",\n            \"--detach\",\n            \"--init\",\n            \"--network\",\n            \"none\",\n            \"--name\",\n            old,\n            \"--volume\",\n            data_volume + \":/data\","
+    },
+    {
+      "id": "evidence-3",
+      "kind": "dependency",
+      "name": "pytest",
+      "version": "9.2.0",
+      "lockBlob": "c14e36fb17d11319135b8a54e16adb73e22859c7",
+      "contract": "_pytest.compat.getfuncargnames",
+      "sourceSha256": "476ac7921fe68d5ece0bdf1f380f49a32317a70ad822f4f2968e466041222eac",
+      "text": "def getfuncargnames(\n    function: Callable[..., object],\n    *,\n    name: str = \"\",\n    cls: type | None = None,\n) -> tuple[str, ...]:\n    \"\"\"Return the names of a function's mandatory arguments.\n\n    Should return the names of all function arguments that:\n    * Aren't bound to an instance or type as in instance or class methods.\n    * Don't have default values.\n    * Aren't bound with functools.partial.\n    * Aren't replaced with mocks.\n\n    The cls arguments indicate that the function should be treated as a bound\n    method even though it's not unless the function is a static method.\n\n    The name parameter should be the original name in which the function was collected.\n    \"\"\"\n    # TODO(RonnyPfannschmidt): This function should be refactored when we\n    # revisit fixtures. The fixture mechanism should ask the node for\n    # the fixture names, and not try to obtain directly from the\n    # function object well after collection has occurred.\n\n    # The parameters attribute of a Signature object contains an\n    # ordered mapping of parameter names to Parameter instances.  This\n    # creates a tuple of the names of the parameters that don't have\n    # defaults.\n    try:\n        parameters = signature(function).parameters.values()\n    except (ValueError, TypeError) as e:\n        from _pytest.outcomes import fail\n\n        fail(\n            f\"Could not determine arguments of {function!r}: {e}\",\n            pytrace=False,\n        )\n\n    arg_names = tuple(\n        p.name\n        for p in parameters\n        if (\n            p.kind is Parameter.POSITIONAL_OR_KEYWORD\n            or p.kind is Parameter.KEYWORD_ONLY\n        )\n        and p.default is Parameter.empty\n    )\n    if not name:\n        name = function.__name__\n\n    # If this function should be treated as a bound method even though\n    # it's passed as an unbound method or function, and its first parameter\n    # wasn't defined as positional only, remove the first parameter name.\n    if not any(p.kind is Parameter.POSITIONAL_ONLY for p in parameters) and (\n        # Not using `getattr` because we don't want to resolve the staticmethod.\n        # Not using `cls.__dict__` because we want to check the entire MRO.\n        cls\n        and not inspect.ismethod(function)\n        and not isinstance(\n            inspect.getattr_static(cls, name, default=None), staticmethod\n        )\n    ):\n        arg_names = arg_names[1:]\n    # Remove any names that will be replaced with mocks.\n    if hasattr(function, \"__wrapped__\"):\n        arg_names = arg_names[num_mock_patch_args(function) :]\n    return arg_names\n"
+    },
+    {
+      "id": "evidence-4",
+      "kind": "native-ci",
+      "head": "878a73b5f06629fa028a2daed87268b717765e45",
+      "run": 42294011539,
+      "job": 128154446414,
+      "checkout": "a76a8629c65499e5eb601abd83cdb3503179142e",
+      "sourceDiffPaths": 0,
+      "command": "uv run pytest tests/containers --no-cov",
+      "observation": "Frozen dependency sync completed. ARM64 job reported 42 passed for that command."
+    },
+    {
+      "id": "evidence-5",
+      "kind": "git",
+      "head": "878a73b5f06629fa028a2daed87268b717765e45",
+      "path": "tests/containers/test_edge_preview_image.py",
+      "blob": "ce6fe164035230cd01269ea12868817348bc1b66",
+      "start": 80,
+      "end": 83,
+      "text": "def test_pinned_edge_native_launcher_authority_storage_and_restart(edge_preview, data_volume):\n    app_tests.test_real_nonroot_listener_rejects_forgery_and_retains_storage_and_replay_on_restart(\n        edge_preview, data_volume, expected_schema=9\n    )"
+    }
+  ],
+  "F2": [
+    {
+      "id": "evidence-1",
+      "kind": "git",
+      "head": "b502ce0cfa82360d73351edfabe618ce0b7c1a20",
+      "path": "tests/containers/test_app_image.py",
+      "blob": "d484c6399a96c92df87edb6b1c501025949b9725",
+      "start": 122,
+      "end": 142,
+      "text": "        removed = docker(\"volume\", \"rm\", volume)\n        assert removed.returncode == 0, removed.stderr\n\n\ndef test_real_nonroot_listener_rejects_forgery_and_retains_storage_and_replay_on_restart(\n    image: str,\n    data_volume: str,\n    expected_schema: int = 10,\n    *,\n    expected_schema_fixture: int,\n) -> None:\n    name = \"domus-persistent-test-\" + uuid.uuid4().hex\n    try:\n        started = docker(\n            \"run\",\n            \"--detach\",\n            \"--init\",\n            \"--network\",\n            \"none\",\n            \"--name\",\n            name,"
+    },
+    {
+      "id": "evidence-2",
+      "kind": "git",
+      "head": "b502ce0cfa82360d73351edfabe618ce0b7c1a20",
+      "path": "tests/containers/test_app_compatibility.py",
+      "blob": "a3f96723a29f5ecbed06bfa197374b0b2ae81107",
+      "start": 120,
+      "end": 144,
+      "text": "    )\n    stopped(name)\n\n\n@pytest.mark.parametrize(\n    \"previous_image,old_schema\",\n    [(\"edge2\", 3), (\"edge3\", 4), (\"edge5\", 7), (\"schema8\", 8)],\n    indirect=[\"previous_image\"],\n)\ndef test_real_older_image_upgrades_replays_and_restores_its_pre_upgrade_snapshot(\n    image, previous_image, data_volume, old_schema, expected_schema=10\n):\n    old = \"domus-upgrade-old-\" + uuid.uuid4().hex\n    new = \"domus-upgrade-new-\" + uuid.uuid4().hex\n    try:\n        result = docker(\n            \"run\",\n            \"--detach\",\n            \"--init\",\n            \"--network\",\n            \"none\",\n            \"--name\",\n            old,\n            \"--volume\",\n            data_volume + \":/data\","
+    },
+    {
+      "id": "evidence-3",
+      "kind": "dependency",
+      "name": "pytest",
+      "version": "9.2.0",
+      "lockBlob": "c14e36fb17d11319135b8a54e16adb73e22859c7",
+      "contract": "_pytest.compat.getfuncargnames",
+      "sourceSha256": "476ac7921fe68d5ece0bdf1f380f49a32317a70ad822f4f2968e466041222eac",
+      "text": "def getfuncargnames(\n    function: Callable[..., object],\n    *,\n    name: str = \"\",\n    cls: type | None = None,\n) -> tuple[str, ...]:\n    \"\"\"Return the names of a function's mandatory arguments.\n\n    Should return the names of all function arguments that:\n    * Aren't bound to an instance or type as in instance or class methods.\n    * Don't have default values.\n    * Aren't bound with functools.partial.\n    * Aren't replaced with mocks.\n\n    The cls arguments indicate that the function should be treated as a bound\n    method even though it's not unless the function is a static method.\n\n    The name parameter should be the original name in which the function was collected.\n    \"\"\"\n    # TODO(RonnyPfannschmidt): This function should be refactored when we\n    # revisit fixtures. The fixture mechanism should ask the node for\n    # the fixture names, and not try to obtain directly from the\n    # function object well after collection has occurred.\n\n    # The parameters attribute of a Signature object contains an\n    # ordered mapping of parameter names to Parameter instances.  This\n    # creates a tuple of the names of the parameters that don't have\n    # defaults.\n    try:\n        parameters = signature(function).parameters.values()\n    except (ValueError, TypeError) as e:\n        from _pytest.outcomes import fail\n\n        fail(\n            f\"Could not determine arguments of {function!r}: {e}\",\n            pytrace=False,\n        )\n\n    arg_names = tuple(\n        p.name\n        for p in parameters\n        if (\n            p.kind is Parameter.POSITIONAL_OR_KEYWORD\n            or p.kind is Parameter.KEYWORD_ONLY\n        )\n        and p.default is Parameter.empty\n    )\n    if not name:\n        name = function.__name__\n\n    # If this function should be treated as a bound method even though\n    # it's passed as an unbound method or function, and its first parameter\n    # wasn't defined as positional only, remove the first parameter name.\n    if not any(p.kind is Parameter.POSITIONAL_ONLY for p in parameters) and (\n        # Not using `getattr` because we don't want to resolve the staticmethod.\n        # Not using `cls.__dict__` because we want to check the entire MRO.\n        cls\n        and not inspect.ismethod(function)\n        and not isinstance(\n            inspect.getattr_static(cls, name, default=None), staticmethod\n        )\n    ):\n        arg_names = arg_names[1:]\n    # Remove any names that will be replaced with mocks.\n    if hasattr(function, \"__wrapped__\"):\n        arg_names = arg_names[num_mock_patch_args(function) :]\n    return arg_names\n"
+    },
+    {
+      "id": "evidence-4",
+      "kind": "git",
+      "head": "b502ce0cfa82360d73351edfabe618ce0b7c1a20",
+      "path": "tests/containers/test_edge_preview_image.py",
+      "blob": "ce6fe164035230cd01269ea12868817348bc1b66",
+      "start": 80,
+      "end": 83,
+      "text": "def test_pinned_edge_native_launcher_authority_storage_and_restart(edge_preview, data_volume):\n    app_tests.test_real_nonroot_listener_rejects_forgery_and_retains_storage_and_replay_on_restart(\n        edge_preview, data_volume, expected_schema=9\n    )"
+    }
+  ],
+  "S1": [
+    {
+      "id": "evidence-1",
+      "kind": "git",
+      "head": "3d890522003c2d2e7d03fa1f51b1bd84f0d0f10f",
+      "path": "backend/src/domus/application/fixed_batch_review.py",
+      "blob": "787701c123995f415300698e0601b7f1c326e8bd",
+      "start": 194,
+      "end": 248,
+      "text": "        if any(item.work.assignee_ids for item in unmatched):\n            raise Conflict(\"recurrence_replacement_assignments_need_review\")\n        return PreparedReplacement(\n            self,\n            before,\n            tuple(steps),\n            pairing,\n            future_until(planner.times, nominal_slots[0], rule.policy),\n        )\n\n\ndef replacement_source(\n    unit: UnitOfWork, scope: MaintenanceScope, request: FixedReplacement\n) -> ReplacementSource:\n    home = scope.household_id\n    rule = unit.recurrence.schedule(home, request.schedule_id)\n    if rule is None:\n        raise NotFound(\"recurrence_rule_missing\")\n    if rule.revision != request.schedule_revision:\n        raise Conflict(\"recurrence_review_stale\")\n    if rule.state is not ScheduleState.ACTIVE or rule.pattern == request.pattern:\n        raise Conflict(\"recurrence_state_change_unavailable\")\n    start = request.pattern.start\n    if type(start) is not type(rule.pattern.start):\n        raise Conflict(\"recurrence_pattern_requires_replacement\")\n    progress = unit.recurrence.progress(home, rule.schedule_id)\n    definition = unit.tasks.definition(home, rule.definition_id)\n    if progress is None or definition is None or not progress.matches_schedule(rule):\n        raise StorageFailure(\"invalid_recurrence_source\")\n    if definition.state is not DefinitionState.ACTIVE:\n        raise Conflict(\"recurrence_state_change_unavailable\")\n    nominal = start.local.isoformat()\n    if unit.recurrence.has_absent_fixed_slot_from(home, rule.schedule_id, nominal):\n        raise Conflict(\"recurrence_review_source_absent\")\n    slots = unit.recurrence.fixed_slots_from(home, rule.schedule_id, nominal)\n    if len(slots) > _SLOT_LIMIT:\n        raise Conflict(\"recurrence_review_too_large\")\n    replaced, retained = [], []\n    for slot in slots:\n        work = unit.tasks.occurrence(home, slot.occurrence_id)\n        if work is None:\n            raise StorageFailure(\"invalid_recurrence_source\")\n        deadline = effective_deadline(unit, work, slot)\n        cancelled = work.state is OccurrenceState.CANCELLED\n        previously_replaced = (\n            cancelled\n            and slot.schedule.pattern_revision < rule.pattern_revision\n            and unit.recurrence.has_replaced_fixed_work(home, rule.schedule_id, work.occurrence_id)\n        )\n        exception = rule.exception(slot.planned.nominal)\n        excluded = (\n            cancelled and exception is not None and exception.kind is FixedExceptionKind.EXCLUDE\n        )\n        item = AffectedWork(\n            work, slot.key, slot.planned.nominal, deadline, previously_replaced, excluded"
+    },
+    {
+      "kind": "git",
+      "head": "3d890522003c2d2e7d03fa1f51b1bd84f0d0f10f",
+      "path": "backend/src/domus/application/fixed_batch_review.py",
+      "blob": "787701c123995f415300698e0601b7f1c326e8bd",
+      "start": 367,
+      "end": 387,
+      "text": "        replacements: JsonObject = {}\n        additions: list[JsonValue] = []\n        originals = iter(self.pairing)\n        for batch in self.steps:\n            expects_work = bool(batch.slots) and rule.exception(batch.slots[0].nominal) is None\n            prior = next(originals) if expects_work else None\n            step = materializer.commit_reviewed_step(\n                unit, rule, batch, self.before, assignees=prior.work.assignee_ids if prior else ()\n            )\n            if expects_work and step.occurrence_id is None:\n                raise Conflict(\"recurrence_review_stale\")\n            if step.occurrence_id is not None:\n                if prior is None:\n                    additions.append(step.occurrence_id)\n                else:\n                    replacements[prior.work.occurrence_id] = step.occurrence_id\n        for affected in self.source.replaceable:\n            work = affected.work\n            transition = TransitionTask(\n                work.occurrence_id, work.revision, OccurrenceState.CANCELLED, request.reason\n            )",
+      "id": "evidence-2"
+    },
+    {
+      "id": "evidence-3",
+      "kind": "git",
+      "head": "3d890522003c2d2e7d03fa1f51b1bd84f0d0f10f",
+      "path": "backend/src/domus/infrastructure/sqlite_recurrence.py",
+      "blob": "031708a14b495f1133f80c8b1c9322ceaf57cac5",
+      "start": 182,
+      "end": 216,
+      "text": "            ).fetchone()\n            is not None\n        )\n\n    def fixed_slots_from(\n        self, household_id: str, schedule_id: str, nominal: str\n    ) -> tuple[ScheduledSlot, ...]:\n        validate_identifier(household_id)\n        validate_identifier(schedule_id)\n        rows = self.connection.execute(\n            \"SELECT * FROM recurrence_slots WHERE household_id=? AND schedule_id=? \"\n            \"AND nominal_value>=? ORDER BY nominal_value,slot_key LIMIT 101\",\n            (household_id, schedule_id, nominal),\n        )\n        return tuple(cast(ScheduledSlot, self._slot(row)) for row in rows)\n\n    def has_absent_fixed_slot_from(self, household_id: str, schedule_id: str, nominal: str) -> bool:\n        validate_identifier(household_id)\n        validate_identifier(schedule_id)\n        return (\n            self.connection.execute(\n                \"SELECT 1 FROM retained_operations WHERE household_id=? AND current=0 \"\n                \"AND (action='recurrence.materialize' OR (action='recurrence.review.apply' \"\n                \"AND json_extract(document,'$.result.kind')='fixed_exception')) \"\n                \"AND json_extract(document,'$.result.schedule_id')=? \"\n                \"AND coalesce(json_extract(document,'$.result.nominal.local'),\"\n                \"json_extract(document,'$.result.exception.nominal.local'))>=? LIMIT 1\",\n                (household_id, schedule_id, nominal),\n            ).fetchone()\n            is not None\n        )\n\n    def has_replaced_fixed_work(\n        self, household_id: str, schedule_id: str, occurrence_id: str\n    ) -> bool:"
+    },
+    {
+      "id": "evidence-4",
+      "kind": "git",
+      "head": "3d890522003c2d2e7d03fa1f51b1bd84f0d0f10f",
+      "path": "tests/backend/test_fixed_batch_review.py",
+      "blob": "5f96f97876ffe680eeb2f5a3f8df9aa4953d5275",
+      "start": 257,
+      "end": 292,
+      "text": "def test_restored_original_batch_cannot_recreate_the_later_generation(tmp_path):\n    from test_activation_compatibility import identity_at\n    from test_sqlite_snapshots import Clock\n\n    from domus.infrastructure.owned_storage import open_storage\n    from domus.infrastructure.sqlite_activation import SQLiteActivation\n    from domus.infrastructure.sqlite_restoration import SQLiteRestorations\n    from domus.infrastructure.sqlite_snapshots import SQLiteSnapshots\n\n    root, archive, target = (tmp_path / part for part in (\"root\", \"archive\", \"target\"))\n    root.mkdir(mode=0o700)\n    review, _, choice, old = prepared(root)\n    store = review.transactions\n    identity_at(root, store.installation)\n    checkpoint = SQLiteSnapshots(store, archive, store.installation, Clock()).create(\"before-batch\")\n    _, request = reviewed(review, choice)\n    applied = review.apply(\"replace\", request)\n    SQLiteRestorations(store, archive, target, store.installation, Clock(), checkpoint).prepare(\n        \"restore\"\n    )\n    assert SQLiteActivation(root, store.installation, Clock(), target).activate().state == \"active\"\n    restored = open_storage(root, \"edge\")\n    try:\n        reopened = replace(review, transactions=restored.database)\n        original = reopened.original(ReviewAction.APPLY, \"replace\")\n        assert original.historical and original.operation_id == applied.operation_id\n        assert reopened.apply(\"replace\", request) == original\n        with pytest.raises(Conflict, match=\"recurrence_review_source_absent\"):\n            reopened.preview(\"fresh\", choice)\n        with restored.database.read() as unit:\n            assert unit.recurrence.schedule(\"home\", choice.schedule_id).revision == 1\n            assert {item.occurrence_id for item in unit.tasks.occurrences(\"home\")} == {\n                item.occurrence_id for item in old\n            }\n    finally:\n        restored.close()"
+    },
+    {
+      "kind": "git",
+      "head": "3d890522003c2d2e7d03fa1f51b1bd84f0d0f10f",
+      "path": "backend/src/domus/application/recurrence_review.py",
+      "blob": "69e089cba7c3b859b852aa74c73382ea4966db07",
+      "start": 512,
+      "end": 540,
+      "text": "    ) -> Receipt:\n        payload = selection.document() if reviewed is None else reviewed.document()\n        scope = authority.scope\n        with self.transactions.read() as unit:\n            previous = commands.replay_in(unit, authority.command, payload)\n            if previous is not None:\n                return previous\n            actor = authority.current(unit)\n            if reviewed is not None:\n                self._reviewed_plan(unit, authority.command, reviewed)\n            source = replacement_source(unit, scope, selection)\n        planner = FixedRecurrencePlanner(CalendarNominalExpansion(), self.planner.times)\n        prepared = source.prepare(planner, self.clock.now())\n        try:\n            plan = self._snapshot(scope, actor, selection.document(), prepared.document())\n        except InvalidInput:\n            raise Conflict(\"recurrence_review_too_large\") from None\n\n        def commit(unit: UnitOfWork) -> Change:\n            if (\n                authority.current(unit) != actor\n                or replacement_source(unit, scope, selection) != source\n            ):\n                raise Conflict(\"recurrence_review_stale\")\n            if reviewed is None:\n                try:\n                    return self._preview_change(payload, plan)\n                except InvalidInput:\n                    raise Conflict(\"recurrence_review_too_large\") from None",
+      "id": "evidence-5"
+    },
+    {
+      "kind": "git",
+      "head": "3d890522003c2d2e7d03fa1f51b1bd84f0d0f10f",
+      "path": "tests/backend/test_fixed_batch_review.py",
+      "blob": "5f96f97876ffe680eeb2f5a3f8df9aa4953d5275",
+      "start": 30,
+      "end": 65,
+      "text": "def prepared(tmp_path, *, timed=False):\n    creator, _, store, actor, identifiers = setup(tmp_path)\n    selected = request(timed=timed)\n\n    def anchor(day: int):\n        return NominalTime(datetime(2026, 3, day, 9)) if timed else nominal(day)\n\n    previous = parse_fixed_pattern(\"FREQ=DAILY;COUNT=3\", anchor(27))\n    created = creator.create_fixed(\"old\", replace(selected, pattern=previous)).result.decode()\n    schedule_id = created[\"schedule_id\"]\n    maintenance = FixedMaintenance(\n        store,\n        MaintenanceScope(store.installation, \"home\"),\n        creator.planner,\n        creator.clock,\n        identifiers,\n    )\n    before = anchor(31)\n    old = tuple(maintenance.step(schedule_id, before) for _ in range(3))\n    assert all(item.status == \"created\" for item in old)\n    review = RecurrenceReview(\n        store,\n        store.installation,\n        actor,\n        actor.current,\n        creator.clock,\n        identifiers,\n        RelativeRecurrencePlanner(creator.planner.times),\n    )\n    command = FixedReplacement(\n        schedule_id,\n        1,\n        parse_fixed_pattern(\"FREQ=DAILY;COUNT=3;INTERVAL=2\", anchor(28)),\n        \"Change future kitchen work\",\n    )\n    return review, maintenance, command, old",
+      "id": "evidence-6"
+    }
+  ],
+  "S2": [
+    {
+      "id": "evidence-1",
+      "kind": "git",
+      "head": "637e34dd382dd88e071be3e19291664f9493d123",
+      "path": "backend/src/domus/application/fixed_batch_review.py",
+      "blob": "9e0a53533790a9b6fe1072a814aaa69287a816b7",
+      "start": 194,
+      "end": 248,
+      "text": "        if any(item.work.assignee_ids for item in unmatched):\n            raise Conflict(\"recurrence_replacement_assignments_need_review\")\n        return PreparedReplacement(\n            self,\n            before,\n            tuple(steps),\n            pairing,\n            future_until(planner.times, nominal_slots[0], rule.policy),\n        )\n\n\ndef replacement_source(\n    unit: UnitOfWork, scope: MaintenanceScope, request: FixedReplacement\n) -> ReplacementSource:\n    home = scope.household_id\n    rule = unit.recurrence.schedule(home, request.schedule_id)\n    if rule is None:\n        raise NotFound(\"recurrence_rule_missing\")\n    if rule.revision != request.schedule_revision:\n        raise Conflict(\"recurrence_review_stale\")\n    if rule.state is not ScheduleState.ACTIVE or rule.pattern == request.pattern:\n        raise Conflict(\"recurrence_state_change_unavailable\")\n    start = request.pattern.start\n    if type(start) is not type(rule.pattern.start):\n        raise Conflict(\"recurrence_pattern_requires_replacement\")\n    progress = unit.recurrence.progress(home, rule.schedule_id)\n    definition = unit.tasks.definition(home, rule.definition_id)\n    if progress is None or definition is None or not progress.matches_schedule(rule):\n        raise StorageFailure(\"invalid_recurrence_source\")\n    if definition.state is not DefinitionState.ACTIVE:\n        raise Conflict(\"recurrence_state_change_unavailable\")\n    nominal = start.local.isoformat()\n    slots = unit.recurrence.fixed_slots_from(home, rule.schedule_id, nominal)\n    if len(slots) > _SLOT_LIMIT:\n        raise Conflict(\"recurrence_review_too_large\")\n    replaced, retained = [], []\n    for slot in slots:\n        work = unit.tasks.occurrence(home, slot.occurrence_id)\n        if work is None:\n            raise StorageFailure(\"invalid_recurrence_source\")\n        deadline = effective_deadline(unit, work, slot)\n        cancelled = work.state is OccurrenceState.CANCELLED\n        previously_replaced = (\n            cancelled\n            and slot.schedule.pattern_revision < rule.pattern_revision\n            and unit.recurrence.has_replaced_fixed_work(home, rule.schedule_id, work.occurrence_id)\n        )\n        exception = rule.exception(slot.planned.nominal)\n        excluded = (\n            cancelled and exception is not None and exception.kind is FixedExceptionKind.EXCLUDE\n        )\n        item = AffectedWork(\n            work, slot.key, slot.planned.nominal, deadline, previously_replaced, excluded\n        )\n        eligible = ("
+    },
+    {
+      "kind": "git",
+      "head": "637e34dd382dd88e071be3e19291664f9493d123",
+      "path": "backend/src/domus/application/fixed_batch_review.py",
+      "blob": "9e0a53533790a9b6fe1072a814aaa69287a816b7",
+      "start": 365,
+      "end": 385,
+      "text": "        replacements: JsonObject = {}\n        additions: list[JsonValue] = []\n        originals = iter(self.pairing)\n        for batch in self.steps:\n            expects_work = bool(batch.slots) and rule.exception(batch.slots[0].nominal) is None\n            prior = next(originals) if expects_work else None\n            step = materializer.commit_reviewed_step(\n                unit, rule, batch, self.before, assignees=prior.work.assignee_ids if prior else ()\n            )\n            if expects_work and step.occurrence_id is None:\n                raise Conflict(\"recurrence_review_stale\")\n            if step.occurrence_id is not None:\n                if prior is None:\n                    additions.append(step.occurrence_id)\n                else:\n                    replacements[prior.work.occurrence_id] = step.occurrence_id\n        for affected in self.source.replaceable:\n            work = affected.work\n            transition = TransitionTask(\n                work.occurrence_id, work.revision, OccurrenceState.CANCELLED, request.reason\n            )",
+      "id": "evidence-2"
+    },
+    {
+      "id": "evidence-3",
+      "kind": "git",
+      "head": "637e34dd382dd88e071be3e19291664f9493d123",
+      "path": "backend/src/domus/infrastructure/sqlite_recurrence.py",
+      "blob": "031708a14b495f1133f80c8b1c9322ceaf57cac5",
+      "start": 182,
+      "end": 216,
+      "text": "            ).fetchone()\n            is not None\n        )\n\n    def fixed_slots_from(\n        self, household_id: str, schedule_id: str, nominal: str\n    ) -> tuple[ScheduledSlot, ...]:\n        validate_identifier(household_id)\n        validate_identifier(schedule_id)\n        rows = self.connection.execute(\n            \"SELECT * FROM recurrence_slots WHERE household_id=? AND schedule_id=? \"\n            \"AND nominal_value>=? ORDER BY nominal_value,slot_key LIMIT 101\",\n            (household_id, schedule_id, nominal),\n        )\n        return tuple(cast(ScheduledSlot, self._slot(row)) for row in rows)\n\n    def has_absent_fixed_slot_from(self, household_id: str, schedule_id: str, nominal: str) -> bool:\n        validate_identifier(household_id)\n        validate_identifier(schedule_id)\n        return (\n            self.connection.execute(\n                \"SELECT 1 FROM retained_operations WHERE household_id=? AND current=0 \"\n                \"AND (action='recurrence.materialize' OR (action='recurrence.review.apply' \"\n                \"AND json_extract(document,'$.result.kind')='fixed_exception')) \"\n                \"AND json_extract(document,'$.result.schedule_id')=? \"\n                \"AND coalesce(json_extract(document,'$.result.nominal.local'),\"\n                \"json_extract(document,'$.result.exception.nominal.local'))>=? LIMIT 1\",\n                (household_id, schedule_id, nominal),\n            ).fetchone()\n            is not None\n        )\n\n    def has_replaced_fixed_work(\n        self, household_id: str, schedule_id: str, occurrence_id: str\n    ) -> bool:"
+    },
+    {
+      "id": "evidence-4",
+      "kind": "git",
+      "head": "637e34dd382dd88e071be3e19291664f9493d123",
+      "path": "tests/backend/test_fixed_batch_review.py",
+      "blob": "5f96f97876ffe680eeb2f5a3f8df9aa4953d5275",
+      "start": 257,
+      "end": 292,
+      "text": "def test_restored_original_batch_cannot_recreate_the_later_generation(tmp_path):\n    from test_activation_compatibility import identity_at\n    from test_sqlite_snapshots import Clock\n\n    from domus.infrastructure.owned_storage import open_storage\n    from domus.infrastructure.sqlite_activation import SQLiteActivation\n    from domus.infrastructure.sqlite_restoration import SQLiteRestorations\n    from domus.infrastructure.sqlite_snapshots import SQLiteSnapshots\n\n    root, archive, target = (tmp_path / part for part in (\"root\", \"archive\", \"target\"))\n    root.mkdir(mode=0o700)\n    review, _, choice, old = prepared(root)\n    store = review.transactions\n    identity_at(root, store.installation)\n    checkpoint = SQLiteSnapshots(store, archive, store.installation, Clock()).create(\"before-batch\")\n    _, request = reviewed(review, choice)\n    applied = review.apply(\"replace\", request)\n    SQLiteRestorations(store, archive, target, store.installation, Clock(), checkpoint).prepare(\n        \"restore\"\n    )\n    assert SQLiteActivation(root, store.installation, Clock(), target).activate().state == \"active\"\n    restored = open_storage(root, \"edge\")\n    try:\n        reopened = replace(review, transactions=restored.database)\n        original = reopened.original(ReviewAction.APPLY, \"replace\")\n        assert original.historical and original.operation_id == applied.operation_id\n        assert reopened.apply(\"replace\", request) == original\n        with pytest.raises(Conflict, match=\"recurrence_review_source_absent\"):\n            reopened.preview(\"fresh\", choice)\n        with restored.database.read() as unit:\n            assert unit.recurrence.schedule(\"home\", choice.schedule_id).revision == 1\n            assert {item.occurrence_id for item in unit.tasks.occurrences(\"home\")} == {\n                item.occurrence_id for item in old\n            }\n    finally:\n        restored.close()"
+    },
+    {
+      "kind": "git",
+      "head": "637e34dd382dd88e071be3e19291664f9493d123",
+      "path": "backend/src/domus/application/recurrence_review.py",
+      "blob": "69e089cba7c3b859b852aa74c73382ea4966db07",
+      "start": 512,
+      "end": 540,
+      "text": "    ) -> Receipt:\n        payload = selection.document() if reviewed is None else reviewed.document()\n        scope = authority.scope\n        with self.transactions.read() as unit:\n            previous = commands.replay_in(unit, authority.command, payload)\n            if previous is not None:\n                return previous\n            actor = authority.current(unit)\n            if reviewed is not None:\n                self._reviewed_plan(unit, authority.command, reviewed)\n            source = replacement_source(unit, scope, selection)\n        planner = FixedRecurrencePlanner(CalendarNominalExpansion(), self.planner.times)\n        prepared = source.prepare(planner, self.clock.now())\n        try:\n            plan = self._snapshot(scope, actor, selection.document(), prepared.document())\n        except InvalidInput:\n            raise Conflict(\"recurrence_review_too_large\") from None\n\n        def commit(unit: UnitOfWork) -> Change:\n            if (\n                authority.current(unit) != actor\n                or replacement_source(unit, scope, selection) != source\n            ):\n                raise Conflict(\"recurrence_review_stale\")\n            if reviewed is None:\n                try:\n                    return self._preview_change(payload, plan)\n                except InvalidInput:\n                    raise Conflict(\"recurrence_review_too_large\") from None",
+      "id": "evidence-5"
+    },
+    {
+      "kind": "git",
+      "head": "637e34dd382dd88e071be3e19291664f9493d123",
+      "path": "tests/backend/test_fixed_batch_review.py",
+      "blob": "5f96f97876ffe680eeb2f5a3f8df9aa4953d5275",
+      "start": 30,
+      "end": 65,
+      "text": "def prepared(tmp_path, *, timed=False):\n    creator, _, store, actor, identifiers = setup(tmp_path)\n    selected = request(timed=timed)\n\n    def anchor(day: int):\n        return NominalTime(datetime(2026, 3, day, 9)) if timed else nominal(day)\n\n    previous = parse_fixed_pattern(\"FREQ=DAILY;COUNT=3\", anchor(27))\n    created = creator.create_fixed(\"old\", replace(selected, pattern=previous)).result.decode()\n    schedule_id = created[\"schedule_id\"]\n    maintenance = FixedMaintenance(\n        store,\n        MaintenanceScope(store.installation, \"home\"),\n        creator.planner,\n        creator.clock,\n        identifiers,\n    )\n    before = anchor(31)\n    old = tuple(maintenance.step(schedule_id, before) for _ in range(3))\n    assert all(item.status == \"created\" for item in old)\n    review = RecurrenceReview(\n        store,\n        store.installation,\n        actor,\n        actor.current,\n        creator.clock,\n        identifiers,\n        RelativeRecurrencePlanner(creator.planner.times),\n    )\n    command = FixedReplacement(\n        schedule_id,\n        1,\n        parse_fixed_pattern(\"FREQ=DAILY;COUNT=3;INTERVAL=2\", anchor(28)),\n        \"Change future kitchen work\",\n    )\n    return review, maintenance, command, old",
+      "id": "evidence-6"
+    }
+  ],
+  "X1": [
+    {
+      "id": "evidence-1",
+      "kind": "git",
+      "head": "e129e76e25deff7314efe3b72996d295cf73f7f3",
+      "path": "backend/src/domus/infrastructure/sqlite_member_profile_schema.py",
+      "blob": "372ee3be7d23cd02b6657a98fc98a84d529cf136",
+      "start": 1,
+      "end": 21,
+      "text": "\"\"\"Schema9 adds separate public/private member records without rewriting historical facts.\"\"\"\n\nPROFILE_TABLES = {\"member_presentations\", \"member_preferences\"}\nPROFILE_STATEMENTS = (\n    \"CREATE TABLE member_presentations(member_id TEXT PRIMARY KEY NOT NULL, \"\n    \"household_id TEXT NOT NULL, alias TEXT, \"\n    \"revision INTEGER NOT NULL CHECK(typeof(revision)='integer' AND revision>=1), \"\n    \"FOREIGN KEY(household_id,member_id) REFERENCES members(household_id,member_id), \"\n    \"CHECK(alias IS NULL OR (typeof(alias)='text' AND length(alias) BETWEEN 1 AND 80)))\",\n    \"CREATE TABLE member_preferences(member_id TEXT PRIMARY KEY NOT NULL, \"\n    \"household_id TEXT NOT NULL, locale TEXT CHECK(locale IS NULL OR locale IN ('en','es')), \"\n    \"routine_participation_summaries INTEGER NOT NULL \"\n    \"CHECK(typeof(routine_participation_summaries)='integer' \"\n    \"AND routine_participation_summaries IN (0,1)), \"\n    \"revision INTEGER NOT NULL CHECK(typeof(revision)='integer' AND revision>=1), \"\n    \"FOREIGN KEY(household_id,member_id) REFERENCES members(household_id,member_id))\",\n    \"INSERT INTO member_presentations(member_id,household_id,alias,revision) \"\n    \"SELECT member_id,household_id,NULL,1 FROM members\",\n    \"INSERT INTO member_preferences(member_id,household_id,locale,\"\n    \"routine_participation_summaries,revision) SELECT member_id,household_id,NULL,1,1 FROM members\",\n)"
+    },
+    {
+      "id": "evidence-2",
+      "kind": "git",
+      "head": "e129e76e25deff7314efe3b72996d295cf73f7f3",
+      "path": "backend/src/domus/infrastructure/sqlite.py",
+      "blob": "44c5d7d1c2326f4105ba9fe387488c6309992720",
+      "start": 70,
+      "end": 101,
+      "text": "IDENTITY_STATEMENTS = (\n    \"CREATE TABLE members(member_id TEXT PRIMARY KEY, \"\n    \"household_id TEXT NOT NULL REFERENCES households(household_id), ha_user_id TEXT NOT NULL, \"\n    \"role TEXT NOT NULL CHECK(role IN ('administrator','adult','restricted','viewer')), \"\n    \"status TEXT NOT NULL CHECK(status IN ('pending','active','suspended','archived')), \"\n    \"revision INTEGER NOT NULL CHECK(revision>=1), exceptions TEXT NOT NULL, \"\n    \"UNIQUE(household_id,ha_user_id))\",\n    \"CREATE TABLE household_policy(household_id TEXT PRIMARY KEY \"\n    \"REFERENCES households(household_id), mapping_mode TEXT NOT NULL, target_ha_user_id TEXT, \"\n    \"revision INTEGER NOT NULL CHECK(revision>=1), adjustments TEXT NOT NULL, \"\n    \"CHECK((mapping_mode='all_ha_administrators' AND target_ha_user_id IS NULL) \"\n    \"OR (mapping_mode IN ('setup_administrator','selected_ha_user') \"\n    \"AND target_ha_user_id IS NOT NULL)))\",\n)\nRECOVERY_STATEMENTS = (\n    \"CREATE TABLE recovery_requests(request_id TEXT PRIMARY KEY, \"\n    \"household_id TEXT NOT NULL REFERENCES households(household_id), \"\n    \"target_ha_user_id TEXT NOT NULL, revision INTEGER NOT NULL CHECK(revision>=1), \"\n    \"state TEXT NOT NULL CHECK(state IN ('pending','approved','consumed','canceled')), \"\n    \"created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL, detail TEXT NOT NULL)\",\n    \"CREATE INDEX recovery_pending ON recovery_requests(household_id,state,expires_at)\",\n)\nSCHEMA_STATEMENTS = (\n    *BASE_STATEMENTS,\n    *IDENTITY_STATEMENTS,\n    *RECOVERY_STATEMENTS,\n    *HISTORY_STATEMENTS,\n    *TASK_STATEMENTS,\n    *MATERIAL_STATEMENTS,\n    *REVIEW_STATEMENTS,\n    *RECURRENCE_STATEMENTS,\n    *PROFILE_STATEMENTS,"
+    },
+    {
+      "id": "evidence-3",
+      "kind": "git",
+      "head": "e129e76e25deff7314efe3b72996d295cf73f7f3",
+      "path": "backend/src/domus/infrastructure/sqlite_task_schema.py",
+      "blob": "60aaffcfa49607cafd5d84d2616dc63f5edc9fa6",
+      "start": 1,
+      "end": 8,
+      "text": "\"\"\"Task table constraints preserve scoped snapshots and both sides of an active cycle.\"\"\"\n\nTASK_TABLES = {\"task_policy\", \"task_definitions\", \"task_occurrences\", \"task_cycles\"}\nTASK_STATEMENTS = (\n    \"CREATE UNIQUE INDEX task_member_scope ON members(household_id,member_id)\",\n    \"CREATE TABLE task_policy(household_id TEXT PRIMARY KEY NOT NULL \"\n    \"REFERENCES households(household_id), \"\n    \"revision INTEGER NOT NULL CHECK(typeof(revision)='integer' AND revision>=1), \""
+    }
+  ],
+  "X2": [
+    {
+      "id": "evidence-1",
+      "kind": "git",
+      "head": "9e65fd088a52cd10ec3ca6a846959c39947ffb16",
+      "path": "backend/src/domus/infrastructure/sqlite_member_profile_schema.py",
+      "blob": "7918d6201c57c060f168b3c1d7f1b3b6a8554295",
+      "start": 1,
+      "end": 21,
+      "text": "\"\"\"Schema9 adds separate public/private member records without rewriting historical facts.\"\"\"\n\nPROFILE_TABLES = {\"member_presentations\", \"member_preferences\"}\nPROFILE_STATEMENTS = (\n    \"CREATE TABLE member_presentations(member_id TEXT PRIMARY KEY NOT NULL, \"\n    \"household_id TEXT NOT NULL, alias TEXT, \"\n    \"revision INTEGER NOT NULL CHECK(typeof(revision)='integer' AND revision>=1), \"\n    \"FOREIGN KEY(household_id,member_id) REFERENCES members(household_id,role), \"\n    \"CHECK(alias IS NULL OR (typeof(alias)='text' AND length(alias) BETWEEN 1 AND 80)))\",\n    \"CREATE TABLE member_preferences(member_id TEXT PRIMARY KEY NOT NULL, \"\n    \"household_id TEXT NOT NULL, locale TEXT CHECK(locale IS NULL OR locale IN ('en','es')), \"\n    \"routine_participation_summaries INTEGER NOT NULL \"\n    \"CHECK(typeof(routine_participation_summaries)='integer' \"\n    \"AND routine_participation_summaries IN (0,1)), \"\n    \"revision INTEGER NOT NULL CHECK(typeof(revision)='integer' AND revision>=1), \"\n    \"FOREIGN KEY(household_id,member_id) REFERENCES members(household_id,member_id))\",\n    \"INSERT INTO member_presentations(member_id,household_id,alias,revision) \"\n    \"SELECT member_id,household_id,NULL,1 FROM members\",\n    \"INSERT INTO member_preferences(member_id,household_id,locale,\"\n    \"routine_participation_summaries,revision) SELECT member_id,household_id,NULL,1,1 FROM members\",\n)"
+    },
+    {
+      "id": "evidence-2",
+      "kind": "git",
+      "head": "9e65fd088a52cd10ec3ca6a846959c39947ffb16",
+      "path": "backend/src/domus/infrastructure/sqlite.py",
+      "blob": "44c5d7d1c2326f4105ba9fe387488c6309992720",
+      "start": 70,
+      "end": 101,
+      "text": "IDENTITY_STATEMENTS = (\n    \"CREATE TABLE members(member_id TEXT PRIMARY KEY, \"\n    \"household_id TEXT NOT NULL REFERENCES households(household_id), ha_user_id TEXT NOT NULL, \"\n    \"role TEXT NOT NULL CHECK(role IN ('administrator','adult','restricted','viewer')), \"\n    \"status TEXT NOT NULL CHECK(status IN ('pending','active','suspended','archived')), \"\n    \"revision INTEGER NOT NULL CHECK(revision>=1), exceptions TEXT NOT NULL, \"\n    \"UNIQUE(household_id,ha_user_id))\",\n    \"CREATE TABLE household_policy(household_id TEXT PRIMARY KEY \"\n    \"REFERENCES households(household_id), mapping_mode TEXT NOT NULL, target_ha_user_id TEXT, \"\n    \"revision INTEGER NOT NULL CHECK(revision>=1), adjustments TEXT NOT NULL, \"\n    \"CHECK((mapping_mode='all_ha_administrators' AND target_ha_user_id IS NULL) \"\n    \"OR (mapping_mode IN ('setup_administrator','selected_ha_user') \"\n    \"AND target_ha_user_id IS NOT NULL)))\",\n)\nRECOVERY_STATEMENTS = (\n    \"CREATE TABLE recovery_requests(request_id TEXT PRIMARY KEY, \"\n    \"household_id TEXT NOT NULL REFERENCES households(household_id), \"\n    \"target_ha_user_id TEXT NOT NULL, revision INTEGER NOT NULL CHECK(revision>=1), \"\n    \"state TEXT NOT NULL CHECK(state IN ('pending','approved','consumed','canceled')), \"\n    \"created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL, detail TEXT NOT NULL)\",\n    \"CREATE INDEX recovery_pending ON recovery_requests(household_id,state,expires_at)\",\n)\nSCHEMA_STATEMENTS = (\n    *BASE_STATEMENTS,\n    *IDENTITY_STATEMENTS,\n    *RECOVERY_STATEMENTS,\n    *HISTORY_STATEMENTS,\n    *TASK_STATEMENTS,\n    *MATERIAL_STATEMENTS,\n    *REVIEW_STATEMENTS,\n    *RECURRENCE_STATEMENTS,\n    *PROFILE_STATEMENTS,"
+    },
+    {
+      "id": "evidence-3",
+      "kind": "git",
+      "head": "9e65fd088a52cd10ec3ca6a846959c39947ffb16",
+      "path": "backend/src/domus/infrastructure/sqlite_task_schema.py",
+      "blob": "60aaffcfa49607cafd5d84d2616dc63f5edc9fa6",
+      "start": 1,
+      "end": 8,
+      "text": "\"\"\"Task table constraints preserve scoped snapshots and both sides of an active cycle.\"\"\"\n\nTASK_TABLES = {\"task_policy\", \"task_definitions\", \"task_occurrences\", \"task_cycles\"}\nTASK_STATEMENTS = (\n    \"CREATE UNIQUE INDEX task_member_scope ON members(household_id,member_id)\",\n    \"CREATE TABLE task_policy(household_id TEXT PRIMARY KEY NOT NULL \"\n    \"REFERENCES households(household_id), \"\n    \"revision INTEGER NOT NULL CHECK(typeof(revision)='integer' AND revision>=1), \""
+    }
+  ],
+  "M1": [
+    {
+      "id": "evidence-1",
+      "kind": "git",
+      "head": "b14c308a28ecad52945a8edac6dce25ba9dfd655",
+      "path": "docs/household-administration.md",
+      "blob": "e90ded2b051cd4e8a87c15aa65ea0a3a22a67941",
+      "start": 25,
+      "end": 30,
+      "text": "\nSee the [API contract](household-api.md), [architecture](architecture-household-administration.md)\nand [migration/rollback limits](household-administration-migration.md). The original\n[72-case administration contract](../specs/household-administration.md),\n[integration refinements](../specs/household-administration-integration.md) and\n[workspace continuation](../specs/household-administration-workspace.md) remain required."
+    },
+    {
+      "id": "evidence-2",
+      "kind": "git-tree",
+      "head": "b14c308a28ecad52945a8edac6dce25ba9dfd655",
+      "path": "docs/household-administration-migration.md",
+      "listing": "100644 blob 814ef09ab5cdc453d66763a6ffe9adcb3082e645\tdocs/household-administration-migration.md"
+    }
+  ],
+  "M2": [
+    {
+      "id": "evidence-1",
+      "kind": "git",
+      "head": "0b288c6fef057b390708064ee32c6f21dd824fd6",
+      "path": "docs/household-administration.md",
+      "blob": "fd3485b4bfec795ac6ee666b60131e65e1ac916f",
+      "start": 25,
+      "end": 30,
+      "text": "\nSee the [API contract](household-api.md), [architecture](architecture-household-administration.md)\nand [migration/rollback limits](household-administration-migration-missing.md). The original\n[72-case administration contract](../specs/household-administration.md),\n[integration refinements](../specs/household-administration-integration.md) and\n[workspace continuation](../specs/household-administration-workspace.md) remain required."
+    },
+    {
+      "id": "evidence-2",
+      "kind": "git-tree",
+      "head": "0b288c6fef057b390708064ee32c6f21dd824fd6",
+      "path": "docs/household-administration-migration-missing.md",
+      "listing": ""
+    }
+  ],
+  "P1": [
+    {
+      "kind": "git",
+      "head": "b9a2dfc8179128fb493ab49666c24967d308c979",
+      "path": "frontend/tests/e2e/catalog.spec.ts",
+      "blob": "43e652394e30c0544433897a27e4d6d15b186d04",
+      "start": 1,
+      "end": 1,
+      "text": "import {expect, test} from '@playwright/test';",
+      "id": "evidence-1"
+    },
+    {
+      "kind": "git",
+      "head": "b9a2dfc8179128fb493ab49666c24967d308c979",
+      "path": "frontend/tests/e2e/catalog.spec.ts",
+      "blob": "43e652394e30c0544433897a27e4d6d15b186d04",
+      "start": 106,
+      "end": 118,
+      "text": "const administrationUrl=(example:string,locale:string,deployment:string)=>origin+'/iframe.html?id=domus-household-administration--'+example\n  +'&viewMode=story&args='+encodeURIComponent(`language:${locale};deployment:${deployment}`);\nfor(const example of ['active','read-only','sources-unavailable','uncertain','historical'])test('HADB-03: built administration '+example+' is localized in both deployments without external requests',async({page})=>{\n  const errors:string[]=[],foreign:string[]=[];page.on('pageerror',error=>errors.push(error.message));\n  await page.route('**/*',async route=>{if(new URL(route.request().url()).origin!==origin){foreign.push(route.request().url());await route.abort();}else await route.continue();});\n  for(const [locale,deployment] of [['en','native'],['en','standalone'],['es','native'],['es','standalone']]) {\n    await page.goto(administrationUrl(example,locale,deployment));const widget=page.locator('domus-administration');\n    await expect(widget.getByRole('heading',{name:locale==='es'?'Administración del hogar':'Household administration',exact:true})).toBeVisible();\n    await expect(widget).toHaveAttribute('lang',locale);await expect(page.getByText('Fictional administration state.',{exact:false})).toBeVisible();\n    await expect(widget.getByRole('button',{name:locale==='es'?'Editar preferencias':'Edit preferences',exact:true})).toBeEnabled({enabled:example!=='read-only'&&example!=='uncertain'});\n    if(example==='historical')await expect(widget.getByText(locale==='es'?'Esta operación se procesó antes de la restauración. Su efecto no está presente en el estado actual.':'This operation was processed before restoration. Its effect is absent from current state.',{exact:true})).toBeVisible();\n    if(example==='sources-unavailable')await expect(widget.getByText(locale==='es'?'Nombre de Home Assistant: Acceso al nombre de HA denegado':'Home Assistant name: HA name access denied',{exact:true})).toBeVisible();\n  }",
+      "id": "evidence-2"
+    },
+    {
+      "kind": "git",
+      "head": "b9a2dfc8179128fb493ab49666c24967d308c979",
+      "path": "frontend/stories/administration.stories.ts",
+      "blob": "8a3c7a260f23e1d745dbe02368c7db1ee7d81e4c",
+      "start": 34,
+      "end": 39,
+      "text": "      context,key:'fictional-original',createdAt:time,expiresAt:time+3_600_000,stage,operationId:example==='historical'?'op_fictional':null}]:[]},\n    outcome:example==='uncertain'?{kind:'uncertain'}:example==='historical'?{kind:'receipt',stage:'historical',action:'member.preferences.update',operationId:'op_fictional',\n      archivedBy:'restore_fictional',createdAt:time,result:{memberId:member.memberId,locale:null,routine_participation_summaries:true,notificationDelivery:'unavailable',revision:revisionValue('13')},notificationDelivery:'unavailable',eventDelivery:'suppressed'}:null,\n    controls:{household:!readOnly,policy:!readOnly,preferences:!readOnly&&example!=='uncertain',ownAlias:!readOnly,memberIds:readOnly?[]:['fictional-owner','fictional-pending'],\n      aliasMemberIds:readOnly?[]:['fictional-pending'],recoverableKeys:journaled?['fictional-original']:[],dismissibleKeys:example==='historical'?['fictional-original']:[]}};\n}",
+      "id": "evidence-3"
+    },
+    {
+      "kind": "dependency",
+      "name": "playwright",
+      "version": "1.64.1",
+      "lockPath": "pnpm-lock.yaml",
+      "lockBlob": "cc98435723ce72fb358df5462f056cb10680b8b6",
+      "source": "package/types/test.d.ts",
+      "start": 9314,
+      "end": 9315,
+      "sourceSha256": "949278a1c606c681142c67252ae585e661578b9bad276572ba0cee193f9fc0b7",
+      "text": "  toBeEnabled(options?: {\n    enabled?: boolean;",
+      "id": "evidence-4"
+    },
+    {
+      "kind": "dependency",
+      "name": "playwright",
+      "version": "1.64.1",
+      "lockPath": "pnpm-lock.yaml",
+      "lockBlob": "cc98435723ce72fb358df5462f056cb10680b8b6",
+      "source": "package/lib/matchers/expect.js",
+      "start": 12773,
+      "end": 12780,
+      "sourceSha256": "9bd56d74eaa44e6073dab364c59a275a13e27baad24ead2ece4c3162608e41c9",
+      "text": "function toBeEnabled(locator, options) {\n  const enabled = !options || options.enabled === void 0 || options.enabled;\n  const expected = enabled ? \"enabled\" : \"disabled\";\n  const arg = enabled ? \"\" : \"{ enabled: false }\";\n  return toBeTruthy.call(this, \"toBeEnabled\", locator, \"Locator\", expected, arg, async (isNot, timeout, signal) => {\n    return await locator._expect(enabled ? \"to.be.enabled\" : \"to.be.disabled\", { isNot, timeout, signal, title: this.title });\n  }, options);\n}",
+      "id": "evidence-5"
+    },
+    {
+      "kind": "dependency",
+      "name": "@playwright/test",
+      "version": "1.64.1",
+      "lockPath": "pnpm-lock.yaml",
+      "lockBlob": "cc98435723ce72fb358df5462f056cb10680b8b6",
+      "source": "package/index.d.ts",
+      "start": 17,
+      "end": 17,
+      "sourceSha256": "f7e9febfa95a8a45e2b990778b829cac74d07d9f57640e5d2d1d790001f724e3",
+      "text": "export * from 'playwright/test';",
+      "id": "evidence-6"
+    }
+  ],
+  "P2": [
+    {
+      "kind": "git",
+      "head": "122e0123a94480dd5d042b408a6c9498aeec5edc",
+      "path": "frontend/tests/e2e/catalog.spec.ts",
+      "blob": "2918cd06d58a82c612f9aee5a610bf4a2706873f",
+      "start": 1,
+      "end": 1,
+      "text": "import {expect, test} from '@playwright/test';",
+      "id": "evidence-1"
+    },
+    {
+      "kind": "git",
+      "head": "122e0123a94480dd5d042b408a6c9498aeec5edc",
+      "path": "frontend/tests/e2e/catalog.spec.ts",
+      "blob": "2918cd06d58a82c612f9aee5a610bf4a2706873f",
+      "start": 106,
+      "end": 118,
+      "text": "const administrationUrl=(example:string,locale:string,deployment:string)=>origin+'/iframe.html?id=domus-household-administration--'+example\n  +'&viewMode=story&args='+encodeURIComponent(`language:${locale};deployment:${deployment}`);\nfor(const example of ['active','read-only','sources-unavailable','uncertain','historical'])test('HADB-03: built administration '+example+' is localized in both deployments without external requests',async({page})=>{\n  const errors:string[]=[],foreign:string[]=[];page.on('pageerror',error=>errors.push(error.message));\n  await page.route('**/*',async route=>{if(new URL(route.request().url()).origin!==origin){foreign.push(route.request().url());await route.abort();}else await route.continue();});\n  for(const [locale,deployment] of [['en','native'],['en','standalone'],['es','native'],['es','standalone']]) {\n    await page.goto(administrationUrl(example,locale,deployment));const widget=page.locator('domus-administration');\n    await expect(widget.getByRole('heading',{name:locale==='es'?'Administración del hogar':'Household administration',exact:true})).toBeVisible();\n    await expect(widget).toHaveAttribute('lang',locale);await expect(page.getByText('Fictional administration state.',{exact:false})).toBeVisible();\n    await expect(widget.getByRole('button',{name:locale==='es'?'Editar preferencias':'Edit preferences',exact:true})).toBeEnabled({enabled:true});\n    if(example==='historical')await expect(widget.getByText(locale==='es'?'Esta operación se procesó antes de la restauración. Su efecto no está presente en el estado actual.':'This operation was processed before restoration. Its effect is absent from current state.',{exact:true})).toBeVisible();\n    if(example==='sources-unavailable')await expect(widget.getByText(locale==='es'?'Nombre de Home Assistant: Acceso al nombre de HA denegado':'Home Assistant name: HA name access denied',{exact:true})).toBeVisible();\n  }",
+      "id": "evidence-2"
+    },
+    {
+      "kind": "git",
+      "head": "122e0123a94480dd5d042b408a6c9498aeec5edc",
+      "path": "frontend/stories/administration.stories.ts",
+      "blob": "8a3c7a260f23e1d745dbe02368c7db1ee7d81e4c",
+      "start": 34,
+      "end": 39,
+      "text": "      context,key:'fictional-original',createdAt:time,expiresAt:time+3_600_000,stage,operationId:example==='historical'?'op_fictional':null}]:[]},\n    outcome:example==='uncertain'?{kind:'uncertain'}:example==='historical'?{kind:'receipt',stage:'historical',action:'member.preferences.update',operationId:'op_fictional',\n      archivedBy:'restore_fictional',createdAt:time,result:{memberId:member.memberId,locale:null,routine_participation_summaries:true,notificationDelivery:'unavailable',revision:revisionValue('13')},notificationDelivery:'unavailable',eventDelivery:'suppressed'}:null,\n    controls:{household:!readOnly,policy:!readOnly,preferences:!readOnly&&example!=='uncertain',ownAlias:!readOnly,memberIds:readOnly?[]:['fictional-owner','fictional-pending'],\n      aliasMemberIds:readOnly?[]:['fictional-pending'],recoverableKeys:journaled?['fictional-original']:[],dismissibleKeys:example==='historical'?['fictional-original']:[]}};\n}",
+      "id": "evidence-3"
+    },
+    {
+      "kind": "dependency",
+      "name": "playwright",
+      "version": "1.64.1",
+      "lockPath": "pnpm-lock.yaml",
+      "lockBlob": "cc98435723ce72fb358df5462f056cb10680b8b6",
+      "source": "package/types/test.d.ts",
+      "start": 9314,
+      "end": 9315,
+      "sourceSha256": "949278a1c606c681142c67252ae585e661578b9bad276572ba0cee193f9fc0b7",
+      "text": "  toBeEnabled(options?: {\n    enabled?: boolean;",
+      "id": "evidence-4"
+    },
+    {
+      "kind": "dependency",
+      "name": "playwright",
+      "version": "1.64.1",
+      "lockPath": "pnpm-lock.yaml",
+      "lockBlob": "cc98435723ce72fb358df5462f056cb10680b8b6",
+      "source": "package/lib/matchers/expect.js",
+      "start": 12773,
+      "end": 12780,
+      "sourceSha256": "9bd56d74eaa44e6073dab364c59a275a13e27baad24ead2ece4c3162608e41c9",
+      "text": "function toBeEnabled(locator, options) {\n  const enabled = !options || options.enabled === void 0 || options.enabled;\n  const expected = enabled ? \"enabled\" : \"disabled\";\n  const arg = enabled ? \"\" : \"{ enabled: false }\";\n  return toBeTruthy.call(this, \"toBeEnabled\", locator, \"Locator\", expected, arg, async (isNot, timeout, signal) => {\n    return await locator._expect(enabled ? \"to.be.enabled\" : \"to.be.disabled\", { isNot, timeout, signal, title: this.title });\n  }, options);\n}",
+      "id": "evidence-5"
+    },
+    {
+      "kind": "dependency",
+      "name": "@playwright/test",
+      "version": "1.64.1",
+      "lockPath": "pnpm-lock.yaml",
+      "lockBlob": "cc98435723ce72fb358df5462f056cb10680b8b6",
+      "source": "package/index.d.ts",
+      "start": 17,
+      "end": 17,
+      "sourceSha256": "f7e9febfa95a8a45e2b990778b829cac74d07d9f57640e5d2d1d790001f724e3",
+      "text": "export * from 'playwright/test';",
+      "id": "evidence-6"
+    }
+  ],
+  "J1": [
+    {
+      "kind": "git",
+      "head": "127cb48647efb777be8494c40239fd048c751c72",
+      "path": "tests/python/test_image_channel.py",
+      "blob": "2dcd2954ceeaa360f8a15082975b5dca20a7b9b2",
+      "start": 112,
+      "end": 124,
+      "text": "    assert calls == [\"terminate\", \"wait\", \"kill\", \"wait\"]\n\n\n@pytest.mark.parametrize(\"identity\", [0, True, 1.0, \"1\"])\ndef test_wrong_frame_identity_cannot_be_reported_as_the_current_original_result(identity):\n    channel = worker(\n        \"import sys,json\\nsys.stdin.readline()\\nprint(json.dumps({'transport_id':\"\n        + repr(identity)\n        + \",'response':{'status':200}}))\"\n    )\n    with pytest.raises(ValueError, match=\"identity\"):\n        channel.exchange({\"original_key\": \"different-current-context\"})\n    assert channel.closed and channel.process.poll() is not None",
+      "id": "evidence-1"
+    },
+    {
+      "kind": "git",
+      "head": "127cb48647efb777be8494c40239fd048c751c72",
+      "path": "tests/browser/image_channel.py",
+      "blob": "6e46e0112e79bd7b14f79bb1705c7d225aee4e37",
+      "start": 65,
+      "end": 83,
+      "text": "                except BlockingIOError:\n                    continue\n                if not part:\n                    raise ValueError(\"The image transport worker ended without a complete response\")\n                response.extend(part)\n                if len(response) > self.frame_limit:\n                    raise ValueError(\"The image transport response exceeds its frame budget\")\n            if response.count(b\"\\n\") != 1 or not response.endswith(b\"\\n\"):\n                raise ValueError(\"The image transport returned unsolicited response bytes\")\n            frame = json.loads(response[:-1])\n            if (\n                not isinstance(frame, dict)\n                or set(frame) != {\"transport_id\", \"response\"}\n                or type(frame[\"transport_id\"]) is not int\n                or frame[\"transport_id\"] != self.sequence\n            ):\n                raise ValueError(\"The image transport response identity differs from its request\")\n            return json.dumps(frame[\"response\"])\n        except BaseException:",
+      "id": "evidence-2"
+    },
+    {
+      "kind": "git",
+      "head": "127cb48647efb777be8494c40239fd048c751c72",
+      "path": "tests/python/test_image_channel.py",
+      "blob": "2dcd2954ceeaa360f8a15082975b5dca20a7b9b2",
+      "start": 13,
+      "end": 19,
+      "text": "ROOT = Path(__file__).resolve().parents[2]\nImageChannel = runpy.run_path(str(ROOT / \"tests/browser/image_channel.py\"))[\"ImageChannel\"]\nECHO = (\n    \"import sys,json,os\\nfor line in sys.stdin:\\n value=json.loads(line); pri\"\n    \"nt(json.dumps({'transport_id':value['transport_id'],'response':{'pid':\"\n    \"os.getpid(),'value':value['request']}}),flush=True)\"\n)",
+      "id": "evidence-3"
+    }
+  ],
+  "J2": [
+    {
+      "kind": "git",
+      "head": "f525eea60e34e33b096a0f329b82086b6b656ff4",
+      "path": "tests/python/test_image_channel.py",
+      "blob": "ec9fcfbbf4f5e4901e564332dbdf3624183d5a7b",
+      "start": 112,
+      "end": 124,
+      "text": "    assert calls == [\"terminate\", \"wait\", \"kill\", \"wait\"]\n\n\n@pytest.mark.parametrize(\"identity\", [0, True, 1, \"1\"])\ndef test_wrong_frame_identity_cannot_be_reported_as_the_current_original_result(identity):\n    channel = worker(\n        \"import sys,json\\nsys.stdin.readline()\\nprint(json.dumps({'transport_id':\"\n        + repr(identity)\n        + \",'response':{'status':200}}))\"\n    )\n    with pytest.raises(ValueError, match=\"identity\"):\n        channel.exchange({\"original_key\": \"different-current-context\"})\n    assert channel.closed and channel.process.poll() is not None",
+      "id": "evidence-1"
+    },
+    {
+      "kind": "git",
+      "head": "f525eea60e34e33b096a0f329b82086b6b656ff4",
+      "path": "tests/browser/image_channel.py",
+      "blob": "6e46e0112e79bd7b14f79bb1705c7d225aee4e37",
+      "start": 65,
+      "end": 83,
+      "text": "                except BlockingIOError:\n                    continue\n                if not part:\n                    raise ValueError(\"The image transport worker ended without a complete response\")\n                response.extend(part)\n                if len(response) > self.frame_limit:\n                    raise ValueError(\"The image transport response exceeds its frame budget\")\n            if response.count(b\"\\n\") != 1 or not response.endswith(b\"\\n\"):\n                raise ValueError(\"The image transport returned unsolicited response bytes\")\n            frame = json.loads(response[:-1])\n            if (\n                not isinstance(frame, dict)\n                or set(frame) != {\"transport_id\", \"response\"}\n                or type(frame[\"transport_id\"]) is not int\n                or frame[\"transport_id\"] != self.sequence\n            ):\n                raise ValueError(\"The image transport response identity differs from its request\")\n            return json.dumps(frame[\"response\"])\n        except BaseException:",
+      "id": "evidence-2"
+    },
+    {
+      "kind": "git",
+      "head": "f525eea60e34e33b096a0f329b82086b6b656ff4",
+      "path": "tests/python/test_image_channel.py",
+      "blob": "ec9fcfbbf4f5e4901e564332dbdf3624183d5a7b",
+      "start": 13,
+      "end": 19,
+      "text": "ROOT = Path(__file__).resolve().parents[2]\nImageChannel = runpy.run_path(str(ROOT / \"tests/browser/image_channel.py\"))[\"ImageChannel\"]\nECHO = (\n    \"import sys,json,os\\nfor line in sys.stdin:\\n value=json.loads(line); pri\"\n    \"nt(json.dumps({'transport_id':value['transport_id'],'response':{'pid':\"\n    \"os.getpid(),'value':value['request']}}),flush=True)\"\n)",
+      "id": "evidence-3"
+    }
+  ]
+}
