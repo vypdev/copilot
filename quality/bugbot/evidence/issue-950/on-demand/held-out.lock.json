@@ -1,0 +1,124 @@
+{
+  "R1": {
+    "binding": {
+      "base": "8b1cbc110c389b9cdb6ecd11317c95abf2c4b0a9",
+      "head": "9988e44849a9c50a11718aecf88fddddf3e6082d",
+      "tree": "ee489873068ae52bad5fc28154e335971ecdd058",
+      "paths": [
+        "tests/browser/image_bridge.py"
+      ],
+      "diffSha256": "2672d9b267da645ae8ad5b6c054555149bfd85dc75c5c58ef80021acdf999bf4"
+    },
+    "candidate": {
+      "id": "c-869-1",
+      "path": "tests/browser/image_bridge.py",
+      "line": 164,
+      "trigger": "Run Playwright administration tests with the image-backed server while the detached inner service has not bound its listener.",
+      "pathToEffect": "The effective Playwright readiness request can receive an acceptable local response from the outer bridge while the inner service remains unavailable.",
+      "impact": "The first test can begin before the inner server is ready and its first proxied operation can fail."
+    },
+    "evidence": [
+      {
+        "kind": "git",
+        "head": "9988e44849a9c50a11718aecf88fddddf3e6082d",
+        "path": "tests/browser/image_bridge.py",
+        "blob": "b8cf557db10b6b16755efed94125019d48c9db68",
+        "start": 153,
+        "end": 202,
+        "text": "    async def __call__(self, scope, receive, send):\n        if scope[\"type\"] == \"lifespan\":\n            while True:\n                event = await receive()\n                if event[\"type\"] == \"lifespan.startup\":\n                    await send({\"type\": \"lifespan.startup.complete\"})\n                elif event[\"type\"] == \"lifespan.shutdown\":\n                    await send({\"type\": \"lifespan.shutdown.complete\"})\n                    return\n        if scope[\"type\"] != \"http\":\n            return\n        if scope[\"path\"] == \"/__fixture__/image\":\n            await self.respond(\n                send,\n                200,\n                [[b\"content-type\", b\"application/json\"], [b\"cache-control\", b\"no-store\"]],\n                json.dumps(self.metadata).encode(),\n            )\n            return\n        body = bytearray()\n        while True:\n            event = await receive()\n            if event[\"type\"] == \"http.disconnect\":\n                return\n            body.extend(event.get(\"body\", b\"\"))\n            if len(body) > 2**21:\n                await self.respond(send, 413, [], b\"\")\n                return\n            if not event.get(\"more_body\", False):\n                break\n        path = scope[\"raw_path\"].decode(\"ascii\")\n        if scope[\"query_string\"]:\n            path += \"?\" + scope[\"query_string\"].decode(\"ascii\")\n        headers = [\n            [name.decode(\"latin1\"), value.decode(\"latin1\")] for name, value in scope[\"headers\"]\n        ]\n        try:\n            response = await asyncio.to_thread(\n                self.exchange, scope[\"method\"], path, headers, bytes(body)\n            )\n            values = [\n                [name.encode(\"latin1\"), value.encode(\"latin1\")]\n                for name, value in response[\"headers\"]\n                if name.lower().encode() not in _HOP\n            ]\n            payload = base64.b64decode(response[\"body\"], validate=True)\n        except _TRANSPORT_ERRORS:\n            await self.respond(send, 502, [[b\"cache-control\", b\"no-store\"]], b\"\")\n            return\n        await self.respond(send, response[\"status\"], values, payload)"
+      },
+      {
+        "kind": "git",
+        "head": "9988e44849a9c50a11718aecf88fddddf3e6082d",
+        "path": "tests/browser/entry_server.py",
+        "blob": "cd5726c170fbf849d7929842e55731995c943e39",
+        "start": 363,
+        "end": 380,
+        "text": "    image = os.environ.get(\"DOMUS_BROWSER_IMAGE\")\n    if image:\n        from image_bridge import ImageBridge\n\n        fixture = ImageBridge(\n            image,\n            args.mode,\n            args.port,\n            os.environ[\"DOMUS_TEST_SOURCE_COMMIT\"],\n            os.environ[\"DOMUS_TEST_ARCH\"],\n        )\n        fixture.start()\n    else:\n        fixture = Fixture(args.mode, args.port, args.origin_port)\n    try:\n        uvicorn.run(\n            fixture,\n            host=\"127.0.0.1\","
+      },
+      {
+        "kind": "git",
+        "head": "9988e44849a9c50a11718aecf88fddddf3e6082d",
+        "path": ".github/workflows/ci_check.yml",
+        "blob": "7abde5f25388ea8ce3be242e82e6d60c6eaa2593",
+        "start": 285,
+        "end": 298,
+        "text": "        with:\n          run_install: false\n          cache: false\n      - run: pnpm install --frozen-lockfile\n      - run: pnpm --filter @domus/frontend exec playwright install --with-deps chromium\n      - name: Execute administration in the actual isolated image from Chromium\n        env:\n          DOMUS_BROWSER_IMAGE: domus-app-ci\n          DOMUS_TEST_SOURCE_COMMIT: ${{ github.sha }}\n          DOMUS_TEST_ARCH: ${{ matrix.arch }}\n        run: >-\n          pnpm --filter @domus/frontend exec playwright test\n          -c playwright.entry.config.ts tests/e2e/administration.spec.ts\n          --grep 'HADW-0[1245]:'"
+      },
+      {
+        "kind": "dependency",
+        "head": "9988e44849a9c50a11718aecf88fddddf3e6082d",
+        "package": "playwright-core",
+        "version": "1.64.1",
+        "integrity": "sha512-BC4s8y6SEVA6Q1rSxZTto8hI1KUI3xXlHGZgvGqP4IqPdI/a6FX9H29IDNz7vKo9l21b6LfYosScPL6M3xxyDQ==",
+        "path": "package/lib/coreBundle.js",
+        "lockPath": "pnpm-lock.yaml",
+        "lockBlob": "cc98435723ce72fb358df5462f056cb10680b8b6",
+        "start": 9596,
+        "end": 9607,
+        "text": "    server.removeListener(\"error\", errorListener);\n  }\n}\nasync function isURLAvailable(url3, ignoreHTTPSErrors, onLog, onStdErr) {\n  let statusCode = await httpStatusCode(url3, ignoreHTTPSErrors, onLog, onStdErr);\n  if (statusCode === 404 && url3.pathname === \"/\") {\n    const indexUrl = new URL(url3);\n    indexUrl.pathname = \"/index.html\";\n    statusCode = await httpStatusCode(indexUrl, ignoreHTTPSErrors, onLog, onStdErr);\n  }\n  return statusCode >= 200 && statusCode < 404;\n}"
+      }
+    ]
+  },
+  "R2": {
+    "binding": {
+      "base": "9988e44849a9c50a11718aecf88fddddf3e6082d",
+      "head": "a8b4aa0efca1d7c56ac0197155b72a9a5899aabf",
+      "tree": "8b33266cb0b6a1040e11dbe03426bf9bed4bb57d",
+      "paths": [
+        "tests/browser/image_bridge.py"
+      ],
+      "diffSha256": "6f98e8c09def684a726fdfa748577d0106d825635880f84900b6ed4a6a0404b0"
+    },
+    "candidate": {
+      "id": "c-869-2",
+      "path": "tests/browser/image_bridge.py",
+      "line": 164,
+      "trigger": "Run Playwright administration tests with the image-backed server while the detached inner service has not bound its listener.",
+      "pathToEffect": "The effective Playwright readiness request can receive an acceptable local response from the outer bridge while the inner service remains unavailable.",
+      "impact": "The first test can begin before the inner server is ready and its first proxied operation can fail."
+    },
+    "evidence": [
+      {
+        "kind": "git",
+        "head": "a8b4aa0efca1d7c56ac0197155b72a9a5899aabf",
+        "path": "tests/browser/image_bridge.py",
+        "blob": "70e74a7bc71ed811103b8845b138852e1be43d78",
+        "start": 153,
+        "end": 202,
+        "text": "    async def __call__(self, scope, receive, send):\n        if scope[\"type\"] == \"lifespan\":\n            while True:\n                event = await receive()\n                if event[\"type\"] == \"lifespan.startup\":\n                    await send({\"type\": \"lifespan.startup.complete\"})\n                elif event[\"type\"] == \"lifespan.shutdown\":\n                    await send({\"type\": \"lifespan.shutdown.complete\"})\n                    return\n        if scope[\"type\"] != \"http\":\n            return\n        if scope[\"path\"] in (\"/__fixture__/image\", \"/__fixture__/ready\"):\n            await self.respond(\n                send,\n                200,\n                [[b\"content-type\", b\"application/json\"], [b\"cache-control\", b\"no-store\"]],\n                json.dumps(self.metadata).encode(),\n            )\n            return\n        body = bytearray()\n        while True:\n            event = await receive()\n            if event[\"type\"] == \"http.disconnect\":\n                return\n            body.extend(event.get(\"body\", b\"\"))\n            if len(body) > 2**21:\n                await self.respond(send, 413, [], b\"\")\n                return\n            if not event.get(\"more_body\", False):\n                break\n        path = scope[\"raw_path\"].decode(\"ascii\")\n        if scope[\"query_string\"]:\n            path += \"?\" + scope[\"query_string\"].decode(\"ascii\")\n        headers = [\n            [name.decode(\"latin1\"), value.decode(\"latin1\")] for name, value in scope[\"headers\"]\n        ]\n        try:\n            response = await asyncio.to_thread(\n                self.exchange, scope[\"method\"], path, headers, bytes(body)\n            )\n            values = [\n                [name.encode(\"latin1\"), value.encode(\"latin1\")]\n                for name, value in response[\"headers\"]\n                if name.lower().encode() not in _HOP\n            ]\n            payload = base64.b64decode(response[\"body\"], validate=True)\n        except _TRANSPORT_ERRORS:\n            await self.respond(send, 502, [[b\"cache-control\", b\"no-store\"]], b\"\")\n            return\n        await self.respond(send, response[\"status\"], values, payload)"
+      },
+      {
+        "kind": "git",
+        "head": "a8b4aa0efca1d7c56ac0197155b72a9a5899aabf",
+        "path": "tests/browser/entry_server.py",
+        "blob": "cd5726c170fbf849d7929842e55731995c943e39",
+        "start": 363,
+        "end": 380,
+        "text": "    image = os.environ.get(\"DOMUS_BROWSER_IMAGE\")\n    if image:\n        from image_bridge import ImageBridge\n\n        fixture = ImageBridge(\n            image,\n            args.mode,\n            args.port,\n            os.environ[\"DOMUS_TEST_SOURCE_COMMIT\"],\n            os.environ[\"DOMUS_TEST_ARCH\"],\n        )\n        fixture.start()\n    else:\n        fixture = Fixture(args.mode, args.port, args.origin_port)\n    try:\n        uvicorn.run(\n            fixture,\n            host=\"127.0.0.1\","
+      },
+      {
+        "kind": "git",
+        "head": "a8b4aa0efca1d7c56ac0197155b72a9a5899aabf",
+        "path": ".github/workflows/ci_check.yml",
+        "blob": "7abde5f25388ea8ce3be242e82e6d60c6eaa2593",
+        "start": 285,
+        "end": 298,
+        "text": "        with:\n          run_install: false\n          cache: false\n      - run: pnpm install --frozen-lockfile\n      - run: pnpm --filter @domus/frontend exec playwright install --with-deps chromium\n      - name: Execute administration in the actual isolated image from Chromium\n        env:\n          DOMUS_BROWSER_IMAGE: domus-app-ci\n          DOMUS_TEST_SOURCE_COMMIT: ${{ github.sha }}\n          DOMUS_TEST_ARCH: ${{ matrix.arch }}\n        run: >-\n          pnpm --filter @domus/frontend exec playwright test\n          -c playwright.entry.config.ts tests/e2e/administration.spec.ts\n          --grep 'HADW-0[1245]:'"
+      },
+      {
+        "kind": "dependency",
+        "head": "a8b4aa0efca1d7c56ac0197155b72a9a5899aabf",
+        "package": "playwright-core",
+        "version": "1.64.1",
+        "integrity": "sha512-BC4s8y6SEVA6Q1rSxZTto8hI1KUI3xXlHGZgvGqP4IqPdI/a6FX9H29IDNz7vKo9l21b6LfYosScPL6M3xxyDQ==",
+        "path": "package/lib/coreBundle.js",
+        "lockPath": "pnpm-lock.yaml",
+        "lockBlob": "cc98435723ce72fb358df5462f056cb10680b8b6",
+        "start": 9596,
+        "end": 9607,
+        "text": "    server.removeListener(\"error\", errorListener);\n  }\n}\nasync function isURLAvailable(url3, ignoreHTTPSErrors, onLog, onStdErr) {\n  let statusCode = await httpStatusCode(url3, ignoreHTTPSErrors, onLog, onStdErr);\n  if (statusCode === 404 && url3.pathname === \"/\") {\n    const indexUrl = new URL(url3);\n    indexUrl.pathname = \"/index.html\";\n    statusCode = await httpStatusCode(indexUrl, ignoreHTTPSErrors, onLog, onStdErr);\n  }\n  return statusCode >= 200 && statusCode < 404;\n}"
+      }
+    ]
+  }
+}

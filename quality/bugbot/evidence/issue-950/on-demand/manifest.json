@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "issue": 950,
+  "frozenOn": "2026-11-09",
+  "publicationMode": "dry-run",
+  "phase": "frozen-candidate-diagnostic",
+  "sdk": "b3952f686a55a9b4207e1a23c64be8344e8df5d5",
+  "cli": "codex-cli 0.167.0-alpha.3.2",
+  "models": ["gpt-6-luna", "gpt-6.1-sol"],
+  "modelProvider": "openai",
+  "effort": "low",
+  "subjects": ["J1", "J2", "R1", "R2"],
+  "arms": ["fixed", "repeat", "on-demand"],
+  "repetitions": [1, 2, 3],
+  "plannedTrials": 72,
+  "concurrencyPerModel": 3,
+  "ceiling": {"caseMs": 90000, "grossInputTokens": 32768, "outputTokens": 4096, "calls": 3},
+  "retainedSources": {
+    "J1/J2": "Original v4 bound source packet. No admitted relevant native CI observation.",
+    "R1/R2": "Pinned Git, effective workflow source and lock-authenticated Playwright Core. No admitted relevant native CI observation."
+  },
+  "heldOutDesignSha256": "ec5249f08f3eab259ffe491ea4bdb8b82e05c8644c2c0441cde7f616e8fe2152"
+}

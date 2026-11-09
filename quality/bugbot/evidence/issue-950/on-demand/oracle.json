@@ -1,0 +1,10 @@
+{
+  "J1": {"issue": 875, "verdict": "refuted", "path": "tests/python/test_image_channel.py", "line": 115,
+    "decisive": {"path": "tests/browser/image_channel.py", "start": 25, "end": 44}},
+  "J2": {"issue": 875, "verdict": "confirmed", "path": "tests/python/test_image_channel.py", "line": 115,
+    "decisive": {"path": "tests/browser/image_channel.py", "start": 25, "end": 44}},
+  "R1": {"issue": 869, "verdict": "refuted", "path": "tests/browser/image_bridge.py", "line": 164,
+    "decisive": {"path": "frontend/playwright.entry.config.ts", "start": 10, "end": 12}},
+  "R2": {"issue": 869, "verdict": "confirmed", "path": "tests/browser/image_bridge.py", "line": 164,
+    "decisive": {"path": "frontend/playwright.entry.config.ts", "start": 10, "end": 12}}
+}
