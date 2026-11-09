@@ -103,6 +103,12 @@ The same values are managed as Repository Variables by `copilot setup`. One revi
 /copilot review effort=high dry-run=true trace-rules=true suggested-changes=false
 ```
 
+## Proposed evidence verification rollout
+
+The #950 design keeps the evidence gate disabled until the paired dry-run pilot qualifies a verifier model and production budgets. The first enabled profile uses immutable source and matching CI. Its runtime controls are pending qualification.
+
+[Specification and pilot status](https://github.com/vypdev/copilot/issues/950)
+
 ## Hierarchical review rules
 
 Bugbot loads rules in deterministic precedence order:

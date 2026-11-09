@@ -7,6 +7,12 @@ description: Measure Bugbot accuracy, latency, outcomes, feedback, and regressio
 
 Bugbot separates deterministic evaluator checks from optional, cost-bearing model benchmarks. The versioned corpus at `quality/bugbot/corpus.v1.json` contains 174 positive and negative synthetic cases across TypeScript/TSX, Python, Go, SQL, Java, Rust, YAML workflows, shell, Terraform, C#, Kotlin, and Markdown. Ground truth is never included in the model prompt.
 
+## Repository evidence pilot
+
+The #950 protocol freezes paired repository cases, two models, three variants and three repetitions. The report separates local controls and historical execution from actual model outcomes. Publication requires measured qualification.
+
+[Specification and pilot status](https://github.com/vypdev/copilot/issues/950)
+
 ## JSON value regression
 
 The separate `quality/bugbot/json-value-corpus.v1.json` group has twelve frozen

@@ -1,0 +1,21 @@
+{
+  "U1": [
+    {"id":"c-a184","path":"packages/core/src/presentation-text.ts","line":4,"severity":"medium","category":"correctness","trigger":"A label contains U+1F600.","pathToEffect":"The surrogate range matches one part of the character in presentationText.","impact":"A valid supplementary-character label is rejected."}
+  ],
+  "U2": [
+    {"id":"c-929e","path":"packages/core/src/presentation-text.ts","line":4,"severity":"medium","category":"correctness","trigger":"A label contains U+1F600.","pathToEffect":"The surrogate range matches one part of the character in presentationText.","impact":"A valid supplementary-character label is rejected."}
+  ],
+  "F1": [
+    {"id":"c-8ca0","path":"tests/containers/test_app_image.py","line":129,"severity":"medium","category":"reliability","trigger":"pytest runs the listener test.","pathToEffect":"pytest asks the fixture manager to resolve expected_schema.","impact":"The listener test errors before the image assertions."},
+    {"id":"c-bd22","path":"tests/containers/test_app_compatibility.py","line":130,"severity":"medium","category":"reliability","trigger":"pytest runs the migration test.","pathToEffect":"pytest asks the fixture manager to resolve expected_schema.","impact":"The migration test errors before the image assertions."}
+  ],
+  "F2": [
+    {"id":"c-7eb5","path":"tests/containers/test_app_image.py","line":131,"severity":"medium","category":"reliability","trigger":"pytest runs the listener test.","pathToEffect":"pytest asks the fixture manager to resolve expected_schema_fixture.","impact":"The listener test errors before the image assertions."}
+  ],
+  "S1": [
+    {"id":"c-2f7b","path":"backend/src/domus/application/fixed_batch_review.py","line":371,"severity":"medium","category":"correctness","trigger":"Preview a replacement after restoring a checkpoint that retains a fixed exclusion as history.","pathToEffect":"Historical exclusion reaches materialization despite being absent from the current exception tuple.","impact":"Replacement is reported stale during materialization instead of being stopped at source validation."}
+  ],
+  "S2": [
+    {"id":"c-45cd","path":"backend/src/domus/application/fixed_batch_review.py","line":226,"side":"old","severity":"medium","category":"correctness","trigger":"Preview a replacement after restoring a checkpoint that retains a fixed exclusion as history.","pathToEffect":"The replacement path no longer checks for historical exclusion at the source.","impact":"Preview proceeds into planning even though the retained original should prevent replacement."}
+  ]
+}

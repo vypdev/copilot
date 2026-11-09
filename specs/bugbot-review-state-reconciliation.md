@@ -1931,3 +1931,9 @@ Optional Check Run failures use the shared [#728 diagnostic contract](./optional
 This does not alter review findings, protected-path approval, check identity or
 completion authority. A failed optional projection never masks an earlier
 required error or turns required success into failure.
+
+## Proposed verification contract for #950
+
+The proposed #950 verification gate covers retained identities before fixed, obsolete or reopened transitions. Candidate dispositions and durable finding states are separate. Inconclusive evidence, omission, failed integrity and human dismissal preserve native thread authority. The existing read-after-write projection owns observed and unknown effects during recovery.
+
+[Bugbot repository evidence verification](./bugbot-analysis-publication-and-autofix.md#bugbot-repository-evidence-verification)

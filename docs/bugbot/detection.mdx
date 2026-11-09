@@ -7,6 +7,12 @@ description: When Bugbot runs, where findings appear, severity, comment limit, a
 
 This page describes **when** Bugbot runs, **where** findings are published, and how **severity**, **comment limit**, and **resolved findings** work.
 
+## Evidence verification pilot
+
+Issue #950 specifies a separate verification stage after candidate detection. The pilot evaluates whether immutable repository evidence can refute plausible candidates while retaining real defects. Repository-shaped controls cover Unicode matching, pytest fixture discovery and SQLite restore guards.
+
+[Specification and pilot status](https://github.com/vypdev/copilot/issues/950)
+
 ## JSON values and reader contracts
 
 Before reporting double encoding, Bugbot traces the producer, actual decoder

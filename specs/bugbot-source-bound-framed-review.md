@@ -727,3 +727,9 @@ This explicitly extends legacy section capacity through that protocol; it does
 not relabel missing provider evidence as complete, enlarge public settings or
 grant comment authors instruction/approval authority. Other context callers
 retain their existing truthful partial behavior.
+
+## Proposed verification contract for #950
+
+The proposed #950 verification gate runs after complete frame aggregation and before ranking, overflow counting or any write. It shares the actual invocation ledger and the existing reviewed source and freshness fences. Valid mixed dispositions can publish confirmed findings while blocking clean approval. A missing required frame or verdict preserves the last verified result.
+
+[Bugbot repository evidence verification](./bugbot-analysis-publication-and-autofix.md#bugbot-repository-evidence-verification)

@@ -2564,14 +2564,14 @@ consumer root cause and release adoption remain separate claims.
 
 ## Bugbot repository evidence verification
 
-- Status: Draft for pre-branch review
+- Status: Published design and pilot protocol. Runtime implementation and qualification pending.
 - Date: 2026-11-09
 - Catalog capability ID: `bugbot-analysis-and-autofix`
 - Owners: Copilot maintainers
 - Scope: Verify each eligible Bugbot finding and proposed history transition before coordinated publication.
 - Related issue: [#950](https://github.com/vypdev/copilot/issues/950)
 - Required gates: product UX, architecture, testing, documentation, security and operations
-- Readiness decisions: Action owner/path confirmation and managed branch publication. The pilot must establish a production verifier model, budget and activation decision before verified publication is enabled.
+- Readiness decisions: The Action verified the SDD and managed branch in [the issue status](https://github.com/vypdev/copilot/issues/950#issuecomment-6732048399). The pilot must establish a production verifier model, budget and activation decision before verified publication is enabled.
 
 ### 1. Executive summary
 
@@ -2606,8 +2606,8 @@ The comparison used here pins development to [b3952f686](https://github.com/vypd
 and the audit to [v3.10.13](https://github.com/vypdev/copilot/commit/ace49e4a7ce0f6a007fef5d11479eb9b7a5846e3).
 The authenticated GitHub comparison returned zero changed paths across the two
 commits. The cached development ref `0f1fc943d2cd2bfe11be51ea215a0333577074a4`
-differs from the audited tree only in package version. Reconfirm the Action's
-selected base before using the pilot as implementation evidence.
+differs from the audited tree only in package version. The Action's first SDD
+commit has the same selected development SHA as its only parent.
 
 1. `src/application/usecases/steps/commit/detect_potential_problems_workflow.ts`
    resolves canonical ownership and context, analyzes, checks freshness, then
@@ -2686,12 +2686,19 @@ canonical target, reviewed head and tree, applicable base and comparison,
 range/fragment identities, authorized policy digest and cancellation signal.
 Use base evidence when needed to prove introduction or reachability. A synthetic
 merge SHA needs provider-attested source or tree equivalence for the relevant
-paths and resolved build inputs. Incomplete equivalence cannot support a CI
+paths and effective build inputs, including workflow, dependency resolution,
+test selection, runtime and build artifact identity. A matching Git commit
+does not independently establish what ran. Incomplete equivalence cannot support a CI
 claim. A ref name alone does not identify an artifact.
 
 Validate required partition/frame responses before using any candidate. Apply
 existing shape, changed-scope, ignore, severity and suppression rules. Preserve
-stable IDs and provider anchors. Deduplicate only when normalized root cause,
+stable IDs and provider anchors. Bind each anchor to the changed path, diff
+side, range and exact comparison. For a rename or deletion, retain the old
+path and side where the provider can anchor it. If the changed-code anchor
+is valid but unavailable as an inline destination, use the existing fallback
+or summary with the immutable source locator. Never fabricate a location.
+Deduplicate only when normalized root cause,
 trigger and causal path are equivalent under existing local/semantic identity
 rules. Merge leads from duplicate candidates while retaining origins. Keep
 different causes at the same location distinct. Group history proposals by
@@ -2710,8 +2717,9 @@ platform and relevant package implementation or versioned contract. When
 resolution cannot be established, return the missing premise.
 
 Match native CI by trusted producer, workflow, run attempt, job/suite and step or
-test identity, verified source and effective inputs. Distinguish executed,
-skipped, cached, canceled, missing and irrelevant results. A cache hit needs its
+test identity, verified source and effective inputs. Match the asserted
+behavior or failure to the executed case and observation. Distinguish
+executed, skipped, cached, canceled, missing and irrelevant results. A cache hit needs its
 own attestation of equivalent inputs and execution. Treat later test code as a
 separate reproduction even when the underlying runtime paths are byte-identical.
 Only an approved probe ID may resolve to a trusted command and typed, pinned
@@ -2721,7 +2729,9 @@ inputs. Source and CI verification must work without an execution profile.
 artifacts, independent of the detector session. Seek earlier guards, effective
 configuration, alternative reachable paths, versioned exceptions and matching
 executed counterevidence. Model requests and repository text remain untrusted.
-For each eligible ID the final response supplies one of the following:
+An intermediate response can request additional evidence only. It supplies no
+final disposition and cannot become publication input. For each eligible ID
+the final response supplies exactly one of the following:
 
 | Disposition | Required basis | Projection |
 |---|---|---|
@@ -2731,7 +2741,11 @@ For each eligible ID the final response supplies one of the following:
 
 A response cannot introduce an ID, re-anchor a finding or substitute a citation.
 The application validates exact expected IDs and cardinality, schema and scope,
-nonce, locale, evidence IDs, artifact provenance and source identity. It verifies
+nonce, locale, evidence IDs, artifact provenance and source identity. Each
+final response echoes the immutable candidate version and expected operation
+receipt. Confirmed and refuted responses reference one or more supplied
+artifacts. Inconclusive responses name the missing, denied, conflicting or
+exhausted evidence and a supported next action. It verifies
 receipt membership per candidate. It never substitutes a confidence threshold
 for the verifier's causal decision. Missing, repeated, replayed, forged, stale
 or cross-candidate receipts and malformed required verdicts invalidate the run.
@@ -2754,8 +2768,10 @@ No cross-endpoint GitHub transaction is assumed. After writes, re-read native
 provider facts and project a single canonical result for the revision. A
 confirmed and inconclusive mixture publishes the confirmed subset and marks
 verification incomplete. A clean result requires complete required coverage,
-all dispositions validated, no confirmed or unresolved candidate or durable
-finding, and all existing native approval gates.
+all dispositions validated, no confirmed or inconclusive candidate, no open, reopened, unknown or
+verification-required durable finding, and all existing native approval
+gates. Resolved or human-dismissed history is compatible with a clean result
+when the existing policy allows it.
 
 | Route | Behavior |
 |---|---|
@@ -2773,7 +2789,9 @@ impact. Obsolete requires explicit evidence against the retained premise or
 proof it is no longer applicable under the existing policy. Omission,
 inconclusiveness, incomplete history and provider failure preserve prior state,
 including verification-required flags. Confirmed human dismissal remains
-effective. Re-read native decisions before history mutations.
+effective. A refuted current candidate alone cannot close a historical finding.
+Require an explicit fixed or obsolete transition for the retained ID. Re-read
+native decisions before history mutations.
 
 ### 7. User-facing configuration
 
@@ -2782,7 +2800,7 @@ effective. Re-read native decisions before history mutations.
 | Existing `bugbot-dry-run` | Boolean, existing trusted configuration or authorized review command | Existing default is false. True takes precedence over every write destination and persistence option. |
 | Evidence rollout | Proposed trusted installation setting, disabled/shadow/enforced | Disabled until qualified release and maintainer opt-in. Shadow computes the evidence result without verified publication or approval. Enforced requires the full gate. Final public name and runtime route need maintainer review. |
 | Verifier configuration | Trusted allowlisted provider/model and finite effort | Pilot compares the two named models at medium effort. Final choice and bounds depend on pilot. Review comments and PR code cannot override it. |
-| Evidence profile | Trusted installation capability, source/CI or source/CI plus registered isolated probes | Source/CI. Probe-capable profile needs reviewed IDs, commands, runner prerequisites and input limits. Reject invalid or unauthorized profiles before work. |
+| Evidence profile | Trusted installation capability, source/CI or source/CI plus registered isolated probes | The first enabled profile is source/CI. Probe execution requires separately reviewed IDs, commands, runner prerequisites and input limits. Reject invalid or unauthorized profiles before work. |
 
 Snapshot effective policy/model/budgets at start. Unknown values fail
 configuration validation. Omitted rollout settings keep the installed policy.
@@ -2793,8 +2811,10 @@ Production must fix limits for candidate count, bytes, reads, tokens, time,
 concurrency and retry, with both per-candidate and shared ceilings. Counters
 charge before dispatch and at observed output, including failed attempts and
 duplicate-search work before cache lookup where applicable. Use source-scoped
-caching and an independent total wire limit. Final numeric values, safe default
-and supported override ranges require the measured pilot.
+caching and an independent total wire limit. Retry consumes the original request and call
+budgets, with zero retries when the remaining capacity is insufficient. An
+unreported usage field stays unknown. Final numeric values, the verifier
+default and supported override ranges require the measured pilot.
 
 ### 8. Clean Architecture design
 
@@ -2824,8 +2844,11 @@ batch. Rendering consumes the result of observed provider effects.
 An evidence request is one of `readBlob`, `searchTree`, `resolveDependency`,
 `readExecution` or `runRegisteredProbe`. Use typed relative paths/ranges,
 literal bounded queries, pinned identifiers and registered capability IDs.
-No free-form command, URL, revision or repository selector crosses the model
-boundary. Each receipt binds operation, candidate, source kind, repository,
+The operation supplies the only repository and revision bindings. Model
+requests can choose a named source side within that binding. A search match
+becomes positive evidence only after the application reads the matching blob
+at that side. No free-form command, URL, revision or repository selector
+crosses the model boundary. Each receipt binds operation, candidate, source kind, repository,
 revision/tree, validated locator, artifact digest and result or safe error.
 Share immutable bytes across equivalent reads but issue separate scoped
 references. No model-authored link is authoritative. Persist only approved
@@ -2863,12 +2886,21 @@ Representative confirmed comment:
 
 The canonical projection carries separate verification, coverage and publication
 fields. Pending status belongs to the current run/check and does not replace the
-last verified result. Upsert one canonical final card with existing marker and
-identity rules. Existing comment cap applies only after verification. Refuted
+last verified result. The check and summary refer to each result's own revision. Upsert one
+canonical final card with existing marker and identity rules. Existing comment cap applies only after verification. Refuted
 and inconclusive candidates do not get defect comments. Existing English and
 Spanish locale resolution and fallback apply. Use descriptive links and text
 states, mobile-readable headings, bounded details and sanitized untrusted
 content. Preserve actual human-authored replies and native thread decisions.
+
+Examples of history and overflow on the canonical card:
+
+- **One finding reopened.** The required guard was removed in this revision.
+  The existing discussion links to the bound source and reachability evidence.
+- **One finding marked obsolete.** The pinned runtime contract contradicts
+  the retained premise. The existing discussion shows the verified reason.
+- **Three confirmed defects.** Two inline comments and one summary-only
+  finding. The summary-only item links to its changed anchor and evidence.
 
 ### 10. Failure, recovery, and cleanup
 
@@ -2988,6 +3020,11 @@ the unchanged recall and quality thresholds in the pilot protocol.
 | `docs/bugbot/failure-scenarios.mdx` | update |
 | `docs/bugbot/permissions.mdx` | update |
 | `docs/bugbot/quality-observability.mdx` | update |
+| `quality/bugbot/evidence/issue-950/preregistration.md` | create |
+| `quality/bugbot/evidence/issue-950/manifest.json` | create |
+| `quality/bugbot/evidence/issue-950/results.md` | create |
+| `quality/bugbot/evidence/issue-950/traceability.md` | create |
+| `quality/bugbot/evidence/issue-950/reproduce-controls.sh` | create |
 
 Update detection and publication for users, permissions and configuration for
 setup owners, failures and quality for operators. Document recovery, rollout
@@ -3026,8 +3063,8 @@ evidence with actual landed tests and docs. Regenerate the human catalog.
 | EV-06 | ev950-C26, ev950-C27, ev950-C28, ev950-C29 |
 | EV-07 | ev950-C29, ev950-C30 |
 
-The historical issue matrix separately maps each premise and decisive evidence
-to a planned test or remaining limitation. General capability coverage is not
+The [historical issue matrix](../quality/bugbot/evidence/issue-950/traceability.md) maps each premise
+and decisive evidence to a planned test or remaining limitation. General capability coverage is not
 closure evidence for a particular historical issue.
 
 ### 18. Implementation sequence
@@ -3058,8 +3095,7 @@ closure evidence for a particular historical issue.
 ### 20. References and decisions
 
 - Owning capability and companion contracts in the inventory above.
-- Pilot deliverables: preregistration, manifest, separate scoring key, raw
-  observations, result report and issue-level traceability matrix.
+- [Pilot protocol](../quality/bugbot/evidence/issue-950/preregistration.md), [frozen manifest](../quality/bugbot/evidence/issue-950/manifest.json) and [results and reproduction](../quality/bugbot/evidence/issue-950/results.md). The results distinguish observed controls, provider access and unexecuted model trials.
 - Established safety choices: source binding, fresh falsification, explicit
   incomplete state, observed-effect recovery and preserved human authority.
 - Pending choices: measured model selection, production limits and the approved

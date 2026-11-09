@@ -2503,7 +2503,8 @@
         "src/tooling/__tests__/fixtures/bugbot_json_value_probe.py",
         "src/tooling/__tests__/fixtures/bugbot_json_value_runner.py",
         "src/application/usecases/steps/commit/bugbot/__tests__/bugbot_partition_query_diagnostics.test.ts",
-        "src/application/policies/__tests__/bugbot_freshness_diagnostics.test.ts"
+        "src/application/policies/__tests__/bugbot_freshness_diagnostics.test.ts",
+        "quality/bugbot/evidence/issue-950/reproduce-controls.sh"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",
@@ -2517,7 +2518,10 @@
         "docs/bugbot/configuration.mdx",
         "docs/pull-requests/workflow-setup.mdx",
         "docs/issues/comment-commands.mdx",
-        "docs/security-operations/operations/error-reference.mdx"
+        "docs/security-operations/operations/error-reference.mdx",
+        "quality/bugbot/evidence/issue-950/preregistration.md",
+        "quality/bugbot/evidence/issue-950/results.md",
+        "quality/bugbot/evidence/issue-950/traceability.md"
       ]
     },
     {
