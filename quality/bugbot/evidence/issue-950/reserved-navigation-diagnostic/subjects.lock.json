@@ -1,0 +1,42 @@
+{
+  "N1": {
+    "binding": {
+      "base": "d885bccf2c3152c3151471d3efaabd901429d6bd",
+      "head": "55174696e97a4c8b424c7f57d7da7a61e4b157fd",
+      "tree": "0d5efca673329a8a28d1b9e93a46b564edcbe285",
+      "paths": [
+        "packages/core/src/components/navigation-overflow.ts"
+      ],
+      "diffSha256": "6122a0a53454093a5e2ac879477ff214af44c37f57ef4c10f553b3023b6dac58"
+    },
+    "candidate": {
+      "id": "c-892-1",
+      "path": "packages/core/src/components/navigation-overflow.ts",
+      "line": 107,
+      "trigger": "Drag a navigation item horizontally, release outside the bar, then make a fresh pointer click on Overview.",
+      "pathToEffect": "The outside mouseup preserves click suppression, which can carry into the next pointer gesture.",
+      "impact": "The fresh Overview click emits no selection request."
+    },
+    "evidence": []
+  },
+  "N2": {
+    "binding": {
+      "base": "d885bccf2c3152c3151471d3efaabd901429d6bd",
+      "head": "c654e501593ddb01446c6b37873a5b094624dd93",
+      "tree": "263e61f6c8d518657a3e160774f0af8f1f3f49d9",
+      "paths": [
+        "packages/core/src/components/navigation-overflow.ts"
+      ],
+      "diffSha256": "ab451fca62475dc6cc4d3f57c194380f69622c6a973e1be11223253faea0d9a5"
+    },
+    "candidate": {
+      "id": "c-892-1",
+      "path": "packages/core/src/components/navigation-overflow.ts",
+      "line": 107,
+      "trigger": "Drag a navigation item horizontally, release outside the bar, then make a fresh pointer click on Overview.",
+      "pathToEffect": "The outside mouseup preserves click suppression, which can carry into the next pointer gesture.",
+      "impact": "The fresh Overview click emits no selection request."
+    },
+    "evidence": []
+  }
+}
