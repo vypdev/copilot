@@ -3465,3 +3465,142 @@ Retain the owner’s separate approval requirements and mappings: `BBE950-R01` i
 - Issue: [#950](https://github.com/vypdev/copilot/issues/950).
 - Decisions: compare GPT-6 Luna and GPT-6.1 Sol independently at low effort; keep v4 and the Sol supplement diagnostic, with v4 unqualified. Apply the stated two-pair replay limits, evidence-profile order, single typed evidence round, citation rejection rules, full-review qualification gates, explicit approval fence, rollback receipt requirement, and mixed-review publication behavior.
 - Unresolved implementation evidence: the concrete selected-project invocation and prerequisites for specification/catalog validation were not established by this draft. The required publication outcomes remain as stated in section 19; do not treat a command declaration or structural consistency as executed validation or product acceptance.
+
+## #950 on-demand evidence, anchors and qualification
+
+- Status: Proposed amendment to Bugbot repository evidence verification
+- Issue: [#950](https://github.com/vypdev/copilot/issues/950)
+- Capability: `bugbot-analysis-and-autofix`
+
+### 1. Executive summary
+
+This amendment is authoritative for candidate anchor selection, the optional
+follow-up in sections 6–8, and EV-07. It replaces the earlier anchor
+preservation shorthand and pilot configuration/qualification assumptions.
+The separate #950 approval receipt contract still governs the consumer.
+
+### 2. Evidence
+
+V4 and the independent Sol source-closure supplement are diagnostic. V4 did
+not qualify. Full review reproduced one historical premise on Luna and none
+on Sol. Neither model retained all positive controls at their exact anchors.
+The Sol supplement supplied known missing code in replay and does not
+establish evidence discovery or qualify a production profile.
+
+### 4. Goals
+
+| Requirement | Behavior |
+|---|---|
+| BBE950-D01 | Admit one typed evidence round and require an evidence-bound final verdict. |
+| BBE950-D02 | Normalize the changed location before freezing candidate identity and anchor. |
+| BBE950-D03 | Qualify the exact model, effort, evidence capabilities and limits independently for each profile. |
+
+### 6. Behavior
+
+After required frame or partition aggregation, the application selects an
+anchor on the pinned diff before freezing candidate identity and version. It
+records the original and selected path, side and line, plus the selection
+reason. Preserve a valid substantive original line, a meaningful lone
+punctuation change and a valid deletion-side anchor. For a syntactic separator
+such as Python's `*,`, the same contiguous change block may supply a single
+substantive causal line within two lines. A non-addressable original may use
+one unique eligible causal line in that same block and window. Multiple
+plausible lines make the anchor ambiguous. Keep the original for diagnostics,
+do not emit an inline finding, and return an inconclusive anchor result for
+an otherwise eligible hypothesis. The verifier cannot move a frozen anchor
+or alter a durable finding ID.
+
+The first verifier response is either a final verdict or exactly one typed
+request for material evidence using the closed vocabulary in section 8.
+The application validates the request and executes allowed reads within the
+authorized repository, revision and candidate budget. It returns the fragment
+and a receipt bound to the operation, candidate version, source and artifact
+digest. Denials, absent evidence and exhausted candidate budget return a
+bounded reason without an unauthorized read. The follow-up can only return a
+final verdict and must cite the supplied evidence sustaining a confirmation or
+refutation, including the recovered receipt when it supplies a material premise.
+If decisive evidence is still missing, denied or over budget, return
+`inconclusive` with the cause and a practical next step. A fabricated,
+foreign-candidate or wrong-revision citation or a second request fails
+integrity before publication. An intact mixed review can publish confirmed
+findings and preserve unresolved history, but cannot authorize clean approval.
+On integrity failure preserve the prior verified projection and make zero
+finding, resolution or approval writes. Native run diagnostics may report failure.
+
+### 8. Clean Architecture
+
+The application owns normalization, freeze, source authority, retrieval,
+receipt membership, budgets and the pre-write validation gate. The verifier
+judges the causal evidence in a closed session. The framed path charges both
+calls, retries and retrieval on the common ledger. The closed verifier cannot
+reach raw Git, commands, credentials, network or any mutation port.
+
+### 14. Testing strategy
+
+| Area | Minimum distinct cases | Behaviors/risks covered |
+|---|---:|---|
+| Request and budget | 5 | Direct verdict, useful receipt, denial, missing source, candidate budget |
+| Integrity and provider writes | 4 | Forgery, foreign candidate, foreign revision, second request |
+| Anchor selection | 3 | Pytest separator, valid original, two plausible lines |
+| Qualification | 1 | Reject a profile with a failed independent gate |
+| Total | 13 | Additional deterministic cases separate from model trials |
+
+| Case ID | Area | Requirements | Scenario |
+|---|---|---|---|
+| bbe950-demand-C01 | Request and budget | BBE950-D01 | Direct verdict bypasses retrieval. |
+| bbe950-demand-C02 | Request and budget | BBE950-D01 | An allowed request delivers the pinned fragment and candidate-bound receipt cited by the final verdict. |
+| bbe950-demand-C03 | Request and budget | BBE950-D01 | A denied request cannot read and an unresolved premise remains inconclusive with a next step. |
+| bbe950-demand-C04 | Request and budget | BBE950-D01 | Missing evidence yields an inconclusive verdict with a next step. |
+| bbe950-demand-C05 | Request and budget | BBE950-D01 | Exhausted candidate budget does not invalidate an otherwise integral mixed review. |
+| bbe950-demand-C06 | Integrity and provider writes | BBE950-D01 | Forged citation fails a mixed batch with zero finding, resolution or approval writes. |
+| bbe950-demand-C07 | Integrity and provider writes | BBE950-D01 | Another candidate's citation fails before any mutation. |
+| bbe950-demand-C08 | Integrity and provider writes | BBE950-D01 | A receipt from another revision fails before any mutation. |
+| bbe950-demand-C09 | Integrity and provider writes | BBE950-D01 | A second request fails before any mutation. |
+| bbe950-demand-C10 | Anchor selection | BBE950-D02 | The pytest separator selects the sole nearby causal declaration and records both positions. |
+| bbe950-demand-C11 | Anchor selection | BBE950-D02 | A substantive eligible line stays fixed even with another nearby addition. |
+| bbe950-demand-C12 | Anchor selection | BBE950-D02 | Two plausible nearby lines produce an inconclusive anchor and no inline effect. |
+| bbe950-demand-C13 | Qualification | BBE950-D03 | A passing model cannot qualify another model and a diagnostic replay cannot authorize activation. |
+
+### 15. Documentation
+
+| Path | Change |
+|---|---|
+| `specs/bugbot-analysis-publication-and-autofix.md` | update |
+| `specs/bugbot-review-state-reconciliation.md` | update |
+| `specs/bugbot-source-bound-framed-review.md` | update |
+| `docs/bugbot/quality-observability.mdx` | update |
+
+### 16. Acceptance
+
+Compare Luna and Sol in dry-run, first with the same frozen candidate and
+initial packet, using the fixed packet, an evidence-free second call and a
+second call with application-retrieved evidence. Require three repetitions of
+each original and mutant per model in the held-out pair. The recovered source
+must establish the material premise, retain the exact mutant anchor and
+preserve refutation of the original. A favorable diagnostic allows evaluation
+in full review. Activation remains disabled.
+
+Each proposed profile must independently pass all qualification gates. Full
+review must reproduce at least three historical baseline alerts across two
+premises, reduce false positives in at least two paired repetitions without
+regression in the third, retain all positive controls at their exact anchors
+and pass integrity, zero-write, metering, cost and latency gates. Keep failed,
+aborted and unmetered cases. The independent unchanged 174-case detection
+corpus must meet its precision, recall, F1, exact location, severity, category
+and calibration floors. A qualifying profile is eligible only after explicit
+maintainer approval. No model inherits another profile's qualification.
+
+### 17. Requirements traceability
+
+| Requirement | Cases |
+|---|---|
+| BBE950-D01 | bbe950-demand-C01, bbe950-demand-C02, bbe950-demand-C03, bbe950-demand-C04, bbe950-demand-C05, bbe950-demand-C06, bbe950-demand-C07, bbe950-demand-C08, bbe950-demand-C09 |
+| BBE950-D02 | bbe950-demand-C10, bbe950-demand-C11, bbe950-demand-C12 |
+| BBE950-D03 | bbe950-demand-C13 |
+
+### 20. References and decisions
+
+- [V4 protocol](https://github.com/vypdev/copilot/blob/19da0614f/quality/bugbot/evidence/issue-950/v4/preregistration.md)
+- [V4 results](https://github.com/vypdev/copilot/blob/a3f70858b/quality/bugbot/evidence/issue-950/v4/results.md)
+- [Sol source supplement](https://github.com/vypdev/copilot/blob/a3f70858b/quality/bugbot/evidence/issue-950/v4/sol-source-supplement/results.md)
+- The 27-issue matrix separates executed evidence from planned coverage.
