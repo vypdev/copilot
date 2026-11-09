@@ -5,7 +5,7 @@
       "id": "github-communication-experience",
       "title": "Semantic GitHub communication and repository localization",
       "status": "implemented",
-      "scope": "English-default, localized, semantic, bounded and idempotent product messages across GitHub and repository-aware operator surfaces; complete acceptance batches and cards with stable source identities, verified published SDD provenance, shared complete-inventory text allocation, precise response diagnostics and same-head requirement evidence before Commit progress publication; shared bounded complete-batch recovery for attributable completed acceptance-field length or completion failures; bounded closed-fact recovery and compact large-inventory assessment, exact original hard allocations, explicit admission counts and non-retryable length exhaustion with separate live-provider qualification; exact JSON-byte allocation and one shared source-part size replacement for both framed profiles, captured request contracts, receipt quota revalidation and nonretryable unit-specific exhaustion",
+      "scope": "English-default, localized, semantic, bounded and idempotent product messages across GitHub and repository-aware operator surfaces; complete acceptance batches and cards with stable source identities, verified published SDD provenance, shared complete-inventory text allocation, precise response diagnostics and same-head requirement evidence before Commit progress publication; shared bounded complete-batch recovery for attributable completed acceptance-field length or completion failures; bounded closed-fact recovery and compact large-inventory assessment, exact original hard allocations, explicit admission counts and non-retryable length exhaustion with separate live-provider qualification; exact JSON-byte allocation and one shared source-part size replacement for both framed profiles, captured request contracts, receipt quota revalidation and nonretryable unit-specific exhaustion; shared same-profile complete-batch correction for otherwise-valid repeated citations with current-request origin binding, unchanged evidence gates and nonretryable citation exhaustion",
       "owner": "Copilot maintainers",
       "lastVerified": "2026-11-08",
       "specs": [
@@ -249,7 +249,9 @@
         "src/application/ports/pull_request_review_errors.ts",
         "src/application/usecases/steps/commit/bugbot/bugbot_review_freshness.ts",
         "src/data/repository/pull_request/pull_request_lifecycle_repository.ts",
-        "src/data/repository/pull_request/pull_request_changes_repository.ts"
+        "src/data/repository/pull_request/pull_request_changes_repository.ts",
+        "src/domain/progress_citation_repetition.ts",
+        "src/application/policies/progress_citation_recovery_policy.ts"
       ],
       "tests": [
         "src/domain/__tests__/implementation_plan.test.ts",
@@ -444,7 +446,8 @@
         "src/application/policies/__tests__/progress_partition_byte_recovery.test.ts",
         "src/application/usecases/actions/__tests__/progress_partition_byte_publication.integration.test.ts",
         "src/application/policies/__tests__/bugbot_freshness_diagnostics.test.ts",
-        "src/data/repository/__tests__/bugbot_source_bound_identity_repository.test.ts"
+        "src/data/repository/__tests__/bugbot_source_bound_identity_repository.test.ts",
+        "src/application/usecases/actions/__tests__/progress_citation_recovery.test.ts"
       ],
       "documentation": [
         "docs/configuration.mdx",

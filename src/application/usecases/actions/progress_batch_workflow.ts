@@ -78,7 +78,7 @@ export async function analyzeProgressBatches(context: ProgressContext, issueDesc
     const promptFor = (batch: typeof batches[number], diffEvidence: string, schema: ReturnType<typeof progressBatchResponseSchema>) => getCheckProgressPrompt({ ...parameters,
         acceptanceScope: scopeData(batch.scope), diffEvidence }) + '\n\nSame-head assessment receipt contract\n' + renderProgressPromptData(JSON.stringify({ manifestDigest: manifest.digest,
         batchId: batch.id, headSha: manifest.headSha, evidenceDictionary: manifest.evidence.filter(reference => !reference.generated).map(reference => reference.id) }), 'progress.comparison', 262_144, 'assessment')
-        + '\nReturn these exact manifestDigest, batchId and headSha fields. Each requirement must cite one to eight exact evidenceDictionary IDs in citations. '
+        + '\nReturn these exact manifestDigest, batchId and headSha fields. Each requirement must cite one to eight DISTINCT exact evidenceDictionary IDs in citations; never repeat an ID within a requirement. '
         + 'A citation is its exact unitId in the complete comparison facts, or its exact path when no unitId is supplied. A SHA echo alone is insufficient. '
         + 'Every outcome requires a non-generated source observation. Missing or uncertain outcomes require a traceable source observation supporting that outcome. '
         + 'Do not infer contents of unprovided unchanged files or external verification. Preserve uncertainty and all qualifiers. Return no partial inventory. '
@@ -109,8 +109,8 @@ export async function analyzeProgressBatches(context: ProgressContext, issueDesc
         capacity(() => requests.forEach(({ prompt, schema }) => remainingProgressAssessmentPromptBytes(prompt, schema, context.agentConfiguration.effort)));
         for (const { batch, schema, prompt } of requests) {
             let acceptedResponse: unknown;
-            const projectResponse = (response: Parameters<typeof readProgressAssessmentEvidence>[0]) => {
-                const { payload } = readProgressAssessmentEvidence(response, manifest, batch, context.targetLocale, anchors, compact);
+            const projectResponse = (response: Parameters<typeof readProgressAssessmentEvidence>[0], requestSchema?: Record<string, unknown>) => {
+                const { payload } = readProgressAssessmentEvidence(response, manifest, batch, context.targetLocale, anchors, compact, requestSchema);
                 acceptedResponse = response;
                 return payload;
             };

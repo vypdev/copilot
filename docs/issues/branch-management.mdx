@@ -325,6 +325,19 @@ before starting one fresh assessment. The run records the actual requirement
 count, batch count and per-text allocation before collecting comparison facts.
 Length and completion failures cannot each allocate a replacement: there are
 still at most two final queries for a batch. No provisional batches publish.
+
+An otherwise valid native assessment that repeats an admitted source citation
+may spend that same single allowance on a complete correction. Both narrative
+and closed-fact responses must ultimately contain one to eight distinct admitted
+citations per requirement. Copilot preserves the whole original evidence
+dictionary, scope, head and profile; it never silently deduplicates model output.
+A second repetition stops with non-retryable `progress-batch-retained`, reason
+`evidence-duplicate`, and verified requirement/batch IDs. Inspect the run and
+qualify a corrected build before a fresh full assessment; do not loop on the
+unchanged failed head. Invalid evidence and simultaneous other validation defects
+remain blocking without citation correction. Accepted earlier batches remain
+provisional, and correction cannot reset the 120-call/30-minute ledger.
+
 Issue-body/open-state, native owning PR/target, base and head checks
 still run before publication. Publication failures retain their actual completed
 effects and error classification; writes are never automatically replayed.

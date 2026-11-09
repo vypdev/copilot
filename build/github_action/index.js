@@ -48917,6 +48917,9 @@ const progress_evidence_protocol_policy_1 = __nccwpck_require__(37124);
 const progress_evidence_path_1 = __nccwpck_require__(25887);
 const progress_assessment_capacity_policy_1 = __nccwpck_require__(67329);
 const progress_capacity_failure_1 = __nccwpck_require__(6457);
+const progress_completion_mismatch_1 = __nccwpck_require__(6519);
+const application_error_1 = __nccwpck_require__(75999);
+const progress_citation_recovery_policy_1 = __nccwpck_require__(88351);
 exports.PROGRESS_BATCH_PROFILE = Object.freeze({ sourceLines: 32, clauses: 256, bytes: 262144,
     assessmentClauses: 32, calls: 120, milliseconds: 1800000 });
 const digest = (value) => (0, node_crypto_1.createHash)('sha256').update(JSON.stringify(value)).digest('hex');
@@ -49041,12 +49044,12 @@ function progressBatchResponseSchema(manifest, batch, anchors, compact) {
                     properties: { ...schema.properties.requirements.items.properties,
                         summary: { ...schema.properties.requirements.items.properties.summary, maxLength: factLimit, description },
                         remaining: { ...schema.properties.requirements.items.properties.remaining, maxLength: factLimit, description },
-                        citations: { type: 'array', minItems: 1, maxItems: 8,
+                        citations: { type: 'array', minItems: 1, maxItems: 8, description: 'One to eight distinct admitted evidence IDs. Never repeat a citation within a requirement.',
                             items: { type: 'string', enum: manifest.evidence.filter(reference => !reference.generated).map(reference => reference.id) } } },
                     required: [...schema.properties.requirements.items.required, 'citations'] } } },
         required: [...schema.required, 'manifestDigest', 'batchId', 'headSha'] };
 }
-function readProgressAssessmentEvidence(response, manifest, batch, locale, anchors, compact) {
+function readProgressAssessmentEvidence(response, manifest, batch, locale, anchors, compact, requestSchema) {
     const payload = (0, progress_response_rejection_policy_1.progressResponsePayload)(response, locale, 'assessment');
     const fail = (reason, requirementId = 'none') => { throw (0, progress_batch_rejection_policy_1.progressBatchRejected)(reason, { batch: batch.ordinal, requirementId }); };
     if (!exact(payload, ['outputLocale', 'progress', 'requirements', 'manifestDigest', 'batchId', 'headSha'])
@@ -49059,6 +49062,7 @@ function readProgressAssessmentEvidence(response, manifest, batch, locale, ancho
         fail('receipt-coverage', missing?.id);
     }
     const citations = [];
+    let repetition;
     const factLimit = aggregateFactLimit(manifest, compact, anchors);
     const facts = payload.requirements.map(value => {
         if (!record(value) || !exact(value, ['id', 'status', 'evidence', 'summary', 'remaining', 'citations']))
@@ -49075,19 +49079,36 @@ function readProgressAssessmentEvidence(response, manifest, batch, locale, ancho
                     context: { kind: 'assessment', requirementCount: manifest.scope.requirements.length, batch: batch.ordinal, requirementId: id },
                 });
         }
-        if (!Array.isArray(value.citations) || value.citations.length < 1 || value.citations.length > 8
-            || new Set(value.citations).size !== value.citations.length)
+        if (!Array.isArray(value.citations) || value.citations.length < 1 || value.citations.length > 8)
             return fail('evidence-missing', id);
         for (const citation of value.citations) {
             const reference = manifest.evidence.find(entry => entry.id === citation);
             if (!reference || reference.headSha !== manifest.headSha || reference.generated)
                 fail('evidence-identity', id);
         }
+        const distinctCount = new Set(value.citations).size;
+        if (!repetition && distinctCount !== value.citations.length)
+            repetition = { requirementId: id, citationCount: value.citations.length, distinctCount };
         citations.push(Object.freeze([...value.citations]));
         const { citations: _citations, ...fact } = value;
         return fact;
     });
-    return { payload: { outputLocale: payload.outputLocale, progress: payload.progress, requirements: facts }, citations };
+    const canonical = { outputLocale: payload.outputLocale, progress: payload.progress, requirements: facts };
+    if (repetition) {
+        const scope = progressBatchDisplayScope(batch, compact);
+        // A repetition is eligible only when every other native and semantic check passes.
+        // A simultaneous completion contradiction must not escape as an eligible completion result.
+        try {
+            (0, progress_scope_policy_1.parseScopedProgressResponse)(canonical, locale, scope, anchors);
+        }
+        catch (error) {
+            if (error instanceof progress_completion_mismatch_1.ProgressCompletionMismatch)
+                throw new application_error_1.ApplicationError(error.code, error.message, { correlationId: error.correlationId, retryable: error.retryable, recovery: error.recovery });
+            throw error;
+        }
+        throw (0, progress_citation_recovery_policy_1.progressCitationRepetitionError)(progressBatchResponseSchema(manifest, batch, anchors, compact), scope, anchors, locale, { ...repetition, batch: batch.ordinal, sourceLineId: anchors[repetition.requirementId] ?? 'none' }, requestSchema);
+    }
+    return { payload: canonical, citations };
 }
 function parseProgressAssessmentReceipt(response, manifest, batch, anchors, locale, compact) {
     const { payload, citations } = readProgressAssessmentEvidence(response, manifest, batch, locale, anchors, compact);
@@ -49422,6 +49443,80 @@ function progressCapacityDiffContext(diff, allPathReceiptsAccepted = false) {
     }
     return (0, progress_capacity_context_policy_1.progressComparisonCapacityContext)({ baseSha: diff.baseSha, headSha: diff.headSha, requiredPaths: required,
         reviewedPaths: diff.kind === 'partitioned' && allPathReceiptsAccepted ? required : [], ...(manifestDigest === undefined ? {} : { manifestDigest }) });
+}
+
+
+/***/ }),
+
+/***/ 88351:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PROGRESS_CITATION_HINT_MAX_BYTES = void 0;
+exports.progressCitationRepetitionError = progressCitationRepetitionError;
+exports.bindProgressCitationRepetition = bindProgressCitationRepetition;
+exports.hasProgressCitationsSchema = hasProgressCitationsSchema;
+exports.reservedProgressCitationPrompt = reservedProgressCitationPrompt;
+exports.progressCitationRepairPrompt = progressCitationRepairPrompt;
+const node_util_1 = __nccwpck_require__(47261);
+const progress_citation_repetition_1 = __nccwpck_require__(3482);
+const progress_compact_assessment_policy_1 = __nccwpck_require__(32351);
+const progress_batch_rejection_policy_1 = __nccwpck_require__(13397);
+const nativeRepetitions = new WeakMap();
+exports.PROGRESS_CITATION_HINT_MAX_BYTES = 256;
+const PREFIX = '\n\nThe previous completed assessment repeated a source citation. Return one complete replacement for the SAME pinned batch, original requirement IDs, evidence dictionary, locale and unchanged schema. Each citations array must contain one to eight DISTINCT admitted source IDs. Preserve the complete original evidence inventory; do not invent references, infer verification, force completion or omit requirements. These closed measurements describe the rejected response, not implementation or execution evidence.\n[BEGIN_PREVIOUS_CITATION_REPETITION]\n';
+const SUFFIX = '\n[END_PREVIOUS_CITATION_REPETITION]';
+function freezeSnapshot(value) {
+    if (value && typeof value === 'object' && !Object.isFrozen(value)) {
+        Object.freeze(value);
+        Object.values(value).forEach(freezeSnapshot);
+    }
+    return value;
+}
+/** Only the native receipt validator mints this invocation-local origin; public error fields cannot forge it. */
+function progressCitationRepetitionError(schema, scope, anchors, locale, facts, requestSchema) {
+    const valid = (0, progress_citation_repetition_1.isProgressCitationRepetitionDiagnostic)(facts);
+    const error = (0, progress_batch_rejection_policy_1.progressBatchRejected)('evidence-duplicate', valid ? { batch: facts.batch, requirementId: facts.requirementId } : {});
+    if (!valid || !requestSchema || !Object.isFrozen(requestSchema))
+        return error;
+    try {
+        const captured = structuredClone({ scope, anchors, locale, facts });
+        const canonical = structuredClone(schema), actual = structuredClone(requestSchema);
+        const compact = (0, progress_compact_assessment_policy_1.compactProgressAssessmentPlan)(canonical, locale);
+        if (!(0, node_util_1.isDeepStrictEqual)(canonical, actual) && (!compact || !(0, node_util_1.isDeepStrictEqual)(structuredClone(compact.schema), actual)))
+            return error;
+        nativeRepetitions.set(error, Object.freeze({ ...freezeSnapshot(captured), schema: requestSchema }));
+    }
+    catch { /* Unknown contracts never acquire recovery authority. */ }
+    return error;
+}
+/** Bind complete native request and scope snapshots, not exception names or model-echoed metadata. */
+function bindProgressCitationRepetition(error, schema, scope, anchors, sourceLineIds, locale) {
+    if (!error || typeof error !== 'object')
+        return null;
+    const captured = nativeRepetitions.get(error);
+    if (!captured || captured.locale !== locale || captured.schema !== schema
+        || !(0, node_util_1.isDeepStrictEqual)(captured.scope, scope) || !(0, node_util_1.isDeepStrictEqual)(captured.anchors, anchors)
+        || !sourceLineIds?.includes(captured.facts.sourceLineId))
+        return null;
+    return captured.facts;
+}
+/** Planning only: an unrelated legacy schema does not reserve a citation correction it cannot produce. */
+function hasProgressCitationsSchema(schema) {
+    const record = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+    const properties = schema.properties, requirements = record(properties) ? properties.requirements : undefined;
+    const items = record(requirements) ? requirements.items : undefined, fields = record(items) ? items.properties : undefined;
+    return record(fields) && record(fields.citations);
+}
+function reservedProgressCitationPrompt(prompt) {
+    return prompt + PREFIX + ' '.repeat(exports.PROGRESS_CITATION_HINT_MAX_BYTES) + SUFFIX;
+}
+function progressCitationRepairPrompt(prompt, facts) {
+    if (!(0, progress_citation_repetition_1.isProgressCitationRepetitionDiagnostic)(facts))
+        throw new TypeError('Progress citation repetition diagnostic is invalid.');
+    return prompt + PREFIX + JSON.stringify(facts) + SUFFIX;
 }
 
 
@@ -50397,6 +50492,7 @@ const progress_partition_response_policy_1 = __nccwpck_require__(30025);
 const progress_completion_recovery_policy_1 = __nccwpck_require__(93325);
 const progress_assessment_length_policy_1 = __nccwpck_require__(60334);
 const progress_compact_assessment_policy_1 = __nccwpck_require__(32351);
+const progress_citation_recovery_policy_1 = __nccwpck_require__(88351);
 exports.PROGRESS_PROMPT_FRAMING_RESERVE_BYTES = 1024;
 /** Counts exactly the security/schema/task envelope used by the native adapter. */
 function remainingProgressPromptBytes(prompt, task, schema, effort, dimension = 'native-prompt-bytes') {
@@ -50420,7 +50516,10 @@ function progressAggregateBudget(promptWithoutEvidence, schema, effort) {
 function remainingProgressAssessmentPromptBytes(prompt, schema, effort) {
     remainingProgressPromptBytes(prompt, 'progress', schema, effort);
     const compact = (0, progress_compact_assessment_policy_1.compactProgressAssessmentPlan)(schema, 'en-US');
-    return Math.min(remainingProgressPromptBytes((0, progress_completion_recovery_policy_1.reservedProgressCompletionPrompt)(prompt), 'progress', schema, effort, 'native-prompt-reserve-bytes'), remainingProgressPromptBytes((0, progress_assessment_length_policy_1.reservedProgressAssessmentLengthPrompt)(prompt), 'progress', schema, effort, 'native-prompt-reserve-bytes'), ...(compact ? [remainingProgressPromptBytes((0, progress_compact_assessment_policy_1.reservedCompactProgressAssessmentPrompt)(prompt), 'progress', compact.schema, effort, 'native-prompt-reserve-bytes')] : []));
+    return Math.min(remainingProgressPromptBytes((0, progress_completion_recovery_policy_1.reservedProgressCompletionPrompt)(prompt), 'progress', schema, effort, 'native-prompt-reserve-bytes'), remainingProgressPromptBytes((0, progress_assessment_length_policy_1.reservedProgressAssessmentLengthPrompt)(prompt), 'progress', schema, effort, 'native-prompt-reserve-bytes'), ...(compact ? [remainingProgressPromptBytes((0, progress_compact_assessment_policy_1.reservedCompactProgressAssessmentPrompt)(prompt), 'progress', compact.schema, effort, 'native-prompt-reserve-bytes')] : []), ...((0, progress_citation_recovery_policy_1.hasProgressCitationsSchema)(schema) ? [
+        remainingProgressPromptBytes((0, progress_citation_recovery_policy_1.reservedProgressCitationPrompt)(prompt), 'progress', schema, effort, 'native-prompt-reserve-bytes'),
+        ...(compact ? [remainingProgressPromptBytes((0, progress_citation_recovery_policy_1.reservedProgressCitationPrompt)((0, progress_compact_assessment_policy_1.compactProgressAssessmentPrompt)(prompt)), 'progress', compact.schema, effort, 'native-prompt-reserve-bytes')] : []),
+    ] : []));
 }
 
 
@@ -59660,7 +59759,7 @@ async function analyzeProgressBatches(context, issueDescription, captured, diff,
     const promptFor = (batch, diffEvidence, schema) => (0, prompts_1.getCheckProgressPrompt)({ ...parameters,
         acceptanceScope: scopeData(batch.scope), diffEvidence }) + '\n\nSame-head assessment receipt contract\n' + (0, progress_scope_1.renderProgressPromptData)(JSON.stringify({ manifestDigest: manifest.digest,
         batchId: batch.id, headSha: manifest.headSha, evidenceDictionary: manifest.evidence.filter(reference => !reference.generated).map(reference => reference.id) }), 'progress.comparison', 262144, 'assessment')
-        + '\nReturn these exact manifestDigest, batchId and headSha fields. Each requirement must cite one to eight exact evidenceDictionary IDs in citations. '
+        + '\nReturn these exact manifestDigest, batchId and headSha fields. Each requirement must cite one to eight DISTINCT exact evidenceDictionary IDs in citations; never repeat an ID within a requirement. '
         + 'A citation is its exact unitId in the complete comparison facts, or its exact path when no unitId is supplied. A SHA echo alone is insufficient. '
         + 'Every outcome requires a non-generated source observation. Missing or uncertain outcomes require a traceable source observation supporting that outcome. '
         + 'Do not infer contents of unprovided unchanged files or external verification. Preserve uncertainty and all qualifiers. Return no partial inventory. '
@@ -59692,8 +59791,8 @@ async function analyzeProgressBatches(context, issueDescription, captured, diff,
         capacity(() => requests.forEach(({ prompt, schema }) => (0, progress_prompt_capacity_policy_1.remainingProgressAssessmentPromptBytes)(prompt, schema, context.agentConfiguration.effort)));
         for (const { batch, schema, prompt } of requests) {
             let acceptedResponse;
-            const projectResponse = (response) => {
-                const { payload } = (0, progress_batch_policy_1.readProgressAssessmentEvidence)(response, manifest, batch, context.targetLocale, anchors, compact);
+            const projectResponse = (response, requestSchema) => {
+                const { payload } = (0, progress_batch_policy_1.readProgressAssessmentEvidence)(response, manifest, batch, context.targetLocale, anchors, compact, requestSchema);
                 acceptedResponse = response;
                 return payload;
             };
@@ -59983,6 +60082,8 @@ const logging_ports_1 = __nccwpck_require__(6152);
 const progress_response_1 = __nccwpck_require__(64264);
 const query_progress_result_workflow_1 = __nccwpck_require__(33658);
 const progress_compact_assessment_policy_1 = __nccwpck_require__(32351);
+const progress_citation_recovery_policy_1 = __nccwpck_require__(88351);
+const progress_batch_rejection_policy_1 = __nccwpck_require__(13397);
 function freezeSnapshot(value) {
     if (value && typeof value === 'object' && !Object.isFrozen(value)) {
         Object.freeze(value);
@@ -60005,9 +60106,12 @@ async function evaluate(agent, request, context, projectResponse, compact) {
     }
     try {
         const canonical = compact ? (0, progress_compact_assessment_policy_1.decodeCompactProgressAssessment)(response, compact, context.scope, context.anchors) : response;
-        return { kind: 'valid', result: (0, progress_response_1.parseProgressResponse)(projectResponse(canonical), context.targetLocale, context.scope, context.anchors) };
+        return { kind: 'valid', result: (0, progress_response_1.parseProgressResponse)(projectResponse(canonical, request.options?.schema), context.targetLocale, context.scope, context.anchors) };
     }
     catch (error) {
+        const repetition = (0, progress_citation_recovery_policy_1.bindProgressCitationRepetition)(error, request.options?.schema, context.scope, context.anchors, context.sourceLineIds, context.targetLocale);
+        if (repetition)
+            return { kind: 'repetition', facts: repetition };
         if (!(error instanceof progress_completion_mismatch_1.ProgressCompletionMismatch))
             throw error;
         const facts = error.factsFor(context.scope);
@@ -60029,21 +60133,27 @@ async function queryProgressAssessment(agent, request, context, projectResponse 
         ...captured.request, prompt: (0, progress_compact_assessment_policy_1.compactProgressAssessmentPrompt)(captured.request.prompt, facts),
         options: { ...captured.request.options, schema: plan.schema },
     });
-    const first = await evaluate(agent, initialCompact ? compactRequest(initialCompact) : captured.request, captured.context, projectResponse, initialCompact);
+    const initialRequest = initialCompact ? compactRequest(initialCompact) : captured.request;
+    const first = await evaluate(agent, initialRequest, captured.context, projectResponse, initialCompact);
     if (first.kind === 'valid')
         return first.result;
     (0, logging_ports_1.logInfo)(first.kind === 'length'
         ? 'A progress acceptance fact exceeded its unchanged response limit. Requesting one complete replacement for the same pinned batch; previous progress is retained.'
-        : 'Reassessing one inconsistent completed progress estimate using the same complete pinned evidence. Previous progress is retained.');
+        : first.kind === 'repetition'
+            ? 'A completed progress assessment repeated a native source citation. Requesting one complete correction for the same pinned batch; previous progress is retained.'
+            : 'Reassessing one inconsistent completed progress estimate using the same complete pinned evidence. Previous progress is retained.');
     const replacementCompact = initialCompact ?? (first.kind === 'length' ? compact : undefined);
-    const replacement = replacementCompact ? compactRequest(replacementCompact, first.facts) : { ...captured.request, prompt: first.kind === 'length'
-            ? (0, progress_assessment_length_policy_1.progressAssessmentLengthRepairPrompt)(captured.request.prompt, first.facts)
-            : (0, progress_completion_recovery_policy_1.progressCompletionRepairPrompt)(captured.request.prompt, first.facts) };
+    const replacement = first.kind === 'repetition' ? freezeSnapshot({ ...initialRequest, prompt: (0, progress_citation_recovery_policy_1.progressCitationRepairPrompt)(initialRequest.prompt, first.facts) })
+        : replacementCompact ? compactRequest(replacementCompact, first.facts) : { ...captured.request, prompt: first.kind === 'length'
+                ? (0, progress_assessment_length_policy_1.progressAssessmentLengthRepairPrompt)(captured.request.prompt, first.facts)
+                : (0, progress_completion_recovery_policy_1.progressCompletionRepairPrompt)(captured.request.prompt, first.facts) };
     const second = await evaluate(agent, replacement, captured.context, projectResponse, replacementCompact);
     if (second.kind === 'valid')
         return second.result;
     if (second.kind === 'length')
         throw (0, progress_assessment_length_policy_1.progressAssessmentLengthRejected)(second.facts);
+    if (second.kind === 'repetition')
+        throw (0, progress_batch_rejection_policy_1.progressBatchRejected)('evidence-duplicate', { batch: second.facts.batch, requirementId: second.facts.requirementId });
     throw new application_error_1.ApplicationError('agent.failed', 'Progress completion remained inconsistent after one complete reassessment. Existing progress was retained.', { correlationId: second.correlationId, recovery: { id: 'progress-completion-recovery-exhausted', variables: second.facts } });
 }
 
@@ -94419,7 +94529,7 @@ exports.PROGRESS_BATCH_REASONS = void 0;
 exports.isProgressBatchDiagnostic = isProgressBatchDiagnostic;
 exports.PROGRESS_BATCH_REASONS = [
     'source-coverage', 'scope-capacity', 'manifest-identity', 'batch-identity', 'receipt-coverage',
-    'evidence-identity', 'evidence-missing', 'receipt-conflict', 'call-budget', 'time-budget', 'aggregate-capacity',
+    'evidence-identity', 'evidence-missing', 'evidence-duplicate', 'receipt-conflict', 'call-budget', 'time-budget', 'aggregate-capacity',
 ];
 function isProgressBatchDiagnostic(value) {
     if (!value || typeof value !== 'object' || Array.isArray(value))
@@ -94601,6 +94711,30 @@ function progressCapacityDiagnostic(input) {
     return normalizeProgressCapacityDiagnostic({ phase: input.phase, dimension: input.dimension, unit: policy?.unit,
         bound: input.bound ?? 'maximum', observedCount: input.observedCount, supportedLimit: input.supportedLimit,
         countKind: input.countKind ?? 'exact', context: input.context ?? { kind: 'unavailable' } });
+}
+
+
+/***/ }),
+
+/***/ 3482:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.isProgressCitationRepetitionDiagnostic = isProgressCitationRepetitionDiagnostic;
+const progress_response_diagnostic_1 = __nccwpck_require__(56289);
+/** Closed host measurements only; neither source references nor rejected prose are retained. */
+function isProgressCitationRepetitionDiagnostic(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return false;
+    const facts = value;
+    return Object.keys(facts).sort().join(',') === 'batch,citationCount,distinctCount,requirementId,sourceLineId'
+        && (0, progress_response_diagnostic_1.isProgressRequirementId)(facts.requirementId) && (0, progress_response_diagnostic_1.isProgressSourceLineId)(facts.sourceLineId)
+        && Number.isSafeInteger(facts.batch) && facts.batch >= 1 && facts.batch <= 1024
+        && Number.isSafeInteger(facts.citationCount) && facts.citationCount >= 2 && facts.citationCount <= 8
+        && Number.isSafeInteger(facts.distinctCount) && facts.distinctCount >= 1
+        && facts.distinctCount < facts.citationCount;
 }
 
 
