@@ -1,0 +1,114 @@
+{
+  "X1": [
+    {
+      "kind": "git",
+      "head": "e129e76e25deff7314efe3b72996d295cf73f7f3",
+      "path": "backend/src/domus/infrastructure/sqlite.py",
+      "blob": "44c5d7d1c2326f4105ba9fe387488c6309992720",
+      "start": 351,
+      "end": 386,
+      "text": "    def initialize(self, *, require_existing: bool = False) -> None:\n        if not require_existing:\n            try:\n                descriptor = os.open(self.path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)\n            except FileExistsError:\n                pass\n            except OSError:\n                raise StorageFailure(\"storage_failure\") from None\n            else:\n                os.close(descriptor)\n        with self._connection() as connection:\n            self._inspect(connection, allow_empty=not require_existing, allow_previous=True)\n            connection.execute(\"PRAGMA foreign_keys=ON\")\n            try:\n                connection.execute(\"BEGIN IMMEDIATE\")\n                version = self._inspect(\n                    connection, allow_empty=not require_existing, allow_previous=True\n                )\n                if version == 0:\n                    for statement in SCHEMA_STATEMENTS:\n                        connection.execute(statement)\n                    connection.execute(\n                        \"INSERT INTO installation VALUES (1,?,?)\",\n                        (self.installation.instance_id, self.installation.channel),\n                    )\n                    connection.execute(f\"PRAGMA application_id={APPLICATION_ID}\")\n                    connection.execute(f\"PRAGMA user_version={SCHEMA_VERSION}\")\n                elif version in (1, 2, 3, 4, 5, 6, 7, 8):\n                    migration = (\n                        *(IDENTITY_STATEMENTS if version == 1 else ()),\n                        *(RECOVERY_STATEMENTS if version < 3 else ()),\n                        *(HISTORY_STATEMENTS if version < 4 else ()),\n                        *(TASK_STATEMENTS if version < 5 else ()),\n                        *(MATERIAL_STATEMENTS if version < 6 else ()),\n                        *(REVIEW_STATEMENTS if version < 7 else ()),\n                        *(RECURRENCE_STATEMENTS if version < 8 else ()),",
+      "id": "evidence-4"
+    }
+  ],
+  "X2": [
+    {
+      "kind": "git",
+      "head": "9e65fd088a52cd10ec3ca6a846959c39947ffb16",
+      "path": "backend/src/domus/infrastructure/sqlite.py",
+      "blob": "44c5d7d1c2326f4105ba9fe387488c6309992720",
+      "start": 351,
+      "end": 386,
+      "text": "    def initialize(self, *, require_existing: bool = False) -> None:\n        if not require_existing:\n            try:\n                descriptor = os.open(self.path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)\n            except FileExistsError:\n                pass\n            except OSError:\n                raise StorageFailure(\"storage_failure\") from None\n            else:\n                os.close(descriptor)\n        with self._connection() as connection:\n            self._inspect(connection, allow_empty=not require_existing, allow_previous=True)\n            connection.execute(\"PRAGMA foreign_keys=ON\")\n            try:\n                connection.execute(\"BEGIN IMMEDIATE\")\n                version = self._inspect(\n                    connection, allow_empty=not require_existing, allow_previous=True\n                )\n                if version == 0:\n                    for statement in SCHEMA_STATEMENTS:\n                        connection.execute(statement)\n                    connection.execute(\n                        \"INSERT INTO installation VALUES (1,?,?)\",\n                        (self.installation.instance_id, self.installation.channel),\n                    )\n                    connection.execute(f\"PRAGMA application_id={APPLICATION_ID}\")\n                    connection.execute(f\"PRAGMA user_version={SCHEMA_VERSION}\")\n                elif version in (1, 2, 3, 4, 5, 6, 7, 8):\n                    migration = (\n                        *(IDENTITY_STATEMENTS if version == 1 else ()),\n                        *(RECOVERY_STATEMENTS if version < 3 else ()),\n                        *(HISTORY_STATEMENTS if version < 4 else ()),\n                        *(TASK_STATEMENTS if version < 5 else ()),\n                        *(MATERIAL_STATEMENTS if version < 6 else ()),\n                        *(REVIEW_STATEMENTS if version < 7 else ()),\n                        *(RECURRENCE_STATEMENTS if version < 8 else ()),",
+      "id": "evidence-4"
+    }
+  ],
+  "P1": [
+    {
+      "kind": "git",
+      "head": "b9a2dfc8179128fb493ab49666c24967d308c979",
+      "path": "frontend/src/presentation/domus-administration.ts",
+      "blob": "6712ceca3d05ae12cf7cba23a66a8db69dbbdc81",
+      "start": 286,
+      "end": 339,
+      "text": "  private openButton(label:string,action:AdministrationAction,enabled:boolean,memberId?:string,display?:string) {\n    return html`<button id=${'open-'+action+':'+(memberId??'own')} type=\"button\" ?disabled=${!enabled}\n      aria-label=${display===undefined?this.t(label):this.t(label)+': '+display} @click=${()=>this.open(action,memberId)}>${this.t(label)}</button>`;\n  }\n  private display(row:RosterMember):string{return row.presentation.alias??row.metadata.name??this.t('unnamed');}\n  private participants(view:AdministrationView) {\n    const roster=view.roster;\n    return html`<section class=\"card\" role=\"region\" aria-label=${this.t('participants')}><h3>${this.t('participants')}</h3>\n      ${roster===null?html`<p>${this.t('unavailable')}</p>`:html`<ul class=\"people\">${repeat(roster.members,row=>row.member.memberId,row=>html`<li>\n        <strong>${this.display(row)}</strong><p class=\"source\">${this.t('haName')}: ${row.metadata.name??this.t('metadata_'+row.metadata.state)}</p>\n        <p>${this.t('storedProfile')}: ${this.t('role_'+row.member.role)} · ${this.t('status_'+row.member.status)}</p>\n        <p class=\"help\">${this.t('avatar')}</p><div class=\"actions\">\n          ${this.openButton('manage','member.update',view.controls.memberIds.includes(row.member.memberId),row.member.memberId,this.display(row))}\n          ${row.member.memberId===view.access!.member!.memberId?nothing:this.openButton('otherAlias','member.presentation.update',view.controls.aliasMemberIds.includes(row.member.memberId),row.member.memberId,this.display(row))}\n        </div></li>`)}</ul>`}</section>`;\n  }\n  private outcome(view:AdministrationView) {\n    const result=view.outcome;if(result===null)return nothing;\n    const kind=result.kind==='receipt'?result.stage:result.kind;\n    return html`<section class=\"note\" role=\"status\"><h3>${this.t(kind)}</h3><p>${this.t(kind+'Body')}</p>\n      ${result.kind==='receipt'?html`<p>${this.t('operation')}: <code>${result.operationId}</code></p>`:nothing}\n      ${result.kind==='rejected'?html`<p>${this.t('notice_'+result.reason)}</p>${result.correlationId===null?nothing:html`<p>${this.t('correlation')}: <code>${result.correlationId}</code></p>`}`:nothing}</section>`;\n  }\n  private requests(view:AdministrationView) {\n    const records=view.journal?.records;if(!records?.length)return nothing;\n    return html`<section class=\"card\" role=\"region\" aria-label=${this.t('requests')}><h3>${this.t('requests')}</h3><p class=\"help\">${this.t('requestHelp')}</p>\n      <ul class=\"requests\">${records.map(record=>html`<li><strong>${this.actionTitle(record.action)}</strong><p>${this.t('stage_'+record.stage)}</p>\n        <p class=\"help\">${this.t('deadline')}: ${instant(record.expiresAt,this.language)}</p>\n        ${record.operationId===null?nothing:html`<p>${this.t('operation')}: <code>${record.operationId}</code></p>`}\n        <div class=\"actions\"><button type=\"button\" ?disabled=${!view.controls.recoverableKeys.includes(record.key)} @click=${()=>this.original('recover',record.key)}>${this.t('check')}</button>\n          <button type=\"button\" ?disabled=${!view.controls.dismissibleKeys.includes(record.key)} @click=${()=>this.original('dismiss',record.key)}>${this.t('dismiss')}</button></div></li>`)}</ul></section>`;\n  }\n  private original(type:'recover'|'dismiss',key:string):void {\n    const view=this.ready();if(view===null)return;\n    if((type==='recover'?view.controls.recoverableKeys:view.controls.dismissibleKeys).includes(key))this.intent({type,key});\n  }\n  protected render() {\n    const view=this.ready();\n    if(view===null){\n      if(this.pending||this.view?.busy||this.view?.phase==='loading')return html`<section class=\"note\" role=\"status\" aria-busy=\"true\"><h2>${this.t('checking')}</h2><p>${this.t('checkingBody')}</p></section>`;\n      if(this.view===null||this.retired)return nothing;\n      return html`<section class=\"note\" role=\"status\"><h2>${this.t('title')}</h2><p>${this.t('notice_'+(this.view.notice??'unavailable'))}</p>\n        <button type=\"button\" @click=${()=>this.intent({type:'refresh'})}>${this.t('refresh')}</button></section>`;\n    }\n    const person=view.access!.member!,own=this.ownPresentation(view);\n    const haName=this.ownName(view);\n    return html`<section role=\"region\" aria-label=${this.t('title')}><h2>${this.t('title')}</h2>\n      ${view.notice===null?nothing:html`<p class=\"note\" role=\"status\">${this.t('notice_'+view.notice)}</p>`}${this.outcome(view)}\n      <section class=\"card\"><h3>${this.t('ownProfile')}</h3><p><strong>${own?.alias??haName}</strong></p><p class=\"source\">${this.t('haName')}: ${haName}</p>\n        <p>${this.t('storedProfile')}: ${this.t('role_'+person.role)}</p><p>${this.t('effectiveProfile')}: ${this.t('role_'+view.access!.effectiveRole)}</p>\n        <p>${this.t('status')}: ${this.t('status_'+person.status)}</p><p class=\"help\">${this.t('avatar')}</p>\n        ${this.openButton('editAlias','member.presentation.update',view.controls.ownAlias,person.memberId)}\n        ${this.openButton('editPreferences','member.preferences.update',view.controls.preferences)}</section>\n      ${this.participants(view)}<section class=\"card\"><h3>${this.t('household')}</h3>${this.openButton('editHousehold','household.update',view.controls.household)}</section>",
+      "id": "evidence-7"
+    },
+    {
+      "kind": "git",
+      "head": "b9a2dfc8179128fb493ab49666c24967d308c979",
+      "path": "frontend/src/presentation/administration-messages.ts",
+      "blob": "f5373486b41040a187cd87ef36eea8b1c388559a",
+      "start": 8,
+      "end": 11,
+      "text": "  storedProfile:'Stored profile', effectiveProfile:'Effective profile for this session', status:'Membership status', unnamed:'Name unavailable',\n  haName:'Home Assistant name', alias:'Domus alias', avatar:'Avatar delivery is unavailable', ownAlias:'Your public alias', preferences:'Your private preferences',\n  household:'Household settings', policy:'Access rules', editAlias:'Edit own alias', editPreferences:'Edit preferences', editHousehold:'Edit household',\n  editPolicy:'Edit access rules', manage:'Manage participant', otherAlias:'Change alias', revision:'Original revision',",
+      "id": "evidence-8"
+    }
+  ],
+  "P2": [
+    {
+      "kind": "git",
+      "head": "122e0123a94480dd5d042b408a6c9498aeec5edc",
+      "path": "frontend/src/presentation/domus-administration.ts",
+      "blob": "6712ceca3d05ae12cf7cba23a66a8db69dbbdc81",
+      "start": 286,
+      "end": 339,
+      "text": "  private openButton(label:string,action:AdministrationAction,enabled:boolean,memberId?:string,display?:string) {\n    return html`<button id=${'open-'+action+':'+(memberId??'own')} type=\"button\" ?disabled=${!enabled}\n      aria-label=${display===undefined?this.t(label):this.t(label)+': '+display} @click=${()=>this.open(action,memberId)}>${this.t(label)}</button>`;\n  }\n  private display(row:RosterMember):string{return row.presentation.alias??row.metadata.name??this.t('unnamed');}\n  private participants(view:AdministrationView) {\n    const roster=view.roster;\n    return html`<section class=\"card\" role=\"region\" aria-label=${this.t('participants')}><h3>${this.t('participants')}</h3>\n      ${roster===null?html`<p>${this.t('unavailable')}</p>`:html`<ul class=\"people\">${repeat(roster.members,row=>row.member.memberId,row=>html`<li>\n        <strong>${this.display(row)}</strong><p class=\"source\">${this.t('haName')}: ${row.metadata.name??this.t('metadata_'+row.metadata.state)}</p>\n        <p>${this.t('storedProfile')}: ${this.t('role_'+row.member.role)} · ${this.t('status_'+row.member.status)}</p>\n        <p class=\"help\">${this.t('avatar')}</p><div class=\"actions\">\n          ${this.openButton('manage','member.update',view.controls.memberIds.includes(row.member.memberId),row.member.memberId,this.display(row))}\n          ${row.member.memberId===view.access!.member!.memberId?nothing:this.openButton('otherAlias','member.presentation.update',view.controls.aliasMemberIds.includes(row.member.memberId),row.member.memberId,this.display(row))}\n        </div></li>`)}</ul>`}</section>`;\n  }\n  private outcome(view:AdministrationView) {\n    const result=view.outcome;if(result===null)return nothing;\n    const kind=result.kind==='receipt'?result.stage:result.kind;\n    return html`<section class=\"note\" role=\"status\"><h3>${this.t(kind)}</h3><p>${this.t(kind+'Body')}</p>\n      ${result.kind==='receipt'?html`<p>${this.t('operation')}: <code>${result.operationId}</code></p>`:nothing}\n      ${result.kind==='rejected'?html`<p>${this.t('notice_'+result.reason)}</p>${result.correlationId===null?nothing:html`<p>${this.t('correlation')}: <code>${result.correlationId}</code></p>`}`:nothing}</section>`;\n  }\n  private requests(view:AdministrationView) {\n    const records=view.journal?.records;if(!records?.length)return nothing;\n    return html`<section class=\"card\" role=\"region\" aria-label=${this.t('requests')}><h3>${this.t('requests')}</h3><p class=\"help\">${this.t('requestHelp')}</p>\n      <ul class=\"requests\">${records.map(record=>html`<li><strong>${this.actionTitle(record.action)}</strong><p>${this.t('stage_'+record.stage)}</p>\n        <p class=\"help\">${this.t('deadline')}: ${instant(record.expiresAt,this.language)}</p>\n        ${record.operationId===null?nothing:html`<p>${this.t('operation')}: <code>${record.operationId}</code></p>`}\n        <div class=\"actions\"><button type=\"button\" ?disabled=${!view.controls.recoverableKeys.includes(record.key)} @click=${()=>this.original('recover',record.key)}>${this.t('check')}</button>\n          <button type=\"button\" ?disabled=${!view.controls.dismissibleKeys.includes(record.key)} @click=${()=>this.original('dismiss',record.key)}>${this.t('dismiss')}</button></div></li>`)}</ul></section>`;\n  }\n  private original(type:'recover'|'dismiss',key:string):void {\n    const view=this.ready();if(view===null)return;\n    if((type==='recover'?view.controls.recoverableKeys:view.controls.dismissibleKeys).includes(key))this.intent({type,key});\n  }\n  protected render() {\n    const view=this.ready();\n    if(view===null){\n      if(this.pending||this.view?.busy||this.view?.phase==='loading')return html`<section class=\"note\" role=\"status\" aria-busy=\"true\"><h2>${this.t('checking')}</h2><p>${this.t('checkingBody')}</p></section>`;\n      if(this.view===null||this.retired)return nothing;\n      return html`<section class=\"note\" role=\"status\"><h2>${this.t('title')}</h2><p>${this.t('notice_'+(this.view.notice??'unavailable'))}</p>\n        <button type=\"button\" @click=${()=>this.intent({type:'refresh'})}>${this.t('refresh')}</button></section>`;\n    }\n    const person=view.access!.member!,own=this.ownPresentation(view);\n    const haName=this.ownName(view);\n    return html`<section role=\"region\" aria-label=${this.t('title')}><h2>${this.t('title')}</h2>\n      ${view.notice===null?nothing:html`<p class=\"note\" role=\"status\">${this.t('notice_'+view.notice)}</p>`}${this.outcome(view)}\n      <section class=\"card\"><h3>${this.t('ownProfile')}</h3><p><strong>${own?.alias??haName}</strong></p><p class=\"source\">${this.t('haName')}: ${haName}</p>\n        <p>${this.t('storedProfile')}: ${this.t('role_'+person.role)}</p><p>${this.t('effectiveProfile')}: ${this.t('role_'+view.access!.effectiveRole)}</p>\n        <p>${this.t('status')}: ${this.t('status_'+person.status)}</p><p class=\"help\">${this.t('avatar')}</p>\n        ${this.openButton('editAlias','member.presentation.update',view.controls.ownAlias,person.memberId)}\n        ${this.openButton('editPreferences','member.preferences.update',view.controls.preferences)}</section>\n      ${this.participants(view)}<section class=\"card\"><h3>${this.t('household')}</h3>${this.openButton('editHousehold','household.update',view.controls.household)}</section>",
+      "id": "evidence-7"
+    },
+    {
+      "kind": "git",
+      "head": "122e0123a94480dd5d042b408a6c9498aeec5edc",
+      "path": "frontend/src/presentation/administration-messages.ts",
+      "blob": "f5373486b41040a187cd87ef36eea8b1c388559a",
+      "start": 8,
+      "end": 11,
+      "text": "  storedProfile:'Stored profile', effectiveProfile:'Effective profile for this session', status:'Membership status', unnamed:'Name unavailable',\n  haName:'Home Assistant name', alias:'Domus alias', avatar:'Avatar delivery is unavailable', ownAlias:'Your public alias', preferences:'Your private preferences',\n  household:'Household settings', policy:'Access rules', editAlias:'Edit own alias', editPreferences:'Edit preferences', editHousehold:'Edit household',\n  editPolicy:'Edit access rules', manage:'Manage participant', otherAlias:'Change alias', revision:'Original revision',",
+      "id": "evidence-8"
+    }
+  ],
+  "J1": [
+    {
+      "kind": "git",
+      "head": "127cb48647efb777be8494c40239fd048c751c72",
+      "path": "tests/browser/image_channel.py",
+      "blob": "6e46e0112e79bd7b14f79bb1705c7d225aee4e37",
+      "start": 17,
+      "end": 45,
+      "text": "        launcher=subprocess.Popen,\n        wait=select.select,\n        timeout=30,\n        frame_limit=2**24,\n    ):\n        self.command = tuple(command)\n        self.wait, self.timeout, self.frame_limit = wait, timeout, frame_limit\n        self.lock, self.close_lock, self.closed = threading.Lock(), threading.Lock(), False\n        self.sequence = 0\n        self.process = launcher(\n            list(command),\n            stdin=subprocess.PIPE,\n            stdout=subprocess.PIPE,\n            stderr=subprocess.DEVNULL,\n            bufsize=0,\n        )\n        assert self.process.stdin is not None and self.process.stdout is not None\n        os.set_blocking(self.process.stdin.fileno(), False)\n        os.set_blocking(self.process.stdout.fileno(), False)\n\n    def exchange(self, value):\n        if not self.lock.acquire(timeout=self.timeout):\n            raise subprocess.TimeoutExpired(self.command, self.timeout)\n        try:\n            if self.closed or self.process.poll() is not None:\n                raise ValueError(\"The image transport worker is no longer available\")\n            deadline = time.monotonic() + self.timeout\n            self.sequence += 1\n            payload = json.dumps({\"transport_id\": self.sequence, \"request\": value}).encode() + b\"\\n\"",
+      "id": "evidence-4"
+    },
+    {
+      "kind": "git",
+      "head": "127cb48647efb777be8494c40239fd048c751c72",
+      "path": "tests/python/test_image_channel.py",
+      "blob": "2dcd2954ceeaa360f8a15082975b5dca20a7b9b2",
+      "start": 22,
+      "end": 23,
+      "text": "def worker(script=ECHO, **options):\n    return ImageChannel([sys.executable, \"-u\", \"-c\", script], **options)",
+      "id": "evidence-5"
+    }
+  ],
+  "J2": [
+    {
+      "kind": "git",
+      "head": "f525eea60e34e33b096a0f329b82086b6b656ff4",
+      "path": "tests/browser/image_channel.py",
+      "blob": "6e46e0112e79bd7b14f79bb1705c7d225aee4e37",
+      "start": 17,
+      "end": 45,
+      "text": "        launcher=subprocess.Popen,\n        wait=select.select,\n        timeout=30,\n        frame_limit=2**24,\n    ):\n        self.command = tuple(command)\n        self.wait, self.timeout, self.frame_limit = wait, timeout, frame_limit\n        self.lock, self.close_lock, self.closed = threading.Lock(), threading.Lock(), False\n        self.sequence = 0\n        self.process = launcher(\n            list(command),\n            stdin=subprocess.PIPE,\n            stdout=subprocess.PIPE,\n            stderr=subprocess.DEVNULL,\n            bufsize=0,\n        )\n        assert self.process.stdin is not None and self.process.stdout is not None\n        os.set_blocking(self.process.stdin.fileno(), False)\n        os.set_blocking(self.process.stdout.fileno(), False)\n\n    def exchange(self, value):\n        if not self.lock.acquire(timeout=self.timeout):\n            raise subprocess.TimeoutExpired(self.command, self.timeout)\n        try:\n            if self.closed or self.process.poll() is not None:\n                raise ValueError(\"The image transport worker is no longer available\")\n            deadline = time.monotonic() + self.timeout\n            self.sequence += 1\n            payload = json.dumps({\"transport_id\": self.sequence, \"request\": value}).encode() + b\"\\n\"",
+      "id": "evidence-4"
+    },
+    {
+      "kind": "git",
+      "head": "f525eea60e34e33b096a0f329b82086b6b656ff4",
+      "path": "tests/python/test_image_channel.py",
+      "blob": "ec9fcfbbf4f5e4901e564332dbdf3624183d5a7b",
+      "start": 22,
+      "end": 23,
+      "text": "def worker(script=ECHO, **options):\n    return ImageChannel([sys.executable, \"-u\", \"-c\", script], **options)",
+      "id": "evidence-5"
+    }
+  ]
+}
