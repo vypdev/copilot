@@ -1,0 +1,58 @@
+{
+  "R1": {
+    "issue": 869,
+    "verdict": "refuted",
+    "path": "tests/browser/image_bridge.py",
+    "line": 164,
+    "decisive": {
+      "path": "frontend/playwright.entry.config.ts",
+      "start": 10,
+      "end": 12
+    },
+    "head": "9988e44849a9c50a11718aecf88fddddf3e6082d",
+    "tree": "ee489873068ae52bad5fc28154e335971ecdd058",
+    "side": "RIGHT"
+  },
+  "R2": {
+    "issue": 869,
+    "verdict": "confirmed",
+    "path": "tests/browser/image_bridge.py",
+    "line": 164,
+    "decisive": {
+      "path": "frontend/playwright.entry.config.ts",
+      "start": 10,
+      "end": 12
+    },
+    "head": "a8b4aa0efca1d7c56ac0197155b72a9a5899aabf",
+    "tree": "8b33266cb0b6a1040e11dbe03426bf9bed4bb57d",
+    "side": "RIGHT"
+  },
+  "T1": {
+    "issue": 918,
+    "verdict": "refuted",
+    "path": "backend/src/domus/application/recurrence_review_target.py",
+    "line": 82,
+    "decisive": {
+      "path": "backend/src/domus/infrastructure/sqlite_recurrence.py",
+      "start": 125,
+      "end": 137
+    },
+    "head": "3d890522003c2d2e7d03fa1f51b1bd84f0d0f10f",
+    "tree": "d670f43e401a26cf2c488f268e0d8b4910def2cd",
+    "side": "RIGHT"
+  },
+  "T2": {
+    "issue": 918,
+    "verdict": "confirmed",
+    "path": "backend/src/domus/application/recurrence_review_target.py",
+    "line": 82,
+    "decisive": {
+      "path": "backend/src/domus/infrastructure/sqlite_recurrence.py",
+      "start": 125,
+      "end": 136
+    },
+    "head": "8b8ad597b6831cc11dddb7a856a3d972e82acc22",
+    "tree": "10863588cb2a39a9e7760d908c14afd58121e20e",
+    "side": "RIGHT"
+  }
+}
