@@ -3155,42 +3155,6 @@ receipts. The main profile executes no reproductions. Local deterministic
 controls remain outside model input. A probe-enabled experiment requires a
 separate preregistration and score.
 
-### 7. Native receipt and policy selection
-
-The canonical review producer writes a bounded `copilot-bugbot-verification:v1`
-machine marker in the trusted native `Copilot / Review` check. The observer
-selects the configured publishing workflow's latest native run and attempt
-for the PR and exact reviewed head or verified synthetic merge. It matches
-the check's app, suite and run source before parsing its payload. A run with
-ambiguous PR association at that head can block approval. Evidence from a
-different PR or an untrusted producer cannot authorize approval.
-
-| Receipt field | Binding |
-|---|---|
-| `version` | Closed schema version 1 |
-| `repositoryId`, `pullNumber`, `headSha`, `baseSha` | Current provider repository, PR and exact comparison |
-| `mode`, `generation`, `policyDigest` | Canonical digest of the effective trusted policy, including its rollout generation, verifier/evidence profile and limits |
-| `runId`, `attempt` | Latest authoritative native run ID and attempt number |
-| `coverage`, `verification`, `publication`, `outcome` | Separate coverage, complete or inconclusive dispositions, provider verification, and terminal review status |
-| `findingStates` | Seven canonical non-negative counts. Verified overflow contributes to actionable state even without an inline comment. |
-
-Only complete coverage and verification with observed, verified publication
-and the existing approval gates can authorize. Pending, failed or inconclusive
-authoritative runs can publish diagnostics and leave the previous finding
-presentation available. The consumer never falls back to that earlier receipt.
-The observer's independently loaded trusted policy decides whether to require
-the native receipt. A repository that has never enabled the new gate may use
-the existing legacy projection in disabled or shadow mode. Changing enforcement
-or rolling back advances the policy generation and requires a fresh
-authoritative receipt. The shadow execution is a separate non-authoritative
-stream with no approval writes and cannot become the selected producer.
-
-The real approval repository consumes this contract when supplied with the
-trusted policy binding. Its controlled-provider tests cover existing legacy
-readers, an unchanged SHA after enforcement, later incomplete and failed
-attempts, and rollback. Production policy composition and receipt emission
-remain gated by pilot qualification.
-
 ### 8. Clean Architecture
 
 The review workflow owns attempt and result evidence. The approval application
