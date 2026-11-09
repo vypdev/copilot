@@ -1,0 +1,113 @@
+{
+  "detector": {
+    "N1": {
+      "head": "55174696e97a4c8b424c7f57d7da7a61e4b157fd",
+      "tree": "0d5efca673329a8a28d1b9e93a46b564edcbe285",
+      "base": "d885bccf2c3152c3151471d3efaabd901429d6bd",
+      "baseTree": "6c26d065f56bf69045813dd8bef3ace4530a57d4",
+      "promptSha256": "86e6c0880c8eb527cd92495262a2b99b838503ece75797a9d152f519a3323d81",
+      "schemaSha256": "687863a27755b53d3a2dd3d9856d4bf204446af157d6c26ec7ea33f6822a2379",
+      "promptBytes": 20947
+    },
+    "N2": {
+      "head": "c654e501593ddb01446c6b37873a5b094624dd93",
+      "tree": "263e61f6c8d518657a3e160774f0af8f1f3f49d9",
+      "base": "d885bccf2c3152c3151471d3efaabd901429d6bd",
+      "baseTree": "6c26d065f56bf69045813dd8bef3ace4530a57d4",
+      "promptSha256": "2f2d4f5af1f676ad4899cb6a450df8a1053baa14270cf3d6738dd126abbfcec7",
+      "schemaSha256": "687863a27755b53d3a2dd3d9856d4bf204446af157d6c26ec7ea33f6822a2379",
+      "promptBytes": 20951
+    }
+  },
+  "fixed": {
+    "N1": [
+      {
+        "kind": "git",
+        "path": "packages/core/src/components/navigation-overflow.ts",
+        "blob": "862a43bba1e5ff4ce69cc1367ce0ed1c0439482a",
+        "start": 26,
+        "end": 32,
+        "text": "    if(this.#viewport!==viewport){\n      this.#detach();this.#viewport=viewport;\n      viewport.addEventListener('scroll',this.#schedule,{passive:true});\n      viewport.addEventListener('mousedown',this.#down);\n      viewport.addEventListener('dragstart',this.#nativeDrag);\n      const epoch=this.#epoch;\n      this.#resize=new ResizeObserver(()=>{if(epoch===this.#epoch)this.#schedule();});"
+      },
+      {
+        "kind": "git",
+        "path": "packages/core/src/components/navigation-overflow.ts",
+        "blob": "862a43bba1e5ff4ce69cc1367ce0ed1c0439482a",
+        "start": 89,
+        "end": 112,
+        "text": "  consumeClick(event:MouseEvent):boolean {\n    if(!this.#suppressClick||event.detail===0)return false;\n    this.#suppressClick=false;return true;\n  }\n  #down=(event:MouseEvent):void=>{\n    this.#finishDrag();\n    if(event.defaultPrevented||event.button!==0||event.altKey||event.ctrlKey||event.metaKey||event.shiftKey||!this.#viewport)return;\n    this.#drag={viewport:this.#viewport,start:event.clientX,offset:this.#viewport.scrollLeft};\n    window.addEventListener('mousemove',this.#move);window.addEventListener('mouseup',this.#up);window.addEventListener('blur',this.#blur);\n  };\n  #move=(event:MouseEvent):void=>{\n    const drag=this.#drag;if(!drag)return;\n    if(event.buttons===0||drag.viewport!==this.#viewport||!this.host.isConnected){this.#finishDrag();return;}\n    const distance=event.clientX-drag.start;\n    if(!this.#suppressClick&&Math.abs(distance)<=1)return;\n    this.#suppressClick=true;event.preventDefault();drag.viewport.scrollLeft=drag.offset-distance;this.#schedule();\n  };\n  #nativeDrag=(event:DragEvent):void=>{if(this.#drag)event.preventDefault();};\n  #up=():void=>{this.#finishDrag(true);};\n  #blur=():void=>{this.#finishDrag();};\n  #finishDrag(preserveClick=false):void {\n    if(this.#drag){window.removeEventListener('mousemove',this.#move);window.removeEventListener('mouseup',this.#up);window.removeEventListener('blur',this.#blur);this.#drag=null;}\n    if(!preserveClick)this.#suppressClick=false;\n  }"
+      },
+      {
+        "kind": "git",
+        "path": "packages/core/src/components/tabs.ts",
+        "blob": "704eef979858dae294e403c551816c955d721087",
+        "start": 59,
+        "end": 78,
+        "text": "  #model = navigationState({kind:'navigation',label:'Sections',selected:null,items:[]});\n  #focused: string | null = null;\n  readonly #overflow=new NavigationOverflowController(this);\n  #scrollFocused:{side:'start'|'end';button:EventTarget|null}|null=null;\n  protected updated():void {this.#overflow.update(this.state.selected);}\n  disconnectedCallback():void {super.disconnectedCallback();this.#scrollFocused=null;}\n  get state(): NavigationState { return this.#model; }\n  set state(value: NavigationState) {\n    const next = navigationState(value), previous = this.#model;\n    this.#model = next; this.#focused = null; this.requestUpdate('state', previous);\n  }\n  #activate(event: MouseEvent, item: NavigationItem, snapshot: NavigationState): void {\n    if (snapshot !== this.state || item.disabled || this.#overflow.consumeClick(event)) { event.preventDefault(); return; }\n    if (event.defaultPrevented) return;\n    if (snapshot.kind === 'navigation' && (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey)) return;\n    const intent: NavigationSelectionEvent = new CustomEvent('ha-selection-request', {\n      detail: Object.freeze({kind:snapshot.kind,id:item.id}), bubbles:true, composed:true, cancelable:true,\n    });\n    if (!this.dispatchEvent(intent)) event.preventDefault();\n  }"
+      },
+      {
+        "kind": "git",
+        "path": "packages/core/src/components/tabs.ts",
+        "blob": "704eef979858dae294e403c551816c955d721087",
+        "start": 107,
+        "end": 120,
+        "text": "  #list(snapshot:NavigationState) {\n    if (snapshot.kind === 'navigation') return html`<nav class=\"bar\" part=\"bar\" tabindex=\"-1\" aria-label=${snapshot.label} @focusin=${this.#reveal}>\n      <div class=\"items\">${snapshot.items.map(item => html`<a role=\"link\" part=\"item\" aria-label=${item.label} title=${item.showLabel === false ? item.label : nothing} href=${item.disabled ? nothing : item.href!}\n        aria-current=${snapshot.selected === item.id ? 'page' : nothing} aria-disabled=${item.disabled ? 'true' : nothing}\n        tabindex=${item.disabled ? '-1' : nothing} @click=${(event: MouseEvent) => this.#activate(event,item,snapshot)}>${this.#content(item)}</a>`)}</div>\n    </nav>`;\n    const enabled=snapshot.items.filter(item=>!item.disabled);\n    const tabStop=enabled.find(item=>item.id === this.#focused)?.id ?? snapshot.selected ?? enabled[0]?.id;\n    return html`<div class=\"bar\" part=\"bar\" tabindex=\"-1\" role=\"tablist\" aria-label=${snapshot.label} aria-orientation=\"horizontal\" @focusout=${this.#leave} @focusin=${this.#reveal}>\n      <div class=\"items\">${snapshot.items.map(item => html`<button part=\"item\" aria-label=${item.label} title=${item.showLabel === false ? item.label : nothing} id=${'tab-'+item.id} type=\"button\" role=\"tab\"\n        aria-selected=${String(snapshot.selected === item.id)} aria-controls=${'panel-'+item.id}\n        ?disabled=${item.disabled} tabindex=${item.id === tabStop ? 0 : -1}\n        @click=${(event: MouseEvent) => this.#activate(event,item,snapshot)}\n        @keydown=${(event: KeyboardEvent) => this.#move(event,item,snapshot)}>${this.#content(item)}</button>`)}</div>"
+      }
+    ],
+    "N2": [
+      {
+        "kind": "git",
+        "path": "packages/core/src/components/navigation-overflow.ts",
+        "blob": "38c5d7607802c7cfb90628f8c4f00f7dba92c720",
+        "start": 26,
+        "end": 32,
+        "text": "    if(this.#viewport!==viewport){\n      this.#detach();this.#viewport=viewport;\n      viewport.addEventListener('scroll',this.#schedule,{passive:true});\n      viewport.addEventListener('mousedown',this.#down);\n      viewport.addEventListener('dragstart',this.#nativeDrag);\n      const epoch=this.#epoch;\n      this.#resize=new ResizeObserver(()=>{if(epoch===this.#epoch)this.#schedule();});"
+      },
+      {
+        "kind": "git",
+        "path": "packages/core/src/components/navigation-overflow.ts",
+        "blob": "38c5d7607802c7cfb90628f8c4f00f7dba92c720",
+        "start": 89,
+        "end": 112,
+        "text": "  consumeClick(event:MouseEvent):boolean {\n    if(!this.#suppressClick||event.detail===0)return false;\n    this.#suppressClick=false;return true;\n  }\n  #down=(event:MouseEvent):void=>{\n    this.#finishDrag(true);\n    if(event.defaultPrevented||event.button!==0||event.altKey||event.ctrlKey||event.metaKey||event.shiftKey||!this.#viewport)return;\n    this.#drag={viewport:this.#viewport,start:event.clientX,offset:this.#viewport.scrollLeft};\n    window.addEventListener('mousemove',this.#move);window.addEventListener('mouseup',this.#up);window.addEventListener('blur',this.#blur);\n  };\n  #move=(event:MouseEvent):void=>{\n    const drag=this.#drag;if(!drag)return;\n    if(event.buttons===0||drag.viewport!==this.#viewport||!this.host.isConnected){this.#finishDrag();return;}\n    const distance=event.clientX-drag.start;\n    if(!this.#suppressClick&&Math.abs(distance)<=1)return;\n    this.#suppressClick=true;event.preventDefault();drag.viewport.scrollLeft=drag.offset-distance;this.#schedule();\n  };\n  #nativeDrag=(event:DragEvent):void=>{if(this.#drag)event.preventDefault();};\n  #up=():void=>{this.#finishDrag(true);};\n  #blur=():void=>{this.#finishDrag();};\n  #finishDrag(preserveClick=false):void {\n    if(this.#drag){window.removeEventListener('mousemove',this.#move);window.removeEventListener('mouseup',this.#up);window.removeEventListener('blur',this.#blur);this.#drag=null;}\n    if(!preserveClick)this.#suppressClick=false;\n  }"
+      },
+      {
+        "kind": "git",
+        "path": "packages/core/src/components/tabs.ts",
+        "blob": "704eef979858dae294e403c551816c955d721087",
+        "start": 59,
+        "end": 78,
+        "text": "  #model = navigationState({kind:'navigation',label:'Sections',selected:null,items:[]});\n  #focused: string | null = null;\n  readonly #overflow=new NavigationOverflowController(this);\n  #scrollFocused:{side:'start'|'end';button:EventTarget|null}|null=null;\n  protected updated():void {this.#overflow.update(this.state.selected);}\n  disconnectedCallback():void {super.disconnectedCallback();this.#scrollFocused=null;}\n  get state(): NavigationState { return this.#model; }\n  set state(value: NavigationState) {\n    const next = navigationState(value), previous = this.#model;\n    this.#model = next; this.#focused = null; this.requestUpdate('state', previous);\n  }\n  #activate(event: MouseEvent, item: NavigationItem, snapshot: NavigationState): void {\n    if (snapshot !== this.state || item.disabled || this.#overflow.consumeClick(event)) { event.preventDefault(); return; }\n    if (event.defaultPrevented) return;\n    if (snapshot.kind === 'navigation' && (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey)) return;\n    const intent: NavigationSelectionEvent = new CustomEvent('ha-selection-request', {\n      detail: Object.freeze({kind:snapshot.kind,id:item.id}), bubbles:true, composed:true, cancelable:true,\n    });\n    if (!this.dispatchEvent(intent)) event.preventDefault();\n  }"
+      },
+      {
+        "kind": "git",
+        "path": "packages/core/src/components/tabs.ts",
+        "blob": "704eef979858dae294e403c551816c955d721087",
+        "start": 107,
+        "end": 120,
+        "text": "  #list(snapshot:NavigationState) {\n    if (snapshot.kind === 'navigation') return html`<nav class=\"bar\" part=\"bar\" tabindex=\"-1\" aria-label=${snapshot.label} @focusin=${this.#reveal}>\n      <div class=\"items\">${snapshot.items.map(item => html`<a role=\"link\" part=\"item\" aria-label=${item.label} title=${item.showLabel === false ? item.label : nothing} href=${item.disabled ? nothing : item.href!}\n        aria-current=${snapshot.selected === item.id ? 'page' : nothing} aria-disabled=${item.disabled ? 'true' : nothing}\n        tabindex=${item.disabled ? '-1' : nothing} @click=${(event: MouseEvent) => this.#activate(event,item,snapshot)}>${this.#content(item)}</a>`)}</div>\n    </nav>`;\n    const enabled=snapshot.items.filter(item=>!item.disabled);\n    const tabStop=enabled.find(item=>item.id === this.#focused)?.id ?? snapshot.selected ?? enabled[0]?.id;\n    return html`<div class=\"bar\" part=\"bar\" tabindex=\"-1\" role=\"tablist\" aria-label=${snapshot.label} aria-orientation=\"horizontal\" @focusout=${this.#leave} @focusin=${this.#reveal}>\n      <div class=\"items\">${snapshot.items.map(item => html`<button part=\"item\" aria-label=${item.label} title=${item.showLabel === false ? item.label : nothing} id=${'tab-'+item.id} type=\"button\" role=\"tab\"\n        aria-selected=${String(snapshot.selected === item.id)} aria-controls=${'panel-'+item.id}\n        ?disabled=${item.disabled} tabindex=${item.id === tabStop ? 0 : -1}\n        @click=${(event: MouseEvent) => this.#activate(event,item,snapshot)}\n        @keydown=${(event: KeyboardEvent) => this.#move(event,item,snapshot)}>${this.#content(item)}</button>`)}</div>"
+      }
+    ]
+  },
+  "checks": {
+    "N1": {
+      "twoRounds": 2,
+      "calls": 3,
+      "retained": 2,
+      "extraRead": "extra-read-round",
+      "matchedPromptSha256": "4773782cf3dc15e14894de423775a46cc93b693fea5160573a7b2f0b57fca8f5",
+      "baseAuthorization": true,
+      "writeTrap": "dry-run-write-port"
+    },
+    "N2": {
+      "twoRounds": 2,
+      "calls": 3,
+      "retained": 2,
+      "extraRead": "extra-read-round",
+      "matchedPromptSha256": "0f3807ef6380e2c9320606d200492c4c286e484ffcd0f8f34339303e5d64bb43",
+      "baseAuthorization": true,
+      "writeTrap": "dry-run-write-port"
+    }
+  },
+  "foreignCitationRejected": true
+}
