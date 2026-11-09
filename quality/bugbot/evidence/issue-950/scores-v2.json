@@ -1,0 +1,649 @@
+{
+  "trials": 216,
+  "groups": {
+    "frozen-replay/gpt-6-luna/current": {
+      "quality": {
+        "precision": 0.47368421052631576,
+        "recall": 1.0,
+        "f1": 0.6428571428571429,
+        "exactLocation": 1.0,
+        "severity": 1.0,
+        "category": 1.0,
+        "brier": 0.4968789473684209
+      },
+      "status": {
+        "completed": 18
+      },
+      "totals": {
+        "severity": 9,
+        "category": 9,
+        "squaredError": 9.440699999999998,
+        "unsupported": 10,
+        "detected": 9,
+        "retained": 9,
+        "exact": 9,
+        "missedDetection": 0,
+        "missedFinal": 0,
+        "inconclusive": 0
+      },
+      "wallMs": {
+        "p50": 14936.0,
+        "p95": 27612,
+        "max": 27612
+      },
+      "verificationWallMs": null,
+      "inputTokens": null,
+      "outputTokens": null,
+      "calls": 12,
+      "totalObservedInputTokens": 1076924,
+      "totalObservedOutputTokens": 10267,
+      "missingUsage": 0
+    },
+    "frozen-replay/gpt-6-luna/original-context": {
+      "quality": {
+        "precision": 1.0,
+        "recall": 0.1111111111111111,
+        "f1": 0.19999999999999998,
+        "exactLocation": 1.0,
+        "severity": 1.0,
+        "category": 1.0,
+        "brier": 0.0025000000000000044
+      },
+      "status": {
+        "completed": 7,
+        "failed": 11
+      },
+      "totals": {
+        "severity": 1,
+        "category": 1,
+        "squaredError": 0.0025000000000000044,
+        "unsupported": 0,
+        "detected": 9,
+        "retained": 1,
+        "exact": 1,
+        "missedDetection": 0,
+        "missedFinal": 8,
+        "inconclusive": 5
+      },
+      "wallMs": {
+        "p50": 9850.5,
+        "p95": 27227,
+        "max": 27227
+      },
+      "verificationWallMs": {
+        "p50": 9678,
+        "p95": 27227,
+        "max": 27227
+      },
+      "inputTokens": {
+        "p50": 42822.5,
+        "p95": 241764,
+        "max": 241764
+      },
+      "outputTokens": {
+        "p50": 355.0,
+        "p95": 1052,
+        "max": 1052
+      },
+      "calls": 18,
+      "totalObservedInputTokens": 1065015,
+      "totalObservedOutputTokens": 7536,
+      "missingUsage": 0
+    },
+    "frozen-replay/gpt-6-luna/application-evidence": {
+      "quality": {
+        "precision": 0.7142857142857143,
+        "recall": 0.5555555555555556,
+        "f1": 0.6250000000000001,
+        "exactLocation": 1.0,
+        "severity": 1.0,
+        "category": 1.0,
+        "brier": 0.2596428571428571
+      },
+      "status": {
+        "completed": 16,
+        "failed": 2
+      },
+      "totals": {
+        "severity": 5,
+        "category": 5,
+        "squaredError": 1.8175,
+        "unsupported": 2,
+        "detected": 9,
+        "retained": 5,
+        "exact": 5,
+        "missedDetection": 0,
+        "missedFinal": 4,
+        "inconclusive": 4
+      },
+      "wallMs": {
+        "p50": 9774.0,
+        "p95": 20495,
+        "max": 20495
+      },
+      "verificationWallMs": {
+        "p50": 9773.0,
+        "p95": 20494,
+        "max": 20494
+      },
+      "inputTokens": {
+        "p50": 38165.0,
+        "p95": 108474,
+        "max": 108474
+      },
+      "outputTokens": {
+        "p50": 322.5,
+        "p95": 917,
+        "max": 917
+      },
+      "calls": 21,
+      "totalObservedInputTokens": 698558,
+      "totalObservedOutputTokens": 6510,
+      "missingUsage": 0
+    },
+    "frozen-replay/gpt-6.1-sol/current": {
+      "quality": {
+        "precision": 0.7272727272727273,
+        "recall": 0.8888888888888888,
+        "f1": 0.7999999999999999,
+        "exactLocation": 1.0,
+        "severity": 1.0,
+        "category": 1.0,
+        "brier": 0.24691818181818181
+      },
+      "status": {
+        "completed": 17,
+        "failed": 1
+      },
+      "totals": {
+        "severity": 8,
+        "category": 8,
+        "squaredError": 2.7161,
+        "unsupported": 3,
+        "detected": 8,
+        "retained": 8,
+        "exact": 8,
+        "missedDetection": 1,
+        "missedFinal": 1,
+        "inconclusive": 0
+      },
+      "wallMs": {
+        "p50": 20034.5,
+        "p95": 119718,
+        "max": 119718
+      },
+      "verificationWallMs": null,
+      "inputTokens": null,
+      "outputTokens": null,
+      "calls": 13,
+      "totalObservedInputTokens": 2204300,
+      "totalObservedOutputTokens": 11766,
+      "missingUsage": 1
+    },
+    "frozen-replay/gpt-6.1-sol/original-context": {
+      "quality": {
+        "precision": 1.0,
+        "recall": 0.1111111111111111,
+        "f1": 0.19999999999999998,
+        "exactLocation": 1.0,
+        "severity": 1.0,
+        "category": 1.0,
+        "brier": 0.0025000000000000044
+      },
+      "status": {
+        "completed": 12,
+        "failed": 6
+      },
+      "totals": {
+        "severity": 1,
+        "category": 1,
+        "squaredError": 0.0025000000000000044,
+        "unsupported": 0,
+        "detected": 9,
+        "retained": 1,
+        "exact": 1,
+        "missedDetection": 0,
+        "missedFinal": 8,
+        "inconclusive": 9
+      },
+      "wallMs": {
+        "p50": 12604.0,
+        "p95": 28158,
+        "max": 28158
+      },
+      "verificationWallMs": {
+        "p50": 11415.0,
+        "p95": 16297,
+        "max": 16297
+      },
+      "inputTokens": {
+        "p50": 42721.0,
+        "p95": 97864,
+        "max": 97864
+      },
+      "outputTokens": {
+        "p50": 279.0,
+        "p95": 704,
+        "max": 704
+      },
+      "calls": 19,
+      "totalObservedInputTokens": 881358,
+      "totalObservedOutputTokens": 5420,
+      "missingUsage": 0
+    },
+    "frozen-replay/gpt-6.1-sol/application-evidence": {
+      "quality": {
+        "precision": 1.0,
+        "recall": 0.3333333333333333,
+        "f1": 0.5,
+        "exactLocation": 1.0,
+        "severity": 1.0,
+        "category": 1.0,
+        "brier": 0.0025000000000000044
+      },
+      "status": {
+        "completed": 18
+      },
+      "totals": {
+        "severity": 3,
+        "category": 3,
+        "squaredError": 0.007500000000000014,
+        "unsupported": 0,
+        "detected": 9,
+        "retained": 3,
+        "exact": 3,
+        "missedDetection": 0,
+        "missedFinal": 6,
+        "inconclusive": 6
+      },
+      "wallMs": {
+        "p50": 11903.0,
+        "p95": 20602,
+        "max": 20602
+      },
+      "verificationWallMs": {
+        "p50": 11887.0,
+        "p95": 20601,
+        "max": 20601
+      },
+      "inputTokens": {
+        "p50": 45814.5,
+        "p95": 92811,
+        "max": 92811
+      },
+      "outputTokens": {
+        "p50": 300.5,
+        "p95": 512,
+        "max": 512
+      },
+      "calls": 21,
+      "totalObservedInputTokens": 939724,
+      "totalObservedOutputTokens": 5610,
+      "missingUsage": 0
+    },
+    "full-review/gpt-6-luna/current": {
+      "quality": {
+        "precision": 0.875,
+        "recall": 0.7777777777777778,
+        "f1": 0.823529411764706,
+        "exactLocation": 1.0,
+        "severity": 1.0,
+        "category": 0.5714285714285714,
+        "brier": 0.11826249999999999
+      },
+      "status": {
+        "completed": 18
+      },
+      "totals": {
+        "severity": 7,
+        "category": 4,
+        "squaredError": 0.9460999999999999,
+        "unsupported": 1,
+        "detected": 7,
+        "retained": 7,
+        "exact": 7,
+        "missedDetection": 2,
+        "missedFinal": 2,
+        "inconclusive": 0
+      },
+      "wallMs": {
+        "p50": 33037.5,
+        "p95": 63943,
+        "max": 63943
+      },
+      "verificationWallMs": null,
+      "inputTokens": null,
+      "outputTokens": null,
+      "calls": 25,
+      "totalObservedInputTokens": 2903487,
+      "totalObservedOutputTokens": 25806,
+      "missingUsage": 0
+    },
+    "full-review/gpt-6-luna/original-context": {
+      "quality": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0,
+        "exactLocation": 0.0,
+        "severity": 0.0,
+        "category": 0.0,
+        "brier": null
+      },
+      "status": {
+        "completed": 11,
+        "failed": 7
+      },
+      "totals": {
+        "severity": 0,
+        "category": 0,
+        "squaredError": 0,
+        "unsupported": 0,
+        "detected": 8,
+        "retained": 0,
+        "exact": 0,
+        "missedDetection": 1,
+        "missedFinal": 9,
+        "inconclusive": 2
+      },
+      "wallMs": {
+        "p50": 40331.5,
+        "p95": 70398,
+        "max": 70398
+      },
+      "verificationWallMs": {
+        "p50": 0,
+        "p95": 17639,
+        "max": 17639
+      },
+      "inputTokens": {
+        "p50": 45034,
+        "p95": 249934,
+        "max": 249934
+      },
+      "outputTokens": {
+        "p50": 466,
+        "p95": 1195,
+        "max": 1195
+      },
+      "calls": 27,
+      "totalObservedInputTokens": 3492082,
+      "totalObservedOutputTokens": 28323,
+      "missingUsage": 0
+    },
+    "full-review/gpt-6-luna/application-evidence": {
+      "quality": {
+        "precision": 1.0,
+        "recall": 0.1111111111111111,
+        "f1": 0.19999999999999998,
+        "exactLocation": 1.0,
+        "severity": 1.0,
+        "category": 1.0,
+        "brier": 0.004899999999999993
+      },
+      "status": {
+        "completed": 11,
+        "failed": 7
+      },
+      "totals": {
+        "severity": 1,
+        "category": 1,
+        "squaredError": 0.004899999999999993,
+        "unsupported": 0,
+        "detected": 7,
+        "retained": 1,
+        "exact": 1,
+        "missedDetection": 2,
+        "missedFinal": 8,
+        "inconclusive": 2
+      },
+      "wallMs": {
+        "p50": 34044.0,
+        "p95": 70441,
+        "max": 70441
+      },
+      "verificationWallMs": {
+        "p50": 0,
+        "p95": 14123,
+        "max": 14123
+      },
+      "inputTokens": {
+        "p50": 29567.0,
+        "p95": 213032,
+        "max": 213032
+      },
+      "outputTokens": {
+        "p50": 352.5,
+        "p95": 780,
+        "max": 780
+      },
+      "calls": 28,
+      "totalObservedInputTokens": 3144614,
+      "totalObservedOutputTokens": 26880,
+      "missingUsage": 0
+    },
+    "full-review/gpt-6.1-sol/current": {
+      "quality": {
+        "precision": 0.8571428571428571,
+        "recall": 0.6666666666666666,
+        "f1": 0.75,
+        "exactLocation": 0.6666666666666666,
+        "severity": 1.0,
+        "category": 1.0,
+        "brier": 0.1344142857142857
+      },
+      "status": {
+        "completed": 14,
+        "failed": 4
+      },
+      "totals": {
+        "severity": 6,
+        "category": 6,
+        "squaredError": 0.9409,
+        "unsupported": 1,
+        "detected": 6,
+        "retained": 6,
+        "exact": 4,
+        "missedDetection": 3,
+        "missedFinal": 3,
+        "inconclusive": 0
+      },
+      "wallMs": {
+        "p50": 45051.5,
+        "p95": 298580,
+        "max": 298580
+      },
+      "verificationWallMs": null,
+      "inputTokens": null,
+      "outputTokens": null,
+      "calls": 34,
+      "totalObservedInputTokens": 5842880,
+      "totalObservedOutputTokens": 35617,
+      "missingUsage": 7
+    },
+    "full-review/gpt-6.1-sol/original-context": {
+      "quality": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0,
+        "exactLocation": 0.0,
+        "severity": 0.0,
+        "category": 0.0,
+        "brier": null
+      },
+      "status": {
+        "completed": 11,
+        "failed": 7
+      },
+      "totals": {
+        "severity": 0,
+        "category": 0,
+        "squaredError": 0,
+        "unsupported": 0,
+        "detected": 9,
+        "retained": 0,
+        "exact": 0,
+        "missedDetection": 0,
+        "missedFinal": 9,
+        "inconclusive": 5
+      },
+      "wallMs": {
+        "p50": 44704.0,
+        "p95": 142245,
+        "max": 142245
+      },
+      "verificationWallMs": {
+        "p50": 0,
+        "p95": 21780,
+        "max": 21780
+      },
+      "inputTokens": {
+        "p50": 39630,
+        "p95": 132045,
+        "max": 132045
+      },
+      "outputTokens": {
+        "p50": 364,
+        "p95": 548,
+        "max": 548
+      },
+      "calls": 30,
+      "totalObservedInputTokens": 4661820,
+      "totalObservedOutputTokens": 27408,
+      "missingUsage": 1
+    },
+    "full-review/gpt-6.1-sol/application-evidence": {
+      "quality": {
+        "precision": 1.0,
+        "recall": 0.1111111111111111,
+        "f1": 0.19999999999999998,
+        "exactLocation": 1.0,
+        "severity": 1.0,
+        "category": 1.0,
+        "brier": 0.0
+      },
+      "status": {
+        "completed": 12,
+        "failed": 5,
+        "aborted": 1
+      },
+      "totals": {
+        "severity": 1,
+        "category": 1,
+        "squaredError": 0.0,
+        "unsupported": 0,
+        "detected": 9,
+        "retained": 1,
+        "exact": 1,
+        "missedDetection": 0,
+        "missedFinal": 8,
+        "inconclusive": 5
+      },
+      "wallMs": {
+        "p50": 50580.5,
+        "p95": 225049,
+        "max": 225049
+      },
+      "verificationWallMs": {
+        "p50": 6504.0,
+        "p95": 20338,
+        "max": 20338
+      },
+      "inputTokens": {
+        "p50": 88879.5,
+        "p95": 434624,
+        "max": 434624
+      },
+      "outputTokens": {
+        "p50": 427.5,
+        "p95": 1493,
+        "max": 1493
+      },
+      "calls": 31,
+      "totalObservedInputTokens": 4489176,
+      "totalObservedOutputTokens": 25686,
+      "missingUsage": 4
+    }
+  },
+  "pairedGates": {
+    "frozen-replay/gpt-6-luna": {
+      "baselineHistoricalOccurrences": 10,
+      "baselineHistoricalPremises": 4,
+      "baselineSufficient": true,
+      "complete": false,
+      "differences": {
+        "current": [
+          1,
+          3,
+          4
+        ],
+        "original-context": [
+          -1,
+          -1,
+          0
+        ]
+      },
+      "allPositivesExactlyAnchored": false,
+      "pairedReduction": false
+    },
+    "frozen-replay/gpt-6.1-sol": {
+      "baselineHistoricalOccurrences": 3,
+      "baselineHistoricalPremises": 1,
+      "baselineSufficient": false,
+      "complete": false,
+      "differences": {
+        "current": [
+          1,
+          1,
+          1
+        ],
+        "original-context": [
+          0,
+          0,
+          0
+        ]
+      },
+      "allPositivesExactlyAnchored": false,
+      "pairedReduction": false
+    },
+    "full-review/gpt-6-luna": {
+      "baselineHistoricalOccurrences": 1,
+      "baselineHistoricalPremises": 1,
+      "baselineSufficient": false,
+      "complete": false,
+      "differences": {
+        "current": [
+          0,
+          0,
+          1
+        ],
+        "original-context": [
+          0,
+          0,
+          0
+        ]
+      },
+      "allPositivesExactlyAnchored": false,
+      "pairedReduction": false
+    },
+    "full-review/gpt-6.1-sol": {
+      "baselineHistoricalOccurrences": 0,
+      "baselineHistoricalPremises": 0,
+      "baselineSufficient": false,
+      "complete": false,
+      "differences": {
+        "current": [
+          0,
+          0,
+          1
+        ],
+        "original-context": [
+          0,
+          0,
+          0
+        ]
+      },
+      "allPositivesExactlyAnchored": false,
+      "pairedReduction": false
+    }
+  }
+}

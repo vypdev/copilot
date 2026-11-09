@@ -1,0 +1,26 @@
+{
+  "M1": [
+    {
+      "id": "c-861a",
+      "path": "docs/household-administration.md",
+      "line": 27,
+      "severity": "medium",
+      "category": "correctness",
+      "trigger": "A reader follows the migration guide link.",
+      "pathToEffect": "The relative target resolves to docs/household-administration-migration.md, which has no tracked entry at the reviewed revision.",
+      "impact": "The migration and rollback link fails."
+    }
+  ],
+  "M2": [
+    {
+      "id": "c-861b",
+      "path": "docs/household-administration.md",
+      "line": 27,
+      "severity": "medium",
+      "category": "correctness",
+      "trigger": "A reader follows the migration guide link.",
+      "pathToEffect": "The relative target resolves to docs/household-administration-migration-missing.md, which has no tracked entry at the reviewed revision.",
+      "impact": "The migration and rollback link fails."
+    }
+  ]
+}

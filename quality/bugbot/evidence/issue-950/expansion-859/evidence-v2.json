@@ -1,0 +1,66 @@
+{
+  "X1": [
+    {
+      "id": "evidence-1",
+      "kind": "git",
+      "head": "e129e76e25deff7314efe3b72996d295cf73f7f3",
+      "path": "backend/src/domus/infrastructure/sqlite_member_profile_schema.py",
+      "blob": "372ee3be7d23cd02b6657a98fc98a84d529cf136",
+      "start": 1,
+      "end": 21,
+      "text": "\"\"\"Schema9 adds separate public/private member records without rewriting historical facts.\"\"\"\n\nPROFILE_TABLES = {\"member_presentations\", \"member_preferences\"}\nPROFILE_STATEMENTS = (\n    \"CREATE TABLE member_presentations(member_id TEXT PRIMARY KEY NOT NULL, \"\n    \"household_id TEXT NOT NULL, alias TEXT, \"\n    \"revision INTEGER NOT NULL CHECK(typeof(revision)='integer' AND revision>=1), \"\n    \"FOREIGN KEY(household_id,member_id) REFERENCES members(household_id,member_id), \"\n    \"CHECK(alias IS NULL OR (typeof(alias)='text' AND length(alias) BETWEEN 1 AND 80)))\",\n    \"CREATE TABLE member_preferences(member_id TEXT PRIMARY KEY NOT NULL, \"\n    \"household_id TEXT NOT NULL, locale TEXT CHECK(locale IS NULL OR locale IN ('en','es')), \"\n    \"routine_participation_summaries INTEGER NOT NULL \"\n    \"CHECK(typeof(routine_participation_summaries)='integer' \"\n    \"AND routine_participation_summaries IN (0,1)), \"\n    \"revision INTEGER NOT NULL CHECK(typeof(revision)='integer' AND revision>=1), \"\n    \"FOREIGN KEY(household_id,member_id) REFERENCES members(household_id,member_id))\",\n    \"INSERT INTO member_presentations(member_id,household_id,alias,revision) \"\n    \"SELECT member_id,household_id,NULL,1 FROM members\",\n    \"INSERT INTO member_preferences(member_id,household_id,locale,\"\n    \"routine_participation_summaries,revision) SELECT member_id,household_id,NULL,1,1 FROM members\",\n)"
+    },
+    {
+      "id": "evidence-2",
+      "kind": "git",
+      "head": "e129e76e25deff7314efe3b72996d295cf73f7f3",
+      "path": "backend/src/domus/infrastructure/sqlite.py",
+      "blob": "44c5d7d1c2326f4105ba9fe387488c6309992720",
+      "start": 70,
+      "end": 101,
+      "text": "IDENTITY_STATEMENTS = (\n    \"CREATE TABLE members(member_id TEXT PRIMARY KEY, \"\n    \"household_id TEXT NOT NULL REFERENCES households(household_id), ha_user_id TEXT NOT NULL, \"\n    \"role TEXT NOT NULL CHECK(role IN ('administrator','adult','restricted','viewer')), \"\n    \"status TEXT NOT NULL CHECK(status IN ('pending','active','suspended','archived')), \"\n    \"revision INTEGER NOT NULL CHECK(revision>=1), exceptions TEXT NOT NULL, \"\n    \"UNIQUE(household_id,ha_user_id))\",\n    \"CREATE TABLE household_policy(household_id TEXT PRIMARY KEY \"\n    \"REFERENCES households(household_id), mapping_mode TEXT NOT NULL, target_ha_user_id TEXT, \"\n    \"revision INTEGER NOT NULL CHECK(revision>=1), adjustments TEXT NOT NULL, \"\n    \"CHECK((mapping_mode='all_ha_administrators' AND target_ha_user_id IS NULL) \"\n    \"OR (mapping_mode IN ('setup_administrator','selected_ha_user') \"\n    \"AND target_ha_user_id IS NOT NULL)))\",\n)\nRECOVERY_STATEMENTS = (\n    \"CREATE TABLE recovery_requests(request_id TEXT PRIMARY KEY, \"\n    \"household_id TEXT NOT NULL REFERENCES households(household_id), \"\n    \"target_ha_user_id TEXT NOT NULL, revision INTEGER NOT NULL CHECK(revision>=1), \"\n    \"state TEXT NOT NULL CHECK(state IN ('pending','approved','consumed','canceled')), \"\n    \"created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL, detail TEXT NOT NULL)\",\n    \"CREATE INDEX recovery_pending ON recovery_requests(household_id,state,expires_at)\",\n)\nSCHEMA_STATEMENTS = (\n    *BASE_STATEMENTS,\n    *IDENTITY_STATEMENTS,\n    *RECOVERY_STATEMENTS,\n    *HISTORY_STATEMENTS,\n    *TASK_STATEMENTS,\n    *MATERIAL_STATEMENTS,\n    *REVIEW_STATEMENTS,\n    *RECURRENCE_STATEMENTS,\n    *PROFILE_STATEMENTS,"
+    },
+    {
+      "id": "evidence-3",
+      "kind": "git",
+      "head": "e129e76e25deff7314efe3b72996d295cf73f7f3",
+      "path": "backend/src/domus/infrastructure/sqlite_task_schema.py",
+      "blob": "60aaffcfa49607cafd5d84d2616dc63f5edc9fa6",
+      "start": 1,
+      "end": 8,
+      "text": "\"\"\"Task table constraints preserve scoped snapshots and both sides of an active cycle.\"\"\"\n\nTASK_TABLES = {\"task_policy\", \"task_definitions\", \"task_occurrences\", \"task_cycles\"}\nTASK_STATEMENTS = (\n    \"CREATE UNIQUE INDEX task_member_scope ON members(household_id,member_id)\",\n    \"CREATE TABLE task_policy(household_id TEXT PRIMARY KEY NOT NULL \"\n    \"REFERENCES households(household_id), \"\n    \"revision INTEGER NOT NULL CHECK(typeof(revision)='integer' AND revision>=1), \""
+    }
+  ],
+  "X2": [
+    {
+      "id": "evidence-1",
+      "kind": "git",
+      "head": "9e65fd088a52cd10ec3ca6a846959c39947ffb16",
+      "path": "backend/src/domus/infrastructure/sqlite_member_profile_schema.py",
+      "blob": "7918d6201c57c060f168b3c1d7f1b3b6a8554295",
+      "start": 1,
+      "end": 21,
+      "text": "\"\"\"Schema9 adds separate public/private member records without rewriting historical facts.\"\"\"\n\nPROFILE_TABLES = {\"member_presentations\", \"member_preferences\"}\nPROFILE_STATEMENTS = (\n    \"CREATE TABLE member_presentations(member_id TEXT PRIMARY KEY NOT NULL, \"\n    \"household_id TEXT NOT NULL, alias TEXT, \"\n    \"revision INTEGER NOT NULL CHECK(typeof(revision)='integer' AND revision>=1), \"\n    \"FOREIGN KEY(household_id,member_id) REFERENCES members(household_id,role), \"\n    \"CHECK(alias IS NULL OR (typeof(alias)='text' AND length(alias) BETWEEN 1 AND 80)))\",\n    \"CREATE TABLE member_preferences(member_id TEXT PRIMARY KEY NOT NULL, \"\n    \"household_id TEXT NOT NULL, locale TEXT CHECK(locale IS NULL OR locale IN ('en','es')), \"\n    \"routine_participation_summaries INTEGER NOT NULL \"\n    \"CHECK(typeof(routine_participation_summaries)='integer' \"\n    \"AND routine_participation_summaries IN (0,1)), \"\n    \"revision INTEGER NOT NULL CHECK(typeof(revision)='integer' AND revision>=1), \"\n    \"FOREIGN KEY(household_id,member_id) REFERENCES members(household_id,member_id))\",\n    \"INSERT INTO member_presentations(member_id,household_id,alias,revision) \"\n    \"SELECT member_id,household_id,NULL,1 FROM members\",\n    \"INSERT INTO member_preferences(member_id,household_id,locale,\"\n    \"routine_participation_summaries,revision) SELECT member_id,household_id,NULL,1,1 FROM members\",\n)"
+    },
+    {
+      "id": "evidence-2",
+      "kind": "git",
+      "head": "9e65fd088a52cd10ec3ca6a846959c39947ffb16",
+      "path": "backend/src/domus/infrastructure/sqlite.py",
+      "blob": "44c5d7d1c2326f4105ba9fe387488c6309992720",
+      "start": 70,
+      "end": 101,
+      "text": "IDENTITY_STATEMENTS = (\n    \"CREATE TABLE members(member_id TEXT PRIMARY KEY, \"\n    \"household_id TEXT NOT NULL REFERENCES households(household_id), ha_user_id TEXT NOT NULL, \"\n    \"role TEXT NOT NULL CHECK(role IN ('administrator','adult','restricted','viewer')), \"\n    \"status TEXT NOT NULL CHECK(status IN ('pending','active','suspended','archived')), \"\n    \"revision INTEGER NOT NULL CHECK(revision>=1), exceptions TEXT NOT NULL, \"\n    \"UNIQUE(household_id,ha_user_id))\",\n    \"CREATE TABLE household_policy(household_id TEXT PRIMARY KEY \"\n    \"REFERENCES households(household_id), mapping_mode TEXT NOT NULL, target_ha_user_id TEXT, \"\n    \"revision INTEGER NOT NULL CHECK(revision>=1), adjustments TEXT NOT NULL, \"\n    \"CHECK((mapping_mode='all_ha_administrators' AND target_ha_user_id IS NULL) \"\n    \"OR (mapping_mode IN ('setup_administrator','selected_ha_user') \"\n    \"AND target_ha_user_id IS NOT NULL)))\",\n)\nRECOVERY_STATEMENTS = (\n    \"CREATE TABLE recovery_requests(request_id TEXT PRIMARY KEY, \"\n    \"household_id TEXT NOT NULL REFERENCES households(household_id), \"\n    \"target_ha_user_id TEXT NOT NULL, revision INTEGER NOT NULL CHECK(revision>=1), \"\n    \"state TEXT NOT NULL CHECK(state IN ('pending','approved','consumed','canceled')), \"\n    \"created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL, detail TEXT NOT NULL)\",\n    \"CREATE INDEX recovery_pending ON recovery_requests(household_id,state,expires_at)\",\n)\nSCHEMA_STATEMENTS = (\n    *BASE_STATEMENTS,\n    *IDENTITY_STATEMENTS,\n    *RECOVERY_STATEMENTS,\n    *HISTORY_STATEMENTS,\n    *TASK_STATEMENTS,\n    *MATERIAL_STATEMENTS,\n    *REVIEW_STATEMENTS,\n    *RECURRENCE_STATEMENTS,\n    *PROFILE_STATEMENTS,"
+    },
+    {
+      "id": "evidence-3",
+      "kind": "git",
+      "head": "9e65fd088a52cd10ec3ca6a846959c39947ffb16",
+      "path": "backend/src/domus/infrastructure/sqlite_task_schema.py",
+      "blob": "60aaffcfa49607cafd5d84d2616dc63f5edc9fa6",
+      "start": 1,
+      "end": 8,
+      "text": "\"\"\"Task table constraints preserve scoped snapshots and both sides of an active cycle.\"\"\"\n\nTASK_TABLES = {\"task_policy\", \"task_definitions\", \"task_occurrences\", \"task_cycles\"}\nTASK_STATEMENTS = (\n    \"CREATE UNIQUE INDEX task_member_scope ON members(household_id,member_id)\",\n    \"CREATE TABLE task_policy(household_id TEXT PRIMARY KEY NOT NULL \"\n    \"REFERENCES households(household_id), \"\n    \"revision INTEGER NOT NULL CHECK(typeof(revision)='integer' AND revision>=1), \""
+    }
+  ]
+}

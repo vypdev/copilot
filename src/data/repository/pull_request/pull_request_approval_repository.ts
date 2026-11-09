@@ -32,7 +32,7 @@ export interface ApprovalRepositorySettings {
     readonly branchPrefixes: Readonly<Record<'feature' | 'bugfix' | 'documentation' | 'chore', string>>;
     readonly bugbotSeverity: string;
     readonly bugbotDryRun: boolean;
-    readonly bugbotVerification?: ApprovalBugbotVerificationPolicy;
+    readonly readBugbotVerificationPolicy?: (target: ApprovalObservationTarget) => Promise<ApprovalBugbotVerificationPolicy>;
     readonly bugbotIgnorePatterns: readonly string[];
     readonly githubToken?: string;
     readonly locale?: string;
@@ -157,7 +157,13 @@ export class PullRequestApprovalRepository implements PullRequestApprovalPort {
         }));
         const botId = user.data.id;
         const botCards = comments.filter((comment: ApprovalGithubComment) => comment.user?.id === botId && /<!-- copilot-bugbot-status schema="1"/u.test(comment.body ?? ''));
-        const verification = this.settings.bugbotVerification;
+        const readVerificationPolicy = this.settings.readBugbotVerificationPolicy;
+        const verification = readVerificationPolicy
+            ? await readApprovalEvidence('policy', () => readVerificationPolicy(target)) : undefined;
+        if (readVerificationPolicy && !verification?.requireReceipt
+            && !(verification?.requireReceipt === false && ['disabled', 'shadow'].includes(verification.mode))) {
+            throw approvalEvidenceError('policy', 'invalid-response');
+        }
         const bugbot = verification?.requireReceipt
             ? readApprovalBugbotVerification(verification, { repositoryId: pull.base.repo?.id ?? 0, pullNumber: pull.number,
                 headSha, baseSha, testedMergeSha }, workflowRuns, checkRuns)

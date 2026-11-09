@@ -1,5 +1,7 @@
 # #950 pilot report
 
+The [measured v2 report](results-v2.md) supersedes this preparation record.
+
 **Status: unqualified.** The six repository subjects and seven replay hypotheses
 are frozen. All three local paired controls reproduced the intended contrast.
 The planned model comparison remains unexecuted. No production setting is

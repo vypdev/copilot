@@ -1,0 +1,46 @@
+--- run-pilot.cjs
++++ run-pilot.cjs
+@@ -91,12 +91,15 @@
+     assert(Buffer.byteLength(JSON.stringify(evidence)) <= manifest.labLimits.candidateRetainedBytes);
+     assert.equal(new Set(evidence.map(item => item.id)).size, evidence.length);
+     for (const item of evidence) {
+-        assert(['git', 'dependency', 'native-ci'].includes(item.kind));
++        assert(['git', 'git-tree', 'dependency', 'native-ci'].includes(item.kind));
+         if (item.kind === 'git') {
+             assert.equal(item.head, fixture.binding.head);
+             const locator = item.head + ':' + item.path;
+             assert.equal(git(fixture.cwd, 'rev-parse', locator).trim(), item.blob);
+             assert.equal(git(fixture.cwd, 'show', locator).split(/\r?\n/).slice(item.start - 1, item.end).join('\n'), item.text);
++        } else if (item.kind === 'git-tree') {
++            assert.equal(item.head, fixture.binding.head);
++            assert.equal(git(fixture.cwd, 'ls-tree', item.head, '--', item.path).trim(), item.listing);
+         } else if (item.kind === 'dependency') {
+             assert.equal(git(fixture.cwd, 'rev-parse', 'HEAD:uv.lock').trim(), item.lockBlob);
+             assert.equal(sha(item.text), item.sourceSha256);
+@@ -294,7 +297,7 @@
+     const fixtures = Object.fromEntries(Object.keys(bindings).map(id => [id, fixture(subjects, id)]));
+     for (const [id, item] of Object.entries(fixtures)) checkEvidence(id, item);
+     const ledger = fs.readFileSync(path.join(__dirname, 'trial-ledger.jsonl'), 'utf8').trim().split('\n').map(JSON.parse);
+-    assert.equal(ledger.length, 216);
++    assert.equal(ledger.length, manifest.subjectTrialCount);
+     const trials = ledger.map(({ trial, phase, repetition, model, variant, subject }) => ({ trial, phase, repetition, model, variant, subject }));
+     assert.equal(sha(fs.readFileSync(path.join(__dirname, 'evidence-v2.json'))), manifest.evidencePacketSha256);
+     if (mode === 'preflight') {
+@@ -311,7 +314,7 @@
+             const checked = await Promise.all(Object.keys(fixtures).flatMap(subject => manifest.variants.map(variant =>
+                 trial({ ...row, subject, variant, phase: 'frozen-replay' }, fixtures[subject], true))));
+             for (const result of checked) assert.equal(result.status, 'completed', JSON.stringify(result));
+-            console.log('18 controlled production dry-runs passed, pinned evidence and tool matrix verified.');
++            console.log(checked.length + ' controlled production dry-runs passed, pinned evidence and tool matrix verified.');
+         } finally { fs.rmSync(directory, { recursive: true, force: true }); }
+         return;
+     }
+@@ -319,7 +322,7 @@
+     const rows = trials.filter(row => row.phase === mode);
+     const previous = fs.existsSync(output) ? fs.readFileSync(output, 'utf8').trim().split('\n').filter(Boolean).map(JSON.parse) : [];
+     const done = new Set(previous.map(row => row.trial));
+-    if (mode === 'full-review') assert.equal(previous.filter(row => row.phase === 'frozen-replay').length, 108);
++    if (mode === 'full-review') assert.equal(previous.filter(row => row.phase === 'frozen-replay').length, manifest.subjectTrialCount / 2);
+     const pending = rows.filter(row => !done.has(row.trial));
+     const worker = async () => {
+         let row;

@@ -1,0 +1,20 @@
+{
+  "M1": {
+    "base": "171244421fcc6289180bdb94bf4e7bb52a990a1b",
+    "head": "b14c308a28ecad52945a8edac6dce25ba9dfd655",
+    "tree": "45ba3df3701786d602ff082522c5bbfeadd7a72b",
+    "paths": [
+      "docs/household-administration.md"
+    ],
+    "diffSha256": "b817f2ef2f4a850f8d836c7cf07dca930c6ce3be639c79b4acf123932c0fed29"
+  },
+  "M2": {
+    "base": "b14c308a28ecad52945a8edac6dce25ba9dfd655",
+    "head": "0b288c6fef057b390708064ee32c6f21dd824fd6",
+    "tree": "4d49909351088460ee288be3afa82811880823ce",
+    "paths": [
+      "docs/household-administration.md"
+    ],
+    "diffSha256": "132358d4aa1fc8637f64d0782dc1927d5fd3be885e3f6ffd9b38afbbfcb7ea46"
+  }
+}

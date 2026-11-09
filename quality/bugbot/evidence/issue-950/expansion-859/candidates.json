@@ -1,0 +1,26 @@
+{
+  "X1": [
+    {
+      "id": "c-e590",
+      "path": "backend/src/domus/infrastructure/sqlite_member_profile_schema.py",
+      "line": 8,
+      "severity": "medium",
+      "category": "correctness",
+      "trigger": "Fresh schema9 composition installs and backfills member profiles.",
+      "pathToEffect": "The profile foreign key references a pair without an effective unique parent index.",
+      "impact": "SQLite rejects profile backfill with a foreign key mismatch."
+    }
+  ],
+  "X2": [
+    {
+      "id": "c-9f88",
+      "path": "backend/src/domus/infrastructure/sqlite_member_profile_schema.py",
+      "line": 8,
+      "severity": "medium",
+      "category": "correctness",
+      "trigger": "Fresh schema9 composition installs and backfills member profiles.",
+      "pathToEffect": "The presentation foreign key targets household_id and role without an exact unique parent index.",
+      "impact": "SQLite rejects presentation backfill with a foreign key mismatch."
+    }
+  ]
+}

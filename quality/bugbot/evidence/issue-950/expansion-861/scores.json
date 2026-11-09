@@ -1,0 +1,124 @@
+{
+  "original": 288,
+  "expansion": 72,
+  "combined": {
+    "frozen-replay/gpt-6-luna": {
+      "baselineOccurrences": 13,
+      "baselinePremises": 5,
+      "baselineSufficient": true,
+      "added": {
+        "current": {
+          "statuses": {
+            "completed": 6
+          },
+          "unsupported": 3,
+          "positiveRetained": 3
+        },
+        "original-context": {
+          "statuses": {
+            "failed": 5,
+            "completed": 1
+          },
+          "unsupported": 0,
+          "positiveRetained": 0
+        },
+        "application-evidence": {
+          "statuses": {
+            "completed": 5,
+            "failed": 1
+          },
+          "unsupported": 0,
+          "positiveRetained": 2
+        }
+      }
+    },
+    "frozen-replay/gpt-6.1-sol": {
+      "baselineOccurrences": 6,
+      "baselinePremises": 2,
+      "baselineSufficient": true,
+      "added": {
+        "current": {
+          "statuses": {
+            "completed": 6
+          },
+          "unsupported": 3,
+          "positiveRetained": 3
+        },
+        "original-context": {
+          "statuses": {
+            "completed": 5,
+            "failed": 1
+          },
+          "unsupported": 0,
+          "positiveRetained": 0
+        },
+        "application-evidence": {
+          "statuses": {
+            "completed": 6
+          },
+          "unsupported": 0,
+          "positiveRetained": 3
+        }
+      }
+    },
+    "full-review/gpt-6-luna": {
+      "baselineOccurrences": 2,
+      "baselinePremises": 2,
+      "baselineSufficient": false,
+      "added": {
+        "current": {
+          "statuses": {
+            "completed": 6
+          },
+          "unsupported": 0,
+          "positiveRetained": 3
+        },
+        "original-context": {
+          "statuses": {
+            "completed": 4,
+            "failed": 2
+          },
+          "unsupported": 0,
+          "positiveRetained": 0
+        },
+        "application-evidence": {
+          "statuses": {
+            "failed": 2,
+            "completed": 4
+          },
+          "unsupported": 0,
+          "positiveRetained": 1
+        }
+      }
+    },
+    "full-review/gpt-6.1-sol": {
+      "baselineOccurrences": 0,
+      "baselinePremises": 0,
+      "baselineSufficient": false,
+      "added": {
+        "current": {
+          "statuses": {
+            "completed": 6
+          },
+          "unsupported": 0,
+          "positiveRetained": 3
+        },
+        "original-context": {
+          "statuses": {
+            "completed": 6
+          },
+          "unsupported": 0,
+          "positiveRetained": 0
+        },
+        "application-evidence": {
+          "statuses": {
+            "completed": 5,
+            "failed": 1
+          },
+          "unsupported": 0,
+          "positiveRetained": 2
+        }
+      }
+    }
+  }
+}

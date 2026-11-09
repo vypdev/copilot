@@ -115,7 +115,8 @@ function evidenceOctokit(mergeParents = [base, head], attempt = 1, runConclusion
   return client;
 }
 
-function evidenceFixture(verification?: ConstructorParameters<typeof PullRequestApprovalRepository>[1]['bugbotVerification']) {
+type VerificationPolicyRead = NonNullable<ConstructorParameters<typeof PullRequestApprovalRepository>[1]['readBugbotVerificationPolicy']>;
+function evidenceFixture(verification?: Awaited<ReturnType<VerificationPolicyRead>>, readVerification?: VerificationPolicyRead) {
   const pat = evidenceOctokit();
   const original = pat.paginate.iterator.getMockImplementation()!;
   const pages = new Map<unknown, readonly unknown[]>();
@@ -125,7 +126,9 @@ function evidenceFixture(verification?: ConstructorParameters<typeof PullRequest
     else yield* original(method, params);
   });
   (github.getOctokit as jest.Mock).mockReturnValue(pat);
-  return { pat, pages, repository: new PullRequestApprovalRepository('pat', { ...settings, bugbotVerification: verification }) };
+  return { pat, pages, repository: new PullRequestApprovalRepository('pat', {
+    ...settings, readBugbotVerificationPolicy: readVerification ?? (verification ? async () => verification : undefined),
+  }) };
 }
 
 function nativeCheckFixture() {
@@ -865,6 +868,24 @@ describe('issue #950 current-policy Bugbot evidence at the approval consumer', (
     const fact = await evidence(enforced);
     expect(fact.headSha).toBe(head);
     expect(decidePullRequestApproval(await approvalPolicy(), fact).code).toBe('bugbot-missing');
+  });
+
+  it('rereads effective policy during a same-head transition on the same consumer', async () => {
+    const read = jest.fn().mockResolvedValueOnce({ mode: 'disabled', requireReceipt: false }).mockResolvedValueOnce(enforced);
+    const f = evidenceFixture(undefined, read);
+    f.pages.set(f.pat.rest.issues.listComments, [[{ id: 65, user: { id: 20 }, body: legacy }]]);
+    const before = await f.repository.loadEvidence(target);
+    const after = await f.repository.loadEvidence(target);
+    expect(before.headSha).toBe(after.headSha);
+    expect(before.bugbot?.outcome).toBe('complete');
+    expect(after.bugbot).toBeUndefined();
+    expect(read).toHaveBeenCalledTimes(2);
+  });
+
+  it('fails closed when the trusted policy binding returns no policy', async () => {
+    const f = evidenceFixture(undefined, jest.fn().mockResolvedValue(undefined));
+    f.pages.set(f.pat.rest.issues.listComments, [[{ id: 65, user: { id: 20 }, body: legacy }]]);
+    await expect(f.repository.loadEvidence(target)).rejects.toMatchObject({ code: 'provider.contract-invalid' });
   });
 
   it('accepts the unique current-policy and current-attempt native receipt', async () => {
