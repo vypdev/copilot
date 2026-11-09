@@ -9,12 +9,17 @@ Bugbot separates deterministic evaluator checks from optional, cost-bearing mode
 
 ## Repository evidence pilot
 
-The #950 v2 protocol qualifies the source-and-native-CI profile without
-repository probes. All arms use the same read-only detector. The two fresh
-verifiers share a closed tool policy and differ in host-supplied evidence.
-The protocol freezes paired repository cases, two models, three variants and three repetitions. The report separates local controls and historical execution from actual model outcomes. Publication requires measured qualification.
+The #950 pilot measures source-and-native-CI verification without repository
+probes. It freezes paired repository cases, models and repeated attempts, keeps
+expected verdicts outside the model and records all dry-run outcomes. The v3
+retest gives each new verifier a bounded diff excerpt and records gross provider
+input separately from the prompt bytes. Its two experimental arms share the
+same detector and tool policy. Only one receives pinned caller, dependency and
+eligible CI receipts. The unchanged current arm retains production inspection.
+Pilot evidence and the separate detection corpus gate any rollout.
 
-[Specification and pilot status](https://github.com/vypdev/copilot/issues/950)
+[Issue and published design](https://github.com/vypdev/copilot/issues/950) ·
+[Bounded retest and results](https://github.com/vypdev/copilot/blob/develop/quality/bugbot/evidence/issue-950/v3/results.md)
 
 ## JSON value regression
 
