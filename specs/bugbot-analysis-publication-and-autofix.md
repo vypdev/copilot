@@ -3100,3 +3100,105 @@ closure evidence for a particular historical issue.
   incomplete state, observed-effect recovery and preserved human authority.
 - Pending choices: measured model selection, production limits and the approved
   activation surface. No activation is supported while the pilot is incomplete.
+
+## #950 approval and pilot qualification revision
+
+- Status: Proposed refinement of the published Bugbot contract
+- Issue: [#950](https://github.com/vypdev/copilot/issues/950)
+- Capability: `bugbot-analysis-and-autofix`
+
+### 1. Executive summary
+
+Bind approval to the newest authoritative review attempt for the current PR
+revision and effective verification policy. Qualify the first source-and-CI
+profile in a repository-shaped dry run. This revision keeps the published
+requirements, historical matrix and production activation gate.
+
+### 2. Evidence
+
+The existing approval consumer reads native checks and a revision-bound review
+marker. SHA equality alone cannot distinguish a review produced before an
+enforcement change or a failed later attempt at the same SHA.
+
+### 4. Goals
+
+| Requirement | Behavior |
+|---|---|
+| BBE950-R01 | Bind approval evidence to the PR, current revision, effective policy and newest authoritative review attempt. |
+| BBE950-R02 | Compare the three preregistered arms using matched tools and the first source-and-CI profile. |
+
+### 6. Behavior
+
+Publish a versioned machine receipt owned by the canonical Bugbot execution.
+It binds repository ID, PR number, reviewed head and comparison, effective
+policy identity, native attempt identity and observed outcomes for coverage,
+verification and publication. Keep native pending and failed attempts visible
+even when the last verified finding presentation is preserved. Approval reads
+the latest trusted native attempt and its receipt. Missing, stale, ambiguous,
+unavailable or mismatched evidence blocks approval. A subsequent pending,
+inconclusive, failed, canceled or superseded authoritative attempt cannot
+promote an older clean receipt. Dry-run and shadow runs never supply a positive
+approval receipt or supersede the separate authoritative legacy stream.
+
+In disabled mode the legacy marker remains usable subject to the existing
+legacy gates. Shadow observes without changing the legacy approval path. In
+enforced mode require the current policy receipt even after a same-SHA
+configuration change. Rollback starts a new policy generation and requires a
+fresh authoritative review under the effective rollback policy. A prior
+positive receipt from an earlier generation cannot requalify automatically.
+
+The current pilot arm uses the production read-only checkout and inspection
+capabilities. Both experimental arms use the same detection environment and
+fresh verifier without shell or network tools. Only the evidence arm receives
+host-issued immutable source, versioned dependency and matching native CI
+receipts. The main profile executes no reproductions. Local deterministic
+controls remain outside model input. A probe-enabled experiment requires a
+separate preregistration and score.
+
+### 8. Clean Architecture
+
+The review workflow owns attempt and result evidence. The approval application
+reads it through the trusted provider observation port, checks current policy
+and freshness, and remains the only approval decision owner. The pilot runner
+uses pinned Git reads and fail-on-call write ports. It checks tool parity and
+the closed evidence profile before a measured request.
+
+### 14. Testing strategy
+
+| Area | Minimum distinct cases | Behaviors/risks covered |
+|---|---:|---|
+| Approval consumer | 4 | Policy change, later incomplete or failed attempt, rollback |
+| Pilot qualification | 2 | Tool parity and excluded evidence |
+| Total | 6 | Additional cases |
+
+| Case ID | Area | Requirements | Scenario |
+|---|---|---|---|
+| bbe950-revision-C01 | Approval consumer | BBE950-R01 | A clean legacy marker at the same SHA cannot authorize approval after enforcement. |
+| bbe950-revision-C02 | Approval consumer | BBE950-R01 | A later inconclusive authoritative attempt invalidates earlier clean approval evidence. |
+| bbe950-revision-C03 | Approval consumer | BBE950-R01 | A later failed authoritative attempt invalidates earlier clean approval evidence. |
+| bbe950-revision-C04 | Approval consumer | BBE950-R01 | Rollback requires fresh evidence and shadow results cannot authorize approval. |
+| bbe950-revision-C05 | Pilot qualification | BBE950-R02 | Current and both experimental detection calls retain equivalent read-only inspection; verifiers share the same tool policy. |
+| bbe950-revision-C06 | Pilot qualification | BBE950-R02 | The main evidence packet rejects probes, oracle data, later sources and unmatched CI. |
+
+### 15. Documentation
+
+| Path | Change |
+|---|---|
+| `specs/bugbot-analysis-publication-and-autofix.md` | update |
+| `specs/bugbot-review-state-reconciliation.md` | update |
+| `docs/bugbot/quality-observability.mdx` | update |
+
+### 16. Acceptance
+
+Test approval through the real consumer with a controlled provider. Validate
+the v2 pilot's tool matrix and exact evidence inputs before replay, then run
+full review in dry-run. Report invalid and incomplete trials separately from
+clean results. Maintainer activation requires the existing paired efficacy,
+recall, anchor, latency and token gates.
+
+### 17. Requirements traceability
+
+| Requirement | Cases |
+|---|---|
+| BBE950-R01 | bbe950-revision-C01, bbe950-revision-C02, bbe950-revision-C03, bbe950-revision-C04 |
+| BBE950-R02 | bbe950-revision-C05, bbe950-revision-C06 |
