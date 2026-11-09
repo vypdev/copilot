@@ -1936,6 +1936,15 @@ required error or turns required success into failure.
 
 The proposed #950 verification gate covers retained identities before fixed, obsolete or reopened transitions. Candidate dispositions and durable finding states are separate. Inconclusive evidence, omission, failed integrity and human dismissal preserve native thread authority. The existing read-after-write projection owns observed and unknown effects during recovery.
 
+The analysis SDD owns candidate anchors and the optional typed evidence round.
+An explicit historical transition uses the retained finding ID and frozen
+candidate version. Evidence recovered after the freeze may support a verdict
+without changing the anchor or the durable ID. An unavailable or exhausted
+candidate remains inconclusive and preserves its native thread, even when
+other confirmed candidates publish. Invalid receipt provenance fails the
+whole pre-publication batch with zero finding, resolution or approval writes.
+The prior verified projection remains readable.
+
 [Bugbot repository evidence verification](./bugbot-analysis-publication-and-autofix.md#bugbot-repository-evidence-verification)
 
 The finding projection and approval receipt have different lifecycles. An

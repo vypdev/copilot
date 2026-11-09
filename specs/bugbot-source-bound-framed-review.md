@@ -730,6 +730,17 @@ retain their existing truthful partial behavior.
 
 ## Proposed verification contract for #950
 
-The proposed #950 verification gate runs after complete frame aggregation and before ranking, overflow counting or any write. It shares the actual invocation ledger and the existing reviewed source and freshness fences. Valid mixed dispositions can publish confirmed findings while blocking clean approval. A missing required frame or verdict preserves the last verified result.
+The proposed #950 verification gate runs after complete frame aggregation and
+before ranking, overflow counting or any write. The application normalizes the
+anchor on the pinned diff before freezing the candidate. An ambiguous anchor
+stays unresolved. The verifier cannot change the frozen position or identity.
+
+Both verifier calls, bounded retrieval and retries share the actual invocation
+ledger and the reviewed source and freshness fences. The optional typed round
+receives a candidate-bound receipt from the authorized source. Candidate
+exhaustion produces an inconclusive disposition. An intact mixed review can
+publish confirmed findings while blocking clean approval. A missing frame or
+required verdict, an invalid receipt or aggregate exhaustion preserves the
+last verified result and prevents finding or resolution writes.
 
 [Bugbot repository evidence verification](./bugbot-analysis-publication-and-autofix.md#bugbot-repository-evidence-verification)
