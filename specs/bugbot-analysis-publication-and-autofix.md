@@ -2561,3 +2561,506 @@ The scoped corpus keeps the existing 174-case corpus and its references unchange
 with the 200-case per-invocation bound intact. The evidence retains actual baseline
 and candidate samples, failed gates and authored fixture corrections. Historical
 consumer root cause and release adoption remain separate claims.
+
+## Bugbot repository evidence verification
+
+- Status: Draft for pre-branch review
+- Date: 2026-11-09
+- Catalog capability ID: `bugbot-analysis-and-autofix`
+- Owners: Copilot maintainers
+- Scope: Verify each eligible Bugbot finding and proposed history transition before coordinated publication.
+- Related issue: [#950](https://github.com/vypdev/copilot/issues/950)
+- Required gates: product UX, architecture, testing, documentation, security and operations
+- Readiness decisions: Action owner/path confirmation and managed branch publication. The pilot must establish a production verifier model, budget and activation decision before verified publication is enabled.
+
+### 1. Executive summary
+
+Bugbot checks the project's actual behavior before publishing a defect. A review can
+publish confirmed findings while showing that other candidates need evidence.
+Only a complete and reconciled result can qualify for clean automatic approval.
+
+```mermaid
+flowchart LR
+    P[Pin source and review owner] --> D[Detect in diff]
+    D --> M[Admit and group hypotheses]
+    M --> E[Retrieve bound evidence]
+    E --> V[Fresh verifier tries to refute]
+    V --> I[Validate all dispositions]
+    I --> F[Recheck freshness]
+    F --> R[Publish and reconcile]
+```
+
+Bugbot pins the target, detects in its diff, groups equivalent hypotheses, obtains
+evidence and attempts to refute each hypothesis in a fresh task. The application
+validates the complete batch and the current revision before coordinating writes
+and reconciling the observed provider result.
+
+### 2. Problem, current behavior, and evidence
+
+A reviewer can currently see an active defect even when unchanged code, a
+resolved dependency or a directly relevant test contradicts a material premise.
+Diff coverage says which input was processed. It cannot establish the truth of a
+particular finding.
+
+The comparison used here pins development to [b3952f686](https://github.com/vypdev/copilot/commit/b3952f686a55a9b4207e1a23c64be8344e8df5d5)
+and the audit to [v3.10.13](https://github.com/vypdev/copilot/commit/ace49e4a7ce0f6a007fef5d11479eb9b7a5846e3).
+The authenticated GitHub comparison returned zero changed paths across the two
+commits. The cached development ref `0f1fc943d2cd2bfe11be51ea215a0333577074a4`
+differs from the audited tree only in package version. Reconfirm the Action's
+selected base before using the pilot as implementation evidence.
+
+1. `src/application/usecases/steps/commit/detect_potential_problems_workflow.ts`
+   resolves canonical ownership and context, analyzes, checks freshness, then
+   applies finding/resolution mutations and reconciles provider state. Dry-run
+   exits before that mutation path.
+2. `src/application/usecases/steps/commit/bugbot/analyze_bugbot_revision_use_case.ts`
+   dispatches single, partitioned or framed analysis and projects retained IDs,
+   candidate severity, suppression, comment limits and history eligibility.
+   `src/application/usecases/steps/commit/bugbot/analyze_bugbot_frames.ts`
+   checks plan/receipts and charges actual query traffic to the frame ledger.
+   `src/application/usecases/steps/commit/bugbot/bugbot_partition_aggregation.ts`
+   validates and aggregates required responses.
+3. `src/application/usecases/steps/commit/bugbot/build_bugbot_prompt.ts`
+   selects generated-source verification mainly from Python paths or witnesses.
+   `src/application/usecases/steps/commit/bugbot/query_bugbot_findings.ts`
+   applies it before final aggregation and admission. The verifier receives the
+   detection prompt and uses the same reviewer configuration. The policy checks
+   candidate identity, cardinality, and retained evidence text. Evidence text
+   currently has no application-issued proof of its source.
+4. `src/application/usecases/steps/commit/bugbot/apply_detected_findings.ts`
+   and `src/application/usecases/steps/commit/bugbot/reconcile_bugbot_review_state_use_case.ts`
+   preserve provider ownership and publish the reconciled PR result. Explicit
+   model history claims go through the retained-ID and native-thread rules.
+
+Historical examples include a Unicode regex, two defaulted pytest arguments and
+an earlier SQLite guard. The pilot separates original incidents, independent
+reproductions and model trials. Rationale for the historical false findings is
+unknown. Historical runs used Luna and establish no relative model advantage.
+
+### 3. Actors, surfaces, and terminology
+
+| Actor | Entry | Outcome and surface |
+|---|---|---|
+| Author or reviewer | PR review, recheck, PR update or supported Commit review | Anchored defect with revision evidence, or an actionable uncertainty in the canonical review result |
+| Maintainer | Trusted setup, runtime policy or history intervention | Bound configuration and explicit authority over rollout and human dismissals |
+| Operator | Copilot / Review, run and Job Summary | Coverage, verification and observed publication status, with an exact-head recovery path |
+| Application | Canonical review operation | Binds facts, enforces policy, projects and writes through provider ports |
+| Verifier | Fresh task for one admitted hypothesis | Attempts falsification and returns one disposition citing supplied evidence |
+
+A **candidate** is a testable causal hypothesis. A **receipt** is an
+application-issued record of a retrieved artifact. A **disposition** expresses
+what the evidence established for a candidate at a revision. A **finding state**
+records the durable state of a finding or native thread.
+
+### 4. Goals, non-goals, and fixed invariants
+
+| Requirement | Behavior |
+|---|---|
+| EV-01 | Bind sources and evidence to one immutable review operation and recover the material project, runtime or execution facts. |
+| EV-02 | Group equivalent eligible hypotheses before verification. Try to refute each in a fresh task and validate one disposition per candidate before ranking or projection. |
+| EV-03 | Publish only confirmed candidates and validated suggestions. Coordinate incomplete, failed and clean results with approval and observed provider facts. |
+| EV-04 | Preserve target ownership, freshness, retry safety and explicit historical transitions including human authority. |
+| EV-05 | Bound and authorize evidence reads, probes and verifier traffic. Reject forged or mismatched artifacts and prevent arbitrary execution or publication from the verifier. |
+| EV-06 | Keep GitHub results legible, localized, sanitized, auditable and compatible with durable history. |
+| EV-07 | Qualify both pilot models and all quality gates before enabling publication. Make rollback and unresolved evidence explicit. |
+
+The design reuses the existing Bugbot capability, authorizations, candidate
+admission, projection, protection rules and comment noise budget. Merge,
+deployment and automatic remediation retain their separate authority. One
+successful unrelated test, model confidence, and a syntactically valid link
+are insufficient evidence. No runtime setting can weaken these invariants.
+
+### 5. Current versus proposed product journey
+
+| Stage | Current | Proposed |
+|---|---|---|
+| Detect | Review diff and surrounding guidance | Same detection scope and changed anchor. Preserve structured trigger, path and impact hypotheses. |
+| Aggregate | Optional generated-source check before global projection | Validate all required inputs, reconcile stable identity, then group equivalent hypotheses and retain their evidence leads. |
+| Verify | Language or witness-triggered evidence text | Application retrieval and fresh falsification task for every eligible hypothesis, including confirmed overflow. |
+| Publish | Apply prepared findings and reconcile provider projection | Validate batch and freshness, apply a coordinated result, and record observed effects. |
+
+### 6. Functional behavior and state model
+
+**Pin and admit.** Bind immutable repository identity, route, operation nonce,
+canonical target, reviewed head and tree, applicable base and comparison,
+range/fragment identities, authorized policy digest and cancellation signal.
+Use base evidence when needed to prove introduction or reachability. A synthetic
+merge SHA needs provider-attested source or tree equivalence for the relevant
+paths and resolved build inputs. Incomplete equivalence cannot support a CI
+claim. A ref name alone does not identify an artifact.
+
+Validate required partition/frame responses before using any candidate. Apply
+existing shape, changed-scope, ignore, severity and suppression rules. Preserve
+stable IDs and provider anchors. Deduplicate only when normalized root cause,
+trigger and causal path are equivalent under existing local/semantic identity
+rules. Merge leads from duplicate candidates while retaining origins. Keep
+different causes at the same location distinct. Group history proposals by
+retained ID and intended transition. Conflicting proposals require evidence and
+an integral, single transition. Publish and comment-slot ranking happen after
+verification. Every eligible overflow contributes a disposition.
+
+**Retrieve.** Seed a bounded evidence plan from the change, imports, nearby
+guards, call path, configured contract and known native execution references.
+The verifier can request one additional round with the closed vocabulary in
+section 8. Read changed and unchanged blobs via repository object identity.
+Bind negative search results to their searched scope and cap. Resolve imports
+through the pinned manifests, effective settings, lockfiles or attested build
+resolution. Match exact version, package integrity, alias/override, runtime,
+platform and relevant package implementation or versioned contract. When
+resolution cannot be established, return the missing premise.
+
+Match native CI by trusted producer, workflow, run attempt, job/suite and step or
+test identity, verified source and effective inputs. Distinguish executed,
+skipped, cached, canceled, missing and irrelevant results. A cache hit needs its
+own attestation of equivalent inputs and execution. Treat later test code as a
+separate reproduction even when the underlying runtime paths are byte-identical.
+Only an approved probe ID may resolve to a trusted command and typed, pinned
+inputs. Source and CI verification must work without an execution profile.
+
+**Decide.** Start a fresh verifier task with the candidate and retrieved
+artifacts, independent of the detector session. Seek earlier guards, effective
+configuration, alternative reachable paths, versioned exceptions and matching
+executed counterevidence. Model requests and repository text remain untrusted.
+For each eligible ID the final response supplies one of the following:
+
+| Disposition | Required basis | Projection |
+|---|---|---|
+| Confirmed | In-scope anchor, causal trigger/path/impact and supplied supporting evidence | Publish or update under existing identity. Confirmed overflow counts in the summary. |
+| Refuted | Supplied evidence that contradicts a material premise | Drop a new candidate. Historical state changes only via a separately authorized transition. |
+| Inconclusive | Bounded reason, missing/conflicting evidence and one practical next step | No defect thread for a new candidate. Mark verification incomplete and preserve historical state. |
+
+A response cannot introduce an ID, re-anchor a finding or substitute a citation.
+The application validates exact expected IDs and cardinality, schema and scope,
+nonce, locale, evidence IDs, artifact provenance and source identity. It verifies
+receipt membership per candidate. It never substitutes a confidence threshold
+for the verifier's causal decision. Missing, repeated, replayed, forged, stale
+or cross-candidate receipts and malformed required verdicts invalidate the run.
+A valid but unavailable evidence request is reported as a candidate limitation.
+An exhausted aggregate ledger, missing required partition, cancellation or
+supersession invalidates the publication plan as a whole.
+
+**Check the suggested replacement separately.** Bind patch bytes and range to the
+same pinned blob, parse/apply to a disposable copy, enforce the existing
+suggestion and file-scope rules, and require evidence from a matching trusted
+check or an equivalently strong versioned proof that the replacement fixes the
+witness and preserves affected invariants. Withhold executable syntax if the
+check cannot establish either. Publish the confirmed defect as prose. Autofix
+keeps its own authorization and verification requirements.
+
+**Coordinate.** Recheck the live owner/head/comparison and cancellation after any
+awaited preparation and directly before the first irreversible effect for all
+routes. Fence subsequent writes using existing provider concurrency contracts.
+No cross-endpoint GitHub transaction is assumed. After writes, re-read native
+provider facts and project a single canonical result for the revision. A
+confirmed and inconclusive mixture publishes the confirmed subset and marks
+verification incomplete. A clean result requires complete required coverage,
+all dispositions validated, no confirmed or unresolved candidate or durable
+finding, and all existing native approval gates.
+
+| Route | Behavior |
+|---|---|
+| Ordinary and framed PR | Common verification after complete aggregation. Charge framed and ordinary verification at actual port admission. |
+| Incremental synchronize | Existing exact before/after and canonical full-diff fallback. May read unchanged current code. Explicit history examination is not limited to changed paths. |
+| Exact-head recheck | Reacquire evidence, read retained native history, reuse identities, and update existing destinations. An old run cannot be replayed into a fresh result. |
+| Commit owned by PR | Existing canonical PR owns publication. The duplicate push path exits. |
+| Standalone supported Commit | Use the existing commit/branch/fallback target, exact range or parent fallback, same gate and supported destination. No new PR or destination is created. |
+
+A history transition names a retained ID, observed native state, original
+premise and evidence at the current revision. Confirmed persistent or regressed
+defects may reopen only when the existing transition policy allows it. Fixed
+requires proof that the defect's path has changed to prevent the original
+impact. Obsolete requires explicit evidence against the retained premise or
+proof it is no longer applicable under the existing policy. Omission,
+inconclusiveness, incomplete history and provider failure preserve prior state,
+including verification-required flags. Confirmed human dismissal remains
+effective. Re-read native decisions before history mutations.
+
+### 7. User-facing configuration
+
+| Input | Type and values | Default and precedence |
+|---|---|---|
+| Existing `bugbot-dry-run` | Boolean, existing trusted configuration or authorized review command | Existing default is false. True takes precedence over every write destination and persistence option. |
+| Evidence rollout | Proposed trusted installation setting, disabled/shadow/enforced | Disabled until qualified release and maintainer opt-in. Shadow computes the evidence result without verified publication or approval. Enforced requires the full gate. Final public name and runtime route need maintainer review. |
+| Verifier configuration | Trusted allowlisted provider/model and finite effort | Pilot compares the two named models at medium effort. Final choice and bounds depend on pilot. Review comments and PR code cannot override it. |
+| Evidence profile | Trusted installation capability, source/CI or source/CI plus registered isolated probes | Source/CI. Probe-capable profile needs reviewed IDs, commands, runner prerequisites and input limits. Reject invalid or unauthorized profiles before work. |
+
+Snapshot effective policy/model/budgets at start. Unknown values fail
+configuration validation. Omitted rollout settings keep the installed policy.
+Repositories without execution profiles retain source and native CI access.
+Proposed lab caps are two rounds, eight requests and 32 KiB retained evidence
+per candidate, two simultaneous verifiers, and one bounded transient retry.
+Production must fix limits for candidate count, bytes, reads, tokens, time,
+concurrency and retry, with both per-candidate and shared ceilings. Counters
+charge before dispatch and at observed output, including failed attempts and
+duplicate-search work before cache lookup where applicable. Use source-scoped
+caching and an independent total wire limit. Final numeric values, safe default
+and supported override ranges require the measured pilot.
+
+### 8. Clean Architecture design
+
+| Boundary | Owns |
+|---|---|
+| Domain and pure policy | Candidate/group identity, source and evidence values, state and disposition rules, effect eligibility, budgets. |
+| Application | Pinning, evidence planning, immutable receipts, verifier batches, validation, write plan, approval projection and recovery. |
+| Semantic read ports | Bounded Git read/search, resolved dependency contract, native execution metadata and registered probe. No GitHub mutation methods. |
+| Verifier port | Fresh session, exact schema, closed evidence request and disposition output. No SCM writes, checkout shell, credentials or arbitrary network. |
+| Adapters/composition | Git/tree validation, provider DTO mapping, artifact hashes, trusted probe runtime and constrained model sessions. |
+| Presentation | Locale, safe links and one status projection consumed by existing Check, Job Summary and card. |
+
+```mermaid
+flowchart LR
+    X[Review entry] --> A[Application workflow]
+    A --> D[Pure review policies]
+    A --> Q[Evidence and verifier ports]
+    R[Read adapters] --> Q
+    A --> W[Provider mutation ports]
+    A --> U[Canonical review projection]
+```
+
+The workflow calls pure policies and read/verify ports during analysis. The write
+plan is a separate application boundary invoked only with a validated current
+batch. Rendering consumes the result of observed provider effects.
+
+An evidence request is one of `readBlob`, `searchTree`, `resolveDependency`,
+`readExecution` or `runRegisteredProbe`. Use typed relative paths/ranges,
+literal bounded queries, pinned identifiers and registered capability IDs.
+No free-form command, URL, revision or repository selector crosses the model
+boundary. Each receipt binds operation, candidate, source kind, repository,
+revision/tree, validated locator, artifact digest and result or safe error.
+Share immutable bytes across equivalent reads but issue separate scoped
+references. No model-authored link is authoritative. Persist only approved
+locator/projection metadata for verified results. Absence of metadata on legacy
+history grants no verified transition.
+
+Add an executable import/port boundary check using the existing architecture
+tests. Verifier and response validation cannot reach publication, shell/process
+execution, ambient filesystem, network transports or provider credentials.
+Add controlled-provider integration assertions that no mutation port is invoked
+before validation/freshness and none is reachable in dry-run.
+
+### 9. UI/UX and content contract
+
+Use the existing canonical card, native Copilot / Review and Job Summary.
+Examples below use illustrative short SHAs. The real renderer adds the actual
+commit, run or evidence link from validated identities.
+
+| State | Primary message and action |
+|---|---|
+| Pending | **Checking findings for `a14f600`.** Changes analyzed. Checking three candidates against this commit. Open the current run for progress. |
+| Complete | **Review complete for `a14f600`.** One confirmed defect and two refuted candidates. Read the confirmed defect and its source. |
+| Incomplete | **Evidence incomplete for `a14f600`.** Two confirmed defects published. One candidate needs the exact-head browser job result. Automatic approval is unavailable. Run the browser job and recheck this revision. |
+| Failed before writes | **Review failed for `a14f600`.** A required verdict was missing. Recheck after inspecting the run. Last verified review `72854ce` remains available. No finding or resolution effects observed. |
+| Canceled | **Review canceled for `a14f600`.** Retry if this commit is still current. Last verified review `72854ce` remains available. |
+| Superseded | **Review superseded for `a14f600`.** `b605d27` is now current. Follow that revision's run. Last verified review `72854ce` remains available. |
+| Publication partial | **Publication incomplete for `a14f600`.** One confirmed comment was observed and the provider could not verify the remaining updates. Recheck to recover. Automatic approval is unavailable. |
+
+Representative confirmed comment:
+
+> **Valid supplementary characters are rejected.** The validator rejects
+> U+1F600 when a user saves a valid label. On the reviewed revision the regex
+> runs without its Unicode flag. The pinned Node probe rejects that input.
+> [Reviewed validator](https://github.example/example/labels/blob/9dafa8cc09d9e83111a79e8dd3ea38a1b31ed6d1/packages/core/src/presentation-text.ts#L4) · [Pinned Node probe](https://github.example/example/labels/actions/runs/101).
+
+The canonical projection carries separate verification, coverage and publication
+fields. Pending status belongs to the current run/check and does not replace the
+last verified result. Upsert one canonical final card with existing marker and
+identity rules. Existing comment cap applies only after verification. Refuted
+and inconclusive candidates do not get defect comments. Existing English and
+Spanish locale resolution and fallback apply. Use descriptive links and text
+states, mobile-readable headings, bounded details and sanitized untrusted
+content. Preserve actual human-authored replies and native thread decisions.
+
+### 10. Failure, recovery, and cleanup
+
+| Condition | Retained facts and recovery |
+|---|---|
+| Candidate source/contract unavailable, request limit or unresolved contradiction | Integral inconclusive result with named gap. Recheck the same head after the evidence becomes available. |
+| Required frame/verdict missing, invalid integrity or aggregate limit | Preserve previous verified projection and historical state. Surface the failed run with reason and retry/split action. |
+| Canceled or newer head before publication | Zero finding/resolution writes. Keep previous revision's result and follow the current run. |
+| Provider error after a write | Re-read actual comments/threads/reviews, record observed or unknown effects, and reconcile by exact head and existing stable markers on retry. Never approve from intended writes. |
+| Cleanup | Discard private workspaces and transient outputs on success, failure or cancellation. Keep bounded safe diagnostics and verified locators under existing retention. |
+
+Bound transient retries. A partial write must not be repeated blindly. A newer
+owner/head or verified human decision takes precedence over recovery for an
+older plan. Missing history never means resolved.
+
+### 11. Security, permissions, and privacy
+
+Allow only authorized repository objects and immutable comparisons. Validate
+path traversal, case/normalization, symlink/gitlink, external links, redirects,
+object type, provider scope and maximum sizes before reads. Keep developer
+commands and model prompts distinct. Probe approval comes from trusted
+installation policy. Use an isolated disposable execution environment with a
+private filesystem profile, pinned inputs, no provider credentials, no ambient
+network, time/memory/output limits, and cancellation cleanup. Reuse approved
+repository verification capability where applicable. Evidence records can prove
+what was supplied and what executed. The model evaluates what it means.
+Strip secret-bearing and instruction-like output from publication and bound
+diagnostic content. Reject replay and swapping across reviews, targets or
+candidates.
+
+### 12. Observability and operational UX
+
+Record safe counts by disposition, evidence kind and limitation, stage latency,
+tokens and concurrency where available, source/head and run correlation,
+coverage and provider effects. Record observed and unknown publication effects
+separately. No raw prompt, repository blob, credentials or full command output
+in public or durable telemetry. Existing noise budgets apply. Use the Job
+Summary and check diagnostics for operators. A failed or skipped action cannot
+present a clean reviewed head.
+
+### 13. Compatibility, migration, rollout, and rollback
+
+Existing identity markers and history remain readable and retain human
+decisions. Legacy proof is labeled by its actual revision and policy. In-flight
+runs complete under their snapshot subject to existing authority and freshness.
+Never upgrade legacy proof retroactively. Compare in dry-run, review provider
+replays and exact-head UI, then obtain maintainer approval for an explicit
+bounded canary before enforcement. Roll back through the approved runtime
+configuration/release route. Pausing evidence publication preserves the last
+verified result and the protection of verification-required history.
+
+### 14. Testing strategy and numeric budget
+
+| Area | Minimum distinct cases | Behaviors/risks covered |
+|---|---:|---|
+| Provenance and source | 8 | Immutable Git, ranges and unchanged paths, imports, runtime resolution, native execution and synthetic merges |
+| Verdict and publication | 6 | Grouping and overflow, strict verdict accounting, mixed projection, approval and verified suggestions |
+| Lifecycle and concurrency | 6 | Ownership, incremental/fallback/recheck, cancellation, supersession, provider recovery and history |
+| Permission and security | 5 | Unsafe input, read permissions, probe authority, budgets and dry-run zero effects |
+| Presentation and compatibility | 5 | States, native projection, locale, historic migration and pilot qualification |
+| Total | 30 | Distinct deterministic cases, exclusive of model trials |
+
+| Case ID | Area | Requirements | Scenario |
+|---|---|---|---|
+| ev950-C01 | Provenance and source | EV-01 | Verify reviewed and base blobs through immutable identities and reject mismatched heads. |
+| ev950-C02 | Provenance and source | EV-01 | Unchanged caller and guard refute an eligible non-Python defect. |
+| ev950-C03 | Provenance and source | EV-01 | Python candidate uses the same route and versioned fixture witness. |
+| ev950-C04 | Provenance and source | EV-01 | Resolve an imported dependency through actual lockfile override and reject a wrong version. |
+| ev950-C05 | Provenance and source | EV-01 | Runtime witness and changed anchor support the genuine paired defect. |
+| ev950-C06 | Provenance and source | EV-01 | Relevant executed CI step refutes the exact predicted failure. |
+| ev950-C07 | Provenance and source | EV-01 | Unrelated, skipped or unsupported cache evidence yields a named gap. |
+| ev950-C08 | Provenance and source | EV-01 | Synthetic merge needs verified tree and build-input equivalence. |
+| ev950-C09 | Verdict and publication | EV-02 | Equivalent hypotheses merge while distinct same-location causes retain separate IDs. |
+| ev950-C10 | Verdict and publication | EV-02 | Verify every eligible candidate before applying the comment limit, including overflow. |
+| ev950-C11 | Verdict and publication | EV-02 | Missing, duplicate and cross-run disposition responses invalidate the whole batch. |
+| ev950-C12 | Verdict and publication | EV-03 | Mixed dispositions produce one coordinated result and block clean approval. |
+| ev950-C13 | Verdict and publication | EV-03 | Only refuted candidates permit existing clean approval rules when history and coverage are clean. |
+| ev950-C14 | Verdict and publication | EV-03 | Reject invalid suggested replacement and publish the confirmed prose finding. |
+| ev950-C15 | Lifecycle and concurrency | EV-04 | Duplicate push gives canonical PR ownership and standalone Commit retains fallback destination. |
+| ev950-C16 | Lifecycle and concurrency | EV-04 | Compare incremental exact range, bounded fallback, framed aggregation and same-head recheck. |
+| ev950-C17 | Lifecycle and concurrency | EV-04 | Cancellation during verification preserves previous review and native threads. |
+| ev950-C18 | Lifecycle and concurrency | EV-04 | New head between validation and write invalidates the effect plan. |
+| ev950-C19 | Lifecycle and concurrency | EV-03, EV-04 | Write partially succeeds, provider read fails, and retry recovers without duplicate effects. |
+| ev950-C20 | Lifecycle and concurrency | EV-04 | Explicit evidence gates fixed, obsolete and reopen transitions while human dismissal and omission retain state. |
+| ev950-C21 | Permission and security | EV-05 | Reject traversal, symlinks, unsafe locators and external destinations. |
+| ev950-C22 | Permission and security | EV-05 | Reject swapped, fabricated and unsupplied evidence receipts. |
+| ev950-C23 | Permission and security | EV-05 | Only trusted probe IDs can execute in isolated credential-free runtime. |
+| ev950-C24 | Permission and security | EV-05 | Charge actual port calls, bytes, retries and cancellation to per-candidate and aggregate ledgers. |
+| ev950-C25 | Permission and security | EV-05 | Dry-run mutation and durable write ports fail on invocation across success and errors. |
+| ev950-C26 | Presentation and compatibility | EV-06 | Pending/complete/incomplete card and Check carry the correct commit and available actions. |
+| ev950-C27 | Presentation and compatibility | EV-06 | Failed/superseded and partial publication wording distinguish retained and observed effects. |
+| ev950-C28 | Presentation and compatibility | EV-06 | English/Spanish render bounded text, safe links and no injected machine markers. |
+| ev950-C29 | Presentation and compatibility | EV-06, EV-07 | Legacy history and rollout rollback preserve prior result and current approval integrity. |
+| ev950-C30 | Presentation and compatibility | EV-07 | Pilot manifest/score validation retains missing, aborted and malformed trial records and refuses activation. |
+
+Preserve repository-wide thresholds (90% lines/statements, 88% functions,
+82% branches) and the applicable changed-module coverage gates. Target full branch
+coverage of new disposition completeness, provenance membership and approval
+eligibility policies. Use deterministic clocks, Git fixtures, in-memory
+providers, fail-on-call ports and injected cancellation/failures. Exercise
+production orchestration alongside pure policy. Capture maintainer review of
+rendered English/Spanish mobile-width examples and actual marker updates. Use
+the unchanged recall and quality thresholds in the pilot protocol.
+
+### 15. Documentation and discoverability
+
+| Path | Change |
+|---|---|
+| `specs/bugbot-analysis-publication-and-autofix.md` | update |
+| `specs/bugbot-review-state-reconciliation.md` | update |
+| `specs/bugbot-source-bound-framed-review.md` | update |
+| `specs/catalog.json` | update |
+| `specs/CATALOG.md` | update |
+| `docs/bugbot/detection.mdx` | update |
+| `docs/bugbot/finding-publication.mdx` | update |
+| `docs/bugbot/configuration.mdx` | update |
+| `docs/bugbot/failure-scenarios.mdx` | update |
+| `docs/bugbot/permissions.mdx` | update |
+| `docs/bugbot/quality-observability.mdx` | update |
+
+Update detection and publication for users, permissions and configuration for
+setup owners, failures and quality for operators. Document recovery, rollout
+and historical behavior. Link from existing Bugbot navigation and validate
+routes and example content. Update the existing catalog entry and reconciliation
+evidence with actual landed tests and docs. Regenerate the human catalog.
+
+### 16. Acceptance scenarios
+
+1. An ordinary or framed review receives a historical candidate and a matching
+   real defect. Unchanged and pinned versioned evidence refute the historical
+   premise and confirm the reachable defect with a valid anchor.
+2. Updated, reopened and overflow candidates receive individually validated
+   dispositions. Forgery, missing responses and mismatched source stop writes.
+3. Two confirmed and one inconclusive candidate publish the two defects and one
+   coordinated result. The summary explains the missing evidence and blocks
+   clean approval. An unverified suggestion remains prose.
+4. An exact-head recheck after evidence recovery updates existing destinations.
+   A canceled or superseded run preserves the prior verified projection.
+5. History changes only with explicit evidence, current native facts and an
+   allowed transition. A protected human dismissal remains effective.
+6. Inject provider partial writes, ambiguity and retries through the production
+   workflow. Check observed effects, recovery and no duplicate writes.
+7. The 30 deterministic cases, completed pilot, GitHub UX review and final
+   commit checks support the maintainer's activation decision.
+
+### 17. Requirements traceability
+
+| Requirement | Cases |
+|---|---|
+| EV-01 | ev950-C01, ev950-C02, ev950-C03, ev950-C04, ev950-C05, ev950-C06, ev950-C07, ev950-C08 |
+| EV-02 | ev950-C09, ev950-C10, ev950-C11 |
+| EV-03 | ev950-C12, ev950-C13, ev950-C14, ev950-C19 |
+| EV-04 | ev950-C15, ev950-C16, ev950-C17, ev950-C18, ev950-C19, ev950-C20 |
+| EV-05 | ev950-C21, ev950-C22, ev950-C23, ev950-C24, ev950-C25 |
+| EV-06 | ev950-C26, ev950-C27, ev950-C28, ev950-C29 |
+| EV-07 | ev950-C29, ev950-C30 |
+
+The historical issue matrix separately maps each premise and decisive evidence
+to a planned test or remaining limitation. General capability coverage is not
+closure evidence for a particular historical issue.
+
+### 18. Implementation sequence
+
+1. Resolve Action clarification and verify the managed branch and its first SDD
+   commit. Reconfirm the immutable selected base and all named paths.
+2. Implement read-only pilot seams and frozen replay. Complete full review and
+   measure both models. Record qualification and finalize configuration.
+3. Implement contracts, budgets and source adapters. Add candidate/historical
+   verification at the common orchestration boundary. Integrate approval and
+   publication projection with controlled-provider race and failure tests.
+4. Complete localized GitHub examples, operator docs, catalog evidence and
+   qualification at the final head. Submit the issue-linked PR for maintainer
+   review with verification disabled until explicitly qualified and enabled.
+
+### 19. Definition of Done
+
+- [ ] Every requirement and all 27 historical issues have traceable evidence.
+- [ ] Boundary, 30-case deterministic, provider, compatibility and security gates pass.
+- [ ] All pilot rows, quality and overhead gates are reviewed and production limits are fixed.
+- [ ] Existing approval, recovery, accessibility, localization and noise contracts pass.
+- [ ] SDD, catalog, generated catalog and user/setup/operator docs agree.
+- [ ] Run `pnpm run generate:specifications`, `pnpm run validate:specifications`,
+      `pnpm run eval:bugbot`, affected tests and coverage, typecheck, lint,
+      workflow/documentation validation, and `graphify update .` on the implementation.
+- [ ] Final-head qualification and PR checks are recorded. Maintainer owns approval, merge and activation.
+
+### 20. References and decisions
+
+- Owning capability and companion contracts in the inventory above.
+- Pilot deliverables: preregistration, manifest, separate scoring key, raw
+  observations, result report and issue-level traceability matrix.
+- Established safety choices: source binding, fresh falsification, explicit
+  incomplete state, observed-effect recovery and preserved human authority.
+- Pending choices: measured model selection, production limits and the approved
+  activation surface. No activation is supported while the pilot is incomplete.
