@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "issue": 950,
+  "automaticCommit": "55124fbefb88edcf575aa8b9e1d6a5ce4caf92fe",
+  "preparedCommit": "4fe9a40e824ed21928b0bda3917dfe01e24407e3",
+  "publicationMode": "dry-run",
+  "sdk": "b3952f686a55a9b4207e1a23c64be8344e8df5d5",
+  "cli": "codex-cli 0.167.0-alpha.3.2",
+  "modelProvider": "openai",
+  "effort": "low",
+  "model": "gpt-6.1-sol",
+  "subjects": [
+    "H1",
+    "H2"
+  ],
+  "ceiling": {
+    "caseMs": 90000,
+    "callMs": 42000,
+    "grossInputTokens": 32768,
+    "outputTokens": 4096,
+    "packetBytes": 15500,
+    "promptBytes": 21500,
+    "attempts": 1
+  },
+  "concurrency": 3,
+  "rows": [
+    {
+      "trial": "722391d4f0e95097",
+      "model": "gpt-6.1-sol",
+      "subject": "H1",
+      "repetition": 2,
+      "arm": "automatic",
+      "referenceTrial": "3b090cae7cd12ea4"
+    },
+    {
+      "trial": "9729bc7bb4afdb20",
+      "model": "gpt-6.1-sol",
+      "subject": "H1",
+      "repetition": 3,
+      "arm": "automatic",
+      "referenceTrial": "3d3d0b62ab9c348d"
+    },
+    {
+      "trial": "5f9da9c8421b8bd8",
+      "model": "gpt-6.1-sol",
+      "subject": "H1",
+      "repetition": 1,
+      "arm": "automatic",
+      "referenceTrial": "53be72b8e3438143"
+    },
+    {
+      "trial": "680bb76b3d15ef62",
+      "model": "gpt-6.1-sol",
+      "subject": "H2",
+      "repetition": 3,
+      "arm": "automatic",
+      "referenceTrial": "be202551f3ea6050"
+    },
+    {
+      "trial": "3bbd09301663a40d",
+      "model": "gpt-6.1-sol",
+      "subject": "H2",
+      "repetition": 1,
+      "arm": "automatic",
+      "referenceTrial": "d9fe6da270c87b10"
+    },
+    {
+      "trial": "215566d57e44aa3d",
+      "model": "gpt-6.1-sol",
+      "subject": "H2",
+      "repetition": 2,
+      "arm": "automatic",
+      "referenceTrial": "ecb6279c5664006a"
+    }
+  ]
+}

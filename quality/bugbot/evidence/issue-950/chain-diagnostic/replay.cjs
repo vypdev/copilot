@@ -49,7 +49,7 @@ async function simulate(row, fixture, respond, options) {
         assert.equal(calls.length, 2);
         assert.deepEqual(message.options.schema.properties.kind.enum, ['verdict']);
         return { ...envelope, kind: 'verdict', verdict: 'inconclusive', citations: next.receiptIds,
-            request: null, nextStep: 'Delivery control only.', ...respond?.(row, calls) };
+            request: null, nextStep: 'Delivery control only.', ...respond?.(row, calls, message) };
     }, options);
     return { calls, ...result };
 }
@@ -101,4 +101,4 @@ async function replay(directory) {
 }
 
 if (require.main === module) replay(process.argv[2]).catch(error => { console.error(error); process.exitCode = 1; });
-module.exports = { locked, rows, simulate };
+module.exports = { attest, locked, rows, simulate };
