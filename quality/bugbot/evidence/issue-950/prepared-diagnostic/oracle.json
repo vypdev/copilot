@@ -1,0 +1,58 @@
+{
+  "H1": {
+    "issue": 913,
+    "verdict": "refuted",
+    "path": "frontend/src/presentation/domus-tasks.ts",
+    "line": 145,
+    "side": "RIGHT",
+    "head": "3c7d0c8b57cc6a53c611646e12a33b752d481730",
+    "tree": "1a60af28ce70708f983d439dafb23aa3418f7b6f",
+    "decisive": {
+      "path": "frontend/src/domain/tasks.ts",
+      "start": 28,
+      "end": 30
+    }
+  },
+  "H2": {
+    "issue": 913,
+    "verdict": "confirmed",
+    "path": "frontend/src/presentation/domus-tasks.ts",
+    "line": 145,
+    "side": "RIGHT",
+    "head": "20cd99868ed8c2b6595db4c804dbccab90bad17f",
+    "tree": "18e5ed14408481ccc58543e8c3fb0bbce5d19c70",
+    "decisive": {
+      "path": "frontend/src/domain/tasks.ts",
+      "start": 28,
+      "end": 30
+    }
+  },
+  "P1": {
+    "issue": 880,
+    "verdict": "refuted",
+    "path": "frontend/src/application/task-controller.ts",
+    "line": 89,
+    "side": "RIGHT",
+    "head": "93d7d77b98a196640bf0049bca36a3d90b7a5857",
+    "tree": "bd6d304c24239da3f57175e02dec0932f9a47d6d",
+    "decisive": {
+      "path": "frontend/src/presentation/task-messages.ts",
+      "start": 7,
+      "end": 7
+    }
+  },
+  "P2": {
+    "issue": 880,
+    "verdict": "confirmed",
+    "path": "frontend/src/application/task-controller.ts",
+    "line": 89,
+    "side": "RIGHT",
+    "head": "c69f2eff6a33f54bda4a06a4333a60c9c7442a11",
+    "tree": "55f23c86bc36c15c28335ecab8a6b4d67a2569b7",
+    "decisive": {
+      "path": "frontend/src/presentation/task-messages.ts",
+      "start": 7,
+      "end": 7
+    }
+  }
+}

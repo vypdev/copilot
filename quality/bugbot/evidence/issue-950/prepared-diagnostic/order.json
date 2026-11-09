@@ -1,0 +1,338 @@
+[
+  {
+    "trial": "00626c3f31a167e2",
+    "model": "gpt-6-luna",
+    "subject": "P2",
+    "arm": "complete",
+    "repetition": 3
+  },
+  {
+    "trial": "1411a661ad48d6e3",
+    "model": "gpt-6.1-sol",
+    "subject": "H1",
+    "arm": "historical",
+    "repetition": 3
+  },
+  {
+    "trial": "1b295d7284a1dd0f",
+    "model": "gpt-6.1-sol",
+    "subject": "P1",
+    "arm": "complete",
+    "repetition": 3
+  },
+  {
+    "trial": "1f63c5ef7eeb3222",
+    "model": "gpt-6.1-sol",
+    "subject": "H1",
+    "arm": "historical",
+    "repetition": 2
+  },
+  {
+    "trial": "262512b576d36da0",
+    "model": "gpt-6-luna",
+    "subject": "P2",
+    "arm": "complete",
+    "repetition": 1
+  },
+  {
+    "trial": "2c6841d458d93587",
+    "model": "gpt-6-luna",
+    "subject": "P1",
+    "arm": "complete",
+    "repetition": 2
+  },
+  {
+    "trial": "338e0d1707b7a80d",
+    "model": "gpt-6.1-sol",
+    "subject": "H2",
+    "arm": "historical",
+    "repetition": 2
+  },
+  {
+    "trial": "39410474c540fa51",
+    "model": "gpt-6-luna",
+    "subject": "H2",
+    "arm": "historical",
+    "repetition": 2
+  },
+  {
+    "trial": "3a9b5c6c4adb003c",
+    "model": "gpt-6-luna",
+    "subject": "H1",
+    "arm": "complete",
+    "repetition": 3
+  },
+  {
+    "trial": "3b090cae7cd12ea4",
+    "model": "gpt-6.1-sol",
+    "subject": "H1",
+    "arm": "complete",
+    "repetition": 2
+  },
+  {
+    "trial": "3d3d0b62ab9c348d",
+    "model": "gpt-6.1-sol",
+    "subject": "H1",
+    "arm": "complete",
+    "repetition": 3
+  },
+  {
+    "trial": "3d4e4c641f7379cf",
+    "model": "gpt-6-luna",
+    "subject": "P2",
+    "arm": "complete",
+    "repetition": 2
+  },
+  {
+    "trial": "48c52a774a7bf4dd",
+    "model": "gpt-6-luna",
+    "subject": "P1",
+    "arm": "historical",
+    "repetition": 3
+  },
+  {
+    "trial": "49160d2f8b7fd084",
+    "model": "gpt-6.1-sol",
+    "subject": "P2",
+    "arm": "historical",
+    "repetition": 3
+  },
+  {
+    "trial": "494846403ec7ef4f",
+    "model": "gpt-6.1-sol",
+    "subject": "P1",
+    "arm": "complete",
+    "repetition": 2
+  },
+  {
+    "trial": "4bfc09cd106b9338",
+    "model": "gpt-6.1-sol",
+    "subject": "P1",
+    "arm": "historical",
+    "repetition": 2
+  },
+  {
+    "trial": "4f0a39849cfe2335",
+    "model": "gpt-6-luna",
+    "subject": "H1",
+    "arm": "historical",
+    "repetition": 2
+  },
+  {
+    "trial": "53be72b8e3438143",
+    "model": "gpt-6.1-sol",
+    "subject": "H1",
+    "arm": "complete",
+    "repetition": 1
+  },
+  {
+    "trial": "660b54a9efd0afad",
+    "model": "gpt-6.1-sol",
+    "subject": "P1",
+    "arm": "complete",
+    "repetition": 1
+  },
+  {
+    "trial": "6ccb041a3b12241e",
+    "model": "gpt-6.1-sol",
+    "subject": "P2",
+    "arm": "historical",
+    "repetition": 2
+  },
+  {
+    "trial": "6e4eb1cb4f89bb94",
+    "model": "gpt-6.1-sol",
+    "subject": "P2",
+    "arm": "historical",
+    "repetition": 1
+  },
+  {
+    "trial": "6ecdec441e92aba8",
+    "model": "gpt-6.1-sol",
+    "subject": "P1",
+    "arm": "historical",
+    "repetition": 1
+  },
+  {
+    "trial": "7fd025c017e938ef",
+    "model": "gpt-6.1-sol",
+    "subject": "H1",
+    "arm": "historical",
+    "repetition": 1
+  },
+  {
+    "trial": "85eb4437ce9aaa9e",
+    "model": "gpt-6.1-sol",
+    "subject": "H2",
+    "arm": "historical",
+    "repetition": 1
+  },
+  {
+    "trial": "86ee4802d07cdfdc",
+    "model": "gpt-6.1-sol",
+    "subject": "P2",
+    "arm": "complete",
+    "repetition": 1
+  },
+  {
+    "trial": "8757c68362eeeed2",
+    "model": "gpt-6.1-sol",
+    "subject": "P1",
+    "arm": "historical",
+    "repetition": 3
+  },
+  {
+    "trial": "891354e7bd4a834c",
+    "model": "gpt-6-luna",
+    "subject": "H1",
+    "arm": "historical",
+    "repetition": 3
+  },
+  {
+    "trial": "8b8f98218e67a623",
+    "model": "gpt-6-luna",
+    "subject": "P1",
+    "arm": "complete",
+    "repetition": 1
+  },
+  {
+    "trial": "8d747e676c9c63f7",
+    "model": "gpt-6-luna",
+    "subject": "P1",
+    "arm": "complete",
+    "repetition": 3
+  },
+  {
+    "trial": "912ca5fc4ff156b0",
+    "model": "gpt-6-luna",
+    "subject": "H2",
+    "arm": "complete",
+    "repetition": 3
+  },
+  {
+    "trial": "9710d4f42e885fd6",
+    "model": "gpt-6-luna",
+    "subject": "P1",
+    "arm": "historical",
+    "repetition": 1
+  },
+  {
+    "trial": "98b8a55fed992959",
+    "model": "gpt-6-luna",
+    "subject": "H1",
+    "arm": "historical",
+    "repetition": 1
+  },
+  {
+    "trial": "9a180e847ed8bb86",
+    "model": "gpt-6-luna",
+    "subject": "H1",
+    "arm": "complete",
+    "repetition": 1
+  },
+  {
+    "trial": "9f09261b4a8546d9",
+    "model": "gpt-6-luna",
+    "subject": "P2",
+    "arm": "historical",
+    "repetition": 2
+  },
+  {
+    "trial": "a1e34473404674a6",
+    "model": "gpt-6-luna",
+    "subject": "P1",
+    "arm": "historical",
+    "repetition": 2
+  },
+  {
+    "trial": "be202551f3ea6050",
+    "model": "gpt-6.1-sol",
+    "subject": "H2",
+    "arm": "complete",
+    "repetition": 3
+  },
+  {
+    "trial": "c739f6de782c76f3",
+    "model": "gpt-6-luna",
+    "subject": "H2",
+    "arm": "historical",
+    "repetition": 1
+  },
+  {
+    "trial": "d1ec5512889a398b",
+    "model": "gpt-6-luna",
+    "subject": "H1",
+    "arm": "complete",
+    "repetition": 2
+  },
+  {
+    "trial": "d898d876054fe3e6",
+    "model": "gpt-6.1-sol",
+    "subject": "P2",
+    "arm": "complete",
+    "repetition": 3
+  },
+  {
+    "trial": "d9fe6da270c87b10",
+    "model": "gpt-6.1-sol",
+    "subject": "H2",
+    "arm": "complete",
+    "repetition": 1
+  },
+  {
+    "trial": "e1ff78eadedad7bb",
+    "model": "gpt-6.1-sol",
+    "subject": "P2",
+    "arm": "complete",
+    "repetition": 2
+  },
+  {
+    "trial": "e51171de9971d169",
+    "model": "gpt-6.1-sol",
+    "subject": "H2",
+    "arm": "historical",
+    "repetition": 3
+  },
+  {
+    "trial": "e67f794616bd0650",
+    "model": "gpt-6-luna",
+    "subject": "H2",
+    "arm": "historical",
+    "repetition": 3
+  },
+  {
+    "trial": "ea8feb5be084564a",
+    "model": "gpt-6-luna",
+    "subject": "P2",
+    "arm": "historical",
+    "repetition": 3
+  },
+  {
+    "trial": "ebcf06aef9ccea41",
+    "model": "gpt-6-luna",
+    "subject": "H2",
+    "arm": "complete",
+    "repetition": 1
+  },
+  {
+    "trial": "ecb6279c5664006a",
+    "model": "gpt-6.1-sol",
+    "subject": "H2",
+    "arm": "complete",
+    "repetition": 2
+  },
+  {
+    "trial": "edba504d7bfbec2a",
+    "model": "gpt-6-luna",
+    "subject": "H2",
+    "arm": "complete",
+    "repetition": 2
+  },
+  {
+    "trial": "fa15661b50ed018a",
+    "model": "gpt-6-luna",
+    "subject": "P2",
+    "arm": "historical",
+    "repetition": 1
+  }
+]
