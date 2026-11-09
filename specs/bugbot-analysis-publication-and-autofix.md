@@ -3202,3 +3202,266 @@ recall, anchor, latency and token gates.
 |---|---|
 | BBE950-R01 | bbe950-revision-C01, bbe950-revision-C02, bbe950-revision-C03, bbe950-revision-C04 |
 | BBE950-R02 | bbe950-revision-C05, bbe950-revision-C06 |
+
+## Proposed change: Verify Bugbot findings against repository evidence before publication
+
+- Status: Draft
+- Catalog capability: bugbot-analysis-and-autofix
+
+### 1. Executive summary
+
+This amendment verifies each eligible Bugbot hypothesis against evidence retrieved and bound to the reviewed source before publication. It preserves the owning SDD’s admission, identity, partitioning, history, freshness, provider ownership and presentation contracts. A fresh verifier may classify a candidate as confirmed, refuted or inconclusive; the application validates the complete result and coordinates publication. Confirmed findings may publish in an intact mixed review while incomplete evidence blocks automatic approval. Production verification remains disabled pending qualification and explicit maintainer approval.
+
+### 2. Problem, current behavior, and evidence
+
+Diff coverage records which inputs a run processed; it does not establish that the evidence supporting a particular finding is relevant or correct. The retained owner documents that generated-source verification currently applies mainly to Python paths or witnesses, reuses detection context and reviewer configuration, and checks identity, cardinality and retained evidence text without application-issued proof of evidence source. The cited implementation locations are `src/application/usecases/steps/commit/bugbot/build_bugbot_prompt.ts`, `src/application/usecases/steps/commit/bugbot/query_bugbot_findings.ts`, and `src/application/policies/bugbot_literal_verification_policy.ts`.
+
+The owner also describes the existing workflow as resolving canonical ownership and context, analyzing, checking freshness, applying finding or resolution mutations, and reconciling provider state. Relevant locations are `src/application/usecases/steps/commit/detect_potential_problems_workflow.ts`, `src/application/usecases/steps/commit/bugbot/analyze_bugbot_revision_use_case.ts`, `src/application/usecases/steps/commit/bugbot/bugbot_partition_aggregation.ts`, and `src/application/usecases/steps/commit/bugbot/apply_detected_findings.ts`. These paths establish the existing flow; this delta does not claim that proposed evidence retrieval or qualification is already implemented.
+
+The owner records historical examples involving Unicode matching, defaulted pytest arguments and an earlier SQLite guard, while noting that historical false-finding rationale is unknown and Luna runs establish no relative model advantage. The pilot must keep original reports, independent reproductions and model trials distinct. Its evidence must cover all 27 historical reports and distinguish measured evidence from planned coverage.
+
+### 3. Actors, surfaces, and terminology
+
+The change applies to every eligible finding that could become active, including new, updated, reopened and overflow candidates, across ordinary and framed PR review, incremental review and recheck, and the supported Commit review path with or without an owning PR. Existing canonical PR ownership and fallback rules continue to prevent duplicate publication. Proposed fixed or obsolete transitions require explicit evidence; human dismissal authority remains intact.
+
+The author or reviewer receives an anchored defect with revision evidence or an actionable uncertainty in the canonical review result. Maintainers control trusted configuration, rollout and human history decisions. Operators see coverage, verification and observed publication status through the existing review surfaces. The application binds evidence and enforces policy; the verifier works in a fresh task for an admitted hypothesis and returns a disposition over evidence supplied by the application.
+
+A candidate is a testable causal hypothesis. A receipt is an application-issued record bound to the review operation, candidate and revision. A disposition states what supplied evidence establishes for that candidate. A finding state records durable finding or native-thread history. Evidence can include source, resolved dependency or matching native CI; probes are a separately authorized profile.
+
+### 4. Goals, non-goals, and fixed invariants
+
+The application must compare GPT-6 Luna and GPT-6.1 Sol independently at low effort. V4 and the Sol supplement are diagnostic only, and v4 is unqualified. An on-demand replay covers two pairs and is capped at 90 seconds, 32,768 gross input tokens and 4,096 output tokens per case, including retries and both rounds. A favorable replay may proceed to full-review evaluation; bounded production limits can be set only from a qualified full-review profile.
+
+The first evidence profile uses source, the resolved dependency and matching native CI. Probes require separate opt-in, isolation and qualification. Before freezing finding identity and anchor, the application preserves the substantive original line. It may select one unique causal changed line within two lines in the same diff block; ambiguity remains inconclusive and records both locations. The verifier cannot move the anchor.
+
+Allow exactly one typed evidence round, with an operation, candidate and revision-bound receipts. Missing, denied or exhausted decisive evidence produces an inconclusive disposition naming the cause and next step. Forged, cross-candidate or wrong-revision citations fail the batch before finding, resolution or approval writes. The verifier ports and untrusted response handling cannot invoke publication or arbitrary commands.
+
+Each exact profile must independently pass full historical baseline reproduction, paired false-positive improvement, every positive control at its exact anchor, integrity, accounting, cost and latency checks, and the unchanged independent 174-case detection corpus. A qualifying profile requires explicit maintainer approval before enablement; production remains disabled until then. After rollback, retain the same-policy approval fence and require a fresh authoritative receipt. An intact mixed review may publish confirmed findings while incomplete evidence blocks approval. These constraints refine the existing owning contract; they do not replace its cases or publication and history rules.
+
+| Requirement | Behavior |
+| --- | --- |
+| SDD-I950-U3-R1 | Verifier ports and untrusted response handling cannot invoke publication or arbitrary commands. |
+| SDD-I950-U4-R1 | Compare GPT-6 Luna and GPT-6.1 Sol independently at low effort; treat v4 and the Sol supplement as diagnostic, with v4 unqualified. |
+| SDD-I950-U4-R2 | Limit the two-pair on-demand replay to 90 seconds, 32,768 gross input tokens, and 4,096 output tokens per case, including retries and both rounds. |
+| SDD-I950-U4-R3 | Allow a favorable replay result to proceed to full-review evaluation; set bounded production limits only from a qualified full-review profile. |
+| SDD-I950-U5-R1 | Use source, resolved dependency, and matching native CI as the first profile; require separate opt-in, isolation, and qualification for probes. |
+| SDD-I950-U5-R2 | Preserve the substantive original line before freezing identity and anchor; allow one unique causal changed line within two lines in the same diff block, record both locations when ambiguous, and prevent the verifier from moving the anchor. |
+| SDD-I950-U5-R3 | Allow exactly one typed evidence round with an operation, candidate, and revision-bound receipts; make missing, denied, or exhausted decisive evidence inconclusive with its cause and next step. |
+| SDD-I950-U5-R4 | Reject forged, cross-candidate, or wrong-revision citations before any finding, resolution, or approval writes. |
+| SDD-I950-U6-R1 | Each exact profile passes full historical baseline reproduction, paired false-positive improvement, positive controls at exact anchors, integrity, accounting, cost, latency, and the unchanged independent 174-case detection corpus before qualifying. |
+| SDD-I950-U6-R2 | A qualifying profile requires explicit maintainer approval before enablement; production remains disabled. |
+| SDD-I950-U6-R3 | After rollback, retain the same-policy approval fence and require a fresh authoritative receipt. |
+| SDD-I950-U6-R4 | An intact mixed review may publish confirmed findings while incomplete evidence blocks approval. |
+| SDD-I950-U6-R5 | Keep all 27 historical cases traceable, with measured evidence distinguished from planned coverage. |
+
+### 5. Current versus proposed product journey
+
+This amendment extends the immutable owner’s existing review journey in `specs/bugbot-analysis-publication-and-autofix.md`; canonical ownership, admission, identity, freshness, publication, history, and recovery rules remain in force.
+
+| Stage | Delta |
+|---|---|
+| Prepare | Preserve the substantive original line before fixing candidate identity and anchor. The application may select one unique causal changed line within two lines in the same diff block. If the evidence leaves multiple locations plausible, keep the candidate inconclusive and record both locations. |
+| Verify | Apply the same evidence-verification gate to every eligible finding, regardless of language, severity, or comment capacity, including new, updated, reopened, overflow, and history-transition candidates. Start from source, resolved dependency, and matching native CI evidence. |
+| Decide | Give the verifier one typed evidence round, bound to its operation, candidate, and reviewed revision. It may assess supplied evidence but cannot change the candidate’s anchor or authorize a publication or command. |
+| Publish | Reject forged, cross-candidate, or wrong-revision evidence before any finding, resolution, or approval write. An intact mixed result may publish confirmed findings while keeping the review incomplete and approval blocked for unresolved evidence. |
+| Qualify | Compare GPT-6 Luna and GPT-6.1 Sol independently at low effort. V4 and the Sol supplement are diagnostic; v4 is unqualified. A favorable bounded replay proceeds only to full-review evaluation. Production remains disabled pending the separate qualification and maintainer-approval gates. |
+
+Existing PR, framed and ordinary review, incremental recheck, and supported Commit routes retain their canonical destination and single-owner behavior. A Commit associated with a PR continues to use that PR’s owner; standalone supported Commit review uses the existing fallback. No additional publication destination is introduced.
+
+### 6. Functional behavior and state model
+
+The existing owner’s pinning, candidate admission, disposition, freshness, publication, historical-transition, and provider-reconciliation contract remains authoritative. This delta adds the following verification rules.
+
+Before identity and anchor are frozen, retain the substantive original changed line. The application may choose a unique causal changed line no more than two lines away in the same diff block. If uniqueness cannot be established, preserve both locations and return an inconclusive result; the verifier cannot move the anchor. Apply the same check to proposed fixed or obsolete transitions against the retained historical finding ID and current pinned evidence. Uncertainty or omission alone never changes historical state.
+
+The first evidence profile uses immutable source, the resolved dependency or runtime relevant to the claim, and matching native CI evidence where execution is material. A general green check does not prove a candidate. CI must match the reviewed source and relevant job, suite, or step. Probes require separate opt-in, an isolated bounded environment, and independent qualification; they are not part of the first profile.
+
+For each decisive gap, allow exactly one typed evidence round. Its request names an allowed operation and candidate, and every receipt is bound to that operation and reviewed revision. Missing, denied, conflicting, or exhausted decisive evidence yields an inconclusive disposition with its cause and practical next step. Reject forged, cross-candidate, or wrong-revision citations as a batch integrity failure before finding, resolution, or approval writes. The verifier receives no publication capability or authority to invoke arbitrary commands.
+
+The on-demand two-pair replay is bounded to 90 seconds, 32,768 gross input tokens, and 4,096 output tokens per case, counting retries and both rounds. Exceeding a bound is reported as a bounded replay outcome, not as a favorable result. A favorable replay permits full-review evaluation only; set bounded production limits from a qualified full-review profile.
+
+Qualification is per exact profile. It requires reproduction of the full historical baseline, paired false-positive improvement, every positive control at its exact anchor, integrity and accounting, cost and latency gates, and the unchanged independent 174-case detection corpus. Missing or failed evidence prevents qualification. A qualifying profile remains disabled until explicit maintainer approval; production is disabled before that approval. After rollback, preserve the same-policy approval fence and require a fresh authoritative receipt. An intact mixed review can publish confirmed findings while incomplete evidence blocks approval.
+
+### 7. User-facing configuration
+
+The existing owner’s user-facing settings and fixed safety invariants remain unchanged. This amendment adds no user-controlled verifier, evidence, or probe override. Effective policy and profile are trusted installation/runtime decisions, snapshotted for the review; review text, repository content, and verifier output cannot change them.
+
+The initial evidence profile is source, resolved dependency, and matching native CI. A profile that runs probes requires a separate trusted opt-in, isolation, and qualification before use. Probe commands, runner prerequisites, and bounds must be explicitly registered by the trusted application; arbitrary commands or model-selected execution are invalid.
+
+Compare GPT-6 Luna and GPT-6.1 Sol independently at low effort. Treat v4 and the Sol supplement as diagnostic only, and do not qualify v4. Keep production disabled until an exact profile passes the full-review gates and a maintainer explicitly approves enablement. Production limits must be bounded from that qualified profile; a favorable two-pair replay alone cannot set them.
+
+### 8. Clean Architecture design
+
+Keep the existing owner’s domain policies, application workflow, semantic ports, provider adapters, composition, presentation, and publication/reconciliation boundaries. Add evidence verification within those boundaries: the application owns candidate-to-evidence planning and issues immutable receipts; read adapters retrieve only authorized source, dependency, and matching CI artifacts; the verifier consumes a fresh bounded task and returns a typed result. A probe adapter is unavailable unless separately opted in, isolated, and qualified.
+
+Keep policy checks pure: candidate and receipt binding, revision matching, anchor immutability, one-round allowance, disposition completeness, and qualification eligibility. The application validates the full result before constructing any write plan. Verifier ports and untrusted response handling must have no dependency path to provider mutations or arbitrary command execution; enforce this with an executable boundary check. Keep provider DTOs and credentials out of domain policy and verifier requests. Existing provider write and recovery paths continue to own observed effects and publication reconciliation.
+
+The pilot must exercise the evidence profile and tool permissions through the real orchestration boundary with write ports that fail on invocation. Qualification evidence distinguishes replay from full-review results, records the exact profile and accounting, and does not treat structural checks or declarations as executed acceptance.
+
+### 9. UI/UX and content contract
+
+For this #950 delta, retain the canonical card, Copilot / Review check, Job Summary, locale and sanitization contract in the immutable owning SDD’s “Bugbot repository evidence verification” section. Add the pilot state without implying that replay output is production evidence:
+
+| State | Primary message and action |
+|---|---|
+| Pilot pending | “Evidence pilot running for this revision. Findings remain under the current review policy.” Link to the current run. |
+| Pilot complete | “Evidence pilot complete. Review the per-profile results and qualification evidence.” Show Luna and Sol separately and identify diagnostic-only arms. |
+| Pilot incomplete | “Evidence pilot incomplete. [Profile] lacks [named evidence]. Qualification is unavailable.” Link to the run and state the next supported action. |
+| Production disabled | “Repository evidence verification is not enabled for publication.” Keep findings and approval under the current effective policy. |
+
+Present matched, independent GPT-6 Luna and GPT-6.1 Sol results at low effort. Label v4 and the Sol supplement diagnostic; v4 is unqualified. Show the two-pair replay’s elapsed time and gross input/output accounting per case, including retries and both rounds. A favorable replay may proceed to full-review evaluation, but must not appear as qualification. Accessible text and headings must identify the profile, status, limits and next step independently of color; preserve localized fallback, descriptive links and bounded details. Production stays disabled unless its exact profile qualifies and receives explicit maintainer approval.
+
+### 10. Failure, recovery, and cleanup
+
+Keep the owning SDD’s failure, freshness, provider-reconciliation and cleanup behavior. For the #950 pilot, distinguish an invalid or incomplete trial from a negative efficacy result: retain its bounded safe cause, mark the profile unqualified, and do not substitute another arm’s evidence. Stop a two-pair on-demand replay when it reaches 90 seconds, 32,768 gross input tokens, or 4,096 output tokens per case; totals include retries and both rounds. Report the exhausted bound and supported next action. A favorable bounded replay permits full-review evaluation only; production limits are set only from a qualified full-review profile.
+
+A missing, denied or exhausted decisive item in the single typed evidence round yields an inconclusive candidate with its cause and next step. Forged, cross-candidate or wrong-revision citations invalidate the batch before finding, resolution or approval writes. On rollback, invalidate the prior approval receipt for the effective policy and require a fresh authoritative receipt under the rollback policy. Preserve the last verified finding presentation, but do not let an older clean receipt authorize approval after a later authoritative pending, incomplete, failed, canceled or superseded attempt. Discard transient pilot evidence under the owning invocation’s cleanup and retention rules.
+
+### 11. Security, permissions, and privacy
+
+Use source, resolved dependency and matching native CI as the first evidence profile. The profile consumes application-issued, immutable, revision- and candidate-bound receipts. Repository data, CI output and model responses remain untrusted; verifier ports and response handling cannot invoke publication or arbitrary commands. The first profile uses read-only evidence and no reproduction probes. Any probe requires separate opt-in, isolation and its own qualification; it cannot be authorized by model or repository text. V4 and the Sol supplement remain diagnostic and cannot furnish qualification evidence.
+
+Before identity and anchor are frozen, preserve the substantive original line. The application may select a unique causal changed line within two lines in the same diff block; when the causal line is ambiguous, retain both locations and leave the candidate inconclusive. The verifier cannot move the anchor. Validate every citation against the current candidate, operation and revision before any finding, resolution or approval mutation. Keep raw prompts, source blobs, credentials and full command output out of public and durable diagnostics; expose only safe locators and bounded reason categories under the existing privacy contract.
+
+### 12. Observability and operational UX
+
+The pilot record must make each exact profile independently reviewable: model and low-effort setting, immutable source/dependency/CI evidence identities, trial and retry accounting, elapsed time, gross input/output tokens, dispositions, anchor outcomes, integrity results, cost and latency observations, and corpus result. Separate diagnostic arms and incomplete trials from qualifying results. Report full-review baseline reproduction, paired false-positive comparison, positive controls, and the unchanged independent 174-case detection corpus as distinct evidence; a favorable replay is not qualification. Do not pool results across models or profiles.
+
+For production approval, retain a safe authoritative receipt bound to repository, review target, revision, effective policy and native attempt, with observed coverage, verification and publication outcomes. The approval consumer uses the newest authoritative attempt: a later pending, inconclusive, failed, canceled or superseded attempt blocks an older clean receipt. Dry-run and shadow evidence cannot authorize approval or replace the authoritative stream. Operator status must distinguish profile qualification, explicit maintainer approval, production enablement and current review outcome. Keep telemetry bounded and exclude raw prompts, repository content, credentials and full output.
+
+### 13. Compatibility, migration, rollout, and rollback
+
+The immutable owning SDD remains authoritative for finding identity, historical state, publication ownership, freshness and human decisions. This delta adds no production enablement by default: keep production disabled. Qualify each exact profile only after it independently passes full historical baseline reproduction, paired false-positive improvement, every positive control at its exact anchor, integrity, accounting, cost and latency gates, and the unchanged independent 174-case detection corpus. A favorable two-pair replay only advances the profile to full-review evaluation. Set bounded production limits only from a qualified full-review profile, then require explicit maintainer approval before enabling it.
+
+Keep shadow and dry-run results separate from authoritative approval evidence. After rollback, preserve the same-policy approval fence and require a fresh authoritative receipt; a receipt from an earlier policy generation cannot qualify the rollback. A later unsuccessful authoritative attempt at the same revision also blocks an older clean receipt. Recheck current revision and policy before approval or publication, and preserve existing human decisions and recoverable provider effects. The immutable retained owner continues to govern compatibility for legacy findings and in-flight work; this delta must not retroactively qualify prior evidence.
+
+### 14. Testing strategy and numeric budget
+
+The retained deterministic baseline is 30 distinct cases: 8 for provenance and source evidence, 6 for verdict and publication, 6 for lifecycle and concurrency, 5 for permission and security, and 5 for presentation and compatibility. Add the six approval-consumer and pilot-qualification cases from the immutable owner for a total minimum of 36 deterministic cases; model trials are additional and do not count toward this total. Keep the existing 27 historical reports individually traceable to measured evidence or an explicit remaining limitation. Planned coverage and derived totals do not establish semantic completeness or executed acceptance.
+
+For this delta, `inventory3-C01` exercises the verifier boundary: neither verifier ports nor untrusted responses can invoke publication or arbitrary commands. The independent low-effort model comparison and diagnostic treatment are exercised by `inventory4-C01`; the bounded two-pair replay, including retries and both rounds, by `inventory4-C02`; and progression from favorable replay to full-review qualification, with production limits set only from a qualified profile, by `inventory4-C03`.
+
+The source-and-CI-first profile, with separate probe opt-in, isolation and qualification, is covered by `inventory5-C01`. Finding identity and anchor preservation, including unique causal-line selection and ambiguity handling, by `inventory5-C02`. The single typed evidence round and inconclusive cause/next-step behavior by `inventory5-C03`. Forged, cross-candidate and wrong-revision citation rejection before writes by `inventory5-C04`.
+
+Each exact profile’s required historical reproduction, paired improvement, positive controls, integrity, accounting, cost, latency and unchanged 174-case corpus gates are covered by `inventory6-C01`. Explicit maintainer approval and disabled production by `inventory6-C02`; fresh authoritative evidence after rollback by `inventory6-C03`; and mixed publication with approval blocked by incomplete evidence by `inventory6-C04`.
+
+Retain deterministic clocks, pinned Git fixtures, in-memory providers, fail-on-call ports, and injected cancellation and provider failures. Exercise production orchestration as well as pure policy; verify measured cost and latency against declared budgets. Preserve repository-wide thresholds of 90% lines/statements, 88% functions and 82% branches, plus applicable changed-module gates; target full branch coverage for disposition completeness, provenance membership and approval eligibility. Maintainer review must inspect rendered English and Spanish mobile-width examples and actual marker updates. Pilot evidence must retain per-profile outcomes, controls, failures and deviations; structural counts alone do not qualify a profile.
+
+| Area | Minimum distinct cases | Behaviors/risks covered |
+|---|---:|---|
+| executable boundary check | 1 | Observable scenarios in the case inventory. |
+| model comparison | 1 | Observable scenarios in the case inventory. |
+| on-demand replay | 1 | Observable scenarios in the case inventory. |
+| qualification and production limits | 1 | Observable scenarios in the case inventory. |
+| Profile qualification | 1 | Observable scenarios in the case inventory. |
+| Finding identity and anchor | 1 | Observable scenarios in the case inventory. |
+| Typed evidence round | 1 | Observable scenarios in the case inventory. |
+| Citation validation | 1 | Observable scenarios in the case inventory. |
+| Pilot qualification | 2 | Observable scenarios in the case inventory. |
+| Approval consumer | 1 | Observable scenarios in the case inventory. |
+| Review publication | 1 | Observable scenarios in the case inventory. |
+| Historical evidence | 1 | Observable scenarios in the case inventory. |
+| Total | 13 | Distinct inventory cases; repeated executions do not add cases. |
+
+| Case ID | Area | Requirements | Scenario |
+| --- | --- | --- | --- |
+| inventory3-C01 | executable boundary check | SDD-I950-U3-R1 | A boundary check exercises verifier ports and untrusted response handling and observes that neither can invoke publication or arbitrary commands. |
+| inventory4-C01 | model comparison | SDD-I950-U4-R1 | Results record independent low-effort comparisons for GPT-6 Luna and GPT-6.1 Sol; v4 and the Sol supplement are marked diagnostic and v4 does not qualify. |
+| inventory4-C02 | on-demand replay | SDD-I950-U4-R2 | A two-pair replay records elapsed time and per-case gross input/output totals across retries and both rounds, and stays within 90 seconds, 32,768 input tokens, and 4,096 output tokens. |
+| inventory4-C03 | qualification and production limits | SDD-I950-U4-R3 | A favorable replay proceeds to full-review evaluation, and bounded production limits are set only when that full-review profile qualifies. |
+| inventory5-C01 | Profile qualification | SDD-I950-U5-R1 | The first profile uses source, resolved dependency, and matching native CI; a probe run is rejected without separate opt-in, isolation, and qualification. |
+| inventory5-C02 | Finding identity and anchor | SDD-I950-U5-R2 | The substantive original line is retained; a unique causal changed line within two lines in the same diff block can be selected, while ambiguity records both locations and the verifier cannot move the anchor. |
+| inventory5-C03 | Typed evidence round | SDD-I950-U5-R3 | A decisive evidence request permits one typed round bound to its operation, candidate, and revision; missing, denied, or exhausted evidence returns an inconclusive result with cause and next step. |
+| inventory5-C04 | Citation validation | SDD-I950-U5-R4 | Forged, cross-candidate, and wrong-revision citations each fail the batch before finding, resolution, or approval writes. |
+| inventory6-C01 | Pilot qualification | SDD-I950-U6-R1 | For each exact profile, reject qualification when any required historical, paired false-positive, exact-anchor positive-control, integrity, accounting, cost, latency, or unchanged 174-case corpus result fails or is missing. |
+| inventory6-C02 | Pilot qualification | SDD-I950-U6-R2 | A qualifying profile remains disabled until explicit maintainer approval is recorded; production remains disabled. |
+| inventory6-C03 | Approval consumer | SDD-I950-U6-R3 | After rollback, a prior receipt cannot pass the same-policy approval fence; a fresh authoritative receipt is required. |
+| inventory6-C04 | Review publication | SDD-I950-U6-R4 | An intact mixed review publishes its confirmed findings while incomplete evidence prevents approval. |
+| inventory6-C05 | Historical evidence | SDD-I950-U6-R5 | All 27 historical cases have traceable records, and measured evidence is distinguishable from planned coverage. |
+
+### 15. Documentation and discoverability
+
+Update the existing user-facing detection and publication guidance, setup guidance for permissions and configuration, and operator guidance for failure recovery, quality evidence, rollout and historical behavior. Keep the registered catalog evidence and generated catalog aligned with the owning specification and the actual landed tests and documentation. The immutable owner’s path inventory declares the documentation, catalog and pilot evidence updates, including prospective creates; those create declarations are not evidence that files already exist.
+
+The pilot documentation must define the two-pair replay limits, model and effort comparison, diagnostic-only variants, first source-and-CI evidence profile, probe prerequisites, qualification gates, approval fence and rollback behavior. Link the material through existing Bugbot navigation and validate routes and examples against implementation fixtures or contracts. For repository validation, the required outcomes are specification format validity, internal and cross-document consistency, and reciprocal catalog ownership, paths and evidence matching the generated view. The concrete invocation and prerequisites for these outcomes remain unverified in this selected source view; do not assume an installed project script.
+
+| Path | Change |
+| --- | --- |
+| specs/bugbot-analysis-publication-and-autofix.md | update |
+
+[specs/bugbot-analysis-publication-and-autofix.md](bugbot-analysis-publication-and-autofix.md)
+
+### 16. Acceptance scenarios
+
+1. A boundary check observes that verifier ports and untrusted verifier responses cannot trigger publication or arbitrary command execution (`inventory3-C01`).
+2. Independent low-effort comparisons record GPT-6 Luna and GPT-6.1 Sol; v4 and the Sol supplement remain diagnostic, and v4 is unqualified (`inventory4-C01`).
+3. A two-pair on-demand replay stays within 90 seconds, 32,768 gross input tokens and 4,096 output tokens per case, counting retries and both rounds; favorable results proceed to full-review evaluation, and only a qualified full-review profile sets production limits (`inventory4-C02`, `inventory4-C03`).
+4. The first profile uses source, resolved dependency and matching native CI. A probe is rejected without separate opt-in, isolation and qualification (`inventory5-C01`).
+5. The application preserves the substantive original line before identity and anchor freeze. It selects a unique causal changed line within two lines in the same diff block when available; ambiguity remains inconclusive and records both locations. The verifier cannot move the anchor (`inventory5-C02`).
+6. A decisive evidence request permits exactly one typed round bound to operation, candidate and revision. Missing, denied or exhausted evidence is inconclusive with cause and next step (`inventory5-C03`). Forged, cross-candidate and wrong-revision citations each fail the batch before finding, resolution or approval writes (`inventory5-C04`).
+7. Qualification rejects an exact profile if any required historical baseline, paired false-positive, exact-anchor positive-control, integrity, accounting, cost, latency or unchanged independent 174-case corpus result fails or is missing (`inventory6-C01`). A qualifying profile remains disabled until explicit maintainer approval, and production remains disabled (`inventory6-C02`). After rollback, a prior receipt cannot pass the same-policy approval fence; a fresh authoritative receipt is required (`inventory6-C03`).
+8. An intact mixed review publishes confirmed findings while incomplete evidence blocks approval (`inventory6-C04`).
+9. Preserve the existing approval-consumer and pilot-qualification scenarios: a same-SHA legacy marker cannot authorize approval after enforcement; later inconclusive or failed authoritative attempts invalidate older clean evidence; rollback requires fresh evidence and shadow results cannot authorize approval; pilot arms retain equivalent read-only inspection and shared verifier tool policy; and the main evidence packet rejects probes, oracle data, later sources and unmatched CI. The owner defines these as `bbe950-revision-C01`, `bbe950-revision-C02`, `bbe950-revision-C03`, `bbe950-revision-C04`, `bbe950-revision-C05` and `bbe950-revision-C06`.
+
+### 17. Requirements traceability
+
+Map each requirement only to cases that exercise its observable behavior:
+
+- `SDD-I950-U3-R1`: `inventory3-C01`.
+- `SDD-I950-U4-R1`: `inventory4-C01`.
+- `SDD-I950-U4-R2`: `inventory4-C02`.
+- `SDD-I950-U4-R3`: `inventory4-C03`.
+- `SDD-I950-U5-R1`: `inventory5-C01`.
+- `SDD-I950-U5-R2`: `inventory5-C02`.
+- `SDD-I950-U5-R3`: `inventory5-C03`.
+- `SDD-I950-U5-R4`: `inventory5-C04`.
+- `SDD-I950-U6-R1`: `inventory6-C01`.
+- `SDD-I950-U6-R2`: `inventory6-C02`.
+- `SDD-I950-U6-R3`: `inventory6-C03`.
+- `SDD-I950-U6-R4`: `inventory6-C04`.
+
+Retain the owner’s separate approval requirements and mappings: `BBE950-R01` is exercised by `bbe950-revision-C01`, `bbe950-revision-C02`, `bbe950-revision-C03` and `bbe950-revision-C04`; `BBE950-R02` by `bbe950-revision-C05` and `bbe950-revision-C06`. These existing owner identities remain references, not new case definitions. Keep the historical issue matrix traceable to decisive evidence and planned regression or an explicit limitation; generic capability coverage does not establish closure of an individual historical report. This mapping is structural evidence only and does not assert that cases ran or that pilot acceptance passed.
+
+| Requirement | Cases |
+|---|---|
+| SDD-I950-U3-R1 | inventory3-C01 |
+| SDD-I950-U4-R1 | inventory4-C01 |
+| SDD-I950-U4-R2 | inventory4-C02 |
+| SDD-I950-U4-R3 | inventory4-C03 |
+| SDD-I950-U5-R1 | inventory5-C01 |
+| SDD-I950-U5-R2 | inventory5-C02 |
+| SDD-I950-U5-R3 | inventory5-C03 |
+| SDD-I950-U5-R4 | inventory5-C04 |
+| SDD-I950-U6-R1 | inventory6-C01 |
+| SDD-I950-U6-R2 | inventory6-C02 |
+| SDD-I950-U6-R3 | inventory6-C03 |
+| SDD-I950-U6-R4 | inventory6-C04 |
+| SDD-I950-U6-R5 | inventory6-C05 |
+
+### 18. Implementation sequence
+
+1. Preserve this specification’s existing review, publication, history, freshness, and approval contracts. Implement the executable boundary check so verifier ports and untrusted responses cannot invoke publication or arbitrary commands.
+2. Add the low-effort GPT-6 Luna and GPT-6.1 Sol comparisons as independent measurements. Keep v4 and the Sol supplement diagnostic; v4 is unqualified. Apply the two-pair on-demand replay ceilings across retries and both rounds: 90 seconds, 32,768 gross input tokens, and 4,096 output tokens per case. A favorable replay advances only to full-review evaluation; derive production limits only from a qualified full-review profile.
+3. Qualify the source, resolved dependency, and matching native CI profile first. Treat probes as a separate profile requiring explicit opt-in, isolation, and qualification. Preserve the substantive original line before freezing finding identity and anchor. Permit one unique causal changed line within two lines in the same diff block; on ambiguity, record both locations and leave the anchor unmoved by the verifier.
+4. Implement one typed evidence round, bound by operation, candidate, and revision-bound receipts. Missing, denied, or exhausted decisive evidence returns an inconclusive result with its cause and next step. Reject forged, cross-candidate, and wrong-revision citations before any finding, resolution, or approval write. An intact mixed review may publish confirmed findings while incomplete evidence blocks approval.
+5. Qualify each exact profile independently against historical baseline reproduction, paired false-positive improvement, all positive controls at exact anchors, integrity, accounting, cost, latency, and the unchanged independent 174-case detection corpus. Require explicit maintainer approval before enabling a qualifying profile; production remains disabled pending that approval. After rollback, retain the same-policy approval fence and require a fresh authoritative receipt.
+6. Preserve the existing owning contract and cases. Add and trace the approved case inventory to its concrete behaviors, including the boundary, model comparison, replay, profile, identity/anchor, evidence-round, citation, qualification, approval, rollback, and mixed-publication assertions. Keep all 27 historical reports traceable and distinguish measured evidence from planned coverage.
+
+### 19. Definition of Done
+
+- [ ] The executable boundary check proves verifier ports and untrusted responses cannot invoke publication or arbitrary commands.
+- [ ] Independent low-effort Luna and Sol results are recorded; v4 and the Sol supplement remain diagnostic, and v4 is not qualified. The two-pair replay stays within all per-case elapsed-time and gross token ceilings, including retries and both rounds. A favorable replay is followed by full-review evaluation; production limits derive only from a qualified full-review profile.
+- [ ] The first evidence profile uses source, resolved dependency, and matching native CI. Probe use has separate opt-in, isolation, and qualification. The original substantive line is retained before identity and anchor freeze; unique causal changed-line selection follows the stated same-block/two-line rule, ambiguity records both locations, and the verifier cannot move the anchor.
+- [ ] Exactly one typed evidence round is allowed and its operation, candidate, and receipts are revision-bound. Missing, denied, or exhausted decisive evidence is inconclusive with cause and next step. Forged, cross-candidate, and wrong-revision citations fail before finding, resolution, or approval writes.
+- [ ] Every exact profile passes all specified historical, paired false-positive, exact-anchor positive-control, integrity, accounting, cost, latency, and unchanged 174-case corpus gates before qualification. A qualifying profile remains disabled until explicit maintainer approval; production remains disabled. Rollback preserves the same-policy approval fence and requires a fresh authoritative receipt.
+- [ ] An intact mixed review publishes confirmed findings while incomplete evidence blocks approval. Existing review ownership, freshness, human dismissal, history, and publication safeguards remain consistent with the retained owner.
+- [ ] The approved case inventory preserves every declared identity and concrete assertion, maps each requirement to cases that exercise it, and maps each case only to exercised requirements. Counts and reciprocal mappings demonstrate structural consistency, not semantic completeness, executed acceptance, or model improvement.
+- [ ] The specification satisfies the required format; internal and cross-document consistency is checked; reciprocal catalog ownership, paths, and evidence agree with the generated view. These are explicit publication outcomes. The selected project’s concrete invocation and prerequisites for specification/catalog validation remain unverified here; a declared command is not evidence of execution or acceptance.
+- [ ] Product acceptance evidence, including model measurements and profile qualification, is recorded separately from deterministic cases and structural validation. No measurement or acceptance result is implied by this SDD delta.
+
+### 20. References and decisions
+
+- This is a bounded amendment to the immutable owning specification `specs/bugbot-analysis-publication-and-autofix.md`; retain its existing contract, cases, and related ownership references.
+- Issue: [#950](https://github.com/vypdev/copilot/issues/950).
+- Decisions: compare GPT-6 Luna and GPT-6.1 Sol independently at low effort; keep v4 and the Sol supplement diagnostic, with v4 unqualified. Apply the stated two-pair replay limits, evidence-profile order, single typed evidence round, citation rejection rules, full-review qualification gates, explicit approval fence, rollback receipt requirement, and mixed-review publication behavior.
+- Unresolved implementation evidence: the concrete selected-project invocation and prerequisites for specification/catalog validation were not established by this draft. The required publication outcomes remain as stated in section 19; do not treat a command declaration or structural consistency as executed validation or product acceptance.
