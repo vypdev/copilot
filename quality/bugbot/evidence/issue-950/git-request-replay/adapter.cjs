@@ -42,7 +42,7 @@ const instructions = 'Return a final decision with request set to null or one ty
     + `Use searchTree with one to ${sourceLimits.maxTargets} targets, a repository-relative scope and null start/end. Use scope "" for the authorized repository root. The single dot is a search alias for that root. `
     + 'Use match name for the exact basename including its extension when present. Name matching treats wildcard characters literally. Use match literal for text inside files. Use null workspace unless targeting a declared workspace.';
 
-function admit(original, scopes) {
+function admit(original, scopes, validate = requestProblem) {
     const denied = reason => ({ normalized: original, admission: { status: 'denied', reason } });
     if (!original || typeof original !== 'object' || Array.isArray(original)
         || Object.keys(original).sort().join(',') !== 'kind,revision,targets') return denied('request-shape');
@@ -56,7 +56,7 @@ function admit(original, scopes) {
             target?.scope === '.' ? { ...target, scope: '' } : target) };
     }
     const { revision: _, ...query } = normalized;
-    return { normalized, admission: requestProblem(query, scopes) ?? { status: 'admitted' } };
+    return { normalized, admission: validate(query, scopes) ?? { status: 'admitted' } };
 }
 
 function read(cwd, binding, original) {

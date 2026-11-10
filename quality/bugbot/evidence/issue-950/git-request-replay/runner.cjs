@@ -5,9 +5,9 @@ const { requestFor, validateProof, bindReply } = require('../coverage-895-pilot/
 const { dryRunPorts } = require('../on-demand/contract.cjs');
 const { byteLength, digest } = require('../v4/verification.cjs');
 const { packetBytes, promptBytes } = require('../coverage-895-pilot/manifest.json');
-const adapter = require('./adapter.cjs');
+const legacyAdapter = require('./adapter.cjs');
 
-function initialRequest(model, session) {
+function initialRequest(model, session, adapter = legacyAdapter) {
     const initial = requestFor(model, session, session.initial);
     const lines = initial.request.prompt.split('\n');
     assert.equal(lines.length, 4);
@@ -29,10 +29,10 @@ const stableBudget = budget => {
 };
 const statusFields = ({ status, reason }) => ({ status, ...(reason ? { reason } : {}) });
 
-function replay(row, session, simulatedVerifier) {
+function replay(row, session, simulatedVerifier, adapter = legacyAdapter) {
     const writeAttempts = [];
     const ports = dryRunPorts(operation => writeAttempts.push(operation));
-    const first = initialRequest(row.model, session);
+    const first = initialRequest(row.model, session, adapter);
     const decision = simulatedVerifier(first.request, ports);
     assert.deepEqual(decision, { decision: null, request: row.requested });
     const { normalized, admission, result, usage } = adapter.read(session.cwd, session.identity, decision.request);

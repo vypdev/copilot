@@ -63,7 +63,7 @@ function decisive(subject, receipts) {
     return required.every(line => receipts.some(proof => proof.path === 'vitest.config.ts' && proof.start <= line && line <= proof.end));
 }
 
-function simulatedReplay(row, session, schema) {
+function simulatedReplay(row, session, schema, selectedAdapter = adapter) {
     let turns = 0;
     const schemaAccepted = schema({ decision: null, request: row.requested });
     const output = replay(row, session, request => {
@@ -85,7 +85,7 @@ function simulatedReplay(row, session, schema) {
         assert.deepEqual(request.options.schema.properties.citations.items.enum, packet.sources.map(source => source.alias));
         assert(packet.retrieval);
         return verdict(packet.sources.map(source => source.alias));
-    });
+    }, selectedAdapter);
 
     assert.equal(turns, output.delivery?.status === 'delivered' ? 2 : 1);
     assert.deepEqual(output.original, row.requested);
@@ -216,4 +216,6 @@ async function main() {
     ] }, trials }, null, 2));
 }
 
-main().catch(error => { console.error(error); process.exitCode = 1; });
+if (require.main === module) main().catch(error => { console.error(error); process.exitCode = 1; });
+
+module.exports = { historicalRequests, simulatedReplay };
