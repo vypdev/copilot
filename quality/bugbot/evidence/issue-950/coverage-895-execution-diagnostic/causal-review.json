@@ -1,0 +1,22 @@
+{
+  "mutant/1/execution/gpt-6.1-sol": {
+    "reasonSha256": "27e67a7aeed1e2d9869ade50f9664226068845c587a9654d0e8cfb8cfe15a25c",
+    "passes": true,
+    "note": "Connects the project hook rewrite and V8 option consumption to tested-source admission, remap and merge, then uses the observed JSON key and inventory rejection."
+  },
+  "original/2/execution/gpt-6.1-sol": {
+    "reasonSha256": "c80dd0ad4896258074bcc329acffba229f0d518ec59ba1663930b7a7dd84e1a8",
+    "passes": true,
+    "note": "Connects awaited hook dispatch and V8 option consumption to the original exclusion, then cites the executed-source rejection, no summary key and inventory exit zero."
+  },
+  "mutant/2/execution/gpt-6.1-sol": {
+    "reasonSha256": "c53b93f79499418e6c8f6e52ffd6710c9f37661f1804b9b1dcbe3bd7f8f22e33",
+    "passes": true,
+    "note": "Traces the exception through V8 initialization and tested-source coverage, distinguishes the uncovered route and cites the observed key and inventory exit one."
+  },
+  "mutant/3/execution/gpt-6.1-sol": {
+    "reasonSha256": "95b2b2a962a61bcf6f50f2dcf42dbb15d43f2546540699e54e302f68c37c3136",
+    "passes": true,
+    "note": "Explains the exact hook order and exclusion rewrite, then cites tested coverage, the emitted story key, coverage exit zero and inventory exit one."
+  }
+}
