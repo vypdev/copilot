@@ -1,0 +1,3717 @@
+{
+  "freeze": "4bfdb03370b5acd7b6bcd8250ab16757c502d1fb",
+  "profiles": {
+    "gpt-6-luna": {
+      "correct": {
+        "fixed": 0,
+        "repeat": 0,
+        "on-demand": 0
+      },
+      "passes": false,
+      "modes": {
+        "readBlob": 1
+      },
+      "onDemandBySubject": {
+        "original": 0,
+        "mutant": 0
+      }
+    },
+    "gpt-6.1-sol": {
+      "correct": {
+        "fixed": 0,
+        "repeat": 0,
+        "on-demand": 0
+      },
+      "passes": false,
+      "modes": {
+        "literal": 17,
+        "name": 3
+      },
+      "onDemandBySubject": {
+        "original": 0,
+        "mutant": 0
+      }
+    }
+  },
+  "trials": [
+    {
+      "trial": "original/1/fixed/gpt-6-luna",
+      "subject": "original",
+      "repetition": 1,
+      "arm": "fixed",
+      "model": "gpt-6-luna",
+      "attempts": 1,
+      "status": "valid-inconclusive",
+      "stop": "request",
+      "correct": false,
+      "expected": "refuted",
+      "verdict": "inconclusive",
+      "requested": null,
+      "admission": null,
+      "lookup": null,
+      "retrieved": [],
+      "deliveredIds": [
+        "r-990cbf7c3826b8923fbc5a40",
+        "r-e84cbaadaeecb7bde819c59f",
+        "r-879a406139e50f4e360f7559",
+        "r-e56521db29c8b10f07f4a31f",
+        "r-5e4e6a44985bf9924502fdd0",
+        "r-0feb7b06e3c137546bf35552",
+        "r-3330ca744d369bc323bde576",
+        "r-73e4ddfc94494317c97ae3db",
+        "r-62e83cbd336df8ae0768daf3",
+        "r-1df15e7738e14f0aea36ffc7",
+        "r-03c7e5f2ea49e653b66096d8",
+        "r-566aac65530b2261eaa61554",
+        "r-e143f2ad6ef6c072a4096aa3"
+      ],
+      "citedIds": [
+        "r-990cbf7c3826b8923fbc5a40",
+        "r-e84cbaadaeecb7bde819c59f",
+        "r-5e4e6a44985bf9924502fdd0",
+        "r-1df15e7738e14f0aea36ffc7",
+        "r-03c7e5f2ea49e653b66096d8",
+        "r-566aac65530b2261eaa61554",
+        "r-e143f2ad6ef6c072a4096aa3"
+      ],
+      "stages": {
+        "retrieval": false,
+        "delivery": false,
+        "citation": false
+      },
+      "coverage": {
+        "collection": true,
+        "exclusion": false,
+        "report": false,
+        "inventory": true
+      },
+      "failure": null,
+      "budget": "within",
+      "anchor": {
+        "path": "tooling/coverage.mjs",
+        "side": "RIGHT",
+        "line": 14
+      },
+      "usage": {
+        "input_tokens": 11774,
+        "output_tokens": 145
+      },
+      "wallMs": 6279,
+      "reason": "Storybook adds stories to Vitest collection and coverage filtering can include matching files; the independent inventory excludes *.stories.ts, but no effective config/source extension evidence establishes that a Storybook CSF file matches the coverage include or appears in the JSON summary.",
+      "missing": "Need the runtimeExtensions value, full effective Vitest/Storybook coverage configuration, and evidence of the relevant Storybook CSF path matching it; next inspect those source/config definitions and their resolved coverage include.",
+      "review": {
+        "reasonSha256": "a5d2d8794bb3bb1a40b691d881b076853716ca53dde425f5e22f0ef9bd9bbb34",
+        "passes": false,
+        "note": "Identifies an unresolved link between the effective project filters and the report or inventory and withholds judgment."
+      },
+      "writeAttempts": [],
+      "modes": [],
+      "normalized": null,
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      }
+    },
+    {
+      "trial": "original/1/fixed/gpt-6.1-sol",
+      "subject": "original",
+      "repetition": 1,
+      "arm": "fixed",
+      "model": "gpt-6.1-sol",
+      "attempts": 1,
+      "status": "unresolved-request",
+      "stop": "fixed-stop",
+      "correct": false,
+      "expected": "refuted",
+      "verdict": null,
+      "requested": {
+        "revision": "head",
+        "kind": "searchTree",
+        "targets": [
+          {
+            "scope": "",
+            "workspace": null,
+            "match": "literal",
+            "query": "storybookTest(",
+            "start": null,
+            "end": null
+          },
+          {
+            "scope": "",
+            "workspace": null,
+            "match": "literal",
+            "query": "completeCoverage(",
+            "start": null,
+            "end": null
+          }
+        ]
+      },
+      "admission": {
+        "status": "admitted"
+      },
+      "lookup": {
+        "status": "unresolved",
+        "reason": "fixed-single-call"
+      },
+      "retrieved": [],
+      "deliveredIds": [
+        "r-990cbf7c3826b8923fbc5a40",
+        "r-e84cbaadaeecb7bde819c59f",
+        "r-879a406139e50f4e360f7559",
+        "r-e56521db29c8b10f07f4a31f",
+        "r-5e4e6a44985bf9924502fdd0",
+        "r-0feb7b06e3c137546bf35552",
+        "r-3330ca744d369bc323bde576",
+        "r-73e4ddfc94494317c97ae3db",
+        "r-62e83cbd336df8ae0768daf3",
+        "r-1df15e7738e14f0aea36ffc7",
+        "r-03c7e5f2ea49e653b66096d8",
+        "r-566aac65530b2261eaa61554",
+        "r-e143f2ad6ef6c072a4096aa3"
+      ],
+      "citedIds": [],
+      "stages": {
+        "retrieval": false,
+        "delivery": false,
+        "citation": false
+      },
+      "coverage": {
+        "collection": false,
+        "exclusion": false,
+        "report": false,
+        "inventory": false
+      },
+      "failure": null,
+      "budget": "within",
+      "anchor": {
+        "path": "tooling/coverage.mjs",
+        "side": "RIGHT",
+        "line": 14
+      },
+      "usage": {
+        "input_tokens": 11774,
+        "output_tokens": 190
+      },
+      "wallMs": 9824,
+      "reason": null,
+      "missing": null,
+      "review": null,
+      "writeAttempts": [],
+      "modes": [
+        "literal",
+        "literal"
+      ],
+      "normalized": {
+        "revision": "head",
+        "kind": "searchTree",
+        "targets": [
+          {
+            "scope": "",
+            "workspace": null,
+            "match": "literal",
+            "query": "storybookTest(",
+            "start": null,
+            "end": null
+          },
+          {
+            "scope": "",
+            "workspace": null,
+            "match": "literal",
+            "query": "completeCoverage(",
+            "start": null,
+            "end": null
+          }
+        ]
+      },
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      }
+    },
+    {
+      "trial": "original/1/repeat/gpt-6-luna",
+      "subject": "original",
+      "repetition": 1,
+      "arm": "repeat",
+      "model": "gpt-6-luna",
+      "attempts": 1,
+      "status": "valid-inconclusive",
+      "stop": "request",
+      "correct": false,
+      "expected": "refuted",
+      "verdict": "inconclusive",
+      "requested": null,
+      "admission": null,
+      "lookup": null,
+      "retrieved": [],
+      "deliveredIds": [
+        "r-990cbf7c3826b8923fbc5a40",
+        "r-e84cbaadaeecb7bde819c59f",
+        "r-879a406139e50f4e360f7559",
+        "r-e56521db29c8b10f07f4a31f",
+        "r-5e4e6a44985bf9924502fdd0",
+        "r-0feb7b06e3c137546bf35552",
+        "r-3330ca744d369bc323bde576",
+        "r-73e4ddfc94494317c97ae3db",
+        "r-62e83cbd336df8ae0768daf3",
+        "r-1df15e7738e14f0aea36ffc7",
+        "r-03c7e5f2ea49e653b66096d8",
+        "r-566aac65530b2261eaa61554",
+        "r-e143f2ad6ef6c072a4096aa3"
+      ],
+      "citedIds": [
+        "r-990cbf7c3826b8923fbc5a40",
+        "r-e84cbaadaeecb7bde819c59f",
+        "r-879a406139e50f4e360f7559",
+        "r-e56521db29c8b10f07f4a31f",
+        "r-5e4e6a44985bf9924502fdd0",
+        "r-0feb7b06e3c137546bf35552",
+        "r-3330ca744d369bc323bde576",
+        "r-73e4ddfc94494317c97ae3db",
+        "r-62e83cbd336df8ae0768daf3",
+        "r-1df15e7738e14f0aea36ffc7",
+        "r-03c7e5f2ea49e653b66096d8",
+        "r-566aac65530b2261eaa61554",
+        "r-e143f2ad6ef6c072a4096aa3"
+      ],
+      "stages": {
+        "retrieval": false,
+        "delivery": false,
+        "citation": false
+      },
+      "coverage": {
+        "collection": true,
+        "exclusion": false,
+        "report": true,
+        "inventory": true
+      },
+      "failure": null,
+      "budget": "within",
+      "anchor": {
+        "path": "tooling/coverage.mjs",
+        "side": "RIGHT",
+        "line": 14
+      },
+      "usage": {
+        "input_tokens": 11776,
+        "output_tokens": 192
+      },
+      "wallMs": 6585,
+      "reason": "Storybook adds story globs to test collection, but Vitest coverage inclusion and exclusions plus V8 collection/remapping/reporting are shown; the inventory explicitly filters *.stories.ts and rejects unexpected report keys, yet the effective sourceDirectories/runtimeExtensions and coverage include/exclude resolution are absent, so admission of a CSF definition is not established.",
+      "missing": "The complete effective configuration values (sourceDirectories and runtimeExtensions) and relevant Vitest coverage glob match results for the Storybook story path; check those against the `stories/**/*.stories.ts` path and the resolved `coverage.include`/`coverage.exclude` patterns.",
+      "review": {
+        "reasonSha256": "d5ed23d415e22acc46d1a73560f4ece5d5d2b874d0a529ed73e82a4a86086113",
+        "passes": false,
+        "note": "Recognizes that the effective coverage configuration is missing, so the cited collection or reporting logic cannot establish the inventory outcome."
+      },
+      "writeAttempts": [],
+      "modes": [],
+      "normalized": null,
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      }
+    },
+    {
+      "trial": "original/1/repeat/gpt-6.1-sol",
+      "subject": "original",
+      "repetition": 1,
+      "arm": "repeat",
+      "model": "gpt-6.1-sol",
+      "attempts": 2,
+      "status": "unsupported-conclusive",
+      "stop": "withheld-control",
+      "correct": false,
+      "expected": "refuted",
+      "verdict": "refuted",
+      "requested": {
+        "revision": "head",
+        "kind": "searchTree",
+        "targets": [
+          {
+            "scope": "",
+            "workspace": null,
+            "match": "name",
+            "query": "vitest.config.ts",
+            "start": null,
+            "end": null
+          }
+        ]
+      },
+      "admission": {
+        "status": "admitted"
+      },
+      "lookup": {
+        "status": "withheld",
+        "reason": "control-no-new-source"
+      },
+      "retrieved": [],
+      "deliveredIds": [
+        "r-990cbf7c3826b8923fbc5a40",
+        "r-e84cbaadaeecb7bde819c59f",
+        "r-879a406139e50f4e360f7559",
+        "r-e56521db29c8b10f07f4a31f",
+        "r-5e4e6a44985bf9924502fdd0",
+        "r-0feb7b06e3c137546bf35552",
+        "r-3330ca744d369bc323bde576",
+        "r-73e4ddfc94494317c97ae3db",
+        "r-62e83cbd336df8ae0768daf3",
+        "r-1df15e7738e14f0aea36ffc7",
+        "r-03c7e5f2ea49e653b66096d8",
+        "r-566aac65530b2261eaa61554",
+        "r-e143f2ad6ef6c072a4096aa3"
+      ],
+      "citedIds": [
+        "r-03c7e5f2ea49e653b66096d8",
+        "r-990cbf7c3826b8923fbc5a40",
+        "r-e84cbaadaeecb7bde819c59f",
+        "r-879a406139e50f4e360f7559",
+        "r-e56521db29c8b10f07f4a31f",
+        "r-5e4e6a44985bf9924502fdd0",
+        "r-0feb7b06e3c137546bf35552",
+        "r-3330ca744d369bc323bde576",
+        "r-73e4ddfc94494317c97ae3db",
+        "r-62e83cbd336df8ae0768daf3",
+        "r-1df15e7738e14f0aea36ffc7",
+        "r-e143f2ad6ef6c072a4096aa3",
+        "r-566aac65530b2261eaa61554"
+      ],
+      "stages": {
+        "retrieval": false,
+        "delivery": false,
+        "citation": false
+      },
+      "coverage": {
+        "collection": true,
+        "exclusion": false,
+        "report": true,
+        "inventory": true
+      },
+      "failure": null,
+      "budget": "within",
+      "anchor": {
+        "path": "tooling/coverage.mjs",
+        "side": "RIGHT",
+        "line": 14
+      },
+      "usage": {
+        "input_tokens": 22260,
+        "output_tokens": 366
+      },
+      "wallMs": 18522,
+      "reason": "Storybook\u2019s story globs become test includes and shared, mandatory coverage exclusions; these exclusions govern V8 input and untested-file collection before remapping and JSON-summary reporting, so CSF files do not reach the summary or violate the independent inventory check, which also excludes stories; no test run is inferred.",
+      "missing": null,
+      "review": {
+        "reasonSha256": "1c44d67aeff8d218f10e69c57ccb13649f0ee3d56e1fb8b0f539dfbe9bd21ab5",
+        "passes": false,
+        "note": "Describes the default exclusion and its downstream effects. The effective project configuration needed to justify applying that exclusion to this revision was neither delivered nor cited."
+      },
+      "writeAttempts": [],
+      "modes": [
+        "name"
+      ],
+      "normalized": {
+        "revision": "head",
+        "kind": "searchTree",
+        "targets": [
+          {
+            "scope": "",
+            "workspace": null,
+            "match": "name",
+            "query": "vitest.config.ts",
+            "start": null,
+            "end": null
+          }
+        ]
+      },
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      }
+    },
+    {
+      "trial": "original/1/on-demand/gpt-6-luna",
+      "subject": "original",
+      "repetition": 1,
+      "arm": "on-demand",
+      "model": "gpt-6-luna",
+      "attempts": 1,
+      "status": "valid-inconclusive",
+      "stop": "request",
+      "correct": false,
+      "expected": "refuted",
+      "verdict": "inconclusive",
+      "requested": null,
+      "admission": null,
+      "lookup": null,
+      "retrieved": [],
+      "deliveredIds": [
+        "r-990cbf7c3826b8923fbc5a40",
+        "r-e84cbaadaeecb7bde819c59f",
+        "r-879a406139e50f4e360f7559",
+        "r-e56521db29c8b10f07f4a31f",
+        "r-5e4e6a44985bf9924502fdd0",
+        "r-0feb7b06e3c137546bf35552",
+        "r-3330ca744d369bc323bde576",
+        "r-73e4ddfc94494317c97ae3db",
+        "r-62e83cbd336df8ae0768daf3",
+        "r-1df15e7738e14f0aea36ffc7",
+        "r-03c7e5f2ea49e653b66096d8",
+        "r-566aac65530b2261eaa61554",
+        "r-e143f2ad6ef6c072a4096aa3"
+      ],
+      "citedIds": [
+        "r-990cbf7c3826b8923fbc5a40",
+        "r-e84cbaadaeecb7bde819c59f",
+        "r-566aac65530b2261eaa61554"
+      ],
+      "stages": {
+        "retrieval": false,
+        "delivery": false,
+        "citation": false
+      },
+      "coverage": {
+        "collection": false,
+        "exclusion": false,
+        "report": false,
+        "inventory": false
+      },
+      "failure": null,
+      "budget": "within",
+      "anchor": {
+        "path": "tooling/coverage.mjs",
+        "side": "RIGHT",
+        "line": 14
+      },
+      "usage": {
+        "input_tokens": 11772,
+        "output_tokens": 133
+      },
+      "wallMs": 6518,
+      "reason": "Storybook adds story paths to Vitest test inclusion, and the independent inventory excludes .stories.ts; the supplied excerpts do not show whether completeCoverage's glob admits those paths or how that coverage configuration is merged with Storybook's test config before reporting.",
+      "missing": "The effective merged Vitest coverage include/exclude configuration and runtimeExtensions value; next check the relevant app config and remaining tooling/coverage.mjs lines, then trace how the Storybook project receives coverage options.",
+      "review": {
+        "reasonSha256": "9dc0db884f32a26510ddb214f409d2e4b4c892659a217406d0f3e1e9a69d063a",
+        "passes": false,
+        "note": "Recognizes that the effective coverage configuration is missing, so the cited collection or reporting logic cannot establish the inventory outcome."
+      },
+      "writeAttempts": [],
+      "modes": [],
+      "normalized": null,
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      }
+    },
+    {
+      "trial": "original/1/on-demand/gpt-6.1-sol",
+      "subject": "original",
+      "repetition": 1,
+      "arm": "on-demand",
+      "model": "gpt-6.1-sol",
+      "attempts": 1,
+      "status": "unsupported-conclusive",
+      "stop": "request",
+      "correct": false,
+      "expected": "refuted",
+      "verdict": "refuted",
+      "requested": null,
+      "admission": null,
+      "lookup": null,
+      "retrieved": [],
+      "deliveredIds": [
+        "r-990cbf7c3826b8923fbc5a40",
+        "r-e84cbaadaeecb7bde819c59f",
+        "r-879a406139e50f4e360f7559",
+        "r-e56521db29c8b10f07f4a31f",
+        "r-5e4e6a44985bf9924502fdd0",
+        "r-0feb7b06e3c137546bf35552",
+        "r-3330ca744d369bc323bde576",
+        "r-73e4ddfc94494317c97ae3db",
+        "r-62e83cbd336df8ae0768daf3",
+        "r-1df15e7738e14f0aea36ffc7",
+        "r-03c7e5f2ea49e653b66096d8",
+        "r-566aac65530b2261eaa61554",
+        "r-e143f2ad6ef6c072a4096aa3"
+      ],
+      "citedIds": [
+        "r-03c7e5f2ea49e653b66096d8",
+        "r-990cbf7c3826b8923fbc5a40",
+        "r-e84cbaadaeecb7bde819c59f",
+        "r-879a406139e50f4e360f7559",
+        "r-e56521db29c8b10f07f4a31f",
+        "r-5e4e6a44985bf9924502fdd0",
+        "r-0feb7b06e3c137546bf35552",
+        "r-3330ca744d369bc323bde576",
+        "r-73e4ddfc94494317c97ae3db",
+        "r-62e83cbd336df8ae0768daf3",
+        "r-1df15e7738e14f0aea36ffc7",
+        "r-566aac65530b2261eaa61554",
+        "r-e143f2ad6ef6c072a4096aa3"
+      ],
+      "stages": {
+        "retrieval": false,
+        "delivery": false,
+        "citation": false
+      },
+      "coverage": {
+        "collection": true,
+        "exclusion": false,
+        "report": true,
+        "inventory": true
+      },
+      "failure": null,
+      "budget": "within",
+      "anchor": {
+        "path": "tooling/coverage.mjs",
+        "side": "RIGHT",
+        "line": 14
+      },
+      "usage": {
+        "input_tokens": 11772,
+        "output_tokens": 279
+      },
+      "wallMs": 12813,
+      "reason": "Storybook\u2019s CSF glob becomes a test include and therefore a shared, mandatory coverage exclusion; that exclusion filters executed and untested files before reporting, so JSON-summary omits those stories, consistent with the independent inventory\u2019s explicit story exclusion\u2014not the hypothesized unexpected-file failure.",
+      "missing": null,
+      "review": {
+        "reasonSha256": "db6fc486000f0935af7c6926fff4d39b2e7be44f0996d3f9a80d7fd95ab2e4e5",
+        "passes": false,
+        "note": "Describes the default exclusion and its downstream effects. The effective project configuration needed to justify applying that exclusion to this revision was neither delivered nor cited."
+      },
+      "writeAttempts": [],
+      "modes": [],
+      "normalized": null,
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      }
+    },
+    {
+      "trial": "mutant/1/fixed/gpt-6-luna",
+      "subject": "mutant",
+      "repetition": 1,
+      "arm": "fixed",
+      "model": "gpt-6-luna",
+      "attempts": 1,
+      "status": "valid-inconclusive",
+      "stop": "request",
+      "correct": false,
+      "expected": "confirmed",
+      "verdict": "inconclusive",
+      "requested": null,
+      "admission": null,
+      "lookup": null,
+      "retrieved": [],
+      "deliveredIds": [
+        "r-3d3e7daebc290b887df19161",
+        "r-3cbad5755bef4bc852b46f5d",
+        "r-6c6ffaabb69e828410a4c882",
+        "r-b6efa90f7c795b8a65d5781c",
+        "r-bf0153a35f66408c268ec0c6",
+        "r-82fd42016661d7267e3e1948",
+        "r-0a953aa31fbe13509c0a13d8",
+        "r-3091e0ec4b9c4f098e1e14fb",
+        "r-4abe4a81f363f550e71b6d6d",
+        "r-882c29e08d9cdd02af0d7deb",
+        "r-d6de447e8604a67d70505ae7",
+        "r-517392980ba6f0c62b7bc0a0",
+        "r-d79507aa296bb08478d459c5"
+      ],
+      "citedIds": [
+        "r-3d3e7daebc290b887df19161",
+        "r-3cbad5755bef4bc852b46f5d",
+        "r-b6efa90f7c795b8a65d5781c",
+        "r-bf0153a35f66408c268ec0c6",
+        "r-4abe4a81f363f550e71b6d6d",
+        "r-882c29e08d9cdd02af0d7deb",
+        "r-d6de447e8604a67d70505ae7",
+        "r-517392980ba6f0c62b7bc0a0",
+        "r-d79507aa296bb08478d459c5"
+      ],
+      "stages": {
+        "retrieval": false,
+        "delivery": false,
+        "citation": false
+      },
+      "coverage": {
+        "collection": true,
+        "exclusion": false,
+        "report": false,
+        "inventory": true
+      },
+      "failure": null,
+      "budget": "within",
+      "anchor": {
+        "path": "tooling/coverage.mjs",
+        "side": "RIGHT",
+        "line": 14
+      },
+      "usage": {
+        "input_tokens": 11782,
+        "output_tokens": 156
+      },
+      "wallMs": 6187,
+      "reason": "Storybook selects story files for test collection, but Vitest excludes its resolved test.include patterns from coverage, while the independent inventory explicitly filters *.stories.ts; the evidence therefore does not establish that a CSF definition enters the JSON summary or causes the check to fail.",
+      "missing": "The supplied excerpts do not establish how the Storybook include pattern resolves for coverage filtering, nor the actual report contents; next check the resolved include/exclude patterns and whether any CSF file remains in the generated summary.",
+      "review": {
+        "reasonSha256": "2f5edd5784cd4b843aac78a3c71a3bc304a7ec945851376b2cf227234bd458ff",
+        "passes": false,
+        "note": "Recognizes that the effective coverage configuration is missing, so the cited collection or reporting logic cannot establish the inventory outcome."
+      },
+      "writeAttempts": [],
+      "modes": [],
+      "normalized": null,
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      }
+    },
+    {
+      "trial": "mutant/1/fixed/gpt-6.1-sol",
+      "subject": "mutant",
+      "repetition": 1,
+      "arm": "fixed",
+      "model": "gpt-6.1-sol",
+      "attempts": 1,
+      "status": "unresolved-request",
+      "stop": "fixed-stop",
+      "correct": false,
+      "expected": "confirmed",
+      "verdict": null,
+      "requested": {
+        "revision": "head",
+        "kind": "searchTree",
+        "targets": [
+          {
+            "scope": "",
+            "workspace": null,
+            "match": "literal",
+            "query": "completeCoverage(",
+            "start": null,
+            "end": null
+          },
+          {
+            "scope": "",
+            "workspace": null,
+            "match": "literal",
+            "query": "storybookTest(",
+            "start": null,
+            "end": null
+          }
+        ]
+      },
+      "admission": {
+        "status": "admitted"
+      },
+      "lookup": {
+        "status": "unresolved",
+        "reason": "fixed-single-call"
+      },
+      "retrieved": [],
+      "deliveredIds": [
+        "r-3d3e7daebc290b887df19161",
+        "r-3cbad5755bef4bc852b46f5d",
+        "r-6c6ffaabb69e828410a4c882",
+        "r-b6efa90f7c795b8a65d5781c",
+        "r-bf0153a35f66408c268ec0c6",
+        "r-82fd42016661d7267e3e1948",
+        "r-0a953aa31fbe13509c0a13d8",
+        "r-3091e0ec4b9c4f098e1e14fb",
+        "r-4abe4a81f363f550e71b6d6d",
+        "r-882c29e08d9cdd02af0d7deb",
+        "r-d6de447e8604a67d70505ae7",
+        "r-517392980ba6f0c62b7bc0a0",
+        "r-d79507aa296bb08478d459c5"
+      ],
+      "citedIds": [],
+      "stages": {
+        "retrieval": false,
+        "delivery": false,
+        "citation": false
+      },
+      "coverage": {
+        "collection": false,
+        "exclusion": false,
+        "report": false,
+        "inventory": false
+      },
+      "failure": null,
+      "budget": "within",
+      "anchor": {
+        "path": "tooling/coverage.mjs",
+        "side": "RIGHT",
+        "line": 14
+      },
+      "usage": {
+        "input_tokens": 11782,
+        "output_tokens": 149
+      },
+      "wallMs": 8465,
+      "reason": null,
+      "missing": null,
+      "review": null,
+      "writeAttempts": [],
+      "modes": [
+        "literal",
+        "literal"
+      ],
+      "normalized": {
+        "revision": "head",
+        "kind": "searchTree",
+        "targets": [
+          {
+            "scope": "",
+            "workspace": null,
+            "match": "literal",
+            "query": "completeCoverage(",
+            "start": null,
+            "end": null
+          },
+          {
+            "scope": "",
+            "workspace": null,
+            "match": "literal",
+            "query": "storybookTest(",
+            "start": null,
+            "end": null
+          }
+        ]
+      },
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      }
+    },
+    {
+      "trial": "mutant/1/repeat/gpt-6-luna",
+      "subject": "mutant",
+      "repetition": 1,
+      "arm": "repeat",
+      "model": "gpt-6-luna",
+      "attempts": 1,
+      "status": "valid-inconclusive",
+      "stop": "request",
+      "correct": false,
+      "expected": "confirmed",
+      "verdict": "inconclusive",
+      "requested": null,
+      "admission": null,
+      "lookup": null,
+      "retrieved": [],
+      "deliveredIds": [
+        "r-3d3e7daebc290b887df19161",
+        "r-3cbad5755bef4bc852b46f5d",
+        "r-6c6ffaabb69e828410a4c882",
+        "r-b6efa90f7c795b8a65d5781c",
+        "r-bf0153a35f66408c268ec0c6",
+        "r-82fd42016661d7267e3e1948",
+        "r-0a953aa31fbe13509c0a13d8",
+        "r-3091e0ec4b9c4f098e1e14fb",
+        "r-4abe4a81f363f550e71b6d6d",
+        "r-882c29e08d9cdd02af0d7deb",
+        "r-d6de447e8604a67d70505ae7",
+        "r-517392980ba6f0c62b7bc0a0",
+        "r-d79507aa296bb08478d459c5"
+      ],
+      "citedIds": [
+        "r-3d3e7daebc290b887df19161",
+        "r-3cbad5755bef4bc852b46f5d",
+        "r-517392980ba6f0c62b7bc0a0",
+        "r-d79507aa296bb08478d459c5"
+      ],
+      "stages": {
+        "retrieval": false,
+        "delivery": false,
+        "citation": false
+      },
+      "coverage": {
+        "collection": false,
+        "exclusion": false,
+        "report": false,
+        "inventory": true
+      },
+      "failure": null,
+      "budget": "within",
+      "anchor": {
+        "path": "tooling/coverage.mjs",
+        "side": "RIGHT",
+        "line": 14
+      },
+      "usage": {
+        "input_tokens": 11780,
+        "output_tokens": 132
+      },
+      "wallMs": 5914,
+      "reason": "Storybook includes story globs for test discovery, but supplied evidence does not show that the coverage configuration uses those globs or admits a story file into the JSON summary; the inventory test explicitly filters story files before checking the report.",
+      "missing": "The effective completeCoverage sourceDirectories/runtimeExtensions values and Vitest configuration merge for this project; next check: inspect the caller/config and determine whether a matching non-filtered story path can enter coverage-summary.json.",
+      "review": {
+        "reasonSha256": "77b1039be3ba23be812955332214ee4efd984e4a0b44a709039a392cd37ad273",
+        "passes": false,
+        "note": "Recognizes that the effective coverage configuration is missing, so the cited collection or reporting logic cannot establish the inventory outcome."
+      },
+      "writeAttempts": [],
+      "modes": [],
+      "normalized": null,
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      }
+    },
+    {
+      "trial": "mutant/1/repeat/gpt-6.1-sol",
+      "subject": "mutant",
+      "repetition": 1,
+      "arm": "repeat",
+      "model": "gpt-6.1-sol",
+      "attempts": 2,
+      "status": "unsupported-conclusive",
+      "stop": "withheld-control",
+      "correct": false,
+      "expected": "confirmed",
+      "verdict": "refuted",
+      "requested": {
+        "revision": "head",
+        "kind": "searchTree",
+        "targets": [
+          {
+            "scope": "",
+            "workspace": null,
+            "match": "name",
+            "query": "vitest.config.ts",
+            "start": null,
+            "end": null
+          }
+        ]
+      },
+      "admission": {
+        "status": "admitted"
+      },
+      "lookup": {
+        "status": "withheld",
+        "reason": "control-no-new-source"
+      },
+      "retrieved": [],
+      "deliveredIds": [
+        "r-3d3e7daebc290b887df19161",
+        "r-3cbad5755bef4bc852b46f5d",
+        "r-6c6ffaabb69e828410a4c882",
+        "r-b6efa90f7c795b8a65d5781c",
+        "r-bf0153a35f66408c268ec0c6",
+        "r-82fd42016661d7267e3e1948",
+        "r-0a953aa31fbe13509c0a13d8",
+        "r-3091e0ec4b9c4f098e1e14fb",
+        "r-4abe4a81f363f550e71b6d6d",
+        "r-882c29e08d9cdd02af0d7deb",
+        "r-d6de447e8604a67d70505ae7",
+        "r-517392980ba6f0c62b7bc0a0",
+        "r-d79507aa296bb08478d459c5"
+      ],
+      "citedIds": [
+        "r-d6de447e8604a67d70505ae7",
+        "r-3d3e7daebc290b887df19161",
+        "r-3cbad5755bef4bc852b46f5d",
+        "r-6c6ffaabb69e828410a4c882",
+        "r-b6efa90f7c795b8a65d5781c",
+        "r-bf0153a35f66408c268ec0c6",
+        "r-82fd42016661d7267e3e1948",
+        "r-3091e0ec4b9c4f098e1e14fb",
+        "r-4abe4a81f363f550e71b6d6d",
+        "r-882c29e08d9cdd02af0d7deb",
+        "r-517392980ba6f0c62b7bc0a0",
+        "r-d79507aa296bb08478d459c5"
+      ],
+      "stages": {
+        "retrieval": false,
+        "delivery": false,
+        "citation": false
+      },
+      "coverage": {
+        "collection": true,
+        "exclusion": false,
+        "report": false,
+        "inventory": true
+      },
+      "failure": null,
+      "budget": "within",
+      "anchor": {
+        "path": "tooling/coverage.mjs",
+        "side": "RIGHT",
+        "line": 14
+      },
+      "usage": {
+        "input_tokens": 22274,
+        "output_tokens": 355
+      },
+      "wallMs": 17259,
+      "reason": "Storybook story globs become test includes and mandatory shared coverage exclusions, filtering both executed and untested stories before JSON-summary reporting; the independent inventory also excludes stories, contradicting the proposed unexpected-file failure without implying an observed run.",
+      "missing": null,
+      "review": {
+        "reasonSha256": "1df635963754725d4e376faba96637fb741eb35001ba6ea7649b7e2c673a9e7a",
+        "passes": false,
+        "note": "Applies the default exclusion to the mutant without accounting for its project hook. The hook admits the CSF entry, which the independent inventory rejects."
+      },
+      "writeAttempts": [],
+      "modes": [
+        "name"
+      ],
+      "normalized": {
+        "revision": "head",
+        "kind": "searchTree",
+        "targets": [
+          {
+            "scope": "",
+            "workspace": null,
+            "match": "name",
+            "query": "vitest.config.ts",
+            "start": null,
+            "end": null
+          }
+        ]
+      },
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      }
+    },
+    {
+      "trial": "mutant/1/on-demand/gpt-6-luna",
+      "subject": "mutant",
+      "repetition": 1,
+      "arm": "on-demand",
+      "model": "gpt-6-luna",
+      "attempts": 1,
+      "status": "valid-inconclusive",
+      "stop": "request",
+      "correct": false,
+      "expected": "confirmed",
+      "verdict": "inconclusive",
+      "requested": null,
+      "admission": null,
+      "lookup": null,
+      "retrieved": [],
+      "deliveredIds": [
+        "r-3d3e7daebc290b887df19161",
+        "r-3cbad5755bef4bc852b46f5d",
+        "r-6c6ffaabb69e828410a4c882",
+        "r-b6efa90f7c795b8a65d5781c",
+        "r-bf0153a35f66408c268ec0c6",
+        "r-82fd42016661d7267e3e1948",
+        "r-0a953aa31fbe13509c0a13d8",
+        "r-3091e0ec4b9c4f098e1e14fb",
+        "r-4abe4a81f363f550e71b6d6d",
+        "r-882c29e08d9cdd02af0d7deb",
+        "r-d6de447e8604a67d70505ae7",
+        "r-517392980ba6f0c62b7bc0a0",
+        "r-d79507aa296bb08478d459c5"
+      ],
+      "citedIds": [
+        "r-3d3e7daebc290b887df19161",
+        "r-3cbad5755bef4bc852b46f5d",
+        "r-b6efa90f7c795b8a65d5781c",
+        "r-bf0153a35f66408c268ec0c6",
+        "r-4abe4a81f363f550e71b6d6d",
+        "r-882c29e08d9cdd02af0d7deb",
+        "r-d6de447e8604a67d70505ae7",
+        "r-517392980ba6f0c62b7bc0a0",
+        "r-d79507aa296bb08478d459c5"
+      ],
+      "stages": {
+        "retrieval": false,
+        "delivery": false,
+        "citation": false
+      },
+      "coverage": {
+        "collection": true,
+        "exclusion": false,
+        "report": false,
+        "inventory": true
+      },
+      "failure": null,
+      "budget": "within",
+      "anchor": {
+        "path": "tooling/coverage.mjs",
+        "side": "RIGHT",
+        "line": 14
+      },
+      "usage": {
+        "input_tokens": 11782,
+        "output_tokens": 156
+      },
+      "wallMs": 6189,
+      "reason": "Storybook supplies stories as Vitest test includes, which Vitest adds to coverage excludes; even if a CSF path reached the JSON summary, the independent check filters *.stories.ts from its inventory, so the supplied evidence does not establish the claimed failure.",
+      "missing": "The resolved runtimeExtensions and complete coverage include/exclude configuration are absent, so it is unclear whether a CSF definition survives filtering; inspect the full tooling/coverage.mjs and resolved Vitest config to confirm the effective pattern.",
+      "review": {
+        "reasonSha256": "52c6f2f606d40cdfa6634de2b1efd4e9842648938a531a8674a57f989bfa3afc",
+        "passes": false,
+        "note": "Names the missing effective configuration and withholds judgment. It also conflates excluding stories from the expected inventory with filtering report keys. An unexpected story key would fail the comparison."
+      },
+      "writeAttempts": [],
+      "modes": [],
+      "normalized": null,
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      }
+    },
+    {
+      "trial": "mutant/1/on-demand/gpt-6.1-sol",
+      "subject": "mutant",
+      "repetition": 1,
+      "arm": "on-demand",
+      "model": "gpt-6.1-sol",
+      "attempts": 1,
+      "status": "unsupported-conclusive",
+      "stop": "request",
+      "correct": false,
+      "expected": "confirmed",
+      "verdict": "refuted",
+      "requested": null,
+      "admission": null,
+      "lookup": null,
+      "retrieved": [],
+      "deliveredIds": [
+        "r-3d3e7daebc290b887df19161",
+        "r-3cbad5755bef4bc852b46f5d",
+        "r-6c6ffaabb69e828410a4c882",
+        "r-b6efa90f7c795b8a65d5781c",
+        "r-bf0153a35f66408c268ec0c6",
+        "r-82fd42016661d7267e3e1948",
+        "r-0a953aa31fbe13509c0a13d8",
+        "r-3091e0ec4b9c4f098e1e14fb",
+        "r-4abe4a81f363f550e71b6d6d",
+        "r-882c29e08d9cdd02af0d7deb",
+        "r-d6de447e8604a67d70505ae7",
+        "r-517392980ba6f0c62b7bc0a0",
+        "r-d79507aa296bb08478d459c5"
+      ],
+      "citedIds": [
+        "r-d6de447e8604a67d70505ae7",
+        "r-3d3e7daebc290b887df19161",
+        "r-3cbad5755bef4bc852b46f5d",
+        "r-6c6ffaabb69e828410a4c882",
+        "r-b6efa90f7c795b8a65d5781c",
+        "r-bf0153a35f66408c268ec0c6",
+        "r-82fd42016661d7267e3e1948",
+        "r-3091e0ec4b9c4f098e1e14fb",
+        "r-4abe4a81f363f550e71b6d6d",
+        "r-882c29e08d9cdd02af0d7deb",
+        "r-517392980ba6f0c62b7bc0a0",
+        "r-d79507aa296bb08478d459c5"
+      ],
+      "stages": {
+        "retrieval": false,
+        "delivery": false,
+        "citation": false
+      },
+      "coverage": {
+        "collection": true,
+        "exclusion": false,
+        "report": false,
+        "inventory": true
+      },
+      "failure": null,
+      "budget": "within",
+      "anchor": {
+        "path": "tooling/coverage.mjs",
+        "side": "RIGHT",
+        "line": 14
+      },
+      "usage": {
+        "input_tokens": 11782,
+        "output_tokens": 206
+      },
+      "wallMs": 7934,
+      "reason": "Storybook\u2019s story collection patterns become shared, mandatory coverage exclusions, filtering both executed and untested files before JSON-summary reporting; thus CSF files do not become unexpected entries in the independent inventory check.",
+      "missing": null,
+      "review": {
+        "reasonSha256": "4712c5ac790429c3574bfd464e75e0aee7cd03b226071847bda18bdbca0193a3",
+        "passes": false,
+        "note": "Applies the default exclusion to the mutant without accounting for its project hook. The hook admits the CSF entry, which the independent inventory rejects."
+      },
+      "writeAttempts": [],
+      "modes": [],
+      "normalized": null,
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      }
+    },
+    {
+      "trial": "original/2/repeat/gpt-6-luna",
+      "subject": "original",
+      "repetition": 2,
+      "arm": "repeat",
+      "model": "gpt-6-luna",
+      "attempts": 1,
+      "status": "valid-inconclusive",
+      "stop": "request",
+      "correct": false,
+      "expected": "refuted",
+      "verdict": "inconclusive",
+      "requested": null,
+      "admission": null,
+      "lookup": null,
+      "retrieved": [],
+      "deliveredIds": [
+        "r-990cbf7c3826b8923fbc5a40",
+        "r-e84cbaadaeecb7bde819c59f",
+        "r-879a406139e50f4e360f7559",
+        "r-e56521db29c8b10f07f4a31f",
+        "r-5e4e6a44985bf9924502fdd0",
+        "r-0feb7b06e3c137546bf35552",
+        "r-3330ca744d369bc323bde576",
+        "r-73e4ddfc94494317c97ae3db",
+        "r-62e83cbd336df8ae0768daf3",
+        "r-1df15e7738e14f0aea36ffc7",
+        "r-03c7e5f2ea49e653b66096d8",
+        "r-566aac65530b2261eaa61554",
+        "r-e143f2ad6ef6c072a4096aa3"
+      ],
+      "citedIds": [
+        "r-990cbf7c3826b8923fbc5a40",
+        "r-e84cbaadaeecb7bde819c59f",
+        "r-5e4e6a44985bf9924502fdd0",
+        "r-1df15e7738e14f0aea36ffc7",
+        "r-03c7e5f2ea49e653b66096d8",
+        "r-566aac65530b2261eaa61554",
+        "r-e143f2ad6ef6c072a4096aa3"
+      ],
+      "stages": {
+        "retrieval": false,
+        "delivery": false,
+        "citation": false
+      },
+      "coverage": {
+        "collection": true,
+        "exclusion": false,
+        "report": false,
+        "inventory": true
+      },
+      "failure": null,
+      "budget": "within",
+      "anchor": {
+        "path": "tooling/coverage.mjs",
+        "side": "RIGHT",
+        "line": 14
+      },
+      "usage": {
+        "input_tokens": 11774,
+        "output_tokens": 140
+      },
+      "wallMs": 6207,
+      "reason": "Storybook admits stories as test files and JSON summary reports coverage-map paths, but the supplied evidence does not establish the effective include/exclude outcome for a story file or the actual report path, so the proposed causal chain to the inventory failure is unresolved.",
+      "missing": "The project coverage configuration/root and concrete story-file path needed to determine whether coverage filtering admits it; a source-level trace of how the inventory paths correspond to summary keys would resolve this.",
+      "review": {
+        "reasonSha256": "8efe2425fcf9dda9dfbfaa6bd76563f0c4f67fcb4e91c15d8a221f6be5cc50ad",
+        "passes": false,
+        "note": "Identifies an unresolved link between the effective project filters and the report or inventory and withholds judgment."
+      },
+      "writeAttempts": [],
+      "modes": [],
+      "normalized": null,
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      }
+    },
+    {
+      "trial": "original/2/repeat/gpt-6.1-sol",
+      "subject": "original",
+      "repetition": 2,
+      "arm": "repeat",
+      "model": "gpt-6.1-sol",
+      "attempts": 2,
+      "status": "unsupported-conclusive",
+      "stop": "withheld-control",
+      "correct": false,
+      "expected": "refuted",
+      "verdict": "refuted",
+      "requested": {
+        "revision": "head",
+        "kind": "searchTree",
+        "targets": [
+          {
+            "scope": "",
+            "workspace": null,
+            "match": "literal",
+            "query": "completeCoverage(",
+            "start": null,
+            "end": null
+          }
+        ]
+      },
+      "admission": {
+        "status": "admitted"
+      },
+      "lookup": {
+        "status": "withheld",
+        "reason": "control-no-new-source"
+      },
+      "retrieved": [],
+      "deliveredIds": [
+        "r-990cbf7c3826b8923fbc5a40",
+        "r-e84cbaadaeecb7bde819c59f",
+        "r-879a406139e50f4e360f7559",
+        "r-e56521db29c8b10f07f4a31f",
+        "r-5e4e6a44985bf9924502fdd0",
+        "r-0feb7b06e3c137546bf35552",
+        "r-3330ca744d369bc323bde576",
+        "r-73e4ddfc94494317c97ae3db",
+        "r-62e83cbd336df8ae0768daf3",
+        "r-1df15e7738e14f0aea36ffc7",
+        "r-03c7e5f2ea49e653b66096d8",
+        "r-566aac65530b2261eaa61554",
+        "r-e143f2ad6ef6c072a4096aa3"
+      ],
+      "citedIds": [
+        "r-03c7e5f2ea49e653b66096d8",
+        "r-990cbf7c3826b8923fbc5a40",
+        "r-e84cbaadaeecb7bde819c59f",
+        "r-879a406139e50f4e360f7559",
+        "r-e56521db29c8b10f07f4a31f",
+        "r-5e4e6a44985bf9924502fdd0",
+        "r-0feb7b06e3c137546bf35552",
+        "r-3330ca744d369bc323bde576",
+        "r-73e4ddfc94494317c97ae3db",
+        "r-62e83cbd336df8ae0768daf3",
+        "r-1df15e7738e14f0aea36ffc7",
+        "r-566aac65530b2261eaa61554",
+        "r-e143f2ad6ef6c072a4096aa3"
+      ],
+      "stages": {
+        "retrieval": false,
+        "delivery": false,
+        "citation": false
+      },
+      "coverage": {
+        "collection": true,
+        "exclusion": false,
+        "report": true,
+        "inventory": true
+      },
+      "failure": null,
+      "budget": "within",
+      "anchor": {
+        "path": "tooling/coverage.mjs",
+        "side": "RIGHT",
+        "line": 14
+      },
+      "usage": {
+        "input_tokens": 22262,
+        "output_tokens": 321
+      },
+      "wallMs": 17525,
+      "reason": "Storybook story globs become test includes and mandatory shared coverage exclusions; executed and untested coverage are filtered before remapping and JSON reporting, so CSF definitions do not produce the unexpected keys rejected by the independent inventory check.",
+      "missing": null,
+      "review": {
+        "reasonSha256": "27df14e77b38b9801f04fff07b4cc2a4f2ff22131bad9d075a448e26c2c815a4",
+        "passes": false,
+        "note": "Describes the default exclusion and its downstream effects. The effective project configuration needed to justify applying that exclusion to this revision was neither delivered nor cited."
+      },
+      "writeAttempts": [],
+      "modes": [
+        "literal"
+      ],
+      "normalized": {
+        "revision": "head",
+        "kind": "searchTree",
+        "targets": [
+          {
+            "scope": "",
+            "workspace": null,
+            "match": "literal",
+            "query": "completeCoverage(",
+            "start": null,
+            "end": null
+          }
+        ]
+      },
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      }
+    },
+    {
+      "trial": "original/2/on-demand/gpt-6-luna",
+      "subject": "original",
+      "repetition": 2,
+      "arm": "on-demand",
+      "model": "gpt-6-luna",
+      "attempts": 1,
+      "status": "valid-inconclusive",
+      "stop": "request",
+      "correct": false,
+      "expected": "refuted",
+      "verdict": "inconclusive",
+      "requested": null,
+      "admission": null,
+      "lookup": null,
+      "retrieved": [],
+      "deliveredIds": [
+        "r-990cbf7c3826b8923fbc5a40",
+        "r-e84cbaadaeecb7bde819c59f",
+        "r-879a406139e50f4e360f7559",
+        "r-e56521db29c8b10f07f4a31f",
+        "r-5e4e6a44985bf9924502fdd0",
+        "r-0feb7b06e3c137546bf35552",
+        "r-3330ca744d369bc323bde576",
+        "r-73e4ddfc94494317c97ae3db",
+        "r-62e83cbd336df8ae0768daf3",
+        "r-1df15e7738e14f0aea36ffc7",
+        "r-03c7e5f2ea49e653b66096d8",
+        "r-566aac65530b2261eaa61554",
+        "r-e143f2ad6ef6c072a4096aa3"
+      ],
+      "citedIds": [
+        "r-990cbf7c3826b8923fbc5a40",
+        "r-e84cbaadaeecb7bde819c59f",
+        "r-879a406139e50f4e360f7559",
+        "r-e56521db29c8b10f07f4a31f",
+        "r-5e4e6a44985bf9924502fdd0",
+        "r-0feb7b06e3c137546bf35552",
+        "r-3330ca744d369bc323bde576",
+        "r-73e4ddfc94494317c97ae3db",
+        "r-62e83cbd336df8ae0768daf3",
+        "r-1df15e7738e14f0aea36ffc7",
+        "r-03c7e5f2ea49e653b66096d8",
+        "r-566aac65530b2261eaa61554",
+        "r-e143f2ad6ef6c072a4096aa3"
+      ],
+      "stages": {
+        "retrieval": false,
+        "delivery": false,
+        "citation": false
+      },
+      "coverage": {
+        "collection": true,
+        "exclusion": false,
+        "report": true,
+        "inventory": true
+      },
+      "failure": null,
+      "budget": "within",
+      "anchor": {
+        "path": "tooling/coverage.mjs",
+        "side": "RIGHT",
+        "line": 14
+      },
+      "usage": {
+        "input_tokens": 11774,
+        "output_tokens": 186
+      },
+      "wallMs": 6692,
+      "reason": "Storybook builds an include list from stories, but the supplied evidence does not establish how that list interacts with the final effective coverage.include or prove a story file passes coverage filtering into json-summary; the independent inventory excludes *.stories.ts, so the hypothesized mismatch remains possible, not demonstrated.",
+      "missing": "Need the app's full Vitest project/coverage configuration and the relevant Storybook/coverage provider behavior showing the effective include patterns and whether a story definition is retained in the coverage map; next inspect the complete tooling/coverage.mjs and project config, then trace the resolved coverage options.",
+      "review": {
+        "reasonSha256": "e3643cd6e10a40143cf3ca797ccc6e2db871d0920dc8b23ebffbe2e9379fdadb",
+        "passes": false,
+        "note": "Recognizes that the effective coverage configuration is missing, so the cited collection or reporting logic cannot establish the inventory outcome."
+      },
+      "writeAttempts": [],
+      "modes": [],
+      "normalized": null,
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      }
+    },
+    {
+      "trial": "original/2/on-demand/gpt-6.1-sol",
+      "subject": "original",
+      "repetition": 2,
+      "arm": "on-demand",
+      "model": "gpt-6.1-sol",
+      "attempts": 1,
+      "status": "unsupported-conclusive",
+      "stop": "request",
+      "correct": false,
+      "expected": "refuted",
+      "verdict": "refuted",
+      "requested": null,
+      "admission": null,
+      "lookup": null,
+      "retrieved": [],
+      "deliveredIds": [
+        "r-990cbf7c3826b8923fbc5a40",
+        "r-e84cbaadaeecb7bde819c59f",
+        "r-879a406139e50f4e360f7559",
+        "r-e56521db29c8b10f07f4a31f",
+        "r-5e4e6a44985bf9924502fdd0",
+        "r-0feb7b06e3c137546bf35552",
+        "r-3330ca744d369bc323bde576",
+        "r-73e4ddfc94494317c97ae3db",
+        "r-62e83cbd336df8ae0768daf3",
+        "r-1df15e7738e14f0aea36ffc7",
+        "r-03c7e5f2ea49e653b66096d8",
+        "r-566aac65530b2261eaa61554",
+        "r-e143f2ad6ef6c072a4096aa3"
+      ],
+      "citedIds": [
+        "r-03c7e5f2ea49e653b66096d8",
+        "r-990cbf7c3826b8923fbc5a40",
+        "r-e84cbaadaeecb7bde819c59f",
+        "r-879a406139e50f4e360f7559",
+        "r-e56521db29c8b10f07f4a31f",
+        "r-5e4e6a44985bf9924502fdd0",
+        "r-0feb7b06e3c137546bf35552",
+        "r-3330ca744d369bc323bde576",
+        "r-73e4ddfc94494317c97ae3db",
+        "r-62e83cbd336df8ae0768daf3",
+        "r-1df15e7738e14f0aea36ffc7",
+        "r-566aac65530b2261eaa61554",
+        "r-e143f2ad6ef6c072a4096aa3"
+      ],
+      "stages": {
+        "retrieval": false,
+        "delivery": false,
+        "citation": false
+      },
+      "coverage": {
+        "collection": true,
+        "exclusion": false,
+        "report": true,
+        "inventory": true
+      },
+      "failure": null,
+      "budget": "within",
+      "anchor": {
+        "path": "tooling/coverage.mjs",
+        "side": "RIGHT",
+        "line": 14
+      },
+      "usage": {
+        "input_tokens": 11774,
+        "output_tokens": 229
+      },
+      "wallMs": 8576,
+      "reason": "Storybook\u2019s story globs become test includes and mandatory shared coverage exclusions; exclusion-first filtering keeps CSF files out of collected and untested coverage, so JSON-summary reporting does not introduce the unexpected story keys rejected by the independent inventory check.",
+      "missing": null,
+      "review": {
+        "reasonSha256": "263acbefad902fde78f35c10f098c55e959ffe65ff56e46c0060a2137816cd07",
+        "passes": false,
+        "note": "Describes the default exclusion and its downstream effects. The effective project configuration needed to justify applying that exclusion to this revision was neither delivered nor cited."
+      },
+      "writeAttempts": [],
+      "modes": [],
+      "normalized": null,
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      }
+    },
+    {
+      "trial": "original/2/fixed/gpt-6-luna",
+      "subject": "original",
+      "repetition": 2,
+      "arm": "fixed",
+      "model": "gpt-6-luna",
+      "attempts": 1,
+      "status": "unresolved-request",
+      "stop": "fixed-stop",
+      "correct": false,
+      "expected": "refuted",
+      "verdict": null,
+      "requested": {
+        "revision": "head",
+        "kind": "readBlob",
+        "targets": [
+          {
+            "scope": "tooling/coverage.mjs",
+            "workspace": null,
+            "match": "lines",
+            "query": null,
+            "start": 1,
+            "end": 56
+          }
+        ]
+      },
+      "admission": {
+        "status": "admitted"
+      },
+      "lookup": {
+        "status": "unresolved",
+        "reason": "fixed-single-call"
+      },
+      "retrieved": [],
+      "deliveredIds": [
+        "r-990cbf7c3826b8923fbc5a40",
+        "r-e84cbaadaeecb7bde819c59f",
+        "r-879a406139e50f4e360f7559",
+        "r-e56521db29c8b10f07f4a31f",
+        "r-5e4e6a44985bf9924502fdd0",
+        "r-0feb7b06e3c137546bf35552",
+        "r-3330ca744d369bc323bde576",
+        "r-73e4ddfc94494317c97ae3db",
+        "r-62e83cbd336df8ae0768daf3",
+        "r-1df15e7738e14f0aea36ffc7",
+        "r-03c7e5f2ea49e653b66096d8",
+        "r-566aac65530b2261eaa61554",
+        "r-e143f2ad6ef6c072a4096aa3"
+      ],
+      "citedIds": [],
+      "stages": {
+        "retrieval": false,
+        "delivery": false,
+        "citation": false
+      },
+      "coverage": {
+        "collection": false,
+        "exclusion": false,
+        "report": false,
+        "inventory": false
+      },
+      "failure": null,
+      "budget": "within",
+      "anchor": {
+        "path": "tooling/coverage.mjs",
+        "side": "RIGHT",
+        "line": 14
+      },
+      "usage": {
+        "input_tokens": 11772,
+        "output_tokens": 59
+      },
+      "wallMs": 5029,
+      "reason": null,
+      "missing": null,
+      "review": null,
+      "writeAttempts": [],
+      "modes": [
+        "readBlob"
+      ],
+      "normalized": {
+        "revision": "head",
+        "kind": "readBlob",
+        "targets": [
+          {
+            "scope": "tooling/coverage.mjs",
+            "workspace": null,
+            "match": "lines",
+            "query": null,
+            "start": 1,
+            "end": 56
+          }
+        ]
+      },
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      }
+    },
+    {
+      "trial": "original/2/fixed/gpt-6.1-sol",
+      "subject": "original",
+      "repetition": 2,
+      "arm": "fixed",
+      "model": "gpt-6.1-sol",
+      "attempts": 1,
+      "status": "unresolved-request",
+      "stop": "fixed-stop",
+      "correct": false,
+      "expected": "refuted",
+      "verdict": null,
+      "requested": {
+        "revision": "head",
+        "kind": "searchTree",
+        "targets": [
+          {
+            "scope": "",
+            "workspace": null,
+            "match": "literal",
+            "query": "completeCoverage",
+            "start": null,
+            "end": null
+          }
+        ]
+      },
+      "admission": {
+        "status": "admitted"
+      },
+      "lookup": {
+        "status": "unresolved",
+        "reason": "fixed-single-call"
+      },
+      "retrieved": [],
+      "deliveredIds": [
+        "r-990cbf7c3826b8923fbc5a40",
+        "r-e84cbaadaeecb7bde819c59f",
+        "r-879a406139e50f4e360f7559",
+        "r-e56521db29c8b10f07f4a31f",
+        "r-5e4e6a44985bf9924502fdd0",
+        "r-0feb7b06e3c137546bf35552",
+        "r-3330ca744d369bc323bde576",
+        "r-73e4ddfc94494317c97ae3db",
+        "r-62e83cbd336df8ae0768daf3",
+        "r-1df15e7738e14f0aea36ffc7",
+        "r-03c7e5f2ea49e653b66096d8",
+        "r-566aac65530b2261eaa61554",
+        "r-e143f2ad6ef6c072a4096aa3"
+      ],
+      "citedIds": [],
+      "stages": {
+        "retrieval": false,
+        "delivery": false,
+        "citation": false
+      },
+      "coverage": {
+        "collection": false,
+        "exclusion": false,
+        "report": false,
+        "inventory": false
+      },
+      "failure": null,
+      "budget": "within",
+      "anchor": {
+        "path": "tooling/coverage.mjs",
+        "side": "RIGHT",
+        "line": 14
+      },
+      "usage": {
+        "input_tokens": 11772,
+        "output_tokens": 108
+      },
+      "wallMs": 6795,
+      "reason": null,
+      "missing": null,
+      "review": null,
+      "writeAttempts": [],
+      "modes": [
+        "literal"
+      ],
+      "normalized": {
+        "revision": "head",
+        "kind": "searchTree",
+        "targets": [
+          {
+            "scope": "",
+            "workspace": null,
+            "match": "literal",
+            "query": "completeCoverage",
+            "start": null,
+            "end": null
+          }
+        ]
+      },
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      }
+    },
+    {
+      "trial": "mutant/2/repeat/gpt-6-luna",
+      "subject": "mutant",
+      "repetition": 2,
+      "arm": "repeat",
+      "model": "gpt-6-luna",
+      "attempts": 1,
+      "status": "valid-inconclusive",
+      "stop": "request",
+      "correct": false,
+      "expected": "confirmed",
+      "verdict": "inconclusive",
+      "requested": null,
+      "admission": null,
+      "lookup": null,
+      "retrieved": [],
+      "deliveredIds": [
+        "r-3d3e7daebc290b887df19161",
+        "r-3cbad5755bef4bc852b46f5d",
+        "r-6c6ffaabb69e828410a4c882",
+        "r-b6efa90f7c795b8a65d5781c",
+        "r-bf0153a35f66408c268ec0c6",
+        "r-82fd42016661d7267e3e1948",
+        "r-0a953aa31fbe13509c0a13d8",
+        "r-3091e0ec4b9c4f098e1e14fb",
+        "r-4abe4a81f363f550e71b6d6d",
+        "r-882c29e08d9cdd02af0d7deb",
+        "r-d6de447e8604a67d70505ae7",
+        "r-517392980ba6f0c62b7bc0a0",
+        "r-d79507aa296bb08478d459c5"
+      ],
+      "citedIds": [
+        "r-3d3e7daebc290b887df19161",
+        "r-3cbad5755bef4bc852b46f5d",
+        "r-b6efa90f7c795b8a65d5781c",
+        "r-bf0153a35f66408c268ec0c6",
+        "r-4abe4a81f363f550e71b6d6d",
+        "r-882c29e08d9cdd02af0d7deb",
+        "r-d6de447e8604a67d70505ae7",
+        "r-517392980ba6f0c62b7bc0a0",
+        "r-d79507aa296bb08478d459c5"
+      ],
+      "stages": {
+        "retrieval": false,
+        "delivery": false,
+        "citation": false
+      },
+      "coverage": {
+        "collection": true,
+        "exclusion": false,
+        "report": false,
+        "inventory": true
+      },
+      "failure": null,
+      "budget": "within",
+      "anchor": {
+        "path": "tooling/coverage.mjs",
+        "side": "RIGHT",
+        "line": 14
+      },
+      "usage": {
+        "input_tokens": 11782,
+        "output_tokens": 130
+      },
+      "wallMs": 5734,
+      "reason": "Storybook adds story paths to Vitest include and Vitest excludes those includes from coverage, but the effective runtimeExtensions pattern, resulting summary paths, and independent inventory filter outcome are not supplied.",
+      "missing": "Need tooling/coverage.mjs lines defining runtimeExtensions/sourceDirectories and the full inventory filter plus evidence that a matched story file is present in the coverage map/report.",
+      "review": {
+        "reasonSha256": "9651a5dfbec9e7843bfb557dbfd4df61f29c93d6aa960b70310a065275593cf2",
+        "passes": false,
+        "note": "Identifies an unresolved link between the effective project filters and the report or inventory and withholds judgment."
+      },
+      "writeAttempts": [],
+      "modes": [],
+      "normalized": null,
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      }
+    },
+    {
+      "trial": "mutant/2/repeat/gpt-6.1-sol",
+      "subject": "mutant",
+      "repetition": 2,
+      "arm": "repeat",
+      "model": "gpt-6.1-sol",
+      "attempts": 2,
+      "status": "unsupported-conclusive",
+      "stop": "withheld-control",
+      "correct": false,
+      "expected": "confirmed",
+      "verdict": "refuted",
+      "requested": {
+        "revision": "head",
+        "kind": "searchTree",
+        "targets": [
+          {
+            "scope": "",
+            "workspace": null,
+            "match": "name",
+            "query": "vitest.config.ts",
+            "start": null,
+            "end": null
+          }
+        ]
+      },
+      "admission": {
+        "status": "admitted"
+      },
+      "lookup": {
+        "status": "withheld",
+        "reason": "control-no-new-source"
+      },
+      "retrieved": [],
+      "deliveredIds": [
+        "r-3d3e7daebc290b887df19161",
+        "r-3cbad5755bef4bc852b46f5d",
+        "r-6c6ffaabb69e828410a4c882",
+        "r-b6efa90f7c795b8a65d5781c",
+        "r-bf0153a35f66408c268ec0c6",
+        "r-82fd42016661d7267e3e1948",
+        "r-0a953aa31fbe13509c0a13d8",
+        "r-3091e0ec4b9c4f098e1e14fb",
+        "r-4abe4a81f363f550e71b6d6d",
+        "r-882c29e08d9cdd02af0d7deb",
+        "r-d6de447e8604a67d70505ae7",
+        "r-517392980ba6f0c62b7bc0a0",
+        "r-d79507aa296bb08478d459c5"
+      ],
+      "citedIds": [
+        "r-d6de447e8604a67d70505ae7",
+        "r-3d3e7daebc290b887df19161",
+        "r-3cbad5755bef4bc852b46f5d",
+        "r-6c6ffaabb69e828410a4c882",
+        "r-b6efa90f7c795b8a65d5781c",
+        "r-bf0153a35f66408c268ec0c6",
+        "r-82fd42016661d7267e3e1948",
+        "r-3091e0ec4b9c4f098e1e14fb",
+        "r-4abe4a81f363f550e71b6d6d",
+        "r-882c29e08d9cdd02af0d7deb",
+        "r-d79507aa296bb08478d459c5",
+        "r-517392980ba6f0c62b7bc0a0"
+      ],
+      "stages": {
+        "retrieval": false,
+        "delivery": false,
+        "citation": false
+      },
+      "coverage": {
+        "collection": true,
+        "exclusion": false,
+        "report": false,
+        "inventory": true
+      },
+      "failure": null,
+      "budget": "within",
+      "anchor": {
+        "path": "tooling/coverage.mjs",
+        "side": "RIGHT",
+        "line": 14
+      },
+      "usage": {
+        "input_tokens": 22272,
+        "output_tokens": 336
+      },
+      "wallMs": 18351,
+      "reason": "Storybook\u2019s story globs become test includes and thus shared, mandatory coverage exclusions; exclusion-first filtering applies to executed and untested files, so reporting serializes a coverage map without those CSF files, consistent with the independent inventory\u2019s story exclusion and unexpected-key check\u2014not the hypothesized failure.",
+      "missing": null,
+      "review": {
+        "reasonSha256": "1bd5a35878a7f6287b1b853b8042874365118bfe4011ca98254b218acf2a90bf",
+        "passes": false,
+        "note": "Applies the default exclusion to the mutant without accounting for its project hook. The hook admits the CSF entry, which the independent inventory rejects."
+      },
+      "writeAttempts": [],
+      "modes": [
+        "name"
+      ],
+      "normalized": {
+        "revision": "head",
+        "kind": "searchTree",
+        "targets": [
+          {
+            "scope": "",
+            "workspace": null,
+            "match": "name",
+            "query": "vitest.config.ts",
+            "start": null,
+            "end": null
+          }
+        ]
+      },
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      }
+    },
+    {
+      "trial": "mutant/2/on-demand/gpt-6-luna",
+      "subject": "mutant",
+      "repetition": 2,
+      "arm": "on-demand",
+      "model": "gpt-6-luna",
+      "attempts": 1,
+      "status": "valid-inconclusive",
+      "stop": "request",
+      "correct": false,
+      "expected": "confirmed",
+      "verdict": "inconclusive",
+      "requested": null,
+      "admission": null,
+      "lookup": null,
+      "retrieved": [],
+      "deliveredIds": [
+        "r-3d3e7daebc290b887df19161",
+        "r-3cbad5755bef4bc852b46f5d",
+        "r-6c6ffaabb69e828410a4c882",
+        "r-b6efa90f7c795b8a65d5781c",
+        "r-bf0153a35f66408c268ec0c6",
+        "r-82fd42016661d7267e3e1948",
+        "r-0a953aa31fbe13509c0a13d8",
+        "r-3091e0ec4b9c4f098e1e14fb",
+        "r-4abe4a81f363f550e71b6d6d",
+        "r-882c29e08d9cdd02af0d7deb",
+        "r-d6de447e8604a67d70505ae7",
+        "r-517392980ba6f0c62b7bc0a0",
+        "r-d79507aa296bb08478d459c5"
+      ],
+      "citedIds": [
+        "r-3d3e7daebc290b887df19161",
+        "r-3cbad5755bef4bc852b46f5d",
+        "r-517392980ba6f0c62b7bc0a0",
+        "r-d79507aa296bb08478d459c5",
+        "r-d6de447e8604a67d70505ae7"
+      ],
+      "stages": {
+        "retrieval": false,
+        "delivery": false,
+        "citation": false
+      },
+      "coverage": {
+        "collection": true,
+        "exclusion": false,
+        "report": false,
+        "inventory": true
+      },
+      "failure": null,
+      "budget": "within",
+      "anchor": {
+        "path": "tooling/coverage.mjs",
+        "side": "RIGHT",
+        "line": 14
+      },
+      "usage": {
+        "input_tokens": 11780,
+        "output_tokens": 137
+      },
+      "wallMs": 6535,
+      "reason": "Storybook config includes story files for collection, while the independent inventory excludes .stories.ts; however, supplied evidence does not establish the effective coverage include/exclude configuration or whether a CSF file reaches the summary.",
+      "missing": "Need the complete application coverage configuration (including runtimeExtensions/sourceDirectories) and the relevant Vitest/Storybook merge behavior showing whether story paths survive coverage filtering; then verify whether a matching CSF path is present in the generated JSON summary.",
+      "review": {
+        "reasonSha256": "1d59fd44662798410224056c74ffc9ccffd5ea416b9e3e0442541b8a09a14b0d",
+        "passes": false,
+        "note": "Recognizes that the effective coverage configuration is missing, so the cited collection or reporting logic cannot establish the inventory outcome."
+      },
+      "writeAttempts": [],
+      "modes": [],
+      "normalized": null,
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      }
+    },
+    {
+      "trial": "mutant/2/on-demand/gpt-6.1-sol",
+      "subject": "mutant",
+      "repetition": 2,
+      "arm": "on-demand",
+      "model": "gpt-6.1-sol",
+      "attempts": 2,
+      "status": "unsupported-conclusive",
+      "stop": "retrieval",
+      "correct": false,
+      "expected": "confirmed",
+      "verdict": "refuted",
+      "requested": {
+        "revision": "head",
+        "kind": "searchTree",
+        "targets": [
+          {
+            "scope": "",
+            "workspace": null,
+            "match": "literal",
+            "query": "completeCoverage",
+            "start": null,
+            "end": null
+          }
+        ]
+      },
+      "admission": {
+        "status": "admitted"
+      },
+      "lookup": {
+        "status": "budget",
+        "results": [
+          {
+            "status": "budget",
+            "reason": "search-file-budget"
+          }
+        ],
+        "budget": {
+          "gitCalls": 2,
+          "treeEntries": 660,
+          "openedFiles": 0,
+          "sourceBytes": 0,
+          "matches": 0,
+          "evidenceBytes": 0,
+          "elapsedMs": 87
+        }
+      },
+      "retrieved": [],
+      "deliveredIds": [
+        "r-3d3e7daebc290b887df19161",
+        "r-3cbad5755bef4bc852b46f5d",
+        "r-6c6ffaabb69e828410a4c882",
+        "r-b6efa90f7c795b8a65d5781c",
+        "r-bf0153a35f66408c268ec0c6",
+        "r-82fd42016661d7267e3e1948",
+        "r-0a953aa31fbe13509c0a13d8",
+        "r-3091e0ec4b9c4f098e1e14fb",
+        "r-4abe4a81f363f550e71b6d6d",
+        "r-882c29e08d9cdd02af0d7deb",
+        "r-d6de447e8604a67d70505ae7",
+        "r-517392980ba6f0c62b7bc0a0",
+        "r-d79507aa296bb08478d459c5"
+      ],
+      "citedIds": [
+        "r-d6de447e8604a67d70505ae7",
+        "r-3d3e7daebc290b887df19161",
+        "r-3cbad5755bef4bc852b46f5d",
+        "r-6c6ffaabb69e828410a4c882",
+        "r-b6efa90f7c795b8a65d5781c",
+        "r-bf0153a35f66408c268ec0c6",
+        "r-82fd42016661d7267e3e1948",
+        "r-3091e0ec4b9c4f098e1e14fb",
+        "r-4abe4a81f363f550e71b6d6d",
+        "r-882c29e08d9cdd02af0d7deb",
+        "r-517392980ba6f0c62b7bc0a0",
+        "r-d79507aa296bb08478d459c5"
+      ],
+      "stages": {
+        "retrieval": false,
+        "delivery": false,
+        "citation": false
+      },
+      "coverage": {
+        "collection": true,
+        "exclusion": false,
+        "report": false,
+        "inventory": true
+      },
+      "failure": null,
+      "budget": "within",
+      "anchor": {
+        "path": "tooling/coverage.mjs",
+        "side": "RIGHT",
+        "line": 14
+      },
+      "usage": {
+        "input_tokens": 22363,
+        "output_tokens": 310
+      },
+      "wallMs": 16287,
+      "reason": "Storybook\u2019s story globs become test includes and mandatory shared coverage exclusions; both executed and untested coverage paths honor those exclusions, so JSON reporting omits CSF definitions, consistent with the independent inventory\u2019s story exclusion\u2014not the hypothesized unexpected-file failure.",
+      "missing": null,
+      "review": {
+        "reasonSha256": "4026caf98c8569a382638f956fa1efd796373e03844138052dbf93ba902b618b",
+        "passes": false,
+        "note": "Applies the default exclusion to the mutant without accounting for its project hook. The hook admits the CSF entry, which the independent inventory rejects. The root literal request exhausted the file budget before any blob was opened."
+      },
+      "writeAttempts": [],
+      "modes": [
+        "literal"
+      ],
+      "normalized": {
+        "revision": "head",
+        "kind": "searchTree",
+        "targets": [
+          {
+            "scope": "",
+            "workspace": null,
+            "match": "literal",
+            "query": "completeCoverage",
+            "start": null,
+            "end": null
+          }
+        ]
+      },
+      "sourceUsage": {
+        "treeEntries": 660,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 87,
+        "receipts": 0,
+        "accounted": true
+      }
+    },
+    {
+      "trial": "mutant/2/fixed/gpt-6-luna",
+      "subject": "mutant",
+      "repetition": 2,
+      "arm": "fixed",
+      "model": "gpt-6-luna",
+      "attempts": 1,
+      "status": "valid-inconclusive",
+      "stop": "request",
+      "correct": false,
+      "expected": "confirmed",
+      "verdict": "inconclusive",
+      "requested": null,
+      "admission": null,
+      "lookup": null,
+      "retrieved": [],
+      "deliveredIds": [
+        "r-3d3e7daebc290b887df19161",
+        "r-3cbad5755bef4bc852b46f5d",
+        "r-6c6ffaabb69e828410a4c882",
+        "r-b6efa90f7c795b8a65d5781c",
+        "r-bf0153a35f66408c268ec0c6",
+        "r-82fd42016661d7267e3e1948",
+        "r-0a953aa31fbe13509c0a13d8",
+        "r-3091e0ec4b9c4f098e1e14fb",
+        "r-4abe4a81f363f550e71b6d6d",
+        "r-882c29e08d9cdd02af0d7deb",
+        "r-d6de447e8604a67d70505ae7",
+        "r-517392980ba6f0c62b7bc0a0",
+        "r-d79507aa296bb08478d459c5"
+      ],
+      "citedIds": [
+        "r-3d3e7daebc290b887df19161",
+        "r-3cbad5755bef4bc852b46f5d",
+        "r-6c6ffaabb69e828410a4c882",
+        "r-b6efa90f7c795b8a65d5781c",
+        "r-82fd42016661d7267e3e1948",
+        "r-3091e0ec4b9c4f098e1e14fb",
+        "r-4abe4a81f363f550e71b6d6d",
+        "r-882c29e08d9cdd02af0d7deb",
+        "r-d6de447e8604a67d70505ae7",
+        "r-517392980ba6f0c62b7bc0a0",
+        "r-d79507aa296bb08478d459c5"
+      ],
+      "stages": {
+        "retrieval": false,
+        "delivery": false,
+        "citation": false
+      },
+      "coverage": {
+        "collection": true,
+        "exclusion": false,
+        "report": false,
+        "inventory": true
+      },
+      "failure": null,
+      "budget": "within",
+      "anchor": {
+        "path": "tooling/coverage.mjs",
+        "side": "RIGHT",
+        "line": 14
+      },
+      "usage": {
+        "input_tokens": 11782,
+        "output_tokens": 171
+      },
+      "wallMs": 7213,
+      "reason": "Storybook adds its story glob to Vitest test inclusion; Vitest excludes test include patterns from coverage, but the supplied excerpt does not establish whether the generated runtime include pattern matches `.stories.ts` or how the runtime inventory is constructed, so the claimed causal path to a failing inventory check is unproven.",
+      "missing": "Need the complete runtimeExtensions/sourceDirectories definitions and the effective coverage include/exclude configuration, plus the independent inventory\u2019s construction and report-check invocation; then trace whether any included `.stories.ts` actually enters the JSON summary.",
+      "review": {
+        "reasonSha256": "b3104e1fb4a83d41d34f10ac9fa74c4ea26850172778f755bb5e34bd4b215a73",
+        "passes": false,
+        "note": "Recognizes that the effective coverage configuration is missing, so the cited collection or reporting logic cannot establish the inventory outcome."
+      },
+      "writeAttempts": [],
+      "modes": [],
+      "normalized": null,
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      }
+    },
+    {
+      "trial": "mutant/2/fixed/gpt-6.1-sol",
+      "subject": "mutant",
+      "repetition": 2,
+      "arm": "fixed",
+      "model": "gpt-6.1-sol",
+      "attempts": 1,
+      "status": "unresolved-request",
+      "stop": "fixed-stop",
+      "correct": false,
+      "expected": "confirmed",
+      "verdict": null,
+      "requested": {
+        "revision": "head",
+        "kind": "searchTree",
+        "targets": [
+          {
+            "scope": "",
+            "workspace": null,
+            "match": "literal",
+            "query": "completeCoverage(",
+            "start": null,
+            "end": null
+          },
+          {
+            "scope": "",
+            "workspace": null,
+            "match": "literal",
+            "query": "storybookTest(",
+            "start": null,
+            "end": null
+          }
+        ]
+      },
+      "admission": {
+        "status": "admitted"
+      },
+      "lookup": {
+        "status": "unresolved",
+        "reason": "fixed-single-call"
+      },
+      "retrieved": [],
+      "deliveredIds": [
+        "r-3d3e7daebc290b887df19161",
+        "r-3cbad5755bef4bc852b46f5d",
+        "r-6c6ffaabb69e828410a4c882",
+        "r-b6efa90f7c795b8a65d5781c",
+        "r-bf0153a35f66408c268ec0c6",
+        "r-82fd42016661d7267e3e1948",
+        "r-0a953aa31fbe13509c0a13d8",
+        "r-3091e0ec4b9c4f098e1e14fb",
+        "r-4abe4a81f363f550e71b6d6d",
+        "r-882c29e08d9cdd02af0d7deb",
+        "r-d6de447e8604a67d70505ae7",
+        "r-517392980ba6f0c62b7bc0a0",
+        "r-d79507aa296bb08478d459c5"
+      ],
+      "citedIds": [],
+      "stages": {
+        "retrieval": false,
+        "delivery": false,
+        "citation": false
+      },
+      "coverage": {
+        "collection": false,
+        "exclusion": false,
+        "report": false,
+        "inventory": false
+      },
+      "failure": null,
+      "budget": "within",
+      "anchor": {
+        "path": "tooling/coverage.mjs",
+        "side": "RIGHT",
+        "line": 14
+      },
+      "usage": {
+        "input_tokens": 11782,
+        "output_tokens": 164
+      },
+      "wallMs": 9259,
+      "reason": null,
+      "missing": null,
+      "review": null,
+      "writeAttempts": [],
+      "modes": [
+        "literal",
+        "literal"
+      ],
+      "normalized": {
+        "revision": "head",
+        "kind": "searchTree",
+        "targets": [
+          {
+            "scope": "",
+            "workspace": null,
+            "match": "literal",
+            "query": "completeCoverage(",
+            "start": null,
+            "end": null
+          },
+          {
+            "scope": "",
+            "workspace": null,
+            "match": "literal",
+            "query": "storybookTest(",
+            "start": null,
+            "end": null
+          }
+        ]
+      },
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      }
+    },
+    {
+      "trial": "original/3/on-demand/gpt-6-luna",
+      "subject": "original",
+      "repetition": 3,
+      "arm": "on-demand",
+      "model": "gpt-6-luna",
+      "attempts": 1,
+      "status": "valid-inconclusive",
+      "stop": "request",
+      "correct": false,
+      "expected": "refuted",
+      "verdict": "inconclusive",
+      "requested": null,
+      "admission": null,
+      "lookup": null,
+      "retrieved": [],
+      "deliveredIds": [
+        "r-990cbf7c3826b8923fbc5a40",
+        "r-e84cbaadaeecb7bde819c59f",
+        "r-879a406139e50f4e360f7559",
+        "r-e56521db29c8b10f07f4a31f",
+        "r-5e4e6a44985bf9924502fdd0",
+        "r-0feb7b06e3c137546bf35552",
+        "r-3330ca744d369bc323bde576",
+        "r-73e4ddfc94494317c97ae3db",
+        "r-62e83cbd336df8ae0768daf3",
+        "r-1df15e7738e14f0aea36ffc7",
+        "r-03c7e5f2ea49e653b66096d8",
+        "r-566aac65530b2261eaa61554",
+        "r-e143f2ad6ef6c072a4096aa3"
+      ],
+      "citedIds": [
+        "r-990cbf7c3826b8923fbc5a40",
+        "r-e84cbaadaeecb7bde819c59f",
+        "r-879a406139e50f4e360f7559",
+        "r-e56521db29c8b10f07f4a31f",
+        "r-5e4e6a44985bf9924502fdd0",
+        "r-62e83cbd336df8ae0768daf3",
+        "r-1df15e7738e14f0aea36ffc7",
+        "r-03c7e5f2ea49e653b66096d8",
+        "r-566aac65530b2261eaa61554",
+        "r-e143f2ad6ef6c072a4096aa3"
+      ],
+      "stages": {
+        "retrieval": false,
+        "delivery": false,
+        "citation": false
+      },
+      "coverage": {
+        "collection": true,
+        "exclusion": false,
+        "report": false,
+        "inventory": true
+      },
+      "failure": null,
+      "budget": "within",
+      "anchor": {
+        "path": "tooling/coverage.mjs",
+        "side": "RIGHT",
+        "line": 14
+      },
+      "usage": {
+        "input_tokens": 11774,
+        "output_tokens": 160
+      },
+      "wallMs": 5975,
+      "reason": "Storybook includes stories in test collection, but the coverage include is restricted to runtime extensions and the decisive extension definition and effective runtime coverage settings are absent; therefore the route from collected CSF story to coverage summary is not established.",
+      "missing": "The value of runtimeExtensions and the effective merged coverage config, plus the inventory-check invocation/report path; next check is read tooling/coverage.mjs, the Vitest config, and the coverage-check script to confirm pattern matching and how the JSON summary is consumed.",
+      "review": {
+        "reasonSha256": "38aee44e10e27702ac6f59bbb5e311503ee361dc42a04054581c01c3b7d5246b",
+        "passes": false,
+        "note": "Recognizes that the effective coverage configuration is missing, so the cited collection or reporting logic cannot establish the inventory outcome."
+      },
+      "writeAttempts": [],
+      "modes": [],
+      "normalized": null,
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      }
+    },
+    {
+      "trial": "original/3/on-demand/gpt-6.1-sol",
+      "subject": "original",
+      "repetition": 3,
+      "arm": "on-demand",
+      "model": "gpt-6.1-sol",
+      "attempts": 2,
+      "status": "unsupported-conclusive",
+      "stop": "retrieval",
+      "correct": false,
+      "expected": "refuted",
+      "verdict": "refuted",
+      "requested": {
+        "revision": "head",
+        "kind": "searchTree",
+        "targets": [
+          {
+            "scope": "",
+            "workspace": null,
+            "match": "literal",
+            "query": "completeCoverage(",
+            "start": null,
+            "end": null
+          }
+        ]
+      },
+      "admission": {
+        "status": "admitted"
+      },
+      "lookup": {
+        "status": "budget",
+        "results": [
+          {
+            "status": "budget",
+            "reason": "search-file-budget"
+          }
+        ],
+        "budget": {
+          "gitCalls": 2,
+          "treeEntries": 660,
+          "openedFiles": 0,
+          "sourceBytes": 0,
+          "matches": 0,
+          "evidenceBytes": 0,
+          "elapsedMs": 76
+        }
+      },
+      "retrieved": [],
+      "deliveredIds": [
+        "r-990cbf7c3826b8923fbc5a40",
+        "r-e84cbaadaeecb7bde819c59f",
+        "r-879a406139e50f4e360f7559",
+        "r-e56521db29c8b10f07f4a31f",
+        "r-5e4e6a44985bf9924502fdd0",
+        "r-0feb7b06e3c137546bf35552",
+        "r-3330ca744d369bc323bde576",
+        "r-73e4ddfc94494317c97ae3db",
+        "r-62e83cbd336df8ae0768daf3",
+        "r-1df15e7738e14f0aea36ffc7",
+        "r-03c7e5f2ea49e653b66096d8",
+        "r-566aac65530b2261eaa61554",
+        "r-e143f2ad6ef6c072a4096aa3"
+      ],
+      "citedIds": [
+        "r-03c7e5f2ea49e653b66096d8",
+        "r-990cbf7c3826b8923fbc5a40",
+        "r-e84cbaadaeecb7bde819c59f",
+        "r-879a406139e50f4e360f7559",
+        "r-e56521db29c8b10f07f4a31f",
+        "r-5e4e6a44985bf9924502fdd0",
+        "r-0feb7b06e3c137546bf35552",
+        "r-73e4ddfc94494317c97ae3db",
+        "r-62e83cbd336df8ae0768daf3",
+        "r-1df15e7738e14f0aea36ffc7",
+        "r-566aac65530b2261eaa61554",
+        "r-e143f2ad6ef6c072a4096aa3"
+      ],
+      "stages": {
+        "retrieval": false,
+        "delivery": false,
+        "citation": false
+      },
+      "coverage": {
+        "collection": true,
+        "exclusion": false,
+        "report": false,
+        "inventory": true
+      },
+      "failure": null,
+      "budget": "within",
+      "anchor": {
+        "path": "tooling/coverage.mjs",
+        "side": "RIGHT",
+        "line": 14
+      },
+      "usage": {
+        "input_tokens": 22267,
+        "output_tokens": 352
+      },
+      "wallMs": 18845,
+      "reason": "Storybook\u2019s story globs become test includes and shared, mandatory coverage exclusions; V8 filters executed and untested files accordingly, so JSON-summary omits CSF files, consistent with the independent inventory\u2019s story exclusion\u2014not the hypothesized failure.",
+      "missing": null,
+      "review": {
+        "reasonSha256": "3ddf54c812d1483f5f0c552d596df1f2a2a22552a611e34de13101e42e45a550",
+        "passes": false,
+        "note": "Describes the default exclusion and its downstream effects. The effective project configuration needed to justify applying that exclusion to this revision was neither delivered nor cited. The root literal request exhausted the file budget before any blob was opened."
+      },
+      "writeAttempts": [],
+      "modes": [
+        "literal"
+      ],
+      "normalized": {
+        "revision": "head",
+        "kind": "searchTree",
+        "targets": [
+          {
+            "scope": "",
+            "workspace": null,
+            "match": "literal",
+            "query": "completeCoverage(",
+            "start": null,
+            "end": null
+          }
+        ]
+      },
+      "sourceUsage": {
+        "treeEntries": 660,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 76,
+        "receipts": 0,
+        "accounted": true
+      }
+    },
+    {
+      "trial": "original/3/fixed/gpt-6-luna",
+      "subject": "original",
+      "repetition": 3,
+      "arm": "fixed",
+      "model": "gpt-6-luna",
+      "attempts": 1,
+      "status": "valid-inconclusive",
+      "stop": "request",
+      "correct": false,
+      "expected": "refuted",
+      "verdict": "inconclusive",
+      "requested": null,
+      "admission": null,
+      "lookup": null,
+      "retrieved": [],
+      "deliveredIds": [
+        "r-990cbf7c3826b8923fbc5a40",
+        "r-e84cbaadaeecb7bde819c59f",
+        "r-879a406139e50f4e360f7559",
+        "r-e56521db29c8b10f07f4a31f",
+        "r-5e4e6a44985bf9924502fdd0",
+        "r-0feb7b06e3c137546bf35552",
+        "r-3330ca744d369bc323bde576",
+        "r-73e4ddfc94494317c97ae3db",
+        "r-62e83cbd336df8ae0768daf3",
+        "r-1df15e7738e14f0aea36ffc7",
+        "r-03c7e5f2ea49e653b66096d8",
+        "r-566aac65530b2261eaa61554",
+        "r-e143f2ad6ef6c072a4096aa3"
+      ],
+      "citedIds": [
+        "r-990cbf7c3826b8923fbc5a40",
+        "r-e84cbaadaeecb7bde819c59f",
+        "r-566aac65530b2261eaa61554",
+        "r-e143f2ad6ef6c072a4096aa3"
+      ],
+      "stages": {
+        "retrieval": false,
+        "delivery": false,
+        "citation": false
+      },
+      "coverage": {
+        "collection": false,
+        "exclusion": false,
+        "report": false,
+        "inventory": true
+      },
+      "failure": null,
+      "budget": "within",
+      "anchor": {
+        "path": "tooling/coverage.mjs",
+        "side": "RIGHT",
+        "line": 14
+      },
+      "usage": {
+        "input_tokens": 11774,
+        "output_tokens": 111
+      },
+      "wallMs": 5641,
+      "reason": "Storybook extends test discovery to stories, but the supplied evidence does not show their coverage eligibility or establish that a CSF file enters the summary and fails the inventory check.",
+      "missing": "Effective merged coverage include/exclude configuration and confirmation that the runtimeExtensions glob matches a story file; next inspect the full coverage configuration and addon/Vitest merge behavior.",
+      "review": {
+        "reasonSha256": "e4f8700a99a805509c0cfc0cbf51c89b7d1f67867bb59d20a5e3b4681dc94255",
+        "passes": false,
+        "note": "Recognizes that the effective coverage configuration is missing, so the cited collection or reporting logic cannot establish the inventory outcome."
+      },
+      "writeAttempts": [],
+      "modes": [],
+      "normalized": null,
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      }
+    },
+    {
+      "trial": "original/3/fixed/gpt-6.1-sol",
+      "subject": "original",
+      "repetition": 3,
+      "arm": "fixed",
+      "model": "gpt-6.1-sol",
+      "attempts": 1,
+      "status": "unresolved-request",
+      "stop": "fixed-stop",
+      "correct": false,
+      "expected": "refuted",
+      "verdict": null,
+      "requested": {
+        "revision": "head",
+        "kind": "searchTree",
+        "targets": [
+          {
+            "scope": "",
+            "workspace": null,
+            "match": "literal",
+            "query": "completeCoverage",
+            "start": null,
+            "end": null
+          }
+        ]
+      },
+      "admission": {
+        "status": "admitted"
+      },
+      "lookup": {
+        "status": "unresolved",
+        "reason": "fixed-single-call"
+      },
+      "retrieved": [],
+      "deliveredIds": [
+        "r-990cbf7c3826b8923fbc5a40",
+        "r-e84cbaadaeecb7bde819c59f",
+        "r-879a406139e50f4e360f7559",
+        "r-e56521db29c8b10f07f4a31f",
+        "r-5e4e6a44985bf9924502fdd0",
+        "r-0feb7b06e3c137546bf35552",
+        "r-3330ca744d369bc323bde576",
+        "r-73e4ddfc94494317c97ae3db",
+        "r-62e83cbd336df8ae0768daf3",
+        "r-1df15e7738e14f0aea36ffc7",
+        "r-03c7e5f2ea49e653b66096d8",
+        "r-566aac65530b2261eaa61554",
+        "r-e143f2ad6ef6c072a4096aa3"
+      ],
+      "citedIds": [],
+      "stages": {
+        "retrieval": false,
+        "delivery": false,
+        "citation": false
+      },
+      "coverage": {
+        "collection": false,
+        "exclusion": false,
+        "report": false,
+        "inventory": false
+      },
+      "failure": null,
+      "budget": "within",
+      "anchor": {
+        "path": "tooling/coverage.mjs",
+        "side": "RIGHT",
+        "line": 14
+      },
+      "usage": {
+        "input_tokens": 11772,
+        "output_tokens": 97
+      },
+      "wallMs": 7226,
+      "reason": null,
+      "missing": null,
+      "review": null,
+      "writeAttempts": [],
+      "modes": [
+        "literal"
+      ],
+      "normalized": {
+        "revision": "head",
+        "kind": "searchTree",
+        "targets": [
+          {
+            "scope": "",
+            "workspace": null,
+            "match": "literal",
+            "query": "completeCoverage",
+            "start": null,
+            "end": null
+          }
+        ]
+      },
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      }
+    },
+    {
+      "trial": "original/3/repeat/gpt-6-luna",
+      "subject": "original",
+      "repetition": 3,
+      "arm": "repeat",
+      "model": "gpt-6-luna",
+      "attempts": 1,
+      "status": "valid-inconclusive",
+      "stop": "request",
+      "correct": false,
+      "expected": "refuted",
+      "verdict": "inconclusive",
+      "requested": null,
+      "admission": null,
+      "lookup": null,
+      "retrieved": [],
+      "deliveredIds": [
+        "r-990cbf7c3826b8923fbc5a40",
+        "r-e84cbaadaeecb7bde819c59f",
+        "r-879a406139e50f4e360f7559",
+        "r-e56521db29c8b10f07f4a31f",
+        "r-5e4e6a44985bf9924502fdd0",
+        "r-0feb7b06e3c137546bf35552",
+        "r-3330ca744d369bc323bde576",
+        "r-73e4ddfc94494317c97ae3db",
+        "r-62e83cbd336df8ae0768daf3",
+        "r-1df15e7738e14f0aea36ffc7",
+        "r-03c7e5f2ea49e653b66096d8",
+        "r-566aac65530b2261eaa61554",
+        "r-e143f2ad6ef6c072a4096aa3"
+      ],
+      "citedIds": [
+        "r-990cbf7c3826b8923fbc5a40",
+        "r-e84cbaadaeecb7bde819c59f",
+        "r-e56521db29c8b10f07f4a31f",
+        "r-5e4e6a44985bf9924502fdd0",
+        "r-62e83cbd336df8ae0768daf3",
+        "r-1df15e7738e14f0aea36ffc7",
+        "r-03c7e5f2ea49e653b66096d8",
+        "r-566aac65530b2261eaa61554",
+        "r-e143f2ad6ef6c072a4096aa3"
+      ],
+      "stages": {
+        "retrieval": false,
+        "delivery": false,
+        "citation": false
+      },
+      "coverage": {
+        "collection": true,
+        "exclusion": false,
+        "report": false,
+        "inventory": true
+      },
+      "failure": null,
+      "budget": "within",
+      "anchor": {
+        "path": "tooling/coverage.mjs",
+        "side": "RIGHT",
+        "line": 14
+      },
+      "usage": {
+        "input_tokens": 11774,
+        "output_tokens": 168
+      },
+      "wallMs": 6886,
+      "reason": "Storybook includes story paths for collection and Vitest adds those include patterns to coverage exclusions, while the summary reporter emits only files in its coverage map; however the supplied excerpts do not establish whether a CSF definition is excluded by the effective `include`/`exclude` matching or appears in the report, nor the full `runtimeExtensions` configuration and inventory paths.",
+      "missing": "Need the complete coverage config values and the applicable Vitest include/exclude glob matching for a concrete story path, then compare that result with the generated-summary keys and inventory check.",
+      "review": {
+        "reasonSha256": "b5fdf60410ba329453fe372e0e3c786a6ea604c6f0af5f98ecac2cb6dda1a450",
+        "passes": false,
+        "note": "Recognizes that the effective coverage configuration is missing, so the cited collection or reporting logic cannot establish the inventory outcome."
+      },
+      "writeAttempts": [],
+      "modes": [],
+      "normalized": null,
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      }
+    },
+    {
+      "trial": "original/3/repeat/gpt-6.1-sol",
+      "subject": "original",
+      "repetition": 3,
+      "arm": "repeat",
+      "model": "gpt-6.1-sol",
+      "attempts": 2,
+      "status": "unsupported-conclusive",
+      "stop": "withheld-control",
+      "correct": false,
+      "expected": "refuted",
+      "verdict": "refuted",
+      "requested": {
+        "revision": "head",
+        "kind": "searchTree",
+        "targets": [
+          {
+            "scope": "",
+            "workspace": null,
+            "match": "literal",
+            "query": "completeCoverage(",
+            "start": null,
+            "end": null
+          },
+          {
+            "scope": "",
+            "workspace": null,
+            "match": "literal",
+            "query": "storybookTest(",
+            "start": null,
+            "end": null
+          }
+        ]
+      },
+      "admission": {
+        "status": "admitted"
+      },
+      "lookup": {
+        "status": "withheld",
+        "reason": "control-no-new-source"
+      },
+      "retrieved": [],
+      "deliveredIds": [
+        "r-990cbf7c3826b8923fbc5a40",
+        "r-e84cbaadaeecb7bde819c59f",
+        "r-879a406139e50f4e360f7559",
+        "r-e56521db29c8b10f07f4a31f",
+        "r-5e4e6a44985bf9924502fdd0",
+        "r-0feb7b06e3c137546bf35552",
+        "r-3330ca744d369bc323bde576",
+        "r-73e4ddfc94494317c97ae3db",
+        "r-62e83cbd336df8ae0768daf3",
+        "r-1df15e7738e14f0aea36ffc7",
+        "r-03c7e5f2ea49e653b66096d8",
+        "r-566aac65530b2261eaa61554",
+        "r-e143f2ad6ef6c072a4096aa3"
+      ],
+      "citedIds": [
+        "r-03c7e5f2ea49e653b66096d8",
+        "r-990cbf7c3826b8923fbc5a40",
+        "r-e84cbaadaeecb7bde819c59f",
+        "r-879a406139e50f4e360f7559",
+        "r-e56521db29c8b10f07f4a31f",
+        "r-5e4e6a44985bf9924502fdd0",
+        "r-0feb7b06e3c137546bf35552",
+        "r-3330ca744d369bc323bde576",
+        "r-73e4ddfc94494317c97ae3db",
+        "r-62e83cbd336df8ae0768daf3",
+        "r-1df15e7738e14f0aea36ffc7",
+        "r-566aac65530b2261eaa61554",
+        "r-e143f2ad6ef6c072a4096aa3"
+      ],
+      "stages": {
+        "retrieval": false,
+        "delivery": false,
+        "citation": false
+      },
+      "coverage": {
+        "collection": true,
+        "exclusion": false,
+        "report": true,
+        "inventory": true
+      },
+      "failure": null,
+      "budget": "within",
+      "anchor": {
+        "path": "tooling/coverage.mjs",
+        "side": "RIGHT",
+        "line": 14
+      },
+      "usage": {
+        "input_tokens": 22262,
+        "output_tokens": 343
+      },
+      "wallMs": 16144,
+      "reason": "Storybook story globs become test includes and mandatory shared coverage exclusions; filtering excludes them from collected and uncovered coverage before remapping/reporting, so JSON-summary file keys do not acquire CSF entries that the independent inventory rejects.",
+      "missing": null,
+      "review": {
+        "reasonSha256": "f77f7df2d960417a8179ac0eea0b91e304a50788ac9424721ab4686be071c579",
+        "passes": false,
+        "note": "Describes the default exclusion and its downstream effects. The effective project configuration needed to justify applying that exclusion to this revision was neither delivered nor cited."
+      },
+      "writeAttempts": [],
+      "modes": [
+        "literal",
+        "literal"
+      ],
+      "normalized": {
+        "revision": "head",
+        "kind": "searchTree",
+        "targets": [
+          {
+            "scope": "",
+            "workspace": null,
+            "match": "literal",
+            "query": "completeCoverage(",
+            "start": null,
+            "end": null
+          },
+          {
+            "scope": "",
+            "workspace": null,
+            "match": "literal",
+            "query": "storybookTest(",
+            "start": null,
+            "end": null
+          }
+        ]
+      },
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      }
+    },
+    {
+      "trial": "mutant/3/on-demand/gpt-6-luna",
+      "subject": "mutant",
+      "repetition": 3,
+      "arm": "on-demand",
+      "model": "gpt-6-luna",
+      "attempts": 1,
+      "status": "valid-inconclusive",
+      "stop": "request",
+      "correct": false,
+      "expected": "confirmed",
+      "verdict": "inconclusive",
+      "requested": null,
+      "admission": null,
+      "lookup": null,
+      "retrieved": [],
+      "deliveredIds": [
+        "r-3d3e7daebc290b887df19161",
+        "r-3cbad5755bef4bc852b46f5d",
+        "r-6c6ffaabb69e828410a4c882",
+        "r-b6efa90f7c795b8a65d5781c",
+        "r-bf0153a35f66408c268ec0c6",
+        "r-82fd42016661d7267e3e1948",
+        "r-0a953aa31fbe13509c0a13d8",
+        "r-3091e0ec4b9c4f098e1e14fb",
+        "r-4abe4a81f363f550e71b6d6d",
+        "r-882c29e08d9cdd02af0d7deb",
+        "r-d6de447e8604a67d70505ae7",
+        "r-517392980ba6f0c62b7bc0a0",
+        "r-d79507aa296bb08478d459c5"
+      ],
+      "citedIds": [
+        "r-3d3e7daebc290b887df19161",
+        "r-3cbad5755bef4bc852b46f5d",
+        "r-b6efa90f7c795b8a65d5781c",
+        "r-bf0153a35f66408c268ec0c6",
+        "r-4abe4a81f363f550e71b6d6d",
+        "r-882c29e08d9cdd02af0d7deb",
+        "r-d6de447e8604a67d70505ae7",
+        "r-517392980ba6f0c62b7bc0a0",
+        "r-d79507aa296bb08478d459c5"
+      ],
+      "stages": {
+        "retrieval": false,
+        "delivery": false,
+        "citation": false
+      },
+      "coverage": {
+        "collection": true,
+        "exclusion": false,
+        "report": false,
+        "inventory": true
+      },
+      "failure": null,
+      "budget": "within",
+      "anchor": {
+        "path": "tooling/coverage.mjs",
+        "side": "RIGHT",
+        "line": 14
+      },
+      "usage": {
+        "input_tokens": 11780,
+        "output_tokens": 153
+      },
+      "wallMs": 6205,
+      "reason": "Storybook registers stories as test includes, while Vitest excludes those includes from coverage; however, the supplied excerpts do not establish the effective runtimeExtensions glob or whether the independent inventory excludes this CSF file in the relevant form.",
+      "missing": "Need the complete coverage configuration/runtimeExtensions definition and the relevant story path and inventory expansion to determine whether a CSF definition can enter the JSON summary and mismatch coverageProblems; next check those source lines and confirm the effective resolved include/exclude patterns.",
+      "review": {
+        "reasonSha256": "d0f7746659bf53ab491d69bd0b1ec89aa194c73786dc7edb5da68477d8cc0a43",
+        "passes": false,
+        "note": "Recognizes that the effective coverage configuration is missing, so the cited collection or reporting logic cannot establish the inventory outcome."
+      },
+      "writeAttempts": [],
+      "modes": [],
+      "normalized": null,
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      }
+    },
+    {
+      "trial": "mutant/3/on-demand/gpt-6.1-sol",
+      "subject": "mutant",
+      "repetition": 3,
+      "arm": "on-demand",
+      "model": "gpt-6.1-sol",
+      "attempts": 2,
+      "status": "unsupported-conclusive",
+      "stop": "retrieval",
+      "correct": false,
+      "expected": "confirmed",
+      "verdict": "refuted",
+      "requested": {
+        "revision": "head",
+        "kind": "searchTree",
+        "targets": [
+          {
+            "scope": "",
+            "workspace": null,
+            "match": "literal",
+            "query": "completeCoverage",
+            "start": null,
+            "end": null
+          },
+          {
+            "scope": "",
+            "workspace": null,
+            "match": "literal",
+            "query": "storybookTest(",
+            "start": null,
+            "end": null
+          }
+        ]
+      },
+      "admission": {
+        "status": "admitted"
+      },
+      "lookup": {
+        "status": "budget",
+        "results": [
+          {
+            "status": "budget",
+            "reason": "search-file-budget"
+          },
+          {
+            "status": "budget",
+            "reason": "search-file-budget"
+          }
+        ],
+        "budget": {
+          "gitCalls": 2,
+          "treeEntries": 660,
+          "openedFiles": 0,
+          "sourceBytes": 0,
+          "matches": 0,
+          "evidenceBytes": 0,
+          "elapsedMs": 84
+        }
+      },
+      "retrieved": [],
+      "deliveredIds": [
+        "r-3d3e7daebc290b887df19161",
+        "r-3cbad5755bef4bc852b46f5d",
+        "r-6c6ffaabb69e828410a4c882",
+        "r-b6efa90f7c795b8a65d5781c",
+        "r-bf0153a35f66408c268ec0c6",
+        "r-82fd42016661d7267e3e1948",
+        "r-0a953aa31fbe13509c0a13d8",
+        "r-3091e0ec4b9c4f098e1e14fb",
+        "r-4abe4a81f363f550e71b6d6d",
+        "r-882c29e08d9cdd02af0d7deb",
+        "r-d6de447e8604a67d70505ae7",
+        "r-517392980ba6f0c62b7bc0a0",
+        "r-d79507aa296bb08478d459c5"
+      ],
+      "citedIds": [
+        "r-d6de447e8604a67d70505ae7",
+        "r-3d3e7daebc290b887df19161",
+        "r-3cbad5755bef4bc852b46f5d",
+        "r-6c6ffaabb69e828410a4c882",
+        "r-b6efa90f7c795b8a65d5781c",
+        "r-bf0153a35f66408c268ec0c6",
+        "r-82fd42016661d7267e3e1948",
+        "r-3091e0ec4b9c4f098e1e14fb",
+        "r-4abe4a81f363f550e71b6d6d",
+        "r-882c29e08d9cdd02af0d7deb",
+        "r-517392980ba6f0c62b7bc0a0",
+        "r-d79507aa296bb08478d459c5"
+      ],
+      "stages": {
+        "retrieval": false,
+        "delivery": false,
+        "citation": false
+      },
+      "coverage": {
+        "collection": true,
+        "exclusion": false,
+        "report": false,
+        "inventory": true
+      },
+      "failure": null,
+      "budget": "within",
+      "anchor": {
+        "path": "tooling/coverage.mjs",
+        "side": "RIGHT",
+        "line": 14
+      },
+      "usage": {
+        "input_tokens": 22293,
+        "output_tokens": 392
+      },
+      "wallMs": 20028,
+      "reason": "Storybook story globs become test includes and mandatory shared coverage exclusions; filtering excludes them from tested and untested coverage before JSON reporting, so the independent inventory\u2019s rejection of extra story keys does not establish the alleged failure.",
+      "missing": null,
+      "review": {
+        "reasonSha256": "11fce9c6a60194ee700439cb300fc9b02eef31652ba0c2d58de6545ab67ae002",
+        "passes": false,
+        "note": "Applies the default exclusion to the mutant without accounting for its project hook. The hook admits the CSF entry, which the independent inventory rejects. The root literal request exhausted the file budget before any blob was opened."
+      },
+      "writeAttempts": [],
+      "modes": [
+        "literal",
+        "literal"
+      ],
+      "normalized": {
+        "revision": "head",
+        "kind": "searchTree",
+        "targets": [
+          {
+            "scope": "",
+            "workspace": null,
+            "match": "literal",
+            "query": "completeCoverage",
+            "start": null,
+            "end": null
+          },
+          {
+            "scope": "",
+            "workspace": null,
+            "match": "literal",
+            "query": "storybookTest(",
+            "start": null,
+            "end": null
+          }
+        ]
+      },
+      "sourceUsage": {
+        "treeEntries": 660,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 84,
+        "receipts": 0,
+        "accounted": true
+      }
+    },
+    {
+      "trial": "mutant/3/fixed/gpt-6-luna",
+      "subject": "mutant",
+      "repetition": 3,
+      "arm": "fixed",
+      "model": "gpt-6-luna",
+      "attempts": 1,
+      "status": "valid-inconclusive",
+      "stop": "request",
+      "correct": false,
+      "expected": "confirmed",
+      "verdict": "inconclusive",
+      "requested": null,
+      "admission": null,
+      "lookup": null,
+      "retrieved": [],
+      "deliveredIds": [
+        "r-3d3e7daebc290b887df19161",
+        "r-3cbad5755bef4bc852b46f5d",
+        "r-6c6ffaabb69e828410a4c882",
+        "r-b6efa90f7c795b8a65d5781c",
+        "r-bf0153a35f66408c268ec0c6",
+        "r-82fd42016661d7267e3e1948",
+        "r-0a953aa31fbe13509c0a13d8",
+        "r-3091e0ec4b9c4f098e1e14fb",
+        "r-4abe4a81f363f550e71b6d6d",
+        "r-882c29e08d9cdd02af0d7deb",
+        "r-d6de447e8604a67d70505ae7",
+        "r-517392980ba6f0c62b7bc0a0",
+        "r-d79507aa296bb08478d459c5"
+      ],
+      "citedIds": [
+        "r-3d3e7daebc290b887df19161",
+        "r-3cbad5755bef4bc852b46f5d",
+        "r-b6efa90f7c795b8a65d5781c",
+        "r-bf0153a35f66408c268ec0c6",
+        "r-82fd42016661d7267e3e1948",
+        "r-0a953aa31fbe13509c0a13d8",
+        "r-3091e0ec4b9c4f098e1e14fb",
+        "r-4abe4a81f363f550e71b6d6d",
+        "r-882c29e08d9cdd02af0d7deb",
+        "r-d6de447e8604a67d70505ae7",
+        "r-517392980ba6f0c62b7bc0a0",
+        "r-d79507aa296bb08478d459c5"
+      ],
+      "stages": {
+        "retrieval": false,
+        "delivery": false,
+        "citation": false
+      },
+      "coverage": {
+        "collection": true,
+        "exclusion": false,
+        "report": true,
+        "inventory": true
+      },
+      "failure": null,
+      "budget": "within",
+      "anchor": {
+        "path": "tooling/coverage.mjs",
+        "side": "RIGHT",
+        "line": 14
+      },
+      "usage": {
+        "input_tokens": 11784,
+        "output_tokens": 169
+      },
+      "wallMs": 5929,
+      "reason": "Storybook contributes story paths to test inclusion and the coverage report serializes mapped files, but the supplied evidence does not show how the effective coverage include/exclude patterns interact with the Storybook files or establish that any story reaches the JSON summary and fails the independent inventory check.",
+      "missing": "The effective runtimeExtensions value and coverage configuration at the point Storybook config is merged, plus the resolved story file paths and whether they survive coverage filtering/remapping into the report; next check those source definitions and the resulting path patterns.",
+      "review": {
+        "reasonSha256": "7062d22484eaf9db0a14bf1829db9d70d7c6a8ba6fff7794a9f6983411aa9b6b",
+        "passes": false,
+        "note": "Recognizes that the effective coverage configuration is missing, so the cited collection or reporting logic cannot establish the inventory outcome."
+      },
+      "writeAttempts": [],
+      "modes": [],
+      "normalized": null,
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      }
+    },
+    {
+      "trial": "mutant/3/fixed/gpt-6.1-sol",
+      "subject": "mutant",
+      "repetition": 3,
+      "arm": "fixed",
+      "model": "gpt-6.1-sol",
+      "attempts": 1,
+      "status": "unresolved-request",
+      "stop": "fixed-stop",
+      "correct": false,
+      "expected": "confirmed",
+      "verdict": null,
+      "requested": {
+        "revision": "head",
+        "kind": "searchTree",
+        "targets": [
+          {
+            "scope": "",
+            "workspace": null,
+            "match": "literal",
+            "query": "completeCoverage(",
+            "start": null,
+            "end": null
+          },
+          {
+            "scope": "",
+            "workspace": null,
+            "match": "literal",
+            "query": "storybookTest(",
+            "start": null,
+            "end": null
+          }
+        ]
+      },
+      "admission": {
+        "status": "admitted"
+      },
+      "lookup": {
+        "status": "unresolved",
+        "reason": "fixed-single-call"
+      },
+      "retrieved": [],
+      "deliveredIds": [
+        "r-3d3e7daebc290b887df19161",
+        "r-3cbad5755bef4bc852b46f5d",
+        "r-6c6ffaabb69e828410a4c882",
+        "r-b6efa90f7c795b8a65d5781c",
+        "r-bf0153a35f66408c268ec0c6",
+        "r-82fd42016661d7267e3e1948",
+        "r-0a953aa31fbe13509c0a13d8",
+        "r-3091e0ec4b9c4f098e1e14fb",
+        "r-4abe4a81f363f550e71b6d6d",
+        "r-882c29e08d9cdd02af0d7deb",
+        "r-d6de447e8604a67d70505ae7",
+        "r-517392980ba6f0c62b7bc0a0",
+        "r-d79507aa296bb08478d459c5"
+      ],
+      "citedIds": [],
+      "stages": {
+        "retrieval": false,
+        "delivery": false,
+        "citation": false
+      },
+      "coverage": {
+        "collection": false,
+        "exclusion": false,
+        "report": false,
+        "inventory": false
+      },
+      "failure": null,
+      "budget": "within",
+      "anchor": {
+        "path": "tooling/coverage.mjs",
+        "side": "RIGHT",
+        "line": 14
+      },
+      "usage": {
+        "input_tokens": 11782,
+        "output_tokens": 167
+      },
+      "wallMs": 8410,
+      "reason": null,
+      "missing": null,
+      "review": null,
+      "writeAttempts": [],
+      "modes": [
+        "literal",
+        "literal"
+      ],
+      "normalized": {
+        "revision": "head",
+        "kind": "searchTree",
+        "targets": [
+          {
+            "scope": "",
+            "workspace": null,
+            "match": "literal",
+            "query": "completeCoverage(",
+            "start": null,
+            "end": null
+          },
+          {
+            "scope": "",
+            "workspace": null,
+            "match": "literal",
+            "query": "storybookTest(",
+            "start": null,
+            "end": null
+          }
+        ]
+      },
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      }
+    },
+    {
+      "trial": "mutant/3/repeat/gpt-6-luna",
+      "subject": "mutant",
+      "repetition": 3,
+      "arm": "repeat",
+      "model": "gpt-6-luna",
+      "attempts": 1,
+      "status": "valid-inconclusive",
+      "stop": "request",
+      "correct": false,
+      "expected": "confirmed",
+      "verdict": "inconclusive",
+      "requested": null,
+      "admission": null,
+      "lookup": null,
+      "retrieved": [],
+      "deliveredIds": [
+        "r-3d3e7daebc290b887df19161",
+        "r-3cbad5755bef4bc852b46f5d",
+        "r-6c6ffaabb69e828410a4c882",
+        "r-b6efa90f7c795b8a65d5781c",
+        "r-bf0153a35f66408c268ec0c6",
+        "r-82fd42016661d7267e3e1948",
+        "r-0a953aa31fbe13509c0a13d8",
+        "r-3091e0ec4b9c4f098e1e14fb",
+        "r-4abe4a81f363f550e71b6d6d",
+        "r-882c29e08d9cdd02af0d7deb",
+        "r-d6de447e8604a67d70505ae7",
+        "r-517392980ba6f0c62b7bc0a0",
+        "r-d79507aa296bb08478d459c5"
+      ],
+      "citedIds": [
+        "r-3d3e7daebc290b887df19161",
+        "r-3cbad5755bef4bc852b46f5d",
+        "r-6c6ffaabb69e828410a4c882",
+        "r-b6efa90f7c795b8a65d5781c",
+        "r-bf0153a35f66408c268ec0c6",
+        "r-82fd42016661d7267e3e1948",
+        "r-0a953aa31fbe13509c0a13d8",
+        "r-3091e0ec4b9c4f098e1e14fb",
+        "r-4abe4a81f363f550e71b6d6d",
+        "r-882c29e08d9cdd02af0d7deb",
+        "r-d6de447e8604a67d70505ae7",
+        "r-517392980ba6f0c62b7bc0a0",
+        "r-d79507aa296bb08478d459c5"
+      ],
+      "stages": {
+        "retrieval": false,
+        "delivery": false,
+        "citation": false
+      },
+      "coverage": {
+        "collection": true,
+        "exclusion": false,
+        "report": true,
+        "inventory": true
+      },
+      "failure": null,
+      "budget": "within",
+      "anchor": {
+        "path": "tooling/coverage.mjs",
+        "side": "RIGHT",
+        "line": 14
+      },
+      "usage": {
+        "input_tokens": 24194,
+        "output_tokens": 207
+      },
+      "wallMs": 7127,
+      "reason": "Storybook includes its configured story paths in Vitest collection, but the supplied evidence does not establish whether those .stories.ts files match the coverage include glob; the independent inventory explicitly filters them out, and would reject any extra report path if one is included.",
+      "missing": "Need the exact runtimeExtensions value and effective coverage include/exclude matching for a story path (then verify JSON summary key behavior); the evidence shows reporting and inventory comparison, not that a story is admitted.",
+      "review": {
+        "reasonSha256": "866686a142ba44a2742ef343fecf8faa188aa85303de53cface60fd5a67c5c37",
+        "passes": false,
+        "note": "Recognizes that the effective coverage configuration is missing, so the cited collection or reporting logic cannot establish the inventory outcome."
+      },
+      "writeAttempts": [],
+      "modes": [],
+      "normalized": null,
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      }
+    },
+    {
+      "trial": "mutant/3/repeat/gpt-6.1-sol",
+      "subject": "mutant",
+      "repetition": 3,
+      "arm": "repeat",
+      "model": "gpt-6.1-sol",
+      "attempts": 1,
+      "status": "unsupported-conclusive",
+      "stop": "request",
+      "correct": false,
+      "expected": "confirmed",
+      "verdict": "refuted",
+      "requested": null,
+      "admission": null,
+      "lookup": null,
+      "retrieved": [],
+      "deliveredIds": [
+        "r-3d3e7daebc290b887df19161",
+        "r-3cbad5755bef4bc852b46f5d",
+        "r-6c6ffaabb69e828410a4c882",
+        "r-b6efa90f7c795b8a65d5781c",
+        "r-bf0153a35f66408c268ec0c6",
+        "r-82fd42016661d7267e3e1948",
+        "r-0a953aa31fbe13509c0a13d8",
+        "r-3091e0ec4b9c4f098e1e14fb",
+        "r-4abe4a81f363f550e71b6d6d",
+        "r-882c29e08d9cdd02af0d7deb",
+        "r-d6de447e8604a67d70505ae7",
+        "r-517392980ba6f0c62b7bc0a0",
+        "r-d79507aa296bb08478d459c5"
+      ],
+      "citedIds": [
+        "r-d6de447e8604a67d70505ae7",
+        "r-3d3e7daebc290b887df19161",
+        "r-3cbad5755bef4bc852b46f5d",
+        "r-6c6ffaabb69e828410a4c882",
+        "r-b6efa90f7c795b8a65d5781c",
+        "r-bf0153a35f66408c268ec0c6",
+        "r-82fd42016661d7267e3e1948",
+        "r-0a953aa31fbe13509c0a13d8",
+        "r-3091e0ec4b9c4f098e1e14fb",
+        "r-4abe4a81f363f550e71b6d6d",
+        "r-882c29e08d9cdd02af0d7deb",
+        "r-517392980ba6f0c62b7bc0a0",
+        "r-d79507aa296bb08478d459c5"
+      ],
+      "stages": {
+        "retrieval": false,
+        "delivery": false,
+        "citation": false
+      },
+      "coverage": {
+        "collection": true,
+        "exclusion": false,
+        "report": true,
+        "inventory": true
+      },
+      "failure": null,
+      "budget": "within",
+      "anchor": {
+        "path": "tooling/coverage.mjs",
+        "side": "RIGHT",
+        "line": 14
+      },
+      "usage": {
+        "input_tokens": 11780,
+        "output_tokens": 232
+      },
+      "wallMs": 9741,
+      "reason": "Storybook collects CSF stories as tests; Vitest adds their include patterns to shared, mandatory coverage exclusions, which filter both executed and untested files before JSON-summary reporting, so the independent inventory\u2019s exclusion of stories does not cause the alleged unexpected-file failure.",
+      "missing": null,
+      "review": {
+        "reasonSha256": "3b36fa828d99d55b662e2a671237e2de04d4cbca1bb11bee1cd99c62668595ae",
+        "passes": false,
+        "note": "Applies the default exclusion to the mutant without accounting for its project hook. The hook admits the CSF entry, which the independent inventory rejects."
+      },
+      "writeAttempts": [],
+      "modes": [],
+      "normalized": null,
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      }
+    }
+  ],
+  "attempts": 44,
+  "writeAttempts": 0
+}
