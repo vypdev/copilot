@@ -1,0 +1,117 @@
+{
+  "original/1/fixed/gpt-6-luna": {
+    "reasonSha256": "01c4eaacd89f6b6804ea157539be5af7f706d4e5fda7a0fe79a7c77908c913f0",
+    "passes": false,
+    "note": "Identifies a material gap in effective inclusion, filtering or report reachability and withholds a conclusion."
+  },
+  "original/1/repeat/gpt-6-luna": {
+    "reasonSha256": "afdea9723111093b2b20f3fc39c9d7a0cdb4532aaa1369fa3db415dea6ed9fe2",
+    "passes": false,
+    "note": "Identifies a material gap in effective inclusion, filtering or report reachability and withholds a conclusion."
+  },
+  "original/1/repeat/gpt-6.1-sol": {
+    "reasonSha256": "c4773b8741eaa7145c092af803376b1868f0b5570f98145b3c0f030dc5eb5708",
+    "passes": false,
+    "note": "Describes the default exclusion and reporting chain. Its application to the reviewed project is unsupported without the effective configuration."
+  },
+  "original/1/on-demand/gpt-6.1-sol": {
+    "reasonSha256": "48cc1ffacd0ffa830a67d453d8efa81968c83ae7f14a28363dca860e6a2d99b4",
+    "passes": false,
+    "note": "Describes the default exclusion and reporting chain. Its application to the reviewed project is unsupported without the effective configuration."
+  },
+  "mutant/1/fixed/gpt-6-luna": {
+    "reasonSha256": "46fa9d4356d991672c6922faa206bbe491116de5ab722e3ca0befb2acab4101c",
+    "passes": false,
+    "note": "Identifies a material gap in effective inclusion, filtering or report reachability and withholds a conclusion."
+  },
+  "mutant/1/fixed/gpt-6.1-sol": {
+    "reasonSha256": "bc30aac1ce6bd63c209dc98bd5ce46474dd4fa66e84172225b8379da6dad2932",
+    "passes": false,
+    "note": "Treats the automatic exclusion as effective. The reviewed project overrides it, and the answer does not cite the configuration."
+  },
+  "mutant/1/repeat/gpt-6.1-sol": {
+    "reasonSha256": "b8f8066d4e39748759318ab4ee3217e8980875c1450e4f60c8b70622c41ab17f",
+    "passes": false,
+    "note": "Treats the automatic exclusion as effective. The reviewed project overrides it, and the answer does not cite the configuration."
+  },
+  "mutant/1/on-demand/gpt-6-luna": {
+    "reasonSha256": "405f8a3737a1ec358ca69208710d7b22525d70e05f8222c80205c688291dfe38",
+    "passes": false,
+    "note": "Identifies a material gap in effective inclusion, filtering or report reachability and withholds a conclusion."
+  },
+  "mutant/1/on-demand/gpt-6.1-sol": {
+    "reasonSha256": "5966984049d1e73458ed11c57878810c9e7f4d780ee559c8a00e3e74590c97cc",
+    "passes": false,
+    "note": "Treats the automatic exclusion as effective. The reviewed project overrides it, and the answer does not cite the configuration."
+  },
+  "original/2/repeat/gpt-6.1-sol": {
+    "reasonSha256": "12c348781f38aa567e9fa8c51f46b93588b0c5794c8a5f08a4baa5f63c57c9af",
+    "passes": false,
+    "note": "Describes the default exclusion and reporting chain. Its application to the reviewed project is unsupported without the effective configuration."
+  },
+  "original/2/on-demand/gpt-6.1-sol": {
+    "reasonSha256": "2e7bc167ba0565b022a29ffad27ce66228bcbf4930a8fae076af8a4b43e5d6f1",
+    "passes": false,
+    "note": "Describes the default exclusion and reporting chain. Its application to the reviewed project is unsupported without the effective configuration."
+  },
+  "mutant/2/repeat/gpt-6-luna": {
+    "reasonSha256": "a919191651e6fef807d7b4ae07138bc3f291b6e2655c31f2e2dbe9087e8f219f",
+    "passes": false,
+    "note": "Identifies a material gap in effective inclusion, filtering or report reachability and withholds a conclusion."
+  },
+  "mutant/2/repeat/gpt-6.1-sol": {
+    "reasonSha256": "d5a6fb3a1f4b4f07bc981fcf84af780dcec9705e09b2849b836c98c082649806",
+    "passes": false,
+    "note": "Treats the automatic exclusion as effective. The reviewed project overrides it, and the answer does not cite the configuration."
+  },
+  "mutant/2/on-demand/gpt-6-luna": {
+    "reasonSha256": "5166fe112d2bacd2ff3f3ab9bb93ac8e4dbaa8c68eef537ed56a4b2f649c9951",
+    "passes": false,
+    "note": "Identifies a material gap in effective inclusion, filtering or report reachability and withholds a conclusion."
+  },
+  "mutant/2/on-demand/gpt-6.1-sol": {
+    "reasonSha256": "5011ae042d3bcc77a90b270dce81eb0705fd9a03c67c7ae0529a820d5e1e0280",
+    "passes": false,
+    "note": "Treats the automatic exclusion as effective. The reviewed project overrides it, and the answer does not cite the configuration."
+  },
+  "mutant/2/fixed/gpt-6-luna": {
+    "reasonSha256": "e1ebbe6650629f6b32dbafacf1d5ebcd6dc0c968dc28ef7c026dc0c00d80f913",
+    "passes": false,
+    "note": "Identifies a material gap in effective inclusion, filtering or report reachability and withholds a conclusion."
+  },
+  "original/3/on-demand/gpt-6-luna": {
+    "reasonSha256": "c2e4aa054fec9b349058708f9835aaaab6d1e936bf67a00e8b9a18a37a656847",
+    "passes": false,
+    "note": "Identifies a material gap in effective inclusion, filtering or report reachability and withholds a conclusion."
+  },
+  "original/3/on-demand/gpt-6.1-sol": {
+    "reasonSha256": "a8a437fda19d1c52888f336830f602b434879626a2a228fe8f97ae47da53b28c",
+    "passes": false,
+    "note": "Describes the default exclusion and reporting chain. Its application to the reviewed project is unsupported without the effective configuration."
+  },
+  "original/3/repeat/gpt-6-luna": {
+    "reasonSha256": "2e731e964aac5a944af48d5e44047e1bb7c9295c30c808bd1c6f25ed2f51c72d",
+    "passes": false,
+    "note": "Identifies a material gap in effective inclusion, filtering or report reachability and withholds a conclusion."
+  },
+  "original/3/repeat/gpt-6.1-sol": {
+    "reasonSha256": "6f7ec76a2e8fe63f39af846cd6692f0f26917e79a34aa80e36fc9ae38b1cb6a2",
+    "passes": false,
+    "note": "Describes the default exclusion and reporting chain. Its application to the reviewed project is unsupported without the effective configuration."
+  },
+  "mutant/3/on-demand/gpt-6.1-sol": {
+    "reasonSha256": "65f4855e4d402b330899c10202153befd11712ec404c07885850b74a347f0582",
+    "passes": false,
+    "note": "Treats the automatic exclusion as effective. The reviewed project overrides it, and the answer does not cite the configuration."
+  },
+  "mutant/3/repeat/gpt-6-luna": {
+    "reasonSha256": "638bde98a8dc280afb8472ec3bc80f46fc8c136d2edfbd159cda9aa8c75532a0",
+    "passes": false,
+    "note": "Identifies a material gap in effective inclusion, filtering or report reachability and withholds a conclusion."
+  },
+  "mutant/3/repeat/gpt-6.1-sol": {
+    "reasonSha256": "85c054267391177badfa3072193d29af6b0527c5af0f4282a7b3d69ea2b26f1b",
+    "passes": false,
+    "note": "Treats the automatic exclusion as effective. The reviewed project overrides it, and the answer does not cite the configuration."
+  }
+}
