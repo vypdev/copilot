@@ -1,0 +1,44 @@
+[
+  {
+    "trial": "original/1/complete/gpt-6.1-sol",
+    "subject": "original",
+    "repetition": 1,
+    "arm": "complete",
+    "model": "gpt-6.1-sol"
+  },
+  {
+    "trial": "mutant/1/complete/gpt-6.1-sol",
+    "subject": "mutant",
+    "repetition": 1,
+    "arm": "complete",
+    "model": "gpt-6.1-sol"
+  },
+  {
+    "trial": "original/2/complete/gpt-6.1-sol",
+    "subject": "original",
+    "repetition": 2,
+    "arm": "complete",
+    "model": "gpt-6.1-sol"
+  },
+  {
+    "trial": "mutant/2/complete/gpt-6.1-sol",
+    "subject": "mutant",
+    "repetition": 2,
+    "arm": "complete",
+    "model": "gpt-6.1-sol"
+  },
+  {
+    "trial": "original/3/complete/gpt-6.1-sol",
+    "subject": "original",
+    "repetition": 3,
+    "arm": "complete",
+    "model": "gpt-6.1-sol"
+  },
+  {
+    "trial": "mutant/3/complete/gpt-6.1-sol",
+    "subject": "mutant",
+    "repetition": 3,
+    "arm": "complete",
+    "model": "gpt-6.1-sol"
+  }
+]
