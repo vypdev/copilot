@@ -1,0 +1,217 @@
+{
+  "original": {
+    "runId": "af83f0df70f24da56fe16e913f23bbe0df455861331627524cd7eb08cfc87d13",
+    "producer": {
+      "kind": "local-evaluator",
+      "commit": "7e98fddb7cdf2742c947241608afe87eb1e5cd55",
+      "environment": {
+        "node": "v24.20.0",
+        "v8": "13.6.233.17-node.53",
+        "platform": "darwin",
+        "arch": "arm64",
+        "kernel": "27.2.0",
+        "pnpm": "10.34.0",
+        "playwright": "Version 1.64.1",
+        "chromium": "156.0.8078.4"
+      },
+      "replaySha256": "04e7abb8dba8c162cda6d30453ebb9ed71713fd98d75320a21a79467a8bc0405",
+      "observerSha256": "24b199fd3473e28dd0bdffc111970cc43866ff3c64912360b937f7fb40f3b03a",
+      "auditSha256": "f64838efad20d1fd45795f6e0a76a7e8394d455791b8b7f6e1cc93d3824597b4",
+      "environmentArtifacts": {
+        "environment.json": "cc459c37b9a2be3d19dab996b77bab8dc19977216c9c17585cc007876a593a0f",
+        "pnpm.version": "34e6b38a7c1969fad7be1dd2f28f260f04b5e24e3c71f5d6a83b4a978e284c6a",
+        "playwright.version": "4901ec0877db7d2570d7a819257096c4fd2f395fa3c64fa700eb4af1468def59",
+        "chromium.version": "028efa6357adf9368751238630a794f59cc64910153218e894d87c910a5c7f47"
+      }
+    },
+    "binding": {
+      "repository": "vypdev/ha-ui",
+      "head": "fc143a7fce3e6d50647804f29b0ed0af27fa0e32",
+      "tree": "3a4ecbb323d09ad19c888508f0542451bf197093",
+      "lockPath": "pnpm-lock.yaml",
+      "lockBlob": "afb6382151504e0b51896d61477f967263ec6f48",
+      "lockSha256": "31ba0c22064513fb8b94f469bf10f075bbd20f5ced92901cd13f951f1a207f92",
+      "resolutions": {
+        "@storybook/addon-vitest": {
+          "version": "10.6.5",
+          "integrity": "sha512-0N0E7TQgmdrPNCPqNiVdTWOEQ1Nes+YsUphYX/abzlp6ReOyYBoQJw6mZ0b7BN5ACgdXQsr9Tth161t72k+51Q=="
+        },
+        "vitest": {
+          "version": "5.1.0",
+          "integrity": "sha512-MzmNFnrwa8v8lF1bLxw3UJ4EREwVOVb75VqJZmUDRjJ6EluK/x9th7qTbaeDk41WxE1GxWqmTXcdsfobfH5sOA=="
+        },
+        "@vitest/coverage-v8": {
+          "version": "5.1.0",
+          "integrity": "sha512-OY9aShBQG5KOIw2zCo9fDoCHI9RHliNHJ//nM7m6jGg41Hyke9JOGWmeMlK74xYErsxMoK8mIB3gAeEyFVA7LA=="
+        },
+        "@vitest/istanbul-lib-report": {
+          "version": "2.1.0",
+          "integrity": "sha512-+ZFta25nWtGCOBG9/IET8w1RO5Oawsd6H8Uf6AJ9EA/StFuKVtKAEJEJ6uRt84OH+T4YkI0ASmIHAhRA+0KVxw=="
+        }
+      },
+      "command": "vitest run --coverage && node --test tests/coverage-evidence.test.mjs",
+      "cwd": "/private/tmp/bugbot-895.wLnniU/original",
+      "candidate": "c-895",
+      "operation": "0811eb2dd545807314679ccf035ad988ce014a212c8a22f36cbeda7af6e4ff44",
+      "anchor": {
+        "path": "tooling/coverage.mjs",
+        "side": "RIGHT",
+        "line": 14
+      }
+    },
+    "hashes": {
+      "baseline": {
+        "command": "vitest run --coverage && node --test tests/coverage-evidence.test.mjs",
+        "exit": 0,
+        "reportKey": "/private/tmp/bugbot-895.wLnniU/original/stories/button.stories.ts",
+        "present": false,
+        "summarySha256": "21f0757010ac973f0bd747cc2aeaf48ed4814cfae300d856a938f1d3ecfdf8a8",
+        "normalizedSummarySha256": "d93546cf0a439a32f01f75d6c1a143a4c28739f13b9f4103441a8de0c4599d10",
+        "logSha256": "8db70c139141d1353cd48c93be2c9d733fec10b004d8c375033486b20e24bc9d",
+        "statusSha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+      },
+      "observed": {
+        "command": "vitest run --coverage && node --test tests/coverage-evidence.test.mjs",
+        "exit": 0,
+        "reportKey": "/private/tmp/bugbot-895.wLnniU/original/stories/button.stories.ts",
+        "present": false,
+        "summarySha256": "21f0757010ac973f0bd747cc2aeaf48ed4814cfae300d856a938f1d3ecfdf8a8",
+        "normalizedSummarySha256": "d93546cf0a439a32f01f75d6c1a143a4c28739f13b9f4103441a8de0c4599d10",
+        "logSha256": "eb4b6b02fb515e5dcf98f31150ffc20bcf82494e67e9ea371af55c265628ad24",
+        "statusSha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+      },
+      "trace": "246f2b24504d0a7ee7aa703f65279ce61ab9dc3a693beb3372dde92c21fdca04",
+      "observationBinding": "1278b9e0fa0f6faebecbbcc39d5c692b0548ee29d6c9482e0922a90682153ab8"
+    },
+    "observation": {
+      "target": "stories/button.stories.ts",
+      "report": "coverage/coverage-summary.json",
+      "summaryKeyPresent": false,
+      "coverageExit": 0,
+      "inventoryExit": 0,
+      "inventoryDiagnostics": [],
+      "effectiveExclusion": [
+        "stories/**/*.stories.ts"
+      ],
+      "provider": "v8",
+      "storyProject": [
+        "storybook (chromium)"
+      ],
+      "testedFilterAdmitted": false,
+      "testedRemapHasKey": null,
+      "testedMergeHasKey": null,
+      "untestedListed": false,
+      "untestedMapHasKey": false,
+      "finalMapHasKey": false
+    }
+  },
+  "mutant": {
+    "runId": "dc3f6995dd3ca440ea5add77e2228dad0adb7d1af22e427f766624a8145ccf51",
+    "producer": {
+      "kind": "local-evaluator",
+      "commit": "7e98fddb7cdf2742c947241608afe87eb1e5cd55",
+      "environment": {
+        "node": "v24.20.0",
+        "v8": "13.6.233.17-node.53",
+        "platform": "darwin",
+        "arch": "arm64",
+        "kernel": "27.2.0",
+        "pnpm": "10.34.0",
+        "playwright": "Version 1.64.1",
+        "chromium": "156.0.8078.4"
+      },
+      "replaySha256": "04e7abb8dba8c162cda6d30453ebb9ed71713fd98d75320a21a79467a8bc0405",
+      "observerSha256": "24b199fd3473e28dd0bdffc111970cc43866ff3c64912360b937f7fb40f3b03a",
+      "auditSha256": "f64838efad20d1fd45795f6e0a76a7e8394d455791b8b7f6e1cc93d3824597b4",
+      "environmentArtifacts": {
+        "environment.json": "cc459c37b9a2be3d19dab996b77bab8dc19977216c9c17585cc007876a593a0f",
+        "pnpm.version": "34e6b38a7c1969fad7be1dd2f28f260f04b5e24e3c71f5d6a83b4a978e284c6a",
+        "playwright.version": "4901ec0877db7d2570d7a819257096c4fd2f395fa3c64fa700eb4af1468def59",
+        "chromium.version": "028efa6357adf9368751238630a794f59cc64910153218e894d87c910a5c7f47"
+      }
+    },
+    "binding": {
+      "repository": "vypdev/ha-ui",
+      "head": "06145cbe19f52fa5b9c61fecd381bcbe36421241",
+      "tree": "ec0a355e7aef02329e70942edca7d4139a9b4222",
+      "lockPath": "pnpm-lock.yaml",
+      "lockBlob": "afb6382151504e0b51896d61477f967263ec6f48",
+      "lockSha256": "31ba0c22064513fb8b94f469bf10f075bbd20f5ced92901cd13f951f1a207f92",
+      "resolutions": {
+        "@storybook/addon-vitest": {
+          "version": "10.6.5",
+          "integrity": "sha512-0N0E7TQgmdrPNCPqNiVdTWOEQ1Nes+YsUphYX/abzlp6ReOyYBoQJw6mZ0b7BN5ACgdXQsr9Tth161t72k+51Q=="
+        },
+        "vitest": {
+          "version": "5.1.0",
+          "integrity": "sha512-MzmNFnrwa8v8lF1bLxw3UJ4EREwVOVb75VqJZmUDRjJ6EluK/x9th7qTbaeDk41WxE1GxWqmTXcdsfobfH5sOA=="
+        },
+        "@vitest/coverage-v8": {
+          "version": "5.1.0",
+          "integrity": "sha512-OY9aShBQG5KOIw2zCo9fDoCHI9RHliNHJ//nM7m6jGg41Hyke9JOGWmeMlK74xYErsxMoK8mIB3gAeEyFVA7LA=="
+        },
+        "@vitest/istanbul-lib-report": {
+          "version": "2.1.0",
+          "integrity": "sha512-+ZFta25nWtGCOBG9/IET8w1RO5Oawsd6H8Uf6AJ9EA/StFuKVtKAEJEJ6uRt84OH+T4YkI0ASmIHAhRA+0KVxw=="
+        }
+      },
+      "command": "vitest run --coverage && node --test tests/coverage-evidence.test.mjs",
+      "cwd": "/private/tmp/bugbot-895.wLnniU/mutant",
+      "candidate": "c-895",
+      "operation": "13745283070e153de389fb8e7455cfa56299859126a1a776c70db65a50a8bccd",
+      "anchor": {
+        "path": "tooling/coverage.mjs",
+        "side": "RIGHT",
+        "line": 14
+      }
+    },
+    "hashes": {
+      "baseline": {
+        "command": "vitest run --coverage && node --test tests/coverage-evidence.test.mjs",
+        "exit": 1,
+        "reportKey": "/private/tmp/bugbot-895.wLnniU/mutant/stories/button.stories.ts",
+        "present": true,
+        "summarySha256": "4d746c000bc8abaee66289298c7db01fae5af233c318e79e0338436f4a6851f8",
+        "normalizedSummarySha256": "e81eaccaff0bbc643ef63ef6b895fed114ebe79095bec5041eab2e81f6fdff63",
+        "logSha256": "afb918441f44c322ce3f110e9672812d1953a869e3dabf67a916a4b7a76636dc",
+        "statusSha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+      },
+      "observed": {
+        "command": "vitest run --coverage && node --test tests/coverage-evidence.test.mjs",
+        "exit": 1,
+        "reportKey": "/private/tmp/bugbot-895.wLnniU/mutant/stories/button.stories.ts",
+        "present": true,
+        "summarySha256": "4d746c000bc8abaee66289298c7db01fae5af233c318e79e0338436f4a6851f8",
+        "normalizedSummarySha256": "e81eaccaff0bbc643ef63ef6b895fed114ebe79095bec5041eab2e81f6fdff63",
+        "logSha256": "71e5903d79a178f4d292063eabd22ac448930b5c696489ed21121a22751d5be6",
+        "statusSha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+      },
+      "trace": "242547ecccc8ce42a7f51997523daf18b1e4a3475a3f77152bc956eb8f182594",
+      "observationBinding": "d9c73a7cdc19d9dfc860ad79b8c31c84bc0a335a8b6a52828a1cf5519195a19d"
+    },
+    "observation": {
+      "target": "stories/button.stories.ts",
+      "report": "coverage/coverage-summary.json",
+      "summaryKeyPresent": true,
+      "coverageExit": 0,
+      "inventoryExit": 1,
+      "inventoryDiagnostics": [
+        "unexpected-story-key",
+        "incomplete-aggregate-branches"
+      ],
+      "effectiveExclusion": [
+        "stories/**/!(button).stories.ts"
+      ],
+      "provider": "v8",
+      "storyProject": [
+        "storybook (chromium)"
+      ],
+      "testedFilterAdmitted": true,
+      "testedRemapHasKey": true,
+      "testedMergeHasKey": true,
+      "untestedListed": false,
+      "untestedMapHasKey": false,
+      "finalMapHasKey": true
+    }
+  }
+}

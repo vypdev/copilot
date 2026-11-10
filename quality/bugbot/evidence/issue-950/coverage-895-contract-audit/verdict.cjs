@@ -45,7 +45,7 @@ function text(value, field) {
     requireVerdict(bytes <= limits[field], 'byte-limit', field, { bytes, limit: limits[field] });
 }
 
-function bindReply(response, session, proofs) {
+function bindReply(response, session, proofs, verifyProof = validateProof) {
     requireVerdict(response !== null && typeof response === 'object' && !Array.isArray(response), 'invalid-type', '$');
     for (const field of fields) requireVerdict(Object.hasOwn(response, field), 'missing-field', field);
     // An additional field name may itself contain private or rejected text.
@@ -71,8 +71,9 @@ function bindReply(response, session, proofs) {
         seen.add(alias);
         const proof = delivered.get(alias);
         try {
-            validateProof(session, proof);
+            verifyProof(session, proof);
         } catch (error) {
+            if (error instanceof VerdictFailure) throw error;
             throw new VerdictFailure(citationProofCodes.has(error.code) ? error.code : 'citation-integrity', field);
         }
         return proof.id;

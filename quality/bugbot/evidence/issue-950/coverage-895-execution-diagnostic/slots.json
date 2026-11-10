@@ -1,0 +1,86 @@
+[
+  {
+    "trial": "original/1/source/gpt-6.1-sol",
+    "subject": "original",
+    "repetition": 1,
+    "arm": "source",
+    "model": "gpt-6.1-sol"
+  },
+  {
+    "trial": "original/1/execution/gpt-6.1-sol",
+    "subject": "original",
+    "repetition": 1,
+    "arm": "execution",
+    "model": "gpt-6.1-sol"
+  },
+  {
+    "trial": "mutant/1/source/gpt-6.1-sol",
+    "subject": "mutant",
+    "repetition": 1,
+    "arm": "source",
+    "model": "gpt-6.1-sol"
+  },
+  {
+    "trial": "mutant/1/execution/gpt-6.1-sol",
+    "subject": "mutant",
+    "repetition": 1,
+    "arm": "execution",
+    "model": "gpt-6.1-sol"
+  },
+  {
+    "trial": "original/2/execution/gpt-6.1-sol",
+    "subject": "original",
+    "repetition": 2,
+    "arm": "execution",
+    "model": "gpt-6.1-sol"
+  },
+  {
+    "trial": "original/2/source/gpt-6.1-sol",
+    "subject": "original",
+    "repetition": 2,
+    "arm": "source",
+    "model": "gpt-6.1-sol"
+  },
+  {
+    "trial": "mutant/2/execution/gpt-6.1-sol",
+    "subject": "mutant",
+    "repetition": 2,
+    "arm": "execution",
+    "model": "gpt-6.1-sol"
+  },
+  {
+    "trial": "mutant/2/source/gpt-6.1-sol",
+    "subject": "mutant",
+    "repetition": 2,
+    "arm": "source",
+    "model": "gpt-6.1-sol"
+  },
+  {
+    "trial": "original/3/source/gpt-6.1-sol",
+    "subject": "original",
+    "repetition": 3,
+    "arm": "source",
+    "model": "gpt-6.1-sol"
+  },
+  {
+    "trial": "original/3/execution/gpt-6.1-sol",
+    "subject": "original",
+    "repetition": 3,
+    "arm": "execution",
+    "model": "gpt-6.1-sol"
+  },
+  {
+    "trial": "mutant/3/source/gpt-6.1-sol",
+    "subject": "mutant",
+    "repetition": 3,
+    "arm": "source",
+    "model": "gpt-6.1-sol"
+  },
+  {
+    "trial": "mutant/3/execution/gpt-6.1-sol",
+    "subject": "mutant",
+    "repetition": 3,
+    "arm": "execution",
+    "model": "gpt-6.1-sol"
+  }
+]

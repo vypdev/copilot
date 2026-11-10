@@ -19,14 +19,14 @@ function message(model, packet) {
         facts: { ...facts, promptBytes, promptSha256: digest(prompt), schemaSha256: digest(JSON.stringify(output)) } };
 }
 
-async function trial(model, packet, journal, send, publicationMode = plan.publicationMode) {
+async function trial(model, packet, journal, send, publicationMode = plan.publicationMode, contract = { message, bindReply }) {
     const started = performance.now();
     const writeAttempts = [];
     const ports = dryRunPorts(operation => writeAttempts.push(operation));
     let stage = 'selection', answer = null, failure = null, sent = null, fact = null;
     try {
         if (publicationMode !== 'dry-run') ports.publishReview();
-        const { request, facts } = message(model, packet);
+        const { request, facts } = contract.message(model, packet);
         stage = 'delivery';
         sent = { ...facts, deadline: plan.callMs };
         journal({ event: 'attempt-started', sent });
@@ -42,7 +42,7 @@ async function trial(model, packet, journal, send, publicationMode = plan.public
         requireFact(fact.promptSha256 === sent.promptSha256 && fact.schemaSha256 === sent.schemaSha256, 'session-identity');
         requireFact(fact.turnCompletions === 1 && !fact.toolTypes?.length && !fact.inspections, 'closed-session-tool-event');
         stage = 'verdict';
-        answer = bindReply(response, packet.session, packet.proofs);
+        answer = contract.bindReply(response, packet.session, packet.proofs);
     } catch (error) {
         const code = error.fact?.outcome ?? error.code ?? error.message;
         failure = error instanceof VerdictFailure ? { stage, ...error.diagnostic }
