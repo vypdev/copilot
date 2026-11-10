@@ -1,0 +1,62 @@
+{
+  "N1-1-repeat": {
+    "reasonSha256": "35844eec321bde20a222688ef61190ab3a68e8493f0031ae4e1e297479f5a2d1",
+    "passes": false,
+    "note": "Names missing #down registration and the conditional effect of suppression on dispatch."
+  },
+  "N1-1-on-demand": {
+    "reasonSha256": "db90560a64ed062b5c2328057bb7b5242659a162f97d62b044621fd1baa99acd",
+    "passes": false,
+    "note": "Leaves selection unresolved because the binding that invokes #down is not shown."
+  },
+  "N1-2-repeat": {
+    "reasonSha256": "7da3975d1d01ce41a120642b2bcc0917800a8cac760fc2d15c2e9fec1482ae67",
+    "passes": false,
+    "note": "Identifies the clear in #down and the missing listener connection from Overview."
+  },
+  "N1-2-on-demand": {
+    "reasonSha256": "f241e13a6ca1b35b90c983a0c24492916d7db868c02d300015c8d6e98f7e408f",
+    "passes": false,
+    "note": "Traces #down and #activate conditionally and leaves the listener premise unresolved."
+  },
+  "N1-3-on-demand": {
+    "reasonSha256": "a96b822aa475fa592b965f6c3ba5fc98153f0d2a6927cc6f32f2f9156707555a",
+    "passes": false,
+    "note": "Distinguishes click-to-#activate evidence from the absent mousedown-to-#down binding."
+  },
+  "N1-3-repeat": {
+    "reasonSha256": "b7e2efdfeb428a27a98f7655360fc4013a7084bb78976d954f7495f42b99281a",
+    "passes": false,
+    "note": "Names the missing connection from a fresh pointer press to #down before the item click."
+  },
+  "N2-1-repeat": {
+    "reasonSha256": "2b7deeae3510442d1c0dc8fd0a0de324088629b0c72a9660dc43ab6bad06b6c1",
+    "passes": true,
+    "note": "Describes preservation on mousedown and the consumption and return that block selection. The missing wiring makes this conditional."
+  },
+  "N2-1-on-demand": {
+    "reasonSha256": "912cb5b2cf70c96bbe8ee0fcbfccd406d12d20b9e385b48046105b5ce8af808b",
+    "passes": true,
+    "note": "Describes preservation on mousedown and consumeClick returning true. The response assumes that mousedown reaches #down."
+  },
+  "N2-2-repeat": {
+    "reasonSha256": "6efbbee30b2114033a26ed53bebfa085969d1328dcbfba16cfda1692489ceb9d",
+    "passes": true,
+    "note": "Distinguishes the separate mousedown, which preserves suppression, from the consumed click. Wiring is assumed."
+  },
+  "N2-2-on-demand": {
+    "reasonSha256": "123337149ccb100c18b2ba70562215cdfd9895c7bf8519ee10c7f5780134c096",
+    "passes": true,
+    "note": "Explains the return before dispatch after consuming suppression. Listener reachability is not established."
+  },
+  "N2-3-on-demand": {
+    "reasonSha256": "745629737b0660454ee3e2fca49b4d85e15b1659cf75e4c45c2088e3748609f7",
+    "passes": true,
+    "note": "Places retention before consumption and selection blocking. The cited fragments omit viewport and listener wiring."
+  },
+  "N2-3-repeat": {
+    "reasonSha256": "923817fa4bc39d3315d3a2f6d86dbf799902cc07ae01bc846b99775e9dcc23c6",
+    "passes": true,
+    "note": "Names preservation on mousedown and the early return from #activate. The supplied evidence does not establish that #down runs."
+  }
+}
