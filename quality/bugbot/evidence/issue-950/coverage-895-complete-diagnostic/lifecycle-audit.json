@@ -1,0 +1,90 @@
+[
+  {
+    "package": "vitest",
+    "version": "5.1.0",
+    "file": "dist/chunks/cli-api.COfZo8lK.js",
+    "fileSha256": "a42f8ed8a242f47856eae9bbbb1ea403dc15279b1bb8c2dd59286513e6c12193",
+    "lockBlob": "afb6382151504e0b51896d61477f967263ec6f48",
+    "ranges": {
+      "startup-awaits-project-attachment": {
+        "lines": [
+          12830,
+          12834
+        ],
+        "excerptSha256": "b0b9a898c311aaeb9d6253c4963c8c7d560cae5d28093f2cefc9f1b0ef7705cd"
+      },
+      "project-attachment-dispatches-configureVitest": {
+        "lines": [
+          12946,
+          12958
+        ],
+        "excerptSha256": "ecdc903bfac9f9a72727c1f78b94bd3bb0f0c46d7a01045c24e3f9ebe0da6e2d"
+      },
+      "provider-reads-effective-options": {
+        "lines": [
+          6957,
+          6967
+        ],
+        "excerptSha256": "2b7ea6e1238de46194804bef30ce7a79503bb13eee5613c7054e903dfd3c6be6"
+      },
+      "effective-option-getter": {
+        "lines": [
+          13052,
+          13059
+        ],
+        "excerptSha256": "3bc5cdf6899931fff0fe3b4d396b7ae106d1a41c9891cd2910c09f6cbe30f755"
+      },
+      "provider-initialize": {
+        "lines": [
+          13130,
+          13137
+        ],
+        "excerptSha256": "9382bf8387b95bb18b83dcbf48515997ec6626182d6d36e86e13292a64a46fb8"
+      },
+      "coverage-initialization-in-start": {
+        "lines": [
+          13258,
+          13265
+        ],
+        "excerptSha256": "a67c4eacffe0e821e834a233e80a6ea650f852f22f05f854fa4dd0c98f7209a9"
+      },
+      "context-creation-awaits-startup": {
+        "lines": [
+          13938,
+          13942
+        ],
+        "excerptSha256": "f02041339d7acfcda4c352e8c92e468993b8f7ebf90cf22e473377310b8e2300"
+      },
+      "cli-awaits-prepare": {
+        "lines": [
+          14542,
+          14545
+        ],
+        "excerptSha256": "6ed68c8632dfe708ead9de1304bc2ac0647d147b519390a3b3ae20e0ee881ed6"
+      },
+      "cli-runs-start": {
+        "lines": [
+          14567,
+          14573
+        ],
+        "excerptSha256": "4fdf5f8e90e3e4aca46b7ebb37478f65c08ec5db1c084402771fed0884e1cf14"
+      }
+    }
+  },
+  {
+    "package": "@vitest/coverage-v8",
+    "version": "5.1.0",
+    "file": "dist/provider.js",
+    "fileSha256": "fb0588f2a80879252d45bfbfc4e21ea5af65048b8b4f33571b5d0b8f001f7e72",
+    "lockBlob": "afb6382151504e0b51896d61477f967263ec6f48",
+    "ranges": {
+      "v8-initializes-base-provider": {
+        "lines": [
+          20,
+          25
+        ],
+        "excerptSha256": "cae914fb1890fe0d24401bd9d646e9eececd4cbc19095c3976b3d2f96e42d578"
+      }
+    }
+  }
+]

@@ -1,0 +1,62 @@
+{
+  "original/1/complete/gpt-6-luna": {
+    "reasonSha256": "2b40ab6dfe4d7f1c2476bfe279617b98ae4935110ff15342a1e8d3cfd2db80d4",
+    "passes": false,
+    "note": "Does not establish the exclusion that keeps CSF out of the report. It explains runtime extensions as a separate filter while saying the story suffix is not excluded."
+  },
+  "original/1/complete/gpt-6.1-sol": {
+    "reasonSha256": "5bb85f79e2a1950377325f30ece8aab9ceb61ae57cd33493c17981400e909024",
+    "passes": true,
+    "note": "Explains why the resolved test include exclusions take precedence over the broad runtime include, keeping CSF out of the JSON summary and aligned with the independent inventory."
+  },
+  "mutant/1/complete/gpt-6-luna": {
+    "reasonSha256": "62c08262a2a16c73b8a820de2e33ba5ffabceda47cb0f642c693f3a2f5fa4a91",
+    "passes": false,
+    "note": "Refutes the mutant and incorrectly states that the expected inventory includes authored story files."
+  },
+  "mutant/1/complete/gpt-6.1-sol": {
+    "reasonSha256": "5882dcb201433becbe49f5f6a48848039a48fa7e9a646a79be8574d990db4331",
+    "passes": false,
+    "note": "The label and downstream explanation agree with the evaluator. The answer assumes the hook changes the provider\u2019s effective options; the supplied receipts do not establish the required lifecycle ordering."
+  },
+  "original/2/complete/gpt-6-luna": {
+    "reasonSha256": "a06a875f6cc7ffd4342bb14fca54965f57b285096a657a8d0d4b499f94512ee8",
+    "passes": true,
+    "note": "Traces collected story includes to Vitest coverage exclusions, V8 filtering before the report, and the subsequent independent inventory comparison."
+  },
+  "original/2/complete/gpt-6.1-sol": {
+    "reasonSha256": "14b6572bff04ab23fbc44084e5fd2c909c3bb03fa1393e1cdaacff8329de0157",
+    "passes": true,
+    "note": "Explains why the resolved test include exclusions take precedence over the broad runtime include, keeping CSF out of the JSON summary and aligned with the independent inventory."
+  },
+  "mutant/2/complete/gpt-6-luna": {
+    "reasonSha256": "464be7fb7f85df208def2b08815850f9d5cfba108c42fd0eb9391d326a8a8ec4",
+    "passes": false,
+    "note": "Describes that the button CSF exception can enter the report and fail the inventory, then refutes the existential hypothesis because the exception is specific."
+  },
+  "mutant/2/complete/gpt-6.1-sol": {
+    "reasonSha256": "14812eb5ca163267c96594f434a84442250f8022d2254ad0675f9a471d66df2e",
+    "passes": false,
+    "note": "Valid inconclusive. Identifies the missing timing of configureVitest relative to appended exclusions and provider initialization."
+  },
+  "original/3/complete/gpt-6-luna": {
+    "reasonSha256": "512c36cd45148db801022ed1fdbd5bfbcf57bd5d3acdb9a4fd88da6536047cec",
+    "passes": false,
+    "note": "Attributes the exclusion to the runtime extension list. That list includes ts and therefore does not exclude .stories.ts."
+  },
+  "original/3/complete/gpt-6.1-sol": {
+    "reasonSha256": "2caf97fb2b9331b3ffb45a7c9c1de030922b411906a10a22e218a247574b55b3",
+    "passes": true,
+    "note": "Explains why the resolved test include exclusions take precedence over the broad runtime include, keeping CSF out of the JSON summary and aligned with the independent inventory."
+  },
+  "mutant/3/complete/gpt-6-luna": {
+    "reasonSha256": "d4b661471d4e68650d74bee06dc6da5dade444977fbcc92affddaad6479bc6f9",
+    "passes": false,
+    "note": "Acknowledges the button exception but wrongly treats a defect limited to one CSF definition as incompatible with the hypothesis."
+  },
+  "mutant/3/complete/gpt-6.1-sol": {
+    "reasonSha256": "8bb8cd065c95753682125b5b88b9cb874789453351fb58623b6f44260ff710e3",
+    "passes": false,
+    "note": "Valid inconclusive. Identifies the missing timing of configureVitest relative to appended exclusions and provider initialization."
+  }
+}
