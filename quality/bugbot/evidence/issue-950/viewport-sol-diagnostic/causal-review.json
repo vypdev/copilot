@@ -1,0 +1,32 @@
+{
+  "N1-Sol-1": {
+    "reasonSha256": "92de73a46f69bb3c426e14a036c38b17dce8d145cbea5d644fbf9ad5ad9a6f71",
+    "passes": true,
+    "note": "Identifies bubbling to .bar and clearing on the fresh mousedown before the click emits selection."
+  },
+  "N1-Sol-2": {
+    "reasonSha256": "6311d88479f808deb5fe3ecd9798e244fbf854e91acf169b049fc4aa53291121",
+    "passes": true,
+    "note": "Identifies the fresh mousedown as the clearing step, then #activate as the selection emitter."
+  },
+  "N1-Sol-3": {
+    "reasonSha256": "e7bca5d95ea8593644b3c28df12ab3a0a9d2eb86bc9d28280c0b6e1128177f8e",
+    "passes": true,
+    "note": "Places clearing on mousedown at the bar before the item click handler emits selection."
+  },
+  "N2-Sol-1": {
+    "reasonSha256": "de80d31a128125389bb314030c924546128704d54d6956113e56c773e8b4a84f",
+    "passes": true,
+    "note": "Identifies preservation on the new mousedown and the early return before selection after consuming suppression."
+  },
+  "N2-Sol-2": {
+    "reasonSha256": "d310e7090d6f9f7f681f8538fdb722678e070a4ce66d7a381caf56d9b4fe522d",
+    "passes": true,
+    "note": "Distinguishes the separate mousedown, which preserves suppression, from the click consumed before selection."
+  },
+  "N2-Sol-3": {
+    "reasonSha256": "52344dbb6a72b571c8567f803cf7b1336ef20fc9d3a05c9a5550755e80d2b821",
+    "passes": true,
+    "note": "Identifies preservation on the new mousedown and mouseup, then consumption and return before selection dispatch."
+  }
+}
