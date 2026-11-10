@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "reference": "d7bb6a075cf2a2af406c7ce5e71bfbef640f4cb3",
+  "model": "gpt-6.1-sol",
+  "subjects": [
+    "N1",
+    "N2"
+  ],
+  "arms": [
+    "fixed",
+    "repeat",
+    "on-demand"
+  ],
+  "repetitions": [
+    1,
+    2,
+    3
+  ],
+  "publicationMode": "dry-run",
+  "readRounds": 1,
+  "attemptsPerCase": 2,
+  "retries": 0,
+  "requestBytes": 2048
+}
