@@ -1,0 +1,75 @@
+{
+  "head": "06145cbe19f52fa5b9c61fecd381bcbe36421241",
+  "tree": "ec0a355e7aef02329e70942edca7d4139a9b4222",
+  "lockBlob": "afb6382151504e0b51896d61477f967263ec6f48",
+  "operation": "13745283070e153de389fb8e7455cfa56299859126a1a776c70db65a50a8bccd",
+  "candidate": "c-895",
+  "command": "vitest run --coverage && node --test tests/coverage-evidence.test.mjs",
+  "story": "stories/button.stories.ts",
+  "gitSources": {
+    "stories/button.stories.ts": {
+      "blob": "418adbaa73ebd4df4bc6ff2df66511581afb3cdc",
+      "sha256": "0063fc954ac6fc4a8bb7a4c2ce075e11852c63e0f6708e265114abed77f7123c"
+    },
+    ".storybook/main.ts": {
+      "blob": "a7c05d8b398998396faa7d3b122e1f5452b1f50c",
+      "sha256": "49ab4d11f8baa8116c2e5ac746db7269153c442ed28ffd017d6ed5e2a5d90b66"
+    },
+    "vitest.config.ts": {
+      "blob": "04ac9a06182520e9c303547ae252713eda46ac63",
+      "sha256": "a091ac2596ca70450e51fc01fb8e3c2b5e78ecba0961ebf5c8b74dd9b712e6c9"
+    },
+    "tooling/coverage.mjs": {
+      "blob": "87b4547c1da83a908457abcf62611e65c795c6b3",
+      "sha256": "ad527a5d04517adb1992ac65a9abfffcabb9a2001f7f652c732dbe35899b56c8"
+    },
+    "tests/coverage-evidence.test.mjs": {
+      "blob": "902bfd6bf3af2be5d07362064b296aeeb7beb095",
+      "sha256": "b4b36ba0ed39c510e261a37270849085f758b46a5f1e5c5e8bbe396c237f5696"
+    },
+    "package.json": {
+      "blob": "23a47f506e02052e3c0b44c28726e93b80f75f09",
+      "sha256": "b195f4fa449112595a75dc8fad559a9ee111f4e3c85b815c4b0f1ab5d7bd5ddc"
+    },
+    "pnpm-lock.yaml": {
+      "blob": "afb6382151504e0b51896d61477f967263ec6f48",
+      "sha256": "31ba0c22064513fb8b94f469bf10f075bbd20f5ced92901cd13f951f1a207f92"
+    }
+  },
+  "resolutions": {
+    "@storybook/addon-vitest": {
+      "version": "10.6.5",
+      "integrity": "sha512-0N0E7TQgmdrPNCPqNiVdTWOEQ1Nes+YsUphYX/abzlp6ReOyYBoQJw6mZ0b7BN5ACgdXQsr9Tth161t72k+51Q=="
+    },
+    "vitest": {
+      "version": "5.1.0",
+      "integrity": "sha512-MzmNFnrwa8v8lF1bLxw3UJ4EREwVOVb75VqJZmUDRjJ6EluK/x9th7qTbaeDk41WxE1GxWqmTXcdsfobfH5sOA=="
+    },
+    "@vitest/coverage-v8": {
+      "version": "5.1.0",
+      "integrity": "sha512-OY9aShBQG5KOIw2zCo9fDoCHI9RHliNHJ//nM7m6jGg41Hyke9JOGWmeMlK74xYErsxMoK8mIB3gAeEyFVA7LA=="
+    },
+    "@vitest/istanbul-lib-report": {
+      "version": "2.1.0",
+      "integrity": "sha512-+ZFta25nWtGCOBG9/IET8w1RO5Oawsd6H8Uf6AJ9EA/StFuKVtKAEJEJ6uRt84OH+T4YkI0ASmIHAhRA+0KVxw=="
+    }
+  },
+  "members": [
+    {
+      "role": "cli",
+      "path": "/private/tmp/bugbot-895.wLnniU/mutant/node_modules/.pnpm/vitest@5.1.0_@types+node@24.19.2_@vitest+browser-playwright@5.1.0_@vitest+coverage-v8@5_cce3a5f3923a196e0099b0821781344b/node_modules/vitest/dist/chunks/cli-api.COfZo8lK.js",
+      "sha256": "a42f8ed8a242f47856eae9bbbb1ea403dc15279b1bb8c2dd59286513e6c12193"
+    },
+    {
+      "role": "provider",
+      "path": "/private/tmp/bugbot-895.wLnniU/mutant/node_modules/.pnpm/@vitest+coverage-v8@5.1.0_@vitest+browser@5.1.0_vitest@5.1.0/node_modules/@vitest/coverage-v8/dist/provider.js",
+      "sha256": "fb0588f2a80879252d45bfbfc4e21ea5af65048b8b4f33571b5d0b8f001f7e72"
+    },
+    {
+      "role": "writer",
+      "path": "/private/tmp/bugbot-895.wLnniU/mutant/node_modules/.pnpm/@vitest+istanbul-lib-report@2.1.0/node_modules/@vitest/istanbul-lib-report/dist/reports/json-summary/index.mjs",
+      "sha256": "cceb32dbc13e675e34df3c63e7b678f681abee088e2bfbe97d70b67d3da9b112"
+    }
+  ],
+  "output": "/private/tmp/bugbot-895-contract-audit.onJ6gv/verified/mutant-trace.jsonl"
+}

@@ -1,0 +1,14 @@
+{"event":"member-loaded","role":"cli","sha256":"a42f8ed8a242f47856eae9bbbb1ea403dc15279b1bb8c2dd59286513e6c12193","observedSha256":"b5472e4caeb447783e5411fabef2fdcdd8444f767615cd140b43ec6e4bb6d55b"}
+{"event":"before-hooks","exclude":["stories/**/*.stories.ts"]}
+{"event":"after-hooks","exclude":["stories/**/!(button).stories.ts"]}
+{"event":"member-loaded","role":"provider","sha256":"fb0588f2a80879252d45bfbfc4e21ea5af65048b8b4f33571b5d0b8f001f7e72","observedSha256":"075d961575d1cecd75a090332a63085176382652e3fe716cff3ab8b16e53997f"}
+{"event":"member-loaded","role":"writer","sha256":"cceb32dbc13e675e34df3c63e7b678f681abee088e2bfbe97d70b67d3da9b112","observedSha256":"ddaa25bdd7f6b474f0a37380e366316a9d889ebdcd4692aeff48336b52920e42"}
+{"event":"provider-options","provider":"v8","exclude":["stories/**/!(button).stories.ts"],"include":["stories/**/*.{js,mjs,cjs,jsx,ts,mts,cts,tsx,svelte}"],"excludeAfterRemap":false}
+{"event":"collection","projects":["storybook (chromium)"]}
+{"event":"tested-filter","included":true,"project":"storybook (chromium)","environment":"client"}
+{"event":"tested-remap","inputIsStory":true,"outputHasStory":true}
+{"event":"tested-merge","project":"storybook (chromium)","environment":"client","outputHasStory":true}
+{"event":"untested-candidates","alreadyTested":true,"listedAsUntested":false}
+{"event":"untested-merge","inputHasStory":false}
+{"event":"final-map","hasStory":true,"excludeAfterRemap":false}
+{"event":"summary-key","present":true}
