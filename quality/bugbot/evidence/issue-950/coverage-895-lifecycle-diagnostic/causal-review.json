@@ -1,0 +1,22 @@
+{
+  "original/1/complete/gpt-6.1-sol": {
+    "reasonSha256": "50ff23d71b0eedebeb8636ea2e3ae6ea94d564cfa2cc21e3639091f9cbbd3e05",
+    "passes": false,
+    "note": "Valid inconclusive. Explains project resolution, awaited hook dispatch and V8 option consumption but withholds the refutation because it requests the hook implementations and their effects."
+  },
+  "mutant/1/complete/gpt-6.1-sol": {
+    "reasonSha256": "6927186ed1650440367e110b35c5a5e10fa62691187967b72e03e993c111f3a3",
+    "passes": false,
+    "note": "Valid inconclusive. The answer correctly explains that the project hook runs before V8 initialization and allows the button story, but requests the concrete CSF source and evidence that it survives into the report."
+  },
+  "original/2/complete/gpt-6.1-sol": {
+    "reasonSha256": "2257dfe685ddfb91523c69e2f126bb9d4b93d48f6f7cd42c760691041b0aa7f5",
+    "passes": true,
+    "note": "Connects project resolution and appended exclusions to awaited configureVitest and V8 option consumption. Correctly explains why tested and uncovered story files are absent from the report and how that prevents an unexpected inventory key."
+  },
+  "original/3/complete/gpt-6.1-sol": {
+    "reasonSha256": "01d80b1f3d39cf7a8154e225868b9c0bed701783a847ac60655bfd596e3b0b29",
+    "passes": true,
+    "note": "Traces awaited project hooks before provider initialization, the effective exclusion applied to tested and uncovered files, the JSON summary, and the independent inventory result."
+  }
+}
