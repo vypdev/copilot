@@ -1,0 +1,62 @@
+{
+  "N1-1-repeat": {
+    "reasonSha256": "ebda51bde27ed10fedb07197f4002fd8676905699d5bb97e028dee69520d2c53",
+    "passes": false,
+    "note": "Identifies the absent mousedown binding as the premise needed to connect #down to selection."
+  },
+  "N1-1-on-demand": {
+    "reasonSha256": "add4f62c364dc48fe4e556c3b2fb541020ca41836b98b4e87debb61e3be0564a",
+    "passes": true,
+    "note": "Identifies the fresh mousedown bubbling to the bar and clearing suppression before activation emits selection."
+  },
+  "N1-2-repeat": {
+    "reasonSha256": "db90560a64ed062b5c2328057bb7b5242659a162f97d62b044621fd1baa99acd",
+    "passes": false,
+    "note": "Distinguishes evidence of activation from the missing link that would make a fresh pointer press invoke #down."
+  },
+  "N1-2-on-demand": {
+    "reasonSha256": "e336f065906eae6534440c0e566d4e72fdd046b9557e76755295fdf1105bf1ab",
+    "passes": true,
+    "note": "Identifies #finishDrag() clearing suppression during the new mousedown before #activate emits selection."
+  },
+  "N1-3-on-demand": {
+    "reasonSha256": "4e0c818cd4726b3edb12fbb23b2ebeeac0a3f9812ac696beecf8895b5d35e42e",
+    "passes": true,
+    "note": "Distinguishes the fresh item mousedown and clears suppression before tabs.ts emits selection for the unmodified click."
+  },
+  "N1-3-repeat": {
+    "reasonSha256": "2376627fb19854ce248344824c7dcc01ffd9c1a86aad2618f4d8931d23658717",
+    "passes": false,
+    "note": "Leaves dispatch unresolved because the evidence omits the listener binding and target."
+  },
+  "N2-1-repeat": {
+    "reasonSha256": "3d700e85234c9afca893979a26791b27c6993db35b8dc940b584b6f15e6310a6",
+    "passes": true,
+    "note": "Describes retention at mousedown and consumption before dispatch. The cited sources do not prove the mousedown binding."
+  },
+  "N2-1-on-demand": {
+    "reasonSha256": "919cafac50d550449f77ba4bed0bd9c96e78342227aae951ed9467b18b4a528c",
+    "passes": true,
+    "note": "Places retention at the fresh mousedown and describes consumeClick clearing the flag while blocking dispatch."
+  },
+  "N2-2-repeat": {
+    "reasonSha256": "285276324d94d6787bccbea495f98ed9a31f096bf822b39ffabca6987061c450",
+    "passes": true,
+    "note": "Describes retention and the early return but assumes that the fresh mousedown invokes #down."
+  },
+  "N2-2-on-demand": {
+    "reasonSha256": "0f76a50d0617d9d86d2087a9b8e52856266578d1bf81f33fce92e4d429767e31",
+    "passes": true,
+    "note": "Explains that the fresh mousedown and mouseup keep suppression set until the click is consumed before dispatch."
+  },
+  "N2-3-on-demand": {
+    "reasonSha256": "eb10d2c7fb89f09b184d0b7fded7dc9580cc3cea285783963e61bf119aed958c",
+    "passes": true,
+    "note": "Describes retention on the fresh mousedown and the true return from consumeClick that blocks selection."
+  },
+  "N2-3-repeat": {
+    "reasonSha256": "c4ef44e0e3c812bcf734705c86d6fc456cbf03c74a0d6a1aa68f7f3f04ce3c4b",
+    "passes": true,
+    "note": "Describes retention before the early return. The viewport and listener evidence is missing."
+  }
+}
