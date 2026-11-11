@@ -2505,8 +2505,7 @@
         "src/application/usecases/steps/commit/bugbot/__tests__/bugbot_partition_query_diagnostics.test.ts",
         "src/application/policies/__tests__/bugbot_freshness_diagnostics.test.ts",
         "quality/bugbot/evidence/issue-950/reproduce-controls.sh",
-        "quality/bugbot/evidence/issue-950/run-pilot.cjs",
-        "quality/bugbot/evidence/issue-950/on-demand/contract.test.cjs"
+        "quality/bugbot/evidence/issue-950/shadow-verification/verification.test.cjs"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",
@@ -2527,7 +2526,9 @@
         "quality/bugbot/evidence/issue-950/preregistration-v2.md",
         "quality/bugbot/evidence/issue-950/on-demand/preregistration.md",
         "quality/bugbot/evidence/issue-950/on-demand/reproduce.md",
-        "quality/bugbot/evidence/issue-950/on-demand/results.md"
+        "quality/bugbot/evidence/issue-950/on-demand/results.md",
+        "quality/bugbot/evidence/issue-950/shadow-real-prs/results.md",
+        "quality/bugbot/evidence/issue-950/shadow-verification/README.md"
       ]
     },
     {

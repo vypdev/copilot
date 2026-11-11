@@ -11,6 +11,13 @@ This page describes **when** Bugbot runs, **where** findings are published, and 
 
 Issue #950 specifies a separate verification stage after candidate detection. The pilot evaluates whether immutable repository evidence can refute plausible candidates while retaining real defects. Repository-shaped controls cover Unicode matching, pytest fixture discovery and SQLite restore guards.
 
+The shadow verifier starts a separate investigation for the pinned finding and
+follows material leads through successive reads, including unchanged code and
+official sources for a resolved dependency version. If the provider runs out of
+context, the application retains the finding and evidence receipts so the
+verifier can resume from them. A missing premise yields an inconclusive verdict.
+Usage telemetry has no effect on reads, verdicts or qualification.
+
 [Specification and pilot status](https://github.com/vypdev/copilot/issues/950)
 
 ## JSON values and reader contracts

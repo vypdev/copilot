@@ -735,12 +735,13 @@ before ranking, overflow counting or any write. The application normalizes the
 anchor on the pinned diff before freezing the candidate. An ambiguous anchor
 stays unresolved. The verifier cannot change the frozen position or identity.
 
-Both verifier calls, bounded retrieval and retries share the actual invocation
-ledger and the reviewed source and freshness fences. The optional typed round
-receives a candidate-bound receipt from the authorized source. Candidate
-exhaustion produces an inconclusive disposition. An intact mixed review can
+Successive verification turns and retrieval share the operation, invocation
+ledger and reviewed source and freshness fences. Reads produce candidate-bound
+receipts. The application can resume from retained receipts after a provider
+context-window error. Available token usage is telemetry. Missing decisive
+evidence produces an inconclusive disposition. An intact mixed review can
 publish confirmed findings while blocking clean approval. A missing frame or
-required verdict, an invalid receipt or aggregate exhaustion preserves the
-last verified result and prevents finding or resolution writes.
+required verdict or an invalid receipt preserves the last verified result and
+prevents finding or resolution writes.
 
 [Bugbot repository evidence verification](./bugbot-analysis-publication-and-autofix.md#bugbot-repository-evidence-verification)

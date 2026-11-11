@@ -105,7 +105,13 @@ The same values are managed as Repository Variables by `copilot setup`. One revi
 
 ## Proposed evidence verification rollout
 
-The #950 design keeps the evidence gate disabled until the paired dry-run pilot qualifies a verifier model and production budgets. The first enabled profile uses immutable source and matching CI. Its runtime controls are pending qualification.
+The #950 evidence gate stays disabled until a verifier profile qualifies and
+a maintainer explicitly approves it. The first proposed profile uses immutable
+source, version-matched dependency evidence and matching CI. The shadow runner
+can follow successive read-only evidence requests. Token usage and cost are
+optional telemetry and have no configuration field or effect on a verdict.
+Operational cancellation, read permissions and source integrity apply throughout
+the investigation.
 
 [Specification and pilot status](https://github.com/vypdev/copilot/issues/950)
 

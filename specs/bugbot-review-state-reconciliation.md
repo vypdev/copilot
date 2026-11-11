@@ -1936,12 +1936,13 @@ required error or turns required success into failure.
 
 The proposed #950 verification gate covers retained identities before fixed, obsolete or reopened transitions. Candidate dispositions and durable finding states are separate. Inconclusive evidence, omission, failed integrity and human dismissal preserve native thread authority. The existing read-after-write projection owns observed and unknown effects during recovery.
 
-The analysis SDD owns candidate anchors and the optional typed evidence round.
+The analysis SDD owns candidate anchors and successive typed evidence reads.
 An explicit historical transition uses the retained finding ID and frozen
 candidate version. Evidence recovered after the freeze may support a verdict
-without changing the anchor or the durable ID. An unavailable or exhausted
-candidate remains inconclusive and preserves its native thread, even when
-other confirmed candidates publish. Invalid receipt provenance fails the
+while preserving the anchor and durable ID. A candidate missing decisive
+evidence remains inconclusive and preserves its native thread, even when
+other confirmed candidates publish. Token telemetry has no effect on this
+decision or the approval receipt. Invalid receipt provenance fails the
 whole pre-publication batch with zero finding, resolution or approval writes.
 The prior verified projection remains readable.
 
@@ -1968,7 +1969,7 @@ different PR or an untrusted producer cannot authorize approval.
 |---|---|
 | `version` | Closed schema version 1 |
 | `repositoryId`, `pullNumber`, `headSha`, `baseSha` | Current provider repository, PR and exact comparison |
-| `mode`, `generation`, `policyDigest` | Canonical digest of the effective trusted policy, including its rollout generation, verifier/evidence profile and limits |
+| `mode`, `generation`, `policyDigest` | Canonical digest of the effective trusted policy, including its rollout generation, verifier/evidence profile and operational controls |
 | `runId`, `attempt` | Latest authoritative native run ID and attempt number |
 | `coverage`, `verification`, `publication`, `outcome` | Separate coverage, complete or inconclusive dispositions, provider verification, and terminal review status |
 | `findingStates` | Seven canonical non-negative counts. Verified overflow contributes to actionable state even without an inline comment. |

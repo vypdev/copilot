@@ -354,6 +354,19 @@ reliability claim. Existing exact-source consumer CI and
 read-only source provenance remain separate evidence. All 114 earlier corpus
 inputs/verdicts and quality thresholds remain unchanged.
 
+## Evidence verifier usage
+
+For the #950 shadow verifier, providers may report input and output usage.
+Resumed Codex turns report session totals. Record these as cumulative
+observations and retain absent values as unknown. The verifier continues
+investigating in either case. Usage and cost can inform operator review while
+verdicts and profile qualification depend on the evidence and the declared
+quality, integrity and latency criteria. An actual provider context error
+can start a fresh thread with the same investigation and receipt inventory.
+
+The [real-PR shadow report](https://github.com/vypdev/copilot/blob/335ffe46b352024981f7c1fae409234cb7661e50/quality/bugbot/evidence/issue-950/shadow-real-prs/results.md)
+records the historical metering incident and its offline audit.
+
 ## Python exception syntax evidence
 
 The #831 family contains twelve frozen synthetic inputs: six safe or unknown
