@@ -174,3 +174,53 @@ test('distinguishes provider context rejection from provider usage or unrelated 
     assert(!isContextFailure({ code: 'usageLimitExceeded', message: 'Daily account limit reached' }));
     assert(!isContextFailure({ message: 'The system cannot open a new context' }));
 });
+
+test('keeps an unavailable material official source out of a conclusive verdict', async () => {
+    const requests = [query('read', 'settings.ts'), query('official', 'sqlite', { version: '0.0.0', query: 'key' })];
+    for (const label of ['refuted', 'inconclusive']) {
+        let turn = 0;
+        const result = await run(async request => {
+            if (++turn === 1) return { threadId: 'official', fact: fact(), response: inspect(...requests) };
+            assert.equal(payload(request).observations[1].result.status, 'official-source-unavailable');
+            const response = finish(cite(supplied(request), 1, 1));
+            if (label === 'inconclusive') {
+                response.verdict = label;
+                response.missing = 'The SQLite runtime and version-matched source are unavailable.';
+            }
+            return { threadId: 'official', fact: fact(), response };
+        });
+        assert.equal(result.failure, label === 'inconclusive' ? null : 'official-evidence-missing');
+        assert.equal(result.answer?.label, label === 'inconclusive' ? label : undefined);
+        assert.deepEqual(result.writes, []);
+    }
+});
+
+test('verifies with the inherited configuration and classifies changed files against the actual base', async () => {
+    const { createShadowVerifier } = require('./adapter.cjs');
+    const configuration = { provider: 'codex', modelProvider: 'openai', model: 'another-compatible-model', effort: 'low' };
+    const candidate = { id: finding.id, hypothesis: finding.hypothesis, anchor: finding.detectorLocation,
+        repository: { owner: 'local', name: 'fixture' }, pullRequest: 24, headSha: head, baseSha: base, allowBase: false };
+    const log = [];
+    let turn = 0;
+    const adapter = createShadowVerifier(lab, event => log.push(event), async request => {
+        assert.equal(request.configuration, configuration);
+        if (++turn === 1) {
+            assert.equal(request.threadId, undefined);
+            assert.equal(payload(request).base, null);
+            return { threadId: 'adapter', fact: fact(), response: inspect(
+                query('read', 'anchor.ts'),
+                query('read', 'settings.ts', { revision: 'base' }),
+            ) };
+        }
+        assert.equal(request.threadId, 'adapter');
+        assert.equal(payload(request).observations[1].result.status, 'base-denied');
+        return { threadId: 'adapter', fact: { ...fact(), reportedModel: configuration.model },
+            response: finish(cite(supplied(request))) };
+    });
+    const result = await adapter.verify({ candidate, configuration });
+    assert.equal(result.status, 'verdict');
+    assert.equal(result.reportedModel, configuration.model);
+    assert.equal(result.citations[0].inChangedLines, true);
+    assert.equal(result.citations[0].unchangedFile, false);
+    assert.deepEqual(log.find(event => event.event === 'finding-result').writes, []);
+});

@@ -74305,6 +74305,64 @@ function addResolutionError(errors, destination, findingId, cause) {
 
 /***/ }),
 
+/***/ 93991:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.observeBugbotShadowVerification = observeBugbotShadowVerification;
+const git_object_id_1 = __nccwpck_require__(88623);
+const bounded_concurrency_policy_1 = __nccwpck_require__(35596);
+async function observeBugbotShadowVerification(operation, context, findings, port) {
+    const configuration = operation.analysis.agentConfiguration;
+    const tasks = findings.map(finding => async () => {
+        const candidate = pinCandidate(context, finding);
+        if (!candidate)
+            return { id: finding.id, status: 'technical-failure', reason: 'unbound-candidate' };
+        try {
+            const observation = await port.verify({ candidate, configuration });
+            if (observation.reportedModel && observation.reportedModel !== configuration.model) {
+                return { id: finding.id, candidate, status: 'technical-failure', reason: 'reported-model-mismatch',
+                    reportedModel: observation.reportedModel };
+            }
+            return { ...observation, id: finding.id, candidate };
+        }
+        catch {
+            return { id: finding.id, candidate, status: 'technical-failure', reason: 'verifier-unavailable' };
+        }
+    });
+    const candidates = await (0, bounded_concurrency_policy_1.runWithConcurrencyLimit)(tasks, 2);
+    return { resolvedModel: configuration.model, provider: configuration.provider, candidates };
+}
+function pinCandidate(context, finding) {
+    const pr = context.canonicalPullRequest;
+    const headSha = (0, git_object_id_1.canonicalGitObjectId)(context.prContext?.prHeadSha);
+    const hypothesis = finding.title.trim();
+    const { file, line, endLine } = finding;
+    if (!pr || !headSha || (0, git_object_id_1.canonicalGitObjectId)(pr.headSha) !== headSha || !file || !line
+        || !Number.isSafeInteger(line) || line < 1 || !hypothesis)
+        return undefined;
+    const locations = context.prContext?.pathToDiffLocations?.[file] ?? [];
+    const sides = new Set(locations.filter(location => location.line === line).map(location => location.side));
+    const side = sides.size === 1 ? sides.values().next().value : undefined;
+    const anchor = Object.freeze({ path: file, line,
+        end: endLine && Number.isSafeInteger(endLine) && endLine >= line ? endLine : line,
+        ...(side ? { side } : {}) });
+    // The published title is the claim. Description, confidence, detector evidence and proposed fixes stay out.
+    const comparisonRelevant = side === 'LEFT' || /\b(regressions?|regresi[oó]n|previously|used to|no longer|introduc\w*)\b/iu
+        .test(hypothesis + '\n' + finding.description);
+    const baseSha = (0, git_object_id_1.canonicalGitObjectId)(pr.baseSha);
+    return Object.freeze({
+        id: finding.id, hypothesis, anchor,
+        repository: Object.freeze({ owner: pr.baseRepository.owner, name: pr.baseRepository.name }),
+        pullRequest: pr.number, headSha, allowBase: Boolean(baseSha && comparisonRelevant), ...(baseSha ? { baseSha } : {}),
+    });
+}
+
+
+/***/ }),
+
 /***/ 70124:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -76089,11 +76147,12 @@ exports.DetectPotentialProblemsUseCase = void 0;
 const detect_potential_problems_workflow_1 = __nccwpck_require__(37033);
 /** Application boundary for detecting, publishing and resolving Bugbot findings. */
 class DetectPotentialProblemsUseCase {
-    constructor(aiRepository, scm, telemetryPort, catalogResolver) {
+    constructor(aiRepository, scm, telemetryPort, catalogResolver, shadowVerification) {
         this.aiRepository = aiRepository;
         this.scm = scm;
         this.telemetryPort = telemetryPort;
         this.catalogResolver = catalogResolver;
+        this.shadowVerification = shadowVerification;
         this.taskId = 'DetectPotentialProblemsUseCase';
     }
     async invoke(param) {
@@ -76102,6 +76161,7 @@ class DetectPotentialProblemsUseCase {
             scm: this.scm,
             telemetryPort: this.telemetryPort,
             catalogResolver: this.catalogResolver,
+            shadowVerification: this.shadowVerification,
         });
     }
 }
@@ -76117,6 +76177,7 @@ exports.DetectPotentialProblemsUseCase = DetectPotentialProblemsUseCase;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runDetectPotentialProblemsWorkflow = runDetectPotentialProblemsWorkflow;
+const observe_bugbot_shadow_verification_1 = __nccwpck_require__(93991);
 const framed_review_1 = __nccwpck_require__(43750);
 const agent_1 = __nccwpck_require__(79937);
 const result_1 = __nccwpck_require__(73817);
@@ -76140,6 +76201,12 @@ const TASK_ID = 'DetectPotentialProblemsUseCase';
 async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
     const workflowStartedAt = Date.now();
     const telemetry = new bugbot_review_telemetry_1.BugbotReviewTelemetry(reviewContext);
+    const resolvedAgent = reviewContext.analysis.agentConfiguration;
+    let shadow;
+    const unavailableShadow = () => dependencies.shadowVerification
+        ? { resolvedModel: resolvedAgent.model, provider: resolvedAgent.provider, candidates: [], detectionUnavailable: true }
+        : undefined;
+    const shadowPayload = () => shadow ? { bugbotShadowVerification: shadow } : {};
     const publishTelemetry = async (outcome, category) => {
         const snapshot = telemetry.snapshot(outcome, category);
         if (reviewContext.analysis.reviewConfiguration.telemetry) {
@@ -76157,7 +76224,7 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
         const payload = result.payload && typeof result.payload === 'object' && !Array.isArray(result.payload)
             ? result.payload
             : {};
-        result.payload = { ...payload, bugbotTelemetry: snapshot };
+        result.payload = { ...payload, ...shadowPayload(), bugbotTelemetry: snapshot };
         return [result];
     };
     (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(TASK_ID)} Executing ${TASK_ID}.`);
@@ -76199,6 +76266,7 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
         }
         const prepared = await (0, analyze_bugbot_revision_use_case_1.analyzeBugbotRevision)(reviewContext, context, { agent: dependencies.aiRepository, telemetry, isSourceCurrent: async () => !await (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context) });
         if (prepared === undefined) {
+            shadow = unavailableShadow();
             const analysisError = new application_error_1.ApplicationError('agent.failed', 'The configured agent returned no potential-problem analysis.');
             const catalog = reviewContext.analysis.reviewConfiguration.publicationMode === 'publish'
                 && context.prContext && context.canonicalPullRequest
@@ -76221,6 +76289,12 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
         telemetry.observePrepared(prepared);
         if (await telemetry.measure('freshness', () => (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context))) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
+        }
+        if (dependencies.shadowVerification) {
+            shadow = await (0, observe_bugbot_shadow_verification_1.observeBugbotShadowVerification)(reviewContext, context, prepared.activeFindings ?? prepared.toPublish, dependencies.shadowVerification);
+            if (shadow.candidates.length > 0 && await (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context)) {
+                return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
+            }
         }
         if (reviewContext.analysis.reviewConfiguration.publicationMode === 'dry-run') {
             return await complete(dryRunResult(prepared, context), 'dry-run');
@@ -76272,7 +76346,8 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
             errors: [resultError],
         });
         const snapshot = await publishTelemetry('failed', error instanceof Error ? error.name : 'unknown');
-        result.payload = { bugbotTelemetry: snapshot };
+        shadow ?? (shadow = unavailableShadow());
+        result.payload = { ...shadowPayload(), bugbotTelemetry: snapshot };
         return [result];
     }
 }

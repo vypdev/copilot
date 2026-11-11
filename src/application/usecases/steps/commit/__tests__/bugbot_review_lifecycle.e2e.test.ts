@@ -1,3 +1,6 @@
+import { buildAgentTasksFromValues } from '../../../../../actions/agent_input_builder';
+import type { FindingsQueryRequest } from '../../../../ports/agent_findings_ports';
+import type { BugbotShadowVerificationPort } from '../../../../ports/bugbot_shadow_verification_ports';
 import { Ai } from '../../../../../data/model/ai';
 import type { Execution } from '../../../../../data/model/execution';
 import type {
@@ -170,6 +173,7 @@ function scmPorts(provider: InMemoryReviewProvider) {
 function execution(
   mode: 'publish' | 'dry-run' = 'publish',
   ignorePatterns: readonly string[] = [],
+  inputs?: Record<string, string>,
 ): Execution {
   return {
     owner: 'org', repo: 'repo', issueNumber: -1, tokenUser: 'bot', tokens: { token: 'token' },
@@ -178,7 +182,7 @@ function execution(
     inputs: { eventName: 'pull_request', pull_request: { head: { sha: 'a'.repeat(40) } } },
     pullRequest: { number: 7, head: 'feature/review', action: 'opened' },
     commit: { branch: 'feature/review' }, currentConfiguration: { parentBranch: 'main' }, branches: { development: 'main' },
-    ai: new Ai('', 'model', false, [...ignorePatterns], false, 'low', 20, [], undefined, undefined, { publicationMode: mode, traceRules: true }),
+    ai: new Ai('', 'model', false, [...ignorePatterns], false, 'low', 20, [], inputs && buildAgentTasksFromValues(inputs), undefined, { publicationMode: mode, traceRules: true }),
   } as unknown as Execution;
 }
 
@@ -293,5 +297,83 @@ describe('Bugbot review lifecycle E2E contract', () => {
     expect(provider.reviews).toEqual([]);
     expect(provider.comments).toEqual([]);
     expect(provider.statusComments).toEqual([]);
+  });
+});
+
+describe('Bugbot normal review in shadow', () => {
+  function detector(findings: ReturnType<typeof finding>[]) {
+    return jest.fn(async (request: FindingsQueryRequest) => attestPartitionResponse(request.prompt, {
+      outputLocale: 'en-US', findings, resolved_findings: [],
+    }));
+  }
+
+  it('opens no independent session when the ordinary detector returns zero findings', async () => {
+    const provider = new InMemoryReviewProvider();
+    const query = detector([]);
+    const verify = jest.fn();
+    const results = await new DetectPotentialProblemsUseCase({ query }, scmPorts(provider), undefined, undefined, { verify })
+      .invoke(projectBugbotReviewOperationContext(execution('dry-run', [], {})));
+
+    expect(query).toHaveBeenCalledTimes(1);
+    expect(verify).not.toHaveBeenCalled();
+    expect(results[0].payload).toMatchObject({ dryRun: true, findings: [],
+      bugbotShadowVerification: { resolvedModel: 'gpt-6-luna', candidates: [] } });
+    expect(provider.reviews).toEqual([]);
+    expect(provider.statusComments).toEqual([]);
+  });
+
+  it.each([
+    ['default', {}, 'gpt-6-luna'],
+    ['Luna', { 'reviewer-model': 'gpt-6-luna', 'reviewer-effort': 'low' }, 'gpt-6-luna'],
+    ['Sol', { 'reviewer-model': 'gpt-6.1-sol', 'reviewer-effort': 'low' }, 'gpt-6.1-sol'],
+    ['another compatible model', { 'reviewer-model': 'another-compatible-model' }, 'another-compatible-model'],
+  ] as const)('uses the same effective %s configuration for detection and verification', async (_name, inputs, model) => {
+    const provider = new InMemoryReviewProvider();
+    const query = detector([finding()]);
+    const verify = jest.fn<ReturnType<BugbotShadowVerificationPort['verify']>, Parameters<BugbotShadowVerificationPort['verify']>>().mockResolvedValue({
+      status: 'verdict', verdict: 'inconclusive', reason: 'The caller was not established.',
+      missing: 'Identify the caller at the pinned commit.', citations: [], reportedModel: model,
+    });
+    const operation = projectBugbotReviewOperationContext(execution('dry-run', [], inputs));
+    const results = await new DetectPotentialProblemsUseCase({ query }, scmPorts(provider), undefined, undefined, { verify })
+      .invoke(operation);
+
+    expect(verify).toHaveBeenCalledTimes(1);
+    expect(verify.mock.calls[0][0].configuration).toBe(query.mock.calls[0][0].configuration);
+    expect(verify.mock.calls[0][0].configuration.model).toBe(model);
+    expect(verify.mock.calls[0][0].candidate).toEqual({
+      id: 'unchecked-token', hypothesis: 'Unchecked token',
+      anchor: { path: 'src/auth.ts', line: 10, end: 10, side: 'RIGHT' },
+      repository: { owner: 'org', name: 'repo' }, pullRequest: 7, headSha: provider.headSha, allowBase: false,
+    });
+    expect(results[0].payload).toMatchObject({ findings: [{ id: 'unchecked-token' }],
+      bugbotShadowVerification: { resolvedModel: model, candidates: [{ status: 'verdict', verdict: 'inconclusive', reportedModel: model }] } });
+    expect(provider.reviews).toEqual([]);
+    expect(provider.statusComments).toEqual([]);
+  });
+
+  it.each(['transport failure', 'reported model mismatch'])('keeps the normal native publication on %s', async (fault) => {
+    const baseline = new InMemoryReviewProvider();
+    const observed = new InMemoryReviewProvider();
+    const operation = projectBugbotReviewOperationContext(execution('publish', [], { 'reviewer-model': 'gpt-6.1-sol' }));
+    const verify = jest.fn<ReturnType<BugbotShadowVerificationPort['verify']>, Parameters<BugbotShadowVerificationPort['verify']>>().mockImplementation(async () => {
+      expect(observed.reviews).toHaveLength(0);
+      if (fault === 'transport failure') throw new Error('provider failed');
+      return { status: 'verdict', verdict: 'inconclusive', reason: 'The caller was not established.',
+        missing: 'Identify the caller.', citations: [], reportedModel: 'other-model' };
+    });
+    const query = detector([finding()]);
+    await new DetectPotentialProblemsUseCase({ query }, scmPorts(baseline)).invoke(operation);
+    const result = await new DetectPotentialProblemsUseCase({ query }, scmPorts(observed), undefined, undefined, { verify }).invoke(operation);
+
+    expect(verify).toHaveBeenCalledTimes(1);
+    expect(verify.mock.calls[0][0].configuration.model).toBe('gpt-6.1-sol');
+    expect(baseline.reviews).toHaveLength(1);
+    expect(observed.reviews.map(review => review.comments)).toEqual(baseline.reviews.map(review => review.comments));
+    expect(observed.threadStates).toEqual(baseline.threadStates);
+    expect(result[0].payload).toMatchObject({ bugbotShadowVerification: {
+      resolvedModel: 'gpt-6.1-sol', candidates: [{ status: 'technical-failure',
+        reason: fault === 'transport failure' ? 'verifier-unavailable' : 'reported-model-mismatch' }],
+    } });
   });
 });

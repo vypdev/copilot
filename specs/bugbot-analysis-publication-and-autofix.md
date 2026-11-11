@@ -2657,12 +2657,12 @@ records the durable state of a finding or native thread.
 | Requirement | Behavior |
 |---|---|
 | EV-01 | Bind sources and evidence to one immutable review operation and recover the material project, runtime or execution facts. |
-| EV-02 | Group equivalent eligible hypotheses before verification. Try to refute each in a fresh task and validate one disposition per candidate before ranking or projection. |
+| EV-02 | Group equivalent eligible hypotheses before verification. Try to refute each in a fresh task using the effective detector model and validate one disposition per candidate before the publication boundary. Shadow records the disposition separately and keeps the existing publication decision. |
 | EV-03 | Publish only confirmed candidates and validated suggestions. Coordinate incomplete, failed and clean results with approval and observed provider facts. |
 | EV-04 | Preserve target ownership, freshness, retry safety and explicit historical transitions including human authority. |
 | EV-05 | Authorize evidence reads and probes, and preserve integrity across verifier turns and provider recovery. Reject forged or mismatched artifacts and prevent arbitrary execution or publication from the verifier. |
 | EV-06 | Keep GitHub results legible, localized, sanitized, auditable and compatible with durable history. |
-| EV-07 | Compare GPT-6 Luna and GPT-6.1 Sol. Enable only an exact profile that independently meets every qualification gate and receives explicit maintainer approval. Make rollback and unresolved evidence explicit. |
+| EV-07 | Compare the GPT-6 Luna and GPT-6.1 Sol profiles with the same effective model in both sessions. Enable only an exact profile that independently meets every qualification gate and receives explicit maintainer approval. Make rollback and unresolved evidence explicit. |
 
 The design reuses the existing Bugbot capability, authorizations, candidate
 admission, projection, protection rules and comment noise budget. Merge,
@@ -2799,7 +2799,7 @@ native decisions before history mutations.
 |---|---|---|
 | Existing `bugbot-dry-run` | Boolean, existing trusted configuration or authorized review command | Existing default is false. True takes precedence over every write destination and persistence option. |
 | Evidence rollout | Proposed trusted installation setting, disabled/shadow/enforced | Disabled until qualified release and maintainer opt-in. Shadow computes the evidence result without verified publication or approval. Enforced requires the full gate. Final public name and runtime route need maintainer review. |
-| Verifier configuration | Trusted allowlisted provider/model and reviewed effort | The pilot compares the two named models at low effort. The qualified profile fixes model, effort and evidence authority. Review comments and PR code cannot override it. |
+| Verifier configuration | The effective trusted Bugbot detector configuration | Reuse the resolved provider, model, effort and executable selection, including the existing default. A qualified profile binds those effective inputs and evidence authority. Review comments and PR code cannot override them. |
 | Evidence profile | Trusted installation capability, source/CI or source/CI plus registered isolated probes | The first enabled profile is source/CI. Probe execution requires separately reviewed IDs, commands, runner prerequisites and input limits. Reject invalid or unauthorized profiles before work. |
 
 Snapshot the effective policy, model and evidence authority at start.
@@ -3094,6 +3094,66 @@ closure evidence for a particular historical issue.
       `pnpm run eval:bugbot`, affected tests and coverage, typecheck, lint,
       workflow/documentation validation, and `graphify update .` on the implementation.
 - [ ] Final-head qualification and PR checks are recorded. Maintainer owns approval, merge and activation.
+
+### Normal-flow shadow verification and model inheritance
+
+The usual Bugbot application use case observes verification after normal
+detection and finding preparation and before native publication or dry-run
+projection. Ordinary, framed, incremental, recheck and Commit routes share
+the workflow. Candidate observations require a canonical PR and pinned head.
+The observer receives the prepared active findings, including
+eligible candidates above the inline comment limit. A run with no prepared
+candidates opens zero verifier sessions. An observation never changes
+ranking, publication, thread reconciliation or approval in shadow.
+
+```text
+Resolve effective Bugbot configuration -> detect and prepare on pinned head
+                                              |
+                           one fresh session per eligible finding
+                                              |
+                        validate evidence and record shadow result
+                                              |
+                      check freshness -> existing publication decision
+```
+
+The workflow passes the configuration already resolved for the detection
+operation to every verifier. A configured Luna review uses Luna in both
+stages. A configured Sol review uses Sol in both stages. An omitted model
+uses the ordinary Bugbot default in both stages, and the same rule applies
+to any compatible model. There is no separate verifier model input. Record
+the resolved model for each session, with the provider-reported identity
+when exposed by the transport. A provider error or reported substitution
+is a technical failure. The observer never selects a replacement.
+
+The application fixes the prepared claim, anchor and canonical head before
+creating an independent session. The verifier receives that claim and
+binding. Detector explanation, confidence, proposed fixes and historical
+resolutions stay outside the session. The read-only broker searches the
+whole pinned tree, including unchanged files, and can return a file in full
+over successive reads. It can also read the pinned comparison base when
+the claim involves a regression. For a material dependency claim the
+verifier establishes the effective version and the repository's actual
+configuration, then cites matching official documentation or source.
+Missing material evidence yields an inconclusive verdict with the
+specific gap. A concluding response after an official-source inquiry must
+cite a matching delivered official receipt. Technical failures and invalid receipts are recorded
+separately from verdicts. Token use is optional telemetry.
+
+The integrated pilot invokes the normal detector and application use case
+with pinned SCM reads and fail-on-call write ports. Dry-run records what
+Bugbot would publish and captures the verification result in a separate
+payload. A simulated native publication control compares the resulting
+review drafts with the baseline even when verification fails. The
+production composition leaves the shadow port disabled. Shadow observations
+carry no approval authority. See the
+[real-PR integration report](../quality/bugbot/evidence/issue-950/normal-flow-shadow/results.md).
+
+| Case | Acceptance evidence |
+|---|---|
+| ev950-shadow-C01 | Zero prepared candidates produce no verifier call. |
+| ev950-shadow-C02 | The ordinary resolver's default, Luna, Sol and another compatible model pass the exact effective configuration to both stages. |
+| ev950-shadow-C03 | A verifier error or reported model substitution produces one technical failure, preserves the same native review drafts and never triggers a fallback. |
+| ev950-shadow-C04 | A real dry-run executes the usual detector on pinned PR revisions for Luna and Sol, checks actual prepared findings, and records zero attempted PR writes. |
 
 ### 20. References and decisions
 

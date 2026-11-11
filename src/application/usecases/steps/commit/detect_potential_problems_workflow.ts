@@ -1,3 +1,5 @@
+import type { BugbotShadowVerificationPort } from '../../../ports/bugbot_shadow_verification_ports';
+import { observeBugbotShadowVerification, type BugbotShadowVerificationReport } from './bugbot/observe_bugbot_shadow_verification';
 import { BugbotReviewCompletenessError } from '../../../../domain/bugbot/framed_review';
 import { isAgentConfigurationReady } from '../../../../data/model/agent';
 import { Result } from '../../../../data/model/result';
@@ -44,6 +46,7 @@ export interface DetectPotentialProblemsWorkflowDependencies {
     scm: BugbotScmPorts;
     telemetryPort?: BugbotTelemetryPort;
     catalogResolver?: MessageCatalogResolutionPort;
+    shadowVerification?: BugbotShadowVerificationPort;
 }
 
 const TASK_ID = 'DetectPotentialProblemsUseCase';
@@ -55,6 +58,12 @@ export async function runDetectPotentialProblemsWorkflow(
 ): Promise<Result[]> {
     const workflowStartedAt = Date.now();
     const telemetry = new BugbotReviewTelemetry(reviewContext);
+    const resolvedAgent = reviewContext.analysis.agentConfiguration;
+    let shadow: BugbotShadowVerificationReport | undefined;
+    const unavailableShadow = (): BugbotShadowVerificationReport | undefined => dependencies.shadowVerification
+        ? { resolvedModel: resolvedAgent.model, provider: resolvedAgent.provider, candidates: [], detectionUnavailable: true }
+        : undefined;
+    const shadowPayload = () => shadow ? { bugbotShadowVerification: shadow } : {};
     const publishTelemetry = async (outcome: BugbotReviewOutcome, category?: string) => {
         const snapshot = telemetry.snapshot(outcome, category);
         if (reviewContext.analysis.reviewConfiguration.telemetry) {
@@ -71,7 +80,7 @@ export async function runDetectPotentialProblemsWorkflow(
         const payload = result.payload && typeof result.payload === 'object' && !Array.isArray(result.payload)
             ? result.payload as Record<string, unknown>
             : {};
-        result.payload = { ...payload, bugbotTelemetry: snapshot };
+        result.payload = { ...payload, ...shadowPayload(), bugbotTelemetry: snapshot };
         return [result];
     };
     logInfo(`${getTaskEmoji(TASK_ID)} Executing ${TASK_ID}.`);
@@ -117,6 +126,7 @@ export async function runDetectPotentialProblemsWorkflow(
         }
         const prepared = await analyzeBugbotRevision(reviewContext, context, { agent: dependencies.aiRepository, telemetry, isSourceCurrent: async () => !await hasNewerBugbotRevision(context, dependencies.scm.context) });
         if (prepared === undefined) {
+            shadow = unavailableShadow();
             const analysisError = new ApplicationError('agent.failed', 'The configured agent returned no potential-problem analysis.');
             const catalog = reviewContext.analysis.reviewConfiguration.publicationMode === 'publish'
                 && context.prContext && context.canonicalPullRequest
@@ -139,6 +149,14 @@ export async function runDetectPotentialProblemsWorkflow(
         if (await telemetry.measure('freshness', () =>
             hasNewerBugbotRevision(context, dependencies.scm.context))) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
+        }
+        if (dependencies.shadowVerification) {
+            shadow = await observeBugbotShadowVerification(
+                reviewContext, context, prepared.activeFindings ?? prepared.toPublish, dependencies.shadowVerification,
+            );
+            if (shadow.candidates.length > 0 && await hasNewerBugbotRevision(context, dependencies.scm.context)) {
+                return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
+            }
         }
         if (reviewContext.analysis.reviewConfiguration.publicationMode === 'dry-run') {
             return await complete(dryRunResult(prepared, context), 'dry-run');
@@ -204,7 +222,8 @@ export async function runDetectPotentialProblemsWorkflow(
             errors: [resultError],
         });
         const snapshot = await publishTelemetry('failed', error instanceof Error ? error.name : 'unknown');
-        result.payload = { bugbotTelemetry: snapshot };
+        shadow ??= unavailableShadow();
+        result.payload = { ...shadowPayload(), bugbotTelemetry: snapshot };
         return [result];
     }
 }

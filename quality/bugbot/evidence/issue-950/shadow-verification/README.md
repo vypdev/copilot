@@ -45,6 +45,7 @@ pilot=quality/bugbot/evidence/issue-950/shadow-verification
 node "$pilot/run.cjs" "$LAB" --check
 ```
 
-An authorized dry-run campaign can use `--run "$OUT" "$SHA"` from a clean
-checkout at its selected commit. This starts real model calls and records
-results locally. The #950 production gate remains disabled.
+The integrated pilot supplies the transport from the effective Bugbot
+configuration at the normal review boundary. Use the immutable revisions
+linked by earlier reports to reproduce their standalone campaigns. The #950
+production gate remains disabled.

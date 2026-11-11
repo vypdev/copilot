@@ -1,21 +1,17 @@
 'use strict';
 
 const assert = require('node:assert/strict');
-const { execFileSync } = require('node:child_process');
 const fs = require('node:fs');
-const os = require('node:os');
 const path = require('node:path');
 const Ajv = require('ajv');
 const plan = require('./plan.json');
-const cohort = require('../shadow-real-prs/cohort.json');
 const schema = require('./schema.cjs');
 const official = require('../shadow-real-prs/official.json');
 const { dryRunPorts } = require('../on-demand/contract.cjs');
-const { ask } = require('./session.cjs');
 const { hash } = require('../shadow-real-prs/session.cjs');
-const { preflight, subjects } = require('../shadow-real-prs/run.cjs');
+const { preflight } = require('../shadow-real-prs/run.cjs');
 const { git } = require('../shadow-real-prs/broker.cjs');
-const { makeBroker } = require('./broker.cjs');
+const { makeBroker, officialPackage } = require('./broker.cjs');
 
 const instructions = fs.readFileSync(path.join(__dirname, 'prompt.txt'), 'utf8').trimEnd();
 const validate = new Ajv().compile(schema);
@@ -68,6 +64,17 @@ function recordDelivery(delivered, observations) {
     }
 }
 
+function validateOfficialConclusion(answer, actions) {
+    if (answer.label === 'inconclusive') return;
+    // An explicit request identifies a tool premise the verifier elected to investigate.
+    const investigated = new Set(actions.filter(({ request }) => request.op === 'official')
+        .map(({ request }) => officialPackage(request.target)));
+    for (const name of investigated) {
+        assert(answer.citations.some(citation => citation.kind === 'official' && citation.package === name),
+            'official-evidence-missing');
+    }
+}
+
 async function investigate(lab, subject, finding, cwd, transport, log, signal) {
     const started = performance.now(), writes = [], turns = [], actions = [];
     const ports = dryRunPorts(write => writes.push(write));
@@ -115,7 +122,9 @@ async function investigate(lab, subject, finding, cwd, transport, log, signal) {
             assert(validate(response), 'response-schema');
             if (response.action === 'finish') {
                 checkTree(lab, subject, finding.allowBase);
-                answer = verdict(response, broker, delivered);
+                const candidateAnswer = verdict(response, broker, delivered);
+                validateOfficialConclusion(candidateAnswer, actions);
+                answer = candidateAnswer;
                 break;
             }
             assert(response.verdict === null && response.reason === null && response.missing === null
@@ -138,41 +147,10 @@ async function investigate(lab, subject, finding, cwd, transport, log, signal) {
         wallMs: Math.round(performance.now() - started), writes };
 }
 
-async function main() {
-    const [lab, mode, output, freeze] = process.argv.slice(2);
-    assert(lab);
+if (require.main === module) {
+    const [lab, mode] = process.argv.slice(2);
+    assert.equal(mode, '--check');
     preflight(lab);
-    assert.equal(plan.publication, 'dry-run');
-    if (mode === '--check') return console.log('Pinned subject trees, archived producer evidence and official sources checked.');
-    assert.equal(mode, '--run');
-    assert(freeze && /^[a-f0-9]{40}$/u.test(freeze));
-    assert.equal(git(__dirname, ['rev-parse', 'HEAD']).trim(), freeze);
-    assert.equal(git(__dirname, ['status', '--porcelain']), '');
-    assert.equal(execFileSync(process.env.BUGBOT_PILOT_CODEX || 'codex', ['--version'], { encoding: 'utf8' }).trim(), plan.cli);
-    fs.mkdirSync(output, { mode: 0o700 });
-    const ledger = path.join(output, 'ledger.jsonl');
-    fs.writeFileSync(ledger, '', { flag: 'wx', mode: 0o600 });
-    const log = row => fs.appendFileSync(ledger, JSON.stringify(row) + '\n');
-    log({ event: 'plan', freeze, schemaSha256: hash(JSON.stringify(schema)), subjectCount: cohort.length, findingCount: subjects.length });
-    for (const subject of cohort) log({ event: 'detection-reused', repository: subject.repository, pr: subject.pr, head: subject.head,
-        review: subject.review, findings: subject.findings.map(({ id }) => id), producer: subject.producerUrl,
-        newCalls: 0, writeAttempts: 0 });
-    const cancel = new AbortController();
-    process.once('SIGINT', () => cancel.abort());
-    process.once('SIGTERM', () => cancel.abort());
-    for (let offset = 0; offset < subjects.length; offset += plan.concurrency) {
-        await Promise.all(subjects.slice(offset, offset + plan.concurrency).map(async ({ subject, finding }) => {
-            const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'shadow-finding-'));
-            try {
-                const result = await investigate(lab, subject, finding, cwd, ask, log, cancel.signal);
-                log(result);
-                console.log(finding.id, result.answer?.label ?? result.failure, result.turns.length, result.wallMs);
-            } finally {
-                fs.rmSync(cwd, { recursive: true, force: true });
-            }
-        }));
-    }
+    console.log('Pinned subject trees, archived producer evidence and official sources checked.');
 }
-
-if (require.main === module) main().catch(error => { console.error(error.message); process.exitCode = 1; });
-module.exports = { investigate };
+module.exports = { investigate, validateOfficialConclusion };

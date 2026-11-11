@@ -2284,6 +2284,8 @@
       ],
       "entrypoints": [
         "src/application/usecases/steps/commit/detect_potential_problems_use_case.ts",
+        "src/application/ports/bugbot_shadow_verification_ports.ts",
+        "src/application/usecases/steps/commit/bugbot/observe_bugbot_shadow_verification.ts",
         "src/application/usecases/steps/commit/bugbot/bugbot_autofix_use_case.ts"
       ],
       "code": [
@@ -2528,7 +2530,8 @@
         "quality/bugbot/evidence/issue-950/on-demand/reproduce.md",
         "quality/bugbot/evidence/issue-950/on-demand/results.md",
         "quality/bugbot/evidence/issue-950/shadow-real-prs/results.md",
-        "quality/bugbot/evidence/issue-950/shadow-verification/README.md"
+        "quality/bugbot/evidence/issue-950/shadow-verification/README.md",
+        "quality/bugbot/evidence/issue-950/normal-flow-shadow/results.md"
       ]
     },
     {

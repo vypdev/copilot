@@ -10,6 +10,7 @@ const plan = require('./plan.json');
 const official = require('../shadow-real-prs/official.json');
 
 const blocked = code => ({ status: code });
+const officialPackage = target => target === '@playwright/test' ? 'playwright' : target.toLowerCase();
 const safePath = value => typeof value === 'string' && value.length <= 300 && !/[\\\u0000-\u001f\u007f]/u.test(value)
     && value.split('/').every(part => part && !['.', '..', '.git'].includes(part.toLowerCase()));
 const linesOf = source => source.replace(/\n$/u, '').split(/\r?\n/u);
@@ -41,7 +42,7 @@ function makeBroker(lab, subject, finding) {
     }
 
     function doc(request) {
-        const packageName = request.target === '@playwright/test' ? 'playwright' : request.target.toLowerCase();
+        const packageName = officialPackage(request.target);
         const proof = receipts.get(request.basis);
         const supported = official.filter(item => item.package === packageName && item.version === request.version);
         if (!supported.length) return blocked('official-source-unavailable');
@@ -165,4 +166,4 @@ function locationWithText(location, lines) {
     return { ...proof, lines };
 }
 
-module.exports = { makeBroker };
+module.exports = { makeBroker, officialPackage };

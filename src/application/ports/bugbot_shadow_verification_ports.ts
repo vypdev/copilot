@@ -1,0 +1,53 @@
+import type { AgentConfiguration } from '../../domain/agent';
+
+export interface BugbotShadowAnchor {
+    readonly path: string;
+    readonly line: number;
+    readonly end: number;
+    readonly side?: 'LEFT' | 'RIGHT';
+}
+
+export interface BugbotShadowCandidate {
+    readonly id: string;
+    readonly hypothesis: string;
+    readonly anchor: BugbotShadowAnchor;
+    readonly repository: { readonly owner: string; readonly name: string };
+    readonly pullRequest: number;
+    readonly headSha: string;
+    readonly baseSha?: string;
+    readonly allowBase: boolean;
+}
+
+export interface BugbotShadowCitation {
+    readonly receipt: string;
+    readonly kind: 'git' | 'official' | 'runtime';
+    readonly first: number;
+    readonly last: number;
+    readonly sha?: string;
+    readonly path?: string;
+    readonly url?: string;
+    readonly textSha256: string;
+}
+
+export type BugbotShadowResult =
+    | {
+        readonly status: 'verdict';
+        readonly verdict: 'confirmed' | 'refuted' | 'inconclusive';
+        readonly reason: string;
+        readonly missing: string | null;
+        readonly citations: readonly BugbotShadowCitation[];
+        readonly reportedModel?: string;
+      }
+    | {
+        readonly status: 'technical-failure';
+        readonly reason: string;
+        readonly reportedModel?: string;
+      };
+
+/** Trusted adapter validates the delivered receipts in an independent read-only session. */
+export interface BugbotShadowVerificationPort {
+    verify(request: {
+        readonly candidate: BugbotShadowCandidate;
+        readonly configuration: Readonly<AgentConfiguration>;
+    }): Promise<BugbotShadowResult>;
+}
