@@ -1,0 +1,698 @@
+{
+  "preregistration": "8866fa5c4849d6649cb379b0e31c8be7b0b88aa5",
+  "ledgerSha256": "219c42ba5d4fc7dcca4ae60fbefaeda2ca396d2f09f04a7a2c1bde8998cdd779",
+  "started": "2026-11-11T12:08:44Z",
+  "finished": "2026-11-11T12:11:27Z",
+  "modelCallsAdded": 0,
+  "writeAttempts": 0,
+  "accounting": "per-turn deltas verified against final cumulative usage",
+  "audited": [
+    {
+      "finding": "4443394859",
+      "repository": "vypdev/domus",
+      "head": "e129e76e25deff7314efe3b72996d295cf73f7f3",
+      "anchor": {
+        "path": "backend/src/domus/infrastructure/sqlite_member_profile_schema.py",
+        "line": 8,
+        "end": 8
+      },
+      "liveFailure": "token-budget-or-unknown",
+      "recovery": "unfinished",
+      "failure": "recorded-session-ended-before-verdict",
+      "answer": null,
+      "calls": 6,
+      "wallMs": 56697,
+      "usage": {
+        "inputTokens": 99003,
+        "cachedInputTokens": 73088,
+        "outputTokens": 1539,
+        "known": true
+      },
+      "sessionSha256": "f186ed2f49663937669bcd9dac901230fec28ea04d6ef2f3e1761559d3367e96",
+      "rolloutSha256": "6afdf24faf02c7d92eeaecd304aaf0e660cf21be23ecd957eb268651b1ba846e",
+      "terminalSha256": "d33e342fd65d5d7b3f3ab2dd8718584d66de8dd50423a39f289c6f69f1ef2fe9",
+      "pendingRequests": [
+        {
+          "op": "official",
+          "target": "sqlite",
+          "why": "Obtain explicit official evidence that an external matching unique index satisfies the composite parent key."
+        },
+        {
+          "op": "read",
+          "target": "tests/fixtures/sqlite/v8.sql",
+          "why": "Verify an existing schema8 database includes the matching index before the schema9 backfill."
+        }
+      ]
+    },
+    {
+      "finding": "4443394870",
+      "repository": "vypdev/domus",
+      "head": "e129e76e25deff7314efe3b72996d295cf73f7f3",
+      "anchor": {
+        "path": "specs/household-administration-integration.md",
+        "line": 42,
+        "end": 42
+      },
+      "liveFailure": null,
+      "recovery": "live-verdict",
+      "failure": null,
+      "answer": {
+        "label": "confirmed",
+        "reason": "The companion identifies base 4b71969d3b3f6df5f28d617ab0da4e86c9be5884 and cites the owning specification's blob as f315a00d9efbb7da8a9ea44ab0da8a9df2d088e100a. The Git read at that base reports f315a00d9efbb7da8a9ea44de8a9df2d088e100a instead; head retains that same actual blob. Thus the cited object ID does not identify the owning file at the stated base and cannot verify it. This is a documentary provenance defect, not evidence of an application runtime failure.",
+        "missing": null,
+        "anchor": {
+          "path": "specs/household-administration-integration.md",
+          "line": 42,
+          "end": 42
+        },
+        "citations": [
+          {
+            "kind": "git",
+            "sha": "e129e76e25deff7314efe3b72996d295cf73f7f3",
+            "path": "specs/household-administration-integration.md",
+            "blob": "3915d21680e413bd76ad81b4e8e7d3ee4a16276a",
+            "first": 32,
+            "last": 42,
+            "receipt": "R14a77ce620473c998e000028",
+            "inChangedLines": true,
+            "unchangedFile": false,
+            "textSha256": "e1fcff4e009c9f8429d928c80c572654786b7faa72188591fdbfad9a1dd5c268"
+          },
+          {
+            "kind": "git",
+            "sha": "4b71969d3b3f6df5f28d617ab0da4e86c9be5884",
+            "path": "specs/household-administration.md",
+            "blob": "f315a00d9efbb7da8a9ea44de8a9df2d088e100a",
+            "first": 1,
+            "last": 13,
+            "receipt": "Rcc2847d6b5a8db0081c19527",
+            "inChangedLines": false,
+            "unchangedFile": false,
+            "textSha256": "aff49d1a1e247565a4ef749919a281593df77e7d395ffe455627f3491daf8a8f"
+          },
+          {
+            "kind": "git",
+            "sha": "e129e76e25deff7314efe3b72996d295cf73f7f3",
+            "path": "specs/household-administration.md",
+            "blob": "f315a00d9efbb7da8a9ea44de8a9df2d088e100a",
+            "first": 1,
+            "last": 13,
+            "receipt": "Rfb3ba18bb774e0d5f5d57dd9",
+            "inChangedLines": false,
+            "unchangedFile": true,
+            "textSha256": "aff49d1a1e247565a4ef749919a281593df77e7d395ffe455627f3491daf8a8f"
+          }
+        ]
+      },
+      "calls": 3,
+      "wallMs": 24704,
+      "usage": {
+        "inputTokens": 32831,
+        "cachedInputTokens": 18816,
+        "outputTokens": 625,
+        "known": true
+      },
+      "sessionSha256": "aea6c8cac00d53b2acdf6d8a57de0b2663dce26b466b8ff5d33a0b4dbb3543fa",
+      "rolloutSha256": "20faad536f8ccf9043d1f2188f4421f999a6abf7be0a86c2f53d005cbe27bb89",
+      "terminalSha256": "b940c8d4532afdcb742c72555c81ef5e64078fb1aca3b50be5492477958218a5"
+    },
+    {
+      "finding": "4452825495",
+      "repository": "vypdev/domus",
+      "head": "b9a2dfc8179128fb493ab49666c24967d308c979",
+      "anchor": {
+        "path": "frontend/tests/e2e/catalog.spec.ts",
+        "line": 115,
+        "end": 115
+      },
+      "liveFailure": "token-budget-or-unknown",
+      "recovery": "offline-validated-final",
+      "failure": null,
+      "answer": {
+        "label": "refuted",
+        "reason": "The locked Playwright release is 1.64.1. Its actual toBeEnabled implementation explicitly reads options.enabled and dispatches to 'to.be.disabled' when false; it does not ignore this option. The catalog imports expect directly from @playwright/test, and its configuration supplies no matcher override. The assertion passes enabled:false for read-only and uncertain. Those stories set controls.preferences=false, and the component renders the preferences button with disabled bound to the inverse of that control. Thus the assertion expects precisely the disabled state rendered by these stories, not an enabled button. The hypothesized failure mechanism is contradicted by the versioned matcher implementation and application route.",
+        "missing": null,
+        "anchor": {
+          "path": "frontend/tests/e2e/catalog.spec.ts",
+          "line": 115,
+          "end": 115
+        },
+        "citations": [
+          {
+            "kind": "git",
+            "sha": "b9a2dfc8179128fb493ab49666c24967d308c979",
+            "path": "pnpm-lock.yaml",
+            "blob": "cc98435723ce72fb358df5462f056cb10680b8b6",
+            "first": 33,
+            "last": 35,
+            "receipt": "Ra30070b6f11c667718ba2d44",
+            "inChangedLines": false,
+            "unchangedFile": true,
+            "textSha256": "d0f565a1c1426f3172216ad1ce720ff6dbc5c8a2f563cbe2b4568767fb51625e"
+          },
+          {
+            "kind": "official",
+            "package": "playwright",
+            "version": "1.64.1",
+            "sourceKind": "release-source",
+            "url": "https://github.com/microsoft/playwright/blob/cfe490d941f992655948eee8fd4fd94e1c4234bf/packages/playwright/src/matchers/matchers.ts",
+            "commit": "cfe490d941f992655948eee8fd4fd94e1c4234bf",
+            "sha256": "509f8280aae39e6a0ac1f19fe0ed2a9f89677604d841d2d6ff70c2d3c129065e",
+            "basis": "Ra30070b6f11c667718ba2d44",
+            "first": 152,
+            "last": 162,
+            "receipt": "R5307c82c03fe688ee6cf4f1b",
+            "textSha256": "62a7a0291123bc38e706819a6a23a328727027d52d0c96e0501cd7281ece09e3"
+          },
+          {
+            "kind": "git",
+            "sha": "b9a2dfc8179128fb493ab49666c24967d308c979",
+            "path": "frontend/tests/e2e/catalog.spec.ts",
+            "blob": "43e652394e30c0544433897a27e4d6d15b186d04",
+            "first": 106,
+            "last": 115,
+            "receipt": "R0c6e756b90ac660dcb557bd1",
+            "inChangedLines": true,
+            "unchangedFile": false,
+            "textSha256": "140b329202651e73bc87a443c62389abae844c68c6baace454fecfa001a44903"
+          },
+          {
+            "kind": "git",
+            "sha": "b9a2dfc8179128fb493ab49666c24967d308c979",
+            "path": "frontend/playwright.config.ts",
+            "blob": "dd41ef1d5f63bf76f6d7d2a2651d676ee90db4bc",
+            "first": 1,
+            "last": 10,
+            "receipt": "R431b95344add309dc887010c",
+            "inChangedLines": false,
+            "unchangedFile": true,
+            "textSha256": "8e4bb12c52e5f1d868822ead7124176fb369b9d4b51e1be8313f94603b231010"
+          },
+          {
+            "kind": "git",
+            "sha": "b9a2dfc8179128fb493ab49666c24967d308c979",
+            "path": "frontend/stories/administration.stories.ts",
+            "blob": "8a3c7a260f23e1d745dbe02368c7db1ee7d81e4c",
+            "first": 37,
+            "last": 51,
+            "receipt": "R288f1741be70ec0e1954965b",
+            "inChangedLines": true,
+            "unchangedFile": false,
+            "textSha256": "c8da0776ad49e6f6bb7d08c1a1615ed540d3866a160668275e9a88f2806f89d2"
+          },
+          {
+            "kind": "git",
+            "sha": "b9a2dfc8179128fb493ab49666c24967d308c979",
+            "path": "frontend/src/presentation/domus-administration.ts",
+            "blob": "6712ceca3d05ae12cf7cba23a66a8db69dbbdc81",
+            "first": 286,
+            "last": 289,
+            "receipt": "Rd6bdaa59c3564125a40668f8",
+            "inChangedLines": true,
+            "unchangedFile": false,
+            "textSha256": "fdf39daf362fbf9d1a50f56c516a344880b995867e82a58d20938fa7dc74e526"
+          },
+          {
+            "kind": "git",
+            "sha": "b9a2dfc8179128fb493ab49666c24967d308c979",
+            "path": "frontend/src/presentation/domus-administration.ts",
+            "blob": "6712ceca3d05ae12cf7cba23a66a8db69dbbdc81",
+            "first": 339,
+            "last": 340,
+            "receipt": "Rd6bdaa59c3564125a40668f8",
+            "inChangedLines": true,
+            "unchangedFile": false,
+            "textSha256": "989a30074f7798c0a0ea6fa7fe94a6ec2bf2e0bde22aff6df8366acd96d41a2e"
+          }
+        ]
+      },
+      "calls": 6,
+      "wallMs": 54807,
+      "usage": {
+        "inputTokens": 103262,
+        "cachedInputTokens": 76544,
+        "outputTokens": 1408,
+        "known": true
+      },
+      "sessionSha256": "828465388f6e99ad70dc00ea79b73cf92540c170af16090db94db3d946f622ec",
+      "rolloutSha256": "835d73c01c19c0067ac332b3defe27b9731e0c34343bee737b81c60cb700e985",
+      "terminalSha256": "d084bed5d0d0faea9e01dcfedecfc654d8d63737ef86e805a808ebc42a0dbe80"
+    },
+    {
+      "finding": "4500071414",
+      "repository": "vypdev/domus",
+      "head": "3d890522003c2d2e7d03fa1f51b1bd84f0d0f10f",
+      "anchor": {
+        "path": "backend/src/domus/application/fixed_batch_review.py",
+        "line": 371,
+        "end": 372
+      },
+      "liveFailure": "token-budget-or-unknown",
+      "recovery": "offline-validated-final",
+      "failure": null,
+      "answer": {
+        "label": "inconclusive",
+        "reason": "The implementation contains the hypothesized mismatch: replacement expects work based only on rule.exception(), while reviewed materialization additionally suppresses slots matching has_historical_fixed_exception(). Suppression leaves occurrence_id unset, triggering recurrence_review_stale. However, replacement preserves the current exceptions, so an ordinary current exclusion makes expects_work false and does not establish the failure. Confirmation requires a reachable historical-only exception that is absent from the current schedule; its persistence semantics and the full replacement caller could not be inspected within the evidence budget.",
+        "missing": "The implementation of has_historical_fixed_exception, a supported route producing historical-only exception state, and replacement preview/apply dispatch and transaction handling are needed to establish reachability and observable rollback.",
+        "anchor": {
+          "path": "backend/src/domus/application/fixed_batch_review.py",
+          "line": 371,
+          "end": 372
+        },
+        "citations": [
+          {
+            "kind": "git",
+            "sha": "3d890522003c2d2e7d03fa1f51b1bd84f0d0f10f",
+            "path": "backend/src/domus/application/fixed_batch_review.py",
+            "blob": "787701c123995f415300698e0601b7f1c326e8bd",
+            "first": 363,
+            "last": 372,
+            "receipt": "Ra807ac14627f70d70ead7981",
+            "inChangedLines": true,
+            "unchangedFile": false,
+            "textSha256": "791937b62576bdf79557a9a7ab54034b4dadb8bc7de6013afb9f736d985103f9"
+          },
+          {
+            "kind": "git",
+            "sha": "3d890522003c2d2e7d03fa1f51b1bd84f0d0f10f",
+            "path": "backend/src/domus/application/fixed_materialization.py",
+            "blob": "cae691c4eeaee2e2ac367c422726229ecc5a6f8a",
+            "first": 232,
+            "last": 243,
+            "receipt": "Re310ff1774c561f3fabeac78",
+            "inChangedLines": true,
+            "unchangedFile": false,
+            "textSha256": "55e30154fa1050cd08f2353ae1655df58dd64ebafac822e062cf2cfa97b33245"
+          },
+          {
+            "kind": "git",
+            "sha": "3d890522003c2d2e7d03fa1f51b1bd84f0d0f10f",
+            "path": "backend/src/domus/application/fixed_materialization.py",
+            "blob": "cae691c4eeaee2e2ac367c422726229ecc5a6f8a",
+            "first": 318,
+            "last": 320,
+            "receipt": "Re310ff1774c561f3fabeac78",
+            "inChangedLines": true,
+            "unchangedFile": false,
+            "textSha256": "b17eeb112d2a8a2621360a9f6091cb8b6030d3935ef0eca36d3608462fd66c7d"
+          },
+          {
+            "kind": "git",
+            "sha": "3d890522003c2d2e7d03fa1f51b1bd84f0d0f10f",
+            "path": "backend/src/domus/application/fixed_batch_review.py",
+            "blob": "787701c123995f415300698e0601b7f1c326e8bd",
+            "first": 300,
+            "last": 306,
+            "receipt": "Ra807ac14627f70d70ead7981",
+            "inChangedLines": true,
+            "unchangedFile": false,
+            "textSha256": "e2d9fb50127aec0585cf2629d384bf8292903ccfbe66819509e97c627d77cb25"
+          },
+          {
+            "kind": "git",
+            "sha": "3d890522003c2d2e7d03fa1f51b1bd84f0d0f10f",
+            "path": "backend/src/domus/domain/recurrence_records.py",
+            "blob": "de006bf43cd883d0fbe8869587a18dfaa5d07be8",
+            "first": 111,
+            "last": 112,
+            "receipt": "R59b9890e2601d779a43b620d",
+            "inChangedLines": true,
+            "unchangedFile": false,
+            "textSha256": "55032e964d0932351e5d185269281b171a3a09b08b286e661ea470323c82eb4d"
+          }
+        ]
+      },
+      "calls": 5,
+      "wallMs": 60262,
+      "usage": {
+        "inputTokens": 91726,
+        "cachedInputTokens": 65792,
+        "outputTokens": 1305,
+        "known": true
+      },
+      "sessionSha256": "7d4180aba50c5a6c4307a64950ea05436dc2f86888bbd7d77f5bf0527448405b",
+      "rolloutSha256": "fc23e3f4b0e52c1e9f80cab2e51551b2a4a4fd02c8cdd7e045abd7d0b2090420",
+      "terminalSha256": "ef5d5d16f409c420f03885ad214b2123c410f6b1e038687f5c9b82f720a3c507"
+    },
+    {
+      "finding": "4500071416",
+      "repository": "vypdev/domus",
+      "head": "3d890522003c2d2e7d03fa1f51b1bd84f0d0f10f",
+      "anchor": {
+        "path": "docs/roadmap.md",
+        "line": 26,
+        "end": 26
+      },
+      "liveFailure": "token-budget-or-unknown",
+      "recovery": "offline-validated-final",
+      "failure": null,
+      "answer": {
+        "label": "confirmed",
+        "reason": "The roadmap explicitly says the durable relative consumer remains open and the pure policy and initial service are not wired into maintenance. The pinned implementation contradicts that wiring claim: persistent standalone and Ingress compositions bind a recurrence worker to application lifetime. Its polling tick constructs RelativeMaintenance, source ingestion and RelativeLifecycle together. The dispatcher calls initial materialization and then consumes persisted lifecycle sources. Initial materialization saves an occurrence, slot and continuation; lifecycle consumption checks scope, original evidence and prior outcomes, generates successors and records completion. It also invokes successor_disposition and applies protected cancellation/reconciliation. Installation and household checks, shutdown checks and replay handling constrain these effects rather than disabling the route. This establishes implemented maintenance integration, not completion of every broader recurrence acceptance obligation. No comparison base was supplied, so this verdict concerns the pinned documentation mismatch, not when it arose.",
+        "missing": null,
+        "anchor": {
+          "path": "docs/roadmap.md",
+          "line": 26,
+          "end": 26
+        },
+        "citations": [
+          {
+            "kind": "git",
+            "sha": "3d890522003c2d2e7d03fa1f51b1bd84f0d0f10f",
+            "path": "docs/roadmap.md",
+            "blob": "12c177b4ec7bc7128de56becf77f92a41f03c263",
+            "first": 26,
+            "last": 26,
+            "receipt": "Rd7f478b6c1a5f1fc23606849",
+            "inChangedLines": true,
+            "unchangedFile": false,
+            "textSha256": "7f97a2a2ade9cfa7d3b2fd576cded5c6300845d8f661f7f8b21ed0ecfaffd85a"
+          },
+          {
+            "kind": "git",
+            "sha": "3d890522003c2d2e7d03fa1f51b1bd84f0d0f10f",
+            "path": "backend/src/domus/composition/server.py",
+            "blob": "eeae0b70c04dbe579dcd6f1a803a638132a628f1",
+            "first": 139,
+            "last": 143,
+            "receipt": "Ree2751bacfef530d496d8c55",
+            "inChangedLines": false,
+            "unchangedFile": true,
+            "textSha256": "325d471a5fdbd5c1e4699102bda65aba9954d2b419967c53632cc898f75bf53d"
+          },
+          {
+            "kind": "git",
+            "sha": "3d890522003c2d2e7d03fa1f51b1bd84f0d0f10f",
+            "path": "backend/src/domus/composition/ingress.py",
+            "blob": "715ad5833beca7c353e9f74e40226cf4d963a79c",
+            "first": 141,
+            "last": 145,
+            "receipt": "R8abe38dfd3dfe8cb241f5c87",
+            "inChangedLines": false,
+            "unchangedFile": true,
+            "textSha256": "a1ef32e722b3407dac513b7fdba6ca540b2dd8b4d2ff8c90eed466b0326f25e1"
+          },
+          {
+            "kind": "git",
+            "sha": "3d890522003c2d2e7d03fa1f51b1bd84f0d0f10f",
+            "path": "backend/src/domus/composition/recurrence.py",
+            "blob": "d1e1bfe082045bdf4204109042606616964bc384",
+            "first": 25,
+            "last": 69,
+            "receipt": "R891d1a45d9b2c3f9b37e9bf9",
+            "inChangedLines": true,
+            "unchangedFile": false,
+            "textSha256": "d349577077402d1a3caeda30e2d08e81010ab45f0c723475970e3a4e9c49bb5a"
+          },
+          {
+            "kind": "git",
+            "sha": "3d890522003c2d2e7d03fa1f51b1bd84f0d0f10f",
+            "path": "backend/src/domus/infrastructure/recurrence_worker.py",
+            "blob": "db98be23cf3e5aa9d63f8677c02b23d785f7652e",
+            "first": 46,
+            "last": 54,
+            "receipt": "R2117304d377d737404130d8b",
+            "inChangedLines": false,
+            "unchangedFile": true,
+            "textSha256": "33a10391be62ea51e9d726b22290a8862413d7ef7645dca67c090a11451706a3"
+          },
+          {
+            "kind": "git",
+            "sha": "3d890522003c2d2e7d03fa1f51b1bd84f0d0f10f",
+            "path": "backend/src/domus/infrastructure/recurrence_worker.py",
+            "blob": "db98be23cf3e5aa9d63f8677c02b23d785f7652e",
+            "first": 67,
+            "last": 90,
+            "receipt": "R2117304d377d737404130d8b",
+            "inChangedLines": false,
+            "unchangedFile": true,
+            "textSha256": "ca4e3da8893510c5fcfadcb45a980723e806a3c12e0b8cf0457d4eeaac51cd71"
+          },
+          {
+            "kind": "git",
+            "sha": "3d890522003c2d2e7d03fa1f51b1bd84f0d0f10f",
+            "path": "backend/src/domus/application/fair_recurrence.py",
+            "blob": "98e46171b9f98011f0d1d34d628a04eaea898878",
+            "first": 95,
+            "last": 116,
+            "receipt": "R76ad2e3f65fa76c3308ddf87",
+            "inChangedLines": true,
+            "unchangedFile": false,
+            "textSha256": "ef73727b22ab44cedf7aea885ee9ed8325869854964732a750b56062505b69ea"
+          },
+          {
+            "kind": "git",
+            "sha": "3d890522003c2d2e7d03fa1f51b1bd84f0d0f10f",
+            "path": "backend/src/domus/application/recurrence_sources.py",
+            "blob": "b56c22e04def7c9a3ee7bb68183f1c58619922ea",
+            "first": 45,
+            "last": 78,
+            "receipt": "R29c4ea5d3529fad039d6481c",
+            "inChangedLines": true,
+            "unchangedFile": false,
+            "textSha256": "97e5e933c689626ad1dc862f12433705d9bb3bf49bbaab2d480c3eb2dea25e66"
+          },
+          {
+            "kind": "git",
+            "sha": "3d890522003c2d2e7d03fa1f51b1bd84f0d0f10f",
+            "path": "backend/src/domus/application/relative_materialization.py",
+            "blob": "effcea72c621405bee17a122ead38d6e0cfc2893",
+            "first": 220,
+            "last": 260,
+            "receipt": "Rbd1e4e21d010f41febd14116",
+            "inChangedLines": true,
+            "unchangedFile": false,
+            "textSha256": "c82e400b868dab9e9cefc8354fdc90d9b5529f6650192a77850a21c2b00da345"
+          },
+          {
+            "kind": "git",
+            "sha": "3d890522003c2d2e7d03fa1f51b1bd84f0d0f10f",
+            "path": "backend/src/domus/application/relative_lifecycle.py",
+            "blob": "94f6d647c2322bbc4187b483c9c231ac8cb93fa9",
+            "first": 80,
+            "last": 123,
+            "receipt": "R9b3b4a4bbef07de33465ca16",
+            "inChangedLines": true,
+            "unchangedFile": false,
+            "textSha256": "1a8e809513a24066f1519f4b97b15247c5297105fcfc72befb3855efe2b92dc1"
+          },
+          {
+            "kind": "git",
+            "sha": "3d890522003c2d2e7d03fa1f51b1bd84f0d0f10f",
+            "path": "backend/src/domus/application/relative_lifecycle.py",
+            "blob": "94f6d647c2322bbc4187b483c9c231ac8cb93fa9",
+            "first": 171,
+            "last": 213,
+            "receipt": "R9b3b4a4bbef07de33465ca16",
+            "inChangedLines": true,
+            "unchangedFile": false,
+            "textSha256": "1a71e66385eccc8da626f01c044459be94260dad077e7b2f140c429163c56593"
+          },
+          {
+            "kind": "git",
+            "sha": "3d890522003c2d2e7d03fa1f51b1bd84f0d0f10f",
+            "path": "backend/src/domus/application/relative_lifecycle.py",
+            "blob": "94f6d647c2322bbc4187b483c9c231ac8cb93fa9",
+            "first": 286,
+            "last": 328,
+            "receipt": "R9b3b4a4bbef07de33465ca16",
+            "inChangedLines": true,
+            "unchangedFile": false,
+            "textSha256": "20deecce33c3b9c9f4eff75c77752ea7b3021707c4fc1f69c3e3d6f5733369fd"
+          }
+        ]
+      },
+      "calls": 5,
+      "wallMs": 67614,
+      "usage": {
+        "inputTokens": 83190,
+        "cachedInputTokens": 56704,
+        "outputTokens": 1612,
+        "known": true
+      },
+      "sessionSha256": "35a01177d9f34d5064459d6d8d25f56e303b80a437a2e459680c476d7caa8a31",
+      "rolloutSha256": "3b470e1511bc50ea57485cc8394b1c4ed53742fc5eb65f42c11f1916ff579624",
+      "terminalSha256": "b37e66880a3940f6d0aafbcbdd5d1a5ce2e4461391e012252a5b3b3253b5628c"
+    },
+    {
+      "finding": "4473894574",
+      "repository": "vypdev/ha-ui",
+      "head": "55174696e97a4c8b424c7f57d7da7a61e4b157fd",
+      "anchor": {
+        "path": "tests/browser/field-presentation.test.ts",
+        "line": 38,
+        "end": 38
+      },
+      "liveFailure": "token-budget-or-unknown",
+      "recovery": "offline-validated-final",
+      "failure": null,
+      "answer": {
+        "label": "refuted",
+        "reason": "The native input does not fill the painted control horizontally. The control has 16px left/right padding and no border; its flex input occupies the content area, so width:100% does not extend it into that padding. Thus (4,4) is in the control’s left padding, not the input. The label ignores pointer events and the underline pseudo-element does too. The test mounts the field without a padding override and is included in the Chromium browser project. Clicking that padding targets the control; its click handler explicitly focuses the input, explaining how the target assertion and enabled/readonly focus assertion can both hold. Disabled native inputs cannot be focused by that handler. The proposed input-hit explanation is contradicted by the implementation.",
+        "missing": null,
+        "anchor": {
+          "path": "tests/browser/field-presentation.test.ts",
+          "line": 38,
+          "end": 38
+        },
+        "citations": [
+          {
+            "kind": "git",
+            "sha": "55174696e97a4c8b424c7f57d7da7a61e4b157fd",
+            "path": "tests/browser/field-presentation.test.ts",
+            "blob": "161f9f1650ec288f0d7517aabecd2c062fccfaa5",
+            "first": 35,
+            "last": 38,
+            "receipt": "R1962eb13395c5eaa09fb0a76",
+            "inChangedLines": true,
+            "unchangedFile": false,
+            "textSha256": "dc4bdbc2161e31f9edf7e8af95ca6abec312dbf45dc53916e1c52c5b83225f7e"
+          },
+          {
+            "kind": "git",
+            "sha": "55174696e97a4c8b424c7f57d7da7a61e4b157fd",
+            "path": "packages/core/src/components/field.ts",
+            "blob": "be969ddcf7ea22e776673100ca3174a394be8a17",
+            "first": 24,
+            "last": 30,
+            "receipt": "R2f0a47a589496aff154a9eaf",
+            "inChangedLines": true,
+            "unchangedFile": false,
+            "textSha256": "67f23df473b177977b78e6f70d90015584879aa41e231b0663092287404ec378"
+          },
+          {
+            "kind": "git",
+            "sha": "55174696e97a4c8b424c7f57d7da7a61e4b157fd",
+            "path": "packages/core/src/components/field.ts",
+            "blob": "be969ddcf7ea22e776673100ca3174a394be8a17",
+            "first": 94,
+            "last": 95,
+            "receipt": "R2f0a47a589496aff154a9eaf",
+            "inChangedLines": true,
+            "unchangedFile": false,
+            "textSha256": "8bae5d427f10b780ac0a968f3f93aad535df4c5f1e171267974aa7f3dbe0688c"
+          },
+          {
+            "kind": "git",
+            "sha": "55174696e97a4c8b424c7f57d7da7a61e4b157fd",
+            "path": "packages/core/src/components/field.ts",
+            "blob": "be969ddcf7ea22e776673100ca3174a394be8a17",
+            "first": 147,
+            "last": 153,
+            "receipt": "R2f0a47a589496aff154a9eaf",
+            "inChangedLines": true,
+            "unchangedFile": false,
+            "textSha256": "9f747e720bb306b342e9d3285a4adac8d120d2016293fd8105a6539c80192ade"
+          },
+          {
+            "kind": "git",
+            "sha": "55174696e97a4c8b424c7f57d7da7a61e4b157fd",
+            "path": "vitest.config.ts",
+            "blob": "2230eaa266f78975388e86fb5f26c8c7fa5c60ba",
+            "first": 10,
+            "last": 11,
+            "receipt": "Rb2afed558c3d822aa3c17b26",
+            "inChangedLines": true,
+            "unchangedFile": false,
+            "textSha256": "6f1ab8be48831255389c7ef73d850affae2f81c2e65059fc72b08a2a44a8ada6"
+          }
+        ]
+      },
+      "calls": 6,
+      "wallMs": 70762,
+      "usage": {
+        "inputTokens": 81635,
+        "cachedInputTokens": 62848,
+        "outputTokens": 1333,
+        "known": true
+      },
+      "sessionSha256": "992293a7bd0d061032957d40e7d91667265842874014a5ded574257d568efacb",
+      "rolloutSha256": "a835d0aa836dccda2737e273259de213d01067830ebeaa1f4fc3cb898ec4f1ab",
+      "terminalSha256": "483d35fa9db8ebe4a3aaa0cf3082ece869b3b05b8170e96026c91ce10bb689c9"
+    },
+    {
+      "finding": "4473894599",
+      "repository": "vypdev/ha-ui",
+      "head": "55174696e97a4c8b424c7f57d7da7a61e4b157fd",
+      "anchor": {
+        "path": "packages/core/src/components/navigation-overflow.ts",
+        "line": 107,
+        "end": 107
+      },
+      "liveFailure": null,
+      "recovery": "live-verdict",
+      "failure": null,
+      "answer": {
+        "label": "refuted",
+        "reason": "Releasing a drag outside the original target can leave #suppressClick set: mouseup calls #finishDrag(true). However, the next ordinary pointer click is preceded by mousedown on the tab, which bubbles to its enclosing .bar and invokes #down. That handler calls #finishDrag() before any guard, clearing #suppressClick. Without another drag movement, the subsequent mouseup preserves the now-false flag, so consumeClick returns false and the enabled, current tab's activation dispatches ha-selection-request. Both navigation links and panel tabs are inside .bar. The stale flag therefore does not swallow the later ordinary click described in the hypothesis; a synthetic click without mousedown would be a different sequence.",
+        "missing": null,
+        "anchor": {
+          "path": "packages/core/src/components/navigation-overflow.ts",
+          "line": 107,
+          "end": 107
+        },
+        "citations": [
+          {
+            "kind": "git",
+            "sha": "55174696e97a4c8b424c7f57d7da7a61e4b157fd",
+            "path": "packages/core/src/components/navigation-overflow.ts",
+            "blob": "862a43bba1e5ff4ce69cc1367ce0ed1c0439482a",
+            "first": 89,
+            "last": 111,
+            "receipt": "R1074bb99d4bded7ce6d38fee",
+            "inChangedLines": true,
+            "unchangedFile": false,
+            "textSha256": "c66e25543221f2eb3238c329f4a12fcfa53ddb70583d2e6934efa1c106b49638"
+          },
+          {
+            "kind": "git",
+            "sha": "55174696e97a4c8b424c7f57d7da7a61e4b157fd",
+            "path": "packages/core/src/components/navigation-overflow.ts",
+            "blob": "862a43bba1e5ff4ce69cc1367ce0ed1c0439482a",
+            "first": 24,
+            "last": 30,
+            "receipt": "R1074bb99d4bded7ce6d38fee",
+            "inChangedLines": true,
+            "unchangedFile": false,
+            "textSha256": "7ae44d6277d826ffe8b82f6c4261206dfe49969c9376ab299cd3f8d6686a49de"
+          },
+          {
+            "kind": "git",
+            "sha": "55174696e97a4c8b424c7f57d7da7a61e4b157fd",
+            "path": "packages/core/src/components/tabs.ts",
+            "blob": "704eef979858dae294e403c551816c955d721087",
+            "first": 69,
+            "last": 77,
+            "receipt": "R76bdb7b892c533291793883f",
+            "inChangedLines": true,
+            "unchangedFile": false,
+            "textSha256": "41127748eb7ff8cf050846ed0e739ba87eda4a979e45a5857629ad11e982dfec"
+          },
+          {
+            "kind": "git",
+            "sha": "55174696e97a4c8b424c7f57d7da7a61e4b157fd",
+            "path": "packages/core/src/components/tabs.ts",
+            "blob": "704eef979858dae294e403c551816c955d721087",
+            "first": 106,
+            "last": 123,
+            "receipt": "R76bdb7b892c533291793883f",
+            "inChangedLines": true,
+            "unchangedFile": false,
+            "textSha256": "3a4ecb0cb80de73d1344b183a8b7ae5203f75a0793f344c922410db92f1ff924"
+          }
+        ]
+      },
+      "calls": 4,
+      "wallMs": 34555,
+      "usage": {
+        "inputTokens": 44725,
+        "cachedInputTokens": 29056,
+        "outputTokens": 769,
+        "known": true
+      },
+      "sessionSha256": "0ffcf1dac79608586ac53d4463256a71ee3b2a6ddc5a9c4bd0a7c9f630064706",
+      "rolloutSha256": "3f3373d9e9606d1327e0849805c3d486fc3e695b6247912c5242e87468427a26",
+      "terminalSha256": "ccda41d7c5fee7d78871eedcc2088cd07072507bfc8f5874debb9e7b43829508"
+    }
+  ]
+}
