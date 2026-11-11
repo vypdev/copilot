@@ -1,0 +1,72 @@
+{
+  "node": "v24.20.0",
+  "lit": "3.3.3",
+  "playwright": "1.64.1",
+  "esbuild": "0.28.2",
+  "chromium": "156.0.8078.4",
+  "cdp": {
+    "protocolVersion": "1.3",
+    "product": "HeadlessChrome/156.0.8078.4",
+    "revision": "@f842f52ef39fd97b449eb27cff414bf05a98ddce",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36",
+    "jsVersion": "15.6.75"
+  },
+  "lockSha256": "d78383ae9e844f7eb2f61295eac7216688a5ad6f07db045c00491a63f464506a",
+  "bundleSha256": "b4e5aae9acf7024cf8ef3d6aa50a9a99316e67255de03838cdfd0f91c03e0969",
+  "observations": [
+    {
+      "action": "reject",
+      "kind": "ascii-space",
+      "disabled": true,
+      "notice": null,
+      "noticeVisible": false,
+      "intents": 0,
+      "requestsToMockServer": 0
+    },
+    {
+      "action": "reject",
+      "kind": "nel-U+0085",
+      "disabled": false,
+      "notice": "invalid_input",
+      "noticeVisible": true,
+      "intents": 1,
+      "requestsToMockServer": 0
+    },
+    {
+      "action": "reject",
+      "kind": "nonempty",
+      "disabled": false,
+      "notice": null,
+      "noticeVisible": false,
+      "intents": 1,
+      "requestsToMockServer": 1
+    },
+    {
+      "action": "reopen",
+      "kind": "ascii-space",
+      "disabled": true,
+      "notice": null,
+      "noticeVisible": false,
+      "intents": 0,
+      "requestsToMockServer": 0
+    },
+    {
+      "action": "reopen",
+      "kind": "nel-U+0085",
+      "disabled": false,
+      "notice": "invalid_input",
+      "noticeVisible": true,
+      "intents": 1,
+      "requestsToMockServer": 0
+    },
+    {
+      "action": "reopen",
+      "kind": "nonempty",
+      "disabled": false,
+      "notice": null,
+      "noticeVisible": false,
+      "intents": 1,
+      "requestsToMockServer": 1
+    }
+  ]
+}

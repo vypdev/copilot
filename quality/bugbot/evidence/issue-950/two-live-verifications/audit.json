@@ -1,0 +1,204 @@
+{
+  "ledgerSha256": "6d6eb03278913ea12d10ec19fe056b483d2ab71a29167f6ebb4860aec25e9143",
+  "inputsSha256": "8b694d9c5cc8403575b9c56c66036d4f6ee07999168c778db4c53b8035b70614",
+  "independentSessions": 2,
+  "writeAttempts": 0,
+  "results": [
+    {
+      "finding": "4443394859",
+      "head": "e129e76e25deff7314efe3b72996d295cf73f7f3",
+      "verdict": "refuted",
+      "independentAgreement": true,
+      "live": true,
+      "wallMs": 72062,
+      "turns": 8,
+      "gitCitations": 6,
+      "officialCitations": 1,
+      "usageScope": "session-cumulative",
+      "usage": {
+        "input_tokens": 179392,
+        "cached_input_tokens": 145024,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 1765,
+        "reasoning_output_tokens": 11
+      },
+      "citations": [
+        {
+          "receipt": "R4bc1372c8a35e2f12245e26f",
+          "kind": "git",
+          "locator": "backend/src/domus/infrastructure/sqlite_task_schema.py",
+          "first": 3,
+          "last": 5,
+          "textSha256": "056e17bc198b10b9c06562d2245d054281a94249ce30b6683f8738c139ea2ea9"
+        },
+        {
+          "receipt": "Rbf6532140f08dc4ccdf77014",
+          "kind": "git",
+          "locator": "backend/src/domus/infrastructure/sqlite.py",
+          "first": 92,
+          "last": 103,
+          "textSha256": "20e9cf1f5b94ded4fc7fe7f5187f1d246374ea4e14be41f0d2e8a81df8b20b95"
+        },
+        {
+          "receipt": "Rdbfd2d2f6db4e7b66c0a7c95",
+          "kind": "git",
+          "locator": "backend/src/domus/infrastructure/sqlite.py",
+          "first": 361,
+          "last": 390,
+          "textSha256": "3cf34246997f30d8b16a468faa79bb55f662018f6dd3320926bba4e450d623c9"
+        },
+        {
+          "receipt": "R53c11c6e27ef3b2cd12a26ae",
+          "kind": "git",
+          "locator": "tests/fixtures/sqlite/v8.sql",
+          "first": 61,
+          "last": 61,
+          "textSha256": "dc49b8ee05f08edd3ad8804cfa8f14bd93567a8fa59ebc26ccc39d45c1aa3e7a"
+        },
+        {
+          "receipt": "Rb6d44e25bb967ffdf10d7adf",
+          "kind": "git",
+          "locator": "backend/src/domus/infrastructure/sqlite_identity.py",
+          "first": 89,
+          "last": 99,
+          "textSha256": "fc859c7e62b6d0d5bdd7e373aa113ca8a614062f3ced258fc60092f56e54ad55"
+        },
+        {
+          "receipt": "Rd2c7722ac3dad090a506c86c",
+          "kind": "git",
+          "locator": "backend/src/domus/infrastructure/sqlite_member_profile_schema.py",
+          "first": 5,
+          "last": 20,
+          "textSha256": "93a57ba30c513b9498d6bfcf98a4a4f7a580eaa3a7503b0b1c70a1736913df86"
+        },
+        {
+          "receipt": "Ra6bc0117369ff107e1bcc31a",
+          "kind": "official",
+          "locator": "https://github.com/sqlite/sqlite/blob/92a6c5c3636faa021ecc3be5403a00f50f65eda7/src/fkey.c",
+          "first": 229,
+          "last": 233,
+          "textSha256": "6aa5f413ecc113e233e4d22d56ccc7dd3caecea4601932702e041046825c1b75"
+        }
+      ],
+      "writeAttempts": 0
+    },
+    {
+      "finding": "4497291296",
+      "head": "57a8b4c6a9f52afb1ffc8e38275bcfd13575a3ae",
+      "verdict": "confirmed",
+      "independentAgreement": true,
+      "live": true,
+      "wallMs": 69600,
+      "turns": 8,
+      "gitCitations": 12,
+      "officialCitations": 0,
+      "usageScope": "session-cumulative",
+      "usage": {
+        "input_tokens": 203986,
+        "cached_input_tokens": 165376,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 1737,
+        "reasoning_output_tokens": 19
+      },
+      "citations": [
+        {
+          "receipt": "R9a8f1bf74b4462c48980d109",
+          "kind": "git",
+          "locator": "frontend/src/presentation/domus-tasks.ts",
+          "first": 149,
+          "last": 156,
+          "textSha256": "90d79588981737c0c8d3e31797e1fb7f7a9e2955eac589e3ed9e1ad8e5ed5314"
+        },
+        {
+          "receipt": "R298d3f53d61be5daf3eea8d9",
+          "kind": "git",
+          "locator": "backend/src/domus/application/task_queries.py",
+          "first": 611,
+          "last": 619,
+          "textSha256": "a1d07c7a80e4f3cb84c30e8472769548399c83b37bf1dc3c8c97fd78b1573660"
+        },
+        {
+          "receipt": "Rb69e699294c450dbdc48cd9a",
+          "kind": "git",
+          "locator": "frontend/src/composition/entry-page.ts",
+          "first": 82,
+          "last": 86,
+          "textSha256": "df45518962eef9428ca4ce7e3b9fcbaeb89ef8c457018a0ed5b0187009321afe"
+        },
+        {
+          "receipt": "R86878699653a4b2e11e591ba",
+          "kind": "git",
+          "locator": "frontend/src/composition/entry-page.ts",
+          "first": 206,
+          "last": 220,
+          "textSha256": "44ae49d9a7fa5ee509d28cfd5d4ee8c757579421977eef13f7f0c67d84c9eaaa"
+        },
+        {
+          "receipt": "R06df2b742bf766b1686a439c",
+          "kind": "git",
+          "locator": "frontend/src/domain/tasks.ts",
+          "first": 14,
+          "last": 19,
+          "textSha256": "2a6797fc21d0adc1dc445ff59a750ae4883816e92f39645d519c73a8133e6355"
+        },
+        {
+          "receipt": "R06df2b742bf766b1686a439c",
+          "kind": "git",
+          "locator": "frontend/src/domain/tasks.ts",
+          "first": 85,
+          "last": 96,
+          "textSha256": "2b8778ab7993a4b9a546359a7d7016e4228c63649a7cc6106ed1bf6c1fccd9c2"
+        },
+        {
+          "receipt": "R06755f66a48d9abcc5ea494c",
+          "kind": "git",
+          "locator": "frontend/src/application/task-controller.ts",
+          "first": 129,
+          "last": 133,
+          "textSha256": "9976a3bb6d3acfe5f8ae66f17e56ce25de420f74b9c32f4994e471a4ba2e010d"
+        },
+        {
+          "receipt": "R06755f66a48d9abcc5ea494c",
+          "kind": "git",
+          "locator": "frontend/src/application/task-controller.ts",
+          "first": 174,
+          "last": 183,
+          "textSha256": "0ad4d4aa31e6652a6538cd15e0bc492112fb37625a6a21e1424505378de7b7ed"
+        },
+        {
+          "receipt": "Raa36f6190df1c49d159b5917",
+          "kind": "git",
+          "locator": "frontend/src/application/household-controller.ts",
+          "first": 156,
+          "last": 167,
+          "textSha256": "afa3912e5eb22afce14338a261c769a2dfb225c1439fc01e565afc6d47bc6b17"
+        },
+        {
+          "receipt": "R4db75ad89064c3835c5f309c",
+          "kind": "git",
+          "locator": "frontend/src/composition/entry-runtime.ts",
+          "first": 97,
+          "last": 103,
+          "textSha256": "458479bb97810d5c80ba95c53eae10a01f05feb5e0f1690311889169c5ba910a"
+        },
+        {
+          "receipt": "R9a8f1bf74b4462c48980d109",
+          "kind": "git",
+          "locator": "frontend/src/presentation/domus-tasks.ts",
+          "first": 177,
+          "last": 183,
+          "textSha256": "4bf888feac85128c9c6afdfba4cd2c4b10987e769dd89bd926e1a733899cb9e8"
+        },
+        {
+          "receipt": "R9b576595b1016cd96ad08cfa",
+          "kind": "git",
+          "locator": "frontend/src/presentation/task-messages.ts",
+          "first": 32,
+          "last": 32,
+          "textSha256": "d0c43cfe8d22d5aa848931240085529a0f5b6034a0516c5d3a06061d809445a3"
+        }
+      ],
+      "writeAttempts": 0
+    }
+  ]
+}

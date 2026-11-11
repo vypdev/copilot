@@ -1,0 +1,40 @@
+{
+  "frozenAt": "2026-11-11T13:30:57.368+00:00",
+  "sqlite": {
+    "expected": "refuted",
+    "pythonLocal": "3.14.6",
+    "sqliteLocal": "3.53.3",
+    "localTestsPassed": 74,
+    "localFixture": "tests/backend/test_sqlite_member_profiles.py",
+    "localCommand": "uv run --frozen --offline pytest tests/backend/test_sqlite_member_profiles.py -v",
+    "localRawLogSha256": "f6ec653dbec3c41e769af6312e1eb3dc86e50dbd3a43a86638defba81ed5eccc",
+    "historicalCI": {
+      "job": "https://github.com/vypdev/domus/actions/runs/41459181271/job/125323533010",
+      "python": "3.14.6",
+      "sqliteLinked": null,
+      "checkout": {
+        "parents": [
+          "4b71969d3b3f6df5f28d617ab0da4e86c9be5884",
+          "e129e76e25deff7314efe3b72996d295cf73f7f3"
+        ],
+        "sha": "de95f045a47badf9d9fe2b808bf5f7b15b4fd0b1",
+        "tree": "c71daa5ff4f59ddfee9ee2356b6a04dc1649cb9e"
+      },
+      "rawLogSha256": "d8507c4b37ce2d01a567a0f889e47206ee12a9838651675e696b6dd33a0331c9"
+    },
+    "releaseSource": "https://github.com/sqlite/sqlite/blob/92a6c5c3636faa021ecc3be5403a00f50f65eda7/src/fkey.c",
+    "releaseSourceSha256": "e63a0616dad4b8a387e90dd3a896acd77d590d8aadafade4c581ff3a6d74bce3"
+  },
+  "functional": {
+    "expected": "confirmed",
+    "control": "functional-control.json",
+    "controlSha256": "18a1a9f072a3bf3ba65585a36b234abb9cf41a9cc822ee22c0f9c6477df13595",
+    "browser": "156.0.8078.4",
+    "v8": "15.6.75",
+    "v8Commit": "b976f35da8356fcf4e5e176d1d810ba6a6f05718",
+    "v8TrimSource": "https://github.com/v8/v8/blob/b976f35da8356fcf4e5e176d1d810ba6a6f05718/src/builtins/string-trim.tq#L16-L40",
+    "v8TrimSha256": "a7d1ee4558396eba696a55b7f9ea1b52246b50f8065f6a28a17fd3340bce3841",
+    "ecmascript": "https://tc39.es/ecma262/2026/#sec-string.prototype.trim",
+    "unicode": "https://www.unicode.org/Public/17.0.0/ucd/PropList.txt"
+  }
+}
