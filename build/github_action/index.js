@@ -100025,6 +100025,21 @@ function createBugbotCompositionRoot(binding) {
 
 /***/ }),
 
+/***/ 71872:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.composeBugbotReview = composeBugbotReview;
+const detect_potential_problems_use_case_1 = __nccwpck_require__(6287);
+function composeBugbotReview({ findings, scm, telemetry, catalog, shadowVerification }) {
+    return new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, scm, telemetry, catalog, shadowVerification);
+}
+
+
+/***/ }),
+
 /***/ 19937:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -101442,11 +101457,11 @@ const issue_metadata_repository_1 = __nccwpck_require__(11333);
 const issue_title_repository_1 = __nccwpck_require__(10121);
 const pull_request_lifecycle_repository_1 = __nccwpck_require__(24189);
 const pull_request_use_case_composition_1 = __nccwpck_require__(24);
+const bugbot_review_composition_1 = __nccwpck_require__(71872);
 const pull_request_reviewer_composition_root_1 = __nccwpck_require__(72651);
 const organization_members_composition_root_1 = __nccwpck_require__(50603);
 const project_board_composition_root_1 = __nccwpck_require__(37194);
 const timer_delay_adapter_1 = __nccwpck_require__(71942);
-const detect_potential_problems_use_case_1 = __nccwpck_require__(6287);
 const resolve_message_catalog_use_case_1 = __nccwpck_require__(99961);
 const bugbot_composition_root_1 = __nccwpck_require__(67395);
 const actor_authorization_composition_root_1 = __nccwpck_require__(233);
@@ -101491,7 +101506,10 @@ function createPullRequestUseCaseCompositionRoot(binding) {
             comments: (0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueContent, binding),
         }),
     };
-    return (0, pull_request_use_case_composition_1.composePullRequestUseCase)(new update_pull_request_description_use_case_1.UpdatePullRequestDescriptionUseCase((0, lifecycle_capability_port_binding_1.bindPullRequestDescription)(pullRequestLifecycle, binding, new pull_request_changes_repository_1.PullRequestChangesRepository((0, github_pull_request_client_factory_1.createPullRequestChangesClient)())), (0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueContent, binding), (0, shared_capability_port_binding_1.bindOrganizationMembers)(organizationMembers, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), workflowSteps, new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase((0, agent_capability_composition_root_1.createFindingsQueryPort)(), bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase((0, agent_capability_composition_root_1.createLanguageQueryPort)())), (0, lifecycle_capability_port_binding_1.bindActorAuthorization)((0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), binding));
+    return (0, pull_request_use_case_composition_1.composePullRequestUseCase)(new update_pull_request_description_use_case_1.UpdatePullRequestDescriptionUseCase((0, lifecycle_capability_port_binding_1.bindPullRequestDescription)(pullRequestLifecycle, binding, new pull_request_changes_repository_1.PullRequestChangesRepository((0, github_pull_request_client_factory_1.createPullRequestChangesClient)())), (0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueContent, binding), (0, shared_capability_port_binding_1.bindOrganizationMembers)(organizationMembers, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), workflowSteps, (0, bugbot_review_composition_1.composeBugbotReview)({
+        findings: (0, agent_capability_composition_root_1.createFindingsQueryPort)(), scm: bugbot.scm, telemetry: bugbot.telemetry,
+        catalog: new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase((0, agent_capability_composition_root_1.createLanguageQueryPort)()),
+    }), (0, lifecycle_capability_port_binding_1.bindActorAuthorization)((0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), binding));
 }
 
 

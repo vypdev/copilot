@@ -2289,9 +2289,12 @@
         "src/application/usecases/steps/commit/bugbot/bugbot_autofix_use_case.ts"
       ],
       "code": [
-        "quality/bugbot/evidence/issue-950/shadow-verification/broker.cjs",
-        "quality/bugbot/evidence/issue-950/shadow-verification/run.cjs",
-        "quality/bugbot/evidence/issue-950/shadow-verification/schema.cjs",
+        "src/infrastructure/bugbot/shadow_verification_adapter.ts",
+        "src/infrastructure/bugbot/shadow/broker.cjs",
+        "src/infrastructure/bugbot/shadow/run.cjs",
+        "src/infrastructure/bugbot/shadow/schema.cjs",
+        "src/infrastructure/bugbot/shadow/session.cjs",
+        "src/infrastructure/composition/bugbot_review_composition.ts",
         "src/application/ports/bugbot_context_ports.ts",
         "src/data/repository/pull_request/pull_request_changes_repository.ts",
         "src/domain/bugbot/context.ts",
@@ -2510,7 +2513,8 @@
         "src/application/usecases/steps/commit/bugbot/__tests__/bugbot_partition_query_diagnostics.test.ts",
         "src/application/policies/__tests__/bugbot_freshness_diagnostics.test.ts",
         "quality/bugbot/evidence/issue-950/reproduce-controls.sh",
-        "quality/bugbot/evidence/issue-950/shadow-verification/verification.test.cjs"
+        "quality/bugbot/evidence/issue-950/shadow-verification/verification.test.cjs",
+        "src/infrastructure/bugbot/__tests__/shadow_verification_adapter.test.ts"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",

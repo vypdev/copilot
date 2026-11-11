@@ -1,0 +1,33 @@
+{
+  "selection": "Two archived real Domus PRs with independent SQLite schema and Playwright matcher controls. The ordinary detector decides the prepared findings.",
+  "subjects": [
+    {
+      "repository": "vypdev/domus",
+      "head": "e129e76e25deff7314efe3b72996d295cf73f7f3",
+      "base": "4b71969d3b3f6df5f28d617ab0da4e86c9be5884",
+      "tree": "c71daa5ff4f59ddfee9ee2356b6a04dc1649cb9e",
+      "baseTree": "8953c48ef7f8501b88244ab513c9f3e80fcac7b9",
+      "number": 24,
+      "baseRef": "develop",
+      "headRef": "shadow-pinned-24",
+      "model": "gpt-6-luna"
+    },
+    {
+      "repository": "vypdev/domus",
+      "head": "b9a2dfc8179128fb493ab49666c24967d308c979",
+      "base": "8b1cbc110c389b9cdb6ecd11317c95abf2c4b0a9",
+      "tree": "220df819e1081b563178209afb595f03561571bd",
+      "baseTree": "9386f2ea5249b5ea0c0bb4e83f814f503012be47",
+      "number": 28,
+      "baseRef": "develop",
+      "headRef": "shadow-pinned-28",
+      "model": "gpt-6.1-sol"
+    }
+  ],
+  "publication": "dry-run",
+  "workflowInputs": {
+    "REVIEWER_EFFORT": "xhigh",
+    "BUGBOT_EFFORT": "smart"
+  },
+  "scope": "Repository verifier adapter, shared ordinary Bugbot composition, pinned Git source and fail-on-call mutation ports."
+}

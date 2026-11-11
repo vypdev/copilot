@@ -3148,11 +3148,17 @@ from verdicts. Token use is optional telemetry.
 The integrated pilot invokes the normal detector and application use case
 with pinned SCM reads and fail-on-call write ports. Dry-run records what
 Bugbot would publish and captures the verification result in a separate
-payload. A simulated native publication control compares the resulting
-review drafts with the baseline even when verification fails. The
-production composition leaves the shadow port disabled. Shadow observations
+payload. The shared Bugbot composition accepts an explicitly supplied verifier
+port. Its repository adapter receives a trusted mapping from the prepared
+candidate to a Git object store and optional authenticated official sources.
+The verifier has read-only tools and receives zero publication ports. A
+simulated native publication control compares the resulting review drafts
+with the baseline even when verification fails. The installed Action omits
+the verifier binding. Shadow observations
 carry no approval authority. See the
 [real-PR integration report](../quality/bugbot/evidence/issue-950/normal-flow-shadow/results.md).
+The [repository adapter pilot at xhigh](../quality/bugbot/evidence/issue-950/integrated-shadow-xhigh/results.md)
+records the shared composition, actual Codex invocations and zero attempted PR writes.
 
 | Case | Acceptance evidence |
 |---|---|
@@ -3160,6 +3166,7 @@ carry no approval authority. See the
 | ev950-shadow-C02 | The ordinary resolver's default, Luna, Sol and another compatible model pass the exact effective configuration to both stages. |
 | ev950-shadow-C03 | A verifier error or reported model substitution produces one technical failure, preserves the same native review drafts and never triggers a fallback. |
 | ev950-shadow-C04 | A real dry-run executes the usual detector on pinned PR revisions for Luna and Sol, checks actual prepared findings, and records zero attempted PR writes. |
+| ev950-shadow-C22 | The repository adapter refuses an unbound source before opening a provider session. A provider safety stop records a technical failure, keeps already collected evidence in the pilot ledger, and ends the verifier attempt without context recovery. |
 
 ### Version proof, effective state, and premise citations in shadow
 
@@ -3868,6 +3875,9 @@ Pinned finding -> read and cite -> continue on a material evidence gap -> verdic
 A provider context failure changes the provider thread and preserves the
 application investigation. The verdict still requires a current source binding
 and valid evidence. Usage alone cannot change the review or approval surface.
+A provider safety stop ends the attempt and remains distinct from context
+exhaustion and an inconclusive verdict. The shadow decision still uses the
+original Bugbot findings.
 
 ### 20. References and decisions
 

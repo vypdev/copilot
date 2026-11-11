@@ -10,7 +10,20 @@ const { investigate } = require('./run.cjs');
 const { makeBroker } = require('./broker.cjs');
 const { hash } = require('../shadow-real-prs/session.cjs');
 const plan = require('./plan.json');
-const { isContextFailure } = require('./session.cjs');
+const { codexInvocation, isContextFailure, providerFailure } = require('./session.cjs');
+
+test('records only model, provider, effort and sandbox from Codex invocation flags', () => {
+    const shared = ['-c', 'model_provider="openai"', '--config', 'model_reasoning_effort="xhigh"',
+        '-c', 'unused="private-value"'];
+    for (const options of [
+        ['--model', 'gpt-6-luna', '--sandbox', 'read-only'],
+        ['-c', 'model="gpt-6-luna"', '-c', 'sandbox_mode="read-only"'],
+    ]) {
+        assert.deepEqual(codexInvocation(['exec', ...shared, ...options]), {
+            model: 'gpt-6-luna', modelProvider: 'openai', reasoningEffort: 'xhigh', sandbox: 'read-only',
+        });
+    }
+});
 
 const lab = fs.mkdtempSync(path.join(os.tmpdir(), 'bugbot-shadow-controls-'));
 after(() => fs.rmSync(lab, { recursive: true, force: true }));
@@ -197,6 +210,20 @@ test('distinguishes provider context rejection from provider usage or unrelated 
     assert(isContextFailure({ message: "Codex ran out of room in the model's context window." }));
     assert(!isContextFailure({ code: 'usageLimitExceeded', message: 'Daily account limit reached' }));
     assert(!isContextFailure({ message: 'The system cannot open a new context' }));
+});
+
+test('records a provider safety stop without trying context recovery or accepting a verdict', async () => {
+    assert.equal(providerFailure({ codex_error_info: 'cy' }), 'provider-safety-stop');
+    assert.equal(providerFailure({ code: 'content_filter' }), 'provider-safety-stop');
+    assert.equal(providerFailure({ message: 'This content was flagged for possible cybersecurity risk.' }), 'provider-safety-stop');
+    let calls = 0;
+    const result = await run(async () => ({ threadId: 'same-thread', fact: calls++ === 0 ? fact() : { failure: 'provider-safety-stop' },
+        response: calls === 1 ? inspect(query('read', 'settings.ts')) : undefined }));
+    assert.equal(calls, 2);
+    assert.equal(result.failure, 'provider-safety-stop');
+    assert.equal(result.answer, null);
+    assert.equal(result.actions[0].result.status, 'provided');
+    assert.deepEqual(result.writes, []);
 });
 
 test('asks the same session to record an inconclusive verdict when required official evidence is unavailable', async () => {

@@ -108,7 +108,13 @@ The same values are managed as Repository Variables by `copilot setup`. One revi
 The #950 evidence gate stays disabled until a verifier profile qualifies and
 a maintainer explicitly approves it. The first proposed profile uses immutable
 source, version-matched dependency evidence and matching CI. The shadow runner
-can follow successive read-only evidence requests. Token usage and cost are
+uses the same effective model and reasoning effort as Bugbot detection and
+can follow successive read-only evidence requests. `bugbot-effort` controls
+review depth. `reviewer-effort` controls provider reasoning effort for both
+sessions. The installed Action leaves the verifier unbound. In controlled
+dry-runs a provider safety stop is recorded as a technical failure and the
+simulated publication continues to reflect the ordinary Bugbot decision.
+Token usage and cost are
 optional telemetry and have no configuration field or effect on a verdict.
 Operational cancellation, read permissions and source integrity apply throughout
 the investigation.

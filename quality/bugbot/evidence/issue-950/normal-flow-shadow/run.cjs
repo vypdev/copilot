@@ -6,8 +6,8 @@ const { createHash } = require('node:crypto');
 const fs = require('node:fs');
 const { tmpdir } = require('node:os');
 const path = require('node:path');
-const { createShadowVerifier } = require('../shadow-verification/adapter.cjs');
-const frozen = require('./subjects.json');
+const official = require('../shadow-real-prs/official.json');
+const shadowPlan = require('../shadow-verification/plan.json');
 const root = path.resolve(__dirname, '../../../../..');
 const ts = require(path.join(root, 'node_modules/typescript'));
 require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
@@ -15,11 +15,16 @@ require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileMo
 }).outputText, filename);
 
 const load = file => require(path.join(root, 'src', file));
-const { DetectPotentialProblemsUseCase } = load('application/usecases/steps/commit/detect_potential_problems_use_case');
+const { composeBugbotReview } = load('infrastructure/composition/bugbot_review_composition');
+const { createPinnedBugbotShadowVerifier } = load('infrastructure/bugbot/shadow_verification_adapter');
+const { ask, codexInvocation } = load('infrastructure/bugbot/shadow/session.cjs');
 const { projectBugbotReviewOperationContext } = load('application/usecases/steps/commit/bugbot/bugbot_review_operation_context');
 const { buildAgentTasksFromValues } = load('actions/agent_input_builder');
 const { Ai } = load('data/model/ai');
 const { createFindingsQueryPort } = load('infrastructure/composition/agent_capability_composition_root');
+const { AgentCliClient } = load('data/repository/agent_cli_client');
+const { AgentExecutionPlanner } = load('infrastructure/agents/agent_execution_planner');
+const { resolveBugbotReviewEffort } = load('domain/bugbot/review_configuration');
 
 const hash = text => createHash('sha256').update(text).digest('hex');
 const git = (cwd, ...args) => execFileSync('git', ['-C', cwd, '-c', 'core.hooksPath=/dev/null', ...args],
@@ -60,7 +65,11 @@ function comparison(checkout, subject) {
     return { changes, filesWithFirstDiffLine, filesWithDiffLocations };
 }
 
-async function run(lab, number, destination) {
+async function run(lab, number, destination, manifestPath = path.join(__dirname, 'subjects.json')) {
+    const manifest = fs.readFileSync(manifestPath);
+    const frozen = JSON.parse(manifest);
+    const { workflowInputs } = frozen;
+    assert.equal(frozen.publication, 'dry-run');
     const subject = frozen.subjects.find(item => item.number === Number(number));
     assert(subject, 'unknown pinned PR');
     const [owner, name] = subject.repository.split('/');
@@ -75,6 +84,12 @@ async function run(lab, number, destination) {
     const stream = path.resolve(destination);
     fs.writeFileSync(stream, '', { flag: 'wx', mode: 0o600 });
     const log = event => fs.appendFileSync(stream, JSON.stringify({ at: new Date().toISOString(), ...event }) + '\n');
+    const cancellation = new AbortController();
+    const cancel = () => cancellation.abort();
+    process.once('SIGINT', cancel);
+    process.once('SIGTERM', cancel);
+    const signal = cancellation.signal;
+    const withCancellation = original => original ? AbortSignal.any([original, signal]) : signal;
     const writes = [];
     const guard = new Proxy({}, { get: (_target, method) => () => {
         writes.push(String(method));
@@ -109,9 +124,19 @@ async function run(lab, number, destination) {
             resolution: { issueComments: guard, pullRequestComments: guard },
             reconciliation: { snapshot: guard, presentation: { comments: guard, updatePullRequestReview: guard.updatePullRequestReview } },
         };
-        const tasks = buildAgentTasksFromValues({ 'reviewer-model': subject.model, 'reviewer-effort': frozen.effort });
-        const ai = new Ai('shadow-campaign', '', false, [], false, 'low', 20, [], tasks, undefined,
-            { publicationMode: frozen.publication });
+        if (workflowInputs) {
+            assert.equal(process.env.REVIEWER_EFFORT, workflowInputs.REVIEWER_EFFORT);
+            assert.equal(process.env.BUGBOT_EFFORT, workflowInputs.BUGBOT_EFFORT);
+            const runtime = execFileSync(process.env.PILOT_LOCAL_PYTHON, ['-c',
+                'import platform,sqlite3; print(platform.python_version(), sqlite3.sqlite_version)'], { encoding: 'utf8' }).trim();
+            assert.equal(runtime, shadowPlan.localRuntime.python + ' ' + shadowPlan.localRuntime.sqlite);
+            log({ event: 'local-runtime', runtime, scope: shadowPlan.localRuntime.scope });
+        }
+        const tasks = buildAgentTasksFromValues({ 'reviewer-model': subject.model,
+            'reviewer-effort': workflowInputs ? process.env.REVIEWER_EFFORT : frozen.effort });
+        const reviewEffort = workflowInputs ? process.env.BUGBOT_EFFORT : 'default';
+        const ai = new Ai('shadow-campaign', '', false, workflowInputs ? ['build/*', 'specs/CATALOG.md'] : [], false,
+            'low', 20, [], tasks, undefined, { publicationMode: frozen.publication, effort: reviewEffort });
         const operation = projectBugbotReviewOperationContext({
             ai, owner, repo: name, issueNumber: subject.number, isPullRequest: true, eventName: 'pull_request',
             tokenUser: 'copilot', locale: { issue: 'en-US', pullRequest: 'en-US' },
@@ -119,10 +144,37 @@ async function run(lab, number, destination) {
             commit: { branch: subject.headRef }, currentConfiguration: { parentBranch: subject.baseRef }, branches: {},
             inputs: { pull_request: { head: { sha: subject.head, repo: { owner: { login: owner } } } } },
         });
-        const standardDetector = createFindingsQueryPort();
-        const started = Date.now();
+        const selected = operation.analysis.agentConfiguration;
+        const planner = new AgentExecutionPlanner();
+        const attest = invocation => {
+            assert.equal(invocation.model, selected.model);
+            assert.equal(invocation.reasoningEffort, selected.effort);
+            assert.equal(invocation.modelProvider, selected.modelProvider);
+            assert.equal(invocation.sandbox, 'read-only');
+        };
+        const standardDetector = createFindingsQueryPort({ cli: new AgentCliClient({
+            prepare(request) {
+                const plan = planner.prepare(request);
+                const flags = codexInvocation(plan.argv);
+                attest(flags);
+                log({ event: 'detector-invocation', invocation: flags, capability: plan.capability, atMs: sinceStart() });
+                return plan;
+            },
+        }, { observe(observation) {
+            if (observation.state === 'failed') log({ event: 'detector-provider-failure', observation, atMs: sinceStart() });
+        } }) });
+        const started = performance.now();
+        const sinceStart = () => Math.round(performance.now() - started);
+        const reviewed = diff.changes.filter(change => !workflowInputs || change.filename !== 'specs/CATALOG.md'
+            && !change.filename.startsWith('build/'));
+        const effectiveDepth = resolveBugbotReviewEffort(reviewEffort, {
+            files: reviewed.length,
+            additions: reviewed.reduce((sum, change) => sum + change.additions, 0),
+            deletions: reviewed.reduce((sum, change) => sum + change.deletions, 0),
+            touchesSensitivePath: reviewed.some(change => /(^|\/)(auth|security|permissions?|credentials?|secrets?|payments?|migrations?)(\/|\.|$)/i.test(change.filename)),
+        });
         log({ event: 'plan', subject, files: diff.changes.length, comparisonSha256: hash(JSON.stringify(diff)),
-            configuration: operation.analysis.agentConfiguration, subjectsSha256: hash(fs.readFileSync(path.join(__dirname, 'subjects.json'))),
+            configuration: selected, workflowInputs, reviewEffort, effectiveDepth, subjectsSha256: hash(manifest),
             cli: execFileSync('codex', ['--version'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim(),
             implementation: git(root, 'rev-parse', 'HEAD').trim(), runnerSha256: hash(fs.readFileSync(__filename)) });
         let invocation = 0;
@@ -131,7 +183,7 @@ async function run(lab, number, destination) {
             const time = Date.now();
             log({ event: 'detector-start', turn, resolvedModel: request.configuration.model, promptSha256: hash(request.prompt) });
             try {
-                const answer = await standardDetector.query(request);
+                const answer = await standardDetector.query({ ...request, signal: withCancellation(request.signal) });
                 const findings = Array.isArray(answer?.findings) ? answer.findings.map(
                     ({ id, title, file, line, endLine }) => ({ id, title, file, line, endLine }),
                 ) : null;
@@ -145,12 +197,48 @@ async function run(lab, number, destination) {
                 throw error;
             }
         } };
-        const verifier = createShadowVerifier(lab, log);
-        const results = await new DetectPotentialProblemsUseCase(detector, scm, undefined, undefined, verifier).invoke(operation);
+        let active = 0, peak = 0, firstVerifier, lastVerifier;
+        const verifier = {
+            async verify(request) {
+                const { candidate, configuration } = request;
+                assert.deepEqual(configuration, selected);
+                const startedAt = sinceStart();
+                firstVerifier ??= startedAt;
+                active += 1;
+                peak = Math.max(peak, active);
+                log({ event: 'verifier-start', id: candidate.id, active, atMs: startedAt });
+                const adapter = createPinnedBugbotShadowVerifier({ log,
+                    resolveSource: input => input.repository.owner === owner && input.repository.name === name
+                        && input.headSha === subject.head && input.baseSha === subject.base
+                        ? { repo: source, officialDirectory: lab, catalog: official,
+                            ...(workflowInputs && { localRuntime: shadowPlan.localRuntime }) } : undefined,
+                    transport: turn => ask({ ...turn,
+                        onInvocation(flags) {
+                            attest(flags);
+                            log({ event: 'verifier-invocation', id: candidate.id, invocation: flags,
+                                continuation: Boolean(turn.threadId), atMs: sinceStart() });
+                        },
+                    }),
+                });
+                try {
+                    return await adapter.verify({ ...request, signal: withCancellation(request.signal) });
+                } finally {
+                    active -= 1;
+                    lastVerifier = sinceStart();
+                    log({ event: 'verifier-finish', id: candidate.id, active, atMs: lastVerifier,
+                        wallMs: lastVerifier - startedAt });
+                }
+            },
+        };
+        const results = await composeBugbotReview({ findings: detector, scm, shadowVerification: verifier }).invoke(operation);
+        const wallMs = sinceStart();
         log({ event: 'workflow-result', results, writes, checkoutUnchanged: git(checkout, 'status', '--porcelain') === '',
-            wallMs: Date.now() - started });
+            wallMs, verificationWallMs: firstVerifier === undefined ? 0 : lastVerifier - firstVerifier,
+            peakVerifierConcurrency: peak });
         assert.deepEqual(writes, []);
     } finally {
+        process.removeListener('SIGINT', cancel);
+        process.removeListener('SIGTERM', cancel);
         process.chdir(originalCwd);
         fs.rmSync(scratch, { recursive: true, force: true });
     }
