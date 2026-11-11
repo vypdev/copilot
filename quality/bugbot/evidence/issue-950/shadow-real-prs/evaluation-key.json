@@ -1,0 +1,44 @@
+{
+  "4443394859": {
+    "expected": "refuted",
+    "material": "A UNIQUE index covers the exact ordered parent pair and is installed before the schema using the foreign keys.",
+    "independent": "Pinned #859 fresh creation and schema9 migration with foreign-key enforcement, prior v2 expansion and exact-head consumer tests.",
+    "reference": "../expansion-859/protocol.md"
+  },
+  "4443394870": {
+    "expected": "confirmed",
+    "material": "The immutable object ID in the integration spec disagrees with the blob of the owner file at the specified base.",
+    "independent": "The preflight obtains the actual blob with git ls-tree and confirms its type with git cat-file.",
+    "reference": "controls.json"
+  },
+  "4452825495": {
+    "expected": "refuted",
+    "material": "Resolved Playwright 1.64.1 implements enabled:false as a disabled-state assertion for the cited catalog cases.",
+    "independent": "Lock-authenticated matcher executed under Chromium 156.0.8078.4, with enabled and disabled counterexamples. Exact-head frontend CI passed.",
+    "reference": "../v4/results.md#controls-and-trial-integrity"
+  },
+  "4500071414": {
+    "expected": "refuted",
+    "material": "The earlier source guard includes historical exceptions at/after start and stops the alleged materialization path.",
+    "independent": "Pinned exact-source SQLite restore and replacement test, with guard-removal positive control in v4.",
+    "reference": "../v4/results.md#controls-and-trial-integrity"
+  },
+  "4500071416": {
+    "expected": "confirmed",
+    "material": "The roadmap is contradicted by the reachable wired relative maintenance services.",
+    "independent": "The later correction updates the stated M2 status with byte-identical composition code. The preflight compares both Git blobs.",
+    "reference": "controls.json"
+  },
+  "4473894574": {
+    "expected": "refuted",
+    "material": "The 16-pixel control inset means a native pointer at (4,4) hits control padding and not the input.",
+    "independent": "Issue #891 records exact-head hit-target measurements in Chromium, Firefox and WebKit and passing hosted CI.",
+    "reference": "https://github.com/vypdev/copilot/issues/891"
+  },
+  "4473894599": {
+    "expected": "refuted",
+    "material": "The new mousedown reaches the viewport listener and clears suppression before the tab click handler attempts to consume it.",
+    "independent": "Pinned Chromium control records one fresh pointer selection on the original and zero on the clearing-removal mutant.",
+    "reference": "../reserved-navigation-diagnostic/browser-control.jsonl"
+  }
+}

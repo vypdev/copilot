@@ -1,0 +1,24 @@
+{
+  "publication": "dry-run",
+  "provider": "openai",
+  "model": "gpt-6.1-sol",
+  "effort": "low",
+  "cli": "codex-cli 0.167.0-alpha.3.2",
+  "maxTurns": 8,
+  "maxActions": 36,
+  "maxActionsPerTurn": 5,
+  "caseMs": 260000,
+  "turnMs": 46000,
+  "inputTokens": 200000,
+  "outputTokens": 10000,
+  "evidenceBytes": 75000,
+  "fragmentBytes": 18000,
+  "toolMs": 4000,
+  "concurrency": 3,
+  "retries": 0,
+  "localRuntime": {
+    "python": "3.14.6",
+    "sqlite": "3.53.3",
+    "scope": "local pinned-version probe; historical hosted linked SQLite version unmeasured"
+  }
+}

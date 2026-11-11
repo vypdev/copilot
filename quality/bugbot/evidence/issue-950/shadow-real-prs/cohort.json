@@ -1,0 +1,196 @@
+[
+  {
+    "repository": "vypdev/domus",
+    "pr": 24,
+    "head": "e129e76e25deff7314efe3b72996d295cf73f7f3",
+    "tree": "c71daa5ff4f59ddfee9ee2356b6a04dc1649cb9e",
+    "base": "4b71969d3b3f6df5f28d617ab0da4e86c9be5884",
+    "baseTree": "8953c48ef7f8501b88244ab513c9f3e80fcac7b9",
+    "review": 5737841763,
+    "producerUrl": "https://github.com/vypdev/domus/actions/runs/41459181117",
+    "producer": {
+      "id": 41459181117,
+      "sha": "e129e76e25deff7314efe3b72996d295cf73f7f3",
+      "status": "success",
+      "event": "pull_request",
+      "start": "2026-11-02T14:08:57Z",
+      "end": "2026-11-02T14:12:51Z",
+      "reviewSha256": "b09666f62ce716152bcdc7e3b2e57be5b386ff66129317b51bdfea2050b77ddd",
+      "reviewSubmittedAt": "2026-11-02T14:12:31Z"
+    },
+    "findings": [
+      {
+        "id": "4443394859",
+        "title": "Profile foreign keys reference a non-unique member key",
+        "detectorLocation": {
+          "path": "backend/src/domus/infrastructure/sqlite_member_profile_schema.py",
+          "line": 8,
+          "end": 8
+        },
+        "originalInlineLine": 8,
+        "hypothesis": "The profile tables’ composite foreign keys target a members key that lacks a matching unique constraint or index. Creating profile defaults for a new member and backfilling existing members during the schema9 upgrade fail with a foreign-key mismatch.",
+        "allowBase": false,
+        "commentSnapshotSha256": "f4df1a0d2db5982d26bf639ac01ce847788baebebcf2d889d0a3e1b7d6fa890f"
+      },
+      {
+        "id": "4443394870",
+        "title": "Incorrect Git blob ID prevents verifying the cited source",
+        "detectorLocation": {
+          "path": "specs/household-administration-integration.md",
+          "line": 42,
+          "end": 42
+        },
+        "originalInlineLine": 42,
+        "hypothesis": "The cited Git blob ID for the owning specification differs from the blob of that file at the stated base commit, preventing verification with the cited object ID.",
+        "allowBase": true,
+        "commentSnapshotSha256": "d98e4cd17fc1a4034efb173d147b71de2ae5ecf8975b7837db8a4dbb9dc2d3a8"
+      }
+    ]
+  },
+  {
+    "repository": "vypdev/domus",
+    "pr": 28,
+    "head": "b9a2dfc8179128fb493ab49666c24967d308c979",
+    "tree": "220df819e1081b563178209afb595f03561571bd",
+    "base": "8b1cbc110c389b9cdb6ecd11317c95abf2c4b0a9",
+    "baseTree": "9386f2ea5249b5ea0c0bb4e83f814f503012be47",
+    "review": 5749670508,
+    "producerUrl": "https://github.com/vypdev/domus/actions/runs/41610125444",
+    "producer": {
+      "id": 41610125444,
+      "sha": "b9a2dfc8179128fb493ab49666c24967d308c979",
+      "status": "success",
+      "event": "pull_request",
+      "start": "2026-11-03T09:19:46Z",
+      "end": "2026-11-03T09:22:53Z",
+      "reviewSha256": "8694431fc4bb987a8870077ca098b0c66bab29bd40d7c6b3ae7de6e675ddf080",
+      "reviewSubmittedAt": "2026-11-03T09:22:36Z"
+    },
+    "findings": [
+      {
+        "id": "4452825495",
+        "title": "Use a supported enabled-state assertion",
+        "detectorLocation": {
+          "path": "frontend/tests/e2e/catalog.spec.ts",
+          "line": 115,
+          "end": 115
+        },
+        "originalInlineLine": 115,
+        "hypothesis": "The configured Playwright matcher ignores the enabled option of toBeEnabled. The assertion consequently expects the Edit preferences button to be enabled even for the read-only and uncertain stories, so the catalog test fails.",
+        "allowBase": false,
+        "commentSnapshotSha256": "8afb2b103a3aadfc7d06a4fc8bbeb6d70239e099f503f179ffa223a76d057d27"
+      }
+    ]
+  },
+  {
+    "repository": "vypdev/domus",
+    "pr": 29,
+    "head": "3d890522003c2d2e7d03fa1f51b1bd84f0d0f10f",
+    "tree": "d670f43e401a26cf2c488f268e0d8b4910def2cd",
+    "base": "5b7bdcdee3a9e98d6669bfd34ce750ae30a8c775",
+    "baseTree": "1e37628eea52b2aba394095edf4c33edb16753ce",
+    "review": 5810052916,
+    "producerUrl": "https://github.com/vypdev/domus/runs/128299697947",
+    "producer": {
+      "id": 128299697947,
+      "sha": "3d890522003c2d2e7d03fa1f51b1bd84f0d0f10f",
+      "status": "neutral",
+      "completedAt": "2026-11-07T04:22:24Z",
+      "reviewSha256": "927ead793e8b872bd3a804b9a2c528875837bb50310d2912ef7964d8e8e25b5c",
+      "reviewSubmittedAt": "2026-11-07T04:21:52Z"
+    },
+    "findings": [
+      {
+        "id": "4500071414",
+        "title": "Replacement treats historically excluded slots as required work",
+        "detectorLocation": {
+          "path": "backend/src/domus/application/fixed_batch_review.py",
+          "line": 371,
+          "end": 372
+        },
+        "originalInlineLine": 372,
+        "hypothesis": "A replacement of a fixed schedule can reach reviewed materialization with a prospective slot excluded by a historical fixed exception. The slot returns no occurrence ID while expects_work is true, causing recurrence_review_stale and aborting replacement.",
+        "allowBase": false,
+        "commentSnapshotSha256": "b9109a7ad912c17c80a7cca50b76159ef886d32028e2ddc7a5f944eb316c50ad"
+      },
+      {
+        "id": "4500071416",
+        "title": "Roadmap incorrectly says the relative lifecycle is not wired",
+        "detectorLocation": {
+          "path": "docs/roadmap.md",
+          "line": 26,
+          "end": 26
+        },
+        "originalInlineLine": 26,
+        "hypothesis": "The roadmap still says the durable relative consumer is open and that the policy and initial service are unwired from maintenance even though they are wired in the reviewed project.",
+        "allowBase": false,
+        "commentSnapshotSha256": "6dd67cec92bb544c43a2579f53da630418e59828482e55a20a6b5a301447e290"
+      }
+    ]
+  },
+  {
+    "repository": "vypdev/ha-ui",
+    "pr": 10,
+    "head": "55174696e97a4c8b424c7f57d7da7a61e4b157fd",
+    "tree": "0d5efca673329a8a28d1b9e93a46b564edcbe285",
+    "base": "d885bccf2c3152c3151471d3efaabd901429d6bd",
+    "baseTree": "6c26d065f56bf69045813dd8bef3ace4530a57d4",
+    "review": 5776481669,
+    "producerUrl": "https://github.com/vypdev/ha-ui/actions/runs/41920064818",
+    "producer": {
+      "id": 41920064818,
+      "sha": "55174696e97a4c8b424c7f57d7da7a61e4b157fd",
+      "status": "success",
+      "event": "pull_request",
+      "start": "2026-11-04T21:52:11Z",
+      "end": "2026-11-04T22:01:30Z",
+      "reviewSha256": "48d6dadfa6cf39145bcde19e071c705378f00b7e333e145d9eba2e85e7a80127",
+      "reviewSubmittedAt": "2026-11-04T22:01:09Z"
+    },
+    "findings": [
+      {
+        "id": "4473894574",
+        "title": "The padding-click test expects the wrong event target",
+        "detectorLocation": {
+          "path": "tests/browser/field-presentation.test.ts",
+          "line": 38,
+          "end": 38
+        },
+        "originalInlineLine": 38,
+        "hypothesis": "A real click at (4,4) relative to the text field control hits the native input because it fills the painted control. The browser test’s assertion that the target is the control therefore fails.",
+        "allowBase": false,
+        "commentSnapshotSha256": "39ad7f3efacdaad7916f3932bf2ca9d01e45510da0735e5758ee4de8df017b3d"
+      },
+      {
+        "id": "4473894599",
+        "title": "A drag ending outside the bar suppresses a later navigation click",
+        "detectorLocation": {
+          "path": "packages/core/src/components/navigation-overflow.ts",
+          "line": 107,
+          "end": 107
+        },
+        "originalInlineLine": 111,
+        "hypothesis": "After a navigation drag ends outside the original click target, a later ordinary pointer click on a tab is swallowed, preventing that tab’s selection request.",
+        "allowBase": false,
+        "commentSnapshotSha256": "d9d59905fe305ffa84615f6bc847f42401f8eb60cf99a6f96ad1154b595b8b3e"
+      }
+    ]
+  },
+  {
+    "repository": "vypdev/domus",
+    "pr": 31,
+    "head": "82b7e0f72e57ff61b0331bfb1499ea1a66bc2b6f",
+    "tree": "1e37628eea52b2aba394095edf4c33edb16753ce",
+    "base": "0170085f283ea5775f41e77a2f8c8d9cc69f20b7",
+    "baseTree": "d4a660cd5b12e847d3f38072c26f038c0edc1935",
+    "review": null,
+    "producerUrl": "https://github.com/vypdev/domus/runs/128108103928",
+    "producer": {
+      "id": 128108103928,
+      "sha": "82b7e0f72e57ff61b0331bfb1499ea1a66bc2b6f",
+      "status": "no-findings",
+      "summarySha256": "157d2825238c91c9c99abb8243df7e20f44fea1952dc287fa3d15fa465c7632a"
+    },
+    "findings": []
+  }
+]

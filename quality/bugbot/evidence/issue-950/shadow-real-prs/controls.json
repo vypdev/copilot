@@ -1,0 +1,38 @@
+{
+  "initialPrompts": {
+    "4443394859": "ba90e17b026276eb6b243c2eb8e9d5c7dffc2b848e2ff3245e9f6a4784f27528",
+    "4443394870": "eb214fd21ab86421c5494caebd41336c6c214182fea627e4c66b0e2339f78b29",
+    "4452825495": "14c8e4ec928e4aef5f027cace7d94912100bf42c6bda980ca9e89bfbcc2bc247",
+    "4500071414": "487d193f7cb0d81691292463cf02c5a2bbc6fd4c4e34ede4fd8ccc8ffb165737",
+    "4500071416": "502ea9880f916121eafb56eae1dcaf4c53b7d5d86d9e1e84d76984a6a8a82a4a",
+    "4473894574": "930d806a3ca485d1cf8c04ad1dc577435a1684fc3a74addca840170222e5e751",
+    "4473894599": "ccb988e569184a4319ad1ad620cce5fe4db14ebba68b759ebe8ab175e671d25b"
+  },
+  "schemaSha256": "0eaf6d0272a04fcd00e4dc4776485c7df9bdd68bcf21eb12af376fe88a3d953e",
+  "runtime": "3.14.6 3.53.3",
+  "zeroModelCalls": true,
+  "simulatedWrites": 0,
+  "intentionalWriteTrapCanary": [
+    "publishReview"
+  ],
+  "toolControls": [
+    "whole-tree search",
+    "authorized base",
+    "denied base",
+    "protected paths",
+    "official version",
+    "foreign and out-of-range citations",
+    "same-thread turn continuation",
+    "fixed anchor"
+  ],
+  "independentGitControls": {
+    "docBlob": {
+      "cited": "f315a00d9efbb7da8a9ea44ab0da8a9df2d088e100a",
+      "actual": "f315a00d9efbb7da8a9ea44de8a9df2d088e100a"
+    },
+    "roadmap": {
+      "corrected": "e222212cda04890fb60831c9c3fad22ff04f8a2b",
+      "unchangedCompositionBlob": "d1e1bfe082045bdf4204109042606616964bc384"
+    }
+  }
+}
