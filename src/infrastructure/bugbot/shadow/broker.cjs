@@ -31,6 +31,13 @@ function intervals(patch) {
     });
 }
 
+class CitationRangeError extends Error {
+    constructor({ sha, path, url }) {
+        super('citation-outside-receipt-range');
+        this.source = { sha, path, url };
+    }
+}
+
 function makeBroker({ repo, officialDirectory, catalog = [], localRuntime }, subject, finding) {
     const binding = { finding: finding.id, repository: subject.repository, head: subject.head, tree: subject.tree, operation: randomUUID(), anchor: finding.detectorLocation };
     const receipts = new Map();
@@ -167,11 +174,13 @@ function makeBroker({ repo, officialDirectory, catalog = [], localRuntime }, sub
 
     function cite(citation) {
         const proof = receipts.get(citation.receipt);
-        if (!proof || citation.first < proof.first || citation.last > proof.last || citation.first > citation.last) {
+        if (!proof || !Number.isSafeInteger(citation.first) || !Number.isSafeInteger(citation.last)
+            || citation.first < 1 || citation.first > citation.last) {
             throw new Error('citation-unavailable-or-out-of-range');
         }
         const { lines, ...location } = proof;
         assert.equal('R' + hash(JSON.stringify({ binding, proof: locationWithText(location, lines) })).slice(0, 24), citation.receipt);
+        if (citation.first < proof.first || citation.last > proof.last) throw new CitationRangeError(proof);
         const selected = lines.slice(citation.first - proof.first, citation.last - proof.first + 1);
         if (proof.kind === 'git') {
             const value = blob(repo, proof.sha, proof.path);
@@ -208,4 +217,4 @@ function locationWithText(location, lines) {
     return proof;
 }
 
-module.exports = { makeBroker, officialPackage };
+module.exports = { CitationRangeError, makeBroker, officialPackage };

@@ -8,7 +8,7 @@ const { performance } = require('node:perf_hooks');
 const Ajv = require('ajv');
 const schema = require('./schema.cjs');
 const { git, hash } = require('./git.cjs');
-const { makeBroker, officialPackage } = require('./broker.cjs');
+const { CitationRangeError, makeBroker, officialPackage } = require('./broker.cjs');
 
 const instructions = fs.readFileSync(path.join(__dirname, 'prompt.txt'), 'utf8').trimEnd();
 const validate = new Ajv().compile(schema);
@@ -45,14 +45,15 @@ function validateOrder(order, claim, premise, validateCitation, broker, omission
         const proof = { route };
         for (const part of Object.keys(orderParts)) {
             if (!parts[part].length) omissions.push({ issue: 'order-evidence-missing', premise, route, part });
-            proof[part] = parts[part].map(({ excerpt, ...citation }) => {
-                const source = validateCitation(citation);
+            proof[part] = parts[part].flatMap(({ excerpt, ...citation }) => {
+                const source = validateCitation(citation, { premise, route, part });
+                if (!source) return [];
                 shas.add(source.sha);
                 if (source.kind !== 'git' || !text(excerpt, 300)
                     || !broker.containsExcerpt(citation, excerpt.trim())) {
                     omissions.push({ issue: 'order-excerpt-unsupported', premise, route, part });
                 }
-                return { excerpt, citation: source };
+                return [{ excerpt, citation: source }];
             });
         }
         if (shas.size > 1) omissions.push({ issue: 'order-mixed-revisions', premise, route });
@@ -68,14 +69,22 @@ function prepareVerdict(response, broker, delivered) {
 
     const omissions = [];
     const proofs = new Map();
-    function validateCitation(citation) {
+    function validateCitation(citation, location) {
         const { receipt, first, last } = citation;
         const key = JSON.stringify([receipt, first, last]);
         if (!proofs.has(key)) {
-            const proof = broker.cite(citation);
-            assert(delivered.get(receipt)?.some(range => range.first <= first && range.last >= last),
-                'citation-not-delivered');
-            proofs.set(key, proof);
+            const ranges = delivered.get(receipt);
+            try {
+                const proof = broker.cite(citation);
+                assert(ranges?.some(range => range.first <= first && range.last >= last), 'citation-not-delivered');
+                proofs.set(key, proof);
+            } catch (error) {
+                if (!(error instanceof CitationRangeError)) throw error;
+                assert(ranges?.length, 'citation-not-delivered');
+                omissions.push({ issue: error.message, ...location, ...error.source, receipt,
+                    requested: { first, last }, delivered: ranges.slice() });
+                return null;
+            }
         }
         return proofs.get(key);
     }
@@ -84,7 +93,7 @@ function prepareVerdict(response, broker, delivered) {
         assert(text(claim, 1000), 'invalid-premise');
         const premise = index + 1;
         if (!citations.length && !order.length) omissions.push({ issue: 'uncited-premise', premise });
-        const direct = citations.map(validateCitation);
+        const direct = citations.map(citation => validateCitation(citation, { premise })).filter(Boolean);
         assert.equal(new Set(direct).size, direct.length, 'duplicate-citation');
         const routes = validateOrder(order, claim, premise, validateCitation, broker, omissions);
         const ordered = routes.flatMap(route => Object.keys(orderParts)
@@ -218,6 +227,8 @@ async function investigate(source, subject, finding, cwd, transport, log, signal
                     observations = [];
                     prompt = 'The proposed verdict is still open. In this same investigation, read or recall the exact ranges ' +
                         'and submit a complete verdict. For an order issue, complete the named role with its exact code excerpt and receipt. ' +
+                        'For a citation outside its receipt range, cite a delivered range if it supports the premise, ' +
+                        'or request the required lines and cite the receipt returned for those lines. ' +
                         'For an official-evidence issue, establish the release and request its official source. ' +
                         'If material evidence is unavailable, finish inconclusive and state the specific gap.\n' +
                         JSON.stringify({ closureIssues });

@@ -70,7 +70,7 @@ export function buildBugbotReviewInput(
     const prompt = getBugbotPrompt({
         reviewContextProfile: assignment?.partition.framed ? 'framed-v1' : undefined,
         pythonSyntaxProfile: [...changes.map(change => change.filename), ...(assignment?.partition.files ?? [])].some(path => /\.py$/iu.test(path)) ? 'python' : '',
-        projectContextInstruction: 'Read code (respect ignores), README/docs and rules/conventions (.cursor/rules, CONTRIBUTING, guidelines).',
+        projectContextInstruction: 'Read pinned code and supplied official docs. Respect ignores. No MCP, browsing, or code execution.',
         owner: param.repository.owner,
         repo: param.repository.name,
         headBranch,

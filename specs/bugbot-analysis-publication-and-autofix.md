@@ -3197,7 +3197,12 @@ A finishing response maps each material premise to exact supporting ranges.
 The broker checks provenance, SHA, receipt bounds and prior delivery. The
 application keeps a draft with a missing premise or citation open and can
 return a closure issue to the same verifier session. The verifier can recover
-or narrow the range and finish again. If a material source remains unavailable,
+or narrow the range and finish again. When a citation extends beyond a valid,
+delivered receipt, the closure reports the affected premise or order role,
+source, requested lines and delivered ranges. The same session can cite a
+supported subrange or read the missing lines and cite the new receipt. The
+application validates the replacement against the same candidate and revision.
+If a material source remains unavailable,
 the verifier finishes `inconclusive` and names the evidence gap. A foreign or
 undelivered citation is an integrity failure. An independently reviewed replay
 checks semantic coverage, including whether a cited range contains the
@@ -3280,8 +3285,9 @@ or publication permission.
 | ev950-shadow-C19 | A foreign order citation fails the same provenance checks as any other citation. |
 | ev950-shadow-C20 | The pinned Domus #24 replay records Luna's verdict and independent checks of both schema entries, the loop, the unique index, and the applicable official rule. A migration-dependent verdict also needs proof of the routes it covers. The replay attempts zero PR writes. |
 | ev950-shadow-C21 | Advancing the test clock beyond the former provider-turn and investigation limits leaves the same session active and accepts a valid verdict. Explicit cancellation still stops it. |
+| ev950-shadow-C22 | A delivered receipt with an out-of-range premise or order citation keeps the same session open. The corrected range must pass provenance and delivery validation before a verdict is accepted. |
 
-Run the eight deterministic cases through
+Run the nine deterministic cases through
 [the shadow runner suite](../quality/bugbot/evidence/issue-950/shadow-verification/verification.test.cjs).
 Replays may pin an explicit provider reasoning effort and record it alongside
 the frozen candidate configuration. Actual reviews inherit the effective

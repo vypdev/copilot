@@ -20,7 +20,10 @@ receipt inventory survive. The new thread receives the pending evidence
 leads and can recall any saved receipt or an exact subrange. The app only
 accepts a citation after it has delivered the cited range. A finishing draft
 pairs each material premise with its exact ranges. The verifier can continue
-in the same session to complete an omitted citation. For an order-dependent
+in the same session to complete an omitted citation. If a citation extends
+outside a delivered receipt, the runner reports the requested and delivered
+lines. The verifier can cite a supported subrange or read the missing lines
+and cite the resulting receipt in the same session. For an order-dependent
 premise the closure checks exact excerpts for both operations and the control
 flow on every claimed route. A delivered runtime
 receipt can directly select its official release with the original scope.
@@ -39,9 +42,17 @@ GitHub writes or model calls. It verifies accepted verdicts with usage over
 the former input and output ceilings, with usage absent, and after resuming
 a session reporting cumulative totals. It also verifies a full file beyond
 the former fragment threshold, investigation beyond the old turn and read
-ceilings, context recovery, rejection of an undelivered or foreign receipt,
+ceilings, context recovery, same-session range repair, rejection of an
+undelivered or foreign receipt,
 pinned tree checks, continuation beyond the former time limits, cancellation
 and provider failure classification.
+
+The range repair also covers the recorded Domus #28 closure. At reviewed SHA
+`b9a2dfc8179128fb493ab49666c24967d308c979`, a draft cited lines 278–284 of
+`frontend/src/presentation/domus-administration.ts` with a receipt for lines
+280–298. A simulated replay on the same tree opened the draft for repair,
+read lines 278–284 and accepted the replacement receipt in the same session.
+The control kept the line 282 anchor and attempted zero writes.
 
 The [historical shadow pilot](../shadow-real-prs/results.md) and its frozen
 runner remain available for reproducing the original measurements. Use the

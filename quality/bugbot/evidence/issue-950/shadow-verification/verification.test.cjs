@@ -10,7 +10,7 @@ const { investigate } = require('./run.cjs');
 const { makeBroker } = require('./broker.cjs');
 const { hash } = require('../shadow-real-prs/session.cjs');
 const plan = require('./plan.json');
-const { codexInvocation, isContextFailure, providerFailure } = require('./session.cjs');
+const { ask, codexInvocation, isContextFailure, providerFailure } = require('./session.cjs');
 
 test('records only model, provider, effort and sandbox from Codex invocation flags', () => {
     const shared = ['-c', 'model_provider="openai"', '--config', 'model_reasoning_effort="xhigh"',
@@ -27,6 +27,40 @@ test('records only model, provider, effort and sandbox from Codex invocation fla
 
 const lab = fs.mkdtempSync(path.join(os.tmpdir(), 'bugbot-shadow-controls-'));
 after(() => fs.rmSync(lab, { recursive: true, force: true }));
+
+test('disables provider discovery and distinguishes the startup notice from an actual tool call', async () => {
+    const cwd = fs.mkdtempSync(path.join(lab, 'provider-'));
+    fs.writeFileSync(path.join(cwd, 'exec'), `
+        const assert = require('node:assert/strict');
+        const fs = require('node:fs');
+        const args = process.argv.slice(2);
+        for (const feature of ['code_mode_host', 'incremental_tools', 'deferred_tool_world_state', 'shell_tool']) {
+            const offset = args.indexOf(feature);
+            assert(offset > 0 && args[offset - 1] === '--disable');
+        }
+        assert(args.includes('mcp_servers={}'));
+        assert.match(fs.readFileSync('instructions.txt', 'utf8'), /return action=investigate with typed requests/);
+        const prompt = fs.readFileSync(0, 'utf8');
+        for (const event of [
+            { type: 'thread.started', thread_id: 'fixture' },
+            { type: 'item.completed', item: { type: 'error', message: 'Code Mode is unavailable because code-mode host is disabled. Code mode will fail closed; enable \`features.code_mode_host\` and install \`codex-code-mode-host\`.' } },
+            { type: 'turn.started' },
+            ...(prompt === 'Try a provider tool.' ? [{ type: 'item.started', item: { type: 'mcp_tool_call', tool: 'list_mcp_resources' } }] : []),
+            { type: 'item.completed', item: { type: 'agent_message', text: '{}' } },
+            { type: 'turn.completed' },
+        ]) process.stdout.write(JSON.stringify(event) + '\\n');
+    `);
+    const configuration = {
+        provider: 'codex', modelProvider: 'openai', model: 'gpt-6-luna', effort: 'xhigh', executable: process.execPath,
+    };
+    const read = await ask({ cwd, prompt: 'Inspect the pinned code.', schema: {}, configuration });
+    assert.equal(read.fact.failure, null);
+    assert.deepEqual(read.response, {});
+    const toolCall = await ask({ cwd, prompt: 'Try a provider tool.', schema: {}, configuration });
+    assert.equal(toolCall.fact.failure, 'unexpected-provider-tool');
+    assert.equal(toolCall.response, undefined);
+});
+
 const repo = path.join(lab, 'fixture.git');
 const git = (args, input) => execFileSync('git', ['-C', repo, ...args], {
     encoding: 'utf8', input, env: { PATH: process.env.PATH, TMPDIR: lab, GIT_AUTHOR_NAME: 'Fixture', GIT_AUTHOR_EMAIL: 'fixture@example.invalid',
@@ -104,7 +138,7 @@ test('delivers a full file and continues beyond the historical turn, action and 
     assert.deepEqual(result.writes, []);
 });
 
-async function contextScenario({ skipRecall = false, failRecovery = false } = {}) {
+async function contextScenario({ skipRecall = false, failRecovery = false, outsideRange = false } = {}) {
     let turn = 0, anchorSource, unreceived;
     const events = [];
     const result = await run(async request => {
@@ -127,7 +161,7 @@ async function contextScenario({ skipRecall = false, failRecovery = false } = {}
             assert.deepEqual(leads[0].receipts, [unreceived.receipt]);
             assert(!request.prompt.includes('x'.repeat(100)));
             if (failRecovery) return { fact: { failure: 'provider-context-window' } };
-            return { threadId: 'replacement', fact: fact(), response: skipRecall ? finish(cite(unreceived, 1, 1))
+            return { threadId: 'replacement', fact: fact(), response: skipRecall ? finish(cite(unreceived, 1, outsideRange ? 3 : 1))
                 : inspect(query('recall', unreceived.receipt, { first: 1, last: 1 })) };
         }
         assert.equal(request.threadId, 'replacement');
@@ -152,6 +186,13 @@ test('rejects a receipt that was offered only in the failed provider turn', asyn
     const result = await contextScenario({ skipRecall: true });
     assert.equal(result.failure, 'citation-not-delivered');
     assert.equal(result.answer, null);
+});
+
+test('does not offer range repair for a receipt that was never delivered', async () => {
+    const result = await contextScenario({ skipRecall: true, outsideRange: true });
+    assert.equal(result.failure, 'citation-not-delivered');
+    assert.equal(result.answer, null);
+    assert.deepEqual(result.closures, []);
 });
 
 test('reports provider failure if even a fresh checkpoint cannot be processed', async () => {
@@ -341,6 +382,50 @@ function orderDraft(source, missingPart, neighbor = false) {
     if (missingPart) order[missingPart] = [];
     return { ...finish(), reason: 'Preparation executes before delivery on the fresh route.',
         premises: [{ claim: 'Preparation executes before delivery on the fresh route.', citations: [], order: [order] }] };
+}
+
+for (const order of [false, true]) {
+    test(`repairs a delivered receipt's out-of-range ${order ? 'order' : 'premise'} citation in the same session`, async () => {
+        let turn = 0, original;
+        const result = await run(async request => {
+            assert.equal(request.threadId, turn ? 'citation-repair' : undefined);
+            let response;
+            switch (++turn) {
+                case 1: response = inspect(query('read', 'ordered.py', { first: 2, last: 3 })); break;
+                case 2:
+                    original = supplied(request);
+                    response = order ? orderDraft(original) : finish(cite(original, 1, 2));
+                    break;
+                case 3: {
+                    const gaps = payload(request).closureIssues;
+                    assert.equal(gaps.length, order ? 2 : 1);
+                    assert.deepEqual(gaps[0], {
+                        issue: 'citation-outside-receipt-range', premise: 1,
+                        ...(order && { route: 'fresh initialization', part: 'first' }),
+                        receipt: original.receipt, sha: head, path: 'ordered.py',
+                        requested: { first: 1, last: order ? 1 : 2 }, delivered: [{ first: 2, last: 3 }],
+                    });
+                    response = inspect(query('read', 'ordered.py', { first: 1, last: 3 }));
+                    break;
+                }
+                case 4: {
+                    const repaired = supplied(request);
+                    assert.notEqual(repaired.receipt, original.receipt);
+                    response = order ? orderDraft(repaired) : finish(cite(repaired, 1, 2));
+                    break;
+                }
+                default: assert.fail('unexpected recovery turn');
+            }
+            return { threadId: 'citation-repair', fact: fact(), response };
+        });
+        assert.equal(turn, 4);
+        assert.equal(result.failure, null);
+        assert.equal(result.answer.label, 'refuted');
+        assert.equal(result.answer.citations[0].first, 1);
+        assert.deepEqual(result.answer.anchor, finding.detectorLocation);
+        assert.equal(result.closures.length, 1);
+        assert.deepEqual(result.writes, []);
+    });
 }
 
 for (const [part, neighbor] of [['second', false], ['mechanism', false], ['second', true]]) {
