@@ -21,7 +21,10 @@ module.exports = object({
         why: text,
     })),
     verdict: { type: ['string', 'null'], enum: [null, 'confirmed', 'refuted', 'inconclusive'] },
-    citations: array(object({ receipt: text, first: { type: 'integer' }, last: { type: 'integer' } })),
+    premises: array(object({
+        claim: text,
+        citations: array(object({ receipt: text, first: { type: 'integer' }, last: { type: 'integer' } })),
+    })),
     reason: nullable('string'),
     missing: nullable('string'),
 });

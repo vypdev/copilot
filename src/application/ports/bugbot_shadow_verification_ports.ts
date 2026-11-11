@@ -36,6 +36,10 @@ export type BugbotShadowResult =
         readonly reason: string;
         readonly missing: string | null;
         readonly citations: readonly BugbotShadowCitation[];
+        readonly premises: readonly {
+            readonly claim: string;
+            readonly citations: readonly BugbotShadowCitation[];
+        }[];
         readonly reportedModel?: string;
       }
     | {

@@ -3136,8 +3136,10 @@ verifier establishes the effective version and the repository's actual
 configuration, then cites matching official documentation or source.
 Missing material evidence yields an inconclusive verdict with the
 specific gap. A concluding response after an official-source inquiry must
-cite a matching delivered official receipt. Technical failures and invalid receipts are recorded
-separately from verdicts. Token use is optional telemetry.
+cite a matching delivered official receipt for the investigated dependency
+and revision. A catalogued dependency named in the prepared claim, anchored filename or
+concluding answer also requires its source when no lookup preceded the answer. Technical failures and invalid receipts are recorded separately
+from verdicts. Token use is optional telemetry.
 
 The integrated pilot invokes the normal detector and application use case
 with pinned SCM reads and fail-on-call write ports. Dry-run records what
@@ -3154,6 +3156,72 @@ carry no approval authority. See the
 | ev950-shadow-C02 | The ordinary resolver's default, Luna, Sol and another compatible model pass the exact effective configuration to both stages. |
 | ev950-shadow-C03 | A verifier error or reported model substitution produces one technical failure, preserves the same native review drafts and never triggers a fallback. |
 | ev950-shadow-C04 | A real dry-run executes the usual detector on pinned PR revisions for Luna and Sol, checks actual prepared findings, and records zero attempted PR writes. |
+
+### Version proof, effective state, and premise citations in shadow
+
+An official lookup can use a delivered runtime receipt directly. The broker
+resolves its typed package and release when the caller omits the release. If the
+caller specifies a release, it must equal the one accredited by that receipt.
+The broker verifies the receipt belongs to this investigation and revision.
+A source response carries the version proof's scope through to the citation.
+For example, a Python version pin can authorize the local SQLite probe. Its
+runtime receipt establishes SQLite 3.53.3 for that local probe. The linked
+SQLite release of the historical hosted CI remains unproven.
+
+| Lookup outcome | Meaning and recovery |
+|---|---|
+| `official-version-not-proven` | The receipt did not establish the requested dependency version on the selected revision. Request a compatible version proof. |
+| `official-source-unavailable` | The version is accredited and the broker has no matching official source available. |
+| `official-no-match` | The version-matched official source is available and the literal search found no result. Try a different exact phrase or identifier. |
+| `provided` | The response contains source ranges with release, scope and provenance. Cite the ranges that establish the dependency behavior. |
+
+For a hypothesis about a missing constraint, setting or guard, the verifier
+traces how the effective state is assembled. It follows the actual execution
+order through imported declarations, registration, overrides, and migrations
+that may add the allegedly absent protection. The route and the decisive state
+must both be grounded. The evaluator holds the known counterevidence and any
+reproduction outside the verifier prompt.
+
+A finishing response maps each material premise to exact supporting ranges.
+The broker checks provenance, SHA, receipt bounds and prior delivery. The
+application keeps a draft with a missing premise or citation open and can
+return a closure issue to the same verifier session. The verifier can recover
+or narrow the range and finish again. If a material source remains unavailable,
+the verifier finishes `inconclusive` and names the evidence gap. A foreign or
+undelivered citation is an integrity failure. An independently reviewed replay
+checks semantic coverage, including whether a cited range contains the
+operation claimed in the premise.
+
+```text
+Prepared candidate -> investigate effective state and version
+                   -> draft with cited premises -> validate and record
+                                   |
+                        missing premise or range
+                                   |
+                          continue same session
+```
+
+A shadow report shows the candidate's revision, verdict, per-premise citations
+and any remaining gap. For example, an inconclusive case can identify an
+unavailable version-matched dependency source and retain the code citations
+already verified. The report has no publication or approval effect. Runtime
+and citation controls are fixed by the broker and expose no new user inputs.
+
+| Case | Minimum acceptance evidence |
+|---|---|
+| ev950-shadow-C05 | Resolve the SQLite release from a delivered runtime receipt with no version string and retain local scope. |
+| ev950-shadow-C06 | Reject incompatible package, explicit version, revision, operation and undelivered basis. |
+| ev950-shadow-C07 | Distinguish missing sources from unmatched text and verify the exact official receipt. |
+| ev950-shadow-C08 | Continue the same session to add a previously omitted exact range. |
+| ev950-shadow-C09 | Continue a conclusive draft with missing official evidence and accept an explicit inconclusive verdict with the specific gap. |
+| ev950-shadow-C10 | Reject a conclusive draft naming a catalogued dependency without a matching receipt, even when no official lookup occurred. |
+| ev950-shadow-C11 | A dependency named in the anchored filename stays required even when the concluding draft omits it. |
+| ev950-shadow-C12 | Replay the two prepared candidates with their original models and anchors. Independently check the observed verdict, evidence for the decisive operations and zero attempted writes. |
+
+The first seven cases are deterministic controls in
+[the shadow runner suite](../quality/bugbot/evidence/issue-950/shadow-verification/verification.test.cjs).
+The two live replays and their independent controls are recorded in
+[the closure replay report](../quality/bugbot/evidence/issue-950/shadow-closure-replay/results.md).
 
 ### 20. References and decisions
 

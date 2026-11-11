@@ -7,6 +7,9 @@ const os = require('node:os');
 const path = require('node:path');
 const { after, test } = require('node:test');
 const { investigate } = require('./run.cjs');
+const { makeBroker } = require('./broker.cjs');
+const { hash } = require('../shadow-real-prs/session.cjs');
+const plan = require('./plan.json');
 const { isContextFailure } = require('./session.cjs');
 
 const lab = fs.mkdtempSync(path.join(os.tmpdir(), 'bugbot-shadow-controls-'));
@@ -20,7 +23,9 @@ fs.mkdirSync(repo);
 git(['init', '--bare', '--quiet']);
 const source = git(['hash-object', '-w', '--stdin'], 'export const enabled = true;\n');
 const unchanged = git(['hash-object', '-w', '--stdin'], 'export const allowsRequests = false;\n' + 'x'.repeat(24_000) + '\n');
-const tree = git(['mktree'], `100644 blob ${source}\tanchor.ts\n100644 blob ${unchanged}\tsettings.ts\n`);
+const python = git(['hash-object', '-w', '--stdin'], plan.localRuntime.python + '\n');
+const lockfile = git(['hash-object', '-w', '--stdin'], "packages:\n  playwright@1.64.2:\n    resolution: {}\n");
+const tree = git(['mktree'], `100644 blob ${python}\t.python-version\n100644 blob ${source}\tanchor.ts\n100644 blob ${lockfile}\tpnpm-lock.yaml\n100644 blob ${unchanged}\tsettings.ts\n`);
 const baseTree = git(['mktree'], `100644 blob ${unchanged}\tsettings.ts\n`);
 const base = git(['commit-tree', baseTree, '-m', 'base']);
 const head = git(['commit-tree', tree, '-p', base, '-m', 'head']);
@@ -30,9 +35,10 @@ const finding = { id: 'same-finding', detectorLocation: { path: 'anchor.ts', lin
 
 const query = (op, target, extra = {}) => ({ op, target, revision: 'head', scope: null, first: null, last: null,
     version: null, basis: null, query: null, why: 'Determine whether the actual route is allowed.', ...extra });
-const inspect = (...requests) => ({ action: 'investigate', requests, verdict: null, reason: null, missing: null, citations: [] });
+const inspect = (...requests) => ({ action: 'investigate', requests, verdict: null, reason: null, missing: null, premises: [] });
 const finish = (...citations) => ({ action: 'finish', requests: [], verdict: 'refuted',
-    reason: 'The unchanged settings disable the reachable path.', missing: null, citations });
+    reason: 'The unchanged settings disable the reachable path.', missing: null,
+    premises: citations.length ? [{ claim: 'Settings disable the reachable path.', citations }] : [] });
 const fact = usage => ({ failure: null, ...(usage === undefined ? {} : { usage, usageScope: 'session-cumulative' }) });
 const payload = request => JSON.parse(request.prompt.split('\n').at(-1));
 const supplied = request => payload(request).observations[0].result.sources[0];
@@ -175,23 +181,167 @@ test('distinguishes provider context rejection from provider usage or unrelated 
     assert(!isContextFailure({ message: 'The system cannot open a new context' }));
 });
 
-test('keeps an unavailable material official source out of a conclusive verdict', async () => {
+test('asks the same session to record an inconclusive verdict when required official evidence is unavailable', async () => {
     const requests = [query('read', 'settings.ts'), query('official', 'sqlite', { version: '0.0.0', query: 'key' })];
-    for (const label of ['refuted', 'inconclusive']) {
-        let turn = 0;
-        const result = await run(async request => {
-            if (++turn === 1) return { threadId: 'official', fact: fact(), response: inspect(...requests) };
-            assert.equal(payload(request).observations[1].result.status, 'official-source-unavailable');
-            const response = finish(cite(supplied(request), 1, 1));
-            if (label === 'inconclusive') {
-                response.verdict = label;
-                response.missing = 'The SQLite runtime and version-matched source are unavailable.';
+    let turn = 0, citation;
+    const result = await run(async request => {
+        let response;
+        if (++turn === 1) response = inspect(...requests);
+        else {
+            assert.equal(request.threadId, 'official');
+            if (turn === 2) {
+                assert.equal(payload(request).observations[1].result.status, 'official-version-not-proven');
+                citation = cite(supplied(request), 1, 1);
+                response = finish(citation);
+            } else {
+                assert.equal(payload(request).closureIssues[0].issue, 'official-evidence-missing');
+                response = { ...finish(citation), verdict: 'inconclusive', missing: 'The SQLite release and applicable official source are unproven.' };
             }
-            return { threadId: 'official', fact: fact(), response };
-        });
-        assert.equal(result.failure, label === 'inconclusive' ? null : 'official-evidence-missing');
-        assert.equal(result.answer?.label, label === 'inconclusive' ? label : undefined);
-        assert.deepEqual(result.writes, []);
+        }
+        return { threadId: 'official', fact: fact(), response };
+    });
+    assert.equal(turn, 3);
+    assert.equal(result.failure, null);
+    assert.equal(result.answer.label, 'inconclusive');
+    assert.match(result.answer.missing, /SQLite release/u);
+    assert.deepEqual(result.writes, []);
+});
+
+test('requires official evidence for a catalogued dependency asserted at closing without a lookup', async () => {
+    let turn = 0, citation;
+    const result = await run(async request => {
+        let response;
+        if (++turn === 1) response = inspect(query('read', 'settings.ts'));
+        else if (turn === 2) {
+            citation = cite(supplied(request), 1, 1);
+            response = { ...finish(citation), reason: "SQLite's behavior prevents the effect." };
+        } else {
+            assert.equal(request.threadId, 'dependency');
+            assert.equal(payload(request).closureIssues[0].package, 'sqlite');
+            response = { ...finish(citation), verdict: 'inconclusive', missing: 'The matching SQLite source is unavailable.' };
+        }
+        return { threadId: 'dependency', fact: fact(), response };
+    });
+    assert.equal(turn, 3);
+    assert.equal(result.failure, null);
+    assert.equal(result.answer.label, 'inconclusive');
+    assert.deepEqual(result.writes, []);
+});
+
+test('requires the dependency named in the anchored file even when the closing draft omits its name', async () => {
+    let turn = 0;
+    const anchored = { ...finding, detectorLocation: { path: 'sqlite_policy.ts', line: 1, end: 1 } };
+    const result = await investigate(lab, subject, anchored, null, async request => {
+        let response;
+        if (++turn === 1) {
+            assert.deepEqual(payload(request).requiredOfficial, ['sqlite']);
+            response = inspect(query('read', 'settings.ts'));
+        } else if (turn === 2) {
+            response = finish(cite(supplied(request), 1, 1));
+        } else {
+            assert.equal(request.threadId, 'anchor-dependency');
+            assert.equal(payload(request).closureIssues[0].package, 'sqlite');
+            response = { ...finish(), verdict: 'inconclusive', missing: 'Missing version-matched SQLite evidence.' };
+        }
+        return { threadId: 'anchor-dependency', fact: fact(), response };
+    }, () => {});
+    assert.equal(result.failure, null);
+    assert.equal(result.answer.label, 'inconclusive');
+    assert.equal(result.closures.length, 1);
+});
+
+test('keeps a finishing draft open while the same session recovers an omitted exact citation', async () => {
+    let turn = 0, anchor, settings;
+    const result = await run(async request => {
+        if (turn) assert.equal(request.threadId, 'same-session');
+        let response;
+        switch (++turn) {
+            case 1: response = inspect(query('read', 'anchor.ts'), query('read', 'settings.ts')); break;
+            case 2: {
+                const observations = payload(request).observations;
+                anchor = cite(observations[0].result.sources[0]);
+                settings = observations[1].result.sources[0];
+                response = finish(anchor);
+                response.premises.push({ claim: 'The early guard prevents the effect.', citations: [] });
+                break;
+            }
+            case 3:
+                assert.deepEqual(payload(request).closureIssues, [{ issue: 'uncited-premise', premise: 2 }]);
+                response = inspect(query('recall', settings.receipt, { first: 1, last: 1 }));
+                break;
+            case 4:
+                response = finish(anchor);
+                response.premises.push({ claim: 'The early guard prevents the effect.', citations: [cite(supplied(request))] });
+                break;
+            default: assert.fail('unexpected recovery turn');
+        }
+        return { threadId: 'same-session', fact: fact(), response };
+    });
+    assert.equal(result.failure, null);
+    assert.equal(turn, 4);
+    assert.equal(result.answer.premises[1].citations[0].path, 'settings.ts');
+    assert.equal(result.answer.premises[1].citations[0].last, 1);
+    assert.equal(result.closures.length, 1);
+    assert.deepEqual(result.writes, []);
+});
+
+function runtimeEvidence(catalog) {
+    const broker = makeBroker(lab, subject, { ...finding, allowBase: true }, catalog);
+    const delivered = new Map();
+    const remember = proof => delivered.set(proof.receipt, [{ first: proof.first, last: proof.last }]);
+    const pin = broker.inspect(query('read', '.python-version')).sources[0];
+    remember(pin);
+    const runtime = broker.inspect(query('runtime', 'sqlite', { basis: pin.receipt }), delivered).sources[0];
+    return { broker, delivered, pin, runtime, remember };
+}
+
+test('derives a typed, local-only SQLite release from a delivered runtime receipt', () => {
+    const { broker, delivered, runtime, remember } = runtimeEvidence();
+    const lookup = query('official', 'sqlite', { basis: runtime.receipt, query: 'UNIQUE index' });
+    assert.equal(broker.inspect(lookup, delivered).status, 'official-version-not-proven');
+    const wrongBasis = broker.inspect(query('runtime', 'sqlite', { basis: runtime.receipt }), delivered);
+    assert.deepEqual(wrongBasis, { status: 'runtime-basis',
+        requiredBasis: { kind: 'git', path: '.python-version', revision: 'head' } });
+    remember(runtime);
+    assert.equal(runtime.version, plan.localRuntime.sqlite);
+    assert.match(runtime.versionScope, /historical hosted linked SQLite version unmeasured/u);
+    assert.deepEqual(broker.inspect(lookup, delivered), { status: 'official-source-unavailable', package: 'sqlite',
+        version: plan.localRuntime.sqlite, versionScope: plan.localRuntime.scope });
+});
+
+test('delivers version-scoped official source and distinguishes no text match from missing source', () => {
+    const contents = 'Match the UNIQUE index.\n';
+    const file = 'synthetic-official.c';
+    fs.writeFileSync(path.join(lab, file), contents);
+    const { broker, delivered, runtime, remember } = runtimeEvidence([{ package: 'sqlite',
+        version: plan.localRuntime.sqlite, kind: 'release-source', file, sha256: hash(contents),
+        url: 'https://example.invalid/source', commit: 'f'.repeat(40) }]);
+    remember(runtime);
+    const lookup = query('official', 'sqlite', { basis: runtime.receipt, query: 'UNIQUE index' });
+    const source = broker.inspect(lookup, delivered).sources[0];
+    assert.equal(source.sha, head);
+    assert.equal(source.version, runtime.version);
+    assert.equal(source.versionScope, runtime.versionScope);
+    assert.equal(source.basis, runtime.receipt);
+    assert.equal(broker.cite(cite(source)).textSha256, hash(contents.trimEnd()));
+    assert.equal(broker.inspect({ ...lookup, query: 'different text' }, delivered).status, 'official-no-match');
+});
+
+test('rejects incompatible official basis receipts and explicit versions', () => {
+    const { broker, delivered, pin, runtime, remember } = runtimeEvidence();
+    remember(runtime);
+    const lock = broker.inspect(query('read', 'pnpm-lock.yaml')).sources[0];
+    remember(lock);
+    const lockLookup = query('official', 'playwright', { basis: lock.receipt, version: '1.64.2', query: 'key' });
+    assert.equal(broker.inspect(lockLookup, delivered).status, 'official-source-unavailable');
+    assert.equal(broker.inspect({ ...lockLookup, version: '1.64.1' }, delivered).status, 'official-version-not-proven');
+    const foreign = runtimeEvidence();
+    foreign.remember(foreign.runtime);
+    const lookup = query('official', 'sqlite', { basis: runtime.receipt, query: 'UNIQUE index' });
+    for (const request of [{ ...lookup, basis: pin.receipt }, { ...lookup, target: 'playwright' },
+        { ...lookup, version: '3.53' }, { ...lookup, revision: 'base' },
+        { ...lookup, basis: foreign.runtime.receipt }]) {
+        assert.equal(broker.inspect(request, delivered).status, 'official-version-not-proven');
     }
 });
 

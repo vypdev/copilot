@@ -16,7 +16,11 @@ the usual Bugbot detector before publication. Both stages use the same effective
 Bugbot model, including the ordinary default when the model is omitted. An
 empty candidate set opens no verifier sessions. The verifier follows material
 leads through successive reads, including unchanged code and official sources
-for a resolved dependency version. If the provider runs out of
+for a resolved dependency version. A delivered runtime receipt can identify the
+release for an official lookup while preserving the scope of the measurement.
+For missing-guard or missing-configuration claims, the verifier traces how the
+effective state is assembled. The report cites exact ranges for each material
+premise. A draft with an omitted citation can continue in the same session. If the provider runs out of
 context, the application retains the finding and evidence receipts so the
 verifier can resume from them. A missing premise yields an inconclusive verdict.
 Usage telemetry has no effect on reads, verdicts or qualification. The pilot

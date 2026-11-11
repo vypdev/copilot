@@ -36,8 +36,8 @@ function createShadowVerifier(lab, log, transport = ask) {
                 const models = new Set(result.turns.flatMap(turn => turn.reportedModel ? [turn.reportedModel] : []));
                 const reportedModel = [...models].find(model => model !== configuration.model) ?? [...models][0];
                 if (!result.answer) return { status: 'technical-failure', reason: result.failure, reportedModel };
-                const { label, reason, missing, citations } = result.answer;
-                return { status: 'verdict', verdict: label, reason, missing, citations, reportedModel };
+                const { label, reason, missing, citations, premises } = result.answer;
+                return { status: 'verdict', verdict: label, reason, missing, citations, premises, reportedModel };
             } finally {
                 fs.rmSync(cwd, { recursive: true, force: true });
             }

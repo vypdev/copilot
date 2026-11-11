@@ -17,7 +17,12 @@ A genuine provider context-window rejection starts a fresh provider thread
 for the same application investigation. The hypothesis, SHA, anchor and
 receipt inventory survive. The new thread receives the pending evidence
 leads and can recall any saved receipt or an exact subrange. The app only
-accepts a citation after it has delivered the cited range. A failure of the
+accepts a citation after it has delivered the cited range. A finishing draft
+pairs each material premise with its exact ranges. The verifier can continue
+in the same session to complete an omitted citation. A delivered runtime
+receipt can directly select its official release with the original scope.
+See the [closure replays](../shadow-closure-replay/results.md) for the
+same-candidate reruns and independent line checks. A failure of the
 fresh checkpoint is recorded as a provider failure.
 
 ## Run the controls

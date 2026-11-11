@@ -2289,6 +2289,9 @@
         "src/application/usecases/steps/commit/bugbot/bugbot_autofix_use_case.ts"
       ],
       "code": [
+        "quality/bugbot/evidence/issue-950/shadow-verification/broker.cjs",
+        "quality/bugbot/evidence/issue-950/shadow-verification/run.cjs",
+        "quality/bugbot/evidence/issue-950/shadow-verification/schema.cjs",
         "src/application/ports/bugbot_context_ports.ts",
         "src/data/repository/pull_request/pull_request_changes_repository.ts",
         "src/domain/bugbot/context.ts",
@@ -2531,7 +2534,8 @@
         "quality/bugbot/evidence/issue-950/on-demand/results.md",
         "quality/bugbot/evidence/issue-950/shadow-real-prs/results.md",
         "quality/bugbot/evidence/issue-950/shadow-verification/README.md",
-        "quality/bugbot/evidence/issue-950/normal-flow-shadow/results.md"
+        "quality/bugbot/evidence/issue-950/normal-flow-shadow/results.md",
+        "quality/bugbot/evidence/issue-950/shadow-closure-replay/results.md"
       ]
     },
     {

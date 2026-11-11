@@ -332,7 +332,7 @@ describe('Bugbot normal review in shadow', () => {
     const query = detector([finding()]);
     const verify = jest.fn<ReturnType<BugbotShadowVerificationPort['verify']>, Parameters<BugbotShadowVerificationPort['verify']>>().mockResolvedValue({
       status: 'verdict', verdict: 'inconclusive', reason: 'The caller was not established.',
-      missing: 'Identify the caller at the pinned commit.', citations: [], reportedModel: model,
+      missing: 'Identify the caller at the pinned commit.', citations: [], premises: [], reportedModel: model,
     });
     const operation = projectBugbotReviewOperationContext(execution('dry-run', [], inputs));
     const results = await new DetectPotentialProblemsUseCase({ query }, scmPorts(provider), undefined, undefined, { verify })
@@ -360,7 +360,7 @@ describe('Bugbot normal review in shadow', () => {
       expect(observed.reviews).toHaveLength(0);
       if (fault === 'transport failure') throw new Error('provider failed');
       return { status: 'verdict', verdict: 'inconclusive', reason: 'The caller was not established.',
-        missing: 'Identify the caller.', citations: [], reportedModel: 'other-model' };
+        missing: 'Identify the caller.', citations: [], premises: [], reportedModel: 'other-model' };
     });
     const query = detector([finding()]);
     await new DetectPotentialProblemsUseCase({ query }, scmPorts(baseline)).invoke(operation);

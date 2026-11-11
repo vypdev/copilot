@@ -13,6 +13,7 @@ const blocked = code => ({ status: code });
 const officialPackage = target => target === '@playwright/test' ? 'playwright' : target.toLowerCase();
 const safePath = value => typeof value === 'string' && value.length <= 300 && !/[\\\u0000-\u001f\u007f]/u.test(value)
     && value.split('/').every(part => part && !['.', '..', '.git'].includes(part.toLowerCase()));
+const sqliteRuntimeBasis = { kind: 'git', path: '.python-version', revision: 'head' };
 const linesOf = source => source.replace(/\n$/u, '').split(/\r?\n/u);
 
 // Pages bound individual wire records. Every next page remains available.
@@ -30,7 +31,7 @@ function intervals(patch) {
     });
 }
 
-function makeBroker(lab, subject, finding) {
+function makeBroker(lab, subject, finding, catalog = official) {
     const repo = path.join(lab, subject.repository.split('/')[1] + '.git');
     const binding = { finding: finding.id, repository: subject.repository, head: subject.head, tree: subject.tree, operation: randomUUID(), anchor: finding.detectorLocation };
     const receipts = new Map();
@@ -41,20 +42,49 @@ function makeBroker(lab, subject, finding) {
         return { status: 'provided', sources: result };
     }
 
-    function doc(request) {
+    function readBasis(receipt, sha, delivered) {
+        const proof = receipts.get(receipt);
+        const ranges = delivered.get(receipt);
+        if (!proof || proof.sha !== sha || !ranges?.length) return null;
+        const lines = proof.lines.filter((_line, index) =>
+            ranges.some(range => range.first <= proof.first + index && proof.first + index <= range.last));
+        return lines.length ? { ...proof, lines } : null;
+    }
+
+    function versionEvidence(request, packageName, proof) {
+        if (proof?.kind === 'runtime' && proof.package === packageName
+            && (request.version === null || request.version === proof.version)) {
+            return { package: packageName, version: proof.version, versionScope: proof.versionScope };
+        }
+        if (packageName === 'playwright' && proof?.kind === 'git' && proof.path === 'pnpm-lock.yaml'
+            && typeof request.version === 'string' && proof.lines.some(line => {
+                const key = line.trim().replace(/^['"]|['"](?=:$)/gu, '');
+                return ['playwright', '@playwright/test'].some(name =>
+                    key === name + '@' + request.version + ':');
+            })) {
+            return { package: packageName, version: request.version, versionScope: 'tracked lockfile package entry' };
+        }
+        return null;
+    }
+
+    function doc(request, sha, delivered) {
         const packageName = officialPackage(request.target);
-        const proof = receipts.get(request.basis);
-        const supported = official.filter(item => item.package === packageName && item.version === request.version);
-        if (!supported.length) return blocked('official-source-unavailable');
-        const hasVersion = packageName === 'sqlite'
-            ? proof?.kind === 'runtime' && proof.lines[0].includes(request.version)
-            : proof?.kind === 'git' && proof.sha === subject.head && proof.path === 'pnpm-lock.yaml'
-                && proof.lines.join('\n').includes(request.version) && proof.lines.join('\n').includes('playwright');
-        if (!hasVersion) return blocked('official-version-not-proven');
+        const proof = readBasis(request.basis, sha, delivered);
+        const version = versionEvidence(request, packageName, proof);
+        if (!version) return { status: 'official-version-not-proven',
+            ...(packageName === 'sqlite' ? { requiredBasis: { kind: 'runtime', package: packageName, prerequisite: sqliteRuntimeBasis } } : {}) };
         if (typeof request.query !== 'string' || !request.query.trim() || request.query.length > 120) return blocked('official-query');
+        const supported = catalog.filter(item => item.package === packageName && item.version === version.version);
+        if (!supported.length) return { status: 'official-source-unavailable', ...version };
         const sources = [];
         for (const item of supported) {
-            const contents = readFileSync(path.join(lab, item.file));
+            let contents;
+            try {
+                contents = readFileSync(path.join(lab, item.file));
+            } catch (error) {
+                if (error.code === 'ENOENT') return { status: 'official-source-unavailable', ...version };
+                throw error;
+            }
             assert.equal(hash(contents), item.sha256, 'official-source-hash');
             const lines = linesOf(contents.toString('utf8'));
             const matches = lines.flatMap((line, index) => line.includes(request.query) ? [index + 1] : []);
@@ -67,16 +97,18 @@ function makeBroker(lab, subject, finding) {
                 else windows.push({ first, last });
             }
             for (const range of windows) {
-                sources.push({ kind: 'official', package: packageName, version: item.version, sourceKind: item.kind,
+                sources.push({ kind: 'official', sha, ...version, sourceKind: item.kind,
                     url: item.url, commit: item.commit, sha256: item.sha256, basis: request.basis,
                     ...window(lines, range.first, range.last) });
             }
         }
         const current = page(sources, request.first ?? 1, 8);
-        return current.items.length ? { ...grant(current.items), next: current.next } : blocked('official-no-match');
+        return current.items.length
+            ? { ...grant(current.items), ...version, next: current.next }
+            : { status: 'official-no-match', ...version };
     }
 
-    function run(request) {
+    function run(request, delivered) {
         if (request.first !== null && (!Number.isSafeInteger(request.first) || request.first < 1)) {
             return blocked('invalid-start');
         }
@@ -92,12 +124,15 @@ function makeBroker(lab, subject, finding) {
             if (first < proof.first || last > proof.last || first > last) return blocked('invalid-range');
             return { status: 'provided', sources: [{ ...proof, first, last, lines: proof.lines.slice(first - proof.first, last - proof.first + 1) }] };
         }
-        if (request.op === 'official') return doc(request);
+        if (request.op === 'official') return doc(request, sha, delivered);
         if (request.op === 'runtime') {
-            const proof = receipts.get(request.basis);
-            if (request.target !== 'sqlite' || proof?.kind !== 'git' || proof.sha !== subject.head
-                || proof.path !== '.python-version' || !proof.lines.includes(plan.localRuntime.python)) return blocked('runtime-basis');
-            return grant([{ kind: 'runtime', first: 1, last: 1, sha: subject.head, basis: request.basis,
+            const proof = readBasis(request.basis, sha, delivered);
+            if (request.target !== 'sqlite' || sha !== subject.head) return blocked('runtime-unavailable');
+            if (proof?.kind !== 'git' || proof.path !== sqliteRuntimeBasis.path || !proof.lines.includes(plan.localRuntime.python)) {
+                return { status: 'runtime-basis', requiredBasis: sqliteRuntimeBasis };
+            }
+            return grant([{ kind: 'runtime', first: 1, last: 1, sha, basis: request.basis,
+                package: 'sqlite', version: plan.localRuntime.sqlite, versionScope: plan.localRuntime.scope,
                 lines: [`Python ${plan.localRuntime.python}; SQLite ${plan.localRuntime.sqlite}; ${plan.localRuntime.scope}`] }]);
         }
         if (request.scope !== null && !safePath(request.scope)) return blocked('scope-denied');
@@ -123,8 +158,8 @@ function makeBroker(lab, subject, finding) {
         return { status: matches.length ? 'matches' : 'no-match', count: matches.length, matches: current.items, next: current.next };
     }
 
-    function inspect(request) {
-        try { return run(request); } catch (error) {
+    function inspect(request, delivered = new Map()) {
+        try { return run(request, delivered); } catch (error) {
             if (['no-file', 'path-denied', 'non-text', 'git-budget', 'git-unavailable'].includes(error.message)) return blocked(error.message);
             throw error;
         }

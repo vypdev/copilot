@@ -12,38 +12,60 @@ const { hash } = require('../shadow-real-prs/session.cjs');
 const { preflight } = require('../shadow-real-prs/run.cjs');
 const { git } = require('../shadow-real-prs/broker.cjs');
 const { makeBroker, officialPackage } = require('./broker.cjs');
+const officialPackages = [...new Set(official.map(entry => entry.package))];
 
 const instructions = fs.readFileSync(path.join(__dirname, 'prompt.txt'), 'utf8').trimEnd();
 const validate = new Ajv().compile(schema);
 const text = (value, limit) => typeof value === 'string' && value.trim() && Buffer.byteLength(value) <= limit;
 const repoFor = (lab, subject) => path.join(lab, subject.repository.split('/')[1] + '.git');
 
-function initial(broker, subject, finding) {
-    return instructions + '\n\n' + JSON.stringify({ identity: broker.binding,
-        hypothesis: finding.hypothesis, base: finding.allowBase ? subject.base : null,
-        officialCatalog: [...new Set(official.map(entry => entry.package))] });
+function namedOfficialPackages(...values) {
+    const text = values.join(' ');
+    return officialPackages.filter(name => new RegExp(
+        `(?:^|[^a-z0-9])${RegExp.escape(name)}(?=[^a-z0-9]|$)`, 'iu').test(text));
 }
 
-function verdict(response, broker, delivered) {
+function initial(broker, subject, finding, requiredOfficial) {
+    return instructions + '\n\n' + JSON.stringify({ identity: broker.binding,
+        hypothesis: finding.hypothesis, base: finding.allowBase ? subject.base : null,
+        officialCatalog: officialPackages, requiredOfficial });
+}
+
+function prepareVerdict(response, broker, delivered) {
     assert.equal(response.requests.length, 0, 'final-has-requests');
     assert(response.verdict && text(response.reason, 3000), 'final-verdict-or-reason');
     if (response.verdict === 'inconclusive') assert(text(response.missing, 1000), 'final-missing-condition');
-    else assert(response.missing === null && response.citations.length, 'final-evidence-required');
-    const keys = response.citations.map(cite => JSON.stringify(cite));
-    assert.equal(new Set(keys).size, keys.length, 'duplicate-citation');
-    return { label: response.verdict, reason: response.reason, missing: response.missing,
-        anchor: broker.binding.anchor, citations: response.citations.map(citation => {
-            const proof = broker.cite(citation);
-            assert(delivered.get(citation.receipt)?.some(range => range.first <= citation.first && range.last >= citation.last),
-                'citation-not-delivered');
-            return proof;
+    else assert(response.missing === null, 'final-missing-condition');
+
+    const omissions = [];
+    const proofs = new Map();
+    const premises = response.premises.map(({ claim, citations }, index) => {
+        assert(text(claim, 1000), 'invalid-premise');
+        if (!citations.length) omissions.push({ issue: 'uncited-premise', premise: index + 1 });
+        const seen = new Set();
+        return { claim, citations: citations.map(citation => {
+            const { receipt, first, last } = citation;
+            const key = JSON.stringify([receipt, first, last]);
+            assert(!seen.has(key), 'duplicate-citation');
+            seen.add(key);
+            if (!proofs.has(key)) {
+                const proof = broker.cite(citation);
+                assert(delivered.get(receipt)?.some(range => range.first <= first && range.last >= last),
+                    'citation-not-delivered');
+                proofs.set(key, proof);
+            }
+            return proofs.get(key);
         }) };
+    });
+    if (response.verdict !== 'inconclusive' && !premises.length) omissions.push({ issue: 'missing-premises' });
+    return { answer: { label: response.verdict, reason: response.reason, missing: response.missing,
+        anchor: broker.binding.anchor, premises, citations: [...proofs.values()] }, omissions };
 }
 
-function receiptMetadata(result) {
-    if (!result.sources) return { status: result.status, count: result.count, next: result.next };
-    return { status: result.status, next: result.next, lineCount: result.lineCount,
-        sources: result.sources.map(({ lines, ...proof }) => ({ ...proof, textSha256: hash(lines.join('\n')) })) };
+function receiptMetadata({ sources, ...result }) {
+    const { matches: _matches, ...metadata } = result;
+    return sources ? { ...metadata, sources: sources.map(({ lines, ...proof }) =>
+        ({ ...proof, textSha256: hash(lines.join('\n')) })) } : metadata;
 }
 
 function checkTree(lab, subject, allowBase) {
@@ -64,24 +86,41 @@ function recordDelivery(delivered, observations) {
     }
 }
 
-function validateOfficialConclusion(answer, actions) {
-    if (answer.label === 'inconclusive') return;
-    // An explicit request identifies a tool premise the verifier elected to investigate.
-    const investigated = new Set(actions.filter(({ request }) => request.op === 'official')
-        .map(({ request }) => officialPackage(request.target)));
-    for (const name of investigated) {
-        assert(answer.citations.some(citation => citation.kind === 'official' && citation.package === name),
-            'official-evidence-missing');
+function missingOfficialEvidence(answer, actions, subject, requiredOfficial) {
+    if (answer.label === 'inconclusive') return [];
+    const investigated = new Map();
+    for (const { request, result } of actions) {
+        if (request.op !== 'official') continue;
+        const name = officialPackage(request.target);
+        const sha = request.revision === 'head' ? subject.head : subject.base;
+        const key = JSON.stringify([name, sha]);
+        const source = investigated.get(key) ?? { name, sha, versions: new Map() };
+        if (result.version) source.versions.set(result.version, result.status);
+        investigated.set(key, source);
     }
+    const namedAtClosing = namedOfficialPackages(answer.reason, ...answer.premises.map(premise => premise.claim));
+    for (const name of new Set([...requiredOfficial, ...namedAtClosing])) {
+        const key = JSON.stringify([name, subject.head]);
+        if (!investigated.has(key)) {
+            investigated.set(key, { name, sha: subject.head, versions: new Map() });
+        }
+    }
+    return [...investigated.values()].flatMap(({ name, sha, versions }) => {
+        const cited = answer.citations.some(citation =>
+            citation.kind === 'official' && citation.package === name && citation.sha === sha);
+        return cited ? [] : [{ issue: 'official-evidence-missing', package: name, sha,
+            versions: Object.fromEntries(versions) }];
+    });
 }
 
 async function investigate(lab, subject, finding, cwd, transport, log, signal) {
-    const started = performance.now(), writes = [], turns = [], actions = [];
+    const started = performance.now(), writes = [], turns = [], actions = [], closures = [];
     const ports = dryRunPorts(write => writes.push(write));
     const broker = makeBroker(lab, subject, finding);
-    const first = initial(broker, subject, finding);
+    const requiredOfficial = namedOfficialPackages(finding.hypothesis, path.basename(finding.detectorLocation.path));
+    const first = initial(broker, subject, finding, requiredOfficial);
     const delivered = new Map();
-    let prompt = first, threadId, observations = [], answer = null, failure = null;
+    let prompt = first, threadId, observations = [], answer = null, failure = null, closureIssues = [];
     const remaining = () => {
         assert(!signal?.aborted, 'investigation-canceled');
         const time = Math.floor(plan.caseMs - (performance.now() - started));
@@ -109,7 +148,7 @@ async function investigate(lab, subject, finding, cwd, transport, log, signal) {
                 }));
                 prompt = first + '\nThe provider context window filled. Resume this investigation with the same evidence identity. ' +
                     'Retrieve saved code with recall, paginate receipts for older evidence, and request narrower ranges when needed.\n' +
-                    JSON.stringify({ inventory: broker.inventory(), leads });
+                    JSON.stringify({ inventory: broker.inventory(), leads, closureIssues });
                 threadId = undefined;
                 observations = [];
                 continue;
@@ -122,17 +161,26 @@ async function investigate(lab, subject, finding, cwd, transport, log, signal) {
             assert(validate(response), 'response-schema');
             if (response.action === 'finish') {
                 checkTree(lab, subject, finding.allowBase);
-                const candidateAnswer = verdict(response, broker, delivered);
-                validateOfficialConclusion(candidateAnswer, actions);
-                answer = candidateAnswer;
+                const proposed = prepareVerdict(response, broker, delivered);
+                closureIssues = [...proposed.omissions, ...missingOfficialEvidence(proposed.answer, actions, subject, requiredOfficial)];
+                if (closureIssues.length) {
+                    closures.push({ turn, issues: closureIssues });
+                    observations = [];
+                    prompt = 'The proposed verdict is still open. In this same investigation, read or recall the exact ranges ' +
+                        'and submit a complete verdict. For an official-evidence issue, establish the release and request its official source. ' +
+                        'If material evidence is unavailable, finish inconclusive and state the specific gap.\n' +
+                        JSON.stringify({ closureIssues });
+                    continue;
+                }
+                answer = proposed.answer;
                 break;
             }
             assert(response.verdict === null && response.reason === null && response.missing === null
-                && !response.citations.length && response.requests.length > 0, 'investigation-shape');
+                && !response.premises.length && response.requests.length > 0, 'investigation-shape');
             observations = [];
             for (const request of response.requests) {
                 remaining();
-                const result = broker.inspect(request);
+                const result = broker.inspect(request, delivered);
                 observations.push({ request, result });
                 actions.push({ turn, request, result: receiptMetadata(result) });
             }
@@ -143,7 +191,7 @@ async function investigate(lab, subject, finding, cwd, transport, log, signal) {
         failure = /^[a-z][a-z0-9-]+$/u.test(error.message) ? error.message : 'integrity-or-runner-error';
     }
     return { event: 'finding-result', ...broker.binding, initialPromptSha256: hash(first),
-        status: failure ? 'failed' : 'completed', answer, failure, turns, actions,
+        status: failure ? 'failed' : 'completed', answer, failure, turns, actions, closures,
         wallMs: Math.round(performance.now() - started), writes };
 }
 
@@ -153,4 +201,4 @@ if (require.main === module) {
     preflight(lab);
     console.log('Pinned subject trees, archived producer evidence and official sources checked.');
 }
-module.exports = { investigate, validateOfficialConclusion };
+module.exports = { investigate };
