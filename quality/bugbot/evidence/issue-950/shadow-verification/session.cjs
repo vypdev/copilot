@@ -37,7 +37,7 @@ function isContextFailure(error) {
         || (typeof message === 'string' && /ran out of room in the model[’']s context window|context_length_exceeded/iu.test(message));
 }
 
-function ask({ cwd, prompt, schema, threadId, deadline, signal, configuration }) {
+function ask({ cwd, prompt, schema, threadId, signal, configuration }) {
     assert.equal(configuration.provider, 'codex', 'shadow-provider-unavailable');
     assert.match(configuration.model, /^[a-zA-Z0-9][a-zA-Z0-9._:-]*$/u);
     const started = performance.now();
@@ -49,7 +49,6 @@ function ask({ cwd, prompt, schema, threadId, deadline, signal, configuration })
         let tail = '', stderr = '', output = null, usage = null, actualThread = null, failure = null;
         let completions = 0, bytes = 0, grace, reportedModel;
         const stop = code => { failure ??= code; child.kill('SIGKILL'); };
-        const timeout = setTimeout(() => stop('provider-expired'), deadline);
         const cancel = () => stop('investigation-canceled');
         if (signal?.aborted) cancel();
         else signal?.addEventListener('abort', cancel, { once: true });
@@ -66,6 +65,7 @@ function ask({ cwd, prompt, schema, threadId, deadline, signal, configuration })
                 if (typeof event.model === 'string' && /^[a-zA-Z0-9][a-zA-Z0-9._:-]*$/u.test(event.model)) {
                     reportedModel = event.model;
                 }
+                // The provider already completed this turn. Reap a process that fails to exit.
                 grace = setTimeout(() => child.kill('SIGKILL'), 1600);
             }
             if (event.type !== 'item.completed') return;
@@ -86,7 +86,6 @@ function ask({ cwd, prompt, schema, threadId, deadline, signal, configuration })
         child.on('error', () => { failure ??= 'provider-launch'; });
         child.on('close', () => {
             signal?.removeEventListener('abort', cancel);
-            clearTimeout(timeout);
             clearTimeout(grace);
             if (tail) consume(tail);
             clearTimeout(grace);

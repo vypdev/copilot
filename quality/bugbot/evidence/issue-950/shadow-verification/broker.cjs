@@ -187,13 +187,19 @@ function makeBroker(lab, subject, finding, catalog = official) {
         return { ...location, first: citation.first, last: citation.last, textSha256: hash(selected.join('\n')) };
     }
 
+    // The caller first validates the receipt and delivery with cite and the session ledger.
+    function containsExcerpt({ receipt, first, last }, excerpt) {
+        const proof = receipts.get(receipt);
+        return proof.lines.slice(first - proof.first, last - proof.first + 1).join('\n').includes(excerpt);
+    }
+
     function inventory(first = 1) {
         const sources = [...receipts.values()];
         const current = page(sources, first, 30);
         return { count: sources.length, items: current.items.map(locationOf), next: current.next };
     }
 
-    return { inspect, cite, inventory, binding };
+    return { inspect, cite, containsExcerpt, inventory, binding };
 }
 
 function locationWithText(location, lines) {

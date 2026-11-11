@@ -29,6 +29,11 @@ export interface BugbotShadowCitation {
     readonly textSha256: string;
 }
 
+interface BugbotShadowOrderEvidence {
+    readonly excerpt: string;
+    readonly citation: BugbotShadowCitation;
+}
+
 export type BugbotShadowResult =
     | {
         readonly status: 'verdict';
@@ -39,6 +44,12 @@ export type BugbotShadowResult =
         readonly premises: readonly {
             readonly claim: string;
             readonly citations: readonly BugbotShadowCitation[];
+            readonly order: readonly {
+                readonly route: string;
+                readonly first: readonly BugbotShadowOrderEvidence[];
+                readonly second: readonly BugbotShadowOrderEvidence[];
+                readonly mechanism: readonly BugbotShadowOrderEvidence[];
+            }[];
         }[];
         readonly reportedModel?: string;
       }
@@ -53,5 +64,6 @@ export interface BugbotShadowVerificationPort {
     verify(request: {
         readonly candidate: BugbotShadowCandidate;
         readonly configuration: Readonly<AgentConfiguration>;
+        readonly signal?: AbortSignal;
     }): Promise<BugbotShadowResult>;
 }

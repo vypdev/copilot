@@ -1,0 +1,999 @@
+[
+  {
+    "file": "domus-24-luna-closure.jsonl",
+    "model": "gpt-6-luna",
+    "head": "e129e76e25deff7314efe3b72996d295cf73f7f3",
+    "session": "052aea53d433689d1cd631421f2535964abce28a41ea3efb3d507a84a7ceef55",
+    "observed": null,
+    "expected": "refuted",
+    "verdictMatches": false,
+    "exactRanges": [
+      {
+        "step": "exact parent index",
+        "premises": []
+      },
+      {
+        "step": "index before profile schema",
+        "premises": []
+      },
+      {
+        "step": "version-matched official unique index rule",
+        "premises": []
+      }
+    ],
+    "validatedCitations": 0,
+    "writes": 0,
+    "closures": 2,
+    "wallMs": 88649,
+    "missing": null,
+    "failure": "unexpected-provider-tool",
+    "effort": "low",
+    "uniqueIndex": false,
+    "officialRule": false,
+    "freshOrder": false,
+    "migrationMentioned": false,
+    "routes": [],
+    "laterTrackedIndexes": [
+      {
+        "version": 5,
+        "file": "tests/fixtures/sqlite/v5.sql",
+        "line": 55,
+        "cited": false
+      },
+      {
+        "version": 6,
+        "file": "tests/fixtures/sqlite/v6.sql",
+        "line": 79,
+        "cited": false
+      },
+      {
+        "version": 7,
+        "file": "tests/fixtures/sqlite/v7.sql",
+        "line": 39,
+        "cited": false
+      },
+      {
+        "version": 8,
+        "file": "tests/fixtures/sqlite/v8.sql",
+        "line": 61,
+        "cited": false
+      }
+    ],
+    "migrationEvidenceComplete": true,
+    "lunaMeetsCitationCriteria": false
+  },
+  {
+    "file": "domus-24-luna-expired.jsonl",
+    "model": "gpt-6-luna",
+    "head": "e129e76e25deff7314efe3b72996d295cf73f7f3",
+    "session": "bbd8a1083ed788033dd79af26e80bdc26ccf897ae9d78b63422ec8db5acdd727",
+    "observed": null,
+    "expected": "refuted",
+    "verdictMatches": false,
+    "exactRanges": [
+      {
+        "step": "exact parent index",
+        "premises": []
+      },
+      {
+        "step": "index before profile schema",
+        "premises": []
+      },
+      {
+        "step": "version-matched official unique index rule",
+        "premises": []
+      }
+    ],
+    "validatedCitations": 0,
+    "writes": 0,
+    "closures": 0,
+    "wallMs": 46034,
+    "missing": null,
+    "failure": "provider-expired",
+    "effort": "low",
+    "uniqueIndex": false,
+    "officialRule": false,
+    "freshOrder": false,
+    "migrationMentioned": false,
+    "routes": [],
+    "laterTrackedIndexes": [
+      {
+        "version": 5,
+        "file": "tests/fixtures/sqlite/v5.sql",
+        "line": 55,
+        "cited": false
+      },
+      {
+        "version": 6,
+        "file": "tests/fixtures/sqlite/v6.sql",
+        "line": 79,
+        "cited": false
+      },
+      {
+        "version": 7,
+        "file": "tests/fixtures/sqlite/v7.sql",
+        "line": 39,
+        "cited": false
+      },
+      {
+        "version": 8,
+        "file": "tests/fixtures/sqlite/v8.sql",
+        "line": 61,
+        "cited": false
+      }
+    ],
+    "migrationEvidenceComplete": true,
+    "lunaMeetsCitationCriteria": false
+  },
+  {
+    "file": "domus-24-luna-interrupted.jsonl",
+    "model": "gpt-6-luna",
+    "head": "e129e76e25deff7314efe3b72996d295cf73f7f3",
+    "session": "3a1cdcbc89fe79bac5c5eeb94a255467846ec3275f2ca7584aee7dae99d67d39",
+    "observed": null,
+    "expected": "refuted",
+    "verdictMatches": false,
+    "exactRanges": [
+      {
+        "step": "exact parent index",
+        "premises": []
+      },
+      {
+        "step": "index before profile schema",
+        "premises": []
+      },
+      {
+        "step": "version-matched official unique index rule",
+        "premises": []
+      }
+    ],
+    "validatedCitations": 0,
+    "writes": 0,
+    "closures": 0,
+    "wallMs": 38489,
+    "missing": null,
+    "failure": "unexpected-provider-tool",
+    "effort": "low",
+    "uniqueIndex": false,
+    "officialRule": false,
+    "freshOrder": false,
+    "migrationMentioned": false,
+    "routes": [],
+    "laterTrackedIndexes": [
+      {
+        "version": 5,
+        "file": "tests/fixtures/sqlite/v5.sql",
+        "line": 55,
+        "cited": false
+      },
+      {
+        "version": 6,
+        "file": "tests/fixtures/sqlite/v6.sql",
+        "line": 79,
+        "cited": false
+      },
+      {
+        "version": 7,
+        "file": "tests/fixtures/sqlite/v7.sql",
+        "line": 39,
+        "cited": false
+      },
+      {
+        "version": 8,
+        "file": "tests/fixtures/sqlite/v8.sql",
+        "line": 61,
+        "cited": false
+      }
+    ],
+    "migrationEvidenceComplete": true,
+    "lunaMeetsCitationCriteria": false
+  },
+  {
+    "file": "domus-24-luna-no-deadline.jsonl",
+    "model": "gpt-6-luna",
+    "head": "e129e76e25deff7314efe3b72996d295cf73f7f3",
+    "session": "abcb4d29690af6ee528d1986d105876e68d71cccefc5304df49c1a150b7cd20c",
+    "observed": null,
+    "expected": "refuted",
+    "verdictMatches": false,
+    "exactRanges": [
+      {
+        "step": "exact parent index",
+        "premises": []
+      },
+      {
+        "step": "index before profile schema",
+        "premises": []
+      },
+      {
+        "step": "version-matched official unique index rule",
+        "premises": []
+      }
+    ],
+    "validatedCitations": 0,
+    "writes": 0,
+    "closures": 0,
+    "wallMs": 5133,
+    "missing": null,
+    "failure": "investigation-shape",
+    "effort": "low",
+    "uniqueIndex": false,
+    "officialRule": false,
+    "freshOrder": false,
+    "migrationMentioned": false,
+    "routes": [],
+    "laterTrackedIndexes": [
+      {
+        "version": 5,
+        "file": "tests/fixtures/sqlite/v5.sql",
+        "line": 55,
+        "cited": false
+      },
+      {
+        "version": 6,
+        "file": "tests/fixtures/sqlite/v6.sql",
+        "line": 79,
+        "cited": false
+      },
+      {
+        "version": 7,
+        "file": "tests/fixtures/sqlite/v7.sql",
+        "line": 39,
+        "cited": false
+      },
+      {
+        "version": 8,
+        "file": "tests/fixtures/sqlite/v8.sql",
+        "line": 61,
+        "cited": false
+      }
+    ],
+    "migrationEvidenceComplete": true,
+    "lunaMeetsCitationCriteria": false
+  },
+  {
+    "file": "domus-24-luna-xhigh.jsonl",
+    "model": "gpt-6-luna",
+    "head": "e129e76e25deff7314efe3b72996d295cf73f7f3",
+    "session": "52340b91ac452a04ad00f89c13c5ce4cc1c6858c21dc903fc2e0bedb5f8e5138",
+    "observed": "refuted",
+    "expected": "refuted",
+    "verdictMatches": true,
+    "exactRanges": [
+      {
+        "step": "exact parent index",
+        "premises": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "step": "index before profile schema",
+        "premises": [
+          2
+        ]
+      },
+      {
+        "step": "version-matched official unique index rule",
+        "premises": []
+      }
+    ],
+    "validatedCitations": 35,
+    "writes": 0,
+    "closures": 1,
+    "wallMs": 844794,
+    "missing": null,
+    "failure": null,
+    "effort": "xhigh",
+    "uniqueIndex": true,
+    "officialRule": true,
+    "freshOrder": true,
+    "migrationMentioned": true,
+    "routes": [
+      {
+        "route": "fresh database initialization",
+        "claim": "On fresh initialization, foreign keys are enabled and the statement loop executes SCHEMA_STATEMENTS sequentially. It registers the members table, then the task index, then both profile tables with their composite foreign keys.",
+        "firstOperation": true,
+        "secondOperation": true,
+        "taskEntry": true,
+        "profileEntry": true,
+        "executionLoop": true,
+        "createsIndexInMigration": false,
+        "ranges": {
+          "first": [
+            {
+              "path": "backend/src/domus/infrastructure/sqlite_task_schema.py",
+              "first": 5,
+              "last": 5,
+              "excerpt": "    \"CREATE UNIQUE INDEX task_member_scope ON members(household_id,member_id)\","
+            }
+          ],
+          "second": [
+            {
+              "path": "backend/src/domus/infrastructure/sqlite_member_profile_schema.py",
+              "first": 8,
+              "last": 8,
+              "excerpt": "    \"FOREIGN KEY(household_id,member_id) REFERENCES members(household_id,member_id), \""
+            },
+            {
+              "path": "backend/src/domus/infrastructure/sqlite_member_profile_schema.py",
+              "first": 16,
+              "last": 16,
+              "excerpt": "    \"FOREIGN KEY(household_id,member_id) REFERENCES members(household_id,member_id))\""
+            }
+          ],
+          "mechanism": [
+            {
+              "path": "backend/src/domus/infrastructure/sqlite.py",
+              "first": 94,
+              "last": 94,
+              "excerpt": "    *IDENTITY_STATEMENTS,"
+            },
+            {
+              "path": "backend/src/domus/infrastructure/sqlite.py",
+              "first": 97,
+              "last": 97,
+              "excerpt": "    *TASK_STATEMENTS,"
+            },
+            {
+              "path": "backend/src/domus/infrastructure/sqlite.py",
+              "first": 101,
+              "last": 101,
+              "excerpt": "    *PROFILE_STATEMENTS,"
+            },
+            {
+              "path": "backend/src/domus/infrastructure/sqlite.py",
+              "first": 369,
+              "last": 369,
+              "excerpt": "                if version == 0:"
+            },
+            {
+              "path": "backend/src/domus/infrastructure/sqlite.py",
+              "first": 370,
+              "last": 370,
+              "excerpt": "                    for statement in SCHEMA_STATEMENTS:"
+            },
+            {
+              "path": "backend/src/domus/infrastructure/sqlite.py",
+              "first": 371,
+              "last": 371,
+              "excerpt": "                        connection.execute(statement)"
+            }
+          ]
+        }
+      },
+      {
+        "route": "migration from schema versions 1–4",
+        "claim": "For migrations from versions 1–4, the migration list includes TASK_STATEMENTS when version <5, then PROFILE_STATEMENTS, and executes the list sequentially. The composite index therefore precedes the profile foreign keys on these routes.",
+        "firstOperation": true,
+        "secondOperation": true,
+        "taskEntry": false,
+        "profileEntry": false,
+        "executionLoop": false,
+        "createsIndexInMigration": true,
+        "ranges": {
+          "first": [
+            {
+              "path": "backend/src/domus/infrastructure/sqlite_task_schema.py",
+              "first": 5,
+              "last": 5,
+              "excerpt": "    \"CREATE UNIQUE INDEX task_member_scope ON members(household_id,member_id)\","
+            }
+          ],
+          "second": [
+            {
+              "path": "backend/src/domus/infrastructure/sqlite_member_profile_schema.py",
+              "first": 8,
+              "last": 8,
+              "excerpt": "    \"FOREIGN KEY(household_id,member_id) REFERENCES members(household_id,member_id), \""
+            },
+            {
+              "path": "backend/src/domus/infrastructure/sqlite_member_profile_schema.py",
+              "first": 16,
+              "last": 16,
+              "excerpt": "    \"FOREIGN KEY(household_id,member_id) REFERENCES members(household_id,member_id))\""
+            }
+          ],
+          "mechanism": [
+            {
+              "path": "backend/src/domus/infrastructure/sqlite.py",
+              "first": 383,
+              "last": 383,
+              "excerpt": "                        *(TASK_STATEMENTS if version < 5 else ()),"
+            },
+            {
+              "path": "backend/src/domus/infrastructure/sqlite.py",
+              "first": 387,
+              "last": 387,
+              "excerpt": "                        *PROFILE_STATEMENTS,"
+            },
+            {
+              "path": "backend/src/domus/infrastructure/sqlite.py",
+              "first": 389,
+              "last": 390,
+              "excerpt": "                    for statement in migration:\n                        connection.execute(statement)"
+            }
+          ]
+        }
+      },
+      {
+        "route": "configured standalone runtime",
+        "claim": "The configured standalone runtime initializes its SQLiteDatabase before composing the service. Member creation inserts into members and then calls initialize_member_profiles, whose implementation inserts profile rows.",
+        "firstOperation": false,
+        "secondOperation": false,
+        "taskEntry": false,
+        "profileEntry": false,
+        "executionLoop": false,
+        "createsIndexInMigration": false,
+        "ranges": {
+          "first": [
+            {
+              "path": "backend/src/domus/composition/server.py",
+              "first": 89,
+              "last": 89,
+              "excerpt": "        store.initialize()"
+            }
+          ],
+          "second": [
+            {
+              "path": "backend/src/domus/composition/server.py",
+              "first": 90,
+              "last": 90,
+              "excerpt": "    return _compose(config, installation, store)"
+            }
+          ],
+          "mechanism": [
+            {
+              "path": "backend/src/domus/composition/server.py",
+              "first": 86,
+              "last": 86,
+              "excerpt": "    if database is not None:"
+            }
+          ]
+        }
+      },
+      {
+        "route": "new member provisioning",
+        "claim": "The configured standalone runtime initializes its SQLiteDatabase before composing the service. Member creation inserts into members and then calls initialize_member_profiles, whose implementation inserts profile rows.",
+        "firstOperation": false,
+        "secondOperation": false,
+        "taskEntry": false,
+        "profileEntry": false,
+        "executionLoop": false,
+        "createsIndexInMigration": false,
+        "ranges": {
+          "first": [
+            {
+              "path": "backend/src/domus/infrastructure/sqlite_identity.py",
+              "first": 92,
+              "last": 94,
+              "excerpt": "                    \"INSERT INTO members(role,status,revision,exceptions,member_id,\"\n                    \"household_id,ha_user_id) \"\n                    \"VALUES (?,?,?,?,?,?,?)\","
+            }
+          ],
+          "second": [
+            {
+              "path": "backend/src/domus/infrastructure/sqlite_identity.py",
+              "first": 99,
+              "last": 99,
+              "excerpt": "            initialize_member_profiles(self.connection, member)"
+            },
+            {
+              "path": "backend/src/domus/infrastructure/sqlite_member_profiles.py",
+              "first": 16,
+              "last": 16,
+              "excerpt": "        \"INSERT INTO member_presentations(member_id,household_id,alias,revision) VALUES (?,?,?,?)\","
+            }
+          ],
+          "mechanism": [
+            {
+              "path": "backend/src/domus/infrastructure/sqlite_identity.py",
+              "first": 89,
+              "last": 89,
+              "excerpt": "        if expected_revision == 0:"
+            },
+            {
+              "path": "backend/src/domus/infrastructure/sqlite_identity.py",
+              "first": 97,
+              "last": 98,
+              "excerpt": "            except sqlite3.IntegrityError:\n                raise Conflict(\"member_exists\") from None"
+            },
+            {
+              "path": "backend/src/domus/infrastructure/sqlite_identity.py",
+              "first": 99,
+              "last": 99,
+              "excerpt": "            initialize_member_profiles(self.connection, member)"
+            }
+          ]
+        }
+      }
+    ],
+    "laterTrackedIndexes": [
+      {
+        "version": 5,
+        "file": "tests/fixtures/sqlite/v5.sql",
+        "line": 55,
+        "cited": true
+      },
+      {
+        "version": 6,
+        "file": "tests/fixtures/sqlite/v6.sql",
+        "line": 79,
+        "cited": true
+      },
+      {
+        "version": 7,
+        "file": "tests/fixtures/sqlite/v7.sql",
+        "line": 39,
+        "cited": true
+      },
+      {
+        "version": 8,
+        "file": "tests/fixtures/sqlite/v8.sql",
+        "line": 61,
+        "cited": true
+      }
+    ],
+    "migrationEvidenceComplete": true,
+    "lunaMeetsCitationCriteria": true
+  },
+  {
+    "file": "domus-29-sol-xhigh.jsonl",
+    "model": "gpt-6.1-sol",
+    "head": "57a8b4c6a9f52afb1ffc8e38275bcfd13575a3ae",
+    "session": "f375a6d57452dcaf38ee71b1de20b549ada38f19fe7783f385c27fcc48114ad5",
+    "observed": "confirmed",
+    "expected": "confirmed",
+    "verdictMatches": true,
+    "exactRanges": [
+      {
+        "step": "early invalid-input return",
+        "premises": [
+          5
+        ]
+      },
+      {
+        "step": "receipt-driven form clear",
+        "premises": [
+          9
+        ]
+      }
+    ],
+    "validatedCitations": 83,
+    "writes": 0,
+    "closures": 1,
+    "wallMs": 537731,
+    "missing": null,
+    "failure": null,
+    "effort": "xhigh",
+    "routes": [
+      {
+        "route": "successful creation response to saved outcome",
+        "claim": "A successful committed creation response becomes the controller outcome and a committed journal record. The workflow subsequently returns to ready and not busy.",
+        "ranges": {
+          "first": [
+            {
+              "path": "frontend/src/application/task-controller.ts",
+              "first": 145,
+              "last": 145,
+              "excerpt": "      const outcome = await this.server.send({key, command}, this.state.session!.context);"
+            }
+          ],
+          "second": [
+            {
+              "path": "frontend/src/application/task-controller.ts",
+              "first": 147,
+              "last": 147,
+              "excerpt": "      this.save(key, outcome);"
+            }
+          ],
+          "mechanism": [
+            {
+              "path": "frontend/src/application/task-controller.ts",
+              "first": 145,
+              "last": 145,
+              "excerpt": "      const outcome = await this.server.send({key, command}, this.state.session!.context);"
+            },
+            {
+              "path": "frontend/src/application/task-controller.ts",
+              "first": 146,
+              "last": 146,
+              "excerpt": "      if (this.closed || generation !== this.generation) return;"
+            },
+            {
+              "path": "frontend/src/application/task-controller.ts",
+              "first": 147,
+              "last": 147,
+              "excerpt": "      this.save(key, outcome);"
+            }
+          ]
+        }
+      },
+      {
+        "route": "completed controller work to ready state",
+        "claim": "A successful committed creation response becomes the controller outcome and a committed journal record. The workflow subsequently returns to ready and not busy.",
+        "ranges": {
+          "first": [
+            {
+              "path": "frontend/src/application/task-controller.ts",
+              "first": 77,
+              "last": 77,
+              "excerpt": "    try {await this.fresh(generation); await work(prior, generation);}"
+            }
+          ],
+          "second": [
+            {
+              "path": "frontend/src/application/task-controller.ts",
+              "first": 84,
+              "last": 84,
+              "excerpt": "      if (generation === this.generation && !this.closed) {this.running = false; this.update({phase: 'ready'});}"
+            }
+          ],
+          "mechanism": [
+            {
+              "path": "frontend/src/application/task-controller.ts",
+              "first": 74,
+              "last": 74,
+              "excerpt": "  private async run(work: (prior: State, generation: number) => Promise<void>): Promise<void> {"
+            },
+            {
+              "path": "frontend/src/application/task-controller.ts",
+              "first": 77,
+              "last": 77,
+              "excerpt": "    try {await this.fresh(generation); await work(prior, generation);}"
+            },
+            {
+              "path": "frontend/src/application/task-controller.ts",
+              "first": 83,
+              "last": 83,
+              "excerpt": "    } finally {"
+            },
+            {
+              "path": "frontend/src/application/task-controller.ts",
+              "first": 84,
+              "last": 84,
+              "excerpt": "      if (generation === this.generation && !this.closed) {this.running = false; this.update({phase: 'ready'});}"
+            }
+          ]
+        }
+      },
+      {
+        "route": "second form submission",
+        "claim": "A new draft with a three-space title, description 'Unsaved notes', and priority 'urgent' passes the form's length checks. The submit handler records that draft before emitting the creation intent.",
+        "ranges": {
+          "first": [
+            {
+              "path": "frontend/src/presentation/domus-tasks.ts",
+              "first": 101,
+              "last": 101,
+              "excerpt": "        this.submittedDraft = JSON.stringify([this.titleDraft, this.descriptionDraft, this.priorityDraft]);"
+            }
+          ],
+          "second": [
+            {
+              "path": "frontend/src/presentation/domus-tasks.ts",
+              "first": 102,
+              "last": 102,
+              "excerpt": "        this.intent({type: 'create', title: this.titleDraft, description: this.descriptionDraft, priority: this.priorityDraft});}}>"
+            }
+          ],
+          "mechanism": [
+            {
+              "path": "frontend/src/presentation/domus-tasks.ts",
+              "first": 97,
+              "last": 97,
+              "excerpt": "      <form novalidate @submit=${(event: SubmitEvent) => {event.preventDefault(); this.lastForm = 'create';"
+            },
+            {
+              "path": "frontend/src/presentation/domus-tasks.ts",
+              "first": 98,
+              "last": 98,
+              "excerpt": "        if (titleInvalid || descriptionInvalid) {"
+            },
+            {
+              "path": "frontend/src/presentation/domus-tasks.ts",
+              "first": 99,
+              "last": 99,
+              "excerpt": "          this.shadowRoot?.querySelector<HTMLElement>(titleInvalid ? '#task-title' : '#task-description')?.focus(); return;"
+            },
+            {
+              "path": "frontend/src/presentation/domus-tasks.ts",
+              "first": 100,
+              "last": 100,
+              "excerpt": "        }"
+            },
+            {
+              "path": "frontend/src/presentation/domus-tasks.ts",
+              "first": 101,
+              "last": 101,
+              "excerpt": "        this.submittedDraft = JSON.stringify([this.titleDraft, this.descriptionDraft, this.priorityDraft]);"
+            },
+            {
+              "path": "frontend/src/presentation/domus-tasks.ts",
+              "first": 102,
+              "last": 102,
+              "excerpt": "        this.intent({type: 'create', title: this.titleDraft, description: this.descriptionDraft, priority: this.priorityDraft});}}>"
+            }
+          ]
+        }
+      },
+      {
+        "route": "locally invalid second creation",
+        "claim": "Domain validation rejects the whitespace-only required title and returns undefined. execute then changes only notice and returns before run, key preparation, or sending a creation. The state merge preserves the prior receipt, scope, records, and access.",
+        "ranges": {
+          "first": [
+            {
+              "path": "frontend/src/application/task-controller.ts",
+              "first": 131,
+              "last": 131,
+              "excerpt": "    const command = taskCommand(value);"
+            }
+          ],
+          "second": [
+            {
+              "path": "frontend/src/application/task-controller.ts",
+              "first": 132,
+              "last": 132,
+              "excerpt": "    if (command === undefined) {this.update({notice: 'invalid_input'}); return Promise.resolve();}"
+            }
+          ],
+          "mechanism": [
+            {
+              "path": "frontend/src/application/task-controller.ts",
+              "first": 129,
+              "last": 129,
+              "excerpt": "  private execute(value: unknown): Promise<void> {"
+            },
+            {
+              "path": "frontend/src/application/task-controller.ts",
+              "first": 130,
+              "last": 130,
+              "excerpt": "    if (this.closed || this.running || this.state.access === null) return Promise.resolve();"
+            },
+            {
+              "path": "frontend/src/application/task-controller.ts",
+              "first": 131,
+              "last": 131,
+              "excerpt": "    const command = taskCommand(value);"
+            },
+            {
+              "path": "frontend/src/application/task-controller.ts",
+              "first": 132,
+              "last": 132,
+              "excerpt": "    if (command === undefined) {this.update({notice: 'invalid_input'}); return Promise.resolve();}"
+            },
+            {
+              "path": "frontend/src/application/task-controller.ts",
+              "first": 133,
+              "last": 133,
+              "excerpt": "    return this.run(async (prior, generation) => {"
+            }
+          ]
+        }
+      },
+      {
+        "route": "same-authority task reconciliation",
+        "claim": "Household taskWork reconciles entry and administration after the local result but explicitly disables task refresh. With matching, unexpired authority, synchronization restores visibility and the tasks getter returns the existing task view with its preserved outcome.",
+        "ranges": {
+          "first": [
+            {
+              "path": "frontend/src/application/household-controller.ts",
+              "first": 160,
+              "last": 160,
+              "excerpt": "      await work(current);"
+            }
+          ],
+          "second": [
+            {
+              "path": "frontend/src/application/household-controller.ts",
+              "first": 162,
+              "last": 162,
+              "excerpt": "      await Promise.all([this.entry.refresh(), this.current!.reconcile()]);"
+            },
+            {
+              "path": "frontend/src/application/household-controller.ts",
+              "first": 163,
+              "last": 163,
+              "excerpt": "      await this.synchronize(generation, true);"
+            }
+          ],
+          "mechanism": [
+            {
+              "path": "frontend/src/application/household-controller.ts",
+              "first": 159,
+              "last": 159,
+              "excerpt": "    return this.perform(async generation => {"
+            },
+            {
+              "path": "frontend/src/application/household-controller.ts",
+              "first": 160,
+              "last": 160,
+              "excerpt": "      await work(current);"
+            },
+            {
+              "path": "frontend/src/application/household-controller.ts",
+              "first": 161,
+              "last": 161,
+              "excerpt": "      if (!this.live(generation)) return;"
+            },
+            {
+              "path": "frontend/src/application/household-controller.ts",
+              "first": 162,
+              "last": 162,
+              "excerpt": "      await Promise.all([this.entry.refresh(), this.current!.reconcile()]);"
+            },
+            {
+              "path": "frontend/src/application/household-controller.ts",
+              "first": 163,
+              "last": 163,
+              "excerpt": "      await this.synchronize(generation, true);"
+            },
+            {
+              "path": "frontend/src/application/household-controller.ts",
+              "first": 167,
+              "last": 167,
+              "excerpt": "    }, false);"
+            },
+            {
+              "path": "frontend/src/application/household-controller.ts",
+              "first": 109,
+              "last": 109,
+              "excerpt": "  private async perform(work: (generation: number) => Promise<void>, refreshTasks = true): Promise<void> {"
+            },
+            {
+              "path": "frontend/src/application/household-controller.ts",
+              "first": 114,
+              "last": 114,
+              "excerpt": "      await work(generation);"
+            },
+            {
+              "path": "frontend/src/application/household-controller.ts",
+              "first": 115,
+              "last": 115,
+              "excerpt": "      if (refreshTasks && this.live(generation) && this.visible && this.eligible() && this.taskFactory !== undefined) {"
+            },
+            {
+              "path": "frontend/src/application/household-controller.ts",
+              "first": 117,
+              "last": 117,
+              "excerpt": "        await this.taskCurrent.refresh();"
+            }
+          ]
+        }
+      },
+      {
+        "route": "task work completion to final view publication",
+        "claim": "The final runtime publication delivers the task view through element.tasks to domus-tasks.view. The parent retirement guard is false for the chosen active, unchanged-authority route.",
+        "ranges": {
+          "first": [
+            {
+              "path": "frontend/src/composition/entry-runtime.ts",
+              "first": 99,
+              "last": 99,
+              "excerpt": "    try {await pending;}"
+            }
+          ],
+          "second": [
+            {
+              "path": "frontend/src/composition/entry-runtime.ts",
+              "first": 100,
+              "last": 100,
+              "excerpt": "    finally {if (this.active && this.current === owned) {this.publish(); this.arm();}}"
+            }
+          ],
+          "mechanism": [
+            {
+              "path": "frontend/src/composition/entry-runtime.ts",
+              "first": 95,
+              "last": 95,
+              "excerpt": "  private async perform(work: (controller: HouseholdController) => Promise<void>): Promise<void> {"
+            },
+            {
+              "path": "frontend/src/composition/entry-runtime.ts",
+              "first": 96,
+              "last": 96,
+              "excerpt": "    if (this.disposed || !this.active || this.view.busy) return;"
+            },
+            {
+              "path": "frontend/src/composition/entry-runtime.ts",
+              "first": 97,
+              "last": 97,
+              "excerpt": "    const owned = this.current, pending = work(owned.controller);"
+            },
+            {
+              "path": "frontend/src/composition/entry-runtime.ts",
+              "first": 99,
+              "last": 99,
+              "excerpt": "    try {await pending;}"
+            },
+            {
+              "path": "frontend/src/composition/entry-runtime.ts",
+              "first": 100,
+              "last": 100,
+              "excerpt": "    finally {if (this.active && this.current === owned) {this.publish(); this.arm();}}"
+            }
+          ]
+        }
+      },
+      {
+        "route": "invalid-input view with preserved creation receipt",
+        "claim": "On the final invalid_input view, willUpdate first opens the creation form, then the old committed creation receipt satisfies the clearing guard because submittedDraft matches the unchanged new fields. That guard has no receipt/request identity comparison; it clears title and description and resets priority.",
+        "ranges": {
+          "first": [
+            {
+              "path": "frontend/src/presentation/domus-tasks.ts",
+              "first": 65,
+              "last": 65,
+              "excerpt": "    if (this.view?.notice === 'invalid_input' && this.lastForm === 'create') this.createOpen = true;"
+            }
+          ],
+          "second": [
+            {
+              "path": "frontend/src/presentation/domus-tasks.ts",
+              "first": 75,
+              "last": 75,
+              "excerpt": "      this.createOpen = false; this.titleDraft = ''; this.descriptionDraft = ''; this.priorityDraft = 'normal'; this.submittedDraft = null;"
+            }
+          ],
+          "mechanism": [
+            {
+              "path": "frontend/src/presentation/domus-tasks.ts",
+              "first": 62,
+              "last": 62,
+              "excerpt": "  protected willUpdate(changed: PropertyValues<this>): void {"
+            },
+            {
+              "path": "frontend/src/presentation/domus-tasks.ts",
+              "first": 63,
+              "last": 63,
+              "excerpt": "    if (changed.has('retired') && this.retired) this.reset();"
+            },
+            {
+              "path": "frontend/src/presentation/domus-tasks.ts",
+              "first": 64,
+              "last": 64,
+              "excerpt": "    if (!changed.has('view')) return;"
+            },
+            {
+              "path": "frontend/src/presentation/domus-tasks.ts",
+              "first": 65,
+              "last": 65,
+              "excerpt": "    if (this.view?.notice === 'invalid_input' && this.lastForm === 'create') this.createOpen = true;"
+            },
+            {
+              "path": "frontend/src/presentation/domus-tasks.ts",
+              "first": 67,
+              "last": 67,
+              "excerpt": "    if (this.view?.phase === 'closed' || this.view?.notice === 'authentication_required' || this.view?.notice === 'forbidden'"
+            },
+            {
+              "path": "frontend/src/presentation/domus-tasks.ts",
+              "first": 68,
+              "last": 68,
+              "excerpt": "      || next != null && this.draftScope !== null && next !== this.draftScope) this.reset();"
+            },
+            {
+              "path": "frontend/src/presentation/domus-tasks.ts",
+              "first": 73,
+              "last": 73,
+              "excerpt": "    if (this.view?.outcome?.kind === 'receipt' && this.view.outcome.stage === 'committed' && this.view.outcome.action === 'task.create'"
+            },
+            {
+              "path": "frontend/src/presentation/domus-tasks.ts",
+              "first": 74,
+              "last": 74,
+              "excerpt": "        && this.submittedDraft === JSON.stringify([this.titleDraft, this.descriptionDraft, this.priorityDraft])) {"
+            },
+            {
+              "path": "frontend/src/presentation/domus-tasks.ts",
+              "first": 75,
+              "last": 75,
+              "excerpt": "      this.createOpen = false; this.titleDraft = ''; this.descriptionDraft = ''; this.priorityDraft = 'normal'; this.submittedDraft = null;"
+            }
+          ]
+        }
+      }
+    ],
+    "solMeetsCitationCriteria": true
+  }
+]

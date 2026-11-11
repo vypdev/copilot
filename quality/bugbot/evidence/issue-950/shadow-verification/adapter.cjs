@@ -9,7 +9,7 @@ const { git, blob } = require('../shadow-real-prs/broker.cjs');
 
 function createShadowVerifier(lab, log, transport = ask) {
     return {
-        async verify({ candidate, configuration }) {
+        async verify({ candidate, configuration, signal }) {
             const { owner, name } = candidate.repository;
             if (configuration.provider !== 'codex') {
                 return { status: 'technical-failure', reason: 'shadow-provider-unavailable' };
@@ -31,7 +31,7 @@ function createShadowVerifier(lab, log, transport = ask) {
             const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'bugbot-integrated-shadow-'));
             try {
                 const result = await investigate(lab, subject, finding, cwd,
-                    request => transport({ ...request, configuration }), log);
+                    request => transport({ ...request, configuration }), log, signal);
                 log({ ...result, resolvedModel: configuration.model });
                 const models = new Set(result.turns.flatMap(turn => turn.reportedModel ? [turn.reportedModel] : []));
                 const reportedModel = [...models].find(model => model !== configuration.model) ?? [...models][0];

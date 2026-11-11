@@ -31,6 +31,41 @@ function initial(broker, subject, finding, requiredOfficial) {
         officialCatalog: officialPackages, requiredOfficial });
 }
 
+const orderLanguage = /\b(?:before|after|precedes?|follows? the execution|prior to|followed by|and then|first.+(?:then|second)|antes de|despu[eé]s de|seguido de)\b/iu;
+const orderParts = {
+    first: 'the first operation',
+    second: 'the second operation',
+    mechanism: 'the code that determines the effective order',
+};
+
+function validateOrder(order, claim, premise, validateCitation, broker, omissions) {
+    if (!order.length && orderLanguage.test(claim)) {
+        omissions.push({ issue: 'order-claim-uncited', premise });
+    }
+    const routes = new Set();
+    return order.map(({ route, ...parts }) => {
+        assert(text(route, 300), 'invalid-order-route');
+        assert(!routes.has(route.trim().toLowerCase()), 'duplicate-order-route');
+        routes.add(route.trim().toLowerCase());
+        const shas = new Set();
+        const proof = { route };
+        for (const part of Object.keys(orderParts)) {
+            if (!parts[part].length) omissions.push({ issue: 'order-evidence-missing', premise, route, part });
+            proof[part] = parts[part].map(({ excerpt, ...citation }) => {
+                const source = validateCitation(citation);
+                shas.add(source.sha);
+                if (source.kind !== 'git' || !text(excerpt, 300)
+                    || !broker.containsExcerpt(citation, excerpt.trim())) {
+                    omissions.push({ issue: 'order-excerpt-unsupported', premise, route, part });
+                }
+                return { excerpt, citation: source };
+            });
+        }
+        if (shas.size > 1) omissions.push({ issue: 'order-mixed-revisions', premise, route });
+        return proof;
+    });
+}
+
 function prepareVerdict(response, broker, delivered) {
     assert.equal(response.requests.length, 0, 'final-has-requests');
     assert(response.verdict && text(response.reason, 3000), 'final-verdict-or-reason');
@@ -39,27 +74,47 @@ function prepareVerdict(response, broker, delivered) {
 
     const omissions = [];
     const proofs = new Map();
-    const premises = response.premises.map(({ claim, citations }, index) => {
+    function validateCitation(citation) {
+        const { receipt, first, last } = citation;
+        const key = JSON.stringify([receipt, first, last]);
+        if (!proofs.has(key)) {
+            const proof = broker.cite(citation);
+            assert(delivered.get(receipt)?.some(range => range.first <= first && range.last >= last),
+                'citation-not-delivered');
+            proofs.set(key, proof);
+        }
+        return proofs.get(key);
+    }
+
+    const premises = response.premises.map(({ claim, citations, order }, index) => {
         assert(text(claim, 1000), 'invalid-premise');
-        if (!citations.length) omissions.push({ issue: 'uncited-premise', premise: index + 1 });
-        const seen = new Set();
-        return { claim, citations: citations.map(citation => {
-            const { receipt, first, last } = citation;
-            const key = JSON.stringify([receipt, first, last]);
-            assert(!seen.has(key), 'duplicate-citation');
-            seen.add(key);
-            if (!proofs.has(key)) {
-                const proof = broker.cite(citation);
-                assert(delivered.get(receipt)?.some(range => range.first <= first && range.last >= last),
-                    'citation-not-delivered');
-                proofs.set(key, proof);
-            }
-            return proofs.get(key);
-        }) };
+        const premise = index + 1;
+        if (!citations.length && !order.length) omissions.push({ issue: 'uncited-premise', premise });
+        const direct = citations.map(validateCitation);
+        assert.equal(new Set(direct).size, direct.length, 'duplicate-citation');
+        const routes = validateOrder(order, claim, premise, validateCitation, broker, omissions);
+        const ordered = routes.flatMap(route => Object.keys(orderParts)
+            .flatMap(part => route[part].map(evidence => evidence.citation)));
+        return { claim, citations: [...new Set([...direct, ...ordered])], order: routes };
     });
-    if (response.verdict !== 'inconclusive' && !premises.length) omissions.push({ issue: 'missing-premises' });
+    if (response.verdict !== 'inconclusive') {
+        if (!premises.length) omissions.push({ issue: 'missing-premises' });
+        if (orderLanguage.test(response.reason) && !premises.some(premise => premise.order.length)
+            && !omissions.some(gap => gap.issue === 'order-claim-uncited')) {
+            omissions.push({ issue: 'order-claim-uncited', field: 'reason' });
+        }
+    }
     return { answer: { label: response.verdict, reason: response.reason, missing: response.missing,
         anchor: broker.binding.anchor, premises, citations: [...proofs.values()] }, omissions };
+}
+
+function inconclusiveOrder(broker, gap) {
+    const where = gap.route ? ` for route "${gap.route}"` : '';
+    const missing = gap.part ? `Missing grounded evidence for ${orderParts[gap.part]}${where}.`
+        : gap.issue === 'order-mixed-revisions' ? `Missing same-revision proof of the two operations and their order${where}.`
+            : 'Missing the citations for both operations and the code that determines their effective order.';
+    return { label: 'inconclusive', reason: 'The cited evidence did not establish the required execution order.',
+        missing, anchor: broker.binding.anchor, premises: [], citations: [] };
 }
 
 function receiptMetadata({ sources, ...result }) {
@@ -121,22 +176,18 @@ async function investigate(lab, subject, finding, cwd, transport, log, signal) {
     const first = initial(broker, subject, finding, requiredOfficial);
     const delivered = new Map();
     let prompt = first, threadId, observations = [], answer = null, failure = null, closureIssues = [];
-    const remaining = () => {
-        assert(!signal?.aborted, 'investigation-canceled');
-        const time = Math.floor(plan.caseMs - (performance.now() - started));
-        assert(time > 0, 'investigation-timeout');
-        return time;
-    };
+    let pendingOrder;
+    const checkCanceled = () => assert(!signal?.aborted, 'investigation-canceled');
     try {
         if (plan.publication !== 'dry-run') ports.publishReview();
         checkTree(lab, subject, finding.allowBase);
         while (!answer) {
-            const deadline = Math.min(remaining(), plan.turnMs);
+            checkCanceled();
             const turn = turns.length + 1;
             log({ event: 'turn-started', finding: finding.id, turn, promptSha256: hash(prompt) });
-            const result = await transport({ cwd, prompt, schema, threadId, deadline, signal });
+            const result = await transport({ cwd, prompt, schema, threadId, signal });
             turns.push(result.fact);
-            remaining();
+            checkCanceled();
             if (result.threadId) assert(!threadId || result.threadId === threadId, 'thread-mismatch');
             if (result.fact.failure === 'provider-context-window' && threadId) {
                 // A provider rejection may leave the latest source undelivered.
@@ -165,9 +216,17 @@ async function investigate(lab, subject, finding, cwd, transport, log, signal) {
                 closureIssues = [...proposed.omissions, ...missingOfficialEvidence(proposed.answer, actions, subject, requiredOfficial)];
                 if (closureIssues.length) {
                     closures.push({ turn, issues: closureIssues });
+                    const orderGap = closureIssues.find(gap => gap.issue.startsWith('order-'));
+                    const key = JSON.stringify([actions.length, closureIssues]);
+                    if (orderGap && pendingOrder === key) {
+                        answer = inconclusiveOrder(broker, orderGap);
+                        break;
+                    }
+                    pendingOrder = orderGap ? key : undefined;
                     observations = [];
                     prompt = 'The proposed verdict is still open. In this same investigation, read or recall the exact ranges ' +
-                        'and submit a complete verdict. For an official-evidence issue, establish the release and request its official source. ' +
+                        'and submit a complete verdict. For an order issue, complete the named role with its exact code excerpt and receipt. ' +
+                        'For an official-evidence issue, establish the release and request its official source. ' +
                         'If material evidence is unavailable, finish inconclusive and state the specific gap.\n' +
                         JSON.stringify({ closureIssues });
                     continue;
@@ -179,7 +238,7 @@ async function investigate(lab, subject, finding, cwd, transport, log, signal) {
                 && !response.premises.length && response.requests.length > 0, 'investigation-shape');
             observations = [];
             for (const request of response.requests) {
-                remaining();
+                checkCanceled();
                 const result = broker.inspect(request, delivered);
                 observations.push({ request, result });
                 actions.push({ turn, request, result: receiptMetadata(result) });

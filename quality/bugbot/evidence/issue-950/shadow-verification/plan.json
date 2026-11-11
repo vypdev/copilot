@@ -1,8 +1,6 @@
 {
   "publication": "dry-run",
   "cli": "codex-cli 0.167.0-alpha.3.2",
-  "caseMs": 260000,
-  "turnMs": 46000,
   "concurrency": 3,
   "localRuntime": {
     "python": "3.14.6",

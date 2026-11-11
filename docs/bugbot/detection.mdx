@@ -13,16 +13,21 @@ Issue #950 specifies a separate verification stage after candidate detection. Th
 
 The shadow pilot starts a separate investigation for each candidate prepared by
 the usual Bugbot detector before publication. Both stages use the same effective
-Bugbot model, including the ordinary default when the model is omitted. An
-empty candidate set opens no verifier sessions. The verifier follows material
+Bugbot model and reasoning effort. Bugbot supplies its default model when
+needed and leaves omitted reasoning effort to the provider. An empty candidate
+set opens no verifier sessions. The verifier follows material
 leads through successive reads, including unchanged code and official sources
 for a resolved dependency version. A delivered runtime receipt can identify the
 release for an official lookup while preserving the scope of the measurement.
 For missing-guard or missing-configuration claims, the verifier traces how the
 effective state is assembled. The report cites exact ranges for each material
-premise. A draft with an omitted citation can continue in the same session. If the provider runs out of
-context, the application retains the finding and evidence receipts so the
+premise. For a premise about execution order, it identifies the route, both
+operations, and the code that determines their order. The same session can
+complete a missing role or close as inconclusive with the remaining gap.
+If the provider runs out of context, the application retains the finding and evidence receipts so the
 verifier can resume from them. A missing premise yields an inconclusive verdict.
+The verifier records elapsed time and continues without a time cutoff.
+Explicit cancellation and provider failures can still end the investigation.
 Usage telemetry has no effect on reads, verdicts or qualification. The pilot
 records verdicts and technical failures separately from the usual publication
 decision and runs with GitHub writes blocked.

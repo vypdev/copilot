@@ -2813,9 +2813,13 @@ unavailable usage MUST have no effect on candidate admission, evidence
 selection or delivery, dispatch, retry, verdict validation, approval or profile
 qualification. Log cumulative usage as such when the provider supplies it.
 
-Use read permissions, concurrency, operational timeouts and the existing
-cancellation fence. Keep process and wire safety bounds local to the relevant
-operation. Paginate search results or issue narrower reads where needed and
+Use read permissions, concurrency, and the explicit cancellation fence.
+Keep evidence transport and process safety bounds local to the relevant
+operation. The verifier does not impose an elapsed-time cutoff on a provider
+turn or on the investigation. Record elapsed time as telemetry. The timed
+two-pair diagnostic descriptions later in this document describe their
+frozen experimental protocols. Fresh runs through the active verifier use
+the continuation behavior above. Profile latency is evaluated after a run. Paginate search results or issue narrower reads where needed and
 preserve previously obtained evidence. Do not impose a turn, read, retained
 evidence or aggregate traffic quota to control model spend.
 
@@ -3222,6 +3226,61 @@ The first seven cases are deterministic controls in
 [the shadow runner suite](../quality/bugbot/evidence/issue-950/shadow-verification/verification.test.cjs).
 The two live replays and their independent controls are recorded in
 [the closure replay report](../quality/bugbot/evidence/issue-950/shadow-closure-replay/results.md).
+
+### Execution order evidence at shadow closure
+
+A material premise about sequence declares the route and cites three roles.
+The first and second roles identify the two operations. The mechanism role
+identifies the code that makes that order effective, such as the execution
+loop for an ordered list, a call chain, a guard, or a migration branch. Each
+role has a verbatim code excerpt inside its cited range. When relevant routes
+have different behavior, the premise and verdict are limited to the supported
+route or carry a complete proof for each route they cover.
+
+The existing closure validates each role against the same pinned revision and
+previously delivered Git receipts. It checks that the excerpt occurs within
+the cited range. Explicit sequence language without order roles also returns
+a closure issue. These checks establish source grounding. The independent
+evaluator checks whether the lines and control flow substantiate the claimed
+operations and order.
+
+```text
+Draft premise -> check first, second, and mechanism per route -> close verdict
+                            |
+                     missing role or excerpt
+                            |
+                     continue same session
+                            |
+              unresolved evidence -> inconclusive
+```
+
+The closure identifies the affected premise, route, and role where available.
+For example, a draft that omits the second operation can receive a request for
+that operation's exact code range. The same session can read or recall it and
+complete the proof. A repeated unresolved gap without further evidence
+records an inconclusive verdict that names the gap. Provider failures, cancellation, foreign receipts and undelivered
+citations preserve their failure treatment. This change adds no configuration
+or publication permission.
+
+| Case | Minimum acceptance evidence |
+|---|---|
+| ev950-shadow-C13 | A draft missing the second operation stays open. The same session supplies its range and concludes. |
+| ev950-shadow-C14 | A draft missing the ordering mechanism stays open. The same session supplies its range and concludes. |
+| ev950-shadow-C15 | An excerpt outside its cited range leaves the corresponding role incomplete. |
+| ev950-shadow-C16 | An unchanged unresolved order gap closes as inconclusive with a specific missing role. |
+| ev950-shadow-C17 | Explicit sequence without structured order evidence triggers recovery. |
+| ev950-shadow-C18 | The runner identifies a route with missing proof and can accept a verdict narrowed to the proven route. |
+| ev950-shadow-C19 | A foreign order citation fails the same provenance checks as any other citation. |
+| ev950-shadow-C20 | The pinned Domus #24 replay records Luna's verdict and independent checks of both schema entries, the loop, the unique index, and the applicable official rule. A migration-dependent verdict also needs proof of the routes it covers. The replay attempts zero PR writes. |
+| ev950-shadow-C21 | Advancing the test clock beyond the former provider-turn and investigation limits leaves the same session active and accepts a valid verdict. Explicit cancellation still stops it. |
+
+Run the eight deterministic cases through
+[the shadow runner suite](../quality/bugbot/evidence/issue-950/shadow-verification/verification.test.cjs).
+Replays may pin an explicit provider reasoning effort and record it alongside
+the frozen candidate configuration. Actual reviews inherit the effective
+reviewer or findings configuration. Record the provider attempts and the
+independent line checks in
+[the execution order replay](../quality/bugbot/evidence/issue-950/shadow-order-replay/results.md).
 
 ### 20. References and decisions
 

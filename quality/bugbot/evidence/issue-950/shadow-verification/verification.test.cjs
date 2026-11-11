@@ -25,7 +25,8 @@ const source = git(['hash-object', '-w', '--stdin'], 'export const enabled = tru
 const unchanged = git(['hash-object', '-w', '--stdin'], 'export const allowsRequests = false;\n' + 'x'.repeat(24_000) + '\n');
 const python = git(['hash-object', '-w', '--stdin'], plan.localRuntime.python + '\n');
 const lockfile = git(['hash-object', '-w', '--stdin'], "packages:\n  playwright@1.64.2:\n    resolution: {}\n");
-const tree = git(['mktree'], `100644 blob ${python}\t.python-version\n100644 blob ${source}\tanchor.ts\n100644 blob ${lockfile}\tpnpm-lock.yaml\n100644 blob ${unchanged}\tsettings.ts\n`);
+const operations = git(['hash-object', '-w', '--stdin'], 'steps = [prepare, deliver]\nfor step in steps:\n    step()\n');
+const tree = git(['mktree'], `100644 blob ${python}\t.python-version\n100644 blob ${source}\tanchor.ts\n100644 blob ${operations}\tordered.py\n100644 blob ${lockfile}\tpnpm-lock.yaml\n100644 blob ${unchanged}\tsettings.ts\n`);
 const baseTree = git(['mktree'], `100644 blob ${unchanged}\tsettings.ts\n`);
 const base = git(['commit-tree', baseTree, '-m', 'base']);
 const head = git(['commit-tree', tree, '-p', base, '-m', 'head']);
@@ -38,7 +39,7 @@ const query = (op, target, extra = {}) => ({ op, target, revision: 'head', scope
 const inspect = (...requests) => ({ action: 'investigate', requests, verdict: null, reason: null, missing: null, premises: [] });
 const finish = (...citations) => ({ action: 'finish', requests: [], verdict: 'refuted',
     reason: 'The unchanged settings disable the reachable path.', missing: null,
-    premises: citations.length ? [{ claim: 'Settings disable the reachable path.', citations }] : [] });
+    premises: citations.length ? [{ claim: 'Settings disable the reachable path.', citations, order: [] }] : [] });
 const fact = usage => ({ failure: null, ...(usage === undefined ? {} : { usage, usageScope: 'session-cumulative' }) });
 const payload = request => JSON.parse(request.prompt.split('\n').at(-1));
 const supplied = request => payload(request).observations[0].result.sources[0];
@@ -163,6 +164,23 @@ test('rejects a different pinned tree before dispatch', async () => {
     assert.deepEqual(result.writes, []);
 });
 
+test('continues verification beyond the former turn and case deadlines', async t => {
+    const started = performance.now();
+    let clock = started, turn = 0;
+    t.mock.method(performance, 'now', () => clock);
+    const result = await run(async request => {
+        assert(!Object.hasOwn(request, 'deadline'));
+        clock += turn++ === 0 ? 60_000 : 300_000;
+        return { threadId: 'unbounded-investigation', fact: fact(), response: turn === 1
+            ? inspect(query('read', 'settings.ts'))
+            : finish(cite(supplied(request), 1, 1)) };
+    });
+    assert.equal(result.failure, null);
+    assert.equal(result.answer.label, 'refuted');
+    assert.equal(result.wallMs, 360_000);
+    assert.deepEqual(result.writes, []);
+});
+
 test('stops on real cancellation before accepting a verdict', async () => {
     const controller = new AbortController();
     const result = await run(async () => {
@@ -262,7 +280,7 @@ test('keeps a finishing draft open while the same session recovers an omitted ex
                 anchor = cite(observations[0].result.sources[0]);
                 settings = observations[1].result.sources[0];
                 response = finish(anchor);
-                response.premises.push({ claim: 'The early guard prevents the effect.', citations: [] });
+                response.premises.push({ claim: 'The early guard prevents the effect.', citations: [], order: [] });
                 break;
             }
             case 3:
@@ -271,7 +289,7 @@ test('keeps a finishing draft open while the same session recovers an omitted ex
                 break;
             case 4:
                 response = finish(anchor);
-                response.premises.push({ claim: 'The early guard prevents the effect.', citations: [cite(supplied(request))] });
+                response.premises.push({ claim: 'The early guard prevents the effect.', citations: [cite(supplied(request))], order: [] });
                 break;
             default: assert.fail('unexpected recovery turn');
         }
@@ -282,6 +300,124 @@ test('keeps a finishing draft open while the same session recovers an omitted ex
     assert.equal(result.answer.premises[1].citations[0].path, 'settings.ts');
     assert.equal(result.answer.premises[1].citations[0].last, 1);
     assert.equal(result.closures.length, 1);
+    assert.deepEqual(result.writes, []);
+});
+
+function orderDraft(source, missingPart, neighbor = false) {
+    const excerpt = (first, last, code) => ({ ...cite(source, first, last), excerpt: code });
+    const order = {
+        route: 'fresh initialization',
+        first: [excerpt(1, 1, 'prepare')],
+        second: [excerpt(neighbor ? 2 : 1, neighbor ? 2 : 1, 'deliver')],
+        mechanism: [excerpt(2, 3, 'for step in steps:')],
+    };
+    if (missingPart) order[missingPart] = [];
+    return { ...finish(), reason: 'Preparation executes before delivery on the fresh route.',
+        premises: [{ claim: 'Preparation executes before delivery on the fresh route.', citations: [], order: [order] }] };
+}
+
+for (const [part, neighbor] of [['second', false], ['mechanism', false], ['second', true]]) {
+    test(`keeps the same session open for the ${part} ${neighbor ? 'excerpt outside its cited range' : 'order evidence'}`, async () => {
+        let turn = 0, source;
+        const result = await run(async request => {
+            if (turn) assert.equal(request.threadId, 'ordered');
+            let response;
+            switch (++turn) {
+                case 1: response = inspect(query('read', 'ordered.py')); break;
+                case 2:
+                    source = supplied(request);
+                    response = orderDraft(source, neighbor ? null : part, neighbor);
+                    break;
+                case 3:
+                    assert.deepEqual(payload(request).closureIssues, [{
+                        issue: neighbor ? 'order-excerpt-unsupported' : 'order-evidence-missing',
+                        premise: 1, route: 'fresh initialization', part,
+                    }]);
+                    response = inspect(query('recall', source.receipt, { first: 1, last: 3 }));
+                    break;
+                case 4: response = orderDraft(supplied(request)); break;
+                default: assert.fail('unexpected recovery turn');
+            }
+            return { threadId: 'ordered', fact: fact(), response };
+        });
+        assert.equal(result.failure, null);
+        assert.equal(result.answer.label, 'refuted');
+        assert.deepEqual(result.writes, []);
+        assert.equal(result.answer.premises[0].order[0].second[0].citation.first, 1);
+        assert.equal(result.answer.premises[0].order[0].mechanism[0].citation.last, 3);
+        assert.equal(result.closures.length, 1);
+    });
+}
+
+test('leaves a repeated order gap inconclusive with the specific missing role', async () => {
+    let turn = 0, source;
+    const result = await run(async request => {
+        let response;
+        if (++turn === 1) response = inspect(query('read', 'ordered.py'));
+        else {
+            if (turn === 2) source = supplied(request);
+            response = orderDraft(source, 'mechanism');
+        }
+        return { threadId: 'same-gap', fact: fact(), response };
+    });
+    assert.equal(turn, 3);
+    assert.equal(result.failure, null);
+    assert.equal(result.answer.label, 'inconclusive');
+    assert.match(result.answer.missing, /code that determines the effective order.*fresh initialization/u);
+    assert.deepEqual(result.writes, []);
+});
+
+test('requests order roles for an explicit sequence supported only by ordinary citations', async () => {
+    let turn = 0;
+    const result = await run(async request => {
+        let response;
+        if (++turn === 1) response = inspect(query('read', 'ordered.py'));
+        else if (turn === 2) {
+            response = finish(cite(supplied(request)));
+            response.premises[0].claim = 'Preparation executes before delivery.';
+        } else {
+            assert.deepEqual(payload(request).closureIssues, [{ issue: 'order-claim-uncited', premise: 1 }]);
+            response = { ...finish(), verdict: 'inconclusive', missing: 'The execution loop is unavailable.' };
+        }
+        return { threadId: 'implicit-order', fact: fact(), response };
+    });
+    assert.equal(result.answer.label, 'inconclusive');
+});
+
+test('identifies the incomplete route and accepts a verdict narrowed to the proven route', async () => {
+    let turn = 0, source;
+    const result = await run(async request => {
+        let response;
+        if (++turn === 1) response = inspect(query('read', 'ordered.py'));
+        else if (turn === 2) {
+            source = supplied(request);
+            response = orderDraft(source);
+            response.premises[0].order.push({
+                ...response.premises[0].order[0], route: 'upgrade', mechanism: [],
+            });
+        } else {
+            assert.equal(request.threadId, 'narrow-route');
+            assert.deepEqual(payload(request).closureIssues, [{
+                issue: 'order-evidence-missing', premise: 1, route: 'upgrade', part: 'mechanism',
+            }]);
+            response = orderDraft(source);
+        }
+        return { threadId: 'narrow-route', fact: fact(), response };
+    });
+    assert.equal(result.failure, null);
+    assert.equal(result.answer.label, 'refuted');
+    assert.deepEqual(result.answer.premises[0].order.map(route => route.route), ['fresh initialization']);
+});
+
+test('rejects a foreign receipt in an order role as an integrity failure', async () => {
+    const result = await run(async request => {
+        if (!request.threadId) return { threadId: 'foreign-order', fact: fact(), response: inspect(query('read', 'ordered.py')) };
+        const response = orderDraft(supplied(request));
+        response.premises[0].order[0].second[0].receipt = 'R-foreign-receipt';
+        return { threadId: 'foreign-order', fact: fact(), response };
+    });
+    assert.equal(result.failure, 'citation-unavailable-or-out-of-range');
+    assert.equal(result.answer, null);
     assert.deepEqual(result.writes, []);
 });
 

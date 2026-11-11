@@ -1,4 +1,4 @@
-# Bugbot shadow verification without usage gates
+# Bugbot shadow verification without usage or time cutoffs
 
 The active shadow runner continues the investigation of each pinned finding
 across successive evidence reads. Token counters in provider turn records
@@ -9,9 +9,10 @@ the next request, the available evidence or verdict validation.
 Read-only Git and version-matched official-source requests use the same
 source authorities as the real-PR shadow pilot. Search and receipt inventory
 pages can be traversed in order. Full tracked files are available within
-the existing Git process transport. The runner keeps the operational
-deadline, cancellation, isolated provider process, repository authorization
-and byte-for-byte Git proof. Dry-run write ports throw.
+the existing Git process transport. The runner imposes no provider-turn or
+investigation deadline. Explicit cancellation, provider failures, repository
+authorization and byte-for-byte Git proof remain in force. Dry-run write ports
+throw. The replay entry point maps SIGINT and SIGTERM to cancellation.
 
 A genuine provider context-window rejection starts a fresh provider thread
 for the same application investigation. The hypothesis, SHA, anchor and
@@ -19,7 +20,9 @@ receipt inventory survive. The new thread receives the pending evidence
 leads and can recall any saved receipt or an exact subrange. The app only
 accepts a citation after it has delivered the cited range. A finishing draft
 pairs each material premise with its exact ranges. The verifier can continue
-in the same session to complete an omitted citation. A delivered runtime
+in the same session to complete an omitted citation. For an order-dependent
+premise the closure checks exact excerpts for both operations and the control
+flow on every claimed route. A delivered runtime
 receipt can directly select its official release with the original scope.
 See the [closure replays](../shadow-closure-replay/results.md) for the
 same-candidate reruns and independent line checks. A failure of the
@@ -37,7 +40,8 @@ the former input and output ceilings, with usage absent, and after resuming
 a session reporting cumulative totals. It also verifies a full file beyond
 the former fragment threshold, investigation beyond the old turn and read
 ceilings, context recovery, rejection of an undelivered or foreign receipt,
-pinned tree checks, cancellation and provider failure classification.
+pinned tree checks, continuation beyond the former time limits, cancellation
+and provider failure classification.
 
 The [historical shadow pilot](../shadow-real-prs/results.md) and its frozen
 runner remain available for reproducing the original measurements. Use the

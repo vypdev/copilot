@@ -4,18 +4,21 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
+const { parseArgs } = require('node:util');
 const { createShadowVerifier } = require('../shadow-verification/adapter.cjs');
 const { git } = require('../shadow-real-prs/broker.cjs');
 const { hash } = require('../shadow-real-prs/session.cjs');
 const plan = require('../shadow-verification/plan.json');
 
-async function replay(lab, subjectNumber, output, localPython) {
+async function replay(lab, subjectNumber, output, localPython, effort) {
+    assert(effort === undefined || /^[a-z][a-z0-9_-]*$/iu.test(effort), 'invalid replay effort');
     const subjects = { 24: 'domus-24-luna.jsonl', 29: 'domus-29-sol.jsonl' };
     assert(Object.hasOwn(subjects, subjectNumber), 'unknown frozen subject');
     const file = path.join(__dirname, '../normal-flow-shadow', subjects[subjectNumber]);
     const input = fs.readFileSync(file, 'utf8');
     const rows = input.trim().split('\n').map(line => JSON.parse(line));
-    const { subject, configuration } = rows.find(row => row.event === 'plan');
+    const { subject, configuration: frozenConfiguration } = rows.find(row => row.event === 'plan');
+    const configuration = effort === undefined ? frozenConfiguration : { ...frozenConfiguration, effort };
     const [entry] = rows.find(row => row.event === 'workflow-result').results[0].payload.bugbotShadowVerification.candidates;
     const { id, hypothesis, anchor, repository, pullRequest, headSha } = entry.candidate;
     assert.equal(pullRequest, Number(subjectNumber));
@@ -40,13 +43,24 @@ async function replay(lab, subjectNumber, output, localPython) {
     fs.writeFileSync(output, '', { flag: 'wx', mode: 0o600 });
     const log = event => fs.appendFileSync(output, JSON.stringify({ at: new Date().toISOString(), ...event }) + '\n');
     log({ event: 'replay-plan', publication: plan.publication, candidate, configuration, cli, runtime, protocol,
-        frozenLedger: subjects[subjectNumber], frozenLedgerSha256: hash(input) });
+        frozenLedger: subjects[subjectNumber], frozenLedgerSha256: hash(input),
+        frozenEffort: frozenConfiguration.effort, effortSource: effort === undefined ? 'frozen' : 'replay-override' });
     let investigation;
     const verifier = createShadowVerifier(lab, event => {
         if (event.event === 'finding-result') investigation = event;
         log(event);
     });
-    const result = await verifier.verify({ candidate, configuration });
+    const cancellation = new AbortController();
+    const cancel = () => cancellation.abort();
+    process.once('SIGINT', cancel);
+    process.once('SIGTERM', cancel);
+    let result;
+    try {
+        result = await verifier.verify({ candidate, configuration, signal: cancellation.signal });
+    } finally {
+        process.removeListener('SIGINT', cancel);
+        process.removeListener('SIGTERM', cancel);
+    }
     assert(investigation, 'missing-verification-ledger');
     assert.deepEqual(investigation.writes, []);
     assert.deepEqual(investigation.anchor, candidate.anchor);
@@ -58,7 +72,10 @@ async function replay(lab, subjectNumber, output, localPython) {
         wallMs: investigation.wallMs, writes: investigation.writes }));
 }
 
-replay(...process.argv.slice(2)).catch(error => {
+const { positionals: [lab, subjectNumber, output, localPython], values } = parseArgs({
+    allowPositionals: true, options: { effort: { type: 'string' } },
+});
+replay(lab, subjectNumber, output, localPython, values.effort).catch(error => {
     console.error(error);
     process.exitCode = 1;
 });
