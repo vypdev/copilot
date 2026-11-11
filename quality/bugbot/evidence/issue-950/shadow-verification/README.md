@@ -23,7 +23,10 @@ pairs each material premise with its exact ranges. The verifier can continue
 in the same session to complete an omitted citation. If a citation extends
 outside a delivered receipt, the runner reports the requested and delivered
 lines. The verifier can cite a supported subrange or read the missing lines
-and cite the resulting receipt in the same session. For an order-dependent
+and cite the resulting receipt in the same session. When a confirmation
+omits the anchored effect, the runner asks the same session for a premise
+with a citation inside the pinned anchor on the appropriate revision.
+For an order-dependent
 premise the closure checks exact excerpts for both operations and the control
 flow on every claimed route. A delivered runtime
 receipt can directly select its official release with the original scope.
@@ -53,6 +56,13 @@ The range repair also covers the recorded Domus #28 closure. At reviewed SHA
 280–298. A simulated replay on the same tree opened the draft for repair,
 read lines 278–284 and accepted the replacement receipt in the same session.
 The control kept the line 282 anchor and attempted zero writes.
+
+A second replay reused the same candidate and the 28 cited Git ranges from
+Luna's next confirmation. The ranges covered rejection and retention of the
+draft but omitted the anchored line that disables the Back button. The closure
+returned `anchor-evidence-missing` with line 282 and the pinned head. The same
+simulated session read and cited that line in the effect premise. The runner
+accepted the corrected confirmation with zero write attempts.
 
 The [historical shadow pilot](../shadow-real-prs/results.md) and its frozen
 runner remain available for reproducing the original measurements. Use the

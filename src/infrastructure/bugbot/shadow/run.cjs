@@ -61,7 +61,7 @@ function validateOrder(order, claim, premise, validateCitation, broker, omission
     });
 }
 
-function prepareVerdict(response, broker, delivered) {
+function prepareVerdict(response, broker, delivered, subject) {
     assert.equal(response.requests.length, 0, 'final-has-requests');
     assert(response.verdict && text(response.reason, 3000), 'final-verdict-or-reason');
     if (response.verdict === 'inconclusive') assert(text(response.missing, 1000), 'final-missing-condition');
@@ -107,8 +107,19 @@ function prepareVerdict(response, broker, delivered) {
             omissions.push({ issue: 'order-claim-uncited', field: 'reason' });
         }
     }
+    const anchor = broker.binding.anchor;
+    const citations = [...proofs.values()];
+    if (response.verdict === 'confirmed') {
+        const revision = anchor.side === 'LEFT' ? 'base' : 'head';
+        const sha = subject[revision];
+        if (!citations.some(citation => citation.kind === 'git' && citation.sha === sha
+            && citation.path === anchor.path && citation.first <= anchor.end && citation.last >= anchor.line)) {
+            omissions.push({ issue: 'anchor-evidence-missing', revision, sha, path: anchor.path,
+                first: anchor.line, last: anchor.end });
+        }
+    }
     return { answer: { label: response.verdict, reason: response.reason, missing: response.missing,
-        anchor: broker.binding.anchor, premises, citations: [...proofs.values()] }, omissions };
+        anchor, premises, citations }, omissions };
 }
 
 function inconclusiveOrder(broker, gap) {
@@ -213,7 +224,7 @@ async function investigate(source, subject, finding, cwd, transport, log, signal
             assert(validate(response), 'response-schema');
             if (response.action === 'finish') {
                 checkTree(source.repo, subject, finding.allowBase);
-                const proposed = prepareVerdict(response, broker, delivered);
+                const proposed = prepareVerdict(response, broker, delivered, subject);
                 closureIssues = [...proposed.omissions, ...missingOfficialEvidence(proposed.answer, actions, subject, officialPackages, requiredOfficial)];
                 if (closureIssues.length) {
                     closures.push({ turn, issues: closureIssues });
@@ -229,6 +240,9 @@ async function investigate(source, subject, finding, cwd, transport, log, signal
                         'and submit a complete verdict. For an order issue, complete the named role with its exact code excerpt and receipt. ' +
                         'For a citation outside its receipt range, cite a delivered range if it supports the premise, ' +
                         'or request the required lines and cite the receipt returned for those lines. ' +
+                        'For anchor-evidence-missing, read or recall the reported Git range on its specified revision. ' +
+                        'Cite the decisive anchored line in a premise that explains how it causes the claimed effect. ' +
+                        'Keep every material premise relied on by the verdict. ' +
                         'For an official-evidence issue, establish the release and request its official source. ' +
                         'If material evidence is unavailable, finish inconclusive and state the specific gap.\n' +
                         JSON.stringify({ closureIssues });

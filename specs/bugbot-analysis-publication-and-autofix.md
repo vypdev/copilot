@@ -3202,8 +3202,14 @@ delivered receipt, the closure reports the affected premise or order role,
 source, requested lines and delivered ranges. The same session can cite a
 supported subrange or read the missing lines and cite the new receipt. The
 application validates the replacement against the same candidate and revision.
-If a material source remains unavailable,
-the verifier finishes `inconclusive` and names the evidence gap. A foreign or
+To confirm a finding, the verifier must cite a decisive Git line within the
+candidate's pinned anchor range as part of a premise connecting the code to
+the claimed effect. The closure checks the file, range and revision. A left
+anchor uses the pinned base, and a right or unspecified anchor uses the
+pinned head. If the citation is absent, the same session receives the exact
+anchor location and can read or recall the source before submitting again.
+A refutation can cite counterevidence elsewhere. If a material source remains
+unavailable, the verifier finishes `inconclusive` and names the evidence gap. A foreign or
 undelivered citation is an integrity failure. An independently reviewed replay
 checks semantic coverage, including whether a cited range contains the
 operation claimed in the premise.
@@ -3286,8 +3292,9 @@ or publication permission.
 | ev950-shadow-C20 | The pinned Domus #24 replay records Luna's verdict and independent checks of both schema entries, the loop, the unique index, and the applicable official rule. A migration-dependent verdict also needs proof of the routes it covers. The replay attempts zero PR writes. |
 | ev950-shadow-C21 | Advancing the test clock beyond the former provider-turn and investigation limits leaves the same session active and accepts a valid verdict. Explicit cancellation still stops it. |
 | ev950-shadow-C22 | A delivered receipt with an out-of-range premise or order citation keeps the same session open. The corrected range must pass provenance and delivery validation before a verdict is accepted. |
+| ev950-shadow-C23 | A confirmation citing nearby lines or the other revision stays open. The same session supplies a decisive citation from the pinned anchor range. |
 
-Run the nine deterministic cases through
+Run the ten deterministic cases through
 [the shadow runner suite](../quality/bugbot/evidence/issue-950/shadow-verification/verification.test.cjs).
 Replays may pin an explicit provider reasoning effort and record it alongside
 the frozen candidate configuration. Actual reviews inherit the effective

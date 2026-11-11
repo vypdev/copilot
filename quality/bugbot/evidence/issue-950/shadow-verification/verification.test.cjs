@@ -371,6 +371,54 @@ test('keeps a finishing draft open while the same session recovers an omitted ex
     assert.deepEqual(result.writes, []);
 });
 
+for (const revision of ['head', 'base']) {
+    test(`keeps a confirmation open until the same session cites the decisive line on ${revision}`, async () => {
+        const isBase = revision === 'base';
+        const anchor = isBase ? { path: 'settings.ts', line: 1, end: 1, side: 'LEFT' }
+            : { path: 'ordered.py', line: 2, end: 2, side: 'RIGHT' };
+        const anchored = { ...finding, detectorLocation: anchor, allowBase: isBase };
+        const sha = subject[revision];
+        let turn = 0, otherEvidence;
+        const result = await investigate(lab, subject, anchored, null, async request => {
+            assert.equal(request.threadId, turn ? 'decisive-citation' : undefined);
+            let response;
+            switch (++turn) {
+                case 1:
+                    response = inspect(query('read', anchor.path, { first: 1, last: isBase ? 1 : 3 }));
+                    break;
+                case 2:
+                    otherEvidence = supplied(request);
+                    response = { ...finish(cite(otherEvidence, 1, 1)), verdict: 'confirmed' };
+                    break;
+                case 3:
+                    assert.deepEqual(payload(request).closureIssues, [
+                        { issue: 'anchor-evidence-missing', revision, sha, path: anchor.path,
+                            first: anchor.line, last: anchor.end },
+                    ]);
+                    response = inspect(isBase
+                        ? query('read', anchor.path, { revision, first: 1, last: 1 })
+                        : query('recall', otherEvidence.receipt, { first: 2, last: 2 }));
+                    break;
+                case 4:
+                    response = { ...finish(cite(otherEvidence, 1, 1)), verdict: 'confirmed' };
+                    response.premises.push({ claim: 'The anchored statement establishes the effect.',
+                        citations: [cite(supplied(request))], order: [] });
+                    break;
+                default: assert.fail('unexpected recovery turn');
+            }
+            return { threadId: 'decisive-citation', fact: fact(), response };
+        }, () => {});
+        assert.equal(turn, 4);
+        assert.equal(result.failure, null);
+        assert.equal(result.answer.label, 'confirmed');
+        assert.deepEqual(result.answer.anchor, anchor);
+        assert.equal(result.answer.premises[1].citations[0].sha, sha);
+        assert.equal(result.answer.premises[1].citations[0].first, anchor.line);
+        assert.equal(result.closures.length, 1);
+        assert.deepEqual(result.writes, []);
+    });
+}
+
 function orderDraft(source, missingPart, neighbor = false) {
     const excerpt = (first, last, code) => ({ ...cite(source, first, last), excerpt: code });
     const order = {
