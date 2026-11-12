@@ -117,8 +117,8 @@ optional `BUGBOT_VERIFIER_*` override. For example, set
 provider's reasoning and is inherited when applicable. See
 [verifier variables and provider settings](/bugbot/quality-observability#finding-lifecycle-in-a-shadow-diagnostic)
 for the full profile. The installed Action runs Anthropic models through
-OpenCode. #950 also requires an independent Claude Code agent for review and
-verification. [Native runtime specification](https://github.com/vypdev/copilot/blob/master/specs/agent-runtime-provider-and-model-routing.md#native-claude-code-runtime)
+OpenCode. The independent Claude Code agent for review and verification
+is a future runtime task. [Native runtime specification](https://github.com/vypdev/copilot/blob/master/specs/agent-runtime-provider-and-model-routing.md#native-claude-code-runtime)
 
 The verifier can request official evidence about a dependency whose behavior
 could change a verdict. The installed shadow broker reads the pinned Git

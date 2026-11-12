@@ -3250,7 +3250,7 @@ comment content and reviewed code cannot select a profile.
 | Actions variable | Action input | Default or constraint |
 |---|---|---|
 | `BUGBOT_VERIFICATION_MODE` | `bugbot-verification-mode` | `disabled` by default. `shadow` records diagnostic verdicts only. The Action and approval entrypoint reject `enforced` until the rollout contract is implemented and qualified. |
-| `BUGBOT_VERIFIER_PROVIDER` | `bugbot-verifier-provider` | Inherits the effective agent. The installed values are `codex`, `opencode` and `cursor`. The required native extension adds `claude-code`. |
+| `BUGBOT_VERIFIER_PROVIDER` | `bugbot-verifier-provider` | Inherits the effective agent. The installed values are `codex`, `opencode` and `cursor`. The future runtime extension adds `claude-code`. |
 | `BUGBOT_VERIFIER_MODEL_PROVIDER` | `bugbot-verifier-model-provider` | Inherits the effective backend when the agent stays the same. A different agent uses its ordinary backend default unless specified. |
 | `BUGBOT_VERIFIER_MODEL` | `bugbot-verifier-model` | Inherits the effective detector model. Changing agent or backend requires an explicit compatible model. |
 | `BUGBOT_VERIFIER_EFFORT` | `bugbot-verifier-effort` | Inherits effort on the same agent and backend where expressible. A different agent or backend uses its default unless given a valid override. |
@@ -3264,11 +3264,13 @@ selection and activation are separate decisions.
 | Codex | `openai` | Accept `none`, `minimal`, `low`, `medium`, `high` or `xhigh`. Pass the value as `model_reasoning_effort`. The provider must admit the selected model and setting. |
 | OpenCode | A configured backend such as `openai` or `anthropic` | Check the exact backend/model and any named variant against the runtime catalog before the first turn. Pass an admitted variant as `--variant`. |
 | Cursor | `cursor` | Check the selected identifier against the runtime catalog and pass it as `--model`, including a reasoning variant if listed. The CLI adapter has no separate reasoning flag: reject an explicit override and do not copy an ineffective inherited effort. |
-| Claude Code (required extension) | `anthropic` | Use the official `claude` executable. Validate the Claude model and its supported `--effort` against the reviewed runtime contract. |
+| Claude Code (future runtime task) | `anthropic` | Use the official `claude` executable. Validate the Claude model and its supported `--effort` against the reviewed runtime contract. |
 
-The `claude-code` provider must be available to both the detector and the
-optional verifier profile. Once implemented, `REVIEWER_PROVIDER=claude-code`
-selects it for PR detection and verification inherits that selection by
+The future `claude-code` provider must support both the detector and the
+optional verifier profile. Its implementation and provider tests belong to a
+separate runtime task. Qualify #950 using the installed providers. Once
+implemented, `REVIEWER_PROVIDER=claude-code` selects it for PR detection
+and verification inherits that selection by
 default. To use Claude Code only for verification, select
 `BUGBOT_VERIFIER_PROVIDER=claude-code` and set `BUGBOT_VERIFIER_MODEL` to
 an approved Claude model ID. Its model provider defaults to `anthropic`.
@@ -3306,16 +3308,17 @@ control.
 The acceptance budget is at least six deterministic configuration cases:
 exact inheritance, Codex with supported and rejected effort, OpenCode
 with an OpenAI variant, OpenCode with an Anthropic variant, Cursor model
-selection, and rejection of a separate Cursor verifier effort. Add three
-distinct Bugbot acceptance cases for native Claude Code. Run detection and
-verification through Claude Code by inheritance, run Codex detection with an
-explicit Claude Code verifier, and retain the ordinary review when Claude
-Code preflight or execution fails. These are in addition to the runtime SDD's
-eight deterministic cases. Exercise the generated workflow bindings and provider
+selection, and rejection of a separate Cursor verifier effort. Exercise
+the generated workflow bindings and provider
 arguments. Also cover an unavailable model or variant, immutable checkout
 reads and the absence of approval authority. A provider-specific smoke test
 supplies separate execution evidence. It does not replace the full-review
 historical controls or the independent 174-case corpus required by EV-07.
+The future Claude Code task also covers three Bugbot cases: detection
+and verification through inheritance, Codex detection with an explicit Claude
+Code verifier, and ordinary shadow publication after verifier preflight or
+execution fails. Those cases supplement the runtime SDD tests.
+
 The [installed profile smoke test](../quality/bugbot/evidence/issue-950/installed-profile/results.md)
 did not qualify the Codex/Sol profile: the installed broker could not
 deliver material version-matched official evidence for either candidate.

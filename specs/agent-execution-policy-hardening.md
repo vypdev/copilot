@@ -84,7 +84,7 @@ remain unsupported/unverified, not green; the setup 350-row budget is unchanged.
 ### Native Claude Code extension
 
 The three-provider baseline below describes the implemented dispatcher.
-For #950, its target contract includes a fourth independent policy for
+A separate runtime task will add a fourth independent policy for
 `claude-code`. That policy must meet the same execution-plan, artifact
 integrity, credential isolation, local output validation, cancellation and
 no-fallback gates. Brokered Bugbot verification admits only the

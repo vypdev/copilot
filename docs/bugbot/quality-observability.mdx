@@ -884,8 +884,9 @@ For example, a Codex review at `REVIEWER_EFFORT=xhigh` can test a
 different verifier model by setting only `BUGBOT_VERIFIER_MODEL`. To use
 Claude models, select `BUGBOT_VERIFIER_PROVIDER=opencode` and
 `BUGBOT_VERIFIER_MODEL_PROVIDER=anthropic`, then use a model and, optionally,
-a reasoning variant listed by that OpenCode runtime. The #950 specification
-requires a separate `claude-code` agent with an `anthropic` model provider.
+a reasoning variant listed by that OpenCode runtime. A future runtime
+task will add the independent `claude-code` agent with an `anthropic`
+model provider.
 [Native runtime specification](https://github.com/vypdev/copilot/blob/master/specs/agent-runtime-provider-and-model-routing.md#native-claude-code-runtime)
 
 For Cursor, choose the model or variant in `BUGBOT_VERIFIER_MODEL` and

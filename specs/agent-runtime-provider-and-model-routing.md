@@ -419,12 +419,12 @@ transport do not change as part of the default migration.
 
 ### Native Claude Code runtime
 
-**Required extension for #950.** The current dispatcher supports Codex,
-OpenCode, and Cursor. The target adds `claude-code` as an independent agent
-provider. It invokes Anthropic's official `claude` executable directly with
+**Future runtime requirement.** Track implementation in a separate task
+outside #950. The current dispatcher supports Codex, OpenCode, and Cursor.
+The future contract adds `claude-code` as an independent agent provider.
+It invokes Anthropic's official `claude` executable directly with
 `anthropic` as its model provider. Existing `opencode` plus `anthropic`
-configurations remain valid. [Issue #950](https://github.com/vypdev/copilot/issues/950) ·
-[Bugbot profile contract](bugbot-analysis-publication-and-autofix.md#configuration-and-ownership)
+configurations remain valid. [Bugbot profile contract](bugbot-analysis-publication-and-autofix.md#configuration-and-ownership)
 
 | Input | Contract once implemented |
 |---|---|

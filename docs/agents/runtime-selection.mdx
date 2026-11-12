@@ -56,9 +56,9 @@ cancellation, policy or execution code in the conversation reply. The agent's
 15-minute deadline stays bounded; inspect the current state before retrying a
 timed-out implementation.
 
-The installed dispatcher recognizes the three values above. #950 specifies
-a fourth independent agent, `claude-code`, which will run the official
-Anthropic CLI for supported review roles. [Native Claude Code specification](https://github.com/vypdev/copilot/blob/master/specs/agent-runtime-provider-and-model-routing.md#native-claude-code-runtime)
+The installed dispatcher recognizes the three values above. A future
+runtime task will add an independent `claude-code` agent for supported
+review roles through the official Anthropic CLI. [Native Claude Code specification](https://github.com/vypdev/copilot/blob/master/specs/agent-runtime-provider-and-model-routing.md#native-claude-code-runtime)
 
 Codex invocations explicitly select the Windows `elevated` sandbox while ignoring
 operator configuration. This selects a sandbox backend; commands still receive
