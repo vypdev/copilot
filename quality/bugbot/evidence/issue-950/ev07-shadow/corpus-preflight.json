@@ -1,0 +1,17 @@
+{
+  "initialPlannerRejections": 174,
+  "providerInvocations": 0,
+  "failure": "agent.policy-rejected",
+  "repair": "Initialize an empty local Git workspace without remotes before invoking the canonical planner.",
+  "acceptedCanary": {
+    "event": "planner-preflight",
+    "flags": [
+      {
+        "model": "gpt-6-luna",
+        "modelProvider": "openai",
+        "reasoningEffort": "xhigh",
+        "sandbox": "read-only"
+      }
+    ]
+  }
+}

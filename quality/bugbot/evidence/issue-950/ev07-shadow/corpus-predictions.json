@@ -1,0 +1,995 @@
+{
+  "schemaVersion": 1,
+  "predictions": {
+    "ts-null-dereference": [
+      {
+        "title": "Dereferences a possibly missing user",
+        "file": "src/users.ts",
+        "line": 42,
+        "severity": "medium",
+        "category": "correctness",
+        "confidence": 0.99
+      }
+    ],
+    "py-command-injection": [
+      {
+        "title": "Request filename allows shell command injection",
+        "file": "app/image.py",
+        "line": 18,
+        "severity": "high",
+        "category": "security",
+        "confidence": 0.99
+      }
+    ],
+    "go-leaked-goroutine": [
+      {
+        "title": "Producer can block after the consumer returns",
+        "file": "internal/fetch.go",
+        "line": 64,
+        "severity": "medium",
+        "category": "reliability",
+        "confidence": 0.96
+      }
+    ],
+    "sql-unbounded-query": [
+      {
+        "title": "Restore the pagination limit",
+        "file": "queries/events.sql",
+        "line": 9,
+        "severity": "medium",
+        "category": "performance",
+        "confidence": 0.99
+      }
+    ],
+    "java-close-resource": [
+      {
+        "title": "Opened stream is not closed on the early return",
+        "file": "src/StorageReader.java",
+        "line": 31,
+        "severity": "medium",
+        "category": "reliability",
+        "confidence": 0.91
+      }
+    ],
+    "rust-safe-change": [],
+    "docs-only": [],
+    "ts-authorization-bypass": [
+      {
+        "title": "Delete operation no longer checks admin authorization",
+        "file": "src/admin/delete_user.ts",
+        "line": 71,
+        "severity": "high",
+        "category": "security",
+        "confidence": 1
+      }
+    ],
+    "ts-safe-optional-chain": [],
+    "py-mutable-default": [
+      {
+        "title": "Filter values accumulate across calls",
+        "file": "app/filters.py",
+        "line": 11,
+        "severity": "medium",
+        "category": "correctness",
+        "confidence": 1,
+        "symbol": "collect_filters"
+      }
+    ],
+    "py-parameterized-query": [],
+    "go-ignored-write-error": [
+      {
+        "title": "Discarded response write error hides failed exports",
+        "file": "internal/export.go",
+        "line": 52,
+        "severity": "medium",
+        "category": "reliability",
+        "confidence": 0.91
+      }
+    ],
+    "go-cancellable-send": [],
+    "sql-string-concatenation": [
+      {
+        "title": "Untrusted tenant ID is concatenated into SQL",
+        "file": "queries/tenant.js",
+        "line": 15,
+        "severity": "medium",
+        "category": "security",
+        "confidence": 0.99
+      }
+    ],
+    "sql-bounded-query": [
+      {
+        "title": "The limit does not select a deterministic set of rows",
+        "file": "queries/audit.sql",
+        "line": 4,
+        "severity": "medium",
+        "category": "correctness",
+        "confidence": 0.87
+      }
+    ],
+    "java-try-with-resources": [],
+    "rust-unchecked-input": [
+      {
+        "title": "Malformed limit input panics the service",
+        "file": "src/http/limit.rs",
+        "line": 27,
+        "severity": "high",
+        "category": "security",
+        "confidence": 0.98
+      }
+    ],
+    "rust-result-propagation": [],
+    "actions-untrusted-checkout": [
+      {
+        "title": "Privileged workflow executes pull request code",
+        "file": ".github/workflows/review.yml",
+        "line": 7,
+        "severity": "high",
+        "category": "security",
+        "confidence": 0.99,
+        "symbol": "steps"
+      }
+    ],
+    "actions-readonly-metadata": [
+      {
+        "title": "Workflow steps are not inside a job",
+        "file": ".github/workflows/metadata.yml",
+        "line": 4,
+        "severity": "medium",
+        "category": "correctness",
+        "confidence": 0.99,
+        "symbol": "workflow"
+      }
+    ],
+    "shell-unquoted-path": [
+      {
+        "title": "Quote the attacker-controlled path",
+        "file": "scripts/archive.sh",
+        "line": 14,
+        "severity": "medium",
+        "category": "security",
+        "confidence": 0.97
+      }
+    ],
+    "shell-quoted-path": [],
+    "terraform-public-database": [
+      {
+        "title": "PostgreSQL ingress is open to the internet",
+        "file": "infra/database.tf",
+        "line": 94,
+        "severity": "high",
+        "category": "security",
+        "confidence": 1,
+        "symbol": "ingress"
+      }
+    ],
+    "terraform-private-database": [],
+    "react-stale-effect": [
+      {
+        "title": "Effect does not reload when userId changes",
+        "file": "src/UserPanel.tsx",
+        "line": 32,
+        "severity": "medium",
+        "category": "correctness",
+        "confidence": 0.98
+      }
+    ],
+    "react-complete-dependencies": [],
+    "csharp-path-traversal": [
+      {
+        "title": "Filename can escape the upload root",
+        "file": "Controllers/DownloadController.cs",
+        "line": 58,
+        "severity": "high",
+        "category": "security",
+        "confidence": 0.99
+      }
+    ],
+    "csharp-contained-path": [],
+    "kotlin-blocking-coroutine": [
+      {
+        "title": "Blocking file read runs on the request coroutine dispatcher",
+        "file": "src/ReportController.kt",
+        "line": 49,
+        "severity": "medium",
+        "category": "performance",
+        "confidence": 0.98,
+        "symbol": "report"
+      }
+    ],
+    "kotlin-io-dispatcher": [],
+    "py-coverage-config-branch": [
+      {
+        "title": "The coverage job does not enforce the configured threshold",
+        "file": "pyproject.toml",
+        "line": 4,
+        "severity": "medium",
+        "category": "correctness",
+        "confidence": 0.99,
+        "symbol": "[tool.coverage.report]"
+      }
+    ],
+    "py-http10-reconnect": [],
+    "docs-correct-regression-total": [],
+    "py-short-circuit-unhashable": [],
+    "py-helper-retry-validation": [],
+    "ts-exclusive-render-branches": [],
+    "py-short-circuit-unsafe-order": [
+      {
+        "title": "Check step types before set membership",
+        "file": "src/checkpoint.py",
+        "line": 2,
+        "severity": "medium",
+        "category": "reliability",
+        "confidence": 0.88,
+        "symbol": "valid_steps"
+      }
+    ],
+    "ts-composed-duplicate-ids": [
+      {
+        "title": "Repeated actions render duplicate IDs",
+        "file": "ui/views.ts",
+        "line": 1,
+        "severity": "low",
+        "category": "correctness",
+        "confidence": 0.96,
+        "symbol": "unavailableAction"
+      }
+    ],
+    "kt-compose-owned-loader": [],
+    "kt-compose-external-loader": [
+      {
+        "title": "Loader remains over the app after Compose mounts",
+        "file": "frontend/index.html",
+        "line": 2,
+        "severity": "medium",
+        "category": "reliability",
+        "confidence": 1,
+        "symbol": "ComposeTarget"
+      }
+    ],
+    "kt-compose-failed-startup-error": [],
+    "kt-compose-failed-startup-stuck": [
+      {
+        "title": "Initialization failure leaves the loading screen stuck",
+        "file": "frontend/Main.kt",
+        "line": 2,
+        "severity": "medium",
+        "category": "reliability",
+        "confidence": 0.99,
+        "symbol": "main"
+      }
+    ],
+    "ts-viewport-version-without-cleanup": [
+      {
+        "title": "Loading indicator remains after startup",
+        "file": "src/startup.ts",
+        "line": 2,
+        "severity": "low",
+        "category": "correctness",
+        "confidence": 1,
+        "symbol": "mount"
+      }
+    ],
+    "kt-compose-preferred-width-narrow": [],
+    "kt-compose-required-width-overflow": [
+      {
+        "title": "Required width overflows the narrow parent",
+        "file": "ui/AuthForm.kt",
+        "line": 10,
+        "severity": "medium",
+        "category": "correctness",
+        "confidence": 0.99,
+        "symbol": "AuthForm"
+      }
+    ],
+    "kt-compose-fill-before-cap": [
+      {
+        "title": "Width cap is ineffective on wide layouts",
+        "file": "ui/AuthForm.kt",
+        "line": 10,
+        "severity": "medium",
+        "category": "correctness",
+        "confidence": 0.99,
+        "symbol": "AuthForm"
+      }
+    ],
+    "kt-compose-cap-before-fill": [],
+    "kt-compose-padded-preferred-width": [],
+    "android-listed-minor-platform": [],
+    "android-absent-platform-package": [
+      {
+        "title": "SDK installation requests an unavailable platform package",
+        "file": ".github/workflows/ci.yml",
+        "line": 185,
+        "severity": "medium",
+        "category": "reliability",
+        "confidence": 1,
+        "symbol": "sdkmanager --install"
+      }
+    ],
+    "external-package-unverified-inventory": [],
+    "android-stale-inventory-current-install": [],
+    "android-unrelated-green-job": [
+      {
+        "title": "SDK install requests an unavailable platform package",
+        "file": ".github/workflows/ci.yml",
+        "line": 185,
+        "severity": "medium",
+        "category": "reliability",
+        "confidence": 0.99
+      }
+    ],
+    "kt-resolved-sql-subclass": [],
+    "jvm-type-hierarchy-unavailable": [],
+    "jvm-current-contract-over-stale-docs": [],
+    "jvm-unrelated-runtime-wrapper": [
+      {
+        "title": "SqlFailure escapes the promised Either result",
+        "file": "storage/ReadRows.kt",
+        "line": 4,
+        "severity": "medium",
+        "category": "correctness",
+        "confidence": 1,
+        "symbol": "readRows"
+      }
+    ],
+    "jvm-passing-mock-not-counterevidence": [
+      {
+        "title": "Driver wrapper escapes the error conversion",
+        "file": "storage/ReadRows.kt",
+        "line": 4,
+        "severity": "medium",
+        "category": "correctness",
+        "confidence": 1,
+        "symbol": "readRows"
+      }
+    ],
+    "kt-broad-catch-swallows-cancellation": [
+      {
+        "title": "Broad catch converts coroutine cancellation into a database error",
+        "file": "storage/ReadRows.kt",
+        "line": 4,
+        "severity": "medium",
+        "category": "reliability",
+        "confidence": 0.99,
+        "symbol": "readRows"
+      }
+    ],
+    "test-indirect-binding-propagates": [],
+    "test-parameterized-fallback-reaches-stub": [],
+    "test-bound-callback-reaches-stub": [],
+    "test-delegate-bypasses-stub": [
+      {
+        "title": "The new assertion cannot reach the arranged projection failure",
+        "file": "test/SessionReturnedState.test.ts",
+        "line": 22,
+        "severity": "medium",
+        "category": "correctness",
+        "confidence": 1,
+        "symbol": "test"
+      }
+    ],
+    "test-empty-participants-skip-stub": [
+      {
+        "title": "Assertion expects a projection error that cannot occur",
+        "file": "test/SessionReturnedState.test.ts",
+        "line": 22,
+        "severity": "medium",
+        "category": "correctness",
+        "confidence": 1,
+        "symbol": "test"
+      }
+    ],
+    "test-recovery-swallows-bound-failure": [
+      {
+        "title": "Projection failure is swallowed before the new assertion",
+        "file": "test/SessionReturnedState.test.ts",
+        "line": 25,
+        "severity": "medium",
+        "category": "correctness",
+        "confidence": 0.99,
+        "symbol": "test"
+      }
+    ],
+    "action-declared-matcher-input": [],
+    "action-renamed-input-current-version": [],
+    "action-input-contract-unavailable": [],
+    "action-undeclared-matcher-alias": [
+      {
+        "title": "Matcher input uses an undeclared name",
+        "file": ".github/actions/publish-package/action.yml",
+        "line": 21,
+        "severity": "medium",
+        "category": "reliability",
+        "confidence": 0.99,
+        "symbol": "Publish package"
+      }
+    ],
+    "action-old-input-on-new-version": [
+      {
+        "title": "The pinned action ignores the problem matcher input",
+        "file": ".github/actions/publish-package/action.yml",
+        "line": 22,
+        "severity": "medium",
+        "category": "reliability",
+        "confidence": 0.99,
+        "symbol": "Publish package composite step"
+      }
+    ],
+    "action-declared-input-wrong-value": [
+      {
+        "title": "Use the value that disables matcher registration",
+        "file": ".github/actions/publish-package/action.yml",
+        "line": 22,
+        "severity": "medium",
+        "category": "reliability",
+        "confidence": 1,
+        "symbol": "Publish package composite step"
+      }
+    ],
+    "kt-email-unicode-empty-label-guard": [],
+    "ts-email-caller-empty-label-guard": [],
+    "ts-email-normalization-before-guard": [],
+    "ts-email-existential-label-defect": [
+      {
+        "title": "Empty domain labels pass validation",
+        "file": "auth/register.ts",
+        "line": 5,
+        "severity": "medium",
+        "category": "correctness",
+        "confidence": 1,
+        "symbol": "valid"
+      }
+    ],
+    "ts-email-ignored-validator-result": [
+      {
+        "title": "Invalid domains are persisted",
+        "file": "auth/register.ts",
+        "line": 13,
+        "severity": "medium",
+        "category": "correctness",
+        "confidence": 0.99,
+        "symbol": "registerIgnoredResult"
+      }
+    ],
+    "ts-email-normalization-after-guard": [
+      {
+        "title": "Normalization can create an empty domain label after validation",
+        "file": "auth/register.ts",
+        "line": 12,
+        "severity": "medium",
+        "category": "correctness",
+        "confidence": 0.99,
+        "symbol": "registerNormalizedLate"
+      }
+    ],
+    "kt-wasm-parameter-closure": [],
+    "kt-wasm-size-count-parameters": [],
+    "kt-wasm-object-parameter": [],
+    "kt-wasm-binding-evidence-unavailable": [],
+    "kt-wasm-missing-direct-identifier": [
+      {
+        "title": "Undefined `count` breaks the Wasm bridge",
+        "file": "fixtures/WasmBindings.kt",
+        "line": 2,
+        "severity": "medium",
+        "category": "correctness",
+        "confidence": 0.99,
+        "symbol": "installBudget"
+      }
+    ],
+    "kt-wasm-missing-callback-identifier": [
+      {
+        "title": "Callback references an undefined identifier",
+        "file": "fixtures/WasmBindings.kt",
+        "line": 3,
+        "severity": "medium",
+        "category": "correctness",
+        "confidence": 0.96,
+        "symbol": "installDirectory"
+      }
+    ],
+    "action-self-ref-bootstrap": [],
+    "action-self-ref-version-policy": [],
+    "action-workspace-ref-after-checkout": [],
+    "action-reference-contract-unavailable": [],
+    "action-self-ref-explicit-suffix": [
+      {
+        "title": "Self-repository action reference includes an invalid ref suffix",
+        "file": ".github/workflows/build.yml",
+        "line": 5,
+        "severity": "medium",
+        "category": "reliability",
+        "confidence": 0.99,
+        "symbol": "build.steps"
+      }
+    ],
+    "action-workspace-ref-before-checkout": [
+      {
+        "title": "Local bootstrap action runs before checkout",
+        "file": ".github/workflows/build.yml",
+        "line": 5,
+        "severity": "medium",
+        "category": "reliability",
+        "confidence": 1,
+        "symbol": "jobs.build.steps"
+      }
+    ],
+    "action-self-ref-unsupported-host": [
+      {
+        "title": "Unsupported same-repository action reference on GHES",
+        "file": ".github/workflows/build.yml",
+        "line": 5,
+        "severity": "medium",
+        "category": "reliability",
+        "confidence": 0.99,
+        "symbol": "jobs.build.steps"
+      }
+    ],
+    "md-link-root-self": [],
+    "md-link-nested-self": [],
+    "md-link-companion": [],
+    "md-link-root-relative": [],
+    "md-link-evidence-unavailable": [],
+    "md-link-extra-specs-directory": [
+      {
+        "title": "Design link points to a missing file",
+        "file": "specs/payments.md",
+        "line": 41,
+        "severity": "low",
+        "category": "correctness",
+        "confidence": 1,
+        "symbol": "Architecture"
+      }
+    ],
+    "md-link-missing-fragment": [
+      {
+        "title": "Architecture link points to a missing fragment",
+        "file": "specs/payments.md",
+        "line": 41,
+        "severity": "low",
+        "category": "correctness",
+        "confidence": 0.99,
+        "symbol": "Architecture navigation link"
+      }
+    ],
+    "md-link-renderer-drops-directory": [
+      {
+        "title": "Catalog links discard the specification directory",
+        "file": "scripts/catalog.ts",
+        "line": 41,
+        "severity": "low",
+        "category": "correctness",
+        "confidence": 1,
+        "symbol": "renderSpecLink"
+      }
+    ],
+    "request-transform-coil": [],
+    "request-transform-middleware": [],
+    "request-transform-unknown": [],
+    "request-transform-write": [
+      {
+        "title": "Private image requests omit no-store",
+        "file": "media/request.ts",
+        "line": 1,
+        "severity": "medium",
+        "category": "correctness",
+        "confidence": 1,
+        "symbol": "policy"
+      }
+    ],
+    "request-transform-bypass": [
+      {
+        "title": "Application request bypasses the no-store header builder",
+        "file": "media/request.ts",
+        "line": 11,
+        "severity": "medium",
+        "category": "correctness",
+        "confidence": 1,
+        "symbol": "applicationRequest"
+      }
+    ],
+    "request-transform-overwrite": [
+      {
+        "title": "Overwrites the required no-store header",
+        "file": "media/request.ts",
+        "line": 12,
+        "severity": "medium",
+        "category": "correctness",
+        "confidence": 1,
+        "symbol": "applicationRequest"
+      }
+    ],
+    "request-transform-mock": [
+      {
+        "title": "Production requests omit the required no-store policy",
+        "file": "media/request.ts",
+        "line": 11,
+        "severity": "medium",
+        "category": "security",
+        "confidence": 0.98,
+        "symbol": "applicationRequest"
+      }
+    ],
+    "request-transform-utf8": [
+      {
+        "title": "Byte truncation can produce invalid UTF-8",
+        "file": "media/request.ts",
+        "line": 23,
+        "severity": "medium",
+        "category": "correctness",
+        "confidence": 1,
+        "symbol": "preview"
+      }
+    ],
+    "generated-source-literal": [],
+    "generated-source-leading-newline": [],
+    "generated-source-escaped": [],
+    "generated-source-dedent": [],
+    "generated-source-wrong-literal": [
+      {
+        "title": "Asserts zero coverage for an executed branch",
+        "file": "coverage/generated_fixture.py",
+        "line": 18,
+        "severity": "medium",
+        "category": "correctness",
+        "confidence": 0.99,
+        "symbol": "test_generated_counters"
+      }
+    ],
+    "generated-source-wrong-leading-newline": [
+      {
+        "title": "Assertion expects an executed line to be uncovered",
+        "file": "coverage/generated_fixture.py",
+        "line": 20,
+        "severity": "medium",
+        "category": "correctness",
+        "confidence": 0.94,
+        "symbol": "test_generated_counters"
+      }
+    ],
+    "generated-literal-independent-shell": [
+      {
+        "title": "Untrusted path enables shell command injection",
+        "file": "coverage/literal_handler.py",
+        "line": 5,
+        "severity": "high",
+        "category": "security",
+        "confidence": 0.99,
+        "symbol": "export_report"
+      }
+    ],
+    "generated-literal-independent-contract": [
+      {
+        "title": "Accepts zero despite the positive-count contract",
+        "file": "coverage/literal_validator.py",
+        "line": 6,
+        "severity": "medium",
+        "category": "correctness",
+        "confidence": 1,
+        "symbol": "accepts_count"
+      }
+    ],
+    "session-source-signed-bootstrap": [],
+    "session-source-storage-alias": [],
+    "session-source-opaque-bootstrap": [
+      {
+        "title": "JWT assertion rejects the selected opaque token",
+        "file": "e2e/owned-session.spec.ts",
+        "line": 30,
+        "severity": "medium",
+        "category": "correctness",
+        "confidence": 1,
+        "symbol": "authorization"
+      }
+    ],
+    "session-source-expired-refresh": [
+      {
+        "title": "Refresh path fails the new token-format assertion",
+        "file": "e2e/owned-session.spec.ts",
+        "line": 30,
+        "severity": "medium",
+        "category": "correctness",
+        "confidence": 1,
+        "symbol": "assert.match"
+      }
+    ],
+    "session-source-prefix-gap": [
+      {
+        "title": "Authorization header is missing the Bearer separator",
+        "file": "e2e/owned-session.spec.ts",
+        "line": 29,
+        "severity": "medium",
+        "category": "correctness",
+        "confidence": 1,
+        "symbol": "authorization"
+      }
+    ],
+    "session-source-setup-unavailable": [],
+    "unittest-discovery-delegated-wildcard": [],
+    "unittest-discovery-nested-working-directory": [],
+    "unittest-discovery-literal-argv-pattern": [],
+    "unittest-discovery-excluded-by-pattern": [
+      {
+        "title": "Discovery skips the required export tests",
+        "file": ".github/scripts/tests/run_manifest_tests.py",
+        "line": 12,
+        "severity": "medium",
+        "category": "correctness",
+        "confidence": 0.99,
+        "symbol": "command"
+      }
+    ],
+    "unittest-discovery-wrong-start-directory": [
+      {
+        "title": "Discovery skips both required manifest test modules",
+        "file": ".github/scripts/tests/run_manifest_tests.py",
+        "line": 12,
+        "severity": "medium",
+        "category": "correctness",
+        "confidence": 1,
+        "symbol": "command"
+      }
+    ],
+    "unittest-discovery-runner-unavailable": [],
+    "kotlin-json-implicit-nullable-omission": [],
+    "kotlin-json-explicit-nullable-omission": [
+      {
+        "title": "Missing nullable field rejects the documented request",
+        "file": "backend/OwnedRequest.kt",
+        "line": 11,
+        "severity": "medium",
+        "category": "correctness",
+        "confidence": 0.99,
+        "symbol": "acceptedRequest"
+      }
+    ],
+    "kotlin-json-implicit-missing-nonnullable": [
+      {
+        "title": "Decoding rejects the documented request because `name` is missing",
+        "file": "backend/OwnedRequest.kt",
+        "line": 11,
+        "severity": "medium",
+        "category": "correctness",
+        "confidence": 0.99,
+        "symbol": "acceptedRequest"
+      }
+    ],
+    "kotlin-json-implicit-nullable-default": [],
+    "kotlin-json-explicit-nullable-default": [],
+    "kotlin-json-inherited-implicit-policy": [],
+    "kotlin-json-different-instance-policy": [
+      {
+        "title": "Decode rejects the documented omitted nullable field",
+        "file": "backend/OwnedRequest.kt",
+        "line": 11,
+        "severity": "medium",
+        "category": "correctness",
+        "confidence": 0.99,
+        "symbol": "acceptedRequest"
+      }
+    ],
+    "kotlin-json-unavailable-policy": [],
+    "ktor-routing-installed-root": [],
+    "ktor-routing-delegated-root": [],
+    "ktor-routing-configured-root": [],
+    "ktor-routing-child-subtree": [
+      {
+        "title": "Selects the child route instead of the installed root",
+        "file": "backend/OwnedRoutingSelection.kt",
+        "line": 6,
+        "severity": "medium",
+        "category": "correctness",
+        "confidence": 0.99,
+        "symbol": "selectForExport"
+      }
+    ],
+    "ktor-routing-different-application": [
+      {
+        "title": "Selects the routing root from the wrong application",
+        "file": "backend/OwnedRoutingSelection.kt",
+        "line": 5,
+        "severity": "medium",
+        "category": "correctness",
+        "confidence": 0.99,
+        "symbol": "selectForExport"
+      }
+    ],
+    "ktor-routing-unavailable-implementation": [],
+    "py-pep758-314-two": [],
+    "py-pep758-314-three": [],
+    "py-pep758-314-group": [],
+    "py-pep758-314-parenthesized-as": [],
+    "py-pep758-313-list": [
+      {
+        "title": "Exception clause is invalid for the supported Python version",
+        "file": "backend/owned_handlers.py",
+        "line": 4,
+        "severity": "medium",
+        "category": "reliability",
+        "confidence": 0.99,
+        "symbol": "catch_owned"
+      }
+    ],
+    "py-pep758-313-group": [
+      {
+        "title": "Python 3.13 cannot parse the unparenthesized exception types",
+        "file": "backend/owned_handlers.py",
+        "line": 4,
+        "severity": "medium",
+        "category": "reliability",
+        "confidence": 1,
+        "symbol": "catch_owned"
+      }
+    ],
+    "py-pep758-314-list-as": [
+      {
+        "title": "Exception types must be parenthesized when bound",
+        "file": "backend/owned_handlers.py",
+        "line": 4,
+        "severity": "medium",
+        "category": "reliability",
+        "confidence": 1,
+        "symbol": "catch_owned"
+      }
+    ],
+    "py-pep758-314-group-as": [
+      {
+        "title": "Parenthesize exception types in the `except*` clause",
+        "file": "backend/owned_handlers.py",
+        "line": 4,
+        "severity": "medium",
+        "category": "reliability",
+        "confidence": 1,
+        "symbol": "catch_owned"
+      }
+    ],
+    "py-pep758-mixed-range": [
+      {
+        "title": "Multiple exception types fail to parse on Python 3.13",
+        "file": "backend/owned_handlers.py",
+        "line": 4,
+        "severity": "medium",
+        "category": "reliability",
+        "confidence": 0.99,
+        "symbol": "catch_owned"
+      }
+    ],
+    "py-pep758-unknown-range": [],
+    "py-pep758-stale-parser": [],
+    "py-pep758-unbound-handler": [
+      {
+        "title": "Undefined exception name breaks handler matching",
+        "file": "backend/owned_handlers.py",
+        "line": 4,
+        "severity": "medium",
+        "category": "correctness",
+        "confidence": 0.99,
+        "symbol": "catch_owned"
+      }
+    ],
+    "snapshot-recovery-explicit-retain": [],
+    "snapshot-recovery-disposable-retain": [
+      {
+        "title": "Failed staging directory is left behind and blocks retry",
+        "file": "owned/snapshot_contract.py",
+        "line": 62,
+        "severity": "medium",
+        "category": "reliability",
+        "confidence": 1,
+        "symbol": "retained_snapshot"
+      }
+    ],
+    "snapshot-recovery-disposable-clean": [],
+    "snapshot-recovery-published-report": [],
+    "snapshot-recovery-published-cleanup": [
+      {
+        "title": "Deletes a published snapshot after reporting fails",
+        "file": "owned/snapshot_contract.py",
+        "line": 84,
+        "severity": "high",
+        "category": "correctness",
+        "confidence": 1,
+        "symbol": "published_snapshot_deleted"
+      }
+    ],
+    "snapshot-recovery-existing-destination": [
+      {
+        "title": "Deletes existing snapshot evidence before retry",
+        "file": "owned/snapshot_contract.py",
+        "line": 90,
+        "severity": "high",
+        "category": "correctness",
+        "confidence": 0.99,
+        "symbol": "overwrite_existing_snapshot"
+      }
+    ],
+    "snapshot-recovery-changed-ownership": [],
+    "snapshot-recovery-policy-unavailable": [],
+    "snapshot-recovery-incomplete-manifest": [],
+    "snapshot-recovery-completed-destination": [
+      {
+        "title": "Deletes the published snapshot before replacement succeeds",
+        "file": "owned/snapshot_contract.py",
+        "line": 90,
+        "severity": "high",
+        "category": "correctness",
+        "confidence": 1,
+        "symbol": "overwrite_existing_snapshot"
+      }
+    ],
+    "fixture-values-db-file-parent": [],
+    "fixture-values-db-file-peer": [
+      {
+        "title": "Assertion expects the wrong rejection result",
+        "file": "owned/test_fixture_values.py",
+        "line": 89,
+        "severity": "medium",
+        "category": "correctness",
+        "confidence": 1,
+        "symbol": "test_file_source_peer"
+      }
+    ],
+    "fixture-values-db-directory-peer": [],
+    "fixture-values-db-directory-child": [
+      {
+        "title": "Assertion expects a nested destination to be accepted",
+        "file": "owned/test_fixture_values.py",
+        "line": 105,
+        "severity": "medium",
+        "category": "correctness",
+        "confidence": 1,
+        "symbol": "test_directory_source_child"
+      }
+    ],
+    "fixture-values-ids-default-asc": [],
+    "fixture-values-ids-default-inverted": [
+      {
+        "title": "Assertion expects the wrong SQL order",
+        "file": "owned/test_fixture_values.py",
+        "line": 128,
+        "severity": "medium",
+        "category": "correctness",
+        "confidence": 1,
+        "symbol": "test_default_id_alternate_order"
+      }
+    ],
+    "fixture-values-ids-override-asc": [],
+    "fixture-values-ids-override-inverted": [
+      {
+        "title": "Assertion expects the IDs in reverse order",
+        "file": "owned/test_fixture_values.py",
+        "line": 150,
+        "severity": "medium",
+        "category": "correctness",
+        "confidence": 1,
+        "symbol": "test_overridden_id_alternate_order"
+      }
+    ],
+    "fixture-values-ids-default-desc": [],
+    "fixture-values-ids-desc-inverted": [
+      {
+        "title": "Descending-order assertion expects the reverse tuple",
+        "file": "owned/test_fixture_values.py",
+        "line": 172,
+        "severity": "medium",
+        "category": "correctness",
+        "confidence": 1,
+        "symbol": "test_descending_alternate_order"
+      }
+    ],
+    "fixture-values-ids-filtered": [],
+    "fixture-values-ids-unfiltered": [
+      {
+        "title": "Assertion expects filtered results from an unfiltered query",
+        "file": "owned/test_fixture_values.py",
+        "line": 196,
+        "severity": "medium",
+        "category": "correctness",
+        "confidence": 1,
+        "symbol": "test_pending_alternate_query"
+      }
+    ]
+  }
+}

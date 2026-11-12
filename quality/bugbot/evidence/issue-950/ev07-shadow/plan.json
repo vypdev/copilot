@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "implementation": "b12d0e9c156e45bce530164f54af8b6af173289c",
+  "mode": "shadow",
+  "publication": "dry-run",
+  "production": "disabled",
+  "detector": { "provider": "codex", "modelProvider": "openai", "model": "gpt-6-luna", "effort": "xhigh" },
+  "verifier": { "provider": "codex", "modelProvider": "openai", "model": "gpt-6.1-sol", "effort": "xhigh" },
+  "evidence": "installed exact Git head and permitted base, official release catalog, matching native CI step metadata",
+  "repositoryCohort": {
+    "manifestSha256": "dab7d62b0419c2da63eae3387be6222e77c114ed32b22dc9a2a9af35fb6afe85",
+    "oracleSha256": "c79302cb376519f60d69e0a080cd65dc29ff35ab256ce17b0e4b218fe69e239a",
+    "order": ["U1", "U2", "F1", "F2", "S1", "S2", "X1", "X2", "M1", "M2", "P1", "P2", "J1", "J2"],
+    "repetitions": 3,
+    "baselineMinimumAlerts": 3,
+    "baselineMinimumPremises": 2,
+    "minimumStrictlyBetterRepetitions": 2,
+    "maximumAddedP95Ms": 90000,
+    "requireAllExactPositiveControls": true
+  },
+  "corpus": {
+    "sha256": "640c3355aeb65c1b15454bd7f9242fa36acc12b8b3f5ef284ee06af8af36c6c6",
+    "cases": 174,
+    "concurrency": 6,
+    "outerAttemptsPerCase": 1,
+    "gates": { "precision": 0.9, "recall": 0.85, "f1": 0.87, "exactLocation": 0.8, "severity": 0.8, "category": 0.8, "maxBrier": 0.16 }
+  }
+}

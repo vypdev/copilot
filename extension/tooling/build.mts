@@ -99,12 +99,21 @@ export async function buildDevelopmentSet(root: string, output: string, bundle: 
         return receipt;
     } catch (error) {
         if (error instanceof PublishedCleanupError) throw new Error('build/publish: the complete NEW set is present; previous backup cleanup failed. Inspect output.previous before retry.', { cause: error });
-        const reason = error instanceof FoundationGateError ? `\n${error.message}` : '';
+        const reason = error instanceof FoundationGateError ? `\n${error.message}` : safeBuildFailure(error);
         throw new Error(`build/${target}: development set not replaced; correct this phase and retry. Previous complete output is retained.${reason}`, { cause: error });
     } finally {
         if (staging) await rm(staging, { recursive: true, force: true });
         await rm(lock, { recursive: true });
     }
+}
+
+const BUILD_FAILURE_CODES = new Set(['EACCES', 'EDQUOT', 'EEXIST', 'EIO', 'EMFILE', 'ENOENT', 'ENOMEM',
+    'ENOSPC', 'EPERM', 'EROFS', 'EXDEV', 'ERR_WORKER_INIT_FAILED', 'PLUGIN_ERROR', 'UNRESOLVED_IMPORT']);
+
+function safeBuildFailure(error: unknown): string {
+    if (!error || typeof error !== 'object' || !('code' in error)
+        || typeof error.code !== 'string' || !BUILD_FAILURE_CODES.has(error.code)) return '';
+    return `\nBuild error code: ${error.code}.`;
 }
 
 export async function replaceCompleteSet(staging: string, output: string, io: PublishPort = { rename, rm, lstat }): Promise<void> {

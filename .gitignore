@@ -159,4 +159,5 @@ extension/dist/
 extension/dist.lock/
 extension/dist.previous/
 extension/dist.staging-*/
+extension/.copilot-extension-repro-*/
 extension/.vitest/

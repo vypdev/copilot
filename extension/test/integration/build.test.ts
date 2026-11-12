@@ -60,6 +60,16 @@ it('bexh1-foundation-C26 rejects a target failure, removes staging and retains t
     expect((await readdir(temporary)).filter(name => name.startsWith('first.'))).toEqual([]);
     await expect(validateArtifactSet(output)).resolves.toBeUndefined();
 });
+it('reports allowlisted build failure codes without exposing the bundler message', async () => {
+    const output = path.join(temporary, 'first');
+    const build = (code: string) => buildDevelopmentSet(root, output, async () => {
+        throw Object.assign(new Error('private bundler message'), { code });
+    });
+    await expect(build('ENOSPC')).rejects.toThrow('Build error code: ENOSPC.');
+    await expect(build('private data')).rejects.not.toThrow(/private/);
+    expect(JSON.parse(await readFile(path.join(output, 'receipt.json'), 'utf8'))).toEqual(first);
+});
+
 it('bexh1-foundation-C27 replaces complete output on corrected retry and removes stale assets', async () => {
     const output = path.join(temporary, 'first');
     await writeFile(path.join(output, 'chrome/stale.js'), 'obsolete');
