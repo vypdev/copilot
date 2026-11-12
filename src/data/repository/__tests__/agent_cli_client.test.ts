@@ -479,6 +479,34 @@ describe('AgentCliClient admitted process execution', () => {
         })).rejects.toMatchObject({ category: 'cancelled' });
     });
 
+    it('does not time out brokered verification but honors explicit cancellation', () => {
+        jest.useFakeTimers();
+        const executionPlan = plan('unused', { brokeredVerification: true, timeoutMs: 100 });
+        const kill = jest.fn();
+        const reject = jest.fn();
+        try {
+            const lifecycle = createAgentProcessLifecycle({ exitCode: null, pid: undefined, kill } as never,
+                executionPlan, undefined, jest.fn(), reject);
+            jest.advanceTimersByTime(900_000);
+            expect(kill).not.toHaveBeenCalled();
+            lifecycle.abort();
+            lifecycle.onClose(null);
+            expect(kill).toHaveBeenCalledWith('SIGTERM');
+            expect(reject).toHaveBeenCalledWith(expect.objectContaining({ category: 'cancelled' }));
+        } finally {
+            rmSync(executionPlan.runtimeDirectory, { recursive: true, force: true });
+            jest.useRealTimers();
+        }
+    });
+
+    it('rejects a brokered execution plan with write authority', async () => {
+        const executionPlan = plan('process.stdout.write("unexpected")', {
+            brokeredVerification: true, capability: 'fixer', workspaceMode: 'workspace-write',
+        });
+        await expect(agentExecution.runAgentCli(executionPlan, '')).rejects.toMatchObject({ category: 'configuration' });
+        expect(existsSync(executionPlan.runtimeDirectory)).toBe(false);
+    });
+
     it('keeps lifecycle settlement idempotent under late process events', () => {
         jest.useFakeTimers();
         const executionPlan = plan('unused');

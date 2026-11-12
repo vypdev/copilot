@@ -1,3 +1,4 @@
+import { readBugbotVerificationMode } from '../application/policies/bugbot_shadow_configuration_policy';
 import { renderApplicationErrorText } from '../application/policies/application_error_presentation_policy';
 import { resolveStaticApplicationErrorCatalog } from '../application/policies/application_error_message_catalog';
 import type { ApplicationError } from '../application/errors/application_error';
@@ -16,6 +17,7 @@ import { createLoggerAdapter } from '../infrastructure/logging/logger_adapter';
 /** Dedicated trusted-default-branch route. It never calls the agent or checks out PR code. */
 export async function runPullRequestApprovalAction(token: string): Promise<void> {
     configureApplicationLogger(createLoggerAdapter());
+    readBugbotVerificationMode(getGithubActionInput);
     const repository = github.context.payload.repository;
     const repositoryId = repository?.id;
     if (!Number.isSafeInteger(repositoryId) || !repositoryId || repositoryId <= 0) {

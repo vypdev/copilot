@@ -103,21 +103,28 @@ The same values are managed as Repository Variables by `copilot setup`. One revi
 /copilot review effort=high dry-run=true trace-rules=true suggested-changes=false
 ```
 
-## Proposed evidence verification rollout
+## Evidence verification in shadow
 
-The #950 evidence gate stays disabled until a verifier profile qualifies and
-a maintainer explicitly approves it. The first proposed profile uses immutable
-source, version-matched dependency evidence and matching CI. The shadow runner
-uses the same effective model and reasoning effort as Bugbot detection and
-can follow successive read-only evidence requests. `bugbot-effort` controls
-review depth. `reviewer-effort` controls provider reasoning effort for both
-sessions. The installed Action leaves the verifier unbound. In controlled
-dry-runs a provider safety stop is recorded as a technical failure and the
-simulated publication continues to reflect the ordinary Bugbot decision.
-Token usage and cost are
-optional telemetry and have no configuration field or effect on a verdict.
-Operational cancellation, read permissions and source integrity apply throughout
-the investigation.
+Set `BUGBOT_VERIFICATION_MODE=shadow` in an evaluation workflow to observe
+verification. It defaults to `disabled`. Set `BUGBOT_DRY_RUN=true` as well
+when testing without ordinary Bugbot writes. Shadow verdicts do not change
+publication or approval.
+
+The verifier inherits the effective `REVIEWER_*` profile unless you set an
+optional `BUGBOT_VERIFIER_*` override. For example, set
+`BUGBOT_VERIFIER_MODEL` to select a different model on the same backend.
+`BUGBOT_EFFORT` controls detection depth; `REVIEWER_EFFORT` controls the
+provider's reasoning and is inherited when applicable. See
+[verifier variables and provider settings](/bugbot/quality-observability#finding-lifecycle-in-a-shadow-diagnostic)
+for the full profile. Anthropic models use the OpenCode agent with the
+`anthropic` backend. Direct Claude Code is not supported.
+
+The installed shadow broker reads the pinned Git tree without repository
+writes. A provider interruption is recorded as a technical failure. Usage
+and cost are optional telemetry and do not decide the verdict.
+Production enforcement stays disabled until an exact profile qualifies
+with source, version-matched dependency evidence and matching CI, and
+a maintainer explicitly approves it.
 
 [Specification and pilot status](https://github.com/vypdev/copilot/issues/950)
 

@@ -1,4 +1,4 @@
-import { buildAgentTasksFromValues } from '../../../../../actions/agent_input_builder';
+import { readGithubActionAiInputs } from '../../../../../actions/github_action_ai_inputs';
 import type { FindingsQueryRequest } from '../../../../ports/agent_findings_ports';
 import type { BugbotShadowVerificationPort } from '../../../../ports/bugbot_shadow_verification_ports';
 import { Ai } from '../../../../../data/model/ai';
@@ -175,6 +175,7 @@ function execution(
   ignorePatterns: readonly string[] = [],
   inputs?: Record<string, string>,
 ): Execution {
+  const actionInputs = readGithubActionAiInputs(key => inputs?.[key] ?? '');
   return {
     owner: 'org', repo: 'repo', issueNumber: -1, tokenUser: 'bot', tokens: { token: 'token' },
     locale: { repository: 'en-US', issue: 'en-US', pullRequest: 'en-US' },
@@ -182,7 +183,7 @@ function execution(
     inputs: { eventName: 'pull_request', pull_request: { head: { sha: 'a'.repeat(40) } } },
     pullRequest: { number: 7, head: 'feature/review', action: 'opened' },
     commit: { branch: 'feature/review' }, currentConfiguration: { parentBranch: 'main' }, branches: { development: 'main' },
-    ai: new Ai('', 'model', false, [...ignorePatterns], false, 'low', 20, [], inputs && buildAgentTasksFromValues(inputs), undefined, { publicationMode: mode, traceRules: true }),
+    ai: new Ai('', 'model', false, [...ignorePatterns], false, 'low', 20, [], actionInputs.requestedAgentTasks, undefined, { ...actionInputs.bugbotReviewConfiguration, publicationMode: mode, traceRules: true }),
   } as unknown as Execution;
 }
 
@@ -348,6 +349,25 @@ describe('Bugbot normal review in shadow', () => {
     });
     expect(results[0].payload).toMatchObject({ findings: [{ id: 'unchecked-token' }],
       bugbotShadowVerification: { resolvedModel: model, candidates: [{ status: 'verdict', verdict: 'inconclusive', reportedModel: model }] } });
+    expect(provider.reviews).toEqual([]);
+    expect(provider.statusComments).toEqual([]);
+  });
+
+  it('uses the optional Action profile for verification only, without changing dry-run findings', async () => {
+    const provider = new InMemoryReviewProvider();
+    const query = detector([finding()]);
+    const verify = jest.fn<ReturnType<BugbotShadowVerificationPort['verify']>, Parameters<BugbotShadowVerificationPort['verify']>>()
+      .mockResolvedValue({ status: 'technical-failure', reason: 'provider-model-unavailable' });
+    const inputs = { 'reviewer-model': 'gpt-6-luna', 'reviewer-effort': 'xhigh',
+      'bugbot-verification-mode': 'shadow', 'bugbot-verifier-model': 'gpt-6.1-sol' };
+    const [result] = await new DetectPotentialProblemsUseCase({ query }, scmPorts(provider), undefined, undefined, { verify })
+      .invoke(projectBugbotReviewOperationContext(execution('dry-run', [], inputs)));
+
+    expect(query.mock.calls[0][0].configuration).toMatchObject({ model: 'gpt-6-luna', effort: 'xhigh' });
+    expect(verify.mock.calls[0][0].configuration).toMatchObject({ model: 'gpt-6.1-sol', effort: 'xhigh' });
+    expect(result.payload).toMatchObject({ findings: [{ id: 'unchecked-token' }],
+      bugbotShadowVerification: { resolvedModel: 'gpt-6-luna', verifier: { model: 'gpt-6.1-sol', effort: 'xhigh' },
+        candidates: [{ status: 'technical-failure', reason: 'provider-model-unavailable' }] } });
     expect(provider.reviews).toEqual([]);
     expect(provider.statusComments).toEqual([]);
   });

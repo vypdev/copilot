@@ -1,15 +1,13 @@
 'use strict';
 
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
 const Ajv = require('ajv');
 const schema = require('./schema.cjs');
 const { git, hash } = require('./git.cjs');
 const { makeBroker } = require('./broker.cjs');
 const { investigateBugbotShadow } = require('../../../application/usecases/steps/commit/bugbot/investigate_bugbot_shadow.cjs');
 
-const instructions = fs.readFileSync(path.join(__dirname, 'prompt.txt'), 'utf8').trimEnd();
+const instructions = require('./prompt.cjs');
 const ajv = new Ajv();
 const validateLegacy = ajv.compile(schema);
 const validateLifecycle = ajv.compile(schema.lifecycle);
@@ -30,9 +28,9 @@ function checkTree(repo, subject, allowBase) {
 
 
 /** Bind Git, source and provider adapters to the application investigation. */
-function investigate(source, subject, finding, cwd, transport, log, signal, { lifecycle = false, sharedRead } = {}) {
+function investigate(source, subject, finding, cwd, transport, log, signal, { lifecycle = false, sharedRead, stateless } = {}) {
     return investigateBugbotShadow({
-        broker: makeBroker(source, subject, finding, sharedRead), subject, finding, log, signal, lifecycle,
+        broker: makeBroker(source, subject, finding, sharedRead), subject, finding, log, signal, lifecycle, stateless,
         transport: request => transport({ ...request, cwd }),
         officialPackages: [...new Set((source.catalog ?? []).map(entry => entry.package))],
         instructions: lifecycle ? lifecycleInstructions : instructions,

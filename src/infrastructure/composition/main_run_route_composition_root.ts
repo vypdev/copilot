@@ -127,6 +127,7 @@ function createDetectPotentialProblemsUseCase(binding: BugbotScmBinding): Detect
     bugbot.scm,
     bugbot.telemetry,
     new ResolveMessageCatalogUseCase(createLanguageQueryPort()),
+    bugbot.shadowVerification,
   );
 }
 
@@ -262,6 +263,7 @@ export function createIssueCommentUseCaseCompositionRoot(binding: BugbotScmBindi
       bugbot.scm,
       bugbot.telemetry,
       new ResolveMessageCatalogUseCase(language),
+      bugbot.shadowVerification,
     ),
     pullRequestDescription,
     new RememberBugbotRuleUseCase(bugbot.rules),
@@ -326,6 +328,7 @@ export function createPullRequestReviewCommentUseCaseCompositionRoot(binding: Bu
       bugbot.scm,
       bugbot.telemetry,
       new ResolveMessageCatalogUseCase(language),
+      bugbot.shadowVerification,
     ),
     pullRequestDescription,
     new RememberBugbotRuleUseCase(bugbot.rules),
@@ -377,27 +380,27 @@ export function createMainRunRouteCompositionRoot(
   let push: CommitUseCase | undefined;
   return {
     "single-action": async (execution) => {
-      singleAction ??= createSingleActionUseCaseCompositionRoot(surface, bugbotBinding(execution), setupProgress);
+      singleAction ??= createSingleActionUseCaseCompositionRoot(surface, bugbotBinding(execution, surface), setupProgress);
       return singleAction.invoke(execution);
     },
     "issue-comment": async (execution) => {
-      issueComment ??= createIssueCommentUseCaseCompositionRoot(bugbotBinding(execution), captureVerificationSetup(execution.verificationSetup, execution.branches.main));
+      issueComment ??= createIssueCommentUseCaseCompositionRoot(bugbotBinding(execution, surface), captureVerificationSetup(execution.verificationSetup, execution.branches.main));
       return issueComment.invoke(execution);
     },
     issue: async (execution) => {
-      issue ??= createIssueUseCaseCompositionRoot(bugbotBinding(execution));
+      issue ??= createIssueUseCaseCompositionRoot(bugbotBinding(execution, surface));
       return issue.invoke(execution);
     },
     "pull-request-review-comment": async (execution) => {
-      pullRequestReviewComment ??= createPullRequestReviewCommentUseCaseCompositionRoot(bugbotBinding(execution), captureVerificationSetup(execution.verificationSetup, execution.branches.main));
+      pullRequestReviewComment ??= createPullRequestReviewCommentUseCaseCompositionRoot(bugbotBinding(execution, surface), captureVerificationSetup(execution.verificationSetup, execution.branches.main));
       return pullRequestReviewComment.invoke(execution);
     },
     "pull-request": async (execution) => {
-      pullRequest ??= createPullRequestUseCaseCompositionRoot(bugbotBinding(execution));
+      pullRequest ??= createPullRequestUseCaseCompositionRoot(bugbotBinding(execution, surface));
       return pullRequest.invoke(execution);
     },
     push: async (execution) => {
-      push ??= createCommitUseCaseCompositionRoot(projectBoardCommandPort, bugbotBinding(execution));
+      push ??= createCommitUseCaseCompositionRoot(projectBoardCommandPort, bugbotBinding(execution, surface));
       return push.invoke(execution);
     },
   };
@@ -407,11 +410,14 @@ function bugbotBinding(execution: {
   readonly owner: string;
   readonly repo: string;
   readonly tokens: { readonly token: string };
-}): BugbotScmBinding {
+  readonly ai?: { getBugbotReviewConfiguration(): { readonly shadowVerification?: unknown } };
+}, surface: MainRunCompositionSurface): BugbotScmBinding {
   return {
     owner: execution.owner,
     repository: execution.repo,
     token: execution.tokens.token,
+    ...(surface === 'github-workflow' && execution.ai?.getBugbotReviewConfiguration?.().shadowVerification
+      ? { shadow: { workspace: process.env.GITHUB_WORKSPACE } } : {}),
   };
 }
 

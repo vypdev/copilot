@@ -72,17 +72,17 @@ function providerFailure(error) {
     return isContextFailure(error) ? 'provider-context-window' : 'provider-turn-failed';
 }
 
-function ask({ cwd, prompt, schema, threadId, signal, configuration, onInvocation }) {
+function ask({ cwd, prompt, schema, threadId, signal, configuration, onInvocation, runtime }) {
     assert.equal(configuration.provider, 'codex', 'shadow-provider-unavailable');
     assert.match(configuration.model, /^[a-zA-Z0-9][a-zA-Z0-9._:-]*$/u);
     const started = performance.now();
     const argv = flags(cwd, schema, threadId, configuration);
     const invocation = codexInvocation(argv);
     onInvocation?.(invocation);
-    const env = Object.fromEntries(['HOME', 'PATH', 'TMPDIR', 'LANG', 'LC_ALL']
+    const env = runtime?.environment ?? Object.fromEntries(['HOME', 'PATH', 'TMPDIR', 'LANG', 'LC_ALL']
         .filter(key => process.env[key]).map(key => [key, process.env[key]]));
     return new Promise(resolve => {
-        const child = spawn(configuration.executable || 'codex', argv, { cwd, env, stdio: ['pipe', 'pipe', 'pipe'] });
+        const child = spawn(runtime?.executable ?? (configuration.executable || 'codex'), [...(runtime?.prefixArgs ?? []), ...argv], { cwd, env, stdio: ['pipe', 'pipe', 'pipe'] });
         let tail = '', stderr = '', output = null, usage = null, actualThread = null, failure = null;
         let completions = 0, bytes = 0, grace, reportedModel, turnStarted = false;
         const stop = code => { failure ??= code; child.kill('SIGKILL'); };

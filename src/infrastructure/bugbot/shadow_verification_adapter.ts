@@ -1,10 +1,19 @@
+import { randomUUID } from 'node:crypto';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { BugbotShadowCandidate, BugbotShadowInvestigationMetrics, BugbotShadowResult, BugbotShadowVerificationPort } from '../../application/ports/bugbot_shadow_verification_ports';
 import type { AgentConfiguration } from '../../domain/agent';
 import { redactSensitiveText } from '../../domain/security/sensitive_text';
+import { AgentExecutionPlanner } from '../agents/agent_execution_planner';
+import { runAgentCli } from '../../data/repository/agent_cli_execution';
+import { AgentCliError } from '../../data/repository/agent_cli_contracts';
+import { AGENT_EXECUTION_TIMEOUT_MAX_MS } from '../../domain/agent_execution_plan';
+import { buildAgentCliEnvironment } from '../../data/repository/agent_authentication';
+import { getAgentRuntimeManifestEntry } from '../agents/agent_runtime_manifest';
+import { resolveAgentExecutablePath, validateResolvedAgentInvocation } from '../agents/agent_executable_invocation';
 import { canonicalGitObjectId } from '../../domain/git_object_id';
+import { inspectCursorVerifierCatalog, inspectOpenCodeVerifierCatalog } from './verifier_model_catalog';
 
 export interface BugbotShadowSource {
     readonly repo: string;
@@ -39,6 +48,7 @@ interface TurnRequest {
     readonly signal?: AbortSignal;
     readonly configuration: Readonly<AgentConfiguration>;
     readonly candidateId: string;
+    readonly runtime?: { readonly executable: string; readonly prefixArgs: readonly string[]; readonly environment: NodeJS.ProcessEnv };
 }
 
 interface TurnResult {
@@ -72,7 +82,7 @@ const { investigate } = require('./shadow/run.cjs') as {
         transport: (request: Omit<TurnRequest, 'configuration' | 'candidateId'>) => Promise<TurnResult>,
         log: Log,
         signal?: AbortSignal,
-        options?: { lifecycle: boolean; sharedRead?: SharedRead },
+        options?: { lifecycle: boolean; sharedRead?: SharedRead; stateless?: boolean },
     ): Promise<{
         answer: (Pick<Verdict, 'reason' | 'missing' | 'citations' | 'premises'> & { label: Verdict['verdict'] }) | null;
         failure: string | null;
@@ -96,18 +106,75 @@ interface ShadowVerifierOptions {
     readonly transport?: (request: TurnRequest) => Promise<TurnResult>;
     /** Frozen replay callers can retain their original prompt and response schema. */
     readonly lifecycle?: boolean;
+    readonly managed?: boolean;
 }
 
 const failure = (reason: string): BugbotShadowResult => ({ status: 'technical-failure', reason });
 
+export function askManagedBugbotShadowTurn(request: TurnRequest): Promise<TurnResult> {
+    const { configuration } = request;
+    if (configuration.provider !== 'codex') return askManagedBrokeredTurn(request);
+    try {
+        const environment = buildAgentCliEnvironment(configuration.provider, process.env, configuration.modelProvider);
+        const executable = resolveAgentExecutablePath(
+            configuration.executable ?? getAgentRuntimeManifestEntry(configuration.provider).executable, environment,
+        );
+        const invocation = validateResolvedAgentInvocation(executable, configuration.provider, environment);
+        return ask({ ...request, runtime: { ...invocation, environment } });
+    } catch {
+        return Promise.resolve({ fact: { failure: 'provider-runtime-unavailable' } });
+    }
+}
+
+async function askManagedBrokeredTurn(request: TurnRequest): Promise<TurnResult> {
+    const { configuration, cwd, schema, signal } = request;
+    const prompt = 'Respond with one JSON object that matches this schema.\n' + JSON.stringify(schema) + '\n' + request.prompt;
+    let output: string;
+    try {
+        const planner = new AgentExecutionPlanner();
+        if (!request.threadId) {
+            const catalogPlan = planner.prepareBrokeredVerification({
+                configuration, capability: 'findings', prompt: '', timeoutMs: 15_000,
+            }, cwd);
+            let catalog: string;
+            try {
+                catalog = await runAgentCli({
+                    ...catalogPlan, argv: configuration.provider === 'opencode'
+                        ? ['models', configuration.modelProvider ?? 'openai', '--pure', '--verbose'] : ['models'],
+                    promptMode: 'stdin', outputProtocol: 'plain-text', brokeredVerification: undefined,
+                }, '', signal);
+            } catch (error) {
+                if (signal?.aborted) throw error;
+                return { fact: { failure: 'provider-catalog-unavailable' } };
+            }
+            const failure = configuration.provider === 'opencode' ? inspectOpenCodeVerifierCatalog(catalog, configuration)
+                : inspectCursorVerifierCatalog(catalog, configuration.model);
+            if (failure) return { fact: { failure } };
+        }
+        const plan = planner.prepareBrokeredVerification({
+            configuration, capability: 'findings', prompt, timeoutMs: AGENT_EXECUTION_TIMEOUT_MAX_MS,
+        }, cwd);
+        output = await runAgentCli(plan, prompt, signal);
+    } catch (error) {
+        const category = error instanceof AgentCliError ? error.category : undefined;
+        return { fact: { failure: category === 'cancelled' ? 'investigation-canceled'
+            : category === 'configuration' ? 'provider-runtime-unavailable' : 'provider-turn-failed' } };
+    }
+    try {
+        return { response: JSON.parse(output.trim()), threadId: request.threadId ?? randomUUID(), fact: { failure: null } };
+    } catch {
+        return { fact: { failure: 'provider-json-invalid' } };
+    }
+}
+
 /** Composition supplies an authorized object store. The verifier receives no SCM or mutation ports. */
 export function createPinnedBugbotShadowVerifier({
-    resolveSource, log = () => undefined, transport = ask, lifecycle = true,
+    resolveSource, log = () => undefined, transport = ask, lifecycle = true, managed = false,
 }: ShadowVerifierOptions): BugbotShadowVerificationPort {
     const reviewCaches = new WeakMap<object, SharedRead>();
     return {
         async verify({ candidate, configuration, signal, review }) {
-            if (configuration.provider !== 'codex') return failure('shadow-provider-unavailable');
+            if (configuration.provider !== 'codex' && !managed) return failure('shadow-provider-unavailable');
             if (signal?.aborted) return failure('investigation-canceled');
             const head = canonicalGitObjectId(candidate.headSha);
             const base = canonicalGitObjectId(candidate.baseSha ?? candidate.headSha);
@@ -138,7 +205,7 @@ export function createPinnedBugbotShadowVerifier({
                         return { ...turn, fact: { ...turn.fact, failure: 'reported-model-mismatch' } };
                     }
                     return turn;
-                }, log, signal, { lifecycle, sharedRead });
+                }, log, signal, { lifecycle, sharedRead, stateless: managed && configuration.provider !== 'codex' });
                 log({ ...result, resolvedModel: configuration.model });
                 const reported = result.turns.flatMap(turn => turn.reportedModel ? [turn.reportedModel] : []);
                 const reportedModel = reported.find(model => model !== configuration.model) ?? reported[0];

@@ -51,6 +51,7 @@ export async function finishGithubAction(
 
     execution.currentConfiguration.results = results;
     core.setOutput('bugbot-telemetry', JSON.stringify(extractBugbotTelemetry(results)));
+    const shadowSummary = emitBugbotShadowSummary(results);
     const dryRun = results.some((result) => getResultPayload(result.payload)?.dryRun === true);
     const admissionStopped = execution.issueWorkflowRuntimeMode === 'block' || execution.issueWorkflowRuntimeMode === 'noop';
     const ownsDeploymentPresentation = execution.singleAction.isDeploymentOrchestrationAction;
@@ -86,6 +87,10 @@ export async function finishGithubAction(
         logInfo('Configuration persistence skipped: this single action does not modify execution configuration.');
     }
     const summary = await writeActionSummary(execution, summaryPort, catalogResolver);
+    if (shadowSummary && summaryPort) {
+        try { await summaryPort.publish(shadowSummary); }
+        catch { logInfo('Bugbot shadow summary could not be appended.'); }
+    }
     const optionalEvidenceDiagnostic = !dryRun ? await publishCopilotEvidence(
         execution,
         results,
@@ -100,6 +105,33 @@ export async function finishGithubAction(
     const completionError = firstApplicationError(results)
         ?? bugbotCompletionError(execution, results, dryRun);
     if (completionError) core.setFailed(renderApplicationErrorText(completionError, summary.errorMessage));
+}
+
+/** Shadow is diagnostic only. Do not export candidate text, receipts, or provider payloads. */
+export function emitBugbotShadowSummary(results: readonly Result[]): string | undefined {
+    const reports = results.flatMap(result => {
+        const report = getResultPayload(result.payload)?.bugbotShadowVerification as
+            import('../application/usecases/steps/commit/bugbot/observe_bugbot_shadow_verification').BugbotShadowVerificationReport | undefined;
+        if (!report || !Array.isArray(report.candidates)) return [];
+        return [{
+            detector: report.resolvedModel, detectorProvider: report.provider,
+            detectorModelProvider: report.detectorModelProvider, detectorEffort: report.detectorEffort,
+            verifier: report.verifier, head: report.review?.headSha, detectionUnavailable: report.detectionUnavailable === true,
+            superseded: report.superseded === true, timing: report.timing,
+            candidates: report.candidates.length,
+            confirmed: report.candidates.filter(candidate => candidate.status === 'verdict' && candidate.verdict === 'confirmed').length,
+            refuted: report.candidates.filter(candidate => candidate.status === 'verdict' && candidate.verdict === 'refuted').length,
+            inconclusive: report.candidates.filter(candidate => candidate.status === 'verdict' && candidate.verdict === 'inconclusive').length,
+            technicalFailures: report.candidates.filter(candidate => candidate.status === 'technical-failure').length,
+        }];
+    });
+    if (!reports.length) return undefined;
+    core.setOutput('bugbot-shadow-summary', JSON.stringify(reports));
+    return ['### Bugbot shadow verification', '', ...reports.map(report => {
+        if (report.detectionUnavailable) return '- Detection did not produce a complete review.';
+        const prefix = report.superseded ? 'Superseded: ' : '';
+        return `- ${prefix}${report.candidates} candidate(s): ${report.confirmed} confirmed, ${report.refuted} refuted, ${report.inconclusive} inconclusive, ${report.technicalFailures} technical failure(s). This observation does not control publication or approval.`;
+    }), ''].join('\n');
 }
 
 interface WrittenActionSummary {

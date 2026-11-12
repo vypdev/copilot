@@ -1,3 +1,4 @@
+import { resolveBugbotShadowConfiguration } from '../application/policies/bugbot_shadow_configuration_policy';
 import { runIssueEventAdmissionAction } from './issue_event_admission_action';
 import { runNativeVerificationEntry } from '../infrastructure/native_verification_controller';
 import { createNativeStatusReadPort } from '../infrastructure/composition/issue_completion_composition_root';
@@ -7,7 +8,7 @@ import { ConfigurationHandler } from '../manager/description/configuration_handl
 import { GitCliRepository } from '../data/repository/git_cli_repository';
 import { createIssueContentCompositionRoot } from '../infrastructure/composition/issue_content_composition_root';
 import { createProjectBoardCompositionRoot } from '../infrastructure/composition/project_board_composition_root';
-import { finishGithubAction } from './github_action_completion';
+import { emitBugbotShadowSummary, finishGithubAction } from './github_action_completion';
 import { getGithubActionInput } from './github_action_input';
 import { isEnabledInput, parseIssueWorkflowBoolean } from './input_boolean_policy';
 import { buildGithubActionExecution, hydrateGithubActionExecutionProjects, readGithubActionSingleAction } from './github_action_execution';
@@ -132,20 +133,36 @@ export async function runGitHubAction(): Promise<void> {
         agentRuntimeAuthorized: memberOnlyAgentTasksAuthorized,
         localeInputs,
     });
+    const shadowSettings = aiInputs.bugbotReviewConfiguration.shadowVerification;
+    const prepareShadowRuntime = () => {
+        if (!shadowSettings || (!botAnalysisOnly && !requestedActiveAgentTasks.some(task => task === 'reviewer' || task === 'findings'))) return;
+        const detection = execution.ai.getAgentConfiguration(execution.isPullRequest ? 'reviewer' : 'findings');
+        const verifier = resolveBugbotShadowConfiguration(detection, shadowSettings);
+        if (verifier.provider === detection.provider && verifier.modelProvider === detection.modelProvider) return;
+        try {
+            prepareGithubAgentRuntime({ findings: verifier, fixer: verifier }, ['findings']);
+        } catch {
+            logInfo('The shadow verifier runtime could not be prepared. The ordinary review can still complete.');
+        }
+    };
     if (botAnalysisOnly) {
         // Bypass the normal lifecycle/issue route entirely. The only permitted
         // side effect is Bugbot's PR analysis and its own bounded presentation.
         execution.issueNumber = execution.pullRequest.number;
         prepareGithubAgentRuntime(aiInputs.requestedAgentTasks, ['reviewer']);
+        prepareShadowRuntime();
         const results = await createPullRequestUseCaseCompositionRoot({
             owner: execution.owner,
             repository: execution.repo,
             token,
+            ...(shadowSettings ? { shadow: { workspace: process.env.GITHUB_WORKSPACE } } : {}),
         }).reviewOnly(execution);
         if (results.some(result => !result.success)) {
             throw new Error('Bot-authored pull-request analysis did not complete.');
         }
-        await core.summary.addRaw('Copilot analyzed this bot-authored pull request. Native bot approval is never permitted.').write();
+        const shadowSummary = emitBugbotShadowSummary(results);
+        await core.summary.addRaw(['Copilot analyzed this bot-authored pull request. Native bot approval is never permitted.',
+            shadowSummary].filter(Boolean).join('\n\n')).write();
         return;
     }
     logDebugInfo(
@@ -192,6 +209,7 @@ export async function runGitHubAction(): Promise<void> {
             }
             if (!singleAction.isCloseInactiveIssuesAction && requestedActiveAgentTasks.length > 0) {
                 prepareGithubAgentRuntime(aiInputs.requestedAgentTasks, requestedActiveAgentTasks);
+                prepareShadowRuntime();
                 languageRuntimeAvailable = requestedActiveAgentTasks.includes('planner');
             }
         },

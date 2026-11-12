@@ -5,6 +5,7 @@ import {
     mkdirSync,
     mkdtempSync,
     readFileSync,
+    readdirSync,
     realpathSync,
     rmSync,
     writeFileSync,
@@ -86,6 +87,18 @@ export class AgentExecutionPlanner {
     constructor(private readonly system: AgentExecutionPlanningSystem = DEFAULT_SYSTEM) {}
 
     prepare(request: AgentExecutionPlanningRequest): AgentExecutionPlan {
+        return this.preparePlan(request);
+    }
+
+    prepareBrokeredVerification(request: AgentExecutionPlanningRequest, emptyWorkspace: string): AgentExecutionPlan {
+        const workspace = realpathSync(emptyWorkspace);
+        if (request.capability !== 'findings' || request.sourceSnapshot || readdirSync(workspace).length !== 0) {
+            throw new AgentCliError('Brokered verification requires an empty read-only workspace.', 'configuration');
+        }
+        return this.preparePlan(request, workspace);
+    }
+
+    private preparePlan(request: AgentExecutionPlanningRequest, brokeredWorkspace?: string): AgentExecutionPlan {
         const startedAt = performance.now();
         const limits = validateLimits(request);
         const sourceEnvironment = request.environment ?? process.env;
@@ -93,7 +106,7 @@ export class AgentExecutionPlanner {
         let stage: AgentExecutionPreflightStage = 'workspace';
         try {
             const sourceSnapshot = admitAgentSourceSnapshot(request.sourceSnapshot, request.capability);
-            let workspace = this.system.resolveWorkspace(request.cwd ?? process.cwd());
+            let workspace = brokeredWorkspace ?? this.system.resolveWorkspace(request.cwd ?? process.cwd());
             stage = 'ambient-configuration';
             rejectAmbientProviderConfiguration(request.configuration.provider, workspace);
             stage = 'manifest';
@@ -149,6 +162,7 @@ export class AgentExecutionPlanner {
                 workspace,
                 runtimeDirectory,
                 ...(request.outputSchema ? { outputSchema: request.outputSchema } : {}),
+                ...(brokeredWorkspace ? { brokeredVerification: true as const } : {}),
             });
             stage = 'artifacts';
             const artifacts = materializeArtifacts([
@@ -180,6 +194,7 @@ export class AgentExecutionPlanner {
                 approval: 'never',
                 sessionPersistence: false,
                 output: providerPolicy.output,
+                ...(brokeredWorkspace ? { brokeredVerification: true as const } : {}),
                 timeoutMs: remainingSourceTimeout(sourceSnapshot, startedAt, limits.timeoutMs),
                 maxPromptBytes: limits.maxPromptBytes,
                 maxOutputBytes: limits.maxOutputBytes,

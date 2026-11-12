@@ -186,7 +186,7 @@ function missingOfficialEvidence(answer, actions, subject, officialPackages, req
 
 /** One independent investigation over evidence and provider ports. */
 async function investigateBugbotShadow({ broker, subject, finding, transport, log, signal, lifecycle,
-    officialPackages, instructions, schema, validate, checkRevision, fingerprint }) {
+    officialPackages, instructions, schema, validate, checkRevision, fingerprint, stateless }) {
     const started = performance.now(), writes = [], turns = [], actions = [], closures = [];
     const references = lifecycle ? createEvidenceReferences(broker.binding.operation) : undefined;
     const turnDurationsMs = [];
@@ -211,9 +211,13 @@ async function investigateBugbotShadow({ broker, subject, finding, transport, lo
         while (!answer) {
             checkCanceled();
             const turn = turns.length + 1;
-            log({ event: 'turn-started', finding: finding.id, turn, promptSha256: fingerprint(prompt) });
+            const turnPrompt = stateless && turn > 1
+                ? first + '\nContinue the same investigation. Recall saved receipts if you need their text.\n'
+                    + JSON.stringify({ inventory: inventory(), closureIssues: visibleIssues() }) + '\n' + prompt
+                : prompt;
+            log({ event: 'turn-started', finding: finding.id, turn, promptSha256: fingerprint(turnPrompt) });
             const turnStarted = performance.now();
-            const result = await Promise.resolve().then(() => transport({ prompt, schema, threadId, signal }))
+            const result = await Promise.resolve().then(() => transport({ prompt: turnPrompt, schema, threadId, signal }))
                 .finally(() => turnDurationsMs.push(Math.round(performance.now() - turnStarted)));
             turns.push(result.fact);
             checkCanceled();

@@ -40,6 +40,36 @@ describe('AgentExecutionPlanner', () => {
         if (systemFixtureDirectory) rmSync(systemFixtureDirectory, { recursive: true, force: true });
     });
 
+    it.each(['cursor', 'opencode'] as const)('prepares an empty brokered workspace with no repository tools for %s', provider => {
+        const cwd = mkdtempSync(join(tmpdir(), 'copilot-agent-broker-'));
+        const planner = new AgentExecutionPlanner(system(provider));
+        const configuration = provider === 'cursor'
+            ? { provider, modelProvider: 'cursor', model: 'catalog-model' }
+            : { provider, modelProvider: 'anthropic', model: 'catalog-model', effort: 'high' };
+        const request = { configuration, capability: 'findings' as const, prompt: 'fixture', timeoutMs: 1_000 };
+        const plan = planner.prepareBrokeredVerification(request, cwd);
+        try {
+            expect(plan).toMatchObject({ workspace: realpathSync(cwd), workspaceMode: 'read-only', brokeredVerification: true,
+                childNetwork: 'deny', approval: 'never', sessionPersistence: false });
+            if (provider === 'cursor') {
+                expect(plan.argv).toEqual(expect.arrayContaining(['--model', 'catalog-model', '--mode', 'ask']));
+                const policy = JSON.parse(readFileSync(join(plan.environment.CURSOR_CONFIG_DIR, 'cli-config.json'), 'utf8'));
+                expect(policy.permissions.allow).toEqual([]);
+                expect(policy.permissions.deny).toEqual(expect.arrayContaining(['Read(**)', 'Shell(*)', 'Mcp(*:*)', 'Write(**)']));
+            } else {
+                expect(plan.argv).toEqual(expect.arrayContaining(['--model', 'anthropic/catalog-model', '--variant', 'high']));
+                const policy = JSON.parse(plan.environment.OPENCODE_CONFIG_CONTENT);
+                expect(policy.mcp).toEqual({});
+                expect(policy.permission).toMatchObject({ read: 'deny', grep: 'deny', edit: 'deny', bash: 'deny', webfetch: 'deny' });
+            }
+            writeFileSync(join(cwd, 'untrusted.txt'), '');
+            expect(() => planner.prepareBrokeredVerification(request, cwd)).toThrow(/empty read-only workspace/);
+        } finally {
+            rmSync(cwd, { recursive: true, force: true });
+            rmSync(plan.runtimeDirectory, { recursive: true, force: true });
+        }
+    });
+
     windowsIt('preflights a PATH shim and native absolute binary but rejects an explicit command shim', () => {
         const directory = mkdtempSync(join(tmpdir(), 'copilot-agent-windows-system-'));
         const packageRoot = join(directory, 'node_modules', '@openai', 'codex');

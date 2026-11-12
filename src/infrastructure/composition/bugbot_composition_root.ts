@@ -1,3 +1,5 @@
+import type { BugbotShadowVerificationPort } from '../../application/ports/bugbot_shadow_verification_ports';
+import { createInstalledBugbotShadowVerifier } from '../bugbot/installed_bugbot_shadow_adapter';
 import { BugbotGitReviewSourceAdapter } from '../filesystem/bugbot_git_review_source_adapter';
 import { createIssueContentClient } from "./github_issue_client_factory";
 import { createGraphqlTransportClient } from "./github_project_client_factory";
@@ -28,6 +30,7 @@ export type BugbotCompositionRoot = {
   issue: BugbotIssueRepository;
   scm: BugbotScmPorts;
   telemetry: BugbotTelemetryPort;
+  shadowVerification?: BugbotShadowVerificationPort;
   rules: BugbotRuleFileQueryPort & BugbotLearnedRuleCommandPort;
 
 };
@@ -75,6 +78,9 @@ export function createBugbotCompositionRoot(binding: BugbotScmBinding): BugbotCo
     issue,
     scm,
     telemetry: new LoggerBugbotTelemetryAdapter(),
+    ...(binding.shadow ? { shadowVerification: createInstalledBugbotShadowVerifier(
+      { owner: binding.owner, name: binding.repository }, binding.shadow.workspace,
+    ) } : {}),
     rules,
   };
 }

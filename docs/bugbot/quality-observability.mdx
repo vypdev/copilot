@@ -854,11 +854,50 @@ audit. A delivered official source also records the accredited version and
 the scope in which it was proved. If the version or source is missing for a
 material premise, the verdict can be inconclusive with that specific gap.
 
-The ordinary workflow uses the same resolved model and effort in both
-sessions. A trusted dry-run harness can supply a separate verifier profile for
-a matched comparison. Both arms need the same candidates and evidence
-access. A reported provider mismatch is a technical failure. Production
-configuration and setup fields do not change.
+The pull request workflow reads `REVIEWER_PROVIDER`,
+`REVIEWER_MODEL_PROVIDER`, `REVIEWER_MODEL` and `REVIEWER_EFFORT` from
+Actions variables. The effective reviewer profile goes to the detector and
+is inherited by the shadow verifier. `BUGBOT_EFFORT` sets review depth.
+A trusted dry-run manifest can supply a separate verifier profile for a
+matched comparison. Both arms use the same candidates and evidence access.
+A reported provider mismatch is a technical failure.
+
+| Review agent | Model selection | Reasoning configuration |
+|---|---|---|
+| Codex | OpenAI model ID | `REVIEWER_EFFORT` passes the model's supported `model_reasoning_effort` value. |
+| OpenCode | Backend such as `anthropic` or `openai` and the selected model ID | `REVIEWER_EFFORT` passes the model's named variant. |
+| Cursor | Cursor catalog model ID | The current adapter selects the model through `--model`. Choose a variant ID if it is listed in the catalog. |
+
+The installed workflows read the following optional Actions variables. Set
+shared defaults at organization level and override them per repository
+when needed. See [GitHub variable precedence](https://docs.github.com/en/actions/reference/workflows-and-actions/variables#configuration-variable-precedence).
+
+| Actions variable | Action input | Use |
+|---|---|---|
+| `BUGBOT_VERIFICATION_MODE` | `bugbot-verification-mode` | Defaults to `disabled`. Set `shadow` for diagnostics. Shadow observations do not change which findings publish or whether the PR is approved. |
+| `BUGBOT_VERIFIER_PROVIDER` | `bugbot-verifier-provider` | Optional agent: `codex`, `opencode` or `cursor`. |
+| `BUGBOT_VERIFIER_MODEL_PROVIDER` | `bugbot-verifier-model-provider` | Optional backend: for example, `openai` for Codex or `anthropic` for OpenCode. |
+| `BUGBOT_VERIFIER_MODEL` | `bugbot-verifier-model` | Optional model ID. Required when changing agent or backend. |
+| `BUGBOT_VERIFIER_EFFORT` | `bugbot-verifier-effort` | Optional provider-native setting. On the same backend it inherits the effective reviewer effort when omitted and supported. |
+
+For example, a Codex review at `REVIEWER_EFFORT=xhigh` can test a
+different verifier model by setting only `BUGBOT_VERIFIER_MODEL`. To use
+Claude models, select `BUGBOT_VERIFIER_PROVIDER=opencode` and
+`BUGBOT_VERIFIER_MODEL_PROVIDER=anthropic`, then use a model and, optionally,
+a reasoning variant listed by that OpenCode runtime. Do not select
+`anthropic` as an agent: direct Claude Code execution is not implemented.
+For Cursor, choose the model or variant in `BUGBOT_VERIFIER_MODEL` and
+leave the separate effort empty. Both selected profiles must satisfy
+`AGENT_ALLOWED_MODEL_PROVIDERS` and `AGENT_ALLOWED_MODELS` if configured.
+The setup workflow templates carry the same bindings.
+
+For a no-write pilot, also set `BUGBOT_DRY_RUN=true` in an isolated
+evaluation workflow. The Action reports counts and profile identities in
+`bugbot-shadow-summary` and counts in the Job Summary. A finding that needs
+official or CI evidence may remain inconclusive: the installed broker
+currently exposes the pinned repository tree, while an evaluation fixture
+may also supply a trusted official-source catalog. Production enforcement
+is unavailable.
 
 For example, a review can report one individual finding and one summary-only
 finding, with one confirmed and one inconclusive shadow outcome. Inspect the

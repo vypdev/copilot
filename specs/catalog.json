@@ -2289,6 +2289,9 @@
         "src/application/usecases/steps/commit/bugbot/bugbot_autofix_use_case.ts"
       ],
       "code": [
+        "src/application/policies/bugbot_shadow_configuration_policy.ts",
+        "src/infrastructure/bugbot/installed_bugbot_shadow_adapter.ts",
+        "src/infrastructure/bugbot/verifier_model_catalog.ts",
         "src/application/policies/bugbot_evidence_reference_policy.cjs",
         "src/application/policies/bugbot_material_dependency_policy.cjs",
         "src/application/usecases/steps/commit/bugbot/bugbot_candidate_trace.ts",
@@ -2297,6 +2300,7 @@
         "src/infrastructure/bugbot/shadow_verification_adapter.ts",
         "src/infrastructure/bugbot/shadow/broker.cjs",
         "src/infrastructure/bugbot/shadow/run.cjs",
+        "src/infrastructure/bugbot/shadow/prompt.cjs",
         "src/infrastructure/bugbot/shadow/schema.cjs",
         "src/infrastructure/bugbot/shadow/session.cjs",
         "src/infrastructure/composition/bugbot_review_composition.ts",
@@ -2412,6 +2416,7 @@
         "src/application/usecases/steps/commit/bugbot/bugbot_review_freshness.ts"
       ],
       "tests": [
+        "src/application/policies/__tests__/bugbot_shadow_configuration_policy.test.ts",
         "src/data/repository/__tests__/pull_request_changes_repository.test.ts",
         "src/application/usecases/steps/commit/__tests__/bugbot_review_lifecycle.e2e.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/bugbot_review_operation_context.test.ts",
@@ -2544,6 +2549,7 @@
         "quality/bugbot/evidence/issue-950/shadow-real-prs/results.md",
         "quality/bugbot/evidence/issue-950/shadow-verification/README.md",
         "quality/bugbot/evidence/issue-950/normal-flow-shadow/results.md",
+        "quality/bugbot/evidence/issue-950/installed-profile/results.md",
         "quality/bugbot/evidence/issue-950/shadow-closure-replay/results.md",
         "quality/bugbot/evidence/issue-950/shadow-order-replay/results.md"
       ]

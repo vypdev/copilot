@@ -145,6 +145,7 @@ export function createPullRequestUseCaseCompositionRoot(binding: BugbotScmBindin
     composeBugbotReview({
       findings: createFindingsQueryPort(), scm: bugbot.scm, telemetry: bugbot.telemetry,
       catalog: new ResolveMessageCatalogUseCase(createLanguageQueryPort()),
+      shadowVerification: bugbot.shadowVerification,
     }),
     bindActorAuthorization(createActorAuthorizationRepository(), binding),
   );

@@ -14,6 +14,7 @@ export interface BugbotScmBinding {
   readonly owner: string;
   readonly repository: string;
   readonly token: string;
+  readonly shadow?: { readonly workspace?: string };
 }
 
 /** Binds repository identity and credential once, outside application workflows. */

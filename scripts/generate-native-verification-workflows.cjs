@@ -11,7 +11,7 @@ const SELF_ACTION = '$/';
 const SECRET_NAMES = ['PAT', 'OPENCODE_API_KEY', 'OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'GOOGLE_API_KEY', 'OPENROUTER_API_KEY', 'CURSOR_API_KEY', 'CODEX_API_KEY'];
 const BINDINGS = require('../src/infrastructure/copilot_comment_inputs.json');
 const expr = value => '${{ ' + value + ' }}';
-const CURSOR_SECRET = expr("(vars.AGENT_PROVIDER == 'cursor' || vars.FINDINGS_PROVIDER == 'cursor' || vars.FIXER_PROVIDER == 'cursor' || vars.PLANNER_PROVIDER == 'cursor' || vars.REVIEWER_PROVIDER == 'cursor' || vars.TESTER_PROVIDER == 'cursor') && secrets.CURSOR_API_KEY || ''");
+const CURSOR_SECRET = expr("(vars.AGENT_PROVIDER == 'cursor' || vars.FINDINGS_PROVIDER == 'cursor' || vars.FIXER_PROVIDER == 'cursor' || vars.PLANNER_PROVIDER == 'cursor' || vars.REVIEWER_PROVIDER == 'cursor' || vars.TESTER_PROVIDER == 'cursor' || (vars.BUGBOT_VERIFICATION_MODE == 'shadow' && vars.BUGBOT_VERIFIER_PROVIDER == 'cursor')) && secrets.CURSOR_API_KEY || ''");
 
 function phaseSteps(action, inputAlias = 'copilot-inputs', id = 'copilot') {
   const steps = [];

@@ -3,7 +3,7 @@ import { closedIssueReconciliationError } from '../../application/errors/closed_
 import type { Execution } from '../../data/model/execution';
 import { Ai } from '../../data/model/ai';
 import { Result } from '../../data/model/result';
-import { finishGithubAction } from '../github_action_completion';
+import { emitBugbotShadowSummary, finishGithubAction } from '../github_action_completion';
 import { ApplicationError } from '../../application/errors/application_error';
 import * as core from '@actions/core';
 import type { DeploymentOperationSnapshot } from '../../domain/deployment_operation';
@@ -1029,4 +1029,24 @@ describe('admission recovery stays in the immutable run summary (#725)',()=>{
     it('leaves previous configuration unchanged on repeated rejected events',async()=>{const value=blocked();value.action.currentConfiguration.workingBranch='bugfix/42-owned';await finish(value);await finish(value);expect(value.action.currentConfiguration.workingBranch).toBe('bugfix/42-owned');expect(mockStoreInvoke).not.toHaveBeenCalled();expect(mockPublishInvoke).not.toHaveBeenCalled();});
     it('also keeps passive no-op admission free of conversation and config writes',async()=>{const value=blocked();value.action.issueWorkflowRuntimeMode='noop';value.result=new Result({id:'IssueWorkflowAdmission',success:true,executed:false});await finish(value);expect(mockStoreInvoke).not.toHaveBeenCalled();expect(mockPublishInvoke).not.toHaveBeenCalled();expect(core.setFailed).not.toHaveBeenCalled();});
     it('returns repaired admitted executions to normal publication and persistence',async()=>{const value=blocked();value.action.issueWorkflowRuntimeMode='execute';value.result=new Result({id:'repaired',success:true,executed:true});await finish(value);expect(mockPublishInvoke).toHaveBeenCalledTimes(1);expect(mockStoreInvoke).toHaveBeenCalledTimes(1);expect(core.setFailed).not.toHaveBeenCalled();});
+});
+
+
+describe('installed Bugbot shadow diagnostics', () => {
+    it('exports counts and profiles without exporting claims, receipts, or approval authority', () => {
+        jest.mocked(core.setOutput).mockClear();
+        const report = new Result({ id: 'DetectPotentialProblemsUseCase', success: true });
+        report.payload = { bugbotShadowVerification: {
+            resolvedModel: 'gpt-6-luna', provider: 'codex', detectorEffort: 'xhigh',
+            verifier: { model: 'gpt-6.1-sol', provider: 'codex', effort: 'xhigh' },
+            candidates: [{ status: 'verdict', verdict: 'confirmed', reason: 'private claim', citations: ['private receipt'] },
+                { status: 'technical-failure', reason: 'private failure' }],
+        } };
+        expect(emitBugbotShadowSummary([report])).toContain('1 confirmed, 0 refuted, 0 inconclusive, 1 technical failure(s)');
+        const [, value] = jest.mocked(core.setOutput).mock.calls[0];
+        expect(core.setOutput).toHaveBeenCalledWith('bugbot-shadow-summary', expect.any(String));
+        expect(JSON.parse(value)).toEqual([expect.objectContaining({ confirmed: 1, technicalFailures: 1,
+            verifier: { model: 'gpt-6.1-sol', provider: 'codex', effort: 'xhigh' } })]);
+        expect(value).not.toContain('private');
+    });
 });

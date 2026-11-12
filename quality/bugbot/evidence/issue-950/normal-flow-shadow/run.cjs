@@ -79,12 +79,13 @@ function selectVerifierProfiles(subject, detector) {
 }
 
 async function verifyMatchedCandidate(request, profiles, verifyArm, recordComparison) {
-    const primary = verifyArm(profiles.experimental ? 'experimental' : 'inherited', request);
+    const primary = Promise.resolve().then(() => verifyArm(profiles.experimental ? 'experimental' : 'inherited', request));
     if (!profiles.comparison) return primary;
-    const [experimental, inherited] = await Promise.all([
+    const [experimental, inherited] = (await Promise.allSettled([
         primary,
-        verifyArm('inherited', { ...request, configuration: profiles.comparison }),
-    ]);
+        Promise.resolve().then(() => verifyArm('inherited', { ...request, configuration: profiles.comparison })),
+    ])).map(outcome => outcome.status === 'fulfilled' ? outcome.value
+        : { status: 'technical-failure', reason: 'verifier-unavailable' });
     recordComparison({ event: 'matched-verification-result', id: request.candidate.id, inherited, experimental });
     return experimental;
 }

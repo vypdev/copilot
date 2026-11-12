@@ -41,3 +41,16 @@ test('omitting the experimental profile opens only the inherited arm', async () 
     assert.deepEqual(calls, [['inherited', luna]]);
     assert.throws(() => selectVerifierProfiles({ experimentalVerifier: { model: ' ' } }, luna), /model required/u);
 });
+
+test('a rejected matched arm preserves the other arm and never substitutes its verdict', async () => {
+    const events = [];
+    const inherited = { status: 'verdict', verdict: 'confirmed' };
+    const result = await verifyMatchedCandidate({ candidate: { id: 'fixture' }, configuration: sol },
+        { primary: sol, experimental: sol, comparison: luna }, async arm => {
+            if (arm === 'experimental') throw Error('provider failed');
+            return inherited;
+        }, event => events.push(event));
+    assert.deepEqual(result, { status: 'technical-failure', reason: 'verifier-unavailable' });
+    assert.equal(events[0].inherited, inherited);
+    assert.deepEqual(events[0].experimental, result);
+});

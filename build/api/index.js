@@ -1,6 +1,228 @@
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
+/***/ 8539:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.INPUT_KEYS = void 0;
+/** Canonical action and CLI input vocabulary shared by input mappers. */
+exports.INPUT_KEYS = {
+    // Debug
+    DEBUG: 'debug',
+    // Welcome
+    WELCOME_TITLE: 'welcome-title',
+    WELCOME_MESSAGES: 'welcome-messages',
+    // Single action
+    SINGLE_ACTION: 'single-action',
+    SINGLE_ACTION_ISSUE: 'single-action-issue',
+    SINGLE_ACTION_VERSION: 'single-action-version',
+    SINGLE_ACTION_TITLE: 'single-action-title',
+    SINGLE_ACTION_CHANGELOG: 'single-action-changelog',
+    SINGLE_ACTION_MESSAGE: 'single-action-message',
+    SINGLE_ACTION_OPERATION_ID: 'single-action-operation-id',
+    SINGLE_ACTION_EXPECTED_REVISION: 'single-action-expected-revision',
+    SINGLE_ACTION_CANDIDATE_SHA: 'single-action-candidate-sha',
+    SINGLE_ACTION_REVIEWED_SOURCE_SHA: 'single-action-reviewed-source-sha',
+    SINGLE_ACTION_PRODUCTION_BASE_SHA: 'single-action-production-base-sha',
+    SINGLE_ACTION_CONFIRM_UNPUBLISHED: 'single-action-confirm-unpublished',
+    SINGLE_ACTION_COMMENT_ID: 'single-action-comment-id',
+    SINGLE_ACTION_COMMENT_MODE: 'single-action-comment-mode',
+    INACTIVITY_THRESHOLD_HOURS: 'inactivity-threshold-hours',
+    // Tokens
+    TOKEN: 'token',
+    // Agent selection
+    AGENT_PROVIDER: 'agent-provider',
+    AGENT_MODEL_PROVIDER: 'agent-model-provider',
+    AGENT_EFFORT: 'agent-effort',
+    AGENT_MODEL: 'agent-model',
+    AGENT_EXECUTABLE: 'agent-executable',
+    FINDINGS_PROVIDER: 'findings-provider',
+    FINDINGS_MODEL_PROVIDER: 'findings-model-provider',
+    FINDINGS_EFFORT: 'findings-effort',
+    FINDINGS_MODEL: 'findings-model',
+    FINDINGS_EXECUTABLE: 'findings-executable',
+    FIXER_PROVIDER: 'fixer-provider',
+    FIXER_MODEL_PROVIDER: 'fixer-model-provider',
+    FIXER_EFFORT: 'fixer-effort',
+    FIXER_MODEL: 'fixer-model',
+    FIXER_EXECUTABLE: 'fixer-executable',
+    PLANNER_PROVIDER: 'planner-provider',
+    PLANNER_MODEL_PROVIDER: 'planner-model-provider',
+    PLANNER_EFFORT: 'planner-effort',
+    PLANNER_MODEL: 'planner-model',
+    PLANNER_EXECUTABLE: 'planner-executable',
+    REVIEWER_PROVIDER: 'reviewer-provider',
+    REVIEWER_MODEL_PROVIDER: 'reviewer-model-provider',
+    REVIEWER_EFFORT: 'reviewer-effort',
+    REVIEWER_MODEL: 'reviewer-model',
+    REVIEWER_EXECUTABLE: 'reviewer-executable',
+    TESTER_PROVIDER: 'tester-provider',
+    TESTER_MODEL_PROVIDER: 'tester-model-provider',
+    TESTER_EFFORT: 'tester-effort',
+    TESTER_MODEL: 'tester-model',
+    TESTER_EXECUTABLE: 'tester-executable',
+    // AI configuration
+    AI_PULL_REQUEST_DESCRIPTION_MODE: 'ai-pull-request-description-mode',
+    AI_MEMBERS_ONLY: 'ai-members-only',
+    AI_IGNORE_FILES: 'ai-ignore-files',
+    AI_INCLUDE_REASONING: 'ai-include-reasoning',
+    BUGBOT_SEVERITY: 'bugbot-severity',
+    BUGBOT_COMMENT_LIMIT: 'bugbot-comment-limit',
+    BUGBOT_FIX_VERIFY_COMMANDS: 'bugbot-fix-verify-commands',
+    BUGBOT_DRY_RUN: 'bugbot-dry-run',
+    BUGBOT_VERIFICATION_MODE: 'bugbot-verification-mode',
+    BUGBOT_VERIFIER_PROVIDER: 'bugbot-verifier-provider',
+    BUGBOT_VERIFIER_MODEL_PROVIDER: 'bugbot-verifier-model-provider',
+    BUGBOT_VERIFIER_MODEL: 'bugbot-verifier-model',
+    BUGBOT_VERIFIER_EFFORT: 'bugbot-verifier-effort',
+    BUGBOT_EFFORT: 'bugbot-effort',
+    BUGBOT_REVIEW_DRAFTS: 'bugbot-review-drafts',
+    BUGBOT_TRACE_RULES: 'bugbot-trace-rules',
+    BUGBOT_SUGGESTED_CHANGES: 'bugbot-suggested-changes',
+    BUGBOT_TELEMETRY: 'bugbot-telemetry',
+    BUGBOT_FAIL_ON_UNRESOLVED: 'bugbot-fail-on-unresolved',
+    BUGBOT_ORGANIZATION_RULES: 'bugbot-organization-rules',
+    // Projects
+    PROJECT_IDS: 'project-ids',
+    PROJECT_COLUMN_ISSUE_CREATED: 'project-column-issue-created',
+    PROJECT_COLUMN_PULL_REQUEST_CREATED: 'project-column-pull-request-created',
+    PROJECT_COLUMN_ISSUE_IN_PROGRESS: 'project-column-issue-in-progress',
+    PROJECT_COLUMN_PULL_REQUEST_IN_PROGRESS: 'project-column-pull-request-in-progress',
+    // Workflows
+    RELEASE_WORKFLOW: 'release-workflow',
+    HOTFIX_WORKFLOW: 'hotfix-workflow',
+    RELEASE_RECONCILIATION_STRATEGY: 'release-reconciliation-strategy',
+    HOTFIX_RECONCILIATION_STRATEGY: 'hotfix-reconciliation-strategy',
+    RECONCILIATION_PR_MODE: 'reconciliation-pr-mode',
+    MERGE_QUEUE_CHECK_ATTESTATIONS: 'merge-queue-check-attestations',
+    RECONCILIATION_BACKMERGE_MODE: 'reconciliation-backmerge-mode',
+    HOTFIX_ACTIVE_RELEASE_POLICY: 'hotfix-active-release-policy',
+    RECONCILIATION_TREE: 'reconciliation-tree',
+    RECONCILIATION_CLEANUP: 'reconciliation-cleanup',
+    RECONCILIATION_ISSUE_COMPLETION: 'reconciliation-issue-completion',
+    ORCHESTRATION_PRESENTATION_MODE: 'orchestration-presentation-mode',
+    ORCHESTRATION_DIAGRAMS: 'orchestration-diagrams',
+    ORCHESTRATION_COMMENT_MODE: 'orchestration-comment-mode',
+    // Emoji
+    EMOJI_LABELED_TITLE: 'emoji-labeled-title',
+    BRANCH_MANAGEMENT_EMOJI: 'branch-management-emoji',
+    // Labels
+    BUGFIX_LABEL: 'bugfix-label',
+    BUG_LABEL: 'bug-label',
+    HOTFIX_LABEL: 'hotfix-label',
+    ENHANCEMENT_LABEL: 'enhancement-label',
+    FEATURE_LABEL: 'feature-label',
+    RELEASE_LABEL: 'release-label',
+    QUESTION_LABEL: 'question-label',
+    HELP_LABEL: 'help-label',
+    DEPLOY_LABEL: 'deploy-label',
+    DEPLOYED_LABEL: 'deployed-label',
+    DOCS_LABEL: 'docs-label',
+    DOCUMENTATION_LABEL: 'documentation-label',
+    CHORE_LABEL: 'chore-label',
+    MAINTENANCE_LABEL: 'maintenance-label',
+    PRIORITY_HIGH_LABEL: 'priority-high-label',
+    PRIORITY_MEDIUM_LABEL: 'priority-medium-label',
+    PRIORITY_LOW_LABEL: 'priority-low-label',
+    PRIORITY_NONE_LABEL: 'priority-none-label',
+    SIZE_XXL_LABEL: 'size-xxl-label',
+    SIZE_XL_LABEL: 'size-xl-label',
+    SIZE_L_LABEL: 'size-l-label',
+    SIZE_M_LABEL: 'size-m-label',
+    SIZE_S_LABEL: 'size-s-label',
+    SIZE_XS_LABEL: 'size-xs-label',
+    // Lifecycle label inputs
+    STATE_AI_PROCESSING_LABEL: 'state-ai-processing-label',
+    STATE_PLANNED_LABEL: 'state-planned-label',
+    STATE_WORKING_LABEL: 'state-working-label',
+    STATE_SPECIFYING_LABEL: 'state-specifying-label',
+    STATE_REVIEWING_LABEL: 'state-reviewing-label',
+    STATE_CHANGES_REQUESTED_LABEL: 'state-changes-requested-label',
+    STATE_VERIFIED_LABEL: 'state-verified-label',
+    STATE_READY_LABEL: 'state-ready-label',
+    STATE_BLOCKED_LABEL: 'state-blocked-label',
+    STATE_AWAITING_MAINTAINER_LABEL: 'state-awaiting-maintainer-label',
+    STATE_AWAITING_ISSUE_AUTHOR_LABEL: 'state-awaiting-issue-author-label',
+    // Issue Types
+    ISSUE_TYPE_BUG: 'issue-type-bug',
+    ISSUE_TYPE_BUG_DESCRIPTION: 'issue-type-bug-description',
+    ISSUE_TYPE_BUG_COLOR: 'issue-type-bug-color',
+    ISSUE_TYPE_HOTFIX: 'issue-type-hotfix',
+    ISSUE_TYPE_HOTFIX_DESCRIPTION: 'issue-type-hotfix-description',
+    ISSUE_TYPE_HOTFIX_COLOR: 'issue-type-hotfix-color',
+    ISSUE_TYPE_FEATURE: 'issue-type-feature',
+    ISSUE_TYPE_FEATURE_DESCRIPTION: 'issue-type-feature-description',
+    ISSUE_TYPE_FEATURE_COLOR: 'issue-type-feature-color',
+    ISSUE_TYPE_DOCUMENTATION: 'issue-type-documentation',
+    ISSUE_TYPE_DOCUMENTATION_DESCRIPTION: 'issue-type-documentation-description',
+    ISSUE_TYPE_DOCUMENTATION_COLOR: 'issue-type-documentation-color',
+    ISSUE_TYPE_MAINTENANCE: 'issue-type-maintenance',
+    ISSUE_TYPE_MAINTENANCE_DESCRIPTION: 'issue-type-maintenance-description',
+    ISSUE_TYPE_MAINTENANCE_COLOR: 'issue-type-maintenance-color',
+    ISSUE_TYPE_RELEASE: 'issue-type-release',
+    ISSUE_TYPE_RELEASE_DESCRIPTION: 'issue-type-release-description',
+    ISSUE_TYPE_RELEASE_COLOR: 'issue-type-release-color',
+    ISSUE_TYPE_QUESTION: 'issue-type-question',
+    ISSUE_TYPE_QUESTION_DESCRIPTION: 'issue-type-question-description',
+    ISSUE_TYPE_QUESTION_COLOR: 'issue-type-question-color',
+    ISSUE_TYPE_HELP: 'issue-type-help',
+    ISSUE_TYPE_HELP_DESCRIPTION: 'issue-type-help-description',
+    ISSUE_TYPE_HELP_COLOR: 'issue-type-help-color',
+    ISSUE_TYPE_TASK: 'issue-type-task',
+    ISSUE_TYPE_TASK_DESCRIPTION: 'issue-type-task-description',
+    ISSUE_TYPE_TASK_COLOR: 'issue-type-task-color',
+    // Locale
+    REPOSITORY_LOCALE: 'repository-locale',
+    ISSUES_LOCALE: 'issues-locale',
+    PULL_REQUESTS_LOCALE: 'pull-requests-locale',
+    // Size Thresholds
+    SIZE_XXL_THRESHOLD_LINES: 'size-xxl-threshold-lines',
+    SIZE_XXL_THRESHOLD_FILES: 'size-xxl-threshold-files',
+    SIZE_XXL_THRESHOLD_COMMITS: 'size-xxl-threshold-commits',
+    SIZE_XL_THRESHOLD_LINES: 'size-xl-threshold-lines',
+    SIZE_XL_THRESHOLD_FILES: 'size-xl-threshold-files',
+    SIZE_XL_THRESHOLD_COMMITS: 'size-xl-threshold-commits',
+    SIZE_L_THRESHOLD_LINES: 'size-l-threshold-lines',
+    SIZE_L_THRESHOLD_FILES: 'size-l-threshold-files',
+    SIZE_L_THRESHOLD_COMMITS: 'size-l-threshold-commits',
+    SIZE_M_THRESHOLD_LINES: 'size-m-threshold-lines',
+    SIZE_M_THRESHOLD_FILES: 'size-m-threshold-files',
+    SIZE_M_THRESHOLD_COMMITS: 'size-m-threshold-commits',
+    SIZE_S_THRESHOLD_LINES: 'size-s-threshold-lines',
+    SIZE_S_THRESHOLD_FILES: 'size-s-threshold-files',
+    SIZE_S_THRESHOLD_COMMITS: 'size-s-threshold-commits',
+    SIZE_XS_THRESHOLD_LINES: 'size-xs-threshold-lines',
+    SIZE_XS_THRESHOLD_FILES: 'size-xs-threshold-files',
+    SIZE_XS_THRESHOLD_COMMITS: 'size-xs-threshold-commits',
+    // Branches
+    MAIN_BRANCH: 'main-branch',
+    DEVELOPMENT_BRANCH: 'development-branch',
+    FEATURE_TREE: 'feature-tree',
+    BUGFIX_TREE: 'bugfix-tree',
+    HOTFIX_TREE: 'hotfix-tree',
+    RELEASE_TREE: 'release-tree',
+    DOCS_TREE: 'docs-tree',
+    CHORE_TREE: 'chore-tree',
+    ISSUE_WORKFLOW_PROFILE: 'issue-workflow-profile',
+    // Commit
+    COMMIT_PREFIX_TRANSFORMS: 'commit-prefix-transforms',
+    // Issue
+    ISSUE_MANAGED_BRANCHES: 'issue-managed-branches',
+    PRE_BRANCH_SDD: 'pre-branch-sdd',
+    VERIFICATION_SETUP: 'verification-setup',
+    REOPEN_ISSUE_ON_PUSH: 'reopen-issue-on-push',
+    DESIRED_ASSIGNEES_COUNT: 'desired-assignees-count',
+    // Pull Request
+    PULL_REQUEST_DESIRED_ASSIGNEES_COUNT: 'desired-assignees-count',
+    PULL_REQUEST_DESIRED_REVIEWERS_COUNT: 'desired-reviewers-count',
+};
+
+
+/***/ }),
+
 /***/ 5999:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -229,6 +451,167 @@ class ProgressCompletionMismatch extends application_error_1.ApplicationError {
 }
 exports.ProgressCompletionMismatch = ProgressCompletionMismatch;
 _ProgressCompletionMismatch_facts = new WeakMap(), _ProgressCompletionMismatch_scope = new WeakMap();
+
+
+/***/ }),
+
+/***/ 7699:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.buildAgentConfiguration = buildAgentConfiguration;
+exports.mergeAgentTaskValues = mergeAgentTaskValues;
+exports.buildAgentTaskConfiguration = buildAgentTaskConfiguration;
+const agent_configuration_validation_policy_1 = __nccwpck_require__(596);
+const agent_executable_policy_1 = __nccwpck_require__(2570);
+function buildAgentConfiguration(values, environment) {
+    const provider = (0, agent_configuration_validation_policy_1.resolveAgentProvider)(values.provider.trim().toLowerCase());
+    const modelProvider = (0, agent_configuration_validation_policy_1.resolveModelProvider)(values.modelProvider, environment, provider);
+    (0, agent_configuration_validation_policy_1.assertProviderModelCompatibility)(provider, modelProvider);
+    const model = (0, agent_configuration_validation_policy_1.resolveModel)(values.model);
+    (0, agent_configuration_validation_policy_1.assertModelAllowlisted)(modelProvider, model, environment);
+    const effort = (0, agent_configuration_validation_policy_1.resolveEffort)(values.effort);
+    const executable = values.executable?.trim();
+    const configuration = {
+        provider,
+        modelProvider,
+        model,
+        ...(effort ? { effort } : {}),
+        ...(executable ? { executable } : {}),
+    };
+    (0, agent_executable_policy_1.validateAgentExecutableSelection)(configuration);
+    return configuration;
+}
+function mergeAgentTaskValues(values, overrides) {
+    const merged = {
+        ...values,
+        ...Object.fromEntries(Object.entries(overrides ?? {}).filter(([, value]) => typeof value === 'string' && value.trim().length > 0)),
+    };
+    if (overrides?.provider?.trim() && !overrides.modelProvider?.trim()) {
+        delete merged.modelProvider;
+    }
+    return merged;
+}
+function buildAgentTaskConfiguration(values, environment) {
+    const configuration = {
+        findings: buildAgentConfiguration(mergeAgentTaskValues(values, values.findings), environment),
+        fixer: buildAgentConfiguration(mergeAgentTaskValues(values, values.fixer), environment),
+    };
+    for (const task of ['planner', 'reviewer', 'tester']) {
+        if (hasTaskOverride(values[task])) {
+            configuration[task] = buildAgentConfiguration(mergeAgentTaskValues(values, values[task]), environment);
+        }
+    }
+    return configuration;
+}
+function hasTaskOverride(value) {
+    return Object.values(value ?? {}).some(item => typeof item === 'string' && item.trim().length > 0);
+}
+
+
+/***/ }),
+
+/***/ 596:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SUPPORTED_AGENT_PROVIDERS = void 0;
+exports.resolveAgentProvider = resolveAgentProvider;
+exports.resolveModelProvider = resolveModelProvider;
+exports.assertProviderModelCompatibility = assertProviderModelCompatibility;
+exports.resolveModel = resolveModel;
+exports.resolveEffort = resolveEffort;
+exports.assertModelAllowlisted = assertModelAllowlisted;
+const application_error_1 = __nccwpck_require__(5999);
+exports.SUPPORTED_AGENT_PROVIDERS = ['opencode', 'cursor', 'codex'];
+function resolveAgentProvider(value) {
+    if (exports.SUPPORTED_AGENT_PROVIDERS.includes(value))
+        return value;
+    throw new application_error_1.ApplicationError('configuration.unsupported', `Unsupported agent provider "${value}". Supported providers: ${exports.SUPPORTED_AGENT_PROVIDERS.join(', ')}.`);
+}
+function resolveModelProvider(value, environment, agentProvider) {
+    const provider = value?.trim().toLowerCase() || (agentProvider === 'cursor' ? 'cursor' : 'openai');
+    assertIdentifier(provider, 'Agent model provider must be a valid provider identifier.');
+    assertAllowlisted('AGENT_ALLOWED_MODEL_PROVIDERS', provider, environment);
+    return provider;
+}
+function assertProviderModelCompatibility(agentProvider, modelProvider) {
+    if (agentProvider === 'codex' && modelProvider !== 'openai') {
+        throw new application_error_1.ApplicationError('configuration.unsupported', `Codex automation supports the "openai" model provider only; received "${modelProvider}".`);
+    }
+    if (agentProvider === 'cursor' && modelProvider !== 'cursor') {
+        throw new application_error_1.ApplicationError('configuration.unsupported', `Cursor automation requires model provider "cursor"; received "${modelProvider}".`);
+    }
+}
+function resolveModel(value) {
+    const model = value.trim();
+    if (!model)
+        throw new application_error_1.ApplicationError('configuration.invalid', 'Agent model must not be empty.');
+    assertIdentifier(model, 'Agent model must be a simple model identifier without whitespace or shell syntax.', /^[a-zA-Z0-9][a-zA-Z0-9._:-]*$/);
+    return model;
+}
+function resolveEffort(value) {
+    const effort = value?.trim() || undefined;
+    if (effort)
+        assertIdentifier(effort, 'Agent effort must be a simple identifier without whitespace or shell syntax.');
+    return effort;
+}
+function assertModelAllowlisted(modelProvider, model, environment) {
+    const allowedModels = parseAllowlist(environment.AGENT_ALLOWED_MODELS);
+    if (allowedModels.length > 0 && !allowedModels.includes(`${modelProvider}/${model}`) && !allowedModels.includes(model)) {
+        throw new application_error_1.ApplicationError('authorization.denied', `Agent model "${modelProvider}/${model}" is not allowlisted.`);
+    }
+}
+function assertAllowlisted(name, value, environment) {
+    const values = parseAllowlist(environment[name]);
+    if (values.length > 0 && !values.includes(value))
+        throw new application_error_1.ApplicationError('authorization.denied', `Agent model provider "${value}" is not allowlisted.`);
+}
+function parseAllowlist(raw) {
+    if (!raw?.trim())
+        return [];
+    const values = raw.split(',').map(value => value.trim().toLowerCase()).filter(Boolean);
+    if (values.length === 0)
+        throw new application_error_1.ApplicationError('configuration.invalid', 'Agent allowlist must contain at least one value.');
+    return values;
+}
+function assertIdentifier(value, message, pattern = /^[a-z0-9][a-z0-9_-]*$/i) {
+    if (!pattern.test(value))
+        throw new application_error_1.ApplicationError('configuration.invalid', message);
+}
+
+
+/***/ }),
+
+/***/ 2570:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.validateAgentExecutableSelection = validateAgentExecutableSelection;
+const agent_1 = __nccwpck_require__(9040);
+const application_error_1 = __nccwpck_require__(5999);
+/** Accepts only the provider basename or one absolute path to that binary. */
+function validateAgentExecutableSelection(configuration) {
+    const selected = configuration.executable?.trim();
+    if (!selected)
+        return;
+    const expected = agent_1.AGENT_EXECUTABLE_BASENAMES[configuration.provider];
+    const isExpectedBareName = selected === expected;
+    const isWindowsAbsolutePath = /^[a-zA-Z]:[\\/]/.test(selected);
+    const isAbsolutePath = selected.startsWith('/') || isWindowsAbsolutePath;
+    const selectedBasename = selected.split(/[\\/]/).at(-1);
+    const isExpectedAbsolutePath = isAbsolutePath && (selectedBasename === expected
+        || (isWindowsAbsolutePath && selectedBasename?.toLowerCase() === `${expected}.exe`));
+    if (!isExpectedBareName && !isExpectedAbsolutePath) {
+        throw new application_error_1.ApplicationError('agent.policy-rejected', `Agent executable must be the bare name "${expected}" or an absolute path with that basename.`);
+    }
+}
 
 
 /***/ }),
@@ -2749,6 +3132,72 @@ function escapeRegExp(value) {
 }
 function presentationCatalog(value) {
     return typeof value === 'string' ? (0, bugbot_message_catalog_1.resolveStaticBugbotCatalog)(value) : value;
+}
+
+
+/***/ }),
+
+/***/ 7379:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.readBugbotVerificationMode = readBugbotVerificationMode;
+exports.readBugbotShadowConfiguration = readBugbotShadowConfiguration;
+exports.resolveBugbotShadowConfiguration = resolveBugbotShadowConfiguration;
+const input_keys_1 = __nccwpck_require__(8539);
+const application_error_1 = __nccwpck_require__(5999);
+const agent_configuration_input_policy_1 = __nccwpck_require__(7699);
+const agent_configuration_validation_policy_1 = __nccwpck_require__(596);
+function readBugbotVerificationMode(read) {
+    const mode = read(input_keys_1.INPUT_KEYS.BUGBOT_VERIFICATION_MODE)?.trim() || 'disabled';
+    if (mode === 'enforced') {
+        throw new application_error_1.ApplicationError('configuration.unsupported', 'Bugbot enforcement requires a qualified verification profile. Use shadow for evaluation.');
+    }
+    if (mode !== 'shadow' && mode !== 'disabled') {
+        throw new application_error_1.ApplicationError('configuration.invalid', 'Bugbot verification mode must be disabled or shadow.');
+    }
+    return mode;
+}
+function readBugbotShadowConfiguration(read, environment) {
+    if (readBugbotVerificationMode(read) === 'disabled')
+        return undefined;
+    const provider = read(input_keys_1.INPUT_KEYS.BUGBOT_VERIFIER_PROVIDER)?.trim().toLowerCase();
+    const modelProvider = read(input_keys_1.INPUT_KEYS.BUGBOT_VERIFIER_MODEL_PROVIDER)?.trim().toLowerCase();
+    const model = read(input_keys_1.INPUT_KEYS.BUGBOT_VERIFIER_MODEL)?.trim();
+    const effort = (0, agent_configuration_validation_policy_1.resolveEffort)(read(input_keys_1.INPUT_KEYS.BUGBOT_VERIFIER_EFFORT));
+    return Object.freeze({
+        ...(provider ? { provider: (0, agent_configuration_validation_policy_1.resolveAgentProvider)(provider) } : {}),
+        ...(modelProvider ? { modelProvider } : {}),
+        ...(model ? { model: (0, agent_configuration_validation_policy_1.resolveModel)(model) } : {}),
+        ...(effort ? { effort } : {}),
+        ...(environment.AGENT_ALLOWED_MODEL_PROVIDERS ? { allowedModelProviders: environment.AGENT_ALLOWED_MODEL_PROVIDERS } : {}),
+        ...(environment.AGENT_ALLOWED_MODELS ? { allowedModels: environment.AGENT_ALLOWED_MODELS } : {}),
+    });
+}
+function resolveBugbotShadowConfiguration(detector, overrides) {
+    const provider = overrides.provider ?? detector.provider;
+    const newAgent = provider !== detector.provider;
+    const modelProvider = overrides.modelProvider ?? (newAgent ? undefined : detector.modelProvider);
+    const newBackend = newAgent || modelProvider !== detector.modelProvider;
+    if (newBackend && !overrides.model) {
+        throw new application_error_1.ApplicationError('configuration.invalid', 'Changing the Bugbot verifier provider requires an explicit compatible model.');
+    }
+    if (provider === 'cursor' && overrides.effort) {
+        throw new application_error_1.ApplicationError('configuration.unsupported', 'Cursor verification uses a catalog model ID for reasoning variants. Leave verifier effort empty.');
+    }
+    const effort = provider === 'cursor' ? undefined : overrides.effort ?? (newBackend ? undefined : detector.effort);
+    if (provider === 'codex' && effort && !['none', 'minimal', 'low', 'medium', 'high', 'xhigh'].includes(effort)) {
+        throw new application_error_1.ApplicationError('configuration.unsupported', 'Unsupported Codex verifier reasoning effort.');
+    }
+    return Object.freeze((0, agent_configuration_input_policy_1.buildAgentConfiguration)({
+        provider, modelProvider, model: overrides.model ?? detector.model, effort,
+        executable: newAgent ? undefined : detector.executable,
+    }, {
+        AGENT_ALLOWED_MODEL_PROVIDERS: overrides.allowedModelProviders,
+        AGENT_ALLOWED_MODELS: overrides.allowedModels,
+    }));
 }
 
 
@@ -5680,12 +6129,15 @@ function addResolutionError(errors, destination, findingId, cause) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.observeBugbotShadowVerification = observeBugbotShadowVerification;
+const bugbot_shadow_configuration_policy_1 = __nccwpck_require__(7379);
 const git_object_id_1 = __nccwpck_require__(8623);
 const bounded_concurrency_policy_1 = __nccwpck_require__(5596);
 async function observeBugbotShadowVerification(operation, context, prepared, port, trace, detectionAndPreparationMs, experimentalProfile) {
     const detector = operation.analysis.agentConfiguration;
     const dryRun = operation.analysis.reviewConfiguration.publicationMode === 'dry-run';
-    const configuration = dryRun && experimentalProfile ? experimentalProfile : detector;
+    const installed = operation.analysis.reviewConfiguration.shadowVerification;
+    const configuration = dryRun && experimentalProfile ? experimentalProfile
+        : installed ? (0, bugbot_shadow_configuration_policy_1.resolveBugbotShadowConfiguration)(detector, installed) : detector;
     const review = {};
     const started = performance.now();
     const findings = prepared.activeFindings ?? prepared.toPublish;
@@ -5706,8 +6158,8 @@ async function observeBugbotShadowVerification(operation, context, prepared, por
     const candidates = await (0, bounded_concurrency_policy_1.runWithConcurrencyLimit)(tasks, 2);
     const pr = context.canonicalPullRequest;
     return {
-        resolvedModel: detector.model, provider: detector.provider, detectorEffort: detector.effort,
-        verifier: { model: configuration.model, provider: configuration.provider, effort: configuration.effort },
+        resolvedModel: detector.model, provider: detector.provider, detectorModelProvider: detector.modelProvider, detectorEffort: detector.effort,
+        verifier: { model: configuration.model, provider: configuration.provider, modelProvider: configuration.modelProvider, effort: configuration.effort },
         ...(!dryRun && experimentalProfile ? { experimentalProfileRejected: true } : {}),
         ...(pr ? { review: { repository: { owner: pr.baseRepository.owner, name: pr.baseRepository.name },
                 pullRequest: pr.number, headSha: pr.headSha, baseSha: pr.baseSha } } : {}),
@@ -8826,6 +9278,7 @@ function normalizeBugbotReviewConfiguration(value) {
         suggestedChanges: value?.suggestedChanges !== false,
         telemetry: value?.telemetry !== false,
         failOnUnresolved: value?.failOnUnresolved === true,
+        ...(value?.shadowVerification ? { shadowVerification: Object.freeze({ ...value.shadowVerification }) } : {}),
         organizationRules: (value?.organizationRules ?? [])
             .map((rule) => rule.normalize('NFKC').trim())
             .filter(Boolean)

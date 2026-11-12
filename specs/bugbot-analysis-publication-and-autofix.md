@@ -3124,8 +3124,9 @@ The workflow passes the configuration already resolved for the detection
 operation to every verifier. A configured Luna review uses Luna in both
 stages. A configured Sol review uses Sol in both stages. An omitted model
 uses the ordinary Bugbot default in both stages, and the same rule applies
-to any compatible model. There is no separate verifier model input. Record
-the resolved model for each session, with the provider-reported identity
+to any compatible model. Trusted Action configuration may override the
+verifier profile as specified below. Record the resolved model for each
+session, with the provider-reported identity
 when exposed by the transport. A provider error or reported substitution
 is a technical failure. The observer never selects a replacement.
 
@@ -3152,9 +3153,12 @@ port. Its repository adapter receives a trusted mapping from the prepared
 candidate to a Git object store and optional authenticated official sources.
 The verifier has read-only tools and receives zero publication ports. A
 simulated native publication control compares the resulting review drafts
-with the baseline even when verification fails. The installed Action omits
-the verifier binding. Shadow observations
-carry no approval authority. See the
+with the baseline even when verification fails. In installed shadow mode
+the Action binds the verifier to the authorized checkout's Git object store.
+It supplies only pinned Git evidence in this iteration. An official-source
+or CI evidence catalog must be supplied through a trusted adapter before
+qualification of findings that require it. Shadow observations carry no
+approval authority. See the
 [real-PR integration report](../quality/bugbot/evidence/issue-950/normal-flow-shadow/results.md).
 The [repository adapter pilot at xhigh](../quality/bugbot/evidence/issue-950/integrated-shadow-xhigh/results.md)
 records the shared composition, actual Codex invocations and zero attempted PR writes.
@@ -3231,15 +3235,54 @@ finding transitions remain subject to reconciliation and human decisions.
 
 #### Configuration and ownership
 
-The ordinary resolver snapshots model, provider and effort. The same effective
-configuration reaches detection and verification by default, including when
-the resolver supplies defaults. A trusted dry-run experiment may inject a
-distinct supported verifier profile. This is an operation-scoped input to
-shadow composition and adds no repository variable or setup field. Ordinary
-and native-publication runs use the inherited configuration. A reported model
-mismatch or an unavailable profile is recorded as a technical failure.
-There is no fallback. The experiment records the configuration and any
-provider-reported model for each stage.
+The ordinary resolver snapshots the agent provider, model provider, model and
+reasoning effort. PR detection uses the resolved reviewer role. The findings
+role remains the fallback when no reviewer role is configured. Verification
+inherits the effective detection profile by default, including defaults.
+The collector uses typed evidence requests and the application emits the
+validated decision. Neither step needs a separate model. A trusted dry-run
+experiment can supply a distinct verifier profile through shadow composition.
+The installed workflows expose the same profile through trusted organization
+or repository Actions variables. A repository value takes precedence over
+the organization default. The workflow captures the inputs for that run;
+comment content and reviewed code cannot select a profile.
+
+| Actions variable | Action input | Default or constraint |
+|---|---|---|
+| `BUGBOT_VERIFICATION_MODE` | `bugbot-verification-mode` | `disabled` by default. `shadow` records diagnostic verdicts only. The Action and approval entrypoint reject `enforced` until the rollout contract is implemented and qualified. |
+| `BUGBOT_VERIFIER_PROVIDER` | `bugbot-verifier-provider` | Inherits the effective agent. Supported agents are `codex`, `opencode` and `cursor`. |
+| `BUGBOT_VERIFIER_MODEL_PROVIDER` | `bugbot-verifier-model-provider` | Inherits the effective backend when the agent stays the same. A different agent uses its ordinary backend default unless specified. |
+| `BUGBOT_VERIFIER_MODEL` | `bugbot-verifier-model` | Inherits the effective detector model. Changing agent or backend requires an explicit compatible model. |
+| `BUGBOT_VERIFIER_EFFORT` | `bugbot-verifier-effort` | Inherits effort on the same agent and backend where expressible. A different agent or backend uses its default unless given a valid override. |
+
+The detector and verifier each satisfy the installed backend and model
+allowlists. Invalid combinations fail configuration validation. Profile
+selection and activation are separate decisions.
+
+| Agent | Model provider | Reasoning effort |
+|---|---|---|
+| Codex | `openai` | Accept `none`, `minimal`, `low`, `medium`, `high` or `xhigh`. Pass the value as `model_reasoning_effort`. The provider must admit the selected model and setting. |
+| OpenCode | A configured backend such as `openai` or `anthropic` | Check the exact backend/model and any named variant against the runtime catalog before the first turn. Pass an admitted variant as `--variant`. |
+| Cursor | `cursor` | Check the selected identifier against the runtime catalog and pass it as `--model`, including a reasoning variant if listed. The CLI adapter has no separate reasoning flag: reject an explicit override and do not copy an ineffective inherited effort. |
+
+Anthropic is supported as an OpenCode model backend. A standalone Anthropic
+or Claude Code agent has no supported execution adapter and is rejected as
+an agent selector. `BUGBOT_EFFORT` continues to select Bugbot's review depth;
+the role effort controls provider reasoning. Record the effective profile
+and provider-reported identity when available. An unavailable model or
+variant, catalog failure, or reported model mismatch is a technical
+failure; no fallback changes the selected agent or model.
+
+The checkout-backed broker accepts only the candidate's repository and
+canonical object IDs. Its temporary Git view has no remotes, does not lazily
+fetch missing objects, and never reads the checked-out version of a candidate
+file. Codex uses its supported session resume. For Cursor and OpenCode the
+host preserves the candidate, admitted evidence and closure state between
+isolated provider turns. The model cannot invoke repository, shell, web or
+MCP tools through that transport. No approval evidence is written in shadow.
+The Action output `bugbot-shadow-summary` and the Job Summary provide
+diagnostic counts without claims or citations. `BUGBOT_DRY_RUN=true`
+also suppresses ordinary Bugbot publication.
 
 The application owns candidate identity, correlation, model selection and
 the emitter's projection. The evidence use case owns typed requests,
@@ -3250,6 +3293,19 @@ No adapter may introduce a dependency from domain/application to a provider
 SDK or import an SCM writer into the verifier. Enforce these boundaries with
 the repository's architecture checks and a fail-on-call SCM integration
 control.
+
+The acceptance budget is at least six deterministic configuration cases:
+exact inheritance, Codex with supported and rejected effort, OpenCode
+with an OpenAI variant, OpenCode with an Anthropic variant, Cursor model
+selection, and rejection of a separate Cursor verifier effort or a direct
+Anthropic agent. Exercise the generated workflow bindings and provider
+arguments. Also cover an unavailable model or variant, immutable checkout
+reads and the absence of approval authority. A provider-specific smoke test
+supplies separate execution evidence. It does not replace the full-review
+historical controls or the independent 174-case corpus required by EV-07.
+The [installed profile smoke test](../quality/bugbot/evidence/issue-950/installed-profile/results.md)
+did not qualify the Codex/Sol profile: the installed broker could not
+deliver material version-matched official evidence for either candidate.
 
 #### Diagnostics and evaluation
 

@@ -1,6 +1,7 @@
 'use strict';
 
 const { spawnSync } = require('node:child_process');
+const { devNull } = require('node:os');
 const { hash } = require('./hash.cjs');
 
 // eslint-disable-next-line no-control-regex -- Only ordinary relative Git paths are accepted.
@@ -8,9 +9,14 @@ const safePath = value => typeof value === 'string' && value.length <= 300 && !/
     && value.split('/').every(part => part && !['.', '..', '.git'].includes(part.toLowerCase()));
 
 function git(repo, args, exits = [0]) {
-    const result = spawnSync('git', ['--no-pager', '--no-replace-objects', '--literal-pathspecs', '-C', repo, ...args], {
+    const result = spawnSync('git', ['--no-pager', '--no-optional-locks', '--no-replace-objects', '--literal-pathspecs',
+        '-c', 'protocol.allow=never', '-C', repo, ...args], {
         encoding: 'utf8', timeout: 4_000, maxBuffer: 4 * 1024 * 1024,
-        env: { PATH: process.env.PATH, LC_ALL: 'C', GIT_CONFIG_NOSYSTEM: '1', GIT_CONFIG_GLOBAL: '/dev/null', GIT_NO_LAZY_FETCH: '1' },
+        env: {
+            PATH: process.env.PATH ?? process.env.Path, LC_ALL: 'C',
+            ...(process.platform === 'win32' && { SystemRoot: process.env.SystemRoot, PATHEXT: process.env.PATHEXT }),
+            GIT_CONFIG_NOSYSTEM: '1', GIT_CONFIG_GLOBAL: devNull, GIT_NO_LAZY_FETCH: '1', GIT_ALLOW_PROTOCOL: '', GIT_TERMINAL_PROMPT: '0',
+        },
     });
     if (result.error) throw new Error('git-budget', { cause: result.error });
     if (!exits.includes(result.status)) throw new Error('git-unavailable');

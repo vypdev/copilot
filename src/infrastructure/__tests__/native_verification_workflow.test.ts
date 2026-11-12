@@ -24,7 +24,7 @@ describe('encapsulated native verification workflow contract', () => {
         'grants the Cursor secret only to selected providers in %s/%s', (directory, name) => {
             const { file, workflow } = read(directory, name);
             const job = Object.values(workflow.jobs)[0] as any;
-            const gate = "${{ (vars.AGENT_PROVIDER == 'cursor' || vars.FINDINGS_PROVIDER == 'cursor' || vars.FIXER_PROVIDER == 'cursor' || vars.PLANNER_PROVIDER == 'cursor' || vars.REVIEWER_PROVIDER == 'cursor' || vars.TESTER_PROVIDER == 'cursor') && secrets.CURSOR_API_KEY || '' }}";
+            const gate = "${{ (vars.AGENT_PROVIDER == 'cursor' || vars.FINDINGS_PROVIDER == 'cursor' || vars.FIXER_PROVIDER == 'cursor' || vars.PLANNER_PROVIDER == 'cursor' || vars.REVIEWER_PROVIDER == 'cursor' || vars.TESTER_PROVIDER == 'cursor' || (vars.BUGBOT_VERIFICATION_MODE == 'shadow' && vars.BUGBOT_VERIFIER_PROVIDER == 'cursor')) && secrets.CURSOR_API_KEY || '' }}";
             expect(job.secrets.CURSOR_API_KEY).toBe(gate);
             expect(runtimeWorkflow().jobs.copilot.steps.find((step: any) => step.id === 'copilot').env.CURSOR_API_KEY).toBe(gate);
             job.secrets.CURSOR_API_KEY = '${{ secrets.CURSOR_API_KEY }}';

@@ -1,3 +1,4 @@
+import { resolveBugbotShadowConfiguration } from '../../../../policies/bugbot_shadow_configuration_policy';
 import type { AgentConfiguration } from '../../../../../domain/agent';
 import type { BugbotFinding } from '../../../../../domain/bugbot/finding';
 import { canonicalGitObjectId } from '../../../../../domain/git_object_id';
@@ -24,8 +25,9 @@ export interface BugbotShadowVerificationReport {
     readonly resolvedModel: string;
     readonly provider: string;
     readonly candidates: readonly Observation[];
+    readonly detectorModelProvider?: string;
     readonly detectorEffort?: string;
-    readonly verifier?: { readonly model: string; readonly provider: string; readonly effort?: string };
+    readonly verifier?: { readonly model: string; readonly provider: string; readonly modelProvider?: string; readonly effort?: string };
     readonly experimentalProfileRejected?: true;
     readonly review?: {
         readonly repository: { readonly owner: string; readonly name: string };
@@ -56,7 +58,9 @@ export async function observeBugbotShadowVerification(
 ): Promise<BugbotShadowVerificationReport> {
     const detector = operation.analysis.agentConfiguration;
     const dryRun = operation.analysis.reviewConfiguration.publicationMode === 'dry-run';
-    const configuration = dryRun && experimentalProfile ? experimentalProfile : detector;
+    const installed = operation.analysis.reviewConfiguration.shadowVerification;
+    const configuration = dryRun && experimentalProfile ? experimentalProfile
+        : installed ? resolveBugbotShadowConfiguration(detector, installed) : detector;
     const review = {};
     const started = performance.now();
     const findings = prepared.activeFindings ?? prepared.toPublish;
@@ -77,8 +81,8 @@ export async function observeBugbotShadowVerification(
     const candidates = await runWithConcurrencyLimit(tasks, 2);
     const pr = context.canonicalPullRequest;
     return {
-        resolvedModel: detector.model, provider: detector.provider, detectorEffort: detector.effort,
-        verifier: { model: configuration.model, provider: configuration.provider, effort: configuration.effort },
+        resolvedModel: detector.model, provider: detector.provider, detectorModelProvider: detector.modelProvider, detectorEffort: detector.effort,
+        verifier: { model: configuration.model, provider: configuration.provider, modelProvider: configuration.modelProvider, effort: configuration.effort },
         ...(!dryRun && experimentalProfile ? { experimentalProfileRejected: true as const } : {}),
         ...(pr ? { review: { repository: { owner: pr.baseRepository.owner, name: pr.baseRepository.name },
             pullRequest: pr.number, headSha: pr.headSha, baseSha: pr.baseSha } } : {}),
