@@ -51004,8 +51004,15 @@ const input_keys_1 = __nccwpck_require__(88539);
 const application_error_1 = __nccwpck_require__(75999);
 const agent_configuration_input_policy_1 = __nccwpck_require__(7699);
 const agent_configuration_validation_policy_1 = __nccwpck_require__(60596);
+function readWorkflowRoutingInput(read, input) {
+    const value = read(input, { trimWhitespace: false }) ?? '';
+    if (value !== value.trim()) {
+        throw new application_error_1.ApplicationError('configuration.invalid', `Remove leading or trailing whitespace from ${input}.`);
+    }
+    return value;
+}
 function readBugbotVerificationMode(read, authority) {
-    const mode = read(input_keys_1.INPUT_KEYS.BUGBOT_VERIFICATION_MODE)?.trim() || 'disabled';
+    const mode = readWorkflowRoutingInput(read, input_keys_1.INPUT_KEYS.BUGBOT_VERIFICATION_MODE) || 'disabled';
     if (authority && (!/^[a-f0-9]{64}$/u.test(authority.policyDigest)
         || ![authority.generation, authority.workflowId, authority.sourceAppId].every(value => Number.isSafeInteger(value) && value > 0))) {
         throw new application_error_1.ApplicationError('configuration.invalid', 'The trusted Bugbot rollout policy is malformed.');
@@ -51026,7 +51033,7 @@ function readBugbotVerificationMode(read, authority) {
 function readBugbotShadowConfiguration(read, environment, authority) {
     if (readBugbotVerificationMode(read, authority) === 'disabled')
         return undefined;
-    const provider = read(input_keys_1.INPUT_KEYS.BUGBOT_VERIFIER_PROVIDER)?.trim().toLowerCase();
+    const provider = readWorkflowRoutingInput(read, input_keys_1.INPUT_KEYS.BUGBOT_VERIFIER_PROVIDER).toLowerCase();
     const modelProvider = read(input_keys_1.INPUT_KEYS.BUGBOT_VERIFIER_MODEL_PROVIDER)?.trim().toLowerCase();
     const model = read(input_keys_1.INPUT_KEYS.BUGBOT_VERIFIER_MODEL)?.trim();
     const effort = (0, agent_configuration_validation_policy_1.resolveEffort)(read(input_keys_1.INPUT_KEYS.BUGBOT_VERIFIER_EFFORT));
@@ -120440,7 +120447,9 @@ function getGithubActionInput(key, options) {
     catch (error) {
         (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'configuration.invalid', 'Unable to parse INPUT_VARS_JSON.'));
     }
-    value = (value ?? core.getInput(key, options)).trim();
+    value = value ?? core.getInput(key, options);
+    if (options?.trimWhitespace !== false)
+        value = value.trim();
     if (options?.required && value.length === 0)
         throw new Error(`Input required and not supplied: ${key}`);
     if (key.toLowerCase() === 'token' && value)

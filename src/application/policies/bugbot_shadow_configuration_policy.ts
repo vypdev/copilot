@@ -7,11 +7,21 @@ import type { AgentConfigurationEnvironment } from '../ports/agent_configuration
 import { buildAgentConfiguration } from './agent_configuration_input_policy';
 import { resolveAgentProvider, resolveEffort, resolveModel } from './agent_configuration_validation_policy';
 
+type ReadInput = (input: string, options?: { trimWhitespace?: boolean }) => string;
+
+function readWorkflowRoutingInput(read: ReadInput, input: string): string {
+    const value = read(input, { trimWhitespace: false }) ?? '';
+    if (value !== value.trim()) {
+        throw new ApplicationError('configuration.invalid', `Remove leading or trailing whitespace from ${input}.`);
+    }
+    return value;
+}
+
 export function readBugbotVerificationMode(
-    read: (input: string) => string,
+    read: ReadInput,
     authority?: BugbotVerificationAuthority,
 ): 'disabled' | 'shadow' | 'enforced' {
-    const mode = read(INPUT_KEYS.BUGBOT_VERIFICATION_MODE)?.trim() || 'disabled';
+    const mode = readWorkflowRoutingInput(read, INPUT_KEYS.BUGBOT_VERIFICATION_MODE) || 'disabled';
     if (authority && (!/^[a-f0-9]{64}$/u.test(authority.policyDigest)
         || ![authority.generation, authority.workflowId, authority.sourceAppId].every(value => Number.isSafeInteger(value) && value > 0))) {
         throw new ApplicationError('configuration.invalid', 'The trusted Bugbot rollout policy is malformed.');
@@ -30,12 +40,12 @@ export function readBugbotVerificationMode(
 }
 
 export function readBugbotShadowConfiguration(
-    read: (input: string) => string,
+    read: ReadInput,
     environment: AgentConfigurationEnvironment,
     authority?: BugbotVerificationAuthority,
 ): BugbotShadowConfiguration | undefined {
     if (readBugbotVerificationMode(read, authority) === 'disabled') return undefined;
-    const provider = read(INPUT_KEYS.BUGBOT_VERIFIER_PROVIDER)?.trim().toLowerCase();
+    const provider = readWorkflowRoutingInput(read, INPUT_KEYS.BUGBOT_VERIFIER_PROVIDER).toLowerCase();
     const modelProvider = read(INPUT_KEYS.BUGBOT_VERIFIER_MODEL_PROVIDER)?.trim().toLowerCase();
     const model = read(INPUT_KEYS.BUGBOT_VERIFIER_MODEL)?.trim();
     const effort = resolveEffort(read(INPUT_KEYS.BUGBOT_VERIFIER_EFFORT));

@@ -874,8 +874,8 @@ when needed. See [GitHub variable precedence](https://docs.github.com/en/actions
 
 | Actions variable | Action input | Use |
 |---|---|---|
-| `BUGBOT_VERIFICATION_MODE` | `bugbot-verification-mode` | Defaults to `disabled`. Set `shadow` for diagnostics. Shadow observations do not change which findings publish or whether the PR is approved. |
-| `BUGBOT_VERIFIER_PROVIDER` | `bugbot-verifier-provider` | Optional agent: `codex`, `opencode` or `cursor`. |
+| `BUGBOT_VERIFICATION_MODE` | `bugbot-verification-mode` | Defaults to `disabled`. Set `shadow` for diagnostics. Use the exact value without surrounding whitespace. Shadow observations do not change which findings publish or whether the PR is approved. |
+| `BUGBOT_VERIFIER_PROVIDER` | `bugbot-verifier-provider` | Optional agent: `codex`, `opencode` or `cursor`. Use the provider name without surrounding whitespace. |
 | `BUGBOT_VERIFIER_MODEL_PROVIDER` | `bugbot-verifier-model-provider` | Optional backend: for example, `openai` for Codex or `anthropic` for OpenCode. |
 | `BUGBOT_VERIFIER_MODEL` | `bugbot-verifier-model` | Optional model ID. Required when changing agent or backend. |
 | `BUGBOT_VERIFIER_EFFORT` | `bugbot-verifier-effort` | Optional provider-native setting. On the same backend it inherits the effective reviewer effort when omitted and supported. |

@@ -3258,6 +3258,10 @@ comment content and reviewed code cannot select a profile.
 The detector and verifier each satisfy the installed backend and model
 allowlists. Invalid combinations fail configuration validation. Profile
 selection and activation are separate decisions.
+The Action validates the raw verification mode and explicit verifier provider
+for surrounding whitespace before provider setup. This keeps accepted values
+aligned with the workflow's Cursor credential condition. A padded value fails
+with the input name and an instruction to remove the whitespace.
 
 | Agent | Model provider | Reasoning effort |
 |---|---|---|

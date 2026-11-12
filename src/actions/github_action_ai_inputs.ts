@@ -31,7 +31,7 @@ export function readGithubActionAgentTasks(
 }
 
 export function readGithubActionAiInputs(
-    getInput: (key: string) => string,
+    getInput: Parameters<typeof readBugbotShadowConfiguration>[0],
     environment: AgentConfigurationEnvironment = process.env,
     authority?: BugbotVerificationAuthority,
 ): GithubActionAiInputs {
