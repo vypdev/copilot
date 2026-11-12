@@ -6,6 +6,7 @@ import type { FindingsQueryRequest } from '../../../../../ports/agent_findings_p
 import type { BugbotReviewOperationContext } from '../bugbot_review_operation_context';
 import type { BugbotContext } from '../types';
 import { BugbotReviewTelemetry } from '../bugbot_review_telemetry';
+import { BugbotCandidateTrace } from '../bugbot_candidate_trace';
 import { analyzeBugbotFrames, bugbotFramedContextDigest } from '../analyze_bugbot_frames';
 import { analyzeBugbotRevision } from '../analyze_bugbot_revision_use_case';
 
@@ -54,6 +55,26 @@ it('validates every source-bound receipt before returning one global result', as
     const f = setup(); const query = jest.fn(async (request: FindingsQueryRequest) => reply(request));
     await expect(run(f, query)).resolves.toEqual({ findings: [], resolved_findings: [] });
     expect(query).toHaveBeenCalledTimes(1);
+});
+
+it('adds same-file context pointers to traced frames and retains their individual receipts', async () => {
+    const path = 'src/example.ts';
+    const fixture = setup(framedSource([framedChange({ filename: path, patch: 'x'.repeat(90_000) })]));
+    const trace = new BugbotCandidateTrace();
+    const query = jest.fn(async (request: FindingsQueryRequest) => reply(request));
+
+    await expect(analyzeBugbotFrames(fixture.operation, fixture.context, fixture.plan, {
+        agent: { query }, telemetry: fixture.telemetry, trace, isSourceCurrent: async () => true,
+    })).resolves.toEqual({ findings: [], resolved_findings: [] });
+
+    expect(fixture.plan.partitions).toHaveLength(2);
+    expect(query).toHaveBeenCalledTimes(2);
+    expect(query.mock.calls[0][0].prompt).toContain(JSON.stringify([{ file: path, partition: 2 }]));
+    expect(query.mock.calls[1][0].prompt).toContain(JSON.stringify([{ file: path, partition: 1 }]));
+    expect(trace.detectionSnapshot()).toMatchObject([
+        { partition: 1, partitionId: fixture.plan.partitions[0].id, status: 'completed' },
+        { partition: 2, partitionId: fixture.plan.partitions[1].id, status: 'completed' },
+    ]);
 });
 
 it('bugbot-framed-C079 completes the first frame before starting the next, with global concurrency2', async () => {
