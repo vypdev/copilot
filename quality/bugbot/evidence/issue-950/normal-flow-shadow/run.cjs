@@ -65,6 +65,30 @@ function comparison(checkout, subject) {
     return { changes, filesWithFirstDiffLine, filesWithDiffLocations };
 }
 
+function selectVerifierProfiles(subject, detector) {
+    if (subject.experimentalVerifier === undefined) {
+        assert(!subject.compareInheritedVerifier, 'matched comparison requires an experimental verifier');
+        return { primary: detector };
+    }
+    const { model, effort } = subject.experimentalVerifier;
+    assert(typeof model === 'string' && model.trim(), 'experimental verifier model required');
+    const { reviewer } = buildAgentTasksFromValues({ 'reviewer-model': model, 'reviewer-effort': effort });
+    assert(reviewer, 'experimental verifier profile unavailable');
+    return { primary: reviewer, experimental: reviewer,
+        ...(subject.compareInheritedVerifier === true && { comparison: detector }) };
+}
+
+async function verifyMatchedCandidate(request, profiles, verifyArm, recordComparison) {
+    const primary = verifyArm(profiles.experimental ? 'experimental' : 'inherited', request);
+    if (!profiles.comparison) return primary;
+    const [experimental, inherited] = await Promise.all([
+        primary,
+        verifyArm('inherited', { ...request, configuration: profiles.comparison }),
+    ]);
+    recordComparison({ event: 'matched-verification-result', id: request.candidate.id, inherited, experimental });
+    return experimental;
+}
+
 async function run(lab, number, destination, manifestPath = path.join(__dirname, 'subjects.json')) {
     const manifest = fs.readFileSync(manifestPath);
     const frozen = JSON.parse(manifest);
@@ -145,10 +169,8 @@ async function run(lab, number, destination, manifestPath = path.join(__dirname,
             inputs: { pull_request: { head: { sha: subject.head, repo: { owner: { login: owner } } } } },
         });
         const selected = operation.analysis.agentConfiguration;
-        const experimentalShadowProfile = subject.experimentalVerifier
-            ? buildAgentTasksFromValues({ 'reviewer-model': subject.experimentalVerifier.model,
-                'reviewer-effort': subject.experimentalVerifier.effort }).findings : undefined;
-        const verifierConfiguration = experimentalShadowProfile ?? selected;
+        const profiles = selectVerifierProfiles(subject, selected);
+        const verifierConfiguration = profiles.primary;
         const planner = new AgentExecutionPlanner();
         const attest = (invocation, expected = selected) => {
             assert.equal(invocation.model, expected.model);
@@ -202,39 +224,48 @@ async function run(lab, number, destination, manifestPath = path.join(__dirname,
             }
         } };
         let active = 0, peak = 0, firstVerifier, lastVerifier;
-        const adapter = createPinnedBugbotShadowVerifier({ log,
+        const label = (arm, event) => profiles.comparison ? { ...event, arm } : event;
+        const makeAdapter = (arm, expected) => createPinnedBugbotShadowVerifier({
+            log: event => log(label(arm, event)),
             resolveSource: input => input.repository.owner === owner && input.repository.name === name
                 && input.headSha === subject.head && input.baseSha === subject.base
                 ? { repo: source, officialDirectory: lab, catalog: official,
                     ...(workflowInputs && { localRuntime: shadowPlan.localRuntime }) } : undefined,
             transport: turn => ask({ ...turn,
                 onInvocation(flags) {
-                    attest(flags, verifierConfiguration);
-                    log({ event: 'verifier-invocation', id: turn.candidateId, invocation: flags,
-                        continuation: Boolean(turn.threadId), atMs: sinceStart() });
+                    attest(flags, expected);
+                    log(label(arm, { event: 'verifier-invocation', id: turn.candidateId, invocation: flags,
+                        continuation: Boolean(turn.threadId), atMs: sinceStart() }));
                 },
             }),
         });
+        const primaryArm = profiles.experimental ? 'experimental' : 'inherited';
+        const adapters = { [primaryArm]: makeAdapter(primaryArm, profiles.primary) };
+        if (profiles.comparison) adapters.inherited = makeAdapter('inherited', profiles.comparison);
+        const verifyArm = async (arm, request) => {
+            const { candidate } = request;
+            const startedAt = sinceStart();
+            firstVerifier ??= startedAt;
+            active += 1;
+            peak = Math.max(peak, active);
+            log(label(arm, { event: 'verifier-start', id: candidate.id, active, atMs: startedAt }));
+            try {
+                return await adapters[arm].verify({ ...request, signal: withCancellation(request.signal) });
+            } finally {
+                active -= 1;
+                lastVerifier = sinceStart();
+                log(label(arm, { event: 'verifier-finish', id: candidate.id, active, atMs: lastVerifier,
+                    wallMs: lastVerifier - startedAt }));
+            }
+        };
         const verifier = {
             async verify(request) {
-                const { candidate, configuration } = request;
-                assert.deepEqual(configuration, verifierConfiguration);
-                const startedAt = sinceStart();
-                firstVerifier ??= startedAt;
-                active += 1;
-                peak = Math.max(peak, active);
-                log({ event: 'verifier-start', id: candidate.id, active, atMs: startedAt });
-                try {
-                    return await adapter.verify({ ...request, signal: withCancellation(request.signal) });
-                } finally {
-                    active -= 1;
-                    lastVerifier = sinceStart();
-                    log({ event: 'verifier-finish', id: candidate.id, active, atMs: lastVerifier,
-                        wallMs: lastVerifier - startedAt });
-                }
+                assert.deepEqual(request.configuration, verifierConfiguration);
+                return verifyMatchedCandidate(request, profiles, verifyArm, log);
             },
         };
-        const results = await composeBugbotReview({ findings: detector, scm, shadowVerification: verifier, experimentalShadowProfile }).invoke(operation);
+        const results = await composeBugbotReview({ findings: detector, scm, shadowVerification: verifier,
+            experimentalShadowProfile: profiles.experimental }).invoke(operation);
         const wallMs = sinceStart();
         log({ event: 'workflow-result', results, writes, checkoutUnchanged: git(checkout, 'status', '--porcelain') === '',
             wallMs, verificationWallMs: firstVerifier === undefined ? 0 : lastVerifier - firstVerifier,
@@ -248,7 +279,11 @@ async function run(lab, number, destination, manifestPath = path.join(__dirname,
     }
 }
 
-run(...process.argv.slice(2)).catch(error => {
-    console.error(error);
-    process.exitCode = 1;
-});
+if (require.main === module) {
+    run(...process.argv.slice(2)).catch(error => {
+        console.error(error);
+        process.exitCode = 1;
+    });
+}
+
+module.exports = { selectVerifierProfiles, verifyMatchedCandidate };
