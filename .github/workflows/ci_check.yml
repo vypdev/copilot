@@ -62,6 +62,10 @@ jobs:
       - name: Audit production dependencies
         run: pnpm audit --prod --audit-level=high
 
+      - name: Use runner scratch for build and validation
+        # Self-hosted runners can mount /tmp on a smaller filesystem than the work directory.
+        run: printf 'TMPDIR=%s\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+
       - name: Build
         run: pnpm run build
 
