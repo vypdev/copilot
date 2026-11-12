@@ -5,6 +5,9 @@ const { load, JSON_SCHEMA } = require('js-yaml');
 const { blob, hash } = require('./git.cjs');
 
 const PLAYWRIGHT_COMMIT = 'cfe490d941f992655948eee8fd4fd94e1c4234bf';
+const sqliteSourceIds = new Map([
+    ['3.53.3', '2026-06-26 20:14:12 d4c0e51e4aeb96955b99185ab9cde75c339e2c29c3f3f12428d364a10d782c62'],
+]);
 const entries = [
     ['playwright', '1.64.1', 'microsoft/playwright', PLAYWRIGHT_COMMIT, 'docs/src/api/class-locatorassertions.md', 'versioned-docs',
         'affa4f27a70b9f3e9a3575224acf077acbe474cac45936d2a677b8a14e72589e'],
@@ -72,9 +75,12 @@ function releaseFromLock(lock, name, version) {
 }
 
 function resolveInstalledVersion({ repo, sha, anchor, request, packageName, proof }) {
-    if (proof?.kind === 'runtime' && proof.package === packageName
-        && (request.version === null || request.version === proof.version)) {
-        return { package: packageName, version: proof.version, versionScope: proof.versionScope, basis: request.basis };
+    if (packageName === 'sqlite') {
+        const expected = sqliteSourceIds.get(proof?.version);
+        if (proof?.kind !== 'runtime' || proof.package !== packageName || !proof.sourceId
+            || (expected && expected !== proof.sourceId) || (request.version !== null && request.version !== proof.version)) return undefined;
+        return { package: packageName, version: proof.version, versionScope: proof.versionScope, basis: request.basis,
+            runtimeSourceId: proof.sourceId };
     }
     if (request.basis !== null && proof?.kind !== 'git') return undefined;
     const ancestry = directories(anchor.path);
@@ -129,13 +135,18 @@ async function retrieve(url, signal, fetchSource) {
 
 /** Only audited release bindings authorize a public request. Query text never leaves the broker. */
 function createInstalledOfficialReader(fetchSource = globalThis.fetch) {
+    const cache = new Map();
     return {
         packages,
         resolveVersion: resolveInstalledVersion,
         async sources(packageName, version, signal) {
+            const key = packageName + '@' + version;
+            if (cache.has(key)) return cache.get(key);
             const result = [];
+            let expected = 0;
             for (const [name, release, origin, commit, path, sourceKind, sha256] of entries) {
                 if (name !== packageName || release !== version) continue;
+                expected++;
                 const raw = 'https://raw.githubusercontent.com/' + [origin, commit, path].join('/');
                 let contents;
                 try { contents = await retrieve(raw, signal, fetchSource); } catch { continue; }
@@ -144,6 +155,7 @@ function createInstalledOfficialReader(fetchSource = globalThis.fetch) {
                 const url = 'https://github.com/' + [origin, 'blob', commit, path].join('/');
                 result.push({ sourceKind, url, commit, sha256, lines: contents.toString('utf8').replace(/\n$/u, '').split(/\r?\n/u) });
             }
+            if (expected && result.length === expected) cache.set(key, result);
             return result;
         },
     };

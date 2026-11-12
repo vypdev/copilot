@@ -3356,9 +3356,18 @@ catalog, and a read-only Actions step adapter. The first installed version
 resolver checks the nearest pnpm workspace manifest and its lockfile importer,
 including approved package re-exports. The release catalog currently covers
 Playwright 1.64.1, Lit HTML 3.3.3, LitElement 4.2.2, and SQLite 3.53.3 when
-the session has an accredited runtime receipt. The installed adapter cannot
-infer a SQLite version from a Python version pin. Other package versions and
-package managers require additional provenance adapters.
+the session has an accredited runtime receipt. For SQLite, an installed
+lookup may establish the version and retrieve official source in the same
+request. The adapter reads the exact Python pin from the requested Git
+revision and checks that the installed interpreter matches it. It runs a
+fixed standard-library probe outside the checkout and reads the linked SQLite
+version and source ID. No project file supplies executable code or arguments.
+The runtime receipt binds the pin blob, measured source ID, revision and
+operation. A release-source receipt must carry that runtime scope and match the
+reviewed upstream source identity. Missing or conflicting measurements leave the
+official version unproven. A local probe cannot establish the SQLite version
+linked by historical CI. Other package versions and package managers require
+additional provenance adapters.
 
 The `ci` request names a workflow run, job, and step. The adapter uses the
 latest matching run and its exact attempt, checks the repository and associated
@@ -3420,6 +3429,14 @@ actual configuration and execution path. The native CI reader separately
 validates evidence against the same revision and operation when the claim
 depends on CI behavior.
 
+The installed verifier starts with a small exact excerpt around the pinned
+anchor when the broker can supply it. The application records that delivery
+using the same receipt rules as subsequent reads. The verifier may close on
+sufficient evidence from its first response or batch independent evidence
+requests in one turn. The complete authorized tree remains available and
+neither turn count, token use nor elapsed time closes a session. The latency
+gate measures added wall time after review. It controls qualification only.
+
 Reuse the lookup outcomes in the version-proof section below. A missing
 release source and a literal search with zero results have different
 recovery paths. An authenticated source gap still outstanding at closure
@@ -3441,6 +3458,13 @@ retrieval is driven by provenance and the request. Replay both pinned
 Domus #28 candidates through the installed adapter and compare against the
 independent evidence. The replay diagnoses the integration. Qualification
 still uses EV-07 and the existing full-review and independent corpus gates.
+
+The installed SQLite and latency repair adds four deterministic acceptance
+cases. Resolve SQLite and deliver the local proof and official receipt in one
+request. Reject another operation's or an undelivered proof. Reject a
+different interpreter pin, missing runtime, or conflicting upstream source ID.
+Accept a first-turn verdict only with a delivered, exact anchor receipt.
+The existing continuation, cancellation and missing-usage cases still apply.
 
 #### Diagnostics and evaluation
 

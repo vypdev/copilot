@@ -2291,6 +2291,7 @@
       "code": [
         "src/application/policies/bugbot_shadow_configuration_policy.ts",
         "src/infrastructure/bugbot/installed_bugbot_shadow_adapter.ts",
+        "src/infrastructure/bugbot/installed_bugbot_sqlite_runtime.ts",
         "src/infrastructure/bugbot/verifier_model_catalog.ts",
         "src/application/policies/bugbot_evidence_reference_policy.cjs",
         "src/application/policies/bugbot_material_dependency_policy.cjs",

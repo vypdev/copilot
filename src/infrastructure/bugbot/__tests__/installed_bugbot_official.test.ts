@@ -8,6 +8,7 @@ const { makeBroker } = require('../shadow/broker.cjs');
 
 const integrity = 'sha512-HCrVhHr5QQuwYoswEUGTb7gGp522yflbv/ST8nF4sFWGuLjQCt17Q/EubpGGSNKYn1tsTCPZxqHhHCfVURu7UA==';
 const other = 'b'.repeat(40);
+const sqliteSourceId = '2026-06-26 20:14:12 d4c0e51e4aeb96955b99185ab9cde75c339e2c29c3f3f12428d364a10d782c62';
 const anchor = { path: 'frontend/src/view.ts', line: 1, end: 1 };
 const basis = { op: 'official', revision: 'head', target: 'playwright', version: null,
     basis: null, first: null, last: null, scope: null, query: 'toBeEnabled', why: 'Find the matcher behavior.' };
@@ -23,6 +24,7 @@ beforeAll(() => {
     writeFileSync(join(repo, 'frontend/src/view.ts'), 'const test = true;\n');
     writeFileSync(join(repo, 'frontend/package.json'), '{"devDependencies":{"playwright":"^1.64.0"}}');
     writeFileSync(join(repo, 'unrelated/package.json'), '{"devDependencies":{"playwright":"1.65.0"}}');
+    writeFileSync(join(repo, '.python-version'), '3.14.6\n');
     writeFileSync(join(repo, 'pnpm-lock.yaml'), `lockfileVersion: "9.0"
 importers:
   frontend:
@@ -54,9 +56,54 @@ it('proves the anchored importer version and rejects another importer or an inco
     expect(reader.resolveVersion({ ...input, anchor: { ...anchor, path: 'unrelated/src/view.ts' } })).toMatchObject({ version: '1.65.0' });
     expect(reader.resolveVersion({ ...input, packageName: 'sqlite' })).toBeUndefined();
     expect(reader.resolveVersion({ ...input, packageName: 'sqlite', request: { ...basis, basis: 'runtime' },
-        proof: { kind: 'runtime', package: 'sqlite', version: '3.53.3', versionScope: 'local only' } })).toMatchObject({
-        version: '3.53.3', versionScope: 'local only',
+        proof: { kind: 'runtime', package: 'sqlite', version: '3.53.3', versionScope: 'local only', sourceId: sqliteSourceId } })).toMatchObject({
+        version: '3.53.3', versionScope: 'local only', runtimeSourceId: sqliteSourceId,
     });
+});
+
+it('resolves SQLite and its official source together, preserving the runtime and Git pin in separate receipts', async () => {
+    const reader = createInstalledOfficialReader();
+    const sources = jest.fn().mockResolvedValue([{ lines: ['sqlite3FkLocateIndex'], url: 'https://github.com/sqlite/sqlite' }]);
+    const readLocalSqlite = jest.fn().mockResolvedValue({ python: '3.14.6', sqlite: '3.53.3', sourceId: sqliteSourceId });
+    const subject = { repository: 'owner/repo', head: sha, base: other, tree: git('rev-parse', 'HEAD^{tree}') };
+    const finding = { id: 'sqlite', detectorLocation: anchor, allowBase: false };
+    const source = { repo, installedOfficial: { ...reader, sources }, readLocalSqlite };
+    const broker = makeBroker(source, subject, finding);
+    const query = { ...basis, target: 'sqlite', query: 'sqlite3FkLocateIndex' };
+    const result = await broker.inspect(query);
+    const [runtime, official] = result.sources;
+    expect(result).toMatchObject({ status: 'provided', version: '3.53.3' });
+    expect(runtime).toMatchObject({ kind: 'runtime', sha, sourceId: sqliteSourceId,
+        pin: { path: '.python-version', blob: git('rev-parse', 'HEAD:.python-version'), first: 1, last: 1 },
+        versionScope: expect.stringContaining('historical hosted linked SQLite version unmeasured') });
+    expect(official).toMatchObject({ kind: 'official', sha, basis: runtime.receipt, runtimeSourceId: sqliteSourceId,
+        versionScope: runtime.versionScope });
+    expect(broker.cite({ receipt: official.receipt, first: 1, last: 1 })).toMatchObject({ basis: runtime.receipt });
+    const delivered = new Map([[runtime.receipt, [{ first: 1, last: 1 }]]]);
+    await expect(broker.inspect({ ...query, basis: runtime.receipt }, delivered)).resolves.toMatchObject({ status: 'provided' });
+    await expect(broker.inspect({ ...query, basis: runtime.receipt }, new Map())).resolves.toMatchObject({ status: 'official-version-not-proven' });
+    await expect(makeBroker(source, subject, finding).inspect({ ...query, basis: runtime.receipt }, delivered))
+        .resolves.toMatchObject({ status: 'official-version-not-proven' });
+    await expect(broker.inspect({ ...query, basis: runtime.receipt, version: '3.53.1' }, delivered))
+        .resolves.toMatchObject({ status: 'official-version-not-proven' });
+    expect(readLocalSqlite).toHaveBeenCalledTimes(1);
+    expect(sources).toHaveBeenCalledTimes(2);
+});
+
+it('withholds official SQLite source when the installed interpreter or measured release identity disagrees', async () => {
+    const reader = createInstalledOfficialReader();
+    const sources = jest.fn();
+    const readLocalSqlite = jest.fn().mockResolvedValueOnce({ python: '3.14.5', sqlite: '3.53.3', sourceId: sqliteSourceId })
+        .mockResolvedValueOnce({ python: '3.14.6', sqlite: '3.53.3', sourceId: 'wrong source' })
+        .mockResolvedValueOnce(undefined);
+    const subject = { repository: 'owner/repo', head: sha, base: sha, tree: git('rev-parse', 'HEAD^{tree}') };
+    const broker = makeBroker({ repo, installedOfficial: { ...reader, sources }, readLocalSqlite }, subject,
+        { id: 'sqlite', detectorLocation: anchor, allowBase: true });
+    const query = { ...basis, target: 'sqlite', query: 'sqlite3FkLocateIndex' };
+    await expect(broker.inspect(query)).resolves.toMatchObject({ status: 'official-version-not-proven', runtimeStatus: 'runtime-version-mismatch' });
+    await expect(broker.inspect(query)).resolves.toMatchObject({ status: 'official-version-not-proven' });
+    await expect(broker.inspect(query)).resolves.toMatchObject({ status: 'official-version-not-proven', runtimeStatus: 'runtime-unavailable' });
+    expect(sources).not.toHaveBeenCalled();
 });
 
 it('only fetches reviewed public release origins and rejects altered source bytes', async () => {

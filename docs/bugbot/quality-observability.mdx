@@ -897,13 +897,14 @@ The setup workflow templates carry the same bindings.
 For a no-write pilot, also set `BUGBOT_DRY_RUN=true` in an isolated
 evaluation workflow. The Action reports counts and profile identities in
 `bugbot-shadow-summary` and counts in the Job Summary. The verifier can
-request official sources. The installed broker currently exposes the pinned
-repository tree. An evaluation fixture may also supply a trusted source
-catalog. The planned collector will establish the effective dependency
-version and return exact official source ranges with receipts. When the
-version or a decisive source remains unproven, the artifact records the
-specific gap and the verdict is inconclusive. Production enforcement
-is unavailable. [Official evidence contract](https://github.com/vypdev/copilot/blob/master/specs/bugbot-analysis-publication-and-autofix.md#official-evidence-in-the-installed-review)
+request official sources and read the full pinned repository tree. An initial
+excerpt shows the anchored code with a citable receipt when available.
+For SQLite, the installed broker checks the tracked Python pin against the
+host interpreter and measures its linked SQLite version and source ID.
+A matching release source can be returned in the same request. The receipt
+describes the local measurement. The SQLite version linked by historical CI
+needs separate evidence. A material version or source gap produces an
+inconclusive verdict with the missing fact. [Official evidence contract](https://github.com/vypdev/copilot/blob/master/specs/bugbot-analysis-publication-and-autofix.md#official-evidence-in-the-installed-review)
 
 For example, a review can report one individual finding and one summary-only
 finding, with one confirmed and one inconclusive shadow outcome. Inspect the

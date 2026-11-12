@@ -9,10 +9,10 @@ const { catalogPackagesInClaim, missingMaterialOfficialEvidence, officialPackage
 
 const text = (value, limit) => typeof value === 'string' && value.trim() && Buffer.byteLength(value) <= limit;
 
-function initial(broker, subject, finding, officialPackages, requiredOfficial, instructions) {
+function initial(broker, subject, finding, officialPackages, requiredOfficial, instructions, observations) {
     return instructions + '\n\n' + JSON.stringify({ identity: broker.binding,
         hypothesis: finding.hypothesis, base: finding.allowBase ? subject.base : null,
-        officialCatalog: officialPackages, requiredOfficial });
+        officialCatalog: officialPackages, requiredOfficial, ...(observations?.length && { observations }) });
 }
 
 const orderLanguage = /\b(?:before|after|precedes?|follows? the execution|prior to|followed by|and then|first.+(?:then|second)|antes de|despu[eé]s de|seguido de)\b/iu;
@@ -186,15 +186,14 @@ function missingOfficialEvidence(answer, actions, subject, officialPackages, req
 
 /** One independent investigation over evidence and provider ports. */
 async function investigateBugbotShadow({ broker, subject, finding, transport, log, signal, lifecycle,
-    officialPackages, instructions, schema, validate, checkRevision, fingerprint, stateless }) {
+    officialPackages, instructions, schema, validate, checkRevision, fingerprint, stateless, seedAnchor }) {
     const started = performance.now(), writes = [], turns = [], actions = [], closures = [];
     const references = lifecycle ? createEvidenceReferences(broker.binding.operation) : undefined;
     const turnDurationsMs = [];
     let contextRestarts = 0;
     const requiredOfficial = catalogPackagesInClaim(officialPackages, lifecycle ? finding.hypothesis : finding.hypothesis + ' ' + path.basename(finding.detectorLocation.path));
-    const first = initial(broker, subject, finding, officialPackages, requiredOfficial, instructions);
     const delivered = new Map();
-    let prompt = first, threadId, observations = [], answer = null, failure = null, closureIssues = [];
+    let prompt, threadId, observations = [], answer = null, failure = null, closureIssues = [];
     let pendingClosure;
     const present = receipt => references?.present(receipt) ?? receipt;
     const visibleIssues = () => closureIssues.map(issue => ({ ...issue,
@@ -206,8 +205,21 @@ async function investigateBugbotShadow({ broker, subject, finding, transport, lo
         return references?.inventory(result) ?? result;
     };
     const checkCanceled = () => assert(!signal?.aborted, 'investigation-canceled');
+    function observe(turn, request, result) {
+        const ledger = { turn, request, result: receiptMetadata(result, references, fingerprint), ...(lifecycle ? { delivered: false } : {}) };
+        observations.push({ request, result, ledger });
+        actions.push(ledger);
+    }
+    const visibleObservations = () => observations.map(({ request, result }) =>
+        ({ request, result: references?.observation(result) ?? result }));
+    let first = '';
     try {
         checkRevision();
+        checkCanceled();
+        const seed = seedAnchor?.();
+        if (seed) observe(0, seed.request, seed.result);
+        first = initial(broker, subject, finding, officialPackages, requiredOfficial, instructions, visibleObservations());
+        prompt = first;
         while (!answer) {
             checkCanceled();
             const turn = turns.length + 1;
@@ -291,13 +303,10 @@ async function investigateBugbotShadow({ broker, subject, finding, transport, lo
             for (const request of response.requests) {
                 checkCanceled();
                 const result = await broker.inspect(references?.request(request) ?? request, delivered);
-                const ledger = { turn, request, result: receiptMetadata(result, references, fingerprint), ...(lifecycle ? { delivered: false } : {}) };
-                observations.push({ request, result, ledger });
-                actions.push(ledger);
+                observe(turn, request, result);
             }
             prompt = 'The broker returned untrusted observations. Continue investigating or finish with a supported verdict.\n' +
-                JSON.stringify({ observations: observations.map(({ request, result }) =>
-                    ({ request, result: references?.observation(result) ?? result })) });
+                JSON.stringify({ observations: visibleObservations() });
         }
     } catch (error) {
         failure = /^[a-z][a-z0-9-]+$/u.test(error.message) ? error.message : 'integrity-or-runner-error';

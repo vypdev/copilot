@@ -11,6 +11,7 @@ const blocked = code => ({ status: code });
 const { officialPackage } = require('../../../application/policies/bugbot_material_dependency_policy.cjs');
 const { CitationRangeError } = require('../../../application/policies/bugbot_evidence_reference_policy.cjs');
 const sqliteRuntimeBasis = { kind: 'git', path: '.python-version', revision: 'head' };
+const localSqliteScope = 'local pinned-version probe; historical hosted linked SQLite version unmeasured';
 const linesOf = source => source.replace(/\n$/u, '').split(/\r?\n/u);
 
 // Pages bound individual wire records. Every next page remains available.
@@ -32,7 +33,7 @@ function intervals(patch) {
     });
 }
 
-function makeBroker({ repo, officialDirectory, catalog = [], localRuntime, resolvedVersions = [], installedOfficial, readCi, pullRequest }, subject, finding, sharedRead, signal) {
+function makeBroker({ repo, officialDirectory, catalog = [], localRuntime, readLocalSqlite, resolvedVersions = [], installedOfficial, readCi, pullRequest }, subject, finding, sharedRead, signal) {
     const binding = { finding: finding.id, repository: subject.repository, head: subject.head, tree: subject.tree, operation: randomUUID(), anchor: finding.detectorLocation };
     const receipts = new Map();
     let cacheHits = 0;
@@ -107,7 +108,35 @@ function makeBroker({ repo, officialDirectory, catalog = [], localRuntime, resol
     const unprovenVersion = packageName => ({ status: 'official-version-not-proven',
         ...(packageName === 'sqlite' ? { requiredBasis: { kind: 'runtime', package: packageName, prerequisite: sqliteRuntimeBasis } } : {}) });
 
+    async function localSqlite(request, sha, proof) {
+        const pin = load(['blob', sha, sqliteRuntimeBasis.path], () => {
+            try { return blob(repo, sha, sqliteRuntimeBasis.path); } catch (error) {
+                if (['no-file', 'non-text'].includes(error.message)) return null;
+                throw error;
+            }
+        });
+        const python = pin?.lines.length === 1 ? pin.lines[0].trim() : '';
+        if (!/^\d+\.\d+\.\d+$/u.test(python) || (request.basis !== null
+            && (proof?.kind !== 'git' || proof.path !== sqliteRuntimeBasis.path || proof.blob !== pin.blob))) {
+            return { status: 'runtime-basis', requiredBasis: { ...sqliteRuntimeBasis, revision: request.revision } };
+        }
+        const runtime = await readLocalSqlite();
+        if (!runtime) return blocked('runtime-unavailable');
+        if (runtime.python !== python) return blocked('runtime-version-mismatch');
+        return grant([{ kind: 'runtime', first: 1, last: 1, sha, basis: request.basis,
+            pin: { path: sqliteRuntimeBasis.path, blob: pin.blob, first: 1, last: 1 },
+            package: 'sqlite', version: runtime.sqlite, versionScope: localSqliteScope, sourceId: runtime.sourceId,
+            lines: [`Python ${python}; SQLite ${runtime.sqlite}; source ID ${runtime.sourceId}; ${localSqliteScope}`] }]);
+    }
+
     async function installedDoc(request, sha, packageName, proof) {
+        if (readLocalSqlite && packageName === 'sqlite' && request.basis === null) {
+            const runtime = await localSqlite(request, sha, null);
+            if (runtime.status !== 'provided') return { ...unprovenVersion(packageName), runtimeStatus: runtime.status };
+            const [receipt] = runtime.sources;
+            const result = await installedDoc({ ...request, basis: receipt.receipt }, sha, packageName, receipt);
+            return { ...result, sources: [receipt, ...(result.sources ?? [])] };
+        }
         const version = installedOfficial.resolveVersion({ repo, sha, anchor: finding.detectorLocation, request, packageName, proof });
         if (!version) return unprovenVersion(packageName);
         const sources = await installedOfficial.sources(packageName, version.version, signal);
@@ -179,6 +208,7 @@ function makeBroker({ repo, officialDirectory, catalog = [], localRuntime, resol
         if (request.op === 'ci') return ci(request, sha);
         if (request.op === 'runtime') {
             const proof = readBasis(request.basis, sha, delivered);
+            if (request.target === 'sqlite' && readLocalSqlite) return localSqlite(request, sha, proof);
             if (!localRuntime || request.target !== 'sqlite' || sha !== subject.head) return blocked('runtime-unavailable');
             if (proof?.kind !== 'git' || proof.path !== sqliteRuntimeBasis.path || !proof.lines.includes(localRuntime.python)) {
                 return { status: 'runtime-basis', requiredBasis: sqliteRuntimeBasis };
@@ -258,7 +288,24 @@ function makeBroker({ repo, officialDirectory, catalog = [], localRuntime, resol
         return { count: sources.length, items: current.items.map(locationOf), next: current.next };
     }
 
-    return { inspect, cite, containsExcerpt, inventory, binding };
+    function initialAnchor() {
+        const anchor = finding.detectorLocation;
+        const revision = anchor.side === 'LEFT' ? 'base' : 'head';
+        if (revision === 'base' && !finding.allowBase) return undefined;
+        const sha = subject[revision];
+        const value = load(['blob', sha, anchor.path], () => blob(repo, sha, anchor.path));
+        const first = Math.max(1, anchor.line - 12);
+        const last = Math.min(value.lines.length, anchor.line + 12);
+        const source = window(value.lines, first, last);
+        if (Buffer.byteLength(source.lines.join('\n')) > 4_400) return undefined;
+        const request = { op: 'read', revision, target: anchor.path, first, last,
+            why: 'Inspect the prepared finding’s anchor and adjacent source.' };
+        const result = { ...grant([{ kind: 'git', sha, path: anchor.path, blob: value.blob, ...source }]),
+            lineCount: value.lines.length };
+        return { request, result };
+    }
+
+    return { inspect, cite, containsExcerpt, inventory, binding, initialAnchor };
 }
 
 function locationWithText(location, lines) {

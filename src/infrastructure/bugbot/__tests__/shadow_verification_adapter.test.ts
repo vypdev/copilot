@@ -153,6 +153,26 @@ describe('pinned Bugbot verifier adapter', () => {
             .resolves.toMatchObject({ reason: 'shadow-revision-unavailable' });
         expect(transport).not.toHaveBeenCalled();
     });
+
+    it('can close on an exact anchored excerpt delivered in the first installed turn', async () => {
+        const transport = jest.fn(async (turn: { prompt: string }) => {
+            const { observations } = JSON.parse(turn.prompt.split('\n').pop()!);
+            const [source] = observations[0].result.sources;
+            expect(source).toMatchObject({ sha: candidate.headSha, path: 'setting.ts', first: 1, last: 1,
+                lines: ['export const enabled = false;'] });
+            return { threadId: 'fixture', fact: { failure: null }, response: {
+                action: 'finish', requests: [], verdict: 'refuted', reason: 'The pinned setting is false.', missing: null,
+                dependencies: [], premises: [{ claim: 'The pinned setting is false.',
+                    citations: [{ receipt: source.receipt, first: 1, last: 1 }], order: [] }],
+            } };
+        });
+        const adapter = createInstalledBugbotShadowVerifier(candidate.repository, repo, transport);
+        await expect(adapter.verify({ candidate, configuration })).resolves.toMatchObject({
+            status: 'verdict', verdict: 'refuted',
+            investigation: { evidence: [{ turn: 0, delivered: [{ sha: candidate.headSha }] }] },
+        });
+        expect(transport).toHaveBeenCalledTimes(1);
+    });
 });
 
 
