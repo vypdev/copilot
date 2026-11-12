@@ -7774,6 +7774,7 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
     let verification;
     const authority = dependencies.verificationAuthority;
     const enforced = authority?.mode === 'enforced';
+    const requiresReceipt = authority !== undefined;
     const dryRun = reviewContext.analysis.reviewConfiguration.publicationMode === 'dry-run';
     const unavailableShadow = () => dependencies.shadowVerification
         ? { resolvedModel: resolvedAgent.model, provider: resolvedAgent.provider, candidates: [], detectionUnavailable: true,
@@ -7918,11 +7919,12 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
             if (current !== expected)
                 return await complete(supersededResult(expected), 'superseded');
         }
-        if ((enforced || context.reviewFramedSource) && await (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context, 'before-publication', enforced)) {
+        if ((requiresReceipt || context.reviewFramedSource)
+            && await (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context, 'before-publication', requiresReceipt)) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
         const resolutionErrors = await telemetry.measure('publication', () => (0, apply_detected_findings_1.applyDetectedFindings)(reviewContext, context, prepared, dependencies.scm.publication, dependencies.scm.resolution, catalog));
-        if (await telemetry.measure('post-publication-freshness', () => (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context, 'after-publication', enforced))) {
+        if (await telemetry.measure('post-publication-freshness', () => (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context, 'after-publication', requiresReceipt))) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
         const presentation = await telemetry.measure('projection', () => reconcileReviewState({
@@ -8164,8 +8166,9 @@ function resolvePublicationCatalog(operation, dependencies, publishesToPullReque
     return (0, bugbot_message_catalog_1.resolveBugbotCatalog)(locale, operation.analysis.agentConfiguration, dependencies.catalogResolver);
 }
 function buildVerificationPublication(authority, operation, context, verification, presentation, errors) {
-    // Qualification and rollback authority come from trusted runtime admission.
-    if (authority.mode !== 'enforced' || verification?.status !== 'complete' || errors.length
+    // Rollback attests the canonical ordinary review. Shadow observations do
+    // not participate in approval evidence.
+    if ((authority.mode === 'enforced' && verification?.status !== 'complete') || errors.length
         || presentation?.projection.outcome !== 'complete' || presentation.pendingReviewUpdates > 0
         || presentation.statusCardOperation === 'failed')
         return undefined;

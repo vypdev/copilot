@@ -239,6 +239,21 @@ describe("main run route composition root", () => {
     },
   );
 
+  it('passes trusted rollback authority to the normal PR route without enabling the verifier', async () => {
+    const authority = { mode: 'disabled', generation: 2, policyDigest: 'd'.repeat(64), workflowId: 24, sourceAppId: 15368 } as const;
+    const execution = {
+      owner: binding.owner,
+      repo: binding.repository,
+      tokens: { token: binding.token },
+      ai: { getBugbotReviewConfiguration: () => ({}) },
+    } as Execution;
+    const handlers = createMainRunRouteCompositionRoot({} as ProjectBoardCommandPort, 'github-workflow', undefined, authority);
+
+    await handlers['pull-request'](execution);
+
+    expect(createPullRequestUseCaseCompositionRoot).toHaveBeenCalledWith({ ...binding, verificationAuthority: authority });
+  });
+
   it("binds every route to its matching use case", async () => {
     const execution = {
       owner: 'owner',

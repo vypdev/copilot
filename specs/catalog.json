@@ -3351,7 +3351,9 @@
         "src/application/errors/approval_evidence_error.ts",
         "src/data/repository/pull_request/approval_evidence_read.ts",
         "src/domain/pull_request_closing_reference.ts",
-        "src/data/repository/pull_request/approval_bugbot_verification.ts"
+        "src/data/repository/pull_request/approval_bugbot_verification.ts",
+        "src/application/policies/bugbot_verification_receipt_policy.ts",
+        "src/domain/bugbot/verification_receipt.ts"
       ],
       "tests": [
         "src/application/policies/__tests__/setup_questionnaire_policy.test.ts",
@@ -3370,6 +3372,7 @@
         "src/actions/__tests__/pull_request_approval_logging.test.ts",
         "src/data/repository/pull_request/__tests__/approval_coverage_artifact.test.ts",
         "src/data/repository/pull_request/__tests__/pull_request_approval_repository.test.ts",
+        "quality/bugbot/evidence/issue-950/cursor-rollback-shadow/packaged-rollback.cjs",
         "src/data/repository/pull_request/__tests__/pull_request_review_comment_command_repository.test.ts",
         "src/infrastructure/__tests__/setup_approval_readiness_adapter.test.ts",
         "src/utils/__tests__/setup_files.test.ts",

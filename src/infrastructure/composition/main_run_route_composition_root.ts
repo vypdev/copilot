@@ -129,7 +129,7 @@ function createDetectPotentialProblemsUseCase(binding: BugbotScmBinding): Detect
     bugbot.telemetry,
     new ResolveMessageCatalogUseCase(createLanguageQueryPort()),
     bugbot.shadowVerification,
-    undefined, binding.shadow?.authority, bugbot.sourceFreshness,
+    undefined, binding.verificationAuthority, bugbot.sourceFreshness,
   );
 }
 
@@ -266,7 +266,7 @@ export function createIssueCommentUseCaseCompositionRoot(binding: BugbotScmBindi
       bugbot.telemetry,
       new ResolveMessageCatalogUseCase(language),
       bugbot.shadowVerification,
-    undefined, binding.shadow?.authority, bugbot.sourceFreshness,
+    undefined, binding.verificationAuthority, bugbot.sourceFreshness,
     ),
     pullRequestDescription,
     new RememberBugbotRuleUseCase(bugbot.rules),
@@ -332,7 +332,7 @@ export function createPullRequestReviewCommentUseCaseCompositionRoot(binding: Bu
       bugbot.telemetry,
       new ResolveMessageCatalogUseCase(language),
       bugbot.shadowVerification,
-    undefined, binding.shadow?.authority, bugbot.sourceFreshness,
+    undefined, binding.verificationAuthority, bugbot.sourceFreshness,
     ),
     pullRequestDescription,
     new RememberBugbotRuleUseCase(bugbot.rules),
@@ -422,7 +422,8 @@ function bugbotBinding(execution: {
     repository: execution.repo,
     token: execution.tokens.token,
     ...(surface === 'github-workflow' && execution.ai?.getBugbotReviewConfiguration?.().shadowVerification
-      ? { shadow: { workspace: process.env.GITHUB_WORKSPACE, ...(authority ? { authority } : {}) } } : {}),
+      ? { shadow: { workspace: process.env.GITHUB_WORKSPACE } } : {}),
+    ...(surface === 'github-workflow' && authority ? { verificationAuthority: authority } : {}),
   };
 }
 

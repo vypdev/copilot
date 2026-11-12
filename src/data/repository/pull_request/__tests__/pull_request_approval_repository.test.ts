@@ -920,9 +920,18 @@ describe('issue #950 current-policy Bugbot evidence at the approval consumer', (
 
   it('requires a fresh authoritative receipt when rolling back on the same head', async () => {
     const rollback = { ...enforced, mode: 'disabled', generation: 3, policyDigest: '2'.repeat(64) } as const;
-    expect((await evidence(rollback, [run(80)], [check(80)])).bugbot).toBeUndefined();
-    const current = check(81, { mode: 'disabled', generation: 3, policyDigest: rollback.policyDigest });
-    expect((await evidence(rollback, [run(80), run(81)], [check(80), current])).bugbot?.outcome).toBe('complete');
+    const stale = await evidence(rollback, [run(80)], [check(80)]);
+    expect(decidePullRequestApproval(await approvalPolicy(), stale).code).toBe('bugbot-missing');
+
+    const native = { repositoryId: 17, pullNumber: 42, baseSha: base, runId: 81, attempt: 1 };
+    const summary = renderBugbotApprovalReceipt({ authority: rollback, repositoryId: 17, pullNumber: 42,
+      headSha: head, baseSha: base, coverage: 'complete', verification: 'complete',
+      publication: 'verified', outcome: 'complete', findingStates: states }, native, head);
+    expect(summary).toBeDefined();
+    const current = { ...check(81), output: { summary: summary! } };
+    const fresh = await evidence(rollback, [run(80), run(81)], [check(80), current]);
+    expect(fresh.bugbot?.verificationReceipt).toMatchObject({ generation: 3, runId: 81 });
+    expect(decidePullRequestApproval(await approvalPolicy(), fresh).status).toBe('eligible');
   });
 
   async function approvalPolicy() {

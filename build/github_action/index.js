@@ -44554,7 +44554,8 @@ async function runGitHubAction(verificationAuthority) {
             owner: execution.owner,
             repository: execution.repo,
             token,
-            ...(shadowSettings ? { shadow: { workspace: process.env.GITHUB_WORKSPACE, ...(verificationAuthority ? { authority: verificationAuthority } : {}) } } : {}),
+            ...(shadowSettings ? { shadow: { workspace: process.env.GITHUB_WORKSPACE } } : {}),
+            ...(verificationAuthority ? { verificationAuthority } : {}),
         }).reviewOnly(execution);
         if (results.some(result => !result.success)) {
             throw new Error('Bot-authored pull-request analysis did not complete.');
@@ -79563,6 +79564,7 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
     let verification;
     const authority = dependencies.verificationAuthority;
     const enforced = authority?.mode === 'enforced';
+    const requiresReceipt = authority !== undefined;
     const dryRun = reviewContext.analysis.reviewConfiguration.publicationMode === 'dry-run';
     const unavailableShadow = () => dependencies.shadowVerification
         ? { resolvedModel: resolvedAgent.model, provider: resolvedAgent.provider, candidates: [], detectionUnavailable: true,
@@ -79707,11 +79709,12 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
             if (current !== expected)
                 return await complete(supersededResult(expected), 'superseded');
         }
-        if ((enforced || context.reviewFramedSource) && await (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context, 'before-publication', enforced)) {
+        if ((requiresReceipt || context.reviewFramedSource)
+            && await (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context, 'before-publication', requiresReceipt)) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
         const resolutionErrors = await telemetry.measure('publication', () => (0, apply_detected_findings_1.applyDetectedFindings)(reviewContext, context, prepared, dependencies.scm.publication, dependencies.scm.resolution, catalog));
-        if (await telemetry.measure('post-publication-freshness', () => (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context, 'after-publication', enforced))) {
+        if (await telemetry.measure('post-publication-freshness', () => (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context, 'after-publication', requiresReceipt))) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
         const presentation = await telemetry.measure('projection', () => reconcileReviewState({
@@ -79953,8 +79956,9 @@ function resolvePublicationCatalog(operation, dependencies, publishesToPullReque
     return (0, bugbot_message_catalog_1.resolveBugbotCatalog)(locale, operation.analysis.agentConfiguration, dependencies.catalogResolver);
 }
 function buildVerificationPublication(authority, operation, context, verification, presentation, errors) {
-    // Qualification and rollback authority come from trusted runtime admission.
-    if (authority.mode !== 'enforced' || verification?.status !== 'complete' || errors.length
+    // Rollback attests the canonical ordinary review. Shadow observations do
+    // not participate in approval evidence.
+    if ((authority.mode === 'enforced' && verification?.status !== 'complete') || errors.length
         || presentation?.projection.outcome !== 'complete' || presentation.pendingReviewUpdates > 0
         || presentation.statusCardOperation === 'failed')
         return undefined;
@@ -108310,7 +108314,7 @@ function createBugbotCompositionRoot(binding) {
         scm,
         telemetry: new logger_bugbot_telemetry_adapter_1.LoggerBugbotTelemetryAdapter(),
         ...(binding.shadow ? { shadowVerification: (0, installed_bugbot_shadow_adapter_1.createInstalledBugbotShadowVerifier)({ owner: binding.owner, name: binding.repository }, binding.shadow.workspace, undefined, (0, github_bugbot_ci_reader_1.createGitHubBugbotCiReader)({ owner: binding.owner, repo: binding.repository }, (0, github_1.getOctokit)(process.env.COPILOT_EVIDENCE_TOKEN?.trim() || binding.token).rest.actions)) } : {}),
-        ...(binding.shadow?.authority?.mode === 'enforced' ? {
+        ...(binding.verificationAuthority?.mode === 'enforced' ? {
             sourceFreshness: (0, shared_capability_port_binding_1.bindPublicationSourceQuery)(new github_publication_source_repository_1.GithubPublicationSourceRepository((0, github_branch_client_factory_1.createBranchClient)()), binding),
         } : {}),
         rules,
@@ -109461,7 +109465,7 @@ const lifecycle_capability_port_binding_2 = __nccwpck_require__(85785);
 const push_single_action_capability_port_binding_1 = __nccwpck_require__(49417);
 function createDetectPotentialProblemsUseCase(binding) {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)(binding);
-    return new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase((0, agent_capability_composition_root_1.createFindingsQueryPort)(), bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase((0, agent_capability_composition_root_1.createLanguageQueryPort)()), bugbot.shadowVerification, undefined, binding.shadow?.authority, bugbot.sourceFreshness);
+    return new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase((0, agent_capability_composition_root_1.createFindingsQueryPort)(), bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase((0, agent_capability_composition_root_1.createLanguageQueryPort)()), bugbot.shadowVerification, undefined, binding.verificationAuthority, bugbot.sourceFreshness);
 }
 function createSingleActionUseCaseCompositionRoot(surface, binding, setupProgress) {
     const catalogResolver = new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase((0, agent_capability_composition_root_1.createLanguageQueryPort)());
@@ -109517,7 +109521,7 @@ function createIssueCommentUseCaseCompositionRoot(binding, setup = verification_
         contextPorts: bugbot.scm.context,
         resolutionPorts: bugbot.scm.resolution,
         catalogResolver: new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language),
-    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language), bugbot.shadowVerification, undefined, binding.shadow?.authority, bugbot.sourceFreshness), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, (0, issue_use_case_composition_root_1.createIssueUseCaseCompositionRoot)(binding), rememberBranchPorts(binding, bugbot.scm.context), (0, pull_request_status_composition_root_1.createPullRequestStatusReadPorts)(binding, bugbot.scm.context), (0, copilot_history_port_factory_1.createCopilotHistoryReadPort)(bugbot.scm.context, process.env.GITHUB_SERVER_URL ?? 'https://github.com'), (0, sdd_evidence_composition_root_1.createSddEvidenceQueryPort)(binding, bugbot.scm.context), (0, sdd_diff_composition_root_1.createSddDiffQueryPort)(binding, bugbot.scm.context), (0, issue_completion_composition_root_2.createNativeStatusReadPort)(binding), (0, github_runtime_doctor_composition_root_1.createGithubRuntimeDoctorPorts)(binding, bugbot.scm.context), createDescriptionLinkRecovery(binding));
+    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language), bugbot.shadowVerification, undefined, binding.verificationAuthority, bugbot.sourceFreshness), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, (0, issue_use_case_composition_root_1.createIssueUseCaseCompositionRoot)(binding), rememberBranchPorts(binding, bugbot.scm.context), (0, pull_request_status_composition_root_1.createPullRequestStatusReadPorts)(binding, bugbot.scm.context), (0, copilot_history_port_factory_1.createCopilotHistoryReadPort)(bugbot.scm.context, process.env.GITHUB_SERVER_URL ?? 'https://github.com'), (0, sdd_evidence_composition_root_1.createSddEvidenceQueryPort)(binding, bugbot.scm.context), (0, sdd_diff_composition_root_1.createSddDiffQueryPort)(binding, bugbot.scm.context), (0, issue_completion_composition_root_2.createNativeStatusReadPort)(binding), (0, github_runtime_doctor_composition_root_1.createGithubRuntimeDoctorPorts)(binding, bugbot.scm.context), createDescriptionLinkRecovery(binding));
 }
 function createPullRequestReviewCommentUseCaseCompositionRoot(binding, setup = verification_setup_ports_1.DISABLED_VERIFICATION_SETUP) {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)(binding);
@@ -109533,7 +109537,7 @@ function createPullRequestReviewCommentUseCaseCompositionRoot(binding, setup = v
         contextPorts: bugbot.scm.context,
         resolutionPorts: bugbot.scm.resolution,
         catalogResolver: new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language),
-    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language), bugbot.shadowVerification, undefined, binding.shadow?.authority, bugbot.sourceFreshness), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, rememberBranchPorts(binding, bugbot.scm.context), (0, pull_request_status_composition_root_1.createPullRequestStatusReadPorts)(binding, bugbot.scm.context), (0, copilot_history_port_factory_1.createCopilotHistoryReadPort)(bugbot.scm.context, process.env.GITHUB_SERVER_URL ?? 'https://github.com'), (0, sdd_diff_composition_root_1.createSddDiffQueryPort)(binding, bugbot.scm.context), (0, issue_completion_composition_root_2.createNativeStatusReadPort)(binding), (0, github_runtime_doctor_composition_root_1.createGithubRuntimeDoctorPorts)(binding, bugbot.scm.context), createDescriptionLinkRecovery(binding));
+    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language), bugbot.shadowVerification, undefined, binding.verificationAuthority, bugbot.sourceFreshness), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, rememberBranchPorts(binding, bugbot.scm.context), (0, pull_request_status_composition_root_1.createPullRequestStatusReadPorts)(binding, bugbot.scm.context), (0, copilot_history_port_factory_1.createCopilotHistoryReadPort)(bugbot.scm.context, process.env.GITHUB_SERVER_URL ?? 'https://github.com'), (0, sdd_diff_composition_root_1.createSddDiffQueryPort)(binding, bugbot.scm.context), (0, issue_completion_composition_root_2.createNativeStatusReadPort)(binding), (0, github_runtime_doctor_composition_root_1.createGithubRuntimeDoctorPorts)(binding, bugbot.scm.context), createDescriptionLinkRecovery(binding));
 }
 function createCommitUseCaseCompositionRoot(projectBoardCommandPort, binding) {
     const labels = (0, issue_labels_composition_root_1.createIssueLabelRepository)();
@@ -109586,7 +109590,8 @@ function bugbotBinding(execution, surface, authority) {
         repository: execution.repo,
         token: execution.tokens.token,
         ...(surface === 'github-workflow' && execution.ai?.getBugbotReviewConfiguration?.().shadowVerification
-            ? { shadow: { workspace: process.env.GITHUB_WORKSPACE, ...(authority ? { authority } : {}) } } : {}),
+            ? { shadow: { workspace: process.env.GITHUB_WORKSPACE } } : {}),
+        ...(surface === 'github-workflow' && authority ? { verificationAuthority: authority } : {}),
     };
 }
 function rememberBranchPorts(binding, pullRequests) {
@@ -109807,7 +109812,7 @@ function createPullRequestUseCaseCompositionRoot(binding) {
         findings: (0, agent_capability_composition_root_1.createFindingsQueryPort)(), scm: bugbot.scm, telemetry: bugbot.telemetry,
         catalog: new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase((0, agent_capability_composition_root_1.createLanguageQueryPort)()),
         shadowVerification: bugbot.shadowVerification,
-        verificationAuthority: binding.shadow?.authority, sourceFreshness: bugbot.sourceFreshness,
+        verificationAuthority: binding.verificationAuthority, sourceFreshness: bugbot.sourceFreshness,
     }), (0, lifecycle_capability_port_binding_1.bindActorAuthorization)((0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), binding));
 }
 

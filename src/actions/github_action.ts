@@ -157,7 +157,8 @@ export async function runGitHubAction(verificationAuthority?: BugbotVerification
             owner: execution.owner,
             repository: execution.repo,
             token,
-            ...(shadowSettings ? { shadow: { workspace: process.env.GITHUB_WORKSPACE, ...(verificationAuthority ? { authority: verificationAuthority } : {}) } } : {}),
+            ...(shadowSettings ? { shadow: { workspace: process.env.GITHUB_WORKSPACE } } : {}),
+            ...(verificationAuthority ? { verificationAuthority } : {}),
         }).reviewOnly(execution);
         if (results.some(result => !result.success)) {
             throw new Error('Bot-authored pull-request analysis did not complete.');

@@ -89,7 +89,7 @@ export function createBugbotCompositionRoot(binding: BugbotScmBinding): BugbotCo
       { owner: binding.owner, name: binding.repository }, binding.shadow.workspace, undefined,
       createGitHubBugbotCiReader({ owner: binding.owner, repo: binding.repository }, getOctokit(process.env.COPILOT_EVIDENCE_TOKEN?.trim() || binding.token).rest.actions),
     ) } : {}),
-    ...(binding.shadow?.authority?.mode === 'enforced' ? {
+    ...(binding.verificationAuthority?.mode === 'enforced' ? {
       sourceFreshness: bindPublicationSourceQuery(new GithubPublicationSourceRepository(createBranchClient()), binding),
     } : {}),
     rules,

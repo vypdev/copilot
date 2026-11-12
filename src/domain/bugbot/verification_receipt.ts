@@ -20,6 +20,7 @@ export interface BugbotVerificationPublication {
     readonly headSha: string;
     readonly baseSha: string;
     readonly coverage: 'complete';
+    /** All evidence required by the effective policy is complete. */
     readonly verification: 'complete';
     readonly publication: 'verified';
     readonly outcome: 'complete';

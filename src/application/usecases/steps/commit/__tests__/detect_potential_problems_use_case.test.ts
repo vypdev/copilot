@@ -499,6 +499,74 @@ describe("DetectPotentialProblemsUseCase", () => {
       expect(result.payload).toMatchObject({ bugbotShadowVerification: { publicationSimulation: { status: 'complete', individual: [] } } });
     });
 
+    it.each(['disabled', 'shadow'] as const)('attests the ordinary review under trusted %s rollback', async mode => {
+      testBaseSha = 'b'.repeat(40);
+      const rollback = { ...authority, mode, generation: 2, policyDigest: 'd'.repeat(64) } as const;
+      const verify = jest.fn().mockResolvedValue(technicalFailure);
+      const param = pr();
+      param.inputs!.repository = { id: 17 };
+      mockAskAgent.mockResolvedValue({ findings: [], resolved_findings: [] });
+
+      const [result] = await invokeUseCase(createUseCase(mode === 'shadow' ? { verify } : undefined, undefined, rollback), param);
+
+      expect(result.success).toBe(true);
+      expect(verify).not.toHaveBeenCalled();
+      expect(result.payload).toMatchObject({ bugbotVerificationPublication: {
+        authority: rollback, repositoryId: 17, pullNumber: 100, headSha: head, baseSha: testBaseSha,
+        coverage: 'complete', verification: 'complete', publication: 'verified', outcome: 'complete',
+        findingStates: { open: 0, reopened: 0, verificationRequired: 0, unknown: 0 },
+      } });
+    });
+
+    it('does not use a shadow refutation to attest an unobserved ordinary review', async () => {
+      testBaseSha = 'b'.repeat(40);
+      const rollback = { ...authority, mode: 'shadow', generation: 2 } as const;
+      const param = pr();
+      param.inputs!.repository = { id: 17 };
+      const verify = jest.fn().mockResolvedValue(refuted);
+      const [result] = await invokeUseCase(createUseCase({ verify }, undefined, rollback), param);
+
+      expect(verify).toHaveBeenCalledTimes(1);
+      expect(mockCreateReviewWithComments).toHaveBeenCalledTimes(1);
+      expect(result.payload).toMatchObject({ bugbotShadowVerification: { publicationSimulation: { individual: [] } } });
+      const publication = (result.payload as Record<string, unknown>).bugbotVerificationPublication;
+      // A fixture with no persisted finding must not attest a clean review.
+      expect(publication).toBeUndefined();
+    });
+
+    it('does not mint a rollback receipt or mutate SCM in dry-run', async () => {
+      testBaseSha = 'b'.repeat(40);
+      const rollback = { ...authority, mode: 'disabled', generation: 2 } as const;
+      const param = pr();
+      param.inputs!.repository = { id: 17 };
+      mockAskAgent.mockResolvedValue({ findings: [], resolved_findings: [] });
+      const [result] = await dryRun(createUseCase(undefined, undefined, rollback), param);
+
+      expect(result.payload).toMatchObject({ dryRun: true });
+      expect(result.payload).not.toHaveProperty('bugbotVerificationPublication');
+      expect(mockCreateReviewWithComments).not.toHaveBeenCalled();
+      expect(mockAddComment).not.toHaveBeenCalled();
+      expect(mockUpdateComment).not.toHaveBeenCalled();
+      expect(mockUpdatePullRequestReview).not.toHaveBeenCalled();
+    });
+
+    it('withholds a rollback receipt when the PR base changes at the same head', async () => {
+      testBaseSha = 'b'.repeat(40);
+      const rollback = { ...authority, mode: 'disabled', generation: 2 } as const;
+      const param = pr();
+      param.inputs!.repository = { id: 17 };
+      mockAskAgent.mockImplementation(async () => {
+        testBaseSha = 'c'.repeat(40);
+        return { findings: [], resolved_findings: [] };
+      });
+      const [result] = await invokeUseCase(createUseCase(undefined, undefined, rollback), param);
+
+      expect(result.payload).toMatchObject({ superseded: true });
+      expect(result.payload).not.toHaveProperty('bugbotVerificationPublication');
+      expect(mockAddComment).not.toHaveBeenCalled();
+      expect(mockCreateReviewWithComments).not.toHaveBeenCalled();
+    });
+
     it('preserves the previous publication when only the PR base changes after verification', async () => {
       testBaseSha = 'b'.repeat(40);
       const verify = jest.fn(async () => {

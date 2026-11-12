@@ -3726,7 +3726,19 @@ legacy gates. Shadow observes without changing the legacy approval path. In
 enforced mode require the current policy receipt even after a same-SHA
 configuration change. Rollback starts a new policy generation and requires a
 fresh authoritative review under the effective rollback policy. A prior
-positive receipt from an earlier generation cannot requalify automatically.
+positive receipt from an earlier generation leaves approval pending.
+
+The installed runtime carries trusted rollout authority separately from the
+optional verifier session. When it supplies a rollback policy in `disabled`
+or `shadow`, the canonical ordinary review can issue a current-generation
+receipt after complete coverage and reconciliation of the actual published
+finding state. The producer checks the pinned comparison before and after
+finding publication, and the receipt renderer binds that comparison to the
+native run and attempt. For rollback, `verification: complete` means that
+the checks required by the effective policy have completed. Shadow
+observations remain diagnostic and cannot supply the receipt or change its
+finding counts. An incomplete, superseded or dry-run review cannot issue one.
+The normal entry without trusted rollout authority uses legacy approval evidence.
 
 The current pilot arm uses the production read-only checkout and inspection
 capabilities. Both experimental arms use the same detection environment and
@@ -3760,6 +3772,21 @@ the closed evidence profile before a measured request.
 | bbe950-revision-C04 | Approval consumer | BBE950-R01 | Rollback requires fresh evidence and shadow results cannot authorize approval. |
 | bbe950-revision-C05 | Pilot qualification | BBE950-R02 | Current and both experimental detection calls retain equivalent read-only inspection; verifiers share the same tool policy. |
 | bbe950-revision-C06 | Pilot qualification | BBE950-R02 | The main evidence packet rejects probes, oracle data, later sources and unmatched CI. |
+
+The rollback path adds six producer and composition cases. Cover disabled
+and shadow authority with a complete ordinary review, a shadow refutation
+with an unobserved ordinary publication, dry-run with zero mutations,
+same-head base change, and authority reaching the ordinary PR route with
+the verifier disabled. The consumer test renders the current receipt and
+checks it against the prior generation. The packaged Action control runs
+the approval observer with a prior and a current receipt on the same
+comparison, with zero mutation requests. Use the existing pending and
+recommendation presentation. The production activation gate still applies.
+
+- [Producer tests](../src/application/usecases/steps/commit/__tests__/detect_potential_problems_use_case.test.ts)
+- [Composition tests](../src/infrastructure/composition/__tests__/main_run_route_composition_root.test.ts)
+- [Consumer tests](../src/data/repository/pull_request/__tests__/pull_request_approval_repository.test.ts)
+- [Packaged observer control](../quality/bugbot/evidence/issue-950/cursor-rollback-shadow/packaged-rollback.cjs)
 
 ### 15. Documentation
 

@@ -74,6 +74,7 @@ export async function runDetectPotentialProblemsWorkflow(
     let verification: BugbotVerificationProjection | undefined;
     const authority = dependencies.verificationAuthority;
     const enforced = authority?.mode === 'enforced';
+    const requiresReceipt = authority !== undefined;
     const dryRun = reviewContext.analysis.reviewConfiguration.publicationMode === 'dry-run';
     const unavailableShadow = (): BugbotShadowVerificationReport | undefined => dependencies.shadowVerification
         ? { resolvedModel: resolvedAgent.model, provider: resolvedAgent.provider, candidates: [], detectionUnavailable: true,
@@ -221,7 +222,8 @@ export async function runDetectPotentialProblemsWorkflow(
             if (!current) throw new ApplicationError('validation.evidence-unavailable', 'Bugbot could not bind the current Commit revision.');
             if (current !== expected) return await complete(supersededResult(expected), 'superseded');
         }
-        if ((enforced || context.reviewFramedSource) && await hasNewerBugbotRevision(context, dependencies.scm.context, 'before-publication', enforced)) {
+        if ((requiresReceipt || context.reviewFramedSource)
+            && await hasNewerBugbotRevision(context, dependencies.scm.context, 'before-publication', requiresReceipt)) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
         const resolutionErrors = await telemetry.measure('publication', () => applyDetectedFindings(
@@ -233,7 +235,7 @@ export async function runDetectPotentialProblemsWorkflow(
             catalog,
         ));
         if (await telemetry.measure('post-publication-freshness', () =>
-            hasNewerBugbotRevision(context, dependencies.scm.context, 'after-publication', enforced))) {
+            hasNewerBugbotRevision(context, dependencies.scm.context, 'after-publication', requiresReceipt))) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
         const presentation = await telemetry.measure('projection', () =>
@@ -526,8 +528,9 @@ function buildVerificationPublication(
     presentation: BugbotPresentationReport | undefined,
     errors: readonly Error[],
 ): BugbotVerificationPublication | undefined {
-    // Qualification and rollback authority come from trusted runtime admission.
-    if (authority.mode !== 'enforced' || verification?.status !== 'complete' || errors.length
+    // Rollback attests the canonical ordinary review. Shadow observations do
+    // not participate in approval evidence.
+    if ((authority.mode === 'enforced' && verification?.status !== 'complete') || errors.length
         || presentation?.projection.outcome !== 'complete' || presentation.pendingReviewUpdates > 0
         || presentation.statusCardOperation === 'failed') return undefined;
     const pr = context.canonicalPullRequest;
