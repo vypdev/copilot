@@ -58,6 +58,21 @@ function mockContext(overrides: Partial<BugbotContext> = {}): BugbotContext {
 }
 
 describe("buildBugbotPrompt", () => {
+    it('points to same-file assignments without copying their source or widening ownership', () => {
+        const assigned = { id: 'owned-3', ordinal: 3, total: 4, headSha: 'a'.repeat(40),
+            block: 'assigned source at line 149', fragmentCount: 1, files: ['src/navigation.ts'], ownsResolution: false };
+        const sibling = { ...assigned, id: 'owned-4', ordinal: 4, block: 'other source at line 282' };
+        const stale = { ...assigned, id: 'other-revision', ordinal: 2, headSha: 'b'.repeat(40) };
+        const unrelated = { ...assigned, id: 'unrelated', ordinal: 1, files: ['src/unrelated.ts'] };
+        const prompt = buildBugbotPrompt(mockExecution(), mockContext(), { partition: assigned, related: [assigned, sibling, stale, unrelated] });
+        expect(prompt).toContain('[{"file":"src/navigation.ts","partition":4}]');
+        expect(prompt).toContain('report only from this assignment');
+        expect(prompt).toContain(assigned.block);
+        expect(prompt).not.toContain(sibling.block);
+        expect(prompt).not.toContain(unrelated.files[0]);
+        expect(prompt).not.toContain('"partition":2');
+    });
+
     it.each([
         ['canonical Python', 'owned.py', '+raise', undefined, [], true],
         ['uppercase Python', 'owned.PY', '+raise', undefined, [], true],

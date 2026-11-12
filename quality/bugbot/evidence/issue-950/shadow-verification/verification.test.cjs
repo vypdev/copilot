@@ -727,3 +727,243 @@ test('verifies with the inherited configuration and classifies changed files aga
     assert.equal(result.citations[0].unchangedFile, false);
     assert.deepEqual(log.find(event => event.event === 'finding-result').writes, []);
 });
+
+const lifecycleRun = require('../../../../../src/infrastructure/bugbot/shadow/run.cjs').investigate;
+const { fixtureSource } = require('./source.cjs');
+const lifecycleResponse = (response, dependencies = []) => ({ ...response, dependencies });
+const fixtureDependency = { package: 'sqlite', revision: 'head', premise: 1 };
+
+function simulateLifecycle(respond, options = {}) {
+    let turn = 0;
+    return lifecycleRun(options.source ?? fixtureSource(lab, subject), subject, options.finding ?? finding, null,
+        async request => ({ threadId: 'lifecycle', fact: fact(), response: await respond(request, ++turn) }),
+        () => {}, undefined, { lifecycle: true, sharedRead: options.sharedRead });
+}
+
+test('lifecycle uses one alias across read and recall and records only canonical citations', async () => {
+    let alias;
+    const result = await simulateLifecycle((request, turn) => {
+        if (turn === 1) {
+            assert.match(request.prompt, /Use the short evidence reference/u);
+            assert(request.schema.properties.dependencies);
+            return lifecycleResponse(inspect(query('read', 'settings.ts')));
+        }
+        if (turn === 2) {
+            alias = supplied(request).receipt;
+            assert.match(alias, /^E[a-f0-9]{10}-1$/u);
+            return lifecycleResponse(inspect(query('recall', alias, { first: 1, last: 1 })));
+        }
+        assert.equal(supplied(request).receipt, alias);
+        return lifecycleResponse(finish(cite(supplied(request))));
+    });
+    assert.equal(result.answer.label, 'refuted');
+    assert.match(result.answer.citations[0].receipt, /^R[a-f0-9]{24}$/u);
+    assert.equal(result.actions[1].result.sources[0].alias, alias);
+    assert.equal(result.actions[1].result.sources[0].receipt, result.answer.citations[0].receipt);
+    assert(result.actions.every(action => action.delivered));
+    assert.equal(result.turnDurationsMs.length, 3);
+});
+
+test('lifecycle refuses an alias from another candidate even when the source range is identical', async () => {
+    let foreignAlias;
+    await simulateLifecycle((request, turn) => {
+        if (turn === 1) return lifecycleResponse(inspect(query('read', 'settings.ts')));
+        foreignAlias = supplied(request).receipt;
+        return lifecycleResponse(finish(cite(supplied(request), 1, 1)));
+    });
+    const result = await simulateLifecycle((request, turn) => {
+        if (turn === 1) return lifecycleResponse(inspect(query('read', 'settings.ts')));
+        assert.notEqual(supplied(request).receipt, foreignAlias);
+        return lifecycleResponse(finish({ receipt: foreignAlias, first: 1, last: 1 }));
+    }, { finding: { ...finding, id: 'another' } });
+    assert.equal(result.failure, 'citation-unavailable-or-out-of-range');
+    assert.equal(result.answer, null);
+});
+
+test('lifecycle repairs an exact range using a short alias in the same session', async () => {
+    let alias;
+    const result = await simulateLifecycle((request, turn) => {
+        if (turn === 1) return lifecycleResponse(inspect(query('read', 'ordered.py', { first: 1, last: 1 })));
+        assert.equal(request.threadId, 'lifecycle');
+        if (turn === 2) {
+            alias = supplied(request).receipt;
+            return lifecycleResponse(finish({ receipt: alias, first: 1, last: 2 }));
+        }
+        if (turn === 3) {
+            assert.equal(payload(request).closureIssues[0].receipt, alias);
+            return lifecycleResponse(inspect(query('read', 'ordered.py', { first: 1, last: 2 })));
+        }
+        return lifecycleResponse(finish(cite(supplied(request))));
+    });
+    assert.equal(result.answer.label, 'refuted');
+    assert.equal(result.closures[0].issues[0].issue, 'citation-outside-receipt-range');
+    assert.equal(result.answer.citations[0].last, 2);
+});
+
+test('lifecycle allows a local-code verdict after an incidental official lookup fails', async () => {
+    const result = await simulateLifecycle((request, turn) => {
+        if (turn === 1) {
+            assert.deepEqual(payload(request).requiredOfficial, []);
+            return lifecycleResponse(inspect(query('read', 'settings.ts'), query('official', 'sqlite', { query: 'key' })));
+        }
+        assert.equal(payload(request).observations[1].result.status, 'official-version-not-proven');
+        return lifecycleResponse({ ...finish(cite(supplied(request), 1, 1)), reason: 'The repository settings disable the SQLite feature.' });
+    }, { finding: { ...finding, detectorLocation: { path: 'sqlite_feature.ts', line: 1, end: 1 } } });
+    assert.equal(result.answer.label, 'refuted');
+    assert.deepEqual(result.closures, []);
+});
+
+test('lifecycle requires official evidence for an explicit material premise and names an unchanged gap', async () => {
+    let citation;
+    const result = await simulateLifecycle((request, turn) => {
+        if (turn === 1) return lifecycleResponse(inspect(query('read', 'settings.ts')));
+        if (turn === 2) citation = cite(supplied(request), 1, 1);
+        else assert.deepEqual(payload(request).closureIssues,
+            [{ issue: 'official-evidence-missing', package: 'sqlite', sha: head, premise: 1 }]);
+        return lifecycleResponse(finish(citation), [fixtureDependency]);
+    });
+    assert.equal(result.answer.label, 'inconclusive');
+    assert.match(result.answer.missing, /sqlite/u);
+    assert.equal(result.turns.length, 3);
+});
+
+test('lifecycle independently requires a dependency named in the hypothesis', async () => {
+    const result = await simulateLifecycle((request, turn) => {
+        if (turn === 1) {
+            assert.deepEqual(payload(request).requiredOfficial, ['sqlite']);
+            return lifecycleResponse(inspect(query('read', 'settings.ts')));
+        }
+        if (turn === 2) return lifecycleResponse(finish(cite(supplied(request), 1, 1)));
+        assert.equal(payload(request).closureIssues[0].package, 'sqlite');
+        return lifecycleResponse({ ...finish(), verdict: 'inconclusive', missing: 'The official version is unavailable.' });
+    }, { finding: { ...finding, hypothesis: 'SQLite requires the missing constraint.' } });
+    assert.equal(result.answer.label, 'inconclusive');
+});
+
+test('lifecycle uses a delivered alias as an authenticated runtime and official basis', async () => {
+    const file = 'lifecycle-official.c';
+    const content = 'A UNIQUE index can implement a candidate parent key.\n';
+    fs.writeFileSync(path.join(lab, file), content);
+    const source = fixtureSource(lab, subject, [{ package: 'sqlite', version: plan.localRuntime.sqlite, kind: 'source', file,
+        commit: '9'.repeat(40), url: 'https://sqlite.org/src/file/src/fkey.c', sha256: hash(content) }]);
+    const result = await simulateLifecycle((request, turn) => {
+        if (turn === 1) return lifecycleResponse(inspect(query('read', '.python-version')));
+        if (turn === 2) return lifecycleResponse(inspect(query('runtime', 'sqlite', { basis: supplied(request).receipt })));
+        if (turn === 3) return lifecycleResponse(inspect(query('official', 'sqlite', { basis: supplied(request).receipt, query: 'UNIQUE index' })));
+        assert.equal(supplied(request).kind, 'official');
+        assert.equal(supplied(request).versionScope, plan.localRuntime.scope);
+        return lifecycleResponse(finish(cite(supplied(request))), [fixtureDependency]);
+    }, { source });
+    assert.equal(result.answer.label, 'refuted');
+    assert.equal(result.answer.citations[0].version, plan.localRuntime.sqlite);
+    assert.match(result.answer.citations[0].basis, /^R/u);
+});
+
+test('a trusted dependency version requires the exact pinned blob, revision and delivered range', () => {
+    const item = { package: 'sample-tool', version: '1.2.3', sha: head, blob: lockfile,
+        path: 'pnpm-lock.yaml', first: 2, last: 3, scope: 'pinned lockfile resolution' };
+    const source = fixtureSource(lab, subject, []);
+    for (const [version, last, expected] of [
+        [item, 3, 'official-source-unavailable'],
+        [item, 2, 'official-version-not-proven'],
+        [{ ...item, sha: base }, 3, 'official-version-not-proven'],
+        [{ ...item, blob: operations }, 3, 'official-version-not-proven'],
+    ]) {
+        const broker = require('../../../../../src/infrastructure/bugbot/shadow/broker.cjs')
+            .makeBroker({ ...source, resolvedVersions: [version] }, subject, finding);
+        const { receipt } = broker.inspect(query('read', 'pnpm-lock.yaml', { first: 2, last })).sources[0];
+        const delivered = new Map([[receipt, [{ first: 2, last }]]]);
+        const lookup = query('official', item.package, { query: 'setting', basis: receipt });
+        assert.equal(broker.inspect(lookup, delivered).status, expected);
+        assert.equal(broker.inspect({ ...lookup, version: '2.0.0' }, delivered).status, 'official-version-not-proven');
+    }
+});
+
+test('a context restart keeps aliases and authenticates only ranges actually delivered', async () => {
+    let turn = 0, alias, pending;
+    const runtime = fixtureSource(lab, subject);
+    const result = await lifecycleRun(runtime, subject, finding, null, async request => {
+        turn++;
+        if (turn === 1) return { threadId: 'before', fact: fact(), response: lifecycleResponse(inspect(query('read', 'anchor.ts'))) };
+        if (turn === 2) {
+            alias = supplied(request).receipt;
+            return { threadId: 'before', fact: fact(counter(400_000)), response: lifecycleResponse(inspect(query('read', 'settings.ts'))) };
+        }
+        if (turn === 3) {
+            pending = supplied(request).receipt;
+            return { threadId: 'before', fact: { failure: 'provider-context-window' } };
+        }
+        if (turn === 4) {
+            assert.equal(request.threadId, undefined);
+            assert.deepEqual(payload(request).inventory.items.map(item => item.receipt), [alias, pending]);
+            return { threadId: 'after', fact: fact(), response: lifecycleResponse(inspect(query('recall', pending, { first: 1, last: 1 }))) };
+        }
+        assert.equal(request.threadId, 'after');
+        assert.equal(supplied(request).receipt, pending);
+        return { threadId: 'after', fact: fact(), response: lifecycleResponse(finish(cite(supplied(request)))) };
+    }, () => {}, undefined, { lifecycle: true });
+    assert.equal(result.contextRestarts, 1);
+    assert.deepEqual(result.actions.map(action => action.delivered), [true, false, true]);
+    assert.equal(result.answer.label, 'refuted');
+    assert.deepEqual(result.writes, []);
+});
+
+test('rejects a dependency attached to an invalid premise or an unauthorized revision', async () => {
+    for (const [dependency, expected] of [
+        [{ ...fixtureDependency, premise: 2 }, 'invalid-material-dependency-premise'],
+        [{ ...fixtureDependency, revision: 'base' }, 'material-dependency-base-denied'],
+        [{ ...fixtureDependency, package: '../untrusted' }, 'invalid-material-dependency'],
+    ]) {
+        const result = await simulateLifecycle((request, turn) => turn === 1
+            ? lifecycleResponse(inspect(query('read', 'settings.ts')))
+            : lifecycleResponse(finish(cite(supplied(request), 1, 1)), [dependency]));
+        assert.equal(result.failure, expected);
+        assert.equal(result.answer, null);
+    }
+});
+
+test('receipt inventory exposes only session aliases and preserves canonical delivery tracking', async () => {
+    let receipt;
+    const result = await simulateLifecycle((request, turn) => {
+        if (turn === 1) return lifecycleResponse(inspect(query('read', 'settings.ts')));
+        if (turn === 2) {
+            receipt = supplied(request).receipt;
+            return lifecycleResponse(inspect(query('receipts', 'receipts')));
+        }
+        const [item] = payload(request).observations[0].result.items;
+        assert.equal(item.receipt, receipt);
+        assert.equal(Object.hasOwn(item, 'lines'), false);
+        return lifecycleResponse(finish(cite(item, 1, 1)));
+    });
+    assert.equal(result.answer.label, 'refuted');
+    assert.equal(result.actions[1].result.status, 'inventory');
+});
+
+test('a verified official citation must support the exact declared premise and revision', () => {
+    const { missingMaterialOfficialEvidence, officialPackage } = require('../../../../../src/application/policies/bugbot_material_dependency_policy.cjs');
+    const citation = { kind: 'official', package: 'playwright', sha: head };
+    const declarations = [{ package: '@playwright/test', revision: 'head', premise: 2 }];
+    const given = { dependencies: declarations, required: ['playwright'], head, base, allowBase: true, normalize: officialPackage };
+    const answer = { label: 'refuted', premises: [{ citations: [citation] }, { citations: [] }], citations: [citation] };
+    assert.equal(missingMaterialOfficialEvidence({ ...given, answer })[0].premise, 2);
+    assert.deepEqual(missingMaterialOfficialEvidence({ ...given,
+        answer: { ...answer, premises: [{ citations: [] }, { citations: [citation] }] } }), []);
+    assert.equal(missingMaterialOfficialEvidence({ ...given, dependencies: [{ ...declarations[0], revision: 'base' }], answer })[0].sha, base);
+    assert.throws(() => missingMaterialOfficialEvidence({ ...given, answer, dependencies: [...declarations, ...declarations] }),
+        /duplicate-material-dependency/u);
+});
+
+test('evidence cache eviction never blocks an authorized read or truncates the returned source', () => {
+    const { createSourceCache } = require('../../../../../src/infrastructure/bugbot/shadow/source_cache.cjs');
+    const cache = createSourceCache();
+    const hits = [];
+    const read = (key, value) => cache(key, () => value, () => hits.push(key));
+    for (let key = 0; key < 128; key++) assert.equal(read(String(key), key), key);
+    assert.equal(read('0', 'would be a cache miss'), 0);
+    read('new', 'new value');
+    assert.equal(read('1', 'evicted'), 'evicted');
+    const largeSource = 'x'.repeat(16 * 1024 * 1024 + 1);
+    assert.equal(read('large', largeSource), largeSource);
+    assert.equal(read('large', 'read again after skipping retention'), 'read again after skipping retention');
+    assert.deepEqual(hits, ['0']);
+});

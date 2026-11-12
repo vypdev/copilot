@@ -1,3 +1,4 @@
+import type { AgentConfiguration } from '../../../../domain/agent';
 import type { BugbotShadowVerificationPort } from '../../../ports/bugbot_shadow_verification_ports';
 import { Result } from '../../../../data/model/result';
 import type { FindingsQueryPort } from '../../../ports/agent_findings_ports';
@@ -20,6 +21,7 @@ export class DetectPotentialProblemsUseCase implements ParamUseCase<BugbotReview
         private readonly telemetryPort?: BugbotTelemetryPort,
         private readonly catalogResolver?: MessageCatalogResolutionPort,
         private readonly shadowVerification?: BugbotShadowVerificationPort,
+        private readonly experimentalShadowProfile?: Readonly<AgentConfiguration>,
     ) {}
 
     async invoke(param: BugbotReviewOperationContext): Promise<Result[]> {
@@ -29,6 +31,7 @@ export class DetectPotentialProblemsUseCase implements ParamUseCase<BugbotReview
             telemetryPort: this.telemetryPort,
             catalogResolver: this.catalogResolver,
             shadowVerification: this.shadowVerification,
+            experimentalShadowProfile: this.experimentalShadowProfile,
         });
     }
 }

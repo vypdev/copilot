@@ -1,14 +1,14 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 
-function productionTypeScriptFiles(directory: string): string[] {
+function productionSourceFiles(directory: string): string[] {
     return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
         const path = join(directory, entry.name);
         if (entry.isDirectory()) {
-            return entry.name === '__tests__' ? [] : productionTypeScriptFiles(path);
+            return entry.name === '__tests__' ? [] : productionSourceFiles(path);
         }
-        return entry.name.endsWith('.ts')
-            && !entry.name.endsWith('.test.ts')
+        return (entry.name.endsWith('.ts') || entry.name.endsWith('.cjs'))
+            && !/\.test\.(?:ts|cjs)$/.test(entry.name)
             && !entry.name.endsWith('.d.ts')
             ? [resolve(path)]
             : [];
@@ -24,7 +24,7 @@ function relativeModuleSpecifiers(source: string): string[] {
     ].filter(specifier => specifier.startsWith('.'));
 }
 
-function resolveTypeScriptImport(file: string, specifier: string): string | undefined {
+function resolveSourceImport(file: string, specifier: string): string | undefined {
     const target = resolve(dirname(file), specifier);
     const candidates = specifier.endsWith('.json') || specifier.endsWith('.cjs')
         ? [target]
@@ -44,12 +44,12 @@ function isPurePath(sourceRoot: string, file: string): boolean {
 
 describe('production dependency boundaries', () => {
     const sourceRoot = resolve(__dirname, '../..');
-    const files = productionTypeScriptFiles(sourceRoot);
+    const files = productionSourceFiles(sourceRoot);
     const fileSet = new Set(files);
 
     it('resolves every relative production import', () => {
         const unresolved = files.flatMap(file => relativeModuleSpecifiers(readFileSync(file, 'utf8'))
-            .filter(specifier => resolveTypeScriptImport(file, specifier) === undefined)
+            .filter(specifier => resolveSourceImport(file, specifier) === undefined)
             .map(specifier => `${relative(sourceRoot, file)} -> ${specifier}`));
 
         expect(unresolved).toEqual([]);
@@ -59,7 +59,7 @@ describe('production dependency boundaries', () => {
         const violations = files
             .filter(file => isPurePath(sourceRoot, file))
             .flatMap(file => relativeModuleSpecifiers(readFileSync(file, 'utf8'))
-                .map(specifier => resolveTypeScriptImport(file, specifier))
+                .map(specifier => resolveSourceImport(file, specifier))
                 .filter((dependency): dependency is string => dependency !== undefined && fileSet.has(dependency))
                 .filter(dependency => !isPurePath(sourceRoot, dependency))
                 .map(dependency => `${relative(sourceRoot, file)} -> ${relative(sourceRoot, dependency)}`));
@@ -72,7 +72,7 @@ describe('production dependency boundaries', () => {
         const violations = files
             .filter(file => layerPath(sourceRoot, file) === 'application')
             .flatMap(file => relativeModuleSpecifiers(readFileSync(file, 'utf8'))
-                .map(specifier => resolveTypeScriptImport(file, specifier))
+                .map(specifier => resolveSourceImport(file, specifier))
                 .filter((dependency): dependency is string => dependency !== undefined && fileSet.has(dependency))
                 .filter(dependency => forbiddenOuterLayers.has(layerPath(sourceRoot, dependency)))
                 .map(dependency => `${relative(sourceRoot, file)} -> ${relative(sourceRoot, dependency)}`));

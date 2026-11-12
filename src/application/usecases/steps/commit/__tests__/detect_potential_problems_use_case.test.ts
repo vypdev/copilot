@@ -1,3 +1,5 @@
+import type { BugbotShadowVerificationPort } from '../../../../ports/bugbot_shadow_verification_ports';
+import type { AgentConfiguration } from '../../../../../domain/agent';
 import { PullRequestReviewOperationError } from '../../../../ports/pull_request_review_errors';
 /**
  * Unit tests for DetectPotentialProblemsUseCase (bugbot on push).
@@ -110,6 +112,7 @@ function invokeUseCase(useCase: DetectPotentialProblemsUseCase, source: Executio
 
 describe("DetectPotentialProblemsUseCase", () => {
   let useCase: DetectPotentialProblemsUseCase;
+  let createUseCase: (verifier?: BugbotShadowVerificationPort, profile?: AgentConfiguration) => DetectPotentialProblemsUseCase;
 
   beforeEach(() => {
     providerDraft = false;
@@ -239,7 +242,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       getPullRequestReviewCommentBody: jest.fn().mockResolvedValue(null),
       loadRules: rulesPort.loadRules,
     };
-    useCase = new DetectPotentialProblemsUseCase(
+    createUseCase = (verifier, profile) => new DetectPotentialProblemsUseCase(
       {
         query: (request: {
           configuration: unknown;
@@ -303,7 +306,10 @@ describe("DetectPotentialProblemsUseCase", () => {
       },
       { publish: mockPublishTelemetry },
       { resolve: (request) => mockResolveCatalog(request) },
+      verifier,
+      profile,
     );
+    useCase = createUseCase();
     mockListIssueComments.mockReset();
     mockAddComment.mockReset();
     mockUpdateComment.mockReset();
@@ -377,6 +383,120 @@ describe("DetectPotentialProblemsUseCase", () => {
     expect(mockResolveCatalog).not.toHaveBeenCalled();
     expect(mockAddComment).not.toHaveBeenCalled();
     expect(mockCreateReviewWithComments).not.toHaveBeenCalled();
+  });
+
+  describe('shadow finding lifecycle through the normal review entrypoint', () => {
+    const head = 'a'.repeat(40);
+    const profile: AgentConfiguration = { provider: 'codex', model: 'gpt-6.1-sol', effort: 'xhigh' };
+    const candidate = { id: 'candidate-first', title: 'Incorrect effective value', file: 'src/bar.ts', line: 5,
+      description: 'Detector reasoning must stay separate.', severity: 'high' };
+    const technicalFailure = { status: 'technical-failure', reason: 'fixture-failure' } as const;
+    const pr = (ai?: Ai) => baseParam({ ...(ai ? { ai } : {}), issueNumber: -1, isPullRequest: true, eventName: 'pull_request',
+      inputs: { eventName: 'pull_request', pull_request: {} },
+      pullRequest: { number: 100, head: 'feature/head', action: 'synchronize' } });
+
+    beforeEach(() => {
+      mockGetPullRequestHeadSha.mockResolvedValue(head);
+      mockGetChangedFiles.mockResolvedValue([{ filename: 'src/bar.ts', status: 'modified' }]);
+      mockGetFilesWithFirstDiffLine.mockResolvedValue([{ path: 'src/bar.ts', firstLine: 5 }]);
+      mockGetFilesWithDiffLocations.mockResolvedValue([{ path: 'src/bar.ts', locations: [{ line: 5, side: 'RIGHT' }] }]);
+      mockAskAgent.mockResolvedValue({ findings: [candidate], resolved_findings: [] });
+    });
+
+    const dryRun = (useCase: DetectPotentialProblemsUseCase, param = pr()) => param.ai.withBugbotReviewConfiguration(
+      { publicationMode: 'dry-run' }, () => invokeUseCase(useCase, param),
+    );
+
+    it('inherits the exact resolved detector configuration and carries the pinned hypothesis only', async () => {
+      const verify = jest.fn().mockResolvedValue(technicalFailure);
+      const [result] = await dryRun(createUseCase({ verify }));
+      const detector = mockAskAgent.mock.calls[0][0];
+      expect(verify).toHaveBeenCalledWith({
+        configuration: detector, review: expect.any(Object),
+        candidate: { id: candidate.id, hypothesis: candidate.title, repository: { owner: 'owner', name: 'repo' },
+          pullRequest: 100, headSha: head, allowBase: false, anchor: { path: candidate.file, line: 5, end: 5, side: 'RIGHT' } },
+      });
+      expect(result.payload).toMatchObject({ dryRun: true, bugbotShadowVerification: {
+        resolvedModel: detector.model, verifier: { model: detector.model }, review: { headSha: head },
+        detection: [{ partition: 1, partitionId: expect.any(String), wallMs: expect.any(Number), observed: 1, status: 'completed' }],
+        origins: [{ partition: 1, disposition: 'prepared', candidateId: candidate.id }],
+        candidates: [{ ordinaryPublication: 'individual', status: 'technical-failure' }],
+      } });
+    });
+
+    it('honors the explicitly supplied profile only in dry-run and records a substitution without fallback', async () => {
+      const verify = jest.fn().mockResolvedValue({ ...technicalFailure, reportedModel: 'unexpected-model' });
+      const [result] = await dryRun(createUseCase({ verify }, profile));
+      expect(verify).toHaveBeenCalledTimes(1);
+      expect(verify.mock.calls[0][0].configuration).toBe(profile);
+      expect(mockAskAgent.mock.calls[0][0].model).not.toBe(profile.model);
+      expect(result.payload).toMatchObject({ bugbotShadowVerification: {
+        verifier: { model: profile.model, effort: 'xhigh' },
+        candidates: [{ reason: 'reported-model-mismatch', reportedModel: 'unexpected-model' }],
+      } });
+      expect(mockCreateReviewWithComments).not.toHaveBeenCalled();
+      expect(mockAddComment).not.toHaveBeenCalled();
+      expect(mockUpdateComment).not.toHaveBeenCalled();
+      expect(mockUpdatePullRequestReview).not.toHaveBeenCalled();
+      expect(mockResolvePullRequestReviewThread).not.toHaveBeenCalled();
+    });
+
+    it('uses the inherited profile in native publication and leaves the original draft intact after failure', async () => {
+      await invokeUseCase(useCase, pr());
+      const baseline = mockCreateReviewWithComments.mock.calls[0][5];
+      mockCreateReviewWithComments.mockClear();
+      const verify = jest.fn().mockRejectedValue(new Error('fixture interrupted'));
+      const [result] = await invokeUseCase(createUseCase({ verify }, profile), pr());
+      expect(verify.mock.calls[0][0].configuration.model).toBe(mockAskAgent.mock.calls[0][0].model);
+      expect(mockCreateReviewWithComments.mock.calls[0][5]).toEqual(baseline);
+      expect(result.payload).toMatchObject({ bugbotShadowVerification: {
+        experimentalProfileRejected: true, candidates: [{ reason: 'verifier-unavailable' }],
+      } });
+    });
+
+    it('reports zero candidate sessions for a clean dry-run', async () => {
+      mockAskAgent.mockResolvedValue({ findings: [], resolved_findings: [] });
+      const verify = jest.fn();
+      const [result] = await dryRun(createUseCase({ verify }));
+      expect(verify).not.toHaveBeenCalled();
+      expect(result.payload).toMatchObject({ bugbotShadowVerification: {
+        origins: [], candidates: [], timing: { concurrency: 0, workflowWallMs: expect.any(Number) },
+      } });
+    });
+
+    it('joins duplicate origins and observes overflow with one review-local identity', async () => {
+      mockGetFilesWithDiffLocations.mockResolvedValue([{ path: 'src/bar.ts', locations: [{ line: 5, side: 'RIGHT' }, { line: 6, side: 'RIGHT' }] }]);
+      mockAskAgent.mockResolvedValue({ findings: [candidate, { ...candidate, id: 'copy' },
+        { ...candidate, id: 'discarded', title: 'Low confidence', confidence: 0.1 },
+        { ...candidate, id: 'extra', title: 'A separate premise', line: 6 }] });
+      const param = pr(new Ai('', 'fixture-model', false, [], false, 'low', 1));
+      const verify = jest.fn().mockResolvedValue(technicalFailure);
+      const [result] = await dryRun(createUseCase({ verify }), param);
+      expect(verify).toHaveBeenCalledTimes(2);
+      expect(verify.mock.calls[0][0].review).toBe(verify.mock.calls[1][0].review);
+      expect(result.payload).toMatchObject({ bugbotShadowVerification: {
+        origins: [
+          { origin: '1:1', disposition: 'prepared', candidateId: candidate.id },
+          { origin: '1:2', disposition: 'duplicate', candidateId: candidate.id },
+          { origin: '1:3', disposition: 'confidence' },
+          { origin: '1:4', disposition: 'prepared', candidateId: 'extra' },
+        ],
+        candidates: [{ id: candidate.id, ordinaryPublication: 'individual' }, { id: 'extra', ordinaryPublication: 'summary-only' }],
+      } });
+      expect(mockCreateReviewWithComments).not.toHaveBeenCalled();
+    });
+
+    it('marks the diagnostic superseded when the head changes during investigation', async () => {
+      const verify = jest.fn(async () => {
+        mockGetPullRequestHeadSha.mockResolvedValue('b'.repeat(40));
+        return technicalFailure;
+      });
+      const [result] = await dryRun(createUseCase({ verify }));
+      expect(result.payload).toMatchObject({ superseded: true, bugbotShadowVerification: {
+        superseded: true, candidates: [{ id: candidate.id }],
+      } });
+      expect(mockCreateReviewWithComments).not.toHaveBeenCalled();
+    });
   });
 
   it("returns empty results when OpenCode is not configured (no model)", async () => {

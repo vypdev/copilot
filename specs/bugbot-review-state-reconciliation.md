@@ -1990,3 +1990,12 @@ trusted policy binding. Its controlled-provider tests cover existing legacy
 readers, an unchanged SHA after enforcement, later incomplete and failed
 attempts, and rollback. Production policy composition and receipt emission
 remain gated by pilot qualification.
+
+### Finding lifecycle diagnostics
+
+The [#950 finding lifecycle](./bugbot-analysis-publication-and-autofix.md#finding-lifecycle-and-experimental-profiles)
+reports the ordinary publication decision alongside the validated shadow
+outcome for each prepared identity. Candidate traces, receipt aliases and
+experimental model profiles carry no authority to reopen, resolve or approve
+a historical finding. An inconclusive, canceled or failed observation leaves
+durable state to the ordinary reconciliation contract.

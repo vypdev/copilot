@@ -1,3 +1,4 @@
+import type { BugbotCandidateTrace } from './bugbot_candidate_trace';
 import type { FindingsQueryPort } from '../../../../ports/agent_findings_ports';
 import type { BugbotContext } from './types';
 import type { BugbotReviewOperationContext } from './bugbot_review_operation_context';
@@ -21,12 +22,13 @@ export function bugbotFramedContextDigest(operation: BugbotReviewOperationContex
 export async function analyzeBugbotFrames(operation: BugbotReviewOperationContext, context: BugbotContext,
     plan: BugbotFramedReviewPlan, dependencies: {
         readonly agent: FindingsQueryPort; readonly telemetry: BugbotReviewTelemetry;
+        readonly trace?: BugbotCandidateTrace;
         readonly isSourceCurrent: () => Promise<boolean>;
     }) {
     validateBugbotFramedReviewPlan(plan, operation.ignorePatterns);
     let promptBytes = 0;
     const inputs = plan.partitions.map(partition => {
-        const input = buildBugbotReviewInput(operation, context, { partition });
+        const input = buildBugbotReviewInput(operation, context, { partition, related: dependencies.trace ? plan.partitions : undefined });
         const size = bugbotFramedPromptBytes(buildBugbotPartitionQueryRequest(operation.analysis.agentConfiguration, input.prompt,
             { partitionId: partition.id, headSha: partition.headSha, framed: partition.framed }));
         enforceBugbotFramedBudget('promptBytes', size);
@@ -58,6 +60,7 @@ export async function analyzeBugbotFrames(operation: BugbotReviewOperationContex
         const responses = await runWithConcurrencyLimit(assigned.map(partition => async () => {
             const input = inputs[partition.ordinal - 1];
             dependencies.telemetry.beginPartition();
+            const startedAt = Date.now();
             try {
                 const response = await queryBugbotPartitionFindings(boundedAgent, operation.analysis.agentConfiguration,
                     input.prompt, targetLocale, { partitionId: partition.id, headSha: partition.headSha, framed: partition.framed },
@@ -74,9 +77,11 @@ export async function analyzeBugbotFrames(operation: BugbotReviewOperationContex
                 enforceBugbotFramedBudget('findings', findingCount);
                 retainedBytes += Buffer.byteLength(serialized);
                 enforceBugbotFramedBudget('resultBytes', retainedBytes);
+                dependencies.trace?.recordResponse(admitted, partition.ordinal, Date.now() - startedAt, partition.id);
                 dependencies.telemetry.endPartition(true);
                 return admitted;
             } catch (error) {
+                dependencies.trace?.recordResponse(undefined, partition.ordinal, Date.now() - startedAt, partition.id);
                 dependencies.telemetry.endPartition(false, { ordinal: partition.ordinal, category: 'framed-review' });
                 throw error;
             }

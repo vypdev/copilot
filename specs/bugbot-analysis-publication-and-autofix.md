@@ -2662,7 +2662,7 @@ records the durable state of a finding or native thread.
 | EV-04 | Preserve target ownership, freshness, retry safety and explicit historical transitions including human authority. |
 | EV-05 | Authorize evidence reads and probes, and preserve integrity across verifier turns and provider recovery. Reject forged or mismatched artifacts and prevent arbitrary execution or publication from the verifier. |
 | EV-06 | Keep GitHub results legible, localized, sanitized, auditable and compatible with durable history. |
-| EV-07 | Compare the GPT-6 Luna and GPT-6.1 Sol profiles with the same effective model in both sessions. Enable only an exact profile that independently meets every qualification gate and receives explicit maintainer approval. Make rollback and unresolved evidence explicit. |
+| EV-07 | Compare same-model profiles and explicit mixed-model shadow profiles on matched candidates. Ordinary reviews inherit the effective detector model. Enable only an exact profile that independently meets every qualification gate and receives explicit maintainer approval. Make rollback and unresolved evidence explicit. |
 
 The design reuses the existing Bugbot capability, authorizations, candidate
 admission, projection, protection rules and comment noise budget. Merge,
@@ -3139,10 +3139,9 @@ the claim involves a regression. For a material dependency claim the
 verifier establishes the effective version and the repository's actual
 configuration, then cites matching official documentation or source.
 Missing material evidence yields an inconclusive verdict with the
-specific gap. A concluding response after an official-source inquiry must
-cite a matching delivered official receipt for the investigated dependency
-and revision. A catalogued dependency named in the prepared claim, anchored filename or
-concluding answer also requires its source when no lookup preceded the answer. Technical failures and invalid receipts are recorded separately
+specific gap. A conclusion depending on an official-source inquiry must cite a matching
+delivered official receipt for the material dependency and revision. A material dependency named in the prepared claim requires its source even when
+no lookup preceded the answer. A filename or an incidental mention is a discovery hint. Technical failures and invalid receipts are recorded separately
 from verdicts. Token use is optional telemetry.
 
 The integrated pilot invokes the normal detector and application use case
@@ -3167,6 +3166,152 @@ records the shared composition, actual Codex invocations and zero attempted PR w
 | ev950-shadow-C03 | A verifier error or reported model substitution produces one technical failure, preserves the same native review drafts and never triggers a fallback. |
 | ev950-shadow-C04 | A real dry-run executes the usual detector on pinned PR revisions for Luna and Sol, checks actual prepared findings, and records zero attempted PR writes. |
 | ev950-shadow-C22 | The repository adapter refuses an unbound source before opening a provider session. A provider safety stop records a technical failure, keeps already collected evidence in the pilot ledger, and ends the verifier attempt without context recovery. |
+
+### Finding lifecycle and experimental profiles
+
+This amendment to #950 applies to the normal Bugbot review entrypoint when a
+trusted shadow verifier is supplied. It extends the normal-flow contract above
+and governs new diagnostics. The published pilot manifests and results retain
+their original scoring. Production activation requires the existing separate
+qualification and maintainer decision.
+
+```text
+Diff -> analyzer -> prepared hypothesis, anchor and revision
+                              |
+                 collector <-> independent verifier
+                              |
+                  validated outcome -> emitter
+                              |
+               diagnostic record + ordinary review decision
+```
+
+The analyzer considers its assigned diff. When another partition owns a
+fragment of the same file, the detector gets related coordinates to help it
+follow context. This is a pointer to pinned source. It grants no ownership of
+another partition's lines. The application records each observed candidate
+before deduplication and preparation, its origin and its disposition.
+Canonical prepared candidates carry the ID into verification, including
+active findings above the inline comment limit. A duplicate links to its
+retained identity where available. A dropped or unbound candidate has an
+explicit disposition and never becomes a clean verification.
+
+The collector is an application-controlled evidence service. It may obtain
+the anchor context and follows material questions from typed requests. It
+reads the pinned Git tree, including unchanged code, and the pinned base
+when the claim and authorization permit it. Sources can resolve actual
+callers, runtime paths, configuration and effective dependency versions.
+Material dependency behavior requires version-matched official evidence and
+the link to effective project settings. A filename or an auxiliary lookup
+alone does not prove that the verdict depends on the tool. Each query records
+its purpose, result and delivered ranges. A trusted source adapter can accredit a version against an exact tracked blob
+and delivered range. A review can reuse immutable source
+reads with the same authorized identity. Every delivery still receives a
+candidate-specific receipt. Version claims retain their original scope.
+Evaluator outcomes and expected verdicts are reserved to evaluation.
+
+The verifier starts independently with the prepared hypothesis, immutable
+anchor and pinned revision. It attempts to refute the claim. Each decisive
+step must be linked to a delivered receipt and its exact range. Short
+session-local aliases can be used for citations, version bases and recall.
+The application maps an alias to the immutable receipt, then checks its
+delivery, revision, provenance and range. Aliases are bound to the
+investigation, survive a provider context restart, and have no meaning in
+another investigation. Unknown or foreign references fail integrity checks.
+Material gaps may be completed in the same investigation or yield
+`inconclusive` with a concrete missing fact. Elapsed time and token usage
+are telemetry. Explicit cancellation still stops the investigation.
+
+The emitter is a deterministic application projection. It shows the ordinary
+publication decision beside the verifier's outcome. It cannot reinterpret
+the verdict, add claims or authorize approval. Shadow dry-run has no write
+authority on the evaluated PR. Cancellation, stale source and technical or
+integrity failure keep their existing status and cannot create a verified
+outcome. An inconclusive run cannot establish clean approval. Historical
+finding transitions remain subject to reconciliation and human decisions.
+
+#### Configuration and ownership
+
+The ordinary resolver snapshots model, provider and effort. The same effective
+configuration reaches detection and verification by default, including when
+the resolver supplies defaults. A trusted dry-run experiment may inject a
+distinct supported verifier profile. This is an operation-scoped input to
+shadow composition and adds no repository variable or setup field. Ordinary
+and native-publication runs use the inherited configuration. A reported model
+mismatch or an unavailable profile is recorded as a technical failure.
+There is no fallback. The experiment records the configuration and any
+provider-reported model for each stage.
+
+The application owns candidate identity, correlation, model selection and
+the emitter's projection. The evidence use case owns typed requests,
+delivery and closure. Git, official-source and provider adapters implement
+the read and session ports. They cannot mutate SCM or decide publication.
+The entrypoint uses the normal workflow and the existing freshness checks.
+No adapter may introduce a dependency from domain/application to a provider
+SDK or import an SCM writer into the verifier. Enforce these boundaries with
+the repository's architecture checks and a fail-on-call SCM integration
+control.
+
+#### Diagnostics and evaluation
+
+The shadow record exposes the pinned review, partition origins, disposition
+and anchor of each potential finding, selected and reported models, ordinary
+publication eligibility, accepted verdict or technical failure, and exact
+citations. It records evidence requests and results, repairs, turns, latency
+and usage when provided. Measure detector/prepare and verifier wall time
+separately. Shared detector effort belongs to the partition once. Keep
+per-finding work separate from review wall time and note concurrency. The
+diagnostic projection contains operational facts and cited claims. Store
+raw provider prompts and rejected bodies outside this projection.
+
+| Status | Example diagnostic text |
+|---|---|
+| In progress | Two candidates prepared. Verification is running on the pinned review. |
+| Complete | One confirmed and one refuted. Ordinary dry-run would publish two. |
+| Inconclusive | Runtime version could not be established. Remaining source and exact gap are recorded. |
+| Failed or canceled | Verification stopped. Previously collected evidence is retained for investigation. |
+| Superseded | A newer revision is available. Results apply to the earlier SHA. |
+
+The operator report belongs to the shadow result and uses the normal
+observability surface. It creates no new GitHub comments, approvals, checks
+or notifications on the evaluated PR. Show stable IDs and link to exact
+source ranges in the diagnostic artifact. The normal review UI, localization
+and durable review markers retain their own contracts.
+
+Preregister model comparisons on identical frozen candidates and equal
+evidence access, for example A to A versus A to B. Compare collector
+variants separately with the same profiles. Record missed detections and
+candidate counts separately in complete reviews. Measure correctness against
+independent evidence, material citation coverage, anchoring, invalid
+outcomes and latency. All existing full-review and independent 174-case
+detection gates apply to each exact profile proposed for qualification.
+
+#### Deterministic acceptance and delivery
+
+Run at least 16 distinct deterministic cases across the areas below. The
+normal-entrypoint, evidence runner and repository adapter suites listed in
+the capability catalog exercise these cases. Keep
+the existing repository coverage gates. Exercise every new policy branch
+and the actual review entrypoint with controlled providers and pinned
+sources. Record model measurements in a subsequent preregistered pilot.
+
+| Cases | Requirement and evidence |
+|---|---|
+| lifecycle-C01–C04 | Model and output policy. Default inheritance, an explicit mixed dry-run profile, rejection of mixed native publication, and provider mismatch without fallback. |
+| lifecycle-C05–C08 | Normal workflow. Zero findings, duplicate or discarded origin, evidence for a split file, and overflow candidates observed without modifying the ordinary result. |
+| lifecycle-C09–C12 | Evidence integrity. Stable aliases, foreign or unknown reference rejection, a shared read with isolated receipts, and different revision or scope without reuse. |
+| lifecycle-C13–C16 | Closure and emission. Material official-source gap, incidental mention, repair of an exact range in-session, and technical failure or supersession with no verified publication. |
+
+- [Normal entrypoint tests](../src/application/usecases/steps/commit/__tests__/detect_potential_problems_use_case.test.ts)
+- [Evidence runner controls](../quality/bugbot/evidence/issue-950/shadow-verification/verification.test.cjs)
+- [Pinned adapter tests](../src/infrastructure/bugbot/__tests__/shadow_verification_adapter.test.ts)
+- [Operator guide](../docs/bugbot/quality-observability.mdx#finding-lifecycle-in-a-shadow-diagnostic)
+
+Implement in this order. Fix the application and evidence contracts. Wire
+them into the ordinary entrypoint and presentation projection. Run the
+deterministic tests and validate this SDD, the reconciliation and framed
+contracts and the operator guide. Keep the PR in draft. Compare profiles
+only after those checks and keep the rollout disabled.
+
 
 ### Version proof, effective state, and premise citations in shadow
 
@@ -3242,8 +3387,8 @@ and citation controls are fixed by the broker and expose no new user inputs.
 | ev950-shadow-C07 | Distinguish missing sources from unmatched text and verify the exact official receipt. |
 | ev950-shadow-C08 | Continue the same session to add a previously omitted exact range. |
 | ev950-shadow-C09 | Continue a conclusive draft with missing official evidence and accept an explicit inconclusive verdict with the specific gap. |
-| ev950-shadow-C10 | Reject a conclusive draft naming a catalogued dependency without a matching receipt, even when no official lookup occurred. |
-| ev950-shadow-C11 | A dependency named in the anchored filename stays required even when the concluding draft omits it. |
+| ev950-shadow-C10 | Keep a conclusive draft open when a material dependency lacks a matching official receipt, even if no lookup occurred. |
+| ev950-shadow-C11 | An incidental dependency in an anchored filename or in the reason does not require unrelated official evidence. |
 | ev950-shadow-C12 | Replay the two prepared candidates with their original models and anchors. Independently check the observed verdict, evidence for the decisive operations and zero attempted writes. |
 
 The first seven cases are deterministic controls in

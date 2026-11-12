@@ -2289,6 +2289,11 @@
         "src/application/usecases/steps/commit/bugbot/bugbot_autofix_use_case.ts"
       ],
       "code": [
+        "src/application/policies/bugbot_evidence_reference_policy.cjs",
+        "src/application/policies/bugbot_material_dependency_policy.cjs",
+        "src/application/usecases/steps/commit/bugbot/bugbot_candidate_trace.ts",
+        "src/application/usecases/steps/commit/bugbot/investigate_bugbot_shadow.cjs",
+        "src/infrastructure/bugbot/shadow/source_cache.cjs",
         "src/infrastructure/bugbot/shadow_verification_adapter.ts",
         "src/infrastructure/bugbot/shadow/broker.cjs",
         "src/infrastructure/bugbot/shadow/run.cjs",

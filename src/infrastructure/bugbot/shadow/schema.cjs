@@ -8,7 +8,7 @@ const array = items => ({ type: 'array', items });
 const range = { receipt: text, first: { type: 'integer' }, last: { type: 'integer' } };
 const orderEvidence = array(object({ ...range, excerpt: text }));
 
-module.exports = object({
+const legacy = object({
     action: choice(['investigate', 'finish']),
     requests: array(object({
         op: choice(['search', 'paths', 'read', 'official', 'runtime', 'receipts', 'recall']),
@@ -31,3 +31,15 @@ module.exports = object({
     reason: nullable('string'),
     missing: nullable('string'),
 });
+
+const lifecycle = object({
+    ...legacy.properties,
+    dependencies: array(object({
+        package: text,
+        revision: choice(['head', 'base']),
+        premise: { type: 'integer' },
+    })),
+});
+
+module.exports = legacy;
+Object.defineProperty(module.exports, 'lifecycle', { value: lifecycle });

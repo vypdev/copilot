@@ -1,3 +1,4 @@
+import type { AgentConfiguration } from '../../../../../domain/agent';
 import type { BugbotFinding } from '../../../../../domain/bugbot/finding';
 import { canonicalGitObjectId } from '../../../../../domain/git_object_id';
 import type {
@@ -9,42 +10,101 @@ import type {
 import { runWithConcurrencyLimit } from '../../../../policies/bounded_concurrency_policy';
 import type { BugbotReviewOperationContext } from './bugbot_review_operation_context';
 import type { BugbotContext } from './types';
+import type { PreparedBugbotFindings } from './prepare_bugbot_findings';
+import type { BugbotCandidateTrace } from './bugbot_candidate_trace';
 
 type Observation = BugbotShadowResult & {
     readonly id: string;
     readonly candidate?: BugbotShadowCandidate;
+    readonly wallMs: number;
+    readonly ordinaryPublication: 'individual' | 'summary-only';
 };
 
 export interface BugbotShadowVerificationReport {
     readonly resolvedModel: string;
     readonly provider: string;
     readonly candidates: readonly Observation[];
+    readonly detectorEffort?: string;
+    readonly verifier?: { readonly model: string; readonly provider: string; readonly effort?: string };
+    readonly experimentalProfileRejected?: true;
+    readonly review?: {
+        readonly repository: { readonly owner: string; readonly name: string };
+        readonly pullRequest: number;
+        readonly headSha: string;
+        readonly baseSha?: string;
+    };
+    readonly detection?: ReturnType<BugbotCandidateTrace['detectionSnapshot']>;
+    readonly origins?: ReturnType<BugbotCandidateTrace['snapshot']>;
+    readonly timing?: {
+        readonly detectionAndPreparationMs: number;
+        readonly verificationWallMs: number;
+        readonly workflowWallMs?: number;
+        readonly concurrency: number;
+    };
     readonly detectionUnavailable?: true;
+    readonly superseded?: true;
 }
 
 export async function observeBugbotShadowVerification(
     operation: BugbotReviewOperationContext,
     context: BugbotContext,
-    findings: readonly BugbotFinding[],
+    prepared: PreparedBugbotFindings,
     port: BugbotShadowVerificationPort,
+    trace: BugbotCandidateTrace,
+    detectionAndPreparationMs: number,
+    experimentalProfile?: Readonly<AgentConfiguration>,
 ): Promise<BugbotShadowVerificationReport> {
-    const configuration = operation.analysis.agentConfiguration;
+    const detector = operation.analysis.agentConfiguration;
+    const dryRun = operation.analysis.reviewConfiguration.publicationMode === 'dry-run';
+    const configuration = dryRun && experimentalProfile ? experimentalProfile : detector;
+    const review = {};
+    const started = performance.now();
+    const findings = prepared.activeFindings ?? prepared.toPublish;
+    const individual = new Set(prepared.toPublish.map(finding => finding.id));
+    const concurrency = Math.min(2, findings.length);
     const tasks = findings.map(finding => async (): Promise<Observation> => {
         const candidate = pinCandidate(context, finding);
-        if (!candidate) return { id: finding.id, status: 'technical-failure', reason: 'unbound-candidate' };
-        try {
-            const observation = await port.verify({ candidate, configuration });
-            if (observation.reportedModel && observation.reportedModel !== configuration.model) {
-                return { id: finding.id, candidate, status: 'technical-failure', reason: 'reported-model-mismatch',
-                    reportedModel: observation.reportedModel };
-            }
-            return { ...observation, id: finding.id, candidate };
-        } catch {
-            return { id: finding.id, candidate, status: 'technical-failure', reason: 'verifier-unavailable' };
-        }
+        const started = performance.now();
+        const observation = candidate
+            ? await verifyCandidate(port, candidate, configuration, review)
+            : { status: 'technical-failure' as const, reason: 'unbound-candidate' };
+        return {
+            ...observation, id: finding.id, candidate,
+            wallMs: Math.round(performance.now() - started),
+            ordinaryPublication: individual.has(finding.id) ? 'individual' : 'summary-only',
+        };
     });
     const candidates = await runWithConcurrencyLimit(tasks, 2);
-    return { resolvedModel: configuration.model, provider: configuration.provider, candidates };
+    const pr = context.canonicalPullRequest;
+    return {
+        resolvedModel: detector.model, provider: detector.provider, detectorEffort: detector.effort,
+        verifier: { model: configuration.model, provider: configuration.provider, effort: configuration.effort },
+        ...(!dryRun && experimentalProfile ? { experimentalProfileRejected: true as const } : {}),
+        ...(pr ? { review: { repository: { owner: pr.baseRepository.owner, name: pr.baseRepository.name },
+            pullRequest: pr.number, headSha: pr.headSha, baseSha: pr.baseSha } } : {}),
+        detection: trace.detectionSnapshot(),
+        origins: trace.snapshot(),
+        timing: { detectionAndPreparationMs, verificationWallMs: Math.round(performance.now() - started), concurrency },
+        candidates,
+    };
+}
+
+async function verifyCandidate(
+    port: BugbotShadowVerificationPort,
+    candidate: BugbotShadowCandidate,
+    configuration: Readonly<AgentConfiguration>,
+    review: object,
+): Promise<BugbotShadowResult> {
+    try {
+        const result = await port.verify({ candidate, configuration, review });
+        if (result.reportedModel && result.reportedModel !== configuration.model) {
+            return { status: 'technical-failure', reason: 'reported-model-mismatch',
+                reportedModel: result.reportedModel, investigation: result.investigation };
+        }
+        return result;
+    } catch {
+        return { status: 'technical-failure', reason: 'verifier-unavailable' };
+    }
 }
 
 function pinCandidate(context: BugbotContext, finding: BugbotFinding): BugbotShadowCandidate | undefined {

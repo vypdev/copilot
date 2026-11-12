@@ -62,4 +62,4 @@ export declare function findExistingFindingMatch(existingByFindingId: ExistingBy
  * and final projection. Multiple reports of one uniquely matched durable finding
  * share one record; unmatched or ambiguous reports remain independent evidence.
  */
-export declare function retainExistingFindingIds(findings: readonly BugbotFinding[], existingByFindingId: ExistingByFindingId): BugbotFinding[];
+export declare function retainExistingFindingIds(findings: readonly BugbotFinding[], existingByFindingId: ExistingByFindingId, observe?: (finding: BugbotFinding, retained: BugbotFinding, duplicate: boolean) => void): BugbotFinding[];

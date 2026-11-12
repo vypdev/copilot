@@ -1,3 +1,5 @@
+import type { AgentConfiguration } from '../../../../domain/agent';
+import { BugbotCandidateTrace } from './bugbot/bugbot_candidate_trace';
 import type { BugbotShadowVerificationPort } from '../../../ports/bugbot_shadow_verification_ports';
 import { observeBugbotShadowVerification, type BugbotShadowVerificationReport } from './bugbot/observe_bugbot_shadow_verification';
 import { BugbotReviewCompletenessError } from '../../../../domain/bugbot/framed_review';
@@ -47,6 +49,7 @@ export interface DetectPotentialProblemsWorkflowDependencies {
     telemetryPort?: BugbotTelemetryPort;
     catalogResolver?: MessageCatalogResolutionPort;
     shadowVerification?: BugbotShadowVerificationPort;
+    experimentalShadowProfile?: Readonly<AgentConfiguration>;
 }
 
 const TASK_ID = 'DetectPotentialProblemsUseCase';
@@ -59,11 +62,15 @@ export async function runDetectPotentialProblemsWorkflow(
     const workflowStartedAt = Date.now();
     const telemetry = new BugbotReviewTelemetry(reviewContext);
     const resolvedAgent = reviewContext.analysis.agentConfiguration;
+    const trace = dependencies.shadowVerification ? new BugbotCandidateTrace() : undefined;
     let shadow: BugbotShadowVerificationReport | undefined;
     const unavailableShadow = (): BugbotShadowVerificationReport | undefined => dependencies.shadowVerification
-        ? { resolvedModel: resolvedAgent.model, provider: resolvedAgent.provider, candidates: [], detectionUnavailable: true }
+        ? { resolvedModel: resolvedAgent.model, provider: resolvedAgent.provider, candidates: [], detectionUnavailable: true,
+            detection: trace?.detectionSnapshot(), origins: trace?.snapshot() }
         : undefined;
-    const shadowPayload = () => shadow ? { bugbotShadowVerification: shadow } : {};
+    const shadowPayload = () => shadow ? { bugbotShadowVerification: {
+        ...shadow, ...(shadow.timing ? { timing: { ...shadow.timing, workflowWallMs: Date.now() - workflowStartedAt } } : {}),
+    } } : {};
     const publishTelemetry = async (outcome: BugbotReviewOutcome, category?: string) => {
         const snapshot = telemetry.snapshot(outcome, category);
         if (reviewContext.analysis.reviewConfiguration.telemetry) {
@@ -124,7 +131,9 @@ export async function runDetectPotentialProblemsWorkflow(
         if (isLoadedBugbotRevisionSuperseded(context, eventHeadSha)) {
             return await complete(supersededResult(context.prContext?.prHeadSha, eventHeadSha), 'superseded');
         }
-        const prepared = await analyzeBugbotRevision(reviewContext, context, { agent: dependencies.aiRepository, telemetry, isSourceCurrent: async () => !await hasNewerBugbotRevision(context, dependencies.scm.context) });
+        const detectionStartedAt = Date.now();
+        const prepared = await analyzeBugbotRevision(reviewContext, context, { agent: dependencies.aiRepository, telemetry, trace, isSourceCurrent: async () => !await hasNewerBugbotRevision(context, dependencies.scm.context) });
+        const detectionAndPreparationMs = Date.now() - detectionStartedAt;
         if (prepared === undefined) {
             shadow = unavailableShadow();
             const analysisError = new ApplicationError('agent.failed', 'The configured agent returned no potential-problem analysis.');
@@ -150,11 +159,13 @@ export async function runDetectPotentialProblemsWorkflow(
             hasNewerBugbotRevision(context, dependencies.scm.context))) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
-        if (dependencies.shadowVerification) {
+        if (dependencies.shadowVerification && trace) {
             shadow = await observeBugbotShadowVerification(
-                reviewContext, context, prepared.activeFindings ?? prepared.toPublish, dependencies.shadowVerification,
+                reviewContext, context, prepared, dependencies.shadowVerification, trace,
+                detectionAndPreparationMs, dependencies.experimentalShadowProfile,
             );
             if (shadow.candidates.length > 0 && await hasNewerBugbotRevision(context, dependencies.scm.context)) {
+                shadow = { ...shadow, superseded: true };
                 return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
             }
         }

@@ -1,3 +1,4 @@
+import type { BugbotCandidateTrace } from './bugbot_candidate_trace';
 import { bugbotFramedSourceMatchesPullRequest } from '../../../../policies/bugbot_framed_identity_policy';
 import { randomBytes } from 'node:crypto';
 import { buildBugbotFramedReviewPlan } from '../../../../policies/bugbot_framed_review_policy';
@@ -8,7 +9,7 @@ import { reconcileResolvedFindingIds } from '../../../../policies/bugbot_reconci
 import { logInfo } from '../../../../ports/logging_ports';
 import { applyCommentLimit } from './limit_comments';
 import type { BugbotContext } from './types';
-import { findExistingFindingInfo, retainExistingFindingIds } from '../../../../../domain/bugbot/finding';
+import { findExistingFindingInfo, retainExistingFindingIds, type BugbotFinding } from '../../../../../domain/bugbot/finding';
 import { buildBugbotReviewInput } from './build_bugbot_prompt';
 import { prepareBugbotFindings } from './prepare_bugbot_findings';
 import type { PreparedBugbotFindings } from './prepare_bugbot_findings';
@@ -24,6 +25,7 @@ import {
 import { ApplicationError } from '../../../../errors/application_error';
 
 export interface AnalyzeBugbotRevisionDependencies {
+    readonly trace?: BugbotCandidateTrace;
     readonly isSourceCurrent?: () => Promise<boolean>;
     readonly agent: FindingsQueryPort;
     readonly telemetry: BugbotReviewTelemetry;
@@ -77,9 +79,10 @@ export async function analyzeBugbotRevision(
             logInfo(`Bugbot reviewer planned ${partitions.length} bounded diff ${partitions.length === 1 ? 'partition' : 'partitions'} with maximum concurrency 2.`);
             const responses = await runWithConcurrencyLimit(
                 partitions.map((partition) => async () => {
-                    const { prompt, requiresCandidateVerification } = buildBugbotReviewInput(execution, context, { partition });
+                    const { prompt, requiresCandidateVerification } = buildBugbotReviewInput(execution, context, { partition, related: dependencies.trace ? partitions : undefined });
                     dependencies.telemetry.observePrompt(prompt);
                     dependencies.telemetry.beginPartition();
+                    const partitionStartedAt = Date.now();
                     try {
                         const response = await queryBugbotPartitionFindings(
                             dependencies.agent,
@@ -89,10 +92,12 @@ export async function analyzeBugbotRevision(
                             { partitionId: partition.id, headSha: partition.headSha },
                             { enabled: requiresCandidateVerification, observePrompt: value => dependencies.telemetry.observePrompt(value), observeResponse: value => dependencies.telemetry.observeResponse(value) },
                         );
+                        dependencies.trace?.recordResponse(response, partition.ordinal, Date.now() - partitionStartedAt, partition.id);
                         dependencies.telemetry.endPartition(true);
                         logInfo(`Bugbot reviewer completed partition ${partition.ordinal}/${partition.total}.`);
                         return response;
                     } catch (error) {
+                        dependencies.trace?.recordResponse(undefined, partition.ordinal, Date.now() - partitionStartedAt, partition.id);
                         dependencies.telemetry.endPartition(false, {
                             ordinal: partition.ordinal,
                             category: partitionFailureCategory(error),
@@ -114,18 +119,21 @@ export async function analyzeBugbotRevision(
                 targetLocale,
                 { enabled: requiresCandidateVerification, observePrompt: value => dependencies.telemetry.observePrompt(value), observeResponse: value => dependencies.telemetry.observeResponse(value) },
             );
+            dependencies.trace?.recordResponse(response, null, Date.now() - startedAt);
             return response;
         });
     logInfo(`Bugbot reviewer completed in ${Date.now() - startedAt}ms.`);
+    dependencies.trace?.startPreparation();
     const raw = await dependencies.telemetry.measure('normalization', () => prepareBugbotFindings(
         agentResponse,
         execution.ignorePatterns,
         execution.analysis.minimumSeverity,
         execution.analysis.commentLimit,
         partitions.length > 0 ? MAX_AGGREGATE_PARTITION_FINDINGS : undefined,
+        dependencies.trace,
     ));
     if (!raw) return undefined;
-    const prepared = suppressDismissedFindings(execution, context, raw);
+    const prepared = suppressDismissedFindings(execution, context, raw, dependencies.trace);
     return {
         ...prepared,
         resolvedFindingIds: filterEligibleBugbotResolutionIds(
@@ -149,13 +157,22 @@ function suppressDismissedFindings(
     execution: BugbotReviewOperationContext,
     context: BugbotContext,
     prepared: PreparedBugbotFindings,
+    trace?: BugbotCandidateTrace,
 ): PreparedBugbotFindings {
+    const origins = trace ? new Map<BugbotFinding, BugbotFinding>() : undefined;
     const activeFindings = retainExistingFindingIds(
         prepared.activeFindings ?? prepared.toPublish,
         context.existingByFindingId,
+        trace ? (original, retained, duplicate) => {
+            if (duplicate) trace.classify(original, 'duplicate', retained);
+            else origins?.set(retained, original);
+        } : undefined,
     ).filter((finding) => {
         const existing = findExistingFindingInfo(context.existingByFindingId, finding);
-        return !hasProtectedBugbotDismissal(existing);
+        const keep = !hasProtectedBugbotDismissal(existing);
+        const original = origins?.get(finding);
+        if (original) trace?.classify(original, keep ? 'prepared' : 'human-dismissed', finding);
+        return keep;
     });
     const limited = applyCommentLimit(activeFindings, execution.analysis.commentLimit);
     return { ...prepared, ...limited, activeFindings };

@@ -71560,7 +71560,7 @@ async function analyzeBugbotFrames(operation, context, plan, dependencies) {
     (0, bugbot_framed_review_policy_1.validateBugbotFramedReviewPlan)(plan, operation.ignorePatterns);
     let promptBytes = 0;
     const inputs = plan.partitions.map(partition => {
-        const input = (0, build_bugbot_prompt_1.buildBugbotReviewInput)(operation, context, { partition });
+        const input = (0, build_bugbot_prompt_1.buildBugbotReviewInput)(operation, context, { partition, related: dependencies.trace ? plan.partitions : undefined });
         const size = (0, bugbot_framed_prompt_policy_1.bugbotFramedPromptBytes)((0, query_bugbot_findings_1.buildBugbotPartitionQueryRequest)(operation.analysis.agentConfiguration, input.prompt, { partitionId: partition.id, headSha: partition.headSha, framed: partition.framed }));
         (0, framed_review_1.enforceBugbotFramedBudget)('promptBytes', size);
         promptBytes += size;
@@ -71594,6 +71594,7 @@ async function analyzeBugbotFrames(operation, context, plan, dependencies) {
         const responses = await (0, bounded_concurrency_policy_1.runWithConcurrencyLimit)(assigned.map(partition => async () => {
             const input = inputs[partition.ordinal - 1];
             dependencies.telemetry.beginPartition();
+            const startedAt = Date.now();
             try {
                 const response = await (0, query_bugbot_findings_1.queryBugbotPartitionFindings)(boundedAgent, operation.analysis.agentConfiguration, input.prompt, targetLocale, { partitionId: partition.id, headSha: partition.headSha, framed: partition.framed }, { enabled: input.requiresCandidateVerification });
                 const serialized = JSON.stringify(response);
@@ -71610,10 +71611,12 @@ async function analyzeBugbotFrames(operation, context, plan, dependencies) {
                 (0, framed_review_1.enforceBugbotFramedBudget)('findings', findingCount);
                 retainedBytes += Buffer.byteLength(serialized);
                 (0, framed_review_1.enforceBugbotFramedBudget)('resultBytes', retainedBytes);
+                dependencies.trace?.recordResponse(admitted, partition.ordinal, Date.now() - startedAt, partition.id);
                 dependencies.telemetry.endPartition(true);
                 return admitted;
             }
             catch (error) {
+                dependencies.trace?.recordResponse(undefined, partition.ordinal, Date.now() - startedAt, partition.id);
                 dependencies.telemetry.endPartition(false, { ordinal: partition.ordinal, category: 'framed-review' });
                 throw error;
             }
@@ -71693,16 +71696,19 @@ async function analyzeBugbotRevision(execution, context, dependencies) {
                     dependencies.telemetry.observePartitionPlan(partitions.length, context.reviewDiffFragmentCount ?? partitions.reduce((sum, partition) => sum + partition.fragmentCount, 0), context.reviewDiffFileCount ?? new Set(partitions.flatMap((partition) => partition.files)).size);
                     (0, logging_ports_1.logInfo)(`Bugbot reviewer planned ${partitions.length} bounded diff ${partitions.length === 1 ? 'partition' : 'partitions'} with maximum concurrency 2.`);
                     const responses = await (0, bounded_concurrency_policy_1.runWithConcurrencyLimit)(partitions.map((partition) => async () => {
-                        const { prompt, requiresCandidateVerification } = (0, build_bugbot_prompt_1.buildBugbotReviewInput)(execution, context, { partition });
+                        const { prompt, requiresCandidateVerification } = (0, build_bugbot_prompt_1.buildBugbotReviewInput)(execution, context, { partition, related: dependencies.trace ? partitions : undefined });
                         dependencies.telemetry.observePrompt(prompt);
                         dependencies.telemetry.beginPartition();
+                        const partitionStartedAt = Date.now();
                         try {
                             const response = await (0, query_bugbot_findings_1.queryBugbotPartitionFindings)(dependencies.agent, execution.analysis.agentConfiguration, prompt, targetLocale, { partitionId: partition.id, headSha: partition.headSha }, { enabled: requiresCandidateVerification, observePrompt: value => dependencies.telemetry.observePrompt(value), observeResponse: value => dependencies.telemetry.observeResponse(value) });
+                            dependencies.trace?.recordResponse(response, partition.ordinal, Date.now() - partitionStartedAt, partition.id);
                             dependencies.telemetry.endPartition(true);
                             (0, logging_ports_1.logInfo)(`Bugbot reviewer completed partition ${partition.ordinal}/${partition.total}.`);
                             return response;
                         }
                         catch (error) {
+                            dependencies.trace?.recordResponse(undefined, partition.ordinal, Date.now() - partitionStartedAt, partition.id);
                             dependencies.telemetry.endPartition(false, {
                                 ordinal: partition.ordinal,
                                 category: partitionFailureCategory(error),
@@ -71716,13 +71722,15 @@ async function analyzeBugbotRevision(execution, context, dependencies) {
                     const { prompt, requiresCandidateVerification } = (0, build_bugbot_prompt_1.buildBugbotReviewInput)(execution, context);
                     dependencies.telemetry.observePrompt(prompt);
                     const response = await (0, query_bugbot_findings_1.queryBugbotFindings)(dependencies.agent, execution.analysis.agentConfiguration, prompt, targetLocale, { enabled: requiresCandidateVerification, observePrompt: value => dependencies.telemetry.observePrompt(value), observeResponse: value => dependencies.telemetry.observeResponse(value) });
+                    dependencies.trace?.recordResponse(response, null, Date.now() - startedAt);
                     return response;
                 });
     (0, logging_ports_1.logInfo)(`Bugbot reviewer completed in ${Date.now() - startedAt}ms.`);
-    const raw = await dependencies.telemetry.measure('normalization', () => (0, prepare_bugbot_findings_1.prepareBugbotFindings)(agentResponse, execution.ignorePatterns, execution.analysis.minimumSeverity, execution.analysis.commentLimit, partitions.length > 0 ? bugbot_partition_aggregation_1.MAX_AGGREGATE_PARTITION_FINDINGS : undefined));
+    dependencies.trace?.startPreparation();
+    const raw = await dependencies.telemetry.measure('normalization', () => (0, prepare_bugbot_findings_1.prepareBugbotFindings)(agentResponse, execution.ignorePatterns, execution.analysis.minimumSeverity, execution.analysis.commentLimit, partitions.length > 0 ? bugbot_partition_aggregation_1.MAX_AGGREGATE_PARTITION_FINDINGS : undefined, dependencies.trace));
     if (!raw)
         return undefined;
-    const prepared = suppressDismissedFindings(execution, context, raw);
+    const prepared = suppressDismissedFindings(execution, context, raw, dependencies.trace);
     return {
         ...prepared,
         resolvedFindingIds: (0, bugbot_resolution_eligibility_policy_1.filterEligibleBugbotResolutionIds)((0, bugbot_reconciliation_policy_1.reconcileResolvedFindingIds)(prepared.resolvedFindingIds, context.existingByFindingId, prepared.activeFindings ?? prepared.toPublish), context.eligibleResolutionIds, context.existingByFindingId),
@@ -71733,10 +71741,20 @@ function partitionFailureCategory(error) {
         return error.code;
     return error instanceof Error ? error.name : 'unknown';
 }
-function suppressDismissedFindings(execution, context, prepared) {
-    const activeFindings = (0, finding_1.retainExistingFindingIds)(prepared.activeFindings ?? prepared.toPublish, context.existingByFindingId).filter((finding) => {
+function suppressDismissedFindings(execution, context, prepared, trace) {
+    const origins = trace ? new Map() : undefined;
+    const activeFindings = (0, finding_1.retainExistingFindingIds)(prepared.activeFindings ?? prepared.toPublish, context.existingByFindingId, trace ? (original, retained, duplicate) => {
+        if (duplicate)
+            trace.classify(original, 'duplicate', retained);
+        else
+            origins?.set(retained, original);
+    } : undefined).filter((finding) => {
         const existing = (0, finding_1.findExistingFindingInfo)(context.existingByFindingId, finding);
-        return !(0, bugbot_resolution_eligibility_policy_1.hasProtectedBugbotDismissal)(existing);
+        const keep = !(0, bugbot_resolution_eligibility_policy_1.hasProtectedBugbotDismissal)(existing);
+        const original = origins?.get(finding);
+        if (original)
+            trace?.classify(original, keep ? 'prepared' : 'human-dismissed', finding);
+        return keep;
     });
     const limited = (0, limit_comments_1.applyCommentLimit)(activeFindings, execution.analysis.commentLimit);
     return { ...prepared, ...limited, activeFindings };
@@ -72022,6 +72040,78 @@ function newResultFailure(semanticError) {
         errors: [semanticError],
     });
 }
+
+
+/***/ }),
+
+/***/ 17302:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BugbotCandidateTrace = void 0;
+/** Review-local lineage. Neither the provider nor a candidate's supplied ID can choose an origin. */
+class BugbotCandidateTrace {
+    constructor() {
+        this.origins = new Map();
+        this.detection = new Map();
+        this.normalized = new WeakMap();
+        this.ordered = [];
+    }
+    recordResponse(response, partition, wallMs, partitionId) {
+        const findings = response !== null && typeof response === 'object' && 'findings' in response
+            && Array.isArray(response.findings) ? response.findings : undefined;
+        this.detection.set(partition ?? 0, { partition, partitionId, wallMs,
+            status: findings ? 'completed' : 'failed', observed: findings?.length ?? 0 });
+        if (!findings)
+            return;
+        this.origins.set(partition ?? 0, Array.from(findings, (_finding, index) => ({
+            row: { origin: `${partition ?? 'review'}:${index + 1}`, partition,
+                position: index + 1, disposition: 'response-limit' },
+        })));
+    }
+    entries() {
+        return [...this.origins].sort(([left], [right]) => left - right).flatMap(([, entries]) => entries);
+    }
+    startPreparation() {
+        this.ordered = this.entries();
+    }
+    normalize(index, finding) {
+        const entry = this.ordered[index];
+        if (!entry)
+            return;
+        entry.row.disposition = 'invalid';
+        if (!finding)
+            return;
+        if (finding.file && finding.line) {
+            entry.row.anchor = { path: finding.file, line: finding.line, end: finding.endLine ?? finding.line };
+        }
+        this.normalized.set(finding, entry);
+    }
+    classify(finding, disposition, retained) {
+        const entry = this.normalized.get(finding);
+        if (!entry)
+            return;
+        entry.row.disposition = disposition;
+        entry.retained = retained;
+        if (disposition === 'prepared')
+            entry.row.candidateId = (retained ?? finding).id;
+    }
+    detectionSnapshot() {
+        return [...this.detection.values()].sort((left, right) => (left.partition ?? 0) - (right.partition ?? 0));
+    }
+    snapshot() {
+        if (!this.ordered.length) {
+            return this.entries().map(({ row }) => ({ ...row, disposition: 'analysis-incomplete' }));
+        }
+        return this.ordered.map(({ row, retained }) => {
+            const retainedId = retained && this.normalized.get(retained)?.row.candidateId;
+            return { ...row, ...(retainedId ? { candidateId: retainedId } : {}) };
+        });
+    }
+}
+exports.BugbotCandidateTrace = BugbotCandidateTrace;
 
 
 /***/ }),
@@ -73072,6 +73162,7 @@ function buildBugbotFixPrompt(param, context, targetFindingIds, userComment, ver
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildBugbotPrompt = buildBugbotPrompt;
 exports.buildBugbotReviewInput = buildBugbotReviewInput;
+exports.relatedBugbotPartitionPointers = relatedBugbotPartitionPointers;
 const prompts_1 = __nccwpck_require__(69518);
 const review_configuration_1 = __nccwpck_require__(3994);
 const file_ignore_policy_1 = __nccwpck_require__(20542);
@@ -73129,7 +73220,7 @@ function buildBugbotReviewInput(param, context, assignment) {
         reviewConversationBlock: context.reviewConversationBlock,
         rulesBlock: context.reviewRulesBlock,
         effortBlock: `**Review effort:** ${resolvedEffort}. ${resolvedEffort === 'high' ? 'Perform deeper cross-file and adversarial analysis.' : resolvedEffort === 'low' ? 'Prioritize high-signal changed-code defects and avoid speculative breadth.' : 'Balance depth/latency; limit false positives.'}`,
-        partitionBlock: assignment ? buildPartitionInstruction(assignment.partition) : undefined,
+        partitionBlock: assignment ? buildPartitionInstruction(assignment.partition, assignment.related) : undefined,
         outputContractBlock: assignment ? buildPartitionOutputContract(assignment.partition) : undefined,
         targetLocale: context.prContext && context.canonicalPullRequest
             ? param.locale.pullRequest
@@ -73203,7 +73294,24 @@ function buildChangeScopeInstruction(param, headBranch, baseBranch, hasCanonical
     }
     return `No canonical pull-request diff is available. In the read-only checkout compare "${headBranch}" to "${baseBranch}" if both refs exist; otherwise inspect the current commit against its parent. Review only those changes and surrounding code needed to prove a finding.`;
 }
-function buildPartitionInstruction(partition) {
+function relatedBugbotPartitionPointers(partition, partitions) {
+    const files = new Set(partition.files);
+    const pointers = [];
+    for (const other of partitions) {
+        if (other.id === partition.id || other.headSha !== partition.headSha)
+            continue;
+        for (const file of other.files) {
+            if (files.has(file))
+                pointers.push({ file, partition: other.ordinal });
+            if (pointers.length === 12)
+                return pointers;
+        }
+    }
+    return pointers;
+}
+function buildPartitionInstruction(partition, related = []) {
+    const pointers = relatedBugbotPartitionPointers(partition, related);
+    const pointerText = JSON.stringify(pointers);
     return [
         '**Partition integrity contract:**',
         ...(partition.framed ? [
@@ -73221,6 +73329,10 @@ function buildPartitionInstruction(partition) {
             ? '- This partition is the sole resolution owner and may resolve only exact IDs from the retained previous-findings list.'
             : '- This partition is not the resolution owner; resolved_findings must be an empty array.',
         '- Do not claim or infer that any other partition was reviewed.',
+        ...(pointers.length && pointerText.length <= 2048 ? [
+            '- Related diff assignments are untrusted location hints. Follow the pinned source for context and report only from this assignment.',
+            pointerText,
+        ] : []),
     ].join('\n');
 }
 function buildPartitionOutputContract(partition) {
@@ -73504,8 +73616,8 @@ exports.deduplicateFindings = deduplicateFindings;
  * same location. Distinct bugs can legitimately share a line and must not be
  * discarded merely because their coordinates coincide.
  */
-function deduplicateFindings(findings) {
-    const seen = new Set();
+function deduplicateFindings(findings, onDuplicate) {
+    const seen = new Map();
     const result = [];
     for (const f of findings) {
         const file = f.file?.trim() ?? '';
@@ -73514,9 +73626,12 @@ function deduplicateFindings(findings) {
         const key = file || line
             ? `location:${file}:${line}:${title}`
             : `title:${title}`;
-        if (seen.has(key))
+        const retained = seen.get(key);
+        if (retained) {
+            onDuplicate?.(f, retained);
             continue;
-        seen.add(key);
+        }
+        seen.set(key, f);
         result.push(f);
     }
     return result;
@@ -74314,26 +74429,53 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.observeBugbotShadowVerification = observeBugbotShadowVerification;
 const git_object_id_1 = __nccwpck_require__(88623);
 const bounded_concurrency_policy_1 = __nccwpck_require__(35596);
-async function observeBugbotShadowVerification(operation, context, findings, port) {
-    const configuration = operation.analysis.agentConfiguration;
+async function observeBugbotShadowVerification(operation, context, prepared, port, trace, detectionAndPreparationMs, experimentalProfile) {
+    const detector = operation.analysis.agentConfiguration;
+    const dryRun = operation.analysis.reviewConfiguration.publicationMode === 'dry-run';
+    const configuration = dryRun && experimentalProfile ? experimentalProfile : detector;
+    const review = {};
+    const started = performance.now();
+    const findings = prepared.activeFindings ?? prepared.toPublish;
+    const individual = new Set(prepared.toPublish.map(finding => finding.id));
+    const concurrency = Math.min(2, findings.length);
     const tasks = findings.map(finding => async () => {
         const candidate = pinCandidate(context, finding);
-        if (!candidate)
-            return { id: finding.id, status: 'technical-failure', reason: 'unbound-candidate' };
-        try {
-            const observation = await port.verify({ candidate, configuration });
-            if (observation.reportedModel && observation.reportedModel !== configuration.model) {
-                return { id: finding.id, candidate, status: 'technical-failure', reason: 'reported-model-mismatch',
-                    reportedModel: observation.reportedModel };
-            }
-            return { ...observation, id: finding.id, candidate };
-        }
-        catch {
-            return { id: finding.id, candidate, status: 'technical-failure', reason: 'verifier-unavailable' };
-        }
+        const started = performance.now();
+        const observation = candidate
+            ? await verifyCandidate(port, candidate, configuration, review)
+            : { status: 'technical-failure', reason: 'unbound-candidate' };
+        return {
+            ...observation, id: finding.id, candidate,
+            wallMs: Math.round(performance.now() - started),
+            ordinaryPublication: individual.has(finding.id) ? 'individual' : 'summary-only',
+        };
     });
     const candidates = await (0, bounded_concurrency_policy_1.runWithConcurrencyLimit)(tasks, 2);
-    return { resolvedModel: configuration.model, provider: configuration.provider, candidates };
+    const pr = context.canonicalPullRequest;
+    return {
+        resolvedModel: detector.model, provider: detector.provider, detectorEffort: detector.effort,
+        verifier: { model: configuration.model, provider: configuration.provider, effort: configuration.effort },
+        ...(!dryRun && experimentalProfile ? { experimentalProfileRejected: true } : {}),
+        ...(pr ? { review: { repository: { owner: pr.baseRepository.owner, name: pr.baseRepository.name },
+                pullRequest: pr.number, headSha: pr.headSha, baseSha: pr.baseSha } } : {}),
+        detection: trace.detectionSnapshot(),
+        origins: trace.snapshot(),
+        timing: { detectionAndPreparationMs, verificationWallMs: Math.round(performance.now() - started), concurrency },
+        candidates,
+    };
+}
+async function verifyCandidate(port, candidate, configuration, review) {
+    try {
+        const result = await port.verify({ candidate, configuration, review });
+        if (result.reportedModel && result.reportedModel !== configuration.model) {
+            return { status: 'technical-failure', reason: 'reported-model-mismatch',
+                reportedModel: result.reportedModel, investigation: result.investigation };
+        }
+        return result;
+    }
+    catch {
+        return { status: 'technical-failure', reason: 'verifier-unavailable' };
+    }
 }
 function pinCandidate(context, finding) {
     const pr = context.canonicalPullRequest;
@@ -74434,12 +74576,12 @@ function resolveFindingPathForPr(findingFile, prFiles) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.prepareBugbotFindings = prepareBugbotFindings;
 const prepare_bugbot_findings_policy_1 = __nccwpck_require__(3496);
-function prepareBugbotFindings(response, ignorePatterns, minSeverityValue, maxComments, maxAgentFindings) {
-    const normalized = (0, prepare_bugbot_findings_policy_1.normalizeBugbotResponse)(response, maxAgentFindings);
+function prepareBugbotFindings(response, ignorePatterns, minSeverityValue, maxComments, maxAgentFindings, trace) {
+    const normalized = (0, prepare_bugbot_findings_policy_1.normalizeBugbotResponse)(response, maxAgentFindings, trace);
     return normalized === undefined
         ? undefined
         : {
-            ...(0, prepare_bugbot_findings_policy_1.prepareFindings)(normalized.findings, ignorePatterns, minSeverityValue, maxComments),
+            ...(0, prepare_bugbot_findings_policy_1.prepareFindings)(normalized.findings, ignorePatterns, minSeverityValue, maxComments, trace),
             resolvedFindingIds: normalized.resolvedFindingIds,
             resolvedFindingResolutions: normalized.resolvedFindingResolutions,
         };
@@ -74469,7 +74611,7 @@ const sensitive_text_1 = __nccwpck_require__(47122);
 exports.MAX_AGENT_FINDINGS = 500;
 exports.MAX_AGENT_RESOLVED_FINDINGS = 500;
 exports.MIN_AGENT_FINDING_CONFIDENCE = 0.70;
-function normalizeBugbotResponse(response, maxFindings = exports.MAX_AGENT_FINDINGS) {
+function normalizeBugbotResponse(response, maxFindings = exports.MAX_AGENT_FINDINGS, trace) {
     if (response == null || typeof response !== 'object')
         return undefined;
     const payload = response;
@@ -74477,18 +74619,24 @@ function normalizeBugbotResponse(response, maxFindings = exports.MAX_AGENT_FINDI
         return undefined;
     const resolvedFindingResolutions = normalizeResolvedFindings(payload.resolved_findings);
     return {
-        findings: normalizeFindings(payload.findings, maxFindings),
+        findings: normalizeFindings(payload.findings, maxFindings, trace),
         resolvedFindingIds: new Set(resolvedFindingResolutions.keys()),
         resolvedFindingResolutions,
     };
 }
-function prepareFindings(findings, ignorePatterns, minSeverityValue, maxComments) {
+function prepareFindings(findings, ignorePatterns, minSeverityValue, maxComments, trace) {
     const minSeverity = (0, severity_1.normalizeMinSeverity)(minSeverityValue);
-    const filteredFindings = (0, deduplicate_findings_1.deduplicateFindings)(findings
-        .filter(finding => finding.file == null || String(finding.file).trim() === '' || (0, path_validation_1.isSafeFindingFilePath)(finding.file))
-        .filter(finding => !(0, file_ignore_policy_1.fileMatchesIgnorePatterns)(finding.file, ignorePatterns))
-        .filter(finding => finding.confidence === undefined || finding.confidence >= exports.MIN_AGENT_FINDING_CONFIDENCE)
-        .filter(finding => (0, severity_1.meetsMinSeverity)(finding.severity, minSeverity)))
+    const eligible = findings.filter(finding => {
+        const rejection = finding.file != null && String(finding.file).trim() !== '' && !(0, path_validation_1.isSafeFindingFilePath)(finding.file) ? 'unsafe-path'
+            : (0, file_ignore_policy_1.fileMatchesIgnorePatterns)(finding.file, ignorePatterns) ? 'ignored'
+                : finding.confidence !== undefined && !(finding.confidence >= exports.MIN_AGENT_FINDING_CONFIDENCE) ? 'confidence'
+                    : !(0, severity_1.meetsMinSeverity)(finding.severity, minSeverity) ? 'severity'
+                        : undefined;
+        if (rejection)
+            trace?.classify(finding, rejection);
+        return rejection === undefined;
+    });
+    const filteredFindings = (0, deduplicate_findings_1.deduplicateFindings)(eligible, (finding, retained) => trace?.classify(finding, 'duplicate', retained))
         .map((finding, index) => ({ finding, index }))
         .sort((left, right) => (0, severity_1.severityLevel)(right.finding.severity) - (0, severity_1.severityLevel)(left.finding.severity)
         || (right.finding.confidence ?? 0) - (left.finding.confidence ?? 0)
@@ -74496,11 +74644,12 @@ function prepareFindings(findings, ignorePatterns, minSeverityValue, maxComments
         .map(({ finding }) => finding);
     return { ...(0, limit_comments_1.applyCommentLimit)(filteredFindings, maxComments), activeFindings: filteredFindings };
 }
-function normalizeFindings(findings, maxFindings) {
+function normalizeFindings(findings, maxFindings, trace) {
     const boundedMaximum = Number.isSafeInteger(maxFindings) && maxFindings > 0
         ? maxFindings
         : exports.MAX_AGENT_FINDINGS;
-    return findings.slice(0, boundedMaximum).flatMap(value => {
+    return findings.slice(0, boundedMaximum).flatMap((value, index) => {
+        trace?.normalize(index);
         if (!isRecord(value))
             return [];
         const normalizedId = typeof value.id === 'string' ? (0, bugbot_finding_marker_policy_1.normalizeFindingIdForMarker)(value.id) : null;
@@ -74534,26 +74683,26 @@ function normalizeFindings(findings, maxFindings) {
         const symbol = boundedText(value.symbol, 500) || undefined;
         const codeSnippet = boundedText(value.codeSnippet, 2000) || undefined;
         const suggestedCode = normalizeSuggestedCode(value.suggestedCode);
-        return normalizedId == null
-            ? []
-            : [{
-                    id: normalizedId,
-                    title,
-                    description,
-                    ...(file ? { file } : {}),
-                    ...(line ? { line } : {}),
-                    ...(endLine ? { endLine } : {}),
-                    ...(severity ? { severity } : {}),
-                    ...(confidence !== undefined ? { confidence } : {}),
-                    ...(category ? { category } : {}),
-                    ...(evidence ? { evidence } : {}),
-                    ...(suggestion ? { suggestion } : {}),
-                    ...(symbol ? { symbol } : {}),
-                    ...(codeSnippet ? { codeSnippet } : {}),
-                    ...(suggestedCode ? { suggestedCode } : {}),
-                    fingerprint: (0, finding_identity_1.buildFindingFingerprint)({ file, line, title, description, suggestion }),
-                    semanticFingerprint: (0, finding_identity_1.buildSemanticFindingFingerprint)({ category, symbol, codeSnippet, title }),
-                }];
+        const finding = {
+            id: normalizedId,
+            title,
+            description,
+            ...(file ? { file } : {}),
+            ...(line ? { line } : {}),
+            ...(endLine ? { endLine } : {}),
+            ...(severity ? { severity } : {}),
+            ...(confidence !== undefined ? { confidence } : {}),
+            ...(category ? { category } : {}),
+            ...(evidence ? { evidence } : {}),
+            ...(suggestion ? { suggestion } : {}),
+            ...(symbol ? { symbol } : {}),
+            ...(codeSnippet ? { codeSnippet } : {}),
+            ...(suggestedCode ? { suggestedCode } : {}),
+            fingerprint: (0, finding_identity_1.buildFindingFingerprint)({ file, line, title, description, suggestion }),
+            semanticFingerprint: (0, finding_identity_1.buildSemanticFindingFingerprint)({ category, symbol, codeSnippet, title }),
+        };
+        trace?.normalize(index, finding);
+        return [finding];
     });
 }
 function normalizeSuggestedCode(value) {
@@ -76147,12 +76296,13 @@ exports.DetectPotentialProblemsUseCase = void 0;
 const detect_potential_problems_workflow_1 = __nccwpck_require__(37033);
 /** Application boundary for detecting, publishing and resolving Bugbot findings. */
 class DetectPotentialProblemsUseCase {
-    constructor(aiRepository, scm, telemetryPort, catalogResolver, shadowVerification) {
+    constructor(aiRepository, scm, telemetryPort, catalogResolver, shadowVerification, experimentalShadowProfile) {
         this.aiRepository = aiRepository;
         this.scm = scm;
         this.telemetryPort = telemetryPort;
         this.catalogResolver = catalogResolver;
         this.shadowVerification = shadowVerification;
+        this.experimentalShadowProfile = experimentalShadowProfile;
         this.taskId = 'DetectPotentialProblemsUseCase';
     }
     async invoke(param) {
@@ -76162,6 +76312,7 @@ class DetectPotentialProblemsUseCase {
             telemetryPort: this.telemetryPort,
             catalogResolver: this.catalogResolver,
             shadowVerification: this.shadowVerification,
+            experimentalShadowProfile: this.experimentalShadowProfile,
         });
     }
 }
@@ -76177,6 +76328,7 @@ exports.DetectPotentialProblemsUseCase = DetectPotentialProblemsUseCase;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runDetectPotentialProblemsWorkflow = runDetectPotentialProblemsWorkflow;
+const bugbot_candidate_trace_1 = __nccwpck_require__(17302);
 const observe_bugbot_shadow_verification_1 = __nccwpck_require__(93991);
 const framed_review_1 = __nccwpck_require__(43750);
 const agent_1 = __nccwpck_require__(79937);
@@ -76202,11 +76354,15 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
     const workflowStartedAt = Date.now();
     const telemetry = new bugbot_review_telemetry_1.BugbotReviewTelemetry(reviewContext);
     const resolvedAgent = reviewContext.analysis.agentConfiguration;
+    const trace = dependencies.shadowVerification ? new bugbot_candidate_trace_1.BugbotCandidateTrace() : undefined;
     let shadow;
     const unavailableShadow = () => dependencies.shadowVerification
-        ? { resolvedModel: resolvedAgent.model, provider: resolvedAgent.provider, candidates: [], detectionUnavailable: true }
+        ? { resolvedModel: resolvedAgent.model, provider: resolvedAgent.provider, candidates: [], detectionUnavailable: true,
+            detection: trace?.detectionSnapshot(), origins: trace?.snapshot() }
         : undefined;
-    const shadowPayload = () => shadow ? { bugbotShadowVerification: shadow } : {};
+    const shadowPayload = () => shadow ? { bugbotShadowVerification: {
+            ...shadow, ...(shadow.timing ? { timing: { ...shadow.timing, workflowWallMs: Date.now() - workflowStartedAt } } : {}),
+        } } : {};
     const publishTelemetry = async (outcome, category) => {
         const snapshot = telemetry.snapshot(outcome, category);
         if (reviewContext.analysis.reviewConfiguration.telemetry) {
@@ -76264,7 +76420,9 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
         if ((0, bugbot_review_freshness_1.isLoadedBugbotRevisionSuperseded)(context, eventHeadSha)) {
             return await complete(supersededResult(context.prContext?.prHeadSha, eventHeadSha), 'superseded');
         }
-        const prepared = await (0, analyze_bugbot_revision_use_case_1.analyzeBugbotRevision)(reviewContext, context, { agent: dependencies.aiRepository, telemetry, isSourceCurrent: async () => !await (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context) });
+        const detectionStartedAt = Date.now();
+        const prepared = await (0, analyze_bugbot_revision_use_case_1.analyzeBugbotRevision)(reviewContext, context, { agent: dependencies.aiRepository, telemetry, trace, isSourceCurrent: async () => !await (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context) });
+        const detectionAndPreparationMs = Date.now() - detectionStartedAt;
         if (prepared === undefined) {
             shadow = unavailableShadow();
             const analysisError = new application_error_1.ApplicationError('agent.failed', 'The configured agent returned no potential-problem analysis.');
@@ -76290,9 +76448,10 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
         if (await telemetry.measure('freshness', () => (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context))) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
-        if (dependencies.shadowVerification) {
-            shadow = await (0, observe_bugbot_shadow_verification_1.observeBugbotShadowVerification)(reviewContext, context, prepared.activeFindings ?? prepared.toPublish, dependencies.shadowVerification);
+        if (dependencies.shadowVerification && trace) {
+            shadow = await (0, observe_bugbot_shadow_verification_1.observeBugbotShadowVerification)(reviewContext, context, prepared, dependencies.shadowVerification, trace, detectionAndPreparationMs, dependencies.experimentalShadowProfile);
             if (shadow.candidates.length > 0 && await (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context)) {
+                shadow = { ...shadow, superseded: true };
                 return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
             }
         }
@@ -99704,8 +99863,8 @@ function findExistingFindingMatch(existingByFindingId, finding) {
  * and final projection. Multiple reports of one uniquely matched durable finding
  * share one record; unmatched or ambiguous reports remain independent evidence.
  */
-function retainExistingFindingIds(findings, existingByFindingId) {
-    const retained = new Set();
+function retainExistingFindingIds(findings, existingByFindingId, observe) {
+    const retained = new Map();
     const durableIds = new Set(Object.keys(existingByFindingId));
     // Reserve the whole input up front so a generated ID cannot take another
     // report's ID, including one that occurs later in the response.
@@ -99724,13 +99883,20 @@ function retainExistingFindingIds(findings, existingByFindingId) {
                 reservedIds.add(id);
             }
             emittedIds.add(id);
-            return [id === finding.id ? finding : { ...finding, id }];
+            const result = id === finding.id ? finding : { ...finding, id };
+            observe?.(finding, result, false);
+            return [result];
         }
-        if (retained.has(match.id))
+        const previous = retained.get(match.id);
+        if (previous) {
+            observe?.(finding, previous, true);
             return [];
-        retained.add(match.id);
+        }
+        retained.set(match.id, finding);
         emittedIds.add(match.id);
-        return [finding.id === match.id ? finding : { ...finding, id: match.id }];
+        const result = finding.id === match.id ? finding : { ...finding, id: match.id };
+        observe?.(finding, result, false);
+        return [result];
     });
 }
 function uniqueFindingMatch(matches) {
@@ -109069,8 +109235,8 @@ function createBugbotCompositionRoot(binding) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.composeBugbotReview = composeBugbotReview;
 const detect_potential_problems_use_case_1 = __nccwpck_require__(6287);
-function composeBugbotReview({ findings, scm, telemetry, catalog, shadowVerification }) {
-    return new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, scm, telemetry, catalog, shadowVerification);
+function composeBugbotReview({ findings, scm, telemetry, catalog, shadowVerification, experimentalShadowProfile }) {
+    return new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, scm, telemetry, catalog, shadowVerification, experimentalShadowProfile);
 }
 
 

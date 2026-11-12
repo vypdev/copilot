@@ -745,3 +745,12 @@ required verdict or an invalid receipt preserves the last verified result and
 prevents finding or resolution writes.
 
 [Bugbot repository evidence verification](./bugbot-analysis-publication-and-autofix.md#bugbot-repository-evidence-verification)
+
+## Partition evidence handoff for #950
+
+The [finding lifecycle](./bugbot-analysis-publication-and-autofix.md#finding-lifecycle-and-experimental-profiles)
+can expose the location of fragments of the same file assigned to another
+partition. Each partition still owns only its own eligible changed lines.
+Candidate origins remain attributable before global grouping. Preparation
+fixes the final anchor and the shadow verifier may follow related code on the
+pinned revision without moving it.

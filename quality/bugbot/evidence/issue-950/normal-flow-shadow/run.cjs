@@ -145,11 +145,15 @@ async function run(lab, number, destination, manifestPath = path.join(__dirname,
             inputs: { pull_request: { head: { sha: subject.head, repo: { owner: { login: owner } } } } },
         });
         const selected = operation.analysis.agentConfiguration;
+        const experimentalShadowProfile = subject.experimentalVerifier
+            ? buildAgentTasksFromValues({ 'reviewer-model': subject.experimentalVerifier.model,
+                'reviewer-effort': subject.experimentalVerifier.effort }).findings : undefined;
+        const verifierConfiguration = experimentalShadowProfile ?? selected;
         const planner = new AgentExecutionPlanner();
-        const attest = invocation => {
-            assert.equal(invocation.model, selected.model);
-            assert.equal(invocation.reasoningEffort, selected.effort);
-            assert.equal(invocation.modelProvider, selected.modelProvider);
+        const attest = (invocation, expected = selected) => {
+            assert.equal(invocation.model, expected.model);
+            assert.equal(invocation.reasoningEffort, expected.effort);
+            assert.equal(invocation.modelProvider, expected.modelProvider);
             assert.equal(invocation.sandbox, 'read-only');
         };
         const standardDetector = createFindingsQueryPort({ cli: new AgentCliClient({
@@ -174,7 +178,7 @@ async function run(lab, number, destination, manifestPath = path.join(__dirname,
             touchesSensitivePath: reviewed.some(change => /(^|\/)(auth|security|permissions?|credentials?|secrets?|payments?|migrations?)(\/|\.|$)/i.test(change.filename)),
         });
         log({ event: 'plan', subject, files: diff.changes.length, comparisonSha256: hash(JSON.stringify(diff)),
-            configuration: selected, workflowInputs, reviewEffort, effectiveDepth, subjectsSha256: hash(manifest),
+            configuration: selected, verifierConfiguration, workflowInputs, reviewEffort, effectiveDepth, subjectsSha256: hash(manifest),
             cli: execFileSync('codex', ['--version'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim(),
             implementation: git(root, 'rev-parse', 'HEAD').trim(), runnerSha256: hash(fs.readFileSync(__filename)) });
         let invocation = 0;
@@ -198,28 +202,28 @@ async function run(lab, number, destination, manifestPath = path.join(__dirname,
             }
         } };
         let active = 0, peak = 0, firstVerifier, lastVerifier;
+        const adapter = createPinnedBugbotShadowVerifier({ log,
+            resolveSource: input => input.repository.owner === owner && input.repository.name === name
+                && input.headSha === subject.head && input.baseSha === subject.base
+                ? { repo: source, officialDirectory: lab, catalog: official,
+                    ...(workflowInputs && { localRuntime: shadowPlan.localRuntime }) } : undefined,
+            transport: turn => ask({ ...turn,
+                onInvocation(flags) {
+                    attest(flags, verifierConfiguration);
+                    log({ event: 'verifier-invocation', id: turn.candidateId, invocation: flags,
+                        continuation: Boolean(turn.threadId), atMs: sinceStart() });
+                },
+            }),
+        });
         const verifier = {
             async verify(request) {
                 const { candidate, configuration } = request;
-                assert.deepEqual(configuration, selected);
+                assert.deepEqual(configuration, verifierConfiguration);
                 const startedAt = sinceStart();
                 firstVerifier ??= startedAt;
                 active += 1;
                 peak = Math.max(peak, active);
                 log({ event: 'verifier-start', id: candidate.id, active, atMs: startedAt });
-                const adapter = createPinnedBugbotShadowVerifier({ log,
-                    resolveSource: input => input.repository.owner === owner && input.repository.name === name
-                        && input.headSha === subject.head && input.baseSha === subject.base
-                        ? { repo: source, officialDirectory: lab, catalog: official,
-                            ...(workflowInputs && { localRuntime: shadowPlan.localRuntime }) } : undefined,
-                    transport: turn => ask({ ...turn,
-                        onInvocation(flags) {
-                            attest(flags);
-                            log({ event: 'verifier-invocation', id: candidate.id, invocation: flags,
-                                continuation: Boolean(turn.threadId), atMs: sinceStart() });
-                        },
-                    }),
-                });
                 try {
                     return await adapter.verify({ ...request, signal: withCancellation(request.signal) });
                 } finally {
@@ -230,7 +234,7 @@ async function run(lab, number, destination, manifestPath = path.join(__dirname,
                 }
             },
         };
-        const results = await composeBugbotReview({ findings: detector, scm, shadowVerification: verifier }).invoke(operation);
+        const results = await composeBugbotReview({ findings: detector, scm, shadowVerification: verifier, experimentalShadowProfile }).invoke(operation);
         const wallMs = sinceStart();
         log({ event: 'workflow-result', results, writes, checkoutUnchanged: git(checkout, 'status', '--porcelain') === '',
             wallMs, verificationWallMs: firstVerifier === undefined ? 0 : lastVerifier - firstVerifier,

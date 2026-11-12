@@ -1,3 +1,4 @@
+import { BugbotCandidateTrace } from '../bugbot_candidate_trace';
 import { buildReviewDiffPlan } from '../../../../../policies/bugbot_diff_partition_policy';
 import type { FindingsQueryRequest } from '../../../../../ports/agent_findings_ports';
 import { DEFAULT_BUGBOT_REVIEW_CONFIGURATION } from '../../../../../../domain/bugbot/review_configuration';
@@ -265,14 +266,20 @@ describe('analyzeBugbotRevision partition execution', () => {
       }],
     }));
 
+    const trace = new BugbotCandidateTrace();
     const prepared = await analyzeBugbotRevision(operation(), context(partitions), {
       agent: { query },
+      trace,
       telemetry: new BugbotReviewTelemetry(operation()),
     });
 
     expect(query).toHaveBeenCalledTimes(2);
     expect(prepared?.activeFindings).toHaveLength(1);
     expect(prepared?.activeFindings?.[0].id).toBe('shared-root-cause');
+    expect(trace.snapshot()).toMatchObject([
+      { origin: '1:1', candidateId: 'shared-root-cause', disposition: 'prepared' },
+      { origin: '2:1', candidateId: 'shared-root-cause', disposition: 'duplicate' },
+    ]);
   });
 
   it('fails without an aggregate when any partition query fails', async () => {

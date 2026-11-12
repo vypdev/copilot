@@ -34,7 +34,39 @@ interface BugbotShadowOrderEvidence {
     readonly citation: BugbotShadowCitation;
 }
 
-export type BugbotShadowResult =
+export interface BugbotShadowInvestigationMetrics {
+    readonly operation: string;
+    readonly turnDurationsMs: readonly number[];
+    readonly closureRepairs: number;
+    readonly contextRestarts: number;
+    readonly turns: readonly {
+        readonly failure: string | null;
+        readonly reportedModel?: string;
+        readonly usage?: Readonly<Record<string, number>>;
+    }[];
+    readonly evidence: readonly {
+        readonly turn: number;
+        readonly operation: string;
+        readonly target: string;
+        readonly purpose: string;
+        readonly revision: string;
+        readonly outcome: string;
+        readonly cacheHits: number;
+        readonly delivered: readonly {
+            readonly receipt: string;
+            readonly alias?: string;
+            readonly path?: string;
+            readonly url?: string;
+            readonly sha?: string;
+            readonly version?: string;
+            readonly versionScope?: string;
+            readonly first: number;
+            readonly last: number;
+        }[];
+    }[];
+}
+
+export type BugbotShadowResult = { readonly investigation?: BugbotShadowInvestigationMetrics } & (
     | {
         readonly status: 'verdict';
         readonly verdict: 'confirmed' | 'refuted' | 'inconclusive';
@@ -57,7 +89,7 @@ export type BugbotShadowResult =
         readonly status: 'technical-failure';
         readonly reason: string;
         readonly reportedModel?: string;
-      };
+      });
 
 /** Trusted adapter validates the delivered receipts in an independent read-only session. */
 export interface BugbotShadowVerificationPort {
@@ -65,5 +97,7 @@ export interface BugbotShadowVerificationPort {
         readonly candidate: BugbotShadowCandidate;
         readonly configuration: Readonly<AgentConfiguration>;
         readonly signal?: AbortSignal;
+        /** Opaque operation identity for review-local reuse of authenticated sources. */
+        readonly review?: object;
     }): Promise<BugbotShadowResult>;
 }

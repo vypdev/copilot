@@ -41,7 +41,7 @@ async function run(lab, output) {
     log({ event: 'archived-candidate', candidate, configuration, producer: original.producerUrl,
         commentSnapshotSha256: finding.commentSnapshotSha256 });
     try {
-        const adapter = createPinnedBugbotShadowVerifier({ log,
+        const adapter = createPinnedBugbotShadowVerifier({ log, lifecycle: false,
             resolveSource: input => input === candidate ? { repo, officialDirectory: lab, catalog } : undefined,
             transport: turn => ask({ ...turn, onInvocation(invocation) {
                 assert.equal(invocation.model, configuration.model);

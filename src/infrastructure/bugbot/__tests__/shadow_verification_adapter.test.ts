@@ -37,7 +37,7 @@ describe('pinned Bugbot verifier adapter', () => {
                     return { threadId: 'fixture', fact: { failure: null }, response: {
                         action: 'investigate', requests: [{ op: 'read', revision: 'head', target: 'setting.ts',
                             first: 1, last: 1, scope: null, query: null, basis: null, version: null, why: 'Check the effective setting.' }],
-                        verdict: null, reason: null, missing: null, premises: [],
+                        verdict: null, reason: null, missing: null, premises: [], dependencies: [],
                     } };
                 }
                 expect(turn.threadId).toBe('fixture');
@@ -45,13 +45,66 @@ describe('pinned Bugbot verifier adapter', () => {
                 const { receipt } = observations[0].result.sources[0];
                 return { threadId: 'fixture', fact: { failure: null, reportedModel: configuration.model }, response: {
                     action: 'finish', requests: [], verdict: 'refuted', reason: 'The effective setting is false.', missing: null,
-                    premises: [{ claim: 'The effective setting is false.', citations: [{ receipt, first: 1, last: 1 }], order: [] }],
+                    dependencies: [], premises: [{ claim: 'The effective setting is false.', citations: [{ receipt, first: 1, last: 1 }], order: [] }],
                 } };
             },
         });
         await expect(adapter.verify({ candidate, configuration })).resolves.toMatchObject({ status: 'verdict', verdict: 'refuted',
             reportedModel: configuration.model, citations: [{ sha: candidate.headSha, path: 'setting.ts', first: 1, last: 1 }] });
         expect(onTurn).toHaveBeenCalledTimes(2);
+    });
+
+    it('reuses pinned source reads within one review and isolates receipts, candidates and revisions', async () => {
+        writeFileSync(join(repo, 'setting.ts'), 'export const enabled = true;\n');
+        git('add', 'setting.ts');
+        git('-c', 'user.email=fixture@example.invalid', '-c', 'user.name=Fixture', '-c', 'commit.gpgsign=false', 'commit', '-qm', 'next');
+        const next = { ...candidate, id: 'other-revision', headSha: git('rev-parse', 'HEAD') };
+        const writeFreeSource = jest.fn(() => ({ repo }));
+        const adapter = createPinnedBugbotShadowVerifier({
+            resolveSource: writeFreeSource,
+            async transport(turn) {
+                const fact = { failure: null };
+                if (!turn.threadId) {
+                    return { fact, threadId: turn.candidateId, response: {
+                        action: 'investigate', requests: [{ op: 'read', revision: 'head', target: 'setting.ts',
+                            first: 1, last: 1, scope: null, query: null, basis: null, version: null, why: 'Read the effective setting.' }],
+                        verdict: null, reason: null, missing: null, premises: [], dependencies: [],
+                    } };
+                }
+                const { observations } = JSON.parse(turn.prompt.split('\n').pop()!);
+                const { receipt, lines } = observations[0].result.sources[0];
+                expect(lines[0]).toContain(turn.candidateId === next.id ? 'true' : 'false');
+                return { fact, threadId: turn.threadId, response: {
+                    action: 'finish', requests: [], verdict: 'refuted', reason: 'The pinned value is established.', missing: null,
+                    dependencies: [], premises: [{ claim: 'The pinned value is established.', citations: [{ receipt, first: 1, last: 1 }], order: [] }],
+                } };
+            },
+        });
+        const review = {};
+        const original = { candidate, configuration, review };
+        const results = await Promise.all([
+            adapter.verify(original),
+            adapter.verify({ ...original, candidate: { ...candidate, id: 'same-revision' } }),
+            adapter.verify({ ...original, candidate: next }),
+            adapter.verify({ ...original, review: {} }),
+        ]);
+        const reads = results.map(result => result.investigation!.evidence[0]);
+        expect(reads.slice(0, 2).map(entry => entry.cacheHits).sort()).toEqual([0, 1]);
+        expect(reads.slice(2).map(entry => entry.cacheHits)).toEqual([0, 0]);
+        expect(new Set(reads.map(entry => entry.delivered[0].receipt)).size).toBe(4);
+        expect(new Set(reads.map(entry => entry.delivered[0].alias)).size).toBe(4);
+        expect(reads.map(entry => entry.delivered[0].sha)).toEqual([candidate.headSha, candidate.headSha, next.headSha, candidate.headSha]);
+        expect(writeFreeSource).toHaveBeenCalledTimes(4);
+    });
+
+    it('stops immediately on a reported provider model mismatch and retains turn telemetry', async () => {
+        const transport = jest.fn().mockResolvedValue({ fact: { failure: null, reportedModel: 'other-model', usage: { input_tokens: 900_000 } } });
+        const adapter = createPinnedBugbotShadowVerifier({ resolveSource: () => ({ repo }), transport });
+        await expect(adapter.verify({ candidate, configuration })).resolves.toMatchObject({
+            status: 'technical-failure', reason: 'reported-model-mismatch', reportedModel: 'other-model',
+            investigation: { turns: [{ failure: 'reported-model-mismatch', usage: { input_tokens: 900_000 } }] },
+        });
+        expect(transport).toHaveBeenCalledTimes(1);
     });
 
     it('rejects an unauthorized source and an untrusted revision without opening a provider session', async () => {

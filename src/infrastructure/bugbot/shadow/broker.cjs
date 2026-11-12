@@ -8,7 +8,8 @@ const path = require('node:path');
 const { git, blob, safePath, hash } = require('./git.cjs');
 
 const blocked = code => ({ status: code });
-const officialPackage = target => target === '@playwright/test' ? 'playwright' : target.toLowerCase();
+const { officialPackage } = require('../../../application/policies/bugbot_material_dependency_policy.cjs');
+const { CitationRangeError } = require('../../../application/policies/bugbot_evidence_reference_policy.cjs');
 const sqliteRuntimeBasis = { kind: 'git', path: '.python-version', revision: 'head' };
 const linesOf = source => source.replace(/\n$/u, '').split(/\r?\n/u);
 
@@ -31,16 +32,13 @@ function intervals(patch) {
     });
 }
 
-class CitationRangeError extends Error {
-    constructor({ sha, path, url }) {
-        super('citation-outside-receipt-range');
-        this.source = { sha, path, url };
-    }
-}
-
-function makeBroker({ repo, officialDirectory, catalog = [], localRuntime }, subject, finding) {
+function makeBroker({ repo, officialDirectory, catalog = [], localRuntime, resolvedVersions = [] }, subject, finding, sharedRead) {
     const binding = { finding: finding.id, repository: subject.repository, head: subject.head, tree: subject.tree, operation: randomUUID(), anchor: finding.detectorLocation };
     const receipts = new Map();
+    let cacheHits = 0;
+    const load = (key, read) => sharedRead
+        ? sharedRead(JSON.stringify(key), read, () => { cacheHits++; })
+        : read();
 
     function grant(proofs) {
         const result = proofs.map(proof => ({ ...proof, receipt: 'R' + hash(JSON.stringify({ binding, proof })).slice(0, 24) }));
@@ -54,13 +52,23 @@ function makeBroker({ repo, officialDirectory, catalog = [], localRuntime }, sub
         if (!proof || proof.sha !== sha || !ranges?.length) return null;
         const lines = proof.lines.filter((_line, index) =>
             ranges.some(range => range.first <= proof.first + index && proof.first + index <= range.last));
-        return lines.length ? { ...proof, lines } : null;
+        return lines.length ? { ...proof, lines, deliveredRanges: ranges } : null;
     }
 
     function versionEvidence(request, packageName, proof) {
         if (proof?.kind === 'runtime' && proof.package === packageName
             && (request.version === null || request.version === proof.version)) {
             return { package: packageName, version: proof.version, versionScope: proof.versionScope };
+        }
+        if (proof?.kind === 'git') {
+            const matching = resolvedVersions.filter(entry => entry.package === packageName && entry.sha === proof.sha
+                && entry.path === proof.path && entry.blob === proof.blob
+                && proof.deliveredRanges.some(range => range.first <= entry.first && entry.last <= range.last));
+            if (matching.length) {
+                const [entry] = matching;
+                return matching.length === 1 && (request.version === null || request.version === entry.version)
+                    ? { package: packageName, version: entry.version, versionScope: entry.scope } : null;
+            }
         }
         if (packageName === 'playwright' && proof?.kind === 'git' && proof.path === 'pnpm-lock.yaml'
             && typeof request.version === 'string' && proof.lines.some(line => {
@@ -84,15 +92,17 @@ function makeBroker({ repo, officialDirectory, catalog = [], localRuntime }, sub
         if (!supported.length) return { status: 'official-source-unavailable', ...version };
         const sources = [];
         for (const item of supported) {
-            let contents;
+            let lines;
             try {
-                contents = readFileSync(path.join(officialDirectory, item.file));
+                lines = load(['official', sha, version, officialDirectory, item], () => {
+                    const contents = readFileSync(path.join(officialDirectory, item.file));
+                    assert.equal(hash(contents), item.sha256, 'official-source-hash');
+                    return Object.freeze(linesOf(contents.toString('utf8')));
+                });
             } catch (error) {
                 if (error.code === 'ENOENT') return { status: 'official-source-unavailable', ...version };
                 throw error;
             }
-            assert.equal(hash(contents), item.sha256, 'official-source-hash');
-            const lines = linesOf(contents.toString('utf8'));
             const matches = lines.flatMap((line, index) => line.includes(request.query) ? [index + 1] : []);
             const windows = [];
             for (const match of matches) {
@@ -126,7 +136,7 @@ function makeBroker({ repo, officialDirectory, catalog = [], localRuntime }, sub
         if (request.op === 'receipts') return { status: 'inventory', ...inventory(request.first ?? 1) };
         if (request.op === 'recall') {
             const proof = receipts.get(request.target);
-            if (!proof) return blocked('receipt-unavailable');
+            if (!proof || proof.sha !== sha) return blocked('receipt-unavailable');
             const first = request.first ?? proof.first, last = request.last ?? proof.last;
             if (first < proof.first || last > proof.last || first > last) return blocked('invalid-range');
             return { status: 'provided', sources: [{ ...proof, first, last, lines: proof.lines.slice(first - proof.first, last - proof.first + 1) }] };
@@ -144,7 +154,7 @@ function makeBroker({ repo, officialDirectory, catalog = [], localRuntime }, sub
         }
         if (request.scope !== null && !safePath(request.scope)) return blocked('scope-denied');
         if (request.op === 'read') {
-            const value = blob(repo, sha, request.target);
+            const value = load(['blob', sha, request.target], () => blob(repo, sha, request.target));
             const first = request.first ?? 1, last = request.last ?? value.lines.length;
             if ((request.first === null) !== (request.last === null) || first < 1 || first > last || last > value.lines.length) {
                 return { status: 'invalid-range', lineCount: value.lines.length };
@@ -153,20 +163,24 @@ function makeBroker({ repo, officialDirectory, catalog = [], localRuntime }, sub
                 lineCount: value.lines.length };
         }
         const scope = request.scope ? [request.scope] : [];
-        let matches;
-        if (request.op === 'paths') {
-            matches = git(repo, ['ls-tree', '-r', '--name-only', '-z', sha, '--', ...scope]).split('\u0000')
-                .filter(file => safePath(file) && file.includes(request.target));
-        } else {
-            matches = git(repo, ['grep', '-n', '-I', '-F', '-e', request.target, sha, '--', ...scope], [0, 1])
-                .split('\n').filter(Boolean).map(line => line.slice(41));
-        }
+        const matches = load([request.op, sha, request.scope, request.target], () => {
+            if (request.op === 'paths') {
+                return git(repo, ['ls-tree', '-r', '--name-only', '-z', sha, '--', ...scope]).split('\u0000')
+                    .filter(file => safePath(file) && file.includes(request.target));
+            }
+            return git(repo, ['grep', '-n', '-I', '-F', '-e', request.target, sha, '--', ...scope], [0, 1])
+                .split('\n').filter(Boolean).map(line => line.slice(sha.length + 1));
+        });
         const current = page(matches, request.first ?? 1, 30);
         return { status: matches.length ? 'matches' : 'no-match', count: matches.length, matches: current.items, next: current.next };
     }
 
     function inspect(request, delivered = new Map()) {
-        try { return run(request, delivered); } catch (error) {
+        cacheHits = 0;
+        try {
+            const result = run(request, delivered);
+            return sharedRead ? { ...result, cacheHits } : result;
+        } catch (error) {
             if (['no-file', 'path-denied', 'non-text', 'git-budget', 'git-unavailable'].includes(error.message)) return blocked(error.message);
             throw error;
         }
