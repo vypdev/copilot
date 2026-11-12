@@ -3202,6 +3202,12 @@ delivered receipt, the closure reports the affected premise or order role,
 source, requested lines and delivered ranges. The same session can cite a
 supported subrange or read the missing lines and cite the new receipt. The
 application validates the replacement against the same candidate and revision.
+When a citation omits one final character of a receipt ID, the same session
+can receive the complete ID if exactly one previously delivered receipt
+matches the prefix and covers the entire requested range. The broker
+authenticates that source and the verifier must resubmit the exact ID. The
+hint itself does not count as a citation. Ambiguous or unrecognized IDs and
+truncated IDs without a covering delivered range remain integrity failures.
 To confirm a finding, the verifier must cite a decisive Git line within the
 candidate's pinned anchor range as part of a premise connecting the code to
 the claimed effect. The closure checks the file, range and revision. A left
@@ -3293,8 +3299,9 @@ or publication permission.
 | ev950-shadow-C21 | Advancing the test clock beyond the former provider-turn and investigation limits leaves the same session active and accepts a valid verdict. Explicit cancellation still stops it. |
 | ev950-shadow-C22 | A delivered receipt with an out-of-range premise or order citation keeps the same session open. The corrected range must pass provenance and delivery validation before a verdict is accepted. |
 | ev950-shadow-C23 | A confirmation citing nearby lines or the other revision stays open. The same session supplies a decisive citation from the pinned anchor range. |
+| ev950-shadow-C24 | A unique delivered receipt missing one final character prompts the same session to resubmit its complete ID. The runner validates the replacement and rejects an unmatched, ambiguous, or undelivered range. |
 
-Run the ten deterministic cases through
+Run the eleven deterministic cases through
 [the shadow runner suite](../quality/bugbot/evidence/issue-950/shadow-verification/verification.test.cjs).
 Replays may pin an explicit provider reasoning effort and record it alongside
 the frozen candidate configuration. Actual reviews inherit the effective

@@ -32,6 +32,15 @@ const orderParts = {
     mechanism: 'the code that determines the effective order',
 };
 
+function deliveredReceiptHint({ receipt, first, last }, delivered) {
+    if (!/^R[a-f0-9]+$/u.test(receipt)) return undefined;
+    const matches = [...delivered.keys()].filter(id => id.length === receipt.length + 1 && id.startsWith(receipt));
+    if (matches.length !== 1) return undefined;
+    const [match] = matches;
+    return delivered.get(match).some(range => range.first <= first && first <= last && last <= range.last)
+        ? match : undefined;
+}
+
 function validateOrder(order, claim, premise, validateCitation, broker, omissions) {
     if (!order.length && orderLanguage.test(claim)) {
         omissions.push({ issue: 'order-claim-uncited', premise });
@@ -74,6 +83,13 @@ function prepareVerdict(response, broker, delivered, subject) {
         const key = JSON.stringify([receipt, first, last]);
         if (!proofs.has(key)) {
             const ranges = delivered.get(receipt);
+            const completeReceipt = ranges ? undefined : deliveredReceiptHint(citation, delivered);
+            if (completeReceipt) {
+                const { sha, path, url } = broker.cite({ ...citation, receipt: completeReceipt });
+                omissions.push({ issue: 'citation-receipt-truncated', ...location, sha, path, url,
+                    receipt, completeReceipt, requested: { first, last } });
+                return null;
+            }
             try {
                 const proof = broker.cite(citation);
                 assert(ranges?.some(range => range.first <= first && range.last >= last), 'citation-not-delivered');
@@ -240,6 +256,7 @@ async function investigate(source, subject, finding, cwd, transport, log, signal
                         'and submit a complete verdict. For an order issue, complete the named role with its exact code excerpt and receipt. ' +
                         'For a citation outside its receipt range, cite a delivered range if it supports the premise, ' +
                         'or request the required lines and cite the receipt returned for those lines. ' +
+                        'For citation-receipt-truncated, resubmit the citation with the exact completeReceipt. ' +
                         'For anchor-evidence-missing, read or recall the reported Git range on its specified revision. ' +
                         'Cite the decisive anchored line in a premise that explains how it causes the claimed effect. ' +
                         'Keep every material premise relied on by the verdict. ' +

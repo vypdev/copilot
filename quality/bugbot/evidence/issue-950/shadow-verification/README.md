@@ -23,8 +23,11 @@ pairs each material premise with its exact ranges. The verifier can continue
 in the same session to complete an omitted citation. If a citation extends
 outside a delivered receipt, the runner reports the requested and delivered
 lines. The verifier can cite a supported subrange or read the missing lines
-and cite the resulting receipt in the same session. When a confirmation
-omits the anchored effect, the runner asks the same session for a premise
+and cite the resulting receipt in the same session. A citation missing the
+last character of a receipt ID can receive a hint in the same session when
+one delivered receipt matches and covers the cited range. The verifier must
+resubmit the complete ID before the runner accepts the citation. When a
+confirmation omits the anchored effect, the runner asks the same session for a premise
 with a citation inside the pinned anchor on the appropriate revision.
 For an order-dependent
 premise the closure checks exact excerpts for both operations and the control
@@ -63,6 +66,13 @@ draft but omitted the anchored line that disables the Back button. The closure
 returned `anchor-evidence-missing` with line 282 and the pinned head. The same
 simulated session read and cited that line in the effect premise. The runner
 accepted the corrected confirmation with zero write attempts.
+
+Domus #101 at `d286af50d607eb4216b54a6d3cd057efd2b492cf` exercised a different
+case. The historical finishing draft used the same truncated receipt in
+three citations to line 228. A replay with the original Git ranges returned
+all three hints to the same simulated session. Resubmitting the full ID
+cleared the receipt issues. The remaining order and official-source checks
+continued to apply.
 
 The [historical shadow pilot](../shadow-real-prs/results.md) and its frozen
 runner remain available for reproducing the original measurements. Use the

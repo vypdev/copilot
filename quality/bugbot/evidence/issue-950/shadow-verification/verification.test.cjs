@@ -432,6 +432,63 @@ function orderDraft(source, missingPart, neighbor = false) {
         premises: [{ claim: 'Preparation executes before delivery on the fresh route.', citations: [], order: [order] }] };
 }
 
+test('asks the same session to resubmit a one-character truncated receipt in a premise and order role', async () => {
+    let turn = 0, source;
+    const result = await run(async request => {
+        assert.equal(request.threadId, turn ? 'receipt-repair' : undefined);
+        let response;
+        switch (++turn) {
+            case 1:
+                response = inspect(query('read', 'ordered.py'));
+                break;
+            case 2: {
+                source = supplied(request);
+                const shortened = { ...source, receipt: source.receipt.slice(0, -1) };
+                response = orderDraft(source);
+                response.premises[0].citations = [cite(shortened, 1, 1)];
+                response.premises[0].order[0].second[0].receipt = shortened.receipt;
+                break;
+            }
+            case 3: {
+                const expected = { issue: 'citation-receipt-truncated', premise: 1, sha: head, path: 'ordered.py',
+                    receipt: source.receipt.slice(0, -1), completeReceipt: source.receipt, requested: { first: 1, last: 1 } };
+                assert.deepEqual(payload(request).closureIssues, [
+                    expected, { ...expected, route: 'fresh initialization', part: 'second' },
+                ]);
+                response = orderDraft(source);
+                response.premises[0].citations = [cite(source, 1, 1)];
+                break;
+            }
+            default: assert.fail('unexpected recovery turn');
+        }
+        return { threadId: 'receipt-repair', fact: fact(), response };
+    });
+    assert.equal(turn, 3);
+    assert.equal(result.failure, null);
+    assert.equal(result.answer.label, 'refuted');
+    assert.equal(result.answer.citations[0].receipt, source.receipt);
+    assert.equal(result.closures.length, 1);
+    assert.deepEqual(result.writes, []);
+});
+
+for (const [name, invalid] of [
+    ['two missing characters', source => ({ ...cite(source), receipt: source.receipt.slice(0, -2) })],
+    ['a different prefix', source => ({ ...cite(source),
+        receipt: 'R' + (source.receipt[1] === '0' ? '1' : '0') + source.receipt.slice(2, -1) })],
+    ['a range never delivered', source => ({ ...cite(source, 1, 2), receipt: source.receipt.slice(0, -1) })],
+]) {
+    test(`preserves the integrity rejection for a truncated receipt with ${name}`, async () => {
+        const result = await run(async request => ({
+            threadId: 'invalid-receipt', fact: fact(), response: request.threadId
+                ? finish(invalid(supplied(request))) : inspect(query('read', 'ordered.py', { first: 1, last: 1 })),
+        }));
+        assert.equal(result.failure, 'citation-unavailable-or-out-of-range');
+        assert.equal(result.answer, null);
+        assert.deepEqual(result.closures, []);
+        assert.deepEqual(result.writes, []);
+    });
+}
+
 for (const order of [false, true]) {
     test(`repairs a delivered receipt's out-of-range ${order ? 'order' : 'premise'} citation in the same session`, async () => {
         let turn = 0, original;
