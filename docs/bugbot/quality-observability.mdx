@@ -884,8 +884,10 @@ For example, a Codex review at `REVIEWER_EFFORT=xhigh` can test a
 different verifier model by setting only `BUGBOT_VERIFIER_MODEL`. To use
 Claude models, select `BUGBOT_VERIFIER_PROVIDER=opencode` and
 `BUGBOT_VERIFIER_MODEL_PROVIDER=anthropic`, then use a model and, optionally,
-a reasoning variant listed by that OpenCode runtime. Do not select
-`anthropic` as an agent: direct Claude Code execution is not implemented.
+a reasoning variant listed by that OpenCode runtime. The #950 specification
+requires a separate `claude-code` agent with an `anthropic` model provider.
+[Native runtime specification](https://github.com/vypdev/copilot/blob/master/specs/agent-runtime-provider-and-model-routing.md#native-claude-code-runtime)
+
 For Cursor, choose the model or variant in `BUGBOT_VERIFIER_MODEL` and
 leave the separate effort empty. Both selected profiles must satisfy
 `AGENT_ALLOWED_MODEL_PROVIDERS` and `AGENT_ALLOWED_MODELS` if configured.
@@ -893,11 +895,14 @@ The setup workflow templates carry the same bindings.
 
 For a no-write pilot, also set `BUGBOT_DRY_RUN=true` in an isolated
 evaluation workflow. The Action reports counts and profile identities in
-`bugbot-shadow-summary` and counts in the Job Summary. A finding that needs
-official or CI evidence may remain inconclusive: the installed broker
-currently exposes the pinned repository tree, while an evaluation fixture
-may also supply a trusted official-source catalog. Production enforcement
-is unavailable.
+`bugbot-shadow-summary` and counts in the Job Summary. The verifier can
+request official sources. The installed broker currently exposes the pinned
+repository tree. An evaluation fixture may also supply a trusted source
+catalog. The planned collector will establish the effective dependency
+version and return exact official source ranges with receipts. When the
+version or a decisive source remains unproven, the artifact records the
+specific gap and the verdict is inconclusive. Production enforcement
+is unavailable. [Official evidence contract](https://github.com/vypdev/copilot/blob/master/specs/bugbot-analysis-publication-and-autofix.md#official-evidence-in-the-installed-review)
 
 For example, a review can report one individual finding and one summary-only
 finding, with one confirmed and one inconclusive shadow outcome. Inspect the

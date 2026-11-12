@@ -116,12 +116,16 @@ optional `BUGBOT_VERIFIER_*` override. For example, set
 `BUGBOT_EFFORT` controls detection depth; `REVIEWER_EFFORT` controls the
 provider's reasoning and is inherited when applicable. See
 [verifier variables and provider settings](/bugbot/quality-observability#finding-lifecycle-in-a-shadow-diagnostic)
-for the full profile. Anthropic models use the OpenCode agent with the
-`anthropic` backend. Direct Claude Code is not supported.
+for the full profile. The installed Action runs Anthropic models through
+OpenCode. #950 also requires an independent Claude Code agent for review and
+verification. [Native runtime specification](https://github.com/vypdev/copilot/blob/master/specs/agent-runtime-provider-and-model-routing.md#native-claude-code-runtime)
 
-The installed shadow broker reads the pinned Git tree without repository
-writes. A provider interruption is recorded as a technical failure. Usage
-and cost are optional telemetry and do not decide the verdict.
+The verifier can request official evidence about a dependency whose behavior
+could change a verdict. The installed shadow broker reads the pinned Git
+tree. The next evidence integration will prove the effective dependency
+version and retrieve its official source for the verifier to cite.
+A provider interruption is recorded as a technical failure. Usage and cost
+are optional telemetry and have no effect on the verdict.
 Production enforcement stays disabled until an exact profile qualifies
 with source, version-matched dependency evidence and matching CI, and
 a maintainer explicitly approves it.

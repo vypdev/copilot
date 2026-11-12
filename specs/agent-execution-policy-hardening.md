@@ -2,7 +2,7 @@
 
 - Status: Implemented — automated gates complete; controlled provider smoke remains external
 - Date: 2026-09-11
-- Last updated: 2026-11-07
+- Last updated: 2026-11-12
 - Catalog capability ID: `agent-runtime`
 - Last verified: 2026-09-12 in the P1-C implementation worktree
 - Owners: Copilot maintainers and security reviewers
@@ -80,6 +80,19 @@ execution, smoke, runner provisioning/security, verification and synchronization
 docs MUST agree. Manual runner inventory must show Windows without `codex`
 before new shared-pool dogfooding. Previously open Windows Codex service checks
 remain unsupported/unverified, not green; the setup 350-row budget is unchanged.
+
+### Native Claude Code extension
+
+The three-provider baseline below describes the implemented dispatcher.
+For #950, its target contract includes a fourth independent policy for
+`claude-code`. That policy must meet the same execution-plan, artifact
+integrity, credential isolation, local output validation, cancellation and
+no-fallback gates. Brokered Bugbot verification admits only the
+application's evidence operations. The execution-policy controls must prove
+the effective isolation with the reviewed Claude Code runtime before any
+platform or role is advertised as supported. The runtime SDD owns the
+new cases and support gates.
+[Native Claude Code runtime](agent-runtime-provider-and-model-routing.md#native-claude-code-runtime)
 
 ## 1. Executive summary
 

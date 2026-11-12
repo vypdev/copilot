@@ -3250,7 +3250,7 @@ comment content and reviewed code cannot select a profile.
 | Actions variable | Action input | Default or constraint |
 |---|---|---|
 | `BUGBOT_VERIFICATION_MODE` | `bugbot-verification-mode` | `disabled` by default. `shadow` records diagnostic verdicts only. The Action and approval entrypoint reject `enforced` until the rollout contract is implemented and qualified. |
-| `BUGBOT_VERIFIER_PROVIDER` | `bugbot-verifier-provider` | Inherits the effective agent. Supported agents are `codex`, `opencode` and `cursor`. |
+| `BUGBOT_VERIFIER_PROVIDER` | `bugbot-verifier-provider` | Inherits the effective agent. The installed values are `codex`, `opencode` and `cursor`. The required native extension adds `claude-code`. |
 | `BUGBOT_VERIFIER_MODEL_PROVIDER` | `bugbot-verifier-model-provider` | Inherits the effective backend when the agent stays the same. A different agent uses its ordinary backend default unless specified. |
 | `BUGBOT_VERIFIER_MODEL` | `bugbot-verifier-model` | Inherits the effective detector model. Changing agent or backend requires an explicit compatible model. |
 | `BUGBOT_VERIFIER_EFFORT` | `bugbot-verifier-effort` | Inherits effort on the same agent and backend where expressible. A different agent or backend uses its default unless given a valid override. |
@@ -3264,14 +3264,23 @@ selection and activation are separate decisions.
 | Codex | `openai` | Accept `none`, `minimal`, `low`, `medium`, `high` or `xhigh`. Pass the value as `model_reasoning_effort`. The provider must admit the selected model and setting. |
 | OpenCode | A configured backend such as `openai` or `anthropic` | Check the exact backend/model and any named variant against the runtime catalog before the first turn. Pass an admitted variant as `--variant`. |
 | Cursor | `cursor` | Check the selected identifier against the runtime catalog and pass it as `--model`, including a reasoning variant if listed. The CLI adapter has no separate reasoning flag: reject an explicit override and do not copy an ineffective inherited effort. |
+| Claude Code (required extension) | `anthropic` | Use the official `claude` executable. Validate the Claude model and its supported `--effort` against the reviewed runtime contract. |
 
-Anthropic is supported as an OpenCode model backend. A standalone Anthropic
-or Claude Code agent has no supported execution adapter and is rejected as
-an agent selector. `BUGBOT_EFFORT` continues to select Bugbot's review depth;
-the role effort controls provider reasoning. Record the effective profile
-and provider-reported identity when available. An unavailable model or
-variant, catalog failure, or reported model mismatch is a technical
-failure; no fallback changes the selected agent or model.
+The `claude-code` provider must be available to both the detector and the
+optional verifier profile. Once implemented, `REVIEWER_PROVIDER=claude-code`
+selects it for PR detection and verification inherits that selection by
+default. To use Claude Code only for verification, select
+`BUGBOT_VERIFIER_PROVIDER=claude-code` and set `BUGBOT_VERIFIER_MODEL` to
+an approved Claude model ID. Its model provider defaults to `anthropic`.
+The installed Action still accepts Anthropic through OpenCode. The
+[native runtime SDD](agent-runtime-provider-and-model-routing.md#native-claude-code-runtime)
+owns direct provisioning, authentication, permissions and compatibility.
+
+`BUGBOT_EFFORT` selects Bugbot's review depth. The role effort controls
+provider reasoning. Record the effective profile and provider-reported
+identity when available. An unavailable model or variant, catalog failure,
+or reported model mismatch is a technical failure. The application preserves
+the selected agent and model.
 
 The checkout-backed broker accepts only the candidate's repository and
 canonical object IDs. Its temporary Git view has no remotes, does not lazily
@@ -3297,8 +3306,12 @@ control.
 The acceptance budget is at least six deterministic configuration cases:
 exact inheritance, Codex with supported and rejected effort, OpenCode
 with an OpenAI variant, OpenCode with an Anthropic variant, Cursor model
-selection, and rejection of a separate Cursor verifier effort or a direct
-Anthropic agent. Exercise the generated workflow bindings and provider
+selection, and rejection of a separate Cursor verifier effort. Add three
+distinct Bugbot acceptance cases for native Claude Code. Run detection and
+verification through Claude Code by inheritance, run Codex detection with an
+explicit Claude Code verifier, and retain the ordinary review when Claude
+Code preflight or execution fails. These are in addition to the runtime SDD's
+eight deterministic cases. Exercise the generated workflow bindings and provider
 arguments. Also cover an unavailable model or variant, immutable checkout
 reads and the absence of approval authority. A provider-specific smoke test
 supplies separate execution evidence. It does not replace the full-review
@@ -3306,6 +3319,86 @@ historical controls or the independent 174-case corpus required by EV-07.
 The [installed profile smoke test](../quality/bugbot/evidence/issue-950/installed-profile/results.md)
 did not qualify the Codex/Sol profile: the installed broker could not
 deliver material version-matched official evidence for either candidate.
+
+#### Official evidence in the installed review
+
+**Required extension for #950.** The installed shadow adapter currently
+binds the pinned Git tree. The verifier can request official evidence, but the
+installed broker lacks the version and upstream source adapters required to
+answer those requests across projects. The experimental broker can consume
+an authenticated catalog supplied by a pilot. The installed Domus replay
+showed both missing source and version accreditation gaps.
+[Installed adapter](../src/infrastructure/bugbot/installed_bugbot_shadow_adapter.ts) ·
+[Broker](../src/infrastructure/bugbot/shadow/broker.cjs) ·
+[Domus replay](../quality/bugbot/evidence/issue-950/installed-profile/results.md)
+
+```text
+Prepared hypothesis -> verifier identifies material dependency question
+  -> collector proves the effective version at the candidate revision
+  -> collector retrieves the official source and issues a bound receipt
+  -> verifier checks the actual project path and cites the decisive lines
+  -> application validates the verdict and projects the review result
+```
+
+The verifier determines which dependency behavior could change the verdict.
+It requests the relevant package or tool and a concrete search term, uses the
+returned code or documentation to investigate that behavior, and follows a
+new question when more evidence is needed. A repository-local claim proceeds
+using repository evidence. The application carries forward material
+dependency requirements identified from the candidate and the investigation,
+even when an upstream source is unavailable. A dependency mentioned only
+in passing creates no evidence obligation.
+
+The collector resolves the version used by the affected workspace, import,
+build, or runtime against the pinned head or authorized base. A lockfile
+entry must be linked to the actual consumer when several versions coexist.
+A runtime or CI receipt must prove the applicable scope. A local measurement
+does not establish the historical CI runtime. An ambiguous or missing
+version yields `official-version-not-proven`.
+
+A read adapter retrieves versioned documentation, a released package
+artifact, or source at the upstream commit proven to correspond to the
+release. Source identity comes from reviewed publisher and origin bindings
+or verifiable registry provenance. Registry data may provide discovery
+leads. Package metadata, repository text and model output cannot authorize
+a new origin. The host performs the allowed public fetch, verifies
+origin, release and content integrity, and applies the verifier's search
+terms to the retrieved content locally. The verifier receives no direct
+network or credential authority. General documentation can guide research
+when it does not establish the behavior of the exact version. Use
+version-bound source when documentation is incomplete or ambiguous.
+
+Every delivery binds the exact source revision or artifact digest, package,
+version, version proof and scope, candidate, operation, reviewed revision and
+line range. Immutable upstream material may be shared across investigations
+with the same authority. Each investigation gets its own receipt. The
+application checks receipt provenance and delivery. The verifier checks
+whether the lines support the premise and connects them to the project's
+actual configuration and execution path. The native CI reader separately
+validates evidence against the same revision and operation when the claim
+depends on CI behavior.
+
+Reuse the lookup outcomes in the version-proof section below. A missing
+release source and a literal search with zero results have different
+recovery paths. An authenticated source gap still outstanding at closure
+yields `inconclusive` with the material fact that remains unverified. A
+provenance or citation integrity failure remains a technical failure.
+Report the gap in the existing shadow artifact and Job Summary projection.
+For example, `Inconclusive. The lockfile resolves Playwright 1.64.1. The
+official implementation of the matcher for that release was unavailable.`
+Existing shadow, cancellation, approval and freshness rules apply.
+
+Before qualification, cover **eight distinct evidence cases** through the
+installed path with controlled upstream responses. Exercise effective
+workspace version selection, ambiguous versions, runtime versus CI scope,
+matching official source delivered and cited, source unavailable, an
+authenticated search with no match, an untrusted origin or release mismatch
+rejected, and a material missing receipt prevented from closing as
+confirmed or refuted. Cover a package other than Playwright to show that
+retrieval is driven by provenance and the request. Replay both pinned
+Domus #28 candidates through the installed adapter and compare against the
+independent evidence. The replay diagnoses the integration. Qualification
+still uses EV-07 and the existing full-review and independent corpus gates.
 
 #### Diagnostics and evaluation
 
