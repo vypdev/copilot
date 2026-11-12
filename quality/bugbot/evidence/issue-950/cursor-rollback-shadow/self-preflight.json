@@ -1,0 +1,35 @@
+[
+  {
+    "success": false,
+    "errors": [
+      {
+        "code": "validation.evidence-unavailable"
+      }
+    ],
+    "wallMs": 16136,
+    "githubWriteAttempts": 0,
+    "checkoutUnchanged": true
+  },
+  {
+    "success": false,
+    "errors": [
+      {
+        "code": "validation.evidence-unavailable",
+        "recovery": {
+          "id": "bugbot-review-incomplete",
+          "variables": {
+            "profile": "framed-v1",
+            "countKind": "exact",
+            "resource": "source",
+            "observed": 1,
+            "limit": 0,
+            "unit": "items"
+          }
+        }
+      }
+    ],
+    "wallMs": 13976,
+    "githubWriteAttempts": 0,
+    "checkoutUnchanged": true
+  }
+]

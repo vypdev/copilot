@@ -1,0 +1,42 @@
+--- self-review.cjs
++++ self-review.cjs
+@@ -15,0 +16 @@
++const { fileMatchesIgnorePatterns } = from('application/policies/file_ignore_policy');
+@@ -47,0 +49,11 @@
++    // The native inventory and all supplied patches and counters stay authoritative.
++    // For an empty modified entry only, derive the missing counters from the
++    // exact comparison so the ordinary framed adapter can verify the local patch.
++    const localCounts = new Map();
++    const numstat = git(checkout, '--no-replace-objects', 'diff', '--no-ext-diff', '--no-textconv',
++        '--no-renames', '--text', '--diff-algorithm=myers', '--no-indent-heuristic',
++        '--numstat', '-z', plan.baseSha, plan.headSha, '--');
++    for (const row of numstat.split('\0')) {
++        const parsed = /^(\d+)\t(\d+)\t([^\r\n]+)$/u.exec(row);
++        if (parsed) localCounts.set(parsed[3], [Number(parsed[1]), Number(parsed[2])]);
++    }
+@@ -50 +62,21 @@
+-        context: action.scm.context,
++        context: {
++            ...action.scm.context,
++            async getReviewDiffSnapshot(number, expectedHead) {
++                assert.equal(number, plan.pullRequest);
++                assert.equal(expectedHead, plan.headSha);
++                const snapshot = await action.scm.context.getReviewDiffSnapshot(number, expectedHead);
++                if (snapshot.coverage.status !== 'complete') return snapshot;
++                const supplemented = [];
++                const changes = snapshot.value.changes.map(change => {
++                    if (change.status !== 'modified' || change.patch || change.additions || change.deletions
++                        || fileMatchesIgnorePatterns(change.filename, plan.ignored)) return change;
++                    const counts = localCounts.get(change.filename);
++                    if (!counts?.some(count => count > 0)) return change;
++                    const [additions, deletions] = counts;
++                    supplemented.push({ path: change.filename, additions, deletions });
++                    return { ...change, additions, deletions };
++                });
++                log({ event: 'missing-diff-counters', headSha: expectedHead, supplemented });
++                return { ...snapshot, value: { ...snapshot.value, changes } };
++            },
++        },
+@@ -101 +133 @@
+-        payload: result?.payload, errors: result?.errors?.map(error => ({ code: error.code })), githubWriteAttempts: writes.length,
++        payload: result?.payload, errors: result?.errors?.map(error => ({ code: error.code, ...(error.recovery?.id === 'bugbot-review-incomplete' && { recovery: error.recovery }) })), githubWriteAttempts: writes.length,
