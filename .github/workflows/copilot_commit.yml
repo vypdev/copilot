@@ -23,6 +23,7 @@ jobs:
       group: copilot-push-${{ github.repository }}-${{ github.ref_name }}
       cancel-in-progress: true
     permissions:
+      actions: read
       checks: write
       contents: read
     steps:

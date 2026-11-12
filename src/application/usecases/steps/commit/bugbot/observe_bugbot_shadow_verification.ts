@@ -1,6 +1,7 @@
+import { extractTitleFromBody } from '../../../../policies/bugbot_finding_marker_policy';
 import { resolveBugbotShadowConfiguration } from '../../../../policies/bugbot_shadow_configuration_policy';
 import type { AgentConfiguration } from '../../../../../domain/agent';
-import type { BugbotFinding } from '../../../../../domain/bugbot/finding';
+import { bugbotResolutionCandidateId, type BugbotFinding } from '../../../../../domain/bugbot/finding';
 import { canonicalGitObjectId } from '../../../../../domain/git_object_id';
 import type {
     BugbotShadowAnchor,
@@ -18,7 +19,7 @@ type Observation = BugbotShadowResult & {
     readonly id: string;
     readonly candidate?: BugbotShadowCandidate;
     readonly wallMs: number;
-    readonly ordinaryPublication: 'individual' | 'summary-only';
+    readonly ordinaryPublication: 'individual' | 'summary-only' | 'resolution';
 };
 
 export interface BugbotShadowVerificationReport {
@@ -43,6 +44,13 @@ export interface BugbotShadowVerificationReport {
         readonly workflowWallMs?: number;
         readonly concurrency: number;
     };
+    readonly publicationSimulation?: { readonly status: 'invalid' } | {
+        readonly status: 'complete' | 'incomplete';
+        readonly individual: readonly string[];
+        readonly overflow: number;
+        readonly resolutions: readonly string[];
+        readonly inconclusive: readonly { readonly id: string; readonly missing: string }[];
+    };
     readonly detectionUnavailable?: true;
     readonly superseded?: true;
 }
@@ -65,18 +73,30 @@ export async function observeBugbotShadowVerification(
     const started = performance.now();
     const findings = prepared.activeFindings ?? prepared.toPublish;
     const individual = new Set(prepared.toPublish.map(finding => finding.id));
-    const concurrency = Math.min(2, findings.length);
-    const tasks = findings.map(finding => async (): Promise<Observation> => {
-        const candidate = pinCandidate(context, finding);
+    const historical = new Map(context.unresolvedFindingsWithBody.map(finding => [finding.id, finding]));
+    const inputs = findings.map(finding => ({ id: finding.id, candidate: pinCandidate(operation, context, finding),
+        ordinaryPublication: individual.has(finding.id) ? 'individual' as const : 'summary-only' as const }));
+    const resolutions = [...prepared.resolvedFindingIds].map(id => {
+        const prior = historical.get(id);
+        const title = extractTitleFromBody(prior?.fullBody ?? null);
+        const resolution = prepared.resolvedFindingResolutions?.get(id);
+        const transition = resolution === 'obsolete' ? 'is obsolete because its path or precondition no longer applies'
+            : 'is fixed because the current implementation prevents the original effect';
+        const candidateId = bugbotResolutionCandidateId(id);
+        return { id: candidateId, ordinaryPublication: 'resolution' as const,
+            candidate: prior?.anchor && title ? pinCandidate(operation, context, {
+                id: candidateId, file: prior.anchor.path, line: prior.anchor.line, title: `The historical finding “${title}” ${transition}.`,
+                description: 'Compare with the prior behavior when the pinned base is relevant.',
+            }) : undefined };
+    });
+    const concurrency = Math.min(2, inputs.length + resolutions.length);
+    const tasks = [...inputs, ...resolutions].map(({ id, candidate, ordinaryPublication }) => async (): Promise<Observation> => {
         const started = performance.now();
         const observation = candidate
             ? await verifyCandidate(port, candidate, configuration, review)
-            : { status: 'technical-failure' as const, reason: 'unbound-candidate' };
-        return {
-            ...observation, id: finding.id, candidate,
-            wallMs: Math.round(performance.now() - started),
-            ordinaryPublication: individual.has(finding.id) ? 'individual' : 'summary-only',
-        };
+            : { status: 'verdict' as const, verdict: 'inconclusive' as const, reason: 'Candidate could not be pinned.',
+                missing: 'A repository location on the reviewed revision is required.', citations: [], premises: [] };
+        return { ...observation, id, candidate, wallMs: Math.round(performance.now() - started), ordinaryPublication };
     });
     const candidates = await runWithConcurrencyLimit(tasks, 2);
     const pr = context.canonicalPullRequest;
@@ -111,12 +131,13 @@ async function verifyCandidate(
     }
 }
 
-function pinCandidate(context: BugbotContext, finding: BugbotFinding): BugbotShadowCandidate | undefined {
+function pinCandidate(operation: BugbotReviewOperationContext, context: BugbotContext, finding: BugbotFinding): BugbotShadowCandidate | undefined {
     const pr = context.canonicalPullRequest;
-    const headSha = canonicalGitObjectId(context.prContext?.prHeadSha);
+    const headSha = canonicalGitObjectId(pr ? context.prContext?.prHeadSha
+        : operation.trigger.kind === 'push' ? operation.trigger.after : undefined);
     const hypothesis = finding.title.trim();
     const { file, line, endLine } = finding;
-    if (!pr || !headSha || canonicalGitObjectId(pr.headSha) !== headSha || !file || !line
+    if (!headSha || (pr && canonicalGitObjectId(pr.headSha) !== headSha) || !file || !line
         || !Number.isSafeInteger(line) || line < 1 || !hypothesis) return undefined;
     const locations = context.prContext?.pathToDiffLocations?.[file] ?? [];
     const sides = new Set(locations.filter(location => location.line === line).map(location => location.side));
@@ -127,10 +148,11 @@ function pinCandidate(context: BugbotContext, finding: BugbotFinding): BugbotSha
     // The published title is the claim. Description, confidence, detector evidence and proposed fixes stay out.
     const comparisonRelevant = side === 'LEFT' || /\b(regressions?|regresi[oó]n|previously|used to|no longer|introduc\w*)\b/iu
         .test(hypothesis + '\n' + finding.description);
-    const baseSha = canonicalGitObjectId(pr.baseSha);
+    const baseSha = canonicalGitObjectId(pr?.baseSha ?? operation.trigger.before);
     return Object.freeze({
         id: finding.id, hypothesis, anchor,
-        repository: Object.freeze({ owner: pr.baseRepository.owner, name: pr.baseRepository.name }),
-        pullRequest: pr.number, headSha, allowBase: Boolean(baseSha && comparisonRelevant), ...(baseSha ? { baseSha } : {}),
+        repository: Object.freeze({ owner: pr?.baseRepository.owner ?? operation.repository.owner,
+            name: pr?.baseRepository.name ?? operation.repository.name }),
+        ...(pr ? { pullRequest: pr.number } : {}), headSha, allowBase: Boolean(baseSha && comparisonRelevant), ...(baseSha ? { baseSha } : {}),
     });
 }

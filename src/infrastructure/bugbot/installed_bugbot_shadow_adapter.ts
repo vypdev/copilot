@@ -1,17 +1,26 @@
 import { mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import type { BugbotCiReader } from './github_bugbot_ci_reader';
 import type { BugbotShadowVerificationPort } from '../../application/ports/bugbot_shadow_verification_ports';
 import { askManagedBugbotShadowTurn, createPinnedBugbotShadowVerifier } from './shadow_verification_adapter';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports -- The pilot and the Action share the constrained Git reader.
 const { git } = require('./shadow/git.cjs') as { git(root: string, args: string[]): string };
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports -- Shared with the versioned deterministic broker controls.
+const { createInstalledOfficialReader } = require('./shadow/installed_official.cjs') as {
+    createInstalledOfficialReader(fetchSource?: typeof fetch): { readonly packages: readonly string[] };
+};
+
 export function createInstalledBugbotShadowVerifier(
     repository: { readonly owner: string; readonly name: string },
     workspace: string | undefined,
     transport = askManagedBugbotShadowTurn,
+    readCi?: BugbotCiReader,
+    fetchSource?: typeof fetch,
 ): BugbotShadowVerificationPort {
+    const installedOfficial = createInstalledOfficialReader(fetchSource);
     return {
         async verify(request) {
             const { candidate, signal } = request;
@@ -40,7 +49,7 @@ export function createInstalledBugbotShadowVerifier(
                 git(scratch, ['init', '--bare', '--quiet', '--template=', `--object-format=${format}`]);
                 writeFileSync(join(scratch, 'objects', 'info', 'alternates'), objects + '\n', { mode: 0o600 });
                 const repo = scratch;
-                return await createPinnedBugbotShadowVerifier({ resolveSource: () => ({ repo }), transport, managed: true }).verify(request);
+                return await createPinnedBugbotShadowVerifier({ resolveSource: () => ({ repo, installedOfficial, readCi, pullRequest: candidate.pullRequest }), transport, managed: true }).verify(request);
             } catch {
                 return { status: 'technical-failure', reason: 'shadow-source-unavailable' };
             } finally {

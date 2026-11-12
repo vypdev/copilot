@@ -1,3 +1,4 @@
+import type { BugbotVerificationAuthority } from '../domain/bugbot/verification_receipt';
 import { BUGBOT_MAX_COMMENTS, BUGBOT_MIN_SEVERITY } from '../application/policies/bugbot_constants';
 import type { AgentConfigurationEnvironment } from '../application/ports/agent_configuration_ports';
 import { readBugbotShadowConfiguration } from '../application/policies/bugbot_shadow_configuration_policy';
@@ -32,9 +33,10 @@ export function readGithubActionAgentTasks(
 export function readGithubActionAiInputs(
     getInput: (key: string) => string,
     environment: AgentConfigurationEnvironment = process.env,
+    authority?: BugbotVerificationAuthority,
 ): GithubActionAiInputs {
     const requestedAgentTasks = buildAgentTasksFromInputs(getInput);
-    const shadowVerification = readBugbotShadowConfiguration(getInput, environment);
+    const shadowVerification = readBugbotShadowConfiguration(getInput, environment, authority);
     const verifyCommands = getInput(INPUT_KEYS.BUGBOT_FIX_VERIFY_COMMANDS)
         .split(',')
         .map((command) => command.trim())

@@ -16,6 +16,15 @@ describe('installed Bugbot shadow configuration', () => {
         expect(() => actionInputs({ 'bugbot-verification-mode': 'unknown' })).toThrow(/disabled or shadow/);
     });
 
+    it('accepts enforcement only with a valid trusted policy matching the configured mode', () => {
+        const authority = { mode: 'enforced', policyDigest: 'e'.repeat(64), generation: 1,
+            workflowId: 42, sourceAppId: 15368 } as const;
+        const read = (key: string) => key === 'bugbot-verification-mode' ? 'enforced' : '';
+        expect(readGithubActionAiInputs(read, {}, authority).bugbotReviewConfiguration.shadowVerification).toBeDefined();
+        expect(() => readGithubActionAiInputs(read, {}, { ...authority, generation: 0 })).toThrow(/malformed/);
+        expect(() => readGithubActionAiInputs(read, {}, { ...authority, mode: 'disabled' })).toThrow(/does not match/);
+    });
+
     it('inherits the effective default or reviewer, while keeping Bugbot depth distinct', () => {
         expect(resolve()).toEqual({ provider: 'codex', modelProvider: 'openai', model: 'gpt-6-luna' });
         expect(resolve({ 'reviewer-model': 'gpt-6.1-sol', 'reviewer-effort': 'xhigh', 'bugbot-effort': 'smart' }))

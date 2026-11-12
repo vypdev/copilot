@@ -1,3 +1,4 @@
+import { renderBugbotApprovalReceipt } from '../../../../application/policies/bugbot_verification_receipt_policy';
 import { runUpdatePullRequestDescriptionWorkflow } from '../../../../application/usecases/steps/pull_request/update_pull_request_description_workflow';
 import { PullRequestLifecycleRepository } from '../pull_request_lifecycle_repository';
 import { bindPullRequestDescription } from '../../../../infrastructure/composition/lifecycle_capability_port_binding';
@@ -892,6 +893,19 @@ describe('issue #950 current-policy Bugbot evidence at the approval consumer', (
     const fact = await evidence(enforced, [run(80)], [check(80)]);
     expect(fact.bugbot?.outcome).toBe('complete');
     expect(decidePullRequestApproval(await approvalPolicy(), fact).status).toBe('eligible');
+  });
+
+  it('consumes the application-generated receipt and rejects it under a new same-head policy', async () => {
+    const native = { repositoryId: 17, pullNumber: 42, baseSha: base, runId: 80, attempt: 1 };
+    const publication = { authority: enforced, repositoryId: 17, pullNumber: 42, headSha: head, baseSha: base,
+      coverage: 'complete', verification: 'complete', publication: 'verified', outcome: 'complete', findingStates: states } as const;
+    const summary = renderBugbotApprovalReceipt(publication, native, head);
+    expect(summary).toBeDefined();
+    const checks = [{ ...check(80), output: { summary: summary! } }];
+    expect((await evidence(enforced, [run(80)], checks)).bugbot?.verificationReceipt?.runId).toBe(80);
+    expect((await evidence({ ...enforced, generation: 3 }, [run(80)], checks)).bugbot).toBeUndefined();
+    expect(renderBugbotApprovalReceipt(publication, { ...native, pullNumber: 41 }, head)).toBeUndefined();
+    expect(renderBugbotApprovalReceipt(publication, { ...native, baseSha: 'c'.repeat(40) }, head)).toBeUndefined();
   });
 
   it.each([

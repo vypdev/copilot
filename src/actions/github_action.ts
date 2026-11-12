@@ -1,3 +1,4 @@
+import type { BugbotVerificationAuthority } from '../domain/bugbot/verification_receipt';
 import { resolveBugbotShadowConfiguration } from '../application/policies/bugbot_shadow_configuration_policy';
 import { runIssueEventAdmissionAction } from './issue_event_admission_action';
 import { runNativeVerificationEntry } from '../infrastructure/native_verification_controller';
@@ -44,7 +45,7 @@ import { runPullRequestApprovalAction } from './pull_request_approval_action';
 import { isBotPullRequestAnalysisEvent } from '../application/policies/bot_pull_request_analysis_policy';
 import { createPullRequestUseCaseCompositionRoot } from '../infrastructure/composition/pull_request_use_case_composition_root';
 
-export async function runGitHubAction(): Promise<void> {
+export async function runGitHubAction(verificationAuthority?: BugbotVerificationAuthority): Promise<void> {
     if (process.env.COPILOT_ISSUE_ADMISSION_BOOTSTRAP === '1') {
         // Only the isolated bootstrap owns this input; ordinary JSON input maps
         // must not redirect the mutation entry into a successful read-only no-op.
@@ -52,7 +53,8 @@ export async function runGitHubAction(): Promise<void> {
         return;
     }
     if (isEnabledInput(getGithubActionInput('pr-approval-observer'))) {
-        await runPullRequestApprovalAction(getGithubActionInput(INPUT_KEYS.TOKEN, { required: true }));
+        await runPullRequestApprovalAction(getGithubActionInput(INPUT_KEYS.TOKEN, { required: true }),
+            ...(verificationAuthority ? [verificationAuthority] as const : []));
         return;
     }
     const eventInputs = buildGithubActionEventInputs({
@@ -99,7 +101,7 @@ export async function runGitHubAction(): Promise<void> {
     }
 
     const localeInputs = readGithubActionLocaleInputs(getGithubActionInput);
-    const aiInputs = readGithubActionAiInputs(getGithubActionInput);
+    const aiInputs = readGithubActionAiInputs(getGithubActionInput, undefined, verificationAuthority);
     const activeRuntimeAgentTasks = activeAgentTasks(
         eventInputs,
         singleAction,
@@ -155,7 +157,7 @@ export async function runGitHubAction(): Promise<void> {
             owner: execution.owner,
             repository: execution.repo,
             token,
-            ...(shadowSettings ? { shadow: { workspace: process.env.GITHUB_WORKSPACE } } : {}),
+            ...(shadowSettings ? { shadow: { workspace: process.env.GITHUB_WORKSPACE, ...(verificationAuthority ? { authority: verificationAuthority } : {}) } } : {}),
         }).reviewOnly(execution);
         if (results.some(result => !result.success)) {
             throw new Error('Bot-authored pull-request analysis did not complete.');
@@ -213,6 +215,8 @@ export async function runGitHubAction(): Promise<void> {
                 languageRuntimeAvailable = requestedActiveAgentTasks.includes('planner');
             }
         },
+        undefined,
+        verificationAuthority,
     );
     const issueContentPort = createIssueContentCompositionRoot();
     const configurationHandler = new ConfigurationHandler(issueContentPort);

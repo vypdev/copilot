@@ -1,3 +1,9 @@
+import type { BoundPublicationSourceQueryPort } from '../../application/ports/publication_freshness_ports';
+import { GithubPublicationSourceRepository } from '../../data/repository/github_publication_source_repository';
+import { createBranchClient } from './github_branch_client_factory';
+import { bindPublicationSourceQuery } from './shared_capability_port_binding';
+import { getOctokit } from '@actions/github';
+import { createGitHubBugbotCiReader } from '../bugbot/github_bugbot_ci_reader';
 import type { BugbotShadowVerificationPort } from '../../application/ports/bugbot_shadow_verification_ports';
 import { createInstalledBugbotShadowVerifier } from '../bugbot/installed_bugbot_shadow_adapter';
 import { BugbotGitReviewSourceAdapter } from '../filesystem/bugbot_git_review_source_adapter';
@@ -31,6 +37,7 @@ export type BugbotCompositionRoot = {
   scm: BugbotScmPorts;
   telemetry: BugbotTelemetryPort;
   shadowVerification?: BugbotShadowVerificationPort;
+  sourceFreshness?: BoundPublicationSourceQueryPort;
   rules: BugbotRuleFileQueryPort & BugbotLearnedRuleCommandPort;
 
 };
@@ -79,8 +86,12 @@ export function createBugbotCompositionRoot(binding: BugbotScmBinding): BugbotCo
     scm,
     telemetry: new LoggerBugbotTelemetryAdapter(),
     ...(binding.shadow ? { shadowVerification: createInstalledBugbotShadowVerifier(
-      { owner: binding.owner, name: binding.repository }, binding.shadow.workspace,
+      { owner: binding.owner, name: binding.repository }, binding.shadow.workspace, undefined,
+      createGitHubBugbotCiReader({ owner: binding.owner, repo: binding.repository }, getOctokit(process.env.COPILOT_EVIDENCE_TOKEN?.trim() || binding.token).rest.actions),
     ) } : {}),
+    ...(binding.shadow?.authority?.mode === 'enforced' ? {
+      sourceFreshness: bindPublicationSourceQuery(new GithubPublicationSourceRepository(createBranchClient()), binding),
+    } : {}),
     rules,
   };
 }

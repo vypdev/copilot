@@ -121,9 +121,17 @@ OpenCode. The independent Claude Code agent for review and verification
 is a future runtime task. [Native runtime specification](https://github.com/vypdev/copilot/blob/master/specs/agent-runtime-provider-and-model-routing.md#native-claude-code-runtime)
 
 The verifier can request official evidence about a dependency whose behavior
-could change a verdict. The installed shadow broker reads the pinned Git
-tree. The next evidence integration will prove the effective dependency
-version and retrieve its official source for the verifier to cite.
+could change a verdict. The installed broker checks the affected workspace
+and its pinned pnpm lockfile before retrieving a source from the reviewed
+release catalog. If a version or source is unavailable, the verifier can
+report the specific gap. An installed repository token with Actions read
+permission can also supply metadata for a named workflow, job and step on
+the reviewed SHA. Step metadata describes the reported run. Claims about
+the exact checkout, runtime or an individual test require separate proof.
+
+Shadow records the proposed publication after verification and emits a
+diagnostic receipt with `approvalEligible: false`. The current review and
+approval policy still governs the PR.
 A provider interruption is recorded as a technical failure. Usage and cost
 are optional telemetry and have no effect on the verdict.
 Production enforcement stays disabled until an exact profile qualifies

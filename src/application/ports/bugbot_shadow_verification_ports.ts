@@ -12,7 +12,7 @@ export interface BugbotShadowCandidate {
     readonly hypothesis: string;
     readonly anchor: BugbotShadowAnchor;
     readonly repository: { readonly owner: string; readonly name: string };
-    readonly pullRequest: number;
+    readonly pullRequest?: number;
     readonly headSha: string;
     readonly baseSha?: string;
     readonly allowBase: boolean;
@@ -20,7 +20,7 @@ export interface BugbotShadowCandidate {
 
 export interface BugbotShadowCitation {
     readonly receipt: string;
-    readonly kind: 'git' | 'official' | 'runtime';
+    readonly kind: 'git' | 'official' | 'runtime' | 'ci';
     readonly first: number;
     readonly last: number;
     readonly sha?: string;

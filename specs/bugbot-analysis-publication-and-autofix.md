@@ -3323,17 +3323,56 @@ The [installed profile smoke test](../quality/bugbot/evidence/issue-950/installe
 did not qualify the Codex/Sol profile: the installed broker could not
 deliver material version-matched official evidence for either candidate.
 
+#### Publication and approval rehearsal
+
+The installed review computes the same disposition projection for shadow
+and enforced publication. The projection processes all prepared candidates
+before applying the comment limit. Confirmations use the verifier's account
+and citations. Detector suggestions need a separate evidence check before
+publication. A proposed historical close uses a separate candidate for the
+specific fixed or obsolete transition when the retained comment supplies an
+anchor. An unbound or inconclusive transition preserves historical state.
+Reopened findings retain the existing human-dismissal rules.
+
+An intact mixed batch yields a partial review and can publish confirmed
+findings when authorized. An invalid batch stops before finding and status
+mutations. The review rechecks the revision before publication and reconciles
+observed provider state before recording a receipt. The Action emits a shadow
+simulation with `approvalEligible: false`. A complete, observed enforced review
+can attach the authoritative receipt to `Copilot / Review` when the trusted
+runtime supplies rollout authority and the native run identity matches.
+The approval consumer requires the latest attempt, the expected check app and
+suite, the same head and base, and the same policy generation and digest.
+
+The Action configuration continues to reject `enforced` until rollout
+qualification. The simulated projection and controlled producer-to-consumer
+tests are diagnostic. They do not qualify a profile or provide evidence for
+production approval.
+
 #### Official evidence in the installed review
 
-**Required extension for #950.** The installed shadow adapter currently
-binds the pinned Git tree. The verifier can request official evidence, but the
-installed broker lacks the version and upstream source adapters required to
-answer those requests across projects. The experimental broker can consume
-an authenticated catalog supplied by a pilot. The installed Domus replay
-showed both missing source and version accreditation gaps.
+The installed shadow adapter binds the Git tree, a reviewed release-source
+catalog, and a read-only Actions step adapter. The first installed version
+resolver checks the nearest pnpm workspace manifest and its lockfile importer,
+including approved package re-exports. The release catalog currently covers
+Playwright 1.64.1, Lit HTML 3.3.3, LitElement 4.2.2, and SQLite 3.53.3 when
+the session has an accredited runtime receipt. The installed adapter cannot
+infer a SQLite version from a Python version pin. Other package versions and
+package managers require additional provenance adapters.
+
+The `ci` request names a workflow run, job, and step. The adapter uses the
+latest matching run and its exact attempt, checks the repository and associated
+head SHA, and returns a receipt identifying the run, attempt, job, and step.
+A result from another SHA, an explicitly unrelated PR, or a fork is ineligible.
+If GitHub omits the PR association, the observation is scoped to the reported
+SHA. GitHub step metadata can establish that a named step was skipped, failed,
+or succeeded. A claim about the checked-out source, an individual test or the
+effective runtime needs its own evidence. This adapter does not infer those
+facts from the workflow conclusion.
 [Installed adapter](../src/infrastructure/bugbot/installed_bugbot_shadow_adapter.ts) ·
-[Broker](../src/infrastructure/bugbot/shadow/broker.cjs) ·
-[Domus replay](../quality/bugbot/evidence/issue-950/installed-profile/results.md)
+[Official reader](../src/infrastructure/bugbot/shadow/installed_official.cjs) ·
+[CI reader](../src/infrastructure/bugbot/github_bugbot_ci_reader.ts) ·
+[Earlier Domus replay](../quality/bugbot/evidence/issue-950/installed-profile/results.md)
 
 ```text
 Prepared hypothesis -> verifier identifies material dependency question

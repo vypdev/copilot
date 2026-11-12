@@ -480,6 +480,61 @@ describe('finishGithubAction', () => {
         expect(mockSummaryPublish).toHaveBeenCalledWith(expect.stringContaining('# ⏳ Orquestación del despliegue'));
     });
 
+    it('preserves the previous publication when verification rejects the batch', async () => {
+        const action = Object.assign(execution(), { eventName: 'pull_request',
+            inputs: { pull_request: { head: { sha: 'a'.repeat(40) } } } });
+        await finishGithubAction(action, [new Result({ id: 'DetectPotentialProblemsUseCase', executed: true, success: false,
+            payload: { bugbotPublicationBlocked: true },
+        })], {} as never, {} as never, { publish: mockEvidencePublish }, { publish: mockSummaryPublish });
+        expect(mockPublishInvoke).not.toHaveBeenCalled();
+        expect(mockStoreInvoke).not.toHaveBeenCalled();
+        expect(mockEvidencePublish).not.toHaveBeenCalled();
+    });
+
+    it('keeps a configured dry-run with no finding result free of GitHub writes', async () => {
+        const action = execution();
+        jest.spyOn(action.ai, 'getBugbotReviewConfiguration').mockReturnValue({
+            ...action.ai.getBugbotReviewConfiguration(), publicationMode: 'dry-run',
+        });
+        await finishGithubAction(action, [], {} as never, {} as never, { publish: mockEvidencePublish }, { publish: mockSummaryPublish });
+        expect(mockPublishInvoke).not.toHaveBeenCalled();
+        expect(mockStoreInvoke).not.toHaveBeenCalled();
+        expect(mockEvidencePublish).not.toHaveBeenCalled();
+    });
+
+    it('binds the publication receipt to the native Action run and pull-request comparison', async () => {
+        const headSha = 'a'.repeat(40), baseSha = 'b'.repeat(40);
+        const action = Object.assign(execution(), { eventName: 'pull_request', isIssue: false, isPullRequest: true,
+            pullRequest: { number: 11 },
+            inputs: { repository: { id: 17 }, pull_request: { head: { sha: headSha }, base: { sha: baseSha } } },
+        });
+        const runId = process.env.GITHUB_RUN_ID, attempt = process.env.GITHUB_RUN_ATTEMPT;
+        process.env.GITHUB_RUN_ID = '102';
+        process.env.GITHUB_RUN_ATTEMPT = '3';
+        try {
+            await finishGithubAction(action, [new Result({ id: 'DetectPotentialProblemsUseCase', executed: true, success: true,
+                payload: {
+                    bugbotTelemetry: { schemaVersion: 1, outcome: 'no-findings', elapsedMs: 12,
+                        configuredEffort: 'smart', headSha }, findingStates: completeFindingStates(),
+                    bugbotVerificationPublication: {
+                        authority: { mode: 'enforced', generation: 1, policyDigest: 'e'.repeat(64), workflowId: 42, sourceAppId: 15368 },
+                        repositoryId: 17, pullNumber: 11, headSha, baseSha,
+                        coverage: 'complete', verification: 'complete', publication: 'verified', outcome: 'complete',
+                        findingStates: { open: 0, reopened: 0, dismissed: 0, verificationRequired: 0, unknown: 0, fixed: 0, obsolete: 0 },
+                    },
+                },
+            })], {} as never, {} as never, { publish: mockEvidencePublish });
+            expect(mockEvidencePublish).toHaveBeenCalledWith(expect.objectContaining({
+                summary: expect.stringContaining('"runId":102,"attempt":3'),
+            }), expect.any(String), expect.any(String), expect.any(String));
+        } finally {
+            if (runId === undefined) delete process.env.GITHUB_RUN_ID;
+            else process.env.GITHUB_RUN_ID = runId;
+            if (attempt === undefined) delete process.env.GITHUB_RUN_ATTEMPT;
+            else process.env.GITHUB_RUN_ATTEMPT = attempt;
+        }
+    });
+
     it('uses the short-lived evidence token only for the native Check Run', async () => {
         process.env.COPILOT_EVIDENCE_TOKEN = 'github-actions-token';
         const action = Object.assign(execution(), {
@@ -1033,12 +1088,13 @@ describe('admission recovery stays in the immutable run summary (#725)',()=>{
 
 
 describe('installed Bugbot shadow diagnostics', () => {
-    it('exports counts and profiles without exporting claims, receipts, or approval authority', () => {
+    it('exports a simulation receipt and counts without exporting private evidence or approval authority', () => {
         jest.mocked(core.setOutput).mockClear();
         const report = new Result({ id: 'DetectPotentialProblemsUseCase', success: true });
         report.payload = { bugbotShadowVerification: {
             resolvedModel: 'gpt-6-luna', provider: 'codex', detectorEffort: 'xhigh',
             verifier: { model: 'gpt-6.1-sol', provider: 'codex', effort: 'xhigh' },
+            publicationSimulation: { status: 'invalid' },
             candidates: [{ status: 'verdict', verdict: 'confirmed', reason: 'private claim', citations: ['private receipt'] },
                 { status: 'technical-failure', reason: 'private failure' }],
         } };
@@ -1046,6 +1102,7 @@ describe('installed Bugbot shadow diagnostics', () => {
         const [, value] = jest.mocked(core.setOutput).mock.calls[0];
         expect(core.setOutput).toHaveBeenCalledWith('bugbot-shadow-summary', expect.any(String));
         expect(JSON.parse(value)).toEqual([expect.objectContaining({ confirmed: 1, technicalFailures: 1,
+            approvalReceipt: { mode: 'shadow', publication: 'simulated', approvalEligible: false, verification: 'invalid' },
             verifier: { model: 'gpt-6.1-sol', provider: 'codex', effort: 'xhigh' } })]);
         expect(value).not.toContain('private');
     });

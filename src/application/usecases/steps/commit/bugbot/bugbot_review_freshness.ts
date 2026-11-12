@@ -17,14 +17,27 @@ export async function hasNewerBugbotRevision(
     context: BugbotContext,
     ports: BugbotContextPorts,
     boundary: BugbotFreshnessBoundary = 'before-publication',
+    compareBase = false,
 ): Promise<boolean> {
     if (!context.prContext || !context.canonicalPullRequest) return false;
-    const operation = context.reviewFramedSource ? 'get-source-bound-pr' : 'get-head-sha';
+    const operation = context.reviewFramedSource || compareBase ? 'get-source-bound-pr' : 'get-head-sha';
     try {
         if (context.reviewFramedSource) {
             if (!ports.getSourceBoundPullRequest) throw new BugbotReviewCompletenessError('capability');
             const current = await ports.getSourceBoundPullRequest(context.canonicalPullRequest.number);
             return !sameBugbotFramedPullRequest(context.canonicalPullRequest, current);
+        }
+        if (compareBase) {
+            const expected = context.canonicalPullRequest;
+            const current = await ports.getPullRequest(expected.number);
+            const expectedBase = canonicalGitObjectId(expected.baseSha);
+            if (!current || !expectedBase || !canonicalGitObjectId(current.baseSha) || !canonicalGitObjectId(current.headSha)) {
+                throw bugbotFreshnessError(undefined, boundary, operation, true);
+            }
+            return current.number !== expected.number || current.state !== 'open'
+                || current.baseRepository.owner !== expected.baseRepository.owner || current.baseRepository.name !== expected.baseRepository.name
+                || canonicalGitObjectId(current.baseSha) !== expectedBase
+                || canonicalGitObjectId(current.headSha) !== context.prContext.prHeadSha.toLowerCase();
         }
         const currentHead = canonicalGitObjectId(await ports.getPullRequestHeadSha(context.canonicalPullRequest.number));
         if (currentHead === undefined) throw bugbotFreshnessError(undefined, boundary, operation, true);

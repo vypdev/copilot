@@ -1747,7 +1747,7 @@ describe('workflow contract validator', () => {
         const job = Object.values(workflow.jobs)[0];
         job.permissions = { contents: 'read' };
         expect(() => assertAgentWorkflowPermissions(file, workflow)).toThrow('must grant GITHUB_TOKEN exactly');
-        job.permissions = { checks: 'write', contents: 'read' };
+        job.permissions = { actions: 'read', checks: 'write', contents: 'read' };
         const central = loadMutationWorkflow('.github/workflows', 'copilot_comment_runtime.yml');
         const runtime = central.workflow.jobs.copilot;
         const action = runtime.steps.find((step: any) => step.env?.COPILOT_EVIDENCE_TOKEN);
@@ -1781,7 +1781,7 @@ describe('optional commit Check Run credential route', () => {
     const { file, workflow } = loadMutationWorkflow(directory, 'copilot_commit.yml');
     expect(() => assertAgentWorkflowPermissions(file, workflow)).not.toThrow();
     const job = workflow.jobs['copilot-commits'];
-    expect(job.permissions).toEqual({ checks: 'write', contents: 'read' });
+    expect(job.permissions).toEqual({ actions: 'read', checks: 'write', contents: 'read' });
     expect(job.env?.COPILOT_EVIDENCE_TOKEN).toBeUndefined();
     const action = job.steps.find((step: any) => step.env?.COPILOT_EVIDENCE_TOKEN);
     expect(action.env.COPILOT_EVIDENCE_TOKEN).toBe('${{ github.token }}');

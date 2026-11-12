@@ -1,3 +1,4 @@
+import type { BugbotVerificationAuthority } from '../../domain/bugbot/verification_receipt';
 import type { AgentConfiguration } from '../../domain/agent';
 import type { BugbotShadowConfiguration } from '../../domain/bugbot/review_configuration';
 import { INPUT_KEYS } from '../contracts/input_keys';
@@ -6,8 +7,19 @@ import type { AgentConfigurationEnvironment } from '../ports/agent_configuration
 import { buildAgentConfiguration } from './agent_configuration_input_policy';
 import { resolveAgentProvider, resolveEffort, resolveModel } from './agent_configuration_validation_policy';
 
-export function readBugbotVerificationMode(read: (input: string) => string): 'disabled' | 'shadow' {
+export function readBugbotVerificationMode(
+    read: (input: string) => string,
+    authority?: BugbotVerificationAuthority,
+): 'disabled' | 'shadow' | 'enforced' {
     const mode = read(INPUT_KEYS.BUGBOT_VERIFICATION_MODE)?.trim() || 'disabled';
+    if (authority && (!/^[a-f0-9]{64}$/u.test(authority.policyDigest)
+        || ![authority.generation, authority.workflowId, authority.sourceAppId].every(value => Number.isSafeInteger(value) && value > 0))) {
+        throw new ApplicationError('configuration.invalid', 'The trusted Bugbot rollout policy is malformed.');
+    }
+    if (authority && authority.mode !== mode) {
+        throw new ApplicationError('configuration.invalid', 'The configured Bugbot mode does not match the trusted rollout policy.');
+    }
+    if (mode === 'enforced' && authority?.mode === 'enforced') return mode;
     if (mode === 'enforced') {
         throw new ApplicationError('configuration.unsupported', 'Bugbot enforcement requires a qualified verification profile. Use shadow for evaluation.');
     }
@@ -20,8 +32,9 @@ export function readBugbotVerificationMode(read: (input: string) => string): 'di
 export function readBugbotShadowConfiguration(
     read: (input: string) => string,
     environment: AgentConfigurationEnvironment,
+    authority?: BugbotVerificationAuthority,
 ): BugbotShadowConfiguration | undefined {
-    if (readBugbotVerificationMode(read) === 'disabled') return undefined;
+    if (readBugbotVerificationMode(read, authority) === 'disabled') return undefined;
     const provider = read(INPUT_KEYS.BUGBOT_VERIFIER_PROVIDER)?.trim().toLowerCase();
     const modelProvider = read(INPUT_KEYS.BUGBOT_VERIFIER_MODEL_PROVIDER)?.trim().toLowerCase();
     const model = read(INPUT_KEYS.BUGBOT_VERIFIER_MODEL)?.trim();

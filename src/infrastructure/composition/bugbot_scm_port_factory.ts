@@ -1,3 +1,4 @@
+import type { BugbotVerificationAuthority } from '../../domain/bugbot/verification_receipt';
 import type { BugbotReviewSourcePort } from '../../application/ports/bugbot_review_source_ports';
 import type { BugbotScmPorts } from '../../application/ports/bugbot_scm_ports';
 import type { BugbotRuleFileQueryPort } from '../../application/ports/bugbot_rule_ports';
@@ -14,7 +15,7 @@ export interface BugbotScmBinding {
   readonly owner: string;
   readonly repository: string;
   readonly token: string;
-  readonly shadow?: { readonly workspace?: string };
+  readonly shadow?: { readonly workspace?: string; readonly authority?: BugbotVerificationAuthority };
 }
 
 /** Binds repository identity and credential once, outside application workflows. */

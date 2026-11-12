@@ -18,6 +18,9 @@ import { inspectCursorVerifierCatalog, inspectOpenCodeVerifierCatalog } from './
 export interface BugbotShadowSource {
     readonly repo: string;
     readonly officialDirectory?: string;
+    readonly installedOfficial?: { readonly packages: readonly string[] };
+    readonly readCi?: import('./github_bugbot_ci_reader').BugbotCiReader;
+    readonly pullRequest?: number;
     readonly catalog?: readonly {
         readonly package: string;
         readonly version: string;

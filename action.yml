@@ -588,7 +588,7 @@ inputs:
     default: ""
 outputs:
   bugbot-shadow-summary:
-    description: "Diagnostic counts and effective profiles from Bugbot shadow verification. Does not authorize approval."
+    description: "Diagnostic counts, effective profiles and simulated publication receipts from Bugbot shadow verification. Does not authorize approval."
   bugbot-telemetry:
     description: "JSON array of content-free Bugbot telemetry snapshots for this action run."
 runs:

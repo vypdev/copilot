@@ -19,6 +19,7 @@ jobs:
       group: copilot-pr-${{ github.repository }}-${{ github.event.pull_request.number }}-analysis
       cancel-in-progress: true
     permissions:
+      actions: read
       checks: write
       contents: read
     steps:

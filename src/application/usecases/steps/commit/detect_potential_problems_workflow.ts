@@ -1,3 +1,7 @@
+import type { BugbotVerificationAuthority, BugbotVerificationPublication } from '../../../../domain/bugbot/verification_receipt';
+import { canonicalGitObjectId } from '../../../../domain/git_object_id';
+import { projectVerifiedBugbotPublication, type BugbotVerificationProjection } from './bugbot/verify_bugbot_publication_policy';
+import type { BoundPublicationSourceQueryPort } from '../../../ports/publication_freshness_ports';
 import type { AgentConfiguration } from '../../../../domain/agent';
 import { BugbotCandidateTrace } from './bugbot/bugbot_candidate_trace';
 import type { BugbotShadowVerificationPort } from '../../../ports/bugbot_shadow_verification_ports';
@@ -50,6 +54,9 @@ export interface DetectPotentialProblemsWorkflowDependencies {
     catalogResolver?: MessageCatalogResolutionPort;
     shadowVerification?: BugbotShadowVerificationPort;
     experimentalShadowProfile?: Readonly<AgentConfiguration>;
+    /** Supplied only by trusted rollout admission, independently of agent or repository text. */
+    verificationAuthority?: BugbotVerificationAuthority;
+    sourceFreshness?: BoundPublicationSourceQueryPort;
 }
 
 const TASK_ID = 'DetectPotentialProblemsUseCase';
@@ -64,12 +71,21 @@ export async function runDetectPotentialProblemsWorkflow(
     const resolvedAgent = reviewContext.analysis.agentConfiguration;
     const trace = dependencies.shadowVerification ? new BugbotCandidateTrace() : undefined;
     let shadow: BugbotShadowVerificationReport | undefined;
+    let verification: BugbotVerificationProjection | undefined;
+    const authority = dependencies.verificationAuthority;
+    const enforced = authority?.mode === 'enforced';
+    const dryRun = reviewContext.analysis.reviewConfiguration.publicationMode === 'dry-run';
     const unavailableShadow = (): BugbotShadowVerificationReport | undefined => dependencies.shadowVerification
         ? { resolvedModel: resolvedAgent.model, provider: resolvedAgent.provider, candidates: [], detectionUnavailable: true,
             detection: trace?.detectionSnapshot(), origins: trace?.snapshot() }
         : undefined;
     const shadowPayload = () => shadow ? { bugbotShadowVerification: {
         ...shadow, ...(shadow.timing ? { timing: { ...shadow.timing, workflowWallMs: Date.now() - workflowStartedAt } } : {}),
+        ...(verification ? { publicationSimulation: verification.status === 'invalid' ? { status: 'invalid' } : {
+            status: verification.status, individual: verification.prepared.toPublish.map(finding => finding.id),
+            overflow: verification.prepared.overflowCount, resolutions: [...verification.prepared.resolvedFindingIds],
+            inconclusive: verification.inconclusive,
+        } } : {}),
     } } : {};
     const publishTelemetry = async (outcome: BugbotReviewOutcome, category?: string) => {
         const snapshot = telemetry.snapshot(outcome, category);
@@ -87,7 +103,8 @@ export async function runDetectPotentialProblemsWorkflow(
         const payload = result.payload && typeof result.payload === 'object' && !Array.isArray(result.payload)
             ? result.payload as Record<string, unknown>
             : {};
-        result.payload = { ...payload, ...shadowPayload(), bugbotTelemetry: snapshot };
+        result.payload = { ...payload, ...shadowPayload(), bugbotTelemetry: snapshot, ...(dryRun ? { dryRun: true } : {}),
+            ...(enforced && (outcome === 'failed' || outcome === 'superseded') ? { bugbotPublicationBlocked: true } : {}) };
         return [result];
     };
     logInfo(`${getTaskEmoji(TASK_ID)} Executing ${TASK_ID}.`);
@@ -132,16 +149,17 @@ export async function runDetectPotentialProblemsWorkflow(
             return await complete(supersededResult(context.prContext?.prHeadSha, eventHeadSha), 'superseded');
         }
         const detectionStartedAt = Date.now();
-        const prepared = await analyzeBugbotRevision(reviewContext, context, { agent: dependencies.aiRepository, telemetry, trace, isSourceCurrent: async () => !await hasNewerBugbotRevision(context, dependencies.scm.context) });
+        let prepared = await analyzeBugbotRevision(reviewContext, context, { agent: dependencies.aiRepository, telemetry, trace, isSourceCurrent: async () => !await hasNewerBugbotRevision(context, dependencies.scm.context) });
         const detectionAndPreparationMs = Date.now() - detectionStartedAt;
         if (prepared === undefined) {
             shadow = unavailableShadow();
+            if (enforced) return await complete(noAnalysisResult(), 'failed');
             const analysisError = new ApplicationError('agent.failed', 'The configured agent returned no potential-problem analysis.');
             const catalog = reviewContext.analysis.reviewConfiguration.publicationMode === 'publish'
                 && context.prContext && context.canonicalPullRequest
                 ? await resolvePublicationCatalog(reviewContext, dependencies, true)
                 : undefined;
-            const presentation = reviewContext.analysis.reviewConfiguration.publicationMode === 'publish'
+            const presentation = !dryRun
                 ? await telemetry.measure('projection', () => reconcileReviewState({
                     operation: reviewContext,
                     loadedContext: context,
@@ -169,9 +187,24 @@ export async function runDetectPotentialProblemsWorkflow(
                 return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
             }
         }
-        if (reviewContext.analysis.reviewConfiguration.publicationMode === 'dry-run') {
+        if (shadow) verification = projectVerifiedBugbotPublication(prepared, shadow, reviewContext.analysis.commentLimit);
+        if (dryRun) {
             return await complete(dryRunResult(prepared, context), 'dry-run');
         }
+        if (enforced) {
+            if (!verification || verification.status === 'invalid') {
+                return await complete(new Result({
+                    id: TASK_ID, success: false, executed: true,
+                    errors: [new ApplicationError('validation.evidence-unavailable',
+                        'Bugbot verification failed before publication. The previous verified result was preserved.')],
+                }), 'failed');
+            }
+            prepared = verification.prepared;
+        }
+        const incompleteVerification = enforced && verification?.status === 'incomplete';
+        const publicationContext = incompleteVerification
+            ? { ...context, coverage: { ...context.coverage, status: 'partial' as const } }
+            : context;
         // A pull request still publishes its canonical status card when there are no finding mutations.
         const presentsPullRequestStatus = Boolean(context.prContext && context.canonicalPullRequest);
         const mutatesFindingComments = prepared.toPublish.length > 0
@@ -179,8 +212,16 @@ export async function runDetectPotentialProblemsWorkflow(
         const catalog = presentsPullRequestStatus || mutatesFindingComments
             ? await resolvePublicationCatalog(reviewContext, dependencies, presentsPullRequestStatus)
             : undefined;
-        // Catalog localization may await a provider. Recheck after it, directly before SCM mutation.
-        if (context.reviewFramedSource && await hasNewerBugbotRevision(context, dependencies.scm.context)) {
+        // Catalog localization may await a provider. Recheck the exact comparison immediately before SCM mutation.
+        if (enforced && !context.canonicalPullRequest) {
+            const expected = canonicalGitObjectId(reviewContext.trigger.after);
+            const branch = reviewContext.target.commitBranch;
+            const current = expected && branch && dependencies.sourceFreshness
+                ? canonicalGitObjectId(await dependencies.sourceFreshness.getBranchHeadSha(branch)) : undefined;
+            if (!current) throw new ApplicationError('validation.evidence-unavailable', 'Bugbot could not bind the current Commit revision.');
+            if (current !== expected) return await complete(supersededResult(expected), 'superseded');
+        }
+        if ((enforced || context.reviewFramedSource) && await hasNewerBugbotRevision(context, dependencies.scm.context, 'before-publication', enforced)) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
         const resolutionErrors = await telemetry.measure('publication', () => applyDetectedFindings(
@@ -192,13 +233,13 @@ export async function runDetectPotentialProblemsWorkflow(
             catalog,
         ));
         if (await telemetry.measure('post-publication-freshness', () =>
-            hasNewerBugbotRevision(context, dependencies.scm.context, 'after-publication'))) {
+            hasNewerBugbotRevision(context, dependencies.scm.context, 'after-publication', enforced))) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
         const presentation = await telemetry.measure('projection', () =>
             reconcileReviewState({
                 operation: reviewContext,
-                loadedContext: context,
+                loadedContext: publicationContext,
                 activeFindings: prepared.activeFindings ?? prepared.toPublish,
                 expectedPublishedFindings: prepared.toPublish,
                 mutationErrors: resolutionErrors,
@@ -209,11 +250,15 @@ export async function runDetectPotentialProblemsWorkflow(
         logInfo(`Bugbot workflow completed in ${Date.now() - workflowStartedAt}ms.`);
         const finalErrors = presentation?.errors ?? resolutionErrors;
         const hasChanges = prepared.toPublish.length > 0 || prepared.resolvedFindingIds.size > 0;
+        const result = detectionResult(prepared, publicationContext, finalErrors, presentation);
+        if (incompleteVerification) result.steps.push('Repository verification remains inconclusive for one or more candidates.');
+        const publication = authority && buildVerificationPublication(authority, reviewContext, context, verification, presentation, finalErrors);
+        if (publication) result.payload = { ...result.payload as object, bugbotVerificationPublication: publication };
         return await complete(
-            detectionResult(prepared, context, finalErrors, presentation),
+            result,
             finalErrors.length > 0
                 ? 'failed'
-                : context.coverage.status === 'partial'
+                : publicationContext.coverage.status === 'partial'
                     ? 'partial'
                     : hasChanges ? 'completed' : 'no-findings',
         );
@@ -234,7 +279,8 @@ export async function runDetectPotentialProblemsWorkflow(
         });
         const snapshot = await publishTelemetry('failed', error instanceof Error ? error.name : 'unknown');
         shadow ??= unavailableShadow();
-        result.payload = { ...shadowPayload(), bugbotTelemetry: snapshot };
+        result.payload = { ...shadowPayload(), bugbotTelemetry: snapshot, ...(dryRun ? { dryRun: true } : {}),
+            ...(enforced ? { bugbotPublicationBlocked: true } : {}) };
         return [result];
     }
 }
@@ -470,4 +516,33 @@ function resolvePublicationCatalog(
         operation.analysis.agentConfiguration,
         dependencies.catalogResolver,
     );
+}
+
+function buildVerificationPublication(
+    authority: BugbotVerificationAuthority,
+    operation: BugbotReviewOperationContext,
+    context: BugbotContext,
+    verification: BugbotVerificationProjection | undefined,
+    presentation: BugbotPresentationReport | undefined,
+    errors: readonly Error[],
+): BugbotVerificationPublication | undefined {
+    // Qualification and rollback authority come from trusted runtime admission.
+    if (authority.mode !== 'enforced' || verification?.status !== 'complete' || errors.length
+        || presentation?.projection.outcome !== 'complete' || presentation.pendingReviewUpdates > 0
+        || presentation.statusCardOperation === 'failed') return undefined;
+    const pr = context.canonicalPullRequest;
+    const headSha = canonicalGitObjectId(pr?.headSha);
+    const baseSha = canonicalGitObjectId(pr?.baseSha);
+    const repositoryId = pr?.baseRepository.id;
+    const projection = presentation.projection;
+    if (!pr || !headSha || !baseSha || !repositoryId || repositoryId !== operation.repository.id
+        || projection.pullRequestNumber !== pr.number || projection.analyzedHeadSha !== headSha
+        || projection.verifiedHeadSha !== headSha || projection.coverage.status !== 'complete') return undefined;
+    const { open, reopened, dismissed, unknown, fixed, obsolete } = projection.counts;
+    return {
+        authority, repositoryId, pullNumber: pr.number, headSha, baseSha,
+        coverage: 'complete', verification: 'complete', publication: 'verified', outcome: 'complete',
+        findingStates: { open, reopened, dismissed, unknown, fixed, obsolete,
+            verificationRequired: projection.counts['verification-required'] },
+    };
 }

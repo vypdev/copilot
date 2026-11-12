@@ -11,6 +11,7 @@ const instructions = require('./prompt.cjs');
 const ajv = new Ajv();
 const validateLegacy = ajv.compile(schema);
 const validateLifecycle = ajv.compile(schema.lifecycle);
+const validateInstalled = ajv.compile(schema.installed);
 
 const legacyOfficialInstruction = 'Use a cited source for every dependency in requiredOfficial, derived from the prepared claim and its anchored file, and for any dependency you name in the conclusion. Obtain the scoped version and source early enough to finish. If a dependency is required, the conclusion needs its cited source even when the repository text already refutes the hypothesis.';
 assert(instructions.includes(legacyOfficialInstruction), 'legacy-official-instruction-missing');
@@ -29,13 +30,17 @@ function checkTree(repo, subject, allowBase) {
 
 /** Bind Git, source and provider adapters to the application investigation. */
 function investigate(source, subject, finding, cwd, transport, log, signal, { lifecycle = false, sharedRead, stateless } = {}) {
+    const installed = Boolean(source.installedOfficial || source.readCi);
+    const installedInstructions = lifecycleInstructions +
+        '\nFor official, specify the package and a literal query. Leave version and basis null to request proof from the pinned lockfile for the affected workspace, or cite a delivered version basis. An unproven version, unavailable source, and no literal match are different outcomes.' +
+        '\nFor ci, set target to the exact Actions workflow name, scope to the job name and query to the step name. Inspect the pinned workflow configuration for the applicable step. The receipt describes Actions metadata for the associated SHA. Prove the executed command and checkout separately if the conclusion depends on them.';
     return investigateBugbotShadow({
-        broker: makeBroker(source, subject, finding, sharedRead), subject, finding, log, signal, lifecycle, stateless,
+        broker: makeBroker(source, subject, finding, sharedRead, signal), subject, finding, log, signal, lifecycle, stateless,
         transport: request => transport({ ...request, cwd }),
-        officialPackages: [...new Set((source.catalog ?? []).map(entry => entry.package))],
-        instructions: lifecycle ? lifecycleInstructions : instructions,
-        schema: lifecycle ? schema.lifecycle : schema,
-        validate: lifecycle ? validateLifecycle : validateLegacy,
+        officialPackages: [...new Set([...(source.catalog ?? []).map(entry => entry.package), ...(source.installedOfficial?.packages ?? [])])],
+        instructions: installed ? installedInstructions : lifecycle ? lifecycleInstructions : instructions,
+        schema: installed ? schema.installed : lifecycle ? schema.lifecycle : schema,
+        validate: installed ? validateInstalled : lifecycle ? validateLifecycle : validateLegacy,
         checkRevision: () => checkTree(source.repo, subject, finding.allowBase),
         fingerprint: hash,
     });

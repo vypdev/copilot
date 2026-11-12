@@ -52,10 +52,12 @@ export async function finishGithubAction(
     execution.currentConfiguration.results = results;
     core.setOutput('bugbot-telemetry', JSON.stringify(extractBugbotTelemetry(results)));
     const shadowSummary = emitBugbotShadowSummary(results);
-    const dryRun = results.some((result) => getResultPayload(result.payload)?.dryRun === true);
+    const dryRun = execution.ai.getBugbotReviewConfiguration().publicationMode === 'dry-run'
+        || results.some(result => getResultPayload(result.payload)?.dryRun === true);
+    const verificationBlocked = results.some(result => getResultPayload(result.payload)?.bugbotPublicationBlocked === true);
     const admissionStopped = execution.issueWorkflowRuntimeMode === 'block' || execution.issueWorkflowRuntimeMode === 'noop';
     const ownsDeploymentPresentation = execution.singleAction.isDeploymentOrchestrationAction;
-    if (!dryRun && !admissionStopped && !execution.singleAction.isPublishIssueCommentAction && !ownsDeploymentPresentation) {
+    if (!dryRun && !verificationBlocked && !admissionStopped && !execution.singleAction.isPublishIssueCommentAction && !ownsDeploymentPresentation) {
         const publicationContext = projectPublishResultContext(execution);
         const requestRead = publicationContext.requestSource ? createReplyRequestReadPort({
             owner: execution.owner, repository: execution.repo, token: execution.tokens.token,
@@ -67,6 +69,8 @@ export async function finishGithubAction(
             requestRead,
         ).invoke(publicationContext);
         if (publicationOutcome) results.push(publicationOutcome);
+    } else if (verificationBlocked) {
+        logInfo('Bugbot verification did not authorize publication.');
     } else if (admissionStopped) {
         logInfo('Issue admission stopped: exact recovery is reported only in the Job Summary.');
     } else if (execution.singleAction.isPublishIssueCommentAction || ownsDeploymentPresentation) {
@@ -75,7 +79,7 @@ export async function finishGithubAction(
         logInfo('Bugbot dry-run: result publication and repository configuration persistence are disabled.');
     }
     commitPublishedRecommendationState(execution, results);
-    if (!dryRun && shouldPersistConfiguration(execution)) {
+    if (!dryRun && !verificationBlocked && shouldPersistConfiguration(execution)) {
         const configuration = projectConfigurationPersistenceContext(execution);
         if (configuration) {
             await new StoreConfigurationUseCase(configurationStorePort).invoke(configuration);
@@ -91,7 +95,7 @@ export async function finishGithubAction(
         try { await summaryPort.publish(shadowSummary); }
         catch { logInfo('Bugbot shadow summary could not be appended.'); }
     }
-    const optionalEvidenceDiagnostic = !dryRun ? await publishCopilotEvidence(
+    const optionalEvidenceDiagnostic = !dryRun && !verificationBlocked ? await publishCopilotEvidence(
         execution,
         results,
         summary.text,
@@ -118,6 +122,12 @@ export function emitBugbotShadowSummary(results: readonly Result[]): string | un
             detectorModelProvider: report.detectorModelProvider, detectorEffort: report.detectorEffort,
             verifier: report.verifier, head: report.review?.headSha, detectionUnavailable: report.detectionUnavailable === true,
             superseded: report.superseded === true, timing: report.timing,
+            simulatedVerification: report.publicationSimulation?.status,
+            ...(report.publicationSimulation ? { approvalReceipt: {
+                mode: 'shadow', publication: 'simulated', approvalEligible: false,
+                headSha: report.review?.headSha, baseSha: report.review?.baseSha, pullNumber: report.review?.pullRequest,
+                verification: report.publicationSimulation.status,
+            } } : {}),
             candidates: report.candidates.length,
             confirmed: report.candidates.filter(candidate => candidate.status === 'verdict' && candidate.verdict === 'confirmed').length,
             refuted: report.candidates.filter(candidate => candidate.status === 'verdict' && candidate.verdict === 'refuted').length,
@@ -268,7 +278,16 @@ async function publishCopilotEvidence(
     if (!evidencePort) return;
     const headSha = execution.inputs?.pull_request?.head?.sha
         || (execution.isPush ? process.env.GITHUB_SHA : undefined);
+    const pull = execution.inputs?.pull_request;
+    const native = pull && {
+        repositoryId: Number(execution.inputs?.repository?.id),
+        pullNumber: Number(execution.pullRequest.number),
+        baseSha: String(pull.base?.sha ?? ''),
+        runId: Number(process.env.GITHUB_RUN_ID),
+        attempt: Number(process.env.GITHUB_RUN_ATTEMPT),
+    };
     const evidenceInput = {
+        bugbotNativeAttempt: native,
         eventName: execution.eventName,
         headSha,
         summary,

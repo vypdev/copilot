@@ -43,3 +43,12 @@ const lifecycle = object({
 
 module.exports = legacy;
 Object.defineProperty(module.exports, 'lifecycle', { value: lifecycle });
+
+const installed = object({
+    ...lifecycle.properties,
+    requests: array(object({
+        ...legacy.properties.requests.items.properties,
+        op: choice([...legacy.properties.requests.items.properties.op.enum, 'ci']),
+    })),
+});
+Object.defineProperty(module.exports, 'installed', { value: installed });

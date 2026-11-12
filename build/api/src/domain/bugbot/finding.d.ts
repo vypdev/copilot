@@ -21,6 +21,8 @@ export interface BugbotFinding {
     /** Exact replacement text for a suggested change, when safe and local. */
     suggestedCode?: string;
 }
+/** A transition cannot share receipts with any active finding ID, which excludes quotation marks. */
+export declare function bugbotResolutionCandidateId(id: string): string;
 export type BugbotFindingResolution = 'fixed' | 'obsolete' | 'dismissed';
 export interface ExistingIssueFindingInfo {
     commentId: number;

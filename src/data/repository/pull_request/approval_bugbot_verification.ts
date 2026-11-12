@@ -1,3 +1,4 @@
+import { BUGBOT_RECEIPT_COUNT_KEYS } from '../../../domain/bugbot/verification_receipt';
 import type { ApprovalBugbotFact } from '../../../domain/pull_request_approval';
 
 /** Supplied by trusted runtime configuration. Rollback also requires a receipt. */
@@ -37,7 +38,6 @@ interface ApprovalVerificationScope {
 }
 
 const marker = /<!-- copilot-bugbot-verification:v1 ([^\r\n]{1,4096}) -->/gu;
-const counts = ['open', 'reopened', 'dismissed', 'verificationRequired', 'unknown', 'fixed', 'obsolete'] as const;
 const receiptKeys = ['version', 'repositoryId', 'pullNumber', 'headSha', 'baseSha', 'policyDigest', 'generation',
     'mode', 'runId', 'attempt', 'coverage', 'verification', 'publication', 'outcome', 'findingStates'];
 
@@ -92,7 +92,7 @@ function parseReceipt(
         || receipt.publication !== 'verified' || receipt.outcome !== 'complete'
         || checkConclusion !== 'success') return undefined;
     const state = receipt.findingStates;
-    if (!isRecord(state) || !exactKeys(state, counts) || !counts.every(key => Number.isSafeInteger(state[key]) && (state[key] as number) >= 0)) return undefined;
+    if (!isRecord(state) || !exactKeys(state, BUGBOT_RECEIPT_COUNT_KEYS) || !BUGBOT_RECEIPT_COUNT_KEYS.every(key => Number.isSafeInteger(state[key]) && (state[key] as number) >= 0)) return undefined;
     return {
         headSha: scope.headSha, outcome: 'complete', coverage: 'complete',
         verificationReceipt: { runId: run.id, attempt: run.run_attempt,

@@ -1,3 +1,4 @@
+import type { BugbotVerificationAuthority } from '../domain/bugbot/verification_receipt';
 import { readBugbotVerificationMode } from '../application/policies/bugbot_shadow_configuration_policy';
 import { renderApplicationErrorText } from '../application/policies/application_error_presentation_policy';
 import { resolveStaticApplicationErrorCatalog } from '../application/policies/application_error_message_catalog';
@@ -15,9 +16,9 @@ import { configureApplicationLogger } from '../application/ports/logging_ports';
 import { createLoggerAdapter } from '../infrastructure/logging/logger_adapter';
 
 /** Dedicated trusted-default-branch route. It never calls the agent or checks out PR code. */
-export async function runPullRequestApprovalAction(token: string): Promise<void> {
+export async function runPullRequestApprovalAction(token: string, verificationAuthority?: BugbotVerificationAuthority): Promise<void> {
     configureApplicationLogger(createLoggerAdapter());
-    readBugbotVerificationMode(getGithubActionInput);
+    readBugbotVerificationMode(getGithubActionInput, verificationAuthority);
     const repository = github.context.payload.repository;
     const repositoryId = repository?.id;
     if (!Number.isSafeInteger(repositoryId) || !repositoryId || repositoryId <= 0) {
@@ -47,6 +48,9 @@ export async function runPullRequestApprovalAction(token: string): Promise<void>
         bugbotDryRun: getGithubActionInput('bugbot-dry-run') === 'true',
         bugbotIgnorePatterns: parseDelimitedValues(getGithubActionInput('ai-ignore-files')),
         githubToken: process.env.COPILOT_APPROVAL_CHECK_TOKEN,
+        ...(verificationAuthority ? {
+            readBugbotVerificationPolicy: async () => ({ ...verificationAuthority, requireReceipt: true as const }),
+        } : {}),
         locale,
     });
     const useCase = new ObservePullRequestApprovalUseCase(port);

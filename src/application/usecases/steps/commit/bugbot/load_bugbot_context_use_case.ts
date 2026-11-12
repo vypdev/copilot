@@ -200,6 +200,7 @@ export async function loadBugbotContext(
   logDebugInfo(
     `LoadBugbotContext: selection=${selectionReason}, coverage=${coverage.status}, existing findings=${Object.keys(parsedComments.existingByFindingId).length}, retained previous findings=${previousContext.selected.length}, diff files=${prContext?.changes?.length ?? 0}, diff partitions=${diffPlan.partitions.length}.`,
   );
+  const commentsByIdentity = new Map(pullRequestComments.map(comment => [comment.identity, comment]));
   return {
     ...(framedSource ? { reviewFramedSource: framedSource } : {}),
     existingByFindingId: parsedComments.existingByFindingId,
@@ -215,10 +216,15 @@ export async function loadBugbotContext(
     reviewDiffIgnoredFileCount: diffPlan.ignored,
     reviewConversationBlock: conversationContext.block,
     prContext,
-    unresolvedFindingsWithBody: previousContext.selected.map((finding) => ({
-      id: finding.id,
-      fullBody: finding.fullBody,
-    })),
+    unresolvedFindingsWithBody: previousContext.selected.map((finding) => {
+      const identity = parsedComments.existingByFindingId[finding.id]?.pullRequest?.commentIdentity;
+      const comment = identity ? commentsByIdentity.get(identity) : undefined;
+      return {
+        id: finding.id,
+        fullBody: finding.fullBody,
+        ...(comment?.path && comment.line ? { anchor: { path: comment.path, line: comment.line } } : {}),
+      };
+    }),
     reviewRulesBlock: ruleSet.promptBlock,
     reviewRuleSources: [...ruleSet.sources],
     omittedReviewRules: ruleSet.omitted,

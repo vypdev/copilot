@@ -32,7 +32,7 @@ function intervals(patch) {
     });
 }
 
-function makeBroker({ repo, officialDirectory, catalog = [], localRuntime, resolvedVersions = [] }, subject, finding, sharedRead) {
+function makeBroker({ repo, officialDirectory, catalog = [], localRuntime, resolvedVersions = [], installedOfficial, readCi, pullRequest }, subject, finding, sharedRead, signal) {
     const binding = { finding: finding.id, repository: subject.repository, head: subject.head, tree: subject.tree, operation: randomUUID(), anchor: finding.detectorLocation };
     const receipts = new Map();
     let cacheHits = 0;
@@ -81,16 +81,53 @@ function makeBroker({ repo, officialDirectory, catalog = [], localRuntime, resol
         return null;
     }
 
+    function officialMatches(documents, version, request, sha) {
+        const sources = [];
+        for (const { lines, ...identity } of documents) {
+            const matches = lines.flatMap((line, index) => line.includes(request.query) ? [index + 1] : []);
+            const windows = [];
+            for (const match of matches) {
+                const first = Math.max(1, match - 5);
+                const last = Math.min(lines.length, match + 8);
+                const previous = windows.at(-1);
+                if (previous && first <= previous.last && last - previous.first <= 45) previous.last = last;
+                else windows.push({ first, last });
+            }
+            for (const range of windows) {
+                sources.push({ kind: 'official', sha, ...version, ...identity, basis: request.basis,
+                    ...window(lines, range.first, range.last) });
+            }
+        }
+        const current = page(sources, request.first ?? 1, 8);
+        return current.items.length
+            ? { ...grant(current.items), ...version, next: current.next }
+            : { status: 'official-no-match', ...version };
+    }
+
+    const unprovenVersion = packageName => ({ status: 'official-version-not-proven',
+        ...(packageName === 'sqlite' ? { requiredBasis: { kind: 'runtime', package: packageName, prerequisite: sqliteRuntimeBasis } } : {}) });
+
+    async function installedDoc(request, sha, packageName, proof) {
+        const version = installedOfficial.resolveVersion({ repo, sha, anchor: finding.detectorLocation, request, packageName, proof });
+        if (!version) return unprovenVersion(packageName);
+        const sources = await installedOfficial.sources(packageName, version.version, signal);
+        return sources.length ? officialMatches(sources, version, request, sha)
+            : { status: 'official-source-unavailable', ...version };
+    }
+
     function doc(request, sha, delivered) {
         const packageName = officialPackage(request.target);
         const proof = readBasis(request.basis, sha, delivered);
+        if (installedOfficial) {
+            if (typeof request.query !== 'string' || !request.query.trim() || request.query.length > 120) return blocked('official-query');
+            return installedDoc(request, sha, packageName, proof);
+        }
         const version = versionEvidence(request, packageName, proof);
-        if (!version) return { status: 'official-version-not-proven',
-            ...(packageName === 'sqlite' ? { requiredBasis: { kind: 'runtime', package: packageName, prerequisite: sqliteRuntimeBasis } } : {}) };
+        if (!version) return unprovenVersion(packageName);
         if (typeof request.query !== 'string' || !request.query.trim() || request.query.length > 120) return blocked('official-query');
         const supported = catalog.filter(item => item.package === packageName && item.version === version.version);
         if (!supported.length) return { status: 'official-source-unavailable', ...version };
-        const sources = [];
+        const documents = [];
         for (const item of supported) {
             let lines;
             try {
@@ -103,25 +140,22 @@ function makeBroker({ repo, officialDirectory, catalog = [], localRuntime, resol
                 if (error.code === 'ENOENT') return { status: 'official-source-unavailable', ...version };
                 throw error;
             }
-            const matches = lines.flatMap((line, index) => line.includes(request.query) ? [index + 1] : []);
-            const windows = [];
-            for (const match of matches) {
-                const first = Math.max(1, match - 5);
-                const last = Math.min(lines.length, match + 8);
-                const previous = windows.at(-1);
-                if (previous && first <= previous.last && last - previous.first <= 45) previous.last = last;
-                else windows.push({ first, last });
-            }
-            for (const range of windows) {
-                sources.push({ kind: 'official', sha, ...version, sourceKind: item.kind,
-                    url: item.url, commit: item.commit, sha256: item.sha256, basis: request.basis,
-                    ...window(lines, range.first, range.last) });
-            }
+            documents.push({ sourceKind: item.kind, url: item.url, commit: item.commit, sha256: item.sha256, lines });
         }
-        const current = page(sources, request.first ?? 1, 8);
-        return current.items.length
-            ? { ...grant(current.items), ...version, next: current.next }
-            : { status: 'official-no-match', ...version };
+        return officialMatches(documents, version, request, sha);
+    }
+
+    async function ci(request, sha) {
+        if (!readCi) return blocked('ci-unavailable');
+        if (![request.scope, request.query].every(value => typeof value === 'string' && value.trim()
+            // eslint-disable-next-line no-control-regex -- A CI selector is one printable name.
+            && value.length <= 160 && !/[\u0000-\u001f\u007f]/u.test(value))) return blocked('ci-query');
+        const evidence = await readCi({ sha, workflow: request.target, job: request.scope, step: request.query,
+            pullRequest, revision: request.revision }, signal);
+        if (evidence.status !== 'ci-observed') return blocked(evidence.status);
+        const { runId, attempt, jobId, stepNumber, url, lines } = evidence;
+        return grant([{ kind: 'ci', sha, workflow: request.target, job: request.scope, step: request.query,
+            runId, attempt, jobId, stepNumber, url, first: 1, last: lines.length, lines }]);
     }
 
     function run(request, delivered) {
@@ -142,6 +176,7 @@ function makeBroker({ repo, officialDirectory, catalog = [], localRuntime, resol
             return { status: 'provided', sources: [{ ...proof, first, last, lines: proof.lines.slice(first - proof.first, last - proof.first + 1) }] };
         }
         if (request.op === 'official') return doc(request, sha, delivered);
+        if (request.op === 'ci') return ci(request, sha);
         if (request.op === 'runtime') {
             const proof = readBasis(request.basis, sha, delivered);
             if (!localRuntime || request.target !== 'sqlite' || sha !== subject.head) return blocked('runtime-unavailable');
@@ -179,7 +214,8 @@ function makeBroker({ repo, officialDirectory, catalog = [], localRuntime, resol
         cacheHits = 0;
         try {
             const result = run(request, delivered);
-            return sharedRead ? { ...result, cacheHits } : result;
+            if (!sharedRead) return result;
+            return result instanceof Promise ? result.then(value => ({ ...value, cacheHits })) : { ...result, cacheHits };
         } catch (error) {
             if (['no-file', 'path-denied', 'non-text', 'git-budget', 'git-unavailable'].includes(error.message)) return blocked(error.message);
             throw error;

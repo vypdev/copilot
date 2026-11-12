@@ -1,3 +1,5 @@
+import type { BoundPublicationSourceQueryPort } from '../../../ports/publication_freshness_ports';
+import type { BugbotVerificationAuthority } from '../../../../domain/bugbot/verification_receipt';
 import type { AgentConfiguration } from '../../../../domain/agent';
 import type { BugbotShadowVerificationPort } from '../../../ports/bugbot_shadow_verification_ports';
 import { Result } from '../../../../data/model/result';
@@ -22,6 +24,8 @@ export class DetectPotentialProblemsUseCase implements ParamUseCase<BugbotReview
         private readonly catalogResolver?: MessageCatalogResolutionPort,
         private readonly shadowVerification?: BugbotShadowVerificationPort,
         private readonly experimentalShadowProfile?: Readonly<AgentConfiguration>,
+        private readonly verificationAuthority?: BugbotVerificationAuthority,
+        private readonly sourceFreshness?: BoundPublicationSourceQueryPort,
     ) {}
 
     async invoke(param: BugbotReviewOperationContext): Promise<Result[]> {
@@ -32,6 +36,8 @@ export class DetectPotentialProblemsUseCase implements ParamUseCase<BugbotReview
             catalogResolver: this.catalogResolver,
             shadowVerification: this.shadowVerification,
             experimentalShadowProfile: this.experimentalShadowProfile,
+            verificationAuthority: this.verificationAuthority,
+            sourceFreshness: this.sourceFreshness,
         });
     }
 }

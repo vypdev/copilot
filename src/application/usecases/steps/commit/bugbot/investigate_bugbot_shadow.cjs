@@ -290,7 +290,7 @@ async function investigateBugbotShadow({ broker, subject, finding, transport, lo
             observations = [];
             for (const request of response.requests) {
                 checkCanceled();
-                const result = broker.inspect(references?.request(request) ?? request, delivered);
+                const result = await broker.inspect(references?.request(request) ?? request, delivered);
                 const ledger = { turn, request, result: receiptMetadata(result, references, fingerprint), ...(lifecycle ? { delivered: false } : {}) };
                 observations.push({ request, result, ledger });
                 actions.push(ledger);

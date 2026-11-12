@@ -3150,8 +3150,17 @@ const input_keys_1 = __nccwpck_require__(8539);
 const application_error_1 = __nccwpck_require__(5999);
 const agent_configuration_input_policy_1 = __nccwpck_require__(7699);
 const agent_configuration_validation_policy_1 = __nccwpck_require__(596);
-function readBugbotVerificationMode(read) {
+function readBugbotVerificationMode(read, authority) {
     const mode = read(input_keys_1.INPUT_KEYS.BUGBOT_VERIFICATION_MODE)?.trim() || 'disabled';
+    if (authority && (!/^[a-f0-9]{64}$/u.test(authority.policyDigest)
+        || ![authority.generation, authority.workflowId, authority.sourceAppId].every(value => Number.isSafeInteger(value) && value > 0))) {
+        throw new application_error_1.ApplicationError('configuration.invalid', 'The trusted Bugbot rollout policy is malformed.');
+    }
+    if (authority && authority.mode !== mode) {
+        throw new application_error_1.ApplicationError('configuration.invalid', 'The configured Bugbot mode does not match the trusted rollout policy.');
+    }
+    if (mode === 'enforced' && authority?.mode === 'enforced')
+        return mode;
     if (mode === 'enforced') {
         throw new application_error_1.ApplicationError('configuration.unsupported', 'Bugbot enforcement requires a qualified verification profile. Use shadow for evaluation.');
     }
@@ -3160,8 +3169,8 @@ function readBugbotVerificationMode(read) {
     }
     return mode;
 }
-function readBugbotShadowConfiguration(read, environment) {
-    if (readBugbotVerificationMode(read) === 'disabled')
+function readBugbotShadowConfiguration(read, environment, authority) {
+    if (readBugbotVerificationMode(read, authority) === 'disabled')
         return undefined;
     const provider = read(input_keys_1.INPUT_KEYS.BUGBOT_VERIFIER_PROVIDER)?.trim().toLowerCase();
     const modelProvider = read(input_keys_1.INPUT_KEYS.BUGBOT_VERIFIER_MODEL_PROVIDER)?.trim().toLowerCase();
@@ -5045,16 +5054,28 @@ function isLoadedBugbotRevisionSuperseded(context, expectedHeadSha) {
         && context.prContext.prHeadSha.toLowerCase() !== expectedHeadSha;
 }
 /** Re-reads the remote head immediately before publication to close the analysis race window. */
-async function hasNewerBugbotRevision(context, ports, boundary = 'before-publication') {
+async function hasNewerBugbotRevision(context, ports, boundary = 'before-publication', compareBase = false) {
     if (!context.prContext || !context.canonicalPullRequest)
         return false;
-    const operation = context.reviewFramedSource ? 'get-source-bound-pr' : 'get-head-sha';
+    const operation = context.reviewFramedSource || compareBase ? 'get-source-bound-pr' : 'get-head-sha';
     try {
         if (context.reviewFramedSource) {
             if (!ports.getSourceBoundPullRequest)
                 throw new framed_review_1.BugbotReviewCompletenessError('capability');
             const current = await ports.getSourceBoundPullRequest(context.canonicalPullRequest.number);
             return !(0, bugbot_framed_identity_policy_1.sameBugbotFramedPullRequest)(context.canonicalPullRequest, current);
+        }
+        if (compareBase) {
+            const expected = context.canonicalPullRequest;
+            const current = await ports.getPullRequest(expected.number);
+            const expectedBase = (0, git_object_id_1.canonicalGitObjectId)(expected.baseSha);
+            if (!current || !expectedBase || !(0, git_object_id_1.canonicalGitObjectId)(current.baseSha) || !(0, git_object_id_1.canonicalGitObjectId)(current.headSha)) {
+                throw (0, bugbot_freshness_error_1.bugbotFreshnessError)(undefined, boundary, operation, true);
+            }
+            return current.number !== expected.number || current.state !== 'open'
+                || current.baseRepository.owner !== expected.baseRepository.owner || current.baseRepository.name !== expected.baseRepository.name
+                || (0, git_object_id_1.canonicalGitObjectId)(current.baseSha) !== expectedBase
+                || (0, git_object_id_1.canonicalGitObjectId)(current.headSha) !== context.prContext.prHeadSha.toLowerCase();
         }
         const currentHead = (0, git_object_id_1.canonicalGitObjectId)(await ports.getPullRequestHeadSha(context.canonicalPullRequest.number));
         if (currentHead === undefined)
@@ -5843,6 +5864,7 @@ async function loadBugbotContext(request, ports, resolvedPreflight, reviewSource
         },
     ]);
     (0, logging_ports_1.logDebugInfo)(`LoadBugbotContext: selection=${selectionReason}, coverage=${coverage.status}, existing findings=${Object.keys(parsedComments.existingByFindingId).length}, retained previous findings=${previousContext.selected.length}, diff files=${prContext?.changes?.length ?? 0}, diff partitions=${diffPlan.partitions.length}.`);
+    const commentsByIdentity = new Map(pullRequestComments.map(comment => [comment.identity, comment]));
     return {
         ...(framedSource ? { reviewFramedSource: framedSource } : {}),
         existingByFindingId: parsedComments.existingByFindingId,
@@ -5858,10 +5880,15 @@ async function loadBugbotContext(request, ports, resolvedPreflight, reviewSource
         reviewDiffIgnoredFileCount: diffPlan.ignored,
         reviewConversationBlock: conversationContext.block,
         prContext,
-        unresolvedFindingsWithBody: previousContext.selected.map((finding) => ({
-            id: finding.id,
-            fullBody: finding.fullBody,
-        })),
+        unresolvedFindingsWithBody: previousContext.selected.map((finding) => {
+            const identity = parsedComments.existingByFindingId[finding.id]?.pullRequest?.commentIdentity;
+            const comment = identity ? commentsByIdentity.get(identity) : undefined;
+            return {
+                id: finding.id,
+                fullBody: finding.fullBody,
+                ...(comment?.path && comment.line ? { anchor: { path: comment.path, line: comment.line } } : {}),
+            };
+        }),
         reviewRulesBlock: ruleSet.promptBlock,
         reviewRuleSources: [...ruleSet.sources],
         omittedReviewRules: ruleSet.omitted,
@@ -6129,7 +6156,9 @@ function addResolutionError(errors, destination, findingId, cause) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.observeBugbotShadowVerification = observeBugbotShadowVerification;
+const bugbot_finding_marker_policy_1 = __nccwpck_require__(8024);
 const bugbot_shadow_configuration_policy_1 = __nccwpck_require__(7379);
+const finding_1 = __nccwpck_require__(1011);
 const git_object_id_1 = __nccwpck_require__(8623);
 const bounded_concurrency_policy_1 = __nccwpck_require__(5596);
 async function observeBugbotShadowVerification(operation, context, prepared, port, trace, detectionAndPreparationMs, experimentalProfile) {
@@ -6142,18 +6171,30 @@ async function observeBugbotShadowVerification(operation, context, prepared, por
     const started = performance.now();
     const findings = prepared.activeFindings ?? prepared.toPublish;
     const individual = new Set(prepared.toPublish.map(finding => finding.id));
-    const concurrency = Math.min(2, findings.length);
-    const tasks = findings.map(finding => async () => {
-        const candidate = pinCandidate(context, finding);
+    const historical = new Map(context.unresolvedFindingsWithBody.map(finding => [finding.id, finding]));
+    const inputs = findings.map(finding => ({ id: finding.id, candidate: pinCandidate(operation, context, finding),
+        ordinaryPublication: individual.has(finding.id) ? 'individual' : 'summary-only' }));
+    const resolutions = [...prepared.resolvedFindingIds].map(id => {
+        const prior = historical.get(id);
+        const title = (0, bugbot_finding_marker_policy_1.extractTitleFromBody)(prior?.fullBody ?? null);
+        const resolution = prepared.resolvedFindingResolutions?.get(id);
+        const transition = resolution === 'obsolete' ? 'is obsolete because its path or precondition no longer applies'
+            : 'is fixed because the current implementation prevents the original effect';
+        const candidateId = (0, finding_1.bugbotResolutionCandidateId)(id);
+        return { id: candidateId, ordinaryPublication: 'resolution',
+            candidate: prior?.anchor && title ? pinCandidate(operation, context, {
+                id: candidateId, file: prior.anchor.path, line: prior.anchor.line, title: `The historical finding “${title}” ${transition}.`,
+                description: 'Compare with the prior behavior when the pinned base is relevant.',
+            }) : undefined };
+    });
+    const concurrency = Math.min(2, inputs.length + resolutions.length);
+    const tasks = [...inputs, ...resolutions].map(({ id, candidate, ordinaryPublication }) => async () => {
         const started = performance.now();
         const observation = candidate
             ? await verifyCandidate(port, candidate, configuration, review)
-            : { status: 'technical-failure', reason: 'unbound-candidate' };
-        return {
-            ...observation, id: finding.id, candidate,
-            wallMs: Math.round(performance.now() - started),
-            ordinaryPublication: individual.has(finding.id) ? 'individual' : 'summary-only',
-        };
+            : { status: 'verdict', verdict: 'inconclusive', reason: 'Candidate could not be pinned.',
+                missing: 'A repository location on the reviewed revision is required.', citations: [], premises: [] };
+        return { ...observation, id, candidate, wallMs: Math.round(performance.now() - started), ordinaryPublication };
     });
     const candidates = await (0, bounded_concurrency_policy_1.runWithConcurrencyLimit)(tasks, 2);
     const pr = context.canonicalPullRequest;
@@ -6182,12 +6223,13 @@ async function verifyCandidate(port, candidate, configuration, review) {
         return { status: 'technical-failure', reason: 'verifier-unavailable' };
     }
 }
-function pinCandidate(context, finding) {
+function pinCandidate(operation, context, finding) {
     const pr = context.canonicalPullRequest;
-    const headSha = (0, git_object_id_1.canonicalGitObjectId)(context.prContext?.prHeadSha);
+    const headSha = (0, git_object_id_1.canonicalGitObjectId)(pr ? context.prContext?.prHeadSha
+        : operation.trigger.kind === 'push' ? operation.trigger.after : undefined);
     const hypothesis = finding.title.trim();
     const { file, line, endLine } = finding;
-    if (!pr || !headSha || (0, git_object_id_1.canonicalGitObjectId)(pr.headSha) !== headSha || !file || !line
+    if (!headSha || (pr && (0, git_object_id_1.canonicalGitObjectId)(pr.headSha) !== headSha) || !file || !line
         || !Number.isSafeInteger(line) || line < 1 || !hypothesis)
         return undefined;
     const locations = context.prContext?.pathToDiffLocations?.[file] ?? [];
@@ -6199,11 +6241,12 @@ function pinCandidate(context, finding) {
     // The published title is the claim. Description, confidence, detector evidence and proposed fixes stay out.
     const comparisonRelevant = side === 'LEFT' || /\b(regressions?|regresi[oó]n|previously|used to|no longer|introduc\w*)\b/iu
         .test(hypothesis + '\n' + finding.description);
-    const baseSha = (0, git_object_id_1.canonicalGitObjectId)(pr.baseSha);
+    const baseSha = (0, git_object_id_1.canonicalGitObjectId)(pr?.baseSha ?? operation.trigger.before);
     return Object.freeze({
         id: finding.id, hypothesis, anchor,
-        repository: Object.freeze({ owner: pr.baseRepository.owner, name: pr.baseRepository.name }),
-        pullRequest: pr.number, headSha, allowBase: Boolean(baseSha && comparisonRelevant), ...(baseSha ? { baseSha } : {}),
+        repository: Object.freeze({ owner: pr?.baseRepository.owner ?? operation.repository.owner,
+            name: pr?.baseRepository.name ?? operation.repository.name }),
+        ...(pr ? { pullRequest: pr.number } : {}), headSha, allowBase: Boolean(baseSha && comparisonRelevant), ...(baseSha ? { baseSha } : {}),
     });
 }
 
@@ -7406,6 +7449,78 @@ async function mapWithConcurrency(values, concurrency, operation) {
 
 /***/ }),
 
+/***/ 1899:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.projectVerifiedBugbotPublication = projectVerifiedBugbotPublication;
+const finding_1 = __nccwpck_require__(1011);
+const limit_comments_1 = __nccwpck_require__(1643);
+function describeCitation(citation) {
+    const range = citation.first === citation.last ? String(citation.first) : `${citation.first}–${citation.last}`;
+    if (citation.kind === 'git')
+        return `${citation.path}:${range} (${citation.sha})`;
+    if (citation.url)
+        return `${citation.url} (lines ${range})`;
+    return `${citation.kind} evidence (${citation.sha})`;
+}
+/** Decides the complete batch before any mutation, including overflow and proposed history changes. */
+function projectVerifiedBugbotPublication(prepared, report, commentLimit) {
+    const active = prepared.activeFindings ?? prepared.toPublish;
+    const observations = new Map(report.candidates.map(result => [result.id, result]));
+    const expected = [...active.map(finding => finding.id), ...[...prepared.resolvedFindingIds].map(finding_1.bugbotResolutionCandidateId)];
+    if (report.detectionUnavailable || report.superseded || observations.size !== expected.length
+        || observations.size !== report.candidates.length || new Set(expected).size !== expected.length)
+        return { status: 'invalid' };
+    const inconclusive = [];
+    const confirmed = new Map();
+    for (const id of expected) {
+        const observation = observations.get(id);
+        if (!observation || observation.status !== 'verdict')
+            return { status: 'invalid' };
+        if (observation.verdict === 'inconclusive') {
+            if (!observation.missing?.trim())
+                return { status: 'invalid' };
+            inconclusive.push({ id, missing: observation.missing });
+            continue;
+        }
+        if (observation.verdict !== 'confirmed' && observation.verdict !== 'refuted')
+            return { status: 'invalid' };
+        if (!observation.candidate || observation.candidate.id !== id || !observation.citations.length)
+            return { status: 'invalid' };
+        if (!observation.citations.some(citation => citation.kind === 'git' && citation.sha === observation.candidate?.headSha)) {
+            inconclusive.push({ id, missing: 'The verdict requires repository evidence on the reviewed head.' });
+            continue;
+        }
+        if (observation.verdict === 'confirmed')
+            confirmed.set(id, observation);
+    }
+    const findings = active.flatMap(finding => {
+        const verdict = confirmed.get(finding.id);
+        if (!verdict)
+            return [];
+        const { suggestedCode: _suggestedCode, suggestion: _suggestion, evidence: _evidence, ...verified } = finding;
+        return [{ ...verified, description: verdict.reason, evidence: verdict.citations.map(describeCitation).join('\n') }];
+    });
+    const resolvedFindingIds = new Set([...prepared.resolvedFindingIds].filter(id => confirmed.has((0, finding_1.bugbotResolutionCandidateId)(id))));
+    return {
+        status: inconclusive.length ? 'incomplete' : 'complete',
+        prepared: {
+            ...(0, limit_comments_1.applyCommentLimit)(findings, commentLimit),
+            activeFindings: findings,
+            resolvedFindingIds,
+            resolvedFindingResolutions: new Map([...prepared.resolvedFindingResolutions ?? []]
+                .filter(([id]) => resolvedFindingIds.has(id))),
+        },
+        inconclusive,
+    };
+}
+
+
+/***/ }),
+
 /***/ 1653:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -7583,13 +7698,15 @@ exports.DetectPotentialProblemsUseCase = void 0;
 const detect_potential_problems_workflow_1 = __nccwpck_require__(7033);
 /** Application boundary for detecting, publishing and resolving Bugbot findings. */
 class DetectPotentialProblemsUseCase {
-    constructor(aiRepository, scm, telemetryPort, catalogResolver, shadowVerification, experimentalShadowProfile) {
+    constructor(aiRepository, scm, telemetryPort, catalogResolver, shadowVerification, experimentalShadowProfile, verificationAuthority, sourceFreshness) {
         this.aiRepository = aiRepository;
         this.scm = scm;
         this.telemetryPort = telemetryPort;
         this.catalogResolver = catalogResolver;
         this.shadowVerification = shadowVerification;
         this.experimentalShadowProfile = experimentalShadowProfile;
+        this.verificationAuthority = verificationAuthority;
+        this.sourceFreshness = sourceFreshness;
         this.taskId = 'DetectPotentialProblemsUseCase';
     }
     async invoke(param) {
@@ -7600,6 +7717,8 @@ class DetectPotentialProblemsUseCase {
             catalogResolver: this.catalogResolver,
             shadowVerification: this.shadowVerification,
             experimentalShadowProfile: this.experimentalShadowProfile,
+            verificationAuthority: this.verificationAuthority,
+            sourceFreshness: this.sourceFreshness,
         });
     }
 }
@@ -7615,6 +7734,8 @@ exports.DetectPotentialProblemsUseCase = DetectPotentialProblemsUseCase;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runDetectPotentialProblemsWorkflow = runDetectPotentialProblemsWorkflow;
+const git_object_id_1 = __nccwpck_require__(8623);
+const verify_bugbot_publication_policy_1 = __nccwpck_require__(1899);
 const bugbot_candidate_trace_1 = __nccwpck_require__(7302);
 const observe_bugbot_shadow_verification_1 = __nccwpck_require__(3991);
 const framed_review_1 = __nccwpck_require__(3750);
@@ -7643,12 +7764,21 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
     const resolvedAgent = reviewContext.analysis.agentConfiguration;
     const trace = dependencies.shadowVerification ? new bugbot_candidate_trace_1.BugbotCandidateTrace() : undefined;
     let shadow;
+    let verification;
+    const authority = dependencies.verificationAuthority;
+    const enforced = authority?.mode === 'enforced';
+    const dryRun = reviewContext.analysis.reviewConfiguration.publicationMode === 'dry-run';
     const unavailableShadow = () => dependencies.shadowVerification
         ? { resolvedModel: resolvedAgent.model, provider: resolvedAgent.provider, candidates: [], detectionUnavailable: true,
             detection: trace?.detectionSnapshot(), origins: trace?.snapshot() }
         : undefined;
     const shadowPayload = () => shadow ? { bugbotShadowVerification: {
             ...shadow, ...(shadow.timing ? { timing: { ...shadow.timing, workflowWallMs: Date.now() - workflowStartedAt } } : {}),
+            ...(verification ? { publicationSimulation: verification.status === 'invalid' ? { status: 'invalid' } : {
+                    status: verification.status, individual: verification.prepared.toPublish.map(finding => finding.id),
+                    overflow: verification.prepared.overflowCount, resolutions: [...verification.prepared.resolvedFindingIds],
+                    inconclusive: verification.inconclusive,
+                } } : {}),
         } } : {};
     const publishTelemetry = async (outcome, category) => {
         const snapshot = telemetry.snapshot(outcome, category);
@@ -7667,7 +7797,8 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
         const payload = result.payload && typeof result.payload === 'object' && !Array.isArray(result.payload)
             ? result.payload
             : {};
-        result.payload = { ...payload, ...shadowPayload(), bugbotTelemetry: snapshot };
+        result.payload = { ...payload, ...shadowPayload(), bugbotTelemetry: snapshot, ...(dryRun ? { dryRun: true } : {}),
+            ...(enforced && (outcome === 'failed' || outcome === 'superseded') ? { bugbotPublicationBlocked: true } : {}) };
         return [result];
     };
     (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(TASK_ID)} Executing ${TASK_ID}.`);
@@ -7708,16 +7839,18 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
             return await complete(supersededResult(context.prContext?.prHeadSha, eventHeadSha), 'superseded');
         }
         const detectionStartedAt = Date.now();
-        const prepared = await (0, analyze_bugbot_revision_use_case_1.analyzeBugbotRevision)(reviewContext, context, { agent: dependencies.aiRepository, telemetry, trace, isSourceCurrent: async () => !await (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context) });
+        let prepared = await (0, analyze_bugbot_revision_use_case_1.analyzeBugbotRevision)(reviewContext, context, { agent: dependencies.aiRepository, telemetry, trace, isSourceCurrent: async () => !await (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context) });
         const detectionAndPreparationMs = Date.now() - detectionStartedAt;
         if (prepared === undefined) {
             shadow = unavailableShadow();
+            if (enforced)
+                return await complete(noAnalysisResult(), 'failed');
             const analysisError = new application_error_1.ApplicationError('agent.failed', 'The configured agent returned no potential-problem analysis.');
             const catalog = reviewContext.analysis.reviewConfiguration.publicationMode === 'publish'
                 && context.prContext && context.canonicalPullRequest
                 ? await resolvePublicationCatalog(reviewContext, dependencies, true)
                 : undefined;
-            const presentation = reviewContext.analysis.reviewConfiguration.publicationMode === 'publish'
+            const presentation = !dryRun
                 ? await telemetry.measure('projection', () => reconcileReviewState({
                     operation: reviewContext,
                     loadedContext: context,
@@ -7742,9 +7875,24 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
                 return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
             }
         }
-        if (reviewContext.analysis.reviewConfiguration.publicationMode === 'dry-run') {
+        if (shadow)
+            verification = (0, verify_bugbot_publication_policy_1.projectVerifiedBugbotPublication)(prepared, shadow, reviewContext.analysis.commentLimit);
+        if (dryRun) {
             return await complete(dryRunResult(prepared, context), 'dry-run');
         }
+        if (enforced) {
+            if (!verification || verification.status === 'invalid') {
+                return await complete(new result_1.Result({
+                    id: TASK_ID, success: false, executed: true,
+                    errors: [new application_error_1.ApplicationError('validation.evidence-unavailable', 'Bugbot verification failed before publication. The previous verified result was preserved.')],
+                }), 'failed');
+            }
+            prepared = verification.prepared;
+        }
+        const incompleteVerification = enforced && verification?.status === 'incomplete';
+        const publicationContext = incompleteVerification
+            ? { ...context, coverage: { ...context.coverage, status: 'partial' } }
+            : context;
         // A pull request still publishes its canonical status card when there are no finding mutations.
         const presentsPullRequestStatus = Boolean(context.prContext && context.canonicalPullRequest);
         const mutatesFindingComments = prepared.toPublish.length > 0
@@ -7752,17 +7900,27 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
         const catalog = presentsPullRequestStatus || mutatesFindingComments
             ? await resolvePublicationCatalog(reviewContext, dependencies, presentsPullRequestStatus)
             : undefined;
-        // Catalog localization may await a provider. Recheck after it, directly before SCM mutation.
-        if (context.reviewFramedSource && await (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context)) {
+        // Catalog localization may await a provider. Recheck the exact comparison immediately before SCM mutation.
+        if (enforced && !context.canonicalPullRequest) {
+            const expected = (0, git_object_id_1.canonicalGitObjectId)(reviewContext.trigger.after);
+            const branch = reviewContext.target.commitBranch;
+            const current = expected && branch && dependencies.sourceFreshness
+                ? (0, git_object_id_1.canonicalGitObjectId)(await dependencies.sourceFreshness.getBranchHeadSha(branch)) : undefined;
+            if (!current)
+                throw new application_error_1.ApplicationError('validation.evidence-unavailable', 'Bugbot could not bind the current Commit revision.');
+            if (current !== expected)
+                return await complete(supersededResult(expected), 'superseded');
+        }
+        if ((enforced || context.reviewFramedSource) && await (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context, 'before-publication', enforced)) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
         const resolutionErrors = await telemetry.measure('publication', () => (0, apply_detected_findings_1.applyDetectedFindings)(reviewContext, context, prepared, dependencies.scm.publication, dependencies.scm.resolution, catalog));
-        if (await telemetry.measure('post-publication-freshness', () => (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context, 'after-publication'))) {
+        if (await telemetry.measure('post-publication-freshness', () => (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context, 'after-publication', enforced))) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
         const presentation = await telemetry.measure('projection', () => reconcileReviewState({
             operation: reviewContext,
-            loadedContext: context,
+            loadedContext: publicationContext,
             activeFindings: prepared.activeFindings ?? prepared.toPublish,
             expectedPublishedFindings: prepared.toPublish,
             mutationErrors: resolutionErrors,
@@ -7774,9 +7932,15 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
         (0, logging_ports_1.logInfo)(`Bugbot workflow completed in ${Date.now() - workflowStartedAt}ms.`);
         const finalErrors = presentation?.errors ?? resolutionErrors;
         const hasChanges = prepared.toPublish.length > 0 || prepared.resolvedFindingIds.size > 0;
-        return await complete(detectionResult(prepared, context, finalErrors, presentation), finalErrors.length > 0
+        const result = detectionResult(prepared, publicationContext, finalErrors, presentation);
+        if (incompleteVerification)
+            result.steps.push('Repository verification remains inconclusive for one or more candidates.');
+        const publication = authority && buildVerificationPublication(authority, reviewContext, context, verification, presentation, finalErrors);
+        if (publication)
+            result.payload = { ...result.payload, bugbotVerificationPublication: publication };
+        return await complete(result, finalErrors.length > 0
             ? 'failed'
-            : context.coverage.status === 'partial'
+            : publicationContext.coverage.status === 'partial'
                 ? 'partial'
                 : hasChanges ? 'completed' : 'no-findings');
     }
@@ -7793,7 +7957,8 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
         });
         const snapshot = await publishTelemetry('failed', error instanceof Error ? error.name : 'unknown');
         shadow ?? (shadow = unavailableShadow());
-        result.payload = { ...shadowPayload(), bugbotTelemetry: snapshot };
+        result.payload = { ...shadowPayload(), bugbotTelemetry: snapshot, ...(dryRun ? { dryRun: true } : {}),
+            ...(enforced ? { bugbotPublicationBlocked: true } : {}) };
         return [result];
     }
 }
@@ -7990,6 +8155,29 @@ function resolvePublicationCatalog(operation, dependencies, publishesToPullReque
         ? operation.locale.pullRequest
         : operation.locale.issue ?? operation.locale.pullRequest;
     return (0, bugbot_message_catalog_1.resolveBugbotCatalog)(locale, operation.analysis.agentConfiguration, dependencies.catalogResolver);
+}
+function buildVerificationPublication(authority, operation, context, verification, presentation, errors) {
+    // Qualification and rollback authority come from trusted runtime admission.
+    if (authority.mode !== 'enforced' || verification?.status !== 'complete' || errors.length
+        || presentation?.projection.outcome !== 'complete' || presentation.pendingReviewUpdates > 0
+        || presentation.statusCardOperation === 'failed')
+        return undefined;
+    const pr = context.canonicalPullRequest;
+    const headSha = (0, git_object_id_1.canonicalGitObjectId)(pr?.headSha);
+    const baseSha = (0, git_object_id_1.canonicalGitObjectId)(pr?.baseSha);
+    const repositoryId = pr?.baseRepository.id;
+    const projection = presentation.projection;
+    if (!pr || !headSha || !baseSha || !repositoryId || repositoryId !== operation.repository.id
+        || projection.pullRequestNumber !== pr.number || projection.analyzedHeadSha !== headSha
+        || projection.verifiedHeadSha !== headSha || projection.coverage.status !== 'complete')
+        return undefined;
+    const { open, reopened, dismissed, unknown, fixed, obsolete } = projection.counts;
+    return {
+        authority, repositoryId, pullNumber: pr.number, headSha, baseSha,
+        coverage: 'complete', verification: 'complete', publication: 'verified', outcome: 'complete',
+        findingStates: { open, reopened, dismissed, unknown, fixed, obsolete,
+            verificationRequired: projection.counts['verification-required'] },
+    };
 }
 
 
@@ -8984,6 +9172,7 @@ function matchesConstrainedHead(target, candidate) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.bugbotResolutionCandidateId = bugbotResolutionCandidateId;
 exports.isExistingFindingFullyResolved = isExistingFindingFullyResolved;
 exports.findExistingFindingInfo = findExistingFindingInfo;
 exports.findExistingFindingMatch = findExistingFindingMatch;
@@ -8996,6 +9185,10 @@ exports.retainExistingFindingIds = retainExistingFindingIds;
  * folder and gives every adapter one stable semantic vocabulary.
  */
 const finding_identity_1 = __nccwpck_require__(1853);
+/** A transition cannot share receipts with any active finding ID, which excludes quotation marks. */
+function bugbotResolutionCandidateId(id) {
+    return 'resolve:' + JSON.stringify(id);
+}
 function isExistingFindingFullyResolved(finding) {
     const destinations = [finding.issue, finding.pullRequest].filter((destination) => destination != null);
     return (destinations.length > 0 &&

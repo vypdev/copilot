@@ -31,6 +31,11 @@ export interface BugbotFinding {
   suggestedCode?: string;
 }
 
+/** A transition cannot share receipts with any active finding ID, which excludes quotation marks. */
+export function bugbotResolutionCandidateId(id: string): string {
+  return 'resolve:' + JSON.stringify(id);
+}
+
 export type BugbotFindingResolution = 'fixed' | 'obsolete' | 'dismissed';
 
 export interface ExistingIssueFindingInfo {

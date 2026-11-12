@@ -637,7 +637,7 @@ function assertAgentWorkflowPermissions(file, workflow) {
   const nativeEvidenceWorkflow = ['copilot_commit.yml', 'copilot_pull_request.yml', 'copilot_pull_request_review_state.yml',
     'copilot_issue_comment.yml', 'copilot_pull_request_comment.yml', 'copilot_comment_runtime.yml'].includes(path.basename(file));
   const ordinaryPermissions = nativeEvidenceWorkflow
-    ? { checks: 'write', contents: 'read' }
+    ? { actions: 'read', checks: 'write', contents: 'read' }
     : { contents: 'read' };
   for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
     const expectedPermissions = path.basename(file) === 'copilot_issue.yml' && jobId === 'issue-admission'

@@ -1,3 +1,4 @@
+import type { BugbotVerificationAuthority } from '../domain/bugbot/verification_receipt';
 import { issueWorkflowDiagnostic } from '../domain/issue_workflow_diagnostic';
 import type { IssueWorkflowAdmission } from '../domain/issue_workflow_profile';
 import { Execution } from '../data/model/execution';
@@ -49,6 +50,7 @@ export async function mainRun(
     agentActivityUseCase?: SynchronizeAgentActivityUseCase,
     prepareRuntime?: PrepareExecutionRuntime,
     setupProgress?: (effect: import('../domain/setup').SetupOperationEffect) => void,
+    verificationAuthority?: BugbotVerificationAuthority,
 ): Promise<Result[]> {
     configureApplicationLogger(createLoggerAdapter());
     setGlobalLoggerDebug(execution.debug, execution.inputs === undefined);
@@ -106,7 +108,8 @@ export async function mainRun(
     }
     await prepareRuntime?.(execution);
 
-    const routeHandlers = createMainRunRouteCompositionRoot(projectBoardCommandPort, compositionSurface, setupProgress);
+    const routeHandlers = createMainRunRouteCompositionRoot(projectBoardCommandPort, compositionSurface, setupProgress,
+        ...(verificationAuthority ? [verificationAuthority] as const : []));
     
     if (execution.runnedByToken) {
         return runTrackedRoute(execution, 'single-action', () => runTokenExecution(execution, routeHandlers), undefined, agentActivityUseCase);

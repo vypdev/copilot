@@ -13,6 +13,7 @@ jobs:
     if: ${{ (vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN) && github.event.pull_request.head.repo.full_name == github.repository }}
     uses: vypdev/copilot/.github/workflows/copilot_comment_runtime.yml@v3
     permissions:
+      actions: read
       checks: write
       contents: read
     with:
