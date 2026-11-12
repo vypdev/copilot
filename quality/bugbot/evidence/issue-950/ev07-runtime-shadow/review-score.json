@@ -1,0 +1,496 @@
+{
+  "passed": false,
+  "checks": {
+    "complete": false,
+    "baseline": false,
+    "reduction": false,
+    "positives": false,
+    "latency": false,
+    "integrity": false
+  },
+  "historicalBaseline": {
+    "X1": 1
+  },
+  "paired": [
+    {
+      "repetition": 1,
+      "complete": false,
+      "baseline": 2,
+      "shadow": 1
+    },
+    {
+      "repetition": 2,
+      "complete": false,
+      "baseline": 0,
+      "shadow": 0
+    },
+    {
+      "repetition": 3,
+      "complete": false,
+      "baseline": 0,
+      "shadow": 0
+    }
+  ],
+  "observedAddedP95Ms": 421361,
+  "latencyObservations": 10,
+  "rows": [
+    {
+      "subject": "U1",
+      "repetition": 1,
+      "status": "complete",
+      "githubWriteAttempts": 0,
+      "checkoutUnchanged": true,
+      "baseline": 0,
+      "shadow": 0,
+      "gitCitationAudit": {
+        "checked": 0,
+        "failure": null
+      },
+      "historicalBaseline": false,
+      "baselineUnsupported": 0,
+      "shadowUnsupported": 0,
+      "positiveDetected": false,
+      "positiveExact": false,
+      "anchor": null,
+      "expectedAnchor": null,
+      "verdicts": {},
+      "addedMs": 0
+    },
+    {
+      "subject": "U2",
+      "repetition": 1,
+      "status": "complete",
+      "githubWriteAttempts": 0,
+      "checkoutUnchanged": true,
+      "baseline": 1,
+      "shadow": 1,
+      "gitCitationAudit": {
+        "checked": 5,
+        "failure": null
+      },
+      "historicalBaseline": false,
+      "baselineUnsupported": 0,
+      "shadowUnsupported": 0,
+      "positiveDetected": true,
+      "positiveExact": true,
+      "anchor": 4,
+      "expectedAnchor": 4,
+      "verdicts": {
+        "confirmed": 1
+      },
+      "addedMs": 70032
+    },
+    {
+      "subject": "F1",
+      "repetition": 1,
+      "status": "complete",
+      "githubWriteAttempts": 0,
+      "checkoutUnchanged": true,
+      "baseline": 0,
+      "shadow": 0,
+      "gitCitationAudit": {
+        "checked": 0,
+        "failure": null
+      },
+      "historicalBaseline": false,
+      "baselineUnsupported": 0,
+      "shadowUnsupported": 0,
+      "positiveDetected": false,
+      "positiveExact": false,
+      "anchor": null,
+      "expectedAnchor": null,
+      "verdicts": {},
+      "addedMs": 0
+    },
+    {
+      "subject": "F2",
+      "repetition": 1,
+      "status": "complete",
+      "githubWriteAttempts": 0,
+      "checkoutUnchanged": true,
+      "baseline": 1,
+      "shadow": 1,
+      "gitCitationAudit": {
+        "checked": 9,
+        "failure": null
+      },
+      "historicalBaseline": false,
+      "baselineUnsupported": 0,
+      "shadowUnsupported": 0,
+      "positiveDetected": true,
+      "positiveExact": true,
+      "anchor": 131,
+      "expectedAnchor": 131,
+      "verdicts": {
+        "confirmed": 1
+      },
+      "addedMs": 149629
+    },
+    {
+      "subject": "S1",
+      "repetition": 1,
+      "status": "complete",
+      "githubWriteAttempts": 0,
+      "checkoutUnchanged": true,
+      "baseline": 1,
+      "shadow": 1,
+      "gitCitationAudit": {
+        "checked": 12,
+        "failure": null
+      },
+      "historicalBaseline": false,
+      "baselineUnsupported": 1,
+      "shadowUnsupported": 1,
+      "positiveDetected": false,
+      "positiveExact": false,
+      "anchor": null,
+      "expectedAnchor": null,
+      "verdicts": {
+        "confirmed": 1
+      },
+      "addedMs": 126809
+    },
+    {
+      "subject": "S2",
+      "repetition": 1,
+      "status": "complete",
+      "githubWriteAttempts": 0,
+      "checkoutUnchanged": true,
+      "baseline": 1,
+      "shadow": 1,
+      "gitCitationAudit": {
+        "checked": 37,
+        "failure": null
+      },
+      "historicalBaseline": false,
+      "baselineUnsupported": 0,
+      "shadowUnsupported": 0,
+      "positiveDetected": true,
+      "positiveExact": true,
+      "anchor": 226,
+      "expectedAnchor": 226,
+      "verdicts": {
+        "confirmed": 1
+      },
+      "addedMs": 421361
+    },
+    {
+      "subject": "X1",
+      "repetition": 1,
+      "status": "complete",
+      "githubWriteAttempts": 0,
+      "checkoutUnchanged": true,
+      "baseline": 1,
+      "shadow": 0,
+      "gitCitationAudit": {
+        "checked": 13,
+        "failure": null
+      },
+      "historicalBaseline": true,
+      "baselineUnsupported": 1,
+      "shadowUnsupported": 0,
+      "positiveDetected": false,
+      "positiveExact": false,
+      "anchor": null,
+      "expectedAnchor": null,
+      "verdicts": {
+        "refuted": 1
+      },
+      "addedMs": 153364
+    },
+    {
+      "subject": "X2",
+      "repetition": 1,
+      "status": "complete",
+      "githubWriteAttempts": 0,
+      "checkoutUnchanged": true,
+      "baseline": 1,
+      "shadow": 1,
+      "gitCitationAudit": {
+        "checked": 16,
+        "failure": null
+      },
+      "historicalBaseline": false,
+      "baselineUnsupported": 0,
+      "shadowUnsupported": 0,
+      "positiveDetected": true,
+      "positiveExact": true,
+      "anchor": 8,
+      "expectedAnchor": 8,
+      "verdicts": {
+        "confirmed": 1
+      },
+      "addedMs": 197882
+    },
+    {
+      "subject": "M1",
+      "repetition": 1,
+      "status": "complete",
+      "githubWriteAttempts": 0,
+      "checkoutUnchanged": true,
+      "baseline": 0,
+      "shadow": 0,
+      "gitCitationAudit": {
+        "checked": 0,
+        "failure": null
+      },
+      "historicalBaseline": false,
+      "baselineUnsupported": 0,
+      "shadowUnsupported": 0,
+      "positiveDetected": false,
+      "positiveExact": false,
+      "anchor": null,
+      "expectedAnchor": null,
+      "verdicts": {},
+      "addedMs": 0
+    },
+    {
+      "subject": "M2",
+      "repetition": 1,
+      "status": "complete",
+      "githubWriteAttempts": 0,
+      "checkoutUnchanged": true,
+      "baseline": 1,
+      "shadow": 1,
+      "gitCitationAudit": {
+        "checked": 1,
+        "failure": null
+      },
+      "historicalBaseline": false,
+      "baselineUnsupported": 0,
+      "shadowUnsupported": 0,
+      "positiveDetected": true,
+      "positiveExact": true,
+      "anchor": 27,
+      "expectedAnchor": 27,
+      "verdicts": {
+        "confirmed": 1
+      },
+      "addedMs": 44975
+    },
+    {
+      "subject": "P1",
+      "repetition": 1,
+      "status": "not-started",
+      "schedulerExit": null,
+      "githubWriteAttempts": 0
+    },
+    {
+      "subject": "P2",
+      "repetition": 1,
+      "status": "not-started",
+      "schedulerExit": null,
+      "githubWriteAttempts": 0
+    },
+    {
+      "subject": "J1",
+      "repetition": 1,
+      "status": "not-started",
+      "schedulerExit": null,
+      "githubWriteAttempts": 0
+    },
+    {
+      "subject": "J2",
+      "repetition": 1,
+      "status": "not-started",
+      "schedulerExit": null,
+      "githubWriteAttempts": 0
+    },
+    {
+      "subject": "U1",
+      "repetition": 2,
+      "status": "not-started",
+      "schedulerExit": null,
+      "githubWriteAttempts": 0
+    },
+    {
+      "subject": "U2",
+      "repetition": 2,
+      "status": "not-started",
+      "schedulerExit": null,
+      "githubWriteAttempts": 0
+    },
+    {
+      "subject": "F1",
+      "repetition": 2,
+      "status": "not-started",
+      "schedulerExit": null,
+      "githubWriteAttempts": 0
+    },
+    {
+      "subject": "F2",
+      "repetition": 2,
+      "status": "not-started",
+      "schedulerExit": null,
+      "githubWriteAttempts": 0
+    },
+    {
+      "subject": "S1",
+      "repetition": 2,
+      "status": "not-started",
+      "schedulerExit": null,
+      "githubWriteAttempts": 0
+    },
+    {
+      "subject": "S2",
+      "repetition": 2,
+      "status": "not-started",
+      "schedulerExit": null,
+      "githubWriteAttempts": 0
+    },
+    {
+      "subject": "X1",
+      "repetition": 2,
+      "status": "not-started",
+      "schedulerExit": null,
+      "githubWriteAttempts": 0
+    },
+    {
+      "subject": "X2",
+      "repetition": 2,
+      "status": "not-started",
+      "schedulerExit": null,
+      "githubWriteAttempts": 0
+    },
+    {
+      "subject": "M1",
+      "repetition": 2,
+      "status": "not-started",
+      "schedulerExit": null,
+      "githubWriteAttempts": 0
+    },
+    {
+      "subject": "M2",
+      "repetition": 2,
+      "status": "not-started",
+      "schedulerExit": null,
+      "githubWriteAttempts": 0
+    },
+    {
+      "subject": "P1",
+      "repetition": 2,
+      "status": "not-started",
+      "schedulerExit": null,
+      "githubWriteAttempts": 0
+    },
+    {
+      "subject": "P2",
+      "repetition": 2,
+      "status": "not-started",
+      "schedulerExit": null,
+      "githubWriteAttempts": 0
+    },
+    {
+      "subject": "J1",
+      "repetition": 2,
+      "status": "not-started",
+      "schedulerExit": null,
+      "githubWriteAttempts": 0
+    },
+    {
+      "subject": "J2",
+      "repetition": 2,
+      "status": "not-started",
+      "schedulerExit": null,
+      "githubWriteAttempts": 0
+    },
+    {
+      "subject": "U1",
+      "repetition": 3,
+      "status": "not-started",
+      "schedulerExit": null,
+      "githubWriteAttempts": 0
+    },
+    {
+      "subject": "U2",
+      "repetition": 3,
+      "status": "not-started",
+      "schedulerExit": null,
+      "githubWriteAttempts": 0
+    },
+    {
+      "subject": "F1",
+      "repetition": 3,
+      "status": "not-started",
+      "schedulerExit": null,
+      "githubWriteAttempts": 0
+    },
+    {
+      "subject": "F2",
+      "repetition": 3,
+      "status": "not-started",
+      "schedulerExit": null,
+      "githubWriteAttempts": 0
+    },
+    {
+      "subject": "S1",
+      "repetition": 3,
+      "status": "not-started",
+      "schedulerExit": null,
+      "githubWriteAttempts": 0
+    },
+    {
+      "subject": "S2",
+      "repetition": 3,
+      "status": "not-started",
+      "schedulerExit": null,
+      "githubWriteAttempts": 0
+    },
+    {
+      "subject": "X1",
+      "repetition": 3,
+      "status": "not-started",
+      "schedulerExit": null,
+      "githubWriteAttempts": 0
+    },
+    {
+      "subject": "X2",
+      "repetition": 3,
+      "status": "not-started",
+      "schedulerExit": null,
+      "githubWriteAttempts": 0
+    },
+    {
+      "subject": "M1",
+      "repetition": 3,
+      "status": "not-started",
+      "schedulerExit": null,
+      "githubWriteAttempts": 0
+    },
+    {
+      "subject": "M2",
+      "repetition": 3,
+      "status": "not-started",
+      "schedulerExit": null,
+      "githubWriteAttempts": 0
+    },
+    {
+      "subject": "P1",
+      "repetition": 3,
+      "status": "not-started",
+      "schedulerExit": null,
+      "githubWriteAttempts": 0
+    },
+    {
+      "subject": "P2",
+      "repetition": 3,
+      "status": "not-started",
+      "schedulerExit": null,
+      "githubWriteAttempts": 0
+    },
+    {
+      "subject": "J1",
+      "repetition": 3,
+      "status": "not-started",
+      "schedulerExit": null,
+      "githubWriteAttempts": 0
+    },
+    {
+      "subject": "J2",
+      "repetition": 3,
+      "status": "not-started",
+      "schedulerExit": null,
+      "githubWriteAttempts": 0
+    }
+  ]
+}
