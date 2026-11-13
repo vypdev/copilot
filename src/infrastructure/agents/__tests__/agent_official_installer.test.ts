@@ -43,6 +43,7 @@ describe('official agent installer boundaries', () => {
             SystemDrive: 'D:', OS: 'Windows_NT', GITHUB_TOKEN: 'secret',
             CODEX_API_KEY: 'secret', OPENAI_API_KEY: 'secret', CURSOR_API_KEY: 'secret',
             NPM_TOKEN: 'secret', HOME: '/operator/home', CODEX_HOME: '/operator/codex',
+            TMPDIR: '/operator/tmpdir', TMP: '/operator/tmp', TEMP: '/operator/temp',
             PSModulePath: 'C:\\Program Files\\PowerShell\\7\\Modules',
             PSModuleAnalysisCachePath: '/workspace/untrusted-module-cache',
             ProgramFiles: 'C:\\attacker', 'ProgramFiles(x86)': 'C:\\attacker-x86', ProgramData: 'C:\\attacker-data',
@@ -65,6 +66,9 @@ describe('official agent installer boundaries', () => {
         expect(environment.OS).toBe('Windows_NT');
         expect(environment.HOME).toBe('/private/agent-job');
         expect(environment.CODEX_HOME).toBe(join('/private/agent-job', '.codex'));
+        expect(environment).toMatchObject({
+            TMPDIR: '/private/agent-job', TMP: '/private/agent-job', TEMP: '/private/agent-job',
+        });
         for (const name of ['GITHUB_TOKEN', 'CODEX_API_KEY', 'OPENAI_API_KEY', 'CURSOR_API_KEY', 'NPM_TOKEN']) {
             expect(environment[name]).toBeUndefined();
         }
@@ -149,6 +153,9 @@ describe('official agent installer boundaries', () => {
                 expect(options.env.PATH).not.toContain('/tmp/attacker');
                 return Buffer.from('#!/bin/sh\n');
             } else if (file === '/bin/sh') {
+                const archiveDirectory = mkdtempSync(join(options.env.TMPDIR!, 'codex-release-'));
+                expect(dirname(archiveDirectory)).toBe(options.env.HOME);
+                writeFileSync(join(archiveDirectory, 'release.tar.gz'), 'archive fixture');
                 const release = join(options.env.CODEX_HOME!, 'packages', 'standalone', 'releases', '1.2.3');
                 const current = join(options.env.CODEX_HOME!, 'packages', 'standalone', 'current');
                 const binary = join(release, 'bin', 'codex');
@@ -176,6 +183,24 @@ describe('official agent installer boundaries', () => {
         } finally {
             rmSync(installed.root, { recursive: true, force: true });
         }
+    });
+
+    it('reports a private archive write failure without exposing stderr or retrying the script', () => {
+        let root = '';
+        execute.mockImplementationOnce(() => Buffer.from('official script fixture'));
+        execute.mockImplementationOnce((_file: string, _args: string[], options: { env: NodeJS.ProcessEnv }) => {
+            root = options.env.HOME!;
+            writeFileSync(join(options.env.TMPDIR!, 'partial.tar.gz'), 'partial archive fixture');
+            throw Object.assign(new Error('secret-bearing installer failure'), {
+                status: 23, stderr: Buffer.from('curl: (23) Failure writing output to secret-bearing path'),
+            });
+        });
+        expect(() => installOfficialAgentCli('codex')).toThrow(expect.objectContaining({
+            stage: 'installer-script', exitCode: 23, reason: 'write-failed', message: 'Official agent installer script failed.',
+        }));
+        expect(execute).toHaveBeenCalledTimes(2);
+        expect(root).not.toBe('');
+        expect(existsSync(root)).toBe(false);
     });
 
     (process.platform === 'win32' ? it.skip : it).each([

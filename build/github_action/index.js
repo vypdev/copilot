@@ -106041,6 +106041,8 @@ function installerScriptReason(error) {
     const stderr = Buffer.isBuffer(raw) ? raw.toString('utf8') : typeof raw === 'string' ? raw : '';
     if (/Get-FileHash|Get-AuthenticodeSignature/iu.test(stderr))
         return 'hash-module';
+    if (/curl:\s*\(23\)|No space left on device|Disk quota exceeded/iu.test(stderr))
+        return 'write-failed';
     if (/Invoke-WebRequest|Invoke-RestMethod|Could not resolve host|Unable to resolve|TLS|SSL|HTTP (?:403|404|429|5\d\d)/iu.test(stderr)) {
         return 'network';
     }
@@ -106070,7 +106072,7 @@ function installedFileFailureReason(error) {
 function installerEnvironment(root, source) {
     const allowed = [
         'PATHEXT', 'OS', 'COMSPEC',
-        'TEMP', 'TMP', 'TMPDIR', 'HOMEDRIVE', 'HOMEPATH', 'SHELL',
+        'HOMEDRIVE', 'HOMEPATH', 'SHELL',
         'PROCESSOR_ARCHITECTURE', 'NUMBER_OF_PROCESSORS', 'USERDOMAIN', 'USERNAME', 'LOGONSERVER',
     ];
     const environment = {};
@@ -106079,6 +106081,10 @@ function installerEnvironment(root, source) {
             environment[name] = source[name];
     }
     environment.PATH = (0, agent_trusted_system_tools_1.trustedSystemPath)();
+    // Nested downloads and extraction use the same private scratch as the install.
+    environment.TMPDIR = root;
+    environment.TMP = root;
+    environment.TEMP = root;
     if (process.platform === 'win32') {
         const systemRoot = (0, windows_system_root_cjs_1.trustedWindowsSystemRoot)();
         const drive = systemRoot.slice(0, 2);

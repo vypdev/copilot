@@ -593,6 +593,12 @@ archive in a private job directory. Installer child processes receive no
 GitHub or model credentials. Explicit and present operator CLIs are never
 replaced. Installation checks require a nonempty version and the admitted
 headless command surface, without enforcing an exact version.
+The installer and its child tools MUST use the same private installation root
+for `TMPDIR`, `TMP` and `TEMP`. On a self-hosted runner this keeps the archive
+download and extraction on runner scratch, which may have more space than the
+system temporary filesystem. Use the ordinary private-root cleanup on failure.
+Recognized storage write errors MUST report `write-failed` without raw output.
+The installer adapter owns this behavior. No new configuration is required.
 On Windows the official installer runs under Windows PowerShell 5.1 with fixed
 system tool directories, a private profile, and only non-secret native process
 variables. Its `PSModulePath` contains only Windows PowerShell 5.1 system module
@@ -934,6 +940,12 @@ pinning.
 | UX/sanitization | 12 | phase/errors/redaction/narrow output |
 | Integration/security/cutover | 19 | role→provider, injection, credentials, new provider, configured-variable precedence and model smoke |
 | **Total** | **130** | no double counting |
+
+Installer scratch coverage includes at least three cases. Inherited temporary
+paths cannot reach the installer, a Unix script can stage its archive under
+the private root, and a write failure emits a bounded diagnostic and removes
+the partial archive. The source PR and Commit workflows must also reach review
+on a fresh head in the `vypdev` pool after a provisioning incident.
 
 The Windows extension adds at least 18 distinct fixture cases: 6 for official
 installer selection and executable resolution, 4 for missing/redirected sources
