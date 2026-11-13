@@ -1953,6 +1953,7 @@ exports.BUGBOT_MESSAGE_IDS = Object.freeze([
     'bugbot.status.recoverySummary',
     'bugbot.status.nav.pullRequest',
     'bugbot.status.nav.verifiedCommit',
+    'bugbot.status.nav.reviewChecks',
     'bugbot.status.nav.workflowRun',
     'bugbot.status.duplicate.superseded',
     'bugbot.status.duplicate.viewCurrent',
@@ -2040,6 +2041,7 @@ const ENGLISH_MESSAGES = Object.freeze({
     'bugbot.status.recoverySummary': 'Recovery details',
     'bugbot.status.nav.pullRequest': 'Pull request',
     'bugbot.status.nav.verifiedCommit': 'Verified commit',
+    'bugbot.status.nav.reviewChecks': 'Current review checks',
     'bugbot.status.nav.workflowRun': 'Workflow run',
     'bugbot.status.duplicate.superseded': 'This status was superseded by the canonical card.',
     'bugbot.status.duplicate.viewCurrent': 'View current status',
@@ -2130,6 +2132,7 @@ const SPANISH_MESSAGES = Object.freeze({
     'bugbot.status.recoverySummary': 'Detalles de recuperación',
     'bugbot.status.nav.pullRequest': 'Pull request',
     'bugbot.status.nav.verifiedCommit': 'Commit verificado',
+    'bugbot.status.nav.reviewChecks': 'Checks de la revisión actual',
     'bugbot.status.nav.workflowRun': 'Ejecución',
     'bugbot.status.duplicate.superseded': 'Este estado fue reemplazado por la tarjeta canónica.',
     'bugbot.status.duplicate.viewCurrent': 'Ver estado actual',
@@ -3005,6 +3008,7 @@ function renderBugbotStatusCard(projection, catalogOrLocale, links) {
     const navigation = [
         `[${catalog.message('bugbot.status.nav.pullRequest')}](${links.pullRequestUrl})`,
         `[${catalog.message('bugbot.status.nav.verifiedCommit')}](${links.commitUrl})`,
+        ...(links.reviewChecksUrl ? [`[${catalog.message('bugbot.status.nav.reviewChecks')}](${links.reviewChecksUrl})`] : []),
         ...(links.runUrl
             ? [`[${catalog.message('bugbot.status.nav.workflowRun')}](${links.runUrl})`]
             : []),
@@ -3679,6 +3683,7 @@ exports.parseProgressScopeClassifications = parseProgressScopeClassifications;
 exports.parseProgressScopeWithAnchors = parseProgressScopeWithAnchors;
 exports.scopedProgressResponseSchema = scopedProgressResponseSchema;
 exports.parseScopedProgressResponse = parseScopedProgressResponse;
+exports.validateScopedProgressResponse = validateScopedProgressResponse;
 const progress_batch_rejection_policy_1 = __nccwpck_require__(3397);
 const progress_scope_source_policy_1 = __nccwpck_require__(9565);
 var progress_scope_source_policy_2 = __nccwpck_require__(9565);
@@ -3815,6 +3820,9 @@ function scopedProgressResponseSchema(scope, anchors = {}) {
 }
 /** Only exact in-scope entries can reach the existing progress card. No model top-level remaining is published. */
 function parseScopedProgressResponse(response, locale, scope, anchors = {}) {
+    return validateScopedProgressResponse(response, locale, scope, anchors).result;
+}
+function validateScopedProgressResponse(response, locale, scope, anchors = {}) {
     const payload = (0, progress_response_rejection_policy_1.progressResponsePayload)(response, locale, 'assessment');
     const reject = (reason, field, candidate = 'none') => {
         const id = (0, progress_response_diagnostic_1.isProgressRequirementId)(candidate) && scope.requirements.some(requirement => requirement.id === candidate) ? candidate : 'none';
@@ -3850,8 +3858,9 @@ function parseScopedProgressResponse(response, locale, scope, anchors = {}) {
         seen.add(id);
         if (scope.requirements.find(requirement => requirement.id === id).uncertain && fact.status !== 'verification-unknown')
             reject('scope-uncertain', `${field}.status`, id);
-        if (!['supported', 'missing', 'verification-unknown'].includes(fact.status))
-            reject('requirement-status-invalid', `${field}.status`, id);
+        const status = fact.status;
+        if (status !== 'supported' && status !== 'missing' && status !== 'verification-unknown')
+            return reject('requirement-status-invalid', `${field}.status`, id);
         if (!['source-only', 'external-unverified', 'unavailable', 'contradictory'].includes(fact.evidence))
             reject('requirement-evidence-invalid', `${field}.evidence`, id);
         function text(value) { return typeof value === 'string' && value.trim().length > 0 && [...value].length <= MAX_FACT; }
@@ -3871,7 +3880,7 @@ function parseScopedProgressResponse(response, locale, scope, anchors = {}) {
             else if ([...fact.remaining].length > MAX_FACT)
                 reject('requirement-remaining-too-long', `${field}.remaining`, id);
         }
-        return { id, status: fact.status, summary: fact.summary, remaining: fact.remaining };
+        return { id, status, summary: fact.summary, remaining: fact.remaining };
     });
     const ordered = scope.requirements.map(requirement => ({ requirement, fact: entries.find(entry => entry.id === requirement.id) }));
     function render(field) {
@@ -3900,7 +3909,7 @@ function parseScopedProgressResponse(response, locale, scope, anchors = {}) {
             missingCount: entries.filter(entry => entry.status === 'missing').length,
             unknownCount: entries.filter(entry => entry.status === 'verification-unknown').length }, scope);
     }
-    return { progress, summary, remaining, reasoning: '' };
+    return { result: { progress, summary, remaining, reasoning: '' }, entries: ordered.map(({ fact }) => fact) };
 }
 
 
@@ -4367,6 +4376,8 @@ async function analyzeBugbotFrames(operation, context, plan, dependencies) {
     const targetLocale = operation.locale.pullRequest;
     const all = [];
     let retainedBytes = 0, findingCount = 0, consumedPromptBytes = 0;
+    let completed = 0;
+    let retries = 0;
     // Intercept actual requests so retries and generated-source verification use the same exact ledger.
     const boundedAgent = { query: async (request) => {
             const size = (0, bugbot_framed_prompt_policy_1.bugbotFramedPromptBytes)(request);
@@ -4384,6 +4395,8 @@ async function analyzeBugbotFrames(operation, context, plan, dependencies) {
             || !(await dependencies.isSourceCurrent()))
             throw new framed_review_1.BugbotReviewCompletenessError('identity');
         (0, logging_ports_1.logInfo)(`Bugbot complete review frame ${frame.ordinal}/${plan.frames.length} started; no result is final.`);
+        const frames = { ordinal: frame.ordinal, total: plan.frames.length };
+        await dependencies.progress?.record('analyzing', { frames, partitions: { completed, total: plan.partitions.length } });
         const assigned = plan.partitions.filter(partition => partition.framed.frameId === frame.id);
         if ((0, bugbot_framed_review_policy_1.bugbotReviewDigest)(assigned.map(x => x.id)) !== (0, bugbot_framed_review_policy_1.bugbotReviewDigest)(frame.partitionIds))
             throw new framed_review_1.BugbotReviewCompletenessError('coverage');
@@ -4392,7 +4405,9 @@ async function analyzeBugbotFrames(operation, context, plan, dependencies) {
             dependencies.telemetry.beginPartition();
             const startedAt = Date.now();
             try {
-                const response = await (0, query_bugbot_findings_1.queryBugbotPartitionFindings)(boundedAgent, operation.analysis.agentConfiguration, input.prompt, targetLocale, { partitionId: partition.id, headSha: partition.headSha, framed: partition.framed }, { enabled: input.requiresCandidateVerification });
+                const response = await (0, query_bugbot_findings_1.queryBugbotPartitionFindings)(boundedAgent, operation.analysis.agentConfiguration, input.prompt, targetLocale, { partitionId: partition.id, headSha: partition.headSha, framed: partition.framed }, { enabled: input.requiresCandidateVerification, observeRetry: async () => {
+                        await dependencies.progress?.record('analyzing', { retries: ++retries });
+                    } });
                 const serialized = JSON.stringify(response);
                 (0, framed_review_1.enforceBugbotFramedBudget)('responseBytes', Buffer.byteLength(serialized));
                 const admitted = JSON.parse(serialized);
@@ -4409,6 +4424,7 @@ async function analyzeBugbotFrames(operation, context, plan, dependencies) {
                 (0, framed_review_1.enforceBugbotFramedBudget)('resultBytes', retainedBytes);
                 dependencies.trace?.recordResponse(admitted, partition.ordinal, Date.now() - startedAt, partition.id);
                 dependencies.telemetry.endPartition(true);
+                await dependencies.progress?.record('analyzing', { frames, partitions: { completed: ++completed, total: plan.partitions.length } });
                 return admitted;
             }
             catch (error) {
@@ -4479,8 +4495,9 @@ async function analyzeBugbotRevision(execution, context, dependencies) {
     const agentResponse = context.reviewFramedPlan && partitions.length > 0
         ? await dependencies.telemetry.measure('analysis', () => (0, analyze_bugbot_frames_1.analyzeBugbotFrames)(execution, context, context.reviewFramedPlan, { ...dependencies, isSourceCurrent: dependencies.isSourceCurrent }))
         : canonicalZeroWork
-            ? await dependencies.telemetry.measure('analysis', () => {
+            ? await dependencies.telemetry.measure('analysis', async () => {
                 dependencies.telemetry.observePartitionPlan(0, 0, 0);
+                await dependencies.progress?.record('analyzing', { partitions: { completed: 0, total: 0 } });
                 const reason = ignoredFileCount > 0
                     ? `skipped ${ignoredFileCount} intentionally ignored changed ${ignoredFileCount === 1 ? 'file' : 'files'}`
                     : 'received a canonical diff plan with no reviewable changed files';
@@ -4491,15 +4508,22 @@ async function analyzeBugbotRevision(execution, context, dependencies) {
                 ? await dependencies.telemetry.measure('analysis', async () => {
                     dependencies.telemetry.observePartitionPlan(partitions.length, context.reviewDiffFragmentCount ?? partitions.reduce((sum, partition) => sum + partition.fragmentCount, 0), context.reviewDiffFileCount ?? new Set(partitions.flatMap((partition) => partition.files)).size);
                     (0, logging_ports_1.logInfo)(`Bugbot reviewer planned ${partitions.length} bounded diff ${partitions.length === 1 ? 'partition' : 'partitions'} with maximum concurrency 2.`);
+                    let completed = 0;
+                    let retries = 0;
+                    await dependencies.progress?.record('analyzing', { partitions: { completed, total: partitions.length } });
                     const responses = await (0, bounded_concurrency_policy_1.runWithConcurrencyLimit)(partitions.map((partition) => async () => {
                         const { prompt, requiresCandidateVerification } = (0, build_bugbot_prompt_1.buildBugbotReviewInput)(execution, context, { partition, related: dependencies.trace ? partitions : undefined });
                         dependencies.telemetry.observePrompt(prompt);
                         dependencies.telemetry.beginPartition();
                         const partitionStartedAt = Date.now();
                         try {
-                            const response = await (0, query_bugbot_findings_1.queryBugbotPartitionFindings)(dependencies.agent, execution.analysis.agentConfiguration, prompt, targetLocale, { partitionId: partition.id, headSha: partition.headSha }, { enabled: requiresCandidateVerification, observePrompt: value => dependencies.telemetry.observePrompt(value), observeResponse: value => dependencies.telemetry.observeResponse(value) });
+                            const response = await (0, query_bugbot_findings_1.queryBugbotPartitionFindings)(dependencies.agent, execution.analysis.agentConfiguration, prompt, targetLocale, { partitionId: partition.id, headSha: partition.headSha }, { enabled: requiresCandidateVerification, observePrompt: value => dependencies.telemetry.observePrompt(value),
+                                observeResponse: value => dependencies.telemetry.observeResponse(value), observeRetry: async () => {
+                                    await dependencies.progress?.record('analyzing', { retries: ++retries });
+                                } });
                             dependencies.trace?.recordResponse(response, partition.ordinal, Date.now() - partitionStartedAt, partition.id);
                             dependencies.telemetry.endPartition(true);
+                            await dependencies.progress?.record('analyzing', { partitions: { completed: ++completed, total: partitions.length } });
                             (0, logging_ports_1.logInfo)(`Bugbot reviewer completed partition ${partition.ordinal}/${partition.total}.`);
                             return response;
                         }
@@ -5096,6 +5120,78 @@ async function hasNewerBugbotRevision(context, ports, boundary = 'before-publica
         throw error;
     }
 }
+
+
+/***/ }),
+
+/***/ 8634:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BugbotReviewProgress = void 0;
+const git_object_id_1 = __nccwpck_require__(8623);
+const logging_ports_1 = __nccwpck_require__(6152);
+const UPDATE_INTERVAL_MS = 5 * 60000;
+/** One host-owned observation stream. Serializes snapshots and never influences the review decision. */
+class BugbotReviewProgress {
+    constructor(target, port, dryRun, locale, now = Date.now) {
+        this.target = target;
+        this.port = port;
+        this.dryRun = dryRun;
+        this.locale = locale;
+        this.now = now;
+        this.startedAt = this.now();
+        this.lastAt = -Infinity;
+        this.sequence = 0;
+        this.queue = Promise.resolve();
+        this.stageStartedAt = this.startedAt;
+        this.stageTimesMs = {};
+        this.work = {};
+    }
+    pinComparison(baseRefSha) {
+        this.baseRefSha = (0, git_object_id_1.canonicalGitObjectId)(baseRefSha);
+    }
+    async record(stage, facts = {}, outcome) {
+        const headSha = (0, git_object_id_1.canonicalGitObjectId)(this.target.headSha);
+        if (!headSha || this.lastStage === 'finished')
+            return;
+        const at = this.now();
+        const work = this.work = { ...this.work, ...facts };
+        const data = { stage, ...work, ...(outcome ? { outcome } : {}) };
+        const identity = JSON.stringify(data);
+        const phaseChanged = stage !== this.lastStage;
+        if (phaseChanged) {
+            if (this.lastStage)
+                this.stageTimesMs[this.lastStage] = Math.max(0, at - this.stageStartedAt);
+            this.stageStartedAt = at;
+        }
+        const transition = phaseChanged || work.frames?.ordinal !== this.previousFrame
+            || (facts.partitions !== undefined && this.previousPlan !== facts.partitions.total);
+        if (identity === this.previous || (!transition && at - this.lastAt < UPDATE_INTERVAL_MS))
+            return;
+        this.previous = identity;
+        this.previousFrame = work.frames?.ordinal;
+        this.previousPlan = work.partitions?.total;
+        this.lastAt = at;
+        this.lastStage = stage;
+        const progress = { ...data, headSha, baseSha: (0, git_object_id_1.canonicalGitObjectId)(this.target.baseSha), baseRefSha: this.baseRefSha,
+            pullNumber: this.target.number, elapsedMs: Math.max(0, at - this.startedAt), observedAt: new Date(at).toISOString(),
+            sequence: ++this.sequence, stageTimesMs: { ...this.stageTimesMs } };
+        this.queue = this.queue.then(async () => {
+            (0, logging_ports_1.logInfo)(`[bugbot.progress] ${JSON.stringify(progress)}`);
+            try {
+                await this.port?.observe(progress, this.dryRun, this.locale);
+            }
+            catch {
+                (0, logging_ports_1.logInfo)('Bugbot progress could not be updated. Review continues.');
+            }
+        });
+        await this.queue;
+    }
+}
+exports.BugbotReviewProgress = BugbotReviewProgress;
 
 
 /***/ }),
@@ -6168,7 +6264,7 @@ const bugbot_shadow_configuration_policy_1 = __nccwpck_require__(7379);
 const finding_1 = __nccwpck_require__(1011);
 const git_object_id_1 = __nccwpck_require__(8623);
 const bounded_concurrency_policy_1 = __nccwpck_require__(5596);
-async function observeBugbotShadowVerification(operation, context, prepared, port, trace, detectionAndPreparationMs, experimentalProfile) {
+async function observeBugbotShadowVerification(operation, context, prepared, port, trace, detectionAndPreparationMs, experimentalProfile, progress) {
     const detector = operation.analysis.agentConfiguration;
     const dryRun = operation.analysis.reviewConfiguration.publicationMode === 'dry-run';
     const installed = operation.analysis.reviewConfiguration.shadowVerification;
@@ -6194,14 +6290,22 @@ async function observeBugbotShadowVerification(operation, context, prepared, por
                 description: 'Compare with the prior behavior when the pinned base is relevant.',
             }, true) : undefined };
     });
-    const concurrency = Math.min(2, inputs.length + resolutions.length);
+    const total = inputs.length + resolutions.length;
+    const concurrency = Math.min(2, total);
+    let completed = 0;
+    if (total)
+        await progress?.record('verifying', { candidates: { completed, total } });
     const tasks = [...inputs, ...resolutions].map(({ id, candidate, ordinaryPublication }) => async () => {
         const started = performance.now();
         const observation = candidate
             ? await verifyCandidate(port, candidate, configuration, review)
             : { status: 'verdict', verdict: 'inconclusive', reason: 'Candidate could not be pinned.',
                 missing: 'A repository location on the reviewed revision is required.', citations: [], premises: [] };
-        return { ...observation, id, candidate, wallMs: Math.round(performance.now() - started), ordinaryPublication };
+        const wallMs = Math.round(performance.now() - started);
+        if (observation.status === 'verdict') {
+            await progress?.record('verifying', { candidates: { completed: ++completed, total } });
+        }
+        return { ...observation, id, candidate, wallMs, ordinaryPublication };
     });
     const candidates = await (0, bounded_concurrency_policy_1.runWithConcurrencyLimit)(tasks, 2);
     const pr = context.canonicalPullRequest;
@@ -6858,6 +6962,7 @@ async function queryBugbotPartitionFindings(repository, configuration, prompt, t
             }
             if (attempt === MAX_PARTITION_QUERY_ATTEMPTS || (error instanceof framed_review_1.BugbotReviewCompletenessError && error.facts.resource !== 'receipt'))
                 throw error;
+            await verification?.observeRetry?.();
             (0, logging_ports_1.logInfo)(`Bugbot reviewer retrying one partition query (${attempt + 1}/${MAX_PARTITION_QUERY_ATTEMPTS}) after unusable agent output.`);
         }
     }
@@ -7756,6 +7861,7 @@ const bugbot_context_request_1 = __nccwpck_require__(8299);
 const apply_detected_findings_1 = __nccwpck_require__(793);
 const bugbot_finding_status_policy_1 = __nccwpck_require__(3822);
 const bugbot_review_telemetry_1 = __nccwpck_require__(6790);
+const bugbot_review_progress_1 = __nccwpck_require__(8634);
 const analyze_bugbot_revision_use_case_1 = __nccwpck_require__(4658);
 const bugbot_review_freshness_1 = __nccwpck_require__(4307);
 const reconcile_bugbot_review_state_use_case_1 = __nccwpck_require__(7515);
@@ -7772,6 +7878,7 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
     const trace = dependencies.shadowVerification ? new bugbot_candidate_trace_1.BugbotCandidateTrace() : undefined;
     let shadow;
     let verification;
+    let progress;
     const authority = dependencies.verificationAuthority;
     const enforced = authority?.mode === 'enforced';
     const requiresReceipt = authority !== undefined;
@@ -7801,6 +7908,7 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
         return snapshot;
     };
     const complete = async (result, outcome) => {
+        await progress?.record('finished', {}, outcome);
         const snapshot = await publishTelemetry(outcome);
         const payload = result.payload && typeof result.payload === 'object' && !Array.isArray(result.payload)
             ? result.payload
@@ -7841,13 +7949,21 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
             && !reviewContext.analysis.reviewConfiguration.reviewDrafts) {
             return await complete(skippedDraftResult(), 'skipped');
         }
+        if (preflight.canonicalPullRequest) {
+            progress = new bugbot_review_progress_1.BugbotReviewProgress(preflight.canonicalPullRequest, dependencies.scm.progress, dryRun, reviewContext.locale.pullRequest);
+            await progress.record('preparing');
+        }
         const context = await telemetry.measure('context', () => (0, load_bugbot_context_use_case_1.loadBugbotContext)(contextRequest, dependencies.scm.context, preflight, dependencies.scm.reviewSource));
+        telemetry.observeContext(context);
+        progress?.pinComparison(context.canonicalPullRequest?.baseRefSha);
         const eventHeadSha = reviewContext.trigger.expectedHeadSha;
         if ((0, bugbot_review_freshness_1.isLoadedBugbotRevisionSuperseded)(context, eventHeadSha)) {
             return await complete(supersededResult(context.prContext?.prHeadSha, eventHeadSha), 'superseded');
         }
         const detectionStartedAt = Date.now();
-        let prepared = await (0, analyze_bugbot_revision_use_case_1.analyzeBugbotRevision)(reviewContext, context, { agent: dependencies.aiRepository, telemetry, trace, isSourceCurrent: async () => !await (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context) });
+        await progress?.record('analyzing');
+        let prepared = await (0, analyze_bugbot_revision_use_case_1.analyzeBugbotRevision)(reviewContext, context, { agent: dependencies.aiRepository, telemetry, trace, progress,
+            isSourceCurrent: async () => !await (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context) });
         const detectionAndPreparationMs = Date.now() - detectionStartedAt;
         if (prepared === undefined) {
             shadow = unavailableShadow();
@@ -7877,7 +7993,7 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
         if (dependencies.shadowVerification && trace) {
-            shadow = await (0, observe_bugbot_shadow_verification_1.observeBugbotShadowVerification)(reviewContext, context, prepared, dependencies.shadowVerification, trace, detectionAndPreparationMs, dependencies.experimentalShadowProfile);
+            shadow = await (0, observe_bugbot_shadow_verification_1.observeBugbotShadowVerification)(reviewContext, context, prepared, dependencies.shadowVerification, trace, detectionAndPreparationMs, dependencies.experimentalShadowProfile, enforced || dryRun ? progress : undefined);
             if (shadow.candidates.length > 0 && await (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context)) {
                 shadow = { ...shadow, superseded: true };
                 return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
@@ -7923,6 +8039,7 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
             && await (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context, 'before-publication', requiresReceipt)) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
+        await progress?.record('publishing');
         const resolutionErrors = await telemetry.measure('publication', () => (0, apply_detected_findings_1.applyDetectedFindings)(reviewContext, context, prepared, dependencies.scm.publication, dependencies.scm.resolution, catalog));
         if (await telemetry.measure('post-publication-freshness', () => (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context, 'after-publication', requiresReceipt))) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
@@ -7958,6 +8075,7 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
             ? new application_error_1.ApplicationError('validation.evidence-unavailable', 'Bugbot could not verify a complete source-bound review.', { retryable: false, recovery: { id: 'bugbot-review-incomplete', variables: error.facts } })
             : error, 'provider.unavailable', `Error in ${TASK_ID}: Unable to detect potential problems.`);
         (0, logging_ports_1.logError)(resultError);
+        await progress?.record('finished', { failureCode: resultError.code }, 'failed');
         const result = new result_1.Result({
             id: TASK_ID,
             success: false,

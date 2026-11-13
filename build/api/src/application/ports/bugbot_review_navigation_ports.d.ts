@@ -3,6 +3,7 @@ export interface BugbotReviewNavigation {
     readonly pullRequestUrl: string;
     readonly commitUrl: string;
     readonly runUrl?: string;
+    readonly reviewChecksUrl?: string;
 }
 /**
  * Keeps provider URL construction outside the use case and presentation policy.

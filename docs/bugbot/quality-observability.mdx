@@ -450,6 +450,14 @@ The evaluator reports precision, recall, F1, exact-location accuracy, severity a
 
 ## Runtime telemetry
 
+The live `[bugbot.progress]` events expose the analyzed head, stage and
+validated counts. Frame and partition totals appear after planning, and a
+retried assignment counts once after validation. Phase changes are reported
+immediately. Within a phase, changed counts are coalesced to one update per
+five minutes. Check updates are optional and the workflow run shows native
+cancellation or runner loss. Dry-run records the same observations in logs and
+the Job Summary with zero GitHub writes from this path.
+
 When `bugbot-telemetry` is enabled, each review records only identifiers and
 aggregates: repository/event identity, outcome, stage timings, changed file/line counts, rule count, finding
 counts and states, provider/model names, character counts, and rough token

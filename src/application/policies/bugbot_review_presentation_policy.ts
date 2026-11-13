@@ -93,6 +93,7 @@ export function renderBugbotStatusCard(
   const navigation = [
     `[${catalog.message('bugbot.status.nav.pullRequest')}](${links.pullRequestUrl})`,
     `[${catalog.message('bugbot.status.nav.verifiedCommit')}](${links.commitUrl})`,
+    ...(links.reviewChecksUrl ? [`[${catalog.message('bugbot.status.nav.reviewChecks')}](${links.reviewChecksUrl})`] : []),
     ...(links.runUrl
       ? [`[${catalog.message('bugbot.status.nav.workflowRun')}](${links.runUrl})`]
       : []),

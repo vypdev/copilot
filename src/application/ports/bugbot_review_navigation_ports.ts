@@ -3,6 +3,7 @@ export interface BugbotReviewNavigation {
   readonly pullRequestUrl: string;
   readonly commitUrl: string;
   readonly runUrl?: string;
+  readonly reviewChecksUrl?: string;
 }
 
 /**

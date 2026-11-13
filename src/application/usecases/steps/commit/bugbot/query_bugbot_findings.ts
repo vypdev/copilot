@@ -17,6 +17,7 @@ import { logInfo } from '../../../../ports/logging_ports';
 import { verifyGeneratedLiteralFindings } from './verify_generated_literal_findings';
 
 export interface BugbotLiteralVerificationOptions {
+    readonly observeRetry?: () => Promise<void>;
     readonly enabled: boolean;
     readonly observePrompt?: (prompt: string) => void;
     readonly observeResponse?: (response: unknown) => void;
@@ -103,6 +104,7 @@ export async function queryBugbotPartitionFindings(
                     { retryable: false, recovery: { id: 'bugbot-partition-query-exhausted', variables: { reason: error.reason, attempts: 3 } } });
             }
             if (attempt === MAX_PARTITION_QUERY_ATTEMPTS || (error instanceof BugbotReviewCompletenessError && error.facts.resource !== 'receipt')) throw error;
+            await verification?.observeRetry?.();
             logInfo(`Bugbot reviewer retrying one partition query (${attempt + 1}/${MAX_PARTITION_QUERY_ATTEMPTS}) after unusable agent output.`);
         }
     }

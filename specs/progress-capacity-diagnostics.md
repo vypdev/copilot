@@ -460,6 +460,12 @@ serial duration exceeds the original deadline and validates the ordered
 receipts. The terminal part test allows in-flight requests to settle, then
 asserts no further dispatch or publication.
 
+The [#950 pending-work contract](./batched-progress-scope.md#actionable-remaining-work-for-950)
+uses the complete reduced assessment to present implementation and evidence
+gaps in the existing Commit card. Capacity failures retain that entire
+assessment. The native run may report evaluated part counts and a bounded
+cause during the next attempt without treating those counts as issue progress.
+
 Citation arrays use the provider-compatible native array shape with `minItems`
 and `maxItems`. The host enforces citation uniqueness and same-head resolution
 before accepting any receipt. The deterministic native-projection regression

@@ -17,6 +17,7 @@ export interface BugbotScmBinding {
   readonly token: string;
   readonly shadow?: { readonly workspace?: string };
   readonly verificationAuthority?: BugbotVerificationAuthority;
+  readonly reviewProgress?: BugbotScmPorts['progress'];
 }
 
 /** Binds repository identity and credential once, outside application workflows. */
@@ -143,6 +144,7 @@ export class BugbotScmPortFactory {
 
     return {
       ...(this.reviewSource ? { reviewSource: this.reviewSource } : {}),
+      ...(binding.reviewProgress ? { progress: binding.reviewProgress } : {}),
       context,
       publication: { issueComments, pullRequestComments },
       resolution: { issueComments, pullRequestComments },

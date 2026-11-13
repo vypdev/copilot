@@ -44,6 +44,15 @@ Automatic title formatting keeps the boundaries between hyphenated words. A titl
 
 ## Progress evidence
 
+The Commit progress comment shows the assessed SHA, an estimated percentage,
+and counts of supported requirements, missing implementation, and work that
+still needs evidence. For example, a 45% assessment might ask you to implement
+one behavior and capture the relevant CI result for another. Follow the links
+to inspect the requirement, source evidence and full pending-work inventory
+in the Job Summary. Each item reflects the completed assessment of that SHA.
+If a later assessment fails or is canceled, the previous card remains available.
+An assessment with all requirements supported has an empty pending-work list.
+
 Progress assessments use an immutable GitHub comparison of the actual native PR target and the managed branch head. If no open PR owns that exact head branch, they use the configured development base. The agent receives the source patches directly and does not need shell commands. Generated build files contribute metadata only; a percentage does not certify CI or a build.
 
 Copilot accounts for every original nonempty issue line before analyzing patches. It validates the one reserved persisted-configuration block using the same delimiter scanner and supported version as storage; that operational state, including generated implementation plans, cannot define acceptance. The classifier classifies every remaining human line by its original physical source identifier as required, excluded, context or uncertain. Ordinary prose, unrelated HTML, examples and acceptance before or after the reserved state are preserved. All original line/count limits apply before separation, and malformed or unsupported state stops assessment without changing progress. The scope request, comparison parts and final assessment keep complete issue text, extracted scope and model facts inside explicit untrusted-data blocks. Embedded instructions cannot grant workflow authority. Inputs that exceed the fixed UTF-8 budgets are rejected with retained progress rather than shortened to fit. Small comparisons then use one assessment. Larger complete comparisons are reviewed in up to four rounds of 16 parts (64 parts total), each containing complete patches or identified content slices within the unchanged 256,000-byte UTF-8 evidence limit. Every part must return bounded facts for every assigned file or content unit before one final assessment can update progress. These facts preserve uncertainty and do not certify CI. Their final combined summary has a maximum 384,000-byte budget. Copilot reserves every admitted path and the complete security/schema/task envelope and configured effort suffix inside the unchanged 512 KiB runtime ceiling, then requests concise facts using the same calculated limit in the schema and parser. No returned facts are silently shortened. Source parts and the manifest retain the 256,000-byte limit.

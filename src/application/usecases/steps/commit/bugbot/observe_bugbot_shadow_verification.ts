@@ -14,6 +14,7 @@ import type { BugbotReviewOperationContext } from './bugbot_review_operation_con
 import type { BugbotContext } from './types';
 import type { PreparedBugbotFindings } from './prepare_bugbot_findings';
 import type { BugbotCandidateTrace } from './bugbot_candidate_trace';
+import type { BugbotReviewProgress } from './bugbot_review_progress';
 
 type Observation = BugbotShadowResult & {
     readonly id: string;
@@ -63,6 +64,7 @@ export async function observeBugbotShadowVerification(
     trace: BugbotCandidateTrace,
     detectionAndPreparationMs: number,
     experimentalProfile?: Readonly<AgentConfiguration>,
+    progress?: BugbotReviewProgress,
 ): Promise<BugbotShadowVerificationReport> {
     const detector = operation.analysis.agentConfiguration;
     const dryRun = operation.analysis.reviewConfiguration.publicationMode === 'dry-run';
@@ -89,14 +91,21 @@ export async function observeBugbotShadowVerification(
                 description: 'Compare with the prior behavior when the pinned base is relevant.',
             }, true) : undefined };
     });
-    const concurrency = Math.min(2, inputs.length + resolutions.length);
+    const total = inputs.length + resolutions.length;
+    const concurrency = Math.min(2, total);
+    let completed = 0;
+    if (total) await progress?.record('verifying', { candidates: { completed, total } });
     const tasks = [...inputs, ...resolutions].map(({ id, candidate, ordinaryPublication }) => async (): Promise<Observation> => {
         const started = performance.now();
         const observation = candidate
             ? await verifyCandidate(port, candidate, configuration, review)
             : { status: 'verdict' as const, verdict: 'inconclusive' as const, reason: 'Candidate could not be pinned.',
                 missing: 'A repository location on the reviewed revision is required.', citations: [], premises: [] };
-        return { ...observation, id, candidate, wallMs: Math.round(performance.now() - started), ordinaryPublication };
+        const wallMs = Math.round(performance.now() - started);
+        if (observation.status === 'verdict') {
+            await progress?.record('verifying', { candidates: { completed: ++completed, total } });
+        }
+        return { ...observation, id, candidate, wallMs, ordinaryPublication };
     });
     const candidates = await runWithConcurrencyLimit(tasks, 2);
     const pr = context.canonicalPullRequest;

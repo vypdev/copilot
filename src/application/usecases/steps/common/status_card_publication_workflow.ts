@@ -111,6 +111,8 @@ async function sourceIsCurrent(
     }
     if (await sourceQuery.getBranchHeadSha(guard.branch) !== guard.sha) return false;
     if (intent.projection.kind !== 'progress') return true;
+    const { pendingWork, comparisonBaseBranch } = intent.projection;
+    if (pendingWork?.baseSha && (!comparisonBaseBranch || await sourceQuery.getBranchHeadSha(comparisonBaseBranch) !== pendingWork.baseSha)) return false;
     if (!sourceQuery.isIssueOpen) throw new ApplicationError('configuration.unsupported', 'Progress publication requires a native issue state query.');
     return await sourceQuery.isIssueOpen(intent.identity.target.number) === true;
 }

@@ -19,6 +19,7 @@ import { interpretProgressAgentOutput } from '../../../../data/repository/progre
 import { assessmentWireFixture } from './fixtures/progress_assessment_wire_fixture';
 import { inventoryFixture, addedFiles } from '../../../../data/repository/__tests__/support/immutable_progress_inventory_fixture';
 import { PROGRESS_BATCH_PROFILE } from '../../../policies/progress_batch_policy';
+import { buildActionSummary } from '../../../policies/action_summary_policy';
 
 const base = 'a'.repeat(40), head = 'b'.repeat(40);
 const fixtureText = readFileSync(join(__dirname, 'fixtures/domus-29-immutable-replay.json.gz.hex'), 'utf8');
@@ -138,6 +139,21 @@ it('CommitScope916-C06 assesses 33 distinct obligations in two bounded groups th
     expect(intents[0]).toMatchObject({ sourceVersion: `head:${head}:scope:${(results.at(-1)!.payload as { scopeManifestDigest: string }).scopeManifestDigest}`, sourceGuard: { kind: 'branch-head', sha: head } });
     expect(f.finalOutputs.map(output => output.requirements.length)).toEqual([32, 1]);
     expect(f.setProgressLabel).toHaveBeenCalledTimes(1); expect(f.setLabels).toHaveBeenCalledTimes(1);
+});
+
+it('projects all 111 assessed IDs from the Commit result into one progress card and its full Job Summary', async () => {
+    const results = await scenario(Array.from({ length: 111 }, (_, index) => `Implement unique obligation ${index + 1}.`).join('\n')).invoke();
+    const repositoryUrl = 'https://github.com/vypdev/domus';
+    const progressLinks = { repositoryUrl, runUrl: `${repositoryUrl}/actions/runs/100/attempts/2` };
+    const [intent] = selectSemanticStatusIntents({ locale: 'en-US', results, progressLinks });
+    const card = renderSemanticStatus(intent);
+    expect(card).toContain('50% estimated');
+    expect(card).toContain('105 more pending requirements');
+    expect(card.match(/^- R\d+/gmu)).toHaveLength(6);
+    const summary = buildActionSummary({ owner: 'vypdev', repository: 'domus', eventName: 'push',
+        issueNumber: 23, pullRequestNumber: 29, results, progressLinks });
+    expect(summary.match(/^- R\d+/gmu)).toEqual(Array.from({ length: 111 }, (_, index) => `- R${index + 1}`));
+    expect(summary).toContain('/pull/29');
 });
 it('Issue925 preserves the maximum admitted narrative allocation on the ordinary 32-requirement path', async () => {
     const f = scenario(Array.from({ length: 32 }, (_, index) => `Implement unique obligation ${index + 1}.`).join('\n')), answer = f.query.getMockImplementation()!;

@@ -769,3 +769,32 @@ partition. Each partition still owns only its own eligible changed lines.
 Candidate origins remain attributable before global grouping. Preparation
 fixes the final anchor and the shadow verifier may follow related code on the
 pinned revision without moving it.
+
+## Live progress observations for #950
+
+The [live review presentation contract](./bugbot-review-state-reconciliation.md#live-review-progress-for-950)
+owns public state, update cadence and publication authority. This amendment
+defines the read-only observations produced by framed analysis. It applies to
+the normal, framed and eligible recheck routes through their canonical owner.
+
+- Publish the exact planned partition and frame totals only after successful
+  immutable-source and whole-plan preflight. Identify the current frame when
+  its freshness fence succeeds. Count a partition complete once its assigned
+  response is accepted by application validation. Attempted, retried, failed
+  and in-flight requests do not increment the count. Related candidate proof
+  calls belong to the owning partition and have separate retry/latency facts.
+- A frame completes when every assigned partition has a valid receipt. At a
+  frame boundary preserve global counts and expose the frame count and phase
+  transition. A complete partition count alone is not a complete review.
+  Aggregate validation, applicable verification, freshness and provider
+  reconciliation still determine the terminal result.
+- Emit safe phase start and elapsed times, validated counts, retry counts and
+  bounded failure categories. Report stage wall time independently from the
+  summed duration of concurrent requests. Log only measured counts and timing
+  when those facts exist. Missing telemetry cannot change admission or the
+  result. The detector and verifier receive no status-writing capability.
+
+BRP-02 and BRP-05 exercise the 105-partition geometry from #951, including
+retry, frame advance, stale head, failure after validated work and a native
+interruption. The replay preserves complete ordered receipts, fixed analysis
+concurrency and all-or-nothing review publication.

@@ -13,6 +13,8 @@ import {
     type BugbotResultFindingStateProjection,
 } from './bugbot_result_finding_state_projection_policy';
 import { countActionableBugbotFindings } from '../../domain/bugbot/review_state';
+import { getResultPayload } from '../../data/model/result';
+import { projectProgressWorkDetails, renderProgressWorkAssessment, type ProgressWorkLinks } from './progress_pending_work_policy';
 import type { CatalogResolutionObservation } from '../../domain/message_catalog';
 import {
     resolveStaticActionSummaryCatalog,
@@ -39,6 +41,7 @@ export interface ActionSummaryContext {
     readonly results: readonly Result[];
     readonly locale?: Readonly<{ repository: string; issue: string; pullRequest: string }>;
     readonly catalogResolutions?: readonly CatalogResolutionObservation[];
+    readonly progressLinks?: Omit<ProgressWorkLinks, 'issueNumber'>;
 }
 
 export interface LocalizationSummaryLabels {
@@ -117,6 +120,11 @@ export function buildActionSummary(
         context.catalogResolutions,
         actionSummaryLocalizationLabels(catalog),
     );
+    const progressLinks = context.progressLinks;
+    const progressDetails = progressLinks && !staleSourceSuppressed
+        ? projectProgressWorkDetails(context.results).map(({ issueNumber, progress, assessment }) =>
+            renderProgressWorkAssessment(progress, assessment, context.locale?.issue ?? 'en-US', { ...progressLinks, issueNumber }, true))
+        : [];
 
     return [
         `# ${catalogText(catalog, 'summary.heading')}`,
@@ -126,6 +134,7 @@ export function buildActionSummary(
         `| ${catalogText(catalog, 'summary.property')} | ${catalogText(catalog, 'summary.value')} |`,
         '| --- | --- |',
         ...rows,
+        ...progressDetails.flatMap(detail => ['', detail]),
         ...(failures.length > 0 ? [
             '',
             `## ${catalogText(catalog, 'summary.resultDetails')}`,

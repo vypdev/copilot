@@ -58,7 +58,7 @@ export async function finishGithubAction(
     const admissionStopped = execution.issueWorkflowRuntimeMode === 'block' || execution.issueWorkflowRuntimeMode === 'noop';
     const ownsDeploymentPresentation = execution.singleAction.isDeploymentOrchestrationAction;
     if (!dryRun && !verificationBlocked && !admissionStopped && !execution.singleAction.isPublishIssueCommentAction && !ownsDeploymentPresentation) {
-        const publicationContext = projectPublishResultContext(execution);
+        const publicationContext = { ...projectPublishResultContext(execution), progressLinks: progressWorkLinks(execution) };
         const requestRead = publicationContext.requestSource ? createReplyRequestReadPort({
             owner: execution.owner, repository: execution.repo, token: execution.tokens.token,
         }) : undefined;
@@ -102,6 +102,13 @@ export async function finishGithubAction(
         evidencePort,
         catalogResolver,
     ) : undefined;
+    if (!dryRun) {
+        try {
+            await evidencePort?.retireLiveReviews?.(execution.owner, execution.repo, process.env.COPILOT_EVIDENCE_TOKEN?.trim() || execution.tokens.token);
+        } catch {
+            logInfo('An unfinished Bugbot progress check could not be closed. The native workflow owns the final status.');
+        }
+    }
     if (optionalEvidenceDiagnostic && summaryPort) {
         try { await summaryPort.publish(optionalEvidenceDiagnostic.text); }
         catch { logInfo(optionalEvidenceDiagnostic.summaryAppendFailure); }
@@ -157,6 +164,7 @@ function actionSummaryContext(
     return Object.freeze({
         owner: execution.owner,
         repository: execution.repo,
+        progressLinks: progressWorkLinks(execution),
         eventName: execution.eventName,
         issueNumber: execution.issue?.number ?? -1,
         pullRequestNumber: execution.pullRequest?.number ?? -1,
@@ -176,6 +184,16 @@ function actionSummaryContext(
         catalogResolutions,
         results: execution.currentConfiguration.results,
     });
+}
+
+function progressWorkLinks(execution: Execution): { repositoryUrl: string; runUrl?: string } {
+    const server = process.env.GITHUB_SERVER_URL ?? '';
+    const origin = /^https:\/\/[a-zA-Z0-9.-]+(?::\d+)?$/u.test(server) ? server : 'https://github.com';
+    const repositoryUrl = `${origin}/${encodeURIComponent(execution.owner)}/${encodeURIComponent(execution.repo)}`;
+    const runId = process.env.GITHUB_RUN_ID ?? '';
+    const attempt = process.env.GITHUB_RUN_ATTEMPT ?? '';
+    return { repositoryUrl, ...(process.env.GITHUB_REPOSITORY === `${execution.owner}/${execution.repo}`
+        && /^\d+$/u.test(runId) && /^\d+$/u.test(attempt) ? { runUrl: `${repositoryUrl}/actions/runs/${runId}/attempts/${attempt}` } : {}) };
 }
 
 function extractBugbotTelemetry(results: readonly Result[]): unknown[] {

@@ -376,6 +376,7 @@ export function createMainRunRouteCompositionRoot(
   surface: MainRunCompositionSurface,
   setupProgress?: (effect: import('../../domain/setup').SetupOperationEffect) => void,
   verificationAuthority?: BugbotVerificationAuthority,
+  reviewProgress?: import('../../application/ports/bugbot_review_progress_ports').BugbotReviewProgressPort,
 ): MainRunRouteHandlers {
   let singleAction: SingleActionUseCase | undefined;
   let issueComment: IssueCommentUseCase | undefined;
@@ -385,11 +386,11 @@ export function createMainRunRouteCompositionRoot(
   let push: CommitUseCase | undefined;
   return {
     "single-action": async (execution) => {
-      singleAction ??= createSingleActionUseCaseCompositionRoot(surface, bugbotBinding(execution, surface, verificationAuthority), setupProgress);
+      singleAction ??= createSingleActionUseCaseCompositionRoot(surface, bugbotBinding(execution, surface, verificationAuthority, reviewProgress), setupProgress);
       return singleAction.invoke(execution);
     },
     "issue-comment": async (execution) => {
-      issueComment ??= createIssueCommentUseCaseCompositionRoot(bugbotBinding(execution, surface, verificationAuthority), captureVerificationSetup(execution.verificationSetup, execution.branches.main));
+      issueComment ??= createIssueCommentUseCaseCompositionRoot(bugbotBinding(execution, surface, verificationAuthority, reviewProgress), captureVerificationSetup(execution.verificationSetup, execution.branches.main));
       return issueComment.invoke(execution);
     },
     issue: async (execution) => {
@@ -397,15 +398,15 @@ export function createMainRunRouteCompositionRoot(
       return issue.invoke(execution);
     },
     "pull-request-review-comment": async (execution) => {
-      pullRequestReviewComment ??= createPullRequestReviewCommentUseCaseCompositionRoot(bugbotBinding(execution, surface, verificationAuthority), captureVerificationSetup(execution.verificationSetup, execution.branches.main));
+      pullRequestReviewComment ??= createPullRequestReviewCommentUseCaseCompositionRoot(bugbotBinding(execution, surface, verificationAuthority, reviewProgress), captureVerificationSetup(execution.verificationSetup, execution.branches.main));
       return pullRequestReviewComment.invoke(execution);
     },
     "pull-request": async (execution) => {
-      pullRequest ??= createPullRequestUseCaseCompositionRoot(bugbotBinding(execution, surface, verificationAuthority));
+      pullRequest ??= createPullRequestUseCaseCompositionRoot(bugbotBinding(execution, surface, verificationAuthority, reviewProgress));
       return pullRequest.invoke(execution);
     },
     push: async (execution) => {
-      push ??= createCommitUseCaseCompositionRoot(projectBoardCommandPort, bugbotBinding(execution, surface, verificationAuthority));
+      push ??= createCommitUseCaseCompositionRoot(projectBoardCommandPort, bugbotBinding(execution, surface, verificationAuthority, reviewProgress));
       return push.invoke(execution);
     },
   };
@@ -416,7 +417,7 @@ function bugbotBinding(execution: {
   readonly repo: string;
   readonly tokens: { readonly token: string };
   readonly ai?: { getBugbotReviewConfiguration(): { readonly shadowVerification?: unknown } };
-}, surface: MainRunCompositionSurface, authority?: BugbotVerificationAuthority): BugbotScmBinding {
+}, surface: MainRunCompositionSurface, authority?: BugbotVerificationAuthority, reviewProgress?: BugbotScmBinding['reviewProgress']): BugbotScmBinding {
   return {
     owner: execution.owner,
     repository: execution.repo,
@@ -424,6 +425,7 @@ function bugbotBinding(execution: {
     ...(surface === 'github-workflow' && execution.ai?.getBugbotReviewConfiguration?.().shadowVerification
       ? { shadow: { workspace: process.env.GITHUB_WORKSPACE } } : {}),
     ...(surface === 'github-workflow' && authority ? { verificationAuthority: authority } : {}),
+    ...(surface === 'github-workflow' && reviewProgress ? { reviewProgress } : {}),
   };
 }
 

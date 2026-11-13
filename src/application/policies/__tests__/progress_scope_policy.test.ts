@@ -1,4 +1,4 @@
-import { MAX_PROGRESS_SCOPE_BYTES, progressScopeSourceLines, progressScopeResponseSchema, parseProgressScope, parseScopedProgressResponse, scopedProgressResponseSchema } from '../progress_scope_policy';
+import { MAX_PROGRESS_SCOPE_BYTES, progressScopeSourceLines, progressScopeResponseSchema, parseProgressScope, parseScopedProgressResponse, validateScopedProgressResponse, scopedProgressResponseSchema } from '../progress_scope_policy';
 import { getProgressScopePrompt } from '../../../prompts/progress_scope';
 import { assertStrictOutputSchema } from '../agent_execution/strict_output_schema_policy';
 
@@ -82,6 +82,15 @@ describe('issue-bound progress acceptance scope (#717)', () => {
     it('reorders final facts into original requirement order', () => {
         const value = response(); value.requirements.reverse();
         expect(parse(value)).toEqual(parse(response()));
+    });
+    it('projects validated entries in source order without requiring optional source anchors', () => {
+        const value = response();
+        value.requirements.reverse();
+        const { result, entries } = validateScopedProgressResponse(value, 'en-US', scope());
+        expect(result).toEqual(parse(response()));
+        expect(entries.map(entry => [entry.id, entry.status, entry.remaining])).toEqual(
+            facts().map(fact => [fact.id, fact.status, fact.remaining]),
+        );
     });
     it.each(['X1', 'R3', 'search-debt', 'device-tests'])('rejects non-required identity %s rather than publishing an extra completion item', id => {
         const value = response(); value.requirements[0].id = id; expect(() => parse(value)).toThrow();

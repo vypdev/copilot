@@ -15,6 +15,7 @@ import { prepareBugbotFindings } from './prepare_bugbot_findings';
 import type { PreparedBugbotFindings } from './prepare_bugbot_findings';
 import { queryBugbotFindings, queryBugbotPartitionFindings } from './query_bugbot_findings';
 import type { BugbotReviewTelemetry } from './bugbot_review_telemetry';
+import type { BugbotReviewProgress } from './bugbot_review_progress';
 import { filterEligibleBugbotResolutionIds, hasProtectedBugbotDismissal } from '../../../../policies/bugbot_resolution_eligibility_policy';
 import type { BugbotReviewOperationContext } from './bugbot_review_operation_context';
 import { runWithConcurrencyLimit } from '../../../../policies/bounded_concurrency_policy';
@@ -29,6 +30,7 @@ export interface AnalyzeBugbotRevisionDependencies {
     readonly isSourceCurrent?: () => Promise<boolean>;
     readonly agent: FindingsQueryPort;
     readonly telemetry: BugbotReviewTelemetry;
+    readonly progress?: BugbotReviewProgress;
 }
 
 /** Pure analysis phase: query, validate, normalize, deduplicate and reconcile; never mutates the SCM. */
@@ -61,8 +63,9 @@ export async function analyzeBugbotRevision(
     const agentResponse = context.reviewFramedPlan && partitions.length > 0
         ? await dependencies.telemetry.measure('analysis', () => analyzeBugbotFrames(execution, context, context.reviewFramedPlan!, { ...dependencies, isSourceCurrent: dependencies.isSourceCurrent! }))
         : canonicalZeroWork
-        ? await dependencies.telemetry.measure('analysis', () => {
+        ? await dependencies.telemetry.measure('analysis', async () => {
             dependencies.telemetry.observePartitionPlan(0, 0, 0);
+            await dependencies.progress?.record('analyzing', { partitions: { completed: 0, total: 0 } });
             const reason = ignoredFileCount > 0
                 ? `skipped ${ignoredFileCount} intentionally ignored changed ${ignoredFileCount === 1 ? 'file' : 'files'}`
                 : 'received a canonical diff plan with no reviewable changed files';
@@ -77,6 +80,9 @@ export async function analyzeBugbotRevision(
                 context.reviewDiffFileCount ?? new Set(partitions.flatMap((partition) => partition.files)).size,
             );
             logInfo(`Bugbot reviewer planned ${partitions.length} bounded diff ${partitions.length === 1 ? 'partition' : 'partitions'} with maximum concurrency 2.`);
+            let completed = 0;
+            let retries = 0;
+            await dependencies.progress?.record('analyzing', { partitions: { completed, total: partitions.length } });
             const responses = await runWithConcurrencyLimit(
                 partitions.map((partition) => async () => {
                     const { prompt, requiresCandidateVerification } = buildBugbotReviewInput(execution, context, { partition, related: dependencies.trace ? partitions : undefined });
@@ -90,10 +96,14 @@ export async function analyzeBugbotRevision(
                             prompt,
                             targetLocale,
                             { partitionId: partition.id, headSha: partition.headSha },
-                            { enabled: requiresCandidateVerification, observePrompt: value => dependencies.telemetry.observePrompt(value), observeResponse: value => dependencies.telemetry.observeResponse(value) },
+                            { enabled: requiresCandidateVerification, observePrompt: value => dependencies.telemetry.observePrompt(value),
+                                observeResponse: value => dependencies.telemetry.observeResponse(value), observeRetry: async () => {
+                                    await dependencies.progress?.record('analyzing', { retries: ++retries });
+                                } },
                         );
                         dependencies.trace?.recordResponse(response, partition.ordinal, Date.now() - partitionStartedAt, partition.id);
                         dependencies.telemetry.endPartition(true);
+                        await dependencies.progress?.record('analyzing', { partitions: { completed: ++completed, total: partitions.length } });
                         logInfo(`Bugbot reviewer completed partition ${partition.ordinal}/${partition.total}.`);
                         return response;
                     } catch (error) {

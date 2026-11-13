@@ -51,6 +51,7 @@ export async function mainRun(
     prepareRuntime?: PrepareExecutionRuntime,
     setupProgress?: (effect: import('../domain/setup').SetupOperationEffect) => void,
     verificationAuthority?: BugbotVerificationAuthority,
+    reviewProgress?: import('../application/ports/bugbot_review_progress_ports').BugbotReviewProgressPort,
 ): Promise<Result[]> {
     configureApplicationLogger(createLoggerAdapter());
     setGlobalLoggerDebug(execution.debug, execution.inputs === undefined);
@@ -108,8 +109,10 @@ export async function mainRun(
     }
     await prepareRuntime?.(execution);
 
-    const routeHandlers = createMainRunRouteCompositionRoot(projectBoardCommandPort, compositionSurface, setupProgress,
-        ...(verificationAuthority ? [verificationAuthority] as const : []));
+    const routeHandlers = reviewProgress
+        ? createMainRunRouteCompositionRoot(projectBoardCommandPort, compositionSurface, setupProgress, verificationAuthority, reviewProgress)
+        : createMainRunRouteCompositionRoot(projectBoardCommandPort, compositionSurface, setupProgress,
+            ...(verificationAuthority ? [verificationAuthority] as const : []));
     
     if (execution.runnedByToken) {
         return runTrackedRoute(execution, 'single-action', () => runTokenExecution(execution, routeHandlers), undefined, agentActivityUseCase);

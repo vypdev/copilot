@@ -21,6 +21,7 @@ import { createGithubExecutionAdmissionUseCase } from '../infrastructure/composi
 import { createSynchronizeLifecycleStateUseCase } from '../infrastructure/composition/lifecycle_state_composition_root';
 import { createCopilotEvidenceCompositionRoot } from '../infrastructure/composition/copilot_evidence_composition_root';
 import { createGithubActionSummaryCompositionRoot } from '../infrastructure/composition/github_action_summary_composition_root';
+import { createGithubBugbotReviewProgress } from '../infrastructure/composition/bugbot_review_progress_composition_root';
 import { createSynchronizeAgentActivityUseCase } from '../infrastructure/composition/agent_activity_composition_root';
 import { readGithubActionAiInputs } from './github_action_ai_inputs';
 import { activeAgentTasks, isUnaddressedCommentEvent } from '../application/policies/agent_task_activation_policy';
@@ -178,6 +179,13 @@ export async function runGitHubAction(verificationAuthority?: BugbotVerification
         repository: execution.repo,
         token: execution.tokens.token,
     };
+    const evidence = createCopilotEvidenceCompositionRoot();
+    const summary = createGithubActionSummaryCompositionRoot();
+    const reviewProgress = createGithubBugbotReviewProgress({
+        ...repositoryBinding, pullNumber: Number(execution.pullRequest.number), expectedHead: execution.inputs?.pull_request?.head?.sha,
+        expectedBase: execution.inputs?.pull_request?.base?.sha,
+        policy: verificationAuthority?.policyDigest,
+    }, evidence, summary);
     const results = await mainRun(
         execution,
         projectBoard.command,
@@ -218,6 +226,7 @@ export async function runGitHubAction(verificationAuthority?: BugbotVerification
         },
         undefined,
         verificationAuthority,
+        reviewProgress,
     );
     const issueContentPort = createIssueContentCompositionRoot();
     const configurationHandler = new ConfigurationHandler(issueContentPort);
@@ -231,8 +240,8 @@ export async function runGitHubAction(verificationAuthority?: BugbotVerification
                 issueNumber: context.issueNumber,
             }, context),
         },
-        createCopilotEvidenceCompositionRoot(),
-        createGithubActionSummaryCompositionRoot(),
+        evidence,
+        summary,
         new ResolveMessageCatalogUseCase(
             languageRuntimeAvailable ? createLanguageQueryPort() : undefined,
         ),

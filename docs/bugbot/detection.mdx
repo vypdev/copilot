@@ -330,6 +330,12 @@ The action embeds a **hidden marker** in each comment so it can later **update**
 
 ### On the pull request
 
+Open **Current review checks** from the Bugbot status comment to see the
+current head, stage, last observation, and counts of validated partitions or
+verification outcomes. The status comment keeps the last verified review
+available while the check reports work in progress. If the runner disconnects,
+the last observation remains dated and links to the authoritative workflow run.
+
 When one **open PR** is uniquely verified for the exact head, Bugbot creates one
 submitted review. Its body is a historical snapshot of the analyzed commit and
 its findings descend from that review as inline comments. A small bounded block

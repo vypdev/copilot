@@ -309,6 +309,38 @@ describe('finishGithubAction', () => {
         expect(core.setFailed).not.toHaveBeenCalled();
     });
 
+    it.each([
+        { fails: false, server: 'https://git.example.com', attempt: '2', token: 'check-token', hasRun: true },
+        { fails: true, server: 'https://git.example.com', attempt: '2', token: 'check-token', hasRun: true },
+        { fails: false, server: 'http://git.example.com', attempt: 'invalid', token: undefined, hasRun: false },
+    ])('isolates optional check retirement and validates attempt-bound links (%j)', async ({ fails, server, attempt, token, hasRun }) => {
+        const keys = ['GITHUB_SERVER_URL', 'GITHUB_REPOSITORY', 'GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT', 'COPILOT_EVIDENCE_TOKEN'] as const;
+        const previous = keys.map(key => process.env[key]);
+        try {
+            process.env.GITHUB_SERVER_URL = server;
+            process.env.GITHUB_REPOSITORY = 'test-owner/test-repo';
+            process.env.GITHUB_RUN_ID = '123';
+            process.env.GITHUB_RUN_ATTEMPT = attempt;
+            if (token === undefined) delete process.env.COPILOT_EVIDENCE_TOKEN;
+            else process.env.COPILOT_EVIDENCE_TOKEN = token;
+            const retire = fails ? jest.fn().mockRejectedValue(new Error('optional check unavailable')) : jest.fn().mockResolvedValue(undefined);
+            await expect(finishGithubAction(execution(), [], {} as never, {} as never,
+                { publish: mockEvidencePublish, retireLiveReviews: retire })).resolves.toBeUndefined();
+            expect(retire).toHaveBeenCalledWith('test-owner', 'test-repo', token ?? 'product-pat');
+            expect(mockPublishInvoke).toHaveBeenCalledWith(expect.objectContaining({ progressLinks: hasRun ? {
+                repositoryUrl: 'https://git.example.com/test-owner/test-repo',
+                runUrl: 'https://git.example.com/test-owner/test-repo/actions/runs/123/attempts/2',
+            } : { repositoryUrl: 'https://github.com/test-owner/test-repo' } }));
+            expect(core.setFailed).not.toHaveBeenCalled();
+        } finally {
+            keys.forEach((key, index) => {
+                const value = previous[index];
+                if (value === undefined) delete process.env[key];
+                else process.env[key] = value;
+            });
+        }
+    });
+
     it('publishes the summary only through the explicitly provided output port', async () => {
         const action = Object.assign(execution(), {
             owner: 'test-owner',

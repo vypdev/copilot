@@ -1999,3 +1999,134 @@ outcome for each prepared identity. Candidate traces, receipt aliases and
 experimental model profiles carry no authority to reopen, resolve or approve
 a historical finding. An inconclusive, canceled or failed observation leaves
 durable state to the ordinary reconciliation contract.
+
+## Live review progress for #950
+
+- Status — Proposed for implementation in #950
+- Date — 2026-11-13
+- Owner — Bugbot maintainers
+- Review gates — publication authority, GitHub UX, privacy and lifecycle races
+- Open product decisions — none
+
+The local complete review plan for [PR #951](https://github.com/vypdev/copilot/pull/951)
+at `53b96fee7ad545f409d9b6ce2fcb8fc32eb2019f` needed two frames and 105
+partitions. At the subsequent head `53b21735be184ce562af83bdfaf86780299f1b2c`,
+the [first native attempt](https://github.com/vypdev/copilot/actions/runs/43467621545/job/132030854670)
+lost runner connectivity. On the
+[second attempt](https://github.com/vypdev/copilot/actions/runs/43467621545/job/132063831481),
+the PR showed the job as running without a validated-partition count. The
+amendment adds progress to the existing presentation. The published #950
+owner and its evidence and approval gates remain authoritative.
+
+### Behavior and ownership
+
+| Requirement | Contract |
+|---|---|
+| BRP-01 | Upsert a **Review in progress** block above **Last verified review** on the one trusted Bugbot PR status comment. Label both with their own SHA. Link the current check or native run and keep the last verified finding summary readable throughout. On the first review, say that no verified result exists yet. |
+| BRP-02 | Project host-observed stages from the existing review workflow. Show source preparation, diff analysis, evidence verification when applicable, reconciliation/publication, and the terminal result. Show verified counts only for a frozen plan or candidate inventory. For ordinary and framed paths, count validated assignments once, keep retries separate and show a frame ordinal when applicable. Verification counts represent validated dispositions, including inconclusive ones. While verification is running, show only aggregate counts. Use the [partition observation contract](./bugbot-source-bound-framed-review.md#live-progress-observations-for-950) for the precise counting rules. |
+| BRP-03 | Publish on admission, observable phase change, material advancement at most once per five minutes, and terminal transition. Phase and terminal transitions bypass the five-minute coalescing window. Coalesce concurrent updates and suppress identical writes. Reuse the same comment and check identity. A delayed update never creates a second card or notification. Use trusted time, show the last observed timestamp and elapsed time as of that observation, and omit estimated completion. |
+| BRP-04 | Bind an observation to the canonical repository, PR, base, head, effective review policy, native run and attempt, and monotonic sequence. The application rechecks current ownership immediately before publishing. Serialize live and terminal comment updates with the canonical card owner, including independent review-state events. Those events refresh their verified state without replacing the active review block. If ownership or order cannot be established, skip the live write and expose the native run. A superseded attempt cannot clear or overwrite a newer one. |
+| BRP-05 | An observed failure shows cause, retained state and the next action when known. If runner loss or cancellation prevents a final write, the card still shows the last observation with its timestamp and the native run as the authority for current status. A subsequent authorized refresh reconciles that observation against native terminal facts. Lack of a recent update alone never proves failure, cancellation, or a stalled reviewer. A failed optional progress write preserves the underlying review outcome and uses the existing diagnostic and retry policy. |
+| BRP-06 | Limit publication to existing authorized review runs. Dry-run and write-blocked shadow pilots record the same safe observations in logs and the Job Summary with zero provider write attempts. In ordinary publication with shadow enabled, retain the ordinary publishing decision and keep candidate-level shadow data in the pilot record. Live progress has no authority to publish findings, change threads, update approval or mint a verification receipt. The trusted terminal review and approval consumer retain their existing policy and freshness checks. |
+
+```text
+Admit current review → freeze assignments → validate assignments → verify candidates
+→ reconcile current head → publish terminal result
+                  ↘ application projects observed progress to the existing card and check
+```
+
+In the ordinary path the application reports its analysis phase until it can
+count validated work. The framed path supplies the exact inventory and frame
+progress. The verifier and detector have read-only ports. The application
+owns transitions and ordering. Pure policy determines the projection and
+coalescing. The existing presentation and semantic write adapters render and
+publish it. Provider responses supply observed write effects. The live check
+uses the same attempt-owned native review projection when available. Its
+in-progress state remains distinct from any terminal receipt. Terminal check
+updates and approval must never read a conclusion from the comment. Reuse
+the existing ownership marker with an explicitly validated additive field or
+compatible separate section. Older cards without that section still render
+their last verified result. Keep the storage limited to the current
+observation and existing verified projection. Resume-from-checkpoint is a
+separate design.
+
+The GitHub comment update replaces the full body. A read followed by a
+write does not provide a compare-and-set guarantee. The adapter must use a
+single serialized publication boundary shared by all card writers, with
+ownership verified under that boundary. It must not share the long-running
+analysis lock or cancel independent review-state work. Where that boundary
+is unavailable, keep the active projection in the native check and Job
+Summary until the card can be updated safely.
+
+[GitHub comment update contract](https://docs.github.com/en/rest/issues/comments#update-an-issue-comment)
+
+### GitHub content examples
+
+```markdown
+## Bugbot · review in progress
+
+Head 53b21735 · Diff analysis · Frame 1 of 2
+48 of 105 partitions validated · Last update 19:09 UTC · 1 h 12 min elapsed
+Next · Validate the remaining partitions. No action required.
+[Review check](…) · [Workflow run](…)
+
+### Last verified review · 4b052fb5
+Two open findings. [View the previous review](…)
+```
+
+| State | Primary content and next action |
+|---|---|
+| Preparing | “Preparing the review for 53b21735. Reading the comparison. No action required.” Show a run link and omit unknown totals. |
+| Awaiting evidence | “Verifying findings for 53b21735. Two of five have a validated outcome. No action required.” Put stage times and retry counts in the check or Job Summary. |
+| Interrupted | “Review interrupted for 53b21735. The runner lost contact. Inspect the run and retry this head. The previous verified review is still available.” If the cause is unavailable, link the native state and show the last observed time. |
+| Incomplete terminal result | “Review incomplete for 53b21735. One finding needs evidence. Open the Review check for the missing condition.” Preserve the existing rules for independently confirmed findings and approval. |
+| Complete | “Review complete for 53b21735. All 105 partitions validated.” Replace the active block with the existing terminal summary and link the findings and native check. |
+
+When the PR has a verified linked issue and Commit assessment, the existing
+card also links **Implementation progress and pending work** under the
+[Commit presentation contract](./batched-progress-scope.md#actionable-remaining-work-for-950).
+Render its assessed SHA alongside the link. The PR card remains readable
+during analysis and carries no second copy of the checklist.
+
+Values above are illustrative. Use the effective PR locale, reviewed English
+and Spanish strings and existing fallback. Use short stacked lines, textual
+state labels, descriptive links and collapsed technical details. Verify mobile
+and desktop in light and dark themes. Use host-bound IDs, counts and links
+with the existing sanitization. Keep raw prompts, code excerpts, model text,
+credentials and unverified findings out of the live block. There is no new
+configuration, permission, finding limit or evaluation deadline.
+
+### Acceptance and test evidence
+
+The first implementation delivers the active projection through the
+attempt-owned `Copilot / Review` check, with a **Current review checks** link
+on the existing status comment. This uses the safe fallback in BRP-04. The
+in-comment live block and the verified Commit-assessment backlink remain
+pending until the shared card mutation boundary and issue binding are
+available and tested. The native run is the source for terminal status
+after abrupt runner loss. This stage does not meet the full acceptance
+budget for the amendment.
+
+Minimum **14 distinct deterministic cases**. Use fake clocks, pinned Git
+inputs and recording or fail-on-call ports. Keep repository-wide and
+changed-module coverage gates and exercise every new pure-policy branch.
+
+| Requirement | Cases | Acceptance evidence |
+|---|---:|---|
+| BRP-01 | 2 | An existing status comment keeps its verified SHA and finding summary through admission. The first review shows pending without an invented previous result. |
+| BRP-02 | 3 | Ordinary analysis reports unknown totals until planned. A two-frame replay validates 105 parts and counts a successful retry once. Mixed dispositions including overflow are counted without exposing their content. |
+| BRP-03 | 2 | Fake-clock replay coalesces repeated advancement, observes the five-minute interval and flushes transitions. Retries update the same trusted comment and check without duplicate notifications. |
+| BRP-04 | 3 | Superseding push, same-SHA retry and overlapping review-state update each preserve the correct owner. Wrong-head, out-of-order and old-attempt updates never win. |
+| BRP-05 | 2 | Runner loss with no terminal callback preserves a dated observation and links native state. Optional write failure leaves the primary result and existing terminal authority intact. |
+| BRP-06 | 2 | Write-blocked replay has zero mutation attempts. In publish mode, pending, failed and forged observations cannot change findings or authorize approval, including during rollback. |
+
+Implementation starts with the observation and ordering policy, then integrates
+both review routes and the canonical publisher. Add the normal and interrupted
+states to `docs/bugbot/detection.mdx` and operational metrics and stale-observation
+guidance to `docs/bugbot/quality-observability.mdx`. Validate dependency and
+workflow contracts, specification and documentation contracts, focused and
+full tests, coverage, generated bundles and Graphify. Before closing #950,
+exercise the actual entrypoint with a representative large two-frame fixture
+and verify its rendered PR and check views, including one controlled runner
+interruption. Link that evidence and the final SHA checks in #951. The
+monitoring change does not qualify a verification profile or activate production.

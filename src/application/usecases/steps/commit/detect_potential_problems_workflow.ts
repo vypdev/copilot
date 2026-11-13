@@ -28,6 +28,7 @@ import { projectBugbotFindingStatuses } from '../../../policies/bugbot_finding_s
 import type { BugbotContext } from './bugbot/types';
 import type { BugbotReviewOutcome, BugbotTelemetryPort } from '../../../ports/bugbot_telemetry_ports';
 import { BugbotReviewTelemetry } from './bugbot/bugbot_review_telemetry';
+import { BugbotReviewProgress } from './bugbot/bugbot_review_progress';
 import { analyzeBugbotRevision } from './bugbot/analyze_bugbot_revision_use_case';
 import { hasNewerBugbotRevision, isLoadedBugbotRevisionSuperseded } from './bugbot/bugbot_review_freshness';
 import {
@@ -72,6 +73,7 @@ export async function runDetectPotentialProblemsWorkflow(
     const trace = dependencies.shadowVerification ? new BugbotCandidateTrace() : undefined;
     let shadow: BugbotShadowVerificationReport | undefined;
     let verification: BugbotVerificationProjection | undefined;
+    let progress: BugbotReviewProgress | undefined;
     const authority = dependencies.verificationAuthority;
     const enforced = authority?.mode === 'enforced';
     const requiresReceipt = authority !== undefined;
@@ -100,6 +102,7 @@ export async function runDetectPotentialProblemsWorkflow(
         return snapshot;
     };
     const complete = async (result: Result, outcome: BugbotReviewOutcome): Promise<Result[]> => {
+        await progress?.record('finished', {}, outcome);
         const snapshot = await publishTelemetry(outcome);
         const payload = result.payload && typeof result.payload === 'object' && !Array.isArray(result.payload)
             ? result.payload as Record<string, unknown>
@@ -143,14 +146,22 @@ export async function runDetectPotentialProblemsWorkflow(
             && !reviewContext.analysis.reviewConfiguration.reviewDrafts) {
             return await complete(skippedDraftResult(), 'skipped');
         }
+        if (preflight.canonicalPullRequest) {
+            progress = new BugbotReviewProgress(preflight.canonicalPullRequest, dependencies.scm.progress, dryRun, reviewContext.locale.pullRequest);
+            await progress.record('preparing');
+        }
         const context = await telemetry.measure('context', () =>
             loadBugbotContext(contextRequest, dependencies.scm.context, preflight, dependencies.scm.reviewSource));
+        telemetry.observeContext(context);
+        progress?.pinComparison(context.canonicalPullRequest?.baseRefSha);
         const eventHeadSha = reviewContext.trigger.expectedHeadSha;
         if (isLoadedBugbotRevisionSuperseded(context, eventHeadSha)) {
             return await complete(supersededResult(context.prContext?.prHeadSha, eventHeadSha), 'superseded');
         }
         const detectionStartedAt = Date.now();
-        let prepared = await analyzeBugbotRevision(reviewContext, context, { agent: dependencies.aiRepository, telemetry, trace, isSourceCurrent: async () => !await hasNewerBugbotRevision(context, dependencies.scm.context) });
+        await progress?.record('analyzing');
+        let prepared = await analyzeBugbotRevision(reviewContext, context, { agent: dependencies.aiRepository, telemetry, trace, progress,
+            isSourceCurrent: async () => !await hasNewerBugbotRevision(context, dependencies.scm.context) });
         const detectionAndPreparationMs = Date.now() - detectionStartedAt;
         if (prepared === undefined) {
             shadow = unavailableShadow();
@@ -182,6 +193,7 @@ export async function runDetectPotentialProblemsWorkflow(
             shadow = await observeBugbotShadowVerification(
                 reviewContext, context, prepared, dependencies.shadowVerification, trace,
                 detectionAndPreparationMs, dependencies.experimentalShadowProfile,
+                enforced || dryRun ? progress : undefined,
             );
             if (shadow.candidates.length > 0 && await hasNewerBugbotRevision(context, dependencies.scm.context)) {
                 shadow = { ...shadow, superseded: true };
@@ -226,6 +238,7 @@ export async function runDetectPotentialProblemsWorkflow(
             && await hasNewerBugbotRevision(context, dependencies.scm.context, 'before-publication', requiresReceipt)) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
+        await progress?.record('publishing');
         const resolutionErrors = await telemetry.measure('publication', () => applyDetectedFindings(
             reviewContext,
             context,
@@ -273,6 +286,7 @@ export async function runDetectPotentialProblemsWorkflow(
             `Error in ${TASK_ID}: Unable to detect potential problems.`,
         );
         logError(resultError);
+        await progress?.record('finished', { failureCode: resultError.code }, 'failed');
         const result = new Result({
             id: TASK_ID,
             success: false,

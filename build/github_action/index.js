@@ -44070,7 +44070,7 @@ const main_run_lifecycle_1 = __nccwpck_require__(916);
 const issue_workflow_runtime_policy_1 = __nccwpck_require__(77734);
 const application_error_1 = __nccwpck_require__(75999);
 const issue_start_policy_1 = __nccwpck_require__(90332);
-async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, compositionSurface, lifecycleStateUseCase, agentActivityUseCase, prepareRuntime, setupProgress, verificationAuthority) {
+async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, compositionSurface, lifecycleStateUseCase, agentActivityUseCase, prepareRuntime, setupProgress, verificationAuthority, reviewProgress) {
     (0, logging_ports_1.configureApplicationLogger)((0, logger_adapter_1.createLoggerAdapter)());
     (0, logging_ports_1.setGlobalLoggerDebug)(execution.debug, execution.inputs === undefined);
     const repository = (0, repository_context_1.requireRepositoryCoordinates)({
@@ -44121,7 +44121,9 @@ async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, c
         return [issueWorkflowAdmissionResult(runtimeDecision.mode, runtimeDecision.message, execution.currentIssueWorkflowAdmission)];
     }
     await prepareRuntime?.(execution);
-    const routeHandlers = (0, main_run_route_composition_root_1.createMainRunRouteCompositionRoot)(projectBoardCommandPort, compositionSurface, setupProgress, ...(verificationAuthority ? [verificationAuthority] : []));
+    const routeHandlers = reviewProgress
+        ? (0, main_run_route_composition_root_1.createMainRunRouteCompositionRoot)(projectBoardCommandPort, compositionSurface, setupProgress, verificationAuthority, reviewProgress)
+        : (0, main_run_route_composition_root_1.createMainRunRouteCompositionRoot)(projectBoardCommandPort, compositionSurface, setupProgress, ...(verificationAuthority ? [verificationAuthority] : []));
     if (execution.runnedByToken) {
         return runTrackedRoute(execution, 'single-action', () => (0, main_run_lifecycle_1.runTokenExecution)(execution, routeHandlers), undefined, agentActivityUseCase);
     }
@@ -44432,6 +44434,7 @@ const github_execution_admission_composition_root_1 = __nccwpck_require__(54954)
 const lifecycle_state_composition_root_1 = __nccwpck_require__(4673);
 const copilot_evidence_composition_root_1 = __nccwpck_require__(64686);
 const github_action_summary_composition_root_1 = __nccwpck_require__(75305);
+const bugbot_review_progress_composition_root_1 = __nccwpck_require__(64671);
 const agent_activity_composition_root_1 = __nccwpck_require__(94253);
 const github_action_ai_inputs_1 = __nccwpck_require__(27640);
 const agent_task_activation_policy_1 = __nccwpck_require__(46855);
@@ -44572,6 +44575,13 @@ async function runGitHubAction(verificationAuthority) {
         repository: execution.repo,
         token: execution.tokens.token,
     };
+    const evidence = (0, copilot_evidence_composition_root_1.createCopilotEvidenceCompositionRoot)();
+    const summary = (0, github_action_summary_composition_root_1.createGithubActionSummaryCompositionRoot)();
+    const reviewProgress = (0, bugbot_review_progress_composition_root_1.createGithubBugbotReviewProgress)({
+        ...repositoryBinding, pullNumber: Number(execution.pullRequest.number), expectedHead: execution.inputs?.pull_request?.head?.sha,
+        expectedBase: execution.inputs?.pull_request?.base?.sha,
+        policy: verificationAuthority?.policyDigest,
+    }, evidence, summary);
     const results = await (0, common_action_1.mainRun)(execution, projectBoard.command, new git_cli_repository_1.GitCliRepository(token), 'github-workflow', (0, lifecycle_state_composition_root_1.createSynchronizeLifecycleStateUseCase)(repositoryBinding), (0, agent_activity_composition_root_1.createSynchronizeAgentActivityUseCase)(repositoryBinding), async (admittedExecution) => {
         await (0, github_action_execution_1.hydrateGithubActionExecutionProjects)(admittedExecution, {
             getInput: github_action_input_1.getGithubActionInput,
@@ -44598,7 +44608,7 @@ async function runGitHubAction(verificationAuthority) {
             prepareShadowRuntime();
             languageRuntimeAvailable = requestedActiveAgentTasks.includes('planner');
         }
-    }, undefined, verificationAuthority);
+    }, undefined, verificationAuthority, reviewProgress);
     const issueContentPort = (0, issue_content_composition_root_1.createIssueContentCompositionRoot)();
     const configurationHandler = new configuration_handler_1.ConfigurationHandler(issueContentPort);
     await (0, github_action_completion_1.finishGithubAction)(execution, results, (0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueContentPort, repositoryBinding), {
@@ -44606,7 +44616,7 @@ async function runGitHubAction(verificationAuthority) {
             ...repositoryBinding,
             issueNumber: context.issueNumber,
         }, context),
-    }, (0, copilot_evidence_composition_root_1.createCopilotEvidenceCompositionRoot)(), (0, github_action_summary_composition_root_1.createGithubActionSummaryCompositionRoot)(), new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(languageRuntimeAvailable ? (0, agent_capability_composition_root_1.createLanguageQueryPort)() : undefined), (0, shared_capability_port_binding_1.bindPublicationSourceQuery)(new github_publication_source_repository_1.GithubPublicationSourceRepository((0, github_branch_client_factory_1.createBranchClient)()), repositoryBinding, (0, issue_completion_composition_root_1.createNativeStatusReadPort)(repositoryBinding)));
+    }, evidence, summary, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(languageRuntimeAvailable ? (0, agent_capability_composition_root_1.createLanguageQueryPort)() : undefined), (0, shared_capability_port_binding_1.bindPublicationSourceQuery)(new github_publication_source_repository_1.GithubPublicationSourceRepository((0, github_branch_client_factory_1.createBranchClient)()), repositoryBinding, (0, issue_completion_composition_root_1.createNativeStatusReadPort)(repositoryBinding)));
 }
 /**
  * Runs the action entrypoint without forcing a successful process exit.
@@ -44810,7 +44820,7 @@ async function finishGithubAction(execution, results, issueNotificationPort, con
     const admissionStopped = execution.issueWorkflowRuntimeMode === 'block' || execution.issueWorkflowRuntimeMode === 'noop';
     const ownsDeploymentPresentation = execution.singleAction.isDeploymentOrchestrationAction;
     if (!dryRun && !verificationBlocked && !admissionStopped && !execution.singleAction.isPublishIssueCommentAction && !ownsDeploymentPresentation) {
-        const publicationContext = (0, publish_resume_workflow_1.projectPublishResultContext)(execution);
+        const publicationContext = { ...(0, publish_resume_workflow_1.projectPublishResultContext)(execution), progressLinks: progressWorkLinks(execution) };
         const requestRead = publicationContext.requestSource ? (0, reply_request_composition_root_1.createReplyRequestReadPort)({
             owner: execution.owner, repository: execution.repo, token: execution.tokens.token,
         }) : undefined;
@@ -44854,6 +44864,14 @@ async function finishGithubAction(execution, results, issueNotificationPort, con
         }
     }
     const optionalEvidenceDiagnostic = !dryRun && !verificationBlocked ? await publishCopilotEvidence(execution, results, summary.text, evidencePort, catalogResolver) : undefined;
+    if (!dryRun) {
+        try {
+            await evidencePort?.retireLiveReviews?.(execution.owner, execution.repo, process.env.COPILOT_EVIDENCE_TOKEN?.trim() || execution.tokens.token);
+        }
+        catch {
+            (0, logger_1.logInfo)('An unfinished Bugbot progress check could not be closed. The native workflow owns the final status.');
+        }
+    }
     if (optionalEvidenceDiagnostic && summaryPort) {
         try {
             await summaryPort.publish(optionalEvidenceDiagnostic.text);
@@ -44906,6 +44924,7 @@ function actionSummaryContext(execution, catalogResolutions) {
     return Object.freeze({
         owner: execution.owner,
         repository: execution.repo,
+        progressLinks: progressWorkLinks(execution),
         eventName: execution.eventName,
         issueNumber: execution.issue?.number ?? -1,
         pullRequestNumber: execution.pullRequest?.number ?? -1,
@@ -44922,6 +44941,15 @@ function actionSummaryContext(execution, catalogResolutions) {
         catalogResolutions,
         results: execution.currentConfiguration.results,
     });
+}
+function progressWorkLinks(execution) {
+    const server = process.env.GITHUB_SERVER_URL ?? '';
+    const origin = /^https:\/\/[a-zA-Z0-9.-]+(?::\d+)?$/u.test(server) ? server : 'https://github.com';
+    const repositoryUrl = `${origin}/${encodeURIComponent(execution.owner)}/${encodeURIComponent(execution.repo)}`;
+    const runId = process.env.GITHUB_RUN_ID ?? '';
+    const attempt = process.env.GITHUB_RUN_ATTEMPT ?? '';
+    return { repositoryUrl, ...(process.env.GITHUB_REPOSITORY === `${execution.owner}/${execution.repo}`
+            && /^\d+$/u.test(runId) && /^\d+$/u.test(attempt) ? { runUrl: `${repositoryUrl}/actions/runs/${runId}/attempts/${attempt}` } : {}) };
 }
 function extractBugbotTelemetry(results) {
     return results.flatMap((result) => {
@@ -47237,6 +47265,7 @@ const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 const bugbot_telemetry_projection_policy_1 = __nccwpck_require__(43244);
 const bugbot_result_finding_state_projection_policy_1 = __nccwpck_require__(98117);
 const review_state_1 = __nccwpck_require__(79200);
+const progress_pending_work_policy_1 = __nccwpck_require__(37020);
 const action_summary_message_catalog_1 = __nccwpck_require__(61544);
 const application_error_presentation_policy_1 = __nccwpck_require__(95067);
 const publication_outcome_policy_1 = __nccwpck_require__(79719);
@@ -47296,6 +47325,10 @@ function buildActionSummary(context, catalog = (0, action_summary_message_catalo
         ] : []),
     ];
     const localization = renderLocalizationSummarySection(context.locale, context.catalogResolutions, actionSummaryLocalizationLabels(catalog));
+    const progressLinks = context.progressLinks;
+    const progressDetails = progressLinks && !staleSourceSuppressed
+        ? (0, progress_pending_work_policy_1.projectProgressWorkDetails)(context.results).map(({ issueNumber, progress, assessment }) => (0, progress_pending_work_policy_1.renderProgressWorkAssessment)(progress, assessment, context.locale?.issue ?? 'en-US', { ...progressLinks, issueNumber }, true))
+        : [];
     return [
         `# ${catalogText(catalog, 'summary.heading')}`,
         '',
@@ -47304,6 +47337,7 @@ function buildActionSummary(context, catalog = (0, action_summary_message_catalo
         `| ${catalogText(catalog, 'summary.property')} | ${catalogText(catalog, 'summary.value')} |`,
         '| --- | --- |',
         ...rows,
+        ...progressDetails.flatMap(detail => ['', detail]),
         ...(failures.length > 0 ? [
             '',
             `## ${catalogText(catalog, 'summary.resultDetails')}`,
@@ -51188,6 +51222,55 @@ function invalidVerification() {
 
 /***/ }),
 
+/***/ 93925:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.renderBugbotLiveProgress = renderBugbotLiveProgress;
+const copy = {
+    en: {
+        heading: 'Bugbot review progress', head: 'Reviewed head', elapsed: 'elapsed', observed: 'Last observed',
+        parts: 'partitions validated', frames: 'Frame', candidates: 'candidate dispositions validated', run: 'Workflow run',
+        retries: 'Partition retries', failure: 'Failure code',
+        stage: { preparing: 'Preparing source', analyzing: 'Analyzing diff', verifying: 'Verifying findings',
+            publishing: 'Reconciling and publishing', finished: 'Review ended' },
+        outcome: { completed: 'Review completed', 'no-findings': 'Review completed without findings', partial: 'Review incomplete',
+            'dry-run': 'Dry-run completed', superseded: 'Review superseded', skipped: 'Review skipped', failed: 'Review failed' },
+    },
+    es: {
+        heading: 'Avance de la revisión de Bugbot', head: 'Commit revisado', elapsed: 'transcurridos', observed: 'Última observación',
+        parts: 'particiones validadas', frames: 'Bloque', candidates: 'dictámenes validados', run: 'Ejecución del workflow',
+        retries: 'Reintentos de partición', failure: 'Código de fallo',
+        stage: { preparing: 'Preparando la comparación', analyzing: 'Analizando el diff', verifying: 'Verificando hallazgos',
+            publishing: 'Conciliando y publicando', finished: 'Revisión terminada' },
+        outcome: { completed: 'Revisión completada', 'no-findings': 'Revisión completada sin hallazgos', partial: 'Revisión incompleta',
+            'dry-run': 'Dry-run completado', superseded: 'Revisión sustituida', skipped: 'Revisión omitida', failed: 'Falló la revisión' },
+    },
+};
+function renderBugbotLiveProgress(observation, locale, runUrl) {
+    const labels = /^es(?:-|$)/iu.test(locale) ? copy.es : copy.en;
+    const { stage, headSha, elapsedMs, observedAt, partitions, frames, candidates, outcome, retries, stageTimesMs, failureCode } = observation;
+    const title = outcome ? labels.outcome[outcome] : labels.stage[stage];
+    const seconds = Math.floor(elapsedMs / 1000);
+    const elapsed = seconds < 60 ? `${seconds} s` : `${Math.floor(seconds / 60)} min ${seconds % 60} s`;
+    return { title, summary: [
+            `### ${labels.heading}`, '', `**${title}** · ${labels.head} \`${headSha.slice(0, 8)}\``, '',
+            ...(partitions ? [`${partitions.completed}/${partitions.total} ${labels.parts}`] : []),
+            ...(frames ? [`${labels.frames} ${frames.ordinal}/${frames.total}`] : []),
+            ...(candidates ? [`${candidates.completed}/${candidates.total} ${labels.candidates}`] : []),
+            ...(retries !== undefined ? [`${labels.retries} · ${retries}`] : []),
+            ...(failureCode && /^[a-z]+(?:[.-][a-z]+)*$/u.test(failureCode) ? [`${labels.failure} · \`${failureCode}\``] : []),
+            `${labels.observed} ${observedAt} · ${elapsed} ${labels.elapsed}`,
+            ...Object.entries(stageTimesMs ?? {}).map(([phase, ms]) => `- ${labels.stage[phase]} · ${(ms / 1000).toFixed(1)} s`),
+            ...(runUrl ? ['', `[${labels.run}](${runUrl})`] : []),
+        ].join('\n') };
+}
+
+
+/***/ }),
+
 /***/ 7406:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -51221,6 +51304,7 @@ exports.BUGBOT_MESSAGE_IDS = Object.freeze([
     'bugbot.status.recoverySummary',
     'bugbot.status.nav.pullRequest',
     'bugbot.status.nav.verifiedCommit',
+    'bugbot.status.nav.reviewChecks',
     'bugbot.status.nav.workflowRun',
     'bugbot.status.duplicate.superseded',
     'bugbot.status.duplicate.viewCurrent',
@@ -51308,6 +51392,7 @@ const ENGLISH_MESSAGES = Object.freeze({
     'bugbot.status.recoverySummary': 'Recovery details',
     'bugbot.status.nav.pullRequest': 'Pull request',
     'bugbot.status.nav.verifiedCommit': 'Verified commit',
+    'bugbot.status.nav.reviewChecks': 'Current review checks',
     'bugbot.status.nav.workflowRun': 'Workflow run',
     'bugbot.status.duplicate.superseded': 'This status was superseded by the canonical card.',
     'bugbot.status.duplicate.viewCurrent': 'View current status',
@@ -51398,6 +51483,7 @@ const SPANISH_MESSAGES = Object.freeze({
     'bugbot.status.recoverySummary': 'Detalles de recuperación',
     'bugbot.status.nav.pullRequest': 'Pull request',
     'bugbot.status.nav.verifiedCommit': 'Commit verificado',
+    'bugbot.status.nav.reviewChecks': 'Checks de la revisión actual',
     'bugbot.status.nav.workflowRun': 'Ejecución',
     'bugbot.status.duplicate.superseded': 'Este estado fue reemplazado por la tarjeta canónica.',
     'bugbot.status.duplicate.viewCurrent': 'Ver estado actual',
@@ -52452,6 +52538,7 @@ function renderBugbotStatusCard(projection, catalogOrLocale, links) {
     const navigation = [
         `[${catalog.message('bugbot.status.nav.pullRequest')}](${links.pullRequestUrl})`,
         `[${catalog.message('bugbot.status.nav.verifiedCommit')}](${links.commitUrl})`,
+        ...(links.reviewChecksUrl ? [`[${catalog.message('bugbot.status.nav.reviewChecks')}](${links.reviewChecksUrl})`] : []),
         ...(links.runUrl
             ? [`[${catalog.message('bugbot.status.nav.workflowRun')}](${links.runUrl})`]
             : []),
@@ -56479,7 +56566,9 @@ function progressEvidenceReferences(diff) {
             if (!record(change) || !(0, progress_evidence_path_1.isProgressEvidencePath)(change.path))
                 throw (0, progress_batch_rejection_policy_1.progressBatchRejected)('evidence-identity');
             const id = typeof change.unitId === 'string' ? change.unitId : change.path;
-            references.push(Object.freeze({ id, path: change.path, ...(typeof change.unitId === 'string' ? { unitId: change.unitId } : {}), headSha: diff.headSha, generated: change.evidence === 'generated-metadata-only' }));
+            const removed = change.status === 'removed' || (record(change.recoveredContent) && change.recoveredContent.side === 'base');
+            references.push(Object.freeze({ id, path: change.path, ...(typeof change.unitId === 'string' ? { unitId: change.unitId } : {}), headSha: diff.headSha,
+                generated: change.evidence === 'generated-metadata-only', ...(removed ? { availableAtHead: false } : {}) }));
         }
     }
     if (!references.some(reference => !reference.generated) || new Set(references.map(reference => reference.id)).size !== references.length)
@@ -56607,10 +56696,10 @@ function readProgressAssessmentEvidence(response, manifest, batch, locale, ancho
 function parseProgressAssessmentReceipt(response, manifest, batch, anchors, locale, compact) {
     const { payload, citations } = readProgressAssessmentEvidence(response, manifest, batch, locale, anchors, compact);
     const facts = payload.requirements;
-    const result = (0, progress_scope_policy_1.parseScopedProgressResponse)({ outputLocale: payload.outputLocale, progress: payload.progress, requirements: facts }, locale, progressBatchDisplayScope(batch, compact), anchors);
+    const { result, entries: outcomes } = (0, progress_scope_policy_1.validateScopedProgressResponse)({ outputLocale: payload.outputLocale, progress: payload.progress, requirements: facts }, locale, progressBatchDisplayScope(batch, compact), anchors);
     const indices = batch.scope.requirements.map(requirement => facts.findIndex(fact => fact.id === requirement.id));
     const body = { batchId: batch.id, manifestDigest: manifest.digest, headSha: manifest.headSha,
-        requirementIds: indices.map(index => facts[index].id), citations: indices.map(index => citations[index]), result };
+        requirementIds: indices.map(index => facts[index].id), citations: indices.map(index => citations[index]), result, outcomes };
     return freezeSnapshot({ ...body, digest: digest(body) });
 }
 /** Exact-once compatible receipt reduction is repeated at the publication eligibility boundary. */
@@ -56626,6 +56715,8 @@ function aggregateProgressAssessmentReceipts(manifest, batches, receipts) {
             throw (0, progress_batch_rejection_policy_1.progressBatchRejected)('manifest-identity');
         if (receipt.requirementIds.length !== batch.scope.requirements.length
             || receipt.requirementIds.some((id, index) => id !== batch.scope.requirements[index].id)
+            || receipt.outcomes.length !== receipt.requirementIds.length
+            || receipt.outcomes.some((fact, index) => fact.id !== receipt.requirementIds[index])
             || receipt.citations.length !== receipt.requirementIds.length
             || receipt.citations.some(citations => !citations.length || citations.some(id => !manifest.evidence.some(reference => reference.id === id && reference.headSha === manifest.headSha && !reference.generated)))) {
             throw (0, progress_batch_rejection_policy_1.progressBatchRejected)('receipt-coverage', { batch: batch.ordinal });
@@ -56653,7 +56744,14 @@ function aggregateProgressAssessmentReceipts(manifest, batches, receipts) {
                 context: { kind: 'assessment', requirementCount: ids.length, batch: 0, requirementId: 'none' },
             });
     }
-    return Object.freeze({ progress: remaining ? Math.min(99, progress) : 100, summary, remaining, reasoning: '', publicationId: manifest.digest });
+    const outcomes = ordered.flatMap(receipt => receipt.outcomes.map((fact, index) => {
+        const requirement = manifest.scope.requirements.find(item => item.id === fact.id);
+        const evidence = receipt.citations[index].map(id => manifest.evidence.find(item => item.id === id)).find(item => item.availableAtHead !== false);
+        return { id: fact.id, status: fact.status, remaining: fact.remaining, origin: requirement.sources?.[0]?.origin ?? 'issue',
+            ...(fact.status === 'supported' ? {} : { requirement: [...requirement.quote].slice(0, 180).join('') }),
+            ...(evidence ? { evidencePath: evidence.path } : {}) };
+    }));
+    return freezeSnapshot({ progress: remaining ? Math.min(99, progress) : 100, summary, remaining, reasoning: '', publicationId: manifest.digest, outcomes });
 }
 
 
@@ -57984,6 +58082,135 @@ function isCompleteProgressPatch(patch, additions, deletions) {
 
 /***/ }),
 
+/***/ 37020:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.readProgressWorkAssessment = readProgressWorkAssessment;
+exports.projectProgressWorkDetails = projectProgressWorkDetails;
+exports.renderProgressWorkAssessment = renderProgressWorkAssessment;
+const result_1 = __nccwpck_require__(73817);
+const git_object_id_1 = __nccwpck_require__(88623);
+const progress_evidence_path_1 = __nccwpck_require__(25887);
+const progress_response_diagnostic_1 = __nccwpck_require__(56289);
+const github_comment_publication_policy_1 = __nccwpck_require__(72712);
+const progress_assessment_capacity_policy_1 = __nccwpck_require__(67329);
+/** An additive view of the complete same-head result. Legacy payloads keep their existing rendering. */
+function readProgressWorkAssessment(value, head, scope, progress) {
+    if (!value || typeof value !== 'object' || !Number.isFinite(progress) || progress < 0 || progress > 100)
+        return undefined;
+    const work = value;
+    if (work.headSha !== head || (0, git_object_id_1.canonicalGitObjectId)(head) !== head || work.scopeDigest !== scope
+        || !/^[a-f0-9]{64}$/u.test(scope) || !Array.isArray(work.outcomes)
+        || work.outcomes.length < 1 || work.outcomes.length > 256
+        || (work.pullNumber !== undefined && (!Number.isSafeInteger(work.pullNumber) || work.pullNumber < 1)))
+        return undefined;
+    if (work.baseSha !== undefined && (0, git_object_id_1.canonicalGitObjectId)(work.baseSha) !== work.baseSha)
+        return undefined;
+    if (work.sdd !== undefined && (!work.sdd || (0, git_object_id_1.canonicalGitObjectId)(work.sdd.commitSha) !== work.sdd.commitSha
+        || !(0, progress_evidence_path_1.isProgressEvidencePath)(work.sdd.path) || !work.sdd.path.startsWith('specs/')))
+        return undefined;
+    const ids = new Set();
+    let remainingPoints = 0;
+    for (const item of work.outcomes) {
+        if (!item || !(0, progress_response_diagnostic_1.isProgressRequirementId)(item.id) || ids.has(item.id)
+            || (item.evidencePath !== undefined && !(0, progress_evidence_path_1.isProgressEvidencePath)(item.evidencePath))
+            || (item.requirement !== undefined && (typeof item.requirement !== 'string' || [...item.requirement].length > 180))
+            || !['issue', 'draft'].includes(item.origin))
+            return undefined;
+        ids.add(item.id);
+        if (item.status === 'supported') {
+            if (item.remaining !== null)
+                return undefined;
+        }
+        else if (!['missing', 'verification-unknown'].includes(item.status)
+            || typeof item.remaining !== 'string' || !item.remaining.trim()
+            || [...item.remaining].length > progress_assessment_capacity_policy_1.MAX_PROGRESS_FACT_POINTS) {
+            return undefined;
+        }
+        else {
+            remainingPoints += [...item.remaining].length;
+        }
+    }
+    if (remainingPoints > progress_assessment_capacity_policy_1.MAX_PROGRESS_ASSESSMENT_POINTS || (progress === 100) !== (remainingPoints === 0))
+        return undefined;
+    return work;
+}
+/** Selects eligible typed workflow results before the generic Job Summary renders them. */
+function projectProgressWorkDetails(results) {
+    return results.flatMap(result => {
+        if (result.id !== 'CheckProgressUseCase' || !result.executed || !result.success)
+            return [];
+        const payload = (0, result_1.getResultPayload)(result.payload);
+        if (!payload || typeof payload.progress !== 'number' || typeof payload.sourceHeadSha !== 'string'
+            || typeof payload.scopeManifestDigest !== 'string' || typeof payload.issueNumber !== 'number'
+            || !Number.isSafeInteger(payload.issueNumber) || payload.issueNumber < 1)
+            return [];
+        const assessment = readProgressWorkAssessment(payload.pendingWork, payload.sourceHeadSha, payload.scopeManifestDigest, payload.progress);
+        if (!assessment || (assessment.baseSha && assessment.baseSha !== payload.baseSha))
+            return [];
+        return [{ issueNumber: payload.issueNumber, progress: payload.progress, assessment }];
+    });
+}
+const copy = {
+    en: {
+        estimate: 'estimated', head: 'Assessed head', supported: 'supported', missing: 'need implementation',
+        unknown: 'need verification or clarification', implementation: 'Implementation still needed',
+        verification: 'Verification or clarification needed', complete: 'All scoped requirements are supported.',
+        more: 'more pending requirements', details: 'Full assessment', pull: 'Linked pull request', issue: 'Issue',
+        unavailable: 'The full pending list is unavailable on this surface.',
+        scope: 'Requirement source', evidence: 'Evidence at assessed head',
+    },
+    es: {
+        estimate: 'estimado', head: 'Commit evaluado', supported: 'respaldados', missing: 'requieren implementación',
+        unknown: 'requieren verificación o aclaración', implementation: 'Implementación pendiente',
+        verification: 'Verificación o aclaración pendiente', complete: 'Todos los requisitos evaluados están respaldados.',
+        more: 'requisitos pendientes adicionales', details: 'Evaluación completa', pull: 'Pull request vinculada', issue: 'Issue',
+        unavailable: 'La lista completa de pendientes no está disponible aquí.',
+        scope: 'Fuente del requisito', evidence: 'Evidencia en el commit evaluado',
+    },
+};
+function renderProgressWorkAssessment(progress, assessment, locale, links, full = false) {
+    const labels = /^es(?:-|$)/iu.test(locale) ? copy.es : copy.en;
+    const missing = assessment.outcomes.filter(item => item.status === 'missing');
+    const unknown = assessment.outcomes.filter(item => item.status === 'verification-unknown');
+    const supported = assessment.outcomes.length - missing.length - unknown.length;
+    const issue = `${links.repositoryUrl}/issues/${links.issueNumber}`;
+    const blob = (sha, path) => `${links.repositoryUrl}/blob/${sha}/${path.split('/').map(encodeURIComponent).join('/')}`;
+    const inline = (text) => (0, github_comment_publication_policy_1.escapeHtml)((0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(text, 'complete').replace(/\s+/gu, ' ')).replace(/[[\]()`*_!\\]/gu, '\\$&')
+        .replace(/https?:\/\//giu, match => match.replace('//', '/\u200b/'));
+    const line = (item) => {
+        const source = item.origin === 'draft' && assessment.sdd ? blob(assessment.sdd.commitSha, assessment.sdd.path) : issue;
+        const action = inline(item.remaining);
+        const requirement = item.requirement?.trim() && item.requirement.trim() !== item.remaining?.trim()
+            ? `${inline(item.requirement)} — ` : '';
+        const evidence = item.evidencePath ? ` · [${labels.evidence}](${blob(assessment.headSha, item.evidencePath)})` : '';
+        return `- ${item.id} · ${requirement}${action} [${labels.scope}](${source})${evidence}`;
+    };
+    const count = missing.length + unknown.length;
+    const fitsComment = !links.runUrl && [...missing, ...unknown].reduce((size, item) => size + line(item).length + 1, 0) < 48000;
+    const available = full || fitsComment ? count : 6;
+    const missingShown = missing.slice(0, available - Number(unknown.length > 0));
+    const unknownShown = unknown.slice(0, available - missingShown.length);
+    const more = missing.length + unknown.length - missingShown.length - unknownShown.length;
+    const destinations = [`[${labels.issue}](${issue})`,
+        ...(assessment.pullNumber ? [`[${labels.pull}](${links.repositoryUrl}/pull/${assessment.pullNumber})`] : []),
+        ...(links.runUrl ? [`[${labels.details}](${links.runUrl}#summary)`] : [])];
+    return [
+        `## ${/^es(?:-|$)/iu.test(locale) ? 'Progreso' : 'Progress'} · ${progress}% ${labels.estimate}`, '',
+        `${labels.head} \`${assessment.headSha.slice(0, 8)}\` · ${supported}/${assessment.outcomes.length} ${labels.supported}`,
+        ...(progress === 100 ? ['', labels.complete] : [`${missing.length} ${labels.missing} · ${unknown.length} ${labels.unknown}`]),
+        ...(missingShown.length ? ['', `### ${labels.implementation}`, ...missingShown.map(line)] : []),
+        ...(unknownShown.length ? ['', `### ${labels.verification}`, ...unknownShown.map(line)] : []),
+        ...(more ? ['', `${more} ${labels.more}.`, ...(!links.runUrl ? [labels.unavailable] : [])] : []), '', destinations.join(' · '),
+    ].join('\n');
+}
+
+
+/***/ }),
+
 /***/ 19337:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -58139,6 +58366,7 @@ exports.parseProgressScopeClassifications = parseProgressScopeClassifications;
 exports.parseProgressScopeWithAnchors = parseProgressScopeWithAnchors;
 exports.scopedProgressResponseSchema = scopedProgressResponseSchema;
 exports.parseScopedProgressResponse = parseScopedProgressResponse;
+exports.validateScopedProgressResponse = validateScopedProgressResponse;
 const progress_batch_rejection_policy_1 = __nccwpck_require__(13397);
 const progress_scope_source_policy_1 = __nccwpck_require__(49565);
 var progress_scope_source_policy_2 = __nccwpck_require__(49565);
@@ -58275,6 +58503,9 @@ function scopedProgressResponseSchema(scope, anchors = {}) {
 }
 /** Only exact in-scope entries can reach the existing progress card. No model top-level remaining is published. */
 function parseScopedProgressResponse(response, locale, scope, anchors = {}) {
+    return validateScopedProgressResponse(response, locale, scope, anchors).result;
+}
+function validateScopedProgressResponse(response, locale, scope, anchors = {}) {
     const payload = (0, progress_response_rejection_policy_1.progressResponsePayload)(response, locale, 'assessment');
     const reject = (reason, field, candidate = 'none') => {
         const id = (0, progress_response_diagnostic_1.isProgressRequirementId)(candidate) && scope.requirements.some(requirement => requirement.id === candidate) ? candidate : 'none';
@@ -58310,8 +58541,9 @@ function parseScopedProgressResponse(response, locale, scope, anchors = {}) {
         seen.add(id);
         if (scope.requirements.find(requirement => requirement.id === id).uncertain && fact.status !== 'verification-unknown')
             reject('scope-uncertain', `${field}.status`, id);
-        if (!['supported', 'missing', 'verification-unknown'].includes(fact.status))
-            reject('requirement-status-invalid', `${field}.status`, id);
+        const status = fact.status;
+        if (status !== 'supported' && status !== 'missing' && status !== 'verification-unknown')
+            return reject('requirement-status-invalid', `${field}.status`, id);
         if (!['source-only', 'external-unverified', 'unavailable', 'contradictory'].includes(fact.evidence))
             reject('requirement-evidence-invalid', `${field}.evidence`, id);
         function text(value) { return typeof value === 'string' && value.trim().length > 0 && [...value].length <= MAX_FACT; }
@@ -58331,7 +58563,7 @@ function parseScopedProgressResponse(response, locale, scope, anchors = {}) {
             else if ([...fact.remaining].length > MAX_FACT)
                 reject('requirement-remaining-too-long', `${field}.remaining`, id);
         }
-        return { id, status: fact.status, summary: fact.summary, remaining: fact.remaining };
+        return { id, status, summary: fact.summary, remaining: fact.remaining };
     });
     const ordered = scope.requirements.map(requirement => ({ requirement, fact: entries.find(entry => entry.id === requirement.id) }));
     function render(field) {
@@ -58360,7 +58592,7 @@ function parseScopedProgressResponse(response, locale, scope, anchors = {}) {
             missingCount: entries.filter(entry => entry.status === 'missing').length,
             unknownCount: entries.filter(entry => entry.status === 'verification-unknown').length }, scope);
     }
-    return { progress, summary, remaining, reasoning: '' };
+    return { result: { progress, summary, remaining, reasoning: '' }, entries: ordered.map(({ fact }) => fact) };
 }
 
 
@@ -61291,6 +61523,7 @@ const git_object_id_1 = __nccwpck_require__(88623);
 const implementation_result_policy_1 = __nccwpck_require__(30203);
 const implementation_plan_1 = __nccwpck_require__(77001);
 const staged_rollout_presentation_policy_1 = __nccwpck_require__(99043);
+const progress_pending_work_policy_1 = __nccwpck_require__(37020);
 function selectSemanticStatusIntents(context) {
     return Object.freeze(context.results.flatMap(result => {
         if (!result.executed || !result.success)
@@ -61301,7 +61534,7 @@ function selectSemanticStatusIntents(context) {
         const plan = planIntent(result.id, payload, context.locale);
         if (plan)
             return [plan];
-        const progress = progressIntent(result.id, payload, context.locale);
+        const progress = progressIntent(result.id, payload, context.locale, context.progressLinks);
         return progress ? [progress] : [];
     }));
 }
@@ -61538,6 +61771,9 @@ function renderSemanticStatus(intent, messages = (0, publication_message_catalog
         return `${marker}\n\n${renderImplementationPlanCard(intent.projection.plan, messages)}`;
     }
     const progress = intent.projection.progress;
+    const { pendingWork, workLinks } = intent.projection;
+    if (pendingWork && workLinks)
+        return `${marker}\n\n${(0, progress_pending_work_policy_1.renderProgressWorkAssessment)(progress, pendingWork, intent.locale, workLinks)}`;
     const completeAssessment = intent.sourceVersion.includes(':scope:');
     const state = progress <= 0 ? 'not-started' : progress >= 100 ? 'complete' : 'in-progress';
     const lines = [
@@ -61692,7 +61928,7 @@ function translationProjection(value) {
         targetLocale: translation.targetLocale,
     });
 }
-function progressIntent(id, payload, locale) {
+function progressIntent(id, payload, locale, links) {
     const sourceHeadSha = (0, git_object_id_1.canonicalGitObjectId)(payload.sourceHeadSha);
     const branch = typeof payload.branch === 'string' ? payload.branch.trim() : '';
     if (id !== 'CheckProgressUseCase'
@@ -61709,6 +61945,11 @@ function progressIntent(id, payload, locale) {
     if (scopeDigest && [payload.summary, typeof payload.remaining === 'string' ? payload.remaining : '']
         .some(text => [...text].length > progress_assessment_capacity_policy_1.MAX_PROGRESS_ASSESSMENT_POINTS))
         return undefined;
+    const pendingWork = scopeDigest && links ? (0, progress_pending_work_policy_1.readProgressWorkAssessment)(payload.pendingWork, sourceHeadSha, scopeDigest, progress) : undefined;
+    if (payload.pendingWork !== undefined && links && !pendingWork)
+        return undefined;
+    if (pendingWork?.baseSha && pendingWork.baseSha !== payload.baseSha)
+        return undefined;
     const projection = Object.freeze({
         kind: 'progress',
         progress,
@@ -61717,6 +61958,9 @@ function progressIntent(id, payload, locale) {
             ? { remaining: payload.remaining.trim() }
             : {}),
         branch,
+        ...(pendingWork && links ? { pendingWork, workLinks: { ...links, issueNumber: payload.issueNumber },
+            ...(typeof payload.comparisonBaseBranch === 'string' && payload.comparisonBaseBranch.trim()
+                ? { comparisonBaseBranch: payload.comparisonBaseBranch } : {}) } : {}),
         ...(typeof payload.developmentBranch === 'string' && payload.developmentBranch.trim()
             ? { developmentBranch: payload.developmentBranch.trim() }
             : {}),
@@ -65054,7 +65298,9 @@ async function runCheckProgressWorkflow(param, taskId, dependencies) {
             return skipped();
         }
         await (0, sync_progress_labels_to_open_pull_requests_1.syncProgressLabelsToOpenPullRequests)(branch, progress, dependencies.issueLabelsPort, dependencies.pullRequestRepository);
-        return [buildProgressResult(taskId, issueNumber, branch, developmentBranch, progress, summary, reasoning, remaining, sourceHeadSha, comparisonSource, baseSha, scopeManifestDigest)];
+        return [buildProgressResult(taskId, issueNumber, branch, developmentBranch, progress, summary, reasoning, remaining, sourceHeadSha, comparisonSource, baseSha, scopeManifestDigest, { headSha: sourceHeadSha, baseSha, scopeDigest: scopeManifestDigest, outcomes: attemptResult.outcomes,
+                ...(analysis.scopePublication ? { sdd: { commitSha: analysis.scopePublication.commitSha, path: analysis.scopePublication.path } } : {}),
+                ...(comparisonSource.kind === 'pull-request' ? { pullNumber: comparisonSource.pullRequestNumber } : {}) })];
     }
     catch (error) {
         const semanticError = (0, application_error_1.toApplicationError)(error, 'workflow.failed', `Unable to complete ${taskId}.`);
@@ -65105,7 +65351,7 @@ function buildZeroProgressResult(taskId, issueNumber, branch, developmentBranch,
         },
     });
 }
-function buildProgressResult(taskId, issueNumber, branch, developmentBranch, progress, summary, reasoning, remaining, sourceHeadSha, comparisonSource, baseSha, scopeManifestDigest) {
+function buildProgressResult(taskId, issueNumber, branch, developmentBranch, progress, summary, reasoning, remaining, sourceHeadSha, comparisonSource, baseSha, scopeManifestDigest, pendingWork) {
     return new result_1.Result({
         id: taskId,
         success: true,
@@ -65124,6 +65370,7 @@ function buildProgressResult(taskId, issueNumber, branch, developmentBranch, pro
             comparisonSource,
             baseSha,
             scopeManifestDigest,
+            pendingWork,
         },
     });
 }
@@ -67169,6 +67416,7 @@ async function analyzeProgress(param, taskId, dependencies, publishedSeedExpecte
         sourceHeadSha,
         attemptResult,
         verifyScopePublication,
+        scopePublication: capturedScopeSource.draft?.publication,
         scopeManifestDigest,
         verifyAssessment,
     };
@@ -74676,6 +74924,8 @@ async function analyzeBugbotFrames(operation, context, plan, dependencies) {
     const targetLocale = operation.locale.pullRequest;
     const all = [];
     let retainedBytes = 0, findingCount = 0, consumedPromptBytes = 0;
+    let completed = 0;
+    let retries = 0;
     // Intercept actual requests so retries and generated-source verification use the same exact ledger.
     const boundedAgent = { query: async (request) => {
             const size = (0, bugbot_framed_prompt_policy_1.bugbotFramedPromptBytes)(request);
@@ -74693,6 +74943,8 @@ async function analyzeBugbotFrames(operation, context, plan, dependencies) {
             || !(await dependencies.isSourceCurrent()))
             throw new framed_review_1.BugbotReviewCompletenessError('identity');
         (0, logging_ports_1.logInfo)(`Bugbot complete review frame ${frame.ordinal}/${plan.frames.length} started; no result is final.`);
+        const frames = { ordinal: frame.ordinal, total: plan.frames.length };
+        await dependencies.progress?.record('analyzing', { frames, partitions: { completed, total: plan.partitions.length } });
         const assigned = plan.partitions.filter(partition => partition.framed.frameId === frame.id);
         if ((0, bugbot_framed_review_policy_1.bugbotReviewDigest)(assigned.map(x => x.id)) !== (0, bugbot_framed_review_policy_1.bugbotReviewDigest)(frame.partitionIds))
             throw new framed_review_1.BugbotReviewCompletenessError('coverage');
@@ -74701,7 +74953,9 @@ async function analyzeBugbotFrames(operation, context, plan, dependencies) {
             dependencies.telemetry.beginPartition();
             const startedAt = Date.now();
             try {
-                const response = await (0, query_bugbot_findings_1.queryBugbotPartitionFindings)(boundedAgent, operation.analysis.agentConfiguration, input.prompt, targetLocale, { partitionId: partition.id, headSha: partition.headSha, framed: partition.framed }, { enabled: input.requiresCandidateVerification });
+                const response = await (0, query_bugbot_findings_1.queryBugbotPartitionFindings)(boundedAgent, operation.analysis.agentConfiguration, input.prompt, targetLocale, { partitionId: partition.id, headSha: partition.headSha, framed: partition.framed }, { enabled: input.requiresCandidateVerification, observeRetry: async () => {
+                        await dependencies.progress?.record('analyzing', { retries: ++retries });
+                    } });
                 const serialized = JSON.stringify(response);
                 (0, framed_review_1.enforceBugbotFramedBudget)('responseBytes', Buffer.byteLength(serialized));
                 const admitted = JSON.parse(serialized);
@@ -74718,6 +74972,7 @@ async function analyzeBugbotFrames(operation, context, plan, dependencies) {
                 (0, framed_review_1.enforceBugbotFramedBudget)('resultBytes', retainedBytes);
                 dependencies.trace?.recordResponse(admitted, partition.ordinal, Date.now() - startedAt, partition.id);
                 dependencies.telemetry.endPartition(true);
+                await dependencies.progress?.record('analyzing', { frames, partitions: { completed: ++completed, total: plan.partitions.length } });
                 return admitted;
             }
             catch (error) {
@@ -74788,8 +75043,9 @@ async function analyzeBugbotRevision(execution, context, dependencies) {
     const agentResponse = context.reviewFramedPlan && partitions.length > 0
         ? await dependencies.telemetry.measure('analysis', () => (0, analyze_bugbot_frames_1.analyzeBugbotFrames)(execution, context, context.reviewFramedPlan, { ...dependencies, isSourceCurrent: dependencies.isSourceCurrent }))
         : canonicalZeroWork
-            ? await dependencies.telemetry.measure('analysis', () => {
+            ? await dependencies.telemetry.measure('analysis', async () => {
                 dependencies.telemetry.observePartitionPlan(0, 0, 0);
+                await dependencies.progress?.record('analyzing', { partitions: { completed: 0, total: 0 } });
                 const reason = ignoredFileCount > 0
                     ? `skipped ${ignoredFileCount} intentionally ignored changed ${ignoredFileCount === 1 ? 'file' : 'files'}`
                     : 'received a canonical diff plan with no reviewable changed files';
@@ -74800,15 +75056,22 @@ async function analyzeBugbotRevision(execution, context, dependencies) {
                 ? await dependencies.telemetry.measure('analysis', async () => {
                     dependencies.telemetry.observePartitionPlan(partitions.length, context.reviewDiffFragmentCount ?? partitions.reduce((sum, partition) => sum + partition.fragmentCount, 0), context.reviewDiffFileCount ?? new Set(partitions.flatMap((partition) => partition.files)).size);
                     (0, logging_ports_1.logInfo)(`Bugbot reviewer planned ${partitions.length} bounded diff ${partitions.length === 1 ? 'partition' : 'partitions'} with maximum concurrency 2.`);
+                    let completed = 0;
+                    let retries = 0;
+                    await dependencies.progress?.record('analyzing', { partitions: { completed, total: partitions.length } });
                     const responses = await (0, bounded_concurrency_policy_1.runWithConcurrencyLimit)(partitions.map((partition) => async () => {
                         const { prompt, requiresCandidateVerification } = (0, build_bugbot_prompt_1.buildBugbotReviewInput)(execution, context, { partition, related: dependencies.trace ? partitions : undefined });
                         dependencies.telemetry.observePrompt(prompt);
                         dependencies.telemetry.beginPartition();
                         const partitionStartedAt = Date.now();
                         try {
-                            const response = await (0, query_bugbot_findings_1.queryBugbotPartitionFindings)(dependencies.agent, execution.analysis.agentConfiguration, prompt, targetLocale, { partitionId: partition.id, headSha: partition.headSha }, { enabled: requiresCandidateVerification, observePrompt: value => dependencies.telemetry.observePrompt(value), observeResponse: value => dependencies.telemetry.observeResponse(value) });
+                            const response = await (0, query_bugbot_findings_1.queryBugbotPartitionFindings)(dependencies.agent, execution.analysis.agentConfiguration, prompt, targetLocale, { partitionId: partition.id, headSha: partition.headSha }, { enabled: requiresCandidateVerification, observePrompt: value => dependencies.telemetry.observePrompt(value),
+                                observeResponse: value => dependencies.telemetry.observeResponse(value), observeRetry: async () => {
+                                    await dependencies.progress?.record('analyzing', { retries: ++retries });
+                                } });
                             dependencies.trace?.recordResponse(response, partition.ordinal, Date.now() - partitionStartedAt, partition.id);
                             dependencies.telemetry.endPartition(true);
+                            await dependencies.progress?.record('analyzing', { partitions: { completed: ++completed, total: partitions.length } });
                             (0, logging_ports_1.logInfo)(`Bugbot reviewer completed partition ${partition.ordinal}/${partition.total}.`);
                             return response;
                         }
@@ -75839,6 +76102,78 @@ function normalizeExpectedHeadSha(eventName, inputs) {
         ? candidate.trim().toLowerCase()
         : undefined;
 }
+
+
+/***/ }),
+
+/***/ 98634:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BugbotReviewProgress = void 0;
+const git_object_id_1 = __nccwpck_require__(88623);
+const logging_ports_1 = __nccwpck_require__(6152);
+const UPDATE_INTERVAL_MS = 5 * 60000;
+/** One host-owned observation stream. Serializes snapshots and never influences the review decision. */
+class BugbotReviewProgress {
+    constructor(target, port, dryRun, locale, now = Date.now) {
+        this.target = target;
+        this.port = port;
+        this.dryRun = dryRun;
+        this.locale = locale;
+        this.now = now;
+        this.startedAt = this.now();
+        this.lastAt = -Infinity;
+        this.sequence = 0;
+        this.queue = Promise.resolve();
+        this.stageStartedAt = this.startedAt;
+        this.stageTimesMs = {};
+        this.work = {};
+    }
+    pinComparison(baseRefSha) {
+        this.baseRefSha = (0, git_object_id_1.canonicalGitObjectId)(baseRefSha);
+    }
+    async record(stage, facts = {}, outcome) {
+        const headSha = (0, git_object_id_1.canonicalGitObjectId)(this.target.headSha);
+        if (!headSha || this.lastStage === 'finished')
+            return;
+        const at = this.now();
+        const work = this.work = { ...this.work, ...facts };
+        const data = { stage, ...work, ...(outcome ? { outcome } : {}) };
+        const identity = JSON.stringify(data);
+        const phaseChanged = stage !== this.lastStage;
+        if (phaseChanged) {
+            if (this.lastStage)
+                this.stageTimesMs[this.lastStage] = Math.max(0, at - this.stageStartedAt);
+            this.stageStartedAt = at;
+        }
+        const transition = phaseChanged || work.frames?.ordinal !== this.previousFrame
+            || (facts.partitions !== undefined && this.previousPlan !== facts.partitions.total);
+        if (identity === this.previous || (!transition && at - this.lastAt < UPDATE_INTERVAL_MS))
+            return;
+        this.previous = identity;
+        this.previousFrame = work.frames?.ordinal;
+        this.previousPlan = work.partitions?.total;
+        this.lastAt = at;
+        this.lastStage = stage;
+        const progress = { ...data, headSha, baseSha: (0, git_object_id_1.canonicalGitObjectId)(this.target.baseSha), baseRefSha: this.baseRefSha,
+            pullNumber: this.target.number, elapsedMs: Math.max(0, at - this.startedAt), observedAt: new Date(at).toISOString(),
+            sequence: ++this.sequence, stageTimesMs: { ...this.stageTimesMs } };
+        this.queue = this.queue.then(async () => {
+            (0, logging_ports_1.logInfo)(`[bugbot.progress] ${JSON.stringify(progress)}`);
+            try {
+                await this.port?.observe(progress, this.dryRun, this.locale);
+            }
+            catch {
+                (0, logging_ports_1.logInfo)('Bugbot progress could not be updated. Review continues.');
+            }
+        });
+        await this.queue;
+    }
+}
+exports.BugbotReviewProgress = BugbotReviewProgress;
 
 
 /***/ }),
@@ -77555,7 +77890,7 @@ const bugbot_shadow_configuration_policy_1 = __nccwpck_require__(37379);
 const finding_1 = __nccwpck_require__(31011);
 const git_object_id_1 = __nccwpck_require__(88623);
 const bounded_concurrency_policy_1 = __nccwpck_require__(35596);
-async function observeBugbotShadowVerification(operation, context, prepared, port, trace, detectionAndPreparationMs, experimentalProfile) {
+async function observeBugbotShadowVerification(operation, context, prepared, port, trace, detectionAndPreparationMs, experimentalProfile, progress) {
     const detector = operation.analysis.agentConfiguration;
     const dryRun = operation.analysis.reviewConfiguration.publicationMode === 'dry-run';
     const installed = operation.analysis.reviewConfiguration.shadowVerification;
@@ -77581,14 +77916,22 @@ async function observeBugbotShadowVerification(operation, context, prepared, por
                 description: 'Compare with the prior behavior when the pinned base is relevant.',
             }, true) : undefined };
     });
-    const concurrency = Math.min(2, inputs.length + resolutions.length);
+    const total = inputs.length + resolutions.length;
+    const concurrency = Math.min(2, total);
+    let completed = 0;
+    if (total)
+        await progress?.record('verifying', { candidates: { completed, total } });
     const tasks = [...inputs, ...resolutions].map(({ id, candidate, ordinaryPublication }) => async () => {
         const started = performance.now();
         const observation = candidate
             ? await verifyCandidate(port, candidate, configuration, review)
             : { status: 'verdict', verdict: 'inconclusive', reason: 'Candidate could not be pinned.',
                 missing: 'A repository location on the reviewed revision is required.', citations: [], premises: [] };
-        return { ...observation, id, candidate, wallMs: Math.round(performance.now() - started), ordinaryPublication };
+        const wallMs = Math.round(performance.now() - started);
+        if (observation.status === 'verdict') {
+            await progress?.record('verifying', { candidates: { completed: ++completed, total } });
+        }
+        return { ...observation, id, candidate, wallMs, ordinaryPublication };
     });
     const candidates = await (0, bounded_concurrency_policy_1.runWithConcurrencyLimit)(tasks, 2);
     const pr = context.canonicalPullRequest;
@@ -78245,6 +78588,7 @@ async function queryBugbotPartitionFindings(repository, configuration, prompt, t
             }
             if (attempt === MAX_PARTITION_QUERY_ATTEMPTS || (error instanceof framed_review_1.BugbotReviewCompletenessError && error.facts.resource !== 'receipt'))
                 throw error;
+            await verification?.observeRetry?.();
             (0, logging_ports_1.logInfo)(`Bugbot reviewer retrying one partition query (${attempt + 1}/${MAX_PARTITION_QUERY_ATTEMPTS}) after unusable agent output.`);
         }
     }
@@ -79561,6 +79905,7 @@ const bugbot_context_request_1 = __nccwpck_require__(98299);
 const apply_detected_findings_1 = __nccwpck_require__(20793);
 const bugbot_finding_status_policy_1 = __nccwpck_require__(53822);
 const bugbot_review_telemetry_1 = __nccwpck_require__(46790);
+const bugbot_review_progress_1 = __nccwpck_require__(98634);
 const analyze_bugbot_revision_use_case_1 = __nccwpck_require__(4658);
 const bugbot_review_freshness_1 = __nccwpck_require__(14307);
 const reconcile_bugbot_review_state_use_case_1 = __nccwpck_require__(57515);
@@ -79577,6 +79922,7 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
     const trace = dependencies.shadowVerification ? new bugbot_candidate_trace_1.BugbotCandidateTrace() : undefined;
     let shadow;
     let verification;
+    let progress;
     const authority = dependencies.verificationAuthority;
     const enforced = authority?.mode === 'enforced';
     const requiresReceipt = authority !== undefined;
@@ -79606,6 +79952,7 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
         return snapshot;
     };
     const complete = async (result, outcome) => {
+        await progress?.record('finished', {}, outcome);
         const snapshot = await publishTelemetry(outcome);
         const payload = result.payload && typeof result.payload === 'object' && !Array.isArray(result.payload)
             ? result.payload
@@ -79646,13 +79993,21 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
             && !reviewContext.analysis.reviewConfiguration.reviewDrafts) {
             return await complete(skippedDraftResult(), 'skipped');
         }
+        if (preflight.canonicalPullRequest) {
+            progress = new bugbot_review_progress_1.BugbotReviewProgress(preflight.canonicalPullRequest, dependencies.scm.progress, dryRun, reviewContext.locale.pullRequest);
+            await progress.record('preparing');
+        }
         const context = await telemetry.measure('context', () => (0, load_bugbot_context_use_case_1.loadBugbotContext)(contextRequest, dependencies.scm.context, preflight, dependencies.scm.reviewSource));
+        telemetry.observeContext(context);
+        progress?.pinComparison(context.canonicalPullRequest?.baseRefSha);
         const eventHeadSha = reviewContext.trigger.expectedHeadSha;
         if ((0, bugbot_review_freshness_1.isLoadedBugbotRevisionSuperseded)(context, eventHeadSha)) {
             return await complete(supersededResult(context.prContext?.prHeadSha, eventHeadSha), 'superseded');
         }
         const detectionStartedAt = Date.now();
-        let prepared = await (0, analyze_bugbot_revision_use_case_1.analyzeBugbotRevision)(reviewContext, context, { agent: dependencies.aiRepository, telemetry, trace, isSourceCurrent: async () => !await (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context) });
+        await progress?.record('analyzing');
+        let prepared = await (0, analyze_bugbot_revision_use_case_1.analyzeBugbotRevision)(reviewContext, context, { agent: dependencies.aiRepository, telemetry, trace, progress,
+            isSourceCurrent: async () => !await (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context) });
         const detectionAndPreparationMs = Date.now() - detectionStartedAt;
         if (prepared === undefined) {
             shadow = unavailableShadow();
@@ -79682,7 +80037,7 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
         if (dependencies.shadowVerification && trace) {
-            shadow = await (0, observe_bugbot_shadow_verification_1.observeBugbotShadowVerification)(reviewContext, context, prepared, dependencies.shadowVerification, trace, detectionAndPreparationMs, dependencies.experimentalShadowProfile);
+            shadow = await (0, observe_bugbot_shadow_verification_1.observeBugbotShadowVerification)(reviewContext, context, prepared, dependencies.shadowVerification, trace, detectionAndPreparationMs, dependencies.experimentalShadowProfile, enforced || dryRun ? progress : undefined);
             if (shadow.candidates.length > 0 && await (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context)) {
                 shadow = { ...shadow, superseded: true };
                 return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
@@ -79728,6 +80083,7 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
             && await (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context, 'before-publication', requiresReceipt)) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
+        await progress?.record('publishing');
         const resolutionErrors = await telemetry.measure('publication', () => (0, apply_detected_findings_1.applyDetectedFindings)(reviewContext, context, prepared, dependencies.scm.publication, dependencies.scm.resolution, catalog));
         if (await telemetry.measure('post-publication-freshness', () => (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context, 'after-publication', requiresReceipt))) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
@@ -79763,6 +80119,7 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
             ? new application_error_1.ApplicationError('validation.evidence-unavailable', 'Bugbot could not verify a complete source-bound review.', { retryable: false, recovery: { id: 'bugbot-review-incomplete', variables: error.facts } })
             : error, 'provider.unavailable', `Error in ${TASK_ID}: Unable to detect potential problems.`);
         (0, logging_ports_1.logError)(resultError);
+        await progress?.record('finished', { failureCode: resultError.code }, 'failed');
         const result = new result_1.Result({
             id: TASK_ID,
             success: false,
@@ -81170,6 +81527,7 @@ async function runPublishResume(param, taskId, comments, catalogResolver, source
             ...(param.target ? { target: param.target } : {}),
             correlationId: param.requestCorrelationId,
             botLogin: param.botLogin,
+            progressLinks: param.progressLinks ?? { repositoryUrl: `https://github.com/${encodeURIComponent(param.owner)}/${encodeURIComponent(param.repository)}` },
         };
         const replies = (0, semantic_result_publication_policy_1.selectSemanticReplyIntents)(semanticContext);
         const statuses = (0, semantic_result_publication_policy_1.selectSemanticStatusIntents)(semanticContext);
@@ -81509,6 +81867,9 @@ async function sourceIsCurrent(intent, sourceQuery) {
         return false;
     if (intent.projection.kind !== 'progress')
         return true;
+    const { pendingWork, comparisonBaseBranch } = intent.projection;
+    if (pendingWork?.baseSha && (!comparisonBaseBranch || await sourceQuery.getBranchHeadSha(comparisonBaseBranch) !== pendingWork.baseSha))
+        return false;
     if (!sourceQuery.isIssueOpen)
         throw new application_error_1.ApplicationError('configuration.unsupported', 'Progress publication requires a native issue state query.');
     return await sourceQuery.isIssueOpen(intent.identity.target.number) === true;
@@ -89279,14 +89640,58 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CopilotEvidenceRepository = void 0;
 const copilot_evidence_error_1 = __nccwpck_require__(10127);
 const copilot_evidence_provider_failure_1 = __nccwpck_require__(55920);
-/** Native Check Runs with a closed, credential-free failure boundary. No automatic write retry. */
+/** Native Check Runs with a closed, credential-free failure boundary. */
 class CopilotEvidenceRepository {
     constructor(client) {
         this.client = client;
+        this.live = new Map();
+        this.attempted = new Set();
+        this.liveScope = (owner, repo, head) => `${owner}/${repo}:${head}`;
+    }
+    async observeReview(check, owner, repo, token) {
+        const checks = this.client.getClient(token).rest.checks;
+        if (!checks.update)
+            return;
+        const key = this.liveScope(owner, repo, check.headSha);
+        const existing = this.live.get(key);
+        const output = { title: check.title, summary: check.summary };
+        if (existing !== undefined) {
+            if (existing.externalId === check.externalId)
+                await checks.update({ owner, repo, check_run_id: existing.id, output });
+            return;
+        }
+        if (this.attempted.has(check.externalId))
+            return;
+        this.attempted.add(check.externalId);
+        const response = await checks.create({ owner, repo, name: 'Copilot / Review', head_sha: check.headSha,
+            status: 'in_progress', external_id: check.externalId, details_url: check.runUrl, output });
+        if (!Number.isSafeInteger(response?.data?.id) || response.data.id <= 0)
+            throw new copilot_evidence_error_1.CopilotEvidencePublicationError('provider.contract-invalid');
+        this.live.set(key, { id: response.data.id, externalId: check.externalId });
+    }
+    async retireLiveReviews(owner, repo, token) {
+        if (!this.live.size)
+            return;
+        const checks = this.client.getClient(token).rest.checks;
+        for (const [key, check] of this.live) {
+            if (!key.startsWith(`${owner}/${repo}:`))
+                continue;
+            await checks.update?.({ owner, repo, check_run_id: check.id, status: 'completed', conclusion: 'neutral' });
+            this.live.delete(key);
+        }
     }
     async publish(evidence, owner, repository, token) {
         try {
-            const response = await this.client.getClient(token).rest.checks.create({
+            const checks = this.client.getClient(token).rest.checks;
+            const key = this.liveScope(owner, repository, evidence.headSha);
+            const existing = evidence.name === 'Copilot / Review' ? this.live.get(key) : undefined;
+            if (existing !== undefined && checks.update) {
+                await checks.update({ owner, repo: repository, check_run_id: existing.id, status: 'completed',
+                    conclusion: evidence.conclusion, output: { title: evidence.title, summary: evidence.summary } });
+                this.live.delete(key);
+                return;
+            }
+            const response = await checks.create({
                 owner,
                 repo: repository,
                 name: evidence.name,
@@ -108385,6 +108790,33 @@ function composeBugbotReview({ findings, scm, telemetry, catalog, shadowVerifica
 
 /***/ }),
 
+/***/ 64671:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createGithubBugbotReviewProgress = createGithubBugbotReviewProgress;
+const pull_request_lifecycle_repository_1 = __nccwpck_require__(24189);
+const github_bugbot_review_progress_adapter_1 = __nccwpck_require__(47862);
+const github_pull_request_client_factory_1 = __nccwpck_require__(9068);
+function createGithubBugbotReviewProgress(binding, evidence, summary, environment = process.env) {
+    const { owner, repository, token } = binding;
+    const runId = Number(environment.GITHUB_RUN_ID);
+    const attempt = Number(environment.GITHUB_RUN_ATTEMPT);
+    const server = environment.GITHUB_SERVER_URL ?? '';
+    if (!Number.isSafeInteger(runId) || runId < 1 || !Number.isSafeInteger(attempt) || attempt < 1
+        || environment.GITHUB_REPOSITORY !== `${owner}/${repository}`
+        || !/^https:\/\/[a-zA-Z0-9.-]+(?::\d+)?$/u.test(server))
+        return undefined;
+    const runUrl = `${server}/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}/actions/runs/${runId}/attempts/${attempt}`;
+    const pullRequests = new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)());
+    return (0, github_bugbot_review_progress_adapter_1.githubBugbotReviewProgress)({ ...binding, runId, attempt, runUrl }, summary, number => pullRequests.getBugbotSourceBoundPullRequestIdentity(owner, repository, number, token), check => evidence.observeReview(check, owner, repository, environment.COPILOT_EVIDENCE_TOKEN?.trim() || token));
+}
+
+
+/***/ }),
+
 /***/ 19937:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -108446,6 +108878,7 @@ class BugbotScmPortFactory {
         };
         return {
             ...(this.reviewSource ? { reviewSource: this.reviewSource } : {}),
+            ...(binding.reviewProgress ? { progress: binding.reviewProgress } : {}),
             context,
             publication: { issueComments, pullRequestComments },
             resolution: { issueComments, pullRequestComments },
@@ -109596,7 +110029,7 @@ function createCommitUseCaseCompositionRoot(projectBoardCommandPort, binding) {
     });
     return new commit_use_case_1.CommitUseCase(new notify_new_commit_on_issue_use_case_1.NotifyNewCommitOnIssueUseCase((0, push_single_action_capability_port_binding_1.bindIssueReopen)((0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), binding)), new check_changes_issue_size_use_case_1.CheckChangesIssueSizeUseCase(size.projectBoardCommandPort, size.issueRepository, size.pullRequestRepository, size.branchChangeSizePort, size.projectMembershipQueryPort), createDetectPotentialProblemsUseCase(binding), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)());
 }
-function createMainRunRouteCompositionRoot(projectBoardCommandPort, surface, setupProgress, verificationAuthority) {
+function createMainRunRouteCompositionRoot(projectBoardCommandPort, surface, setupProgress, verificationAuthority, reviewProgress) {
     let singleAction;
     let issueComment;
     let issue;
@@ -109605,11 +110038,11 @@ function createMainRunRouteCompositionRoot(projectBoardCommandPort, surface, set
     let push;
     return {
         "single-action": async (execution) => {
-            singleAction ?? (singleAction = createSingleActionUseCaseCompositionRoot(surface, bugbotBinding(execution, surface, verificationAuthority), setupProgress));
+            singleAction ?? (singleAction = createSingleActionUseCaseCompositionRoot(surface, bugbotBinding(execution, surface, verificationAuthority, reviewProgress), setupProgress));
             return singleAction.invoke(execution);
         },
         "issue-comment": async (execution) => {
-            issueComment ?? (issueComment = createIssueCommentUseCaseCompositionRoot(bugbotBinding(execution, surface, verificationAuthority), (0, verification_setup_snapshot_1.captureVerificationSetup)(execution.verificationSetup, execution.branches.main)));
+            issueComment ?? (issueComment = createIssueCommentUseCaseCompositionRoot(bugbotBinding(execution, surface, verificationAuthority, reviewProgress), (0, verification_setup_snapshot_1.captureVerificationSetup)(execution.verificationSetup, execution.branches.main)));
             return issueComment.invoke(execution);
         },
         issue: async (execution) => {
@@ -109617,20 +110050,20 @@ function createMainRunRouteCompositionRoot(projectBoardCommandPort, surface, set
             return issue.invoke(execution);
         },
         "pull-request-review-comment": async (execution) => {
-            pullRequestReviewComment ?? (pullRequestReviewComment = createPullRequestReviewCommentUseCaseCompositionRoot(bugbotBinding(execution, surface, verificationAuthority), (0, verification_setup_snapshot_1.captureVerificationSetup)(execution.verificationSetup, execution.branches.main)));
+            pullRequestReviewComment ?? (pullRequestReviewComment = createPullRequestReviewCommentUseCaseCompositionRoot(bugbotBinding(execution, surface, verificationAuthority, reviewProgress), (0, verification_setup_snapshot_1.captureVerificationSetup)(execution.verificationSetup, execution.branches.main)));
             return pullRequestReviewComment.invoke(execution);
         },
         "pull-request": async (execution) => {
-            pullRequest ?? (pullRequest = (0, pull_request_use_case_composition_root_1.createPullRequestUseCaseCompositionRoot)(bugbotBinding(execution, surface, verificationAuthority)));
+            pullRequest ?? (pullRequest = (0, pull_request_use_case_composition_root_1.createPullRequestUseCaseCompositionRoot)(bugbotBinding(execution, surface, verificationAuthority, reviewProgress)));
             return pullRequest.invoke(execution);
         },
         push: async (execution) => {
-            push ?? (push = createCommitUseCaseCompositionRoot(projectBoardCommandPort, bugbotBinding(execution, surface, verificationAuthority)));
+            push ?? (push = createCommitUseCaseCompositionRoot(projectBoardCommandPort, bugbotBinding(execution, surface, verificationAuthority, reviewProgress)));
             return push.invoke(execution);
         },
     };
 }
-function bugbotBinding(execution, surface, authority) {
+function bugbotBinding(execution, surface, authority, reviewProgress) {
     return {
         owner: execution.owner,
         repository: execution.repo,
@@ -109638,6 +110071,7 @@ function bugbotBinding(execution, surface, authority) {
         ...(surface === 'github-workflow' && execution.ai?.getBugbotReviewConfiguration?.().shadowVerification
             ? { shadow: { workspace: process.env.GITHUB_WORKSPACE } } : {}),
         ...(surface === 'github-workflow' && authority ? { verificationAuthority: authority } : {}),
+        ...(surface === 'github-workflow' && reviewProgress ? { reviewProgress } : {}),
     };
 }
 function rememberBranchPorts(binding, pullRequests) {
@@ -111125,6 +111559,7 @@ class GithubBugbotReviewNavigationAdapter {
         return {
             pullRequestUrl: `${base}/pull/${pullRequestNumber}`,
             commitUrl: `${base}/commit/${encodeURIComponent(headSha)}`,
+            reviewChecksUrl: `${base}/pull/${pullRequestNumber}/checks`,
             ...(runUrl ? { runUrl } : {}),
         };
     }
@@ -111147,6 +111582,43 @@ function normalizeHttpsServerUrl(value) {
     url.hash = '';
     url.search = '';
     return url.toString().replace(/\/+$/u, '');
+}
+
+
+/***/ }),
+
+/***/ 47862:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.githubBugbotReviewProgress = githubBugbotReviewProgress;
+const bugbot_live_progress_presentation_policy_1 = __nccwpck_require__(93925);
+const git_object_id_1 = __nccwpck_require__(88623);
+/** Reports native progress on the one check owned by this invocation. */
+function githubBugbotReviewProgress(context, summary, current, observeCheck) {
+    let checkStarted = false;
+    let sequence = 0;
+    return { async observe(observation, dryRun, locale) {
+            if (!Number.isSafeInteger(observation.sequence) || observation.sequence <= sequence)
+                return;
+            sequence = observation.sequence;
+            const view = (0, bugbot_live_progress_presentation_policy_1.renderBugbotLiveProgress)(observation, locale, context.runUrl);
+            if (observation.stage === 'finished')
+                await summary.publish(view.summary + '\n\n');
+            if (dryRun || observation.outcome === 'superseded' || observation.pullNumber !== context.pullNumber
+                || observation.headSha !== context.expectedHead || observation.baseSha !== context.expectedBase || !observation.baseSha
+                || (observation.stage === 'finished' && !checkStarted))
+                return;
+            const live = await current(observation.pullNumber);
+            if (live?.state !== 'open' || (0, git_object_id_1.canonicalGitObjectId)(live.headSha) !== observation.headSha
+                || live.baseSha !== observation.baseSha || live.baseRefSha !== (observation.baseRefSha ?? observation.baseSha))
+                return;
+            await observeCheck({ ...view, headSha: observation.headSha, runUrl: context.runUrl,
+                externalId: `bugbot:${observation.pullNumber}:${observation.baseSha}:${observation.headSha}:${context.policy ?? 'default'}:${context.runId}:${context.attempt}` });
+            checkStarted = true;
+        } };
 }
 
 
