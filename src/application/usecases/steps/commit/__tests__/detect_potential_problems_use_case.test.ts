@@ -499,6 +499,22 @@ describe("DetectPotentialProblemsUseCase", () => {
       expect(result.payload).toMatchObject({ bugbotShadowVerification: { publicationSimulation: { status: 'complete', individual: [] } } });
     });
 
+    it('preserves findings and the receipt when a ready PR becomes a draft during verification', async () => {
+      testBaseSha = 'b'.repeat(40);
+      const verify = jest.fn(async () => {
+        providerDraft = true;
+        return confirmed;
+      });
+      const param = pr();
+      param.inputs!.repository = { id: 17 };
+      const [result] = await invokeUseCase(createUseCase({ verify }, undefined, authority), param);
+      expect(verify).toHaveBeenCalledTimes(1);
+      expect(result.payload).toMatchObject({ superseded: true, bugbotPublicationBlocked: true });
+      expect(result.payload).not.toHaveProperty('bugbotVerificationPublication');
+      expect(mockCreateReviewWithComments).not.toHaveBeenCalled();
+      expect(mockAddComment).not.toHaveBeenCalled();
+    });
+
     it.each(['disabled', 'shadow'] as const)('attests the ordinary review under trusted %s rollback', async mode => {
       testBaseSha = 'b'.repeat(40);
       const rollback = { ...authority, mode, generation: 2, policyDigest: 'd'.repeat(64) } as const;

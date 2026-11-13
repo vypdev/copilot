@@ -225,7 +225,8 @@ export async function runDetectPotentialProblemsWorkflow(
         const catalog = presentsPullRequestStatus || mutatesFindingComments
             ? await resolvePublicationCatalog(reviewContext, dependencies, presentsPullRequestStatus)
             : undefined;
-        // Catalog localization may await a provider. Recheck the exact comparison immediately before SCM mutation.
+        await progress?.record('publishing');
+        // Catalog localization and progress can await a provider. Recheck before mutating findings.
         if (enforced && !context.canonicalPullRequest) {
             const expected = canonicalGitObjectId(reviewContext.trigger.after);
             const branch = reviewContext.target.commitBranch;
@@ -238,7 +239,6 @@ export async function runDetectPotentialProblemsWorkflow(
             && await hasNewerBugbotRevision(context, dependencies.scm.context, 'before-publication', requiresReceipt)) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
-        await progress?.record('publishing');
         const resolutionErrors = await telemetry.measure('publication', () => applyDetectedFindings(
             reviewContext,
             context,

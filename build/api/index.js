@@ -5103,7 +5103,7 @@ async function hasNewerBugbotRevision(context, ports, boundary = 'before-publica
             if (!current || !expectedBase || !(0, git_object_id_1.canonicalGitObjectId)(current.baseSha) || !(0, git_object_id_1.canonicalGitObjectId)(current.headSha)) {
                 throw (0, bugbot_freshness_error_1.bugbotFreshnessError)(undefined, boundary, operation, true);
             }
-            return current.number !== expected.number || current.state !== 'open'
+            return current.number !== expected.number || current.state !== 'open' || current.draft !== expected.draft
                 || current.baseRepository.owner !== expected.baseRepository.owner || current.baseRepository.name !== expected.baseRepository.name
                 || (0, git_object_id_1.canonicalGitObjectId)(current.baseSha) !== expectedBase
                 || (0, git_object_id_1.canonicalGitObjectId)(current.headSha) !== context.prContext.prHeadSha.toLowerCase();
@@ -8024,7 +8024,8 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
         const catalog = presentsPullRequestStatus || mutatesFindingComments
             ? await resolvePublicationCatalog(reviewContext, dependencies, presentsPullRequestStatus)
             : undefined;
-        // Catalog localization may await a provider. Recheck the exact comparison immediately before SCM mutation.
+        await progress?.record('publishing');
+        // Catalog localization and progress can await a provider. Recheck before mutating findings.
         if (enforced && !context.canonicalPullRequest) {
             const expected = (0, git_object_id_1.canonicalGitObjectId)(reviewContext.trigger.after);
             const branch = reviewContext.target.commitBranch;
@@ -8039,7 +8040,6 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
             && await (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context, 'before-publication', requiresReceipt)) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
-        await progress?.record('publishing');
         const resolutionErrors = await telemetry.measure('publication', () => (0, apply_detected_findings_1.applyDetectedFindings)(reviewContext, context, prepared, dependencies.scm.publication, dependencies.scm.resolution, catalog));
         if (await telemetry.measure('post-publication-freshness', () => (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context, 'after-publication', requiresReceipt))) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');

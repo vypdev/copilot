@@ -182,6 +182,14 @@ describe('OpenCode verifier model catalog', () => {
         'anthropic/fixture', JSON.stringify({ id: 'fixture', providerID: 'anthropic', variants: { high: { budget: 2 } } }, null, 2),
     ].join('\n');
 
+    it('parses a complete record before the next model header, regardless of indentation', () => {
+        const record = JSON.stringify({ id: 'fixture', providerID: 'anthropic', variants: { high: { config: { message: '}' } } } }, null, 2);
+        const records = `anthropic/fixture\n${record.replace(/^ +/gmu, '')}\n\n${catalog.split('anthropic/fixture\n')[0]}`;
+        expect(inspectOpenCodeVerifierCatalog(records, model)).toBeUndefined();
+        expect(inspectOpenCodeVerifierCatalog(records.replace('"providerID": "anthropic"', '"providerID": "other"'), model))
+            .toBe('provider-catalog-unavailable');
+    });
+
     it('requires the exact provider model and variant from the effective runtime', () => {
         expect(inspectOpenCodeVerifierCatalog(catalog, model)).toBeUndefined();
         expect(inspectOpenCodeVerifierCatalog(catalog, { ...model, effort: 'xhigh' })).toBe('provider-effort-unsupported');

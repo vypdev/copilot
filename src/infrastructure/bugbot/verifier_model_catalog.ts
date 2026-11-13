@@ -10,10 +10,9 @@ export function inspectOpenCodeVerifierCatalog(
     if (!matches.length) return catalog.trim() ? 'provider-model-unavailable' : 'provider-catalog-unavailable';
     if (matches.length !== 1) return 'provider-catalog-unavailable';
     const first = matches[0] + 1;
-    const last = lines.indexOf('}', first);
-    if (last < first) return 'provider-catalog-unavailable';
+    const next = lines.findIndex((line, index) => index >= first && /^[\w.-]+\/\S+$/u.test(line.trim()));
     try {
-        const model = JSON.parse(lines.slice(first, last + 1).join('\n')) as {
+        const model = JSON.parse(lines.slice(first, next < 0 ? lines.length : next).join('\n')) as {
             id?: unknown; providerID?: unknown; variants?: unknown;
         };
         if (model.id !== configuration.model || model.providerID !== (configuration.modelProvider ?? 'openai')) {

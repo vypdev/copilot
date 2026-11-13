@@ -34,7 +34,7 @@ export async function hasNewerBugbotRevision(
             if (!current || !expectedBase || !canonicalGitObjectId(current.baseSha) || !canonicalGitObjectId(current.headSha)) {
                 throw bugbotFreshnessError(undefined, boundary, operation, true);
             }
-            return current.number !== expected.number || current.state !== 'open'
+            return current.number !== expected.number || current.state !== 'open' || current.draft !== expected.draft
                 || current.baseRepository.owner !== expected.baseRepository.owner || current.baseRepository.name !== expected.baseRepository.name
                 || canonicalGitObjectId(current.baseSha) !== expectedBase
                 || canonicalGitObjectId(current.headSha) !== context.prContext.prHeadSha.toLowerCase();
