@@ -15,118 +15,29 @@ defaults:
   run:
     shell: bash
 
+permissions:
+  contents: read
+
 jobs:
-  ci-check:
-    name: CI Check
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
-    runs-on:
+  static-checks:
+    name: CI / Static checks
+    if: &source-ci ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: &source-runner
       group: vypdev
       labels: [self-hosted, codex, Linux]
-    timeout-minutes: 20
-    permissions:
-      contents: read
+    timeout-minutes: 10
     steps:
-      - name: Verify Ubuntu runner
+      - &verify-ubuntu
+        name: Verify Ubuntu runner
         run: . /etc/os-release && test "$ID" = ubuntu
-      - uses: actions/checkout@v5
+
+      - &checkout
+        uses: actions/checkout@v5
         with:
           persist-credentials: false
           # Contract tests inspect the immutable in-repository action revision
           # used by distributed workflows, so its commit must be available.
           fetch-depth: 0
-
-      - name: Set up pnpm
-        # Avoid the standalone @pnpm/exe binary, which has no working Intel
-        # macOS build for this pnpm line.
-        uses: pnpm/action-setup@v5
-        with:
-          version: 10.12.4
-          standalone: false
-          dest: ${{ runner.temp }}/setup-pnpm-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}
-
-      - name: Set up Node.js 24
-        uses: actions/setup-node@v7
-        with:
-          node-version: '24.x'
-          cache: pnpm
-
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Validate generated guidance checkout
-        run: |
-          git ls-files --eol -- .copilot/repository-profile.json .copilot/AGENT_GUIDE.md .agents/skills/copilot-repository-workflow/SKILL.md
-          pnpm run validate:agent-docs
-
-      - name: Audit production dependencies
-        run: pnpm audit --prod --audit-level=high
-
-      - name: Use runner scratch for build and validation
-        # Self-hosted runners can mount /tmp on a smaller filesystem than the work directory.
-        run: printf 'TMPDIR=%s\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
-
-      - name: Build
-        run: pnpm run build
-
-      # Checked-in ncc bundles are generated on Unix; Windows output differs.
-      - name: Validate generated bundles
-        if: runner.os != 'Windows'
-        run: pnpm run validate:build
-
-      - name: Validate extension architecture and reproducibility
-        run: pnpm run validate:extension
-
-      - name: Validate npm package contents
-        run: pnpm run validate:npm-package
-
-      - name: Smoke test npm package
-        run: pnpm run smoke:npm-package
-
-      - name: Typecheck
-        run: pnpm run typecheck
-
-      - name: Run tests with coverage
-        run: pnpm run test:coverage
-
-      - name: Validate Bugbot quality benchmark
-        run: pnpm run eval:bugbot
-
-      - name: Validate Bugbot shadow verification
-        run: pnpm run test:bugbot-shadow-verification
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v6
-        # Coverage reporting is advisory; Codecov v6 requires gpg even when
-        # fail_ci_if_error is false, and the internal macOS runner may not have it.
-        continue-on-error: true
-        with:
-          files: ./coverage/lcov.info,./extension/coverage/lcov.info
-          disable_search: true
-          fail_ci_if_error: false
-          token: ${{ secrets.CODECOV_TOKEN }}
-          verbose: true
-
-      - name: Lint
-        run: pnpm run lint
-
-      - name: Validate documentation
-        run: pnpm run validate:agent-docs
-
-      - name: Validate documentation assets
-        run: pnpm run validate:docs-page
-
-      - name: Validate documentation contract
-        run: pnpm run validate:documentation
-
-      - name: Validate workflow contract
-        run: pnpm run validate:workflows
-
-      - name: Validate product specification catalog
-        run: pnpm run validate:specifications
-
-      - name: Validate setup acceptance ledger
-        run: pnpm run validate:setup-acceptance
 
       - name: Validate Git diff
         env:
@@ -146,3 +57,143 @@ jobs:
           fi
           [[ "$base" =~ ^[0-9a-f]{40}$ ]] || { echo "Missing diff-check base commit" >&2; exit 1; }
           git -c core.whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol diff --check "$base" HEAD -- . ':(exclude)build/**'
+
+      - &pnpm
+        name: Set up pnpm
+        uses: pnpm/action-setup@v5
+        with:
+          version: 10.12.4
+          standalone: false
+          dest: ${{ runner.temp }}/setup-pnpm-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}
+
+      - &node
+        name: Set up Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24.x'
+          # Each self-hosted runner can reuse its local pnpm store.
+          package-manager-cache: false
+
+      - &runner-scratch
+        name: Use runner scratch for CI
+        # Self-hosted runners can mount /tmp on a smaller filesystem than the work directory.
+        run: printf 'TMPDIR=%s\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+
+      - &install
+        name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: Validate documentation assets
+        run: pnpm run validate:docs-page
+
+      - name: Validate documentation contract
+        run: pnpm run validate:documentation
+
+      - name: Validate workflow contract
+        run: pnpm run validate:workflows
+
+      - name: Validate product specification catalog
+        run: pnpm run validate:specifications
+
+      - name: Validate setup acceptance ledger
+        run: pnpm run validate:setup-acceptance
+
+      - name: Audit production dependencies
+        run: pnpm audit --prod --audit-level=high
+
+      - name: Validate Bugbot quality benchmark
+        run: pnpm run eval:bugbot
+
+      - name: Validate Bugbot shadow verification
+        run: pnpm run test:bugbot-shadow-verification
+
+  build-package:
+    name: CI / Build and package
+    if: *source-ci
+    runs-on: *source-runner
+    timeout-minutes: 10
+    steps:
+      - *verify-ubuntu
+      - *checkout
+      - *pnpm
+      - *node
+      - *runner-scratch
+      - *install
+
+      - name: Build
+        run: pnpm run build
+
+      # Checked-in ncc bundles are generated on Unix; Windows output differs.
+      - name: Validate generated bundles
+        run: pnpm run validate:build
+
+      - name: Validate extension architecture and reproducibility
+        run: pnpm run validate:extension
+
+      - name: Validate npm package contents
+        run: pnpm run validate:npm-package
+
+      - name: Smoke test npm package
+        run: pnpm run smoke:npm-package
+
+  coverage:
+    name: CI / Tests and coverage
+    if: *source-ci
+    runs-on: *source-runner
+    timeout-minutes: 25
+    steps:
+      - *verify-ubuntu
+      - *checkout
+      - *pnpm
+      - *node
+      - *runner-scratch
+      - *install
+
+      - name: Validate generated guidance checkout
+        run: |
+          git ls-files --eol -- .copilot/repository-profile.json .copilot/AGENT_GUIDE.md .agents/skills/copilot-repository-workflow/SKILL.md
+          pnpm run validate:agent-docs
+
+      - name: Run tests with coverage
+        run: pnpm run test:coverage
+
+      - name: Verify tests preserved generated guidance
+        run: pnpm run validate:agent-docs
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v6
+        # Coverage reporting is advisory; the local coverage gates above are required.
+        continue-on-error: true
+        with:
+          files: ./coverage/lcov.info,./extension/coverage/lcov.info
+          disable_search: true
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+          verbose: true
+
+  ci-check:
+    # Keep the ruleset and approval consumer bound to this exact check name.
+    name: CI Check
+    if: ${{ always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+    needs: [static-checks, build-package, coverage]
+    runs-on: *source-runner
+    timeout-minutes: 2
+    permissions: {}
+    steps:
+      - name: Require all CI jobs to succeed
+        env:
+          STATIC_RESULT: ${{ needs.static-checks.result }}
+          BUILD_RESULT: ${{ needs.build-package.result }}
+          COVERAGE_RESULT: ${{ needs.coverage.result }}
+        run: |
+          printf '%s\n' '| Job | Result |' '| --- | --- |' \
+            "| Static checks | $STATIC_RESULT |" \
+            "| Build and package | $BUILD_RESULT |" \
+            "| Tests and coverage | $COVERAGE_RESULT |" | tee -a "$GITHUB_STEP_SUMMARY"
+          [[ "$STATIC_RESULT" == success && "$BUILD_RESULT" == success && "$COVERAGE_RESULT" == success ]]

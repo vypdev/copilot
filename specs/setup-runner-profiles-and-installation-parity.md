@@ -546,10 +546,24 @@ hotfix `publish-npm` jobs use GitHub-hosted runners for npm Trusted
 Publishing with OIDC. The read-only deployment preflight and credential
 health jobs use the self-hosted Linux Codex pool.
 
-`CI Check` retains its required check identity. It admits same-repository PRs,
-pushes to `master`, and manual dispatches on Linux Codex runners in the
-`vypdev` group. The job skips fork PRs before runner assignment. GitHub
-reported no merge queue for `develop` or `master`, so the source CI has no
+The source `CI Check` workflow admits same-repository PRs, pushes to `master`,
+and manual dispatches. All four jobs skip fork PRs before runner assignment
+and route to Linux Codex runners in the `vypdev` group. Three independent
+jobs can run concurrently when the pool has capacity:
+
+| Check shown on the PR | Scope |
+| --- | --- |
+| `CI / Static checks` | Committed diff, lint, types, contracts, dependency audit, and deterministic Bugbot checks |
+| `CI / Build and package` | Build, reproducibility, and npm smoke using the same checkout and build |
+| `CI / Tests and coverage` | Repository and extension tests, coverage budgets, and advisory coverage export |
+| `CI Check` | Existing required check; waits for the three results and lists them in the job summary |
+
+The required check succeeds only if all three results are `success`. A failed,
+cancelled, skipped or missing result must not pass the gate on an admitted run.
+The gate uses no checkout, dependencies or repository permissions. Workers
+do not exchange build artifacts or use a shared mutable checkout. The workflow
+and required check names remain stable for rulesets and approval consumers.
+GitHub reported no merge queue for `develop` or `master`, so source CI has no
 `merge_group` trigger. A future queue requires a compatible required check
 and isolated execution before enablement. The platform fixture matrix runs on the three self-hosted operating systems after a manual
 dispatch from protected `master`. The Windows row uses a general-purpose
@@ -557,8 +571,13 @@ runner. The shared comment coordinator selects the source pool only for
 `vypdev/copilot` and honors the caller's reviewed route for consumers.
 
 The [workflow contract tests](../src/tooling/__tests__/validate_workflow_contract.test.ts)
-cover five CI admission cases and reject a missing fork gate or a merge-group
-trigger. They also cover the protected manual matrix and its hosted rejection,
+cover five CI admission cases across all jobs and reject a missing fork gate
+or a merge-group trigger. The gate adds five deterministic Bash cases: all
+success, failure, cancellation, skip, and a missing result. Contract checks
+reject a renamed gate, missing result binding or dependency, and a worker that
+depends on another worker. Live evidence records each job's queue and run
+time on the same SHA; the tests do not assume runner capacity. They also
+cover the protected manual matrix and its hosted rejection,
 three source preflight/credential regressions, and three source or consumer
 comment routes. The existing admission, OIDC, read-only
 preflight, Windows coverage and provisioning checks still apply. Setup

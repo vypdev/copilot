@@ -28,9 +28,12 @@ See the [setup-node cache inputs](https://github.com/actions/setup-node#usage).
 
 In `vypdev/copilot`, `CI Check` uses the `vypdev` runner group with
 `self-hosted`, `codex` and `Linux` labels. It runs for same-repository PRs,
-pushes to `master` and manual dispatches. A job condition excludes fork PRs
-before GitHub assigns a runner. The source repository has no active merge
-queue. Restore a compatible required check on a suitably isolated runner
+pushes to `master` and manual dispatches. Static checks, package build and
+smoke, and tests with coverage can occupy three runners at once. Each uses its
+own checkout and the runner's local pnpm store. The required `CI Check` job
+then records all three conclusions without checking out code. Every job
+excludes fork PRs before runner assignment. The source repository has no
+active merge queue. Restore a compatible required check on a suitably isolated runner
 before enabling a queue.
 
 Run the setup fixture matrix manually from protected `master`. It exercises

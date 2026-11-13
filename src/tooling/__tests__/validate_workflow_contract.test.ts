@@ -1377,22 +1377,24 @@ describe('workflow contract validator', () => {
     ['workflow_dispatch', undefined, true],
   ])('admits %s from %s before assigning a vypdev runner (%s)', (eventName, headRepository, expected) => {
     const { file, workflow } = loadMutationWorkflow('.github/workflows', 'ci_check.yml');
-    const job = workflow.jobs['ci-check'];
-    const admitted = runInNewContext(job.if.slice(4, -3), {
-      github: {
-        event_name: eventName,
-        event: { pull_request: { head: { repo: { full_name: headRepository } } } },
-        repository: 'vypdev/copilot',
-      },
-    }, { timeout: 100 });
-    expect(admitted).toBe(expected);
-    expect(job['runs-on']).toEqual({ group: 'vypdev', labels: ['self-hosted', 'codex', 'Linux'] });
+    for (const job of Object.values(workflow.jobs)) {
+      const admitted = runInNewContext(job.if.slice(4, -3), {
+        always: () => true,
+        github: {
+          event_name: eventName,
+          event: { pull_request: { head: { repo: { full_name: headRepository } } } },
+          repository: 'vypdev/copilot',
+        },
+      }, { timeout: 100 });
+      expect(admitted).toBe(expected);
+      expect(job['runs-on']).toEqual({ group: 'vypdev', labels: ['self-hosted', 'codex', 'Linux'] });
+    }
     expect(() => validateWorkflow(file, workflow)).not.toThrow();
   });
 
   it('rejects CI without the fork gate or with the inactive merge-queue trigger', () => {
     const { file, workflow } = loadMutationWorkflow('.github/workflows', 'ci_check.yml');
-    const job = workflow.jobs['ci-check'];
+    const job = workflow.jobs['static-checks'];
     const runner = job['runs-on'];
     job['runs-on'] = { ...runner, group: 'other' };
     expect(() => validateWorkflow(file, workflow)).toThrow('must use runs-on with the vypdev group');
@@ -1403,6 +1405,55 @@ describe('workflow contract validator', () => {
     job.if = condition;
     workflow.on.merge_group = { types: ['checks_requested'] };
     expect(() => validateWorkflow(file, workflow)).toThrow('must admit only same-repository pull requests');
+  });
+
+  it('preserves the required CI Check identity and waits for all independent jobs', () => {
+    const { file, workflow } = loadMutationWorkflow('.github/workflows', 'ci_check.yml');
+    const gate = workflow.jobs['ci-check'];
+    const dependencies = gate.needs;
+    const gateName = gate.name;
+    gate.name = 'CI summary';
+    expect(() => validateWorkflow(file, workflow)).toThrow('required CI Check gate');
+    gate.name = gateName;
+    gate.needs = dependencies.filter((name: string) => name !== 'coverage');
+    expect(() => validateWorkflow(file, workflow)).toThrow('required CI Check gate');
+    gate.needs = dependencies;
+    workflow.jobs.coverage.needs = ['build-package'];
+    expect(() => validateWorkflow(file, workflow)).toThrow('three independent CI jobs');
+    delete workflow.jobs.coverage.needs;
+    delete gate.steps[0].env.COVERAGE_RESULT;
+    expect(() => validateWorkflow(file, workflow)).toThrow('check the result of every CI job');
+  });
+
+  const onBashPlatform = process.platform === 'win32' ? it.skip : it;
+  onBashPlatform.each([
+    ['success', 'success', 'success', 0],
+    ['failure', 'success', 'success', 1],
+    ['success', 'cancelled', 'success', 1],
+    ['success', 'success', 'skipped', 1],
+    ['success', 'success', '', 1],
+  ])('aggregates static=%s build=%s coverage=%s into exit status %d', (staticResult, buildResult, coverageResult, expected) => {
+    const { workflow } = loadMutationWorkflow('.github/workflows', 'ci_check.yml');
+    const { run } = workflow.jobs['ci-check'].steps[0];
+    const scratch = mkdtempSync(path.join(tmpdir(), 'copilot-ci-gate-'));
+    try {
+      const summary = path.join(scratch, 'summary');
+      const result = spawnSync('bash', ['-e', '-o', 'pipefail', '-c', run], {
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          GITHUB_STEP_SUMMARY: summary,
+          STATIC_RESULT: staticResult,
+          BUILD_RESULT: buildResult,
+          COVERAGE_RESULT: coverageResult,
+        },
+      });
+      expect(result.error).toBeUndefined();
+      expect(result.status).toBe(expected);
+      expect(readFileSync(summary, 'utf8')).toContain('| Tests and coverage | ' + coverageResult + ' |');
+    } finally {
+      rmSync(scratch, { recursive: true, force: true });
+    }
   });
 
   it('isolates RepoWise files per run and removes them after artifact upload', () => {
@@ -1432,7 +1483,7 @@ describe('workflow contract validator', () => {
   });
 
   it.each([
-    ['ci_check.yml', 'ci-check'],
+    ['ci_check.yml', 'static-checks'],
     ['setup_platform_smoke.yml', 'setup-self-hosted-codex-smoke'],
     ['release_workflow.yml', 'prepare-version-files'],
     ['hotfix_workflow.yml', 'prepare-version-files'],
@@ -1448,7 +1499,7 @@ describe('workflow contract validator', () => {
   it('checks generated guidance before and after CI tests', () => {
     const file = path.join(process.cwd(), '.github', 'workflows', 'ci_check.yml');
     const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
-    const steps = workflow.jobs['ci-check'].steps;
+    const steps = workflow.jobs.coverage.steps;
     const install = steps.findIndex((step: { name?: string }) => step.name === 'Install dependencies');
     const coverage = steps.findIndex((step: { name?: string }) => step.name === 'Run tests with coverage');
     const checks = steps.flatMap((step: { run?: string }, index: number) =>
@@ -1473,7 +1524,7 @@ describe('workflow contract validator', () => {
   it('checks committed PR, push, and manual changes against their event base', () => {
     const file = path.join(process.cwd(), '.github', 'workflows', 'ci_check.yml');
     const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
-    const step = workflow.jobs['ci-check'].steps.find((item: { name?: string }) => item.name === 'Validate Git diff');
+    const step = workflow.jobs['static-checks'].steps.find((item: { name?: string }) => item.name === 'Validate Git diff');
     expect(step?.run).toContain('pull_request) base="$PR_BASE_SHA"');
     expect(step?.run).toContain('workflow_dispatch) base="$(git rev-parse HEAD^)"');
     expect(step?.run).toContain('push) base="$PUSH_BEFORE_SHA"');
@@ -1485,7 +1536,7 @@ describe('workflow contract validator', () => {
   it('retains full history for the CI event-base diff check', () => {
     const file = path.join(process.cwd(), '.github', 'workflows', 'ci_check.yml');
     const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
-    const checkout = workflow.jobs['ci-check'].steps.find((step: { uses?: string }) => step.uses === 'actions/checkout@v5');
+    const checkout = workflow.jobs['static-checks'].steps.find((step: { uses?: string }) => step.uses === 'actions/checkout@v5');
     expect(checkout.with).toMatchObject({ 'fetch-depth': 0, 'persist-credentials': false });
     delete checkout.with['fetch-depth'];
     expect(() => assertRunner(file, workflow)).toThrow('fetch full history');
@@ -1494,7 +1545,7 @@ describe('workflow contract validator', () => {
   it.each([
     ['setup_platform_smoke.yml', 'setup-platform-smoke', 'Full platform documentation and contract validators'],
     ['setup_platform_smoke.yml', 'setup-self-hosted-codex-smoke', 'Full platform documentation and contract validators'],
-    ['ci_check.yml', 'ci-check', 'Validate Git diff'],
+    ['ci_check.yml', 'static-checks', 'Validate Git diff'],
   ])('rejects weakened whitespace rules in %s %s', (fileName, jobId, stepName) => {
     const file = path.join(process.cwd(), '.github', 'workflows', fileName);
     const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;

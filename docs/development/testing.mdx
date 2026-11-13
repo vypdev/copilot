@@ -145,9 +145,20 @@ other refs, bounded reads and failures.
 
 Manual RepoWise runs and repository-owned CI use self-hosted Ubuntu
 `codex` runners. `CI Check` skips fork PRs before runner allocation and
-uses the `vypdev` group for internal reviews. Run the three-platform setup
-matrix by manual dispatch from protected `master`. The contract validator
-checks routing. Actual runner capacity requires evidence from Actions.
+uses the `vypdev` group for internal reviews. It starts three independent jobs:
+
+- **CI / Static checks:** diff, lint, types, documentation, workflow and
+  specification contracts, dependency audit, and deterministic Bugbot checks.
+- **CI / Build and package:** build, generated bundle and extension validation,
+  and npm package validation and smoke test in the same checkout.
+- **CI / Tests and coverage:** repository and extension tests, coverage budgets,
+  and advisory Codecov export.
+
+The required **CI Check** job reports all three results and succeeds only
+when all three jobs succeed. Use the named job logs to locate a failure.
+The jobs can overlap when matching runners are available; inspect the Actions
+timeline for queue time as well as execution time. Run the three-platform
+setup matrix by manual dispatch from protected `master`.
 
 ```bash
 graphify update .

@@ -31,6 +31,14 @@ const LINUX_CODEX_LABELS = ['self-hosted', 'codex', 'Linux'];
 const WINDOWS_FIXTURE_LABELS = ['self-hosted', 'Windows'];
 const SOURCE_CI_RUNNER = { group: 'vypdev', labels: LINUX_CODEX_LABELS };
 const SOURCE_CI_CONDITION = "${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}";
+const SOURCE_CI_WORKERS = {
+  'static-checks': 'STATIC_RESULT',
+  'build-package': 'BUILD_RESULT',
+  coverage: 'COVERAGE_RESULT',
+};
+const SOURCE_CI_GATE_CONDITION = SOURCE_CI_CONDITION.replace(
+  '${{ ', '${{ always() && (',
+).replace(' }}', ') }}');
 const PLATFORM_PNPM_DEST = ISOLATED_PNPM_DEST + '-${{ strategy.job-index }}';
 const ISOLATED_REPOWISE_VENV_NAME = 'repowise-venv-${{ github.run_id }}-${{ github.run_attempt }}-code-health';
 const ISOLATED_REPOWISE_REPORT_NAME = 'repowise-report-${{ github.run_id }}-${{ github.run_attempt }}-code-health';
@@ -379,16 +387,37 @@ function assertPlatformHistoryCheckout(relativeFile, job) {
   }
 }
 
+function assertSourceCiJobs(file, workflow) {
+  const workers = Object.keys(SOURCE_CI_WORKERS);
+  const gate = workflow.jobs?.['ci-check'];
+  if (Object.keys(workflow.on ?? {}).sort().join(',') !== 'pull_request,push,workflow_dispatch'
+    || Object.keys(workflow.jobs ?? {}).sort().join(',') !== [...workers, 'ci-check'].sort().join(',')
+    || workers.some(id => workflow.jobs[id].if !== SOURCE_CI_CONDITION)
+    || gate?.if !== SOURCE_CI_GATE_CONDITION) {
+    throw new Error(`${file} must admit only same-repository pull requests, pushes and manual CI.`);
+  }
+  if (workers.some(id => workflow.jobs[id].needs !== undefined
+    || workflow.jobs[id]['continue-on-error'] !== undefined)
+    || workflow.name !== 'CI Check' || gate.name !== 'CI Check'
+    || !Array.isArray(gate.needs) || [...gate.needs].sort().join(',') !== [...workers].sort().join(',')) {
+    throw new Error(`${file} must preserve three independent CI jobs and the required CI Check gate.`);
+  }
+  const [step] = gate.steps ?? [];
+  if (gate['continue-on-error'] !== undefined || gate.steps?.length !== 1
+    || !gate.permissions || Object.keys(gate.permissions).length !== 0
+    || step.if !== undefined || step['continue-on-error'] !== undefined
+    || typeof step.run !== 'string'
+    || workers.some(id => step.env?.[SOURCE_CI_WORKERS[id]] !== '${{ needs.' + id + '.result }}')) {
+    throw new Error(`${file} must check the result of every CI job without credentials or checkout.`);
+  }
+}
+
 function assertRunner(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   if (path.basename(file) === commentContract.RUNTIME) return assertCommentWorkflowRuntime(file, workflow);
   if (commentContract.CALLBACKS.includes(path.basename(file))) return assertCommentWorkflowCaller(file, workflow);
   const isSourceCi = relativeFile === '.github/workflows/ci_check.yml';
-  if (isSourceCi && (Object.keys(workflow.on ?? {}).sort().join(',') !== 'pull_request,push,workflow_dispatch'
-    || Object.keys(workflow.jobs ?? {}).join(',') !== 'ci-check'
-    || workflow.jobs['ci-check'].if !== SOURCE_CI_CONDITION)) {
-    throw new Error(`${relativeFile} must admit only same-repository pull requests, pushes and manual CI.`);
-  }
+  if (isSourceCi) assertSourceCiJobs(relativeFile, workflow);
   if (relativeFile === '.github/workflows/setup_platform_smoke.yml') {
     const jobIds = Object.keys(workflow.jobs ?? {}).sort();
     if (JSON.stringify(jobIds) !== JSON.stringify(['setup-platform-smoke', 'setup-self-hosted-codex-smoke', 'upload-windows-coverage', 'windows-startup-probe'])) {
@@ -548,18 +577,20 @@ function assertRunner(file, workflow) {
     }
     assertIsolatedPnpm(relativeFile, jobId, job);
     assertRepoWiseTemporaryCleanup(relativeFile, job);
-    if (relativeFile === '.github/workflows/ci_check.yml'
-      || relativeFile === '.github/workflows/repowise.yml') {
+    if (isSourceCi && jobId === 'ci-check') continue;
+    if (isSourceCi || relativeFile === '.github/workflows/repowise.yml') {
       const ubuntuCheck = (job.steps ?? []).find(step => step?.name === 'Verify Ubuntu runner');
       if (ubuntuCheck?.run !== '. /etc/os-release && test "$ID" = ubuntu') {
         throw new Error(`${relativeFile} must verify Ubuntu on the selected runner.`);
       }
     }
-    if (relativeFile === '.github/workflows/ci_check.yml') {
+    if (isSourceCi) {
       const checkout = (job.steps ?? []).find(step => step?.uses === 'actions/checkout@v5');
       if (checkout?.with?.['fetch-depth'] !== 0 || checkout.with?.['persist-credentials'] !== false) {
-        throw new Error(`${relativeFile} must fetch full history without stored checkout credentials for the event-base diff check.`);
+        throw new Error(`${relativeFile} must fetch full history without stored checkout credentials for its CI jobs.`);
       }
+    }
+    if (isSourceCi && jobId === 'static-checks') {
       const diffStep = (job.steps ?? []).find(step => step?.name === 'Validate Git diff');
       if (!diffStep?.run?.includes(`git -c ${CRLF_WHITESPACE} diff --check "$base" HEAD -- . ':(exclude)build/**'`)) {
         throw new Error(`${relativeFile} must retain default whitespace checks alongside CRLF support.`);
