@@ -20,6 +20,15 @@ Capacity exhaustion and incomplete evidence produce a nonretryable completeness-
 Canonical PR identity -> complete native source enumeration -> bounded local recovery if needed -> whole-plan preflight -> sequential frames -> complete global validation -> freshness fence -> one atomic reconciliation/publication
 ```
 
+Copilot's own self-hosted PR workflow allows up to 300 minutes at the job
+level. Its first complete plan for PR #951 assigned 105 partitions across two
+frames. The [original 120-minute job](https://github.com/vypdev/copilot/actions/runs/43456827919/job/131993049608)
+was still in the first frame after 30 minutes. The workflow allowance leaves
+room to finish both frames with the fixed two-call concurrency, including
+dependent candidate checks. Per-call handling, source and receipt validation,
+and explicit cancellation on a superseding push keep their existing behavior.
+The allowance applies to this repository's workflow.
+
 ## 2. Problem, current behavior, and evidence
 
 ### 2.1 Problem

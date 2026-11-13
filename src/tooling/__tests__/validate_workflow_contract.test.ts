@@ -1705,6 +1705,14 @@ describe('workflow contract validator', () => {
     expect(() => assertMajorActionReferences(file, workflow)).not.toThrow();
   });
 
+  it('gives the repository PR review time for both frames on its self-hosted runner', () => {
+    const { workflow } = loadMutationWorkflow('.github/workflows', 'copilot_pull_request.yml');
+    const job = workflow.jobs['copilot-pull-requests'];
+    expect(job['runs-on']).toEqual(['self-hosted', 'codex', 'Linux']);
+    expect(job['timeout-minutes']).toBe(300);
+    expect(job.concurrency['cancel-in-progress']).toBe(true);
+  });
+
   it('requires every specialized role reachable from a workflow', () => {
     const file = path.join(process.cwd(), '.github', 'workflows', 'copilot_pull_request.yml');
     const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;

@@ -240,6 +240,10 @@ inventory and recovery: at most 1,024 files, 16 MiB represented before/after byt
 2,048 Git-object reads and 200,000 directory entries. Cached bytes are charged for
 each represented side. Each blob remains bounded by 2 MiB; each source part and
 the complete manifest by 256,000 bytes; at most 64 parts may be analyzed.
+On this route, up to four independent scope assignments or source parts run
+concurrently within each phase. Commit validates all receipts in source order
+before the final assessment and preserves previous progress if the 30-minute
+or 120-call attempt budget expires.
 
 Compact manifests and final facts preserve exact unit/path and request identities;
 full content and metadata remain in their digest-bound source parts. All source

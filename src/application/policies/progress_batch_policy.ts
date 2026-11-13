@@ -17,7 +17,7 @@ import { ApplicationError } from '../errors/application_error';
 import { progressCitationRepetitionError } from './progress_citation_recovery_policy';
 
 export const PROGRESS_BATCH_PROFILE = Object.freeze({ sourceLines: 32, clauses: 256, bytes: 262_144,
-    assessmentClauses: 32, calls: 120, milliseconds: 1_800_000 });
+    assessmentClauses: 32, calls: 120, milliseconds: 1_800_000, immutableTreeConcurrency: 4 });
 const digest = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const record = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 const exact = (value: Record<string, unknown>, keys: readonly string[]) => Object.keys(value).sort().join(',') === [...keys].sort().join(',');

@@ -14,7 +14,8 @@ jobs:
     if: ${{ (vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN) && github.event.pull_request.head.repo.full_name == github.repository }}
     name: Copilot - Pull Request
     runs-on: [self-hosted, codex, Linux]
-    timeout-minutes: 120
+    # Leave time for complete source-bound reviews at the fixed reviewer concurrency.
+    timeout-minutes: 300
     concurrency:
       group: copilot-pr-${{ github.repository }}-${{ github.event.pull_request.number }}-analysis
       cancel-in-progress: true

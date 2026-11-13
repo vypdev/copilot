@@ -5,6 +5,12 @@ import type { AgentCliPort } from '../../../../infrastructure/agents/ports/agent
 import type { ProgressDiffEvidence } from '../../../ports/progress_diff_query_ports';
 import { partitionProgressDiff } from '../../../policies/progress_diff_partition_policy';
 import { largeCompleteProgressFixture } from '../../../../data/repository/__tests__/support/large_complete_progress_fixture';
+import { addedFiles, inventoryFixture } from '../../../../data/repository/__tests__/support/immutable_progress_inventory_fixture';
+import { summarizeProgressDiff } from '../summarize_progress_diff_workflow';
+import { boundProgressBatchAgent } from '../../../policies/progress_batch_query_policy';
+import { PROGRESS_BATCH_PROFILE } from '../../../policies/progress_batch_policy';
+import { bindProgressEvidence } from '../../../policies/progress_evidence_protocol_policy';
+import type { FindingsQueryRequest } from '../../../ports/agent_findings_ports';
 
 const BASE = 'a'.repeat(40), HEAD = 'b'.repeat(40);
 const context = { repositoryIdentity: 'owner/repo', issueNumber: 830, pushedBranch: 'bugfix/830-work', developmentBranch: 'develop', branchTypes: ['bugfix'],
@@ -88,8 +94,48 @@ it('progress-partition-composition-C04: excessive escaped bytes exhaust one part
     expect(result).toMatchObject({ success: false, errors: [{ recovery: {
         id: 'progress-partition-bytes-invalid', variables: expect.objectContaining({ field: '$.files[0].remaining' }),
     } }] });
-    expect(f.execute).toHaveBeenCalledTimes(3);
-    expect([...f.partCalls.values()]).toEqual([2]);
+    expect(f.partCalls.size).toBe(PROGRESS_BATCH_PROFILE.immutableTreeConcurrency);
+    expect([...f.partCalls.values()]).toEqual(Array(PROGRESS_BATCH_PROFILE.immutableTreeConcurrency).fill(2));
+    expect(f.execute).toHaveBeenCalledTimes(1 + 2 * PROGRESS_BATCH_PROFILE.immutableTreeConcurrency);
     expect(f.finalCalls()).toBe(0);
     noPublication(f);
 }, 60000);
+
+it('collects immutable parts concurrently within the same deadline and retains the original receipt order', async () => {
+    const files = { ...addedFiles(), ...Object.fromEntries(Array.from({ length: 9 }, (_, index) => [
+        `large/${index}.ts`, `export const data${index} = '${'x'.repeat(145_000)}';`,
+    ])) };
+    const issueDescription = 'Implement source.';
+    const scope = 'R1';
+    const diff = bindProgressEvidence(await inventoryFixture({}, files).read(), issueDescription, scope, context.targetLocale);
+    if (diff.kind !== 'partitioned') throw new Error('Expected complete immutable comparison');
+    expect(diff.protocol?.version).toBe('immutable-tree-v1');
+    expect(diff.partitions.length).toBeGreaterThan(PROGRESS_BATCH_PROFILE.immutableTreeConcurrency);
+    const expected = diff.partitions.map(part => part.id);
+    let now = 0, active = 0, peak = 0;
+    const finished: string[] = [];
+    const query = jest.fn(async (request: FindingsQueryRequest) => {
+        const id = (request.options!.schema!.properties as { partitionId: { enum: string[] } }).partitionId.enum[0];
+        const part = diff.partitions.find(item => item.id === id)!;
+        peak = Math.max(peak, ++active);
+        const completes = now + 300_000;
+        // The first request takes a second tick. Concurrent completions share simulated wall time.
+        await new Promise(resolve => setImmediate(resolve));
+        if (id === expected[0]) await new Promise(resolve => setImmediate(resolve));
+        now = Math.max(now, completes + (id === expected[0] ? 1 : 0));
+        active--;
+        finished.push(id);
+        return { outputLocale: 'en-US', partitionId: id, files: part.units!.map(unit => ({
+            unitId: unit.id, path: unit.path, implemented: 'Present.', remaining: 'Unknown.',
+        })) };
+    });
+    const { agent, calls } = boundProgressBatchAgent({ query }, () => now);
+    const result = JSON.parse(await summarizeProgressDiff(diff, context, issueDescription, agent, 384_000, scope,
+        PROGRESS_BATCH_PROFILE.immutableTreeConcurrency));
+    expect(peak).toBe(PROGRESS_BATCH_PROFILE.immutableTreeConcurrency);
+    expect(finished[0]).not.toBe(expected[0]);
+    expect(result.sources.map((part: { requestId: string }) => part.requestId)).toEqual(expected);
+    expect(calls()).toBe(expected.length);
+    expect(expected.length * 300_000).toBeGreaterThan(PROGRESS_BATCH_PROFILE.milliseconds);
+    expect(now).toBeLessThan(PROGRESS_BATCH_PROFILE.milliseconds);
+});
