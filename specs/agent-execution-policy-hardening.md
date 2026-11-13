@@ -622,7 +622,11 @@ GitHub UI. Existing locale/fallback and narrow Markdown rules apply.
 2. GitHub/Git/SSH/cloud/proxy credentials and ambient secret-pattern variables
    are stripped.
 3. Managed artifacts are mode 0600 in a unique temp directory, hashed before
-   spawn, and deleted after the process exits.
+   spawn, and deleted after the process exits. On Unix, both the planner and
+   executor use the runner's scratch parent when present. A runner fixture covers
+   successful artifact staging when the system temp path is unavailable and a
+   sanitized failure when runner scratch itself is missing. Storage, access and
+   path failures remain preflight failures and launch no agent process.
 4. Workspace and executable use canonical real paths with symlink/ownership/
    permission checks; no writable executable or wrapper is accepted. Git must
    report the requested canonical workspace as a repository root via its empty

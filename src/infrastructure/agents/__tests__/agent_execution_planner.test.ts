@@ -250,6 +250,35 @@ describe('AgentExecutionPlanner', () => {
         expect(existsSync(plan.runtimeDirectory)).toBe(false);
     });
 
+    unixIt('creates the agent runtime and schema on runner scratch instead of an unavailable system temp', () => {
+        const scratch = mkdtempSync(join(tmpdir(), 'copilot-runner-scratch-'));
+        const previousRunnerTemp = process.env.RUNNER_TEMP;
+        const previousTmpdir = process.env.TMPDIR;
+        try {
+            process.env.RUNNER_TEMP = scratch;
+            process.env.TMPDIR = join(scratch, 'missing-system-temp');
+            const plan = new AgentExecutionPlanner(system('codex')).prepare({
+                configuration: { provider: 'codex', model: 'model' }, capability: 'findings',
+                prompt: 'fixture', timeoutMs: 1_000,
+                outputSchema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+            });
+            expect(plan.runtimeDirectory.startsWith(scratch + '/')).toBe(true);
+            expect(statSync(plan.runtimeDirectory).mode & 0o077).toBe(0);
+            expect(plan.artifacts.some(artifact => artifact.purpose === 'output-schema')).toBe(true);
+            process.env.RUNNER_TEMP = join(scratch, 'missing-runner-scratch');
+            expect(() => new AgentExecutionPlanner(system('codex')).prepare({
+                configuration: { provider: 'codex', model: 'model' }, capability: 'findings',
+                prompt: 'fixture', timeoutMs: 1_000,
+            })).toThrow(expect.objectContaining({ preflightStage: 'artifacts', preflightDiagnostic: 'artifact-path-unavailable' }));
+        } finally {
+            if (previousRunnerTemp === undefined) delete process.env.RUNNER_TEMP;
+            else process.env.RUNNER_TEMP = previousRunnerTemp;
+            if (previousTmpdir === undefined) delete process.env.TMPDIR;
+            else process.env.TMPDIR = previousTmpdir;
+            rmSync(scratch, { recursive: true, force: true });
+        }
+    });
+
     it.each([true, false])('overrides ambient PowerShell cache authority with private runtime data (host app data=%s)', present => {
         const plan = new AgentExecutionPlanner(system('codex')).prepare({
             configuration: { provider: 'codex', model: 'model' }, capability: 'language', prompt: 'fixture', timeoutMs: 1_000,

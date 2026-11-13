@@ -96484,13 +96484,13 @@ const node_crypto_1 = __nccwpck_require__(6005);
 const node_child_process_1 = __nccwpck_require__(17718);
 const node_fs_1 = __nccwpck_require__(87561);
 const node_path_1 = __nccwpck_require__(49411);
-const node_os_1 = __nccwpck_require__(70612);
 const agent_cli_contracts_1 = __nccwpck_require__(48254);
 const agent_cli_exit_diagnostic_1 = __nccwpck_require__(86654);
 const windows_runtime_acl_1 = __nccwpck_require__(55362);
 const agent_executable_file_1 = __nccwpck_require__(87997);
 const agent_trusted_system_tools_1 = __nccwpck_require__(76049);
 const agent_source_snapshot_integrity_1 = __nccwpck_require__(5206);
+const agent_private_install_root_1 = __nccwpck_require__(44640);
 const agent_source_snapshot_1 = __nccwpck_require__(59205);
 const agent_execution_plan_1 = __nccwpck_require__(12253);
 const MAX_STDERR_BYTES = 8 * 1024;
@@ -96730,7 +96730,7 @@ function assertNeverOutputProtocol(protocol) {
 }
 function verifyOwnedRuntimeDirectory(requestedPath) {
     const runtimeDirectory = (0, node_fs_1.realpathSync)(requestedPath);
-    const expectedParent = (0, node_fs_1.realpathSync)((0, node_os_1.tmpdir)());
+    const expectedParent = (0, node_fs_1.realpathSync)((0, agent_private_install_root_1.agentExecutionTempParent)());
     const name = (0, node_path_1.basename)(runtimeDirectory);
     const stats = (0, node_fs_1.statSync)(runtimeDirectory);
     if ((0, node_fs_1.lstatSync)(requestedPath).isSymbolicLink()
@@ -114802,7 +114802,6 @@ exports.AgentExecutionPlanner = void 0;
 const node_crypto_1 = __nccwpck_require__(6005);
 const node_child_process_1 = __nccwpck_require__(17718);
 const node_fs_1 = __nccwpck_require__(87561);
-const node_os_1 = __nccwpck_require__(70612);
 const node_path_1 = __nccwpck_require__(49411);
 const agent_execution_policy_dispatcher_1 = __nccwpck_require__(25690);
 const agent_execution_plan_1 = __nccwpck_require__(12253);
@@ -114815,6 +114814,7 @@ const windows_runtime_acl_1 = __nccwpck_require__(55362);
 const agent_source_snapshot_policy_1 = __nccwpck_require__(1667);
 const agent_source_snapshot_1 = __nccwpck_require__(59205);
 const agent_source_snapshot_workspace_1 = __nccwpck_require__(24092);
+const agent_private_install_root_1 = __nccwpck_require__(44640);
 const DEFAULT_SYSTEM = {
     resolveExecutable(executable, environment) {
         try {
@@ -114888,8 +114888,7 @@ class AgentExecutionPlanner {
             stage = 'version';
             const version = (0, agent_runtime_manifest_1.readAgentRuntimeVersion)(request.configuration.provider, this.system.readVersion(executable, request.configuration.provider, safeEnvironment));
             stage = 'artifacts';
-            runtimeDirectory = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)((0, node_os_1.tmpdir)(), 'copilot-agent-runtime-'));
-            (0, windows_runtime_acl_1.makeWindowsRuntimePathPrivate)(runtimeDirectory, true);
+            runtimeDirectory = (0, agent_private_install_root_1.createPrivateAgentExecutionRoot)();
             if (request.configuration.provider === 'codex') {
                 for (const kind of ['roaming', 'local']) {
                     const directory = (0, node_path_1.join)(runtimeDirectory, 'shell', kind);
@@ -114973,6 +114972,14 @@ class AgentExecutionPlanner {
             }
             const rejected = new agent_cli_contracts_1.AgentCliError('Agent execution plan rejected because its local runtime contract could not be validated.', 'configuration');
             rejected.preflightStage = stage;
+            if (stage === 'artifacts' && error && typeof error === 'object' && 'code' in error) {
+                if (error.code === 'ENOSPC' || error.code === 'EDQUOT')
+                    rejected.preflightDiagnostic = 'artifact-storage-full';
+                if (error.code === 'EACCES' || error.code === 'EPERM' || error.code === 'EROFS')
+                    rejected.preflightDiagnostic = 'artifact-access-denied';
+                if (error.code === 'ENOENT' || error.code === 'ENOTDIR')
+                    rejected.preflightDiagnostic = 'artifact-path-unavailable';
+            }
             throw rejected;
         }
     }
@@ -115043,6 +115050,8 @@ exports.PrivateInstalledAgentValidationError = void 0;
 exports.selectPrivateInstallRoot = selectPrivateInstallRoot;
 exports.prepareWindowsInstallRoot = prepareWindowsInstallRoot;
 exports.createPrivateAgentInstallRoot = createPrivateAgentInstallRoot;
+exports.createPrivateAgentExecutionRoot = createPrivateAgentExecutionRoot;
+exports.agentExecutionTempParent = agentExecutionTempParent;
 exports.createPrivateVerificationRuntimeRoot = createPrivateVerificationRuntimeRoot;
 exports.securePrivateInstalledAgent = securePrivateInstalledAgent;
 const node_fs_1 = __nccwpck_require__(87561);
@@ -115124,6 +115133,20 @@ function prepareWindowsInstallRootOnce(parent, verify, prefix) {
 }
 function createPrivateAgentInstallRoot() {
     return createPrivateRuntimeRoot(INSTALL_PREFIX);
+}
+function createPrivateAgentExecutionRoot() {
+    const root = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)(agentExecutionTempParent(), 'copilot-agent-runtime-'));
+    try {
+        (0, windows_runtime_acl_1.makeWindowsRuntimePathPrivate)(root, true);
+        return root;
+    }
+    catch (error) {
+        (0, node_fs_1.rmSync)(root, { recursive: true, force: true });
+        throw error;
+    }
+}
+function agentExecutionTempParent() {
+    return process.platform === 'win32' ? (0, node_os_1.tmpdir)() : process.env.RUNNER_TEMP || (0, node_os_1.tmpdir)();
 }
 /** Verification uses the same owner and ancestor guarantees before replacing the child's profile. */
 function createPrivateVerificationRuntimeRoot() {
