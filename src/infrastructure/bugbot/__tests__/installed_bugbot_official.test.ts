@@ -117,6 +117,40 @@ it('only fetches reviewed public release origins and rejects altered source byte
         expect.objectContaining({ redirect: 'error', credentials: 'omit' }));
 });
 
+it('reports incomplete release sources as unavailable and retries before reporting no match', async () => {
+    const docs = 'Locator assertions documentation';
+    const implementation = 'function toBeEnabled() {}';
+    let createReader: typeof createInstalledOfficialReader;
+    jest.isolateModules(() => {
+        jest.doMock('../shadow/git.cjs', () => {
+            const gitModule = jest.requireActual('../shadow/git.cjs');
+            return { ...gitModule, hash: (bytes: Buffer) => {
+                if (bytes.toString() === docs) return 'affa4f27a70b9f3e9a3575224acf077acbe474cac45936d2a677b8a14e72589e';
+                if (bytes.toString() === implementation) return '509f8280aae39e6a0ac1f19fe0ed2a9f89677604d841d2d6ff70c2d3c129065e';
+                return gitModule.hash(bytes);
+            } };
+        });
+        try { createReader = require('../shadow/installed_official.cjs').createInstalledOfficialReader; }
+        finally { jest.dontMock('../shadow/git.cjs'); }
+    });
+    const fetchSource = jest.fn()
+        .mockResolvedValueOnce(new Response(docs))
+        .mockRejectedValueOnce(new Error('fixture source unavailable'))
+        .mockResolvedValueOnce(new Response(docs))
+        .mockResolvedValueOnce(new Response(implementation));
+    const subject = { repository: 'owner/repo', head: sha, base: sha, tree: git('rev-parse', 'HEAD^{tree}') };
+    const broker = makeBroker({ repo, installedOfficial: createReader!(fetchSource) }, subject,
+        { id: 'candidate', detectorLocation: anchor, allowBase: false });
+
+    await expect(broker.inspect(basis)).resolves.toMatchObject({ status: 'official-source-unavailable', version: '1.64.1' });
+    const recovered = await broker.inspect(basis);
+    expect(recovered).toMatchObject({ status: 'provided', version: '1.64.1' });
+    expect(broker.cite({ receipt: recovered.sources[0].receipt, first: 1, last: 1 }))
+        .toMatchObject({ kind: 'official', sha, version: '1.64.1' });
+    await expect(broker.inspect({ ...basis, query: 'unrelated symbol' })).resolves.toMatchObject({ status: 'official-no-match' });
+    expect(fetchSource).toHaveBeenCalledTimes(4);
+});
+
 it('keeps async source outcomes distinct and binds receipts from both adapters to this operation', async () => {
     const upstream = { lines: ['function toBeEnabled() {}'], url: 'https://github.com/microsoft/playwright',
         sourceKind: 'release-source', sha256: 'a'.repeat(64) };

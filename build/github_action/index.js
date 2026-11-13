@@ -77564,7 +77564,7 @@ async function observeBugbotShadowVerification(operation, context, prepared, por
             candidate: prior?.anchor && title ? pinCandidate(operation, context, {
                 id: candidateId, file: prior.anchor.path, line: prior.anchor.line, title: `The historical finding “${title}” ${transition}.`,
                 description: 'Compare with the prior behavior when the pinned base is relevant.',
-            }) : undefined };
+            }, true) : undefined };
     });
     const concurrency = Math.min(2, inputs.length + resolutions.length);
     const tasks = [...inputs, ...resolutions].map(({ id, candidate, ordinaryPublication }) => async () => {
@@ -77602,7 +77602,7 @@ async function verifyCandidate(port, candidate, configuration, review) {
         return { status: 'technical-failure', reason: 'verifier-unavailable' };
     }
 }
-function pinCandidate(operation, context, finding) {
+function pinCandidate(operation, context, finding, historicalResolution = false) {
     const pr = context.canonicalPullRequest;
     const headSha = (0, git_object_id_1.canonicalGitObjectId)(pr ? context.prContext?.prHeadSha
         : operation.trigger.kind === 'push' ? operation.trigger.after : undefined);
@@ -77618,7 +77618,7 @@ function pinCandidate(operation, context, finding) {
         end: endLine && Number.isSafeInteger(endLine) && endLine >= line ? endLine : line,
         ...(side ? { side } : {}) });
     // The published title is the claim. Description, confidence, detector evidence and proposed fixes stay out.
-    const comparisonRelevant = side === 'LEFT' || /\b(regressions?|regresi[oó]n|previously|used to|no longer|introduc\w*)\b/iu
+    const comparisonRelevant = historicalResolution || side === 'LEFT' || /\b(regressions?|regresi[oó]n|previously|used to|no longer|introduc\w*)\b/iu
         .test(hypothesis + '\n' + finding.description);
     const baseSha = (0, git_object_id_1.canonicalGitObjectId)(pr?.baseSha ?? operation.trigger.before);
     return Object.freeze({
@@ -128790,7 +128790,10 @@ function createInstalledOfficialReader(fetchSource = globalThis.fetch) {
                 const url = 'https://github.com/' + [origin, 'blob', commit, path].join('/');
                 result.push({ sourceKind, url, commit, sha256, lines: contents.toString('utf8').replace(/\n$/u, '').split(/\r?\n/u) });
             }
-            if (expected && result.length === expected) cache.set(key, result);
+            // A search can only report absence once all registered sources
+            // have been authenticated. Retry incomplete downloads next time.
+            if (!expected || result.length !== expected) return [];
+            cache.set(key, result);
             return result;
         },
     };

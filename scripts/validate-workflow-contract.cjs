@@ -27,7 +27,13 @@ const DEPLOYMENT_CONTINUATION_CONCURRENCY_GROUP = 'copilot-deployment-${{ github
 const DISTRIBUTED_COPILOT_ACTION = 'vypdev/copilot@v3';
 const CHECKOUT_ACTION = 'actions/checkout@v5';
 const ISOLATED_PNPM_DEST = '${{ runner.temp }}/setup-pnpm-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}';
-const QUALITY_RUNNER_BY_TRUST = '${{ fromJSON((github.event_name == \'merge_group\' || (github.event_name == \'pull_request\' && github.event.pull_request.head.repo.full_name != github.repository)) && \'["ubuntu-latest"]\' || \'["self-hosted","codex","Linux"]\') }}';
+const LINUX_CODEX_LABELS = ['self-hosted', 'codex', 'Linux'];
+const WINDOWS_FIXTURE_LABELS = ['self-hosted', 'Windows'];
+const QUALITY_RUNNER_BY_TRUST = {
+  group: 'vypdev',
+  labels: `\${{ fromJSON((github.event_name == 'merge_group' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository)) && '["self-hosted","Linux","ephemeral-ci"]' || '["self-hosted","codex","Linux"]') }}`,
+};
+const PLATFORM_PNPM_DEST = ISOLATED_PNPM_DEST + '-${{ strategy.job-index }}';
 const ISOLATED_REPOWISE_VENV_NAME = 'repowise-venv-${{ github.run_id }}-${{ github.run_attempt }}-code-health';
 const ISOLATED_REPOWISE_REPORT_NAME = 'repowise-report-${{ github.run_id }}-${{ github.run_attempt }}-code-health';
 const CRLF_WHITESPACE = 'core.whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol';
@@ -234,11 +240,8 @@ function runnerLabels(value) {
 }
 
 function assertIsolatedPnpm(relativeFile, jobId, job) {
-  const labels = runnerLabels(job['runs-on']);
-  const selfHostedCodex = labels.includes('self-hosted') && labels.includes('codex');
-  const dynamicQualityRunner = relativeFile === '.github/workflows/ci_check.yml'
-    && labels.includes(QUALITY_RUNNER_BY_TRUST);
-  if (!selfHostedCodex && !dynamicQualityRunner) return;
+  const labels = relativeFile === '.github/workflows/ci_check.yml' ? LINUX_CODEX_LABELS : runnerLabels(job['runs-on']);
+  if (!labels.includes('self-hosted') || !labels.includes('codex')) return;
   for (const step of job.steps ?? []) {
     if (typeof step?.uses === 'string' && step.uses.startsWith('pnpm/action-setup@')
       && step.with?.dest !== ISOLATED_PNPM_DEST) {
@@ -300,18 +303,18 @@ function assertManualRepoWiseWorkflow(file, workflow) {
   }
 }
 
-function assertPlatformCoverageAndValidators(relativeFile, job, hosted = false) {
+function assertPlatformCoverageAndValidators(relativeFile, job, includesWindows = false) {
   const steps = job.steps ?? [];
   const coverageStep = steps.find(step => step?.name === 'Full platform coverage and acceptance budgets');
-  const coverageCondition = hosted ? "runner.os != 'Windows'" : undefined;
+  const coverageCondition = includesWindows ? "runner.os != 'Windows'" : undefined;
   if (coverageStep?.run !== 'pnpm run test:coverage' || coverageStep.if !== coverageCondition) {
     throw new Error(`${relativeFile} must retain full platform coverage and acceptance budgets.`);
   }
   let lastCoverage = coverageStep;
-  if (hosted) {
-    const repository = steps.find(step => step?.name === 'Full hosted Windows repository coverage and acceptance budgets');
-    const extension = steps.find(step => step?.name === 'Full hosted Windows extension coverage');
-    const failureLog = steps.find(step => step?.name === 'Preserve hosted Windows extension failure log');
+  if (includesWindows) {
+    const repository = steps.find(step => step?.name === 'Full Windows repository coverage and acceptance budgets');
+    const extension = steps.find(step => step?.name === 'Full Windows extension coverage');
+    const failureLog = steps.find(step => step?.name === 'Preserve Windows extension failure log');
     const repositoryCommands = [
       'pnpm exec jest --coverage --json --outputFile=coverage/setup-acceptance-jest.json --verbose=false',
       'node scripts/validate-coverage-budgets.cjs',
@@ -324,19 +327,19 @@ function assertPlatformCoverageAndValidators(relativeFile, job, hosted = false) 
     if (repository?.if !== "runner.os == 'Windows'" || repository.run?.trim() !== repositoryCommands
       || extension?.if !== "runner.os == 'Windows'" || extension.run?.trim() !== extensionCommands
       || steps.indexOf(extension) <= steps.indexOf(repository)) {
-      throw new Error(`${relativeFile} must retain ordered full hosted Windows repository and extension coverage.`);
+      throw new Error(`${relativeFile} must retain ordered full Windows repository and extension coverage.`);
     }
-    if (extension.id !== 'hosted_windows_extension_coverage' || extension['timeout-minutes'] !== 80
+    if (extension.id !== 'windows_extension_coverage' || extension['timeout-minutes'] !== 80
       || extension.env?.npm_config_cache !== '${{ runner.temp }}/copilot-windows-extension-npm'
-      || failureLog?.if !== "${{ always() && runner.os == 'Windows' && (steps.hosted_windows_extension_coverage.outcome == 'failure' || steps.hosted_windows_extension_coverage.outcome == 'cancelled') }}"
-      || failureLog?.uses !== 'actions/upload-artifact@v4' || failureLog.with?.name !== 'hosted-windows-extension-failure-log'
+      || failureLog?.if !== "${{ always() && runner.os == 'Windows' && (steps.windows_extension_coverage.outcome == 'failure' || steps.windows_extension_coverage.outcome == 'cancelled') }}"
+      || failureLog?.uses !== 'actions/upload-artifact@v4' || failureLog.with?.name !== 'windows-smoke-extension-failure-log'
       || failureLog.with?.path !== '${{ runner.temp }}/copilot-windows-extension.log'
       || failureLog.with?.['if-no-files-found'] !== 'warn' || failureLog.with?.['retention-days'] !== 1
       || steps.indexOf(failureLog) <= steps.indexOf(extension)) {
-      throw new Error(`${relativeFile} must bound hosted Windows extension coverage and retain its failure log.`);
+      throw new Error(`${relativeFile} must bound Windows extension coverage and retain its failure log.`);
     }
     if ([coverageStep, repository, extension].some(step => step.env?.COPILOT_JEST_WINDOWS_SERVICE_COVERAGE !== undefined)) {
-      throw new Error(`${relativeFile} must not recycle hosted Windows Jest workers at the service-runner limit.`);
+      throw new Error(`${relativeFile} must not recycle Windows Jest workers at the service-runner limit.`);
     }
     lastCoverage = extension;
   }
@@ -384,7 +387,10 @@ function assertRunner(file, workflow) {
   if (relativeFile === '.github/workflows/setup_platform_smoke.yml') {
     const jobIds = Object.keys(workflow.jobs ?? {}).sort();
     if (JSON.stringify(jobIds) !== JSON.stringify(['setup-platform-smoke', 'setup-self-hosted-codex-smoke', 'upload-windows-coverage', 'windows-startup-probe'])) {
-      throw new Error(`${relativeFile} must retain hosted and manually dispatched self-hosted platform fixture jobs and Windows coverage upload.`);
+      throw new Error(`${relativeFile} must retain the manually dispatched platform fixture jobs and Windows coverage upload.`);
+    }
+    if (Object.keys(workflow.on ?? {}).join(',') !== 'workflow_dispatch') {
+      throw new Error(`${relativeFile} must use manual dispatch from protected master for platform fixtures.`);
     }
     const uploadInput = workflow.on?.workflow_dispatch?.inputs?.upload_windows_coverage;
     if (uploadInput?.type !== 'boolean' || uploadInput.default !== false) {
@@ -406,13 +412,13 @@ function assertRunner(file, workflow) {
     if (relativeFile === '.github/workflows/setup_platform_smoke.yml') {
       if (jobId === 'windows-startup-probe') {
         const steps = job.steps ?? [];
-        if (job['runs-on'] !== 'windows-latest' || job['timeout-minutes'] !== 5
-          || job.if !== "${{ github.event_name == 'workflow_dispatch' && inputs.windows_startup_probe == true }}"
+        if (JSON.stringify(job['runs-on']) !== JSON.stringify(WINDOWS_FIXTURE_LABELS) || job['timeout-minutes'] !== 5
+          || job.if !== "${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' && inputs.windows_startup_probe == true }}"
           || job.needs || steps.length !== 3
           || steps[0]?.uses !== 'actions/checkout@v5' || steps[0]?.with?.['persist-credentials'] !== false
           || steps[1]?.uses !== 'actions/setup-node@v7' || steps[1]?.with?.['node-version'] !== '24.x'
           || steps[2]?.run !== 'node scripts/diagnose-windows-powershell-startup.cjs') {
-          throw new Error(`${relativeFile} must retain its bounded manual hosted Windows startup diagnostic without credentials or export.`);
+          throw new Error(`${relativeFile} must retain its bounded manual Windows startup diagnostic without credentials or export.`);
         }
         continue;
       }
@@ -421,40 +427,50 @@ function assertRunner(file, workflow) {
         const checkout = steps[0];
         const download = steps[1];
         const upload = steps[2];
-        if (job['runs-on'] !== 'ubuntu-latest' || job.needs !== 'setup-platform-smoke'
-          || job.if !== "${{ github.event_name == 'workflow_dispatch' && inputs.upload_windows_coverage == true }}"
+        if (JSON.stringify(job['runs-on']) !== JSON.stringify(LINUX_CODEX_LABELS) || job.needs !== 'setup-platform-smoke'
+          || job.if !== "${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' && inputs.upload_windows_coverage == true }}"
           || steps.length !== 3
           || checkout?.uses !== 'actions/checkout@v5'
           || checkout.with?.['persist-credentials'] !== false || checkout.with?.['fetch-depth'] !== 0
           || download?.uses !== 'actions/download-artifact@v4'
-          || download.with?.name !== 'hosted-windows-lcov' || download.with?.path !== 'coverage-windows'
+          || download.with?.name !== 'windows-smoke-lcov' || download.with?.path !== 'coverage-windows'
           || upload?.uses !== 'codecov/codecov-action@v6'
           || upload.with?.files !== './coverage-windows/lcov.info'
           || upload.with?.disable_search !== true || upload.with?.fail_ci_if_error !== true
           || upload.with?.flags !== 'windows' || upload.with?.token !== '${{ secrets.CODECOV_TOKEN }}') {
-          throw new Error(`${relativeFile} must upload hosted Windows coverage from a dependent Ubuntu job only after explicit manual opt-in.`);
+          throw new Error(`${relativeFile} must upload Windows coverage from a dependent Ubuntu job only after explicit manual opt-in.`);
         }
         continue;
       }
       if (jobId === 'setup-platform-smoke') {
-        const platforms = job.strategy?.matrix?.os;
-        if (job.if !== "${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && (inputs.windows_startup_probe != true || inputs.upload_windows_coverage == true)) }}"
-          || job['runs-on'] !== '${{ matrix.os }}'
-          || JSON.stringify(platforms) !== JSON.stringify(['ubuntu-latest', 'windows-latest', 'macos-latest'])) {
-          throw new Error(`${relativeFile} must use the PR or ordinary manual Ubuntu, Windows and macOS setup fixture matrix, independently of coverage export.`);
+        const platforms = [
+          { os: 'Ubuntu', labels: LINUX_CODEX_LABELS, timeout: 45 },
+          { os: 'Windows', labels: WINDOWS_FIXTURE_LABELS, timeout: 120 },
+          { os: 'macOS', labels: ['self-hosted', 'codex', 'macOS'], timeout: 60 },
+        ];
+        if (job.if !== "${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' && (inputs.windows_startup_probe != true || inputs.upload_windows_coverage == true) }}"
+          || job['runs-on'] !== '${{ matrix.labels }}' || job['timeout-minutes'] !== '${{ matrix.timeout }}'
+          || JSON.stringify(job.strategy?.matrix?.include) !== JSON.stringify(platforms) || job.strategy?.['fail-fast'] !== false) {
+          throw new Error(`${relativeFile} must use the manual Ubuntu, Windows and macOS setup fixture matrix on self-hosted runners, independently of coverage export.`);
         }
-        const hostedCoverage = assertPlatformCoverageAndValidators(relativeFile, job, true);
+        const pnpmSetup = (job.steps ?? []).find(step => step?.uses === 'pnpm/action-setup@v5');
+        const nodeSetup = (job.steps ?? []).find(step => step?.uses === 'actions/setup-node@v7');
+        if (pnpmSetup?.with?.dest !== PLATFORM_PNPM_DEST || nodeSetup?.with?.cache !== undefined
+          || nodeSetup?.with?.['package-manager-cache'] !== false) {
+          throw new Error(`${relativeFile} must isolate platform pnpm installation by job and disable dependency-cache backup.`);
+        }
+        const platformCoverage = assertPlatformCoverageAndValidators(relativeFile, job, true);
         assertWindowsJobNpm(relativeFile, job);
         assertPlatformHistoryCheckout(relativeFile, job);
-        const artifact = (job.steps ?? []).find(step => step?.name === 'Preserve hosted Windows coverage');
+        const artifact = (job.steps ?? []).find(step => step?.name === 'Preserve Windows coverage');
         if (artifact?.uses !== 'actions/upload-artifact@v4'
           || artifact.if !== "runner.os == 'Windows'"
-          || artifact.with?.name !== 'hosted-windows-lcov'
+          || artifact.with?.name !== 'windows-smoke-lcov'
           || artifact.with?.path !== 'coverage/lcov.info'
           || artifact.with?.['if-no-files-found'] !== 'error'
           || artifact.with?.['retention-days'] !== 1
-          || (job.steps ?? []).indexOf(artifact) <= (job.steps ?? []).indexOf(hostedCoverage)) {
-          throw new Error(`${relativeFile} must preserve hosted Windows coverage for dependent upload.`);
+          || (job.steps ?? []).indexOf(artifact) <= (job.steps ?? []).indexOf(platformCoverage)) {
+          throw new Error(`${relativeFile} must preserve Windows coverage for dependent upload.`);
         }
       } else {
         const expectedMatrix = [
@@ -506,7 +522,6 @@ function assertRunner(file, workflow) {
     let expected = ['self-hosted', 'codex'];
     if ((path.basename(file) === 'copilot_issue.yml' && jobId === 'issue-admission')
       || relativeFile.startsWith('setup/workflows/')
-      || relativeFile === '.github/workflows/copilot_credential_health.yml'
       || (/^\.github\/workflows\/(?:release|hotfix)_workflow\.yml$/.test(relativeFile) && jobId === 'publish-npm')) {
       expected = ['ubuntu-latest'];
     } else if (relativeFile === '.github/workflows/copilot_pull_request_approval.yml') {
@@ -516,14 +531,15 @@ function assertRunner(file, workflow) {
       expected = ['self-hosted', 'codex', 'Linux'];
     } else if (relativeFile === '.github/workflows/repowise.yml') {
       expected = ['self-hosted', 'codex', 'Linux'];
-    } else if (relativeFile === '.github/workflows/ci_check.yml') {
-      expected = [QUALITY_RUNNER_BY_TRUST];
     }
-    if (jobId === 'candidate-preflight' && MUTATION_WORKFLOW_MANIFEST.some(entry => relativeFile.endsWith(`/${entry.file}`))) expected = ['ubuntu-latest'];
-    const labels = runnerLabels(job['runs-on']);
+    const isCi = relativeFile === '.github/workflows/ci_check.yml';
+    const labels = isCi ? [] : runnerLabels(job['runs-on']);
     const linuxOnly = JSON.stringify(expected) === JSON.stringify(['self-hosted', 'codex'])
-      && JSON.stringify(labels) === JSON.stringify(['self-hosted', 'codex', 'Linux']);
-    if (JSON.stringify(labels) !== JSON.stringify(expected) && !linuxOnly) {
+      && JSON.stringify(labels) === JSON.stringify(LINUX_CODEX_LABELS);
+    if (isCi && JSON.stringify(job['runs-on']) !== JSON.stringify(QUALITY_RUNNER_BY_TRUST)) {
+      throw new Error(`${relativeFile} must use runs-on from the vypdev group and isolate fork and merge-group jobs on ephemeral-ci.`);
+    }
+    if (!isCi && JSON.stringify(labels) !== JSON.stringify(expected) && !linuxOnly) {
       throw new Error(`${relativeFile} job ${jobId} must use runs-on ${expected.join(', ')}.`);
     }
     assertIsolatedPnpm(relativeFile, jobId, job);
@@ -1469,8 +1485,8 @@ function assertIncrementalRangeFetch(relativeFile, manifestFile, job) {
 function assertPortableRunShell(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
-    const isCodexRunner = relativeFile.startsWith('.github/workflows/')
-      && runnerLabels(job['runs-on']).includes('codex');
+    const isCodexRunner = relativeFile === '.github/workflows/ci_check.yml'
+      || (relativeFile.startsWith('.github/workflows/') && runnerLabels(job['runs-on']).includes('codex'));
     const isDistributedReviewRange = relativeFile === 'setup/workflows/copilot_commit.yml'
       || relativeFile === 'setup/workflows/copilot_pull_request.yml';
     const isSetupPlatformSmoke = relativeFile === '.github/workflows/setup_platform_smoke.yml';

@@ -1,12 +1,10 @@
 name: Setup Platform Smoke
 
 on:
-  pull_request:
-    types: [opened, synchronize]
   workflow_dispatch:
     inputs:
       upload_windows_coverage:
-        description: Export hosted Windows coverage to Codecov
+        description: Export Windows coverage to Codecov
         type: boolean
         default: false
       windows_startup_probe:
@@ -23,9 +21,9 @@ defaults:
 
 jobs:
   windows-startup-probe:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.windows_startup_probe == true }}
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' && inputs.windows_startup_probe == true }}
     name: Windows PowerShell startup evidence
-    runs-on: windows-latest
+    runs-on: [self-hosted, Windows]
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v5
@@ -38,15 +36,23 @@ jobs:
         run: node scripts/diagnose-windows-powershell-startup.cjs
 
   setup-platform-smoke:
-    if: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && (inputs.windows_startup_probe != true || inputs.upload_windows_coverage == true)) }}
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' && (inputs.windows_startup_probe != true || inputs.upload_windows_coverage == true) }}
     name: Setup package and local session (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    # macOS can still be running extension tests at the 30-minute mark.
-    timeout-minutes: ${{ matrix.os == 'windows-latest' && 120 || matrix.os == 'macos-latest' && 35 || 30 }}
+    runs-on: ${{ matrix.labels }}
+    timeout-minutes: ${{ matrix.timeout }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: Ubuntu
+            labels: [self-hosted, codex, Linux]
+            timeout: 45
+          - os: Windows
+            labels: [self-hosted, Windows]
+            timeout: 120
+          - os: macOS
+            labels: [self-hosted, codex, macOS]
+            timeout: 60
     steps:
       - uses: actions/checkout@v5
         with:
@@ -56,10 +62,11 @@ jobs:
         with:
           version: 10.12.4
           standalone: false
+          dest: ${{ runner.temp }}/setup-pnpm-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-${{ strategy.job-index }}
       - uses: actions/setup-node@v7
         with:
           node-version: '24.x'
-          cache: pnpm
+          package-manager-cache: false
       - name: Verify Windows job Node npm CLI
         if: runner.os == 'Windows'
         run: node scripts/verify-windows-job-npm.cjs
@@ -765,8 +772,6 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install -y libgtk-3-0t64 libdbus-glib-1-2 libasound2t64 libxt6t64 libx11-xcb1
           mkdir -p "$RUNNER_TEMP/copilot-h2-browsers"
           curl --fail --location --retry 2 https://archive.mozilla.org/pub/firefox/releases/153.5.1esr/linux-x86_64/en-US/firefox-153.5.1esr.tar.xz --output "$RUNNER_TEMP/copilot-h2-browsers/firefox.tar.xz"
           # Same v0.37.1 release asset; the named download route returned repeated HTTP 504.
@@ -777,6 +782,7 @@ jobs:
           printf '%s  %s\n' 'e815130ea95983e162ae91843b48d3a3ce991735635fce83a647afde21e09f7e' "$RUNNER_TEMP/copilot-h2-browsers/geckodriver.tar.gz" | sha256sum --check --strict
           tar -xJf "$RUNNER_TEMP/copilot-h2-browsers/firefox.tar.xz" -C "$RUNNER_TEMP/copilot-h2-browsers"
           tar -xzf "$RUNNER_TEMP/copilot-h2-browsers/geckodriver.tar.gz" -C "$RUNNER_TEMP/copilot-h2-browsers"
+          "$RUNNER_TEMP/copilot-h2-browsers/firefox/firefox" --version
       - name: Exercise extension in native ESR
         if: runner.os == 'Linux'
         env:
@@ -794,14 +800,14 @@ jobs:
       - name: Full platform coverage and acceptance budgets
         if: runner.os != 'Windows'
         run: pnpm run test:coverage
-      - name: Full hosted Windows repository coverage and acceptance budgets
+      - name: Full Windows repository coverage and acceptance budgets
         if: runner.os == 'Windows'
         run: |
           pnpm exec jest --coverage --json --outputFile=coverage/setup-acceptance-jest.json --verbose=false
           node scripts/validate-coverage-budgets.cjs
           node scripts/validate-setup-assistant-acceptance.cjs coverage/setup-acceptance-jest.json
-      - name: Full hosted Windows extension coverage
-        id: hosted_windows_extension_coverage
+      - name: Full Windows extension coverage
+        id: windows_extension_coverage
         if: runner.os == 'Windows'
         timeout-minutes: 80
         env:
@@ -809,19 +815,19 @@ jobs:
         run: |
           set -euo pipefail
           pnpm run test:extension --pool=threads --maxWorkers 2 2>&1 | tee "$RUNNER_TEMP/copilot-windows-extension.log"
-      - name: Preserve hosted Windows extension failure log
-        if: ${{ always() && runner.os == 'Windows' && (steps.hosted_windows_extension_coverage.outcome == 'failure' || steps.hosted_windows_extension_coverage.outcome == 'cancelled') }}
+      - name: Preserve Windows extension failure log
+        if: ${{ always() && runner.os == 'Windows' && (steps.windows_extension_coverage.outcome == 'failure' || steps.windows_extension_coverage.outcome == 'cancelled') }}
         uses: actions/upload-artifact@v4
         with:
-          name: hosted-windows-extension-failure-log
+          name: windows-smoke-extension-failure-log
           path: ${{ runner.temp }}/copilot-windows-extension.log
           if-no-files-found: warn
           retention-days: 1
-      - name: Preserve hosted Windows coverage
+      - name: Preserve Windows coverage
         if: runner.os == 'Windows'
         uses: actions/upload-artifact@v4
         with:
-          name: hosted-windows-lcov
+          name: windows-smoke-lcov
           path: coverage/lcov.info
           if-no-files-found: error
           retention-days: 1
@@ -836,19 +842,19 @@ jobs:
           git -c core.whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol diff --check -- . ':(exclude)build/**'
 
   upload-windows-coverage:
-    name: Upload hosted Windows coverage to Codecov
+    name: Upload Windows coverage to Codecov
     needs: setup-platform-smoke
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.upload_windows_coverage == true }}
-    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' && inputs.upload_windows_coverage == true }}
+    runs-on: [self-hosted, codex, Linux]
     steps:
       - uses: actions/checkout@v5
         with:
           persist-credentials: false
           fetch-depth: 0
-      - name: Download hosted Windows coverage
+      - name: Download Windows coverage
         uses: actions/download-artifact@v4
         with:
-          name: hosted-windows-lcov
+          name: windows-smoke-lcov
           path: coverage-windows
       - name: Upload Windows coverage to Codecov
         uses: codecov/codecov-action@v6
@@ -864,7 +870,7 @@ jobs:
     name: Setup package and local session (self-hosted ${{ matrix.platform }} codex)
     runs-on: ${{ matrix.labels }}
     # Maintainer-authorized temporary Ubuntu-only routing while Apple Intel
-    # runners are offline. Hosted Ubuntu/Windows/macOS coverage remains required.
+    # runners are offline. The platform fixture above retains all three operating systems.
     timeout-minutes: 60
     strategy:
       fail-fast: false

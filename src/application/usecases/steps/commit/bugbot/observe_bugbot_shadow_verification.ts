@@ -87,7 +87,7 @@ export async function observeBugbotShadowVerification(
             candidate: prior?.anchor && title ? pinCandidate(operation, context, {
                 id: candidateId, file: prior.anchor.path, line: prior.anchor.line, title: `The historical finding “${title}” ${transition}.`,
                 description: 'Compare with the prior behavior when the pinned base is relevant.',
-            }) : undefined };
+            }, true) : undefined };
     });
     const concurrency = Math.min(2, inputs.length + resolutions.length);
     const tasks = [...inputs, ...resolutions].map(({ id, candidate, ordinaryPublication }) => async (): Promise<Observation> => {
@@ -131,7 +131,9 @@ async function verifyCandidate(
     }
 }
 
-function pinCandidate(operation: BugbotReviewOperationContext, context: BugbotContext, finding: BugbotFinding): BugbotShadowCandidate | undefined {
+function pinCandidate(
+    operation: BugbotReviewOperationContext, context: BugbotContext, finding: BugbotFinding, historicalResolution = false,
+): BugbotShadowCandidate | undefined {
     const pr = context.canonicalPullRequest;
     const headSha = canonicalGitObjectId(pr ? context.prContext?.prHeadSha
         : operation.trigger.kind === 'push' ? operation.trigger.after : undefined);
@@ -146,7 +148,7 @@ function pinCandidate(operation: BugbotReviewOperationContext, context: BugbotCo
         end: endLine && Number.isSafeInteger(endLine) && endLine >= line ? endLine : line,
         ...(side ? { side } : {}) });
     // The published title is the claim. Description, confidence, detector evidence and proposed fixes stay out.
-    const comparisonRelevant = side === 'LEFT' || /\b(regressions?|regresi[oó]n|previously|used to|no longer|introduc\w*)\b/iu
+    const comparisonRelevant = historicalResolution || side === 'LEFT' || /\b(regressions?|regresi[oó]n|previously|used to|no longer|introduc\w*)\b/iu
         .test(hypothesis + '\n' + finding.description);
     const baseSha = canonicalGitObjectId(pr?.baseSha ?? operation.trigger.before);
     return Object.freeze({

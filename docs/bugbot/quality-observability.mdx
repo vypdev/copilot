@@ -903,7 +903,11 @@ For SQLite, the installed broker checks the tracked Python pin against the
 host interpreter and measures its linked SQLite version and source ID.
 A matching release source can be returned in the same request. The receipt
 describes the local measurement. The SQLite version linked by historical CI
-needs separate evidence. A material version or source gap produces an
+needs separate evidence. An incomplete official release download is unavailable
+and can be retried. A search reports no match only after every registered source
+for the accredited release is authenticated. When verifying a proposed
+historical close, the session may also read the pinned base to compare the
+previous behavior. A material version or source gap produces an
 inconclusive verdict with the missing fact. [Official evidence contract](https://github.com/vypdev/copilot/blob/master/specs/bugbot-analysis-publication-and-autofix.md#official-evidence-in-the-installed-review)
 
 For example, a review can report one individual finding and one summary-only

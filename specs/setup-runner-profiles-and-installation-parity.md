@@ -536,3 +536,31 @@ is not counted twice here. Existing role isolation, coverage gates, receipts,
 backup and recovery remain unchanged. Update verification, upgrade and runner
 operations docs, regenerate catalog evidence/bundles, and pass all validators
 before publication.
+
+
+## Source repository runner allocation
+
+In `vypdev/copilot`, workflows use the organization's self-hosted runners.
+Issue-event admission retains its fixed hosted preflight. The release and
+hotfix `publish-npm` jobs use GitHub-hosted runners for npm Trusted
+Publishing with OIDC. The read-only deployment preflight and credential
+health jobs use the self-hosted Linux Codex pool.
+
+`CI Check` retains the same check identity and events. Repository-owned
+inputs use Linux Codex runners in the `vypdev` group. Fork PRs and merge groups
+use disposable, credential-free Linux runners in that group with the
+`ephemeral-ci` label. An unavailable pool leaves the job queued. The job
+must have no hosted or persistent-agent fallback. The platform fixture
+matrix runs on the three self-hosted operating systems after a manual
+dispatch from protected `master`. The Windows row uses a general-purpose
+runner. The shared comment coordinator selects the source pool only for
+`vypdev/copilot` and honors the caller's reviewed route for consumers.
+
+The [workflow contract tests](../src/tooling/__tests__/validate_workflow_contract.test.ts)
+cover four CI routing events, the protected manual matrix and its hosted
+rejection, three source preflight/credential regressions, and three source
+or consumer comment routes. The existing admission, OIDC, read-only
+preflight, Windows coverage and provisioning checks still apply. Setup
+templates and installation defaults retain their existing contract.
+See the [operator guide](../docs/security-operations/security/self-hosted-runners.mdx)
+for prerequisites and queued checks.

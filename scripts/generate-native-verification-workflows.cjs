@@ -88,7 +88,7 @@ function runtimeWorkflow() {
     secrets: Object.fromEntries(SECRET_NAMES.map(name => [name, { required: false }])) } },
     jobs: { copilot: { name: 'Copilot',
       if: expr("(vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN) && (github.event_name == 'issue_comment' || (github.event_name == 'pull_request_review_comment' && github.event.pull_request.head.repo.full_name == github.repository))"),
-      'runs-on': expr("fromJSON(inputs.runs-on)"), 'timeout-minutes': 120,
+      'runs-on': expr(`fromJSON(github.repository == 'vypdev/copilot' && '${JSON.stringify(['self-hosted', 'codex', 'Linux'])}' || inputs['runs-on'])`), 'timeout-minutes': 120,
       permissions: { actions: 'read', checks: 'write', contents: 'read' },
       env: { COPILOT_PREPARE_VERIFICATION: expr("github.repository == 'vypdev/copilot' && inputs.prepare-source-verification && vars.BUGBOT_AUTOFIX_VERIFY_COMMANDS != '' && ((contains(github.event.comment.body, '/copilot') && ((contains(github.event.comment.body, 'sync-branch') && !contains(github.event.comment.body, '--dry-run')) || contains(github.event.comment.body, 'implement') || contains(github.event.comment.body, 'fix') || contains(github.event.comment.body, 'remember'))) || (vars.COPILOT_BOT_LOGIN != '' && contains(github.event.comment.body, format('@{0}', vars.COPILOT_BOT_LOGIN)) && !contains(github.event.comment.body, '--dry-run')))" ) }, steps } } };
 }

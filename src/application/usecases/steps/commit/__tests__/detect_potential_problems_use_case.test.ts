@@ -590,6 +590,27 @@ describe("DetectPotentialProblemsUseCase", () => {
       expect(mockUpdateComment).not.toHaveBeenCalled();
     });
 
+    it.each(['fixed', 'obsolete'] as const)('allows a %s historical candidate to read the pinned base from a RIGHT anchor', async resolution => {
+      testBaseSha = 'b'.repeat(40);
+      mockListPullRequestReviewComments.mockResolvedValue([{
+        id: 15, identity: 'PRRC_15', authorLogin: 'bot', path: candidate.file, line: 5,
+        body: `## ${candidate.title}\n\n${markerFor(candidate)}`,
+      }]);
+      mockAskAgent.mockResolvedValue({ findings: [], resolved_findings: [{ id: candidate.id, resolution }] });
+      const verify = jest.fn().mockResolvedValue(refuted);
+
+      await dryRun(createUseCase({ verify }));
+
+      expect(verify).toHaveBeenCalledWith(expect.objectContaining({
+        candidate: expect.objectContaining({
+          hypothesis: expect.stringContaining('is ' + resolution), allowBase: true, baseSha: testBaseSha,
+          anchor: { path: candidate.file, line: 5, end: 5, side: 'RIGHT' },
+        }),
+      }));
+      expect(mockResolvePullRequestReviewThread).not.toHaveBeenCalled();
+      expect(mockUpdatePullRequestReviewComment).not.toHaveBeenCalled();
+    });
+
     it('requests independent evidence for a proposed historical close and preserves it when unproven', async () => {
       testBaseSha = 'b'.repeat(40);
       mockListPullRequestReviewComments.mockResolvedValue([{

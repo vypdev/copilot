@@ -22,34 +22,36 @@ access or prove capacity. See [comment workflow upgrades](/security-operations/o
 
 A shared persistent runner is not equivalent to an ephemeral trusted runner.
 
-The self-hosted platform smoke uses the local pnpm store without exporting a
-dependency-cache archive to GitHub. Its Node setup explicitly disables automatic
-package-manager caching. This keeps a successful full validation from timing out
-in the post-job archive step; hosted fixture caching is retained. See the
-[setup-node cache inputs](https://github.com/actions/setup-node#usage).
+The platform smoke jobs use the local pnpm store and disable automatic
+dependency-cache backup. Each platform installs pnpm in its own job directory.
+See the [setup-node cache inputs](https://github.com/actions/setup-node#usage).
 
-This repository runs `CI Check` on self-hosted Ubuntu `codex` runners for its
-own PRs and pushes. Fork PRs and all merge groups run CI on disposable GitHub-hosted Ubuntu
-runners. A merge group can contain fork code without exposing its origin to
-the runner selector; never route it to a persistent service runner. The trusted-default-branch
-PR approval observer also runs on a self-hosted Ubuntu `codex` runner. The
-automatic setup fixture matrix remains GitHub-hosted on Ubuntu, Windows and
-macOS. Its separate fixture matrix for persistent macOS and Ubuntu
-`codex` runners runs only through a manual workflow dispatch of a reviewed
-ref. An ordinary manual dispatch skips the hosted matrix to save hosted
-minutes; `upload_windows_coverage=true` also runs it to generate the coverage
-artifact needed by the opted-in upload job. Keep self-hosted fixtures out of
-automatic pull request execution, including fork pull requests. Each hosted
-and self-hosted platform job runs the full
-coverage, acceptance, package and validator paths with isolated fixtures.
-The hosted Windows job preserves its coverage report as a short-lived artifact.
-Exporting that report to Codecov requires a manual dispatch with the explicit
-`upload_windows_coverage=true` input. A green hosted run does not establish a service runner's local
-symlink or process behavior. A queued or skipped service job is unverified.
+In `vypdev/copilot`, CI uses the `vypdev` runner group. Repository-owned PRs,
+pushes and manual CI use its Ubuntu `codex` runners. Fork PRs and merge groups
+select `[self-hosted, Linux, ephemeral-ci]` in that group. Register this label
+only on disposable, credential-free workers provisioned with clean job
+environments. The organization must make those workers available to this
+repository before the route can complete. Missing capacity leaves the check
+queued without selecting a persistent agent runner or a GitHub-hosted runner.
+A merge group can contain fork code without exposing its origin to the selector.
+See [GitHub's runner isolation guidance](https://docs.github.com/en/actions/reference/security/secure-use#hardening-for-self-hosted-runners).
 
-Release and hotfix publication to npm remain GitHub-hosted because npm Trusted
-Publishing currently requires a hosted runner. Their other jobs continue on
-self-hosted runners. RepoWise obtains a complete Python 3.12 distribution via
+Run the setup fixture matrix manually from protected `master`. It exercises
+Ubuntu, Windows and macOS on self-hosted runners, using Windows services
+without the `codex` label. A Linux runner needs the Firefox ESR system
+libraries preinstalled. The workflow checks the pinned Firefox binary without
+installing system packages. Windows coverage is preserved as a short-lived
+artifact and exported only with `upload_windows_coverage=true`. The separate
+Codex service smoke remains Ubuntu-only until macOS capacity is restored.
+A queued or skipped platform job is unverified.
+
+The only GitHub-hosted jobs in this repository are issue-event admission and
+release/hotfix npm publication. [npm Trusted Publishing](https://docs.npmjs.com/trusted-publishers/#supported-cicd-providers)
+requires a GitHub-hosted runner for OIDC. Deployment preflight and credential
+health use the self-hosted Linux pool. Setup templates retain their consumer
+defaults and accept runner choices from each project.
+
+RepoWise obtains a complete Python 3.12 distribution via
 `actions/setup-python`, creates its virtual environment and reports in
 run-specific temporary directories, and removes them after artifact upload.
 Its runner needs a writable Actions tool cache and GNU `/usr/bin/time` for phase
@@ -97,7 +99,7 @@ another platform does not turn that job into a successful smoke run.
 
 The manual `Copilot - Runner diagnostics` workflow retains only its Linux
 Codex prerequisite job. General Windows PowerShell startup diagnostics and
-hosted platform fixtures remain separate and do not invoke real Codex. CLI or
+platform fixtures remain separate and do not invoke real Codex. CLI or
 model success is distinct from a verified tool read, edit, or command. A model
 reply and a setup marker cannot certify sandbox tools. No new Windows-service
 Codex acceptance run is required or scheduled.

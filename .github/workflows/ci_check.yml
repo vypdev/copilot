@@ -20,8 +20,10 @@ defaults:
 jobs:
   ci-check:
     name: CI Check
-    # A merge group can contain fork code without exposing the originating PR here.
-    runs-on: ${{ fromJSON((github.event_name == 'merge_group' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository)) && '["ubuntu-latest"]' || '["self-hosted","codex","Linux"]') }}
+    # Fork and merge-group code require a disposable pool without agent credentials.
+    runs-on:
+      group: vypdev
+      labels: ${{ fromJSON((github.event_name == 'merge_group' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository)) && '["self-hosted","Linux","ephemeral-ci"]' || '["self-hosted","codex","Linux"]') }}
     timeout-minutes: 20
     permissions:
       contents: read

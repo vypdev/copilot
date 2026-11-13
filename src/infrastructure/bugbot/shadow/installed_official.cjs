@@ -155,7 +155,10 @@ function createInstalledOfficialReader(fetchSource = globalThis.fetch) {
                 const url = 'https://github.com/' + [origin, 'blob', commit, path].join('/');
                 result.push({ sourceKind, url, commit, sha256, lines: contents.toString('utf8').replace(/\n$/u, '').split(/\r?\n/u) });
             }
-            if (expected && result.length === expected) cache.set(key, result);
+            // A search can only report absence once all registered sources
+            // have been authenticated. Retry incomplete downloads next time.
+            if (!expected || result.length !== expected) return [];
+            cache.set(key, result);
             return result;
         },
     };

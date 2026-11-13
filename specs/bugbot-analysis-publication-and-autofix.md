@@ -3335,7 +3335,11 @@ before applying the comment limit. Confirmations use the verifier's account
 and citations. Detector suggestions need a separate evidence check before
 publication. A proposed historical close uses a separate candidate for the
 specific fixed or obsolete transition when the retained comment supplies an
-anchor. An unbound or inconclusive transition preserves historical state.
+anchor. Both transitions may read the pinned base when one is available, even
+if the retained anchor is on the right side of the diff. The pinned base is
+a comparison source and does not establish the revision that originally
+produced the finding. An unbound or inconclusive transition preserves
+historical state.
 Reopened findings retain the existing human-dismissal rules.
 
 An intact mixed batch yields a partial review and can publish confirmed
@@ -3546,8 +3550,8 @@ SQLite release of the historical hosted CI remains unproven.
 | Lookup outcome | Meaning and recovery |
 |---|---|
 | `official-version-not-proven` | The receipt did not establish the requested dependency version on the selected revision. Request a compatible version proof. |
-| `official-source-unavailable` | The version is accredited and the broker has no matching official source available. |
-| `official-no-match` | The version-matched official source is available and the literal search found no result. Try a different exact phrase or identifier. |
+| `official-source-unavailable` | The version is accredited and at least one required registered source is unavailable. Retry the lookup. |
+| `official-no-match` | Every registered source for the accredited version was authenticated and the literal search found no result. Try a different exact phrase or identifier. |
 | `provided` | The response contains source ranges with release, scope and provenance. Cite the ranges that establish the dependency behavior. |
 
 For a hypothesis about a missing constraint, setting or guard, the verifier
@@ -3603,7 +3607,7 @@ and citation controls are fixed by the broker and expose no new user inputs.
 |---|---|
 | ev950-shadow-C05 | Resolve the SQLite release from a delivered runtime receipt with no version string and retain local scope. |
 | ev950-shadow-C06 | Reject incompatible package, explicit version, revision, operation and undelivered basis. |
-| ev950-shadow-C07 | Distinguish missing sources from unmatched text and verify the exact official receipt. |
+| ev950-shadow-C07 | Distinguish missing or incomplete release sources from unmatched text. Retry the incomplete download and verify the exact official receipt after recovery. |
 | ev950-shadow-C08 | Continue the same session to add a previously omitted exact range. |
 | ev950-shadow-C09 | Continue a conclusive draft with missing official evidence and accept an explicit inconclusive verdict with the specific gap. |
 | ev950-shadow-C10 | Keep a conclusive draft open when a material dependency lacks a matching official receipt, even if no lookup occurred. |
