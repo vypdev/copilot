@@ -4302,3 +4302,101 @@ original Bugbot findings.
 - [V4 results](https://github.com/vypdev/copilot/blob/a3f70858b/quality/bugbot/evidence/issue-950/v4/results.md)
 - [Sol source supplement](https://github.com/vypdev/copilot/blob/a3f70858b/quality/bugbot/evidence/issue-950/v4/sol-source-supplement/results.md)
 - The [27-issue matrix](../quality/bugbot/evidence/issue-950/traceability.md) separates executed controls, deterministic replay, simulated delivery and pending model evaluation.
+
+## Bugbot verification integration and rollout for #950
+
+### 1. Executive summary
+
+Bugbot detects candidates, collects applicable project and official evidence,
+independently verifies each candidate, and coordinates the result before any
+publication. This amendment records the current delivery and rollout decisions.
+The existing owner retains the historical cases and earlier pilot evidence.
+
+### 4. Goals
+
+| Requirement | Behavior |
+|---|---|
+| SDD-I950-ROLLOUT-R1 | Bind candidate preparation, evidence, verdict and publication to the same immutable review head and anchor. |
+| SDD-I950-ROLLOUT-R2 | Allow independent investigation under a resolved verifier profile, with a broker that validates project, official and CI evidence. |
+| SDD-I950-ROLLOUT-R3 | Preserve shadow isolation, qualification and approval fences across policy changes and rollback. |
+
+### 6. Functional behavior and state model
+
+A review prepares its candidates before verification. The normal reviewer
+configuration is inherited unless the repository selects a compatible verifier
+profile. Open a fresh session for each candidate and supply its hypothesis,
+anchor and pinned source. Follow the effective implementation, configuration
+and dependency versions. Consult applicable official versioned sources or CI
+when decisive. Use a typed, read-only evidence broker with provenance and
+explicit missing or ambiguous results. The same investigation may refine an
+incomplete citation before closing. Time and token use are telemetry, with
+explicit cancellation and provider failures recorded separately.
+
+Each candidate gets a confirmed, refuted or inconclusive verdict. The closure
+binds material claims to delivered source ranges and preserves the anchor.
+A complete mixed review can publish confirmed findings when enforcement is
+active. An inconclusive review does not authorize a clean approval. An
+integrity failure, cancel or moved head preserves the prior verified result.
+In shadow, record the outcome separately from ordinary publication. The
+default remains disabled. Enforcement requires a qualified exact profile and
+explicit maintainer approval. Approval uses current review and policy evidence;
+a previous receipt cannot authorize a new policy or rollback generation.
+
+### 8. Clean Architecture
+
+Application use cases own sequencing, source identity, verdict completeness,
+publication and approval. Read-only adapters acquire Git, official and CI
+evidence. Provider adapters perform investigation and return bounded structured
+verdicts. GitHub adapters write only through the publication boundary. The
+release decision remains with the maintainer. The source CI and review checks
+remain independent of feature activation.
+
+### 14. Testing strategy
+
+| Area | Minimum distinct cases | Behaviors/risks covered |
+|---|---|---|
+| Source and identity | 2 | Candidate binding and evidence provenance |
+| Investigation and closure | 2 | Profile inheritance and a missing material citation |
+| Rollout and approval | 2 | Shadow isolation and rollback invalidation |
+| Total | 6 | Deterministic coverage separate from the qualification corpus |
+
+| Case ID | Area | Requirements | Scenario |
+|---|---|---|---|
+| bbe950-rollout-C01 | Source and identity | SDD-I950-ROLLOUT-R1 | A new candidate retains its exact reviewed head and anchor through closure. |
+| bbe950-rollout-C02 | Source and identity | SDD-I950-ROLLOUT-R1 | A foreign receipt or moved head prevents verified publication. |
+| bbe950-rollout-C03 | Investigation and closure | SDD-I950-ROLLOUT-R2 | With no override the verifier inherits the effective reviewer profile. |
+| bbe950-rollout-C04 | Investigation and closure | SDD-I950-ROLLOUT-R2 | If a required versioned source or material citation remains unavailable, the result identifies the gap and is inconclusive. |
+| bbe950-rollout-C05 | Rollout and approval | SDD-I950-ROLLOUT-R3 | Shadow verdicts are recorded without changing publication or authorizing clean approval. |
+| bbe950-rollout-C06 | Rollout and approval | SDD-I950-ROLLOUT-R3 | A policy change or rollback requires a valid current receipt even at the same head. |
+
+### 15. Documentation
+
+| Path | Change |
+|---|---|
+| specs/bugbot-analysis-publication-and-autofix.md | update |
+| docs/bugbot/detection.mdx | reference |
+| docs/bugbot/configuration.mdx | reference |
+| docs/bugbot/quality-observability.mdx | reference |
+
+### 16. Acceptance
+
+Validate the source, exact anchor, verdict and policy bindings in the ordinary
+and framed routes. Keep the 27 historical reports traceable and keep recorded
+pilots reproducible. Each profile proposed for enforcement must independently
+satisfy the existing historical reproduction, paired improvement, positive
+control, integrity and latency criteria and the independent 174-case detection
+corpus. Evidence for readiness and authorization for production are distinct.
+
+### 17. Requirements traceability
+
+| Requirement | Cases |
+|---|---|
+| SDD-I950-ROLLOUT-R1 | bbe950-rollout-C01, bbe950-rollout-C02 |
+| SDD-I950-ROLLOUT-R2 | bbe950-rollout-C03, bbe950-rollout-C04 |
+| SDD-I950-ROLLOUT-R3 | bbe950-rollout-C05, bbe950-rollout-C06 |
+
+### 20. References and decisions
+
+The existing Bugbot SDD and its evidence reports document the qualification
+thresholds, supported profiles, approval policy and rollback protocol.
+This revision neither enables production verification nor qualifies a profile.
