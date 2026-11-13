@@ -14,11 +14,13 @@ jobs:
     if: ${{ (vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN) && github.event.pull_request.head.repo.full_name == github.repository }}
     name: Copilot - Pull Request
     runs-on: [self-hosted, codex, Linux]
-    timeout-minutes: 120
+    # Leave time for complete source-bound reviews at the fixed reviewer concurrency.
+    timeout-minutes: 300
     concurrency:
       group: copilot-pr-${{ github.repository }}-${{ github.event.pull_request.number }}-analysis
       cancel-in-progress: true
     permissions:
+      actions: read
       checks: write
       contents: read
     steps:
@@ -49,11 +51,16 @@ jobs:
           issue-managed-branches: true
           pre-branch-sdd: true
           verification-setup: ${{ vars.VERIFICATION_SETUP || 'false' }}
-          ai-ignore-files: build/*,specs/CATALOG.md
+          ai-ignore-files: build/*,specs/CATALOG.md,quality/bugbot/evidence/issue-*/*.jsonl,quality/bugbot/evidence/issue-*/*.log.gz
           bugbot-severity: ${{ vars.BUGBOT_SEVERITY || 'low' }}
           bugbot-comment-limit: ${{ vars.BUGBOT_COMMENT_LIMIT || '20' }}
           bugbot-fix-verify-commands: ${{ vars.BUGBOT_AUTOFIX_VERIFY_COMMANDS }}
           bugbot-dry-run: ${{ vars.BUGBOT_DRY_RUN || 'false' }}
+          bugbot-verification-mode: ${{ vars.BUGBOT_VERIFICATION_MODE || 'disabled' }}
+          bugbot-verifier-provider: ${{ vars.BUGBOT_VERIFIER_PROVIDER }}
+          bugbot-verifier-model-provider: ${{ vars.BUGBOT_VERIFIER_MODEL_PROVIDER }}
+          bugbot-verifier-model: ${{ vars.BUGBOT_VERIFIER_MODEL }}
+          bugbot-verifier-effort: ${{ vars.BUGBOT_VERIFIER_EFFORT }}
           bugbot-effort: ${{ vars.BUGBOT_EFFORT || 'smart' }}
           bugbot-review-drafts: ${{ vars.BUGBOT_REVIEW_DRAFTS || 'false' }}
           bugbot-trace-rules: ${{ vars.BUGBOT_TRACE_RULES || 'false' }}
@@ -102,6 +109,6 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          CURSOR_API_KEY: ${{ (vars.AGENT_PROVIDER == 'cursor' || vars.FINDINGS_PROVIDER == 'cursor' || vars.FIXER_PROVIDER == 'cursor' || vars.PLANNER_PROVIDER == 'cursor' || vars.REVIEWER_PROVIDER == 'cursor' || vars.TESTER_PROVIDER == 'cursor') && secrets.CURSOR_API_KEY || '' }}
+          CURSOR_API_KEY: ${{ (vars.AGENT_PROVIDER == 'cursor' || vars.FINDINGS_PROVIDER == 'cursor' || vars.FIXER_PROVIDER == 'cursor' || vars.PLANNER_PROVIDER == 'cursor' || vars.REVIEWER_PROVIDER == 'cursor' || vars.TESTER_PROVIDER == 'cursor' || (vars.BUGBOT_VERIFICATION_MODE == 'shadow' && vars.BUGBOT_VERIFIER_PROVIDER == 'cursor')) && secrets.CURSOR_API_KEY || '' }}
           CODEX_API_KEY: ${{ secrets.CODEX_API_KEY }}
           COPILOT_EVIDENCE_TOKEN: ${{ github.token }}

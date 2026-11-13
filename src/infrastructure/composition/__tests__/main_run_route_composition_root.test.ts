@@ -10,6 +10,7 @@ import { RememberBugbotRuleUseCase } from "../../../application/usecases/steps/c
 import { CheckIssueCommentLanguageUseCase } from "../../../application/usecases/steps/issue_comment/check_issue_comment_language_use_case";
 import { GitCommitAdapter } from "../../git_commit_adapter";
 import { captureVerificationSetup } from '../../verification_setup_snapshot';
+import { createPullRequestUseCaseCompositionRoot } from '../pull_request_use_case_composition_root';
 import type { ProjectBoardCommandPort } from "../../../application/ports/project_board_command_ports";
 import type { Execution } from "../../../data/model/execution";
 import {
@@ -207,6 +208,50 @@ describe("main run route composition root", () => {
     Object.values(handlers).forEach((handler) =>
       expect(handler).toEqual(expect.any(Function)),
     );
+  });
+
+  it.each([
+    { surface: 'github-workflow', shadowEnabled: true, bindsWorkspace: true },
+    { surface: 'github-workflow', shadowEnabled: false, bindsWorkspace: false },
+    { surface: 'local', shadowEnabled: true, bindsWorkspace: false },
+  ] as const)('binds the Action checkout only for installed shadow reviews ($surface, enabled=$shadowEnabled)',
+    async ({ surface, shadowEnabled, bindsWorkspace }) => {
+      const workspace = process.cwd();
+      const environment = jest.replaceProperty(process, 'env', { ...process.env, GITHUB_WORKSPACE: workspace });
+      try {
+        const execution = {
+          owner: binding.owner,
+          repo: binding.repository,
+          tokens: { token: binding.token },
+          ai: { getBugbotReviewConfiguration: () => ({ shadowVerification: shadowEnabled ? {} : undefined }) },
+        } as Execution;
+        const handlers = createMainRunRouteCompositionRoot({} as ProjectBoardCommandPort, surface);
+
+        await handlers['pull-request'](execution);
+
+        expect(createPullRequestUseCaseCompositionRoot).toHaveBeenCalledWith(
+          bindsWorkspace ? { ...binding, shadow: { workspace } } : binding,
+        );
+        expect(mockPullRequestInvoke).toHaveBeenCalledWith(execution);
+      } finally {
+        environment.restore();
+      }
+    },
+  );
+
+  it('passes trusted rollback authority to the normal PR route without enabling the verifier', async () => {
+    const authority = { mode: 'disabled', generation: 2, policyDigest: 'd'.repeat(64), workflowId: 24, sourceAppId: 15368 } as const;
+    const execution = {
+      owner: binding.owner,
+      repo: binding.repository,
+      tokens: { token: binding.token },
+      ai: { getBugbotReviewConfiguration: () => ({}) },
+    } as Execution;
+    const handlers = createMainRunRouteCompositionRoot({} as ProjectBoardCommandPort, 'github-workflow', undefined, authority);
+
+    await handlers['pull-request'](execution);
+
+    expect(createPullRequestUseCaseCompositionRoot).toHaveBeenCalledWith({ ...binding, verificationAuthority: authority });
   });
 
   it("binds every route to its matching use case", async () => {

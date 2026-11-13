@@ -1,0 +1,182 @@
+{
+  "cases": {
+    "N1": {
+      "candidate": "c-892-5aeaf4db18c0ba79",
+      "head": "55174696e97a4c8b424c7f57d7da7a61e4b157fd",
+      "tree": "0d5efca673329a8a28d1b9e93a46b564edcbe285",
+      "operation": "d0c91cc44c7aa54f88ab974e1ec201e993e524f32b3787c4f8df7d4cea877623",
+      "anchor": {
+        "path": "packages/core/src/components/navigation-overflow.ts",
+        "side": "RIGHT",
+        "line": 107
+      },
+      "promptSha256": "6d22879ed2661052d477e18efe87a8bb1b6b1cd24cdf36c016b3eb8f45a081ff",
+      "schemaSha256": "29a0e97a34e460d1d6d557bef8c285ed6fc9a145dfa90fe4ebd4defa30fcb37d",
+      "packetSha256": "fd531abac9b1e58dd9e4364cc22349f6183fdda3f054c3cf7c1b59863a9560ca",
+      "promptBytes": 9203,
+      "packetBytes": 8111,
+      "citations": {
+        "S1": "r-bc3847505a371cd85d07b138",
+        "S2": "r-bb1ed42647e1b025b0592ba4",
+        "S3": "r-7a2279cddb79ec6256e206c4",
+        "S4": "r-52820aeb1666febf42d91c27"
+      },
+      "sources": [
+        {
+          "alias": "S1",
+          "kind": "git",
+          "path": "packages/core/src/components/navigation-overflow.ts",
+          "blob": "862a43bba1e5ff4ce69cc1367ce0ed1c0439482a",
+          "start": 26,
+          "end": 32,
+          "operation": "d0c91cc44c7aa54f88ab974e1ec201e993e524f32b3787c4f8df7d4cea877623",
+          "candidate": "c-892-5aeaf4db18c0ba79",
+          "head": "55174696e97a4c8b424c7f57d7da7a61e4b157fd",
+          "tree": "0d5efca673329a8a28d1b9e93a46b564edcbe285",
+          "artifact": "0b95d235843ab68caa38e447d1750372f7eb304e182fe422cdfb3191429a5595",
+          "id": "r-bc3847505a371cd85d07b138"
+        },
+        {
+          "alias": "S2",
+          "kind": "git",
+          "path": "packages/core/src/components/navigation-overflow.ts",
+          "blob": "862a43bba1e5ff4ce69cc1367ce0ed1c0439482a",
+          "start": 89,
+          "end": 112,
+          "operation": "d0c91cc44c7aa54f88ab974e1ec201e993e524f32b3787c4f8df7d4cea877623",
+          "candidate": "c-892-5aeaf4db18c0ba79",
+          "head": "55174696e97a4c8b424c7f57d7da7a61e4b157fd",
+          "tree": "0d5efca673329a8a28d1b9e93a46b564edcbe285",
+          "artifact": "a26aad9b0cfefa007f7f70b9fa58b02c420b325264c6789d52b7fdfeac30b627",
+          "id": "r-bb1ed42647e1b025b0592ba4"
+        },
+        {
+          "alias": "S3",
+          "kind": "git",
+          "path": "packages/core/src/components/tabs.ts",
+          "blob": "704eef979858dae294e403c551816c955d721087",
+          "start": 59,
+          "end": 78,
+          "operation": "d0c91cc44c7aa54f88ab974e1ec201e993e524f32b3787c4f8df7d4cea877623",
+          "candidate": "c-892-5aeaf4db18c0ba79",
+          "head": "55174696e97a4c8b424c7f57d7da7a61e4b157fd",
+          "tree": "0d5efca673329a8a28d1b9e93a46b564edcbe285",
+          "artifact": "85ccbcd3c8fb0921da9859dedc39f13e090858c9162f497ed5fb716fe2957115",
+          "id": "r-7a2279cddb79ec6256e206c4"
+        },
+        {
+          "alias": "S4",
+          "kind": "git",
+          "path": "packages/core/src/components/tabs.ts",
+          "blob": "704eef979858dae294e403c551816c955d721087",
+          "start": 107,
+          "end": 120,
+          "operation": "d0c91cc44c7aa54f88ab974e1ec201e993e524f32b3787c4f8df7d4cea877623",
+          "candidate": "c-892-5aeaf4db18c0ba79",
+          "head": "55174696e97a4c8b424c7f57d7da7a61e4b157fd",
+          "tree": "0d5efca673329a8a28d1b9e93a46b564edcbe285",
+          "artifact": "1df2bea4af2562a924b008393dc371932cfc091603761bfaa4de3790be1c610b",
+          "id": "r-52820aeb1666febf42d91c27"
+        }
+      ]
+    },
+    "N2": {
+      "candidate": "c-892-02a446bb39060f51",
+      "head": "c654e501593ddb01446c6b37873a5b094624dd93",
+      "tree": "263e61f6c8d518657a3e160774f0af8f1f3f49d9",
+      "operation": "db2c293c44e02bded3e027416aca000f1432026931155aa1736cf71c6d124488",
+      "anchor": {
+        "path": "packages/core/src/components/navigation-overflow.ts",
+        "side": "RIGHT",
+        "line": 107
+      },
+      "promptSha256": "081393e18f5ca1bd75a01a8aaca911d052937a1d6d26c94e37479fa5a24c61ae",
+      "schemaSha256": "29a0e97a34e460d1d6d557bef8c285ed6fc9a145dfa90fe4ebd4defa30fcb37d",
+      "packetSha256": "5fdafa1027edeed6b5961481cd40e285e3b61442f21e2866979bbb03e3942c1d",
+      "promptBytes": 9207,
+      "packetBytes": 8115,
+      "citations": {
+        "S1": "r-eb752836207a9bbb471e8326",
+        "S2": "r-5382978c5b0a65731f26d765",
+        "S3": "r-9cedf816063ac72c2d78674b",
+        "S4": "r-f6293881252b4a81459bb399"
+      },
+      "sources": [
+        {
+          "alias": "S1",
+          "kind": "git",
+          "path": "packages/core/src/components/navigation-overflow.ts",
+          "blob": "38c5d7607802c7cfb90628f8c4f00f7dba92c720",
+          "start": 26,
+          "end": 32,
+          "operation": "db2c293c44e02bded3e027416aca000f1432026931155aa1736cf71c6d124488",
+          "candidate": "c-892-02a446bb39060f51",
+          "head": "c654e501593ddb01446c6b37873a5b094624dd93",
+          "tree": "263e61f6c8d518657a3e160774f0af8f1f3f49d9",
+          "artifact": "0b95d235843ab68caa38e447d1750372f7eb304e182fe422cdfb3191429a5595",
+          "id": "r-eb752836207a9bbb471e8326"
+        },
+        {
+          "alias": "S2",
+          "kind": "git",
+          "path": "packages/core/src/components/navigation-overflow.ts",
+          "blob": "38c5d7607802c7cfb90628f8c4f00f7dba92c720",
+          "start": 89,
+          "end": 112,
+          "operation": "db2c293c44e02bded3e027416aca000f1432026931155aa1736cf71c6d124488",
+          "candidate": "c-892-02a446bb39060f51",
+          "head": "c654e501593ddb01446c6b37873a5b094624dd93",
+          "tree": "263e61f6c8d518657a3e160774f0af8f1f3f49d9",
+          "artifact": "1241d3c975da59f0aa3f78e49687d363ae1532af001f2ce168bcf99e2bdc17fc",
+          "id": "r-5382978c5b0a65731f26d765"
+        },
+        {
+          "alias": "S3",
+          "kind": "git",
+          "path": "packages/core/src/components/tabs.ts",
+          "blob": "704eef979858dae294e403c551816c955d721087",
+          "start": 59,
+          "end": 78,
+          "operation": "db2c293c44e02bded3e027416aca000f1432026931155aa1736cf71c6d124488",
+          "candidate": "c-892-02a446bb39060f51",
+          "head": "c654e501593ddb01446c6b37873a5b094624dd93",
+          "tree": "263e61f6c8d518657a3e160774f0af8f1f3f49d9",
+          "artifact": "85ccbcd3c8fb0921da9859dedc39f13e090858c9162f497ed5fb716fe2957115",
+          "id": "r-9cedf816063ac72c2d78674b"
+        },
+        {
+          "alias": "S4",
+          "kind": "git",
+          "path": "packages/core/src/components/tabs.ts",
+          "blob": "704eef979858dae294e403c551816c955d721087",
+          "start": 107,
+          "end": 120,
+          "operation": "db2c293c44e02bded3e027416aca000f1432026931155aa1736cf71c6d124488",
+          "candidate": "c-892-02a446bb39060f51",
+          "head": "c654e501593ddb01446c6b37873a5b094624dd93",
+          "tree": "263e61f6c8d518657a3e160774f0af8f1f3f49d9",
+          "artifact": "1df2bea4af2562a924b008393dc371932cfc091603761bfaa4de3790be1c610b",
+          "id": "r-f6293881252b4a81459bb399"
+        }
+      ]
+    }
+  },
+  "checks": {
+    "refuted": "passed",
+    "confirmed": "passed",
+    "inconclusive": "passed",
+    "response-shape/fields": "passed",
+    "response-shape/dispatch": "passed",
+    "citation-duplicate/citations": "passed",
+    "citation-foreign/citations": "passed",
+    "response-shape/missing": "passed",
+    "session-identity/promptSha256": "passed",
+    "receipt-revision": "passed",
+    "receipt-candidate": "passed",
+    "receipt-operation": "passed",
+    "receipt-integrity": "passed",
+    "session-identity/anchor": "passed",
+    "write-trap": "passed",
+    "paired-prompt-and-schema-bytes": "passed"
+  }
+}

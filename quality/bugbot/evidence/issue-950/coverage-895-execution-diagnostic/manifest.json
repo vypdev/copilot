@@ -1,0 +1,33 @@
+{
+  "reference": "7e98fddb7cdf2742c947241608afe87eb1e5cd55",
+  "publicationMode": "dry-run",
+  "transport": {
+    "sdk": "b3952f686a55a9b4207e1a23c64be8344e8df5d5",
+    "cli": "codex-cli 0.167.0-alpha.3.2",
+    "provider": "openai"
+  },
+  "models": [
+    "gpt-6.1-sol"
+  ],
+  "effort": "low",
+  "subjects": [
+    "original",
+    "mutant"
+  ],
+  "arms": [
+    "source",
+    "execution"
+  ],
+  "repetitions": 3,
+  "maxCallsPerTrial": 1,
+  "retries": 0,
+  "readRounds": 0,
+  "requestBytes": 2048,
+  "packetBytes": 15500,
+  "promptBytes": 21500,
+  "caseMs": 90000,
+  "callMs": 42000,
+  "inputTokens": 32768,
+  "outputTokens": 4096,
+  "phase": "execution-evidence"
+}

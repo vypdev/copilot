@@ -1,4 +1,6 @@
-import type { Result } from '../../data/model/result';
+import { BUGBOT_VERIFICATION_RECEIPT_MARKER, type BugbotVerificationPublication } from '../../domain/bugbot/verification_receipt';
+import { renderBugbotApprovalReceipt, type BugbotNativeAttempt } from './bugbot_verification_receipt_policy';
+import { getResultPayload, type Result } from '../../data/model/result';
 import type { CopilotEvidence } from '../ports/copilot_evidence_ports';
 import { projectBugbotResultTelemetry, type BugbotTelemetryProjection } from './bugbot_telemetry_projection_policy';
 import { projectBugbotResultFindingStates } from './bugbot_result_finding_state_projection_policy';
@@ -18,6 +20,7 @@ export interface CopilotEvidenceContext {
     readonly failOnUnresolvedFindings?: boolean;
     readonly locale?: string;
     readonly catalog?: ActionSummaryMessageCatalog;
+    readonly bugbotNativeAttempt?: BugbotNativeAttempt;
 }
 
 /** Creates a stable native Check Run projection without performing GitHub I/O. */
@@ -48,6 +51,14 @@ export function buildCopilotEvidence(context: CopilotEvidenceContext): CopilotEv
         bugbotTelemetry,
     });
     const catalog = context.catalog ?? resolveStaticActionSummaryCatalog(context.locale ?? 'en-US');
+    const receipts = context.results.flatMap(result => {
+        const publication = getResultPayload(result.payload)?.bugbotVerificationPublication as BugbotVerificationPublication | undefined;
+        return publication ? [publication] : [];
+    });
+    const verifiedOutcome = bugbotTelemetry?.outcome === 'completed' || bugbotTelemetry?.outcome === 'no-findings';
+    const receipt = isReviewEvent && verifiedOutcome && failures === 0 && receipts.length === 1
+        ? renderBugbotApprovalReceipt(receipts[0], context.bugbotNativeAttempt, headSha) : undefined;
+    const safeSummary = context.summary.split(BUGBOT_VERIFICATION_RECEIPT_MARKER).join('copilot-bugbot-verification');
     return {
         name: resolveEvidenceName(context.eventName, isReviewEvent),
         headSha,
@@ -59,7 +70,7 @@ export function buildCopilotEvidence(context: CopilotEvidenceContext): CopilotEv
             bugbotTelemetry,
             catalog,
         )),
-        summary: context.summary.slice(0, 20_000),
+        summary: safeSummary.slice(0, 20_000) + (receipt ? '\n\n' + receipt : ''),
     };
 }
 

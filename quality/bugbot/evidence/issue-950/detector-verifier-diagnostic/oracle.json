@@ -1,0 +1,13 @@
+{
+  "N1": {"verdict": "refuted", "links": {"drag": "retained", "freshClick": "clears", "dispatch": "emits"}},
+  "N2": {"verdict": "confirmed", "links": {"drag": "retained", "freshClick": "keeps", "dispatch": "blocked"}},
+  "ranges": {
+    "drag": [["overflow", 99, 105], ["overflow", 107, 112]],
+    "fresh-click": [["overflow", 29, 29], ["overflow", 89, 98]],
+    "dispatch": [["tabs", 61, 63], ["tabs", 70, 78], ["tabs", 111, 111], ["tabs", 119, 119]]
+  },
+  "paths": {
+    "overflow": "packages/core/src/components/navigation-overflow.ts",
+    "tabs": "packages/core/src/components/tabs.ts"
+  }
+}

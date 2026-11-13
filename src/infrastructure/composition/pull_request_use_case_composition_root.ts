@@ -35,11 +35,11 @@ import { IssueMetadataRepository } from "../../data/repository/issue/issue_metad
 import { IssueTitleRepository } from "../../data/repository/issue/issue_title_repository";
 import { PullRequestLifecycleRepository } from "../../data/repository/pull_request/pull_request_lifecycle_repository";
 import { composePullRequestUseCase } from "./pull_request_use_case_composition";
+import { composeBugbotReview } from './bugbot_review_composition';
 import { createPullRequestReviewerCompositionRoot } from "./pull_request_reviewer_composition_root";
 import { createOrganizationMembersCompositionRoot } from "./organization_members_composition_root";
 import { createProjectBoardCompositionRoot } from "./project_board_composition_root";
 import { TimerDelayAdapter } from "../time/timer_delay_adapter";
-import { DetectPotentialProblemsUseCase } from "../../application/usecases/steps/commit/detect_potential_problems_use_case";
 import { ResolveMessageCatalogUseCase } from '../../application/usecases/localization/resolve_message_catalog_use_case';
 import { createBugbotCompositionRoot } from "./bugbot_composition_root";
 import { createActorAuthorizationRepository } from './actor_authorization_composition_root';
@@ -142,12 +142,12 @@ export function createPullRequestUseCaseCompositionRoot(binding: BugbotScmBindin
       createFindingsQueryPort(),
     ),
     workflowSteps,
-    new DetectPotentialProblemsUseCase(
-      createFindingsQueryPort(),
-      bugbot.scm,
-      bugbot.telemetry,
-      new ResolveMessageCatalogUseCase(createLanguageQueryPort()),
-    ),
+    composeBugbotReview({
+      findings: createFindingsQueryPort(), scm: bugbot.scm, telemetry: bugbot.telemetry,
+      catalog: new ResolveMessageCatalogUseCase(createLanguageQueryPort()),
+      shadowVerification: bugbot.shadowVerification,
+      verificationAuthority: binding.verificationAuthority, sourceFreshness: bugbot.sourceFreshness,
+    }),
     bindActorAuthorization(createActorAuthorizationRepository(), binding),
   );
 }

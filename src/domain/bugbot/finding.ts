@@ -31,6 +31,11 @@ export interface BugbotFinding {
   suggestedCode?: string;
 }
 
+/** A transition cannot share receipts with any active finding ID, which excludes quotation marks. */
+export function bugbotResolutionCandidateId(id: string): string {
+  return 'resolve:' + JSON.stringify(id);
+}
+
 export type BugbotFindingResolution = 'fixed' | 'obsolete' | 'dismissed';
 
 export interface ExistingIssueFindingInfo {
@@ -116,8 +121,9 @@ export function findExistingFindingMatch(
 export function retainExistingFindingIds(
   findings: readonly BugbotFinding[],
   existingByFindingId: ExistingByFindingId,
+  observe?: (finding: BugbotFinding, retained: BugbotFinding, duplicate: boolean) => void,
 ): BugbotFinding[] {
-  const retained = new Set<string>();
+  const retained = new Map<string, BugbotFinding>();
   const durableIds = new Set(Object.keys(existingByFindingId));
   // Reserve the whole input up front so a generated ID cannot take another
   // report's ID, including one that occurs later in the response.
@@ -135,12 +141,20 @@ export function retainExistingFindingIds(
         reservedIds.add(id);
       }
       emittedIds.add(id);
-      return [id === finding.id ? finding : { ...finding, id }];
+      const result = id === finding.id ? finding : { ...finding, id };
+      observe?.(finding, result, false);
+      return [result];
     }
-    if (retained.has(match.id)) return [];
-    retained.add(match.id);
+    const previous = retained.get(match.id);
+    if (previous) {
+      observe?.(finding, previous, true);
+      return [];
+    }
+    retained.set(match.id, finding);
     emittedIds.add(match.id);
-    return [finding.id === match.id ? finding : { ...finding, id: match.id }];
+    const result = finding.id === match.id ? finding : { ...finding, id: match.id };
+    observe?.(finding, result, false);
+    return [result];
   });
 }
 

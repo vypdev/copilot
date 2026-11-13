@@ -1,0 +1,24 @@
+{
+  "original": {
+    "head": "fc143a7fce3e6d50647804f29b0ed0af27fa0e32",
+    "path": "stories/button.stories.ts",
+    "blob": "418adbaa73ebd4df4bc6ff2df66511581afb3cdc",
+    "lines": [
+      9,
+      12
+    ],
+    "excerptSha256": "d88a8cf49b7c1db044cfe3ac7393f9a7d325fd5a1183c307caa11a4cfbd4cd5d",
+    "includedInPrompt": false
+  },
+  "mutant": {
+    "head": "06145cbe19f52fa5b9c61fecd381bcbe36421241",
+    "path": "stories/button.stories.ts",
+    "blob": "418adbaa73ebd4df4bc6ff2df66511581afb3cdc",
+    "lines": [
+      9,
+      12
+    ],
+    "excerptSha256": "d88a8cf49b7c1db044cfe3ac7393f9a7d325fd5a1183c307caa11a4cfbd4cd5d",
+    "includedInPrompt": false
+  }
+}

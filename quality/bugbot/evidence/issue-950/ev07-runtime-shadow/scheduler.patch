@@ -1,0 +1,16 @@
+--- full-review.cjs
++++ full-review.cjs
+@@ -22 +22,6 @@
+-    const blocked = () => fs.existsSync(score) && JSON.parse(fs.readFileSync(score, 'utf8')).passed === false;
++    const stop = path.join(campaign, 'stop-admissions');
++    const stopped = () => {
++        if (fs.existsSync(stop)) return fs.readFileSync(stop, 'utf8').trim();
++        if (fs.existsSync(score) && JSON.parse(fs.readFileSync(score, 'utf8')).passed === false) return 'independent-corpus-gate-failed';
++        return null;
++    };
+@@ -35 +40 @@
+-            while (next < slots.length && !interrupted && !blocked()) {
++            while (next < slots.length && !interrupted && !stopped()) {
+@@ -56 +61 @@
+-            reason: interrupted ? 'explicit-cancellation' : 'independent-corpus-gate-failed' });
++            reason: interrupted ? 'explicit-cancellation' : stopped() });

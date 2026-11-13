@@ -1,0 +1,39 @@
+{
+  "scope": "Synthetic no-repository fixed-cost comparison outside measured trials",
+  "prompt": "Return only OK. This synthetic adapter canary has no repository input.",
+  "launcherFailuresBeforeProvider": 2,
+  "samples": [
+    {
+      "model": "gpt-6-luna",
+      "profile": "compact",
+      "input": 6642,
+      "cachedInput": 0,
+      "output": 5,
+      "toolEvents": 0
+    },
+    {
+      "model": "gpt-6-luna",
+      "profile": "default",
+      "input": 10559,
+      "cachedInput": 8320,
+      "output": 5,
+      "toolEvents": 0
+    },
+    {
+      "model": "gpt-6.1-sol",
+      "profile": "compact",
+      "input": 6642,
+      "cachedInput": 0,
+      "output": 5,
+      "toolEvents": 0
+    },
+    {
+      "model": "gpt-6.1-sol",
+      "profile": "default",
+      "input": 11250,
+      "cachedInput": 0,
+      "output": 5,
+      "toolEvents": 0
+    }
+  ]
+}

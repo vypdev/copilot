@@ -4,18 +4,19 @@ import type { ProgressDiffEvidence } from '../../ports/progress_diff_query_ports
 import type { FindingsQueryPort } from '../../ports/agent_findings_ports';
 import type { ProgressContext } from '../push_single_action_contexts';
 import { AGENT_PLAN } from '../../policies/agent_task_policy';
-import { aggregateProgressFacts, parseProgressPartitionFacts, progressPartitionFactBounds, progressPartitionResponseSchema, type ProgressFileFacts, type ProgressPartitionFactBounds } from '../../policies/progress_partition_response_policy';
+import { aggregateProgressFacts, progressPartitionFactBounds, progressPartitionResponseSchema, type ProgressPartitionFactBounds } from '../../policies/progress_partition_response_policy';
 import { AGENT_PROMPT_MAX_BYTES } from '../../../domain/agent_execution_plan';
 import { productFacingAgentQueryOptions } from '../../policies/agent_output_locale_policy';
 import { PROGRESS_SCOPE_INSTRUCTIONS, renderProgressPromptData } from '../../../prompts/progress_scope';
 import { UNTRUSTED_CONTENT_POLICY } from '../../../domain/security/untrusted_content';
 import { MAX_PROGRESS_SCOPE_BYTES } from '../../policies/progress_scope_policy';
 import { remainingProgressPromptBytes, PROGRESS_PROMPT_FRAMING_RESERVE_BYTES } from '../../policies/progress_prompt_capacity_policy';
-import { framedProgressFactBounds, parseProgressPartitionReceipt, aggregateProgressReceipts, type ProgressPartitionReceipt } from '../../policies/progress_partition_receipt_policy';
+import { framedProgressFactBounds, parseProgressPartitionReceipt, aggregateProgressReceipts } from '../../policies/progress_partition_receipt_policy';
 import { MAX_PROGRESS_PARTITIONS, progressEvidenceTooLarge } from '../../policies/progress_diff_partition_policy';
 import { logInfo } from '../../ports/logging_ports';
 import { withProgressCapacityContext } from '../../policies/progress_capacity_context_policy';
 import { progressCapacityDiffContext } from '../../policies/progress_capacity_source_context_policy';
+import { runWithConcurrencyLimit } from '../../policies/bounded_concurrency_policy';
 
 /** Preflight all complete prompts before any request, including the reserved scope envelope. */
 export function planProgressDiffPrompts(diff: ProgressDiffEvidence, context: ProgressContext, issueDescription: string, aggregateBudget: number, acceptanceScope: string, reserveDynamicFraming = true): { readonly prompts: readonly string[] } & ProgressPartitionFactBounds {
@@ -53,21 +54,18 @@ immutableComparison: ${renderProgressPromptData(partition.evidence, 'progress.co
 }
 
 /** Collects every part before exposing one aggregate to the final assessment. No mutation capability. */
-export async function summarizeProgressDiff(diff: ProgressDiffEvidence, context: ProgressContext, issueDescription: string, agent: FindingsQueryPort, aggregateBudget: number, acceptanceScope: string): Promise<string> {
+export async function summarizeProgressDiff(diff: ProgressDiffEvidence, context: ProgressContext, issueDescription: string, agent: FindingsQueryPort, aggregateBudget: number, acceptanceScope: string, concurrency = 1): Promise<string> {
     if (diff.kind !== 'partitioned') return diff.evidence;
     const { prompts, factLimit, factJsonBytes } = withProgressCapacityContext(() => planProgressDiffPrompts(diff, context, issueDescription, aggregateBudget, acceptanceScope, false),
         () => progressCapacityDiffContext(diff));
-    const facts: (readonly ProgressFileFacts[])[] = [];
-    const receipts: ProgressPartitionReceipt[] = [];
     logInfo(`Progress comparison requires ${diff.partitions.length} complete bounded parts; no percentage is published until all parts and final assessment finish.`);
-    for (const [index, partition] of diff.partitions.entries()) {
+    const receipts = await runWithConcurrencyLimit(diff.partitions.map((partition, index) => async () => {
         logInfo(`Assessing progress evidence part ${index + 1} of ${diff.partitions.length}, round ${Math.floor(index / MAX_PROGRESS_PARTITIONS) + 1} of ${Math.ceil(diff.partitions.length / MAX_PROGRESS_PARTITIONS)}.`);
         const response = await queryProgressPartition(agent, { configuration: context.agentConfiguration, agentId: AGENT_PLAN, prompt: prompts[index],
             options: { ...productFacingAgentQueryOptions('progress-partition', progressPartitionResponseSchema(partition, factLimit)),
                 includeReasoning: context.includeReasoning } }, partition, factLimit, context.targetLocale, factJsonBytes);
-        if (diff.protocol) receipts.push(parseProgressPartitionReceipt(response, partition, context.targetLocale, factLimit, factJsonBytes));
-        else facts.push(parseProgressPartitionFacts(response, partition, context.targetLocale, factLimit));
-    }
+        return parseProgressPartitionReceipt(response, partition, context.targetLocale, factLimit, factJsonBytes);
+    }), concurrency);
     return withProgressCapacityContext(() => diff.protocol ? aggregateProgressReceipts(diff, receipts, aggregateBudget)
-        : aggregateProgressFacts(diff.baseSha, diff.headSha, diff.partitions, facts, aggregateBudget), () => progressCapacityDiffContext(diff, true));
+        : aggregateProgressFacts(diff.baseSha, diff.headSha, diff.partitions, receipts.map(receipt => receipt.files), aggregateBudget), () => progressCapacityDiffContext(diff, true));
 }

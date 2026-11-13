@@ -546,6 +546,22 @@ inputs:
   bugbot-fix-verify-commands:
     description: "Comma-separated commands to run after bugbot autofix (e.g. pnpm run build, pnpm test, pnpm run lint). The selected agent runtime runs these in its workspace; the runner can re-run them before commit. If empty, no additional verification commands are requested."
     default: ""
+  bugbot-verification-mode:
+    description: "Bugbot candidate verification rollout. Use disabled or shadow. Enforced requires a qualified profile."
+    required: false
+    default: "disabled"
+  bugbot-verifier-provider:
+    description: "Optional agent for shadow verification. Supported values are codex, cursor and opencode."
+    required: false
+  bugbot-verifier-model-provider:
+    description: "Optional model provider for shadow verification, such as anthropic with OpenCode."
+    required: false
+  bugbot-verifier-model:
+    description: "Optional shadow verifier model. Defaults to the resolved Bugbot reviewer model."
+    required: false
+  bugbot-verifier-effort:
+    description: "Optional shadow verifier reasoning effort. Defaults to the resolved Bugbot reviewer effort."
+    required: false
   bugbot-dry-run:
     description: "Analyze and return findings without publishing comments, resolving threads, updating checks, or performing autofix."
     default: "false"
@@ -571,6 +587,8 @@ inputs:
     description: "Semicolon- or newline-separated organization rules applied before repository and path-scoped rules."
     default: ""
 outputs:
+  bugbot-shadow-summary:
+    description: "Diagnostic counts, effective profiles and simulated publication receipts from Bugbot shadow verification. Does not authorize approval."
   bugbot-telemetry:
     description: "JSON array of content-free Bugbot telemetry snapshots for this action run."
 runs:

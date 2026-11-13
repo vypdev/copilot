@@ -1,0 +1,1132 @@
+{
+  "limits": {
+    "reason": 1400,
+    "missing": 800
+  },
+  "simulatedCalls": 100,
+  "modelCalls": 0,
+  "writeAttempts": 0,
+  "historicalLedgerSha256": "0d82f118022243ce2426a0058b70fd92172c5a2a7b7cb6a31377a168bdec423f",
+  "historical": [
+    {
+      "trial": "mutant/2/complete/gpt-6.1-sol",
+      "failure": {
+        "stage": "verdict",
+        "code": "final-response-shape"
+      },
+      "predicate": "undetermined"
+    },
+    {
+      "trial": "mutant/3/complete/gpt-6.1-sol",
+      "failure": {
+        "stage": "verdict",
+        "code": "final-response-shape"
+      },
+      "predicate": "undetermined"
+    }
+  ],
+  "cases": {
+    "original": {
+      "identity": {
+        "head": "fc143a7fce3e6d50647804f29b0ed0af27fa0e32",
+        "tree": "3a4ecbb323d09ad19c888508f0542451bf197093",
+        "base": "d885bccf2c3152c3151471d3efaabd901429d6bd",
+        "lockPath": "pnpm-lock.yaml",
+        "lockBlob": "afb6382151504e0b51896d61477f967263ec6f48",
+        "anchorDiffSha256": "079d201c2b87d171ba9f91c640cccb4ecbb616fb7daf941bc8f140a5b991edf0",
+        "anchor": {
+          "path": "tooling/coverage.mjs",
+          "side": "RIGHT",
+          "line": 14
+        },
+        "operation": "0811eb2dd545807314679ccf035ad988ce014a212c8a22f36cbeda7af6e4ff44",
+        "candidate": "c-895",
+        "scopes": [
+          ""
+        ]
+      },
+      "message": {
+        "packetSha256": "21aece7e327c71e89e55536adaf11bee00f67233bdb2d4faf5a0189b1a41aa24",
+        "packetBytes": 12861,
+        "promptSha256": "961bcaf8355115c4aac73df208829e625ef4ed9001250eb5bbe9c006297edfa5",
+        "promptBytes": 14195,
+        "schemaSha256": "0e17ab26e7b7054afb4bdd0762b24ede151835387e76d8ae04f3f6ea9568762c",
+        "dependencyBytes": 8833,
+        "aliases": {
+          "E1": "r-91752e8eadd66b8a79157224",
+          "E2": "r-ff7cc3dfec82f400629c2a6c",
+          "E3": "r-357729bc318cd2310f939716",
+          "E4": "r-6f458688fc0e8024f3b8bc83",
+          "E5": "r-ca5cd9e2cfea67229ee182d0",
+          "E6": "r-6345538a81a40bcc5ddd7e6b",
+          "E7": "r-7a6df39c7ef1ba61c3425a80",
+          "E8": "r-1a6c3152eff0439b652f6f46",
+          "E9": "r-61df398638cff9f45f26a403",
+          "E10": "r-3330ca744d369bc323bde576",
+          "E11": "r-b619f821c493dcce41fa4ab9",
+          "E12": "r-ff879d5f2d3432aa729ddf0b",
+          "E13": "r-501581ff56a0c4e0281d0484",
+          "E14": "r-8bdae073f50814264f60efc8",
+          "E15": "r-197377ac134cf019fc4f2015",
+          "E16": "r-952847d428a14433dcc48baa",
+          "E17": "r-26292b6963f1762d37aaafc3",
+          "E18": "r-697ad2fec615f9fe6fdd820d",
+          "E19": "r-d1d27aa48d0ffac5ac7287bf",
+          "E20": "r-d51f1d7f4829019e2938ded7",
+          "E21": "r-6fefa777a96eddec71eb1458",
+          "E22": "r-94666b375d02dd673c70c702",
+          "E23": "r-5e3e520f740514d4bb730aed",
+          "E24": "r-e9ebb372f424453414ea2ca6",
+          "E25": "r-8bd9ae5321386f5b1e61c9c6",
+          "E26": "r-eacba731f77189faf37aa217",
+          "E27": "r-04be821513ad7b9a5f5e2c74",
+          "E28": "r-350bb1e8c73336f9554b6698",
+          "E29": "r-dc8bd4ecc550d3cac0687a9c",
+          "E30": "r-ae46d52c2ef90fc17afc01fc",
+          "E31": "r-82c327573823d8988d18457d",
+          "E32": "r-a41cf4ed43c523f402ecfab3",
+          "E33": "r-4d0533c9b57bc9d131ed7d18",
+          "E34": "r-87e13983671610b869914319",
+          "E35": "r-b7e878450d1b259ca33d7ba6",
+          "E36": "r-73f41fab128a52569e28ccf9",
+          "E37": "r-03c7e5f2ea49e653b66096d8",
+          "E38": "r-566aac65530b2261eaa61554",
+          "E39": "r-e143f2ad6ef6c072a4096aa3",
+          "E40": "r-ee4bff9f39dc185213e1dec3",
+          "E41": "r-2a6c0fc1b1c3c8271c5c53f4",
+          "E42": "r-2bf493228a596e576e540e66",
+          "E43": "r-ced987fa50aa9e75c79c5380"
+        }
+      },
+      "rows": [
+        {
+          "name": "confirmed",
+          "failure": null,
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "refuted",
+          "failure": null,
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "inconclusive",
+          "failure": null,
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "top-level-type",
+          "failure": {
+            "stage": "verdict",
+            "code": "invalid-type",
+            "field": "$"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-field",
+          "failure": {
+            "stage": "verdict",
+            "code": "missing-field",
+            "field": "reason"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "extra-field",
+          "failure": {
+            "stage": "verdict",
+            "code": "additional-field",
+            "field": "$"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "verdict-type",
+          "failure": {
+            "stage": "verdict",
+            "code": "invalid-type",
+            "field": "verdict"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "verdict-invalid",
+          "failure": {
+            "stage": "verdict",
+            "code": "invalid-verdict",
+            "field": "verdict"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "reason-type",
+          "failure": {
+            "stage": "verdict",
+            "code": "invalid-type",
+            "field": "reason"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-type",
+          "failure": {
+            "stage": "verdict",
+            "code": "invalid-type",
+            "field": "missing"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-null-inconclusive",
+          "failure": {
+            "stage": "verdict",
+            "code": "invalid-type",
+            "field": "missing"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-string-conclusive",
+          "failure": {
+            "stage": "verdict",
+            "code": "missing-must-be-null",
+            "field": "missing"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "citations-type",
+          "failure": {
+            "stage": "verdict",
+            "code": "invalid-type",
+            "field": "citations"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "citation-type",
+          "failure": {
+            "stage": "verdict",
+            "code": "invalid-type",
+            "field": "citations[0]"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "citation-required",
+          "failure": {
+            "stage": "verdict",
+            "code": "citation-required",
+            "field": "citations"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "citation-foreign",
+          "failure": {
+            "stage": "verdict",
+            "code": "citation-foreign",
+            "field": "citations[0]"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "citation-duplicate",
+          "failure": {
+            "stage": "verdict",
+            "code": "citation-duplicate",
+            "field": "citations[1]"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-verdict",
+          "failure": {
+            "stage": "verdict",
+            "code": "missing-field",
+            "field": "verdict"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-citations",
+          "failure": {
+            "stage": "verdict",
+            "code": "missing-field",
+            "field": "citations"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-missing",
+          "failure": {
+            "stage": "verdict",
+            "code": "missing-field",
+            "field": "missing"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "reason-blank",
+          "failure": {
+            "stage": "verdict",
+            "code": "empty-text",
+            "field": "reason"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "reason-LF",
+          "failure": {
+            "stage": "verdict",
+            "code": "line-break",
+            "field": "reason"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "reason-CR",
+          "failure": {
+            "stage": "verdict",
+            "code": "line-break",
+            "field": "reason"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "reason-CRLF",
+          "failure": {
+            "stage": "verdict",
+            "code": "line-break",
+            "field": "reason"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "reason-NEL",
+          "failure": {
+            "stage": "verdict",
+            "code": "line-break",
+            "field": "reason"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "reason-LS",
+          "failure": {
+            "stage": "verdict",
+            "code": "line-break",
+            "field": "reason"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "reason-PS",
+          "failure": {
+            "stage": "verdict",
+            "code": "line-break",
+            "field": "reason"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "reason-VT",
+          "failure": {
+            "stage": "verdict",
+            "code": "line-break",
+            "field": "reason"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "reason-FF",
+          "failure": {
+            "stage": "verdict",
+            "code": "line-break",
+            "field": "reason"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "reason-ascii-limit",
+          "failure": null,
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "reason-ascii-limit-plus-one",
+          "failure": {
+            "stage": "verdict",
+            "code": "byte-limit",
+            "field": "reason",
+            "bytes": 1401,
+            "limit": 1400
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "reason-two-byte-limit",
+          "failure": null,
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "reason-two-byte-limit-plus-one",
+          "failure": {
+            "stage": "verdict",
+            "code": "byte-limit",
+            "field": "reason",
+            "bytes": 1401,
+            "limit": 1400
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "reason-four-byte-limit",
+          "failure": null,
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "reason-four-byte-limit-plus-one",
+          "failure": {
+            "stage": "verdict",
+            "code": "byte-limit",
+            "field": "reason",
+            "bytes": 1401,
+            "limit": 1400
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-blank",
+          "failure": {
+            "stage": "verdict",
+            "code": "empty-text",
+            "field": "missing"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-LF",
+          "failure": {
+            "stage": "verdict",
+            "code": "line-break",
+            "field": "missing"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-CR",
+          "failure": {
+            "stage": "verdict",
+            "code": "line-break",
+            "field": "missing"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-CRLF",
+          "failure": {
+            "stage": "verdict",
+            "code": "line-break",
+            "field": "missing"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-NEL",
+          "failure": {
+            "stage": "verdict",
+            "code": "line-break",
+            "field": "missing"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-LS",
+          "failure": {
+            "stage": "verdict",
+            "code": "line-break",
+            "field": "missing"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-PS",
+          "failure": {
+            "stage": "verdict",
+            "code": "line-break",
+            "field": "missing"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-VT",
+          "failure": {
+            "stage": "verdict",
+            "code": "line-break",
+            "field": "missing"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-FF",
+          "failure": {
+            "stage": "verdict",
+            "code": "line-break",
+            "field": "missing"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-ascii-limit",
+          "failure": null,
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-ascii-limit-plus-one",
+          "failure": {
+            "stage": "verdict",
+            "code": "byte-limit",
+            "field": "missing",
+            "bytes": 801,
+            "limit": 800
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-two-byte-limit",
+          "failure": null,
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-two-byte-limit-plus-one",
+          "failure": {
+            "stage": "verdict",
+            "code": "byte-limit",
+            "field": "missing",
+            "bytes": 801,
+            "limit": 800
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-four-byte-limit",
+          "failure": null,
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-four-byte-limit-plus-one",
+          "failure": {
+            "stage": "verdict",
+            "code": "byte-limit",
+            "field": "missing",
+            "bytes": 801,
+            "limit": 800
+          },
+          "budget": "within",
+          "writeAttempts": []
+        }
+      ]
+    },
+    "mutant": {
+      "identity": {
+        "head": "06145cbe19f52fa5b9c61fecd381bcbe36421241",
+        "tree": "ec0a355e7aef02329e70942edca7d4139a9b4222",
+        "base": "d885bccf2c3152c3151471d3efaabd901429d6bd",
+        "lockPath": "pnpm-lock.yaml",
+        "lockBlob": "afb6382151504e0b51896d61477f967263ec6f48",
+        "anchorDiffSha256": "079d201c2b87d171ba9f91c640cccb4ecbb616fb7daf941bc8f140a5b991edf0",
+        "anchor": {
+          "path": "tooling/coverage.mjs",
+          "side": "RIGHT",
+          "line": 14
+        },
+        "operation": "13745283070e153de389fb8e7455cfa56299859126a1a776c70db65a50a8bccd",
+        "candidate": "c-895",
+        "scopes": [
+          ""
+        ]
+      },
+      "message": {
+        "packetSha256": "479714ae79c9930f56278895bd1584f03417cb1def9193cde6a4db9f27751d53",
+        "packetBytes": 13370,
+        "promptSha256": "b74249f382bf3c8e86994e8b50f8cd85207ea7c7cff869d209b034f19e22ce03",
+        "promptBytes": 14704,
+        "schemaSha256": "0e17ab26e7b7054afb4bdd0762b24ede151835387e76d8ae04f3f6ea9568762c",
+        "dependencyBytes": 8833,
+        "aliases": {
+          "E1": "r-bce64b0788aadf47c26193cc",
+          "E2": "r-716bcc871dd3afe90187dc5d",
+          "E3": "r-baf66e3ca01d3438664e36ca",
+          "E4": "r-af03fbecafdc959186593b97",
+          "E5": "r-804cf3d6d5ab751bf4087160",
+          "E6": "r-d9d40fbca6d16a5dcf179ab4",
+          "E7": "r-c5262d715d2c60986603871e",
+          "E8": "r-cf928c8e13c882b41f91e099",
+          "E9": "r-aa3f2a104bd7f45976240b56",
+          "E10": "r-0a953aa31fbe13509c0a13d8",
+          "E11": "r-c494bc074b8c6a9ba346ab58",
+          "E12": "r-e799d51ca4a7baf2a09c2dfe",
+          "E13": "r-acb0a281c99848dd29ec57ed",
+          "E14": "r-b8f0384b194c5359e025b03e",
+          "E15": "r-64d6e77d7a51fefe99469090",
+          "E16": "r-636fad4a30ded94af6255f7b",
+          "E17": "r-9f9c1e7353e3422213f1f505",
+          "E18": "r-66ac847520509216d28a537d",
+          "E19": "r-8bbe1748c919cd38cb8fd5d7",
+          "E20": "r-04e45f4c07747907739b7141",
+          "E21": "r-dc3be57cdc2e70a01a676264",
+          "E22": "r-dd526ddb224594660db9d248",
+          "E23": "r-c0286498af907a1699b953d2",
+          "E24": "r-d085aa5f40ed0424fe9d9518",
+          "E25": "r-03dd13af45323bb41506fd4b",
+          "E26": "r-a8b3a8fc91d068e2f05ca4b3",
+          "E27": "r-956a7395ed7baceb7390bb8d",
+          "E28": "r-6b9834acdbbf81242856b231",
+          "E29": "r-1abfc1ae33ff2868d2717f5c",
+          "E30": "r-47d40f7db0d8248909e8f73f",
+          "E31": "r-7a63895f8231e614f30b4248",
+          "E32": "r-e8e1169d5328ba19c746df14",
+          "E33": "r-e868609369e01c635a14729f",
+          "E34": "r-08193c1043a3eac546720ea5",
+          "E35": "r-f4135776e82504e3ad764983",
+          "E36": "r-93f7250a814f2704f3908e99",
+          "E37": "r-d6de447e8604a67d70505ae7",
+          "E38": "r-517392980ba6f0c62b7bc0a0",
+          "E39": "r-d79507aa296bb08478d459c5",
+          "E40": "r-a22396f1b0c47a7bc96f54f0",
+          "E41": "r-6313921ca200e72924b8aa17",
+          "E42": "r-4c3b1b9d844f7d2cf5be2a51",
+          "E43": "r-ac030afa59e8e3c0eb31ad10"
+        }
+      },
+      "rows": [
+        {
+          "name": "confirmed",
+          "failure": null,
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "refuted",
+          "failure": null,
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "inconclusive",
+          "failure": null,
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "top-level-type",
+          "failure": {
+            "stage": "verdict",
+            "code": "invalid-type",
+            "field": "$"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-field",
+          "failure": {
+            "stage": "verdict",
+            "code": "missing-field",
+            "field": "reason"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "extra-field",
+          "failure": {
+            "stage": "verdict",
+            "code": "additional-field",
+            "field": "$"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "verdict-type",
+          "failure": {
+            "stage": "verdict",
+            "code": "invalid-type",
+            "field": "verdict"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "verdict-invalid",
+          "failure": {
+            "stage": "verdict",
+            "code": "invalid-verdict",
+            "field": "verdict"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "reason-type",
+          "failure": {
+            "stage": "verdict",
+            "code": "invalid-type",
+            "field": "reason"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-type",
+          "failure": {
+            "stage": "verdict",
+            "code": "invalid-type",
+            "field": "missing"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-null-inconclusive",
+          "failure": {
+            "stage": "verdict",
+            "code": "invalid-type",
+            "field": "missing"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-string-conclusive",
+          "failure": {
+            "stage": "verdict",
+            "code": "missing-must-be-null",
+            "field": "missing"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "citations-type",
+          "failure": {
+            "stage": "verdict",
+            "code": "invalid-type",
+            "field": "citations"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "citation-type",
+          "failure": {
+            "stage": "verdict",
+            "code": "invalid-type",
+            "field": "citations[0]"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "citation-required",
+          "failure": {
+            "stage": "verdict",
+            "code": "citation-required",
+            "field": "citations"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "citation-foreign",
+          "failure": {
+            "stage": "verdict",
+            "code": "citation-foreign",
+            "field": "citations[0]"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "citation-duplicate",
+          "failure": {
+            "stage": "verdict",
+            "code": "citation-duplicate",
+            "field": "citations[1]"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-verdict",
+          "failure": {
+            "stage": "verdict",
+            "code": "missing-field",
+            "field": "verdict"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-citations",
+          "failure": {
+            "stage": "verdict",
+            "code": "missing-field",
+            "field": "citations"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-missing",
+          "failure": {
+            "stage": "verdict",
+            "code": "missing-field",
+            "field": "missing"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "reason-blank",
+          "failure": {
+            "stage": "verdict",
+            "code": "empty-text",
+            "field": "reason"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "reason-LF",
+          "failure": {
+            "stage": "verdict",
+            "code": "line-break",
+            "field": "reason"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "reason-CR",
+          "failure": {
+            "stage": "verdict",
+            "code": "line-break",
+            "field": "reason"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "reason-CRLF",
+          "failure": {
+            "stage": "verdict",
+            "code": "line-break",
+            "field": "reason"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "reason-NEL",
+          "failure": {
+            "stage": "verdict",
+            "code": "line-break",
+            "field": "reason"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "reason-LS",
+          "failure": {
+            "stage": "verdict",
+            "code": "line-break",
+            "field": "reason"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "reason-PS",
+          "failure": {
+            "stage": "verdict",
+            "code": "line-break",
+            "field": "reason"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "reason-VT",
+          "failure": {
+            "stage": "verdict",
+            "code": "line-break",
+            "field": "reason"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "reason-FF",
+          "failure": {
+            "stage": "verdict",
+            "code": "line-break",
+            "field": "reason"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "reason-ascii-limit",
+          "failure": null,
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "reason-ascii-limit-plus-one",
+          "failure": {
+            "stage": "verdict",
+            "code": "byte-limit",
+            "field": "reason",
+            "bytes": 1401,
+            "limit": 1400
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "reason-two-byte-limit",
+          "failure": null,
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "reason-two-byte-limit-plus-one",
+          "failure": {
+            "stage": "verdict",
+            "code": "byte-limit",
+            "field": "reason",
+            "bytes": 1401,
+            "limit": 1400
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "reason-four-byte-limit",
+          "failure": null,
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "reason-four-byte-limit-plus-one",
+          "failure": {
+            "stage": "verdict",
+            "code": "byte-limit",
+            "field": "reason",
+            "bytes": 1401,
+            "limit": 1400
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-blank",
+          "failure": {
+            "stage": "verdict",
+            "code": "empty-text",
+            "field": "missing"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-LF",
+          "failure": {
+            "stage": "verdict",
+            "code": "line-break",
+            "field": "missing"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-CR",
+          "failure": {
+            "stage": "verdict",
+            "code": "line-break",
+            "field": "missing"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-CRLF",
+          "failure": {
+            "stage": "verdict",
+            "code": "line-break",
+            "field": "missing"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-NEL",
+          "failure": {
+            "stage": "verdict",
+            "code": "line-break",
+            "field": "missing"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-LS",
+          "failure": {
+            "stage": "verdict",
+            "code": "line-break",
+            "field": "missing"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-PS",
+          "failure": {
+            "stage": "verdict",
+            "code": "line-break",
+            "field": "missing"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-VT",
+          "failure": {
+            "stage": "verdict",
+            "code": "line-break",
+            "field": "missing"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-FF",
+          "failure": {
+            "stage": "verdict",
+            "code": "line-break",
+            "field": "missing"
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-ascii-limit",
+          "failure": null,
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-ascii-limit-plus-one",
+          "failure": {
+            "stage": "verdict",
+            "code": "byte-limit",
+            "field": "missing",
+            "bytes": 801,
+            "limit": 800
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-two-byte-limit",
+          "failure": null,
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-two-byte-limit-plus-one",
+          "failure": {
+            "stage": "verdict",
+            "code": "byte-limit",
+            "field": "missing",
+            "bytes": 801,
+            "limit": 800
+          },
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-four-byte-limit",
+          "failure": null,
+          "budget": "within",
+          "writeAttempts": []
+        },
+        {
+          "name": "missing-four-byte-limit-plus-one",
+          "failure": {
+            "stage": "verdict",
+            "code": "byte-limit",
+            "field": "missing",
+            "bytes": 801,
+            "limit": 800
+          },
+          "budget": "within",
+          "writeAttempts": []
+        }
+      ]
+    }
+  }
+}

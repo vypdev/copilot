@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "reference": "d8fad2e6189cecb8bf181b9451c8195c1798e560",
+  "sourceExpansion": { "alias": "S1", "start": 21, "end": 32 },
+  "slots": [
+    { "trial": "N1-Sol-1", "subject": "N1", "model": "gpt-6.1-sol", "repetition": 1 },
+    { "trial": "N1-Sol-2", "subject": "N1", "model": "gpt-6.1-sol", "repetition": 2 },
+    { "trial": "N1-Sol-3", "subject": "N1", "model": "gpt-6.1-sol", "repetition": 3 },
+    { "trial": "N2-Sol-1", "subject": "N2", "model": "gpt-6.1-sol", "repetition": 1 },
+    { "trial": "N2-Sol-2", "subject": "N2", "model": "gpt-6.1-sol", "repetition": 2 },
+    { "trial": "N2-Sol-3", "subject": "N2", "model": "gpt-6.1-sol", "repetition": 3 }
+  ]
+}

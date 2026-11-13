@@ -1,0 +1,3702 @@
+{
+  "baseline": "10c9e80aab89f89648dab34bf69aef9b8072b4ac",
+  "ledgerSha256": "6cee03d8eba0b2b3641e6dede68cab9a75322f850675a664b8ac9aced2bb79e1",
+  "summary": {
+    "requests": 17,
+    "priorDenials": 17,
+    "admitted": 16,
+    "decisiveRecovered": 0,
+    "decisiveDelivered": 0,
+    "modelCalls": 0,
+    "writeAttempts": 0
+  },
+  "controls": {
+    "cases": {
+      "original": {
+        "first": {
+          "packetSha256": "63571d434f39250fe76c80657d399fb38a4d0ea3f395d3c85c3b42adb397515e",
+          "packetBytes": 11453,
+          "promptSha256": "0a245d8f07ee73d315d01e7045ae3b42a141354ad37445f62693137225bb14df",
+          "promptBytes": 12967,
+          "schemaSha256": "7aa07712c8f8fba36ac7875dbf2468834bf84f1a5ba29026b68532b94863f3ca",
+          "aliases": {
+            "E1": "r-990cbf7c3826b8923fbc5a40",
+            "E2": "r-e84cbaadaeecb7bde819c59f",
+            "E3": "r-879a406139e50f4e360f7559",
+            "E4": "r-e56521db29c8b10f07f4a31f",
+            "E5": "r-5e4e6a44985bf9924502fdd0",
+            "E6": "r-0feb7b06e3c137546bf35552",
+            "E7": "r-3330ca744d369bc323bde576",
+            "E8": "r-73e4ddfc94494317c97ae3db",
+            "E9": "r-62e83cbd336df8ae0768daf3",
+            "E10": "r-1df15e7738e14f0aea36ffc7",
+            "E11": "r-03c7e5f2ea49e653b66096d8",
+            "E12": "r-566aac65530b2261eaa61554",
+            "E13": "r-e143f2ad6ef6c072a4096aa3"
+          }
+        },
+        "samples": {
+          "explicit": {
+            "original": {
+              "revision": "head",
+              "kind": "readBlob",
+              "targets": [
+                {
+                  "scope": "vitest.config.ts",
+                  "start": 1,
+                  "end": 15,
+                  "workspace": null,
+                  "match": "lines",
+                  "query": null
+                }
+              ]
+            },
+            "normalized": {
+              "revision": "head",
+              "kind": "readBlob",
+              "targets": [
+                {
+                  "scope": "vitest.config.ts",
+                  "start": 1,
+                  "end": 15,
+                  "workspace": null,
+                  "match": "lines",
+                  "query": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "admitted"
+            },
+            "git": {
+              "status": "provided",
+              "results": [
+                {
+                  "status": "provided",
+                  "path": "vitest.config.ts",
+                  "receiptIds": [
+                    "r-6aa082185912b08a70ef235f"
+                  ]
+                }
+              ],
+              "budget": {
+                "gitCalls": 4,
+                "treeEntries": 1,
+                "openedFiles": 1,
+                "sourceBytes": 2064,
+                "matches": 1,
+                "evidenceBytes": 2507
+              },
+              "usage": {
+                "treeEntries": 1,
+                "openedFiles": 1,
+                "matches": 1,
+                "evidenceBytes": 2507,
+                "sourceBytes": 2064,
+                "receipts": 1,
+                "accounted": true
+              },
+              "receipts": [
+                {
+                  "kind": "git",
+                  "path": "vitest.config.ts",
+                  "blob": "2230eaa266f78975388e86fb5f26c8c7fa5c60ba",
+                  "start": 1,
+                  "end": 15,
+                  "operation": "0811eb2dd545807314679ccf035ad988ce014a212c8a22f36cbeda7af6e4ff44",
+                  "candidate": "c-895",
+                  "head": "fc143a7fce3e6d50647804f29b0ed0af27fa0e32",
+                  "tree": "3a4ecbb323d09ad19c888508f0542451bf197093",
+                  "artifact": "ba4192a4ed5ba6eeeeca6f2dc156173fea392be83a77b357f9f5acd748c4a653",
+                  "id": "r-6aa082185912b08a70ef235f",
+                  "bytes": 2063
+                }
+              ]
+            },
+            "delivery": {
+              "status": "delivered",
+              "packetSha256": "2ce152cf45006988ff249bb138681563c0613954fb6e2b28e07a6c4501310dcb",
+              "packetBytes": 13766,
+              "promptSha256": "81198215385672b0365646994b342eaf73f430205a15c92f6ca0c1b0877380eb",
+              "promptBytes": 14595,
+              "schemaSha256": "1d872333ef5e2f1be30d68df0cdb443f0021212202fe93647fb928c41f47383f",
+              "aliases": {
+                "E1": "r-990cbf7c3826b8923fbc5a40",
+                "E2": "r-e84cbaadaeecb7bde819c59f",
+                "E3": "r-879a406139e50f4e360f7559",
+                "E4": "r-e56521db29c8b10f07f4a31f",
+                "E5": "r-5e4e6a44985bf9924502fdd0",
+                "E6": "r-0feb7b06e3c137546bf35552",
+                "E7": "r-3330ca744d369bc323bde576",
+                "E8": "r-73e4ddfc94494317c97ae3db",
+                "E9": "r-62e83cbd336df8ae0768daf3",
+                "E10": "r-1df15e7738e14f0aea36ffc7",
+                "E11": "r-03c7e5f2ea49e653b66096d8",
+                "E12": "r-566aac65530b2261eaa61554",
+                "E13": "r-e143f2ad6ef6c072a4096aa3",
+                "E14": "r-6aa082185912b08a70ef235f"
+              },
+              "citedReceiptIds": [
+                "r-990cbf7c3826b8923fbc5a40",
+                "r-e84cbaadaeecb7bde819c59f",
+                "r-879a406139e50f4e360f7559",
+                "r-e56521db29c8b10f07f4a31f",
+                "r-5e4e6a44985bf9924502fdd0",
+                "r-0feb7b06e3c137546bf35552",
+                "r-3330ca744d369bc323bde576",
+                "r-73e4ddfc94494317c97ae3db",
+                "r-62e83cbd336df8ae0768daf3",
+                "r-1df15e7738e14f0aea36ffc7",
+                "r-03c7e5f2ea49e653b66096d8",
+                "r-566aac65530b2261eaa61554",
+                "r-e143f2ad6ef6c072a4096aa3",
+                "r-6aa082185912b08a70ef235f"
+              ]
+            },
+            "writeAttempts": [],
+            "schemaAccepted": true,
+            "simulatedTurns": 2,
+            "decisive": {
+              "recovered": true,
+              "delivered": true
+            }
+          },
+          "exact": {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "name",
+                  "query": "vitest.config.ts",
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "normalized": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": "",
+                  "workspace": null,
+                  "match": "name",
+                  "query": "vitest.config.ts",
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "admitted"
+            },
+            "git": {
+              "status": "provided",
+              "results": [
+                {
+                  "status": "provided",
+                  "path": "vitest.config.ts",
+                  "receiptIds": [
+                    "r-6aa082185912b08a70ef235f"
+                  ]
+                }
+              ],
+              "budget": {
+                "gitCalls": 4,
+                "treeEntries": 660,
+                "openedFiles": 1,
+                "sourceBytes": 2064,
+                "matches": 1,
+                "evidenceBytes": 2507
+              },
+              "usage": {
+                "treeEntries": 660,
+                "openedFiles": 1,
+                "matches": 1,
+                "evidenceBytes": 2507,
+                "sourceBytes": 2064,
+                "receipts": 1,
+                "accounted": true
+              },
+              "receipts": [
+                {
+                  "kind": "git",
+                  "path": "vitest.config.ts",
+                  "blob": "2230eaa266f78975388e86fb5f26c8c7fa5c60ba",
+                  "start": 1,
+                  "end": 15,
+                  "operation": "0811eb2dd545807314679ccf035ad988ce014a212c8a22f36cbeda7af6e4ff44",
+                  "candidate": "c-895",
+                  "head": "fc143a7fce3e6d50647804f29b0ed0af27fa0e32",
+                  "tree": "3a4ecbb323d09ad19c888508f0542451bf197093",
+                  "artifact": "ba4192a4ed5ba6eeeeca6f2dc156173fea392be83a77b357f9f5acd748c4a653",
+                  "id": "r-6aa082185912b08a70ef235f",
+                  "bytes": 2063
+                }
+              ]
+            },
+            "delivery": {
+              "status": "delivered",
+              "packetSha256": "2ce152cf45006988ff249bb138681563c0613954fb6e2b28e07a6c4501310dcb",
+              "packetBytes": 13766,
+              "promptSha256": "81198215385672b0365646994b342eaf73f430205a15c92f6ca0c1b0877380eb",
+              "promptBytes": 14595,
+              "schemaSha256": "1d872333ef5e2f1be30d68df0cdb443f0021212202fe93647fb928c41f47383f",
+              "aliases": {
+                "E1": "r-990cbf7c3826b8923fbc5a40",
+                "E2": "r-e84cbaadaeecb7bde819c59f",
+                "E3": "r-879a406139e50f4e360f7559",
+                "E4": "r-e56521db29c8b10f07f4a31f",
+                "E5": "r-5e4e6a44985bf9924502fdd0",
+                "E6": "r-0feb7b06e3c137546bf35552",
+                "E7": "r-3330ca744d369bc323bde576",
+                "E8": "r-73e4ddfc94494317c97ae3db",
+                "E9": "r-62e83cbd336df8ae0768daf3",
+                "E10": "r-1df15e7738e14f0aea36ffc7",
+                "E11": "r-03c7e5f2ea49e653b66096d8",
+                "E12": "r-566aac65530b2261eaa61554",
+                "E13": "r-e143f2ad6ef6c072a4096aa3",
+                "E14": "r-6aa082185912b08a70ef235f"
+              },
+              "citedReceiptIds": [
+                "r-990cbf7c3826b8923fbc5a40",
+                "r-e84cbaadaeecb7bde819c59f",
+                "r-879a406139e50f4e360f7559",
+                "r-e56521db29c8b10f07f4a31f",
+                "r-5e4e6a44985bf9924502fdd0",
+                "r-0feb7b06e3c137546bf35552",
+                "r-3330ca744d369bc323bde576",
+                "r-73e4ddfc94494317c97ae3db",
+                "r-62e83cbd336df8ae0768daf3",
+                "r-1df15e7738e14f0aea36ffc7",
+                "r-03c7e5f2ea49e653b66096d8",
+                "r-566aac65530b2261eaa61554",
+                "r-e143f2ad6ef6c072a4096aa3",
+                "r-6aa082185912b08a70ef235f"
+              ]
+            },
+            "writeAttempts": [],
+            "schemaAccepted": true,
+            "simulatedTurns": 2,
+            "decisive": {
+              "recovered": true,
+              "delivered": true
+            }
+          },
+          "partial": {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "name",
+                  "query": "vitest.config.ts",
+                  "start": null,
+                  "end": null
+                },
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "name",
+                  "query": "absent-fixture-895.txt",
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "normalized": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": "",
+                  "workspace": null,
+                  "match": "name",
+                  "query": "vitest.config.ts",
+                  "start": null,
+                  "end": null
+                },
+                {
+                  "scope": "",
+                  "workspace": null,
+                  "match": "name",
+                  "query": "absent-fixture-895.txt",
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "admitted"
+            },
+            "git": {
+              "status": "partial",
+              "results": [
+                {
+                  "status": "provided",
+                  "path": "vitest.config.ts",
+                  "receiptIds": [
+                    "r-6aa082185912b08a70ef235f"
+                  ]
+                },
+                {
+                  "status": "absent",
+                  "reason": "path-absent"
+                }
+              ],
+              "budget": {
+                "gitCalls": 4,
+                "treeEntries": 660,
+                "openedFiles": 1,
+                "sourceBytes": 2064,
+                "matches": 1,
+                "evidenceBytes": 2507
+              },
+              "usage": {
+                "treeEntries": 660,
+                "openedFiles": 1,
+                "matches": 1,
+                "evidenceBytes": 2507,
+                "sourceBytes": 2064,
+                "receipts": 1,
+                "accounted": true
+              },
+              "receipts": [
+                {
+                  "kind": "git",
+                  "path": "vitest.config.ts",
+                  "blob": "2230eaa266f78975388e86fb5f26c8c7fa5c60ba",
+                  "start": 1,
+                  "end": 15,
+                  "operation": "0811eb2dd545807314679ccf035ad988ce014a212c8a22f36cbeda7af6e4ff44",
+                  "candidate": "c-895",
+                  "head": "fc143a7fce3e6d50647804f29b0ed0af27fa0e32",
+                  "tree": "3a4ecbb323d09ad19c888508f0542451bf197093",
+                  "artifact": "ba4192a4ed5ba6eeeeca6f2dc156173fea392be83a77b357f9f5acd748c4a653",
+                  "id": "r-6aa082185912b08a70ef235f",
+                  "bytes": 2063
+                }
+              ]
+            },
+            "delivery": {
+              "status": "delivered",
+              "packetSha256": "d86265677a32445cb5e3e16bdd02e377bdd2ca3d6843ef99df2807d2a3f9a9df",
+              "packetBytes": 13808,
+              "promptSha256": "ff45327dd9d92d5f79c44c218918465e15fc829885e9f010e5c62ade11cc52be",
+              "promptBytes": 14637,
+              "schemaSha256": "1d872333ef5e2f1be30d68df0cdb443f0021212202fe93647fb928c41f47383f",
+              "aliases": {
+                "E1": "r-990cbf7c3826b8923fbc5a40",
+                "E2": "r-e84cbaadaeecb7bde819c59f",
+                "E3": "r-879a406139e50f4e360f7559",
+                "E4": "r-e56521db29c8b10f07f4a31f",
+                "E5": "r-5e4e6a44985bf9924502fdd0",
+                "E6": "r-0feb7b06e3c137546bf35552",
+                "E7": "r-3330ca744d369bc323bde576",
+                "E8": "r-73e4ddfc94494317c97ae3db",
+                "E9": "r-62e83cbd336df8ae0768daf3",
+                "E10": "r-1df15e7738e14f0aea36ffc7",
+                "E11": "r-03c7e5f2ea49e653b66096d8",
+                "E12": "r-566aac65530b2261eaa61554",
+                "E13": "r-e143f2ad6ef6c072a4096aa3",
+                "E14": "r-6aa082185912b08a70ef235f"
+              },
+              "citedReceiptIds": [
+                "r-990cbf7c3826b8923fbc5a40",
+                "r-e84cbaadaeecb7bde819c59f",
+                "r-879a406139e50f4e360f7559",
+                "r-e56521db29c8b10f07f4a31f",
+                "r-5e4e6a44985bf9924502fdd0",
+                "r-0feb7b06e3c137546bf35552",
+                "r-3330ca744d369bc323bde576",
+                "r-73e4ddfc94494317c97ae3db",
+                "r-62e83cbd336df8ae0768daf3",
+                "r-1df15e7738e14f0aea36ffc7",
+                "r-03c7e5f2ea49e653b66096d8",
+                "r-566aac65530b2261eaa61554",
+                "r-e143f2ad6ef6c072a4096aa3",
+                "r-6aa082185912b08a70ef235f"
+              ]
+            },
+            "writeAttempts": [],
+            "schemaAccepted": true,
+            "simulatedTurns": 2,
+            "decisive": {
+              "recovered": true,
+              "delivered": true
+            }
+          },
+          "absent": {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "name",
+                  "query": "*vitest*",
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "normalized": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": "",
+                  "workspace": null,
+                  "match": "name",
+                  "query": "*vitest*",
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "admitted"
+            },
+            "git": {
+              "status": "absent",
+              "results": [
+                {
+                  "status": "absent",
+                  "reason": "path-absent"
+                }
+              ],
+              "budget": {
+                "gitCalls": 2,
+                "treeEntries": 660,
+                "openedFiles": 0,
+                "sourceBytes": 0,
+                "matches": 0,
+                "evidenceBytes": 0
+              },
+              "usage": {
+                "treeEntries": 660,
+                "openedFiles": 0,
+                "matches": 0,
+                "evidenceBytes": 0,
+                "sourceBytes": 0,
+                "receipts": 0,
+                "accounted": true
+              },
+              "receipts": []
+            },
+            "delivery": {
+              "status": "delivered",
+              "packetSha256": "c52e5cb2417023b6175c797b48151922059935c0b7105fa6b949395a2706bcf0",
+              "packetBytes": 11540,
+              "promptSha256": "1230193d370ebd92f94dd2ff676a818a62b4c75303066053808d333c6f908246",
+              "promptBytes": 12369,
+              "schemaSha256": "6abf661f088a9d887af5010a7fd110a699a3418fa411fc96f2e5cacc51740a24",
+              "aliases": {
+                "E1": "r-990cbf7c3826b8923fbc5a40",
+                "E2": "r-e84cbaadaeecb7bde819c59f",
+                "E3": "r-879a406139e50f4e360f7559",
+                "E4": "r-e56521db29c8b10f07f4a31f",
+                "E5": "r-5e4e6a44985bf9924502fdd0",
+                "E6": "r-0feb7b06e3c137546bf35552",
+                "E7": "r-3330ca744d369bc323bde576",
+                "E8": "r-73e4ddfc94494317c97ae3db",
+                "E9": "r-62e83cbd336df8ae0768daf3",
+                "E10": "r-1df15e7738e14f0aea36ffc7",
+                "E11": "r-03c7e5f2ea49e653b66096d8",
+                "E12": "r-566aac65530b2261eaa61554",
+                "E13": "r-e143f2ad6ef6c072a4096aa3"
+              },
+              "citedReceiptIds": [
+                "r-990cbf7c3826b8923fbc5a40",
+                "r-e84cbaadaeecb7bde819c59f",
+                "r-879a406139e50f4e360f7559",
+                "r-e56521db29c8b10f07f4a31f",
+                "r-5e4e6a44985bf9924502fdd0",
+                "r-0feb7b06e3c137546bf35552",
+                "r-3330ca744d369bc323bde576",
+                "r-73e4ddfc94494317c97ae3db",
+                "r-62e83cbd336df8ae0768daf3",
+                "r-1df15e7738e14f0aea36ffc7",
+                "r-03c7e5f2ea49e653b66096d8",
+                "r-566aac65530b2261eaa61554",
+                "r-e143f2ad6ef6c072a4096aa3"
+              ]
+            },
+            "writeAttempts": [],
+            "schemaAccepted": true,
+            "simulatedTurns": 2,
+            "decisive": {
+              "recovered": false,
+              "delivered": false
+            }
+          },
+          "broad": {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "literal",
+                  "query": "completeCoverage",
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "normalized": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": "",
+                  "workspace": null,
+                  "match": "literal",
+                  "query": "completeCoverage",
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "admitted"
+            },
+            "git": {
+              "status": "budget",
+              "results": [
+                {
+                  "status": "budget",
+                  "reason": "search-file-budget"
+                }
+              ],
+              "budget": {
+                "gitCalls": 2,
+                "treeEntries": 660,
+                "openedFiles": 0,
+                "sourceBytes": 0,
+                "matches": 0,
+                "evidenceBytes": 0
+              },
+              "usage": {
+                "treeEntries": 660,
+                "openedFiles": 0,
+                "matches": 0,
+                "evidenceBytes": 0,
+                "sourceBytes": 0,
+                "receipts": 0,
+                "accounted": true
+              },
+              "receipts": []
+            },
+            "delivery": {
+              "status": "delivered",
+              "packetSha256": "a9c3b14cc046f6a791803ec8acf952efc2a58b160067c7200bb890fd274a1ec8",
+              "packetBytes": 11547,
+              "promptSha256": "f72ab479d585126731347b3ecbab6b047eddf47665474012115b5a226b69704f",
+              "promptBytes": 12376,
+              "schemaSha256": "6abf661f088a9d887af5010a7fd110a699a3418fa411fc96f2e5cacc51740a24",
+              "aliases": {
+                "E1": "r-990cbf7c3826b8923fbc5a40",
+                "E2": "r-e84cbaadaeecb7bde819c59f",
+                "E3": "r-879a406139e50f4e360f7559",
+                "E4": "r-e56521db29c8b10f07f4a31f",
+                "E5": "r-5e4e6a44985bf9924502fdd0",
+                "E6": "r-0feb7b06e3c137546bf35552",
+                "E7": "r-3330ca744d369bc323bde576",
+                "E8": "r-73e4ddfc94494317c97ae3db",
+                "E9": "r-62e83cbd336df8ae0768daf3",
+                "E10": "r-1df15e7738e14f0aea36ffc7",
+                "E11": "r-03c7e5f2ea49e653b66096d8",
+                "E12": "r-566aac65530b2261eaa61554",
+                "E13": "r-e143f2ad6ef6c072a4096aa3"
+              },
+              "citedReceiptIds": [
+                "r-990cbf7c3826b8923fbc5a40",
+                "r-e84cbaadaeecb7bde819c59f",
+                "r-879a406139e50f4e360f7559",
+                "r-e56521db29c8b10f07f4a31f",
+                "r-5e4e6a44985bf9924502fdd0",
+                "r-0feb7b06e3c137546bf35552",
+                "r-3330ca744d369bc323bde576",
+                "r-73e4ddfc94494317c97ae3db",
+                "r-62e83cbd336df8ae0768daf3",
+                "r-1df15e7738e14f0aea36ffc7",
+                "r-03c7e5f2ea49e653b66096d8",
+                "r-566aac65530b2261eaa61554",
+                "r-e143f2ad6ef6c072a4096aa3"
+              ]
+            },
+            "writeAttempts": [],
+            "schemaAccepted": true,
+            "simulatedTurns": 2,
+            "decisive": {
+              "recovered": false,
+              "delivered": false
+            }
+          },
+          "overBytes": {
+            "original": {
+              "revision": "head",
+              "kind": "readBlob",
+              "targets": [
+                {
+                  "scope": "docs/checkbox-contract.md",
+                  "start": 1,
+                  "end": 74,
+                  "workspace": null,
+                  "match": "lines",
+                  "query": null
+                }
+              ]
+            },
+            "normalized": {
+              "revision": "head",
+              "kind": "readBlob",
+              "targets": [
+                {
+                  "scope": "docs/checkbox-contract.md",
+                  "start": 1,
+                  "end": 74,
+                  "workspace": null,
+                  "match": "lines",
+                  "query": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "admitted"
+            },
+            "git": {
+              "status": "budget",
+              "results": [
+                {
+                  "status": "budget",
+                  "reason": "fragment-byte-budget",
+                  "path": "docs/checkbox-contract.md",
+                  "receiptIds": []
+                }
+              ],
+              "budget": {
+                "gitCalls": 4,
+                "treeEntries": 1,
+                "openedFiles": 1,
+                "sourceBytes": 5453,
+                "matches": 1,
+                "evidenceBytes": 0
+              },
+              "usage": {
+                "treeEntries": 1,
+                "openedFiles": 1,
+                "matches": 1,
+                "evidenceBytes": 0,
+                "sourceBytes": 5453,
+                "receipts": 0,
+                "accounted": true
+              },
+              "receipts": []
+            },
+            "delivery": {
+              "status": "delivered",
+              "packetSha256": "d739aba959b6aee58b360ee76c7bfbebf45d8e45d0263708c9589e0e230064fd",
+              "packetBytes": 11549,
+              "promptSha256": "958cfa8427ba0667c19a33a53c78f1a2bc0f7d4ce460ed8450081c23a9f1e204",
+              "promptBytes": 12378,
+              "schemaSha256": "6abf661f088a9d887af5010a7fd110a699a3418fa411fc96f2e5cacc51740a24",
+              "aliases": {
+                "E1": "r-990cbf7c3826b8923fbc5a40",
+                "E2": "r-e84cbaadaeecb7bde819c59f",
+                "E3": "r-879a406139e50f4e360f7559",
+                "E4": "r-e56521db29c8b10f07f4a31f",
+                "E5": "r-5e4e6a44985bf9924502fdd0",
+                "E6": "r-0feb7b06e3c137546bf35552",
+                "E7": "r-3330ca744d369bc323bde576",
+                "E8": "r-73e4ddfc94494317c97ae3db",
+                "E9": "r-62e83cbd336df8ae0768daf3",
+                "E10": "r-1df15e7738e14f0aea36ffc7",
+                "E11": "r-03c7e5f2ea49e653b66096d8",
+                "E12": "r-566aac65530b2261eaa61554",
+                "E13": "r-e143f2ad6ef6c072a4096aa3"
+              },
+              "citedReceiptIds": [
+                "r-990cbf7c3826b8923fbc5a40",
+                "r-e84cbaadaeecb7bde819c59f",
+                "r-879a406139e50f4e360f7559",
+                "r-e56521db29c8b10f07f4a31f",
+                "r-5e4e6a44985bf9924502fdd0",
+                "r-0feb7b06e3c137546bf35552",
+                "r-3330ca744d369bc323bde576",
+                "r-73e4ddfc94494317c97ae3db",
+                "r-62e83cbd336df8ae0768daf3",
+                "r-1df15e7738e14f0aea36ffc7",
+                "r-03c7e5f2ea49e653b66096d8",
+                "r-566aac65530b2261eaa61554",
+                "r-e143f2ad6ef6c072a4096aa3"
+              ]
+            },
+            "writeAttempts": [],
+            "schemaAccepted": true,
+            "simulatedTurns": 2,
+            "decisive": {
+              "recovered": false,
+              "delivered": false
+            }
+          }
+        }
+      },
+      "mutant": {
+        "first": {
+          "packetSha256": "62291063e0e46e3627a2944afebc89159f7ae80340143a2d2d3698a6f265e647",
+          "packetBytes": 11453,
+          "promptSha256": "d4baf416433d0e93ae68a544663f2cbf9be9d895ce6e0e84f9f0e379618f4aac",
+          "promptBytes": 12967,
+          "schemaSha256": "7aa07712c8f8fba36ac7875dbf2468834bf84f1a5ba29026b68532b94863f3ca",
+          "aliases": {
+            "E1": "r-3d3e7daebc290b887df19161",
+            "E2": "r-3cbad5755bef4bc852b46f5d",
+            "E3": "r-6c6ffaabb69e828410a4c882",
+            "E4": "r-b6efa90f7c795b8a65d5781c",
+            "E5": "r-bf0153a35f66408c268ec0c6",
+            "E6": "r-82fd42016661d7267e3e1948",
+            "E7": "r-0a953aa31fbe13509c0a13d8",
+            "E8": "r-3091e0ec4b9c4f098e1e14fb",
+            "E9": "r-4abe4a81f363f550e71b6d6d",
+            "E10": "r-882c29e08d9cdd02af0d7deb",
+            "E11": "r-d6de447e8604a67d70505ae7",
+            "E12": "r-517392980ba6f0c62b7bc0a0",
+            "E13": "r-d79507aa296bb08478d459c5"
+          }
+        },
+        "samples": {
+          "explicit": {
+            "original": {
+              "revision": "head",
+              "kind": "readBlob",
+              "targets": [
+                {
+                  "scope": "vitest.config.ts",
+                  "start": 1,
+                  "end": 24,
+                  "workspace": null,
+                  "match": "lines",
+                  "query": null
+                }
+              ]
+            },
+            "normalized": {
+              "revision": "head",
+              "kind": "readBlob",
+              "targets": [
+                {
+                  "scope": "vitest.config.ts",
+                  "start": 1,
+                  "end": 24,
+                  "workspace": null,
+                  "match": "lines",
+                  "query": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "admitted"
+            },
+            "git": {
+              "status": "provided",
+              "results": [
+                {
+                  "status": "provided",
+                  "path": "vitest.config.ts",
+                  "receiptIds": [
+                    "r-c03f65e532f576555a1528b4"
+                  ]
+                }
+              ],
+              "budget": {
+                "gitCalls": 4,
+                "treeEntries": 1,
+                "openedFiles": 1,
+                "sourceBytes": 2564,
+                "matches": 1,
+                "evidenceBytes": 3016
+              },
+              "usage": {
+                "treeEntries": 1,
+                "openedFiles": 1,
+                "matches": 1,
+                "evidenceBytes": 3016,
+                "sourceBytes": 2564,
+                "receipts": 1,
+                "accounted": true
+              },
+              "receipts": [
+                {
+                  "kind": "git",
+                  "path": "vitest.config.ts",
+                  "blob": "04ac9a06182520e9c303547ae252713eda46ac63",
+                  "start": 1,
+                  "end": 24,
+                  "operation": "13745283070e153de389fb8e7455cfa56299859126a1a776c70db65a50a8bccd",
+                  "candidate": "c-895",
+                  "head": "06145cbe19f52fa5b9c61fecd381bcbe36421241",
+                  "tree": "ec0a355e7aef02329e70942edca7d4139a9b4222",
+                  "artifact": "f63bb5b90a7d956bcb11d8969bb2a45dc45bee293a253b10c36e4843285ef6c6",
+                  "id": "r-c03f65e532f576555a1528b4",
+                  "bytes": 2563
+                }
+              ]
+            },
+            "delivery": {
+              "status": "delivered",
+              "packetSha256": "7330638a95b9c70967860b772dfcf19d8b73097d611fd6b2dea10a1345cf9f3f",
+              "packetBytes": 14275,
+              "promptSha256": "313bc8fa3a907fb7e3e18a0272b964d28dcae14605c166451ec7fa574fffba2e",
+              "promptBytes": 15104,
+              "schemaSha256": "1d872333ef5e2f1be30d68df0cdb443f0021212202fe93647fb928c41f47383f",
+              "aliases": {
+                "E1": "r-3d3e7daebc290b887df19161",
+                "E2": "r-3cbad5755bef4bc852b46f5d",
+                "E3": "r-6c6ffaabb69e828410a4c882",
+                "E4": "r-b6efa90f7c795b8a65d5781c",
+                "E5": "r-bf0153a35f66408c268ec0c6",
+                "E6": "r-82fd42016661d7267e3e1948",
+                "E7": "r-0a953aa31fbe13509c0a13d8",
+                "E8": "r-3091e0ec4b9c4f098e1e14fb",
+                "E9": "r-4abe4a81f363f550e71b6d6d",
+                "E10": "r-882c29e08d9cdd02af0d7deb",
+                "E11": "r-d6de447e8604a67d70505ae7",
+                "E12": "r-517392980ba6f0c62b7bc0a0",
+                "E13": "r-d79507aa296bb08478d459c5",
+                "E14": "r-c03f65e532f576555a1528b4"
+              },
+              "citedReceiptIds": [
+                "r-3d3e7daebc290b887df19161",
+                "r-3cbad5755bef4bc852b46f5d",
+                "r-6c6ffaabb69e828410a4c882",
+                "r-b6efa90f7c795b8a65d5781c",
+                "r-bf0153a35f66408c268ec0c6",
+                "r-82fd42016661d7267e3e1948",
+                "r-0a953aa31fbe13509c0a13d8",
+                "r-3091e0ec4b9c4f098e1e14fb",
+                "r-4abe4a81f363f550e71b6d6d",
+                "r-882c29e08d9cdd02af0d7deb",
+                "r-d6de447e8604a67d70505ae7",
+                "r-517392980ba6f0c62b7bc0a0",
+                "r-d79507aa296bb08478d459c5",
+                "r-c03f65e532f576555a1528b4"
+              ]
+            },
+            "writeAttempts": [],
+            "schemaAccepted": true,
+            "simulatedTurns": 2,
+            "decisive": {
+              "recovered": true,
+              "delivered": true
+            }
+          },
+          "exact": {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "name",
+                  "query": "vitest.config.ts",
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "normalized": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": "",
+                  "workspace": null,
+                  "match": "name",
+                  "query": "vitest.config.ts",
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "admitted"
+            },
+            "git": {
+              "status": "provided",
+              "results": [
+                {
+                  "status": "provided",
+                  "path": "vitest.config.ts",
+                  "receiptIds": [
+                    "r-c03f65e532f576555a1528b4"
+                  ]
+                }
+              ],
+              "budget": {
+                "gitCalls": 4,
+                "treeEntries": 660,
+                "openedFiles": 1,
+                "sourceBytes": 2564,
+                "matches": 1,
+                "evidenceBytes": 3016
+              },
+              "usage": {
+                "treeEntries": 660,
+                "openedFiles": 1,
+                "matches": 1,
+                "evidenceBytes": 3016,
+                "sourceBytes": 2564,
+                "receipts": 1,
+                "accounted": true
+              },
+              "receipts": [
+                {
+                  "kind": "git",
+                  "path": "vitest.config.ts",
+                  "blob": "04ac9a06182520e9c303547ae252713eda46ac63",
+                  "start": 1,
+                  "end": 24,
+                  "operation": "13745283070e153de389fb8e7455cfa56299859126a1a776c70db65a50a8bccd",
+                  "candidate": "c-895",
+                  "head": "06145cbe19f52fa5b9c61fecd381bcbe36421241",
+                  "tree": "ec0a355e7aef02329e70942edca7d4139a9b4222",
+                  "artifact": "f63bb5b90a7d956bcb11d8969bb2a45dc45bee293a253b10c36e4843285ef6c6",
+                  "id": "r-c03f65e532f576555a1528b4",
+                  "bytes": 2563
+                }
+              ]
+            },
+            "delivery": {
+              "status": "delivered",
+              "packetSha256": "7330638a95b9c70967860b772dfcf19d8b73097d611fd6b2dea10a1345cf9f3f",
+              "packetBytes": 14275,
+              "promptSha256": "313bc8fa3a907fb7e3e18a0272b964d28dcae14605c166451ec7fa574fffba2e",
+              "promptBytes": 15104,
+              "schemaSha256": "1d872333ef5e2f1be30d68df0cdb443f0021212202fe93647fb928c41f47383f",
+              "aliases": {
+                "E1": "r-3d3e7daebc290b887df19161",
+                "E2": "r-3cbad5755bef4bc852b46f5d",
+                "E3": "r-6c6ffaabb69e828410a4c882",
+                "E4": "r-b6efa90f7c795b8a65d5781c",
+                "E5": "r-bf0153a35f66408c268ec0c6",
+                "E6": "r-82fd42016661d7267e3e1948",
+                "E7": "r-0a953aa31fbe13509c0a13d8",
+                "E8": "r-3091e0ec4b9c4f098e1e14fb",
+                "E9": "r-4abe4a81f363f550e71b6d6d",
+                "E10": "r-882c29e08d9cdd02af0d7deb",
+                "E11": "r-d6de447e8604a67d70505ae7",
+                "E12": "r-517392980ba6f0c62b7bc0a0",
+                "E13": "r-d79507aa296bb08478d459c5",
+                "E14": "r-c03f65e532f576555a1528b4"
+              },
+              "citedReceiptIds": [
+                "r-3d3e7daebc290b887df19161",
+                "r-3cbad5755bef4bc852b46f5d",
+                "r-6c6ffaabb69e828410a4c882",
+                "r-b6efa90f7c795b8a65d5781c",
+                "r-bf0153a35f66408c268ec0c6",
+                "r-82fd42016661d7267e3e1948",
+                "r-0a953aa31fbe13509c0a13d8",
+                "r-3091e0ec4b9c4f098e1e14fb",
+                "r-4abe4a81f363f550e71b6d6d",
+                "r-882c29e08d9cdd02af0d7deb",
+                "r-d6de447e8604a67d70505ae7",
+                "r-517392980ba6f0c62b7bc0a0",
+                "r-d79507aa296bb08478d459c5",
+                "r-c03f65e532f576555a1528b4"
+              ]
+            },
+            "writeAttempts": [],
+            "schemaAccepted": true,
+            "simulatedTurns": 2,
+            "decisive": {
+              "recovered": true,
+              "delivered": true
+            }
+          },
+          "partial": {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "name",
+                  "query": "vitest.config.ts",
+                  "start": null,
+                  "end": null
+                },
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "name",
+                  "query": "absent-fixture-895.txt",
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "normalized": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": "",
+                  "workspace": null,
+                  "match": "name",
+                  "query": "vitest.config.ts",
+                  "start": null,
+                  "end": null
+                },
+                {
+                  "scope": "",
+                  "workspace": null,
+                  "match": "name",
+                  "query": "absent-fixture-895.txt",
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "admitted"
+            },
+            "git": {
+              "status": "partial",
+              "results": [
+                {
+                  "status": "provided",
+                  "path": "vitest.config.ts",
+                  "receiptIds": [
+                    "r-c03f65e532f576555a1528b4"
+                  ]
+                },
+                {
+                  "status": "absent",
+                  "reason": "path-absent"
+                }
+              ],
+              "budget": {
+                "gitCalls": 4,
+                "treeEntries": 660,
+                "openedFiles": 1,
+                "sourceBytes": 2564,
+                "matches": 1,
+                "evidenceBytes": 3016
+              },
+              "usage": {
+                "treeEntries": 660,
+                "openedFiles": 1,
+                "matches": 1,
+                "evidenceBytes": 3016,
+                "sourceBytes": 2564,
+                "receipts": 1,
+                "accounted": true
+              },
+              "receipts": [
+                {
+                  "kind": "git",
+                  "path": "vitest.config.ts",
+                  "blob": "04ac9a06182520e9c303547ae252713eda46ac63",
+                  "start": 1,
+                  "end": 24,
+                  "operation": "13745283070e153de389fb8e7455cfa56299859126a1a776c70db65a50a8bccd",
+                  "candidate": "c-895",
+                  "head": "06145cbe19f52fa5b9c61fecd381bcbe36421241",
+                  "tree": "ec0a355e7aef02329e70942edca7d4139a9b4222",
+                  "artifact": "f63bb5b90a7d956bcb11d8969bb2a45dc45bee293a253b10c36e4843285ef6c6",
+                  "id": "r-c03f65e532f576555a1528b4",
+                  "bytes": 2563
+                }
+              ]
+            },
+            "delivery": {
+              "status": "delivered",
+              "packetSha256": "d69e33464154e29aa30ea872df6f24dc6d50c0232e2ebcd80aff7eed9157bb92",
+              "packetBytes": 14317,
+              "promptSha256": "1292e4ba31e2a11d81a6eae93f73abfa0d018b2fd0529ced3af93c541229eaa4",
+              "promptBytes": 15146,
+              "schemaSha256": "1d872333ef5e2f1be30d68df0cdb443f0021212202fe93647fb928c41f47383f",
+              "aliases": {
+                "E1": "r-3d3e7daebc290b887df19161",
+                "E2": "r-3cbad5755bef4bc852b46f5d",
+                "E3": "r-6c6ffaabb69e828410a4c882",
+                "E4": "r-b6efa90f7c795b8a65d5781c",
+                "E5": "r-bf0153a35f66408c268ec0c6",
+                "E6": "r-82fd42016661d7267e3e1948",
+                "E7": "r-0a953aa31fbe13509c0a13d8",
+                "E8": "r-3091e0ec4b9c4f098e1e14fb",
+                "E9": "r-4abe4a81f363f550e71b6d6d",
+                "E10": "r-882c29e08d9cdd02af0d7deb",
+                "E11": "r-d6de447e8604a67d70505ae7",
+                "E12": "r-517392980ba6f0c62b7bc0a0",
+                "E13": "r-d79507aa296bb08478d459c5",
+                "E14": "r-c03f65e532f576555a1528b4"
+              },
+              "citedReceiptIds": [
+                "r-3d3e7daebc290b887df19161",
+                "r-3cbad5755bef4bc852b46f5d",
+                "r-6c6ffaabb69e828410a4c882",
+                "r-b6efa90f7c795b8a65d5781c",
+                "r-bf0153a35f66408c268ec0c6",
+                "r-82fd42016661d7267e3e1948",
+                "r-0a953aa31fbe13509c0a13d8",
+                "r-3091e0ec4b9c4f098e1e14fb",
+                "r-4abe4a81f363f550e71b6d6d",
+                "r-882c29e08d9cdd02af0d7deb",
+                "r-d6de447e8604a67d70505ae7",
+                "r-517392980ba6f0c62b7bc0a0",
+                "r-d79507aa296bb08478d459c5",
+                "r-c03f65e532f576555a1528b4"
+              ]
+            },
+            "writeAttempts": [],
+            "schemaAccepted": true,
+            "simulatedTurns": 2,
+            "decisive": {
+              "recovered": true,
+              "delivered": true
+            }
+          },
+          "absent": {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "name",
+                  "query": "*vitest*",
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "normalized": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": "",
+                  "workspace": null,
+                  "match": "name",
+                  "query": "*vitest*",
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "admitted"
+            },
+            "git": {
+              "status": "absent",
+              "results": [
+                {
+                  "status": "absent",
+                  "reason": "path-absent"
+                }
+              ],
+              "budget": {
+                "gitCalls": 2,
+                "treeEntries": 660,
+                "openedFiles": 0,
+                "sourceBytes": 0,
+                "matches": 0,
+                "evidenceBytes": 0
+              },
+              "usage": {
+                "treeEntries": 660,
+                "openedFiles": 0,
+                "matches": 0,
+                "evidenceBytes": 0,
+                "sourceBytes": 0,
+                "receipts": 0,
+                "accounted": true
+              },
+              "receipts": []
+            },
+            "delivery": {
+              "status": "delivered",
+              "packetSha256": "0471daf14ae99aee8abcbd981587ca6325e9f014d3ab6d058ed55a79a1af2dd6",
+              "packetBytes": 11540,
+              "promptSha256": "10777fd5c86a85043e13f6941fcfe5d4656377cc41e61b2b0c48fb4e536f55bb",
+              "promptBytes": 12369,
+              "schemaSha256": "6abf661f088a9d887af5010a7fd110a699a3418fa411fc96f2e5cacc51740a24",
+              "aliases": {
+                "E1": "r-3d3e7daebc290b887df19161",
+                "E2": "r-3cbad5755bef4bc852b46f5d",
+                "E3": "r-6c6ffaabb69e828410a4c882",
+                "E4": "r-b6efa90f7c795b8a65d5781c",
+                "E5": "r-bf0153a35f66408c268ec0c6",
+                "E6": "r-82fd42016661d7267e3e1948",
+                "E7": "r-0a953aa31fbe13509c0a13d8",
+                "E8": "r-3091e0ec4b9c4f098e1e14fb",
+                "E9": "r-4abe4a81f363f550e71b6d6d",
+                "E10": "r-882c29e08d9cdd02af0d7deb",
+                "E11": "r-d6de447e8604a67d70505ae7",
+                "E12": "r-517392980ba6f0c62b7bc0a0",
+                "E13": "r-d79507aa296bb08478d459c5"
+              },
+              "citedReceiptIds": [
+                "r-3d3e7daebc290b887df19161",
+                "r-3cbad5755bef4bc852b46f5d",
+                "r-6c6ffaabb69e828410a4c882",
+                "r-b6efa90f7c795b8a65d5781c",
+                "r-bf0153a35f66408c268ec0c6",
+                "r-82fd42016661d7267e3e1948",
+                "r-0a953aa31fbe13509c0a13d8",
+                "r-3091e0ec4b9c4f098e1e14fb",
+                "r-4abe4a81f363f550e71b6d6d",
+                "r-882c29e08d9cdd02af0d7deb",
+                "r-d6de447e8604a67d70505ae7",
+                "r-517392980ba6f0c62b7bc0a0",
+                "r-d79507aa296bb08478d459c5"
+              ]
+            },
+            "writeAttempts": [],
+            "schemaAccepted": true,
+            "simulatedTurns": 2,
+            "decisive": {
+              "recovered": false,
+              "delivered": false
+            }
+          },
+          "broad": {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "literal",
+                  "query": "completeCoverage",
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "normalized": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": "",
+                  "workspace": null,
+                  "match": "literal",
+                  "query": "completeCoverage",
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "admitted"
+            },
+            "git": {
+              "status": "budget",
+              "results": [
+                {
+                  "status": "budget",
+                  "reason": "search-file-budget"
+                }
+              ],
+              "budget": {
+                "gitCalls": 2,
+                "treeEntries": 660,
+                "openedFiles": 0,
+                "sourceBytes": 0,
+                "matches": 0,
+                "evidenceBytes": 0
+              },
+              "usage": {
+                "treeEntries": 660,
+                "openedFiles": 0,
+                "matches": 0,
+                "evidenceBytes": 0,
+                "sourceBytes": 0,
+                "receipts": 0,
+                "accounted": true
+              },
+              "receipts": []
+            },
+            "delivery": {
+              "status": "delivered",
+              "packetSha256": "528ca5a58c34ec66d34746d4fe801a3b4f76402d13aa9e5d4b03d92eacc25a4c",
+              "packetBytes": 11547,
+              "promptSha256": "41a32a4a0c53f7e6b97508c9492baa4fae378cbe8cd3123cadc124ed999f7f43",
+              "promptBytes": 12376,
+              "schemaSha256": "6abf661f088a9d887af5010a7fd110a699a3418fa411fc96f2e5cacc51740a24",
+              "aliases": {
+                "E1": "r-3d3e7daebc290b887df19161",
+                "E2": "r-3cbad5755bef4bc852b46f5d",
+                "E3": "r-6c6ffaabb69e828410a4c882",
+                "E4": "r-b6efa90f7c795b8a65d5781c",
+                "E5": "r-bf0153a35f66408c268ec0c6",
+                "E6": "r-82fd42016661d7267e3e1948",
+                "E7": "r-0a953aa31fbe13509c0a13d8",
+                "E8": "r-3091e0ec4b9c4f098e1e14fb",
+                "E9": "r-4abe4a81f363f550e71b6d6d",
+                "E10": "r-882c29e08d9cdd02af0d7deb",
+                "E11": "r-d6de447e8604a67d70505ae7",
+                "E12": "r-517392980ba6f0c62b7bc0a0",
+                "E13": "r-d79507aa296bb08478d459c5"
+              },
+              "citedReceiptIds": [
+                "r-3d3e7daebc290b887df19161",
+                "r-3cbad5755bef4bc852b46f5d",
+                "r-6c6ffaabb69e828410a4c882",
+                "r-b6efa90f7c795b8a65d5781c",
+                "r-bf0153a35f66408c268ec0c6",
+                "r-82fd42016661d7267e3e1948",
+                "r-0a953aa31fbe13509c0a13d8",
+                "r-3091e0ec4b9c4f098e1e14fb",
+                "r-4abe4a81f363f550e71b6d6d",
+                "r-882c29e08d9cdd02af0d7deb",
+                "r-d6de447e8604a67d70505ae7",
+                "r-517392980ba6f0c62b7bc0a0",
+                "r-d79507aa296bb08478d459c5"
+              ]
+            },
+            "writeAttempts": [],
+            "schemaAccepted": true,
+            "simulatedTurns": 2,
+            "decisive": {
+              "recovered": false,
+              "delivered": false
+            }
+          },
+          "overBytes": {
+            "original": {
+              "revision": "head",
+              "kind": "readBlob",
+              "targets": [
+                {
+                  "scope": "docs/checkbox-contract.md",
+                  "start": 1,
+                  "end": 74,
+                  "workspace": null,
+                  "match": "lines",
+                  "query": null
+                }
+              ]
+            },
+            "normalized": {
+              "revision": "head",
+              "kind": "readBlob",
+              "targets": [
+                {
+                  "scope": "docs/checkbox-contract.md",
+                  "start": 1,
+                  "end": 74,
+                  "workspace": null,
+                  "match": "lines",
+                  "query": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "admitted"
+            },
+            "git": {
+              "status": "budget",
+              "results": [
+                {
+                  "status": "budget",
+                  "reason": "fragment-byte-budget",
+                  "path": "docs/checkbox-contract.md",
+                  "receiptIds": []
+                }
+              ],
+              "budget": {
+                "gitCalls": 4,
+                "treeEntries": 1,
+                "openedFiles": 1,
+                "sourceBytes": 5453,
+                "matches": 1,
+                "evidenceBytes": 0
+              },
+              "usage": {
+                "treeEntries": 1,
+                "openedFiles": 1,
+                "matches": 1,
+                "evidenceBytes": 0,
+                "sourceBytes": 5453,
+                "receipts": 0,
+                "accounted": true
+              },
+              "receipts": []
+            },
+            "delivery": {
+              "status": "delivered",
+              "packetSha256": "f741de8dd25f335da8dcc3e499d7206875f2e63e0ebc76f35cfb617ba0416fc4",
+              "packetBytes": 11549,
+              "promptSha256": "63bf186fa844d873d509f810ca755d345f2a7ba8e24c2a726b277a925a17dd2b",
+              "promptBytes": 12378,
+              "schemaSha256": "6abf661f088a9d887af5010a7fd110a699a3418fa411fc96f2e5cacc51740a24",
+              "aliases": {
+                "E1": "r-3d3e7daebc290b887df19161",
+                "E2": "r-3cbad5755bef4bc852b46f5d",
+                "E3": "r-6c6ffaabb69e828410a4c882",
+                "E4": "r-b6efa90f7c795b8a65d5781c",
+                "E5": "r-bf0153a35f66408c268ec0c6",
+                "E6": "r-82fd42016661d7267e3e1948",
+                "E7": "r-0a953aa31fbe13509c0a13d8",
+                "E8": "r-3091e0ec4b9c4f098e1e14fb",
+                "E9": "r-4abe4a81f363f550e71b6d6d",
+                "E10": "r-882c29e08d9cdd02af0d7deb",
+                "E11": "r-d6de447e8604a67d70505ae7",
+                "E12": "r-517392980ba6f0c62b7bc0a0",
+                "E13": "r-d79507aa296bb08478d459c5"
+              },
+              "citedReceiptIds": [
+                "r-3d3e7daebc290b887df19161",
+                "r-3cbad5755bef4bc852b46f5d",
+                "r-6c6ffaabb69e828410a4c882",
+                "r-b6efa90f7c795b8a65d5781c",
+                "r-bf0153a35f66408c268ec0c6",
+                "r-82fd42016661d7267e3e1948",
+                "r-0a953aa31fbe13509c0a13d8",
+                "r-3091e0ec4b9c4f098e1e14fb",
+                "r-4abe4a81f363f550e71b6d6d",
+                "r-882c29e08d9cdd02af0d7deb",
+                "r-d6de447e8604a67d70505ae7",
+                "r-517392980ba6f0c62b7bc0a0",
+                "r-d79507aa296bb08478d459c5"
+              ]
+            },
+            "writeAttempts": [],
+            "schemaAccepted": true,
+            "simulatedTurns": 2,
+            "decisive": {
+              "recovered": false,
+              "delivered": false
+            }
+          }
+        }
+      }
+    },
+    "passed": [
+      "strict-schema",
+      "root-alias",
+      "authorized-subdirectory-only",
+      "path-escapes",
+      "no-blob-root-alias",
+      "one-line-read-target",
+      "three-search-targets",
+      "separate-search-modes",
+      "ordered-inclusive-range",
+      "effective-caps",
+      "exact-name",
+      "partial-delivery",
+      "wildcard-is-literal",
+      "search-file-budget",
+      "fragment-byte-budget"
+    ]
+  },
+  "trials": [
+    {
+      "trial": "original/1/fixed/gpt-6.1-sol",
+      "subject": "original",
+      "model": "gpt-6.1-sol",
+      "arm": "fixed",
+      "execution": "counterfactual-control",
+      "before": {
+        "admission": {
+          "status": "denied",
+          "reason": "scope-denied"
+        },
+        "git": null,
+        "writeAttempts": []
+      },
+      "after": {
+        "original": {
+          "revision": "head",
+          "kind": "searchTree",
+          "targets": [
+            {
+              "scope": ".",
+              "workspace": null,
+              "match": "name",
+              "query": "*vitest*",
+              "start": null,
+              "end": null
+            }
+          ]
+        },
+        "normalized": {
+          "revision": "head",
+          "kind": "searchTree",
+          "targets": [
+            {
+              "scope": "",
+              "workspace": null,
+              "match": "name",
+              "query": "*vitest*",
+              "start": null,
+              "end": null
+            }
+          ]
+        },
+        "admission": {
+          "status": "admitted"
+        },
+        "git": {
+          "status": "absent",
+          "results": [
+            {
+              "status": "absent",
+              "reason": "path-absent"
+            }
+          ],
+          "budget": {
+            "gitCalls": 2,
+            "treeEntries": 660,
+            "openedFiles": 0,
+            "sourceBytes": 0,
+            "matches": 0,
+            "evidenceBytes": 0
+          },
+          "usage": {
+            "treeEntries": 660,
+            "openedFiles": 0,
+            "matches": 0,
+            "evidenceBytes": 0,
+            "sourceBytes": 0,
+            "receipts": 0,
+            "accounted": true
+          },
+          "receipts": []
+        },
+        "delivery": {
+          "status": "delivered",
+          "packetSha256": "c52e5cb2417023b6175c797b48151922059935c0b7105fa6b949395a2706bcf0",
+          "packetBytes": 11540,
+          "promptSha256": "1230193d370ebd92f94dd2ff676a818a62b4c75303066053808d333c6f908246",
+          "promptBytes": 12369,
+          "schemaSha256": "6abf661f088a9d887af5010a7fd110a699a3418fa411fc96f2e5cacc51740a24",
+          "aliases": {
+            "E1": "r-990cbf7c3826b8923fbc5a40",
+            "E2": "r-e84cbaadaeecb7bde819c59f",
+            "E3": "r-879a406139e50f4e360f7559",
+            "E4": "r-e56521db29c8b10f07f4a31f",
+            "E5": "r-5e4e6a44985bf9924502fdd0",
+            "E6": "r-0feb7b06e3c137546bf35552",
+            "E7": "r-3330ca744d369bc323bde576",
+            "E8": "r-73e4ddfc94494317c97ae3db",
+            "E9": "r-62e83cbd336df8ae0768daf3",
+            "E10": "r-1df15e7738e14f0aea36ffc7",
+            "E11": "r-03c7e5f2ea49e653b66096d8",
+            "E12": "r-566aac65530b2261eaa61554",
+            "E13": "r-e143f2ad6ef6c072a4096aa3"
+          },
+          "citedReceiptIds": [
+            "r-990cbf7c3826b8923fbc5a40",
+            "r-e84cbaadaeecb7bde819c59f",
+            "r-879a406139e50f4e360f7559",
+            "r-e56521db29c8b10f07f4a31f",
+            "r-5e4e6a44985bf9924502fdd0",
+            "r-0feb7b06e3c137546bf35552",
+            "r-3330ca744d369bc323bde576",
+            "r-73e4ddfc94494317c97ae3db",
+            "r-62e83cbd336df8ae0768daf3",
+            "r-1df15e7738e14f0aea36ffc7",
+            "r-03c7e5f2ea49e653b66096d8",
+            "r-566aac65530b2261eaa61554",
+            "r-e143f2ad6ef6c072a4096aa3"
+          ]
+        },
+        "writeAttempts": [],
+        "schemaAccepted": true,
+        "simulatedTurns": 2,
+        "decisive": {
+          "recovered": false,
+          "delivered": false
+        }
+      }
+    },
+    {
+      "trial": "original/1/repeat/gpt-6.1-sol",
+      "subject": "original",
+      "model": "gpt-6.1-sol",
+      "arm": "repeat",
+      "execution": "counterfactual-control",
+      "before": {
+        "admission": {
+          "status": "denied",
+          "reason": "scope-denied"
+        },
+        "git": null,
+        "writeAttempts": []
+      },
+      "after": {
+        "original": {
+          "revision": "head",
+          "kind": "searchTree",
+          "targets": [
+            {
+              "scope": ".",
+              "workspace": null,
+              "match": "name",
+              "query": "*vitest*",
+              "start": null,
+              "end": null
+            }
+          ]
+        },
+        "normalized": {
+          "revision": "head",
+          "kind": "searchTree",
+          "targets": [
+            {
+              "scope": "",
+              "workspace": null,
+              "match": "name",
+              "query": "*vitest*",
+              "start": null,
+              "end": null
+            }
+          ]
+        },
+        "admission": {
+          "status": "admitted"
+        },
+        "git": {
+          "status": "absent",
+          "results": [
+            {
+              "status": "absent",
+              "reason": "path-absent"
+            }
+          ],
+          "budget": {
+            "gitCalls": 2,
+            "treeEntries": 660,
+            "openedFiles": 0,
+            "sourceBytes": 0,
+            "matches": 0,
+            "evidenceBytes": 0
+          },
+          "usage": {
+            "treeEntries": 660,
+            "openedFiles": 0,
+            "matches": 0,
+            "evidenceBytes": 0,
+            "sourceBytes": 0,
+            "receipts": 0,
+            "accounted": true
+          },
+          "receipts": []
+        },
+        "delivery": {
+          "status": "delivered",
+          "packetSha256": "c52e5cb2417023b6175c797b48151922059935c0b7105fa6b949395a2706bcf0",
+          "packetBytes": 11540,
+          "promptSha256": "1230193d370ebd92f94dd2ff676a818a62b4c75303066053808d333c6f908246",
+          "promptBytes": 12369,
+          "schemaSha256": "6abf661f088a9d887af5010a7fd110a699a3418fa411fc96f2e5cacc51740a24",
+          "aliases": {
+            "E1": "r-990cbf7c3826b8923fbc5a40",
+            "E2": "r-e84cbaadaeecb7bde819c59f",
+            "E3": "r-879a406139e50f4e360f7559",
+            "E4": "r-e56521db29c8b10f07f4a31f",
+            "E5": "r-5e4e6a44985bf9924502fdd0",
+            "E6": "r-0feb7b06e3c137546bf35552",
+            "E7": "r-3330ca744d369bc323bde576",
+            "E8": "r-73e4ddfc94494317c97ae3db",
+            "E9": "r-62e83cbd336df8ae0768daf3",
+            "E10": "r-1df15e7738e14f0aea36ffc7",
+            "E11": "r-03c7e5f2ea49e653b66096d8",
+            "E12": "r-566aac65530b2261eaa61554",
+            "E13": "r-e143f2ad6ef6c072a4096aa3"
+          },
+          "citedReceiptIds": [
+            "r-990cbf7c3826b8923fbc5a40",
+            "r-e84cbaadaeecb7bde819c59f",
+            "r-879a406139e50f4e360f7559",
+            "r-e56521db29c8b10f07f4a31f",
+            "r-5e4e6a44985bf9924502fdd0",
+            "r-0feb7b06e3c137546bf35552",
+            "r-3330ca744d369bc323bde576",
+            "r-73e4ddfc94494317c97ae3db",
+            "r-62e83cbd336df8ae0768daf3",
+            "r-1df15e7738e14f0aea36ffc7",
+            "r-03c7e5f2ea49e653b66096d8",
+            "r-566aac65530b2261eaa61554",
+            "r-e143f2ad6ef6c072a4096aa3"
+          ]
+        },
+        "writeAttempts": [],
+        "schemaAccepted": true,
+        "simulatedTurns": 2,
+        "decisive": {
+          "recovered": false,
+          "delivered": false
+        }
+      }
+    },
+    {
+      "trial": "original/1/on-demand/gpt-6.1-sol",
+      "subject": "original",
+      "model": "gpt-6.1-sol",
+      "arm": "on-demand",
+      "execution": "on-demand-replay",
+      "before": {
+        "admission": {
+          "status": "denied",
+          "reason": "scope-denied"
+        },
+        "git": null,
+        "writeAttempts": []
+      },
+      "after": {
+        "original": {
+          "revision": "head",
+          "kind": "searchTree",
+          "targets": [
+            {
+              "scope": ".",
+              "workspace": null,
+              "match": "literal",
+              "query": "completeCoverage",
+              "start": null,
+              "end": null
+            },
+            {
+              "scope": ".",
+              "workspace": null,
+              "match": "literal",
+              "query": "storybookTest(",
+              "start": null,
+              "end": null
+            }
+          ]
+        },
+        "normalized": {
+          "revision": "head",
+          "kind": "searchTree",
+          "targets": [
+            {
+              "scope": "",
+              "workspace": null,
+              "match": "literal",
+              "query": "completeCoverage",
+              "start": null,
+              "end": null
+            },
+            {
+              "scope": "",
+              "workspace": null,
+              "match": "literal",
+              "query": "storybookTest(",
+              "start": null,
+              "end": null
+            }
+          ]
+        },
+        "admission": {
+          "status": "admitted"
+        },
+        "git": {
+          "status": "budget",
+          "results": [
+            {
+              "status": "budget",
+              "reason": "search-file-budget"
+            },
+            {
+              "status": "budget",
+              "reason": "search-file-budget"
+            }
+          ],
+          "budget": {
+            "gitCalls": 2,
+            "treeEntries": 660,
+            "openedFiles": 0,
+            "sourceBytes": 0,
+            "matches": 0,
+            "evidenceBytes": 0
+          },
+          "usage": {
+            "treeEntries": 660,
+            "openedFiles": 0,
+            "matches": 0,
+            "evidenceBytes": 0,
+            "sourceBytes": 0,
+            "receipts": 0,
+            "accounted": true
+          },
+          "receipts": []
+        },
+        "delivery": {
+          "status": "delivered",
+          "packetSha256": "4f724ab1a03a8ecc25ef5ea53f05ebe5f5a3753a0a675e04cee291ebb2800b4f",
+          "packetBytes": 11597,
+          "promptSha256": "870ed3247163f961665952102592fe11c0b8cbdfcfdf96431db87a83442fde0f",
+          "promptBytes": 12426,
+          "schemaSha256": "6abf661f088a9d887af5010a7fd110a699a3418fa411fc96f2e5cacc51740a24",
+          "aliases": {
+            "E1": "r-990cbf7c3826b8923fbc5a40",
+            "E2": "r-e84cbaadaeecb7bde819c59f",
+            "E3": "r-879a406139e50f4e360f7559",
+            "E4": "r-e56521db29c8b10f07f4a31f",
+            "E5": "r-5e4e6a44985bf9924502fdd0",
+            "E6": "r-0feb7b06e3c137546bf35552",
+            "E7": "r-3330ca744d369bc323bde576",
+            "E8": "r-73e4ddfc94494317c97ae3db",
+            "E9": "r-62e83cbd336df8ae0768daf3",
+            "E10": "r-1df15e7738e14f0aea36ffc7",
+            "E11": "r-03c7e5f2ea49e653b66096d8",
+            "E12": "r-566aac65530b2261eaa61554",
+            "E13": "r-e143f2ad6ef6c072a4096aa3"
+          },
+          "citedReceiptIds": [
+            "r-990cbf7c3826b8923fbc5a40",
+            "r-e84cbaadaeecb7bde819c59f",
+            "r-879a406139e50f4e360f7559",
+            "r-e56521db29c8b10f07f4a31f",
+            "r-5e4e6a44985bf9924502fdd0",
+            "r-0feb7b06e3c137546bf35552",
+            "r-3330ca744d369bc323bde576",
+            "r-73e4ddfc94494317c97ae3db",
+            "r-62e83cbd336df8ae0768daf3",
+            "r-1df15e7738e14f0aea36ffc7",
+            "r-03c7e5f2ea49e653b66096d8",
+            "r-566aac65530b2261eaa61554",
+            "r-e143f2ad6ef6c072a4096aa3"
+          ]
+        },
+        "writeAttempts": [],
+        "schemaAccepted": true,
+        "simulatedTurns": 2,
+        "decisive": {
+          "recovered": false,
+          "delivered": false
+        }
+      }
+    },
+    {
+      "trial": "mutant/1/repeat/gpt-6-luna",
+      "subject": "mutant",
+      "model": "gpt-6-luna",
+      "arm": "repeat",
+      "execution": "counterfactual-control",
+      "before": {
+        "admission": {
+          "status": "denied",
+          "reason": "request-shape"
+        },
+        "git": null,
+        "writeAttempts": []
+      },
+      "after": {
+        "original": {
+          "revision": "head",
+          "kind": "readBlob",
+          "targets": [
+            {
+              "scope": "tooling/coverage.mjs",
+              "workspace": null,
+              "match": "lines",
+              "query": null,
+              "start": 1,
+              "end": 56
+            },
+            {
+              "scope": "vitest.config.mjs",
+              "workspace": null,
+              "match": "lines",
+              "query": null,
+              "start": 1,
+              "end": 80
+            },
+            {
+              "scope": "tests/coverage-evidence.test.mjs",
+              "workspace": null,
+              "match": "lines",
+              "query": null,
+              "start": 1,
+              "end": 30
+            }
+          ]
+        },
+        "normalized": {
+          "revision": "head",
+          "kind": "readBlob",
+          "targets": [
+            {
+              "scope": "tooling/coverage.mjs",
+              "workspace": null,
+              "match": "lines",
+              "query": null,
+              "start": 1,
+              "end": 56
+            },
+            {
+              "scope": "vitest.config.mjs",
+              "workspace": null,
+              "match": "lines",
+              "query": null,
+              "start": 1,
+              "end": 80
+            },
+            {
+              "scope": "tests/coverage-evidence.test.mjs",
+              "workspace": null,
+              "match": "lines",
+              "query": null,
+              "start": 1,
+              "end": 30
+            }
+          ]
+        },
+        "admission": {
+          "status": "denied",
+          "reason": "request-shape"
+        },
+        "git": null,
+        "delivery": null,
+        "writeAttempts": [],
+        "schemaAccepted": false,
+        "simulatedTurns": 1,
+        "decisive": {
+          "recovered": false,
+          "delivered": false
+        }
+      }
+    },
+    {
+      "trial": "mutant/1/repeat/gpt-6.1-sol",
+      "subject": "mutant",
+      "model": "gpt-6.1-sol",
+      "arm": "repeat",
+      "execution": "counterfactual-control",
+      "before": {
+        "admission": {
+          "status": "denied",
+          "reason": "scope-denied"
+        },
+        "git": null,
+        "writeAttempts": []
+      },
+      "after": {
+        "original": {
+          "revision": "head",
+          "kind": "searchTree",
+          "targets": [
+            {
+              "scope": ".",
+              "workspace": null,
+              "match": "name",
+              "query": "vitest",
+              "start": null,
+              "end": null
+            }
+          ]
+        },
+        "normalized": {
+          "revision": "head",
+          "kind": "searchTree",
+          "targets": [
+            {
+              "scope": "",
+              "workspace": null,
+              "match": "name",
+              "query": "vitest",
+              "start": null,
+              "end": null
+            }
+          ]
+        },
+        "admission": {
+          "status": "admitted"
+        },
+        "git": {
+          "status": "absent",
+          "results": [
+            {
+              "status": "absent",
+              "reason": "path-absent"
+            }
+          ],
+          "budget": {
+            "gitCalls": 2,
+            "treeEntries": 660,
+            "openedFiles": 0,
+            "sourceBytes": 0,
+            "matches": 0,
+            "evidenceBytes": 0
+          },
+          "usage": {
+            "treeEntries": 660,
+            "openedFiles": 0,
+            "matches": 0,
+            "evidenceBytes": 0,
+            "sourceBytes": 0,
+            "receipts": 0,
+            "accounted": true
+          },
+          "receipts": []
+        },
+        "delivery": {
+          "status": "delivered",
+          "packetSha256": "0471daf14ae99aee8abcbd981587ca6325e9f014d3ab6d058ed55a79a1af2dd6",
+          "packetBytes": 11540,
+          "promptSha256": "10777fd5c86a85043e13f6941fcfe5d4656377cc41e61b2b0c48fb4e536f55bb",
+          "promptBytes": 12369,
+          "schemaSha256": "6abf661f088a9d887af5010a7fd110a699a3418fa411fc96f2e5cacc51740a24",
+          "aliases": {
+            "E1": "r-3d3e7daebc290b887df19161",
+            "E2": "r-3cbad5755bef4bc852b46f5d",
+            "E3": "r-6c6ffaabb69e828410a4c882",
+            "E4": "r-b6efa90f7c795b8a65d5781c",
+            "E5": "r-bf0153a35f66408c268ec0c6",
+            "E6": "r-82fd42016661d7267e3e1948",
+            "E7": "r-0a953aa31fbe13509c0a13d8",
+            "E8": "r-3091e0ec4b9c4f098e1e14fb",
+            "E9": "r-4abe4a81f363f550e71b6d6d",
+            "E10": "r-882c29e08d9cdd02af0d7deb",
+            "E11": "r-d6de447e8604a67d70505ae7",
+            "E12": "r-517392980ba6f0c62b7bc0a0",
+            "E13": "r-d79507aa296bb08478d459c5"
+          },
+          "citedReceiptIds": [
+            "r-3d3e7daebc290b887df19161",
+            "r-3cbad5755bef4bc852b46f5d",
+            "r-6c6ffaabb69e828410a4c882",
+            "r-b6efa90f7c795b8a65d5781c",
+            "r-bf0153a35f66408c268ec0c6",
+            "r-82fd42016661d7267e3e1948",
+            "r-0a953aa31fbe13509c0a13d8",
+            "r-3091e0ec4b9c4f098e1e14fb",
+            "r-4abe4a81f363f550e71b6d6d",
+            "r-882c29e08d9cdd02af0d7deb",
+            "r-d6de447e8604a67d70505ae7",
+            "r-517392980ba6f0c62b7bc0a0",
+            "r-d79507aa296bb08478d459c5"
+          ]
+        },
+        "writeAttempts": [],
+        "schemaAccepted": true,
+        "simulatedTurns": 2,
+        "decisive": {
+          "recovered": false,
+          "delivered": false
+        }
+      }
+    },
+    {
+      "trial": "mutant/1/on-demand/gpt-6.1-sol",
+      "subject": "mutant",
+      "model": "gpt-6.1-sol",
+      "arm": "on-demand",
+      "execution": "on-demand-replay",
+      "before": {
+        "admission": {
+          "status": "denied",
+          "reason": "scope-denied"
+        },
+        "git": null,
+        "writeAttempts": []
+      },
+      "after": {
+        "original": {
+          "revision": "head",
+          "kind": "searchTree",
+          "targets": [
+            {
+              "scope": ".",
+              "workspace": null,
+              "match": "literal",
+              "query": "completeCoverage",
+              "start": null,
+              "end": null
+            },
+            {
+              "scope": ".",
+              "workspace": null,
+              "match": "literal",
+              "query": "storybookTest",
+              "start": null,
+              "end": null
+            }
+          ]
+        },
+        "normalized": {
+          "revision": "head",
+          "kind": "searchTree",
+          "targets": [
+            {
+              "scope": "",
+              "workspace": null,
+              "match": "literal",
+              "query": "completeCoverage",
+              "start": null,
+              "end": null
+            },
+            {
+              "scope": "",
+              "workspace": null,
+              "match": "literal",
+              "query": "storybookTest",
+              "start": null,
+              "end": null
+            }
+          ]
+        },
+        "admission": {
+          "status": "admitted"
+        },
+        "git": {
+          "status": "budget",
+          "results": [
+            {
+              "status": "budget",
+              "reason": "search-file-budget"
+            },
+            {
+              "status": "budget",
+              "reason": "search-file-budget"
+            }
+          ],
+          "budget": {
+            "gitCalls": 2,
+            "treeEntries": 660,
+            "openedFiles": 0,
+            "sourceBytes": 0,
+            "matches": 0,
+            "evidenceBytes": 0
+          },
+          "usage": {
+            "treeEntries": 660,
+            "openedFiles": 0,
+            "matches": 0,
+            "evidenceBytes": 0,
+            "sourceBytes": 0,
+            "receipts": 0,
+            "accounted": true
+          },
+          "receipts": []
+        },
+        "delivery": {
+          "status": "delivered",
+          "packetSha256": "cc344ed1dd0a242b26e34b69816c298bb080e9adacfc24b3c52e385c7248a638",
+          "packetBytes": 11597,
+          "promptSha256": "a5e48a7f75b0b4b8229ade5085a58398516571e5de90911a4fd3d617b33f338f",
+          "promptBytes": 12426,
+          "schemaSha256": "6abf661f088a9d887af5010a7fd110a699a3418fa411fc96f2e5cacc51740a24",
+          "aliases": {
+            "E1": "r-3d3e7daebc290b887df19161",
+            "E2": "r-3cbad5755bef4bc852b46f5d",
+            "E3": "r-6c6ffaabb69e828410a4c882",
+            "E4": "r-b6efa90f7c795b8a65d5781c",
+            "E5": "r-bf0153a35f66408c268ec0c6",
+            "E6": "r-82fd42016661d7267e3e1948",
+            "E7": "r-0a953aa31fbe13509c0a13d8",
+            "E8": "r-3091e0ec4b9c4f098e1e14fb",
+            "E9": "r-4abe4a81f363f550e71b6d6d",
+            "E10": "r-882c29e08d9cdd02af0d7deb",
+            "E11": "r-d6de447e8604a67d70505ae7",
+            "E12": "r-517392980ba6f0c62b7bc0a0",
+            "E13": "r-d79507aa296bb08478d459c5"
+          },
+          "citedReceiptIds": [
+            "r-3d3e7daebc290b887df19161",
+            "r-3cbad5755bef4bc852b46f5d",
+            "r-6c6ffaabb69e828410a4c882",
+            "r-b6efa90f7c795b8a65d5781c",
+            "r-bf0153a35f66408c268ec0c6",
+            "r-82fd42016661d7267e3e1948",
+            "r-0a953aa31fbe13509c0a13d8",
+            "r-3091e0ec4b9c4f098e1e14fb",
+            "r-4abe4a81f363f550e71b6d6d",
+            "r-882c29e08d9cdd02af0d7deb",
+            "r-d6de447e8604a67d70505ae7",
+            "r-517392980ba6f0c62b7bc0a0",
+            "r-d79507aa296bb08478d459c5"
+          ]
+        },
+        "writeAttempts": [],
+        "schemaAccepted": true,
+        "simulatedTurns": 2,
+        "decisive": {
+          "recovered": false,
+          "delivered": false
+        }
+      }
+    },
+    {
+      "trial": "original/2/repeat/gpt-6.1-sol",
+      "subject": "original",
+      "model": "gpt-6.1-sol",
+      "arm": "repeat",
+      "execution": "counterfactual-control",
+      "before": {
+        "admission": {
+          "status": "denied",
+          "reason": "scope-denied"
+        },
+        "git": null,
+        "writeAttempts": []
+      },
+      "after": {
+        "original": {
+          "revision": "head",
+          "kind": "searchTree",
+          "targets": [
+            {
+              "scope": ".",
+              "workspace": null,
+              "match": "name",
+              "query": "*vitest*",
+              "start": null,
+              "end": null
+            },
+            {
+              "scope": ".",
+              "workspace": null,
+              "match": "literal",
+              "query": "completeCoverage(",
+              "start": null,
+              "end": null
+            }
+          ]
+        },
+        "normalized": {
+          "revision": "head",
+          "kind": "searchTree",
+          "targets": [
+            {
+              "scope": "",
+              "workspace": null,
+              "match": "name",
+              "query": "*vitest*",
+              "start": null,
+              "end": null
+            },
+            {
+              "scope": "",
+              "workspace": null,
+              "match": "literal",
+              "query": "completeCoverage(",
+              "start": null,
+              "end": null
+            }
+          ]
+        },
+        "admission": {
+          "status": "admitted"
+        },
+        "git": {
+          "status": "unresolved",
+          "results": [
+            {
+              "status": "absent",
+              "reason": "path-absent"
+            },
+            {
+              "status": "budget",
+              "reason": "search-file-budget"
+            }
+          ],
+          "budget": {
+            "gitCalls": 2,
+            "treeEntries": 660,
+            "openedFiles": 0,
+            "sourceBytes": 0,
+            "matches": 0,
+            "evidenceBytes": 0
+          },
+          "usage": {
+            "treeEntries": 660,
+            "openedFiles": 0,
+            "matches": 0,
+            "evidenceBytes": 0,
+            "sourceBytes": 0,
+            "receipts": 0,
+            "accounted": true
+          },
+          "receipts": []
+        },
+        "delivery": {
+          "status": "delivered",
+          "packetSha256": "a6e12bac5224406e928e32b8a44869e36d2b7e2d483cf4d8bdba789100b4ed05",
+          "packetBytes": 11594,
+          "promptSha256": "ddec5cf854affeb7bd08fdc48562f6af03209529af5421af9950000e0d8ca4c7",
+          "promptBytes": 12423,
+          "schemaSha256": "6abf661f088a9d887af5010a7fd110a699a3418fa411fc96f2e5cacc51740a24",
+          "aliases": {
+            "E1": "r-990cbf7c3826b8923fbc5a40",
+            "E2": "r-e84cbaadaeecb7bde819c59f",
+            "E3": "r-879a406139e50f4e360f7559",
+            "E4": "r-e56521db29c8b10f07f4a31f",
+            "E5": "r-5e4e6a44985bf9924502fdd0",
+            "E6": "r-0feb7b06e3c137546bf35552",
+            "E7": "r-3330ca744d369bc323bde576",
+            "E8": "r-73e4ddfc94494317c97ae3db",
+            "E9": "r-62e83cbd336df8ae0768daf3",
+            "E10": "r-1df15e7738e14f0aea36ffc7",
+            "E11": "r-03c7e5f2ea49e653b66096d8",
+            "E12": "r-566aac65530b2261eaa61554",
+            "E13": "r-e143f2ad6ef6c072a4096aa3"
+          },
+          "citedReceiptIds": [
+            "r-990cbf7c3826b8923fbc5a40",
+            "r-e84cbaadaeecb7bde819c59f",
+            "r-879a406139e50f4e360f7559",
+            "r-e56521db29c8b10f07f4a31f",
+            "r-5e4e6a44985bf9924502fdd0",
+            "r-0feb7b06e3c137546bf35552",
+            "r-3330ca744d369bc323bde576",
+            "r-73e4ddfc94494317c97ae3db",
+            "r-62e83cbd336df8ae0768daf3",
+            "r-1df15e7738e14f0aea36ffc7",
+            "r-03c7e5f2ea49e653b66096d8",
+            "r-566aac65530b2261eaa61554",
+            "r-e143f2ad6ef6c072a4096aa3"
+          ]
+        },
+        "writeAttempts": [],
+        "schemaAccepted": true,
+        "simulatedTurns": 2,
+        "decisive": {
+          "recovered": false,
+          "delivered": false
+        }
+      }
+    },
+    {
+      "trial": "original/2/on-demand/gpt-6.1-sol",
+      "subject": "original",
+      "model": "gpt-6.1-sol",
+      "arm": "on-demand",
+      "execution": "on-demand-replay",
+      "before": {
+        "admission": {
+          "status": "denied",
+          "reason": "scope-denied"
+        },
+        "git": null,
+        "writeAttempts": []
+      },
+      "after": {
+        "original": {
+          "revision": "head",
+          "kind": "searchTree",
+          "targets": [
+            {
+              "scope": ".",
+              "workspace": null,
+              "match": "name",
+              "query": "*vitest*",
+              "start": null,
+              "end": null
+            }
+          ]
+        },
+        "normalized": {
+          "revision": "head",
+          "kind": "searchTree",
+          "targets": [
+            {
+              "scope": "",
+              "workspace": null,
+              "match": "name",
+              "query": "*vitest*",
+              "start": null,
+              "end": null
+            }
+          ]
+        },
+        "admission": {
+          "status": "admitted"
+        },
+        "git": {
+          "status": "absent",
+          "results": [
+            {
+              "status": "absent",
+              "reason": "path-absent"
+            }
+          ],
+          "budget": {
+            "gitCalls": 2,
+            "treeEntries": 660,
+            "openedFiles": 0,
+            "sourceBytes": 0,
+            "matches": 0,
+            "evidenceBytes": 0
+          },
+          "usage": {
+            "treeEntries": 660,
+            "openedFiles": 0,
+            "matches": 0,
+            "evidenceBytes": 0,
+            "sourceBytes": 0,
+            "receipts": 0,
+            "accounted": true
+          },
+          "receipts": []
+        },
+        "delivery": {
+          "status": "delivered",
+          "packetSha256": "c52e5cb2417023b6175c797b48151922059935c0b7105fa6b949395a2706bcf0",
+          "packetBytes": 11540,
+          "promptSha256": "1230193d370ebd92f94dd2ff676a818a62b4c75303066053808d333c6f908246",
+          "promptBytes": 12369,
+          "schemaSha256": "6abf661f088a9d887af5010a7fd110a699a3418fa411fc96f2e5cacc51740a24",
+          "aliases": {
+            "E1": "r-990cbf7c3826b8923fbc5a40",
+            "E2": "r-e84cbaadaeecb7bde819c59f",
+            "E3": "r-879a406139e50f4e360f7559",
+            "E4": "r-e56521db29c8b10f07f4a31f",
+            "E5": "r-5e4e6a44985bf9924502fdd0",
+            "E6": "r-0feb7b06e3c137546bf35552",
+            "E7": "r-3330ca744d369bc323bde576",
+            "E8": "r-73e4ddfc94494317c97ae3db",
+            "E9": "r-62e83cbd336df8ae0768daf3",
+            "E10": "r-1df15e7738e14f0aea36ffc7",
+            "E11": "r-03c7e5f2ea49e653b66096d8",
+            "E12": "r-566aac65530b2261eaa61554",
+            "E13": "r-e143f2ad6ef6c072a4096aa3"
+          },
+          "citedReceiptIds": [
+            "r-990cbf7c3826b8923fbc5a40",
+            "r-e84cbaadaeecb7bde819c59f",
+            "r-879a406139e50f4e360f7559",
+            "r-e56521db29c8b10f07f4a31f",
+            "r-5e4e6a44985bf9924502fdd0",
+            "r-0feb7b06e3c137546bf35552",
+            "r-3330ca744d369bc323bde576",
+            "r-73e4ddfc94494317c97ae3db",
+            "r-62e83cbd336df8ae0768daf3",
+            "r-1df15e7738e14f0aea36ffc7",
+            "r-03c7e5f2ea49e653b66096d8",
+            "r-566aac65530b2261eaa61554",
+            "r-e143f2ad6ef6c072a4096aa3"
+          ]
+        },
+        "writeAttempts": [],
+        "schemaAccepted": true,
+        "simulatedTurns": 2,
+        "decisive": {
+          "recovered": false,
+          "delivered": false
+        }
+      }
+    },
+    {
+      "trial": "original/2/fixed/gpt-6.1-sol",
+      "subject": "original",
+      "model": "gpt-6.1-sol",
+      "arm": "fixed",
+      "execution": "counterfactual-control",
+      "before": {
+        "admission": {
+          "status": "denied",
+          "reason": "scope-denied"
+        },
+        "git": null,
+        "writeAttempts": []
+      },
+      "after": {
+        "original": {
+          "revision": "head",
+          "kind": "searchTree",
+          "targets": [
+            {
+              "scope": ".",
+              "workspace": null,
+              "match": "name",
+              "query": "*vitest*",
+              "start": null,
+              "end": null
+            }
+          ]
+        },
+        "normalized": {
+          "revision": "head",
+          "kind": "searchTree",
+          "targets": [
+            {
+              "scope": "",
+              "workspace": null,
+              "match": "name",
+              "query": "*vitest*",
+              "start": null,
+              "end": null
+            }
+          ]
+        },
+        "admission": {
+          "status": "admitted"
+        },
+        "git": {
+          "status": "absent",
+          "results": [
+            {
+              "status": "absent",
+              "reason": "path-absent"
+            }
+          ],
+          "budget": {
+            "gitCalls": 2,
+            "treeEntries": 660,
+            "openedFiles": 0,
+            "sourceBytes": 0,
+            "matches": 0,
+            "evidenceBytes": 0
+          },
+          "usage": {
+            "treeEntries": 660,
+            "openedFiles": 0,
+            "matches": 0,
+            "evidenceBytes": 0,
+            "sourceBytes": 0,
+            "receipts": 0,
+            "accounted": true
+          },
+          "receipts": []
+        },
+        "delivery": {
+          "status": "delivered",
+          "packetSha256": "c52e5cb2417023b6175c797b48151922059935c0b7105fa6b949395a2706bcf0",
+          "packetBytes": 11540,
+          "promptSha256": "1230193d370ebd92f94dd2ff676a818a62b4c75303066053808d333c6f908246",
+          "promptBytes": 12369,
+          "schemaSha256": "6abf661f088a9d887af5010a7fd110a699a3418fa411fc96f2e5cacc51740a24",
+          "aliases": {
+            "E1": "r-990cbf7c3826b8923fbc5a40",
+            "E2": "r-e84cbaadaeecb7bde819c59f",
+            "E3": "r-879a406139e50f4e360f7559",
+            "E4": "r-e56521db29c8b10f07f4a31f",
+            "E5": "r-5e4e6a44985bf9924502fdd0",
+            "E6": "r-0feb7b06e3c137546bf35552",
+            "E7": "r-3330ca744d369bc323bde576",
+            "E8": "r-73e4ddfc94494317c97ae3db",
+            "E9": "r-62e83cbd336df8ae0768daf3",
+            "E10": "r-1df15e7738e14f0aea36ffc7",
+            "E11": "r-03c7e5f2ea49e653b66096d8",
+            "E12": "r-566aac65530b2261eaa61554",
+            "E13": "r-e143f2ad6ef6c072a4096aa3"
+          },
+          "citedReceiptIds": [
+            "r-990cbf7c3826b8923fbc5a40",
+            "r-e84cbaadaeecb7bde819c59f",
+            "r-879a406139e50f4e360f7559",
+            "r-e56521db29c8b10f07f4a31f",
+            "r-5e4e6a44985bf9924502fdd0",
+            "r-0feb7b06e3c137546bf35552",
+            "r-3330ca744d369bc323bde576",
+            "r-73e4ddfc94494317c97ae3db",
+            "r-62e83cbd336df8ae0768daf3",
+            "r-1df15e7738e14f0aea36ffc7",
+            "r-03c7e5f2ea49e653b66096d8",
+            "r-566aac65530b2261eaa61554",
+            "r-e143f2ad6ef6c072a4096aa3"
+          ]
+        },
+        "writeAttempts": [],
+        "schemaAccepted": true,
+        "simulatedTurns": 2,
+        "decisive": {
+          "recovered": false,
+          "delivered": false
+        }
+      }
+    },
+    {
+      "trial": "mutant/2/repeat/gpt-6.1-sol",
+      "subject": "mutant",
+      "model": "gpt-6.1-sol",
+      "arm": "repeat",
+      "execution": "counterfactual-control",
+      "before": {
+        "admission": {
+          "status": "denied",
+          "reason": "scope-denied"
+        },
+        "git": null,
+        "writeAttempts": []
+      },
+      "after": {
+        "original": {
+          "revision": "head",
+          "kind": "searchTree",
+          "targets": [
+            {
+              "scope": ".",
+              "workspace": null,
+              "match": "literal",
+              "query": "completeCoverage",
+              "start": null,
+              "end": null
+            },
+            {
+              "scope": ".",
+              "workspace": null,
+              "match": "literal",
+              "query": "storybookTest(",
+              "start": null,
+              "end": null
+            }
+          ]
+        },
+        "normalized": {
+          "revision": "head",
+          "kind": "searchTree",
+          "targets": [
+            {
+              "scope": "",
+              "workspace": null,
+              "match": "literal",
+              "query": "completeCoverage",
+              "start": null,
+              "end": null
+            },
+            {
+              "scope": "",
+              "workspace": null,
+              "match": "literal",
+              "query": "storybookTest(",
+              "start": null,
+              "end": null
+            }
+          ]
+        },
+        "admission": {
+          "status": "admitted"
+        },
+        "git": {
+          "status": "budget",
+          "results": [
+            {
+              "status": "budget",
+              "reason": "search-file-budget"
+            },
+            {
+              "status": "budget",
+              "reason": "search-file-budget"
+            }
+          ],
+          "budget": {
+            "gitCalls": 2,
+            "treeEntries": 660,
+            "openedFiles": 0,
+            "sourceBytes": 0,
+            "matches": 0,
+            "evidenceBytes": 0
+          },
+          "usage": {
+            "treeEntries": 660,
+            "openedFiles": 0,
+            "matches": 0,
+            "evidenceBytes": 0,
+            "sourceBytes": 0,
+            "receipts": 0,
+            "accounted": true
+          },
+          "receipts": []
+        },
+        "delivery": {
+          "status": "delivered",
+          "packetSha256": "cc344ed1dd0a242b26e34b69816c298bb080e9adacfc24b3c52e385c7248a638",
+          "packetBytes": 11597,
+          "promptSha256": "a5e48a7f75b0b4b8229ade5085a58398516571e5de90911a4fd3d617b33f338f",
+          "promptBytes": 12426,
+          "schemaSha256": "6abf661f088a9d887af5010a7fd110a699a3418fa411fc96f2e5cacc51740a24",
+          "aliases": {
+            "E1": "r-3d3e7daebc290b887df19161",
+            "E2": "r-3cbad5755bef4bc852b46f5d",
+            "E3": "r-6c6ffaabb69e828410a4c882",
+            "E4": "r-b6efa90f7c795b8a65d5781c",
+            "E5": "r-bf0153a35f66408c268ec0c6",
+            "E6": "r-82fd42016661d7267e3e1948",
+            "E7": "r-0a953aa31fbe13509c0a13d8",
+            "E8": "r-3091e0ec4b9c4f098e1e14fb",
+            "E9": "r-4abe4a81f363f550e71b6d6d",
+            "E10": "r-882c29e08d9cdd02af0d7deb",
+            "E11": "r-d6de447e8604a67d70505ae7",
+            "E12": "r-517392980ba6f0c62b7bc0a0",
+            "E13": "r-d79507aa296bb08478d459c5"
+          },
+          "citedReceiptIds": [
+            "r-3d3e7daebc290b887df19161",
+            "r-3cbad5755bef4bc852b46f5d",
+            "r-6c6ffaabb69e828410a4c882",
+            "r-b6efa90f7c795b8a65d5781c",
+            "r-bf0153a35f66408c268ec0c6",
+            "r-82fd42016661d7267e3e1948",
+            "r-0a953aa31fbe13509c0a13d8",
+            "r-3091e0ec4b9c4f098e1e14fb",
+            "r-4abe4a81f363f550e71b6d6d",
+            "r-882c29e08d9cdd02af0d7deb",
+            "r-d6de447e8604a67d70505ae7",
+            "r-517392980ba6f0c62b7bc0a0",
+            "r-d79507aa296bb08478d459c5"
+          ]
+        },
+        "writeAttempts": [],
+        "schemaAccepted": true,
+        "simulatedTurns": 2,
+        "decisive": {
+          "recovered": false,
+          "delivered": false
+        }
+      }
+    },
+    {
+      "trial": "mutant/2/fixed/gpt-6.1-sol",
+      "subject": "mutant",
+      "model": "gpt-6.1-sol",
+      "arm": "fixed",
+      "execution": "counterfactual-control",
+      "before": {
+        "admission": {
+          "status": "denied",
+          "reason": "scope-denied"
+        },
+        "git": null,
+        "writeAttempts": []
+      },
+      "after": {
+        "original": {
+          "revision": "head",
+          "kind": "searchTree",
+          "targets": [
+            {
+              "scope": ".",
+              "workspace": null,
+              "match": "literal",
+              "query": "completeCoverage",
+              "start": null,
+              "end": null
+            },
+            {
+              "scope": ".",
+              "workspace": null,
+              "match": "literal",
+              "query": "storybookTest",
+              "start": null,
+              "end": null
+            }
+          ]
+        },
+        "normalized": {
+          "revision": "head",
+          "kind": "searchTree",
+          "targets": [
+            {
+              "scope": "",
+              "workspace": null,
+              "match": "literal",
+              "query": "completeCoverage",
+              "start": null,
+              "end": null
+            },
+            {
+              "scope": "",
+              "workspace": null,
+              "match": "literal",
+              "query": "storybookTest",
+              "start": null,
+              "end": null
+            }
+          ]
+        },
+        "admission": {
+          "status": "admitted"
+        },
+        "git": {
+          "status": "budget",
+          "results": [
+            {
+              "status": "budget",
+              "reason": "search-file-budget"
+            },
+            {
+              "status": "budget",
+              "reason": "search-file-budget"
+            }
+          ],
+          "budget": {
+            "gitCalls": 2,
+            "treeEntries": 660,
+            "openedFiles": 0,
+            "sourceBytes": 0,
+            "matches": 0,
+            "evidenceBytes": 0
+          },
+          "usage": {
+            "treeEntries": 660,
+            "openedFiles": 0,
+            "matches": 0,
+            "evidenceBytes": 0,
+            "sourceBytes": 0,
+            "receipts": 0,
+            "accounted": true
+          },
+          "receipts": []
+        },
+        "delivery": {
+          "status": "delivered",
+          "packetSha256": "cc344ed1dd0a242b26e34b69816c298bb080e9adacfc24b3c52e385c7248a638",
+          "packetBytes": 11597,
+          "promptSha256": "a5e48a7f75b0b4b8229ade5085a58398516571e5de90911a4fd3d617b33f338f",
+          "promptBytes": 12426,
+          "schemaSha256": "6abf661f088a9d887af5010a7fd110a699a3418fa411fc96f2e5cacc51740a24",
+          "aliases": {
+            "E1": "r-3d3e7daebc290b887df19161",
+            "E2": "r-3cbad5755bef4bc852b46f5d",
+            "E3": "r-6c6ffaabb69e828410a4c882",
+            "E4": "r-b6efa90f7c795b8a65d5781c",
+            "E5": "r-bf0153a35f66408c268ec0c6",
+            "E6": "r-82fd42016661d7267e3e1948",
+            "E7": "r-0a953aa31fbe13509c0a13d8",
+            "E8": "r-3091e0ec4b9c4f098e1e14fb",
+            "E9": "r-4abe4a81f363f550e71b6d6d",
+            "E10": "r-882c29e08d9cdd02af0d7deb",
+            "E11": "r-d6de447e8604a67d70505ae7",
+            "E12": "r-517392980ba6f0c62b7bc0a0",
+            "E13": "r-d79507aa296bb08478d459c5"
+          },
+          "citedReceiptIds": [
+            "r-3d3e7daebc290b887df19161",
+            "r-3cbad5755bef4bc852b46f5d",
+            "r-6c6ffaabb69e828410a4c882",
+            "r-b6efa90f7c795b8a65d5781c",
+            "r-bf0153a35f66408c268ec0c6",
+            "r-82fd42016661d7267e3e1948",
+            "r-0a953aa31fbe13509c0a13d8",
+            "r-3091e0ec4b9c4f098e1e14fb",
+            "r-4abe4a81f363f550e71b6d6d",
+            "r-882c29e08d9cdd02af0d7deb",
+            "r-d6de447e8604a67d70505ae7",
+            "r-517392980ba6f0c62b7bc0a0",
+            "r-d79507aa296bb08478d459c5"
+          ]
+        },
+        "writeAttempts": [],
+        "schemaAccepted": true,
+        "simulatedTurns": 2,
+        "decisive": {
+          "recovered": false,
+          "delivered": false
+        }
+      }
+    },
+    {
+      "trial": "original/3/on-demand/gpt-6.1-sol",
+      "subject": "original",
+      "model": "gpt-6.1-sol",
+      "arm": "on-demand",
+      "execution": "on-demand-replay",
+      "before": {
+        "admission": {
+          "status": "denied",
+          "reason": "scope-denied"
+        },
+        "git": null,
+        "writeAttempts": []
+      },
+      "after": {
+        "original": {
+          "revision": "head",
+          "kind": "searchTree",
+          "targets": [
+            {
+              "scope": ".",
+              "workspace": null,
+              "match": "literal",
+              "query": "completeCoverage",
+              "start": null,
+              "end": null
+            },
+            {
+              "scope": ".",
+              "workspace": null,
+              "match": "literal",
+              "query": "storybookTest",
+              "start": null,
+              "end": null
+            }
+          ]
+        },
+        "normalized": {
+          "revision": "head",
+          "kind": "searchTree",
+          "targets": [
+            {
+              "scope": "",
+              "workspace": null,
+              "match": "literal",
+              "query": "completeCoverage",
+              "start": null,
+              "end": null
+            },
+            {
+              "scope": "",
+              "workspace": null,
+              "match": "literal",
+              "query": "storybookTest",
+              "start": null,
+              "end": null
+            }
+          ]
+        },
+        "admission": {
+          "status": "admitted"
+        },
+        "git": {
+          "status": "budget",
+          "results": [
+            {
+              "status": "budget",
+              "reason": "search-file-budget"
+            },
+            {
+              "status": "budget",
+              "reason": "search-file-budget"
+            }
+          ],
+          "budget": {
+            "gitCalls": 2,
+            "treeEntries": 660,
+            "openedFiles": 0,
+            "sourceBytes": 0,
+            "matches": 0,
+            "evidenceBytes": 0
+          },
+          "usage": {
+            "treeEntries": 660,
+            "openedFiles": 0,
+            "matches": 0,
+            "evidenceBytes": 0,
+            "sourceBytes": 0,
+            "receipts": 0,
+            "accounted": true
+          },
+          "receipts": []
+        },
+        "delivery": {
+          "status": "delivered",
+          "packetSha256": "4f724ab1a03a8ecc25ef5ea53f05ebe5f5a3753a0a675e04cee291ebb2800b4f",
+          "packetBytes": 11597,
+          "promptSha256": "870ed3247163f961665952102592fe11c0b8cbdfcfdf96431db87a83442fde0f",
+          "promptBytes": 12426,
+          "schemaSha256": "6abf661f088a9d887af5010a7fd110a699a3418fa411fc96f2e5cacc51740a24",
+          "aliases": {
+            "E1": "r-990cbf7c3826b8923fbc5a40",
+            "E2": "r-e84cbaadaeecb7bde819c59f",
+            "E3": "r-879a406139e50f4e360f7559",
+            "E4": "r-e56521db29c8b10f07f4a31f",
+            "E5": "r-5e4e6a44985bf9924502fdd0",
+            "E6": "r-0feb7b06e3c137546bf35552",
+            "E7": "r-3330ca744d369bc323bde576",
+            "E8": "r-73e4ddfc94494317c97ae3db",
+            "E9": "r-62e83cbd336df8ae0768daf3",
+            "E10": "r-1df15e7738e14f0aea36ffc7",
+            "E11": "r-03c7e5f2ea49e653b66096d8",
+            "E12": "r-566aac65530b2261eaa61554",
+            "E13": "r-e143f2ad6ef6c072a4096aa3"
+          },
+          "citedReceiptIds": [
+            "r-990cbf7c3826b8923fbc5a40",
+            "r-e84cbaadaeecb7bde819c59f",
+            "r-879a406139e50f4e360f7559",
+            "r-e56521db29c8b10f07f4a31f",
+            "r-5e4e6a44985bf9924502fdd0",
+            "r-0feb7b06e3c137546bf35552",
+            "r-3330ca744d369bc323bde576",
+            "r-73e4ddfc94494317c97ae3db",
+            "r-62e83cbd336df8ae0768daf3",
+            "r-1df15e7738e14f0aea36ffc7",
+            "r-03c7e5f2ea49e653b66096d8",
+            "r-566aac65530b2261eaa61554",
+            "r-e143f2ad6ef6c072a4096aa3"
+          ]
+        },
+        "writeAttempts": [],
+        "schemaAccepted": true,
+        "simulatedTurns": 2,
+        "decisive": {
+          "recovered": false,
+          "delivered": false
+        }
+      }
+    },
+    {
+      "trial": "original/3/fixed/gpt-6.1-sol",
+      "subject": "original",
+      "model": "gpt-6.1-sol",
+      "arm": "fixed",
+      "execution": "counterfactual-control",
+      "before": {
+        "admission": {
+          "status": "denied",
+          "reason": "scope-denied"
+        },
+        "git": null,
+        "writeAttempts": []
+      },
+      "after": {
+        "original": {
+          "revision": "head",
+          "kind": "searchTree",
+          "targets": [
+            {
+              "scope": ".",
+              "workspace": null,
+              "match": "name",
+              "query": "*vitest*",
+              "start": null,
+              "end": null
+            }
+          ]
+        },
+        "normalized": {
+          "revision": "head",
+          "kind": "searchTree",
+          "targets": [
+            {
+              "scope": "",
+              "workspace": null,
+              "match": "name",
+              "query": "*vitest*",
+              "start": null,
+              "end": null
+            }
+          ]
+        },
+        "admission": {
+          "status": "admitted"
+        },
+        "git": {
+          "status": "absent",
+          "results": [
+            {
+              "status": "absent",
+              "reason": "path-absent"
+            }
+          ],
+          "budget": {
+            "gitCalls": 2,
+            "treeEntries": 660,
+            "openedFiles": 0,
+            "sourceBytes": 0,
+            "matches": 0,
+            "evidenceBytes": 0
+          },
+          "usage": {
+            "treeEntries": 660,
+            "openedFiles": 0,
+            "matches": 0,
+            "evidenceBytes": 0,
+            "sourceBytes": 0,
+            "receipts": 0,
+            "accounted": true
+          },
+          "receipts": []
+        },
+        "delivery": {
+          "status": "delivered",
+          "packetSha256": "c52e5cb2417023b6175c797b48151922059935c0b7105fa6b949395a2706bcf0",
+          "packetBytes": 11540,
+          "promptSha256": "1230193d370ebd92f94dd2ff676a818a62b4c75303066053808d333c6f908246",
+          "promptBytes": 12369,
+          "schemaSha256": "6abf661f088a9d887af5010a7fd110a699a3418fa411fc96f2e5cacc51740a24",
+          "aliases": {
+            "E1": "r-990cbf7c3826b8923fbc5a40",
+            "E2": "r-e84cbaadaeecb7bde819c59f",
+            "E3": "r-879a406139e50f4e360f7559",
+            "E4": "r-e56521db29c8b10f07f4a31f",
+            "E5": "r-5e4e6a44985bf9924502fdd0",
+            "E6": "r-0feb7b06e3c137546bf35552",
+            "E7": "r-3330ca744d369bc323bde576",
+            "E8": "r-73e4ddfc94494317c97ae3db",
+            "E9": "r-62e83cbd336df8ae0768daf3",
+            "E10": "r-1df15e7738e14f0aea36ffc7",
+            "E11": "r-03c7e5f2ea49e653b66096d8",
+            "E12": "r-566aac65530b2261eaa61554",
+            "E13": "r-e143f2ad6ef6c072a4096aa3"
+          },
+          "citedReceiptIds": [
+            "r-990cbf7c3826b8923fbc5a40",
+            "r-e84cbaadaeecb7bde819c59f",
+            "r-879a406139e50f4e360f7559",
+            "r-e56521db29c8b10f07f4a31f",
+            "r-5e4e6a44985bf9924502fdd0",
+            "r-0feb7b06e3c137546bf35552",
+            "r-3330ca744d369bc323bde576",
+            "r-73e4ddfc94494317c97ae3db",
+            "r-62e83cbd336df8ae0768daf3",
+            "r-1df15e7738e14f0aea36ffc7",
+            "r-03c7e5f2ea49e653b66096d8",
+            "r-566aac65530b2261eaa61554",
+            "r-e143f2ad6ef6c072a4096aa3"
+          ]
+        },
+        "writeAttempts": [],
+        "schemaAccepted": true,
+        "simulatedTurns": 2,
+        "decisive": {
+          "recovered": false,
+          "delivered": false
+        }
+      }
+    },
+    {
+      "trial": "original/3/repeat/gpt-6.1-sol",
+      "subject": "original",
+      "model": "gpt-6.1-sol",
+      "arm": "repeat",
+      "execution": "counterfactual-control",
+      "before": {
+        "admission": {
+          "status": "denied",
+          "reason": "scope-denied"
+        },
+        "git": null,
+        "writeAttempts": []
+      },
+      "after": {
+        "original": {
+          "revision": "head",
+          "kind": "searchTree",
+          "targets": [
+            {
+              "scope": ".",
+              "workspace": null,
+              "match": "name",
+              "query": "*vitest*",
+              "start": null,
+              "end": null
+            },
+            {
+              "scope": ".",
+              "workspace": null,
+              "match": "literal",
+              "query": "completeCoverage(",
+              "start": null,
+              "end": null
+            }
+          ]
+        },
+        "normalized": {
+          "revision": "head",
+          "kind": "searchTree",
+          "targets": [
+            {
+              "scope": "",
+              "workspace": null,
+              "match": "name",
+              "query": "*vitest*",
+              "start": null,
+              "end": null
+            },
+            {
+              "scope": "",
+              "workspace": null,
+              "match": "literal",
+              "query": "completeCoverage(",
+              "start": null,
+              "end": null
+            }
+          ]
+        },
+        "admission": {
+          "status": "admitted"
+        },
+        "git": {
+          "status": "unresolved",
+          "results": [
+            {
+              "status": "absent",
+              "reason": "path-absent"
+            },
+            {
+              "status": "budget",
+              "reason": "search-file-budget"
+            }
+          ],
+          "budget": {
+            "gitCalls": 2,
+            "treeEntries": 660,
+            "openedFiles": 0,
+            "sourceBytes": 0,
+            "matches": 0,
+            "evidenceBytes": 0
+          },
+          "usage": {
+            "treeEntries": 660,
+            "openedFiles": 0,
+            "matches": 0,
+            "evidenceBytes": 0,
+            "sourceBytes": 0,
+            "receipts": 0,
+            "accounted": true
+          },
+          "receipts": []
+        },
+        "delivery": {
+          "status": "delivered",
+          "packetSha256": "a6e12bac5224406e928e32b8a44869e36d2b7e2d483cf4d8bdba789100b4ed05",
+          "packetBytes": 11594,
+          "promptSha256": "ddec5cf854affeb7bd08fdc48562f6af03209529af5421af9950000e0d8ca4c7",
+          "promptBytes": 12423,
+          "schemaSha256": "6abf661f088a9d887af5010a7fd110a699a3418fa411fc96f2e5cacc51740a24",
+          "aliases": {
+            "E1": "r-990cbf7c3826b8923fbc5a40",
+            "E2": "r-e84cbaadaeecb7bde819c59f",
+            "E3": "r-879a406139e50f4e360f7559",
+            "E4": "r-e56521db29c8b10f07f4a31f",
+            "E5": "r-5e4e6a44985bf9924502fdd0",
+            "E6": "r-0feb7b06e3c137546bf35552",
+            "E7": "r-3330ca744d369bc323bde576",
+            "E8": "r-73e4ddfc94494317c97ae3db",
+            "E9": "r-62e83cbd336df8ae0768daf3",
+            "E10": "r-1df15e7738e14f0aea36ffc7",
+            "E11": "r-03c7e5f2ea49e653b66096d8",
+            "E12": "r-566aac65530b2261eaa61554",
+            "E13": "r-e143f2ad6ef6c072a4096aa3"
+          },
+          "citedReceiptIds": [
+            "r-990cbf7c3826b8923fbc5a40",
+            "r-e84cbaadaeecb7bde819c59f",
+            "r-879a406139e50f4e360f7559",
+            "r-e56521db29c8b10f07f4a31f",
+            "r-5e4e6a44985bf9924502fdd0",
+            "r-0feb7b06e3c137546bf35552",
+            "r-3330ca744d369bc323bde576",
+            "r-73e4ddfc94494317c97ae3db",
+            "r-62e83cbd336df8ae0768daf3",
+            "r-1df15e7738e14f0aea36ffc7",
+            "r-03c7e5f2ea49e653b66096d8",
+            "r-566aac65530b2261eaa61554",
+            "r-e143f2ad6ef6c072a4096aa3"
+          ]
+        },
+        "writeAttempts": [],
+        "schemaAccepted": true,
+        "simulatedTurns": 2,
+        "decisive": {
+          "recovered": false,
+          "delivered": false
+        }
+      }
+    },
+    {
+      "trial": "mutant/3/on-demand/gpt-6.1-sol",
+      "subject": "mutant",
+      "model": "gpt-6.1-sol",
+      "arm": "on-demand",
+      "execution": "on-demand-replay",
+      "before": {
+        "admission": {
+          "status": "denied",
+          "reason": "scope-denied"
+        },
+        "git": null,
+        "writeAttempts": []
+      },
+      "after": {
+        "original": {
+          "revision": "head",
+          "kind": "searchTree",
+          "targets": [
+            {
+              "scope": ".",
+              "workspace": null,
+              "match": "name",
+              "query": "*vitest*",
+              "start": null,
+              "end": null
+            }
+          ]
+        },
+        "normalized": {
+          "revision": "head",
+          "kind": "searchTree",
+          "targets": [
+            {
+              "scope": "",
+              "workspace": null,
+              "match": "name",
+              "query": "*vitest*",
+              "start": null,
+              "end": null
+            }
+          ]
+        },
+        "admission": {
+          "status": "admitted"
+        },
+        "git": {
+          "status": "absent",
+          "results": [
+            {
+              "status": "absent",
+              "reason": "path-absent"
+            }
+          ],
+          "budget": {
+            "gitCalls": 2,
+            "treeEntries": 660,
+            "openedFiles": 0,
+            "sourceBytes": 0,
+            "matches": 0,
+            "evidenceBytes": 0
+          },
+          "usage": {
+            "treeEntries": 660,
+            "openedFiles": 0,
+            "matches": 0,
+            "evidenceBytes": 0,
+            "sourceBytes": 0,
+            "receipts": 0,
+            "accounted": true
+          },
+          "receipts": []
+        },
+        "delivery": {
+          "status": "delivered",
+          "packetSha256": "0471daf14ae99aee8abcbd981587ca6325e9f014d3ab6d058ed55a79a1af2dd6",
+          "packetBytes": 11540,
+          "promptSha256": "10777fd5c86a85043e13f6941fcfe5d4656377cc41e61b2b0c48fb4e536f55bb",
+          "promptBytes": 12369,
+          "schemaSha256": "6abf661f088a9d887af5010a7fd110a699a3418fa411fc96f2e5cacc51740a24",
+          "aliases": {
+            "E1": "r-3d3e7daebc290b887df19161",
+            "E2": "r-3cbad5755bef4bc852b46f5d",
+            "E3": "r-6c6ffaabb69e828410a4c882",
+            "E4": "r-b6efa90f7c795b8a65d5781c",
+            "E5": "r-bf0153a35f66408c268ec0c6",
+            "E6": "r-82fd42016661d7267e3e1948",
+            "E7": "r-0a953aa31fbe13509c0a13d8",
+            "E8": "r-3091e0ec4b9c4f098e1e14fb",
+            "E9": "r-4abe4a81f363f550e71b6d6d",
+            "E10": "r-882c29e08d9cdd02af0d7deb",
+            "E11": "r-d6de447e8604a67d70505ae7",
+            "E12": "r-517392980ba6f0c62b7bc0a0",
+            "E13": "r-d79507aa296bb08478d459c5"
+          },
+          "citedReceiptIds": [
+            "r-3d3e7daebc290b887df19161",
+            "r-3cbad5755bef4bc852b46f5d",
+            "r-6c6ffaabb69e828410a4c882",
+            "r-b6efa90f7c795b8a65d5781c",
+            "r-bf0153a35f66408c268ec0c6",
+            "r-82fd42016661d7267e3e1948",
+            "r-0a953aa31fbe13509c0a13d8",
+            "r-3091e0ec4b9c4f098e1e14fb",
+            "r-4abe4a81f363f550e71b6d6d",
+            "r-882c29e08d9cdd02af0d7deb",
+            "r-d6de447e8604a67d70505ae7",
+            "r-517392980ba6f0c62b7bc0a0",
+            "r-d79507aa296bb08478d459c5"
+          ]
+        },
+        "writeAttempts": [],
+        "schemaAccepted": true,
+        "simulatedTurns": 2,
+        "decisive": {
+          "recovered": false,
+          "delivered": false
+        }
+      }
+    },
+    {
+      "trial": "mutant/3/fixed/gpt-6.1-sol",
+      "subject": "mutant",
+      "model": "gpt-6.1-sol",
+      "arm": "fixed",
+      "execution": "counterfactual-control",
+      "before": {
+        "admission": {
+          "status": "denied",
+          "reason": "scope-denied"
+        },
+        "git": null,
+        "writeAttempts": []
+      },
+      "after": {
+        "original": {
+          "revision": "head",
+          "kind": "searchTree",
+          "targets": [
+            {
+              "scope": ".",
+              "workspace": null,
+              "match": "literal",
+              "query": "completeCoverage",
+              "start": null,
+              "end": null
+            },
+            {
+              "scope": ".",
+              "workspace": null,
+              "match": "literal",
+              "query": "storybookTest(",
+              "start": null,
+              "end": null
+            }
+          ]
+        },
+        "normalized": {
+          "revision": "head",
+          "kind": "searchTree",
+          "targets": [
+            {
+              "scope": "",
+              "workspace": null,
+              "match": "literal",
+              "query": "completeCoverage",
+              "start": null,
+              "end": null
+            },
+            {
+              "scope": "",
+              "workspace": null,
+              "match": "literal",
+              "query": "storybookTest(",
+              "start": null,
+              "end": null
+            }
+          ]
+        },
+        "admission": {
+          "status": "admitted"
+        },
+        "git": {
+          "status": "budget",
+          "results": [
+            {
+              "status": "budget",
+              "reason": "search-file-budget"
+            },
+            {
+              "status": "budget",
+              "reason": "search-file-budget"
+            }
+          ],
+          "budget": {
+            "gitCalls": 2,
+            "treeEntries": 660,
+            "openedFiles": 0,
+            "sourceBytes": 0,
+            "matches": 0,
+            "evidenceBytes": 0
+          },
+          "usage": {
+            "treeEntries": 660,
+            "openedFiles": 0,
+            "matches": 0,
+            "evidenceBytes": 0,
+            "sourceBytes": 0,
+            "receipts": 0,
+            "accounted": true
+          },
+          "receipts": []
+        },
+        "delivery": {
+          "status": "delivered",
+          "packetSha256": "cc344ed1dd0a242b26e34b69816c298bb080e9adacfc24b3c52e385c7248a638",
+          "packetBytes": 11597,
+          "promptSha256": "a5e48a7f75b0b4b8229ade5085a58398516571e5de90911a4fd3d617b33f338f",
+          "promptBytes": 12426,
+          "schemaSha256": "6abf661f088a9d887af5010a7fd110a699a3418fa411fc96f2e5cacc51740a24",
+          "aliases": {
+            "E1": "r-3d3e7daebc290b887df19161",
+            "E2": "r-3cbad5755bef4bc852b46f5d",
+            "E3": "r-6c6ffaabb69e828410a4c882",
+            "E4": "r-b6efa90f7c795b8a65d5781c",
+            "E5": "r-bf0153a35f66408c268ec0c6",
+            "E6": "r-82fd42016661d7267e3e1948",
+            "E7": "r-0a953aa31fbe13509c0a13d8",
+            "E8": "r-3091e0ec4b9c4f098e1e14fb",
+            "E9": "r-4abe4a81f363f550e71b6d6d",
+            "E10": "r-882c29e08d9cdd02af0d7deb",
+            "E11": "r-d6de447e8604a67d70505ae7",
+            "E12": "r-517392980ba6f0c62b7bc0a0",
+            "E13": "r-d79507aa296bb08478d459c5"
+          },
+          "citedReceiptIds": [
+            "r-3d3e7daebc290b887df19161",
+            "r-3cbad5755bef4bc852b46f5d",
+            "r-6c6ffaabb69e828410a4c882",
+            "r-b6efa90f7c795b8a65d5781c",
+            "r-bf0153a35f66408c268ec0c6",
+            "r-82fd42016661d7267e3e1948",
+            "r-0a953aa31fbe13509c0a13d8",
+            "r-3091e0ec4b9c4f098e1e14fb",
+            "r-4abe4a81f363f550e71b6d6d",
+            "r-882c29e08d9cdd02af0d7deb",
+            "r-d6de447e8604a67d70505ae7",
+            "r-517392980ba6f0c62b7bc0a0",
+            "r-d79507aa296bb08478d459c5"
+          ]
+        },
+        "writeAttempts": [],
+        "schemaAccepted": true,
+        "simulatedTurns": 2,
+        "decisive": {
+          "recovered": false,
+          "delivered": false
+        }
+      }
+    },
+    {
+      "trial": "mutant/3/repeat/gpt-6.1-sol",
+      "subject": "mutant",
+      "model": "gpt-6.1-sol",
+      "arm": "repeat",
+      "execution": "counterfactual-control",
+      "before": {
+        "admission": {
+          "status": "denied",
+          "reason": "scope-denied"
+        },
+        "git": null,
+        "writeAttempts": []
+      },
+      "after": {
+        "original": {
+          "revision": "head",
+          "kind": "searchTree",
+          "targets": [
+            {
+              "scope": ".",
+              "workspace": null,
+              "match": "literal",
+              "query": "completeCoverage(",
+              "start": null,
+              "end": null
+            },
+            {
+              "scope": ".",
+              "workspace": null,
+              "match": "literal",
+              "query": "storybookTest(",
+              "start": null,
+              "end": null
+            }
+          ]
+        },
+        "normalized": {
+          "revision": "head",
+          "kind": "searchTree",
+          "targets": [
+            {
+              "scope": "",
+              "workspace": null,
+              "match": "literal",
+              "query": "completeCoverage(",
+              "start": null,
+              "end": null
+            },
+            {
+              "scope": "",
+              "workspace": null,
+              "match": "literal",
+              "query": "storybookTest(",
+              "start": null,
+              "end": null
+            }
+          ]
+        },
+        "admission": {
+          "status": "admitted"
+        },
+        "git": {
+          "status": "budget",
+          "results": [
+            {
+              "status": "budget",
+              "reason": "search-file-budget"
+            },
+            {
+              "status": "budget",
+              "reason": "search-file-budget"
+            }
+          ],
+          "budget": {
+            "gitCalls": 2,
+            "treeEntries": 660,
+            "openedFiles": 0,
+            "sourceBytes": 0,
+            "matches": 0,
+            "evidenceBytes": 0
+          },
+          "usage": {
+            "treeEntries": 660,
+            "openedFiles": 0,
+            "matches": 0,
+            "evidenceBytes": 0,
+            "sourceBytes": 0,
+            "receipts": 0,
+            "accounted": true
+          },
+          "receipts": []
+        },
+        "delivery": {
+          "status": "delivered",
+          "packetSha256": "cc344ed1dd0a242b26e34b69816c298bb080e9adacfc24b3c52e385c7248a638",
+          "packetBytes": 11597,
+          "promptSha256": "a5e48a7f75b0b4b8229ade5085a58398516571e5de90911a4fd3d617b33f338f",
+          "promptBytes": 12426,
+          "schemaSha256": "6abf661f088a9d887af5010a7fd110a699a3418fa411fc96f2e5cacc51740a24",
+          "aliases": {
+            "E1": "r-3d3e7daebc290b887df19161",
+            "E2": "r-3cbad5755bef4bc852b46f5d",
+            "E3": "r-6c6ffaabb69e828410a4c882",
+            "E4": "r-b6efa90f7c795b8a65d5781c",
+            "E5": "r-bf0153a35f66408c268ec0c6",
+            "E6": "r-82fd42016661d7267e3e1948",
+            "E7": "r-0a953aa31fbe13509c0a13d8",
+            "E8": "r-3091e0ec4b9c4f098e1e14fb",
+            "E9": "r-4abe4a81f363f550e71b6d6d",
+            "E10": "r-882c29e08d9cdd02af0d7deb",
+            "E11": "r-d6de447e8604a67d70505ae7",
+            "E12": "r-517392980ba6f0c62b7bc0a0",
+            "E13": "r-d79507aa296bb08478d459c5"
+          },
+          "citedReceiptIds": [
+            "r-3d3e7daebc290b887df19161",
+            "r-3cbad5755bef4bc852b46f5d",
+            "r-6c6ffaabb69e828410a4c882",
+            "r-b6efa90f7c795b8a65d5781c",
+            "r-bf0153a35f66408c268ec0c6",
+            "r-82fd42016661d7267e3e1948",
+            "r-0a953aa31fbe13509c0a13d8",
+            "r-3091e0ec4b9c4f098e1e14fb",
+            "r-4abe4a81f363f550e71b6d6d",
+            "r-882c29e08d9cdd02af0d7deb",
+            "r-d6de447e8604a67d70505ae7",
+            "r-517392980ba6f0c62b7bc0a0",
+            "r-d79507aa296bb08478d459c5"
+          ]
+        },
+        "writeAttempts": [],
+        "schemaAccepted": true,
+        "simulatedTurns": 2,
+        "decisive": {
+          "recovered": false,
+          "delivered": false
+        }
+      }
+    }
+  ]
+}

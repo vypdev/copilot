@@ -1,0 +1,254 @@
+[
+  {
+    "trial": "original/1/fixed/gpt-6-luna",
+    "subject": "original",
+    "repetition": 1,
+    "arm": "fixed",
+    "model": "gpt-6-luna"
+  },
+  {
+    "trial": "original/1/fixed/gpt-6.1-sol",
+    "subject": "original",
+    "repetition": 1,
+    "arm": "fixed",
+    "model": "gpt-6.1-sol"
+  },
+  {
+    "trial": "original/1/repeat/gpt-6-luna",
+    "subject": "original",
+    "repetition": 1,
+    "arm": "repeat",
+    "model": "gpt-6-luna"
+  },
+  {
+    "trial": "original/1/repeat/gpt-6.1-sol",
+    "subject": "original",
+    "repetition": 1,
+    "arm": "repeat",
+    "model": "gpt-6.1-sol"
+  },
+  {
+    "trial": "original/1/on-demand/gpt-6-luna",
+    "subject": "original",
+    "repetition": 1,
+    "arm": "on-demand",
+    "model": "gpt-6-luna"
+  },
+  {
+    "trial": "original/1/on-demand/gpt-6.1-sol",
+    "subject": "original",
+    "repetition": 1,
+    "arm": "on-demand",
+    "model": "gpt-6.1-sol"
+  },
+  {
+    "trial": "mutant/1/fixed/gpt-6-luna",
+    "subject": "mutant",
+    "repetition": 1,
+    "arm": "fixed",
+    "model": "gpt-6-luna"
+  },
+  {
+    "trial": "mutant/1/fixed/gpt-6.1-sol",
+    "subject": "mutant",
+    "repetition": 1,
+    "arm": "fixed",
+    "model": "gpt-6.1-sol"
+  },
+  {
+    "trial": "mutant/1/repeat/gpt-6-luna",
+    "subject": "mutant",
+    "repetition": 1,
+    "arm": "repeat",
+    "model": "gpt-6-luna"
+  },
+  {
+    "trial": "mutant/1/repeat/gpt-6.1-sol",
+    "subject": "mutant",
+    "repetition": 1,
+    "arm": "repeat",
+    "model": "gpt-6.1-sol"
+  },
+  {
+    "trial": "mutant/1/on-demand/gpt-6-luna",
+    "subject": "mutant",
+    "repetition": 1,
+    "arm": "on-demand",
+    "model": "gpt-6-luna"
+  },
+  {
+    "trial": "mutant/1/on-demand/gpt-6.1-sol",
+    "subject": "mutant",
+    "repetition": 1,
+    "arm": "on-demand",
+    "model": "gpt-6.1-sol"
+  },
+  {
+    "trial": "original/2/repeat/gpt-6-luna",
+    "subject": "original",
+    "repetition": 2,
+    "arm": "repeat",
+    "model": "gpt-6-luna"
+  },
+  {
+    "trial": "original/2/repeat/gpt-6.1-sol",
+    "subject": "original",
+    "repetition": 2,
+    "arm": "repeat",
+    "model": "gpt-6.1-sol"
+  },
+  {
+    "trial": "original/2/on-demand/gpt-6-luna",
+    "subject": "original",
+    "repetition": 2,
+    "arm": "on-demand",
+    "model": "gpt-6-luna"
+  },
+  {
+    "trial": "original/2/on-demand/gpt-6.1-sol",
+    "subject": "original",
+    "repetition": 2,
+    "arm": "on-demand",
+    "model": "gpt-6.1-sol"
+  },
+  {
+    "trial": "original/2/fixed/gpt-6-luna",
+    "subject": "original",
+    "repetition": 2,
+    "arm": "fixed",
+    "model": "gpt-6-luna"
+  },
+  {
+    "trial": "original/2/fixed/gpt-6.1-sol",
+    "subject": "original",
+    "repetition": 2,
+    "arm": "fixed",
+    "model": "gpt-6.1-sol"
+  },
+  {
+    "trial": "mutant/2/repeat/gpt-6-luna",
+    "subject": "mutant",
+    "repetition": 2,
+    "arm": "repeat",
+    "model": "gpt-6-luna"
+  },
+  {
+    "trial": "mutant/2/repeat/gpt-6.1-sol",
+    "subject": "mutant",
+    "repetition": 2,
+    "arm": "repeat",
+    "model": "gpt-6.1-sol"
+  },
+  {
+    "trial": "mutant/2/on-demand/gpt-6-luna",
+    "subject": "mutant",
+    "repetition": 2,
+    "arm": "on-demand",
+    "model": "gpt-6-luna"
+  },
+  {
+    "trial": "mutant/2/on-demand/gpt-6.1-sol",
+    "subject": "mutant",
+    "repetition": 2,
+    "arm": "on-demand",
+    "model": "gpt-6.1-sol"
+  },
+  {
+    "trial": "mutant/2/fixed/gpt-6-luna",
+    "subject": "mutant",
+    "repetition": 2,
+    "arm": "fixed",
+    "model": "gpt-6-luna"
+  },
+  {
+    "trial": "mutant/2/fixed/gpt-6.1-sol",
+    "subject": "mutant",
+    "repetition": 2,
+    "arm": "fixed",
+    "model": "gpt-6.1-sol"
+  },
+  {
+    "trial": "original/3/on-demand/gpt-6-luna",
+    "subject": "original",
+    "repetition": 3,
+    "arm": "on-demand",
+    "model": "gpt-6-luna"
+  },
+  {
+    "trial": "original/3/on-demand/gpt-6.1-sol",
+    "subject": "original",
+    "repetition": 3,
+    "arm": "on-demand",
+    "model": "gpt-6.1-sol"
+  },
+  {
+    "trial": "original/3/fixed/gpt-6-luna",
+    "subject": "original",
+    "repetition": 3,
+    "arm": "fixed",
+    "model": "gpt-6-luna"
+  },
+  {
+    "trial": "original/3/fixed/gpt-6.1-sol",
+    "subject": "original",
+    "repetition": 3,
+    "arm": "fixed",
+    "model": "gpt-6.1-sol"
+  },
+  {
+    "trial": "original/3/repeat/gpt-6-luna",
+    "subject": "original",
+    "repetition": 3,
+    "arm": "repeat",
+    "model": "gpt-6-luna"
+  },
+  {
+    "trial": "original/3/repeat/gpt-6.1-sol",
+    "subject": "original",
+    "repetition": 3,
+    "arm": "repeat",
+    "model": "gpt-6.1-sol"
+  },
+  {
+    "trial": "mutant/3/on-demand/gpt-6-luna",
+    "subject": "mutant",
+    "repetition": 3,
+    "arm": "on-demand",
+    "model": "gpt-6-luna"
+  },
+  {
+    "trial": "mutant/3/on-demand/gpt-6.1-sol",
+    "subject": "mutant",
+    "repetition": 3,
+    "arm": "on-demand",
+    "model": "gpt-6.1-sol"
+  },
+  {
+    "trial": "mutant/3/fixed/gpt-6-luna",
+    "subject": "mutant",
+    "repetition": 3,
+    "arm": "fixed",
+    "model": "gpt-6-luna"
+  },
+  {
+    "trial": "mutant/3/fixed/gpt-6.1-sol",
+    "subject": "mutant",
+    "repetition": 3,
+    "arm": "fixed",
+    "model": "gpt-6.1-sol"
+  },
+  {
+    "trial": "mutant/3/repeat/gpt-6-luna",
+    "subject": "mutant",
+    "repetition": 3,
+    "arm": "repeat",
+    "model": "gpt-6-luna"
+  },
+  {
+    "trial": "mutant/3/repeat/gpt-6.1-sol",
+    "subject": "mutant",
+    "repetition": 3,
+    "arm": "repeat",
+    "model": "gpt-6.1-sol"
+  }
+]

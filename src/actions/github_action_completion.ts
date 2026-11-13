@@ -51,11 +51,14 @@ export async function finishGithubAction(
 
     execution.currentConfiguration.results = results;
     core.setOutput('bugbot-telemetry', JSON.stringify(extractBugbotTelemetry(results)));
-    const dryRun = results.some((result) => getResultPayload(result.payload)?.dryRun === true);
+    const shadowSummary = emitBugbotShadowSummary(results);
+    const dryRun = execution.ai.getBugbotReviewConfiguration().publicationMode === 'dry-run'
+        || results.some(result => getResultPayload(result.payload)?.dryRun === true);
+    const verificationBlocked = results.some(result => getResultPayload(result.payload)?.bugbotPublicationBlocked === true);
     const admissionStopped = execution.issueWorkflowRuntimeMode === 'block' || execution.issueWorkflowRuntimeMode === 'noop';
     const ownsDeploymentPresentation = execution.singleAction.isDeploymentOrchestrationAction;
-    if (!dryRun && !admissionStopped && !execution.singleAction.isPublishIssueCommentAction && !ownsDeploymentPresentation) {
-        const publicationContext = projectPublishResultContext(execution);
+    if (!dryRun && !verificationBlocked && !admissionStopped && !execution.singleAction.isPublishIssueCommentAction && !ownsDeploymentPresentation) {
+        const publicationContext = { ...projectPublishResultContext(execution), progressLinks: progressWorkLinks(execution) };
         const requestRead = publicationContext.requestSource ? createReplyRequestReadPort({
             owner: execution.owner, repository: execution.repo, token: execution.tokens.token,
         }) : undefined;
@@ -66,6 +69,8 @@ export async function finishGithubAction(
             requestRead,
         ).invoke(publicationContext);
         if (publicationOutcome) results.push(publicationOutcome);
+    } else if (verificationBlocked) {
+        logInfo('Bugbot verification did not authorize publication.');
     } else if (admissionStopped) {
         logInfo('Issue admission stopped: exact recovery is reported only in the Job Summary.');
     } else if (execution.singleAction.isPublishIssueCommentAction || ownsDeploymentPresentation) {
@@ -74,7 +79,7 @@ export async function finishGithubAction(
         logInfo('Bugbot dry-run: result publication and repository configuration persistence are disabled.');
     }
     commitPublishedRecommendationState(execution, results);
-    if (!dryRun && shouldPersistConfiguration(execution)) {
+    if (!dryRun && !verificationBlocked && shouldPersistConfiguration(execution)) {
         const configuration = projectConfigurationPersistenceContext(execution);
         if (configuration) {
             await new StoreConfigurationUseCase(configurationStorePort).invoke(configuration);
@@ -86,13 +91,24 @@ export async function finishGithubAction(
         logInfo('Configuration persistence skipped: this single action does not modify execution configuration.');
     }
     const summary = await writeActionSummary(execution, summaryPort, catalogResolver);
-    const optionalEvidenceDiagnostic = !dryRun ? await publishCopilotEvidence(
+    if (shadowSummary && summaryPort) {
+        try { await summaryPort.publish(shadowSummary); }
+        catch { logInfo('Bugbot shadow summary could not be appended.'); }
+    }
+    const optionalEvidenceDiagnostic = !dryRun && !verificationBlocked ? await publishCopilotEvidence(
         execution,
         results,
         summary.text,
         evidencePort,
         catalogResolver,
     ) : undefined;
+    if (!dryRun) {
+        try {
+            await evidencePort?.retireLiveReviews?.(execution.owner, execution.repo, process.env.COPILOT_EVIDENCE_TOKEN?.trim() || execution.tokens.token);
+        } catch {
+            logInfo('An unfinished Bugbot progress check could not be closed. The native workflow owns the final status.');
+        }
+    }
     if (optionalEvidenceDiagnostic && summaryPort) {
         try { await summaryPort.publish(optionalEvidenceDiagnostic.text); }
         catch { logInfo(optionalEvidenceDiagnostic.summaryAppendFailure); }
@@ -100,6 +116,39 @@ export async function finishGithubAction(
     const completionError = firstApplicationError(results)
         ?? bugbotCompletionError(execution, results, dryRun);
     if (completionError) core.setFailed(renderApplicationErrorText(completionError, summary.errorMessage));
+}
+
+/** Shadow is diagnostic only. Do not export candidate text, receipts, or provider payloads. */
+export function emitBugbotShadowSummary(results: readonly Result[]): string | undefined {
+    const reports = results.flatMap(result => {
+        const report = getResultPayload(result.payload)?.bugbotShadowVerification as
+            import('../application/usecases/steps/commit/bugbot/observe_bugbot_shadow_verification').BugbotShadowVerificationReport | undefined;
+        if (!report || !Array.isArray(report.candidates)) return [];
+        return [{
+            detector: report.resolvedModel, detectorProvider: report.provider,
+            detectorModelProvider: report.detectorModelProvider, detectorEffort: report.detectorEffort,
+            verifier: report.verifier, head: report.review?.headSha, detectionUnavailable: report.detectionUnavailable === true,
+            superseded: report.superseded === true, timing: report.timing,
+            simulatedVerification: report.publicationSimulation?.status,
+            ...(report.publicationSimulation ? { approvalReceipt: {
+                mode: 'shadow', publication: 'simulated', approvalEligible: false,
+                headSha: report.review?.headSha, baseSha: report.review?.baseSha, pullNumber: report.review?.pullRequest,
+                verification: report.publicationSimulation.status,
+            } } : {}),
+            candidates: report.candidates.length,
+            confirmed: report.candidates.filter(candidate => candidate.status === 'verdict' && candidate.verdict === 'confirmed').length,
+            refuted: report.candidates.filter(candidate => candidate.status === 'verdict' && candidate.verdict === 'refuted').length,
+            inconclusive: report.candidates.filter(candidate => candidate.status === 'verdict' && candidate.verdict === 'inconclusive').length,
+            technicalFailures: report.candidates.filter(candidate => candidate.status === 'technical-failure').length,
+        }];
+    });
+    if (!reports.length) return undefined;
+    core.setOutput('bugbot-shadow-summary', JSON.stringify(reports));
+    return ['### Bugbot shadow verification', '', ...reports.map(report => {
+        if (report.detectionUnavailable) return '- Detection did not produce a complete review.';
+        const prefix = report.superseded ? 'Superseded: ' : '';
+        return `- ${prefix}${report.candidates} candidate(s): ${report.confirmed} confirmed, ${report.refuted} refuted, ${report.inconclusive} inconclusive, ${report.technicalFailures} technical failure(s). This observation does not control publication or approval.`;
+    }), ''].join('\n');
 }
 
 interface WrittenActionSummary {
@@ -115,6 +164,7 @@ function actionSummaryContext(
     return Object.freeze({
         owner: execution.owner,
         repository: execution.repo,
+        progressLinks: progressWorkLinks(execution),
         eventName: execution.eventName,
         issueNumber: execution.issue?.number ?? -1,
         pullRequestNumber: execution.pullRequest?.number ?? -1,
@@ -134,6 +184,16 @@ function actionSummaryContext(
         catalogResolutions,
         results: execution.currentConfiguration.results,
     });
+}
+
+function progressWorkLinks(execution: Execution): { repositoryUrl: string; runUrl?: string } {
+    const server = process.env.GITHUB_SERVER_URL ?? '';
+    const origin = /^https:\/\/[a-zA-Z0-9.-]+(?::\d+)?$/u.test(server) ? server : 'https://github.com';
+    const repositoryUrl = `${origin}/${encodeURIComponent(execution.owner)}/${encodeURIComponent(execution.repo)}`;
+    const runId = process.env.GITHUB_RUN_ID ?? '';
+    const attempt = process.env.GITHUB_RUN_ATTEMPT ?? '';
+    return { repositoryUrl, ...(process.env.GITHUB_REPOSITORY === `${execution.owner}/${execution.repo}`
+        && /^\d+$/u.test(runId) && /^\d+$/u.test(attempt) ? { runUrl: `${repositoryUrl}/actions/runs/${runId}/attempts/${attempt}` } : {}) };
 }
 
 function extractBugbotTelemetry(results: readonly Result[]): unknown[] {
@@ -236,7 +296,16 @@ async function publishCopilotEvidence(
     if (!evidencePort) return;
     const headSha = execution.inputs?.pull_request?.head?.sha
         || (execution.isPush ? process.env.GITHUB_SHA : undefined);
+    const pull = execution.inputs?.pull_request;
+    const native = pull && {
+        repositoryId: Number(execution.inputs?.repository?.id),
+        pullNumber: Number(execution.pullRequest.number),
+        baseSha: String(pull.base?.sha ?? ''),
+        runId: Number(process.env.GITHUB_RUN_ID),
+        attempt: Number(process.env.GITHUB_RUN_ATTEMPT),
+    };
     const evidenceInput = {
+        bugbotNativeAttempt: native,
         eventName: execution.eventName,
         headSha,
         summary,

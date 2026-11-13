@@ -1,0 +1,11 @@
+Python 3.14.6 pytest 9.2.0 SQLite 3.53.3
+#898: original accepts four supplementary characters; removing u rejects all four; malformed-input protection checked
+test_real_nonroot_listener_rejects_forgery_and_retains_storage_and_replay_on_restart ('image', 'data_volume')
+test_real_older_image_upgrades_replays_and_restores_its_pre_upgrade_snapshot ('image', 'previous_image', 'data_volume', 'old_schema')
+#914: 42 original tests collected; both signatures exclude expected_schema; required-argument control fails in pytest setup
+..                                                                       [100%]
+2 passed in 1.32s
+E       Failed: DID NOT RAISE Conflict
+E       Failed: DID NOT RAISE Conflict
+2 failed in 1.41s
+#919: both exact-source restore scenarios pass with the guard; removing it allows both requests past the expected rejection

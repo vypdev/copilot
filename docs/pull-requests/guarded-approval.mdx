@@ -141,6 +141,12 @@ observer after fresh CI completes for the current base and PR head.
 
 The PR gets one editable “Copilot approval” assessment card. It says whether the bot is waiting, a human must review, a prerequisite blocks approval, a submission is uncertain, or a native review was confirmed. `Copilot / Approval` is a supplemental Check, not a prerequisite for itself. The native GitHub `APPROVE` review is the actual approval record and is tied to the head commit.
 
+When a trusted rollout policy requires a receipt after a Bugbot rollback,
+approval waits for a complete ordinary review under the new policy generation.
+Run that review on the current PR comparison. Its receipt attests the observed
+publication and finding state. An older receipt, even at the same SHA, leaves
+approval pending. Shadow observations and dry runs do not furnish this evidence.
+
 If the card says “waiting”, let the named CI or Bugbot producer finish. If it says “blocked”, fix the named check, coverage source, Bugbot finding, PAT permission, or branch rule, then rerun the observer. Bot-authored PRs require a human reviewer. A dismissed bot approval on the same revision is not automatically reposted. After an ambiguous API timeout, a recheck reads GitHub's existing reviews before attempting any new submission.
 
 ## Diagnose and recover

@@ -1,4 +1,7 @@
+import type { BugbotVerificationAuthority } from '../domain/bugbot/verification_receipt';
 import { BUGBOT_MAX_COMMENTS, BUGBOT_MIN_SEVERITY } from '../application/policies/bugbot_constants';
+import type { AgentConfigurationEnvironment } from '../application/ports/agent_configuration_ports';
+import { readBugbotShadowConfiguration } from '../application/policies/bugbot_shadow_configuration_policy';
 import { INPUT_KEYS } from '../application/contracts/input_keys';
 import { isEnabledInput } from './input_boolean_policy';
 import { parseBoundedPositiveIntegerInput } from './input_number_policy';
@@ -27,8 +30,13 @@ export function readGithubActionAgentTasks(
     return buildAgentTasksFromInputs(getInput);
 }
 
-export function readGithubActionAiInputs(getInput: (key: string) => string): GithubActionAiInputs {
+export function readGithubActionAiInputs(
+    getInput: Parameters<typeof readBugbotShadowConfiguration>[0],
+    environment: AgentConfigurationEnvironment = process.env,
+    authority?: BugbotVerificationAuthority,
+): GithubActionAiInputs {
     const requestedAgentTasks = buildAgentTasksFromInputs(getInput);
+    const shadowVerification = readBugbotShadowConfiguration(getInput, environment, authority);
     const verifyCommands = getInput(INPUT_KEYS.BUGBOT_FIX_VERIFY_COMMANDS)
         .split(',')
         .map((command) => command.trim())
@@ -44,6 +52,7 @@ export function readGithubActionAiInputs(getInput: (key: string) => string): Git
         bugbotCommentLimit: parseBoundedPositiveIntegerInput(getInput(INPUT_KEYS.BUGBOT_COMMENT_LIMIT), BUGBOT_MAX_COMMENTS, 200),
         bugbotFixVerifyCommands: verifyCommands,
         bugbotReviewConfiguration: {
+            ...(shadowVerification ? { shadowVerification } : {}),
             publicationMode: isEnabledInput(getInput(INPUT_KEYS.BUGBOT_DRY_RUN)) ? 'dry-run' : 'publish',
             effort: normalizeBugbotReviewEffort(getInput(INPUT_KEYS.BUGBOT_EFFORT)),
             reviewDrafts: isEnabledInput(getInput(INPUT_KEYS.BUGBOT_REVIEW_DRAFTS)),

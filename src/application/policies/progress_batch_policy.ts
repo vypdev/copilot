@@ -6,7 +6,7 @@ import type { ProgressBatchReason } from '../../domain/progress_batch_diagnostic
 import type { ProgressDiffEvidence } from '../ports/progress_diff_query_ports';
 import type { ProgressComparisonSource } from '../ports/progress_comparison_source_ports';
 import type { ProgressScope, ProgressScopeAnchors } from './progress_scope_policy';
-import { scopedProgressResponseSchema, parseScopedProgressResponse, progressScopeResponseSchema, parseProgressScopeClassifications } from './progress_scope_policy';
+import { scopedProgressResponseSchema, parseScopedProgressResponse, validateScopedProgressResponse, progressScopeResponseSchema, parseProgressScopeClassifications } from './progress_scope_policy';
 import { progressResponsePayload } from './progress_response_rejection_policy';
 import { validateFramedProgressEvidence } from './progress_evidence_protocol_policy';
 import { isProgressEvidencePath } from '../../domain/progress_evidence_path';
@@ -17,7 +17,7 @@ import { ApplicationError } from '../errors/application_error';
 import { progressCitationRepetitionError } from './progress_citation_recovery_policy';
 
 export const PROGRESS_BATCH_PROFILE = Object.freeze({ sourceLines: 32, clauses: 256, bytes: 262_144,
-    assessmentClauses: 32, calls: 120, milliseconds: 1_800_000 });
+    assessmentClauses: 32, calls: 120, milliseconds: 1_800_000, immutableTreeConcurrency: 4 });
 const digest = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const record = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 const exact = (value: Record<string, unknown>, keys: readonly string[]) => Object.keys(value).sort().join(',') === [...keys].sort().join(',');
@@ -67,7 +67,7 @@ export function parseProgressClassificationReceipt(response: unknown, source: Pr
     if (payload.assignmentId !== binding.assignmentId) throw progressBatchRejected('batch-identity', { batch: binding.ordinal });
     return parseProgressScopeClassifications({ outputLocale: payload.outputLocale, lines: payload.lines }, source, locale);
 }
-export interface ProgressEvidenceReference { readonly id: string; readonly path: string; readonly unitId?: string; readonly headSha: string; readonly generated: boolean }
+export interface ProgressEvidenceReference { readonly id: string; readonly path: string; readonly unitId?: string; readonly headSha: string; readonly generated: boolean; readonly availableAtHead?: false }
 export interface ProgressScopeManifest {
     readonly version: 'progress-scope-batches-v1';
     readonly repository: string;
@@ -94,7 +94,9 @@ export function progressEvidenceReferences(diff: ProgressDiffEvidence): readonly
         for (const change of payload.changes) {
             if (!record(change) || !isProgressEvidencePath(change.path)) throw progressBatchRejected('evidence-identity');
             const id = typeof change.unitId === 'string' ? change.unitId : change.path;
-            references.push(Object.freeze({ id, path: change.path, ...(typeof change.unitId === 'string' ? { unitId: change.unitId } : {}), headSha: diff.headSha, generated: change.evidence === 'generated-metadata-only' }));
+            const removed = change.status === 'removed' || (record(change.recoveredContent) && change.recoveredContent.side === 'base');
+            references.push(Object.freeze({ id, path: change.path, ...(typeof change.unitId === 'string' ? { unitId: change.unitId } : {}), headSha: diff.headSha,
+                generated: change.evidence === 'generated-metadata-only', ...(removed ? { availableAtHead: false as const } : {}) }));
         }
     }
     if (!references.some(reference => !reference.generated) || new Set(references.map(reference => reference.id)).size !== references.length) throw progressBatchRejected('evidence-missing');
@@ -161,6 +163,7 @@ export interface ProgressAssessmentReceipt {
     readonly requirementIds: readonly string[];
     readonly citations: readonly (readonly string[])[];
     readonly result: ReturnType<typeof parseScopedProgressResponse>;
+    readonly outcomes: Readonly<ReturnType<typeof validateScopedProgressResponse>['entries']>;
     readonly digest: string;
 }
 export function readProgressAssessmentEvidence(response: unknown, manifest: ProgressScopeManifest, batch: ProgressAssessmentBatch, locale: string,
@@ -220,10 +223,10 @@ export function parseProgressAssessmentReceipt(response: unknown, manifest: Prog
     anchors: ProgressScopeAnchors, locale: string, compact: boolean): ProgressAssessmentReceipt {
     const { payload, citations } = readProgressAssessmentEvidence(response, manifest, batch, locale, anchors, compact);
     const facts = payload.requirements;
-    const result = parseScopedProgressResponse({ outputLocale: payload.outputLocale, progress: payload.progress, requirements: facts }, locale, progressBatchDisplayScope(batch, compact), anchors);
+    const { result, entries: outcomes } = validateScopedProgressResponse({ outputLocale: payload.outputLocale, progress: payload.progress, requirements: facts }, locale, progressBatchDisplayScope(batch, compact), anchors);
     const indices = batch.scope.requirements.map(requirement => facts.findIndex(fact => fact.id === requirement.id));
     const body = { batchId: batch.id, manifestDigest: manifest.digest, headSha: manifest.headSha,
-        requirementIds: indices.map(index => facts[index].id as string), citations: indices.map(index => citations[index]), result };
+        requirementIds: indices.map(index => facts[index].id as string), citations: indices.map(index => citations[index]), result, outcomes };
     return freezeSnapshot({ ...body, digest: digest(body) });
 }
 /** Exact-once compatible receipt reduction is repeated at the publication eligibility boundary. */
@@ -237,6 +240,8 @@ export function aggregateProgressAssessmentReceipts(manifest: ProgressScopeManif
         if (!batch || receipt.manifestDigest !== manifest.digest || receipt.headSha !== manifest.headSha || digest(body) !== receiptDigest) throw progressBatchRejected('manifest-identity');
         if (receipt.requirementIds.length !== batch.scope.requirements.length
             || receipt.requirementIds.some((id, index) => id !== batch.scope.requirements[index].id)
+            || receipt.outcomes.length !== receipt.requirementIds.length
+            || receipt.outcomes.some((fact, index) => fact.id !== receipt.requirementIds[index])
             || receipt.citations.length !== receipt.requirementIds.length
             || receipt.citations.some(citations => !citations.length || citations.some(id => !manifest.evidence.some(reference => reference.id === id && reference.headSha === manifest.headSha && !reference.generated)))) {
             throw progressBatchRejected('receipt-coverage', { batch: batch.ordinal });
@@ -260,5 +265,12 @@ export function aggregateProgressAssessmentReceipts(manifest: ProgressScopeManif
             context: { kind: 'assessment', requirementCount: ids.length, batch: 0, requirementId: 'none' },
         });
     }
-    return Object.freeze({ progress: remaining ? Math.min(99, progress) : 100, summary, remaining, reasoning: '', publicationId: manifest.digest });
+    const outcomes = ordered.flatMap(receipt => receipt.outcomes.map((fact, index) => {
+        const requirement = manifest.scope.requirements.find(item => item.id === fact.id)!;
+        const evidence = receipt.citations[index].map(id => manifest.evidence.find(item => item.id === id)!).find(item => item.availableAtHead !== false);
+        return { id: fact.id, status: fact.status, remaining: fact.remaining, origin: requirement.sources?.[0]?.origin ?? 'issue',
+            ...(fact.status === 'supported' ? {} : { requirement: [...requirement.quote].slice(0, 180).join('') }),
+            ...(evidence ? { evidencePath: evidence.path } : {}) };
+    }));
+    return freezeSnapshot({ progress: remaining ? Math.min(99, progress) : 100, summary, remaining, reasoning: '', publicationId: manifest.digest, outcomes });
 }

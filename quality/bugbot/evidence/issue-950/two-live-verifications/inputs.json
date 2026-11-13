@@ -1,0 +1,62 @@
+{
+  "runnerCommit": "92791402bd1ac6cc9fe214ec4a2d43ce8dd2760a",
+  "cases": [
+    {
+      "subject": {
+        "repository": "vypdev/domus",
+        "pr": 24,
+        "head": "e129e76e25deff7314efe3b72996d295cf73f7f3",
+        "tree": "c71daa5ff4f59ddfee9ee2356b6a04dc1649cb9e",
+        "base": "4b71969d3b3f6df5f28d617ab0da4e86c9be5884",
+        "baseTree": "8953c48ef7f8501b88244ab513c9f3e80fcac7b9"
+      },
+      "finding": {
+        "id": "4443394859",
+        "title": "Profile foreign keys reference a non-unique member key",
+        "detectorLocation": {
+          "path": "backend/src/domus/infrastructure/sqlite_member_profile_schema.py",
+          "line": 8,
+          "end": 8
+        },
+        "originalInlineLine": 8,
+        "hypothesis": "The profile tables’ composite foreign keys target a members key that lacks a matching unique constraint or index. Creating profile defaults for a new member and backfilling existing members during the schema9 upgrade fail with a foreign-key mismatch.",
+        "allowBase": false,
+        "commentSnapshotSha256": "f4df1a0d2db5982d26bf639ac01ce847788baebebcf2d889d0a3e1b7d6fa890f"
+      },
+      "producer": {
+        "review": 5737841763,
+        "run": "https://github.com/vypdev/domus/actions/runs/41459181117",
+        "finding": "https://github.com/vypdev/domus/pull/24#discussion_r4443394859"
+      }
+    },
+    {
+      "subject": {
+        "repository": "vypdev/domus",
+        "pr": 29,
+        "head": "57a8b4c6a9f52afb1ffc8e38275bcfd13575a3ae",
+        "tree": "aa124c6cd92c490b1af0953af3be059ac72edddf",
+        "base": "5b7bdcdee3a9e98d6669bfd34ce750ae30a8c775",
+        "baseTree": "1e37628eea52b2aba394095edf4c33edb16753ce"
+      },
+      "finding": {
+        "id": "4497291296",
+        "detectorLocation": {
+          "path": "frontend/src/presentation/domus-tasks.ts",
+          "line": 153,
+          "end": 153
+        },
+        "allowBase": false,
+        "hypothesis": "A reason containing only Unicode whitespace such as U+0085 enables the Reject and Reopen buttons. Clicking either action then fails task command validation and shows an invalid-input notice."
+      },
+      "producer": {
+        "review": 5806598742,
+        "run": "https://github.com/vypdev/domus/actions/runs/42288557801",
+        "runConclusion": "cancelled",
+        "check": "https://github.com/vypdev/domus/runs/128137879608",
+        "checkConclusion": "neutral",
+        "finding": "https://github.com/vypdev/domus/pull/29#discussion_r4497291296",
+        "reviewSnapshotSha256": "397e4ad898121089bd7573c1a351494c702478b5f76bba308e48b07dddce3069"
+      }
+    }
+  ]
+}

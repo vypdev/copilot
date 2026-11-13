@@ -1,0 +1,49 @@
+{
+  "headSha": "9e65fd088a52cd10ec3ca6a846959c39947ffb16",
+  "controlledTurns": 2,
+  "providerCalls": 0,
+  "githubWriteAttempts": 0,
+  "anchor": {
+    "kind": "git",
+    "sha": "9e65fd088a52cd10ec3ca6a846959c39947ffb16",
+    "path": "backend/src/domus/infrastructure/sqlite_member_profile_schema.py",
+    "blob": "7918d6201c57c060f168b3c1d7f1b3b6a8554295",
+    "first": 1,
+    "last": 20,
+    "receipt": "E7110f0b628-1"
+  },
+  "runtime": {
+    "kind": "runtime",
+    "first": 1,
+    "last": 1,
+    "sha": "9e65fd088a52cd10ec3ca6a846959c39947ffb16",
+    "basis": null,
+    "pin": {
+      "path": ".python-version",
+      "blob": "3f0a10fda703c327eb329f869a19cc5cc05af521",
+      "first": 1,
+      "last": 1
+    },
+    "package": "sqlite",
+    "version": "3.53.3",
+    "versionScope": "local pinned-version probe; historical hosted linked SQLite version unmeasured",
+    "sourceId": "2026-06-26 20:14:12 d4c0e51e4aeb96955b99185ab9cde75c339e2c29c3f3f12428d364a10d782c62",
+    "receipt": "E7110f0b628-2"
+  },
+  "official": {
+    "kind": "official",
+    "sha": "9e65fd088a52cd10ec3ca6a846959c39947ffb16",
+    "package": "sqlite",
+    "version": "3.53.3",
+    "versionScope": "local pinned-version probe; historical hosted linked SQLite version unmeasured",
+    "basis": "E7110f0b628-2",
+    "runtimeSourceId": "2026-06-26 20:14:12 d4c0e51e4aeb96955b99185ab9cde75c339e2c29c3f3f12428d364a10d782c62",
+    "sourceKind": "release-source",
+    "url": "https://github.com/sqlite/sqlite/blob/92a6c5c3636faa021ecc3be5403a00f50f65eda7/src/fkey.c",
+    "commit": "92a6c5c3636faa021ecc3be5403a00f50f65eda7",
+    "sha256": "e63a0616dad4b8a387e90dd3a896acd77d590d8aadafade4c581ff3a6d74bce3",
+    "first": 178,
+    "last": 191,
+    "receipt": "E7110f0b628-3"
+  }
+}

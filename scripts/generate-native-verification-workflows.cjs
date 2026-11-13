@@ -11,7 +11,7 @@ const SELF_ACTION = '$/';
 const SECRET_NAMES = ['PAT', 'OPENCODE_API_KEY', 'OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'GOOGLE_API_KEY', 'OPENROUTER_API_KEY', 'CURSOR_API_KEY', 'CODEX_API_KEY'];
 const BINDINGS = require('../src/infrastructure/copilot_comment_inputs.json');
 const expr = value => '${{ ' + value + ' }}';
-const CURSOR_SECRET = expr("(vars.AGENT_PROVIDER == 'cursor' || vars.FINDINGS_PROVIDER == 'cursor' || vars.FIXER_PROVIDER == 'cursor' || vars.PLANNER_PROVIDER == 'cursor' || vars.REVIEWER_PROVIDER == 'cursor' || vars.TESTER_PROVIDER == 'cursor') && secrets.CURSOR_API_KEY || ''");
+const CURSOR_SECRET = expr("(vars.AGENT_PROVIDER == 'cursor' || vars.FINDINGS_PROVIDER == 'cursor' || vars.FIXER_PROVIDER == 'cursor' || vars.PLANNER_PROVIDER == 'cursor' || vars.REVIEWER_PROVIDER == 'cursor' || vars.TESTER_PROVIDER == 'cursor' || (vars.BUGBOT_VERIFICATION_MODE == 'shadow' && vars.BUGBOT_VERIFIER_PROVIDER == 'cursor')) && secrets.CURSOR_API_KEY || ''");
 
 function phaseSteps(action, inputAlias = 'copilot-inputs', id = 'copilot') {
   const steps = [];
@@ -51,9 +51,9 @@ function commentWorkflow(file, source = false) {
     jobs: { [pr ? 'copilot-pull-requests' : 'copilot-issues']: {
       if: expr(pr ? "(vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN) && github.event.pull_request.head.repo.full_name == github.repository" : "vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN"),
       uses: source ? SELF_WORKFLOW : REMOTE_WORKFLOW,
-      permissions: { checks: 'write', contents: 'read' },
+      permissions: { actions: 'read', checks: 'write', contents: 'read' },
       with: { 'runs-on': JSON.stringify(source ? ['self-hosted', 'codex', 'Linux'] : 'ubuntu-latest'),
-        ...(source ? { 'issue-managed-branches': 'true', 'pre-branch-sdd': 'true', 'ai-ignore-files': 'build/*,specs/CATALOG.md', 'prepare-source-verification': true } : {}) },
+        ...(source ? { 'issue-managed-branches': 'true', 'pre-branch-sdd': 'true', 'ai-ignore-files': 'build/*,specs/CATALOG.md,quality/bugbot/evidence/issue-*/*.jsonl,quality/bugbot/evidence/issue-*/*.log.gz', 'prepare-source-verification': true } : {}) },
       secrets: Object.fromEntries(SECRET_NAMES.map(name => [name, name === 'CURSOR_API_KEY' ? CURSOR_SECRET : expr(`secrets.${name}`)])),
     } },
   };
@@ -88,8 +88,8 @@ function runtimeWorkflow() {
     secrets: Object.fromEntries(SECRET_NAMES.map(name => [name, { required: false }])) } },
     jobs: { copilot: { name: 'Copilot',
       if: expr("(vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN) && (github.event_name == 'issue_comment' || (github.event_name == 'pull_request_review_comment' && github.event.pull_request.head.repo.full_name == github.repository))"),
-      'runs-on': expr("fromJSON(inputs.runs-on)"), 'timeout-minutes': 120,
-      permissions: { checks: 'write', contents: 'read' },
+      'runs-on': expr(`fromJSON(github.repository == 'vypdev/copilot' && '${JSON.stringify(['self-hosted', 'codex', 'Linux'])}' || inputs['runs-on'])`), 'timeout-minutes': 120,
+      permissions: { actions: 'read', checks: 'write', contents: 'read' },
       env: { COPILOT_PREPARE_VERIFICATION: expr("github.repository == 'vypdev/copilot' && inputs.prepare-source-verification && vars.BUGBOT_AUTOFIX_VERIFY_COMMANDS != '' && ((contains(github.event.comment.body, '/copilot') && ((contains(github.event.comment.body, 'sync-branch') && !contains(github.event.comment.body, '--dry-run')) || contains(github.event.comment.body, 'implement') || contains(github.event.comment.body, 'fix') || contains(github.event.comment.body, 'remember'))) || (vars.COPILOT_BOT_LOGIN != '' && contains(github.event.comment.body, format('@{0}', vars.COPILOT_BOT_LOGIN)) && !contains(github.event.comment.body, '--dry-run')))" ) }, steps } } };
 }
 

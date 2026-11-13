@@ -20,7 +20,7 @@ const MAX_ARCHIVE_BYTES = 268_435_456;
 
 export type OfficialAgentInstallationStage = 'private-root' | 'download' | 'installer-script' | 'installed-file';
 export type OfficialAgentInstallationReason = 'hash-module' | 'network' | 'missing-command' | 'missing-file'
-    | PrivateInstalledAgentFailureReason | 'recovery-source' | 'checksum' | 'unknown';
+    | PrivateInstalledAgentFailureReason | 'recovery-source' | 'checksum' | 'write-failed' | 'unknown';
 
 export class OfficialAgentInstallationError extends Error {
     constructor(
@@ -40,6 +40,7 @@ function installerScriptReason(error: unknown): OfficialAgentInstallationReason 
     const raw = error && typeof error === 'object' && 'stderr' in error ? error.stderr : undefined;
     const stderr = Buffer.isBuffer(raw) ? raw.toString('utf8') : typeof raw === 'string' ? raw : '';
     if (/Get-FileHash|Get-AuthenticodeSignature/iu.test(stderr)) return 'hash-module';
+    if (/curl:\s*\(23\)|No space left on device|Disk quota exceeded/iu.test(stderr)) return 'write-failed';
     if (/Invoke-WebRequest|Invoke-RestMethod|Could not resolve host|Unable to resolve|TLS|SSL|HTTP (?:403|404|429|5\d\d)/iu.test(stderr)) {
         return 'network';
     }
@@ -72,7 +73,7 @@ export interface OfficialAgentInstallation {
 export function installerEnvironment(root: string, source: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
     const allowed = [
         'PATHEXT', 'OS', 'COMSPEC',
-        'TEMP', 'TMP', 'TMPDIR', 'HOMEDRIVE', 'HOMEPATH', 'SHELL',
+        'HOMEDRIVE', 'HOMEPATH', 'SHELL',
         'PROCESSOR_ARCHITECTURE', 'NUMBER_OF_PROCESSORS', 'USERDOMAIN', 'USERNAME', 'LOGONSERVER',
     ] as const;
     const environment: NodeJS.ProcessEnv = {};
@@ -80,6 +81,10 @@ export function installerEnvironment(root: string, source: NodeJS.ProcessEnv): N
         if (source[name]) environment[name] = source[name];
     }
     environment.PATH = trustedSystemPath();
+    // Nested downloads and extraction use the same private scratch as the install.
+    environment.TMPDIR = root;
+    environment.TMP = root;
+    environment.TEMP = root;
     if (process.platform === 'win32') {
         const systemRoot = trustedWindowsSystemRoot();
         const drive = systemRoot.slice(0, 2);

@@ -20,6 +20,15 @@ Capacity exhaustion and incomplete evidence produce a nonretryable completeness-
 Canonical PR identity -> complete native source enumeration -> bounded local recovery if needed -> whole-plan preflight -> sequential frames -> complete global validation -> freshness fence -> one atomic reconciliation/publication
 ```
 
+Copilot's own self-hosted PR workflow allows up to 300 minutes at the job
+level. Its first complete plan for PR #951 assigned 105 partitions across two
+frames. The [original 120-minute job](https://github.com/vypdev/copilot/actions/runs/43456827919/job/131993049608)
+was still in the first frame after 30 minutes. The workflow allowance leaves
+room to finish both frames with the fixed two-call concurrency, including
+dependent candidate checks. Per-call handling, source and receipt validation,
+and explicit cancellation on a superseding push keep their existing behavior.
+The allowance applies to this repository's workflow.
+
 ## 2. Problem, current behavior, and evidence
 
 ### 2.1 Problem
@@ -210,6 +219,12 @@ Text equivalent: the workflow invokes an application use case; pure policies dec
 - Local source recovery: a narrow trusted-host read-only Git port pins canonical base/head SHAs and requires a unique merge-base and available commit/tree/blob objects. It verifies literal safe paths, regular text object identity/content and exact change metadata, deriving hunks with fixed argv while external diff, textconv, filters, hooks, and network are disabled. Every required side is verified, including complete provider patches: independent immutable changed-path enumeration closes page omissions/ABA mixes, regular modes and all unique old/new blobs are checked, UTF-8/BOM and object hashes are verified, and the native patch must reconstruct those exact texts. Absent, truncated or mismatching patches are recovered. Paths are at most 1,024 UTF-8 bytes. Tree reads batch at most 16 paths / 12,000 argument characters, commands time out at 30 seconds, and lazy fetch is disabled. Limits: 64 recovered files; 2 MiB UTF-8 per recovered patch; 8 MiB recovered patch bytes globally; 4 MiB per regular text blob; 32 MiB total unique verified old/new blob bytes; 256 local Git read operations. Recovered text also counts against every applicable source/rendering limit. Binary, nonregular, ambiguous merge-base, unavailable, mismatched, or over-cap evidence blocks. Existing Action-managed synchronization/object preparation is the path when objects are absent.
 - Framed profile bounds: at most 2 sequential frames x 64 partitions (128 global); 1,000 distinct assigned paths subject to complete native enumeration; 4,096 fragments; 8,192,000 raw UTF-16 code units; independently 8,192,000 normalized UTF-16 code units; each fragment <=12,000 UTF-16 units; each rendered partition <=64,000 UTF-16 units including wrappers/headers; complete rendered diff <=8,192,000 UTF-16 units; each final native prompt (security policy, schema and effort suffix included) <=512 KiB UTF-8 and aggregate prompt traffic including retries and auxiliary verification <=32 MiB UTF-8; each primary or auxiliary model response <=4 MiB UTF-8. Maximum model concurrency is 2. Per response: 200 findings. Retained resolution claims: 500, and only from the single global resolution owner. Global findings: 2,000. Serialized retained result payload across frames: <=16 MiB UTF-8.
 - Freshness binding: protocol/profile, fresh invocation nonce, repository identity, canonical open PR number and base/head repository ownership/ref identity, immutable base/head SHAs (including a separately read live base-ref tip rather than trusting cached PR base.sha), unique merge-base SHA, ordered complete source manifest digest (path/status/counts and source-content digests), ordered fragment coverage, and effective review context/configuration digest. Verify provider identity before source acquisition, after planning, between frames, immediately before reconciliation/publication, and recheck after any awaited localization immediately before mutation, and retain a post-publication identity check. The framed path has at most 41 canonical/context/freshness provider requests before ordinary transport retries; the ordinary context bound is unchanged. Failed identity reads are unverified. Any identity, source, assignment, context, nonce, or profile change invalidates the entire result.
+
+If GitHub supplies no patch and declares `0/0` for a changed text file, the
+source adapter MUST recover the counts from the complete native hunks after
+they reconstruct the two verified immutable sides. Conflicting nonzero
+provider counts still block. An exact Git fixture exercises this case in
+addition to the existing malformed-source and count-mismatch cases.
 
 ### 8.3 Executable architecture constraints
 
@@ -727,3 +742,59 @@ This explicitly extends legacy section capacity through that protocol; it does
 not relabel missing provider evidence as complete, enlarge public settings or
 grant comment authors instruction/approval authority. Other context callers
 retain their existing truthful partial behavior.
+
+## Proposed verification contract for #950
+
+The proposed #950 verification gate runs after complete frame aggregation and
+before ranking, overflow counting or any write. The application normalizes the
+anchor on the pinned diff before freezing the candidate. An ambiguous anchor
+stays unresolved. The verifier cannot change the frozen position or identity.
+
+Successive verification turns and retrieval share the operation, invocation
+ledger and reviewed source and freshness fences. Reads produce candidate-bound
+receipts. The application can resume from retained receipts after a provider
+context-window error. Available token usage is telemetry. Missing decisive
+evidence produces an inconclusive disposition. An intact mixed review can
+publish confirmed findings while blocking clean approval. A missing frame or
+required verdict or an invalid receipt preserves the last verified result and
+prevents finding or resolution writes.
+
+[Bugbot repository evidence verification](./bugbot-analysis-publication-and-autofix.md#bugbot-repository-evidence-verification)
+
+## Partition evidence handoff for #950
+
+The [finding lifecycle](./bugbot-analysis-publication-and-autofix.md#finding-lifecycle-and-experimental-profiles)
+can expose the location of fragments of the same file assigned to another
+partition. Each partition still owns only its own eligible changed lines.
+Candidate origins remain attributable before global grouping. Preparation
+fixes the final anchor and the shadow verifier may follow related code on the
+pinned revision without moving it.
+
+## Live progress observations for #950
+
+The [live review presentation contract](./bugbot-review-state-reconciliation.md#live-review-progress-for-950)
+owns public state, update cadence and publication authority. This amendment
+defines the read-only observations produced by framed analysis. It applies to
+the normal, framed and eligible recheck routes through their canonical owner.
+
+- Publish the exact planned partition and frame totals only after successful
+  immutable-source and whole-plan preflight. Identify the current frame when
+  its freshness fence succeeds. Count a partition complete once its assigned
+  response is accepted by application validation. Attempted, retried, failed
+  and in-flight requests do not increment the count. Related candidate proof
+  calls belong to the owning partition and have separate retry/latency facts.
+- A frame completes when every assigned partition has a valid receipt. At a
+  frame boundary preserve global counts and expose the frame count and phase
+  transition. A complete partition count alone is not a complete review.
+  Aggregate validation, applicable verification, freshness and provider
+  reconciliation still determine the terminal result.
+- Emit safe phase start and elapsed times, validated counts, retry counts and
+  bounded failure categories. Report stage wall time independently from the
+  summed duration of concurrent requests. Log only measured counts and timing
+  when those facts exist. Missing telemetry cannot change admission or the
+  result. The detector and verifier receive no status-writing capability.
+
+BRP-02 and BRP-05 exercise the 105-partition geometry from #951, including
+retry, frame advance, stale head, failure after validated work and a native
+interruption. The replay preserves complete ordered receipts, fixed analysis
+concurrency and all-or-nothing review publication.

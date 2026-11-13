@@ -43,6 +43,12 @@ collision-free ID so both concerns retain separate evidence and threads.
 Publication MUST complete before a finding is marked resolved. Within each reopen or resolution transition the marker is updated before the native thread, making retries convergent. After mutation, Bugbot MUST re-read provider state; invalid responses, unsafe paths, malformed identifiers, missing expected publications, or publication failures are terminal for that finding and MUST NOT produce a false resolved state.
 
 
+## Proposed evidence gate
+
+Issue #950 defines a publication gate that would publish confirmed defects and summarize candidates that still need evidence. Incomplete verification would prevent automatic clean approval. The qualification report records the current status of this proposed behavior.
+
+[Specification and pilot status](https://github.com/vypdev/copilot/issues/950)
+
 ## Framework claims and suggested fixes
 
 Before reporting a framework-specific defect, Bugbot is instructed to verify

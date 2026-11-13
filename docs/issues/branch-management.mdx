@@ -44,6 +44,15 @@ Automatic title formatting keeps the boundaries between hyphenated words. A titl
 
 ## Progress evidence
 
+The Commit progress comment shows the assessed SHA, an estimated percentage,
+and counts of supported requirements, missing implementation, and work that
+still needs evidence. For example, a 45% assessment might ask you to implement
+one behavior and capture the relevant CI result for another. Follow the links
+to inspect the requirement, source evidence and full pending-work inventory
+in the Job Summary. Each item reflects the completed assessment of that SHA.
+If a later assessment fails or is canceled, the previous card remains available.
+An assessment with all requirements supported has an empty pending-work list.
+
 Progress assessments use an immutable GitHub comparison of the actual native PR target and the managed branch head. If no open PR owns that exact head branch, they use the configured development base. The agent receives the source patches directly and does not need shell commands. Generated build files contribute metadata only; a percentage does not certify CI or a build.
 
 Copilot accounts for every original nonempty issue line before analyzing patches. It validates the one reserved persisted-configuration block using the same delimiter scanner and supported version as storage; that operational state, including generated implementation plans, cannot define acceptance. The classifier classifies every remaining human line by its original physical source identifier as required, excluded, context or uncertain. Ordinary prose, unrelated HTML, examples and acceptance before or after the reserved state are preserved. All original line/count limits apply before separation, and malformed or unsupported state stops assessment without changing progress. The scope request, comparison parts and final assessment keep complete issue text, extracted scope and model facts inside explicit untrusted-data blocks. Embedded instructions cannot grant workflow authority. Inputs that exceed the fixed UTF-8 budgets are rejected with retained progress rather than shortened to fit. Small comparisons then use one assessment. Larger complete comparisons are reviewed in up to four rounds of 16 parts (64 parts total), each containing complete patches or identified content slices within the unchanged 256,000-byte UTF-8 evidence limit. Every part must return bounded facts for every assigned file or content unit before one final assessment can update progress. These facts preserve uncertainty and do not certify CI. Their final combined summary has a maximum 384,000-byte budget. Copilot reserves every admitted path and the complete security/schema/task envelope and configured effort suffix inside the unchanged 512 KiB runtime ceiling, then requests concise facts using the same calculated limit in the schema and parser. No returned facts are silently shortened. Source parts and the manifest retain the 256,000-byte limit.
@@ -229,8 +238,9 @@ all changed regular UTF-8 contents. The first 300 records cannot attest complete
 Renames and copies become exact independent removed/added paths; a canonical path
 count can therefore differ from GitHub's rename-record count. This route supplies
 complete contents with explicitly unavailable line statistics, rather than invented
-zero additions or deletions. The existing generated `build/` and `specs/CATALOG.md`
-metadata exceptions remain the only exceptions.
+zero additions or deletions. Generated `build/`, `specs/CATALOG.md`, and Bugbot
+pilot `.jsonl` and `.log.gz` files under `quality/bugbot/evidence/issue-<number>/`
+remain in the inventory as metadata. Replay source and reports are still read.
 
 The closed `immutable-tree-v1` profile supports up to 1,024 canonical paths, 4,096
 content units and 16 recovery epochs. Each epoch retains the existing 64-file,
@@ -239,6 +249,10 @@ inventory and recovery: at most 1,024 files, 16 MiB represented before/after byt
 2,048 Git-object reads and 200,000 directory entries. Cached bytes are charged for
 each represented side. Each blob remains bounded by 2 MiB; each source part and
 the complete manifest by 256,000 bytes; at most 64 parts may be analyzed.
+On this route, up to four independent scope assignments or source parts run
+concurrently within each phase. Commit validates all receipts in source order
+before the final assessment and preserves previous progress if the 30-minute
+or 120-call attempt budget expires.
 
 Compact manifests and final facts preserve exact unit/path and request identities;
 full content and metadata remain in their digest-bound source parts. All source

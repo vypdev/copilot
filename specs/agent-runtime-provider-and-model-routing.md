@@ -2,7 +2,7 @@
 
 - Status: In progress for official standalone agent installation
 - Date: 2026-09-11
-- Last updated: 2026-10-24
+- Last updated: 2026-11-12
 - Catalog capability ID: `agent-runtime`
 - Last verified: 2026-09-24
 - Owners: Copilot maintainers
@@ -417,6 +417,62 @@ snapshotted for a run. Existing explicit `gpt-5.6-luna` deployments remain
 supported when exactly allowlisted. Reasoning effort, credentials, and provider
 transport do not change as part of the default migration.
 
+### Native Claude Code runtime
+
+**Future runtime requirement.** Track implementation in a separate task
+outside #950. The current dispatcher supports Codex, OpenCode, and Cursor.
+The future contract adds `claude-code` as an independent agent provider.
+It invokes Anthropic's official `claude` executable directly with
+`anthropic` as its model provider. Existing `opencode` plus `anthropic`
+configurations remain valid. [Bugbot profile contract](bugbot-analysis-publication-and-autofix.md#configuration-and-ownership)
+
+| Input | Contract once implemented |
+|---|---|
+| Common or role-specific provider | `claude-code`. Use the existing role precedence and run snapshot. The default remains `codex`. |
+| Model provider and model | Default the backend to `anthropic` for this agent. Require an admitted Claude model ID and reject any incompatible backend or disallowed model. Qualify an exact model identity. |
+| Effort | Pass an explicit supported value through Claude Code's `--effort`. Validate it for the selected model and reviewed CLI contract. If omitted after an agent or backend change, use the selected model's provider default. |
+| Executable and credentials | Use the official `claude` runtime, subject to the existing executable and release trust checks. For CI, pass the operator-owned `ANTHROPIC_API_KEY` only to the admitted Anthropic invocation. |
+
+Provision and authenticate only when an active role selects Claude Code.
+The infrastructure planner owns the native flags, private configuration,
+capability-specific sandbox and output decoding. Extend the existing
+dispatcher and execution plan rather than routing through an OpenCode
+adapter. Keep provider flags and credentials outside domain and application
+contracts. Claude Code runs noninteractively and Copilot validates its
+structured response locally. An unsupported runtime, unavailable model,
+incompatible effort, unexpected effective model, or unproven permission
+boundary fails with the corresponding configuration or execution diagnostic.
+Selecting Claude Code never starts another agent or a replacement model.
+
+For detection, prove the same bounded read-only capability as the other
+review agents. For verification, use the application evidence broker from
+the Bugbot SDD. Each Claude Code turn runs with isolated configuration in
+an empty workspace. The host retains the evidence and investigation state
+for successive turns. The admitted invocation disables built-in tools,
+MCP, session persistence, and ambient project hooks, plugins, or settings.
+Prove the effective permissions for the runner and CLI in use, including
+the effect of managed settings. A denied permission, authentication failure,
+or provider interruption is recorded in the existing Job Summary and
+technical diagnostics. For example, `Claude Code reviewer blocked. Configure
+an Anthropic API key on the runner and rerun the review.`
+
+Add **eight distinct deterministic runtime cases**. Cover role inheritance
+and direct routing (2), incompatible backend and unsupported model/effort
+(2), trusted executable and authentication isolation (2), forbidden tool
+authority and malformed native response (2). Use the existing architecture,
+provider policy, workflow and coverage gates. Before advertising platform
+support, run a read-only authenticated smoke on each advertised platform
+and a brokered verifier smoke through the normal Bugbot composition.
+Record the effective runtime, model, effort, permitted operations and
+validated output. Runtime installation alone does not establish role support.
+Setup, runtime selection, credential guidance and Bugbot configuration
+must describe only the capabilities that pass those checks.
+
+Primary sources. [Claude Code CLI reference](https://code.claude.com/docs/en/cli-reference) ·
+[Noninteractive execution](https://code.claude.com/docs/en/headless) ·
+[Model and effort configuration](https://code.claude.com/docs/en/model-config) ·
+[Settings precedence](https://code.claude.com/docs/en/settings)
+
 ## 8. Clean Architecture design
 
 | Boundary | Owns | Must not own/import |
@@ -537,6 +593,12 @@ archive in a private job directory. Installer child processes receive no
 GitHub or model credentials. Explicit and present operator CLIs are never
 replaced. Installation checks require a nonempty version and the admitted
 headless command surface, without enforcing an exact version.
+The installer and its child tools MUST use the same private installation root
+for `TMPDIR`, `TMP` and `TEMP`. On a self-hosted runner this keeps the archive
+download and extraction on runner scratch, which may have more space than the
+system temporary filesystem. Use the ordinary private-root cleanup on failure.
+Recognized storage write errors MUST report `write-failed` without raw output.
+The installer adapter owns this behavior. No new configuration is required.
 On Windows the official installer runs under Windows PowerShell 5.1 with fixed
 system tool directories, a private profile, and only non-secret native process
 variables. Its `PSModulePath` contains only Windows PowerShell 5.1 system module
@@ -878,6 +940,12 @@ pinning.
 | UX/sanitization | 12 | phase/errors/redaction/narrow output |
 | Integration/security/cutover | 19 | role→provider, injection, credentials, new provider, configured-variable precedence and model smoke |
 | **Total** | **130** | no double counting |
+
+Installer scratch coverage includes at least three cases. Inherited temporary
+paths cannot reach the installer, a Unix script can stage its archive under
+the private root, and a write failure emits a bounded diagnostic and removes
+the partial archive. The source PR and Commit workflows must also reach review
+on a fresh head in the `vypdev` pool after a provisioning incident.
 
 The Windows extension adds at least 18 distinct fixture cases: 6 for official
 installer selection and executable resolution, 4 for missing/redirected sources

@@ -650,7 +650,7 @@ gh workflow run release_workflow.yml --ref release/1.5.2 \
   -f source-sha=<full-reviewed-corrected-sha> -f confirm-unpublished=true
 ```
 
-The fixed hosted read-only preflight loads this repository's helper from
+The fixed read-only preflight runs on the source repository’s self-hosted Linux pool and loads its helper from
 `github.workflow_sha`, the GitHub-provided workflow commit. The supplied
 `source-sha` is inspection data; it never selects code receiving the product token.
 Consumer templates use the released standalone subaction independently of their

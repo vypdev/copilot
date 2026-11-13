@@ -1,0 +1,181 @@
+{
+  "U1": [
+    {
+      "id": "c-a184",
+      "path": "packages/core/src/presentation-text.ts",
+      "line": 4,
+      "severity": "medium",
+      "category": "correctness",
+      "trigger": "A label contains U+1F600.",
+      "pathToEffect": "The surrogate range matches one part of the character in presentationText.",
+      "impact": "A valid supplementary-character label is rejected."
+    }
+  ],
+  "U2": [
+    {
+      "id": "c-929e",
+      "path": "packages/core/src/presentation-text.ts",
+      "line": 4,
+      "severity": "medium",
+      "category": "correctness",
+      "trigger": "A label contains U+1F600.",
+      "pathToEffect": "The surrogate range matches one part of the character in presentationText.",
+      "impact": "A valid supplementary-character label is rejected."
+    }
+  ],
+  "F1": [
+    {
+      "id": "c-8ca0",
+      "path": "tests/containers/test_app_image.py",
+      "line": 129,
+      "severity": "medium",
+      "category": "reliability",
+      "trigger": "pytest runs the listener test.",
+      "pathToEffect": "pytest asks the fixture manager to resolve expected_schema.",
+      "impact": "The listener test errors before the image assertions."
+    },
+    {
+      "id": "c-bd22",
+      "path": "tests/containers/test_app_compatibility.py",
+      "line": 130,
+      "severity": "medium",
+      "category": "reliability",
+      "trigger": "pytest runs the migration test.",
+      "pathToEffect": "pytest asks the fixture manager to resolve expected_schema.",
+      "impact": "The migration test errors before the image assertions."
+    }
+  ],
+  "F2": [
+    {
+      "id": "c-7eb5",
+      "path": "tests/containers/test_app_image.py",
+      "line": 131,
+      "severity": "medium",
+      "category": "reliability",
+      "trigger": "pytest runs the listener test.",
+      "pathToEffect": "pytest asks the fixture manager to resolve expected_schema_fixture.",
+      "impact": "The listener test errors before the image assertions."
+    }
+  ],
+  "S1": [
+    {
+      "id": "c-2f7b",
+      "path": "backend/src/domus/application/fixed_batch_review.py",
+      "line": 371,
+      "severity": "medium",
+      "category": "correctness",
+      "trigger": "Preview a replacement after restoring a checkpoint that retains a fixed exclusion as history.",
+      "pathToEffect": "Historical exclusion reaches materialization despite being absent from the current exception tuple.",
+      "impact": "Replacement is reported stale during materialization instead of being stopped at source validation."
+    }
+  ],
+  "S2": [
+    {
+      "id": "c-45cd",
+      "path": "backend/src/domus/application/fixed_batch_review.py",
+      "line": 226,
+      "side": "old",
+      "severity": "medium",
+      "category": "correctness",
+      "trigger": "Request a fresh fixed replacement preview after restoring the pre-batch checkpoint.",
+      "pathToEffect": "The removed source check no longer rejects retained non-current records before selecting current slots.",
+      "impact": "The fresh preview can proceed to preparation despite an absent replacement source."
+    }
+  ],
+  "X1": [
+    {
+      "id": "c-e590",
+      "path": "backend/src/domus/infrastructure/sqlite_member_profile_schema.py",
+      "line": 8,
+      "severity": "medium",
+      "category": "correctness",
+      "trigger": "Fresh schema9 composition installs and backfills member profiles.",
+      "pathToEffect": "The profile foreign key references a pair without an effective unique parent index.",
+      "impact": "SQLite rejects profile backfill with a foreign key mismatch."
+    }
+  ],
+  "X2": [
+    {
+      "id": "c-9f88",
+      "path": "backend/src/domus/infrastructure/sqlite_member_profile_schema.py",
+      "line": 8,
+      "severity": "medium",
+      "category": "correctness",
+      "trigger": "Fresh schema9 composition installs and backfills member profiles.",
+      "pathToEffect": "The presentation foreign key targets household_id and role without an exact unique parent index.",
+      "impact": "SQLite rejects presentation backfill with a foreign key mismatch."
+    }
+  ],
+  "M1": [
+    {
+      "id": "c-861a",
+      "path": "docs/household-administration.md",
+      "line": 27,
+      "severity": "medium",
+      "category": "correctness",
+      "trigger": "A reader follows the migration guide link.",
+      "pathToEffect": "The relative target resolves to docs/household-administration-migration.md, which has no tracked entry at the reviewed revision.",
+      "impact": "The migration and rollback link fails."
+    }
+  ],
+  "M2": [
+    {
+      "id": "c-861b",
+      "path": "docs/household-administration.md",
+      "line": 27,
+      "severity": "medium",
+      "category": "correctness",
+      "trigger": "A reader follows the migration guide link.",
+      "pathToEffect": "The relative target resolves to docs/household-administration-migration-missing.md, which has no tracked entry at the reviewed revision.",
+      "impact": "The migration and rollback link fails."
+    }
+  ],
+  "P1": [
+    {
+      "id": "c-867-1",
+      "path": "frontend/tests/e2e/catalog.spec.ts",
+      "line": 115,
+      "severity": "medium",
+      "category": "reliability",
+      "trigger": "Run the built catalog cases for the read-only or uncertain story.",
+      "pathToEffect": "The matcher always expects enabled because it ignores enabled:false.",
+      "impact": "A disabled preferences control fails the assertion."
+    }
+  ],
+  "P2": [
+    {
+      "id": "c-867-2",
+      "path": "frontend/tests/e2e/catalog.spec.ts",
+      "line": 115,
+      "severity": "medium",
+      "category": "reliability",
+      "trigger": "Run the built catalog cases for the read-only or uncertain story.",
+      "pathToEffect": "The changed assertion explicitly expects enabled even in read-only or uncertain cases.",
+      "impact": "A disabled preferences control fails the assertion."
+    }
+  ],
+  "J1": [
+    {
+      "id": "c-875-1",
+      "path": "tests/python/test_image_channel.py",
+      "line": 115,
+      "severity": "medium",
+      "category": "reliability",
+      "trigger": "Run the parametrized wrong-frame-identity test.",
+      "pathToEffect": "The list includes integer 1, whose decoded type and value match the first transport identity.",
+      "impact": "The guard accepts that frame, so pytest.raises sees no exception."
+    }
+  ],
+  "J2": [
+    {
+      "id": "c-875-2",
+      "path": "tests/python/test_image_channel.py",
+      "line": 115,
+      "severity": "medium",
+      "category": "reliability",
+      "trigger": "Run the parametrized wrong-frame-identity test.",
+      "pathToEffect": "The list includes integer 1, whose decoded type and value match the first transport identity.",
+      "impact": "The guard accepts that frame, so pytest.raises sees no exception."
+    }
+  ]
+}

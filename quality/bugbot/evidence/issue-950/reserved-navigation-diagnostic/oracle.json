@@ -1,0 +1,28 @@
+{
+  "N1": {
+    "verdict": "refuted",
+    "head": "55174696e97a4c8b424c7f57d7da7a61e4b157fd",
+    "tree": "0d5efca673329a8a28d1b9e93a46b564edcbe285",
+    "path": "packages/core/src/components/navigation-overflow.ts",
+    "side": "RIGHT",
+    "line": 107,
+    "decisive": {
+      "path": "packages/core/src/components/navigation-overflow.ts",
+      "start": 93,
+      "end": 95
+    }
+  },
+  "N2": {
+    "verdict": "confirmed",
+    "head": "c654e501593ddb01446c6b37873a5b094624dd93",
+    "tree": "263e61f6c8d518657a3e160774f0af8f1f3f49d9",
+    "path": "packages/core/src/components/navigation-overflow.ts",
+    "side": "RIGHT",
+    "line": 107,
+    "decisive": {
+      "path": "packages/core/src/components/navigation-overflow.ts",
+      "start": 93,
+      "end": 95
+    }
+  }
+}

@@ -1,4 +1,6 @@
 import { readApprovalEvidence } from './approval_evidence_read';
+import { readApprovalBugbotVerification, type ApprovalBugbotVerificationCheck,
+    type ApprovalBugbotVerificationPolicy, type ApprovalBugbotVerificationRun } from './approval_bugbot_verification';
 import { approvalEvidenceError } from '../../../application/errors/approval_evidence_error';
 import type { ApprovalEvidenceDiagnostic, ApprovalEvidenceOperation } from '../../../domain/approval_evidence_diagnostic';
 import { ApplicationError } from '../../../application/errors/application_error';
@@ -30,6 +32,7 @@ export interface ApprovalRepositorySettings {
     readonly branchPrefixes: Readonly<Record<'feature' | 'bugfix' | 'documentation' | 'chore', string>>;
     readonly bugbotSeverity: string;
     readonly bugbotDryRun: boolean;
+    readonly readBugbotVerificationPolicy?: (target: ApprovalObservationTarget) => Promise<ApprovalBugbotVerificationPolicy>;
     readonly bugbotIgnorePatterns: readonly string[];
     readonly githubToken?: string;
     readonly locale?: string;
@@ -38,8 +41,8 @@ export interface ApprovalRepositorySettings {
 interface ApprovalGithubFile { readonly filename: string }
 interface ApprovalGithubReview { readonly id: number; readonly user?: { readonly id?: number } | null; readonly state: string; readonly commit_id?: string; readonly submitted_at?: string | null }
 interface ApprovalGithubComment { readonly id: number; readonly user?: { readonly id?: number } | null; readonly body?: string | null }
-interface ApprovalGithubCheck { readonly id: number; readonly name: string; readonly app?: { readonly id?: number } | null; readonly head_sha: string; readonly conclusion: string | null; readonly status: string; readonly check_suite?: { readonly id: number } | null }
-interface ApprovalGithubRun { readonly id: number; readonly name: string; readonly head_sha: string; readonly check_suite_id?: number; readonly run_attempt: number; readonly status: string; readonly conclusion: string | null }
+interface ApprovalGithubCheck extends ApprovalBugbotVerificationCheck { readonly id: number }
+interface ApprovalGithubRun extends ApprovalBugbotVerificationRun { readonly name: string }
 interface ApprovalGithubJob { readonly check_run_url?: string | null }
 interface ApprovalGithubArtifact { readonly id: number; readonly name: string; readonly expired: boolean; readonly size_in_bytes: number }
 
@@ -154,7 +157,17 @@ export class PullRequestApprovalRepository implements PullRequestApprovalPort {
         }));
         const botId = user.data.id;
         const botCards = comments.filter((comment: ApprovalGithubComment) => comment.user?.id === botId && /<!-- copilot-bugbot-status schema="1"/u.test(comment.body ?? ''));
-        const bugbot = botCards.length === 1 ? parseBugbotCard(botCards[0].body ?? '', headSha, target.pullNumber) : undefined;
+        const readVerificationPolicy = this.settings.readBugbotVerificationPolicy;
+        const verification = readVerificationPolicy
+            ? await readApprovalEvidence('policy', () => readVerificationPolicy(target)) : undefined;
+        if (readVerificationPolicy && !verification?.requireReceipt
+            && !(verification?.requireReceipt === false && ['disabled', 'shadow'].includes(verification.mode))) {
+            throw approvalEvidenceError('policy', 'invalid-response');
+        }
+        const bugbot = verification?.requireReceipt
+            ? readApprovalBugbotVerification(verification, { repositoryId: pull.base.repo?.id ?? 0, pullNumber: pull.number,
+                headSha, baseSha, testedMergeSha }, workflowRuns, checkRuns)
+            : botCards.length === 1 ? parseBugbotCard(botCards[0].body ?? '', headSha, target.pullNumber) : undefined;
         const reviewFacts: ApprovalReviewFact[] = reviews.map((review: ApprovalGithubReview) => ({
             id: review.id,
             userId: review.user?.id ?? 0,

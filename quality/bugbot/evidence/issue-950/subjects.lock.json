@@ -1,0 +1,63 @@
+{
+  "U1": {
+    "base": "d885bccf2c3152c3151471d3efaabd901429d6bd",
+    "head": "e3f49b5c540771caf68ef2f3afca799cff26f389",
+    "tree": "8eef5dfcdf6752934959bef23e3c72bbf98e4a97",
+    "paths": [
+      "packages/core/src/presentation-text.ts"
+    ],
+    "diffSha256": "3242bf377dfa76efce1367eb3c1a2f03b98ab23d1f9e914b90d6f6919455f25c"
+  },
+  "U2": {
+    "base": "e3f49b5c540771caf68ef2f3afca799cff26f389",
+    "head": "9dafa8cc09d9e83111a79e8dd3ea38a1b31ed6d1",
+    "tree": "972a4770cea3349b5679f1c4739cfa279d816822",
+    "paths": [
+      "packages/core/src/presentation-text.ts"
+    ],
+    "diffSha256": "f85e93a85dbcfb42f6f8936350156ac647894c2cb59396e22471046f59f26a5a",
+    "mutatedBlob": "6ca7f05c82d98cc5e507b284981e1344b972b816"
+  },
+  "F1": {
+    "base": "057908b8231bb9ae16142f0de060a54fc8a61552",
+    "head": "878a73b5f06629fa028a2daed87268b717765e45",
+    "tree": "79c69b29285e2c2a216cc4cb6cc1208a02d795cd",
+    "paths": [
+      "tests/containers/test_app_image.py",
+      "tests/containers/test_app_compatibility.py",
+      "tests/containers/test_edge_preview_image.py"
+    ],
+    "diffSha256": "820fe50d8f0395f594449a1df93698d0da3eaa30d407bfc65b00e7af90d8b434"
+  },
+  "F2": {
+    "base": "878a73b5f06629fa028a2daed87268b717765e45",
+    "head": "b502ce0cfa82360d73351edfabe618ce0b7c1a20",
+    "tree": "86b8490bc71bdfcddc07e7f3ca2660c3e22a862c",
+    "paths": [
+      "tests/containers/test_app_image.py",
+      "tests/containers/test_app_compatibility.py",
+      "tests/containers/test_edge_preview_image.py"
+    ],
+    "diffSha256": "33c21a1eb2f5e5abc8bcb1489b28ec1c15fbbf7b4c06c326d91f3b49eb0c67f2",
+    "mutatedBlob": "d484c6399a96c92df87edb6b1c501025949b9725"
+  },
+  "S1": {
+    "base": "5b7bdcdee3a9e98d6669bfd34ce750ae30a8c775",
+    "head": "3d890522003c2d2e7d03fa1f51b1bd84f0d0f10f",
+    "tree": "d670f43e401a26cf2c488f268e0d8b4910def2cd",
+    "paths": [
+      "backend/src/domus/application/fixed_batch_review.py"
+    ],
+    "diffSha256": "b9c96ef25e851c6b1cb7fd31b3451070801fcdea5eb53a3414c9eeea0cc1ce9a"
+  },
+  "S2": {
+    "base": "3d890522003c2d2e7d03fa1f51b1bd84f0d0f10f",
+    "head": "637e34dd382dd88e071be3e19291664f9493d123",
+    "tree": "dcc4132442c8c0b99082f4b451791d7df2346325",
+    "paths": [
+      "backend/src/domus/application/fixed_batch_review.py"
+    ],
+    "diffSha256": "a7f991d83c1bc3f5bc3e64df11ea5197527b450160ac091e32ddedf6e3da9d14",
+    "mutatedBlob": "9e0a53533790a9b6fe1072a814aaa69287a816b7"
+  }
+}

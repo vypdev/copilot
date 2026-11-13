@@ -439,6 +439,33 @@ all assigned requirements, exclusions and comparison parts. The host preflights 
 entire repeated-evidence plan against the same 120-call limit before collecting
 those facts. The pinned Domus fixture retains the shared 30-call path.
 
+For a complete `immutable-tree-v1` comparison, independent scope assignments
+and independent source parts may run up to four at a time within their
+respective phases. Each request and repair spends from the single attempt
+ledger of 120 calls and 30 minutes. The host restores assignment order before
+reducing receipts and waits for complete validated scope before collecting
+parts, then for every part in the group before any dependent assessment. A
+terminal error stops scheduling further requests in the phase. Already
+running requests settle under the same deadline and the attempt publishes no
+partial progress. The existing smaller comparison profiles continue to run
+their source and scope requests in sequence.
+
+On [Commit for PR #951 at `53b96fee`](https://github.com/vypdev/copilot/actions/runs/43456814572/job/131993001742),
+the published SDD receipt was verified and 110 requirements were admitted.
+Serial source assessment reached part 21 of 50 before the fixed deadline.
+Three deterministic cases cover this change. The scope integration test
+completes assignments out of order and checks that all requirements reach
+assessment in source order. The source test fits a simulated workload whose
+serial duration exceeds the original deadline and validates the ordered
+receipts. The terminal part test allows in-flight requests to settle, then
+asserts no further dispatch or publication.
+
+The [#950 pending-work contract](./batched-progress-scope.md#actionable-remaining-work-for-950)
+uses the complete reduced assessment to present implementation and evidence
+gaps in the existing Commit card. Capacity failures retain that entire
+assessment. The native run may report evaluated part counts and a bounded
+cause during the next attempt without treating those counts as issue progress.
+
 Citation arrays use the provider-compatible native array shape with `minItems`
 and `maxItems`. The host enforces citation uniqueness and same-head resolution
 before accepting any receipt. The deterministic native-projection regression

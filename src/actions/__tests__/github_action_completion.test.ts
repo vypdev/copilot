@@ -3,7 +3,7 @@ import { closedIssueReconciliationError } from '../../application/errors/closed_
 import type { Execution } from '../../data/model/execution';
 import { Ai } from '../../data/model/ai';
 import { Result } from '../../data/model/result';
-import { finishGithubAction } from '../github_action_completion';
+import { emitBugbotShadowSummary, finishGithubAction } from '../github_action_completion';
 import { ApplicationError } from '../../application/errors/application_error';
 import * as core from '@actions/core';
 import type { DeploymentOperationSnapshot } from '../../domain/deployment_operation';
@@ -309,6 +309,38 @@ describe('finishGithubAction', () => {
         expect(core.setFailed).not.toHaveBeenCalled();
     });
 
+    it.each([
+        { fails: false, server: 'https://git.example.com', attempt: '2', token: 'check-token', hasRun: true },
+        { fails: true, server: 'https://git.example.com', attempt: '2', token: 'check-token', hasRun: true },
+        { fails: false, server: 'http://git.example.com', attempt: 'invalid', token: undefined, hasRun: false },
+    ])('isolates optional check retirement and validates attempt-bound links (%j)', async ({ fails, server, attempt, token, hasRun }) => {
+        const keys = ['GITHUB_SERVER_URL', 'GITHUB_REPOSITORY', 'GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT', 'COPILOT_EVIDENCE_TOKEN'] as const;
+        const previous = keys.map(key => process.env[key]);
+        try {
+            process.env.GITHUB_SERVER_URL = server;
+            process.env.GITHUB_REPOSITORY = 'test-owner/test-repo';
+            process.env.GITHUB_RUN_ID = '123';
+            process.env.GITHUB_RUN_ATTEMPT = attempt;
+            if (token === undefined) delete process.env.COPILOT_EVIDENCE_TOKEN;
+            else process.env.COPILOT_EVIDENCE_TOKEN = token;
+            const retire = fails ? jest.fn().mockRejectedValue(new Error('optional check unavailable')) : jest.fn().mockResolvedValue(undefined);
+            await expect(finishGithubAction(execution(), [], {} as never, {} as never,
+                { publish: mockEvidencePublish, retireLiveReviews: retire })).resolves.toBeUndefined();
+            expect(retire).toHaveBeenCalledWith('test-owner', 'test-repo', token ?? 'product-pat');
+            expect(mockPublishInvoke).toHaveBeenCalledWith(expect.objectContaining({ progressLinks: hasRun ? {
+                repositoryUrl: 'https://git.example.com/test-owner/test-repo',
+                runUrl: 'https://git.example.com/test-owner/test-repo/actions/runs/123/attempts/2',
+            } : { repositoryUrl: 'https://github.com/test-owner/test-repo' } }));
+            expect(core.setFailed).not.toHaveBeenCalled();
+        } finally {
+            keys.forEach((key, index) => {
+                const value = previous[index];
+                if (value === undefined) delete process.env[key];
+                else process.env[key] = value;
+            });
+        }
+    });
+
     it('publishes the summary only through the explicitly provided output port', async () => {
         const action = Object.assign(execution(), {
             owner: 'test-owner',
@@ -478,6 +510,61 @@ describe('finishGithubAction', () => {
         );
 
         expect(mockSummaryPublish).toHaveBeenCalledWith(expect.stringContaining('# ⏳ Orquestación del despliegue'));
+    });
+
+    it('preserves the previous publication when verification rejects the batch', async () => {
+        const action = Object.assign(execution(), { eventName: 'pull_request',
+            inputs: { pull_request: { head: { sha: 'a'.repeat(40) } } } });
+        await finishGithubAction(action, [new Result({ id: 'DetectPotentialProblemsUseCase', executed: true, success: false,
+            payload: { bugbotPublicationBlocked: true },
+        })], {} as never, {} as never, { publish: mockEvidencePublish }, { publish: mockSummaryPublish });
+        expect(mockPublishInvoke).not.toHaveBeenCalled();
+        expect(mockStoreInvoke).not.toHaveBeenCalled();
+        expect(mockEvidencePublish).not.toHaveBeenCalled();
+    });
+
+    it('keeps a configured dry-run with no finding result free of GitHub writes', async () => {
+        const action = execution();
+        jest.spyOn(action.ai, 'getBugbotReviewConfiguration').mockReturnValue({
+            ...action.ai.getBugbotReviewConfiguration(), publicationMode: 'dry-run',
+        });
+        await finishGithubAction(action, [], {} as never, {} as never, { publish: mockEvidencePublish }, { publish: mockSummaryPublish });
+        expect(mockPublishInvoke).not.toHaveBeenCalled();
+        expect(mockStoreInvoke).not.toHaveBeenCalled();
+        expect(mockEvidencePublish).not.toHaveBeenCalled();
+    });
+
+    it('binds the publication receipt to the native Action run and pull-request comparison', async () => {
+        const headSha = 'a'.repeat(40), baseSha = 'b'.repeat(40);
+        const action = Object.assign(execution(), { eventName: 'pull_request', isIssue: false, isPullRequest: true,
+            pullRequest: { number: 11 },
+            inputs: { repository: { id: 17 }, pull_request: { head: { sha: headSha }, base: { sha: baseSha } } },
+        });
+        const runId = process.env.GITHUB_RUN_ID, attempt = process.env.GITHUB_RUN_ATTEMPT;
+        process.env.GITHUB_RUN_ID = '102';
+        process.env.GITHUB_RUN_ATTEMPT = '3';
+        try {
+            await finishGithubAction(action, [new Result({ id: 'DetectPotentialProblemsUseCase', executed: true, success: true,
+                payload: {
+                    bugbotTelemetry: { schemaVersion: 1, outcome: 'no-findings', elapsedMs: 12,
+                        configuredEffort: 'smart', headSha }, findingStates: completeFindingStates(),
+                    bugbotVerificationPublication: {
+                        authority: { mode: 'enforced', generation: 1, policyDigest: 'e'.repeat(64), workflowId: 42, sourceAppId: 15368 },
+                        repositoryId: 17, pullNumber: 11, headSha, baseSha,
+                        coverage: 'complete', verification: 'complete', publication: 'verified', outcome: 'complete',
+                        findingStates: { open: 0, reopened: 0, dismissed: 0, verificationRequired: 0, unknown: 0, fixed: 0, obsolete: 0 },
+                    },
+                },
+            })], {} as never, {} as never, { publish: mockEvidencePublish });
+            expect(mockEvidencePublish).toHaveBeenCalledWith(expect.objectContaining({
+                summary: expect.stringContaining('"runId":102,"attempt":3'),
+            }), expect.any(String), expect.any(String), expect.any(String));
+        } finally {
+            if (runId === undefined) delete process.env.GITHUB_RUN_ID;
+            else process.env.GITHUB_RUN_ID = runId;
+            if (attempt === undefined) delete process.env.GITHUB_RUN_ATTEMPT;
+            else process.env.GITHUB_RUN_ATTEMPT = attempt;
+        }
     });
 
     it('uses the short-lived evidence token only for the native Check Run', async () => {
@@ -1029,4 +1116,26 @@ describe('admission recovery stays in the immutable run summary (#725)',()=>{
     it('leaves previous configuration unchanged on repeated rejected events',async()=>{const value=blocked();value.action.currentConfiguration.workingBranch='bugfix/42-owned';await finish(value);await finish(value);expect(value.action.currentConfiguration.workingBranch).toBe('bugfix/42-owned');expect(mockStoreInvoke).not.toHaveBeenCalled();expect(mockPublishInvoke).not.toHaveBeenCalled();});
     it('also keeps passive no-op admission free of conversation and config writes',async()=>{const value=blocked();value.action.issueWorkflowRuntimeMode='noop';value.result=new Result({id:'IssueWorkflowAdmission',success:true,executed:false});await finish(value);expect(mockStoreInvoke).not.toHaveBeenCalled();expect(mockPublishInvoke).not.toHaveBeenCalled();expect(core.setFailed).not.toHaveBeenCalled();});
     it('returns repaired admitted executions to normal publication and persistence',async()=>{const value=blocked();value.action.issueWorkflowRuntimeMode='execute';value.result=new Result({id:'repaired',success:true,executed:true});await finish(value);expect(mockPublishInvoke).toHaveBeenCalledTimes(1);expect(mockStoreInvoke).toHaveBeenCalledTimes(1);expect(core.setFailed).not.toHaveBeenCalled();});
+});
+
+
+describe('installed Bugbot shadow diagnostics', () => {
+    it('exports a simulation receipt and counts without exporting private evidence or approval authority', () => {
+        jest.mocked(core.setOutput).mockClear();
+        const report = new Result({ id: 'DetectPotentialProblemsUseCase', success: true });
+        report.payload = { bugbotShadowVerification: {
+            resolvedModel: 'gpt-6-luna', provider: 'codex', detectorEffort: 'xhigh',
+            verifier: { model: 'gpt-6.1-sol', provider: 'codex', effort: 'xhigh' },
+            publicationSimulation: { status: 'invalid' },
+            candidates: [{ status: 'verdict', verdict: 'confirmed', reason: 'private claim', citations: ['private receipt'] },
+                { status: 'technical-failure', reason: 'private failure' }],
+        } };
+        expect(emitBugbotShadowSummary([report])).toContain('1 confirmed, 0 refuted, 0 inconclusive, 1 technical failure(s)');
+        const [, value] = jest.mocked(core.setOutput).mock.calls[0];
+        expect(core.setOutput).toHaveBeenCalledWith('bugbot-shadow-summary', expect.any(String));
+        expect(JSON.parse(value)).toEqual([expect.objectContaining({ confirmed: 1, technicalFailures: 1,
+            approvalReceipt: { mode: 'shadow', publication: 'simulated', approvalEligible: false, verification: 'invalid' },
+            verifier: { model: 'gpt-6.1-sol', provider: 'codex', effort: 'xhigh' } })]);
+        expect(value).not.toContain('private');
+    });
 });

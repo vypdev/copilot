@@ -13,6 +13,7 @@ import type { AgentConfiguration } from '../../../../domain/agent';
 import type { MessageCatalogResolutionPort } from '../../../ports/message_catalog_ports';
 import { resolvePublicationCatalog, resolveStaticPublicationCatalog } from '../../../policies/publication_message_catalog';
 import type { BoundPublicationSourceQueryPort } from '../../../ports/publication_freshness_ports';
+import type { ProgressWorkLinks } from '../../../policies/progress_pending_work_policy';
 import {
     buildDuplicateCompactionPublicationPayload,
     buildStaleSourcePublicationPayload,
@@ -28,6 +29,7 @@ export interface PublishResultContext {
     readonly results: readonly Result[];
     readonly requestSource?: ReplyRequestSnapshot;
     readonly languageConfiguration?: Readonly<AgentConfiguration>;
+    readonly progressLinks?: Omit<ProgressWorkLinks, 'issueNumber'>;
 }
 
 export interface PublishResultContextSource {
@@ -85,6 +87,7 @@ export async function runPublishResume(
             ...(param.target ? { target: param.target } : {}),
             correlationId: param.requestCorrelationId,
             botLogin: param.botLogin,
+            progressLinks: param.progressLinks ?? { repositoryUrl: `https://github.com/${encodeURIComponent(param.owner)}/${encodeURIComponent(param.repository)}` },
         };
         const replies = selectSemanticReplyIntents(semanticContext);
         const statuses = selectSemanticStatusIntents(semanticContext);

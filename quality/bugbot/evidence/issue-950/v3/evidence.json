@@ -1,0 +1,225 @@
+{
+  "U1": [
+    {
+      "id": "evidence-1",
+      "kind": "git",
+      "head": "e3f49b5c540771caf68ef2f3afca799cff26f389",
+      "path": "packages/core/src/presentation-text.ts",
+      "blob": "05780aabc22ec9fbd91ed5de2cc94efa93f70638",
+      "start": 1,
+      "end": 5,
+      "text": "/** Pure inert presentation-text policy shared by component contracts. */\nexport function presentationText(value:unknown,maximum:number,empty=false):value is string {\n  if (typeof value!=='string' || (!value.trim() && !(empty && value==='')) || Array.from(value).length>maximum) return false;\n  return !/[\\u0000-\\u001f\\u007f-\\u009f\\ud800-\\udfff]/u.test(value);\n}"
+    },
+    {
+      "id": "evidence-2",
+      "kind": "git",
+      "head": "e3f49b5c540771caf68ef2f3afca799cff26f389",
+      "path": "package.json",
+      "blob": "23a47f506e02052e3c0b44c28726e93b80f75f09",
+      "start": 1,
+      "end": 14,
+      "text": "{\n  \"name\": \"ha-ui-workspace\",\n  \"private\": true,\n  \"type\": \"module\",\n  \"packageManager\": \"pnpm@10.34.0\",\n  \"engines\": {\n    \"node\": \">=24.20.0 <25\"\n  },\n  \"scripts\": {\n    \"check\": \"tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.consumers.json && svelte-check --tsconfig tsconfig.svelte-source.json && svelte-check --tsconfig tsconfig.svelte-tests.json && tsc --noEmit -p tsconfig.storybook.json\",\n    \"test\": \"vitest run --coverage && node --test tests/coverage-evidence.test.mjs\",\n    \"build\": \"pnpm -r --sort run build\",\n    \"test:package\": \"node --test tests/consumers/packed.test.ts\",\n    \"storybook\": \"storybook dev --port 6006 --no-open\","
+    }
+  ],
+  "U2": [
+    {
+      "id": "evidence-1",
+      "kind": "git",
+      "head": "9dafa8cc09d9e83111a79e8dd3ea38a1b31ed6d1",
+      "path": "packages/core/src/presentation-text.ts",
+      "blob": "6ca7f05c82d98cc5e507b284981e1344b972b816",
+      "start": 1,
+      "end": 5,
+      "text": "/** Pure inert presentation-text policy shared by component contracts. */\nexport function presentationText(value:unknown,maximum:number,empty=false):value is string {\n  if (typeof value!=='string' || (!value.trim() && !(empty && value==='')) || Array.from(value).length>maximum) return false;\n  return !/[\\u0000-\\u001f\\u007f-\\u009f\\ud800-\\udfff]/.test(value);\n}"
+    },
+    {
+      "id": "evidence-2",
+      "kind": "git",
+      "head": "9dafa8cc09d9e83111a79e8dd3ea38a1b31ed6d1",
+      "path": "package.json",
+      "blob": "23a47f506e02052e3c0b44c28726e93b80f75f09",
+      "start": 1,
+      "end": 14,
+      "text": "{\n  \"name\": \"ha-ui-workspace\",\n  \"private\": true,\n  \"type\": \"module\",\n  \"packageManager\": \"pnpm@10.34.0\",\n  \"engines\": {\n    \"node\": \">=24.20.0 <25\"\n  },\n  \"scripts\": {\n    \"check\": \"tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.consumers.json && svelte-check --tsconfig tsconfig.svelte-source.json && svelte-check --tsconfig tsconfig.svelte-tests.json && tsc --noEmit -p tsconfig.storybook.json\",\n    \"test\": \"vitest run --coverage && node --test tests/coverage-evidence.test.mjs\",\n    \"build\": \"pnpm -r --sort run build\",\n    \"test:package\": \"node --test tests/consumers/packed.test.ts\",\n    \"storybook\": \"storybook dev --port 6006 --no-open\","
+    }
+  ],
+  "F1": [
+    {
+      "id": "evidence-1",
+      "kind": "git",
+      "head": "878a73b5f06629fa028a2daed87268b717765e45",
+      "path": "tests/containers/test_app_image.py",
+      "blob": "f457b78af7a865f9866f9a780b91cdd192b4899d",
+      "start": 122,
+      "end": 142,
+      "text": "        removed = docker(\"volume\", \"rm\", volume)\n        assert removed.returncode == 0, removed.stderr\n\n\ndef test_real_nonroot_listener_rejects_forgery_and_retains_storage_and_replay_on_restart(\n    image: str,\n    data_volume: str,\n    expected_schema: int = 10,\n) -> None:\n    name = \"domus-persistent-test-\" + uuid.uuid4().hex\n    try:\n        started = docker(\n            \"run\",\n            \"--detach\",\n            \"--init\",\n            \"--network\",\n            \"none\",\n            \"--name\",\n            name,\n            \"--volume\",\n            data_volume + \":/data\","
+    },
+    {
+      "id": "evidence-2",
+      "kind": "git",
+      "head": "878a73b5f06629fa028a2daed87268b717765e45",
+      "path": "tests/containers/test_app_compatibility.py",
+      "blob": "a3f96723a29f5ecbed06bfa197374b0b2ae81107",
+      "start": 120,
+      "end": 144,
+      "text": "    )\n    stopped(name)\n\n\n@pytest.mark.parametrize(\n    \"previous_image,old_schema\",\n    [(\"edge2\", 3), (\"edge3\", 4), (\"edge5\", 7), (\"schema8\", 8)],\n    indirect=[\"previous_image\"],\n)\ndef test_real_older_image_upgrades_replays_and_restores_its_pre_upgrade_snapshot(\n    image, previous_image, data_volume, old_schema, expected_schema=10\n):\n    old = \"domus-upgrade-old-\" + uuid.uuid4().hex\n    new = \"domus-upgrade-new-\" + uuid.uuid4().hex\n    try:\n        result = docker(\n            \"run\",\n            \"--detach\",\n            \"--init\",\n            \"--network\",\n            \"none\",\n            \"--name\",\n            old,\n            \"--volume\",\n            data_volume + \":/data\","
+    },
+    {
+      "id": "evidence-3",
+      "kind": "dependency",
+      "name": "pytest",
+      "version": "9.2.0",
+      "lockBlob": "c14e36fb17d11319135b8a54e16adb73e22859c7",
+      "contract": "_pytest.compat.getfuncargnames",
+      "sourceSha256": "476ac7921fe68d5ece0bdf1f380f49a32317a70ad822f4f2968e466041222eac",
+      "text": "def getfuncargnames(\n    function: Callable[..., object],\n    *,\n    name: str = \"\",\n    cls: type | None = None,\n) -> tuple[str, ...]:\n    \"\"\"Return the names of a function's mandatory arguments.\n\n    Should return the names of all function arguments that:\n    * Aren't bound to an instance or type as in instance or class methods.\n    * Don't have default values.\n    * Aren't bound with functools.partial.\n    * Aren't replaced with mocks.\n\n    The cls arguments indicate that the function should be treated as a bound\n    method even though it's not unless the function is a static method.\n\n    The name parameter should be the original name in which the function was collected.\n    \"\"\"\n    # TODO(RonnyPfannschmidt): This function should be refactored when we\n    # revisit fixtures. The fixture mechanism should ask the node for\n    # the fixture names, and not try to obtain directly from the\n    # function object well after collection has occurred.\n\n    # The parameters attribute of a Signature object contains an\n    # ordered mapping of parameter names to Parameter instances.  This\n    # creates a tuple of the names of the parameters that don't have\n    # defaults.\n    try:\n        parameters = signature(function).parameters.values()\n    except (ValueError, TypeError) as e:\n        from _pytest.outcomes import fail\n\n        fail(\n            f\"Could not determine arguments of {function!r}: {e}\",\n            pytrace=False,\n        )\n\n    arg_names = tuple(\n        p.name\n        for p in parameters\n        if (\n            p.kind is Parameter.POSITIONAL_OR_KEYWORD\n            or p.kind is Parameter.KEYWORD_ONLY\n        )\n        and p.default is Parameter.empty\n    )\n    if not name:\n        name = function.__name__\n\n    # If this function should be treated as a bound method even though\n    # it's passed as an unbound method or function, and its first parameter\n    # wasn't defined as positional only, remove the first parameter name.\n    if not any(p.kind is Parameter.POSITIONAL_ONLY for p in parameters) and (\n        # Not using `getattr` because we don't want to resolve the staticmethod.\n        # Not using `cls.__dict__` because we want to check the entire MRO.\n        cls\n        and not inspect.ismethod(function)\n        and not isinstance(\n            inspect.getattr_static(cls, name, default=None), staticmethod\n        )\n    ):\n        arg_names = arg_names[1:]\n    # Remove any names that will be replaced with mocks.\n    if hasattr(function, \"__wrapped__\"):\n        arg_names = arg_names[num_mock_patch_args(function) :]\n    return arg_names\n"
+    },
+    {
+      "id": "evidence-4",
+      "kind": "native-ci",
+      "head": "878a73b5f06629fa028a2daed87268b717765e45",
+      "run": 42294011539,
+      "job": 128154446414,
+      "checkout": "a76a8629c65499e5eb601abd83cdb3503179142e",
+      "sourceDiffPaths": 0,
+      "command": "uv run pytest tests/containers --no-cov",
+      "observation": "Frozen dependency sync completed. ARM64 job reported 42 passed for that command."
+    },
+    {
+      "id": "evidence-5",
+      "kind": "git",
+      "head": "878a73b5f06629fa028a2daed87268b717765e45",
+      "path": "tests/containers/test_edge_preview_image.py",
+      "blob": "ce6fe164035230cd01269ea12868817348bc1b66",
+      "start": 80,
+      "end": 83,
+      "text": "def test_pinned_edge_native_launcher_authority_storage_and_restart(edge_preview, data_volume):\n    app_tests.test_real_nonroot_listener_rejects_forgery_and_retains_storage_and_replay_on_restart(\n        edge_preview, data_volume, expected_schema=9\n    )"
+    }
+  ],
+  "F2": [
+    {
+      "id": "evidence-1",
+      "kind": "git",
+      "head": "b502ce0cfa82360d73351edfabe618ce0b7c1a20",
+      "path": "tests/containers/test_app_image.py",
+      "blob": "d484c6399a96c92df87edb6b1c501025949b9725",
+      "start": 122,
+      "end": 142,
+      "text": "        removed = docker(\"volume\", \"rm\", volume)\n        assert removed.returncode == 0, removed.stderr\n\n\ndef test_real_nonroot_listener_rejects_forgery_and_retains_storage_and_replay_on_restart(\n    image: str,\n    data_volume: str,\n    expected_schema: int = 10,\n    *,\n    expected_schema_fixture: int,\n) -> None:\n    name = \"domus-persistent-test-\" + uuid.uuid4().hex\n    try:\n        started = docker(\n            \"run\",\n            \"--detach\",\n            \"--init\",\n            \"--network\",\n            \"none\",\n            \"--name\",\n            name,"
+    },
+    {
+      "id": "evidence-2",
+      "kind": "git",
+      "head": "b502ce0cfa82360d73351edfabe618ce0b7c1a20",
+      "path": "tests/containers/test_app_compatibility.py",
+      "blob": "a3f96723a29f5ecbed06bfa197374b0b2ae81107",
+      "start": 120,
+      "end": 144,
+      "text": "    )\n    stopped(name)\n\n\n@pytest.mark.parametrize(\n    \"previous_image,old_schema\",\n    [(\"edge2\", 3), (\"edge3\", 4), (\"edge5\", 7), (\"schema8\", 8)],\n    indirect=[\"previous_image\"],\n)\ndef test_real_older_image_upgrades_replays_and_restores_its_pre_upgrade_snapshot(\n    image, previous_image, data_volume, old_schema, expected_schema=10\n):\n    old = \"domus-upgrade-old-\" + uuid.uuid4().hex\n    new = \"domus-upgrade-new-\" + uuid.uuid4().hex\n    try:\n        result = docker(\n            \"run\",\n            \"--detach\",\n            \"--init\",\n            \"--network\",\n            \"none\",\n            \"--name\",\n            old,\n            \"--volume\",\n            data_volume + \":/data\","
+    },
+    {
+      "id": "evidence-3",
+      "kind": "dependency",
+      "name": "pytest",
+      "version": "9.2.0",
+      "lockBlob": "c14e36fb17d11319135b8a54e16adb73e22859c7",
+      "contract": "_pytest.compat.getfuncargnames",
+      "sourceSha256": "476ac7921fe68d5ece0bdf1f380f49a32317a70ad822f4f2968e466041222eac",
+      "text": "def getfuncargnames(\n    function: Callable[..., object],\n    *,\n    name: str = \"\",\n    cls: type | None = None,\n) -> tuple[str, ...]:\n    \"\"\"Return the names of a function's mandatory arguments.\n\n    Should return the names of all function arguments that:\n    * Aren't bound to an instance or type as in instance or class methods.\n    * Don't have default values.\n    * Aren't bound with functools.partial.\n    * Aren't replaced with mocks.\n\n    The cls arguments indicate that the function should be treated as a bound\n    method even though it's not unless the function is a static method.\n\n    The name parameter should be the original name in which the function was collected.\n    \"\"\"\n    # TODO(RonnyPfannschmidt): This function should be refactored when we\n    # revisit fixtures. The fixture mechanism should ask the node for\n    # the fixture names, and not try to obtain directly from the\n    # function object well after collection has occurred.\n\n    # The parameters attribute of a Signature object contains an\n    # ordered mapping of parameter names to Parameter instances.  This\n    # creates a tuple of the names of the parameters that don't have\n    # defaults.\n    try:\n        parameters = signature(function).parameters.values()\n    except (ValueError, TypeError) as e:\n        from _pytest.outcomes import fail\n\n        fail(\n            f\"Could not determine arguments of {function!r}: {e}\",\n            pytrace=False,\n        )\n\n    arg_names = tuple(\n        p.name\n        for p in parameters\n        if (\n            p.kind is Parameter.POSITIONAL_OR_KEYWORD\n            or p.kind is Parameter.KEYWORD_ONLY\n        )\n        and p.default is Parameter.empty\n    )\n    if not name:\n        name = function.__name__\n\n    # If this function should be treated as a bound method even though\n    # it's passed as an unbound method or function, and its first parameter\n    # wasn't defined as positional only, remove the first parameter name.\n    if not any(p.kind is Parameter.POSITIONAL_ONLY for p in parameters) and (\n        # Not using `getattr` because we don't want to resolve the staticmethod.\n        # Not using `cls.__dict__` because we want to check the entire MRO.\n        cls\n        and not inspect.ismethod(function)\n        and not isinstance(\n            inspect.getattr_static(cls, name, default=None), staticmethod\n        )\n    ):\n        arg_names = arg_names[1:]\n    # Remove any names that will be replaced with mocks.\n    if hasattr(function, \"__wrapped__\"):\n        arg_names = arg_names[num_mock_patch_args(function) :]\n    return arg_names\n"
+    },
+    {
+      "id": "evidence-4",
+      "kind": "git",
+      "head": "b502ce0cfa82360d73351edfabe618ce0b7c1a20",
+      "path": "tests/containers/test_edge_preview_image.py",
+      "blob": "ce6fe164035230cd01269ea12868817348bc1b66",
+      "start": 80,
+      "end": 83,
+      "text": "def test_pinned_edge_native_launcher_authority_storage_and_restart(edge_preview, data_volume):\n    app_tests.test_real_nonroot_listener_rejects_forgery_and_retains_storage_and_replay_on_restart(\n        edge_preview, data_volume, expected_schema=9\n    )"
+    }
+  ],
+  "S1": [
+    {
+      "id": "evidence-1",
+      "kind": "git",
+      "head": "3d890522003c2d2e7d03fa1f51b1bd84f0d0f10f",
+      "path": "backend/src/domus/application/fixed_batch_review.py",
+      "blob": "787701c123995f415300698e0601b7f1c326e8bd",
+      "start": 194,
+      "end": 248,
+      "text": "        if any(item.work.assignee_ids for item in unmatched):\n            raise Conflict(\"recurrence_replacement_assignments_need_review\")\n        return PreparedReplacement(\n            self,\n            before,\n            tuple(steps),\n            pairing,\n            future_until(planner.times, nominal_slots[0], rule.policy),\n        )\n\n\ndef replacement_source(\n    unit: UnitOfWork, scope: MaintenanceScope, request: FixedReplacement\n) -> ReplacementSource:\n    home = scope.household_id\n    rule = unit.recurrence.schedule(home, request.schedule_id)\n    if rule is None:\n        raise NotFound(\"recurrence_rule_missing\")\n    if rule.revision != request.schedule_revision:\n        raise Conflict(\"recurrence_review_stale\")\n    if rule.state is not ScheduleState.ACTIVE or rule.pattern == request.pattern:\n        raise Conflict(\"recurrence_state_change_unavailable\")\n    start = request.pattern.start\n    if type(start) is not type(rule.pattern.start):\n        raise Conflict(\"recurrence_pattern_requires_replacement\")\n    progress = unit.recurrence.progress(home, rule.schedule_id)\n    definition = unit.tasks.definition(home, rule.definition_id)\n    if progress is None or definition is None or not progress.matches_schedule(rule):\n        raise StorageFailure(\"invalid_recurrence_source\")\n    if definition.state is not DefinitionState.ACTIVE:\n        raise Conflict(\"recurrence_state_change_unavailable\")\n    nominal = start.local.isoformat()\n    if unit.recurrence.has_absent_fixed_slot_from(home, rule.schedule_id, nominal):\n        raise Conflict(\"recurrence_review_source_absent\")\n    slots = unit.recurrence.fixed_slots_from(home, rule.schedule_id, nominal)\n    if len(slots) > _SLOT_LIMIT:\n        raise Conflict(\"recurrence_review_too_large\")\n    replaced, retained = [], []\n    for slot in slots:\n        work = unit.tasks.occurrence(home, slot.occurrence_id)\n        if work is None:\n            raise StorageFailure(\"invalid_recurrence_source\")\n        deadline = effective_deadline(unit, work, slot)\n        cancelled = work.state is OccurrenceState.CANCELLED\n        previously_replaced = (\n            cancelled\n            and slot.schedule.pattern_revision < rule.pattern_revision\n            and unit.recurrence.has_replaced_fixed_work(home, rule.schedule_id, work.occurrence_id)\n        )\n        exception = rule.exception(slot.planned.nominal)\n        excluded = (\n            cancelled and exception is not None and exception.kind is FixedExceptionKind.EXCLUDE\n        )\n        item = AffectedWork(\n            work, slot.key, slot.planned.nominal, deadline, previously_replaced, excluded"
+    },
+    {
+      "id": "evidence-2",
+      "kind": "git",
+      "head": "3d890522003c2d2e7d03fa1f51b1bd84f0d0f10f",
+      "path": "backend/src/domus/application/fixed_batch_review.py",
+      "blob": "787701c123995f415300698e0601b7f1c326e8bd",
+      "start": 356,
+      "end": 385,
+      "text": "        progress = self.source.progress\n        unit.recurrence.save_progress(\n            FixedProgress(\n                rule.schedule_id,\n                home,\n                rule.pattern_revision,\n                FixedCursor(cursor_binding(rule.pattern, rule.policy)),\n                progress.revision + 1,\n            ),\n            progress.revision,\n        )\n        replacements: JsonObject = {}\n        additions: list[JsonValue] = []\n        originals = iter(self.pairing)\n        for batch in self.steps:\n            expects_work = bool(batch.slots) and rule.exception(batch.slots[0].nominal) is None\n            prior = next(originals) if expects_work else None\n            step = materializer.commit_reviewed_step(\n                unit, rule, batch, self.before, assignees=prior.work.assignee_ids if prior else ()\n            )\n            if expects_work and step.occurrence_id is None:\n                raise Conflict(\"recurrence_review_stale\")\n            if step.occurrence_id is not None:\n                if prior is None:\n                    additions.append(step.occurrence_id)\n                else:\n                    replacements[prior.work.occurrence_id] = step.occurrence_id\n        for affected in self.source.replaceable:\n            work = affected.work\n            transition = TransitionTask("
+    },
+    {
+      "id": "evidence-3",
+      "kind": "git",
+      "head": "3d890522003c2d2e7d03fa1f51b1bd84f0d0f10f",
+      "path": "backend/src/domus/infrastructure/sqlite_recurrence.py",
+      "blob": "031708a14b495f1133f80c8b1c9322ceaf57cac5",
+      "start": 182,
+      "end": 216,
+      "text": "            ).fetchone()\n            is not None\n        )\n\n    def fixed_slots_from(\n        self, household_id: str, schedule_id: str, nominal: str\n    ) -> tuple[ScheduledSlot, ...]:\n        validate_identifier(household_id)\n        validate_identifier(schedule_id)\n        rows = self.connection.execute(\n            \"SELECT * FROM recurrence_slots WHERE household_id=? AND schedule_id=? \"\n            \"AND nominal_value>=? ORDER BY nominal_value,slot_key LIMIT 101\",\n            (household_id, schedule_id, nominal),\n        )\n        return tuple(cast(ScheduledSlot, self._slot(row)) for row in rows)\n\n    def has_absent_fixed_slot_from(self, household_id: str, schedule_id: str, nominal: str) -> bool:\n        validate_identifier(household_id)\n        validate_identifier(schedule_id)\n        return (\n            self.connection.execute(\n                \"SELECT 1 FROM retained_operations WHERE household_id=? AND current=0 \"\n                \"AND (action='recurrence.materialize' OR (action='recurrence.review.apply' \"\n                \"AND json_extract(document,'$.result.kind')='fixed_exception')) \"\n                \"AND json_extract(document,'$.result.schedule_id')=? \"\n                \"AND coalesce(json_extract(document,'$.result.nominal.local'),\"\n                \"json_extract(document,'$.result.exception.nominal.local'))>=? LIMIT 1\",\n                (household_id, schedule_id, nominal),\n            ).fetchone()\n            is not None\n        )\n\n    def has_replaced_fixed_work(\n        self, household_id: str, schedule_id: str, occurrence_id: str\n    ) -> bool:"
+    },
+    {
+      "id": "evidence-4",
+      "kind": "git",
+      "head": "3d890522003c2d2e7d03fa1f51b1bd84f0d0f10f",
+      "path": "tests/backend/test_fixed_batch_review.py",
+      "blob": "5f96f97876ffe680eeb2f5a3f8df9aa4953d5275",
+      "start": 257,
+      "end": 292,
+      "text": "def test_restored_original_batch_cannot_recreate_the_later_generation(tmp_path):\n    from test_activation_compatibility import identity_at\n    from test_sqlite_snapshots import Clock\n\n    from domus.infrastructure.owned_storage import open_storage\n    from domus.infrastructure.sqlite_activation import SQLiteActivation\n    from domus.infrastructure.sqlite_restoration import SQLiteRestorations\n    from domus.infrastructure.sqlite_snapshots import SQLiteSnapshots\n\n    root, archive, target = (tmp_path / part for part in (\"root\", \"archive\", \"target\"))\n    root.mkdir(mode=0o700)\n    review, _, choice, old = prepared(root)\n    store = review.transactions\n    identity_at(root, store.installation)\n    checkpoint = SQLiteSnapshots(store, archive, store.installation, Clock()).create(\"before-batch\")\n    _, request = reviewed(review, choice)\n    applied = review.apply(\"replace\", request)\n    SQLiteRestorations(store, archive, target, store.installation, Clock(), checkpoint).prepare(\n        \"restore\"\n    )\n    assert SQLiteActivation(root, store.installation, Clock(), target).activate().state == \"active\"\n    restored = open_storage(root, \"edge\")\n    try:\n        reopened = replace(review, transactions=restored.database)\n        original = reopened.original(ReviewAction.APPLY, \"replace\")\n        assert original.historical and original.operation_id == applied.operation_id\n        assert reopened.apply(\"replace\", request) == original\n        with pytest.raises(Conflict, match=\"recurrence_review_source_absent\"):\n            reopened.preview(\"fresh\", choice)\n        with restored.database.read() as unit:\n            assert unit.recurrence.schedule(\"home\", choice.schedule_id).revision == 1\n            assert {item.occurrence_id for item in unit.tasks.occurrences(\"home\")} == {\n                item.occurrence_id for item in old\n            }\n    finally:\n        restored.close()"
+    }
+  ],
+  "S2": [
+    {
+      "id": "evidence-1",
+      "kind": "git",
+      "head": "637e34dd382dd88e071be3e19291664f9493d123",
+      "path": "backend/src/domus/application/fixed_batch_review.py",
+      "blob": "9e0a53533790a9b6fe1072a814aaa69287a816b7",
+      "start": 194,
+      "end": 248,
+      "text": "        if any(item.work.assignee_ids for item in unmatched):\n            raise Conflict(\"recurrence_replacement_assignments_need_review\")\n        return PreparedReplacement(\n            self,\n            before,\n            tuple(steps),\n            pairing,\n            future_until(planner.times, nominal_slots[0], rule.policy),\n        )\n\n\ndef replacement_source(\n    unit: UnitOfWork, scope: MaintenanceScope, request: FixedReplacement\n) -> ReplacementSource:\n    home = scope.household_id\n    rule = unit.recurrence.schedule(home, request.schedule_id)\n    if rule is None:\n        raise NotFound(\"recurrence_rule_missing\")\n    if rule.revision != request.schedule_revision:\n        raise Conflict(\"recurrence_review_stale\")\n    if rule.state is not ScheduleState.ACTIVE or rule.pattern == request.pattern:\n        raise Conflict(\"recurrence_state_change_unavailable\")\n    start = request.pattern.start\n    if type(start) is not type(rule.pattern.start):\n        raise Conflict(\"recurrence_pattern_requires_replacement\")\n    progress = unit.recurrence.progress(home, rule.schedule_id)\n    definition = unit.tasks.definition(home, rule.definition_id)\n    if progress is None or definition is None or not progress.matches_schedule(rule):\n        raise StorageFailure(\"invalid_recurrence_source\")\n    if definition.state is not DefinitionState.ACTIVE:\n        raise Conflict(\"recurrence_state_change_unavailable\")\n    nominal = start.local.isoformat()\n    slots = unit.recurrence.fixed_slots_from(home, rule.schedule_id, nominal)\n    if len(slots) > _SLOT_LIMIT:\n        raise Conflict(\"recurrence_review_too_large\")\n    replaced, retained = [], []\n    for slot in slots:\n        work = unit.tasks.occurrence(home, slot.occurrence_id)\n        if work is None:\n            raise StorageFailure(\"invalid_recurrence_source\")\n        deadline = effective_deadline(unit, work, slot)\n        cancelled = work.state is OccurrenceState.CANCELLED\n        previously_replaced = (\n            cancelled\n            and slot.schedule.pattern_revision < rule.pattern_revision\n            and unit.recurrence.has_replaced_fixed_work(home, rule.schedule_id, work.occurrence_id)\n        )\n        exception = rule.exception(slot.planned.nominal)\n        excluded = (\n            cancelled and exception is not None and exception.kind is FixedExceptionKind.EXCLUDE\n        )\n        item = AffectedWork(\n            work, slot.key, slot.planned.nominal, deadline, previously_replaced, excluded\n        )\n        eligible = ("
+    },
+    {
+      "id": "evidence-2",
+      "kind": "git",
+      "head": "637e34dd382dd88e071be3e19291664f9493d123",
+      "path": "backend/src/domus/application/fixed_batch_review.py",
+      "blob": "9e0a53533790a9b6fe1072a814aaa69287a816b7",
+      "start": 356,
+      "end": 385,
+      "text": "            FixedProgress(\n                rule.schedule_id,\n                home,\n                rule.pattern_revision,\n                FixedCursor(cursor_binding(rule.pattern, rule.policy)),\n                progress.revision + 1,\n            ),\n            progress.revision,\n        )\n        replacements: JsonObject = {}\n        additions: list[JsonValue] = []\n        originals = iter(self.pairing)\n        for batch in self.steps:\n            expects_work = bool(batch.slots) and rule.exception(batch.slots[0].nominal) is None\n            prior = next(originals) if expects_work else None\n            step = materializer.commit_reviewed_step(\n                unit, rule, batch, self.before, assignees=prior.work.assignee_ids if prior else ()\n            )\n            if expects_work and step.occurrence_id is None:\n                raise Conflict(\"recurrence_review_stale\")\n            if step.occurrence_id is not None:\n                if prior is None:\n                    additions.append(step.occurrence_id)\n                else:\n                    replacements[prior.work.occurrence_id] = step.occurrence_id\n        for affected in self.source.replaceable:\n            work = affected.work\n            transition = TransitionTask(\n                work.occurrence_id, work.revision, OccurrenceState.CANCELLED, request.reason\n            )"
+    },
+    {
+      "id": "evidence-3",
+      "kind": "git",
+      "head": "637e34dd382dd88e071be3e19291664f9493d123",
+      "path": "backend/src/domus/infrastructure/sqlite_recurrence.py",
+      "blob": "031708a14b495f1133f80c8b1c9322ceaf57cac5",
+      "start": 182,
+      "end": 216,
+      "text": "            ).fetchone()\n            is not None\n        )\n\n    def fixed_slots_from(\n        self, household_id: str, schedule_id: str, nominal: str\n    ) -> tuple[ScheduledSlot, ...]:\n        validate_identifier(household_id)\n        validate_identifier(schedule_id)\n        rows = self.connection.execute(\n            \"SELECT * FROM recurrence_slots WHERE household_id=? AND schedule_id=? \"\n            \"AND nominal_value>=? ORDER BY nominal_value,slot_key LIMIT 101\",\n            (household_id, schedule_id, nominal),\n        )\n        return tuple(cast(ScheduledSlot, self._slot(row)) for row in rows)\n\n    def has_absent_fixed_slot_from(self, household_id: str, schedule_id: str, nominal: str) -> bool:\n        validate_identifier(household_id)\n        validate_identifier(schedule_id)\n        return (\n            self.connection.execute(\n                \"SELECT 1 FROM retained_operations WHERE household_id=? AND current=0 \"\n                \"AND (action='recurrence.materialize' OR (action='recurrence.review.apply' \"\n                \"AND json_extract(document,'$.result.kind')='fixed_exception')) \"\n                \"AND json_extract(document,'$.result.schedule_id')=? \"\n                \"AND coalesce(json_extract(document,'$.result.nominal.local'),\"\n                \"json_extract(document,'$.result.exception.nominal.local'))>=? LIMIT 1\",\n                (household_id, schedule_id, nominal),\n            ).fetchone()\n            is not None\n        )\n\n    def has_replaced_fixed_work(\n        self, household_id: str, schedule_id: str, occurrence_id: str\n    ) -> bool:"
+    },
+    {
+      "id": "evidence-4",
+      "kind": "git",
+      "head": "637e34dd382dd88e071be3e19291664f9493d123",
+      "path": "tests/backend/test_fixed_batch_review.py",
+      "blob": "5f96f97876ffe680eeb2f5a3f8df9aa4953d5275",
+      "start": 257,
+      "end": 292,
+      "text": "def test_restored_original_batch_cannot_recreate_the_later_generation(tmp_path):\n    from test_activation_compatibility import identity_at\n    from test_sqlite_snapshots import Clock\n\n    from domus.infrastructure.owned_storage import open_storage\n    from domus.infrastructure.sqlite_activation import SQLiteActivation\n    from domus.infrastructure.sqlite_restoration import SQLiteRestorations\n    from domus.infrastructure.sqlite_snapshots import SQLiteSnapshots\n\n    root, archive, target = (tmp_path / part for part in (\"root\", \"archive\", \"target\"))\n    root.mkdir(mode=0o700)\n    review, _, choice, old = prepared(root)\n    store = review.transactions\n    identity_at(root, store.installation)\n    checkpoint = SQLiteSnapshots(store, archive, store.installation, Clock()).create(\"before-batch\")\n    _, request = reviewed(review, choice)\n    applied = review.apply(\"replace\", request)\n    SQLiteRestorations(store, archive, target, store.installation, Clock(), checkpoint).prepare(\n        \"restore\"\n    )\n    assert SQLiteActivation(root, store.installation, Clock(), target).activate().state == \"active\"\n    restored = open_storage(root, \"edge\")\n    try:\n        reopened = replace(review, transactions=restored.database)\n        original = reopened.original(ReviewAction.APPLY, \"replace\")\n        assert original.historical and original.operation_id == applied.operation_id\n        assert reopened.apply(\"replace\", request) == original\n        with pytest.raises(Conflict, match=\"recurrence_review_source_absent\"):\n            reopened.preview(\"fresh\", choice)\n        with restored.database.read() as unit:\n            assert unit.recurrence.schedule(\"home\", choice.schedule_id).revision == 1\n            assert {item.occurrence_id for item in unit.tasks.occurrences(\"home\")} == {\n                item.occurrence_id for item in old\n            }\n    finally:\n        restored.close()"
+    }
+  ]
+}

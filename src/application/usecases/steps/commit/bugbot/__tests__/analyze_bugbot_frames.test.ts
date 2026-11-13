@@ -6,8 +6,10 @@ import type { FindingsQueryRequest } from '../../../../../ports/agent_findings_p
 import type { BugbotReviewOperationContext } from '../bugbot_review_operation_context';
 import type { BugbotContext } from '../types';
 import { BugbotReviewTelemetry } from '../bugbot_review_telemetry';
+import { BugbotCandidateTrace } from '../bugbot_candidate_trace';
 import { analyzeBugbotFrames, bugbotFramedContextDigest } from '../analyze_bugbot_frames';
 import { analyzeBugbotRevision } from '../analyze_bugbot_revision_use_case';
+import { BugbotReviewProgress } from '../bugbot_review_progress';
 
 function setup(source: BugbotFramedReviewSource = framedSource()) {
     const id = source.identity;
@@ -56,6 +58,26 @@ it('validates every source-bound receipt before returning one global result', as
     expect(query).toHaveBeenCalledTimes(1);
 });
 
+it('adds same-file context pointers to traced frames and retains their individual receipts', async () => {
+    const path = 'src/example.ts';
+    const fixture = setup(framedSource([framedChange({ filename: path, patch: 'x'.repeat(90_000) })]));
+    const trace = new BugbotCandidateTrace();
+    const query = jest.fn(async (request: FindingsQueryRequest) => reply(request));
+
+    await expect(analyzeBugbotFrames(fixture.operation, fixture.context, fixture.plan, {
+        agent: { query }, telemetry: fixture.telemetry, trace, isSourceCurrent: async () => true,
+    })).resolves.toEqual({ findings: [], resolved_findings: [] });
+
+    expect(fixture.plan.partitions).toHaveLength(2);
+    expect(query).toHaveBeenCalledTimes(2);
+    expect(query.mock.calls[0][0].prompt).toContain(JSON.stringify([{ file: path, partition: 2 }]));
+    expect(query.mock.calls[1][0].prompt).toContain(JSON.stringify([{ file: path, partition: 1 }]));
+    expect(trace.detectionSnapshot()).toMatchObject([
+        { partition: 1, partitionId: fixture.plan.partitions[0].id, status: 'completed' },
+        { partition: 2, partitionId: fixture.plan.partitions[1].id, status: 'completed' },
+    ]);
+});
+
 it('bugbot-framed-C079 completes the first frame before starting the next, with global concurrency2', async () => {
     const f = setup(framedFiles(65));
     let active = 0, maximum = 0, completedFirst = 0;
@@ -70,6 +92,27 @@ it('bugbot-framed-C079 completes the first frame before starting the next, with 
     });
     await run(f, query);
     expect(query).toHaveBeenCalledTimes(65); expect(maximum).toBe(2);
+});
+
+it('reports a 105-partition plan across two frames and counts a successful retry once', async () => {
+    const f = setup(framedFiles(105));
+    const observe = jest.fn().mockResolvedValue(undefined);
+    let now = 0;
+    const progress = new BugbotReviewProgress(f.context.canonicalPullRequest!, { observe }, false, 'en-US', () => now);
+    const query = jest.fn(async (request: FindingsQueryRequest) => {
+        now += 180_000;
+        return reply(request);
+    });
+    query.mockRejectedValueOnce(new Error('temporary provider interruption'));
+    await analyzeBugbotFrames(f.operation, f.context, f.plan, {
+        progress, agent: { query }, telemetry: f.telemetry, isSourceCurrent: async () => true,
+    });
+    await progress.record('finished', {}, 'no-findings');
+    const observations = observe.mock.calls.map(([fact]) => fact);
+    expect(query).toHaveBeenCalledTimes(106);
+    expect(observations[0]).toMatchObject({ frames: { ordinal: 1, total: 2 }, partitions: { completed: 0, total: 105 } });
+    expect(observations.find(fact => fact.frames.ordinal === 2)).toMatchObject({ partitions: { completed: 64, total: 105 }, retries: 1 });
+    expect(observations.at(-1)).toMatchObject({ partitions: { completed: 105, total: 105 }, retries: 1, outcome: 'no-findings' });
 });
 
 it.each(['partition_id', 'reviewed_head_sha', 'reviewed_base_sha', 'review_manifest_digest',

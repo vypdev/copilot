@@ -103,6 +103,43 @@ The same values are managed as Repository Variables by `copilot setup`. One revi
 /copilot review effort=high dry-run=true trace-rules=true suggested-changes=false
 ```
 
+## Evidence verification in shadow
+
+Set `BUGBOT_VERIFICATION_MODE=shadow` in an evaluation workflow to observe
+verification. It defaults to `disabled`. Set `BUGBOT_DRY_RUN=true` as well
+when testing without ordinary Bugbot writes. Shadow verdicts do not change
+publication or approval.
+
+The verifier inherits the effective `REVIEWER_*` profile unless you set an
+optional `BUGBOT_VERIFIER_*` override. For example, set
+`BUGBOT_VERIFIER_MODEL` to select a different model on the same backend.
+`BUGBOT_EFFORT` controls detection depth; `REVIEWER_EFFORT` controls the
+provider's reasoning and is inherited when applicable. See
+[verifier variables and provider settings](/bugbot/quality-observability#finding-lifecycle-in-a-shadow-diagnostic)
+for the full profile. The installed Action runs Anthropic models through
+OpenCode. The independent Claude Code agent for review and verification
+is a future runtime task. [Native runtime specification](https://github.com/vypdev/copilot/blob/master/specs/agent-runtime-provider-and-model-routing.md#native-claude-code-runtime)
+
+The verifier can request official evidence about a dependency whose behavior
+could change a verdict. The installed broker checks the affected workspace
+and its pinned pnpm lockfile before retrieving a source from the reviewed
+release catalog. If a version or source is unavailable, the verifier can
+report the specific gap. An installed repository token with Actions read
+permission can also supply metadata for a named workflow, job and step on
+the reviewed SHA. Step metadata describes the reported run. Claims about
+the exact checkout, runtime or an individual test require separate proof.
+
+Shadow records the proposed publication after verification and emits a
+diagnostic receipt with `approvalEligible: false`. The current review and
+approval policy still governs the PR.
+A provider interruption is recorded as a technical failure. Usage and cost
+are optional telemetry and have no effect on the verdict.
+Production enforcement stays disabled until an exact profile qualifies
+with source, version-matched dependency evidence and matching CI, and
+a maintainer explicitly approves it.
+
+[Specification and pilot status](https://github.com/vypdev/copilot/issues/950)
+
 ## Hierarchical review rules
 
 Bugbot loads rules in deterministic precedence order:

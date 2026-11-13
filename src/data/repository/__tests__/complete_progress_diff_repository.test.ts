@@ -17,6 +17,19 @@ describe('complete progress collection at the compare ceiling', () => {
     it('collects 301 complete files instead of assessing the first 300', async () => { const result=await native().read();expect(changes(result)).toHaveLength(301);expect(changes(result).at(-1).path).toBe('src/file-0300.ts'); });
     it('keeps generated bundles metadata-only under their existing exception', async () => { const f=fixture({}, {...addedFiles(), 'build/github_action/index.js':Buffer.alloc(10_000_000).toString()});const result=changes(await f.read()).find(c=>c.path==='build/github_action/index.js');expect(result).toMatchObject({evidence:'generated-metadata-only'});expect(result).not.toHaveProperty('recoveredContent'); });
     it('keeps the generated specification index metadata-only', async () => { const f=fixture({}, {...addedFiles(), 'specs/CATALOG.md':'generated'});expect(changes(await f.read()).find(c=>c.path==='specs/CATALOG.md')).toMatchObject({evidence:'generated-metadata-only'}); });
+    it('keeps generated Bugbot logs in the immutable inventory and recovers the replay source', async () => {
+        const root = 'quality/bugbot/evidence/issue-950/pilot';
+        const ledger = `${root}/trials.jsonl`, log = `${root}/execution.log.gz`, runner = `${root}/run.cjs`;
+        const f = fixture({}, { ...addedFiles(), [ledger]: 'generated ledger\n', [log]: { bytes: Buffer.from([0x1f, 0x8b, 0]) }, [runner]: 'replay();\n' });
+        const result = await f.read();
+        const units = changes(result);
+        expect(units.filter(c => [ledger, log].includes(c.path))).toEqual([log, ledger].map(path =>
+            expect.objectContaining({ path, evidence: 'generated-metadata-only' })));
+        expect(units.find(c => c.path === runner).recoveredContent.text).toBe('replay();\n');
+        expect(f.getBlob).toHaveBeenCalledTimes(302);
+        if (result.kind !== 'partitioned') throw new Error('Expected immutable progress evidence.');
+        expect(() => validateFramedProgressEvidence(result)).not.toThrow();
+    });
     it('does not treat the editable catalog as generated', async () => { const f=fixture({}, {...addedFiles(), 'specs/catalog.json':'{"editable":true}'});expect(changes(await f.read()).find(c=>c.path==='specs/catalog.json').recoveredContent.text).toBe('{"editable":true}'); });
     it('does not invent line counts for tree-derived content', async () => { for(const file of changes(await native().read())){expect(file.statistics).toBe('immutable-content-only');expect(file).not.toHaveProperty('additions');expect(file).not.toHaveProperty('deletions');} });
     it('discards provider patches and URLs in the capped prefix', async () => { const result=await native().read();expect(JSON.stringify(result)).not.toMatch(/UNTRUSTED_PREFIX_PATCH|PRIVATE_URL|PRIVATE_TOKEN/u); });

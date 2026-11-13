@@ -195,6 +195,38 @@ describe('runGitHubAction', () => {
     expect(finishActionSpy).not.toHaveBeenCalled();
   });
 
+  it.each(['ready', 'unavailable'] as const)('preserves a bot-authored review with a distinct %s verifier runtime', async status => {
+    mockExecutionAdmissionInvoke.mockResolvedValue({ decision: 'discard', tokenUser: 'test-actor' });
+    github.context.eventName = 'pull_request';
+    github.context.payload = {
+      repository: { id: 17, name: 'test-repo', owner: { login: 'test-owner' } }, action: 'opened',
+      pull_request: { number: 42, state: 'open', user: { login: 'test-actor' },
+        head: { ref: 'feature/42', sha: 'a'.repeat(40), repo: { id: 17, owner: { login: 'test-owner' } } },
+        base: { ref: 'develop' } },
+    };
+    (core.getInput as jest.Mock).mockImplementation((key: string, opts?: { required?: boolean }) => {
+      if (opts?.required && key === INPUT_KEYS.TOKEN) return 'fake-token';
+      return ({ 'bugbot-verification-mode': 'shadow', 'bugbot-verifier-provider': 'opencode',
+        'bugbot-verifier-model-provider': 'anthropic', 'bugbot-verifier-model': 'fixture-claude',
+        'bugbot-verifier-effort': 'high' } as Record<string, string>)[key] ?? '';
+    });
+    agentProvisioningSpy.mockImplementationOnce(() => undefined).mockImplementationOnce(() => {
+      if (status === 'unavailable') throw new Error('runtime unavailable');
+    });
+
+    await runGitHubAction();
+
+    expect(agentProvisioningSpy).toHaveBeenNthCalledWith(1, expect.anything(), ['reviewer']);
+    expect(agentProvisioningSpy).toHaveBeenNthCalledWith(2, expect.objectContaining({ findings: {
+      provider: 'opencode', modelProvider: 'anthropic', model: 'fixture-claude', effort: 'high',
+    } }), ['findings']);
+    expect(mockReviewOnly).toHaveBeenCalledTimes(1);
+    expect(mockReviewOnly.mock.calls[0][0].ai.getAgentConfiguration('reviewer')).toMatchObject({
+      provider: 'codex', model: 'gpt-6-luna',
+    });
+    expect(mockMainRun).not.toHaveBeenCalled();
+  });
+
   it('fails a same-repository PAT-authored PR event when its review-only analysis fails', async () => {
     mockExecutionAdmissionInvoke.mockResolvedValue({ decision: 'discard', tokenUser: 'test-actor' });
     mockReviewOnly.mockResolvedValue([{ success: false }]);

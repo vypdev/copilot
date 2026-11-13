@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "implementation": "94843e73af4340c147eda9081804694f06d07364",
+  "mode": "shadow",
+  "publication": "dry-run",
+  "production": "disabled",
+  "detector": {
+    "provider": "codex",
+    "modelProvider": "openai",
+    "model": "gpt-6-luna",
+    "effort": "xhigh"
+  },
+  "verifier": {
+    "provider": "codex",
+    "modelProvider": "openai",
+    "model": "gpt-6.1-sol",
+    "effort": "xhigh"
+  },
+  "evidence": "installed Git anchor and exact tree, measured local SQLite and official release source, matching native CI metadata",
+  "repositoryCohort": {
+    "manifestSha256": "dab7d62b0419c2da63eae3387be6222e77c114ed32b22dc9a2a9af35fb6afe85",
+    "oracleSha256": "c79302cb376519f60d69e0a080cd65dc29ff35ab256ce17b0e4b218fe69e239a",
+    "order": [
+      "U1",
+      "U2",
+      "F1",
+      "F2",
+      "S1",
+      "S2",
+      "X1",
+      "X2",
+      "M1",
+      "M2",
+      "P1",
+      "P2",
+      "J1",
+      "J2"
+    ],
+    "repetitions": 3,
+    "baselineMinimumAlerts": 3,
+    "baselineMinimumPremises": 2,
+    "minimumStrictlyBetterRepetitions": 2,
+    "maximumAddedP95Ms": 90000,
+    "requireAllExactPositiveControls": true
+  },
+  "corpus": {
+    "sha256": "640c3355aeb65c1b15454bd7f9242fa36acc12b8b3f5ef284ee06af8af36c6c6",
+    "cases": 174,
+    "concurrency": 6,
+    "outerAttemptsPerCase": 1,
+    "gates": {
+      "precision": 0.9,
+      "recall": 0.85,
+      "f1": 0.87,
+      "exactLocation": 0.8,
+      "severity": 0.8,
+      "category": 0.8,
+      "maxBrier": 0.16
+    },
+    "reusedFrom": "a539e7fb3c23e3ae3bd0075e3455778999d959fb:quality/bugbot/evidence/issue-950/ev07-shadow/corpus-score.json"
+  },
+  "campaignStop": "Once a mandatory gate cannot pass, stop admitting new reviews and let admitted sessions finish."
+}

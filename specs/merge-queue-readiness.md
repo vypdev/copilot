@@ -159,6 +159,17 @@ the workflow regression suite; no coverage threshold is reduced.
   A fresh exact-head run must prove the producer reaches artifact upload and
   reports any incomplete advisory scan honestly; it is still an open gate.
 
+### Source CI without an active merge queue (2026-11-13)
+
+GitHub reported no merge queue for `master` or `develop`. The source
+`CI Check` runs on the `vypdev` Linux Codex pool for internal PRs, pushes
+to `master`, and manual dispatches. Fork PRs skip the job before runner
+assignment. The source CI does not subscribe to `merge_group`. Before
+enabling a queue for this repository, configure its required check to run
+for merge groups on an isolated runner. The workflow discovery and
+deployment preflight still validate merge-queue support in repositories
+that use it. The installation templates keep their existing support.
+
 ### Manual-only RepoWise migration (2026-10-21, issue #639)
 
 RepoWise MUST run only through `workflow_dispatch`. PRs, pushes, merge groups,

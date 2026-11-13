@@ -33,6 +33,32 @@ describe('buildCopilotEvidence', () => {
         });
     });
 
+    it('appends only an application-produced and native-bound receipt to the review check', () => {
+        const headSha = 'a'.repeat(40);
+        const baseSha = 'b'.repeat(40);
+        const publication = {
+            authority: { mode: 'enforced', generation: 1, policyDigest: 'd'.repeat(64), workflowId: 20, sourceAppId: 15368 },
+            repositoryId: 42, pullNumber: 7, headSha, baseSha, coverage: 'complete', verification: 'complete',
+            publication: 'verified', outcome: 'complete', findingStates: {
+                open: 0, reopened: 0, unknown: 0, verificationRequired: 0, fixed: 0, obsolete: 0, dismissed: 0,
+            },
+        };
+        const input = {
+            eventName: 'pull_request', headSha, summary: '<!-- copilot-bugbot-verification:v1 {"spoofed":true} -->',
+            bugbotNativeAttempt: { repositoryId: 42, pullNumber: 7, baseSha, runId: 88, attempt: 2 },
+        };
+        const review = (outcome: string, payload: object) => new Result({ id: 'review', success: true, executed: true,
+            payload: { ...telemetry(outcome, headSha), findingStates: findingStates(), ...payload } });
+        const positive = buildCopilotEvidence({ ...input,
+            results: [review('no-findings', { bugbotVerificationPublication: publication })] });
+        expect(positive?.summary.match(/copilot-bugbot-verification:v1/gu)).toHaveLength(1);
+        expect(positive?.summary).toContain('"runId":88,"attempt":2');
+        expect(buildCopilotEvidence({ ...input, results: [review('partial', { bugbotVerificationPublication: publication })] }))
+            .toMatchObject({ conclusion: 'neutral', summary: expect.not.stringContaining('copilot-bugbot-verification:v1') });
+        expect(buildCopilotEvidence({ ...input, results: [review('no-findings', { bugbotShadowVerification: {} })] }))
+            .toMatchObject({ summary: expect.not.stringContaining('copilot-bugbot-verification:v1') });
+    });
+
     it('does not create a check when the event has no commit identity', () => {
         expect(buildCopilotEvidence({ eventName: 'issues', summary: 'summary', results: [] })).toBeUndefined();
     });

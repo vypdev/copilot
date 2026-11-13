@@ -1,0 +1,54 @@
+{
+  "original": {
+    "historical": {
+      "collection": true,
+      "exclusion": true,
+      "report": true,
+      "inventory": true,
+      "extensions": true,
+      "command": true,
+      "retained-material-ranges": true,
+      "configuration-before-hook": false,
+      "hook-before-provider": false,
+      "effective-v8-options": false
+    },
+    "augmented": {
+      "collection": true,
+      "exclusion": true,
+      "report": true,
+      "inventory": true,
+      "extensions": true,
+      "command": true,
+      "retained-material-ranges": true,
+      "configuration-before-hook": true,
+      "hook-before-provider": true,
+      "effective-v8-options": true
+    }
+  },
+  "mutant": {
+    "historical": {
+      "collection": true,
+      "exclusion": true,
+      "report": true,
+      "inventory": true,
+      "extensions": true,
+      "command": true,
+      "retained-material-ranges": true,
+      "configuration-before-hook": false,
+      "hook-before-provider": false,
+      "effective-v8-options": false
+    },
+    "augmented": {
+      "collection": true,
+      "exclusion": true,
+      "report": true,
+      "inventory": true,
+      "extensions": true,
+      "command": true,
+      "retained-material-ranges": true,
+      "configuration-before-hook": true,
+      "hook-before-provider": true,
+      "effective-v8-options": true
+    }
+  }
+}

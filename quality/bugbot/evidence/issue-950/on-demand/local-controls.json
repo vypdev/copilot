@@ -1,0 +1,17 @@
+{
+  "focalNodeTests": {"passed": 14, "failed": 0},
+  "pyVersion": "3.14.6",
+  "pytestVersion": "9.2.0",
+  "worker": {
+    "J1": {"passed": 4, "failed": 0},
+    "J2": {"passed": 3, "failed": 1, "failingParameter": "integer 1"}
+  },
+  "bridge": {
+    "upstream": ["unavailable", 503, 200],
+    "R1": {"outerStatus": [502, 503, 200], "forwardedEachRequest": true},
+    "R2": {"outerStatus": [200, 200, 200], "forwardedEachRequest": false}
+  },
+  "playwright": {"version": "1.64.1", "httpStatuses": [502, 503, 200], "accepted": [false, false, true]},
+  "modelCalls": 0,
+  "qualificationImpact": "evaluator-only"
+}

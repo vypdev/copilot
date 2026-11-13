@@ -1,7 +1,9 @@
+import type { BugbotCandidateTrace } from './bugbot_candidate_trace';
 import type { FindingsQueryPort } from '../../../../ports/agent_findings_ports';
 import type { BugbotContext } from './types';
 import type { BugbotReviewOperationContext } from './bugbot_review_operation_context';
 import type { BugbotReviewTelemetry } from './bugbot_review_telemetry';
+import type { BugbotReviewProgress } from './bugbot_review_progress';
 import { buildBugbotReviewInput } from './build_bugbot_prompt';
 import { bugbotFramedPromptBytes } from '../../../../policies/bugbot_framed_prompt_policy';
 import { buildBugbotPartitionQueryRequest, queryBugbotPartitionFindings } from './query_bugbot_findings';
@@ -21,12 +23,14 @@ export function bugbotFramedContextDigest(operation: BugbotReviewOperationContex
 export async function analyzeBugbotFrames(operation: BugbotReviewOperationContext, context: BugbotContext,
     plan: BugbotFramedReviewPlan, dependencies: {
         readonly agent: FindingsQueryPort; readonly telemetry: BugbotReviewTelemetry;
+        readonly trace?: BugbotCandidateTrace;
+        readonly progress?: BugbotReviewProgress;
         readonly isSourceCurrent: () => Promise<boolean>;
     }) {
     validateBugbotFramedReviewPlan(plan, operation.ignorePatterns);
     let promptBytes = 0;
     const inputs = plan.partitions.map(partition => {
-        const input = buildBugbotReviewInput(operation, context, { partition });
+        const input = buildBugbotReviewInput(operation, context, { partition, related: dependencies.trace ? plan.partitions : undefined });
         const size = bugbotFramedPromptBytes(buildBugbotPartitionQueryRequest(operation.analysis.agentConfiguration, input.prompt,
             { partitionId: partition.id, headSha: partition.headSha, framed: partition.framed }));
         enforceBugbotFramedBudget('promptBytes', size);
@@ -37,6 +41,8 @@ export async function analyzeBugbotFrames(operation: BugbotReviewOperationContex
     const targetLocale = operation.locale.pullRequest;
     const all: Readonly<Record<string, unknown>>[] = [];
     let retainedBytes = 0, findingCount = 0, consumedPromptBytes = 0;
+    let completed = 0;
+    let retries = 0;
     // Intercept actual requests so retries and generated-source verification use the same exact ledger.
     const boundedAgent: FindingsQueryPort = { query: async request => {
         const size = bugbotFramedPromptBytes(request);
@@ -53,15 +59,20 @@ export async function analyzeBugbotFrames(operation: BugbotReviewOperationContex
         if (bugbotFramedContextDigest(operation, context) !== plan.contextDigest
             || !(await dependencies.isSourceCurrent())) throw new BugbotReviewCompletenessError('identity');
         logInfo(`Bugbot complete review frame ${frame.ordinal}/${plan.frames.length} started; no result is final.`);
+        const frames = { ordinal: frame.ordinal, total: plan.frames.length };
+        await dependencies.progress?.record('analyzing', { frames, partitions: { completed, total: plan.partitions.length } });
         const assigned = plan.partitions.filter(partition => partition.framed!.frameId === frame.id);
         if (bugbotReviewDigest(assigned.map(x => x.id)) !== bugbotReviewDigest(frame.partitionIds)) throw new BugbotReviewCompletenessError('coverage');
         const responses = await runWithConcurrencyLimit(assigned.map(partition => async () => {
             const input = inputs[partition.ordinal - 1];
             dependencies.telemetry.beginPartition();
+            const startedAt = Date.now();
             try {
                 const response = await queryBugbotPartitionFindings(boundedAgent, operation.analysis.agentConfiguration,
                     input.prompt, targetLocale, { partitionId: partition.id, headSha: partition.headSha, framed: partition.framed },
-                    { enabled: input.requiresCandidateVerification });
+                    { enabled: input.requiresCandidateVerification, observeRetry: async () => {
+                        await dependencies.progress?.record('analyzing', { retries: ++retries });
+                    } });
                 const serialized = JSON.stringify(response);
                 enforceBugbotFramedBudget('responseBytes', Buffer.byteLength(serialized));
                 const admitted: Readonly<Record<string, unknown>> = JSON.parse(serialized);
@@ -74,9 +85,12 @@ export async function analyzeBugbotFrames(operation: BugbotReviewOperationContex
                 enforceBugbotFramedBudget('findings', findingCount);
                 retainedBytes += Buffer.byteLength(serialized);
                 enforceBugbotFramedBudget('resultBytes', retainedBytes);
+                dependencies.trace?.recordResponse(admitted, partition.ordinal, Date.now() - startedAt, partition.id);
                 dependencies.telemetry.endPartition(true);
+                await dependencies.progress?.record('analyzing', { frames, partitions: { completed: ++completed, total: plan.partitions.length } });
                 return admitted;
             } catch (error) {
+                dependencies.trace?.recordResponse(undefined, partition.ordinal, Date.now() - startedAt, partition.id);
                 dependencies.telemetry.endPartition(false, { ordinal: partition.ordinal, category: 'framed-review' });
                 throw error;
             }

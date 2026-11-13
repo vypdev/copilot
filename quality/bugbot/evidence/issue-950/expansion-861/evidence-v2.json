@@ -1,0 +1,40 @@
+{
+  "M1": [
+    {
+      "id": "evidence-1",
+      "kind": "git",
+      "head": "b14c308a28ecad52945a8edac6dce25ba9dfd655",
+      "path": "docs/household-administration.md",
+      "blob": "e90ded2b051cd4e8a87c15aa65ea0a3a22a67941",
+      "start": 25,
+      "end": 30,
+      "text": "\nSee the [API contract](household-api.md), [architecture](architecture-household-administration.md)\nand [migration/rollback limits](household-administration-migration.md). The original\n[72-case administration contract](../specs/household-administration.md),\n[integration refinements](../specs/household-administration-integration.md) and\n[workspace continuation](../specs/household-administration-workspace.md) remain required."
+    },
+    {
+      "id": "evidence-2",
+      "kind": "git-tree",
+      "head": "b14c308a28ecad52945a8edac6dce25ba9dfd655",
+      "path": "docs/household-administration-migration.md",
+      "listing": "100644 blob 814ef09ab5cdc453d66763a6ffe9adcb3082e645\tdocs/household-administration-migration.md"
+    }
+  ],
+  "M2": [
+    {
+      "id": "evidence-1",
+      "kind": "git",
+      "head": "0b288c6fef057b390708064ee32c6f21dd824fd6",
+      "path": "docs/household-administration.md",
+      "blob": "fd3485b4bfec795ac6ee666b60131e65e1ac916f",
+      "start": 25,
+      "end": 30,
+      "text": "\nSee the [API contract](household-api.md), [architecture](architecture-household-administration.md)\nand [migration/rollback limits](household-administration-migration-missing.md). The original\n[72-case administration contract](../specs/household-administration.md),\n[integration refinements](../specs/household-administration-integration.md) and\n[workspace continuation](../specs/household-administration-workspace.md) remain required."
+    },
+    {
+      "id": "evidence-2",
+      "kind": "git-tree",
+      "head": "0b288c6fef057b390708064ee32c6f21dd824fd6",
+      "path": "docs/household-administration-migration-missing.md",
+      "listing": ""
+    }
+  ]
+}

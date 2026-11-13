@@ -1,0 +1,29 @@
+--- run-pilot.cjs
++++ run-pilot.cjs
+@@ -294,7 +294,7 @@
+     const fixtures = Object.fromEntries(Object.keys(bindings).map(id => [id, fixture(subjects, id)]));
+     for (const [id, item] of Object.entries(fixtures)) checkEvidence(id, item);
+     const ledger = fs.readFileSync(path.join(__dirname, 'trial-ledger.jsonl'), 'utf8').trim().split('\n').map(JSON.parse);
+-    assert.equal(ledger.length, 216);
++    assert.equal(ledger.length, manifest.subjectTrialCount);
+     const trials = ledger.map(({ trial, phase, repetition, model, variant, subject }) => ({ trial, phase, repetition, model, variant, subject }));
+     assert.equal(sha(fs.readFileSync(path.join(__dirname, 'evidence-v2.json'))), manifest.evidencePacketSha256);
+     if (mode === 'preflight') {
+@@ -311,7 +311,7 @@
+             const checked = await Promise.all(Object.keys(fixtures).flatMap(subject => manifest.variants.map(variant =>
+                 trial({ ...row, subject, variant, phase: 'frozen-replay' }, fixtures[subject], true))));
+             for (const result of checked) assert.equal(result.status, 'completed', JSON.stringify(result));
+-            console.log('18 controlled production dry-runs passed, pinned evidence and tool matrix verified.');
++            console.log(checked.length + ' controlled production dry-runs passed, pinned evidence and tool matrix verified.');
+         } finally { fs.rmSync(directory, { recursive: true, force: true }); }
+         return;
+     }
+@@ -319,7 +319,7 @@
+     const rows = trials.filter(row => row.phase === mode);
+     const previous = fs.existsSync(output) ? fs.readFileSync(output, 'utf8').trim().split('\n').filter(Boolean).map(JSON.parse) : [];
+     const done = new Set(previous.map(row => row.trial));
+-    if (mode === 'full-review') assert.equal(previous.filter(row => row.phase === 'frozen-replay').length, 108);
++    if (mode === 'full-review') assert.equal(previous.filter(row => row.phase === 'frozen-replay').length, manifest.subjectTrialCount / 2);
+     const pending = rows.filter(row => !done.has(row.trial));
+     const worker = async () => {
+         let row;

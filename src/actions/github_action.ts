@@ -1,3 +1,5 @@
+import type { BugbotVerificationAuthority } from '../domain/bugbot/verification_receipt';
+import { resolveBugbotShadowConfiguration } from '../application/policies/bugbot_shadow_configuration_policy';
 import { runIssueEventAdmissionAction } from './issue_event_admission_action';
 import { runNativeVerificationEntry } from '../infrastructure/native_verification_controller';
 import { createNativeStatusReadPort } from '../infrastructure/composition/issue_completion_composition_root';
@@ -7,7 +9,7 @@ import { ConfigurationHandler } from '../manager/description/configuration_handl
 import { GitCliRepository } from '../data/repository/git_cli_repository';
 import { createIssueContentCompositionRoot } from '../infrastructure/composition/issue_content_composition_root';
 import { createProjectBoardCompositionRoot } from '../infrastructure/composition/project_board_composition_root';
-import { finishGithubAction } from './github_action_completion';
+import { emitBugbotShadowSummary, finishGithubAction } from './github_action_completion';
 import { getGithubActionInput } from './github_action_input';
 import { isEnabledInput, parseIssueWorkflowBoolean } from './input_boolean_policy';
 import { buildGithubActionExecution, hydrateGithubActionExecutionProjects, readGithubActionSingleAction } from './github_action_execution';
@@ -19,6 +21,7 @@ import { createGithubExecutionAdmissionUseCase } from '../infrastructure/composi
 import { createSynchronizeLifecycleStateUseCase } from '../infrastructure/composition/lifecycle_state_composition_root';
 import { createCopilotEvidenceCompositionRoot } from '../infrastructure/composition/copilot_evidence_composition_root';
 import { createGithubActionSummaryCompositionRoot } from '../infrastructure/composition/github_action_summary_composition_root';
+import { createGithubBugbotReviewProgress } from '../infrastructure/composition/bugbot_review_progress_composition_root';
 import { createSynchronizeAgentActivityUseCase } from '../infrastructure/composition/agent_activity_composition_root';
 import { readGithubActionAiInputs } from './github_action_ai_inputs';
 import { activeAgentTasks, isUnaddressedCommentEvent } from '../application/policies/agent_task_activation_policy';
@@ -43,7 +46,7 @@ import { runPullRequestApprovalAction } from './pull_request_approval_action';
 import { isBotPullRequestAnalysisEvent } from '../application/policies/bot_pull_request_analysis_policy';
 import { createPullRequestUseCaseCompositionRoot } from '../infrastructure/composition/pull_request_use_case_composition_root';
 
-export async function runGitHubAction(): Promise<void> {
+export async function runGitHubAction(verificationAuthority?: BugbotVerificationAuthority): Promise<void> {
     if (process.env.COPILOT_ISSUE_ADMISSION_BOOTSTRAP === '1') {
         // Only the isolated bootstrap owns this input; ordinary JSON input maps
         // must not redirect the mutation entry into a successful read-only no-op.
@@ -51,7 +54,8 @@ export async function runGitHubAction(): Promise<void> {
         return;
     }
     if (isEnabledInput(getGithubActionInput('pr-approval-observer'))) {
-        await runPullRequestApprovalAction(getGithubActionInput(INPUT_KEYS.TOKEN, { required: true }));
+        await runPullRequestApprovalAction(getGithubActionInput(INPUT_KEYS.TOKEN, { required: true }),
+            ...(verificationAuthority ? [verificationAuthority] as const : []));
         return;
     }
     const eventInputs = buildGithubActionEventInputs({
@@ -98,7 +102,7 @@ export async function runGitHubAction(): Promise<void> {
     }
 
     const localeInputs = readGithubActionLocaleInputs(getGithubActionInput);
-    const aiInputs = readGithubActionAiInputs(getGithubActionInput);
+    const aiInputs = readGithubActionAiInputs(getGithubActionInput, undefined, verificationAuthority);
     const activeRuntimeAgentTasks = activeAgentTasks(
         eventInputs,
         singleAction,
@@ -132,20 +136,37 @@ export async function runGitHubAction(): Promise<void> {
         agentRuntimeAuthorized: memberOnlyAgentTasksAuthorized,
         localeInputs,
     });
+    const shadowSettings = aiInputs.bugbotReviewConfiguration.shadowVerification;
+    const prepareShadowRuntime = () => {
+        if (!shadowSettings || (!botAnalysisOnly && !requestedActiveAgentTasks.some(task => task === 'reviewer' || task === 'findings'))) return;
+        const detection = execution.ai.getAgentConfiguration(execution.isPullRequest ? 'reviewer' : 'findings');
+        const verifier = resolveBugbotShadowConfiguration(detection, shadowSettings);
+        if (verifier.provider === detection.provider && verifier.modelProvider === detection.modelProvider) return;
+        try {
+            prepareGithubAgentRuntime({ findings: verifier, fixer: verifier }, ['findings']);
+        } catch {
+            logInfo('The shadow verifier runtime could not be prepared. The ordinary review can still complete.');
+        }
+    };
     if (botAnalysisOnly) {
         // Bypass the normal lifecycle/issue route entirely. The only permitted
         // side effect is Bugbot's PR analysis and its own bounded presentation.
         execution.issueNumber = execution.pullRequest.number;
         prepareGithubAgentRuntime(aiInputs.requestedAgentTasks, ['reviewer']);
+        prepareShadowRuntime();
         const results = await createPullRequestUseCaseCompositionRoot({
             owner: execution.owner,
             repository: execution.repo,
             token,
+            ...(shadowSettings ? { shadow: { workspace: process.env.GITHUB_WORKSPACE } } : {}),
+            ...(verificationAuthority ? { verificationAuthority } : {}),
         }).reviewOnly(execution);
         if (results.some(result => !result.success)) {
             throw new Error('Bot-authored pull-request analysis did not complete.');
         }
-        await core.summary.addRaw('Copilot analyzed this bot-authored pull request. Native bot approval is never permitted.').write();
+        const shadowSummary = emitBugbotShadowSummary(results);
+        await core.summary.addRaw(['Copilot analyzed this bot-authored pull request. Native bot approval is never permitted.',
+            shadowSummary].filter(Boolean).join('\n\n')).write();
         return;
     }
     logDebugInfo(
@@ -158,6 +179,13 @@ export async function runGitHubAction(): Promise<void> {
         repository: execution.repo,
         token: execution.tokens.token,
     };
+    const evidence = createCopilotEvidenceCompositionRoot();
+    const summary = createGithubActionSummaryCompositionRoot();
+    const reviewProgress = createGithubBugbotReviewProgress({
+        ...repositoryBinding, pullNumber: Number(execution.pullRequest.number), expectedHead: execution.inputs?.pull_request?.head?.sha,
+        expectedBase: execution.inputs?.pull_request?.base?.sha,
+        policy: verificationAuthority?.policyDigest,
+    }, evidence, summary);
     const results = await mainRun(
         execution,
         projectBoard.command,
@@ -192,9 +220,13 @@ export async function runGitHubAction(): Promise<void> {
             }
             if (!singleAction.isCloseInactiveIssuesAction && requestedActiveAgentTasks.length > 0) {
                 prepareGithubAgentRuntime(aiInputs.requestedAgentTasks, requestedActiveAgentTasks);
+                prepareShadowRuntime();
                 languageRuntimeAvailable = requestedActiveAgentTasks.includes('planner');
             }
         },
+        undefined,
+        verificationAuthority,
+        reviewProgress,
     );
     const issueContentPort = createIssueContentCompositionRoot();
     const configurationHandler = new ConfigurationHandler(issueContentPort);
@@ -208,8 +240,8 @@ export async function runGitHubAction(): Promise<void> {
                 issueNumber: context.issueNumber,
             }, context),
         },
-        createCopilotEvidenceCompositionRoot(),
-        createGithubActionSummaryCompositionRoot(),
+        evidence,
+        summary,
         new ResolveMessageCatalogUseCase(
             languageRuntimeAvailable ? createLanguageQueryPort() : undefined,
         ),

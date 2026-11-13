@@ -1,0 +1,34 @@
+{
+  "head": "57a8b4c6a9f52afb1ffc8e38275bcfd13575a3ae",
+  "tree": "aa124c6cd92c490b1af0953af3be059ac72edddf",
+  "lockSha256": "d78383ae9e844f7eb2f61295eac7216688a5ad6f07db045c00491a63f464506a",
+  "bundleSha256": "65dfe4960d90043a465f37333dfaa625b30680d9390d1dfa4426cfda9f3fc266",
+  "node": "v24.20.0",
+  "esbuild": "0.28.2",
+  "chromium": "156.0.8078.4",
+  "playwright": "1.64.1",
+  "lit": "3.3.3",
+  "haUi": "0.1.0-next.1",
+  "observations": [
+    {
+      "priorCommittedReceipt": false,
+      "title": "   ",
+      "description": "Draft the user should keep",
+      "open": true,
+      "notice": "invalid_input",
+      "receipt": null,
+      "sends": []
+    },
+    {
+      "priorCommittedReceipt": true,
+      "title": "",
+      "description": "",
+      "open": false,
+      "notice": "invalid_input",
+      "receipt": "previous-create",
+      "sends": [
+        "Valid preceding task"
+      ]
+    }
+  ]
+}

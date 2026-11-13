@@ -7,6 +7,33 @@ description: When Bugbot runs, where findings appear, severity, comment limit, a
 
 This page describes **when** Bugbot runs, **where** findings are published, and how **severity**, **comment limit**, and **resolved findings** work.
 
+## Evidence verification pilot
+
+Issue #950 specifies a separate verification stage after candidate detection. The pilot evaluates whether immutable repository evidence can refute plausible candidates while retaining real defects. Repository-shaped controls cover Unicode matching, pytest fixture discovery and SQLite restore guards.
+
+The shadow pilot starts a separate investigation for each candidate prepared by
+the usual Bugbot detector before publication. Both stages use the same effective
+Bugbot model and reasoning effort. Bugbot supplies its default model when
+needed and leaves omitted reasoning effort to the provider. An empty candidate
+set opens no verifier sessions. The verifier follows material
+leads through successive reads, including unchanged code and official sources
+for a resolved dependency version. A delivered runtime receipt can identify the
+release for an official lookup while preserving the scope of the measurement.
+For missing-guard or missing-configuration claims, the verifier traces how the
+effective state is assembled. The report cites exact ranges for each material
+premise. For a premise about execution order, it identifies the route, both
+operations, and the code that determines their order. The same session can
+complete a missing role or close as inconclusive with the remaining gap.
+If the provider runs out of context, the application retains the finding and evidence receipts so the
+verifier can resume from them. A missing premise yields an inconclusive verdict.
+The verifier records elapsed time and continues without a time cutoff.
+Explicit cancellation and provider failures can still end the investigation.
+Usage telemetry has no effect on reads, verdicts or qualification. The pilot
+records verdicts and technical failures separately from the usual publication
+decision and runs with GitHub writes blocked.
+
+[Specification and pilot status](https://github.com/vypdev/copilot/issues/950)
+
 ## JSON values and reader contracts
 
 Before reporting double encoding, Bugbot traces the producer, actual decoder
@@ -228,6 +255,10 @@ Bugbot detection runs in two ways:
 
 ### 1. On pull-request review events
 
+In this repository’s own workflows, generated Bugbot pilot `.jsonl` and
+`.log.gz` files are excluded from detection context. Replay code, manifests,
+reports and ordinary project sources remain eligible for review.
+
 The pull-request workflow runs a full review on `opened`, `reopened`, and
 `ready_for_review`. The draft-to-ready event runs review without repeating
 assignments, project linking, or generated descriptions. On
@@ -298,6 +329,12 @@ Each finding is posted as a **separate comment** on the issue. The comment inclu
 The action embeds a **hidden marker** in each comment so it can later **update** the same comment (e.g. when the finding is fixed and the configured agent reports it as resolved) or match it when you ask to “fix it” from a PR review thread.
 
 ### On the pull request
+
+Open **Current review checks** from the Bugbot status comment to see the
+current head, stage, last observation, and counts of validated partitions or
+verification outcomes. The status comment keeps the last verified review
+available while the check reports work in progress. If the runner disconnects,
+the last observation remains dated and links to the authoritative workflow run.
 
 When one **open PR** is uniquely verified for the exact head, Bugbot creates one
 submitted review. Its body is a historical snapshot of the analyzed commit and

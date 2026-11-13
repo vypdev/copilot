@@ -1,0 +1,134 @@
+{
+  "schemaVersion": 1,
+  "issue": 950,
+  "case": 892,
+  "reference": "c48a93494c2b760853661e15e69e2f32ddcacb0e",
+  "publicationMode": "dry-run",
+  "sdk": "b3952f686a55a9b4207e1a23c64be8344e8df5d5",
+  "cli": "codex-cli 0.167.0-alpha.3.2",
+  "modelProvider": "openai",
+  "subjects": [
+    "N1",
+    "N2"
+  ],
+  "detector": {
+    "model": "gpt-6-luna",
+    "effort": "medium",
+    "callMs": 42000,
+    "attempts": 1
+  },
+  "verifier": {
+    "models": [
+      "gpt-6-luna",
+      "gpt-6.1-sol"
+    ],
+    "effort": "low",
+    "readRounds": 2,
+    "callMs": 42000,
+    "retries": 0
+  },
+  "ceiling": {
+    "caseMs": 90000,
+    "grossInputTokens": 32768,
+    "outputTokens": 4096,
+    "calls": 3
+  },
+  "packetCeiling": {
+    "packetBytes": 15500,
+    "promptBytes": 21500,
+    "sourceMs": 4000,
+    "sourceBytes": 524288,
+    "openedFiles": 80,
+    "evidenceBytes": 9000,
+    "receipts": 5,
+    "treeEntries": 4096,
+    "matches": 16
+  },
+  "adapter": "packet-audit/git-evidence.cjs",
+  "slots": [
+    {
+      "trial": "c94e09f7a86f527f",
+      "subject": "N1",
+      "model": "gpt-6-luna",
+      "repetition": 1,
+      "mode": "adaptive"
+    },
+    {
+      "trial": "5ed178d0ab249c5d",
+      "subject": "N1",
+      "model": "gpt-6.1-sol",
+      "repetition": 1,
+      "mode": "adaptive"
+    },
+    {
+      "trial": "21749382f300e201",
+      "subject": "N1",
+      "model": "gpt-6-luna",
+      "repetition": 2,
+      "mode": "adaptive"
+    },
+    {
+      "trial": "19074b18012e7f06",
+      "subject": "N1",
+      "model": "gpt-6.1-sol",
+      "repetition": 2,
+      "mode": "adaptive"
+    },
+    {
+      "trial": "86e4e564938b3003",
+      "subject": "N1",
+      "model": "gpt-6-luna",
+      "repetition": 3,
+      "mode": "matched"
+    },
+    {
+      "trial": "f4a1dbb49e7c10a0",
+      "subject": "N1",
+      "model": "gpt-6.1-sol",
+      "repetition": 3,
+      "mode": "matched"
+    },
+    {
+      "trial": "97a4612c384481b0",
+      "subject": "N2",
+      "model": "gpt-6-luna",
+      "repetition": 1,
+      "mode": "adaptive"
+    },
+    {
+      "trial": "5515d676e910bb97",
+      "subject": "N2",
+      "model": "gpt-6.1-sol",
+      "repetition": 1,
+      "mode": "adaptive"
+    },
+    {
+      "trial": "d55f1822470b1c4b",
+      "subject": "N2",
+      "model": "gpt-6-luna",
+      "repetition": 2,
+      "mode": "adaptive"
+    },
+    {
+      "trial": "1a6d45e3edfd2939",
+      "subject": "N2",
+      "model": "gpt-6.1-sol",
+      "repetition": 2,
+      "mode": "adaptive"
+    },
+    {
+      "trial": "de8ef069ff206a2e",
+      "subject": "N2",
+      "model": "gpt-6-luna",
+      "repetition": 3,
+      "mode": "matched"
+    },
+    {
+      "trial": "0272ec3130f36b4d",
+      "subject": "N2",
+      "model": "gpt-6.1-sol",
+      "repetition": 3,
+      "mode": "matched"
+    }
+  ]
+}

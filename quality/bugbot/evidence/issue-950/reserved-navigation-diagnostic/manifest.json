@@ -1,0 +1,303 @@
+{
+  "schemaVersion": 1,
+  "issue": 950,
+  "case": 892,
+  "reference": "0d920826c853e6da32c270b2cb4d874141e20560",
+  "publicationMode": "dry-run",
+  "sdk": "b3952f686a55a9b4207e1a23c64be8344e8df5d5",
+  "cli": "codex-cli 0.167.0-alpha.3.2",
+  "modelProvider": "openai",
+  "effort": "low",
+  "models": [
+    "gpt-6-luna",
+    "gpt-6.1-sol"
+  ],
+  "subjects": [
+    "N1",
+    "N2"
+  ],
+  "arms": [
+    "fixed",
+    "repeat",
+    "on-demand"
+  ],
+  "repetitions": [
+    1,
+    2,
+    3
+  ],
+  "plannedTrials": 36,
+  "concurrencyPerModel": 3,
+  "ceiling": {
+    "caseMs": 90000,
+    "grossInputTokens": 32768,
+    "outputTokens": 4096,
+    "calls": 3
+  },
+  "packetCeiling": {
+    "packetBytes": 15500,
+    "promptBytes": 21500,
+    "sourceMs": 4000,
+    "sourceBytes": 524288,
+    "openedFiles": 80,
+    "evidenceBytes": 9000,
+    "receipts": 5,
+    "treeEntries": 4096,
+    "matches": 16
+  },
+  "adapter": "packet-audit/git-evidence.cjs",
+  "rows": [
+    {
+      "trial": "08ef56ef82bf7f1f",
+      "model": "gpt-6-luna",
+      "subject": "N2",
+      "arm": "repeat",
+      "repetition": 2
+    },
+    {
+      "trial": "0c1c978341d49e49",
+      "model": "gpt-6.1-sol",
+      "subject": "N1",
+      "arm": "fixed",
+      "repetition": 2
+    },
+    {
+      "trial": "0d8736a67efe443d",
+      "model": "gpt-6.1-sol",
+      "subject": "N1",
+      "arm": "fixed",
+      "repetition": 3
+    },
+    {
+      "trial": "2197d56f07c2f85a",
+      "model": "gpt-6.1-sol",
+      "subject": "N2",
+      "arm": "repeat",
+      "repetition": 1
+    },
+    {
+      "trial": "2237d14bc62494bc",
+      "model": "gpt-6.1-sol",
+      "subject": "N2",
+      "arm": "fixed",
+      "repetition": 2
+    },
+    {
+      "trial": "273d5302ccbfccdd",
+      "model": "gpt-6.1-sol",
+      "subject": "N1",
+      "arm": "on-demand",
+      "repetition": 2
+    },
+    {
+      "trial": "3630d26c9e29699d",
+      "model": "gpt-6-luna",
+      "subject": "N2",
+      "arm": "repeat",
+      "repetition": 1
+    },
+    {
+      "trial": "3baa778a35b0b417",
+      "model": "gpt-6-luna",
+      "subject": "N1",
+      "arm": "fixed",
+      "repetition": 1
+    },
+    {
+      "trial": "4d03abd9497128d4",
+      "model": "gpt-6-luna",
+      "subject": "N1",
+      "arm": "on-demand",
+      "repetition": 3
+    },
+    {
+      "trial": "557eae29a8a56349",
+      "model": "gpt-6.1-sol",
+      "subject": "N1",
+      "arm": "fixed",
+      "repetition": 1
+    },
+    {
+      "trial": "5676bcffc85b5f6d",
+      "model": "gpt-6.1-sol",
+      "subject": "N2",
+      "arm": "repeat",
+      "repetition": 3
+    },
+    {
+      "trial": "72a14a842c8c641d",
+      "model": "gpt-6-luna",
+      "subject": "N1",
+      "arm": "fixed",
+      "repetition": 2
+    },
+    {
+      "trial": "83cff1959f8b5214",
+      "model": "gpt-6-luna",
+      "subject": "N2",
+      "arm": "on-demand",
+      "repetition": 2
+    },
+    {
+      "trial": "8aba7b8ccc967317",
+      "model": "gpt-6.1-sol",
+      "subject": "N2",
+      "arm": "on-demand",
+      "repetition": 3
+    },
+    {
+      "trial": "8fea95b04c389459",
+      "model": "gpt-6-luna",
+      "subject": "N2",
+      "arm": "on-demand",
+      "repetition": 3
+    },
+    {
+      "trial": "95846ac985434ccf",
+      "model": "gpt-6.1-sol",
+      "subject": "N2",
+      "arm": "on-demand",
+      "repetition": 2
+    },
+    {
+      "trial": "95e0cc2fbefca66d",
+      "model": "gpt-6.1-sol",
+      "subject": "N2",
+      "arm": "fixed",
+      "repetition": 1
+    },
+    {
+      "trial": "9d33396893e98dcf",
+      "model": "gpt-6-luna",
+      "subject": "N1",
+      "arm": "repeat",
+      "repetition": 1
+    },
+    {
+      "trial": "a0ee0d6d2e83bef7",
+      "model": "gpt-6-luna",
+      "subject": "N2",
+      "arm": "fixed",
+      "repetition": 2
+    },
+    {
+      "trial": "a21c2dd76d777e47",
+      "model": "gpt-6.1-sol",
+      "subject": "N1",
+      "arm": "repeat",
+      "repetition": 2
+    },
+    {
+      "trial": "a53f044ffa0f0492",
+      "model": "gpt-6.1-sol",
+      "subject": "N1",
+      "arm": "repeat",
+      "repetition": 1
+    },
+    {
+      "trial": "a5d550d4ed76397d",
+      "model": "gpt-6-luna",
+      "subject": "N2",
+      "arm": "repeat",
+      "repetition": 3
+    },
+    {
+      "trial": "aa34a9fdf73fdca6",
+      "model": "gpt-6-luna",
+      "subject": "N1",
+      "arm": "on-demand",
+      "repetition": 2
+    },
+    {
+      "trial": "addfbd9b67141467",
+      "model": "gpt-6-luna",
+      "subject": "N1",
+      "arm": "repeat",
+      "repetition": 2
+    },
+    {
+      "trial": "b06fe02fff841967",
+      "model": "gpt-6-luna",
+      "subject": "N2",
+      "arm": "fixed",
+      "repetition": 3
+    },
+    {
+      "trial": "b1050b68d35e3cb9",
+      "model": "gpt-6.1-sol",
+      "subject": "N1",
+      "arm": "on-demand",
+      "repetition": 3
+    },
+    {
+      "trial": "b9bbef355d610091",
+      "model": "gpt-6.1-sol",
+      "subject": "N2",
+      "arm": "repeat",
+      "repetition": 2
+    },
+    {
+      "trial": "c87d105479f6e057",
+      "model": "gpt-6.1-sol",
+      "subject": "N1",
+      "arm": "on-demand",
+      "repetition": 1
+    },
+    {
+      "trial": "cb5cdcd8a8f25f97",
+      "model": "gpt-6.1-sol",
+      "subject": "N2",
+      "arm": "fixed",
+      "repetition": 3
+    },
+    {
+      "trial": "d1081ad6e4b84374",
+      "model": "gpt-6-luna",
+      "subject": "N1",
+      "arm": "on-demand",
+      "repetition": 1
+    },
+    {
+      "trial": "d1170f43ad5253b6",
+      "model": "gpt-6-luna",
+      "subject": "N1",
+      "arm": "fixed",
+      "repetition": 3
+    },
+    {
+      "trial": "da0e5b84351c697a",
+      "model": "gpt-6.1-sol",
+      "subject": "N1",
+      "arm": "repeat",
+      "repetition": 3
+    },
+    {
+      "trial": "db3ce8a9d1aeda7a",
+      "model": "gpt-6-luna",
+      "subject": "N2",
+      "arm": "on-demand",
+      "repetition": 1
+    },
+    {
+      "trial": "e4f9b9634ea7a16b",
+      "model": "gpt-6-luna",
+      "subject": "N1",
+      "arm": "repeat",
+      "repetition": 3
+    },
+    {
+      "trial": "f5061793b6022fd4",
+      "model": "gpt-6.1-sol",
+      "subject": "N2",
+      "arm": "on-demand",
+      "repetition": 1
+    },
+    {
+      "trial": "f62cd83748002045",
+      "model": "gpt-6-luna",
+      "subject": "N2",
+      "arm": "fixed",
+      "repetition": 1
+    }
+  ]
+}

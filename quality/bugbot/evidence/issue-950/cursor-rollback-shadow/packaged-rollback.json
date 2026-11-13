@@ -1,0 +1,29 @@
+{
+  "sha256": "2f2c8dea99048fd4507ea45cca0ba70c821fcd66708e00ce2222da36838452c4",
+  "results": [
+    {
+      "kind": "packaged-legacy-card",
+      "decision": "recommend (recommend-mode)",
+      "assessment": "stale-head-fence",
+      "mutationRequests": 0
+    },
+    {
+      "kind": "packaged-no-card",
+      "decision": "pending (bugbot-missing)",
+      "assessment": "stale-head-fence",
+      "mutationRequests": 0
+    },
+    {
+      "kind": "injected-stale",
+      "decision": "pending (bugbot-missing)",
+      "assessment": "stale-head-fence",
+      "mutationRequests": 0
+    },
+    {
+      "kind": "injected-fresh",
+      "decision": "recommend (recommend-mode)",
+      "assessment": "stale-head-fence",
+      "mutationRequests": 0
+    }
+  ]
+}

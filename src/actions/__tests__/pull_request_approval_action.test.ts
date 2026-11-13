@@ -54,14 +54,25 @@ describe('trusted PR approval Action route', () => {
   });
 
   it('requires a positive manual PR number and repository write permission', async () => {
-    (getGithubActionInput as jest.Mock).mockReturnValue('0');
+    (getGithubActionInput as jest.Mock).mockImplementation((name: string) => name === 'pr-approval-pr-number' ? '0' : '');
     await expect(runPullRequestApprovalAction('pat')).rejects.toThrow('positive PR number');
-    (getGithubActionInput as jest.Mock).mockReturnValue('42');
+    (getGithubActionInput as jest.Mock).mockImplementation((name: string) => name === 'pr-approval-pr-number' ? '42' : '');
     const octokit = github.getOctokit('pat');
     (octokit.rest.repos.getCollaboratorPermissionLevel as jest.Mock).mockResolvedValue({ data: { permission: 'read' } });
     (github.getOctokit as jest.Mock).mockReturnValue(octokit);
     await expect(runPullRequestApprovalAction('pat')).rejects.toThrow('repository write permission');
     expect(mockExecute).not.toHaveBeenCalled();
+  });
+
+  it('keeps shadow out of approval policy and fails closed for an enforcement request', async () => {
+    let mode = 'shadow';
+    (getGithubActionInput as jest.Mock).mockImplementation((name: string) =>
+      name === 'pr-approval-pr-number' ? '42' : name === 'bugbot-verification-mode' ? mode : '');
+    await runPullRequestApprovalAction('pat');
+    expect(mockExecute).toHaveBeenCalledTimes(1);
+    mode = 'enforced';
+    await expect(runPullRequestApprovalAction('pat')).rejects.toThrow('qualified verification profile');
+    expect(mockExecute).toHaveBeenCalledTimes(1);
   });
 
   it('rechecks one authorized manual PR', async () => {

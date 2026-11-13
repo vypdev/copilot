@@ -1,0 +1,1632 @@
+{
+  "freeze": "6e2258245fb5f882e876ade999e7b1a4911b9d53",
+  "passes": false,
+  "trials": [
+    {
+      "trial": "N1-1-fixed",
+      "subject": "N1",
+      "repetition": 1,
+      "arm": "fixed",
+      "model": "gpt-6.1-sol",
+      "attempts": 1,
+      "requested": {
+        "revision": "head",
+        "kind": "readBlob",
+        "targets": [
+          {
+            "scope": "packages/core/src/components/navigation-overflow.ts",
+            "workspace": null,
+            "match": "lines",
+            "query": null,
+            "start": 1,
+            "end": 88
+          }
+        ]
+      },
+      "lookup": {
+        "status": "unresolved",
+        "reason": "fixed-single-call"
+      },
+      "retrievedProofs": [],
+      "delivered": [
+        "r-bb1ed42647e1b025b0592ba4",
+        "r-7a2279cddb79ec6256e206c4",
+        "r-52820aeb1666febf42d91c27"
+      ],
+      "cited": [],
+      "stage": {
+        "retrieved": {
+          "selection": false,
+          "listener": false
+        },
+        "delivered": {
+          "selection": false,
+          "listener": false
+        },
+        "cited": {
+          "selection": false,
+          "listener": false
+        }
+      },
+      "stop": "request-admission",
+      "citation": {
+        "drag": false,
+        "fresh-click": false,
+        "dispatch": false,
+        "viewport-identity": false,
+        "rendered-in-bar": false
+      },
+      "valid": false,
+      "verdict": null,
+      "expected": "refuted",
+      "status": "unresolved-request",
+      "correct": false,
+      "reason": null,
+      "missing": null,
+      "anchor": {
+        "path": "packages/core/src/components/navigation-overflow.ts",
+        "side": "RIGHT",
+        "line": 107
+      },
+      "wallMs": 5952,
+      "budget": "within",
+      "usage": {
+        "input_tokens": 9520,
+        "output_tokens": 81
+      },
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      },
+      "writeAttempts": [],
+      "causalReview": null
+    },
+    {
+      "trial": "N1-1-repeat",
+      "subject": "N1",
+      "repetition": 1,
+      "arm": "repeat",
+      "model": "gpt-6.1-sol",
+      "attempts": 2,
+      "requested": {
+        "revision": "head",
+        "kind": "readBlob",
+        "targets": [
+          {
+            "scope": "packages/core/src/components/navigation-overflow.ts",
+            "workspace": null,
+            "match": "lines",
+            "query": null,
+            "start": 1,
+            "end": 88
+          }
+        ]
+      },
+      "lookup": {
+        "status": "budget",
+        "reason": "line-budget"
+      },
+      "retrievedProofs": [],
+      "delivered": [
+        "r-bb1ed42647e1b025b0592ba4",
+        "r-7a2279cddb79ec6256e206c4",
+        "r-52820aeb1666febf42d91c27"
+      ],
+      "cited": [
+        "r-bb1ed42647e1b025b0592ba4",
+        "r-7a2279cddb79ec6256e206c4",
+        "r-52820aeb1666febf42d91c27"
+      ],
+      "stage": {
+        "retrieved": {
+          "selection": false,
+          "listener": false
+        },
+        "delivered": {
+          "selection": false,
+          "listener": false
+        },
+        "cited": {
+          "selection": false,
+          "listener": false
+        }
+      },
+      "stop": "request-admission",
+      "citation": {
+        "drag": true,
+        "fresh-click": false,
+        "dispatch": true,
+        "viewport-identity": false,
+        "rendered-in-bar": true
+      },
+      "valid": true,
+      "verdict": "inconclusive",
+      "expected": "refuted",
+      "status": "valid-inconclusive",
+      "correct": false,
+      "reason": "Mouseup preserves drag suppression; #down clears it and item clicks reach #activate, but the fresh click\u2019s route through #down is unproven.",
+      "missing": "The supplied fragments omit #down listener registration. Check whether a fresh pointer press on Overview invokes #down before click; this determines whether consumeClick blocks selection dispatch.",
+      "anchor": {
+        "path": "packages/core/src/components/navigation-overflow.ts",
+        "side": "RIGHT",
+        "line": 107
+      },
+      "wallMs": 17132,
+      "budget": "within",
+      "usage": {
+        "input_tokens": 18842,
+        "output_tokens": 265
+      },
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      },
+      "writeAttempts": [],
+      "causalReview": {
+        "reasonSha256": "35844eec321bde20a222688ef61190ab3a68e8493f0031ae4e1e297479f5a2d1",
+        "passes": false,
+        "note": "Names missing #down registration and the conditional effect of suppression on dispatch."
+      }
+    },
+    {
+      "trial": "N1-1-on-demand",
+      "subject": "N1",
+      "repetition": 1,
+      "arm": "on-demand",
+      "model": "gpt-6.1-sol",
+      "attempts": 2,
+      "requested": {
+        "revision": "head",
+        "kind": "readBlob",
+        "targets": [
+          {
+            "scope": "packages/core/src/components/navigation-overflow.ts",
+            "workspace": null,
+            "match": "lines",
+            "query": null,
+            "start": 1,
+            "end": 88
+          }
+        ]
+      },
+      "lookup": {
+        "status": "budget",
+        "reason": "line-budget"
+      },
+      "retrievedProofs": [],
+      "delivered": [
+        "r-bb1ed42647e1b025b0592ba4",
+        "r-7a2279cddb79ec6256e206c4",
+        "r-52820aeb1666febf42d91c27"
+      ],
+      "cited": [
+        "r-bb1ed42647e1b025b0592ba4",
+        "r-7a2279cddb79ec6256e206c4",
+        "r-52820aeb1666febf42d91c27"
+      ],
+      "stage": {
+        "retrieved": {
+          "selection": false,
+          "listener": false
+        },
+        "delivered": {
+          "selection": false,
+          "listener": false
+        },
+        "cited": {
+          "selection": false,
+          "listener": false
+        }
+      },
+      "stop": "request-admission",
+      "citation": {
+        "drag": true,
+        "fresh-click": false,
+        "dispatch": true,
+        "viewport-identity": false,
+        "rendered-in-bar": true
+      },
+      "valid": true,
+      "verdict": "inconclusive",
+      "expected": "refuted",
+      "status": "valid-inconclusive",
+      "correct": false,
+      "reason": "Outside mouseup retains suppression; #down clears it, but its binding is unshown, so the fresh click\u2019s selection dispatch cannot be established.",
+      "missing": "Check controller listener registration to establish whether a fresh Overview pointer press invokes #down before its click reaches #activate.",
+      "anchor": {
+        "path": "packages/core/src/components/navigation-overflow.ts",
+        "side": "RIGHT",
+        "line": 107
+      },
+      "wallMs": 11489,
+      "budget": "within",
+      "usage": {
+        "input_tokens": 18842,
+        "output_tokens": 236
+      },
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      },
+      "writeAttempts": [],
+      "causalReview": {
+        "reasonSha256": "db90560a64ed062b5c2328057bb7b5242659a162f97d62b044621fd1baa99acd",
+        "passes": false,
+        "note": "Leaves selection unresolved because the binding that invokes #down is not shown."
+      }
+    },
+    {
+      "trial": "N1-2-repeat",
+      "subject": "N1",
+      "repetition": 2,
+      "arm": "repeat",
+      "model": "gpt-6.1-sol",
+      "attempts": 2,
+      "requested": {
+        "revision": "head",
+        "kind": "readBlob",
+        "targets": [
+          {
+            "scope": "packages/core/src/components/navigation-overflow.ts",
+            "workspace": null,
+            "match": "lines",
+            "query": null,
+            "start": 1,
+            "end": 88
+          }
+        ]
+      },
+      "lookup": {
+        "status": "budget",
+        "reason": "line-budget"
+      },
+      "retrievedProofs": [],
+      "delivered": [
+        "r-bb1ed42647e1b025b0592ba4",
+        "r-7a2279cddb79ec6256e206c4",
+        "r-52820aeb1666febf42d91c27"
+      ],
+      "cited": [
+        "r-bb1ed42647e1b025b0592ba4",
+        "r-7a2279cddb79ec6256e206c4",
+        "r-52820aeb1666febf42d91c27"
+      ],
+      "stage": {
+        "retrieved": {
+          "selection": false,
+          "listener": false
+        },
+        "delivered": {
+          "selection": false,
+          "listener": false
+        },
+        "cited": {
+          "selection": false,
+          "listener": false
+        }
+      },
+      "stop": "request-admission",
+      "citation": {
+        "drag": true,
+        "fresh-click": false,
+        "dispatch": true,
+        "viewport-identity": false,
+        "rendered-in-bar": true
+      },
+      "valid": true,
+      "verdict": "inconclusive",
+      "expected": "refuted",
+      "status": "valid-inconclusive",
+      "correct": false,
+      "reason": "Mouseup preserves drag suppression; #down clears it, but its listener wiring is absent, so the fresh click\u2019s selection dispatch cannot be established.",
+      "missing": "Check controller listener registration to establish whether a fresh pointer press on Overview invokes #down before its click reaches #activate.",
+      "anchor": {
+        "path": "packages/core/src/components/navigation-overflow.ts",
+        "side": "RIGHT",
+        "line": 107
+      },
+      "wallMs": 11577,
+      "budget": "within",
+      "usage": {
+        "input_tokens": 18842,
+        "output_tokens": 229
+      },
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      },
+      "writeAttempts": [],
+      "causalReview": {
+        "reasonSha256": "7da3975d1d01ce41a120642b2bcc0917800a8cac760fc2d15c2e9fec1482ae67",
+        "passes": false,
+        "note": "Identifies the clear in #down and the missing listener connection from Overview."
+      }
+    },
+    {
+      "trial": "N1-2-on-demand",
+      "subject": "N1",
+      "repetition": 2,
+      "arm": "on-demand",
+      "model": "gpt-6.1-sol",
+      "attempts": 2,
+      "requested": {
+        "revision": "head",
+        "kind": "readBlob",
+        "targets": [
+          {
+            "scope": "packages/core/src/components/navigation-overflow.ts",
+            "workspace": null,
+            "match": "lines",
+            "query": null,
+            "start": 1,
+            "end": 88
+          }
+        ]
+      },
+      "lookup": {
+        "status": "budget",
+        "reason": "line-budget"
+      },
+      "retrievedProofs": [],
+      "delivered": [
+        "r-bb1ed42647e1b025b0592ba4",
+        "r-7a2279cddb79ec6256e206c4",
+        "r-52820aeb1666febf42d91c27"
+      ],
+      "cited": [
+        "r-bb1ed42647e1b025b0592ba4",
+        "r-7a2279cddb79ec6256e206c4",
+        "r-52820aeb1666febf42d91c27"
+      ],
+      "stage": {
+        "retrieved": {
+          "selection": false,
+          "listener": false
+        },
+        "delivered": {
+          "selection": false,
+          "listener": false
+        },
+        "cited": {
+          "selection": false,
+          "listener": false
+        }
+      },
+      "stop": "request-admission",
+      "citation": {
+        "drag": true,
+        "fresh-click": false,
+        "dispatch": true,
+        "viewport-identity": false,
+        "rendered-in-bar": true
+      },
+      "valid": true,
+      "verdict": "inconclusive",
+      "expected": "refuted",
+      "status": "valid-inconclusive",
+      "correct": false,
+      "reason": "Mouseup preserves suppression; #down would clear it, but its binding is absent; the item click reaches #activate, where remaining suppression blocks dispatch.",
+      "missing": "Verify that Overview\u2019s fresh pointer press invokes #down before its click; the supplied fragments omit the mousedown listener binding.",
+      "anchor": {
+        "path": "packages/core/src/components/navigation-overflow.ts",
+        "side": "RIGHT",
+        "line": 107
+      },
+      "wallMs": 11779,
+      "budget": "within",
+      "usage": {
+        "input_tokens": 18840,
+        "output_tokens": 258
+      },
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      },
+      "writeAttempts": [],
+      "causalReview": {
+        "reasonSha256": "f241e13a6ca1b35b90c983a0c24492916d7db868c02d300015c8d6e98f7e408f",
+        "passes": false,
+        "note": "Traces #down and #activate conditionally and leaves the listener premise unresolved."
+      }
+    },
+    {
+      "trial": "N1-2-fixed",
+      "subject": "N1",
+      "repetition": 2,
+      "arm": "fixed",
+      "model": "gpt-6.1-sol",
+      "attempts": 1,
+      "requested": {
+        "revision": "head",
+        "kind": "readBlob",
+        "targets": [
+          {
+            "scope": "packages/core/src/components/navigation-overflow.ts",
+            "workspace": null,
+            "match": "lines",
+            "query": null,
+            "start": 1,
+            "end": 88
+          }
+        ]
+      },
+      "lookup": {
+        "status": "unresolved",
+        "reason": "fixed-single-call"
+      },
+      "retrievedProofs": [],
+      "delivered": [
+        "r-bb1ed42647e1b025b0592ba4",
+        "r-7a2279cddb79ec6256e206c4",
+        "r-52820aeb1666febf42d91c27"
+      ],
+      "cited": [],
+      "stage": {
+        "retrieved": {
+          "selection": false,
+          "listener": false
+        },
+        "delivered": {
+          "selection": false,
+          "listener": false
+        },
+        "cited": {
+          "selection": false,
+          "listener": false
+        }
+      },
+      "stop": "request-admission",
+      "citation": {
+        "drag": false,
+        "fresh-click": false,
+        "dispatch": false,
+        "viewport-identity": false,
+        "rendered-in-bar": false
+      },
+      "valid": false,
+      "verdict": null,
+      "expected": "refuted",
+      "status": "unresolved-request",
+      "correct": false,
+      "reason": null,
+      "missing": null,
+      "anchor": {
+        "path": "packages/core/src/components/navigation-overflow.ts",
+        "side": "RIGHT",
+        "line": 107
+      },
+      "wallMs": 6058,
+      "budget": "within",
+      "usage": {
+        "input_tokens": 9522,
+        "output_tokens": 79
+      },
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      },
+      "writeAttempts": [],
+      "causalReview": null
+    },
+    {
+      "trial": "N1-3-on-demand",
+      "subject": "N1",
+      "repetition": 3,
+      "arm": "on-demand",
+      "model": "gpt-6.1-sol",
+      "attempts": 2,
+      "requested": {
+        "revision": "head",
+        "kind": "readBlob",
+        "targets": [
+          {
+            "scope": "packages/core/src/components/navigation-overflow.ts",
+            "workspace": null,
+            "match": "lines",
+            "query": null,
+            "start": 1,
+            "end": 88
+          }
+        ]
+      },
+      "lookup": {
+        "status": "budget",
+        "reason": "line-budget"
+      },
+      "retrievedProofs": [],
+      "delivered": [
+        "r-bb1ed42647e1b025b0592ba4",
+        "r-7a2279cddb79ec6256e206c4",
+        "r-52820aeb1666febf42d91c27"
+      ],
+      "cited": [
+        "r-bb1ed42647e1b025b0592ba4",
+        "r-7a2279cddb79ec6256e206c4",
+        "r-52820aeb1666febf42d91c27"
+      ],
+      "stage": {
+        "retrieved": {
+          "selection": false,
+          "listener": false
+        },
+        "delivered": {
+          "selection": false,
+          "listener": false
+        },
+        "cited": {
+          "selection": false,
+          "listener": false
+        }
+      },
+      "stop": "request-admission",
+      "citation": {
+        "drag": true,
+        "fresh-click": false,
+        "dispatch": true,
+        "viewport-identity": false,
+        "rendered-in-bar": true
+      },
+      "valid": true,
+      "verdict": "inconclusive",
+      "expected": "refuted",
+      "status": "valid-inconclusive",
+      "correct": false,
+      "reason": "Outside mouseup preserves suppression; #down clears it, but its binding is unshown, so the fresh click\u2019s selection dispatch cannot be established.",
+      "missing": "Verify that the fresh Overview mousedown reaches #down: supplied fragments show click-to-#activate wiring but not mousedown-to-#down registration.",
+      "anchor": {
+        "path": "packages/core/src/components/navigation-overflow.ts",
+        "side": "RIGHT",
+        "line": 107
+      },
+      "wallMs": 14505,
+      "budget": "within",
+      "usage": {
+        "input_tokens": 18840,
+        "output_tokens": 241
+      },
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      },
+      "writeAttempts": [],
+      "causalReview": {
+        "reasonSha256": "a96b822aa475fa592b965f6c3ba5fc98153f0d2a6927cc6f32f2f9156707555a",
+        "passes": false,
+        "note": "Distinguishes click-to-#activate evidence from the absent mousedown-to-#down binding."
+      }
+    },
+    {
+      "trial": "N1-3-fixed",
+      "subject": "N1",
+      "repetition": 3,
+      "arm": "fixed",
+      "model": "gpt-6.1-sol",
+      "attempts": 1,
+      "requested": {
+        "revision": "head",
+        "kind": "readBlob",
+        "targets": [
+          {
+            "scope": "packages/core/src/components/navigation-overflow.ts",
+            "workspace": null,
+            "match": "lines",
+            "query": null,
+            "start": 1,
+            "end": 88
+          }
+        ]
+      },
+      "lookup": {
+        "status": "unresolved",
+        "reason": "fixed-single-call"
+      },
+      "retrievedProofs": [],
+      "delivered": [
+        "r-bb1ed42647e1b025b0592ba4",
+        "r-7a2279cddb79ec6256e206c4",
+        "r-52820aeb1666febf42d91c27"
+      ],
+      "cited": [],
+      "stage": {
+        "retrieved": {
+          "selection": false,
+          "listener": false
+        },
+        "delivered": {
+          "selection": false,
+          "listener": false
+        },
+        "cited": {
+          "selection": false,
+          "listener": false
+        }
+      },
+      "stop": "request-admission",
+      "citation": {
+        "drag": false,
+        "fresh-click": false,
+        "dispatch": false,
+        "viewport-identity": false,
+        "rendered-in-bar": false
+      },
+      "valid": false,
+      "verdict": null,
+      "expected": "refuted",
+      "status": "unresolved-request",
+      "correct": false,
+      "reason": null,
+      "missing": null,
+      "anchor": {
+        "path": "packages/core/src/components/navigation-overflow.ts",
+        "side": "RIGHT",
+        "line": 107
+      },
+      "wallMs": 4170,
+      "budget": "within",
+      "usage": {
+        "input_tokens": 9522,
+        "output_tokens": 79
+      },
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      },
+      "writeAttempts": [],
+      "causalReview": null
+    },
+    {
+      "trial": "N1-3-repeat",
+      "subject": "N1",
+      "repetition": 3,
+      "arm": "repeat",
+      "model": "gpt-6.1-sol",
+      "attempts": 2,
+      "requested": {
+        "revision": "head",
+        "kind": "readBlob",
+        "targets": [
+          {
+            "scope": "packages/core/src/components/navigation-overflow.ts",
+            "workspace": null,
+            "match": "lines",
+            "query": null,
+            "start": 1,
+            "end": 88
+          }
+        ]
+      },
+      "lookup": {
+        "status": "budget",
+        "reason": "line-budget"
+      },
+      "retrievedProofs": [],
+      "delivered": [
+        "r-bb1ed42647e1b025b0592ba4",
+        "r-7a2279cddb79ec6256e206c4",
+        "r-52820aeb1666febf42d91c27"
+      ],
+      "cited": [
+        "r-bb1ed42647e1b025b0592ba4",
+        "r-7a2279cddb79ec6256e206c4",
+        "r-52820aeb1666febf42d91c27"
+      ],
+      "stage": {
+        "retrieved": {
+          "selection": false,
+          "listener": false
+        },
+        "delivered": {
+          "selection": false,
+          "listener": false
+        },
+        "cited": {
+          "selection": false,
+          "listener": false
+        }
+      },
+      "stop": "request-admission",
+      "citation": {
+        "drag": true,
+        "fresh-click": false,
+        "dispatch": true,
+        "viewport-identity": false,
+        "rendered-in-bar": true
+      },
+      "valid": true,
+      "verdict": "inconclusive",
+      "expected": "refuted",
+      "status": "valid-inconclusive",
+      "correct": false,
+      "reason": "Outside mouseup preserves suppression; #down clears it and item clicks reach #activate, but the supplied fragments do not establish that a fresh pointer press invokes #down.",
+      "missing": "Check the controller\u2019s event-listener registration to establish whether Overview\u2019s fresh pointer press reaches #down before click; this determines whether consumeClick blocks selection dispatch.",
+      "anchor": {
+        "path": "packages/core/src/components/navigation-overflow.ts",
+        "side": "RIGHT",
+        "line": 107
+      },
+      "wallMs": 12302,
+      "budget": "within",
+      "usage": {
+        "input_tokens": 18838,
+        "output_tokens": 235
+      },
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      },
+      "writeAttempts": [],
+      "causalReview": {
+        "reasonSha256": "b7e2efdfeb428a27a98f7655360fc4013a7084bb78976d954f7495f42b99281a",
+        "passes": false,
+        "note": "Names the missing connection from a fresh pointer press to #down before the item click."
+      }
+    },
+    {
+      "trial": "N2-1-fixed",
+      "subject": "N2",
+      "repetition": 1,
+      "arm": "fixed",
+      "model": "gpt-6.1-sol",
+      "attempts": 1,
+      "requested": {
+        "revision": "head",
+        "kind": "readBlob",
+        "targets": [
+          {
+            "scope": "packages/core/src/components/navigation-overflow.ts",
+            "workspace": null,
+            "match": "lines",
+            "query": null,
+            "start": 1,
+            "end": 88
+          }
+        ]
+      },
+      "lookup": {
+        "status": "unresolved",
+        "reason": "fixed-single-call"
+      },
+      "retrievedProofs": [],
+      "delivered": [
+        "r-5382978c5b0a65731f26d765",
+        "r-9cedf816063ac72c2d78674b",
+        "r-f6293881252b4a81459bb399"
+      ],
+      "cited": [],
+      "stage": {
+        "retrieved": {
+          "selection": false,
+          "listener": false
+        },
+        "delivered": {
+          "selection": false,
+          "listener": false
+        },
+        "cited": {
+          "selection": false,
+          "listener": false
+        }
+      },
+      "stop": "request-admission",
+      "citation": {
+        "drag": false,
+        "fresh-click": false,
+        "dispatch": false,
+        "viewport-identity": false,
+        "rendered-in-bar": false
+      },
+      "valid": false,
+      "verdict": null,
+      "expected": "confirmed",
+      "status": "unresolved-request",
+      "correct": false,
+      "reason": null,
+      "missing": null,
+      "anchor": {
+        "path": "packages/core/src/components/navigation-overflow.ts",
+        "side": "RIGHT",
+        "line": 107
+      },
+      "wallMs": 5514,
+      "budget": "within",
+      "usage": {
+        "input_tokens": 9469,
+        "output_tokens": 86
+      },
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      },
+      "writeAttempts": [],
+      "causalReview": null
+    },
+    {
+      "trial": "N2-1-repeat",
+      "subject": "N2",
+      "repetition": 1,
+      "arm": "repeat",
+      "model": "gpt-6.1-sol",
+      "attempts": 2,
+      "requested": {
+        "revision": "head",
+        "kind": "readBlob",
+        "targets": [
+          {
+            "scope": "packages/core/src/components/navigation-overflow.ts",
+            "workspace": null,
+            "match": "lines",
+            "query": null,
+            "start": 1,
+            "end": 88
+          }
+        ]
+      },
+      "lookup": {
+        "status": "budget",
+        "reason": "line-budget"
+      },
+      "retrievedProofs": [],
+      "delivered": [
+        "r-5382978c5b0a65731f26d765",
+        "r-9cedf816063ac72c2d78674b",
+        "r-f6293881252b4a81459bb399"
+      ],
+      "cited": [
+        "r-5382978c5b0a65731f26d765",
+        "r-9cedf816063ac72c2d78674b",
+        "r-f6293881252b4a81459bb399"
+      ],
+      "stage": {
+        "retrieved": {
+          "selection": false,
+          "listener": false
+        },
+        "delivered": {
+          "selection": false,
+          "listener": false
+        },
+        "cited": {
+          "selection": false,
+          "listener": false
+        }
+      },
+      "stop": "request-admission",
+      "citation": {
+        "drag": true,
+        "fresh-click": false,
+        "dispatch": true,
+        "viewport-identity": false,
+        "rendered-in-bar": true
+      },
+      "valid": true,
+      "verdict": "confirmed",
+      "expected": "confirmed",
+      "status": "unsupported-conclusive",
+      "correct": false,
+      "reason": "Outside mouseup preserves suppression, and fresh mousedown also preserves it; Overview\u2019s click reaches #activate, where consumeClick clears the flag and returns true, blocking selection dispatch.",
+      "missing": null,
+      "anchor": {
+        "path": "packages/core/src/components/navigation-overflow.ts",
+        "side": "RIGHT",
+        "line": 107
+      },
+      "wallMs": 16593,
+      "budget": "within",
+      "usage": {
+        "input_tokens": 18738,
+        "output_tokens": 319
+      },
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      },
+      "writeAttempts": [],
+      "causalReview": {
+        "reasonSha256": "2b7deeae3510442d1c0dc8fd0a0de324088629b0c72a9660dc43ab6bad06b6c1",
+        "passes": true,
+        "note": "Describes preservation on mousedown and the consumption and return that block selection. The missing wiring makes this conditional."
+      }
+    },
+    {
+      "trial": "N2-1-on-demand",
+      "subject": "N2",
+      "repetition": 1,
+      "arm": "on-demand",
+      "model": "gpt-6.1-sol",
+      "attempts": 2,
+      "requested": {
+        "revision": "head",
+        "kind": "readBlob",
+        "targets": [
+          {
+            "scope": "packages/core/src/components/navigation-overflow.ts",
+            "workspace": null,
+            "match": "lines",
+            "query": null,
+            "start": 1,
+            "end": 88
+          }
+        ]
+      },
+      "lookup": {
+        "status": "budget",
+        "reason": "line-budget"
+      },
+      "retrievedProofs": [],
+      "delivered": [
+        "r-5382978c5b0a65731f26d765",
+        "r-9cedf816063ac72c2d78674b",
+        "r-f6293881252b4a81459bb399"
+      ],
+      "cited": [
+        "r-5382978c5b0a65731f26d765",
+        "r-9cedf816063ac72c2d78674b",
+        "r-f6293881252b4a81459bb399"
+      ],
+      "stage": {
+        "retrieved": {
+          "selection": false,
+          "listener": false
+        },
+        "delivered": {
+          "selection": false,
+          "listener": false
+        },
+        "cited": {
+          "selection": false,
+          "listener": false
+        }
+      },
+      "stop": "request-admission",
+      "citation": {
+        "drag": true,
+        "fresh-click": false,
+        "dispatch": true,
+        "viewport-identity": false,
+        "rendered-in-bar": true
+      },
+      "valid": true,
+      "verdict": "confirmed",
+      "expected": "confirmed",
+      "status": "unsupported-conclusive",
+      "correct": false,
+      "reason": "Drag mouseup preserves suppression; the fresh mousedown also preserves it. Overview\u2019s click invokes #activate, where consumeClick clears suppression but returns true, blocking selection dispatch.",
+      "missing": null,
+      "anchor": {
+        "path": "packages/core/src/components/navigation-overflow.ts",
+        "side": "RIGHT",
+        "line": 107
+      },
+      "wallMs": 21285,
+      "budget": "within",
+      "usage": {
+        "input_tokens": 18740,
+        "output_tokens": 346
+      },
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      },
+      "writeAttempts": [],
+      "causalReview": {
+        "reasonSha256": "912cb5b2cf70c96bbe8ee0fcbfccd406d12d20b9e385b48046105b5ce8af808b",
+        "passes": true,
+        "note": "Describes preservation on mousedown and consumeClick returning true. The response assumes that mousedown reaches #down."
+      }
+    },
+    {
+      "trial": "N2-2-repeat",
+      "subject": "N2",
+      "repetition": 2,
+      "arm": "repeat",
+      "model": "gpt-6.1-sol",
+      "attempts": 2,
+      "requested": {
+        "revision": "head",
+        "kind": "readBlob",
+        "targets": [
+          {
+            "scope": "packages/core/src/components/navigation-overflow.ts",
+            "workspace": null,
+            "match": "lines",
+            "query": null,
+            "start": 1,
+            "end": 88
+          }
+        ]
+      },
+      "lookup": {
+        "status": "budget",
+        "reason": "line-budget"
+      },
+      "retrievedProofs": [],
+      "delivered": [
+        "r-5382978c5b0a65731f26d765",
+        "r-9cedf816063ac72c2d78674b",
+        "r-f6293881252b4a81459bb399"
+      ],
+      "cited": [
+        "r-5382978c5b0a65731f26d765",
+        "r-9cedf816063ac72c2d78674b",
+        "r-f6293881252b4a81459bb399"
+      ],
+      "stage": {
+        "retrieved": {
+          "selection": false,
+          "listener": false
+        },
+        "delivered": {
+          "selection": false,
+          "listener": false
+        },
+        "cited": {
+          "selection": false,
+          "listener": false
+        }
+      },
+      "stop": "request-admission",
+      "citation": {
+        "drag": true,
+        "fresh-click": false,
+        "dispatch": true,
+        "viewport-identity": false,
+        "rendered-in-bar": true
+      },
+      "valid": true,
+      "verdict": "confirmed",
+      "expected": "confirmed",
+      "status": "unsupported-conclusive",
+      "correct": false,
+      "reason": "Outside mouseup preserves drag suppression; fresh mousedown also preserves it. Overview\u2019s click reaches #activate, where consumeClick clears suppression but returns true, blocking selection dispatch for that separate click.",
+      "missing": null,
+      "anchor": {
+        "path": "packages/core/src/components/navigation-overflow.ts",
+        "side": "RIGHT",
+        "line": 107
+      },
+      "wallMs": 18851,
+      "budget": "within",
+      "usage": {
+        "input_tokens": 18738,
+        "output_tokens": 333
+      },
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      },
+      "writeAttempts": [],
+      "causalReview": {
+        "reasonSha256": "6efbbee30b2114033a26ed53bebfa085969d1328dcbfba16cfda1692489ceb9d",
+        "passes": true,
+        "note": "Distinguishes the separate mousedown, which preserves suppression, from the consumed click. Wiring is assumed."
+      }
+    },
+    {
+      "trial": "N2-2-on-demand",
+      "subject": "N2",
+      "repetition": 2,
+      "arm": "on-demand",
+      "model": "gpt-6.1-sol",
+      "attempts": 2,
+      "requested": {
+        "revision": "head",
+        "kind": "readBlob",
+        "targets": [
+          {
+            "scope": "packages/core/src/components/navigation-overflow.ts",
+            "workspace": null,
+            "match": "lines",
+            "query": null,
+            "start": 1,
+            "end": 88
+          }
+        ]
+      },
+      "lookup": {
+        "status": "budget",
+        "reason": "line-budget"
+      },
+      "retrievedProofs": [],
+      "delivered": [
+        "r-5382978c5b0a65731f26d765",
+        "r-9cedf816063ac72c2d78674b",
+        "r-f6293881252b4a81459bb399"
+      ],
+      "cited": [
+        "r-5382978c5b0a65731f26d765",
+        "r-9cedf816063ac72c2d78674b",
+        "r-f6293881252b4a81459bb399"
+      ],
+      "stage": {
+        "retrieved": {
+          "selection": false,
+          "listener": false
+        },
+        "delivered": {
+          "selection": false,
+          "listener": false
+        },
+        "cited": {
+          "selection": false,
+          "listener": false
+        }
+      },
+      "stop": "request-admission",
+      "citation": {
+        "drag": true,
+        "fresh-click": false,
+        "dispatch": true,
+        "viewport-identity": false,
+        "rendered-in-bar": true
+      },
+      "valid": true,
+      "verdict": "confirmed",
+      "expected": "confirmed",
+      "status": "unsupported-conclusive",
+      "correct": false,
+      "reason": "Outside mouseup preserves drag suppression, and fresh mousedown also preserves it; Overview\u2019s click reaches #activate, where consumeClick clears suppression but returns true, blocking selection dispatch.",
+      "missing": null,
+      "anchor": {
+        "path": "packages/core/src/components/navigation-overflow.ts",
+        "side": "RIGHT",
+        "line": 107
+      },
+      "wallMs": 16436,
+      "budget": "within",
+      "usage": {
+        "input_tokens": 18736,
+        "output_tokens": 293
+      },
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      },
+      "writeAttempts": [],
+      "causalReview": {
+        "reasonSha256": "123337149ccb100c18b2ba70562215cdfd9895c7bf8519ee10c7f5780134c096",
+        "passes": true,
+        "note": "Explains the return before dispatch after consuming suppression. Listener reachability is not established."
+      }
+    },
+    {
+      "trial": "N2-2-fixed",
+      "subject": "N2",
+      "repetition": 2,
+      "arm": "fixed",
+      "model": "gpt-6.1-sol",
+      "attempts": 1,
+      "requested": {
+        "revision": "head",
+        "kind": "readBlob",
+        "targets": [
+          {
+            "scope": "packages/core/src/components/navigation-overflow.ts",
+            "workspace": null,
+            "match": "lines",
+            "query": null,
+            "start": 1,
+            "end": 88
+          }
+        ]
+      },
+      "lookup": {
+        "status": "unresolved",
+        "reason": "fixed-single-call"
+      },
+      "retrievedProofs": [],
+      "delivered": [
+        "r-5382978c5b0a65731f26d765",
+        "r-9cedf816063ac72c2d78674b",
+        "r-f6293881252b4a81459bb399"
+      ],
+      "cited": [],
+      "stage": {
+        "retrieved": {
+          "selection": false,
+          "listener": false
+        },
+        "delivered": {
+          "selection": false,
+          "listener": false
+        },
+        "cited": {
+          "selection": false,
+          "listener": false
+        }
+      },
+      "stop": "request-admission",
+      "citation": {
+        "drag": false,
+        "fresh-click": false,
+        "dispatch": false,
+        "viewport-identity": false,
+        "rendered-in-bar": false
+      },
+      "valid": false,
+      "verdict": null,
+      "expected": "confirmed",
+      "status": "unresolved-request",
+      "correct": false,
+      "reason": null,
+      "missing": null,
+      "anchor": {
+        "path": "packages/core/src/components/navigation-overflow.ts",
+        "side": "RIGHT",
+        "line": 107
+      },
+      "wallMs": 6938,
+      "budget": "within",
+      "usage": {
+        "input_tokens": 9471,
+        "output_tokens": 109
+      },
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      },
+      "writeAttempts": [],
+      "causalReview": null
+    },
+    {
+      "trial": "N2-3-on-demand",
+      "subject": "N2",
+      "repetition": 3,
+      "arm": "on-demand",
+      "model": "gpt-6.1-sol",
+      "attempts": 2,
+      "requested": {
+        "revision": "head",
+        "kind": "readBlob",
+        "targets": [
+          {
+            "scope": "packages/core/src/components/navigation-overflow.ts",
+            "workspace": null,
+            "match": "lines",
+            "query": null,
+            "start": 1,
+            "end": 88
+          }
+        ]
+      },
+      "lookup": {
+        "status": "budget",
+        "reason": "line-budget"
+      },
+      "retrievedProofs": [],
+      "delivered": [
+        "r-5382978c5b0a65731f26d765",
+        "r-9cedf816063ac72c2d78674b",
+        "r-f6293881252b4a81459bb399"
+      ],
+      "cited": [
+        "r-5382978c5b0a65731f26d765",
+        "r-9cedf816063ac72c2d78674b",
+        "r-f6293881252b4a81459bb399"
+      ],
+      "stage": {
+        "retrieved": {
+          "selection": false,
+          "listener": false
+        },
+        "delivered": {
+          "selection": false,
+          "listener": false
+        },
+        "cited": {
+          "selection": false,
+          "listener": false
+        }
+      },
+      "stop": "request-admission",
+      "citation": {
+        "drag": true,
+        "fresh-click": false,
+        "dispatch": true,
+        "viewport-identity": false,
+        "rendered-in-bar": true
+      },
+      "valid": true,
+      "verdict": "confirmed",
+      "expected": "confirmed",
+      "status": "unsupported-conclusive",
+      "correct": false,
+      "reason": "Outside mouseup preserves suppression, and fresh mousedown does not reset it; Overview\u2019s click reaches consumeClick, which clears suppression but returns true, blocking selection dispatch.",
+      "missing": null,
+      "anchor": {
+        "path": "packages/core/src/components/navigation-overflow.ts",
+        "side": "RIGHT",
+        "line": 107
+      },
+      "wallMs": 17245,
+      "budget": "within",
+      "usage": {
+        "input_tokens": 18742,
+        "output_tokens": 339
+      },
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      },
+      "writeAttempts": [],
+      "causalReview": {
+        "reasonSha256": "745629737b0660454ee3e2fca49b4d85e15b1659cf75e4c45c2088e3748609f7",
+        "passes": true,
+        "note": "Places retention before consumption and selection blocking. The cited fragments omit viewport and listener wiring."
+      }
+    },
+    {
+      "trial": "N2-3-fixed",
+      "subject": "N2",
+      "repetition": 3,
+      "arm": "fixed",
+      "model": "gpt-6.1-sol",
+      "attempts": 1,
+      "requested": {
+        "revision": "head",
+        "kind": "readBlob",
+        "targets": [
+          {
+            "scope": "packages/core/src/components/navigation-overflow.ts",
+            "workspace": null,
+            "match": "lines",
+            "query": null,
+            "start": 1,
+            "end": 88
+          }
+        ]
+      },
+      "lookup": {
+        "status": "unresolved",
+        "reason": "fixed-single-call"
+      },
+      "retrievedProofs": [],
+      "delivered": [
+        "r-5382978c5b0a65731f26d765",
+        "r-9cedf816063ac72c2d78674b",
+        "r-f6293881252b4a81459bb399"
+      ],
+      "cited": [],
+      "stage": {
+        "retrieved": {
+          "selection": false,
+          "listener": false
+        },
+        "delivered": {
+          "selection": false,
+          "listener": false
+        },
+        "cited": {
+          "selection": false,
+          "listener": false
+        }
+      },
+      "stop": "request-admission",
+      "citation": {
+        "drag": false,
+        "fresh-click": false,
+        "dispatch": false,
+        "viewport-identity": false,
+        "rendered-in-bar": false
+      },
+      "valid": false,
+      "verdict": null,
+      "expected": "confirmed",
+      "status": "unresolved-request",
+      "correct": false,
+      "reason": null,
+      "missing": null,
+      "anchor": {
+        "path": "packages/core/src/components/navigation-overflow.ts",
+        "side": "RIGHT",
+        "line": 107
+      },
+      "wallMs": 5412,
+      "budget": "within",
+      "usage": {
+        "input_tokens": 9471,
+        "output_tokens": 89
+      },
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      },
+      "writeAttempts": [],
+      "causalReview": null
+    },
+    {
+      "trial": "N2-3-repeat",
+      "subject": "N2",
+      "repetition": 3,
+      "arm": "repeat",
+      "model": "gpt-6.1-sol",
+      "attempts": 2,
+      "requested": {
+        "revision": "head",
+        "kind": "readBlob",
+        "targets": [
+          {
+            "scope": "packages/core/src/components/navigation-overflow.ts",
+            "workspace": null,
+            "match": "lines",
+            "query": null,
+            "start": 1,
+            "end": 88
+          }
+        ]
+      },
+      "lookup": {
+        "status": "budget",
+        "reason": "line-budget"
+      },
+      "retrievedProofs": [],
+      "delivered": [
+        "r-5382978c5b0a65731f26d765",
+        "r-9cedf816063ac72c2d78674b",
+        "r-f6293881252b4a81459bb399"
+      ],
+      "cited": [
+        "r-5382978c5b0a65731f26d765",
+        "r-9cedf816063ac72c2d78674b",
+        "r-f6293881252b4a81459bb399"
+      ],
+      "stage": {
+        "retrieved": {
+          "selection": false,
+          "listener": false
+        },
+        "delivered": {
+          "selection": false,
+          "listener": false
+        },
+        "cited": {
+          "selection": false,
+          "listener": false
+        }
+      },
+      "stop": "request-admission",
+      "citation": {
+        "drag": true,
+        "fresh-click": false,
+        "dispatch": true,
+        "viewport-identity": false,
+        "rendered-in-bar": true
+      },
+      "valid": true,
+      "verdict": "confirmed",
+      "expected": "confirmed",
+      "status": "unsupported-conclusive",
+      "correct": false,
+      "reason": "Outside mouseup preserves suppression; fresh mousedown also preserves it, so the new Overview click reaches #activate, consumes suppression, and returns before emitting selection.",
+      "missing": null,
+      "anchor": {
+        "path": "packages/core/src/components/navigation-overflow.ts",
+        "side": "RIGHT",
+        "line": 107
+      },
+      "wallMs": 15004,
+      "budget": "within",
+      "usage": {
+        "input_tokens": 18742,
+        "output_tokens": 256
+      },
+      "sourceUsage": {
+        "treeEntries": 0,
+        "openedFiles": 0,
+        "matches": 0,
+        "evidenceBytes": 0,
+        "sourceBytes": 0,
+        "elapsedMs": 0,
+        "receipts": 0,
+        "accounted": true
+      },
+      "writeAttempts": [],
+      "causalReview": {
+        "reasonSha256": "923817fa4bc39d3315d3a2f6d86dbf799902cc07ae01bc846b99775e9dcc23c6",
+        "passes": true,
+        "note": "Names preservation on mousedown and the early return from #activate. The supplied evidence does not establish that #down runs."
+      }
+    }
+  ]
+}

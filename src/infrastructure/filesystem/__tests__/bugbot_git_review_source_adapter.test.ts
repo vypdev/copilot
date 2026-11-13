@@ -80,6 +80,15 @@ it('recovers a truncated provider patch instead of trusting its declared coverag
     } finally { fixture.dispose(); }
 }, NATIVE_GIT_TEST_MS);
 
+it('recovers line counts from both immutable blobs when GitHub omits the patch and reports 0/0', async () => {
+    const fixture = repository({ file: 'old\n' }, { file: 'new\nsecond\n' });
+    try {
+        const source = await fixture.read([change('file', 'modified', 0, 0)]);
+        expect(source.changes[0]).toMatchObject({ source: 'local-git', additions: 2, deletions: 1,
+            patch: expect.stringContaining('-old\n+new\n+second\n') });
+    } finally { fixture.dispose(); }
+}, NATIVE_GIT_TEST_MS);
+
 it.each([
     ['native count mismatch', (f: ReturnType<typeof repository>) => f.read([change('file')], true, f.pr(2))],
     ['incomplete native enumeration', (f: ReturnType<typeof repository>) => f.read([change('file')], false)],

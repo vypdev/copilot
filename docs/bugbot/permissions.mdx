@@ -26,6 +26,12 @@ findings. Only the existing trusted application path receives the configured
 GitHub credential, and it mutates provider state once after every partition for
 the same canonical head has validated and the final freshness guard passes.
 
+## Proposed Bugbot probe permissions
+
+The #950 design retrieves source and matching CI using scoped read permissions. It permits an isolated probe only through a reviewed, explicitly enabled repository capability with pinned inputs and a credential-free runner. Finding text and pull-request content cannot authorize execution.
+
+[Specification and pilot status](https://github.com/vypdev/copilot/issues/950)
+
 ## Trusted local source verification
 
 Large framed reviews add no credential, write permission, capacity flag or

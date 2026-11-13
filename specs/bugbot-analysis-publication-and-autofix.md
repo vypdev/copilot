@@ -2561,3 +2561,1842 @@ The scoped corpus keeps the existing 174-case corpus and its references unchange
 with the 200-case per-invocation bound intact. The evidence retains actual baseline
 and candidate samples, failed gates and authored fixture corrections. Historical
 consumer root cause and release adoption remain separate claims.
+
+## Bugbot repository evidence verification
+
+- Status: Published design and pilot protocol. Runtime implementation and qualification pending.
+- Date: 2026-11-09
+- Catalog capability ID: `bugbot-analysis-and-autofix`
+- Owners: Copilot maintainers
+- Scope: Verify each eligible Bugbot finding and proposed history transition before coordinated publication.
+- Related issue: [#950](https://github.com/vypdev/copilot/issues/950)
+- Required gates: product UX, architecture, testing, documentation, security and operations
+- Readiness decisions: The Action verified the SDD and managed branch in [the issue status](https://github.com/vypdev/copilot/issues/950#issuecomment-6732048399). The pilot must establish a production verifier profile and activation decision before verified publication is enabled.
+
+### 1. Executive summary
+
+Bugbot checks the project's actual behavior before publishing a defect. A review can
+publish confirmed findings while showing that other candidates need evidence.
+Only a complete and reconciled result can qualify for clean automatic approval.
+
+```mermaid
+flowchart LR
+    P[Pin source and review owner] --> D[Detect in diff]
+    D --> M[Admit and group hypotheses]
+    M --> E[Retrieve bound evidence]
+    E --> V[Fresh verifier tries to refute]
+    V --> I[Validate all dispositions]
+    I --> F[Recheck freshness]
+    F --> R[Publish and reconcile]
+```
+
+Bugbot pins the target, detects in its diff, groups equivalent hypotheses, obtains
+evidence and attempts to refute each hypothesis in a fresh task. The application
+validates the complete batch and the current revision before coordinating writes
+and reconciling the observed provider result.
+
+### 2. Problem, current behavior, and evidence
+
+A reviewer can currently see an active defect even when unchanged code, a
+resolved dependency or a directly relevant test contradicts a material premise.
+Diff coverage says which input was processed. It cannot establish the truth of a
+particular finding.
+
+The comparison used here pins development to [b3952f686](https://github.com/vypdev/copilot/commit/b3952f686a55a9b4207e1a23c64be8344e8df5d5)
+and the audit to [v3.10.13](https://github.com/vypdev/copilot/commit/ace49e4a7ce0f6a007fef5d11479eb9b7a5846e3).
+The authenticated GitHub comparison returned zero changed paths across the two
+commits. The cached development ref `0f1fc943d2cd2bfe11be51ea215a0333577074a4`
+differs from the audited tree only in package version. The Action's first SDD
+commit has the same selected development SHA as its only parent.
+
+1. `src/application/usecases/steps/commit/detect_potential_problems_workflow.ts`
+   resolves canonical ownership and context, analyzes, checks freshness, then
+   applies finding/resolution mutations and reconciles provider state. Dry-run
+   exits before that mutation path.
+2. `src/application/usecases/steps/commit/bugbot/analyze_bugbot_revision_use_case.ts`
+   dispatches single, partitioned or framed analysis and projects retained IDs,
+   candidate severity, suppression, comment limits and history eligibility.
+   `src/application/usecases/steps/commit/bugbot/analyze_bugbot_frames.ts`
+   checks plan/receipts and charges actual query traffic to the frame ledger.
+   `src/application/usecases/steps/commit/bugbot/bugbot_partition_aggregation.ts`
+   validates and aggregates required responses.
+3. `src/application/usecases/steps/commit/bugbot/build_bugbot_prompt.ts`
+   selects generated-source verification mainly from Python paths or witnesses.
+   `src/application/usecases/steps/commit/bugbot/query_bugbot_findings.ts`
+   applies it before final aggregation and admission. The verifier receives the
+   detection prompt and uses the same reviewer configuration. The policy checks
+   candidate identity, cardinality, and retained evidence text. Evidence text
+   currently has no application-issued proof of its source.
+4. `src/application/usecases/steps/commit/bugbot/apply_detected_findings.ts`
+   and `src/application/usecases/steps/commit/bugbot/reconcile_bugbot_review_state_use_case.ts`
+   preserve provider ownership and publish the reconciled PR result. Explicit
+   model history claims go through the retained-ID and native-thread rules.
+
+Historical examples include a Unicode regex, two defaulted pytest arguments and
+an earlier SQLite guard. The pilot separates original incidents, independent
+reproductions and model trials. Rationale for the historical false findings is
+unknown. Historical runs used Luna and establish no relative model advantage.
+
+### 3. Actors, surfaces, and terminology
+
+| Actor | Entry | Outcome and surface |
+|---|---|---|
+| Author or reviewer | PR review, recheck, PR update or supported Commit review | Anchored defect with revision evidence, or an actionable uncertainty in the canonical review result |
+| Maintainer | Trusted setup, runtime policy or history intervention | Bound configuration and explicit authority over rollout and human dismissals |
+| Operator | Copilot / Review, run and Job Summary | Coverage, verification and observed publication status, with an exact-head recovery path |
+| Application | Canonical review operation | Binds facts, enforces policy, projects and writes through provider ports |
+| Verifier | Fresh task for one admitted hypothesis | Attempts falsification and returns one disposition citing supplied evidence |
+
+A **candidate** is a testable causal hypothesis. A **receipt** is an
+application-issued record of a retrieved artifact. A **disposition** expresses
+what the evidence established for a candidate at a revision. A **finding state**
+records the durable state of a finding or native thread.
+
+### 4. Goals, non-goals, and fixed invariants
+
+| Requirement | Behavior |
+|---|---|
+| EV-01 | Bind sources and evidence to one immutable review operation and recover the material project, runtime or execution facts. |
+| EV-02 | Group equivalent eligible hypotheses before verification. Try to refute each in a fresh task using the effective detector model and validate one disposition per candidate before the publication boundary. Shadow records the disposition separately and keeps the existing publication decision. |
+| EV-03 | Publish only confirmed candidates and validated suggestions. Coordinate incomplete, failed and clean results with approval and observed provider facts. |
+| EV-04 | Preserve target ownership, freshness, retry safety and explicit historical transitions including human authority. |
+| EV-05 | Authorize evidence reads and probes, and preserve integrity across verifier turns and provider recovery. Reject forged or mismatched artifacts and prevent arbitrary execution or publication from the verifier. |
+| EV-06 | Keep GitHub results legible, localized, sanitized, auditable and compatible with durable history. |
+| EV-07 | Compare same-model profiles and explicit mixed-model shadow profiles on matched candidates. Ordinary reviews inherit the effective detector model. Enable only an exact profile that independently meets every qualification gate and receives explicit maintainer approval. Make rollback and unresolved evidence explicit. |
+
+The design reuses the existing Bugbot capability, authorizations, candidate
+admission, projection, protection rules and comment noise budget. Merge,
+deployment and automatic remediation retain their separate authority. One
+successful unrelated test, model confidence, and a syntactically valid link
+are insufficient evidence. No runtime setting can weaken these invariants.
+
+### 5. Current versus proposed product journey
+
+| Stage | Current | Proposed |
+|---|---|---|
+| Detect | Review diff and surrounding guidance | Same detection scope and changed anchor. Preserve structured trigger, path and impact hypotheses. |
+| Aggregate | Optional generated-source check before global projection | Validate all required inputs, reconcile stable identity, then group equivalent hypotheses and retain their evidence leads. |
+| Verify | Language or witness-triggered evidence text | Application retrieval and fresh falsification task for every eligible hypothesis, including confirmed overflow. |
+| Publish | Apply prepared findings and reconcile provider projection | Validate batch and freshness, apply a coordinated result, and record observed effects. |
+
+### 6. Functional behavior and state model
+
+**Pin and admit.** Bind immutable repository identity, route, operation nonce,
+canonical target, reviewed head and tree, applicable base and comparison,
+range/fragment identities, authorized policy digest and cancellation signal.
+Use base evidence when needed to prove introduction or reachability. A synthetic
+merge SHA needs provider-attested source or tree equivalence for the relevant
+paths and effective build inputs, including workflow, dependency resolution,
+test selection, runtime and build artifact identity. A matching Git commit
+does not independently establish what ran. Incomplete equivalence cannot support a CI
+claim. A ref name alone does not identify an artifact.
+
+Validate required partition/frame responses before using any candidate. Apply
+existing shape, changed-scope, ignore, severity and suppression rules. Preserve
+stable IDs and provider anchors. Bind each anchor to the changed path, diff
+side, range and exact comparison. For a rename or deletion, retain the old
+path and side where the provider can anchor it. If the changed-code anchor
+is valid but unavailable as an inline destination, use the existing fallback
+or summary with the immutable source locator. Never fabricate a location.
+Deduplicate only when normalized root cause,
+trigger and causal path are equivalent under existing local/semantic identity
+rules. Merge leads from duplicate candidates while retaining origins. Keep
+different causes at the same location distinct. Group history proposals by
+retained ID and intended transition. Conflicting proposals require evidence and
+an integral, single transition. Publish and comment-slot ranking happen after
+verification. Every eligible overflow contributes a disposition.
+
+**Retrieve.** Seed an evidence plan from the change, imports, nearby
+guards, call path, configured contract and known native execution references.
+The verifier can request successive evidence reads using the closed vocabulary in
+section 8. Read changed and unchanged blobs via repository object identity.
+Bind negative search results to their searched scope and cap. Resolve imports
+through the pinned manifests, effective settings, lockfiles or attested build
+resolution. Match exact version, package integrity, alias/override, runtime,
+platform and relevant package implementation or versioned contract. When
+resolution cannot be established, return the missing premise.
+
+Match native CI by trusted producer, workflow, run attempt, job/suite and step or
+test identity, verified source and effective inputs. Match the asserted
+behavior or failure to the executed case and observation. Distinguish
+executed, skipped, cached, canceled, missing and irrelevant results. A cache hit needs its
+own attestation of equivalent inputs and execution. Treat later test code as a
+separate reproduction even when the underlying runtime paths are byte-identical.
+Only an approved probe ID may resolve to a trusted command and typed, pinned
+inputs. Source and CI verification must work without an execution profile.
+
+**Decide.** Start a fresh verifier task with the candidate and retrieved
+artifacts, independent of the detector session. Seek earlier guards, effective
+configuration, alternative reachable paths, versioned exceptions and matching
+executed counterevidence. Model requests and repository text remain untrusted.
+An intermediate response can request additional evidence only. It supplies no
+final disposition and cannot become publication input. For each eligible ID
+the final response supplies exactly one of the following:
+
+| Disposition | Required basis | Projection |
+|---|---|---|
+| Confirmed | In-scope anchor, causal trigger/path/impact and supplied supporting evidence | Publish or update under existing identity. Confirmed overflow counts in the summary. |
+| Refuted | Supplied evidence that contradicts a material premise | Drop a new candidate. Historical state changes only via a separately authorized transition. |
+| Inconclusive | Bounded reason, missing/conflicting evidence and one practical next step | No defect thread for a new candidate. Mark verification incomplete and preserve historical state. |
+
+A response cannot introduce an ID, re-anchor a finding or substitute a citation.
+The application validates exact expected IDs and cardinality, schema and scope,
+nonce, locale, evidence IDs, artifact provenance and source identity. Each
+final response echoes the immutable candidate version and expected operation
+receipt. Confirmed and refuted responses reference one or more supplied
+artifacts. Inconclusive responses name unavailable, denied or conflicting
+evidence and a supported next action. It verifies
+receipt membership per candidate. It never substitutes a confidence threshold
+for the verifier's causal decision. Missing, repeated, replayed, forged, stale
+or cross-candidate receipts and malformed required verdicts invalidate the run.
+A valid but unavailable evidence request is reported as a candidate limitation.
+A missing required partition, missing required verdict, cancellation or
+supersession invalidates the publication plan as a whole.
+
+**Check the suggested replacement separately.** Bind patch bytes and range to the
+same pinned blob, parse/apply to a disposable copy, enforce the existing
+suggestion and file-scope rules, and require evidence from a matching trusted
+check or an equivalently strong versioned proof that the replacement fixes the
+witness and preserves affected invariants. Withhold executable syntax if the
+check cannot establish either. Publish the confirmed defect as prose. Autofix
+keeps its own authorization and verification requirements.
+
+**Coordinate.** Recheck the live owner/head/comparison and cancellation after any
+awaited preparation and directly before the first irreversible effect for all
+routes. Fence subsequent writes using existing provider concurrency contracts.
+No cross-endpoint GitHub transaction is assumed. After writes, re-read native
+provider facts and project a single canonical result for the revision. A
+confirmed and inconclusive mixture publishes the confirmed subset and marks
+verification incomplete. A clean result requires complete required coverage,
+all dispositions validated, no confirmed or inconclusive candidate, no open, reopened, unknown or
+verification-required durable finding, and all existing native approval
+gates. Resolved or human-dismissed history is compatible with a clean result
+when the existing policy allows it.
+
+| Route | Behavior |
+|---|---|
+| Ordinary and framed PR | Common verification after complete aggregation. Charge framed and ordinary verification at actual port admission. |
+| Incremental synchronize | Existing exact before/after and canonical full-diff fallback. May read unchanged current code. Explicit history examination is not limited to changed paths. |
+| Exact-head recheck | Reacquire evidence, read retained native history, reuse identities, and update existing destinations. An old run cannot be replayed into a fresh result. |
+| Commit owned by PR | Existing canonical PR owns publication. The duplicate push path exits. |
+| Standalone supported Commit | Use the existing commit/branch/fallback target, exact range or parent fallback, same gate and supported destination. No new PR or destination is created. |
+
+A history transition names a retained ID, observed native state, original
+premise and evidence at the current revision. Confirmed persistent or regressed
+defects may reopen only when the existing transition policy allows it. Fixed
+requires proof that the defect's path has changed to prevent the original
+impact. Obsolete requires explicit evidence against the retained premise or
+proof it is no longer applicable under the existing policy. Omission,
+inconclusiveness, incomplete history and provider failure preserve prior state,
+including verification-required flags. Confirmed human dismissal remains
+effective. A refuted current candidate alone cannot close a historical finding.
+Require an explicit fixed or obsolete transition for the retained ID. Re-read
+native decisions before history mutations.
+
+### 7. User-facing configuration
+
+| Input | Type and values | Default and precedence |
+|---|---|---|
+| Existing `bugbot-dry-run` | Boolean, existing trusted configuration or authorized review command | Existing default is false. True takes precedence over every write destination and persistence option. |
+| Evidence rollout | Proposed trusted installation setting, disabled/shadow/enforced | Disabled until qualified release and maintainer opt-in. Shadow computes the evidence result without verified publication or approval. Enforced requires the full gate. Final public name and runtime route need maintainer review. |
+| Verifier configuration | The effective trusted Bugbot detector configuration | Reuse the resolved provider, model, effort and executable selection, including the existing default. A qualified profile binds those effective inputs and evidence authority. Review comments and PR code cannot override them. |
+| Evidence profile | Trusted installation capability, source/CI or source/CI plus registered isolated probes | The first enabled profile is source/CI. Probe execution requires separately reviewed IDs, commands, runner prerequisites and input limits. Reject invalid or unauthorized profiles before work. |
+
+Snapshot the effective policy, model and evidence authority at start.
+Unknown policy values fail configuration validation. Omitted rollout settings
+keep the installed policy. Repositories without execution profiles retain
+source and native CI access.
+
+Token usage and cost are optional observations. There is no token setting or
+reservation for a finding, session or review. Real, estimated, accumulated or
+unavailable usage MUST have no effect on candidate admission, evidence
+selection or delivery, dispatch, retry, verdict validation, approval or profile
+qualification. Log cumulative usage as such when the provider supplies it.
+
+Use read permissions, concurrency, and the explicit cancellation fence.
+Keep evidence transport and process safety bounds local to the relevant
+operation. The verifier does not impose an elapsed-time cutoff on a provider
+turn or on the investigation. Record elapsed time as telemetry. The timed
+two-pair diagnostic descriptions later in this document describe their
+frozen experimental protocols. Fresh runs through the active verifier use
+the continuation behavior above. Profile latency is evaluated after a run. Paginate search results or issue narrower reads where needed and
+preserve previously obtained evidence. Do not impose a turn, read, retained
+evidence or aggregate traffic quota to control model spend.
+
+### 8. Clean Architecture design
+
+| Boundary | Owns |
+|---|---|
+| Domain and pure policy | Candidate/group identity, source and evidence values, state and disposition rules and effect eligibility. |
+| Application | Pinning, evidence planning, immutable receipts, investigation continuity, validation, write plan, approval projection and recovery. |
+| Semantic read ports | Bounded Git read/search, resolved dependency contract, native execution metadata and registered probe. No GitHub mutation methods. |
+| Verifier port | Fresh session, exact schema, closed evidence request and disposition output. No SCM writes, checkout shell, credentials or arbitrary network. |
+| Adapters/composition | Git/tree validation, provider DTO mapping, artifact hashes, trusted probe runtime and constrained model sessions. |
+| Presentation | Locale, safe links and one status projection consumed by existing Check, Job Summary and card. |
+
+```mermaid
+flowchart LR
+    X[Review entry] --> A[Application workflow]
+    A --> D[Pure review policies]
+    A --> Q[Evidence and verifier ports]
+    R[Read adapters] --> Q
+    A --> W[Provider mutation ports]
+    A --> U[Canonical review projection]
+```
+
+The workflow calls pure policies and read/verify ports during analysis. The write
+plan is a separate application boundary invoked only with a validated current
+batch. Rendering consumes the result of observed provider effects.
+
+An evidence request is one of `readBlob`, `searchTree`, `resolveDependency`,
+`readExecution` or `runRegisteredProbe`. Use typed relative paths/ranges,
+literal bounded queries, pinned identifiers and registered capability IDs.
+The operation supplies the only repository and revision bindings. Model
+requests can choose a named source side within that binding. A search match
+becomes positive evidence only after the application reads the matching blob
+at that side. No free-form command, URL, revision or repository selector
+crosses the model boundary. Each receipt binds operation, candidate, source kind, repository,
+revision/tree, validated locator, artifact digest and result or safe error.
+Share immutable bytes across equivalent reads but issue separate scoped
+references. No model-authored link is authoritative. Persist only approved
+locator/projection metadata for verified results. Absence of metadata on legacy
+history grants no verified transition.
+
+Add an executable import/port boundary check using the existing architecture
+tests. Verifier and response validation cannot reach publication, shell/process
+execution, ambient filesystem, network transports or provider credentials.
+Add controlled-provider integration assertions that no mutation port is invoked
+before validation/freshness and none is reachable in dry-run.
+
+### 9. UI/UX and content contract
+
+Use the existing canonical card, native Copilot / Review and Job Summary.
+Examples below use illustrative short SHAs. The real renderer adds the actual
+commit, run or evidence link from validated identities.
+
+| State | Primary message and action |
+|---|---|
+| Pending | **Checking findings for `a14f600`.** Changes analyzed. Checking three candidates against this commit. Open the current run for progress. |
+| Complete | **Review complete for `a14f600`.** One confirmed defect and two refuted candidates. Read the confirmed defect and its source. |
+| Incomplete | **Evidence incomplete for `a14f600`.** Two confirmed defects published. One candidate needs the exact-head browser job result. Automatic approval is unavailable. Run the browser job and recheck this revision. |
+| Failed before writes | **Review failed for `a14f600`.** A required verdict was missing. Recheck after inspecting the run. Last verified review `72854ce` remains available. No finding or resolution effects observed. |
+| Canceled | **Review canceled for `a14f600`.** Retry if this commit is still current. Last verified review `72854ce` remains available. |
+| Superseded | **Review superseded for `a14f600`.** `b605d27` is now current. Follow that revision's run. Last verified review `72854ce` remains available. |
+| Publication partial | **Publication incomplete for `a14f600`.** One confirmed comment was observed and the provider could not verify the remaining updates. Recheck to recover. Automatic approval is unavailable. |
+
+Representative confirmed comment:
+
+> **Valid supplementary characters are rejected.** The validator rejects
+> U+1F600 when a user saves a valid label. On the reviewed revision the regex
+> runs without its Unicode flag. The pinned Node probe rejects that input.
+> [Reviewed validator](https://github.example/example/labels/blob/9dafa8cc09d9e83111a79e8dd3ea38a1b31ed6d1/packages/core/src/presentation-text.ts#L4) · [Pinned Node probe](https://github.example/example/labels/actions/runs/101).
+
+The canonical projection carries separate verification, coverage and publication
+fields. Pending status belongs to the current run/check and does not replace the
+last verified result. The check and summary refer to each result's own revision. Upsert one
+canonical final card with existing marker and identity rules. Existing comment cap applies only after verification. Refuted
+and inconclusive candidates do not get defect comments. Existing English and
+Spanish locale resolution and fallback apply. Use descriptive links and text
+states, mobile-readable headings, bounded details and sanitized untrusted
+content. Preserve actual human-authored replies and native thread decisions.
+
+Examples of history and overflow on the canonical card:
+
+- **One finding reopened.** The required guard was removed in this revision.
+  The existing discussion links to the bound source and reachability evidence.
+- **One finding marked obsolete.** The pinned runtime contract contradicts
+  the retained premise. The existing discussion shows the verified reason.
+- **Three confirmed defects.** Two inline comments and one summary-only
+  finding. The summary-only item links to its changed anchor and evidence.
+
+### 10. Failure, recovery, and cleanup
+
+| Condition | Retained facts and recovery |
+|---|---|
+| Candidate source/contract unavailable or unresolved contradiction | Integral inconclusive result with named gap. Recheck the same head after the evidence becomes available. |
+| Required frame/verdict missing, invalid provenance or unrecoverable provider failure | Preserve previous verified projection and historical state. Surface the failed run with reason and retry/split action. |
+| Canceled or newer head before publication | Zero finding/resolution writes. Keep previous revision's result and follow the current run. |
+| Provider error after a write | Re-read actual comments/threads/reviews, record observed or unknown effects, and reconcile by exact head and existing stable markers on retry. Never approve from intended writes. |
+| Cleanup | Discard private workspaces and transient outputs on success, failure or cancellation. Keep bounded safe diagnostics and verified locators under existing retention. |
+
+Bound transient retries. A partial write must not be repeated blindly. A newer
+owner/head or verified human decision takes precedence over recovery for an
+older plan. Missing history never means resolved.
+
+### 11. Security, permissions, and privacy
+
+Allow only authorized repository objects and immutable comparisons. Validate
+path traversal, case/normalization, symlink/gitlink, external links, redirects,
+object type, provider scope and maximum sizes before reads. Keep developer
+commands and model prompts distinct. Probe approval comes from trusted
+installation policy. Use an isolated disposable execution environment with a
+private filesystem profile, pinned inputs, no provider credentials, no ambient
+network, time/memory/output limits, and cancellation cleanup. Reuse approved
+repository verification capability where applicable. Evidence records can prove
+what was supplied and what executed. The model evaluates what it means.
+Strip secret-bearing and instruction-like output from publication and bound
+diagnostic content. Reject replay and swapping across reviews, targets or
+candidates.
+
+### 12. Observability and operational UX
+
+Record safe counts by disposition, evidence kind and limitation, stage latency,
+tokens and concurrency where available, source/head and run correlation,
+coverage and provider effects. Record observed and unknown publication effects
+separately. No raw prompt, repository blob, credentials or full command output
+in public or durable telemetry. Existing noise budgets apply. Use the Job
+Summary and check diagnostics for operators. A failed or skipped action cannot
+present a clean reviewed head.
+
+### 13. Compatibility, migration, rollout, and rollback
+
+Existing identity markers and history remain readable and retain human
+decisions. Legacy proof is labeled by its actual revision and policy. In-flight
+runs complete under their snapshot subject to existing authority and freshness.
+Never upgrade legacy proof retroactively. Compare in dry-run, review provider
+replays and exact-head UI, then obtain maintainer approval for an explicit
+bounded canary before enforcement. Roll back through the approved runtime
+configuration/release route. Pausing evidence publication preserves the last
+verified result and the protection of verification-required history.
+
+### 14. Testing strategy and numeric budget
+
+| Area | Minimum distinct cases | Behaviors/risks covered |
+|---|---:|---|
+| Provenance and source | 8 | Immutable Git, ranges and unchanged paths, imports, runtime resolution, native execution and synthetic merges |
+| Verdict and publication | 6 | Grouping and overflow, strict verdict accounting, mixed projection, approval and verified suggestions |
+| Lifecycle and concurrency | 6 | Ownership, incremental/fallback/recheck, cancellation, supersession, provider recovery and history |
+| Permission and security | 5 | Unsafe input, read permissions, probe authority, usage independence and dry-run zero effects |
+| Presentation and compatibility | 5 | States, native projection, locale, historic migration and pilot qualification |
+| Total | 30 | Distinct deterministic cases, exclusive of model trials |
+
+| Case ID | Area | Requirements | Scenario |
+|---|---|---|---|
+| ev950-C01 | Provenance and source | EV-01 | Verify reviewed and base blobs through immutable identities and reject mismatched heads. |
+| ev950-C02 | Provenance and source | EV-01 | Unchanged caller and guard refute an eligible non-Python defect. |
+| ev950-C03 | Provenance and source | EV-01 | Python candidate uses the same route and versioned fixture witness. |
+| ev950-C04 | Provenance and source | EV-01 | Resolve an imported dependency through actual lockfile override and reject a wrong version. |
+| ev950-C05 | Provenance and source | EV-01 | Runtime witness and changed anchor support the genuine paired defect. |
+| ev950-C06 | Provenance and source | EV-01 | Relevant executed CI step refutes the exact predicted failure. |
+| ev950-C07 | Provenance and source | EV-01 | Unrelated, skipped or unsupported cache evidence yields a named gap. |
+| ev950-C08 | Provenance and source | EV-01 | Synthetic merge needs verified tree and build-input equivalence. |
+| ev950-C09 | Verdict and publication | EV-02 | Equivalent hypotheses merge while distinct same-location causes retain separate IDs. |
+| ev950-C10 | Verdict and publication | EV-02 | Verify every eligible candidate before applying the comment limit, including overflow. |
+| ev950-C11 | Verdict and publication | EV-02 | Missing, duplicate and cross-run disposition responses invalidate the whole batch. |
+| ev950-C12 | Verdict and publication | EV-03 | Mixed dispositions produce one coordinated result and block clean approval. |
+| ev950-C13 | Verdict and publication | EV-03 | Only refuted candidates permit existing clean approval rules when history and coverage are clean. |
+| ev950-C14 | Verdict and publication | EV-03 | Reject invalid suggested replacement and publish the confirmed prose finding. |
+| ev950-C15 | Lifecycle and concurrency | EV-04 | Duplicate push gives canonical PR ownership and standalone Commit retains fallback destination. |
+| ev950-C16 | Lifecycle and concurrency | EV-04 | Compare incremental exact range, bounded fallback, framed aggregation and same-head recheck. |
+| ev950-C17 | Lifecycle and concurrency | EV-04 | Cancellation during verification preserves previous review and native threads. |
+| ev950-C18 | Lifecycle and concurrency | EV-04 | New head between validation and write invalidates the effect plan. |
+| ev950-C19 | Lifecycle and concurrency | EV-03, EV-04 | Write partially succeeds, provider read fails, and retry recovers without duplicate effects. |
+| ev950-C20 | Lifecycle and concurrency | EV-04 | Explicit evidence gates fixed, obsolete and reopen transitions while human dismissal and omission retain state. |
+| ev950-C21 | Permission and security | EV-05 | Reject traversal, symlinks, unsafe locators and external destinations. |
+| ev950-C22 | Permission and security | EV-05 | Reject swapped, fabricated and unsupplied evidence receipts. |
+| ev950-C23 | Permission and security | EV-05 | Only trusted probe IDs can execute in isolated credential-free runtime. |
+| ev950-C24 | Permission and security | EV-05 | Record evidence reads, retries and cancellation. Optional usage observations cannot affect delivery or verdict acceptance. |
+| ev950-C25 | Permission and security | EV-05 | Dry-run mutation and durable write ports fail on invocation across success and errors. |
+| ev950-C26 | Presentation and compatibility | EV-06 | Pending/complete/incomplete card and Check carry the correct commit and available actions. |
+| ev950-C27 | Presentation and compatibility | EV-06 | Failed/superseded and partial publication wording distinguish retained and observed effects. |
+| ev950-C28 | Presentation and compatibility | EV-06 | English/Spanish render bounded text, safe links and no injected machine markers. |
+| ev950-C29 | Presentation and compatibility | EV-06, EV-07 | Legacy history and rollout rollback preserve prior result and current approval integrity. |
+| ev950-C30 | Presentation and compatibility | EV-07 | Pilot manifest/score validation retains missing, aborted and malformed trial records and refuses activation. |
+
+Preserve repository-wide thresholds (90% lines/statements, 88% functions,
+82% branches) and the applicable changed-module coverage gates. Target full branch
+coverage of new disposition completeness, provenance membership and approval
+eligibility policies. Use deterministic clocks, Git fixtures, in-memory
+providers, fail-on-call ports and injected cancellation/failures. Exercise
+production orchestration alongside pure policy. Capture maintainer review of
+rendered English/Spanish mobile-width examples and actual marker updates. Use
+the unchanged recall and quality thresholds in the pilot protocol.
+
+### 15. Documentation and discoverability
+
+| Path | Change |
+|---|---|
+| `specs/bugbot-analysis-publication-and-autofix.md` | update |
+| `specs/bugbot-review-state-reconciliation.md` | update |
+| `specs/bugbot-source-bound-framed-review.md` | update |
+| `specs/catalog.json` | update |
+| `specs/CATALOG.md` | update |
+| `docs/bugbot/detection.mdx` | update |
+| `docs/bugbot/finding-publication.mdx` | update |
+| `docs/bugbot/configuration.mdx` | update |
+| `docs/bugbot/failure-scenarios.mdx` | update |
+| `docs/bugbot/permissions.mdx` | update |
+| `docs/bugbot/quality-observability.mdx` | update |
+| `quality/bugbot/evidence/issue-950/preregistration.md` | create |
+| `quality/bugbot/evidence/issue-950/manifest.json` | create |
+| `quality/bugbot/evidence/issue-950/results.md` | create |
+| `quality/bugbot/evidence/issue-950/traceability.md` | create |
+| `quality/bugbot/evidence/issue-950/reproduce-controls.sh` | create |
+
+Update detection and publication for users, permissions and configuration for
+setup owners, failures and quality for operators. Document recovery, rollout
+and historical behavior. Link from existing Bugbot navigation and validate
+routes and example content. Update the existing catalog entry and reconciliation
+evidence with actual landed tests and docs. Regenerate the human catalog.
+
+### 16. Acceptance scenarios
+
+1. An ordinary or framed review receives a historical candidate and a matching
+   real defect. Unchanged and pinned versioned evidence refute the historical
+   premise and confirm the reachable defect with a valid anchor.
+2. Updated, reopened and overflow candidates receive individually validated
+   dispositions. Forgery, missing responses and mismatched source stop writes.
+3. Two confirmed and one inconclusive candidate publish the two defects and one
+   coordinated result. The summary explains the missing evidence and blocks
+   clean approval. An unverified suggestion remains prose.
+4. An exact-head recheck after evidence recovery updates existing destinations.
+   A canceled or superseded run preserves the prior verified projection.
+5. History changes only with explicit evidence, current native facts and an
+   allowed transition. A protected human dismissal remains effective.
+6. Inject provider partial writes, ambiguity and retries through the production
+   workflow. Check observed effects, recovery and no duplicate writes.
+7. The 30 deterministic cases, completed pilot, GitHub UX review and final
+   commit checks support the maintainer's activation decision.
+
+### 17. Requirements traceability
+
+| Requirement | Cases |
+|---|---|
+| EV-01 | ev950-C01, ev950-C02, ev950-C03, ev950-C04, ev950-C05, ev950-C06, ev950-C07, ev950-C08 |
+| EV-02 | ev950-C09, ev950-C10, ev950-C11 |
+| EV-03 | ev950-C12, ev950-C13, ev950-C14, ev950-C19 |
+| EV-04 | ev950-C15, ev950-C16, ev950-C17, ev950-C18, ev950-C19, ev950-C20 |
+| EV-05 | ev950-C21, ev950-C22, ev950-C23, ev950-C24, ev950-C25 and the successor shadow continuity controls |
+| EV-06 | ev950-C26, ev950-C27, ev950-C28, ev950-C29 |
+| EV-07 | ev950-C29, ev950-C30 |
+
+The [historical issue matrix](../quality/bugbot/evidence/issue-950/traceability.md) maps each premise
+and decisive evidence to a planned test or remaining limitation. General capability coverage is not
+closure evidence for a particular historical issue.
+
+### 18. Implementation sequence
+
+1. Resolve Action clarification and verify the managed branch and its first SDD
+   commit. Reconfirm the immutable selected base and all named paths.
+2. Implement read-only pilot seams and frozen replay. Complete full review and
+   measure both models. Record qualification and finalize configuration.
+3. Implement contracts, evidence authority and source adapters. Add candidate/historical
+   verification at the common orchestration boundary. Integrate approval and
+   publication projection with controlled-provider race and failure tests.
+4. Complete localized GitHub examples, operator docs, catalog evidence and
+   qualification at the final head. Submit the issue-linked PR for maintainer
+   review with verification disabled until explicitly qualified and enabled.
+
+### 19. Definition of Done
+
+- [ ] Every requirement and all 27 historical issues have traceable evidence.
+- [ ] Boundary, 30-case deterministic, provider, compatibility and security gates pass.
+- [ ] All pilot rows, evidence quality, integrity and latency gates are reviewed. The qualified profile and its operational controls are fixed.
+- [ ] Existing approval, recovery, accessibility, localization and noise contracts pass.
+- [ ] SDD, catalog, generated catalog and user/setup/operator docs agree.
+- [ ] Run `pnpm run generate:specifications`, `pnpm run validate:specifications`,
+      `pnpm run eval:bugbot`, affected tests and coverage, typecheck, lint,
+      workflow/documentation validation, and `graphify update .` on the implementation.
+- [ ] Final-head qualification and PR checks are recorded. Maintainer owns approval, merge and activation.
+
+### Normal-flow shadow verification and model inheritance
+
+The usual Bugbot application use case observes verification after normal
+detection and finding preparation and before native publication or dry-run
+projection. Ordinary, framed, incremental, recheck and Commit routes share
+the workflow. Candidate observations require a canonical PR and pinned head.
+The observer receives the prepared active findings, including
+eligible candidates above the inline comment limit. A run with no prepared
+candidates opens zero verifier sessions. An observation never changes
+ranking, publication, thread reconciliation or approval in shadow.
+
+```text
+Resolve effective Bugbot configuration -> detect and prepare on pinned head
+                                              |
+                           one fresh session per eligible finding
+                                              |
+                        validate evidence and record shadow result
+                                              |
+                      check freshness -> existing publication decision
+```
+
+The workflow passes the configuration already resolved for the detection
+operation to every verifier. A configured Luna review uses Luna in both
+stages. A configured Sol review uses Sol in both stages. An omitted model
+uses the ordinary Bugbot default in both stages, and the same rule applies
+to any compatible model. Trusted Action configuration may override the
+verifier profile as specified below. Record the resolved model for each
+session, with the provider-reported identity
+when exposed by the transport. A provider error or reported substitution
+is a technical failure. The observer never selects a replacement.
+
+The application fixes the prepared claim, anchor and canonical head before
+creating an independent session. The verifier receives that claim and
+binding. Detector explanation, confidence, proposed fixes and historical
+resolutions stay outside the session. The read-only broker searches the
+whole pinned tree, including unchanged files, and can return a file in full
+over successive reads. It can also read the pinned comparison base when
+the claim involves a regression. For a material dependency claim the
+verifier establishes the effective version and the repository's actual
+configuration, then cites matching official documentation or source.
+Missing material evidence yields an inconclusive verdict with the
+specific gap. A conclusion depending on an official-source inquiry must cite a matching
+delivered official receipt for the material dependency and revision. A material dependency named in the prepared claim requires its source even when
+no lookup preceded the answer. A filename or an incidental mention is a discovery hint. Technical failures and invalid receipts are recorded separately
+from verdicts. Token use is optional telemetry.
+
+The integrated pilot invokes the normal detector and application use case
+with pinned SCM reads and fail-on-call write ports. Dry-run records what
+Bugbot would publish and captures the verification result in a separate
+payload. The shared Bugbot composition accepts an explicitly supplied verifier
+port. Its repository adapter receives a trusted mapping from the prepared
+candidate to a Git object store and optional authenticated official sources.
+The verifier has read-only tools and receives zero publication ports. A
+simulated native publication control compares the resulting review drafts
+with the baseline even when verification fails. In installed shadow mode
+the Action binds the verifier to the authorized checkout's Git object store.
+It supplies only pinned Git evidence in this iteration. An official-source
+or CI evidence catalog must be supplied through a trusted adapter before
+qualification of findings that require it. Shadow observations carry no
+approval authority. See the
+[real-PR integration report](../quality/bugbot/evidence/issue-950/normal-flow-shadow/results.md).
+The [repository adapter pilot at xhigh](../quality/bugbot/evidence/issue-950/integrated-shadow-xhigh/results.md)
+records the shared composition, actual Codex invocations and zero attempted PR writes.
+
+| Case | Acceptance evidence |
+|---|---|
+| ev950-shadow-C01 | Zero prepared candidates produce no verifier call. |
+| ev950-shadow-C02 | The ordinary resolver's default, Luna, Sol and another compatible model pass the exact effective configuration to both stages. |
+| ev950-shadow-C03 | A verifier error or reported model substitution produces one technical failure, preserves the same native review drafts and never triggers a fallback. |
+| ev950-shadow-C04 | A real dry-run executes the usual detector on pinned PR revisions for Luna and Sol, checks actual prepared findings, and records zero attempted PR writes. |
+| ev950-shadow-C22 | The repository adapter refuses an unbound source before opening a provider session. A provider safety stop records a technical failure, keeps already collected evidence in the pilot ledger, and ends the verifier attempt without context recovery. |
+
+### Finding lifecycle and experimental profiles
+
+This amendment to #950 applies to the normal Bugbot review entrypoint when a
+trusted shadow verifier is supplied. It extends the normal-flow contract above
+and governs new diagnostics. The published pilot manifests and results retain
+their original scoring. Production activation requires the existing separate
+qualification and maintainer decision.
+
+```text
+Diff -> analyzer -> prepared hypothesis, anchor and revision
+                              |
+                 collector <-> independent verifier
+                              |
+                  validated outcome -> emitter
+                              |
+               diagnostic record + ordinary review decision
+```
+
+The analyzer considers its assigned diff. When another partition owns a
+fragment of the same file, the detector gets related coordinates to help it
+follow context. This is a pointer to pinned source. It grants no ownership of
+another partition's lines. The application records each observed candidate
+before deduplication and preparation, its origin and its disposition.
+Canonical prepared candidates carry the ID into verification, including
+active findings above the inline comment limit. A duplicate links to its
+retained identity where available. A dropped or unbound candidate has an
+explicit disposition and never becomes a clean verification.
+
+The collector is an application-controlled evidence service. It may obtain
+the anchor context and follows material questions from typed requests. It
+reads the pinned Git tree, including unchanged code, and the pinned base
+when the claim and authorization permit it. Sources can resolve actual
+callers, runtime paths, configuration and effective dependency versions.
+Material dependency behavior requires version-matched official evidence and
+the link to effective project settings. A filename or an auxiliary lookup
+alone does not prove that the verdict depends on the tool. Each query records
+its purpose, result and delivered ranges. A trusted source adapter can accredit a version against an exact tracked blob
+and delivered range. A review can reuse immutable source
+reads with the same authorized identity. Every delivery still receives a
+candidate-specific receipt. Version claims retain their original scope.
+Evaluator outcomes and expected verdicts are reserved to evaluation.
+
+The verifier starts independently with the prepared hypothesis, immutable
+anchor and pinned revision. It attempts to refute the claim. Each decisive
+step must be linked to a delivered receipt and its exact range. Short
+session-local aliases can be used for citations, version bases and recall.
+The application maps an alias to the immutable receipt, then checks its
+delivery, revision, provenance and range. Aliases are bound to the
+investigation, survive a provider context restart, and have no meaning in
+another investigation. Unknown or foreign references fail integrity checks.
+Material gaps may be completed in the same investigation or yield
+`inconclusive` with a concrete missing fact. Elapsed time and token usage
+are telemetry. Explicit cancellation still stops the investigation.
+
+The emitter is a deterministic application projection. It shows the ordinary
+publication decision beside the verifier's outcome. It cannot reinterpret
+the verdict, add claims or authorize approval. Shadow dry-run has no write
+authority on the evaluated PR. Cancellation, stale source and technical or
+integrity failure keep their existing status and cannot create a verified
+outcome. An inconclusive run cannot establish clean approval. Historical
+finding transitions remain subject to reconciliation and human decisions.
+
+#### Configuration and ownership
+
+The ordinary resolver snapshots the agent provider, model provider, model and
+reasoning effort. PR detection uses the resolved reviewer role. The findings
+role remains the fallback when no reviewer role is configured. Verification
+inherits the effective detection profile by default, including defaults.
+The collector uses typed evidence requests and the application emits the
+validated decision. Neither step needs a separate model. A trusted dry-run
+experiment can supply a distinct verifier profile through shadow composition.
+The installed workflows expose the same profile through trusted organization
+or repository Actions variables. A repository value takes precedence over
+the organization default. The workflow captures the inputs for that run;
+comment content and reviewed code cannot select a profile.
+
+| Actions variable | Action input | Default or constraint |
+|---|---|---|
+| `BUGBOT_VERIFICATION_MODE` | `bugbot-verification-mode` | `disabled` by default. `shadow` records diagnostic verdicts only. The Action and approval entrypoint reject `enforced` until the rollout contract is implemented and qualified. |
+| `BUGBOT_VERIFIER_PROVIDER` | `bugbot-verifier-provider` | Inherits the effective agent. The installed values are `codex`, `opencode` and `cursor`. The future runtime extension adds `claude-code`. |
+| `BUGBOT_VERIFIER_MODEL_PROVIDER` | `bugbot-verifier-model-provider` | Inherits the effective backend when the agent stays the same. A different agent uses its ordinary backend default unless specified. |
+| `BUGBOT_VERIFIER_MODEL` | `bugbot-verifier-model` | Inherits the effective detector model. Changing agent or backend requires an explicit compatible model. |
+| `BUGBOT_VERIFIER_EFFORT` | `bugbot-verifier-effort` | Inherits effort on the same agent and backend where expressible. A different agent or backend uses its default unless given a valid override. |
+
+The detector and verifier each satisfy the installed backend and model
+allowlists. Invalid combinations fail configuration validation. Profile
+selection and activation are separate decisions.
+The Action validates the raw verification mode and explicit verifier provider
+for surrounding whitespace before provider setup. This keeps accepted values
+aligned with the workflow's Cursor credential condition. A padded value fails
+with the input name and an instruction to remove the whitespace.
+
+| Agent | Model provider | Reasoning effort |
+|---|---|---|
+| Codex | `openai` | Accept `none`, `minimal`, `low`, `medium`, `high` or `xhigh`. Pass the value as `model_reasoning_effort`. The provider must admit the selected model and setting. |
+| OpenCode | A configured backend such as `openai` or `anthropic` | Check the exact backend/model and any named variant against the runtime catalog before the first turn. Pass an admitted variant as `--variant`. |
+| Cursor | `cursor` | Check the selected identifier against the runtime catalog and pass it as `--model`, including a reasoning variant if listed. The CLI adapter has no separate reasoning flag: reject an explicit override and do not copy an ineffective inherited effort. |
+| Claude Code (future runtime task) | `anthropic` | Use the official `claude` executable. Validate the Claude model and its supported `--effort` against the reviewed runtime contract. |
+
+The future `claude-code` provider must support both the detector and the
+optional verifier profile. Its implementation and provider tests belong to a
+separate runtime task. Qualify #950 using the installed providers. Once
+implemented, `REVIEWER_PROVIDER=claude-code` selects it for PR detection
+and verification inherits that selection by
+default. To use Claude Code only for verification, select
+`BUGBOT_VERIFIER_PROVIDER=claude-code` and set `BUGBOT_VERIFIER_MODEL` to
+an approved Claude model ID. Its model provider defaults to `anthropic`.
+The installed Action still accepts Anthropic through OpenCode. The
+[native runtime SDD](agent-runtime-provider-and-model-routing.md#native-claude-code-runtime)
+owns direct provisioning, authentication, permissions and compatibility.
+
+`BUGBOT_EFFORT` selects Bugbot's review depth. The role effort controls
+provider reasoning. Record the effective profile and provider-reported
+identity when available. An unavailable model or variant, catalog failure,
+or reported model mismatch is a technical failure. The application preserves
+the selected agent and model.
+
+The checkout-backed broker accepts only the candidate's repository and
+canonical object IDs. Its temporary Git view has no remotes, does not lazily
+fetch missing objects, and never reads the checked-out version of a candidate
+file. Codex uses its supported session resume. For Cursor and OpenCode the
+host preserves the candidate, admitted evidence and closure state between
+isolated provider turns. The model cannot invoke repository, shell, web or
+MCP tools through that transport. No approval evidence is written in shadow.
+The Action output `bugbot-shadow-summary` and the Job Summary provide
+diagnostic counts without claims or citations. `BUGBOT_DRY_RUN=true`
+also suppresses ordinary Bugbot publication.
+
+The application owns candidate identity, correlation, model selection and
+the emitter's projection. The evidence use case owns typed requests,
+delivery and closure. Git, official-source and provider adapters implement
+the read and session ports. They cannot mutate SCM or decide publication.
+The entrypoint uses the normal workflow and the existing freshness checks.
+No adapter may introduce a dependency from domain/application to a provider
+SDK or import an SCM writer into the verifier. Enforce these boundaries with
+the repository's architecture checks and a fail-on-call SCM integration
+control.
+
+The acceptance budget is at least six deterministic configuration cases:
+exact inheritance, Codex with supported and rejected effort, OpenCode
+with an OpenAI variant, OpenCode with an Anthropic variant, Cursor model
+selection, and rejection of a separate Cursor verifier effort. Exercise
+the generated workflow bindings and provider
+arguments. Also cover an unavailable model or variant, immutable checkout
+reads and the absence of approval authority. A provider-specific smoke test
+supplies separate execution evidence. It does not replace the full-review
+historical controls or the independent 174-case corpus required by EV-07.
+The future Claude Code task also covers three Bugbot cases: detection
+and verification through inheritance, Codex detection with an explicit Claude
+Code verifier, and ordinary shadow publication after verifier preflight or
+execution fails. Those cases supplement the runtime SDD tests.
+
+The [installed profile smoke test](../quality/bugbot/evidence/issue-950/installed-profile/results.md)
+did not qualify the Codex/Sol profile: the installed broker could not
+deliver material version-matched official evidence for either candidate.
+
+#### Publication and approval rehearsal
+
+The installed review computes the same disposition projection for shadow
+and enforced publication. The projection processes all prepared candidates
+before applying the comment limit. Confirmations use the verifier's account
+and citations. Detector suggestions need a separate evidence check before
+publication. A proposed historical close uses a separate candidate for the
+specific fixed or obsolete transition when the retained comment supplies an
+anchor. Both transitions may read the pinned base when one is available, even
+if the retained anchor is on the right side of the diff. The pinned base is
+a comparison source and does not establish the revision that originally
+produced the finding. An unbound or inconclusive transition preserves
+historical state.
+Reopened findings retain the existing human-dismissal rules.
+
+An intact mixed batch yields a partial review and can publish confirmed
+findings when authorized. An invalid batch stops before finding and status
+mutations. The review rechecks the revision before publication and reconciles
+observed provider state before recording a receipt. The Action emits a shadow
+simulation with `approvalEligible: false`. A complete, observed enforced review
+can attach the authoritative receipt to `Copilot / Review` when the trusted
+runtime supplies rollout authority and the native run identity matches.
+The approval consumer requires the latest attempt, the expected check app and
+suite, the same head and base, and the same policy generation and digest.
+
+The Action configuration continues to reject `enforced` until rollout
+qualification. The simulated projection and controlled producer-to-consumer
+tests are diagnostic. They do not qualify a profile or provide evidence for
+production approval.
+
+#### Official evidence in the installed review
+
+The installed shadow adapter binds the Git tree, a reviewed release-source
+catalog, and a read-only Actions step adapter. The first installed version
+resolver checks the nearest pnpm workspace manifest and its lockfile importer,
+including approved package re-exports. The release catalog currently covers
+Playwright 1.64.1, Lit HTML 3.3.3, LitElement 4.2.2, and SQLite 3.53.3 when
+the session has an accredited runtime receipt. For SQLite, an installed
+lookup may establish the version and retrieve official source in the same
+request. The adapter reads the exact Python pin from the requested Git
+revision and checks that the installed interpreter matches it. It runs a
+fixed standard-library probe outside the checkout and reads the linked SQLite
+version and source ID. No project file supplies executable code or arguments.
+The runtime receipt binds the pin blob, measured source ID, revision and
+operation. A release-source receipt must carry that runtime scope and match the
+reviewed upstream source identity. Missing or conflicting measurements leave the
+official version unproven. A local probe cannot establish the SQLite version
+linked by historical CI. Other package versions and package managers require
+additional provenance adapters.
+
+The `ci` request names a workflow run, job, and step. The adapter uses the
+latest matching run and its exact attempt, checks the repository and associated
+head SHA, and returns a receipt identifying the run, attempt, job, and step.
+A result from another SHA, an explicitly unrelated PR, or a fork is ineligible.
+If GitHub omits the PR association, the observation is scoped to the reported
+SHA. GitHub step metadata can establish that a named step was skipped, failed,
+or succeeded. A claim about the checked-out source, an individual test or the
+effective runtime needs its own evidence. This adapter does not infer those
+facts from the workflow conclusion.
+[Installed adapter](../src/infrastructure/bugbot/installed_bugbot_shadow_adapter.ts) ·
+[Official reader](../src/infrastructure/bugbot/shadow/installed_official.cjs) ·
+[CI reader](../src/infrastructure/bugbot/github_bugbot_ci_reader.ts) ·
+[Earlier Domus replay](../quality/bugbot/evidence/issue-950/installed-profile/results.md)
+
+```text
+Prepared hypothesis -> verifier identifies material dependency question
+  -> collector proves the effective version at the candidate revision
+  -> collector retrieves the official source and issues a bound receipt
+  -> verifier checks the actual project path and cites the decisive lines
+  -> application validates the verdict and projects the review result
+```
+
+The verifier determines which dependency behavior could change the verdict.
+It requests the relevant package or tool and a concrete search term, uses the
+returned code or documentation to investigate that behavior, and follows a
+new question when more evidence is needed. A repository-local claim proceeds
+using repository evidence. The application carries forward material
+dependency requirements identified from the candidate and the investigation,
+even when an upstream source is unavailable. A dependency mentioned only
+in passing creates no evidence obligation.
+
+The collector resolves the version used by the affected workspace, import,
+build, or runtime against the pinned head or authorized base. A lockfile
+entry must be linked to the actual consumer when several versions coexist.
+A runtime or CI receipt must prove the applicable scope. A local measurement
+does not establish the historical CI runtime. An ambiguous or missing
+version yields `official-version-not-proven`.
+
+A read adapter retrieves versioned documentation, a released package
+artifact, or source at the upstream commit proven to correspond to the
+release. Source identity comes from reviewed publisher and origin bindings
+or verifiable registry provenance. Registry data may provide discovery
+leads. Package metadata, repository text and model output cannot authorize
+a new origin. The host performs the allowed public fetch, verifies
+origin, release and content integrity, and applies the verifier's search
+terms to the retrieved content locally. The verifier receives no direct
+network or credential authority. General documentation can guide research
+when it does not establish the behavior of the exact version. Use
+version-bound source when documentation is incomplete or ambiguous.
+
+Every delivery binds the exact source revision or artifact digest, package,
+version, version proof and scope, candidate, operation, reviewed revision and
+line range. Immutable upstream material may be shared across investigations
+with the same authority. Each investigation gets its own receipt. The
+application checks receipt provenance and delivery. The verifier checks
+whether the lines support the premise and connects them to the project's
+actual configuration and execution path. The native CI reader separately
+validates evidence against the same revision and operation when the claim
+depends on CI behavior.
+
+The installed verifier starts with a small exact excerpt around the pinned
+anchor when the broker can supply it. The application records that delivery
+using the same receipt rules as subsequent reads. The verifier may close on
+sufficient evidence from its first response or batch independent evidence
+requests in one turn. The complete authorized tree remains available and
+neither turn count, token use nor elapsed time closes a session. The latency
+gate measures added wall time after review. It controls qualification only.
+
+Reuse the lookup outcomes in the version-proof section below. A missing
+release source and a literal search with zero results have different
+recovery paths. An authenticated source gap still outstanding at closure
+yields `inconclusive` with the material fact that remains unverified. A
+provenance or citation integrity failure remains a technical failure.
+Report the gap in the existing shadow artifact and Job Summary projection.
+For example, `Inconclusive. The lockfile resolves Playwright 1.64.1. The
+official implementation of the matcher for that release was unavailable.`
+Existing shadow, cancellation, approval and freshness rules apply.
+
+Before qualification, cover **eight distinct evidence cases** through the
+installed path with controlled upstream responses. Exercise effective
+workspace version selection, ambiguous versions, runtime versus CI scope,
+matching official source delivered and cited, source unavailable, an
+authenticated search with no match, an untrusted origin or release mismatch
+rejected, and a material missing receipt prevented from closing as
+confirmed or refuted. Cover a package other than Playwright to show that
+retrieval is driven by provenance and the request. Replay both pinned
+Domus #28 candidates through the installed adapter and compare against the
+independent evidence. The replay diagnoses the integration. Qualification
+still uses EV-07 and the existing full-review and independent corpus gates.
+
+The installed SQLite and latency repair adds four deterministic acceptance
+cases. Resolve SQLite and deliver the local proof and official receipt in one
+request. Reject another operation's or an undelivered proof. Reject a
+different interpreter pin, missing runtime, or conflicting upstream source ID.
+Accept a first-turn verdict only with a delivered, exact anchor receipt.
+The existing continuation, cancellation and missing-usage cases still apply.
+
+#### Diagnostics and evaluation
+
+The shadow record exposes the pinned review, partition origins, disposition
+and anchor of each potential finding, selected and reported models, ordinary
+publication eligibility, accepted verdict or technical failure, and exact
+citations. It records evidence requests and results, repairs, turns, latency
+and usage when provided. Measure detector/prepare and verifier wall time
+separately. Shared detector effort belongs to the partition once. Keep
+per-finding work separate from review wall time and note concurrency. The
+diagnostic projection contains operational facts and cited claims. Store
+raw provider prompts and rejected bodies outside this projection.
+
+| Status | Example diagnostic text |
+|---|---|
+| In progress | Two candidates prepared. Verification is running on the pinned review. |
+| Complete | One confirmed and one refuted. Ordinary dry-run would publish two. |
+| Inconclusive | Runtime version could not be established. Remaining source and exact gap are recorded. |
+| Failed or canceled | Verification stopped. Previously collected evidence is retained for investigation. |
+| Superseded | A newer revision is available. Results apply to the earlier SHA. |
+
+The operator report belongs to the shadow result and uses the normal
+observability surface. It creates no new GitHub comments, approvals, checks
+or notifications on the evaluated PR. Show stable IDs and link to exact
+source ranges in the diagnostic artifact. The normal review UI, localization
+and durable review markers retain their own contracts.
+
+Preregister model comparisons on identical frozen candidates and equal
+evidence access, for example A to A versus A to B. Compare collector
+variants separately with the same profiles. Record missed detections and
+candidate counts separately in complete reviews. Measure correctness against
+independent evidence, material citation coverage, anchoring, invalid
+outcomes and latency. All existing full-review and independent 174-case
+detection gates apply to each exact profile proposed for qualification.
+
+#### Deterministic acceptance and delivery
+
+Run at least 16 distinct deterministic cases across the areas below. The
+normal-entrypoint, evidence runner and repository adapter suites listed in
+the capability catalog exercise these cases. Keep
+the existing repository coverage gates. Exercise every new policy branch
+and the actual review entrypoint with controlled providers and pinned
+sources. Record model measurements in a subsequent preregistered pilot.
+
+| Cases | Requirement and evidence |
+|---|---|
+| lifecycle-C01–C04 | Model and output policy. Default inheritance, an explicit mixed dry-run profile, rejection of mixed native publication, and provider mismatch without fallback. |
+| lifecycle-C05–C08 | Normal workflow. Zero findings, duplicate or discarded origin, evidence for a split file, and overflow candidates observed without modifying the ordinary result. |
+| lifecycle-C09–C12 | Evidence integrity. Stable aliases, foreign or unknown reference rejection, a shared read with isolated receipts, and different revision or scope without reuse. |
+| lifecycle-C13–C16 | Closure and emission. Material official-source gap, incidental mention, repair of an exact range in-session, and technical failure or supersession with no verified publication. |
+
+- [Normal entrypoint tests](../src/application/usecases/steps/commit/__tests__/detect_potential_problems_use_case.test.ts)
+- [Evidence runner controls](../quality/bugbot/evidence/issue-950/shadow-verification/verification.test.cjs)
+- [Pinned adapter tests](../src/infrastructure/bugbot/__tests__/shadow_verification_adapter.test.ts)
+- [Operator guide](../docs/bugbot/quality-observability.mdx#finding-lifecycle-in-a-shadow-diagnostic)
+
+Implement in this order. Fix the application and evidence contracts. Wire
+them into the ordinary entrypoint and presentation projection. Run the
+deterministic tests and validate this SDD, the reconciliation and framed
+contracts and the operator guide. Keep the PR in draft. Compare profiles
+only after those checks and keep the rollout disabled.
+
+
+### Version proof, effective state, and premise citations in shadow
+
+An official lookup can use a delivered runtime receipt directly. The broker
+resolves its typed package and release when the caller omits the release. If the
+caller specifies a release, it must equal the one accredited by that receipt.
+The broker verifies the receipt belongs to this investigation and revision.
+A source response carries the version proof's scope through to the citation.
+For example, a Python version pin can authorize the local SQLite probe. Its
+runtime receipt establishes SQLite 3.53.3 for that local probe. The linked
+SQLite release of the historical hosted CI remains unproven.
+
+| Lookup outcome | Meaning and recovery |
+|---|---|
+| `official-version-not-proven` | The receipt did not establish the requested dependency version on the selected revision. Request a compatible version proof. |
+| `official-source-unavailable` | The version is accredited and at least one required registered source is unavailable. Retry the lookup. |
+| `official-no-match` | Every registered source for the accredited version was authenticated and the literal search found no result. Try a different exact phrase or identifier. |
+| `provided` | The response contains source ranges with release, scope and provenance. Cite the ranges that establish the dependency behavior. |
+
+For a hypothesis about a missing constraint, setting or guard, the verifier
+traces how the effective state is assembled. It follows the actual execution
+order through imported declarations, registration, overrides, and migrations
+that may add the allegedly absent protection. The route and the decisive state
+must both be grounded. The evaluator holds the known counterevidence and any
+reproduction outside the verifier prompt.
+
+A finishing response maps each material premise to exact supporting ranges.
+The broker checks provenance, SHA, receipt bounds and prior delivery. The
+application keeps a draft with a missing premise or citation open and can
+return a closure issue to the same verifier session. The verifier can recover
+or narrow the range and finish again. When a citation extends beyond a valid,
+delivered receipt, the closure reports the affected premise or order role,
+source, requested lines and delivered ranges. The same session can cite a
+supported subrange or read the missing lines and cite the new receipt. The
+application validates the replacement against the same candidate and revision.
+When a citation omits one final character of a receipt ID, the same session
+can receive the complete ID if exactly one previously delivered receipt
+matches the prefix and covers the entire requested range. The broker
+authenticates that source and the verifier must resubmit the exact ID. The
+hint itself does not count as a citation. Ambiguous or unrecognized IDs and
+truncated IDs without a covering delivered range remain integrity failures.
+To confirm a finding, the verifier must cite a decisive Git line within the
+candidate's pinned anchor range as part of a premise connecting the code to
+the claimed effect. The closure checks the file, range and revision. A left
+anchor uses the pinned base, and a right or unspecified anchor uses the
+pinned head. If the citation is absent, the same session receives the exact
+anchor location and can read or recall the source before submitting again.
+A refutation can cite counterevidence elsewhere. If a material source remains
+unavailable, the verifier finishes `inconclusive` and names the evidence gap. A foreign or
+undelivered citation is an integrity failure. An independently reviewed replay
+checks semantic coverage, including whether a cited range contains the
+operation claimed in the premise.
+
+```text
+Prepared candidate -> investigate effective state and version
+                   -> draft with cited premises -> validate and record
+                                   |
+                        missing premise or range
+                                   |
+                          continue same session
+```
+
+A shadow report shows the candidate's revision, verdict, per-premise citations
+and any remaining gap. For example, an inconclusive case can identify an
+unavailable version-matched dependency source and retain the code citations
+already verified. The report has no publication or approval effect. Runtime
+and citation controls are fixed by the broker and expose no new user inputs.
+
+| Case | Minimum acceptance evidence |
+|---|---|
+| ev950-shadow-C05 | Resolve the SQLite release from a delivered runtime receipt with no version string and retain local scope. |
+| ev950-shadow-C06 | Reject incompatible package, explicit version, revision, operation and undelivered basis. |
+| ev950-shadow-C07 | Distinguish missing or incomplete release sources from unmatched text. Retry the incomplete download and verify the exact official receipt after recovery. |
+| ev950-shadow-C08 | Continue the same session to add a previously omitted exact range. |
+| ev950-shadow-C09 | Continue a conclusive draft with missing official evidence and accept an explicit inconclusive verdict with the specific gap. |
+| ev950-shadow-C10 | Keep a conclusive draft open when a material dependency lacks a matching official receipt, even if no lookup occurred. |
+| ev950-shadow-C11 | An incidental dependency in an anchored filename or in the reason does not require unrelated official evidence. |
+| ev950-shadow-C12 | Replay the two prepared candidates with their original models and anchors. Independently check the observed verdict, evidence for the decisive operations and zero attempted writes. |
+
+The first seven cases are deterministic controls in
+[the shadow runner suite](../quality/bugbot/evidence/issue-950/shadow-verification/verification.test.cjs).
+The two live replays and their independent controls are recorded in
+[the closure replay report](../quality/bugbot/evidence/issue-950/shadow-closure-replay/results.md).
+
+### Execution order evidence at shadow closure
+
+A material premise about sequence declares the route and cites three roles.
+The first and second roles identify the two operations. The mechanism role
+identifies the code that makes that order effective, such as the execution
+loop for an ordered list, a call chain, a guard, or a migration branch. Each
+role has a verbatim code excerpt inside its cited range. When relevant routes
+have different behavior, the premise and verdict are limited to the supported
+route or carry a complete proof for each route they cover.
+
+The existing closure validates each role against the same pinned revision and
+previously delivered Git receipts. It checks that the excerpt occurs within
+the cited range. Explicit sequence language without order roles also returns
+a closure issue. These checks establish source grounding. The independent
+evaluator checks whether the lines and control flow substantiate the claimed
+operations and order.
+
+```text
+Draft premise -> check first, second, and mechanism per route -> close verdict
+                            |
+                     missing role or excerpt
+                            |
+                     continue same session
+                            |
+              unresolved evidence -> inconclusive
+```
+
+The closure identifies the affected premise, route, and role where available.
+For example, a draft that omits the second operation can receive a request for
+that operation's exact code range. The same session can read or recall it and
+complete the proof. A repeated unresolved gap without further evidence
+records an inconclusive verdict that names the gap. Provider failures, cancellation, foreign receipts and undelivered
+citations preserve their failure treatment. This change adds no configuration
+or publication permission.
+
+| Case | Minimum acceptance evidence |
+|---|---|
+| ev950-shadow-C13 | A draft missing the second operation stays open. The same session supplies its range and concludes. |
+| ev950-shadow-C14 | A draft missing the ordering mechanism stays open. The same session supplies its range and concludes. |
+| ev950-shadow-C15 | An excerpt outside its cited range leaves the corresponding role incomplete. |
+| ev950-shadow-C16 | An unchanged unresolved order gap closes as inconclusive with a specific missing role. |
+| ev950-shadow-C17 | Explicit sequence without structured order evidence triggers recovery. |
+| ev950-shadow-C18 | The runner identifies a route with missing proof and can accept a verdict narrowed to the proven route. |
+| ev950-shadow-C19 | A foreign order citation fails the same provenance checks as any other citation. |
+| ev950-shadow-C20 | The pinned Domus #24 replay records Luna's verdict and independent checks of both schema entries, the loop, the unique index, and the applicable official rule. A migration-dependent verdict also needs proof of the routes it covers. The replay attempts zero PR writes. |
+| ev950-shadow-C21 | Advancing the test clock beyond the former provider-turn and investigation limits leaves the same session active and accepts a valid verdict. Explicit cancellation still stops it. |
+| ev950-shadow-C22 | A delivered receipt with an out-of-range premise or order citation keeps the same session open. The corrected range must pass provenance and delivery validation before a verdict is accepted. |
+| ev950-shadow-C23 | A confirmation citing nearby lines or the other revision stays open. The same session supplies a decisive citation from the pinned anchor range. |
+| ev950-shadow-C24 | A unique delivered receipt missing one final character prompts the same session to resubmit its complete ID. The runner validates the replacement and rejects an unmatched, ambiguous, or undelivered range. |
+
+Run the eleven deterministic cases through
+[the shadow runner suite](../quality/bugbot/evidence/issue-950/shadow-verification/verification.test.cjs).
+Replays may pin an explicit provider reasoning effort and record it alongside
+the frozen candidate configuration. Actual reviews inherit the effective
+reviewer or findings configuration. Record the provider attempts and the
+independent line checks in
+[the execution order replay](../quality/bugbot/evidence/issue-950/shadow-order-replay/results.md).
+
+### 20. References and decisions
+
+- Owning capability and companion contracts in the inventory above.
+- [Pilot protocol](../quality/bugbot/evidence/issue-950/preregistration.md), [frozen manifest](../quality/bugbot/evidence/issue-950/manifest.json) and [results and reproduction](../quality/bugbot/evidence/issue-950/results.md). The results distinguish observed controls, provider access and unexecuted model trials.
+- Established safety choices: source binding, fresh falsification, explicit
+  incomplete state, observed-effect recovery and preserved human authority.
+- Pending choices: measured model selection, production operational controls and the approved
+  activation surface. No activation is supported while the pilot is incomplete.
+
+## #950 approval and pilot qualification revision
+
+- Status: Proposed refinement of the published Bugbot contract
+- Issue: [#950](https://github.com/vypdev/copilot/issues/950)
+- Capability: `bugbot-analysis-and-autofix`
+
+### 1. Executive summary
+
+Bind approval to the newest authoritative review attempt for the current PR
+revision and effective verification policy. Qualify the first source-and-CI
+profile in a repository-shaped dry run. This revision keeps the published
+requirements, historical matrix and production activation gate.
+
+### 2. Evidence
+
+The existing approval consumer reads native checks and a revision-bound review
+marker. SHA equality alone cannot distinguish a review produced before an
+enforcement change or a failed later attempt at the same SHA.
+
+### 4. Goals
+
+| Requirement | Behavior |
+|---|---|
+| BBE950-R01 | Bind approval evidence to the PR, current revision, effective policy and newest authoritative review attempt. |
+| BBE950-R02 | Compare the three preregistered arms using matched tools and the first source-and-CI profile. |
+
+### 6. Behavior
+
+Publish a versioned machine receipt owned by the canonical Bugbot execution.
+It binds repository ID, PR number, reviewed head and comparison, effective
+policy identity, native attempt identity and observed outcomes for coverage,
+verification and publication. Keep native pending and failed attempts visible
+even when the last verified finding presentation is preserved. Approval reads
+the latest trusted native attempt and its receipt. Missing, stale, ambiguous,
+unavailable or mismatched evidence blocks approval. A subsequent pending,
+inconclusive, failed, canceled or superseded authoritative attempt cannot
+promote an older clean receipt. Dry-run and shadow runs never supply a positive
+approval receipt or supersede the separate authoritative legacy stream.
+
+In disabled mode the legacy marker remains usable subject to the existing
+legacy gates. Shadow observes without changing the legacy approval path. In
+enforced mode require the current policy receipt even after a same-SHA
+configuration change. Rollback starts a new policy generation and requires a
+fresh authoritative review under the effective rollback policy. A prior
+positive receipt from an earlier generation leaves approval pending.
+
+The installed runtime carries trusted rollout authority separately from the
+optional verifier session. When it supplies a rollback policy in `disabled`
+or `shadow`, the canonical ordinary review can issue a current-generation
+receipt after complete coverage and reconciliation of the actual published
+finding state. The producer checks the pinned comparison before and after
+finding publication, and the receipt renderer binds that comparison to the
+native run and attempt. For rollback, `verification: complete` means that
+the checks required by the effective policy have completed. Shadow
+observations remain diagnostic and cannot supply the receipt or change its
+finding counts. An incomplete, superseded or dry-run review cannot issue one.
+The normal entry without trusted rollout authority uses legacy approval evidence.
+
+The current pilot arm uses the production read-only checkout and inspection
+capabilities. Both experimental arms use the same detection environment and
+fresh verifier without shell or network tools. Only the evidence arm receives
+host-issued immutable source, versioned dependency and matching native CI
+receipts. The main profile executes no reproductions. Local deterministic
+controls remain outside model input. A probe-enabled experiment requires a
+separate preregistration and score.
+
+### 8. Clean Architecture
+
+The review workflow owns attempt and result evidence. The approval application
+reads it through the trusted provider observation port, checks current policy
+and freshness, and remains the only approval decision owner. The pilot runner
+uses pinned Git reads and fail-on-call write ports. It checks tool parity and
+the closed evidence profile before a measured request.
+
+### 14. Testing strategy
+
+| Area | Minimum distinct cases | Behaviors/risks covered |
+|---|---:|---|
+| Approval consumer | 4 | Policy change, later incomplete or failed attempt, rollback |
+| Pilot qualification | 2 | Tool parity and excluded evidence |
+| Total | 6 | Additional cases |
+
+| Case ID | Area | Requirements | Scenario |
+|---|---|---|---|
+| bbe950-revision-C01 | Approval consumer | BBE950-R01 | A clean legacy marker at the same SHA cannot authorize approval after enforcement. |
+| bbe950-revision-C02 | Approval consumer | BBE950-R01 | A later inconclusive authoritative attempt invalidates earlier clean approval evidence. |
+| bbe950-revision-C03 | Approval consumer | BBE950-R01 | A later failed authoritative attempt invalidates earlier clean approval evidence. |
+| bbe950-revision-C04 | Approval consumer | BBE950-R01 | Rollback requires fresh evidence and shadow results cannot authorize approval. |
+| bbe950-revision-C05 | Pilot qualification | BBE950-R02 | Current and both experimental detection calls retain equivalent read-only inspection; verifiers share the same tool policy. |
+| bbe950-revision-C06 | Pilot qualification | BBE950-R02 | The main evidence packet rejects probes, oracle data, later sources and unmatched CI. |
+
+The rollback path adds six producer and composition cases. Cover disabled
+and shadow authority with a complete ordinary review, a shadow refutation
+with an unobserved ordinary publication, dry-run with zero mutations,
+same-head base change, and authority reaching the ordinary PR route with
+the verifier disabled. The consumer test renders the current receipt and
+checks it against the prior generation. The packaged Action control runs
+the approval observer with a prior and a current receipt on the same
+comparison, with zero mutation requests. Use the existing pending and
+recommendation presentation. The production activation gate still applies.
+
+- [Producer tests](../src/application/usecases/steps/commit/__tests__/detect_potential_problems_use_case.test.ts)
+- [Composition tests](../src/infrastructure/composition/__tests__/main_run_route_composition_root.test.ts)
+- [Consumer tests](../src/data/repository/pull_request/__tests__/pull_request_approval_repository.test.ts)
+- [Packaged observer control](../quality/bugbot/evidence/issue-950/cursor-rollback-shadow/packaged-rollback.cjs)
+
+### 15. Documentation
+
+| Path | Change |
+|---|---|
+| `specs/bugbot-analysis-publication-and-autofix.md` | update |
+| `specs/bugbot-review-state-reconciliation.md` | update |
+| `docs/bugbot/quality-observability.mdx` | update |
+
+### 16. Acceptance
+
+Test approval through the real consumer with a controlled provider. Validate
+the v2 pilot's tool matrix and exact evidence inputs before replay, then run
+full review in dry-run. Report invalid and incomplete trials separately from
+clean results. Maintainer activation requires the existing paired efficacy,
+recall, anchor and latency gates. Usage remains optional telemetry.
+
+### 17. Requirements traceability
+
+| Requirement | Cases |
+|---|---|
+| BBE950-R01 | bbe950-revision-C01, bbe950-revision-C02, bbe950-revision-C03, bbe950-revision-C04 |
+| BBE950-R02 | bbe950-revision-C05, bbe950-revision-C06 |
+
+## Proposed change: Verify Bugbot findings against repository evidence before publication
+
+- Status: Draft
+- Catalog capability: bugbot-analysis-and-autofix
+
+### 1. Executive summary
+
+This amendment verifies each eligible Bugbot hypothesis against evidence retrieved and bound to the reviewed source before publication. It preserves the owning SDD’s admission, identity, partitioning, history, freshness, provider ownership and presentation contracts. A fresh verifier may classify a candidate as confirmed, refuted or inconclusive; the application validates the complete result and coordinates publication. Confirmed findings may publish in an intact mixed review while incomplete evidence blocks automatic approval. Production verification remains disabled pending qualification and explicit maintainer approval.
+
+### 2. Problem, current behavior, and evidence
+
+Diff coverage records which inputs a run processed; it does not establish that the evidence supporting a particular finding is relevant or correct. The retained owner documents that generated-source verification currently applies mainly to Python paths or witnesses, reuses detection context and reviewer configuration, and checks identity, cardinality and retained evidence text without application-issued proof of evidence source. The cited implementation locations are `src/application/usecases/steps/commit/bugbot/build_bugbot_prompt.ts`, `src/application/usecases/steps/commit/bugbot/query_bugbot_findings.ts`, and `src/application/policies/bugbot_literal_verification_policy.ts`.
+
+The owner also describes the existing workflow as resolving canonical ownership and context, analyzing, checking freshness, applying finding or resolution mutations, and reconciling provider state. Relevant locations are `src/application/usecases/steps/commit/detect_potential_problems_workflow.ts`, `src/application/usecases/steps/commit/bugbot/analyze_bugbot_revision_use_case.ts`, `src/application/usecases/steps/commit/bugbot/bugbot_partition_aggregation.ts`, and `src/application/usecases/steps/commit/bugbot/apply_detected_findings.ts`. These paths establish the existing flow; this delta does not claim that proposed evidence retrieval or qualification is already implemented.
+
+The owner records historical examples involving Unicode matching, defaulted pytest arguments and an earlier SQLite guard, while noting that historical false-finding rationale is unknown and Luna runs establish no relative model advantage. The pilot must keep original reports, independent reproductions and model trials distinct. Its evidence must cover all 27 historical reports and distinguish measured evidence from planned coverage.
+
+### 3. Actors, surfaces, and terminology
+
+The change applies to every eligible finding that could become active, including new, updated, reopened and overflow candidates, across ordinary and framed PR review, incremental review and recheck, and the supported Commit review path with or without an owning PR. Existing canonical PR ownership and fallback rules continue to prevent duplicate publication. Proposed fixed or obsolete transitions require explicit evidence; human dismissal authority remains intact.
+
+The author or reviewer receives an anchored defect with revision evidence or an actionable uncertainty in the canonical review result. Maintainers control trusted configuration, rollout and human history decisions. Operators see coverage, verification and observed publication status through the existing review surfaces. The application binds evidence and enforces policy; the verifier works in a fresh task for an admitted hypothesis and returns a disposition over evidence supplied by the application.
+
+A candidate is a testable causal hypothesis. A receipt is an application-issued record bound to the review operation, candidate and revision. A disposition states what supplied evidence establishes for that candidate. A finding state records durable finding or native-thread history. Evidence can include source, resolved dependency or matching native CI; probes are a separately authorized profile.
+
+### 4. Goals, non-goals, and fixed invariants
+
+The application must compare GPT-6 Luna and GPT-6.1 Sol independently at low effort. V4 and the Sol supplement are diagnostic only, and v4 is unqualified. An on-demand replay covers two pairs and records elapsed time, including retries and evidence turns. Its operational deadline is 90 seconds per case. A favorable replay may proceed to full-review evaluation.
+
+The first evidence profile uses source, the resolved dependency and matching native CI. Probes require separate opt-in, isolation and qualification. Before freezing finding identity and anchor, the application preserves the substantive original line. It may select one unique causal changed line within two lines in the same diff block; ambiguity remains inconclusive and records both locations. The verifier cannot move the anchor.
+
+Allow successive typed evidence requests with operation-, candidate- and revision-bound receipts. Unavailable or denied decisive evidence produces an inconclusive disposition naming the cause and next step. Forged, cross-candidate or wrong-revision citations fail the batch before finding, resolution or approval writes. The verifier ports and untrusted response handling cannot invoke publication or arbitrary commands.
+
+Each exact profile must independently pass full historical baseline reproduction, paired false-positive improvement, every positive control at its exact anchor, integrity and latency checks, and the unchanged independent 174-case detection corpus. A qualifying profile requires explicit maintainer approval before enablement; production remains disabled until then. After rollback, retain the same-policy approval fence and require a fresh authoritative receipt. An intact mixed review may publish confirmed findings while incomplete evidence blocks approval. These constraints refine the existing owning contract; they do not replace its cases or publication and history rules.
+
+| Requirement | Behavior |
+| --- | --- |
+| SDD-I950-U3-R1 | Verifier ports and untrusted response handling cannot invoke publication or arbitrary commands. |
+| SDD-I950-U4-R1 | Compare GPT-6 Luna and GPT-6.1 Sol independently at low effort; treat v4 and the Sol supplement as diagnostic, with v4 unqualified. |
+| SDD-I950-U4-R2 | Run the two-pair replay with a 90-second operational deadline. Record usage when supplied. It has no effect on evidence collection or outcomes. |
+| SDD-I950-U4-R3 | Allow a favorable replay result to proceed to full-review evaluation; select production capabilities and operational controls from a qualified full-review profile. |
+| SDD-I950-U5-R1 | Use source, resolved dependency, and matching native CI as the first profile; require separate opt-in, isolation, and qualification for probes. |
+| SDD-I950-U5-R2 | Preserve the substantive original line before freezing identity and anchor; allow one unique causal changed line within two lines in the same diff block, record both locations when ambiguous, and prevent the verifier from moving the anchor. |
+| SDD-I950-U5-R3 | Allow successive typed evidence requests with operation-, candidate- and revision-bound receipts. Identify the cause and next step when decisive evidence is unavailable. |
+| SDD-I950-U5-R4 | Reject forged, cross-candidate, or wrong-revision citations before any finding, resolution, or approval writes. |
+| SDD-I950-U6-R1 | Each exact profile passes full historical baseline reproduction, paired false-positive improvement, positive controls at exact anchors, integrity, latency, and the unchanged independent 174-case detection corpus before qualifying. |
+| SDD-I950-U6-R2 | A qualifying profile requires explicit maintainer approval before enablement; production remains disabled. |
+| SDD-I950-U6-R3 | After rollback, retain the same-policy approval fence and require a fresh authoritative receipt. |
+| SDD-I950-U6-R4 | An intact mixed review may publish confirmed findings while incomplete evidence blocks approval. |
+| SDD-I950-U6-R5 | Keep all 27 historical cases traceable, with measured evidence distinguished from planned coverage. |
+
+### 5. Current versus proposed product journey
+
+This amendment extends the immutable owner’s existing review journey in `specs/bugbot-analysis-publication-and-autofix.md`; canonical ownership, admission, identity, freshness, publication, history, and recovery rules remain in force.
+
+| Stage | Delta |
+|---|---|
+| Prepare | Preserve the substantive original line before fixing candidate identity and anchor. The application may select one unique causal changed line within two lines in the same diff block. If the evidence leaves multiple locations plausible, keep the candidate inconclusive and record both locations. |
+| Verify | Apply the same evidence-verification gate to every eligible finding, regardless of language, severity, or comment capacity, including new, updated, reopened, overflow, and history-transition candidates. Start from source, resolved dependency, and matching native CI evidence. |
+| Decide | Allow successive typed evidence requests bound to the operation, candidate and reviewed revision. It may assess supplied evidence but cannot change the candidate’s anchor or authorize a publication or command. |
+| Publish | Reject forged, cross-candidate, or wrong-revision evidence before any finding, resolution, or approval write. An intact mixed result may publish confirmed findings while keeping the review incomplete and approval blocked for unresolved evidence. |
+| Qualify | Compare GPT-6 Luna and GPT-6.1 Sol independently at low effort. V4 and the Sol supplement are diagnostic; v4 is unqualified. A favorable bounded replay proceeds only to full-review evaluation. Production remains disabled pending the separate qualification and maintainer-approval gates. |
+
+Existing PR, framed and ordinary review, incremental recheck, and supported Commit routes retain their canonical destination and single-owner behavior. A Commit associated with a PR continues to use that PR’s owner; standalone supported Commit review uses the existing fallback. No additional publication destination is introduced.
+
+### 6. Functional behavior and state model
+
+The existing owner’s pinning, candidate admission, disposition, freshness, publication, historical-transition, and provider-reconciliation contract remains authoritative. This delta adds the following verification rules.
+
+Before identity and anchor are frozen, retain the substantive original changed line. The application may choose a unique causal changed line no more than two lines away in the same diff block. If uniqueness cannot be established, preserve both locations and return an inconclusive result; the verifier cannot move the anchor. Apply the same check to proposed fixed or obsolete transitions against the retained historical finding ID and current pinned evidence. Uncertainty or omission alone never changes historical state.
+
+The first evidence profile uses immutable source, the resolved dependency or runtime relevant to the claim, and matching native CI evidence where execution is material. A general green check does not prove a candidate. CI must match the reviewed source and relevant job, suite, or step. Probes require separate opt-in, an isolated bounded environment, and independent qualification; they are not part of the first profile.
+
+Permit typed reads for each material evidence gap. Requests name an allowed operation and candidate, and every receipt is bound to that operation and reviewed revision. Missing, denied or conflicting decisive evidence yields an inconclusive disposition with its cause and practical next step. Reject forged, cross-candidate, or wrong-revision citations as a batch integrity failure before finding, resolution, or approval writes. The verifier receives no publication capability or authority to invoke arbitrary commands.
+
+The on-demand two-pair replay observes a 90-second operational deadline per case, including retries. Elapsed time and available usage are recorded. A favorable replay permits full-review evaluation only. The exact production profile must qualify.
+
+Qualification is per exact profile. It requires reproduction of the full historical baseline, paired false-positive improvement, every positive control at its exact anchor, integrity and latency gates, and the unchanged independent 174-case detection corpus. Missing or failed evidence prevents qualification. A qualifying profile remains disabled until explicit maintainer approval; production is disabled before that approval. After rollback, preserve the same-policy approval fence and require a fresh authoritative receipt. An intact mixed review can publish confirmed findings while incomplete evidence blocks approval.
+
+### 7. User-facing configuration
+
+The existing owner’s user-facing settings and fixed safety invariants remain unchanged. This amendment adds no user-controlled verifier, evidence, or probe override. Effective policy and profile are trusted installation/runtime decisions, snapshotted for the review; review text, repository content, and verifier output cannot change them.
+
+The initial evidence profile is source, resolved dependency, and matching native CI. A profile that runs probes requires a separate trusted opt-in, isolation, and qualification before use. Probe commands, runner prerequisites, and bounds must be explicitly registered by the trusted application; arbitrary commands or model-selected execution are invalid.
+
+Compare GPT-6 Luna and GPT-6.1 Sol independently at low effort. Treat v4 and the Sol supplement as diagnostic only, and do not qualify v4. Keep production disabled until an exact profile passes the full-review gates and a maintainer explicitly approves enablement. Use the evidence authority and operational controls of the qualified profile. A favorable two-pair replay advances to full-review evaluation.
+
+### 8. Clean Architecture design
+
+Keep the existing owner’s domain policies, application workflow, semantic ports, provider adapters, composition, presentation, and publication/reconciliation boundaries. Add evidence verification within those boundaries: the application owns candidate-to-evidence planning and issues immutable receipts; read adapters retrieve only authorized source, dependency, and matching CI artifacts; the verifier starts a fresh investigation and returns a typed result. A probe adapter is unavailable unless separately opted in, isolated, and qualified.
+
+Keep policy checks pure: candidate and receipt binding, revision matching, anchor immutability, delivered receipt membership, disposition completeness, and qualification eligibility. The application validates the full result before constructing any write plan. Verifier ports and untrusted response handling must have no dependency path to provider mutations or arbitrary command execution; enforce this with an executable boundary check. Keep provider DTOs and credentials out of domain policy and verifier requests. Existing provider write and recovery paths continue to own observed effects and publication reconciliation.
+
+The pilot must exercise the evidence profile and tool permissions through the real orchestration boundary with write ports that fail on invocation. Qualification evidence distinguishes replay from full-review results, records the exact profile and accounting, and does not treat structural checks or declarations as executed acceptance.
+
+### 9. UI/UX and content contract
+
+For this #950 delta, retain the canonical card, Copilot / Review check, Job Summary, locale and sanitization contract in the immutable owning SDD’s “Bugbot repository evidence verification” section. Add the pilot state without implying that replay output is production evidence:
+
+| State | Primary message and action |
+|---|---|
+| Pilot pending | “Evidence pilot running for this revision. Findings remain under the current review policy.” Link to the current run. |
+| Pilot complete | “Evidence pilot complete. Review the per-profile results and qualification evidence.” Show Luna and Sol separately and identify diagnostic-only arms. |
+| Pilot incomplete | “Evidence pilot incomplete. [Profile] lacks [named evidence]. Qualification is unavailable.” Link to the run and state the next supported action. |
+| Production disabled | “Repository evidence verification is not enabled for publication.” Keep findings and approval under the current effective policy. |
+
+Present matched, independent GPT-6 Luna and GPT-6.1 Sol results at low effort. Label v4 and the Sol supplement diagnostic; v4 is unqualified. Show elapsed time per case, including retries and evidence turns, and available usage as optional telemetry. A favorable replay may proceed to full-review evaluation, but must not appear as qualification. Accessible text and headings must identify the profile, status, limits and next step independently of color; preserve localized fallback, descriptive links and bounded details. Production stays disabled unless its exact profile qualifies and receives explicit maintainer approval.
+
+### 10. Failure, recovery, and cleanup
+
+Keep the owning SDD’s failure, freshness, provider-reconciliation and cleanup behavior. For the #950 pilot, distinguish an invalid or incomplete trial from a negative efficacy result: retain its bounded safe cause, mark the profile unqualified, and do not substitute another arm’s evidence. If the two-pair replay reaches its 90-second operational deadline, record the interruption and supported next action. An explicit provider context error permits resuming the same investigation with its evidence checkpoint while the operation remains active.
+
+A decisive item that remains missing or denied after investigation yields an inconclusive candidate with its cause and next step. Forged, cross-candidate or wrong-revision citations invalidate the batch before finding, resolution or approval writes. On rollback, invalidate the prior approval receipt for the effective policy and require a fresh authoritative receipt under the rollback policy. Preserve the last verified finding presentation, but do not let an older clean receipt authorize approval after a later authoritative pending, incomplete, failed, canceled or superseded attempt. Discard transient pilot evidence under the owning invocation’s cleanup and retention rules.
+
+### 11. Security, permissions, and privacy
+
+Use source, resolved dependency and matching native CI as the first evidence profile. The profile consumes application-issued, immutable, revision- and candidate-bound receipts. Repository data, CI output and model responses remain untrusted; verifier ports and response handling cannot invoke publication or arbitrary commands. The first profile uses read-only evidence and no reproduction probes. Any probe requires separate opt-in, isolation and its own qualification; it cannot be authorized by model or repository text. V4 and the Sol supplement remain diagnostic and cannot furnish qualification evidence.
+
+Before identity and anchor are frozen, preserve the substantive original line. The application may select a unique causal changed line within two lines in the same diff block; when the causal line is ambiguous, retain both locations and leave the candidate inconclusive. The verifier cannot move the anchor. Validate every citation against the current candidate, operation and revision before any finding, resolution or approval mutation. Keep raw prompts, source blobs, credentials and full command output out of public and durable diagnostics; expose only safe locators and bounded reason categories under the existing privacy contract.
+
+### 12. Observability and operational UX
+
+The pilot record must make each exact profile independently reviewable: model and low-effort setting, immutable source/dependency/CI evidence identities, trial and retry accounting, elapsed time, optional token observations, dispositions, anchor outcomes, integrity results, cost and latency observations, and corpus result. Separate diagnostic arms and incomplete trials from qualifying results. Report full-review baseline reproduction, paired false-positive comparison, positive controls, and the unchanged independent 174-case detection corpus as distinct evidence; a favorable replay is not qualification. Do not pool results across models or profiles.
+
+For production approval, retain a safe authoritative receipt bound to repository, review target, revision, effective policy and native attempt, with observed coverage, verification and publication outcomes. The approval consumer uses the newest authoritative attempt: a later pending, inconclusive, failed, canceled or superseded attempt blocks an older clean receipt. Dry-run and shadow evidence cannot authorize approval or replace the authoritative stream. Operator status must distinguish profile qualification, explicit maintainer approval, production enablement and current review outcome. Keep telemetry bounded and exclude raw prompts, repository content, credentials and full output.
+
+### 13. Compatibility, migration, rollout, and rollback
+
+The immutable owning SDD remains authoritative for finding identity, historical state, publication ownership, freshness and human decisions. This delta adds no production enablement by default: keep production disabled. Qualify each exact profile only after it independently passes full historical baseline reproduction, paired false-positive improvement, every positive control at its exact anchor, integrity and latency gates, and the unchanged independent 174-case detection corpus. A favorable two-pair replay only advances the profile to full-review evaluation. Select the qualified full-review profile and require explicit maintainer approval before enabling it.
+
+Keep shadow and dry-run results separate from authoritative approval evidence. After rollback, preserve the same-policy approval fence and require a fresh authoritative receipt; a receipt from an earlier policy generation cannot qualify the rollback. A later unsuccessful authoritative attempt at the same revision also blocks an older clean receipt. Recheck current revision and policy before approval or publication, and preserve existing human decisions and recoverable provider effects. The immutable retained owner continues to govern compatibility for legacy findings and in-flight work; this delta must not retroactively qualify prior evidence.
+
+### 14. Testing strategy and numeric budget
+
+The retained deterministic baseline is 30 distinct cases: 8 for provenance and source evidence, 6 for verdict and publication, 6 for lifecycle and concurrency, 5 for permission and security, and 5 for presentation and compatibility. Add the six approval-consumer and pilot-qualification cases from the immutable owner for a total minimum of 36 deterministic cases; model trials are additional and do not count toward this total. Keep the existing 27 historical reports individually traceable to measured evidence or an explicit remaining limitation. Planned coverage and derived totals do not establish semantic completeness or executed acceptance.
+
+For this delta, `inventory3-C01` exercises the verifier boundary: neither verifier ports nor untrusted responses can invoke publication or arbitrary commands. The independent low-effort model comparison and diagnostic treatment are exercised by `inventory4-C01`; the two-pair replay and optional usage across evidence turns by `inventory4-C02`; and progression from favorable replay to full-review qualification, with production capabilities set only from a qualified profile, by `inventory4-C03`.
+
+The source-and-CI-first profile, with separate probe opt-in, isolation and qualification, is covered by `inventory5-C01`. Finding identity and anchor preservation, including unique causal-line selection and ambiguity handling, by `inventory5-C02`. Successive typed reads and inconclusive cause/next-step behavior by `inventory5-C03`. Forged, cross-candidate and wrong-revision citation rejection before writes by `inventory5-C04`.
+
+Each exact profile’s required historical reproduction, paired improvement, positive controls, integrity, latency and unchanged 174-case corpus gates are covered by `inventory6-C01`. Explicit maintainer approval and disabled production by `inventory6-C02`; fresh authoritative evidence after rollback by `inventory6-C03`; and mixed publication with approval blocked by incomplete evidence by `inventory6-C04`.
+
+Retain deterministic clocks, pinned Git fixtures, in-memory providers, fail-on-call ports, and injected cancellation and provider failures. Exercise production orchestration as well as pure policy; verify latency against the declared performance target and report available cost separately. Preserve repository-wide thresholds of 90% lines/statements, 88% functions and 82% branches, plus applicable changed-module gates; target full branch coverage for disposition completeness, provenance membership and approval eligibility. Maintainer review must inspect rendered English and Spanish mobile-width examples and actual marker updates. Pilot evidence must retain per-profile outcomes, controls, failures and deviations; structural counts alone do not qualify a profile.
+
+| Area | Minimum distinct cases | Behaviors/risks covered |
+|---|---:|---|
+| executable boundary check | 1 | Observable scenarios in the case inventory. |
+| model comparison | 1 | Observable scenarios in the case inventory. |
+| on-demand replay | 1 | Observable scenarios in the case inventory. |
+| qualification and production profile | 1 | Observable scenarios in the case inventory. |
+| Profile qualification | 1 | Observable scenarios in the case inventory. |
+| Finding identity and anchor | 1 | Observable scenarios in the case inventory. |
+| Typed evidence round | 1 | Observable scenarios in the case inventory. |
+| Citation validation | 1 | Observable scenarios in the case inventory. |
+| Pilot qualification | 2 | Observable scenarios in the case inventory. |
+| Approval consumer | 1 | Observable scenarios in the case inventory. |
+| Review publication | 1 | Observable scenarios in the case inventory. |
+| Historical evidence | 1 | Observable scenarios in the case inventory. |
+| Total | 13 | Distinct inventory cases; repeated executions do not add cases. |
+
+| Case ID | Area | Requirements | Scenario |
+| --- | --- | --- | --- |
+| inventory3-C01 | executable boundary check | SDD-I950-U3-R1 | A boundary check exercises verifier ports and untrusted response handling and observes that neither can invoke publication or arbitrary commands. |
+| inventory4-C01 | model comparison | SDD-I950-U4-R1 | Results record independent low-effort comparisons for GPT-6 Luna and GPT-6.1 Sol; v4 and the Sol supplement are marked diagnostic and v4 does not qualify. |
+| inventory4-C02 | on-demand replay | SDD-I950-U4-R2 | A two-pair replay records elapsed time against its 90-second operational deadline. High, absent and cumulative usage leave the evidence and verdict unchanged. |
+| inventory4-C03 | qualification and production profile | SDD-I950-U4-R3 | A favorable replay proceeds to full-review evaluation. The exact production profile must qualify. |
+| inventory5-C01 | Profile qualification | SDD-I950-U5-R1 | The first profile uses source, resolved dependency, and matching native CI; a probe run is rejected without separate opt-in, isolation, and qualification. |
+| inventory5-C02 | Finding identity and anchor | SDD-I950-U5-R2 | The substantive original line is retained; a unique causal changed line within two lines in the same diff block can be selected, while ambiguity records both locations and the verifier cannot move the anchor. |
+| inventory5-C03 | Typed evidence round | SDD-I950-U5-R3 | Successive typed requests retain operation, candidate and revision binding. Missing decisive evidence returns an inconclusive result with cause and next step. |
+| inventory5-C04 | Citation validation | SDD-I950-U5-R4 | Forged, cross-candidate, and wrong-revision citations each fail the batch before finding, resolution, or approval writes. |
+| inventory6-C01 | Pilot qualification | SDD-I950-U6-R1 | For each exact profile, reject qualification when any required historical, paired false-positive, exact-anchor positive-control, integrity, latency, or unchanged 174-case corpus result fails or is missing. |
+| inventory6-C02 | Pilot qualification | SDD-I950-U6-R2 | A qualifying profile remains disabled until explicit maintainer approval is recorded; production remains disabled. |
+| inventory6-C03 | Approval consumer | SDD-I950-U6-R3 | After rollback, a prior receipt cannot pass the same-policy approval fence; a fresh authoritative receipt is required. |
+| inventory6-C04 | Review publication | SDD-I950-U6-R4 | An intact mixed review publishes its confirmed findings while incomplete evidence prevents approval. |
+| inventory6-C05 | Historical evidence | SDD-I950-U6-R5 | All 27 historical cases have traceable records, and measured evidence is distinguishable from planned coverage. |
+
+### 15. Documentation and discoverability
+
+Update the existing user-facing detection and publication guidance, setup guidance for permissions and configuration, and operator guidance for failure recovery, quality evidence, rollout and historical behavior. Keep the registered catalog evidence and generated catalog aligned with the owning specification and the actual landed tests and documentation. The immutable owner’s path inventory declares the documentation, catalog and pilot evidence updates, including prospective creates; those create declarations are not evidence that files already exist.
+
+The pilot documentation must define the two-pair replay limits, model and effort comparison, diagnostic-only variants, first source-and-CI evidence profile, probe prerequisites, qualification gates, approval fence and rollback behavior. Link the material through existing Bugbot navigation and validate routes and examples against implementation fixtures or contracts. For repository validation, the required outcomes are specification format validity, internal and cross-document consistency, and reciprocal catalog ownership, paths and evidence matching the generated view. The concrete invocation and prerequisites for these outcomes remain unverified in this selected source view; do not assume an installed project script.
+
+| Path | Change |
+| --- | --- |
+| specs/bugbot-analysis-publication-and-autofix.md | update |
+
+[specs/bugbot-analysis-publication-and-autofix.md](bugbot-analysis-publication-and-autofix.md)
+
+### 16. Acceptance scenarios
+
+1. A boundary check observes that verifier ports and untrusted verifier responses cannot trigger publication or arbitrary command execution (`inventory3-C01`).
+2. Independent low-effort comparisons record GPT-6 Luna and GPT-6.1 Sol; v4 and the Sol supplement remain diagnostic, and v4 is unqualified (`inventory4-C01`).
+3. A two-pair on-demand replay records time against its 90-second operational deadline, with optional usage telemetry. Favorable results proceed to full-review evaluation (`inventory4-C02`, `inventory4-C03`).
+4. The first profile uses source, resolved dependency and matching native CI. A probe is rejected without separate opt-in, isolation and qualification (`inventory5-C01`).
+5. The application preserves the substantive original line before identity and anchor freeze. It selects a unique causal changed line within two lines in the same diff block when available; ambiguity remains inconclusive and records both locations. The verifier cannot move the anchor (`inventory5-C02`).
+6. Successive typed evidence requests remain bound to operation, candidate and revision. Missing decisive evidence is inconclusive with cause and next step (`inventory5-C03`). Forged, cross-candidate and wrong-revision citations each fail the batch before finding, resolution or approval writes (`inventory5-C04`).
+7. Qualification rejects an exact profile if any required historical baseline, paired false-positive, exact-anchor positive-control, integrity, latency or unchanged independent 174-case corpus result fails or is missing (`inventory6-C01`). A qualifying profile remains disabled until explicit maintainer approval, and production remains disabled (`inventory6-C02`). After rollback, a prior receipt cannot pass the same-policy approval fence; a fresh authoritative receipt is required (`inventory6-C03`).
+8. An intact mixed review publishes confirmed findings while incomplete evidence blocks approval (`inventory6-C04`).
+9. Preserve the existing approval-consumer and pilot-qualification scenarios: a same-SHA legacy marker cannot authorize approval after enforcement; later inconclusive or failed authoritative attempts invalidate older clean evidence; rollback requires fresh evidence and shadow results cannot authorize approval; pilot arms retain equivalent read-only inspection and shared verifier tool policy; and the main evidence packet rejects probes, oracle data, later sources and unmatched CI. The owner defines these as `bbe950-revision-C01`, `bbe950-revision-C02`, `bbe950-revision-C03`, `bbe950-revision-C04`, `bbe950-revision-C05` and `bbe950-revision-C06`.
+
+### 17. Requirements traceability
+
+Map each requirement only to cases that exercise its observable behavior:
+
+- `SDD-I950-U3-R1`: `inventory3-C01`.
+- `SDD-I950-U4-R1`: `inventory4-C01`.
+- `SDD-I950-U4-R2`: `inventory4-C02`.
+- `SDD-I950-U4-R3`: `inventory4-C03`.
+- `SDD-I950-U5-R1`: `inventory5-C01`.
+- `SDD-I950-U5-R2`: `inventory5-C02`.
+- `SDD-I950-U5-R3`: `inventory5-C03`.
+- `SDD-I950-U5-R4`: `inventory5-C04`.
+- `SDD-I950-U6-R1`: `inventory6-C01`.
+- `SDD-I950-U6-R2`: `inventory6-C02`.
+- `SDD-I950-U6-R3`: `inventory6-C03`.
+- `SDD-I950-U6-R4`: `inventory6-C04`.
+
+Retain the owner’s separate approval requirements and mappings: `BBE950-R01` is exercised by `bbe950-revision-C01`, `bbe950-revision-C02`, `bbe950-revision-C03` and `bbe950-revision-C04`; `BBE950-R02` by `bbe950-revision-C05` and `bbe950-revision-C06`. These existing owner identities remain references, not new case definitions. Keep the historical issue matrix traceable to decisive evidence and planned regression or an explicit limitation; generic capability coverage does not establish closure of an individual historical report. This mapping is structural evidence only and does not assert that cases ran or that pilot acceptance passed.
+
+| Requirement | Cases |
+|---|---|
+| SDD-I950-U3-R1 | inventory3-C01 |
+| SDD-I950-U4-R1 | inventory4-C01 |
+| SDD-I950-U4-R2 | inventory4-C02 |
+| SDD-I950-U4-R3 | inventory4-C03 |
+| SDD-I950-U5-R1 | inventory5-C01 |
+| SDD-I950-U5-R2 | inventory5-C02 |
+| SDD-I950-U5-R3 | inventory5-C03 |
+| SDD-I950-U5-R4 | inventory5-C04 |
+| SDD-I950-U6-R1 | inventory6-C01 |
+| SDD-I950-U6-R2 | inventory6-C02 |
+| SDD-I950-U6-R3 | inventory6-C03 |
+| SDD-I950-U6-R4 | inventory6-C04 |
+| SDD-I950-U6-R5 | inventory6-C05 |
+
+### 18. Implementation sequence
+
+1. Preserve this specification’s existing review, publication, history, freshness, and approval contracts. Implement the executable boundary check so verifier ports and untrusted responses cannot invoke publication or arbitrary commands.
+2. Add the low-effort GPT-6 Luna and GPT-6.1 Sol comparisons as independent measurements. Keep v4 and the Sol supplement diagnostic; v4 is unqualified. Record elapsed time against the two-pair replay operational deadline and retain available usage observations. A favorable replay advances only to full-review evaluation.
+3. Qualify the source, resolved dependency, and matching native CI profile first. Treat probes as a separate profile requiring explicit opt-in, isolation, and qualification. Preserve the substantive original line before freezing finding identity and anchor. Permit one unique causal changed line within two lines in the same diff block; on ambiguity, record both locations and leave the anchor unmoved by the verifier.
+4. Implement successive typed evidence reads with operation-, candidate- and revision-bound receipts. Unavailable decisive evidence returns an inconclusive result with its cause and next step. Reject forged, cross-candidate, and wrong-revision citations before any finding, resolution, or approval write. An intact mixed review may publish confirmed findings while incomplete evidence blocks approval.
+5. Qualify each exact profile independently against historical baseline reproduction, paired false-positive improvement, all positive controls at exact anchors, integrity, latency, and the unchanged independent 174-case detection corpus. Require explicit maintainer approval before enabling a qualifying profile; production remains disabled pending that approval. After rollback, retain the same-policy approval fence and require a fresh authoritative receipt.
+6. Preserve the existing owning contract and cases. Add and trace the approved case inventory to its concrete behaviors, including the boundary, model comparison, replay, profile, identity/anchor, evidence-round, citation, qualification, approval, rollback, and mixed-publication assertions. Keep all 27 historical reports traceable and distinguish measured evidence from planned coverage.
+
+### 19. Definition of Done
+
+- [ ] The executable boundary check proves verifier ports and untrusted responses cannot invoke publication or arbitrary commands.
+- [ ] Independent low-effort Luna and Sol results are recorded; v4 and the Sol supplement remain diagnostic, and v4 is not qualified. The two-pair replay observes its elapsed-time deadline. Token and cost telemetry are optional. A favorable replay is followed by full-review evaluation.
+- [ ] The first evidence profile uses source, resolved dependency, and matching native CI. Probe use has separate opt-in, isolation, and qualification. The original substantive line is retained before identity and anchor freeze; unique causal changed-line selection follows the stated same-block/two-line rule, ambiguity records both locations, and the verifier cannot move the anchor.
+- [ ] Successive typed evidence requests and receipts retain operation, candidate and revision binding. Unavailable decisive evidence is inconclusive with cause and next step. Forged, cross-candidate, and wrong-revision citations fail before finding, resolution, or approval writes.
+- [ ] Every exact profile passes all specified historical, paired false-positive, exact-anchor positive-control, integrity, latency, and unchanged 174-case corpus gates before qualification. A qualifying profile remains disabled until explicit maintainer approval; production remains disabled. Rollback preserves the same-policy approval fence and requires a fresh authoritative receipt.
+- [ ] An intact mixed review publishes confirmed findings while incomplete evidence blocks approval. Existing review ownership, freshness, human dismissal, history, and publication safeguards remain consistent with the retained owner.
+- [ ] The approved case inventory preserves every declared identity and concrete assertion, maps each requirement to cases that exercise it, and maps each case only to exercised requirements. Counts and reciprocal mappings demonstrate structural consistency, not semantic completeness, executed acceptance, or model improvement.
+- [ ] The specification satisfies the required format; internal and cross-document consistency is checked; reciprocal catalog ownership, paths, and evidence agree with the generated view. These are explicit publication outcomes. The selected project’s concrete invocation and prerequisites for specification/catalog validation remain unverified here; a declared command is not evidence of execution or acceptance.
+- [ ] Product acceptance evidence, including model measurements and profile qualification, is recorded separately from deterministic cases and structural validation. No measurement or acceptance result is implied by this SDD delta.
+
+### 20. References and decisions
+
+- This is a bounded amendment to the immutable owning specification `specs/bugbot-analysis-publication-and-autofix.md`; retain its existing contract, cases, and related ownership references.
+- Issue: [#950](https://github.com/vypdev/copilot/issues/950).
+- Decisions: compare GPT-6 Luna and GPT-6.1 Sol independently at low effort; keep v4 and the Sol supplement diagnostic, with v4 unqualified. Apply the operational replay deadline, evidence-profile order, successive typed evidence reads, citation rejection rules, full-review qualification gates, explicit approval fence, rollback receipt requirement, and mixed-review publication behavior.
+- Unresolved implementation evidence: the concrete selected-project invocation and prerequisites for specification/catalog validation were not established by this draft. The required publication outcomes remain as stated in section 19; do not treat a command declaration or structural consistency as executed validation or product acceptance.
+
+## #950 on-demand evidence, anchors and qualification
+
+- Status: Proposed amendment to Bugbot repository evidence verification
+- Issue: [#950](https://github.com/vypdev/copilot/issues/950)
+- Capability: `bugbot-analysis-and-autofix`
+
+### 1. Executive summary
+
+This amendment is authoritative for candidate anchor selection, evidence
+attribution, the optional follow-up in sections 6–8, and EV-07. It replaces the earlier anchor
+preservation shorthand and pilot configuration/qualification assumptions.
+The separate #950 approval receipt contract still governs the consumer.
+
+### 2. Evidence
+
+V4 and the independent Sol source-closure supplement are diagnostic. V4 did
+not qualify. Full review reproduced one historical premise on Luna and none
+on Sol. Neither model retained all positive controls at their exact anchors.
+The Sol supplement supplied known missing code in replay and does not
+establish evidence discovery or qualify a production profile.
+
+### 4. Goals
+
+| Requirement | Behavior |
+|---|---|
+| BBE950-D01 | Admit successive typed evidence reads and require an evidence-bound final verdict. |
+| BBE950-D02 | Normalize the changed location before freezing candidate identity and anchor. |
+| BBE950-D03 | Qualify the exact model, effort, evidence capabilities and limits independently for each profile. |
+| BBE950-D04 | Establish effective-route attribution separately from the provenance of retrieved source. |
+| BBE950-D05 | Provide language-independent pinned Git search and reads, and evaluate the common path on a reserved non-Python pair. |
+
+### 6. Behavior
+
+After required frame or partition aggregation, the application selects an
+anchor on the pinned diff before freezing candidate identity and version. It
+records the original and selected path, side and line, plus the selection
+reason. Preserve a valid substantive original line, a meaningful lone
+punctuation change and a valid deletion-side anchor. For a syntactic separator
+such as Python's `*,`, the same contiguous change block may supply a single
+substantive causal line within two lines. A non-addressable original may use
+one unique eligible causal line in that same block and window. Multiple
+plausible lines make the anchor ambiguous. Keep the original for diagnostics,
+do not emit an inline finding, and return an inconclusive anchor result for
+an otherwise eligible hypothesis. The verifier cannot move a frozen anchor
+or alter a durable finding ID.
+
+Each verifier response is either a final verdict or a typed request for material
+evidence using the closed vocabulary in section 8. The application validates
+each request within the authorized repository and revision. It returns the
+fragment and a receipt bound to the operation, candidate version, source and
+artifact digest. Denials and absent evidence return a safe reason. The verifier
+can follow successive leads and consult official documentation or release
+source for the dependency version established from the reviewed project.
+
+On an explicit provider context-window failure, preserve the original
+hypothesis, anchor, immutable tree, receipt inventory and pending evidence
+leads in the application. Continue in a fresh provider thread from this
+checkpoint. Provide paginated receipt lookup and exact subrange recall so
+the verifier can re-read material sources. Keep already delivered citations
+valid. A fragment offered only in the failed turn is eligible for citation
+after successful delivery. If even the fresh checkpoint fails, report a
+provider failure and preserve the prior verified projection.
+
+A final confirmation or refutation cites supplied evidence for every material
+premise. If decisive evidence remains unavailable, return `inconclusive`
+with its cause and a practical next step. Fabricated, foreign-candidate or
+wrong-revision citations fail integrity before publication. An intact mixed review can publish confirmed
+findings and preserve unresolved history, but cannot authorize clean approval.
+On integrity failure preserve the prior verified projection and make zero
+finding, resolution or approval writes. Native run diagnostics may report failure.
+
+A source receipt proves fragment provenance through its pinned tree, blob,
+path and range. Effective-route attribution additionally needs evidence that
+links the reviewed call and value to the implementation that can execute.
+The application MUST establish each relevant reachable origin at the argument
+evaluation point. A Python annotation, declaration or literal match cannot
+prove the runtime instance. For example, if `wire(store: BetaDatabase)` has
+one caller passing `BetaDatabase()` and another passing a factory whose
+origin is unproved, return `unresolved` and identify the gap. If that factory
+demonstrably returns `AlphaDatabase()` and both routes can reach the candidate,
+return `ambiguous` unless the pinned context establishes the effective route.
+A later assignment cannot supply the earlier argument. If all relevant
+origins converge, the bounded packet may include a representative complete
+chain to the shared implementation. Report the attribution status separately
+from source receipts and identify any gaps or competing routes.
+
+An unresolved auxiliary query can coexist with a final verdict if supplied
+evidence already establishes the decisive premise and the verdict cites that
+evidence. If the missing link or competing origins leave the decisive premise
+unproved, the final verdict MUST be `inconclusive` with a cause and next step.
+An ambiguous or unresolved implementation MUST NOT be represented to the
+verifier as effective.
+
+### 8. Clean Architecture
+
+The application owns normalization, freeze, source authority, retrieval,
+receipt membership, checkpoints and the pre-write validation gate. The verifier
+judges the causal evidence in a closed session. The framed path records successive calls, retries and retrieval on the common ledger. The usage observations are independent of orchestration. The closed verifier cannot
+reach raw Git, commands, credentials, network or any mutation port.
+
+The common source adapter MUST support scoped name and literal search and
+bounded line reads against the pinned Git tree for any language. Without a
+language analyzer, the verifier receives the original packet, matching source
+fragments and their operation-, candidate- and revision-bound receipts, or
+an explicit retrieval status when the reads cannot provide them. It also
+receives any already authorized resolved dependencies and matching native CI
+from the profile. These fragments can establish a chain when they contain
+the relevant wiring, call and implementation. A match alone proves only
+where the text occurs. Static Python tracing is an additional source
+capability under the same source authority and trust boundary.
+
+### 14. Testing strategy
+
+| Area | Minimum distinct cases | Behaviors/risks covered |
+|---|---:|---|
+| Evidence requests | 5 | Direct verdict, useful receipt, denial, missing source, successive reads |
+| Integrity and provider writes | 4 | Forgery, foreign candidate, foreign revision, undelivered receipt |
+| Anchor selection | 3 | Pytest separator, valid original, two plausible lines |
+| Qualification | 1 | Reject a profile with a failed independent gate |
+| Attribution and common source retrieval | 5 | Unknown origin, competing proven origins, unique proven origin, auxiliary query, language-independent read |
+| Total | 18 | Additional deterministic cases separate from model trials |
+
+| Case ID | Area | Requirements | Scenario |
+|---|---|---|---|
+| bbe950-demand-C01 | Evidence requests | BBE950-D01 | Direct verdict bypasses retrieval. |
+| bbe950-demand-C02 | Evidence requests | BBE950-D01 | An allowed request delivers the pinned fragment and candidate-bound receipt cited by the final verdict. |
+| bbe950-demand-C03 | Evidence requests | BBE950-D01 | A denied request cannot read and an unresolved premise remains inconclusive with a next step. |
+| bbe950-demand-C04 | Evidence requests | BBE950-D01 | Missing evidence yields an inconclusive verdict with a next step. |
+| bbe950-demand-C05 | Evidence requests | BBE950-D01 | Successive reads can resolve material evidence without an investigation quota. |
+| bbe950-demand-C06 | Integrity and provider writes | BBE950-D01 | Forged citation fails a mixed batch with zero finding, resolution or approval writes. |
+| bbe950-demand-C07 | Integrity and provider writes | BBE950-D01 | Another candidate's citation fails before any mutation. |
+| bbe950-demand-C08 | Integrity and provider writes | BBE950-D01 | A receipt from another revision fails before any mutation. |
+| bbe950-demand-C09 | Integrity and provider writes | BBE950-D01 | A receipt offered only in a provider-rejected prompt cannot authorize a verdict. |
+| bbe950-demand-C10 | Anchor selection | BBE950-D02 | The pytest separator selects the sole nearby causal declaration and records both positions. |
+| bbe950-demand-C11 | Anchor selection | BBE950-D02 | A substantive eligible line stays fixed even with another nearby addition. |
+| bbe950-demand-C12 | Anchor selection | BBE950-D02 | Two plausible nearby lines produce an inconclusive anchor and no inline effect. |
+| bbe950-demand-C13 | Qualification | BBE950-D03, EV-07 | A passing model cannot qualify another model or bypass explicit maintainer approval. A diagnostic replay cannot authorize activation. |
+| bbe950-demand-C14 | Attribution | BBE950-D04 | A reachable annotated wiring call has an unproved origin beside a direct constructor. The runner reports unresolved with no effective implementation receipt and the undecided premise stays inconclusive. |
+| bbe950-demand-C15 | Attribution | BBE950-D04 | The reachable factory proves a second implementation. Without route selection the runner reports ambiguity with no effective implementation receipt. |
+| bbe950-demand-C16 | Attribution | BBE950-D04 | A unique demonstrated origin resolves at argument evaluation. A later assignment or a provably unreachable alternative cannot change it. |
+| bbe950-demand-C17 | Attribution | BBE950-D04 | An unresolved auxiliary query does not block a verdict supported by decisive receipts. A missing decisive receipt yields an inconclusive verdict with a next step. |
+| bbe950-demand-C18 | Common source retrieval | BBE950-D05 | Scoped Git search and reads deliver pinned non-Python source with valid receipts and no claimed analyzer-derived attribution. |
+
+### 15. Documentation
+
+| Path | Change |
+|---|---|
+| `specs/bugbot-analysis-publication-and-autofix.md` | update |
+| `specs/bugbot-review-state-reconciliation.md` | update |
+| `specs/bugbot-source-bound-framed-review.md` | update |
+| `docs/bugbot/quality-observability.mdx` | update |
+
+### 16. Acceptance
+
+Compare Luna and Sol in dry-run, first with the same frozen candidate and
+initial packet, using the fixed packet, an evidence-free second call and a
+second call with application-retrieved evidence. Require three repetitions of
+each original and mutant per model in the held-out pair. The recovered source
+must establish the material premise, retain the exact mutant anchor and
+preserve refutation of the original. The next diagnostic MUST preregister
+and run at least one reserved original/mutation pair whose decisive code is
+outside Python. Both revisions use the common Git adapter with no language
+analyzer for that pair. Record retrieval, citations, verdicts and exact
+mutant anchoring for both models across all three arms and repetitions.
+The single-follow-up arm is an experimental control. The verification flow
+allows further evidence reads when the candidate needs them.
+This iteration defines the criterion and runs deterministic checks. The
+reserved model comparison is pending. A favorable diagnostic allows
+evaluation in full review. Activation remains disabled.
+
+Each proposed profile must independently pass all qualification gates. Full
+review must reproduce at least three historical baseline alerts across two
+premises, reduce false positives in at least two paired repetitions without
+regression in the third, retain all positive controls at their exact anchors
+and pass integrity, zero-write and latency gates. Keep failed,
+aborted and unmetered cases. The independent unchanged 174-case detection
+corpus must meet its precision, recall, F1, exact location, severity, category
+and calibration floors. A qualifying profile is eligible only after explicit
+maintainer approval. No model inherits another profile's qualification.
+
+### 17. Requirements traceability
+
+| Requirement | Cases |
+|---|---|
+| BBE950-D01 | bbe950-demand-C01, bbe950-demand-C02, bbe950-demand-C03, bbe950-demand-C04, bbe950-demand-C05, bbe950-demand-C06, bbe950-demand-C07, bbe950-demand-C08, bbe950-demand-C09 |
+| BBE950-D02 | bbe950-demand-C10, bbe950-demand-C11, bbe950-demand-C12 |
+| BBE950-D03, EV-07 | bbe950-demand-C13 and independent full-review qualification |
+| BBE950-D04 | bbe950-demand-C14–C17 and [causal replay and simulated runner](../quality/bugbot/evidence/issue-950/causal-replay/origin-results.md). C17 is planned for product verification. |
+| BBE950-D05 | bbe950-demand-C18 and the reserved non-Python diagnostic in section 16. The deterministic common Git check ran and the reserved diagnostic is pending. |
+
+### Usage independence and context continuity acceptance
+
+Run at least eleven simulated cases through the shadow orchestration with
+pinned Git objects and fail-on-call write ports. Three sessions continue from
+inspection to a supported verdict with high, absent and cumulative usage.
+One crosses the historical turn, action and retained-byte cuts and delivers
+the full decisive file. Three context controls cover recovery, undelivered
+citations and a provider that rejects the fresh checkpoint. Four further
+controls cover a foreign receipt, tree mismatch, real cancellation and
+provider error classification. The test evidence is
+[the successor shadow suite](../quality/bugbot/evidence/issue-950/shadow-verification/verification.test.cjs).
+Earlier frozen experiments keep their original protocols and scores.
+
+```text
+Pinned finding -> read and cite -> continue on a material evidence gap -> verdict
+                         |
+                  provider context failure -> preserve receipts -> resume reads
+```
+
+A provider context failure changes the provider thread and preserves the
+application investigation. The verdict still requires a current source binding
+and valid evidence. Usage alone cannot change the review or approval surface.
+A provider safety stop ends the attempt and remains distinct from context
+exhaustion and an inconclusive verdict. The shadow decision still uses the
+original Bugbot findings.
+
+### 20. References and decisions
+
+- [Real-PR shadow audit](../quality/bugbot/evidence/issue-950/shadow-real-prs/results.md)
+  records the cumulative-metering incident and the validated historical outcomes.
+- [V4 protocol](https://github.com/vypdev/copilot/blob/19da0614f/quality/bugbot/evidence/issue-950/v4/preregistration.md)
+- [V4 results](https://github.com/vypdev/copilot/blob/a3f70858b/quality/bugbot/evidence/issue-950/v4/results.md)
+- [Sol source supplement](https://github.com/vypdev/copilot/blob/a3f70858b/quality/bugbot/evidence/issue-950/v4/sol-source-supplement/results.md)
+- The [27-issue matrix](../quality/bugbot/evidence/issue-950/traceability.md) separates executed controls, deterministic replay, simulated delivery and pending model evaluation.
+
+## Bugbot verification integration and rollout for #950
+
+### 1. Executive summary
+
+Bugbot detects candidates, collects applicable project and official evidence,
+independently verifies each candidate, and coordinates the result before any
+publication. This amendment records the current delivery and rollout decisions.
+The existing owner retains the historical cases and earlier pilot evidence.
+
+### 4. Goals
+
+| Requirement | Behavior |
+|---|---|
+| SDD-I950-ROLLOUT-R1 | Bind candidate preparation, evidence, verdict and publication to the same immutable review head and anchor. |
+| SDD-I950-ROLLOUT-R2 | Allow independent investigation under a resolved verifier profile, with a broker that validates project, official and CI evidence. |
+| SDD-I950-ROLLOUT-R3 | Preserve shadow isolation, qualification and approval fences across policy changes and rollback. |
+
+### 6. Functional behavior and state model
+
+A review prepares its candidates before verification. The normal reviewer
+configuration is inherited unless the repository selects a compatible verifier
+profile. Open a fresh session for each candidate and supply its hypothesis,
+anchor and pinned source. Follow the effective implementation, configuration
+and dependency versions. Consult applicable official versioned sources or CI
+when decisive. Use a typed, read-only evidence broker with provenance and
+explicit missing or ambiguous results. The same investigation may refine an
+incomplete citation before closing. Time and token use are telemetry, with
+explicit cancellation and provider failures recorded separately.
+
+Each candidate gets a confirmed, refuted or inconclusive verdict. The closure
+binds material claims to delivered source ranges and preserves the anchor.
+A complete mixed review can publish confirmed findings when enforcement is
+active. An inconclusive review does not authorize a clean approval. An
+integrity failure, cancel or moved head preserves the prior verified result.
+In shadow, record the outcome separately from ordinary publication. The
+default remains disabled. Enforcement requires a qualified exact profile and
+explicit maintainer approval. Approval uses current review and policy evidence;
+a previous receipt cannot authorize a new policy or rollback generation.
+
+### 8. Clean Architecture
+
+Application use cases own sequencing, source identity, verdict completeness,
+publication and approval. Read-only adapters acquire Git, official and CI
+evidence. Provider adapters perform investigation and return bounded structured
+verdicts. GitHub adapters write only through the publication boundary. The
+release decision remains with the maintainer. The source CI and review checks
+remain independent of feature activation.
+
+### 14. Testing strategy
+
+| Area | Minimum distinct cases | Behaviors/risks covered |
+|---|---|---|
+| Source and identity | 2 | Candidate binding and evidence provenance |
+| Investigation and closure | 2 | Profile inheritance and a missing material citation |
+| Rollout and approval | 2 | Shadow isolation and rollback invalidation |
+| Total | 6 | Deterministic coverage separate from the qualification corpus |
+
+| Case ID | Area | Requirements | Scenario |
+|---|---|---|---|
+| bbe950-rollout-C01 | Source and identity | SDD-I950-ROLLOUT-R1 | A new candidate retains its exact reviewed head and anchor through closure. |
+| bbe950-rollout-C02 | Source and identity | SDD-I950-ROLLOUT-R1 | A foreign receipt or moved head prevents verified publication. |
+| bbe950-rollout-C03 | Investigation and closure | SDD-I950-ROLLOUT-R2 | With no override the verifier inherits the effective reviewer profile. |
+| bbe950-rollout-C04 | Investigation and closure | SDD-I950-ROLLOUT-R2 | If a required versioned source or material citation remains unavailable, the result identifies the gap and is inconclusive. |
+| bbe950-rollout-C05 | Rollout and approval | SDD-I950-ROLLOUT-R3 | Shadow verdicts are recorded without changing publication or authorizing clean approval. |
+| bbe950-rollout-C06 | Rollout and approval | SDD-I950-ROLLOUT-R3 | A policy change or rollback requires a valid current receipt even at the same head. |
+
+### 15. Documentation
+
+| Path | Change |
+|---|---|
+| specs/bugbot-analysis-publication-and-autofix.md | update |
+| docs/bugbot/detection.mdx | reference |
+| docs/bugbot/configuration.mdx | reference |
+| docs/bugbot/quality-observability.mdx | reference |
+
+### 16. Acceptance
+
+Validate the source, exact anchor, verdict and policy bindings in the ordinary
+and framed routes. Keep the 27 historical reports traceable and keep recorded
+pilots reproducible. Each profile proposed for enforcement must independently
+satisfy the existing historical reproduction, paired improvement, positive
+control, integrity and latency criteria and the independent 174-case detection
+corpus. Evidence for readiness and authorization for production are distinct.
+
+### 17. Requirements traceability
+
+| Requirement | Cases |
+|---|---|
+| SDD-I950-ROLLOUT-R1 | bbe950-rollout-C01, bbe950-rollout-C02 |
+| SDD-I950-ROLLOUT-R2 | bbe950-rollout-C03, bbe950-rollout-C04 |
+| SDD-I950-ROLLOUT-R3 | bbe950-rollout-C05, bbe950-rollout-C06 |
+
+### 20. References and decisions
+
+The existing Bugbot SDD and its evidence reports document the qualification
+thresholds, supported profiles, approval policy and rollback protocol.
+This revision neither enables production verification nor qualifies a profile.

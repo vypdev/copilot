@@ -1,0 +1,82 @@
+{
+  "T1": {
+    "binding": {
+      "base": "5b7bdcdee3a9e98d6669bfd34ce750ae30a8c775",
+      "head": "3d890522003c2d2e7d03fa1f51b1bd84f0d0f10f",
+      "tree": "d670f43e401a26cf2c488f268e0d8b4910def2cd",
+      "paths": [
+        "backend/src/domus/application/recurrence_review_target.py",
+        "backend/src/domus/infrastructure/sqlite_recurrence.py"
+      ],
+      "diffSha256": "fafa9884f072f97b7a589b95b9d3f6b028e38cde5978ef84cd0f0b8f244f1a9c"
+    },
+    "candidate": {
+      "id": "c-918-1",
+      "path": "backend/src/domus/application/recurrence_review_target.py",
+      "line": 82,
+      "trigger": "Review the original occurrence of a retired fixed schedule that still owns its slot in the supported SQLite-backed application.",
+      "pathToEffect": "The retired schedule can still reach the fixed branch that assembles available actions.",
+      "impact": "The review target advertises state, pattern and exception actions for a retired schedule."
+    },
+    "evidence": [
+      {
+        "kind": "git",
+        "head": "3d890522003c2d2e7d03fa1f51b1bd84f0d0f10f",
+        "path": "backend/src/domus/application/recurrence_review_target.py",
+        "blob": "24b5235c90266a59a361229f91cef7c2a38d0fba",
+        "start": 55,
+        "end": 82,
+        "text": "def review_target(\n    unit: UnitOfWork, scope: MaintenanceScope, human: HumanIdentity, occurrence_id: str\n) -> ReviewTarget:\n    home = scope.household(unit)\n    if home is None:\n        raise Forbidden(\"maintenance_scope_denied\")\n    TaskAccess(human).require(unit, scope.household_id, Permission.TASKS_MANAGE)\n    work = unit.tasks.occurrence(scope.household_id, occurrence_id)\n    if work is None:\n        raise NotFound(\"task_occurrence_missing\")\n    definition_id = work.definition_snapshot.definition_id\n    definition = unit.tasks.definition(scope.household_id, definition_id)\n    if definition is None:\n        raise StorageFailure(\"invalid_recurrence_source\")\n    schedule_id = unit.recurrence.current_schedule_id(scope.household_id, definition_id)\n    fixed_slot = unit.recurrence.fixed_slot_for_occurrence(scope.household_id, occurrence_id)\n    relative_slot = unit.recurrence.relative_slot_for_occurrence(scope.household_id, occurrence_id)\n    slot = fixed_slot or relative_slot\n    common = (occurrence_id, work.revision, definition_id, definition.revision, home.time_zone)\n    if definition.state is not DefinitionState.ACTIVE:\n        return ReviewTarget(*common, None, None, ())\n    if schedule_id is None:\n        return ReviewTarget(*common, None, None, (\"attachment\",) if slot is None else ())\n    slot_key = slot.key if slot is not None and slot.schedule.schedule_id == schedule_id else None\n    fixed = unit.recurrence.schedule(scope.household_id, schedule_id)\n    if fixed is not None:\n        nominal = fixed.pattern.start\n        actions: tuple[ReviewKind, ...] = ("
+      },
+      {
+        "kind": "git",
+        "head": "3d890522003c2d2e7d03fa1f51b1bd84f0d0f10f",
+        "path": "backend/src/domus/application/recurrence_ports.py",
+        "blob": "5eba280e820f6135781792e3c4c6ab47e4a36dab",
+        "start": 52,
+        "end": 68,
+        "text": "    def relative_inbox_after(self, household_id: str) -> int: ...\n    def pending_relative_sources(\n        self, household_id: str, *, limit: int = 100, after: int = 0\n    ) -> tuple[TaskSourceRecord, ...]: ...\n    def relative_sources_pending(self, household_id: str) -> bool: ...\n    def next_relative_source(self, household_id: str, schedule_id: str) -> str | None: ...\n    def has_current_schedule(self, household_id: str, definition_id: str) -> bool: ...\n    def current_schedule_id(self, household_id: str, definition_id: str) -> str | None: ...\n    def fixed_slots_at(\n        self, household_id: str, schedule_id: str, nominal: str\n    ) -> tuple[ScheduledSlot, ...]: ...\n    def has_historical_fixed_exception(\n        self, household_id: str, schedule_id: str, nominal: str\n    ) -> bool: ...\n    def has_fixed_materialization_from(\n        self, household_id: str, schedule_id: str, from_nominal: str\n    ) -> bool: ..."
+      }
+    ]
+  },
+  "T2": {
+    "binding": {
+      "base": "5b7bdcdee3a9e98d6669bfd34ce750ae30a8c775",
+      "head": "8b8ad597b6831cc11dddb7a856a3d972e82acc22",
+      "tree": "10863588cb2a39a9e7760d908c14afd58121e20e",
+      "paths": [
+        "backend/src/domus/application/recurrence_review_target.py",
+        "backend/src/domus/infrastructure/sqlite_recurrence.py"
+      ],
+      "diffSha256": "2292b6dd19d97a152275097c6de77d5404e71cadc51cc7897308c3d1e929b171"
+    },
+    "candidate": {
+      "id": "c-918-2",
+      "path": "backend/src/domus/application/recurrence_review_target.py",
+      "line": 82,
+      "trigger": "Review the original occurrence of a retired fixed schedule that still owns its slot in the supported SQLite-backed application.",
+      "pathToEffect": "The retired schedule can still reach the fixed branch that assembles available actions.",
+      "impact": "The review target advertises state, pattern and exception actions for a retired schedule."
+    },
+    "evidence": [
+      {
+        "kind": "git",
+        "head": "8b8ad597b6831cc11dddb7a856a3d972e82acc22",
+        "path": "backend/src/domus/application/recurrence_review_target.py",
+        "blob": "24b5235c90266a59a361229f91cef7c2a38d0fba",
+        "start": 55,
+        "end": 82,
+        "text": "def review_target(\n    unit: UnitOfWork, scope: MaintenanceScope, human: HumanIdentity, occurrence_id: str\n) -> ReviewTarget:\n    home = scope.household(unit)\n    if home is None:\n        raise Forbidden(\"maintenance_scope_denied\")\n    TaskAccess(human).require(unit, scope.household_id, Permission.TASKS_MANAGE)\n    work = unit.tasks.occurrence(scope.household_id, occurrence_id)\n    if work is None:\n        raise NotFound(\"task_occurrence_missing\")\n    definition_id = work.definition_snapshot.definition_id\n    definition = unit.tasks.definition(scope.household_id, definition_id)\n    if definition is None:\n        raise StorageFailure(\"invalid_recurrence_source\")\n    schedule_id = unit.recurrence.current_schedule_id(scope.household_id, definition_id)\n    fixed_slot = unit.recurrence.fixed_slot_for_occurrence(scope.household_id, occurrence_id)\n    relative_slot = unit.recurrence.relative_slot_for_occurrence(scope.household_id, occurrence_id)\n    slot = fixed_slot or relative_slot\n    common = (occurrence_id, work.revision, definition_id, definition.revision, home.time_zone)\n    if definition.state is not DefinitionState.ACTIVE:\n        return ReviewTarget(*common, None, None, ())\n    if schedule_id is None:\n        return ReviewTarget(*common, None, None, (\"attachment\",) if slot is None else ())\n    slot_key = slot.key if slot is not None and slot.schedule.schedule_id == schedule_id else None\n    fixed = unit.recurrence.schedule(scope.household_id, schedule_id)\n    if fixed is not None:\n        nominal = fixed.pattern.start\n        actions: tuple[ReviewKind, ...] = ("
+      },
+      {
+        "kind": "git",
+        "head": "8b8ad597b6831cc11dddb7a856a3d972e82acc22",
+        "path": "backend/src/domus/application/recurrence_ports.py",
+        "blob": "5eba280e820f6135781792e3c4c6ab47e4a36dab",
+        "start": 52,
+        "end": 68,
+        "text": "    def relative_inbox_after(self, household_id: str) -> int: ...\n    def pending_relative_sources(\n        self, household_id: str, *, limit: int = 100, after: int = 0\n    ) -> tuple[TaskSourceRecord, ...]: ...\n    def relative_sources_pending(self, household_id: str) -> bool: ...\n    def next_relative_source(self, household_id: str, schedule_id: str) -> str | None: ...\n    def has_current_schedule(self, household_id: str, definition_id: str) -> bool: ...\n    def current_schedule_id(self, household_id: str, definition_id: str) -> str | None: ...\n    def fixed_slots_at(\n        self, household_id: str, schedule_id: str, nominal: str\n    ) -> tuple[ScheduledSlot, ...]: ...\n    def has_historical_fixed_exception(\n        self, household_id: str, schedule_id: str, nominal: str\n    ) -> bool: ...\n    def has_fixed_materialization_from(\n        self, household_id: str, schedule_id: str, from_nominal: str\n    ) -> bool: ..."
+      }
+    ]
+  }
+}

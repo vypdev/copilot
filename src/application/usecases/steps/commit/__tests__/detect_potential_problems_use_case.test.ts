@@ -1,3 +1,6 @@
+import type { BugbotVerificationAuthority } from '../../../../../domain/bugbot/verification_receipt';
+import type { BugbotShadowVerificationPort } from '../../../../ports/bugbot_shadow_verification_ports';
+import type { AgentConfiguration } from '../../../../../domain/agent';
 import { PullRequestReviewOperationError } from '../../../../ports/pull_request_review_errors';
 /**
  * Unit tests for DetectPotentialProblemsUseCase (bugbot on push).
@@ -110,8 +113,11 @@ function invokeUseCase(useCase: DetectPotentialProblemsUseCase, source: Executio
 
 describe("DetectPotentialProblemsUseCase", () => {
   let useCase: DetectPotentialProblemsUseCase;
+  let testBaseSha: string | undefined;
+  let createUseCase: (verifier?: BugbotShadowVerificationPort, profile?: AgentConfiguration, authority?: BugbotVerificationAuthority) => DetectPotentialProblemsUseCase;
 
   beforeEach(() => {
+    testBaseSha = undefined;
     providerDraft = false;
     const rulesPort = { loadRules: jest.fn().mockResolvedValue([]) };
     const mockListPullRequestReviewThreadStates = jest.fn().mockResolvedValue({});
@@ -177,7 +183,8 @@ describe("DetectPotentialProblemsUseCase", () => {
         number: pullRequestNumber,
         state: 'open' as const,
         draft: providerDraft,
-        baseRepository: { owner: 'owner', name: 'repo' },
+        baseRepository: { owner: 'owner', name: 'repo', ...(testBaseSha ? { id: 17 } : {}) },
+        ...(testBaseSha ? { baseSha: testBaseSha } : {}),
         headRepositoryOwner: 'owner',
         headRef: 'feature/head',
         headSha: await mockGetPullRequestHeadSha(pullRequestNumber),
@@ -239,7 +246,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       getPullRequestReviewCommentBody: jest.fn().mockResolvedValue(null),
       loadRules: rulesPort.loadRules,
     };
-    useCase = new DetectPotentialProblemsUseCase(
+    createUseCase = (verifier, profile, authority) => new DetectPotentialProblemsUseCase(
       {
         query: (request: {
           configuration: unknown;
@@ -303,7 +310,11 @@ describe("DetectPotentialProblemsUseCase", () => {
       },
       { publish: mockPublishTelemetry },
       { resolve: (request) => mockResolveCatalog(request) },
+      verifier,
+      profile,
+      authority,
     );
+    useCase = createUseCase();
     mockListIssueComments.mockReset();
     mockAddComment.mockReset();
     mockUpdateComment.mockReset();
@@ -377,6 +388,307 @@ describe("DetectPotentialProblemsUseCase", () => {
     expect(mockResolveCatalog).not.toHaveBeenCalled();
     expect(mockAddComment).not.toHaveBeenCalled();
     expect(mockCreateReviewWithComments).not.toHaveBeenCalled();
+  });
+
+  describe('shadow finding lifecycle through the normal review entrypoint', () => {
+    const head = 'a'.repeat(40);
+    const profile: AgentConfiguration = { provider: 'codex', model: 'gpt-6.1-sol', effort: 'xhigh' };
+    const candidate = { id: 'candidate-first', title: 'Incorrect effective value', file: 'src/bar.ts', line: 5,
+      description: 'Detector reasoning must stay separate.', severity: 'high' };
+    const technicalFailure = { status: 'technical-failure', reason: 'fixture-failure' } as const;
+    const pr = (ai?: Ai) => baseParam({ ...(ai ? { ai } : {}), issueNumber: -1, isPullRequest: true, eventName: 'pull_request',
+      inputs: { eventName: 'pull_request', pull_request: {} },
+      pullRequest: { number: 100, head: 'feature/head', action: 'synchronize' } });
+
+    beforeEach(() => {
+      mockGetPullRequestHeadSha.mockResolvedValue(head);
+      mockGetChangedFiles.mockResolvedValue([{ filename: 'src/bar.ts', status: 'modified' }]);
+      mockGetFilesWithFirstDiffLine.mockResolvedValue([{ path: 'src/bar.ts', firstLine: 5 }]);
+      mockGetFilesWithDiffLocations.mockResolvedValue([{ path: 'src/bar.ts', locations: [{ line: 5, side: 'RIGHT' }] }]);
+      mockAskAgent.mockResolvedValue({ findings: [candidate], resolved_findings: [] });
+    });
+
+    const dryRun = (useCase: DetectPotentialProblemsUseCase, param = pr()) => param.ai.withBugbotReviewConfiguration(
+      { publicationMode: 'dry-run' }, () => invokeUseCase(useCase, param),
+    );
+
+    it('inherits the exact resolved detector configuration and carries the pinned hypothesis only', async () => {
+      const verify = jest.fn().mockResolvedValue(technicalFailure);
+      const [result] = await dryRun(createUseCase({ verify }));
+      const detector = mockAskAgent.mock.calls[0][0];
+      expect(verify).toHaveBeenCalledWith({
+        configuration: detector, review: expect.any(Object),
+        candidate: { id: candidate.id, hypothesis: candidate.title, repository: { owner: 'owner', name: 'repo' },
+          pullRequest: 100, headSha: head, allowBase: false, anchor: { path: candidate.file, line: 5, end: 5, side: 'RIGHT' } },
+      });
+      expect(result.payload).toMatchObject({ dryRun: true, bugbotShadowVerification: {
+        resolvedModel: detector.model, verifier: { model: detector.model }, review: { headSha: head },
+        detection: [{ partition: 1, partitionId: expect.any(String), wallMs: expect.any(Number), observed: 1, status: 'completed' }],
+        origins: [{ partition: 1, disposition: 'prepared', candidateId: candidate.id }],
+        candidates: [{ ordinaryPublication: 'individual', status: 'technical-failure' }],
+      } });
+    });
+
+    it('honors the explicitly supplied profile only in dry-run and records a substitution without fallback', async () => {
+      const verify = jest.fn().mockResolvedValue({ ...technicalFailure, reportedModel: 'unexpected-model' });
+      const [result] = await dryRun(createUseCase({ verify }, profile));
+      expect(verify).toHaveBeenCalledTimes(1);
+      expect(verify.mock.calls[0][0].configuration).toBe(profile);
+      expect(mockAskAgent.mock.calls[0][0].model).not.toBe(profile.model);
+      expect(result.payload).toMatchObject({ bugbotShadowVerification: {
+        verifier: { model: profile.model, effort: 'xhigh' },
+        candidates: [{ reason: 'reported-model-mismatch', reportedModel: 'unexpected-model' }],
+      } });
+      expect(mockCreateReviewWithComments).not.toHaveBeenCalled();
+      expect(mockAddComment).not.toHaveBeenCalled();
+      expect(mockUpdateComment).not.toHaveBeenCalled();
+      expect(mockUpdatePullRequestReview).not.toHaveBeenCalled();
+      expect(mockResolvePullRequestReviewThread).not.toHaveBeenCalled();
+    });
+
+    it('uses the inherited profile in native publication and leaves the original draft intact after failure', async () => {
+      await invokeUseCase(useCase, pr());
+      const baseline = mockCreateReviewWithComments.mock.calls[0][5];
+      mockCreateReviewWithComments.mockClear();
+      const verify = jest.fn().mockRejectedValue(new Error('fixture interrupted'));
+      const [result] = await invokeUseCase(createUseCase({ verify }, profile), pr());
+      expect(verify.mock.calls[0][0].configuration.model).toBe(mockAskAgent.mock.calls[0][0].model);
+      expect(mockCreateReviewWithComments.mock.calls[0][5]).toEqual(baseline);
+      expect(result.payload).toMatchObject({ bugbotShadowVerification: {
+        experimentalProfileRejected: true, candidates: [{ reason: 'verifier-unavailable' }],
+      } });
+    });
+
+    const authority = { mode: 'enforced', policyDigest: 'e'.repeat(64), generation: 1,
+      workflowId: 24, sourceAppId: 15368 } as const;
+    const refuted = { status: 'verdict', verdict: 'refuted', reason: 'There is an effective guard.',
+      missing: null, premises: [], citations: [{ kind: 'git', sha: head, receipt: 'first',
+        path: candidate.file, first: 5, last: 5, textSha256: '1'.repeat(64) }] } as const;
+    const confirmed = { ...refuted, verdict: 'confirmed', reason: 'The alternate path bypasses the guard.' } as const;
+
+    it('simulates enforcement after verification and promotes a confirmed overflow finding without writes', async () => {
+      mockGetFilesWithDiffLocations.mockResolvedValue([{ path: 'src/bar.ts', locations: [
+        { line: 5, side: 'RIGHT' }, { line: 6, side: 'RIGHT' }, { line: 7, side: 'RIGHT' },
+      ] }]);
+      mockAskAgent.mockResolvedValue({ findings: [candidate, { ...candidate, id: 'overflow', line: 6, title: 'Separate confirmed premise' },
+        { ...candidate, id: 'unproven', line: 7, title: 'Incomplete premise' }] });
+      const verify = jest.fn().mockResolvedValueOnce(refuted).mockResolvedValueOnce(confirmed).mockResolvedValueOnce({
+        ...refuted, verdict: 'inconclusive', missing: 'The effective runtime was unavailable.',
+      });
+      const param = pr(new Ai('', 'fixture-model', false, [], false, 'low', 1));
+      const [result] = await dryRun(createUseCase({ verify }, undefined, authority), param);
+      expect(result.payload).toMatchObject({ dryRun: true, overflowCount: 2, bugbotShadowVerification: {
+        publicationSimulation: { status: 'incomplete', individual: ['overflow'], overflow: 0,
+          inconclusive: [{ id: 'unproven', missing: 'The effective runtime was unavailable.' }] },
+      } });
+      expect(mockCreateReviewWithComments).not.toHaveBeenCalled();
+      expect(mockAddComment).not.toHaveBeenCalled();
+    });
+
+    it('uses the verified result as the mutation input only under trusted enforcement', async () => {
+      testBaseSha = 'b'.repeat(40);
+      const verify = jest.fn().mockResolvedValue(refuted);
+      const param = pr();
+      param.inputs!.repository = { id: 17 };
+      const [result] = await invokeUseCase(createUseCase({ verify }, undefined, authority), param);
+      expect(result.success).toBe(true);
+      expect(result.payload).toMatchObject({ bugbotVerificationPublication: {
+        repositoryId: 17, pullNumber: 100, headSha: head, baseSha: testBaseSha, publication: 'verified',
+      } });
+      expect(mockCreateReviewWithComments).not.toHaveBeenCalled();
+      expect(result.payload).toMatchObject({ bugbotShadowVerification: { publicationSimulation: { status: 'complete', individual: [] } } });
+    });
+
+    it('preserves findings and the receipt when a ready PR becomes a draft during verification', async () => {
+      testBaseSha = 'b'.repeat(40);
+      const verify = jest.fn(async () => {
+        providerDraft = true;
+        return confirmed;
+      });
+      const param = pr();
+      param.inputs!.repository = { id: 17 };
+      const [result] = await invokeUseCase(createUseCase({ verify }, undefined, authority), param);
+      expect(verify).toHaveBeenCalledTimes(1);
+      expect(result.payload).toMatchObject({ superseded: true, bugbotPublicationBlocked: true });
+      expect(result.payload).not.toHaveProperty('bugbotVerificationPublication');
+      expect(mockCreateReviewWithComments).not.toHaveBeenCalled();
+      expect(mockAddComment).not.toHaveBeenCalled();
+    });
+
+    it.each(['disabled', 'shadow'] as const)('attests the ordinary review under trusted %s rollback', async mode => {
+      testBaseSha = 'b'.repeat(40);
+      const rollback = { ...authority, mode, generation: 2, policyDigest: 'd'.repeat(64) } as const;
+      const verify = jest.fn().mockResolvedValue(technicalFailure);
+      const param = pr();
+      param.inputs!.repository = { id: 17 };
+      mockAskAgent.mockResolvedValue({ findings: [], resolved_findings: [] });
+
+      const [result] = await invokeUseCase(createUseCase(mode === 'shadow' ? { verify } : undefined, undefined, rollback), param);
+
+      expect(result.success).toBe(true);
+      expect(verify).not.toHaveBeenCalled();
+      expect(result.payload).toMatchObject({ bugbotVerificationPublication: {
+        authority: rollback, repositoryId: 17, pullNumber: 100, headSha: head, baseSha: testBaseSha,
+        coverage: 'complete', verification: 'complete', publication: 'verified', outcome: 'complete',
+        findingStates: { open: 0, reopened: 0, verificationRequired: 0, unknown: 0 },
+      } });
+    });
+
+    it('does not use a shadow refutation to attest an unobserved ordinary review', async () => {
+      testBaseSha = 'b'.repeat(40);
+      const rollback = { ...authority, mode: 'shadow', generation: 2 } as const;
+      const param = pr();
+      param.inputs!.repository = { id: 17 };
+      const verify = jest.fn().mockResolvedValue(refuted);
+      const [result] = await invokeUseCase(createUseCase({ verify }, undefined, rollback), param);
+
+      expect(verify).toHaveBeenCalledTimes(1);
+      expect(mockCreateReviewWithComments).toHaveBeenCalledTimes(1);
+      expect(result.payload).toMatchObject({ bugbotShadowVerification: { publicationSimulation: { individual: [] } } });
+      const publication = (result.payload as Record<string, unknown>).bugbotVerificationPublication;
+      // A fixture with no persisted finding must not attest a clean review.
+      expect(publication).toBeUndefined();
+    });
+
+    it('does not mint a rollback receipt or mutate SCM in dry-run', async () => {
+      testBaseSha = 'b'.repeat(40);
+      const rollback = { ...authority, mode: 'disabled', generation: 2 } as const;
+      const param = pr();
+      param.inputs!.repository = { id: 17 };
+      mockAskAgent.mockResolvedValue({ findings: [], resolved_findings: [] });
+      const [result] = await dryRun(createUseCase(undefined, undefined, rollback), param);
+
+      expect(result.payload).toMatchObject({ dryRun: true });
+      expect(result.payload).not.toHaveProperty('bugbotVerificationPublication');
+      expect(mockCreateReviewWithComments).not.toHaveBeenCalled();
+      expect(mockAddComment).not.toHaveBeenCalled();
+      expect(mockUpdateComment).not.toHaveBeenCalled();
+      expect(mockUpdatePullRequestReview).not.toHaveBeenCalled();
+    });
+
+    it('withholds a rollback receipt when the PR base changes at the same head', async () => {
+      testBaseSha = 'b'.repeat(40);
+      const rollback = { ...authority, mode: 'disabled', generation: 2 } as const;
+      const param = pr();
+      param.inputs!.repository = { id: 17 };
+      mockAskAgent.mockImplementation(async () => {
+        testBaseSha = 'c'.repeat(40);
+        return { findings: [], resolved_findings: [] };
+      });
+      const [result] = await invokeUseCase(createUseCase(undefined, undefined, rollback), param);
+
+      expect(result.payload).toMatchObject({ superseded: true });
+      expect(result.payload).not.toHaveProperty('bugbotVerificationPublication');
+      expect(mockAddComment).not.toHaveBeenCalled();
+      expect(mockCreateReviewWithComments).not.toHaveBeenCalled();
+    });
+
+    it('preserves the previous publication when only the PR base changes after verification', async () => {
+      testBaseSha = 'b'.repeat(40);
+      const verify = jest.fn(async () => {
+        testBaseSha = 'c'.repeat(40);
+        return refuted;
+      });
+      const [result] = await invokeUseCase(createUseCase({ verify }, undefined, authority), pr());
+      expect(result.payload).toMatchObject({ superseded: true, bugbotPublicationBlocked: true });
+      expect(mockCreateReviewWithComments).not.toHaveBeenCalled();
+      expect(mockAddComment).not.toHaveBeenCalled();
+    });
+
+    it('preserves the prior presentation when the enforced batch cannot be verified', async () => {
+      const verify = jest.fn().mockResolvedValue(technicalFailure);
+      const [result] = await invokeUseCase(createUseCase({ verify }, undefined, authority), pr());
+      expect(result.success).toBe(false);
+      expect(result.payload).toMatchObject({ bugbotPublicationBlocked: true,
+        bugbotShadowVerification: { publicationSimulation: { status: 'invalid' } } });
+      expect(mockCreateReviewWithComments).not.toHaveBeenCalled();
+      expect(mockAddComment).not.toHaveBeenCalled();
+      expect(mockUpdateComment).not.toHaveBeenCalled();
+    });
+
+    it.each(['fixed', 'obsolete'] as const)('allows a %s historical candidate to read the pinned base from a RIGHT anchor', async resolution => {
+      testBaseSha = 'b'.repeat(40);
+      mockListPullRequestReviewComments.mockResolvedValue([{
+        id: 15, identity: 'PRRC_15', authorLogin: 'bot', path: candidate.file, line: 5,
+        body: `## ${candidate.title}\n\n${markerFor(candidate)}`,
+      }]);
+      mockAskAgent.mockResolvedValue({ findings: [], resolved_findings: [{ id: candidate.id, resolution }] });
+      const verify = jest.fn().mockResolvedValue(refuted);
+
+      await dryRun(createUseCase({ verify }));
+
+      expect(verify).toHaveBeenCalledWith(expect.objectContaining({
+        candidate: expect.objectContaining({
+          hypothesis: expect.stringContaining('is ' + resolution), allowBase: true, baseSha: testBaseSha,
+          anchor: { path: candidate.file, line: 5, end: 5, side: 'RIGHT' },
+        }),
+      }));
+      expect(mockResolvePullRequestReviewThread).not.toHaveBeenCalled();
+      expect(mockUpdatePullRequestReviewComment).not.toHaveBeenCalled();
+    });
+
+    it('requests independent evidence for a proposed historical close and preserves it when unproven', async () => {
+      testBaseSha = 'b'.repeat(40);
+      mockListPullRequestReviewComments.mockResolvedValue([{
+        id: 15, identity: 'PRRC_15', authorLogin: 'bot', path: candidate.file, line: 5,
+        body: `## ${candidate.title}\n\n${markerFor(candidate)}`,
+      }]);
+      mockAskAgent.mockResolvedValue({ findings: [], resolved_findings: [{ id: candidate.id, resolution: 'fixed' }] });
+      const verify = jest.fn().mockResolvedValue({ ...refuted, verdict: 'inconclusive',
+        missing: 'The effective caller was not proven.' });
+      const [result] = await invokeUseCase(createUseCase({ verify }, undefined, authority), pr());
+      expect(verify).toHaveBeenCalledWith(expect.objectContaining({ candidate: expect.objectContaining({
+        hypothesis: expect.stringContaining('is fixed'), anchor: expect.objectContaining({ path: candidate.file, line: 5 }),
+      }) }));
+      expect(result.payload).toMatchObject({ contextCoverage: { status: 'partial' },
+        bugbotShadowVerification: { publicationSimulation: { status: 'incomplete', resolutions: [] } } });
+      expect(mockResolvePullRequestReviewThread).not.toHaveBeenCalled();
+      expect(mockUpdatePullRequestReviewComment).not.toHaveBeenCalled();
+    });
+
+    it('reports zero candidate sessions for a clean dry-run', async () => {
+      mockAskAgent.mockResolvedValue({ findings: [], resolved_findings: [] });
+      const verify = jest.fn();
+      const [result] = await dryRun(createUseCase({ verify }));
+      expect(verify).not.toHaveBeenCalled();
+      expect(result.payload).toMatchObject({ bugbotShadowVerification: {
+        origins: [], candidates: [], timing: { concurrency: 0, workflowWallMs: expect.any(Number) },
+      } });
+    });
+
+    it('joins duplicate origins and observes overflow with one review-local identity', async () => {
+      mockGetFilesWithDiffLocations.mockResolvedValue([{ path: 'src/bar.ts', locations: [{ line: 5, side: 'RIGHT' }, { line: 6, side: 'RIGHT' }] }]);
+      mockAskAgent.mockResolvedValue({ findings: [candidate, { ...candidate, id: 'copy' },
+        { ...candidate, id: 'discarded', title: 'Low confidence', confidence: 0.1 },
+        { ...candidate, id: 'extra', title: 'A separate premise', line: 6 }] });
+      const param = pr(new Ai('', 'fixture-model', false, [], false, 'low', 1));
+      const verify = jest.fn().mockResolvedValue(technicalFailure);
+      const [result] = await dryRun(createUseCase({ verify }), param);
+      expect(verify).toHaveBeenCalledTimes(2);
+      expect(verify.mock.calls[0][0].review).toBe(verify.mock.calls[1][0].review);
+      expect(result.payload).toMatchObject({ bugbotShadowVerification: {
+        origins: [
+          { origin: '1:1', disposition: 'prepared', candidateId: candidate.id },
+          { origin: '1:2', disposition: 'duplicate', candidateId: candidate.id },
+          { origin: '1:3', disposition: 'confidence' },
+          { origin: '1:4', disposition: 'prepared', candidateId: 'extra' },
+        ],
+        candidates: [{ id: candidate.id, ordinaryPublication: 'individual' }, { id: 'extra', ordinaryPublication: 'summary-only' }],
+      } });
+      expect(mockCreateReviewWithComments).not.toHaveBeenCalled();
+    });
+
+    it('marks the diagnostic superseded when the head changes during investigation', async () => {
+      const verify = jest.fn(async () => {
+        mockGetPullRequestHeadSha.mockResolvedValue('b'.repeat(40));
+        return technicalFailure;
+      });
+      const [result] = await dryRun(createUseCase({ verify }));
+      expect(result.payload).toMatchObject({ superseded: true, bugbotShadowVerification: {
+        superseded: true, candidates: [{ id: candidate.id }],
+      } });
+      expect(mockCreateReviewWithComments).not.toHaveBeenCalled();
+    });
   });
 
   it("returns empty results when OpenCode is not configured (no model)", async () => {

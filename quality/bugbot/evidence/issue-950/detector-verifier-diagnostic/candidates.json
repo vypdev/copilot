@@ -1,0 +1,39 @@
+{
+  "freeze": "d16161572bf7cffd49c2a90759b6939cf38d1de0",
+  "candidates": {
+    "N1": {
+      "origin": "seeded",
+      "detectorAnchor": null,
+      "hypothesis": {
+        "trigger": "Drag a navigation item horizontally, release outside the bar, then make a fresh pointer click on Overview.",
+        "effect": "The fresh Overview click emits no selection request.",
+        "anchor": {
+          "path": "packages/core/src/components/navigation-overflow.ts",
+          "side": "RIGHT",
+          "line": 107
+        },
+        "head": "55174696e97a4c8b424c7f57d7da7a61e4b157fd",
+        "base": "d885bccf2c3152c3151471d3efaabd901429d6bd",
+        "regression": false,
+        "id": "c-892-5aeaf4db18c0ba79"
+      }
+    },
+    "N2": {
+      "origin": "seeded",
+      "detectorAnchor": null,
+      "hypothesis": {
+        "trigger": "Drag a navigation item horizontally, release outside the bar, then make a fresh pointer click on Overview.",
+        "effect": "The fresh Overview click emits no selection request.",
+        "anchor": {
+          "path": "packages/core/src/components/navigation-overflow.ts",
+          "side": "RIGHT",
+          "line": 107
+        },
+        "head": "c654e501593ddb01446c6b37873a5b094624dd93",
+        "base": "d885bccf2c3152c3151471d3efaabd901429d6bd",
+        "regression": false,
+        "id": "c-892-02a446bb39060f51"
+      }
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "selection": "Domus #101, a previously evaluated functional test assertion. Use one fresh detector run. Send any prepared candidate to both verifiers with the same read-only evidence capabilities. The evaluator and earlier verdicts stay outside the input.",
+  "publication": "dry-run",
+  "workflowInputs": {
+    "REVIEWER_EFFORT": "xhigh",
+    "BUGBOT_EFFORT": "smart"
+  },
+  "subjects": [
+    {
+      "repository": "vypdev/domus",
+      "number": 101,
+      "head": "d286af50d607eb4216b54a6d3cd057efd2b492cf",
+      "base": "37f468608775f8e20ca5b7dea6aabaf1c36178bf",
+      "tree": "f383d4b824cdbd16e5334399ecc8319f36202715",
+      "baseTree": "81b7419f6bd2b7b8b7a895e331681e7d1bf1a494",
+      "baseRef": "develop",
+      "headRef": "shadow-pinned-101",
+      "model": "gpt-6-luna",
+      "experimentalVerifier": {
+        "model": "gpt-6.1-sol",
+        "effort": "xhigh"
+      },
+      "compareInheritedVerifier": true
+    }
+  ]
+}

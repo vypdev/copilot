@@ -7,6 +7,34 @@ description: Measure Bugbot accuracy, latency, outcomes, feedback, and regressio
 
 Bugbot separates deterministic evaluator checks from optional, cost-bearing model benchmarks. The versioned corpus at `quality/bugbot/corpus.v1.json` contains 174 positive and negative synthetic cases across TypeScript/TSX, Python, Go, SQL, Java, Rust, YAML workflows, shell, Terraform, C#, Kotlin, and Markdown. Ground truth is never included in the model prompt.
 
+## Repository evidence pilot
+
+The #950 pilot measures source-and-native-CI verification without repository
+probes. It freezes paired repository cases, model settings and repeated dry-run
+attempts. Expected verdicts stay with the evaluator. V4 adds four historical
+pairs, logs the verifier deadline and bounded retry separately, and checks the
+causal anchor against the reviewed diff. The two experimental arms share the
+detector response and tool policy. One also receives exact-head source and
+eligible CI evidence. The current arm retains the production review route.
+V4 did not qualify either profile. The separate Sol supplement supplied
+known missing source in replay. It measured whether the extra source supported
+the verdict and left evidence discovery untested.
+
+The on-demand diagnostic freezes the candidate and anchor, then compares a
+fixed packet, a second call with the same evidence, and a second call after a
+typed application read. A held-out original and mutation test whether the
+verifier can identify and cite decisive source at the reviewed revision.
+Local probes establish the evaluator's expected behavior. Each model must
+qualify independently in full review with historical reproduction, exact
+positive controls, intact provenance, bounded latency and usage, and the
+separate 174-case detection corpus. Maintainer approval is required to enable
+a qualified profile.
+
+[Issue and published design](https://github.com/vypdev/copilot/issues/950) ·
+[Expanded pilot and results](https://github.com/vypdev/copilot/blob/develop/quality/bugbot/evidence/issue-950/v4/results.md) ·
+[Sol source supplement](https://github.com/vypdev/copilot/blob/develop/quality/bugbot/evidence/issue-950/v4/sol-source-supplement/results.md) ·
+[On-demand diagnostic](https://github.com/vypdev/copilot/blob/develop/quality/bugbot/evidence/issue-950/on-demand/results.md)
+
 ## JSON value regression
 
 The separate `quality/bugbot/json-value-corpus.v1.json` group has twelve frozen
@@ -326,6 +354,19 @@ reliability claim. Existing exact-source consumer CI and
 read-only source provenance remain separate evidence. All 114 earlier corpus
 inputs/verdicts and quality thresholds remain unchanged.
 
+## Evidence verifier usage
+
+For the #950 shadow verifier, providers may report input and output usage.
+Resumed Codex turns report session totals. Record these as cumulative
+observations and retain absent values as unknown. The verifier continues
+investigating in either case. Usage and cost can inform operator review while
+verdicts and profile qualification depend on the evidence and the declared
+quality, integrity and latency criteria. An actual provider context error
+can start a fresh thread with the same investigation and receipt inventory.
+
+The [real-PR shadow report](https://github.com/vypdev/copilot/blob/335ffe46b352024981f7c1fae409234cb7661e50/quality/bugbot/evidence/issue-950/shadow-real-prs/results.md)
+records the historical metering incident and its offline audit.
+
 ## Python exception syntax evidence
 
 The #831 family contains twelve frozen synthetic inputs: six safe or unknown
@@ -408,6 +449,14 @@ copilot bugbot-eval \
 The evaluator reports precision, recall, F1, exact-location accuracy, severity accuracy, category accuracy, false positives, false negatives, mean line distance, and confidence Brier score. Its default gate requires at least 0.90 precision, 0.85 recall, 0.87 F1, 0.80 exact-location/severity/category accuracy, and at most 0.16 Brier error. Missing or malformed corpus cases fail the gate. The checked-in reference predictions validate the scorer and schema; they are not presented as a real-model score.
 
 ## Runtime telemetry
+
+The live `[bugbot.progress]` events expose the analyzed head, stage and
+validated counts. Frame and partition totals appear after planning, and a
+retried assignment counts once after validation. Phase changes are reported
+immediately. Within a phase, changed counts are coalesced to one update per
+five minutes. Check updates are optional and the workflow run shows native
+cancellation or runner loss. Dry-run records the same observations in logs and
+the Job Summary with zero GitHub writes from this path.
 
 When `bugbot-telemetry` is enabled, each review records only identifiers and
 aggregates: repository/event identity, outcome, stage timings, changed file/line counts, rule count, finding
@@ -775,3 +824,106 @@ limitations, all predictions and the earlier candidate remain in the evidence.
 This is a small controlled observation, not a guarantee or statistically established
 improvement. Explicit LF checkout attributes preserve the probe's measured bytes
 on Windows and other platforms.
+
+## Repository evidence attribution prototype (#950)
+
+The common Git adapter searches and reads bounded fragments from the pinned
+tree, regardless of language. Receipts identify the exact source and review
+operation. A receipt can prove where text came from. Establishing which
+implementation the reviewed call reaches requires separate wiring evidence.
+The experimental Python analyzer follows supported assignment, factory and
+constructor paths at the argument evaluation point. An unproved origin is
+`unresolved`. Competing proved origins are `ambiguous` when the review cannot
+select a route. If either leaves the decisive premise unproved, verification
+is inconclusive. A separate auxiliary gap can coexist with a verdict backed
+by decisive receipts.
+
+The #918 SQLite control, pinned replay and simulated verifier exchanges are
+deterministic evidence. Model evaluation of the corrected prototype and a
+reserved non-Python original/mutation pair remain pending. Each production
+profile requires independent qualification and explicit maintainer approval.
+[Deterministic report](https://github.com/vypdev/copilot/pull/951)
+
+
+## Finding lifecycle in a shadow diagnostic
+
+The normal review entrypoint prepares findings before opening independent
+verifier sessions. The review result includes a `bugbotShadowVerification`
+record when the harness supplies a verifier. Each origin identifies the diff
+partition and position, explains its disposition and links to the prepared
+identity when one was retained. Follow that ID into the candidate's anchor,
+ordinary publication decision, verification verdict or technical failure.
+A finding can be verified even when it would only appear in the summary.
+
+The collector records why each read was requested, its status and the exact
+ranges delivered. A verifier uses a short evidence alias. The diagnostic
+record preserves its canonical receipt, operation, revision and range for
+audit. A delivered official source also records the accredited version and
+the scope in which it was proved. If the version or source is missing for a
+material premise, the verdict can be inconclusive with that specific gap.
+
+The pull request workflow reads `REVIEWER_PROVIDER`,
+`REVIEWER_MODEL_PROVIDER`, `REVIEWER_MODEL` and `REVIEWER_EFFORT` from
+Actions variables. The effective reviewer profile goes to the detector and
+is inherited by the shadow verifier. `BUGBOT_EFFORT` sets review depth.
+A trusted dry-run manifest can supply a separate verifier profile for a
+matched comparison. Both arms use the same candidates and evidence access.
+A reported provider mismatch is a technical failure.
+
+| Review agent | Model selection | Reasoning configuration |
+|---|---|---|
+| Codex | OpenAI model ID | `REVIEWER_EFFORT` passes the model's supported `model_reasoning_effort` value. |
+| OpenCode | Backend such as `anthropic` or `openai` and the selected model ID | `REVIEWER_EFFORT` passes the model's named variant. |
+| Cursor | Cursor catalog model ID | The current adapter selects the model through `--model`. Choose a variant ID if it is listed in the catalog. |
+
+The installed workflows read the following optional Actions variables. Set
+shared defaults at organization level and override them per repository
+when needed. See [GitHub variable precedence](https://docs.github.com/en/actions/reference/workflows-and-actions/variables#configuration-variable-precedence).
+
+| Actions variable | Action input | Use |
+|---|---|---|
+| `BUGBOT_VERIFICATION_MODE` | `bugbot-verification-mode` | Defaults to `disabled`. Set `shadow` for diagnostics. Use the exact value without surrounding whitespace. Shadow observations do not change which findings publish or whether the PR is approved. |
+| `BUGBOT_VERIFIER_PROVIDER` | `bugbot-verifier-provider` | Optional agent: `codex`, `opencode` or `cursor`. Use the provider name without surrounding whitespace. |
+| `BUGBOT_VERIFIER_MODEL_PROVIDER` | `bugbot-verifier-model-provider` | Optional backend: for example, `openai` for Codex or `anthropic` for OpenCode. |
+| `BUGBOT_VERIFIER_MODEL` | `bugbot-verifier-model` | Optional model ID. Required when changing agent or backend. |
+| `BUGBOT_VERIFIER_EFFORT` | `bugbot-verifier-effort` | Optional provider-native setting. On the same backend it inherits the effective reviewer effort when omitted and supported. |
+
+For example, a Codex review at `REVIEWER_EFFORT=xhigh` can test a
+different verifier model by setting only `BUGBOT_VERIFIER_MODEL`. To use
+Claude models, select `BUGBOT_VERIFIER_PROVIDER=opencode` and
+`BUGBOT_VERIFIER_MODEL_PROVIDER=anthropic`, then use a model and, optionally,
+a reasoning variant listed by that OpenCode runtime. A future runtime
+task will add the independent `claude-code` agent with an `anthropic`
+model provider.
+[Native runtime specification](https://github.com/vypdev/copilot/blob/master/specs/agent-runtime-provider-and-model-routing.md#native-claude-code-runtime)
+
+For Cursor, choose the model or variant in `BUGBOT_VERIFIER_MODEL` and
+leave the separate effort empty. Both selected profiles must satisfy
+`AGENT_ALLOWED_MODEL_PROVIDERS` and `AGENT_ALLOWED_MODELS` if configured.
+The setup workflow templates carry the same bindings.
+
+For a no-write pilot, also set `BUGBOT_DRY_RUN=true` in an isolated
+evaluation workflow. The Action reports counts and profile identities in
+`bugbot-shadow-summary` and counts in the Job Summary. The verifier can
+request official sources and read the full pinned repository tree. An initial
+excerpt shows the anchored code with a citable receipt when available.
+For SQLite, the installed broker checks the tracked Python pin against the
+host interpreter and measures its linked SQLite version and source ID.
+A matching release source can be returned in the same request. The receipt
+describes the local measurement. The SQLite version linked by historical CI
+needs separate evidence. An incomplete official release download is unavailable
+and can be retried. A search reports no match only after every registered source
+for the accredited release is authenticated. When verifying a proposed
+historical close, the session may also read the pinned base to compare the
+previous behavior. A material version or source gap produces an
+inconclusive verdict with the missing fact. [Official evidence contract](https://github.com/vypdev/copilot/blob/master/specs/bugbot-analysis-publication-and-autofix.md#official-evidence-in-the-installed-review)
+
+For example, a review can report one individual finding and one summary-only
+finding, with one confirmed and one inconclusive shadow outcome. Inspect the
+inconclusive candidate's missing fact and delivered receipts before deciding
+whether to rerun the experiment. Review wall time, detection and preparation
+time, and verification wall time appear separately. Each candidate records
+turn durations, repairs and optional usage. Usage has no effect on acceptance.
+A superseded result is explicitly marked and its citations stay attached to
+the earlier revision. The evaluated PR receives no mutations in dry-run.
+See the [lifecycle SDD](https://github.com/vypdev/copilot/blob/master/specs/bugbot-analysis-publication-and-autofix.md#finding-lifecycle-and-experimental-profiles).

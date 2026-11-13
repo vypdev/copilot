@@ -1,0 +1,2649 @@
+{
+  "reference": "98654c7f8a3bd527445998fd322f07917ab4c4b4",
+  "modelCalls": 0,
+  "newControls": 4,
+  "decisiveRecovered": 4,
+  "decisiveDelivered": 4,
+  "writeAttempts": 0,
+  "evidence": {
+    "original": {
+      "initial": {
+        "packetSha256": "63571d434f39250fe76c80657d399fb38a4d0ea3f395d3c85c3b42adb397515e",
+        "packetBytes": 11453,
+        "promptSha256": "ea603ecfc0abdcca01afc45b68fc55544611eba385d264af2cac3476faadf45b",
+        "promptBytes": 13472,
+        "schemaSha256": "5604c6db6824cc7218418634ec5a9d213a0bf8a611c3f57656e482d855082a94",
+        "aliases": {
+          "E1": "r-990cbf7c3826b8923fbc5a40",
+          "E2": "r-e84cbaadaeecb7bde819c59f",
+          "E3": "r-879a406139e50f4e360f7559",
+          "E4": "r-e56521db29c8b10f07f4a31f",
+          "E5": "r-5e4e6a44985bf9924502fdd0",
+          "E6": "r-0feb7b06e3c137546bf35552",
+          "E7": "r-3330ca744d369bc323bde576",
+          "E8": "r-73e4ddfc94494317c97ae3db",
+          "E9": "r-62e83cbd336df8ae0768daf3",
+          "E10": "r-1df15e7738e14f0aea36ffc7",
+          "E11": "r-03c7e5f2ea49e653b66096d8",
+          "E12": "r-566aac65530b2261eaa61554",
+          "E13": "r-e143f2ad6ef6c072a4096aa3"
+        }
+      },
+      "positive": {
+        "pathPattern": {
+          "original": {
+            "kind": "searchTree",
+            "revision": "head",
+            "targets": [
+              {
+                "scope": ".",
+                "workspace": null,
+                "match": "pathPattern",
+                "query": "*vitest*",
+                "start": null,
+                "end": null
+              }
+            ]
+          },
+          "normalized": {
+            "kind": "searchTree",
+            "revision": "head",
+            "targets": [
+              {
+                "scope": "",
+                "workspace": null,
+                "match": "pathPattern",
+                "query": "*vitest*",
+                "start": null,
+                "end": null
+              }
+            ]
+          },
+          "admission": {
+            "status": "admitted"
+          },
+          "git": {
+            "status": "provided",
+            "results": [
+              {
+                "status": "provided",
+                "path": "vitest.config.ts",
+                "receiptIds": [
+                  "r-6aa082185912b08a70ef235f"
+                ],
+                "filteredPaths": 1
+              }
+            ],
+            "budget": {
+              "gitCalls": 4,
+              "treeEntries": 660,
+              "openedFiles": 1,
+              "sourceBytes": 2064,
+              "matches": 1,
+              "evidenceBytes": 2507
+            },
+            "usage": {
+              "treeEntries": 660,
+              "openedFiles": 1,
+              "matches": 1,
+              "evidenceBytes": 2507,
+              "sourceBytes": 2064,
+              "receipts": 1,
+              "accounted": true
+            },
+            "receipts": [
+              {
+                "kind": "git",
+                "path": "vitest.config.ts",
+                "blob": "2230eaa266f78975388e86fb5f26c8c7fa5c60ba",
+                "start": 1,
+                "end": 15,
+                "operation": "0811eb2dd545807314679ccf035ad988ce014a212c8a22f36cbeda7af6e4ff44",
+                "candidate": "c-895",
+                "head": "fc143a7fce3e6d50647804f29b0ed0af27fa0e32",
+                "tree": "3a4ecbb323d09ad19c888508f0542451bf197093",
+                "artifact": "ba4192a4ed5ba6eeeeca6f2dc156173fea392be83a77b357f9f5acd748c4a653",
+                "id": "r-6aa082185912b08a70ef235f",
+                "bytes": 2063
+              }
+            ]
+          },
+          "delivery": {
+            "status": "delivered",
+            "packetSha256": "2ce152cf45006988ff249bb138681563c0613954fb6e2b28e07a6c4501310dcb",
+            "packetBytes": 13766,
+            "promptSha256": "81198215385672b0365646994b342eaf73f430205a15c92f6ca0c1b0877380eb",
+            "promptBytes": 14595,
+            "schemaSha256": "1d872333ef5e2f1be30d68df0cdb443f0021212202fe93647fb928c41f47383f",
+            "aliases": {
+              "E1": "r-990cbf7c3826b8923fbc5a40",
+              "E2": "r-e84cbaadaeecb7bde819c59f",
+              "E3": "r-879a406139e50f4e360f7559",
+              "E4": "r-e56521db29c8b10f07f4a31f",
+              "E5": "r-5e4e6a44985bf9924502fdd0",
+              "E6": "r-0feb7b06e3c137546bf35552",
+              "E7": "r-3330ca744d369bc323bde576",
+              "E8": "r-73e4ddfc94494317c97ae3db",
+              "E9": "r-62e83cbd336df8ae0768daf3",
+              "E10": "r-1df15e7738e14f0aea36ffc7",
+              "E11": "r-03c7e5f2ea49e653b66096d8",
+              "E12": "r-566aac65530b2261eaa61554",
+              "E13": "r-e143f2ad6ef6c072a4096aa3",
+              "E14": "r-6aa082185912b08a70ef235f"
+            },
+            "citedReceiptIds": [
+              "r-990cbf7c3826b8923fbc5a40",
+              "r-e84cbaadaeecb7bde819c59f",
+              "r-879a406139e50f4e360f7559",
+              "r-e56521db29c8b10f07f4a31f",
+              "r-5e4e6a44985bf9924502fdd0",
+              "r-0feb7b06e3c137546bf35552",
+              "r-3330ca744d369bc323bde576",
+              "r-73e4ddfc94494317c97ae3db",
+              "r-62e83cbd336df8ae0768daf3",
+              "r-1df15e7738e14f0aea36ffc7",
+              "r-03c7e5f2ea49e653b66096d8",
+              "r-566aac65530b2261eaa61554",
+              "r-e143f2ad6ef6c072a4096aa3",
+              "r-6aa082185912b08a70ef235f"
+            ]
+          },
+          "writeAttempts": [],
+          "schemaAccepted": true,
+          "simulatedTurns": 2,
+          "decisive": {
+            "recovered": true,
+            "delivered": true
+          }
+        },
+        "filteredLiteral": {
+          "original": {
+            "kind": "searchTree",
+            "revision": "head",
+            "targets": [
+              {
+                "scope": ".",
+                "workspace": null,
+                "match": "literal",
+                "query": {
+                  "text": "storybookTest(",
+                  "pathPattern": "*vitest*"
+                },
+                "start": null,
+                "end": null
+              }
+            ]
+          },
+          "normalized": {
+            "kind": "searchTree",
+            "revision": "head",
+            "targets": [
+              {
+                "scope": "",
+                "workspace": null,
+                "match": "literal",
+                "query": {
+                  "text": "storybookTest(",
+                  "pathPattern": "*vitest*"
+                },
+                "start": null,
+                "end": null
+              }
+            ]
+          },
+          "admission": {
+            "status": "admitted"
+          },
+          "git": {
+            "status": "provided",
+            "results": [
+              {
+                "status": "provided",
+                "path": "vitest.config.ts",
+                "receiptIds": [
+                  "r-6aa082185912b08a70ef235f"
+                ],
+                "filteredPaths": 1
+              }
+            ],
+            "budget": {
+              "gitCalls": 4,
+              "treeEntries": 660,
+              "openedFiles": 1,
+              "sourceBytes": 2064,
+              "matches": 1,
+              "evidenceBytes": 2507
+            },
+            "usage": {
+              "treeEntries": 660,
+              "openedFiles": 1,
+              "matches": 1,
+              "evidenceBytes": 2507,
+              "sourceBytes": 2064,
+              "receipts": 1,
+              "accounted": true
+            },
+            "receipts": [
+              {
+                "kind": "git",
+                "path": "vitest.config.ts",
+                "blob": "2230eaa266f78975388e86fb5f26c8c7fa5c60ba",
+                "start": 1,
+                "end": 15,
+                "operation": "0811eb2dd545807314679ccf035ad988ce014a212c8a22f36cbeda7af6e4ff44",
+                "candidate": "c-895",
+                "head": "fc143a7fce3e6d50647804f29b0ed0af27fa0e32",
+                "tree": "3a4ecbb323d09ad19c888508f0542451bf197093",
+                "artifact": "ba4192a4ed5ba6eeeeca6f2dc156173fea392be83a77b357f9f5acd748c4a653",
+                "id": "r-6aa082185912b08a70ef235f",
+                "bytes": 2063
+              }
+            ]
+          },
+          "delivery": {
+            "status": "delivered",
+            "packetSha256": "2ce152cf45006988ff249bb138681563c0613954fb6e2b28e07a6c4501310dcb",
+            "packetBytes": 13766,
+            "promptSha256": "81198215385672b0365646994b342eaf73f430205a15c92f6ca0c1b0877380eb",
+            "promptBytes": 14595,
+            "schemaSha256": "1d872333ef5e2f1be30d68df0cdb443f0021212202fe93647fb928c41f47383f",
+            "aliases": {
+              "E1": "r-990cbf7c3826b8923fbc5a40",
+              "E2": "r-e84cbaadaeecb7bde819c59f",
+              "E3": "r-879a406139e50f4e360f7559",
+              "E4": "r-e56521db29c8b10f07f4a31f",
+              "E5": "r-5e4e6a44985bf9924502fdd0",
+              "E6": "r-0feb7b06e3c137546bf35552",
+              "E7": "r-3330ca744d369bc323bde576",
+              "E8": "r-73e4ddfc94494317c97ae3db",
+              "E9": "r-62e83cbd336df8ae0768daf3",
+              "E10": "r-1df15e7738e14f0aea36ffc7",
+              "E11": "r-03c7e5f2ea49e653b66096d8",
+              "E12": "r-566aac65530b2261eaa61554",
+              "E13": "r-e143f2ad6ef6c072a4096aa3",
+              "E14": "r-6aa082185912b08a70ef235f"
+            },
+            "citedReceiptIds": [
+              "r-990cbf7c3826b8923fbc5a40",
+              "r-e84cbaadaeecb7bde819c59f",
+              "r-879a406139e50f4e360f7559",
+              "r-e56521db29c8b10f07f4a31f",
+              "r-5e4e6a44985bf9924502fdd0",
+              "r-0feb7b06e3c137546bf35552",
+              "r-3330ca744d369bc323bde576",
+              "r-73e4ddfc94494317c97ae3db",
+              "r-62e83cbd336df8ae0768daf3",
+              "r-1df15e7738e14f0aea36ffc7",
+              "r-03c7e5f2ea49e653b66096d8",
+              "r-566aac65530b2261eaa61554",
+              "r-e143f2ad6ef6c072a4096aa3",
+              "r-6aa082185912b08a70ef235f"
+            ]
+          },
+          "writeAttempts": [],
+          "schemaAccepted": true,
+          "simulatedTurns": 2,
+          "decisive": {
+            "recovered": true,
+            "delivered": true
+          }
+        }
+      },
+      "separateControls": {
+        "empty": {
+          "original": {
+            "kind": "searchTree",
+            "revision": "head",
+            "targets": [
+              {
+                "scope": ".",
+                "workspace": null,
+                "match": "pathPattern",
+                "query": "*no-matching-895-path*",
+                "start": null,
+                "end": null
+              }
+            ]
+          },
+          "admission": {
+            "status": "admitted"
+          },
+          "git": {
+            "status": "absent",
+            "results": [
+              {
+                "status": "absent",
+                "reason": "path-absent",
+                "filteredPaths": 0
+              }
+            ],
+            "usage": {
+              "treeEntries": 660,
+              "openedFiles": 0,
+              "matches": 0,
+              "evidenceBytes": 0,
+              "sourceBytes": 0,
+              "receipts": 0,
+              "accounted": true
+            }
+          }
+        },
+        "escapedScope": {
+          "original": {
+            "kind": "searchTree",
+            "revision": "head",
+            "targets": [
+              {
+                "scope": "../",
+                "workspace": null,
+                "match": "pathPattern",
+                "query": "*vitest*",
+                "start": null,
+                "end": null
+              }
+            ]
+          },
+          "admission": {
+            "status": "denied",
+            "reason": "scope-denied"
+          },
+          "git": null
+        },
+        "noRoot": {
+          "original": {
+            "kind": "searchTree",
+            "revision": "head",
+            "targets": [
+              {
+                "scope": ".",
+                "workspace": null,
+                "match": "pathPattern",
+                "query": "*vitest*",
+                "start": null,
+                "end": null
+              }
+            ]
+          },
+          "admission": {
+            "status": "denied",
+            "reason": "scope-denied"
+          },
+          "git": null
+        },
+        "restricted": {
+          "original": {
+            "kind": "searchTree",
+            "revision": "head",
+            "targets": [
+              {
+                "scope": "tooling",
+                "workspace": null,
+                "match": "pathPattern",
+                "query": "*vitest*",
+                "start": null,
+                "end": null
+              }
+            ]
+          },
+          "admission": {
+            "status": "admitted"
+          },
+          "git": {
+            "status": "absent",
+            "results": [
+              {
+                "status": "absent",
+                "reason": "path-absent",
+                "filteredPaths": 0
+              }
+            ],
+            "usage": {
+              "treeEntries": 1,
+              "openedFiles": 0,
+              "matches": 0,
+              "evidenceBytes": 0,
+              "sourceBytes": 0,
+              "receipts": 0,
+              "accounted": true
+            }
+          }
+        },
+        "inside": {
+          "original": {
+            "kind": "searchTree",
+            "revision": "head",
+            "targets": [
+              {
+                "scope": "tooling",
+                "workspace": null,
+                "match": "pathPattern",
+                "query": "coverage.mj?",
+                "start": null,
+                "end": null
+              }
+            ]
+          },
+          "admission": {
+            "status": "admitted"
+          },
+          "git": {
+            "status": "provided",
+            "results": [
+              {
+                "status": "provided",
+                "path": "tooling/coverage.mjs",
+                "receiptIds": [
+                  "r-571184704d89ad161aef6b83"
+                ],
+                "filteredPaths": 1
+              }
+            ],
+            "usage": {
+              "treeEntries": 1,
+              "openedFiles": 1,
+              "matches": 1,
+              "evidenceBytes": 2759,
+              "sourceBytes": 2243,
+              "receipts": 1,
+              "accounted": true
+            }
+          }
+        },
+        "outside": {
+          "original": {
+            "kind": "searchTree",
+            "revision": "head",
+            "targets": [
+              {
+                "scope": "tooling",
+                "workspace": null,
+                "match": "pathPattern",
+                "query": "../*vitest*",
+                "start": null,
+                "end": null
+              }
+            ]
+          },
+          "admission": {
+            "status": "denied",
+            "reason": "path-pattern-denied"
+          },
+          "git": null
+        },
+        "bytes": {
+          "original": {
+            "kind": "searchTree",
+            "revision": "head",
+            "targets": [
+              {
+                "scope": ".",
+                "workspace": null,
+                "match": "pathPattern",
+                "query": "ééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+                "start": null,
+                "end": null
+              }
+            ]
+          },
+          "admission": {
+            "status": "budget",
+            "reason": "path-pattern-byte-budget"
+          },
+          "git": null
+        },
+        "ambiguous": {
+          "original": {
+            "kind": "searchTree",
+            "revision": "head",
+            "targets": [
+              {
+                "scope": ".",
+                "workspace": null,
+                "match": "pathPattern",
+                "query": "*",
+                "start": null,
+                "end": null
+              }
+            ]
+          },
+          "admission": {
+            "status": "admitted"
+          },
+          "git": {
+            "status": "ambiguous",
+            "results": [
+              {
+                "status": "ambiguous",
+                "reason": "multiple-files",
+                "paths": [
+                  ".gitignore",
+                  ".node-version",
+                  ".npmrc",
+                  "AGENTS.md",
+                  "LICENSE",
+                  "README.md",
+                  "package.json",
+                  "pnpm-lock.yaml",
+                  "pnpm-workspace.yaml",
+                  "tsconfig.consumers.json",
+                  "tsconfig.json",
+                  "tsconfig.storybook.json",
+                  "tsconfig.svelte-source.json",
+                  "tsconfig.svelte-tests.json",
+                  "vitest.config.ts"
+                ],
+                "filteredPaths": 15
+              }
+            ],
+            "usage": {
+              "treeEntries": 660,
+              "openedFiles": 0,
+              "matches": 15,
+              "evidenceBytes": 0,
+              "sourceBytes": 0,
+              "receipts": 0,
+              "accounted": true
+            }
+          }
+        },
+        "mixed": {
+          "original": {
+            "kind": "searchTree",
+            "revision": "head",
+            "targets": [
+              {
+                "scope": ".",
+                "workspace": null,
+                "match": "pathPattern",
+                "query": "*vitest*",
+                "start": null,
+                "end": null
+              },
+              {
+                "scope": ".",
+                "workspace": null,
+                "match": "literal",
+                "query": {
+                  "text": "storybookTest(",
+                  "pathPattern": "*/*/*"
+                },
+                "start": null,
+                "end": null
+              }
+            ]
+          },
+          "admission": {
+            "status": "admitted"
+          },
+          "git": {
+            "status": "partial",
+            "results": [
+              {
+                "status": "provided",
+                "path": "vitest.config.ts",
+                "receiptIds": [
+                  "r-6aa082185912b08a70ef235f"
+                ],
+                "filteredPaths": 1
+              },
+              {
+                "status": "budget",
+                "reason": "search-file-budget",
+                "filteredPaths": 123
+              }
+            ],
+            "usage": {
+              "treeEntries": 660,
+              "openedFiles": 1,
+              "matches": 1,
+              "evidenceBytes": 2507,
+              "sourceBytes": 2064,
+              "receipts": 1,
+              "accounted": true
+            }
+          }
+        },
+        "exact": {
+          "original": {
+            "kind": "searchTree",
+            "revision": "head",
+            "targets": [
+              {
+                "scope": ".",
+                "workspace": null,
+                "match": "name",
+                "query": "vitest.config.ts",
+                "start": null,
+                "end": null
+              }
+            ]
+          },
+          "admission": {
+            "status": "admitted"
+          },
+          "git": {
+            "status": "provided",
+            "results": [
+              {
+                "status": "provided",
+                "path": "vitest.config.ts",
+                "receiptIds": [
+                  "r-6aa082185912b08a70ef235f"
+                ]
+              }
+            ],
+            "usage": {
+              "treeEntries": 660,
+              "openedFiles": 1,
+              "matches": 1,
+              "evidenceBytes": 2507,
+              "sourceBytes": 2064,
+              "receipts": 1,
+              "accounted": true
+            }
+          }
+        },
+        "wildcardName": {
+          "original": {
+            "kind": "searchTree",
+            "revision": "head",
+            "targets": [
+              {
+                "scope": ".",
+                "workspace": null,
+                "match": "name",
+                "query": "*vitest*",
+                "start": null,
+                "end": null
+              }
+            ]
+          },
+          "admission": {
+            "status": "admitted"
+          },
+          "git": {
+            "status": "absent",
+            "results": [
+              {
+                "status": "absent",
+                "reason": "path-absent"
+              }
+            ],
+            "usage": {
+              "treeEntries": 660,
+              "openedFiles": 0,
+              "matches": 0,
+              "evidenceBytes": 0,
+              "sourceBytes": 0,
+              "receipts": 0,
+              "accounted": true
+            }
+          }
+        },
+        "truncated": {
+          "status": "budget",
+          "results": [
+            {
+              "status": "budget",
+              "reason": "tree-entry-budget"
+            }
+          ],
+          "receipts": [],
+          "budget": {
+            "gitCalls": 2,
+            "treeEntries": 1,
+            "openedFiles": 0,
+            "sourceBytes": 0,
+            "matches": 0,
+            "evidenceBytes": 0
+          }
+        },
+        "matches": {
+          "status": "budget",
+          "results": [
+            {
+              "status": "budget",
+              "reason": "match-budget",
+              "filteredPaths": 15
+            }
+          ],
+          "receipts": [],
+          "budget": {
+            "gitCalls": 2,
+            "treeEntries": 660,
+            "openedFiles": 0,
+            "sourceBytes": 0,
+            "matches": 1,
+            "evidenceBytes": 0
+          }
+        },
+        "deadline": {
+          "status": "expired",
+          "reason": "source-deadline"
+        },
+        "budgetCases": [
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "pathPattern",
+                  "query": "*/*/*",
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "admitted"
+            },
+            "git": {
+              "status": "budget",
+              "results": [
+                {
+                  "status": "budget",
+                  "reason": "search-file-budget",
+                  "filteredPaths": 123
+                }
+              ],
+              "usage": {
+                "treeEntries": 660,
+                "openedFiles": 0,
+                "matches": 0,
+                "evidenceBytes": 0,
+                "sourceBytes": 0,
+                "receipts": 0,
+                "accounted": true
+              }
+            }
+          },
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "literal",
+                  "query": {
+                    "text": "storybookTest(",
+                    "pathPattern": "*/*/*"
+                  },
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "admitted"
+            },
+            "git": {
+              "status": "budget",
+              "results": [
+                {
+                  "status": "budget",
+                  "reason": "search-file-budget",
+                  "filteredPaths": 123
+                }
+              ],
+              "usage": {
+                "treeEntries": 660,
+                "openedFiles": 0,
+                "matches": 0,
+                "evidenceBytes": 0,
+                "sourceBytes": 0,
+                "receipts": 0,
+                "accounted": true
+              }
+            }
+          }
+        ],
+        "deniedPatterns": [
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "pathPattern",
+                  "query": "../*vitest*",
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "denied",
+              "reason": "path-pattern-denied"
+            },
+            "git": null
+          },
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "literal",
+                  "query": {
+                    "text": "storybookTest(",
+                    "pathPattern": "../*vitest*"
+                  },
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "denied",
+              "reason": "path-pattern-denied"
+            },
+            "git": null
+          },
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "pathPattern",
+                  "query": "tooling/../*vitest*",
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "denied",
+              "reason": "path-pattern-denied"
+            },
+            "git": null
+          },
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "literal",
+                  "query": {
+                    "text": "storybookTest(",
+                    "pathPattern": "tooling/../*vitest*"
+                  },
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "denied",
+              "reason": "path-pattern-denied"
+            },
+            "git": null
+          },
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "pathPattern",
+                  "query": "/tmp/*vitest*",
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "denied",
+              "reason": "path-pattern-denied"
+            },
+            "git": null
+          },
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "literal",
+                  "query": {
+                    "text": "storybookTest(",
+                    "pathPattern": "/tmp/*vitest*"
+                  },
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "denied",
+              "reason": "path-pattern-denied"
+            },
+            "git": null
+          },
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "pathPattern",
+                  "query": "C:/tmp/*vitest*",
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "denied",
+              "reason": "path-pattern-denied"
+            },
+            "git": null
+          },
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "literal",
+                  "query": {
+                    "text": "storybookTest(",
+                    "pathPattern": "C:/tmp/*vitest*"
+                  },
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "denied",
+              "reason": "path-pattern-denied"
+            },
+            "git": null
+          },
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "pathPattern",
+                  "query": ".git/*",
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "denied",
+              "reason": "path-pattern-denied"
+            },
+            "git": null
+          },
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "literal",
+                  "query": {
+                    "text": "storybookTest(",
+                    "pathPattern": ".git/*"
+                  },
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "denied",
+              "reason": "path-pattern-denied"
+            },
+            "git": null
+          },
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "pathPattern",
+                  "query": "tooling/.GiT/*",
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "denied",
+              "reason": "path-pattern-denied"
+            },
+            "git": null
+          },
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "literal",
+                  "query": {
+                    "text": "storybookTest(",
+                    "pathPattern": "tooling/.GiT/*"
+                  },
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "denied",
+              "reason": "path-pattern-denied"
+            },
+            "git": null
+          },
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "pathPattern",
+                  "query": "tooling\\*",
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "denied",
+              "reason": "path-pattern-denied"
+            },
+            "git": null
+          },
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "literal",
+                  "query": {
+                    "text": "storybookTest(",
+                    "pathPattern": "tooling\\*"
+                  },
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "denied",
+              "reason": "path-pattern-denied"
+            },
+            "git": null
+          },
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "pathPattern",
+                  "query": "./*",
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "denied",
+              "reason": "path-pattern-denied"
+            },
+            "git": null
+          },
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "literal",
+                  "query": {
+                    "text": "storybookTest(",
+                    "pathPattern": "./*"
+                  },
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "denied",
+              "reason": "path-pattern-denied"
+            },
+            "git": null
+          },
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "pathPattern",
+                  "query": "**/*",
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "denied",
+              "reason": "path-pattern-denied"
+            },
+            "git": null
+          },
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "literal",
+                  "query": {
+                    "text": "storybookTest(",
+                    "pathPattern": "**/*"
+                  },
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "denied",
+              "reason": "path-pattern-denied"
+            },
+            "git": null
+          },
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "pathPattern",
+                  "query": "tooling//*.mjs",
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "denied",
+              "reason": "path-pattern-denied"
+            },
+            "git": null
+          },
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "literal",
+                  "query": {
+                    "text": "storybookTest(",
+                    "pathPattern": "tooling//*.mjs"
+                  },
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "denied",
+              "reason": "path-pattern-denied"
+            },
+            "git": null
+          }
+        ]
+      }
+    },
+    "mutant": {
+      "initial": {
+        "packetSha256": "62291063e0e46e3627a2944afebc89159f7ae80340143a2d2d3698a6f265e647",
+        "packetBytes": 11453,
+        "promptSha256": "d5b417ce386ba44e57ebb3c6f1c556e7fae67f5127b6e4fd20abd859d2a3134b",
+        "promptBytes": 13472,
+        "schemaSha256": "5604c6db6824cc7218418634ec5a9d213a0bf8a611c3f57656e482d855082a94",
+        "aliases": {
+          "E1": "r-3d3e7daebc290b887df19161",
+          "E2": "r-3cbad5755bef4bc852b46f5d",
+          "E3": "r-6c6ffaabb69e828410a4c882",
+          "E4": "r-b6efa90f7c795b8a65d5781c",
+          "E5": "r-bf0153a35f66408c268ec0c6",
+          "E6": "r-82fd42016661d7267e3e1948",
+          "E7": "r-0a953aa31fbe13509c0a13d8",
+          "E8": "r-3091e0ec4b9c4f098e1e14fb",
+          "E9": "r-4abe4a81f363f550e71b6d6d",
+          "E10": "r-882c29e08d9cdd02af0d7deb",
+          "E11": "r-d6de447e8604a67d70505ae7",
+          "E12": "r-517392980ba6f0c62b7bc0a0",
+          "E13": "r-d79507aa296bb08478d459c5"
+        }
+      },
+      "positive": {
+        "pathPattern": {
+          "original": {
+            "kind": "searchTree",
+            "revision": "head",
+            "targets": [
+              {
+                "scope": ".",
+                "workspace": null,
+                "match": "pathPattern",
+                "query": "*vitest*",
+                "start": null,
+                "end": null
+              }
+            ]
+          },
+          "normalized": {
+            "kind": "searchTree",
+            "revision": "head",
+            "targets": [
+              {
+                "scope": "",
+                "workspace": null,
+                "match": "pathPattern",
+                "query": "*vitest*",
+                "start": null,
+                "end": null
+              }
+            ]
+          },
+          "admission": {
+            "status": "admitted"
+          },
+          "git": {
+            "status": "provided",
+            "results": [
+              {
+                "status": "provided",
+                "path": "vitest.config.ts",
+                "receiptIds": [
+                  "r-c03f65e532f576555a1528b4"
+                ],
+                "filteredPaths": 1
+              }
+            ],
+            "budget": {
+              "gitCalls": 4,
+              "treeEntries": 660,
+              "openedFiles": 1,
+              "sourceBytes": 2564,
+              "matches": 1,
+              "evidenceBytes": 3016
+            },
+            "usage": {
+              "treeEntries": 660,
+              "openedFiles": 1,
+              "matches": 1,
+              "evidenceBytes": 3016,
+              "sourceBytes": 2564,
+              "receipts": 1,
+              "accounted": true
+            },
+            "receipts": [
+              {
+                "kind": "git",
+                "path": "vitest.config.ts",
+                "blob": "04ac9a06182520e9c303547ae252713eda46ac63",
+                "start": 1,
+                "end": 24,
+                "operation": "13745283070e153de389fb8e7455cfa56299859126a1a776c70db65a50a8bccd",
+                "candidate": "c-895",
+                "head": "06145cbe19f52fa5b9c61fecd381bcbe36421241",
+                "tree": "ec0a355e7aef02329e70942edca7d4139a9b4222",
+                "artifact": "f63bb5b90a7d956bcb11d8969bb2a45dc45bee293a253b10c36e4843285ef6c6",
+                "id": "r-c03f65e532f576555a1528b4",
+                "bytes": 2563
+              }
+            ]
+          },
+          "delivery": {
+            "status": "delivered",
+            "packetSha256": "7330638a95b9c70967860b772dfcf19d8b73097d611fd6b2dea10a1345cf9f3f",
+            "packetBytes": 14275,
+            "promptSha256": "313bc8fa3a907fb7e3e18a0272b964d28dcae14605c166451ec7fa574fffba2e",
+            "promptBytes": 15104,
+            "schemaSha256": "1d872333ef5e2f1be30d68df0cdb443f0021212202fe93647fb928c41f47383f",
+            "aliases": {
+              "E1": "r-3d3e7daebc290b887df19161",
+              "E2": "r-3cbad5755bef4bc852b46f5d",
+              "E3": "r-6c6ffaabb69e828410a4c882",
+              "E4": "r-b6efa90f7c795b8a65d5781c",
+              "E5": "r-bf0153a35f66408c268ec0c6",
+              "E6": "r-82fd42016661d7267e3e1948",
+              "E7": "r-0a953aa31fbe13509c0a13d8",
+              "E8": "r-3091e0ec4b9c4f098e1e14fb",
+              "E9": "r-4abe4a81f363f550e71b6d6d",
+              "E10": "r-882c29e08d9cdd02af0d7deb",
+              "E11": "r-d6de447e8604a67d70505ae7",
+              "E12": "r-517392980ba6f0c62b7bc0a0",
+              "E13": "r-d79507aa296bb08478d459c5",
+              "E14": "r-c03f65e532f576555a1528b4"
+            },
+            "citedReceiptIds": [
+              "r-3d3e7daebc290b887df19161",
+              "r-3cbad5755bef4bc852b46f5d",
+              "r-6c6ffaabb69e828410a4c882",
+              "r-b6efa90f7c795b8a65d5781c",
+              "r-bf0153a35f66408c268ec0c6",
+              "r-82fd42016661d7267e3e1948",
+              "r-0a953aa31fbe13509c0a13d8",
+              "r-3091e0ec4b9c4f098e1e14fb",
+              "r-4abe4a81f363f550e71b6d6d",
+              "r-882c29e08d9cdd02af0d7deb",
+              "r-d6de447e8604a67d70505ae7",
+              "r-517392980ba6f0c62b7bc0a0",
+              "r-d79507aa296bb08478d459c5",
+              "r-c03f65e532f576555a1528b4"
+            ]
+          },
+          "writeAttempts": [],
+          "schemaAccepted": true,
+          "simulatedTurns": 2,
+          "decisive": {
+            "recovered": true,
+            "delivered": true
+          }
+        },
+        "filteredLiteral": {
+          "original": {
+            "kind": "searchTree",
+            "revision": "head",
+            "targets": [
+              {
+                "scope": ".",
+                "workspace": null,
+                "match": "literal",
+                "query": {
+                  "text": "storybookTest(",
+                  "pathPattern": "*vitest*"
+                },
+                "start": null,
+                "end": null
+              }
+            ]
+          },
+          "normalized": {
+            "kind": "searchTree",
+            "revision": "head",
+            "targets": [
+              {
+                "scope": "",
+                "workspace": null,
+                "match": "literal",
+                "query": {
+                  "text": "storybookTest(",
+                  "pathPattern": "*vitest*"
+                },
+                "start": null,
+                "end": null
+              }
+            ]
+          },
+          "admission": {
+            "status": "admitted"
+          },
+          "git": {
+            "status": "provided",
+            "results": [
+              {
+                "status": "provided",
+                "path": "vitest.config.ts",
+                "receiptIds": [
+                  "r-c03f65e532f576555a1528b4"
+                ],
+                "filteredPaths": 1
+              }
+            ],
+            "budget": {
+              "gitCalls": 4,
+              "treeEntries": 660,
+              "openedFiles": 1,
+              "sourceBytes": 2564,
+              "matches": 1,
+              "evidenceBytes": 3016
+            },
+            "usage": {
+              "treeEntries": 660,
+              "openedFiles": 1,
+              "matches": 1,
+              "evidenceBytes": 3016,
+              "sourceBytes": 2564,
+              "receipts": 1,
+              "accounted": true
+            },
+            "receipts": [
+              {
+                "kind": "git",
+                "path": "vitest.config.ts",
+                "blob": "04ac9a06182520e9c303547ae252713eda46ac63",
+                "start": 1,
+                "end": 24,
+                "operation": "13745283070e153de389fb8e7455cfa56299859126a1a776c70db65a50a8bccd",
+                "candidate": "c-895",
+                "head": "06145cbe19f52fa5b9c61fecd381bcbe36421241",
+                "tree": "ec0a355e7aef02329e70942edca7d4139a9b4222",
+                "artifact": "f63bb5b90a7d956bcb11d8969bb2a45dc45bee293a253b10c36e4843285ef6c6",
+                "id": "r-c03f65e532f576555a1528b4",
+                "bytes": 2563
+              }
+            ]
+          },
+          "delivery": {
+            "status": "delivered",
+            "packetSha256": "7330638a95b9c70967860b772dfcf19d8b73097d611fd6b2dea10a1345cf9f3f",
+            "packetBytes": 14275,
+            "promptSha256": "313bc8fa3a907fb7e3e18a0272b964d28dcae14605c166451ec7fa574fffba2e",
+            "promptBytes": 15104,
+            "schemaSha256": "1d872333ef5e2f1be30d68df0cdb443f0021212202fe93647fb928c41f47383f",
+            "aliases": {
+              "E1": "r-3d3e7daebc290b887df19161",
+              "E2": "r-3cbad5755bef4bc852b46f5d",
+              "E3": "r-6c6ffaabb69e828410a4c882",
+              "E4": "r-b6efa90f7c795b8a65d5781c",
+              "E5": "r-bf0153a35f66408c268ec0c6",
+              "E6": "r-82fd42016661d7267e3e1948",
+              "E7": "r-0a953aa31fbe13509c0a13d8",
+              "E8": "r-3091e0ec4b9c4f098e1e14fb",
+              "E9": "r-4abe4a81f363f550e71b6d6d",
+              "E10": "r-882c29e08d9cdd02af0d7deb",
+              "E11": "r-d6de447e8604a67d70505ae7",
+              "E12": "r-517392980ba6f0c62b7bc0a0",
+              "E13": "r-d79507aa296bb08478d459c5",
+              "E14": "r-c03f65e532f576555a1528b4"
+            },
+            "citedReceiptIds": [
+              "r-3d3e7daebc290b887df19161",
+              "r-3cbad5755bef4bc852b46f5d",
+              "r-6c6ffaabb69e828410a4c882",
+              "r-b6efa90f7c795b8a65d5781c",
+              "r-bf0153a35f66408c268ec0c6",
+              "r-82fd42016661d7267e3e1948",
+              "r-0a953aa31fbe13509c0a13d8",
+              "r-3091e0ec4b9c4f098e1e14fb",
+              "r-4abe4a81f363f550e71b6d6d",
+              "r-882c29e08d9cdd02af0d7deb",
+              "r-d6de447e8604a67d70505ae7",
+              "r-517392980ba6f0c62b7bc0a0",
+              "r-d79507aa296bb08478d459c5",
+              "r-c03f65e532f576555a1528b4"
+            ]
+          },
+          "writeAttempts": [],
+          "schemaAccepted": true,
+          "simulatedTurns": 2,
+          "decisive": {
+            "recovered": true,
+            "delivered": true
+          }
+        }
+      },
+      "separateControls": {
+        "empty": {
+          "original": {
+            "kind": "searchTree",
+            "revision": "head",
+            "targets": [
+              {
+                "scope": ".",
+                "workspace": null,
+                "match": "pathPattern",
+                "query": "*no-matching-895-path*",
+                "start": null,
+                "end": null
+              }
+            ]
+          },
+          "admission": {
+            "status": "admitted"
+          },
+          "git": {
+            "status": "absent",
+            "results": [
+              {
+                "status": "absent",
+                "reason": "path-absent",
+                "filteredPaths": 0
+              }
+            ],
+            "usage": {
+              "treeEntries": 660,
+              "openedFiles": 0,
+              "matches": 0,
+              "evidenceBytes": 0,
+              "sourceBytes": 0,
+              "receipts": 0,
+              "accounted": true
+            }
+          }
+        },
+        "escapedScope": {
+          "original": {
+            "kind": "searchTree",
+            "revision": "head",
+            "targets": [
+              {
+                "scope": "../",
+                "workspace": null,
+                "match": "pathPattern",
+                "query": "*vitest*",
+                "start": null,
+                "end": null
+              }
+            ]
+          },
+          "admission": {
+            "status": "denied",
+            "reason": "scope-denied"
+          },
+          "git": null
+        },
+        "noRoot": {
+          "original": {
+            "kind": "searchTree",
+            "revision": "head",
+            "targets": [
+              {
+                "scope": ".",
+                "workspace": null,
+                "match": "pathPattern",
+                "query": "*vitest*",
+                "start": null,
+                "end": null
+              }
+            ]
+          },
+          "admission": {
+            "status": "denied",
+            "reason": "scope-denied"
+          },
+          "git": null
+        },
+        "restricted": {
+          "original": {
+            "kind": "searchTree",
+            "revision": "head",
+            "targets": [
+              {
+                "scope": "tooling",
+                "workspace": null,
+                "match": "pathPattern",
+                "query": "*vitest*",
+                "start": null,
+                "end": null
+              }
+            ]
+          },
+          "admission": {
+            "status": "admitted"
+          },
+          "git": {
+            "status": "absent",
+            "results": [
+              {
+                "status": "absent",
+                "reason": "path-absent",
+                "filteredPaths": 0
+              }
+            ],
+            "usage": {
+              "treeEntries": 1,
+              "openedFiles": 0,
+              "matches": 0,
+              "evidenceBytes": 0,
+              "sourceBytes": 0,
+              "receipts": 0,
+              "accounted": true
+            }
+          }
+        },
+        "inside": {
+          "original": {
+            "kind": "searchTree",
+            "revision": "head",
+            "targets": [
+              {
+                "scope": "tooling",
+                "workspace": null,
+                "match": "pathPattern",
+                "query": "coverage.mj?",
+                "start": null,
+                "end": null
+              }
+            ]
+          },
+          "admission": {
+            "status": "admitted"
+          },
+          "git": {
+            "status": "provided",
+            "results": [
+              {
+                "status": "provided",
+                "path": "tooling/coverage.mjs",
+                "receiptIds": [
+                  "r-e70382f9d116c6bfc7ca03ec"
+                ],
+                "filteredPaths": 1
+              }
+            ],
+            "usage": {
+              "treeEntries": 1,
+              "openedFiles": 1,
+              "matches": 1,
+              "evidenceBytes": 2759,
+              "sourceBytes": 2243,
+              "receipts": 1,
+              "accounted": true
+            }
+          }
+        },
+        "outside": {
+          "original": {
+            "kind": "searchTree",
+            "revision": "head",
+            "targets": [
+              {
+                "scope": "tooling",
+                "workspace": null,
+                "match": "pathPattern",
+                "query": "../*vitest*",
+                "start": null,
+                "end": null
+              }
+            ]
+          },
+          "admission": {
+            "status": "denied",
+            "reason": "path-pattern-denied"
+          },
+          "git": null
+        },
+        "bytes": {
+          "original": {
+            "kind": "searchTree",
+            "revision": "head",
+            "targets": [
+              {
+                "scope": ".",
+                "workspace": null,
+                "match": "pathPattern",
+                "query": "ééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+                "start": null,
+                "end": null
+              }
+            ]
+          },
+          "admission": {
+            "status": "budget",
+            "reason": "path-pattern-byte-budget"
+          },
+          "git": null
+        },
+        "ambiguous": {
+          "original": {
+            "kind": "searchTree",
+            "revision": "head",
+            "targets": [
+              {
+                "scope": ".",
+                "workspace": null,
+                "match": "pathPattern",
+                "query": "*",
+                "start": null,
+                "end": null
+              }
+            ]
+          },
+          "admission": {
+            "status": "admitted"
+          },
+          "git": {
+            "status": "ambiguous",
+            "results": [
+              {
+                "status": "ambiguous",
+                "reason": "multiple-files",
+                "paths": [
+                  ".gitignore",
+                  ".node-version",
+                  ".npmrc",
+                  "AGENTS.md",
+                  "LICENSE",
+                  "README.md",
+                  "package.json",
+                  "pnpm-lock.yaml",
+                  "pnpm-workspace.yaml",
+                  "tsconfig.consumers.json",
+                  "tsconfig.json",
+                  "tsconfig.storybook.json",
+                  "tsconfig.svelte-source.json",
+                  "tsconfig.svelte-tests.json",
+                  "vitest.config.ts"
+                ],
+                "filteredPaths": 15
+              }
+            ],
+            "usage": {
+              "treeEntries": 660,
+              "openedFiles": 0,
+              "matches": 15,
+              "evidenceBytes": 0,
+              "sourceBytes": 0,
+              "receipts": 0,
+              "accounted": true
+            }
+          }
+        },
+        "mixed": {
+          "original": {
+            "kind": "searchTree",
+            "revision": "head",
+            "targets": [
+              {
+                "scope": ".",
+                "workspace": null,
+                "match": "pathPattern",
+                "query": "*vitest*",
+                "start": null,
+                "end": null
+              },
+              {
+                "scope": ".",
+                "workspace": null,
+                "match": "literal",
+                "query": {
+                  "text": "storybookTest(",
+                  "pathPattern": "*/*/*"
+                },
+                "start": null,
+                "end": null
+              }
+            ]
+          },
+          "admission": {
+            "status": "admitted"
+          },
+          "git": {
+            "status": "partial",
+            "results": [
+              {
+                "status": "provided",
+                "path": "vitest.config.ts",
+                "receiptIds": [
+                  "r-c03f65e532f576555a1528b4"
+                ],
+                "filteredPaths": 1
+              },
+              {
+                "status": "budget",
+                "reason": "search-file-budget",
+                "filteredPaths": 123
+              }
+            ],
+            "usage": {
+              "treeEntries": 660,
+              "openedFiles": 1,
+              "matches": 1,
+              "evidenceBytes": 3016,
+              "sourceBytes": 2564,
+              "receipts": 1,
+              "accounted": true
+            }
+          }
+        },
+        "exact": {
+          "original": {
+            "kind": "searchTree",
+            "revision": "head",
+            "targets": [
+              {
+                "scope": ".",
+                "workspace": null,
+                "match": "name",
+                "query": "vitest.config.ts",
+                "start": null,
+                "end": null
+              }
+            ]
+          },
+          "admission": {
+            "status": "admitted"
+          },
+          "git": {
+            "status": "provided",
+            "results": [
+              {
+                "status": "provided",
+                "path": "vitest.config.ts",
+                "receiptIds": [
+                  "r-c03f65e532f576555a1528b4"
+                ]
+              }
+            ],
+            "usage": {
+              "treeEntries": 660,
+              "openedFiles": 1,
+              "matches": 1,
+              "evidenceBytes": 3016,
+              "sourceBytes": 2564,
+              "receipts": 1,
+              "accounted": true
+            }
+          }
+        },
+        "wildcardName": {
+          "original": {
+            "kind": "searchTree",
+            "revision": "head",
+            "targets": [
+              {
+                "scope": ".",
+                "workspace": null,
+                "match": "name",
+                "query": "*vitest*",
+                "start": null,
+                "end": null
+              }
+            ]
+          },
+          "admission": {
+            "status": "admitted"
+          },
+          "git": {
+            "status": "absent",
+            "results": [
+              {
+                "status": "absent",
+                "reason": "path-absent"
+              }
+            ],
+            "usage": {
+              "treeEntries": 660,
+              "openedFiles": 0,
+              "matches": 0,
+              "evidenceBytes": 0,
+              "sourceBytes": 0,
+              "receipts": 0,
+              "accounted": true
+            }
+          }
+        },
+        "truncated": {
+          "status": "budget",
+          "results": [
+            {
+              "status": "budget",
+              "reason": "tree-entry-budget"
+            }
+          ],
+          "receipts": [],
+          "budget": {
+            "gitCalls": 2,
+            "treeEntries": 1,
+            "openedFiles": 0,
+            "sourceBytes": 0,
+            "matches": 0,
+            "evidenceBytes": 0
+          }
+        },
+        "matches": {
+          "status": "budget",
+          "results": [
+            {
+              "status": "budget",
+              "reason": "match-budget",
+              "filteredPaths": 15
+            }
+          ],
+          "receipts": [],
+          "budget": {
+            "gitCalls": 2,
+            "treeEntries": 660,
+            "openedFiles": 0,
+            "sourceBytes": 0,
+            "matches": 1,
+            "evidenceBytes": 0
+          }
+        },
+        "deadline": {
+          "status": "expired",
+          "reason": "source-deadline"
+        },
+        "budgetCases": [
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "pathPattern",
+                  "query": "*/*/*",
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "admitted"
+            },
+            "git": {
+              "status": "budget",
+              "results": [
+                {
+                  "status": "budget",
+                  "reason": "search-file-budget",
+                  "filteredPaths": 123
+                }
+              ],
+              "usage": {
+                "treeEntries": 660,
+                "openedFiles": 0,
+                "matches": 0,
+                "evidenceBytes": 0,
+                "sourceBytes": 0,
+                "receipts": 0,
+                "accounted": true
+              }
+            }
+          },
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "literal",
+                  "query": {
+                    "text": "storybookTest(",
+                    "pathPattern": "*/*/*"
+                  },
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "admitted"
+            },
+            "git": {
+              "status": "budget",
+              "results": [
+                {
+                  "status": "budget",
+                  "reason": "search-file-budget",
+                  "filteredPaths": 123
+                }
+              ],
+              "usage": {
+                "treeEntries": 660,
+                "openedFiles": 0,
+                "matches": 0,
+                "evidenceBytes": 0,
+                "sourceBytes": 0,
+                "receipts": 0,
+                "accounted": true
+              }
+            }
+          }
+        ],
+        "deniedPatterns": [
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "pathPattern",
+                  "query": "../*vitest*",
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "denied",
+              "reason": "path-pattern-denied"
+            },
+            "git": null
+          },
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "literal",
+                  "query": {
+                    "text": "storybookTest(",
+                    "pathPattern": "../*vitest*"
+                  },
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "denied",
+              "reason": "path-pattern-denied"
+            },
+            "git": null
+          },
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "pathPattern",
+                  "query": "tooling/../*vitest*",
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "denied",
+              "reason": "path-pattern-denied"
+            },
+            "git": null
+          },
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "literal",
+                  "query": {
+                    "text": "storybookTest(",
+                    "pathPattern": "tooling/../*vitest*"
+                  },
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "denied",
+              "reason": "path-pattern-denied"
+            },
+            "git": null
+          },
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "pathPattern",
+                  "query": "/tmp/*vitest*",
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "denied",
+              "reason": "path-pattern-denied"
+            },
+            "git": null
+          },
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "literal",
+                  "query": {
+                    "text": "storybookTest(",
+                    "pathPattern": "/tmp/*vitest*"
+                  },
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "denied",
+              "reason": "path-pattern-denied"
+            },
+            "git": null
+          },
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "pathPattern",
+                  "query": "C:/tmp/*vitest*",
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "denied",
+              "reason": "path-pattern-denied"
+            },
+            "git": null
+          },
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "literal",
+                  "query": {
+                    "text": "storybookTest(",
+                    "pathPattern": "C:/tmp/*vitest*"
+                  },
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "denied",
+              "reason": "path-pattern-denied"
+            },
+            "git": null
+          },
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "pathPattern",
+                  "query": ".git/*",
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "denied",
+              "reason": "path-pattern-denied"
+            },
+            "git": null
+          },
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "literal",
+                  "query": {
+                    "text": "storybookTest(",
+                    "pathPattern": ".git/*"
+                  },
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "denied",
+              "reason": "path-pattern-denied"
+            },
+            "git": null
+          },
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "pathPattern",
+                  "query": "tooling/.GiT/*",
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "denied",
+              "reason": "path-pattern-denied"
+            },
+            "git": null
+          },
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "literal",
+                  "query": {
+                    "text": "storybookTest(",
+                    "pathPattern": "tooling/.GiT/*"
+                  },
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "denied",
+              "reason": "path-pattern-denied"
+            },
+            "git": null
+          },
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "pathPattern",
+                  "query": "tooling\\*",
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "denied",
+              "reason": "path-pattern-denied"
+            },
+            "git": null
+          },
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "literal",
+                  "query": {
+                    "text": "storybookTest(",
+                    "pathPattern": "tooling\\*"
+                  },
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "denied",
+              "reason": "path-pattern-denied"
+            },
+            "git": null
+          },
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "pathPattern",
+                  "query": "./*",
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "denied",
+              "reason": "path-pattern-denied"
+            },
+            "git": null
+          },
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "literal",
+                  "query": {
+                    "text": "storybookTest(",
+                    "pathPattern": "./*"
+                  },
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "denied",
+              "reason": "path-pattern-denied"
+            },
+            "git": null
+          },
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "pathPattern",
+                  "query": "**/*",
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "denied",
+              "reason": "path-pattern-denied"
+            },
+            "git": null
+          },
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "literal",
+                  "query": {
+                    "text": "storybookTest(",
+                    "pathPattern": "**/*"
+                  },
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "denied",
+              "reason": "path-pattern-denied"
+            },
+            "git": null
+          },
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "pathPattern",
+                  "query": "tooling//*.mjs",
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "denied",
+              "reason": "path-pattern-denied"
+            },
+            "git": null
+          },
+          {
+            "original": {
+              "kind": "searchTree",
+              "revision": "head",
+              "targets": [
+                {
+                  "scope": ".",
+                  "workspace": null,
+                  "match": "literal",
+                  "query": {
+                    "text": "storybookTest(",
+                    "pathPattern": "tooling//*.mjs"
+                  },
+                  "start": null,
+                  "end": null
+                }
+              ]
+            },
+            "admission": {
+              "status": "denied",
+              "reason": "path-pattern-denied"
+            },
+            "git": null
+          }
+        ]
+      }
+    }
+  },
+  "historical": [
+    {
+      "trial": "original/1/fixed/gpt-6.1-sol",
+      "unchanged": true,
+      "admission": {
+        "status": "admitted"
+      },
+      "status": "absent"
+    },
+    {
+      "trial": "original/1/repeat/gpt-6.1-sol",
+      "unchanged": true,
+      "admission": {
+        "status": "admitted"
+      },
+      "status": "absent"
+    },
+    {
+      "trial": "original/1/on-demand/gpt-6.1-sol",
+      "unchanged": true,
+      "admission": {
+        "status": "admitted"
+      },
+      "status": "budget"
+    },
+    {
+      "trial": "mutant/1/repeat/gpt-6-luna",
+      "unchanged": true,
+      "admission": {
+        "status": "denied",
+        "reason": "request-shape"
+      },
+      "status": null
+    },
+    {
+      "trial": "mutant/1/repeat/gpt-6.1-sol",
+      "unchanged": true,
+      "admission": {
+        "status": "admitted"
+      },
+      "status": "absent"
+    },
+    {
+      "trial": "mutant/1/on-demand/gpt-6.1-sol",
+      "unchanged": true,
+      "admission": {
+        "status": "admitted"
+      },
+      "status": "budget"
+    },
+    {
+      "trial": "original/2/repeat/gpt-6.1-sol",
+      "unchanged": true,
+      "admission": {
+        "status": "admitted"
+      },
+      "status": "unresolved"
+    },
+    {
+      "trial": "original/2/on-demand/gpt-6.1-sol",
+      "unchanged": true,
+      "admission": {
+        "status": "admitted"
+      },
+      "status": "absent"
+    },
+    {
+      "trial": "original/2/fixed/gpt-6.1-sol",
+      "unchanged": true,
+      "admission": {
+        "status": "admitted"
+      },
+      "status": "absent"
+    },
+    {
+      "trial": "mutant/2/repeat/gpt-6.1-sol",
+      "unchanged": true,
+      "admission": {
+        "status": "admitted"
+      },
+      "status": "budget"
+    },
+    {
+      "trial": "mutant/2/fixed/gpt-6.1-sol",
+      "unchanged": true,
+      "admission": {
+        "status": "admitted"
+      },
+      "status": "budget"
+    },
+    {
+      "trial": "original/3/on-demand/gpt-6.1-sol",
+      "unchanged": true,
+      "admission": {
+        "status": "admitted"
+      },
+      "status": "budget"
+    },
+    {
+      "trial": "original/3/fixed/gpt-6.1-sol",
+      "unchanged": true,
+      "admission": {
+        "status": "admitted"
+      },
+      "status": "absent"
+    },
+    {
+      "trial": "original/3/repeat/gpt-6.1-sol",
+      "unchanged": true,
+      "admission": {
+        "status": "admitted"
+      },
+      "status": "unresolved"
+    },
+    {
+      "trial": "mutant/3/on-demand/gpt-6.1-sol",
+      "unchanged": true,
+      "admission": {
+        "status": "admitted"
+      },
+      "status": "absent"
+    },
+    {
+      "trial": "mutant/3/fixed/gpt-6.1-sol",
+      "unchanged": true,
+      "admission": {
+        "status": "admitted"
+      },
+      "status": "budget"
+    },
+    {
+      "trial": "mutant/3/repeat/gpt-6.1-sol",
+      "unchanged": true,
+      "admission": {
+        "status": "admitted"
+      },
+      "status": "budget"
+    }
+  ]
+}

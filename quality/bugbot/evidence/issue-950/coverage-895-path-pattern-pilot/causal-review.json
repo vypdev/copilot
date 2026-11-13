@@ -1,0 +1,147 @@
+{
+  "original/1/fixed/gpt-6-luna": {
+    "reasonSha256": "a5d2d8794bb3bb1a40b691d881b076853716ca53dde425f5e22f0ef9bd9bbb34",
+    "passes": false,
+    "note": "Identifies an unresolved link between the effective project filters and the report or inventory and withholds judgment."
+  },
+  "original/1/repeat/gpt-6-luna": {
+    "reasonSha256": "d5ed23d415e22acc46d1a73560f4ece5d5d2b874d0a529ed73e82a4a86086113",
+    "passes": false,
+    "note": "Recognizes that the effective coverage configuration is missing, so the cited collection or reporting logic cannot establish the inventory outcome."
+  },
+  "original/1/repeat/gpt-6.1-sol": {
+    "reasonSha256": "1c44d67aeff8d218f10e69c57ccb13649f0ee3d56e1fb8b0f539dfbe9bd21ab5",
+    "passes": false,
+    "note": "Describes the default exclusion and its downstream effects. The effective project configuration needed to justify applying that exclusion to this revision was neither delivered nor cited."
+  },
+  "original/1/on-demand/gpt-6-luna": {
+    "reasonSha256": "9dc0db884f32a26510ddb214f409d2e4b4c892659a217406d0f3e1e9a69d063a",
+    "passes": false,
+    "note": "Recognizes that the effective coverage configuration is missing, so the cited collection or reporting logic cannot establish the inventory outcome."
+  },
+  "original/1/on-demand/gpt-6.1-sol": {
+    "reasonSha256": "db6fc486000f0935af7c6926fff4d39b2e7be44f0996d3f9a80d7fd95ab2e4e5",
+    "passes": false,
+    "note": "Describes the default exclusion and its downstream effects. The effective project configuration needed to justify applying that exclusion to this revision was neither delivered nor cited."
+  },
+  "mutant/1/fixed/gpt-6-luna": {
+    "reasonSha256": "2f5edd5784cd4b843aac78a3c71a3bc304a7ec945851376b2cf227234bd458ff",
+    "passes": false,
+    "note": "Recognizes that the effective coverage configuration is missing, so the cited collection or reporting logic cannot establish the inventory outcome."
+  },
+  "mutant/1/repeat/gpt-6-luna": {
+    "reasonSha256": "77b1039be3ba23be812955332214ee4efd984e4a0b44a709039a392cd37ad273",
+    "passes": false,
+    "note": "Recognizes that the effective coverage configuration is missing, so the cited collection or reporting logic cannot establish the inventory outcome."
+  },
+  "mutant/1/repeat/gpt-6.1-sol": {
+    "reasonSha256": "1df635963754725d4e376faba96637fb741eb35001ba6ea7649b7e2c673a9e7a",
+    "passes": false,
+    "note": "Applies the default exclusion to the mutant without accounting for its project hook. The hook admits the CSF entry, which the independent inventory rejects."
+  },
+  "mutant/1/on-demand/gpt-6-luna": {
+    "reasonSha256": "52c6f2f606d40cdfa6634de2b1efd4e9842648938a531a8674a57f989bfa3afc",
+    "passes": false,
+    "note": "Names the missing effective configuration and withholds judgment. It also conflates excluding stories from the expected inventory with filtering report keys. An unexpected story key would fail the comparison."
+  },
+  "mutant/1/on-demand/gpt-6.1-sol": {
+    "reasonSha256": "4712c5ac790429c3574bfd464e75e0aee7cd03b226071847bda18bdbca0193a3",
+    "passes": false,
+    "note": "Applies the default exclusion to the mutant without accounting for its project hook. The hook admits the CSF entry, which the independent inventory rejects."
+  },
+  "original/2/repeat/gpt-6-luna": {
+    "reasonSha256": "8efe2425fcf9dda9dfbfaa6bd76563f0c4f67fcb4e91c15d8a221f6be5cc50ad",
+    "passes": false,
+    "note": "Identifies an unresolved link between the effective project filters and the report or inventory and withholds judgment."
+  },
+  "original/2/repeat/gpt-6.1-sol": {
+    "reasonSha256": "27df14e77b38b9801f04fff07b4cc2a4f2ff22131bad9d075a448e26c2c815a4",
+    "passes": false,
+    "note": "Describes the default exclusion and its downstream effects. The effective project configuration needed to justify applying that exclusion to this revision was neither delivered nor cited."
+  },
+  "original/2/on-demand/gpt-6-luna": {
+    "reasonSha256": "e3643cd6e10a40143cf3ca797ccc6e2db871d0920dc8b23ebffbe2e9379fdadb",
+    "passes": false,
+    "note": "Recognizes that the effective coverage configuration is missing, so the cited collection or reporting logic cannot establish the inventory outcome."
+  },
+  "original/2/on-demand/gpt-6.1-sol": {
+    "reasonSha256": "263acbefad902fde78f35c10f098c55e959ffe65ff56e46c0060a2137816cd07",
+    "passes": false,
+    "note": "Describes the default exclusion and its downstream effects. The effective project configuration needed to justify applying that exclusion to this revision was neither delivered nor cited."
+  },
+  "mutant/2/repeat/gpt-6-luna": {
+    "reasonSha256": "9651a5dfbec9e7843bfb557dbfd4df61f29c93d6aa960b70310a065275593cf2",
+    "passes": false,
+    "note": "Identifies an unresolved link between the effective project filters and the report or inventory and withholds judgment."
+  },
+  "mutant/2/repeat/gpt-6.1-sol": {
+    "reasonSha256": "1bd5a35878a7f6287b1b853b8042874365118bfe4011ca98254b218acf2a90bf",
+    "passes": false,
+    "note": "Applies the default exclusion to the mutant without accounting for its project hook. The hook admits the CSF entry, which the independent inventory rejects."
+  },
+  "mutant/2/on-demand/gpt-6-luna": {
+    "reasonSha256": "1d59fd44662798410224056c74ffc9ccffd5ea416b9e3e0442541b8a09a14b0d",
+    "passes": false,
+    "note": "Recognizes that the effective coverage configuration is missing, so the cited collection or reporting logic cannot establish the inventory outcome."
+  },
+  "mutant/2/on-demand/gpt-6.1-sol": {
+    "reasonSha256": "4026caf98c8569a382638f956fa1efd796373e03844138052dbf93ba902b618b",
+    "passes": false,
+    "note": "Applies the default exclusion to the mutant without accounting for its project hook. The hook admits the CSF entry, which the independent inventory rejects. The root literal request exhausted the file budget before any blob was opened."
+  },
+  "mutant/2/fixed/gpt-6-luna": {
+    "reasonSha256": "b3104e1fb4a83d41d34f10ac9fa74c4ea26850172778f755bb5e34bd4b215a73",
+    "passes": false,
+    "note": "Recognizes that the effective coverage configuration is missing, so the cited collection or reporting logic cannot establish the inventory outcome."
+  },
+  "original/3/on-demand/gpt-6-luna": {
+    "reasonSha256": "38aee44e10e27702ac6f59bbb5e311503ee361dc42a04054581c01c3b7d5246b",
+    "passes": false,
+    "note": "Recognizes that the effective coverage configuration is missing, so the cited collection or reporting logic cannot establish the inventory outcome."
+  },
+  "original/3/on-demand/gpt-6.1-sol": {
+    "reasonSha256": "3ddf54c812d1483f5f0c552d596df1f2a2a22552a611e34de13101e42e45a550",
+    "passes": false,
+    "note": "Describes the default exclusion and its downstream effects. The effective project configuration needed to justify applying that exclusion to this revision was neither delivered nor cited. The root literal request exhausted the file budget before any blob was opened."
+  },
+  "original/3/fixed/gpt-6-luna": {
+    "reasonSha256": "e4f8700a99a805509c0cfc0cbf51c89b7d1f67867bb59d20a5e3b4681dc94255",
+    "passes": false,
+    "note": "Recognizes that the effective coverage configuration is missing, so the cited collection or reporting logic cannot establish the inventory outcome."
+  },
+  "original/3/repeat/gpt-6-luna": {
+    "reasonSha256": "b5fdf60410ba329453fe372e0e3c786a6ea604c6f0af5f98ecac2cb6dda1a450",
+    "passes": false,
+    "note": "Recognizes that the effective coverage configuration is missing, so the cited collection or reporting logic cannot establish the inventory outcome."
+  },
+  "original/3/repeat/gpt-6.1-sol": {
+    "reasonSha256": "f77f7df2d960417a8179ac0eea0b91e304a50788ac9424721ab4686be071c579",
+    "passes": false,
+    "note": "Describes the default exclusion and its downstream effects. The effective project configuration needed to justify applying that exclusion to this revision was neither delivered nor cited."
+  },
+  "mutant/3/on-demand/gpt-6-luna": {
+    "reasonSha256": "d0f7746659bf53ab491d69bd0b1ec89aa194c73786dc7edb5da68477d8cc0a43",
+    "passes": false,
+    "note": "Recognizes that the effective coverage configuration is missing, so the cited collection or reporting logic cannot establish the inventory outcome."
+  },
+  "mutant/3/on-demand/gpt-6.1-sol": {
+    "reasonSha256": "11fce9c6a60194ee700439cb300fc9b02eef31652ba0c2d58de6545ab67ae002",
+    "passes": false,
+    "note": "Applies the default exclusion to the mutant without accounting for its project hook. The hook admits the CSF entry, which the independent inventory rejects. The root literal request exhausted the file budget before any blob was opened."
+  },
+  "mutant/3/fixed/gpt-6-luna": {
+    "reasonSha256": "7062d22484eaf9db0a14bf1829db9d70d7c6a8ba6fff7794a9f6983411aa9b6b",
+    "passes": false,
+    "note": "Recognizes that the effective coverage configuration is missing, so the cited collection or reporting logic cannot establish the inventory outcome."
+  },
+  "mutant/3/repeat/gpt-6-luna": {
+    "reasonSha256": "866686a142ba44a2742ef343fecf8faa188aa85303de53cface60fd5a67c5c37",
+    "passes": false,
+    "note": "Recognizes that the effective coverage configuration is missing, so the cited collection or reporting logic cannot establish the inventory outcome."
+  },
+  "mutant/3/repeat/gpt-6.1-sol": {
+    "reasonSha256": "3b36fa828d99d55b662e2a671237e2de04d4cbca1bb11bee1cd99c62668595ae",
+    "passes": false,
+    "note": "Applies the default exclusion to the mutant without accounting for its project hook. The hook admits the CSF entry, which the independent inventory rejects."
+  }
+}

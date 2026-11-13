@@ -1,0 +1,120 @@
+{
+  "P1": {
+    "binding": {
+      "base": "5b7bdcdee3a9e98d6669bfd34ce750ae30a8c775",
+      "head": "93d7d77b98a196640bf0049bca36a3d90b7a5857",
+      "tree": "bd6d304c24239da3f57175e02dec0932f9a47d6d",
+      "paths": [
+        "frontend/src/application/task-controller.ts",
+        "frontend/src/presentation/domus-tasks.ts",
+        "frontend/src/presentation/task-messages.ts"
+      ],
+      "diffSha256": "00aef3d6565160938472d8877a21c0194b0aef736c786bbefccfabca303e64b4"
+    },
+    "candidate": {
+      "id": "c-880-1",
+      "path": "frontend/src/application/task-controller.ts",
+      "line": 89,
+      "trigger": "Use the household-task pagination button when the current page has a next cursor.",
+      "pathToEffect": "The English button promises to load more items into the current task list, but the controller replaces the page.",
+      "impact": "Earlier tasks disappear even though the action promises an accumulating list."
+    },
+    "evidence": [
+      {
+        "kind": "git",
+        "head": "93d7d77b98a196640bf0049bca36a3d90b7a5857",
+        "path": "frontend/src/application/task-controller.ts",
+        "blob": "6cd15c14e8cc91cf68a15003f37e242afe6f64ad",
+        "start": 87,
+        "end": 105,
+        "text": "  private async facts(generation: number, selected: string | null, cursor: string | null = null): Promise<void> {\n    const session = this.state.session!, access = this.state.access!;\n    const page = await this.read(this.server.list(session.context, cursor), generation); this.update({page});\n    if (selected !== null) this.update({detail: await this.read(this.server.detail(selected, access.householdId, session.context), generation)});\n  }\n  refresh(): Promise<void> {\n    return this.run(async (prior, generation) => {\n      const same = this.state.scopeKey === prior.scopeKey;\n      if (same) this.update({outcome: prior.outcome});\n      await this.facts(generation, same ? prior.detail?.occurrenceId ?? null : null);\n    });\n  }\n  more(): Promise<void> {\n    const cursor = this.state.page?.nextCursor;\n    if (!cursor) return Promise.resolve();\n    return this.run(async (prior, generation) => {\n      if (this.state.scopeKey !== prior.scopeKey) {this.update({notice: 'context_changed'}); return;}\n      await this.facts(generation, null, cursor);\n    });"
+      },
+      {
+        "kind": "git",
+        "head": "93d7d77b98a196640bf0049bca36a3d90b7a5857",
+        "path": "frontend/src/presentation/domus-tasks.ts",
+        "blob": "337d115c7fed527dba4d63d325177fdc446a7909",
+        "start": 10,
+        "end": 10,
+        "text": "import {taskInstant, taskMessage} from './task-messages';"
+      },
+      {
+        "kind": "git",
+        "head": "93d7d77b98a196640bf0049bca36a3d90b7a5857",
+        "path": "frontend/src/presentation/domus-tasks.ts",
+        "blob": "337d115c7fed527dba4d63d325177fdc446a7909",
+        "start": 57,
+        "end": 57,
+        "text": "  private text(key: TaskMessageKey): string {return taskMessage(key, this.language);}"
+      },
+      {
+        "kind": "git",
+        "head": "93d7d77b98a196640bf0049bca36a3d90b7a5857",
+        "path": "frontend/src/presentation/domus-tasks.ts",
+        "blob": "337d115c7fed527dba4d63d325177fdc446a7909",
+        "start": 185,
+        "end": 190,
+        "text": "            <section class=\"card\" aria-labelledby=\"task-list-title\"><h3 id=\"task-list-title\">${this.text('list')}</h3>\n              ${view.page?.items.length ? html`<ul class=\"task-list\">${view.page.items.map(item => html`<li><button type=\"button\" class=\"task-link\" ?disabled=${view.busy}\n                aria-pressed=${item.occurrenceId === view.detail?.occurrenceId ? 'true' : 'false'} @click=${() => this.intent({type: 'select', occurrenceId: item.occurrenceId})}>${item.title}</button>\n                <div class=\"task-meta\"><span>${this.text(`state_${item.state}`)}</span><span>${taskInstant(item.dueAt, this.language)}</span></div></li>`)}</ul>`\n                : view.page !== null ? html`<p>${this.text('empty')}</p>` : nothing}\n              ${view.page?.nextCursor ? html`<div class=\"actions\"><button type=\"button\" ?disabled=${view.busy} @click=${() => this.intent({type: 'more'})}>${this.text('more')}</button></div>` : nothing}</section></div>"
+      }
+    ]
+  },
+  "P2": {
+    "binding": {
+      "base": "5b7bdcdee3a9e98d6669bfd34ce750ae30a8c775",
+      "head": "c69f2eff6a33f54bda4a06a4333a60c9c7442a11",
+      "tree": "55f23c86bc36c15c28335ecab8a6b4d67a2569b7",
+      "paths": [
+        "frontend/src/application/task-controller.ts",
+        "frontend/src/presentation/domus-tasks.ts",
+        "frontend/src/presentation/task-messages.ts"
+      ],
+      "diffSha256": "728ddac790d2fc762aa4e156a422a2f9449cdf56dd288a361c2e5647fca15fcf"
+    },
+    "candidate": {
+      "id": "c-880-1",
+      "path": "frontend/src/application/task-controller.ts",
+      "line": 89,
+      "trigger": "Use the household-task pagination button when the current page has a next cursor.",
+      "pathToEffect": "The English button promises to load more items into the current task list, but the controller replaces the page.",
+      "impact": "Earlier tasks disappear even though the action promises an accumulating list."
+    },
+    "evidence": [
+      {
+        "kind": "git",
+        "head": "c69f2eff6a33f54bda4a06a4333a60c9c7442a11",
+        "path": "frontend/src/application/task-controller.ts",
+        "blob": "6cd15c14e8cc91cf68a15003f37e242afe6f64ad",
+        "start": 87,
+        "end": 105,
+        "text": "  private async facts(generation: number, selected: string | null, cursor: string | null = null): Promise<void> {\n    const session = this.state.session!, access = this.state.access!;\n    const page = await this.read(this.server.list(session.context, cursor), generation); this.update({page});\n    if (selected !== null) this.update({detail: await this.read(this.server.detail(selected, access.householdId, session.context), generation)});\n  }\n  refresh(): Promise<void> {\n    return this.run(async (prior, generation) => {\n      const same = this.state.scopeKey === prior.scopeKey;\n      if (same) this.update({outcome: prior.outcome});\n      await this.facts(generation, same ? prior.detail?.occurrenceId ?? null : null);\n    });\n  }\n  more(): Promise<void> {\n    const cursor = this.state.page?.nextCursor;\n    if (!cursor) return Promise.resolve();\n    return this.run(async (prior, generation) => {\n      if (this.state.scopeKey !== prior.scopeKey) {this.update({notice: 'context_changed'}); return;}\n      await this.facts(generation, null, cursor);\n    });"
+      },
+      {
+        "kind": "git",
+        "head": "c69f2eff6a33f54bda4a06a4333a60c9c7442a11",
+        "path": "frontend/src/presentation/domus-tasks.ts",
+        "blob": "337d115c7fed527dba4d63d325177fdc446a7909",
+        "start": 10,
+        "end": 10,
+        "text": "import {taskInstant, taskMessage} from './task-messages';"
+      },
+      {
+        "kind": "git",
+        "head": "c69f2eff6a33f54bda4a06a4333a60c9c7442a11",
+        "path": "frontend/src/presentation/domus-tasks.ts",
+        "blob": "337d115c7fed527dba4d63d325177fdc446a7909",
+        "start": 57,
+        "end": 57,
+        "text": "  private text(key: TaskMessageKey): string {return taskMessage(key, this.language);}"
+      },
+      {
+        "kind": "git",
+        "head": "c69f2eff6a33f54bda4a06a4333a60c9c7442a11",
+        "path": "frontend/src/presentation/domus-tasks.ts",
+        "blob": "337d115c7fed527dba4d63d325177fdc446a7909",
+        "start": 185,
+        "end": 190,
+        "text": "            <section class=\"card\" aria-labelledby=\"task-list-title\"><h3 id=\"task-list-title\">${this.text('list')}</h3>\n              ${view.page?.items.length ? html`<ul class=\"task-list\">${view.page.items.map(item => html`<li><button type=\"button\" class=\"task-link\" ?disabled=${view.busy}\n                aria-pressed=${item.occurrenceId === view.detail?.occurrenceId ? 'true' : 'false'} @click=${() => this.intent({type: 'select', occurrenceId: item.occurrenceId})}>${item.title}</button>\n                <div class=\"task-meta\"><span>${this.text(`state_${item.state}`)}</span><span>${taskInstant(item.dueAt, this.language)}</span></div></li>`)}</ul>`\n                : view.page !== null ? html`<p>${this.text('empty')}</p>` : nothing}\n              ${view.page?.nextCursor ? html`<div class=\"actions\"><button type=\"button\" ?disabled=${view.busy} @click=${() => this.intent({type: 'more'})}>${this.text('more')}</button></div>` : nothing}</section></div>"
+      }
+    ]
+  }
+}

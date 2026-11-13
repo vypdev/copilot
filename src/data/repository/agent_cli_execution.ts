@@ -2,7 +2,6 @@ import { createHash } from 'node:crypto';
 import { execFileSync, spawn } from 'node:child_process';
 import { lstatSync, readFileSync, realpathSync, rmSync, statSync } from 'node:fs';
 import { basename, dirname, isAbsolute, relative } from 'node:path';
-import { tmpdir } from 'node:os';
 import type { AgentExecutionPlan, AgentOutputProtocol } from '../../domain/agent_execution_plan';
 import { AgentCliError } from './agent_cli_contracts';
 import type { AgentExecutionOutputDiagnostic, AgentExecutionToolDiagnostic } from '../../application/ports/agent_execution_observation_ports';
@@ -11,6 +10,7 @@ import { verifyWindowsRuntimePathPrivate } from '../../infrastructure/agents/win
 import { validateAgentExecutableFile } from '../../infrastructure/agents/agent_executable_file';
 import { trustedWindowsSystemTool } from '../../infrastructure/agents/agent_trusted_system_tools';
 import { verifySourceSnapshotWorkspace } from '../../infrastructure/agents/agent_source_snapshot_integrity';
+import { agentExecutionTempParent } from '../../infrastructure/agents/agent_private_install_root';
 import { SddSourceContextFailure } from '../../domain/agent_source_snapshot';
 import { AGENT_EXECUTION_TIMEOUT_MAX_MS } from '../../domain/agent_execution_plan';
 
@@ -24,6 +24,10 @@ export function runAgentCli(plan: AgentExecutionPlan, prompt: string, signal?: A
         try {
             runtimeDirectory = verifyOwnedRuntimeDirectory(plan.runtimeDirectory);
             verifyAdmittedPlan(plan, runtimeDirectory);
+            if (plan.brokeredVerification && (plan.capability !== 'findings'
+                || plan.workspaceMode !== 'read-only' || plan.sourceSnapshot || plan.sourceDeadlineMs !== undefined)) {
+                throw new AgentCliError('Invalid brokered verification execution plan.', 'configuration');
+            }
             if (plan.sourceSnapshot) {
                 if (plan.capability !== 'findings' || plan.workspaceMode !== 'read-only'
                     || !Number.isFinite(plan.sourceDeadlineMs) || plan.sourceDeadlineMs! > performance.now() + AGENT_EXECUTION_TIMEOUT_MAX_MS) {
@@ -188,9 +192,11 @@ export function createAgentProcessLifecycle(
                 : outputFailure('Agent CLI returned invalid output.', 'unclassified'));
         }
     };
-    timers.timeout = setTimeout(() => {
-        beginTermination(new AgentCliError(`Agent CLI timed out after ${plan.timeoutMs}ms.`, 'timeout'));
-    }, plan.timeoutMs);
+    if (!plan.brokeredVerification) {
+        timers.timeout = setTimeout(() => {
+            beginTermination(new AgentCliError(`Agent CLI timed out after ${plan.timeoutMs}ms.`, 'timeout'));
+        }, plan.timeoutMs);
+    }
     return { appendStdout, appendStderr, onStdinError, onError, onClose, abort };
 }
 
@@ -241,7 +247,7 @@ function assertNeverOutputProtocol(protocol: never): never {
 
 function verifyOwnedRuntimeDirectory(requestedPath: string): string {
     const runtimeDirectory = realpathSync(requestedPath);
-    const expectedParent = realpathSync(tmpdir());
+    const expectedParent = realpathSync(agentExecutionTempParent());
     const name = basename(runtimeDirectory);
     const stats = statSync(runtimeDirectory);
     if (lstatSync(requestedPath).isSymbolicLink()

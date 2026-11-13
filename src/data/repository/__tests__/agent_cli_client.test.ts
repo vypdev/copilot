@@ -10,14 +10,14 @@ import { AgentCliClient } from '../agent_cli_client';
 import { AgentCliError } from '../agent_cli_contracts';
 import { createAgentProcessLifecycle, decodeAgentCliOutput, verifyWindowsLauncherTrust, windowsTaskkillArguments } from '../agent_cli_execution';
 import { makeWindowsRuntimePathPrivate } from '../../../infrastructure/agents/windows_runtime_acl';
+import { createPrivateAgentExecutionRoot } from '../../../infrastructure/agents/agent_private_install_root';
 
 // Multi-case fixtures run native ACL tools for every plan on Windows. This Jest
 // budget includes that setup; each admitted child keeps its own 5-second limit.
 const MULTI_CASE_TEST_TIMEOUT_MS = process.platform === 'win32' ? 30_000 : 20_000;
 
 function plan(script: string, overrides: Partial<AgentExecutionPlan> = {}): AgentExecutionPlan {
-    const runtimeDirectory = mkdtempSync(join(tmpdir(), 'copilot-agent-runtime-'));
-    makeWindowsRuntimePathPrivate(runtimeDirectory, true);
+    const runtimeDirectory = createPrivateAgentExecutionRoot();
     const artifactPath = join(runtimeDirectory, 'gitconfig');
     writeFileSync(artifactPath, '', { mode: 0o600 });
     makeWindowsRuntimePathPrivate(artifactPath, false);
@@ -92,6 +92,27 @@ describe('AgentCliClient admitted process execution', () => {
             prompt: '$(touch should-not-run); literal', timeoutMs: 5_000,
         })).resolves.toBe('$(touch should-not-run); literal');
         expect(existsSync(executionPlan.runtimeDirectory)).toBe(false);
+    });
+
+    (process.platform === 'win32' ? it.skip : it)('admits and cleans a runtime on runner scratch when system temp is unavailable', async () => {
+        const scratch = mkdtempSync(join(tmpdir(), 'copilot-runner-scratch-'));
+        const previous = { RUNNER_TEMP: process.env.RUNNER_TEMP, TMPDIR: process.env.TMPDIR };
+        try {
+            process.env.RUNNER_TEMP = scratch;
+            process.env.TMPDIR = join(scratch, 'missing-system-temp');
+            const executionPlan = plan('process.stdout.write("READY")');
+            await expect(client(executionPlan).execute({
+                configuration: { provider: 'codex', model: 'model' }, capability: 'findings',
+                prompt: 'fixture', timeoutMs: 5_000,
+            })).resolves.toBe('READY');
+            expect(existsSync(executionPlan.runtimeDirectory)).toBe(false);
+        } finally {
+            for (const [name, value] of Object.entries(previous)) {
+                if (value === undefined) delete process.env[name];
+                else process.env[name] = value;
+            }
+            rmSync(scratch, { recursive: true, force: true });
+        }
     });
 
     it('executes a verified Node package launcher and rejects a changed launcher', async () => {
@@ -477,6 +498,34 @@ describe('AgentCliClient admitted process execution', () => {
             configuration: { provider: 'codex', model: 'model' }, capability: 'findings',
             prompt: 'p', timeoutMs: 5_000, signal: controller.signal,
         })).rejects.toMatchObject({ category: 'cancelled' });
+    });
+
+    it('does not time out brokered verification but honors explicit cancellation', () => {
+        jest.useFakeTimers();
+        const executionPlan = plan('unused', { brokeredVerification: true, timeoutMs: 100 });
+        const kill = jest.fn();
+        const reject = jest.fn();
+        try {
+            const lifecycle = createAgentProcessLifecycle({ exitCode: null, pid: undefined, kill } as never,
+                executionPlan, undefined, jest.fn(), reject);
+            jest.advanceTimersByTime(900_000);
+            expect(kill).not.toHaveBeenCalled();
+            lifecycle.abort();
+            lifecycle.onClose(null);
+            expect(kill).toHaveBeenCalledWith('SIGTERM');
+            expect(reject).toHaveBeenCalledWith(expect.objectContaining({ category: 'cancelled' }));
+        } finally {
+            rmSync(executionPlan.runtimeDirectory, { recursive: true, force: true });
+            jest.useRealTimers();
+        }
+    });
+
+    it('rejects a brokered execution plan with write authority', async () => {
+        const executionPlan = plan('process.stdout.write("unexpected")', {
+            brokeredVerification: true, capability: 'fixer', workspaceMode: 'workspace-write',
+        });
+        await expect(agentExecution.runAgentCli(executionPlan, '')).rejects.toMatchObject({ category: 'configuration' });
+        expect(existsSync(executionPlan.runtimeDirectory)).toBe(false);
     });
 
     it('keeps lifecycle settlement idempotent under late process events', () => {

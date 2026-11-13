@@ -1,0 +1,22 @@
+{
+  "X1": {
+    "base": "a9c4b9723c66868884476743940102ada65d2db0",
+    "head": "e129e76e25deff7314efe3b72996d295cf73f7f3",
+    "tree": "c71daa5ff4f59ddfee9ee2356b6a04dc1649cb9e",
+    "paths": [
+      "backend/src/domus/infrastructure/sqlite_member_profile_schema.py",
+      "backend/src/domus/infrastructure/sqlite.py"
+    ],
+    "diffSha256": "6db56e88e772586bf744eee23102462d779dc9ac64e0d73bf849d8504232aa80"
+  },
+  "X2": {
+    "base": "e129e76e25deff7314efe3b72996d295cf73f7f3",
+    "head": "9e65fd088a52cd10ec3ca6a846959c39947ffb16",
+    "tree": "8df88b9409da3999eeae2cf333ab6bb170277399",
+    "paths": [
+      "backend/src/domus/infrastructure/sqlite_member_profile_schema.py",
+      "backend/src/domus/infrastructure/sqlite.py"
+    ],
+    "diffSha256": "28f6aa7871ffd006ca6e43b394944ff64bda54b047521db9934710f95ca0b053"
+  }
+}

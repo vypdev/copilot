@@ -1,0 +1,27 @@
+{
+  "mode": "shadow",
+  "publication": "dry-run",
+  "actionInputs": {
+    "bugbot-dry-run": "true",
+    "bugbot-verification-mode": "shadow",
+    "reviewer-provider": "codex",
+    "reviewer-model-provider": "openai",
+    "reviewer-model": "gpt-6-luna",
+    "reviewer-effort": "xhigh",
+    "bugbot-verifier-model": "gpt-6.1-sol"
+  },
+  "repository": "vypdev/domus",
+  "pullRequest": 28,
+  "head": "b9a2dfc8179128fb493ab49666c24967d308c979",
+  "base": "8b1cbc110c389b9cdb6ecd11317c95abf2c4b0a9",
+  "tree": "220df819e1081b563178209afb595f03561571bd",
+  "baseTree": "9386f2ea5249b5ea0c0bb4e83f814f503012be47",
+  "cases": [
+    { "ledger": "domus-28-sol.jsonl", "candidateId": "frontend/src/presentation/domus-administration.ts:sent-draft-blocks-rejection-correction" },
+    { "ledger": "domus-28-playwright-replay.jsonl", "candidateId": "4452825495" }
+  ],
+  "trialsPerCase": 1,
+  "transport": "installed checkout and provider adapters; evaluator and historical verdicts excluded",
+  "source": "existing prepared candidates; no new detector call or GitHub mutation credentials",
+  "scoring": "Verify exact source and causal citations against the pinned tree and existing independent controls. A gap in material official evidence remains inconclusive. This smoke test cannot qualify a deployment profile by itself."
+}

@@ -1,0 +1,182 @@
+[
+  {
+    "file": "domus-24-luna-final.jsonl",
+    "model": "gpt-6-luna",
+    "head": "e129e76e25deff7314efe3b72996d295cf73f7f3",
+    "session": "4df804f7d3984116d5927ab38583b7594c39a0d0cb207004d68f539d62fdc3e8",
+    "observed": "refuted",
+    "expected": "refuted",
+    "verdictMatches": true,
+    "exactRanges": [
+      {
+        "step": "exact parent index",
+        "premises": [
+          2
+        ]
+      },
+      {
+        "step": "index before profile schema",
+        "premises": []
+      },
+      {
+        "step": "version-matched official unique index rule",
+        "premises": []
+      }
+    ],
+    "validatedCitations": 6,
+    "writes": 0,
+    "closures": 0,
+    "wallMs": 48744,
+    "missing": null,
+    "failure": null
+  },
+  {
+    "file": "domus-24-luna-follow-up.jsonl",
+    "model": "gpt-6-luna",
+    "head": "e129e76e25deff7314efe3b72996d295cf73f7f3",
+    "session": "5f2493e0e85c83d7c51eb5146395ab589a89c4f28366cc8f7a734b5bf1291936",
+    "observed": "confirmed",
+    "expected": "refuted",
+    "verdictMatches": false,
+    "exactRanges": [
+      {
+        "step": "exact parent index",
+        "premises": []
+      },
+      {
+        "step": "index before profile schema",
+        "premises": [
+          3
+        ]
+      },
+      {
+        "step": "version-matched official unique index rule",
+        "premises": []
+      }
+    ],
+    "validatedCitations": 8,
+    "writes": 0,
+    "closures": 0,
+    "wallMs": 58141,
+    "missing": null,
+    "failure": null
+  },
+  {
+    "file": "domus-24-luna-index.jsonl",
+    "model": "gpt-6-luna",
+    "head": "e129e76e25deff7314efe3b72996d295cf73f7f3",
+    "session": "720120f2e9cc3e46547b2f40d79cccb4d9ee2fb9839b384c18bc9a7ea1cd5f09",
+    "observed": "refuted",
+    "expected": "refuted",
+    "verdictMatches": true,
+    "exactRanges": [
+      {
+        "step": "exact parent index",
+        "premises": [
+          2
+        ]
+      },
+      {
+        "step": "index before profile schema",
+        "premises": []
+      },
+      {
+        "step": "version-matched official unique index rule",
+        "premises": []
+      }
+    ],
+    "validatedCitations": 5,
+    "writes": 0,
+    "closures": 0,
+    "wallMs": 64554,
+    "missing": null,
+    "failure": null
+  },
+  {
+    "file": "domus-24-luna-provider-interruption.jsonl",
+    "model": "gpt-6-luna",
+    "head": "e129e76e25deff7314efe3b72996d295cf73f7f3",
+    "session": "19b854114f0e01bd04fae36b8c087a77c8c43dbaaf55939b757b6bab42fd927b",
+    "observed": null,
+    "expected": "refuted",
+    "verdictMatches": false,
+    "exactRanges": [
+      {
+        "step": "exact parent index",
+        "premises": []
+      },
+      {
+        "step": "index before profile schema",
+        "premises": []
+      },
+      {
+        "step": "version-matched official unique index rule",
+        "premises": []
+      }
+    ],
+    "validatedCitations": 0,
+    "writes": 0,
+    "closures": 0,
+    "wallMs": 25872,
+    "missing": null,
+    "failure": "unexpected-provider-tool"
+  },
+  {
+    "file": "domus-24-luna.jsonl",
+    "model": "gpt-6-luna",
+    "head": "e129e76e25deff7314efe3b72996d295cf73f7f3",
+    "session": "d9aa762920e51d9e979ccb6117c2bcdbb8424215c751248efcf2b140dae069b4",
+    "observed": "inconclusive",
+    "expected": "refuted",
+    "verdictMatches": false,
+    "exactRanges": [
+      {
+        "step": "exact parent index",
+        "premises": []
+      },
+      {
+        "step": "index before profile schema",
+        "premises": []
+      },
+      {
+        "step": "version-matched official unique index rule",
+        "premises": []
+      }
+    ],
+    "validatedCitations": 6,
+    "writes": 0,
+    "closures": 1,
+    "wallMs": 116429,
+    "missing": "Official SQLite evidence for a proven relevant release establishing whether a composite FK parent reference must match a declared unique key. The runtime probe returned no measured version or usable receipt; the supplied official lookup reported that its version was not proven.",
+    "failure": null
+  },
+  {
+    "file": "domus-29-sol.jsonl",
+    "model": "gpt-6.1-sol",
+    "head": "57a8b4c6a9f52afb1ffc8e38275bcfd13575a3ae",
+    "session": "3a407722f91b52633a675ce84d5be9b999d76e221ff583166e6e1007aee5254b",
+    "observed": "confirmed",
+    "expected": "confirmed",
+    "verdictMatches": true,
+    "exactRanges": [
+      {
+        "step": "early invalid-input return",
+        "premises": [
+          4
+        ]
+      },
+      {
+        "step": "receipt-driven form clear",
+        "premises": [
+          6
+        ]
+      }
+    ],
+    "validatedCitations": 21,
+    "writes": 0,
+    "closures": 0,
+    "wallMs": 84754,
+    "missing": null,
+    "failure": null
+  }
+]

@@ -1,0 +1,28 @@
+[
+  {
+    "model": "gpt-6-luna",
+    "status": "ready",
+    "exitCode": 0,
+    "usage": {
+      "input_tokens": 10605,
+      "cached_input_tokens": 8320,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 5,
+      "reasoning_output_tokens": 0
+    },
+    "wallSeconds": 2.243
+  },
+  {
+    "model": "gpt-6.1-sol",
+    "status": "ready",
+    "exitCode": 0,
+    "usage": {
+      "input_tokens": 11292,
+      "cached_input_tokens": 0,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 5,
+      "reasoning_output_tokens": 0
+    },
+    "wallSeconds": 2.749
+  }
+]

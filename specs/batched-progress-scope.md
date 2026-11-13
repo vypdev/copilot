@@ -240,3 +240,118 @@ Every requirement has linked acceptance and test evidence. All 20 minimum cases,
 ## 20. References and decisions
 
 Primary evidence is https://github.com/vypdev/domus/actions/runs/42326869987/job/128264082043 and https://github.com/vypdev/domus/runs/128264839973. Independent CI is https://github.com/vypdev/domus/actions/runs/42326875268/job/128267393049. The implementation contract uses the existing capability and a new companion document because automated updates require canonical owner headings. Existing source ownership, immutable comparison, capacity diagnostics and selected-seed contracts remain applicable. The fixed batching profile is an engineering proposal for maintainer selection, with measured usage to be recorded during implementation.
+
+## Actionable remaining work for #950
+
+- Status — Proposed for implementation in #950
+- Date — 2026-11-13
+- Owner — Commit progress maintainers
+- Review gates — source evidence, publication authority, GitHub UX and security
+- Open product decisions — none
+
+Commit already publishes a percentage, a summary and a **Next** field on its
+owned progress comment. That field can combine many batch results into a
+single block of prose. The [#951 assessment at `53b21735`](https://github.com/vypdev/copilot/actions/runs/43467614059/job/132030813477)
+validated 111 requirement outcomes in four batches from 51 source parts. It
+reported 57% after [the preceding attempt timed out](https://github.com/vypdev/copilot/actions/runs/43456814572/job/131993001742)
+with no partial assessment. Use this comparison as a large regression fixture.
+The displayed percentage is a progress estimate for the assessed scope.
+Requirement counts describe outcomes. Neither gives a time or effort estimate.
+
+### Behavior and ownership
+
+| Requirement | Contract |
+|---|---|
+| CPR-01 | After validating the complete same-head assessment, update the existing Commit progress comment on its current canonical destination. Show the estimated percentage, short assessed head, and exact totals for supported requirements, missing implementation and requirements that still need evidence. Link the issue, the owning PR when present, and the pinned assessment. On that PR, the existing Bugbot status comment links the verified Commit assessment when its issue and PR binding is available through authorized reads. If the assessment predates the head, label the assessment's own SHA and say that it is the previous assessment. |
+| CPR-02 | Project pending items from the validated requirement inventory. Group them under **Implementation still needed** and **Verification or clarification needed**. An item carries the host-owned requirement ID, a concise description of what is missing, one concrete next action, a link to the issue or verified SDD scope, and a decisive same-head evidence reference when the observation admits an exact locator. Keep conditions and exclusions from the scope. Describe unavailable evidence as a verification gap. Never infer missing implementation from a missing observation. |
+| CPR-03 | Put missing implementation before evidence gaps in the preview. Within each group keep the manifest source order, honoring an explicit order from the admitted scope when present. Show up to six items, reserving one slot per nonempty group before distributing remaining slots. State the exact remaining count and link the complete inventory for this SHA and scope. Keep the full bounded list in the existing Job Summary when it fits. If needed and already supported by the host, use a deterministic artifact linked from that summary, with the native run, attempt and content digest. Only link output that the application observed as published. If the full inventory is unavailable, say so and link the run for diagnostics. A GitHub rendering or artifact failure leaves the validated assessment and existing label authority intact and reports the precise publication effect. |
+| CPR-04 | Bind the estimate, counts, items and evidence links to one validated repository, issue, owning PR when present, base, head, scope digest and authorized attempt. A fresh complete result replaces the assessment in place. Duplicate, stale, canceled and incomplete attempts cannot overwrite it or change its percentage or labels. Historical cards with prose only retain that assessment until a fresh valid structured result exists. A retry uses the current authority and never guesses pending work from partial batches or an older SHA. |
+| CPR-05 | At 100% show that all scoped requirements are supported and render no pending checklist. If the accepted assessment is below 100%, the card identifies the admitted open requirements and why they remain open. Use unchecked bullets as a read-only assessment, with no click-to-complete controls or new issue creation. The result never grants approval, closes the issue or changes Bugbot findings. Publish no comments per requirement. |
+
+```text
+Freeze scope and comparison → validate every requirement outcome
+→ derive estimate, grouped counts and pending work → fence issue, PR and refs
+→ update one existing progress card and link the complete inventory
+```
+
+The application carries validated structured outcomes through complete
+reduction and passes an immutable projection to presentation. Pure policy
+owns grouping, ordering, bounded preview and missing-evidence semantics.
+The existing semantic publication boundary owns freshness, idempotency and
+write ordering. Provider adapters own native references and observed write
+results. Presentation and the model cannot write state or supply trusted
+locators. Use the existing fixed assessment and publication budgets. Derive
+the view without another model call or broader read/write permissions.
+Carry older result payloads through the existing reader. Invalid additive
+projection data cannot mint a structured assessment or silently hide items
+from an otherwise valid prior card. There are no new public variables or
+GitHub comments and no coupling to the verification rollout switch.
+
+### GitHub content examples
+
+```markdown
+## Progress · 45% estimated
+
+Assessed head 53b21735 · 11 of 24 requirements supported
+8 need implementation · 5 need verification or clarification
+
+### Implementation still needed
+- R12 · Expose the validated partition count in the existing PR card.
+  [Requirement](…) · [Review telemetry at the assessed SHA](…)
+
+### Verification or clarification needed
+- R19 · Run the large-review interruption case and capture its terminal state.
+  [Acceptance case](…) · [Assessment run](…)
+
+11 more pending requirements. [Full assessment](…) · [Linked pull request](…)
+```
+
+The counts and requirements are illustrative. These examples describe the
+primary behavior under different outcomes.
+
+| State | Primary content and next action |
+|---|---|
+| Pending or canceled | “Assessing 53b21735. Last assessment: 45% at 4b052fb5.” The active status belongs in the run/check. The retained assessment stays labeled with its own SHA. |
+| Partial implementation, complete assessment | “45% estimated. Eight requirements need implementation and five need evidence.” Show the two groups and link the full list. |
+| Action required | “R19 needs a successful cancellation control on this head.” Link the acceptance source and applicable run. Avoid commands or requirements inferred from untrusted text. |
+| Failed or incomplete assessment | “Progress retained at 45% for 4b052fb5. Evidence for 53b21735 is incomplete. Open the run to inspect the missing batch.” Keep the existing percentage and items. |
+| Complete | “100% estimated. All 24 assessed requirements are supported for 53b21735.” Link the scope and assessment. |
+
+Use the existing locale and whole-artifact fallback, reviewed English and
+Spanish examples, short stacked items and descriptive links. Use headings
+and labels that convey status without color. Inspect mobile and desktop
+rendering in light and dark themes. Bound and sanitize source and model text,
+paths, links and provider messages. Only the application may add an
+issue, SDD, Git, CI or artifact link from validated identities. Never expose
+raw model output, repository excerpts or private run details in the card.
+
+### Acceptance and test evidence
+
+The first implementation projects validated outcomes into the Commit card
+and the Job Summary. It links the pinned issue or SDD and admitted head
+paths, with no invented line coordinates. GitHub Actions supplies the
+attempt link. The full assessment fits the existing Job Summary, so this
+stage adds no artifact producer. The PR backlink, controlled large live
+replay and visual review remain separate acceptance evidence.
+
+Minimum **13 distinct deterministic cases**, with repository-wide and
+changed-module coverage gates and every branch of new pure policies. Use
+pinned fixtures, controlled publication ports and semantic assertions in
+addition to golden rendering.
+
+| Requirement | Cases | Acceptance evidence |
+|---|---:|---|
+| CPR-01 | 2 | The 45% fixture reports correct counts with independent estimate semantics, in-place publication and a PR link that labels the assessment's own SHA. A large pinned #951 fixture preserves all 111 requirement identities from 51 source parts. |
+| CPR-02 | 3 | Missing implementation and unavailable verification are grouped correctly. Evidence and source links resolve to the admitted scope and head. Forged locators, untrusted markup, excluded scope and invented actions cannot enter the view. |
+| CPR-03 | 3 | Preview bounds and group representation preserve exact remaining counts. The complete view contains every pending ID exactly once, including through the bounded output route. An unavailable or failed detail publication emits no unverified link and retains accurate write status. |
+| CPR-04 | 3 | Duplicate delivery edits at most the owned card. Supersession, cancellation and incomplete evidence preserve the prior estimate and items. Legacy prose survives until a complete current assessment replaces it. |
+| CPR-05 | 2 | At 100% no pending item is shown and closure/approval authority is unchanged. English and Spanish incomplete views expose a textual actionable list, with no interactive completion controls or added comments. |
+
+Implement typed projection first, then add deterministic rendering and link
+validation, same-head publication tests, and the large comparison replay.
+Update `docs/issues/branch-management.mdx` with the progress estimate and
+pending-work examples and the troubleshooting path. Run specification,
+documentation, architecture, workflow, full test, coverage, bundle and
+Graphify checks. Record manual rendering and the pinned #951 replay in the
+PR before declaring the change complete. Production verification remains
+subject to the separate #950 qualification and activation decision.
