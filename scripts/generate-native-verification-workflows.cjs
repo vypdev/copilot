@@ -53,7 +53,7 @@ function commentWorkflow(file, source = false) {
       uses: source ? SELF_WORKFLOW : REMOTE_WORKFLOW,
       permissions: { actions: 'read', checks: 'write', contents: 'read' },
       with: { 'runs-on': JSON.stringify(source ? ['self-hosted', 'codex', 'Linux'] : 'ubuntu-latest'),
-        ...(source ? { 'issue-managed-branches': 'true', 'pre-branch-sdd': 'true', 'ai-ignore-files': 'build/*,specs/CATALOG.md', 'prepare-source-verification': true } : {}) },
+        ...(source ? { 'issue-managed-branches': 'true', 'pre-branch-sdd': 'true', 'ai-ignore-files': 'build/*,specs/CATALOG.md,quality/bugbot/evidence/issue-*/*.jsonl,quality/bugbot/evidence/issue-*/*.log.gz', 'prepare-source-verification': true } : {}) },
       secrets: Object.fromEntries(SECRET_NAMES.map(name => [name, name === 'CURSOR_API_KEY' ? CURSOR_SECRET : expr(`secrets.${name}`)])),
     } },
   };

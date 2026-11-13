@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import type { ProgressDiffChange, ProgressEvidenceProtocol } from '../ports/progress_diff_query_ports';
 import { MAX_FRAMED_PROGRESS_FILE_BYTES } from './progress_recovery_capacity_policy';
+import { isProgressGeneratedArtifact } from './progress_generated_artifact_policy';
 
 type RecordValue = Readonly<Record<string, unknown>>;
 const record = (value: unknown): value is RecordValue => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -17,7 +18,7 @@ export function validImmutableProgressUnits(changes: readonly ProgressDiffChange
     let representedBytes = 0;
     for (const [path, units] of groups) {
         if (units.some(unit => unit.statistics !== 'immutable-content-only' || !unit.unitId || !['added', 'removed', 'modified'].includes(unit.status))) return false;
-        if (path.startsWith('build/') || path === 'specs/CATALOG.md') {
+        if (isProgressGeneratedArtifact(path)) {
             if (units.length !== 1 || units[0].evidence !== 'generated-metadata-only'
                 || !exact(units[0] as unknown as RecordValue, ['path', 'status', 'statistics', 'unitId', 'evidence'])) return false;
             continue;

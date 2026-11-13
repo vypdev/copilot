@@ -8,6 +8,7 @@ import { progressContentUnits } from '../../application/policies/progress_conten
 import { progressInventoryError } from '../../application/policies/progress_inventory_error_policy';
 import { partitionProgressDiff } from '../../application/policies/progress_diff_partition_policy';
 import { frameProgressEvidence } from '../../application/policies/progress_evidence_protocol_policy';
+import { isProgressGeneratedArtifact } from '../../application/policies/progress_generated_artifact_policy';
 import { progressComparisonCapacityContext, withProgressCapacityContext } from '../../application/policies/progress_capacity_context_policy';
 
 type Comparison = Awaited<ReturnType<GithubBranchComparisonClient['rest']['repos']['compareCommits']>>['data'];
@@ -34,7 +35,7 @@ export async function completeProgressDiff(client: GithubProgressObjectClient | 
     const units: ProgressDiffChange[] = [];
     for (const [index, file] of inventory.entries()) {
         const change: ProgressDiffChange = { path: file.path, status: file.status, statistics: 'immutable-content-only' };
-        if (file.path.startsWith('build/') || file.path === 'specs/CATALOG.md') {
+        if (isProgressGeneratedArtifact(file.path)) {
             recovery.accountFile(paths);
             units.push({ ...change, unitId: `file-${index + 1}-metadata`, evidence: 'generated-metadata-only' });
         } else {

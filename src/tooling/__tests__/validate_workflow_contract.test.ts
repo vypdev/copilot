@@ -1720,6 +1720,14 @@ describe('workflow contract validator', () => {
     );
   });
 
+  it('rejects a source review that includes generated pilot logs in its diff context', () => {
+    const file = path.join(process.cwd(), '.github/workflows', 'copilot_pull_request.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    const action = workflow.jobs['copilot-pull-requests'].steps.find((step: { uses?: string }) => step.uses === './');
+    action.with['ai-ignore-files'] = 'build/*,specs/CATALOG.md';
+    expect(() => validateWorkflow(file, workflow)).toThrow('recorded Bugbot pilot logs');
+  });
+
   it('keeps every agent workflow free of Node/package-manager installation steps', () => {
     for (const directory of ['.github/workflows', 'setup/workflows']) {
       for (const fileName of [

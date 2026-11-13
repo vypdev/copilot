@@ -132,7 +132,8 @@ const REPOSITORY_LOCALE_INPUTS = Object.freeze({
   'issues-locale': "${{ vars.ISSUES_LOCALE || '' }}",
   'pull-requests-locale': "${{ vars.PULL_REQUESTS_LOCALE || '' }}",
 });
-const REPOSITORY_BUGBOT_CONTEXT_EXCLUSIONS = 'build/*,specs/CATALOG.md';
+const REPOSITORY_BUGBOT_CONTEXT_EXCLUSIONS = 'build/*,specs/CATALOG.md' +
+  ',quality/bugbot/evidence/issue-*/*.jsonl,quality/bugbot/evidence/issue-*/*.log.gz';
 const REPOSITORY_BUGBOT_WORKFLOW_FILES = new Set([
   'copilot_issue.yml',
   'copilot_issue_comment.yml',
@@ -610,7 +611,7 @@ function assertRepositoryBugbotContextExclusions(file, workflow) {
     for (const [stepIndex, step] of (job.steps ?? []).entries()) {
       if (!isCopilotAction(step)) continue;
       if (step.with?.['ai-ignore-files'] !== REPOSITORY_BUGBOT_CONTEXT_EXCLUSIONS) {
-        throw new Error(`${relativeFile} job ${jobId} step ${stepIndex + 1} must exclude generated build and specification catalog artifacts from Bugbot context exactly.`);
+        throw new Error(`${relativeFile} job ${jobId} step ${stepIndex + 1} must exclude generated build and specification catalog artifacts and recorded Bugbot pilot logs from Bugbot context exactly.`);
       }
     }
   }

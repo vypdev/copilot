@@ -229,8 +229,9 @@ all changed regular UTF-8 contents. The first 300 records cannot attest complete
 Renames and copies become exact independent removed/added paths; a canonical path
 count can therefore differ from GitHub's rename-record count. This route supplies
 complete contents with explicitly unavailable line statistics, rather than invented
-zero additions or deletions. The existing generated `build/` and `specs/CATALOG.md`
-metadata exceptions remain the only exceptions.
+zero additions or deletions. Generated `build/`, `specs/CATALOG.md`, and Bugbot
+pilot `.jsonl` and `.log.gz` files under `quality/bugbot/evidence/issue-<number>/`
+remain in the inventory as metadata. Replay source and reports are still read.
 
 The closed `immutable-tree-v1` profile supports up to 1,024 canonical paths, 4,096
 content units and 16 recovery epochs. Each epoch retains the existing 64-file,

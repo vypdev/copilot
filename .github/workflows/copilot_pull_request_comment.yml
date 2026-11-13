@@ -20,7 +20,7 @@ jobs:
       runs-on: '["self-hosted","codex","Linux"]'
       issue-managed-branches: 'true'
       pre-branch-sdd: 'true'
-      ai-ignore-files: build/*,specs/CATALOG.md
+      ai-ignore-files: build/*,specs/CATALOG.md,quality/bugbot/evidence/issue-*/*.jsonl,quality/bugbot/evidence/issue-*/*.log.gz
       prepare-source-verification: true
     secrets:
       PAT: ${{ secrets.PAT }}

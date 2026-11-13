@@ -53391,6 +53391,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.validImmutableProgressUnits = validImmutableProgressUnits;
 const node_crypto_1 = __nccwpck_require__(6005);
 const progress_recovery_capacity_policy_1 = __nccwpck_require__(54827);
+const progress_generated_artifact_policy_1 = __nccwpck_require__(84509);
 const record = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 const exact = (value, keys) => Object.keys(value).sort().join(',') === [...keys].sort().join(',');
 const oid = (value) => typeof value === 'string' && /^[a-f0-9]{40}$/u.test(value);
@@ -53406,7 +53407,7 @@ function validImmutableProgressUnits(changes, protocol) {
     for (const [path, units] of groups) {
         if (units.some(unit => unit.statistics !== 'immutable-content-only' || !unit.unitId || !['added', 'removed', 'modified'].includes(unit.status)))
             return false;
-        if (path.startsWith('build/') || path === 'specs/CATALOG.md') {
+        if ((0, progress_generated_artifact_policy_1.isProgressGeneratedArtifact)(path)) {
             if (units.length !== 1 || units[0].evidence !== 'generated-metadata-only'
                 || !exact(units[0], ['path', 'status', 'statistics', 'unitId', 'evidence']))
                 return false;
@@ -55546,6 +55547,22 @@ function bindProgressEvidence(diff, issue, acceptanceScope, locale) {
             id: requestId(protocol.manifestDigest, part.sourceIdentity.digest, contextDigest) }))) });
     validateFramedProgressEvidence(result, true);
     return result;
+}
+
+
+/***/ }),
+
+/***/ 84509:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.isProgressGeneratedArtifact = isProgressGeneratedArtifact;
+/** Reports these generated paths as inventory metadata, without presenting their contents as source. */
+function isProgressGeneratedArtifact(path) {
+    return path.startsWith('build/') || path === 'specs/CATALOG.md'
+        || /^quality\/bugbot\/evidence\/issue-\d+\/.+\.(?:jsonl|log\.gz)$/u.test(path);
 }
 
 
@@ -98307,6 +98324,7 @@ const progress_content_evidence_policy_1 = __nccwpck_require__(66471);
 const progress_inventory_error_policy_1 = __nccwpck_require__(62675);
 const progress_diff_partition_policy_1 = __nccwpck_require__(70628);
 const progress_evidence_protocol_policy_1 = __nccwpck_require__(37124);
+const progress_generated_artifact_policy_1 = __nccwpck_require__(84509);
 const progress_capacity_context_policy_1 = __nccwpck_require__(80348);
 const statuses = new Set(['added', 'removed', 'modified', 'renamed', 'copied', 'changed', 'unchanged']);
 /** Exactly the capped compare prefix selects a new, complete immutable collection attempt. */
@@ -98335,7 +98353,7 @@ async function completeProgressDiff(client, initial, baseSha, headSha, owner, re
     const units = [];
     for (const [index, file] of inventory.entries()) {
         const change = { path: file.path, status: file.status, statistics: 'immutable-content-only' };
-        if (file.path.startsWith('build/') || file.path === 'specs/CATALOG.md') {
+        if ((0, progress_generated_artifact_policy_1.isProgressGeneratedArtifact)(file.path)) {
             recovery.accountFile(paths);
             units.push({ ...change, unitId: `file-${index + 1}-metadata`, evidence: 'generated-metadata-only' });
         }
@@ -103019,6 +103037,7 @@ const progress_inventory_error_policy_1 = __nccwpck_require__(62675);
 const complete_progress_diff_repository_1 = __nccwpck_require__(23782);
 const application_error_1 = __nccwpck_require__(75999);
 const progress_patch_completeness_policy_1 = __nccwpck_require__(69741);
+const progress_generated_artifact_policy_1 = __nccwpck_require__(84509);
 const immutable_progress_content_repository_1 = __nccwpck_require__(8019);
 const progress_content_evidence_policy_1 = __nccwpck_require__(66471);
 const progress_recovery_capacity_policy_1 = __nccwpck_require__(54827);
@@ -103028,7 +103047,7 @@ const progress_capacity_context_policy_1 = __nccwpck_require__(80348);
 const progress_diff_partition_policy_1 = __nccwpck_require__(70628);
 const MAX_COMPARISON_FILES = 300;
 const STATUSES = new Set(['added', 'removed', 'modified', 'renamed', 'copied', 'changed', 'unchanged']);
-/** Reads exact GitHub objects, omitting generated bundle patches but retaining their file facts. */
+/** Reads exact GitHub objects, retaining file facts for generated artifacts. */
 class ProgressDiffRepository {
     constructor(client, objects) {
         this.client = client;
@@ -103052,7 +103071,7 @@ class ProgressDiffRepository {
                 || ![file.additions, file.deletions].every(value => Number.isSafeInteger(value) && value >= 0))
                 throw unavailable();
             paths.add(path);
-            const generated = path.startsWith('build/') || path === 'specs/CATALOG.md';
+            const generated = (0, progress_generated_artifact_policy_1.isProgressGeneratedArtifact)(path);
             const unchanged = file.status === 'unchanged' && file.additions === 0 && file.deletions === 0;
             const complete = generated || unchanged || ((0, progress_patch_completeness_policy_1.isCompleteProgressPatch)(file.patch, file.additions, file.deletions)
                 && Buffer.byteLength((0, progress_diff_partition_policy_1.serializeProgressDiff)(baseSha, headSha, [{ path, status: file.status, additions: file.additions, deletions: file.deletions, patch: file.patch }]), 'utf8') <= progress_diff_partition_policy_1.MAX_PROGRESS_EVIDENCE_BYTES);
@@ -119395,17 +119414,31 @@ class BugbotGitReviewSourceAdapter {
             for (const side of sides) {
                 const { change, oldPath, old, current } = side;
                 const before = old ? blobs.get(old.oid) : '', after = current ? blobs.get(current.oid) : '';
-                let patch = change.patch, source = 'provider';
-                if (!completeTextPatch(patch, change.additions, change.deletions) || !(0, bugbot_patch_binding_policy_1.bugbotPatchBindsText)(patch, before, after)) {
+                let { patch, additions, deletions } = change;
+                let source = 'provider';
+                if (!completeTextPatch(patch, additions, deletions) || !(0, bugbot_patch_binding_policy_1.bugbotPatchBindsText)(patch, before, after)) {
                     (0, framed_review_1.enforceBugbotFramedBudget)('recoveredFiles', ++recovered);
                     const comparison = old && current ? [old.oid, current.oid] : [identity.mergeBaseSha, identity.headSha, '--', change.filename];
                     const diff = decode(await git.read(['diff', '--no-ext-diff', '--no-textconv', '--text', '--no-renames',
                         '--no-color', '--no-relative', '--diff-algorithm=myers', '--no-indent-heuristic', '--unified=3', ...comparison], 2 * 1024 * 1024 + 16384, undefined, 'recoveredPatchBytes'));
                     const start = diff.search(/^@@ -[0-9]/mu);
                     patch = start < 0 ? JSON.stringify({ kind: 'verified-metadata-only', oldPath, path: change.filename, old: old ?? null, current: current ?? null }) : diff.slice(start);
-                    if (start < 0 ? change.additions !== 0 || change.deletions !== 0 || before !== after
-                        : !completeTextPatch(patch, change.additions, change.deletions) || !(0, bugbot_patch_binding_policy_1.bugbotPatchBindsText)(patch, before, after))
-                        throw new framed_review_1.BugbotReviewCompletenessError('source');
+                    if (start < 0) {
+                        if (additions !== 0 || deletions !== 0 || before !== after)
+                            throw new framed_review_1.BugbotReviewCompletenessError('source');
+                    }
+                    else {
+                        const counts = textPatchCounts(patch);
+                        if (!counts || !(0, bugbot_patch_binding_policy_1.bugbotPatchBindsText)(patch, before, after))
+                            throw new framed_review_1.BugbotReviewCompletenessError('source');
+                        // GitHub can omit a patch and both line counts after its diff limit.
+                        if (change.patch === '' && additions === 0 && deletions === 0) {
+                            ({ additions, deletions } = counts);
+                        }
+                        else if (counts.additions !== additions || counts.deletions !== deletions) {
+                            throw new framed_review_1.BugbotReviewCompletenessError('source');
+                        }
+                    }
                     (0, framed_review_1.enforceBugbotFramedBudget)('recoveredPatchBytes', Buffer.byteLength(patch));
                     patchBytes += Buffer.byteLength(patch);
                     (0, framed_review_1.enforceBugbotFramedBudget)('recoveredPatchTotalBytes', patchBytes);
@@ -119413,7 +119446,7 @@ class BugbotGitReviewSourceAdapter {
                 }
                 rawUnits += patch.length;
                 (0, framed_review_1.enforceBugbotFramedBudget)('rawUtf16', rawUnits);
-                changes[changes.indexOf(change)] = Object.freeze({ ...change, patch, source,
+                changes[changes.indexOf(change)] = Object.freeze({ ...change, patch, additions, deletions, source,
                     git: Object.freeze({ ...(old ? { old: Object.freeze(old) } : {}), ...(current ? { current: Object.freeze(current) } : {}) }) });
             }
             return Object.freeze({ identity, complete: true,
@@ -119543,12 +119576,16 @@ class LocalReviewGitReader {
 }
 /** Checks declared hunk completeness and native counts; absent/truncated/binary metadata is not text evidence. */
 function completeTextPatch(patch, additions, deletions) {
+    const counts = textPatchCounts(patch);
+    return counts !== undefined && counts.additions === additions && counts.deletions === deletions;
+}
+function textPatchCounts(patch) {
     let oldRemaining = 0, newRemaining = 0, added = 0, removed = 0, hunks = 0;
     for (const line of patch.split('\n')) {
         const header = /^@@ -\d+(?:,(\d+))? \+\d+(?:,(\d+))? @@/u.exec(line);
         if (header) {
             if (oldRemaining || newRemaining)
-                return false;
+                return undefined;
             oldRemaining = header[1] === undefined ? 1 : Number(header[1]);
             newRemaining = header[2] === undefined ? 1 : Number(header[2]);
             hunks++;
@@ -119559,7 +119596,7 @@ function completeTextPatch(patch, additions, deletions) {
         if (line === '' && oldRemaining === 0 && newRemaining === 0)
             continue;
         if (hunks === 0)
-            return false;
+            return undefined;
         if (line.startsWith('+')) {
             added++;
             newRemaining--;
@@ -119573,11 +119610,13 @@ function completeTextPatch(patch, additions, deletions) {
             newRemaining--;
         }
         else
-            return false;
+            return undefined;
         if (oldRemaining < 0 || newRemaining < 0)
-            return false;
+            return undefined;
     }
-    return hunks > 0 && oldRemaining === 0 && newRemaining === 0 && added === additions && removed === deletions;
+    if (hunks > 0 && oldRemaining === 0 && newRemaining === 0)
+        return { additions: added, deletions: removed };
+    return undefined;
 }
 
 

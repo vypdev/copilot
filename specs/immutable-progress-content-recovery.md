@@ -67,7 +67,8 @@ comparison and the final freshness checks.
   extension, provider URLs or model claims.
 - MUST NOT omit files, shorten content, promote source reports into CI claims,
   inspect a checkout, execute commands or publish partial percentages.
-- Existing `build/` and exact `specs/CATALOG.md` metadata exceptions remain;
+- Generated `build/`, exact `specs/CATALOG.md`, and Bugbot pilot `.jsonl` and
+  `.log.gz` under `quality/bugbot/evidence/issue-<number>/` remain metadata-only;
   editable catalogs, SDDs and other registries are not added to that list.
 - Binary/non-UTF8 contents, symlinks and submodules are unsupported recovery
   inputs. No consumer code, permission expansion or new workflow is required.

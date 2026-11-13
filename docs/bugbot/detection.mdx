@@ -255,6 +255,10 @@ Bugbot detection runs in two ways:
 
 ### 1. On pull-request review events
 
+In this repository’s own workflows, generated Bugbot pilot `.jsonl` and
+`.log.gz` files are excluded from detection context. Replay code, manifests,
+reports and ordinary project sources remain eligible for review.
+
 The pull-request workflow runs a full review on `opened`, `reopened`, and
 `ready_for_review`. The draft-to-ready event runs review without repeating
 assignments, project linking, or generated descriptions. On
