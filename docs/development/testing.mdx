@@ -144,8 +144,8 @@ analysis. They compare secret detection with upstream and verify deleted secrets
 other refs, bounded reads and failures.
 
 Manual RepoWise runs and repository-owned CI use self-hosted Ubuntu
-`codex` runners. Fork and merge-group CI require disposable self-hosted
-`ephemeral-ci` workers in the `vypdev` group. Run the three-platform setup
+`codex` runners. `CI Check` skips fork PRs before runner allocation and
+uses the `vypdev` group for internal reviews. Run the three-platform setup
 matrix by manual dispatch from protected `master`. The contract validator
 checks routing. Actual runner capacity requires evidence from Actions.
 

@@ -29,10 +29,8 @@ const CHECKOUT_ACTION = 'actions/checkout@v5';
 const ISOLATED_PNPM_DEST = '${{ runner.temp }}/setup-pnpm-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}';
 const LINUX_CODEX_LABELS = ['self-hosted', 'codex', 'Linux'];
 const WINDOWS_FIXTURE_LABELS = ['self-hosted', 'Windows'];
-const QUALITY_RUNNER_BY_TRUST = {
-  group: 'vypdev',
-  labels: `\${{ fromJSON((github.event_name == 'merge_group' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository)) && '["self-hosted","Linux","ephemeral-ci"]' || '["self-hosted","codex","Linux"]') }}`,
-};
+const SOURCE_CI_RUNNER = { group: 'vypdev', labels: LINUX_CODEX_LABELS };
+const SOURCE_CI_CONDITION = "${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}";
 const PLATFORM_PNPM_DEST = ISOLATED_PNPM_DEST + '-${{ strategy.job-index }}';
 const ISOLATED_REPOWISE_VENV_NAME = 'repowise-venv-${{ github.run_id }}-${{ github.run_attempt }}-code-health';
 const ISOLATED_REPOWISE_REPORT_NAME = 'repowise-report-${{ github.run_id }}-${{ github.run_attempt }}-code-health';
@@ -240,7 +238,7 @@ function runnerLabels(value) {
 }
 
 function assertIsolatedPnpm(relativeFile, jobId, job) {
-  const labels = relativeFile === '.github/workflows/ci_check.yml' ? LINUX_CODEX_LABELS : runnerLabels(job['runs-on']);
+  const labels = runnerLabels(job['runs-on']);
   if (!labels.includes('self-hosted') || !labels.includes('codex')) return;
   for (const step of job.steps ?? []) {
     if (typeof step?.uses === 'string' && step.uses.startsWith('pnpm/action-setup@')
@@ -384,6 +382,12 @@ function assertRunner(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   if (path.basename(file) === commentContract.RUNTIME) return assertCommentWorkflowRuntime(file, workflow);
   if (commentContract.CALLBACKS.includes(path.basename(file))) return assertCommentWorkflowCaller(file, workflow);
+  const isSourceCi = relativeFile === '.github/workflows/ci_check.yml';
+  if (isSourceCi && (Object.keys(workflow.on ?? {}).sort().join(',') !== 'pull_request,push,workflow_dispatch'
+    || Object.keys(workflow.jobs ?? {}).join(',') !== 'ci-check'
+    || workflow.jobs['ci-check'].if !== SOURCE_CI_CONDITION)) {
+    throw new Error(`${relativeFile} must admit only same-repository pull requests, pushes and manual CI.`);
+  }
   if (relativeFile === '.github/workflows/setup_platform_smoke.yml') {
     const jobIds = Object.keys(workflow.jobs ?? {}).sort();
     if (JSON.stringify(jobIds) !== JSON.stringify(['setup-platform-smoke', 'setup-self-hosted-codex-smoke', 'upload-windows-coverage', 'windows-startup-probe'])) {
@@ -532,14 +536,13 @@ function assertRunner(file, workflow) {
     } else if (relativeFile === '.github/workflows/repowise.yml') {
       expected = ['self-hosted', 'codex', 'Linux'];
     }
-    const isCi = relativeFile === '.github/workflows/ci_check.yml';
-    const labels = isCi ? [] : runnerLabels(job['runs-on']);
+    const labels = runnerLabels(job['runs-on']);
     const linuxOnly = JSON.stringify(expected) === JSON.stringify(['self-hosted', 'codex'])
       && JSON.stringify(labels) === JSON.stringify(LINUX_CODEX_LABELS);
-    if (isCi && JSON.stringify(job['runs-on']) !== JSON.stringify(QUALITY_RUNNER_BY_TRUST)) {
-      throw new Error(`${relativeFile} must use runs-on from the vypdev group and isolate fork and merge-group jobs on ephemeral-ci.`);
+    if (isSourceCi && JSON.stringify(job['runs-on']) !== JSON.stringify(SOURCE_CI_RUNNER)) {
+      throw new Error(`${relativeFile} must use runs-on with the vypdev group and self-hosted, codex, Linux labels.`);
     }
-    if (!isCi && JSON.stringify(labels) !== JSON.stringify(expected) && !linuxOnly) {
+    if (JSON.stringify(labels) !== JSON.stringify(expected) && !linuxOnly) {
       throw new Error(`${relativeFile} job ${jobId} must use runs-on ${expected.join(', ')}.`);
     }
     assertIsolatedPnpm(relativeFile, jobId, job);
@@ -1335,7 +1338,6 @@ function assertDeploymentContinuationWorkflow(file, workflow) {
 function assertMergeQueueWorkflowSupport(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   const required = new Set([
-    '.github/workflows/ci_check.yml',
     '.github/workflows/copilot_pull_request_merge_queue.yml',
     'setup/workflows/copilot_pull_request_merge_queue.yml',
   ]);
@@ -1485,8 +1487,8 @@ function assertIncrementalRangeFetch(relativeFile, manifestFile, job) {
 function assertPortableRunShell(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
-    const isCodexRunner = relativeFile === '.github/workflows/ci_check.yml'
-      || (relativeFile.startsWith('.github/workflows/') && runnerLabels(job['runs-on']).includes('codex'));
+    const isCodexRunner = relativeFile.startsWith('.github/workflows/')
+      && runnerLabels(job['runs-on']).includes('codex');
     const isDistributedReviewRange = relativeFile === 'setup/workflows/copilot_commit.yml'
       || relativeFile === 'setup/workflows/copilot_pull_request.yml';
     const isSetupPlatformSmoke = relativeFile === '.github/workflows/setup_platform_smoke.yml';

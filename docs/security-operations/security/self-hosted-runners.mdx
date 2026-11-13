@@ -26,15 +26,12 @@ The platform smoke jobs use the local pnpm store and disable automatic
 dependency-cache backup. Each platform installs pnpm in its own job directory.
 See the [setup-node cache inputs](https://github.com/actions/setup-node#usage).
 
-In `vypdev/copilot`, CI uses the `vypdev` runner group. Repository-owned PRs,
-pushes and manual CI use its Ubuntu `codex` runners. Fork PRs and merge groups
-select `[self-hosted, Linux, ephemeral-ci]` in that group. Register this label
-only on disposable, credential-free workers provisioned with clean job
-environments. The organization must make those workers available to this
-repository before the route can complete. Missing capacity leaves the check
-queued without selecting a persistent agent runner or a GitHub-hosted runner.
-A merge group can contain fork code without exposing its origin to the selector.
-See [GitHub's runner isolation guidance](https://docs.github.com/en/actions/reference/security/secure-use#hardening-for-self-hosted-runners).
+In `vypdev/copilot`, `CI Check` uses the `vypdev` runner group with
+`self-hosted`, `codex` and `Linux` labels. It runs for same-repository PRs,
+pushes to `master` and manual dispatches. A job condition excludes fork PRs
+before GitHub assigns a runner. The source repository has no active merge
+queue. Restore a compatible required check on a suitably isolated runner
+before enabling a queue.
 
 Run the setup fixture matrix manually from protected `master`. It exercises
 Ubuntu, Windows and macOS on self-hosted runners, using Windows services

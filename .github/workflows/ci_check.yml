@@ -5,8 +5,6 @@ on:
     branches: [master]
   pull_request:
     types: [opened, synchronize]
-  merge_group:
-    types: [checks_requested]
   workflow_dispatch:
 
 concurrency:
@@ -20,10 +18,10 @@ defaults:
 jobs:
   ci-check:
     name: CI Check
-    # Fork and merge-group code require a disposable pool without agent credentials.
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on:
       group: vypdev
-      labels: ${{ fromJSON((github.event_name == 'merge_group' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository)) && '["self-hosted","Linux","ephemeral-ci"]' || '["self-hosted","codex","Linux"]') }}
+      labels: [self-hosted, codex, Linux]
     timeout-minutes: 20
     permissions:
       contents: read
@@ -134,13 +132,11 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          MERGE_BASE_SHA: ${{ github.event.merge_group.base_sha }}
           PUSH_BEFORE_SHA: ${{ github.event.before }}
         run: |
           set -euo pipefail
           case "$EVENT_NAME" in
             pull_request) base="$PR_BASE_SHA" ;;
-            merge_group) base="$MERGE_BASE_SHA" ;;
             push) base="$PUSH_BEFORE_SHA" ;;
             workflow_dispatch) base="$(git rev-parse HEAD^)" ;;
             *) echo "Unsupported diff-check event" >&2; exit 1 ;;

@@ -528,7 +528,6 @@ describe('workflow contract validator', () => {
   );
 
   it.each([
-    '.github/workflows/ci_check.yml',
     '.github/workflows/copilot_pull_request_merge_queue.yml',
     'setup/workflows/copilot_pull_request_merge_queue.yml',
   ])('requires merge-group checks in %s', (relativeFile) => {
@@ -1033,7 +1032,6 @@ describe('workflow contract validator', () => {
     ['.github/workflows', 'copilot_issue.yml'],
     ['setup/workflows', 'copilot_credential_health.yml'],
     ['setup/workflows', 'copilot_issue.yml'],
-    ['.github/workflows', 'ci_check.yml'],
   ])('prevents grouped routing from overriding the hosted/trust role in %s/%s', (directory, name) => {
     const { file, workflow } = loadMutationWorkflow(directory, name);
     Object.values(workflow.jobs)[0]['runs-on'] = { group: 'vypdev', labels: ['self-hosted', 'codex', 'Linux'] };
@@ -1372,27 +1370,39 @@ describe('workflow contract validator', () => {
   );
 
   it.each([
-    ['pull_request', 'vypdev/copilot', ['self-hosted', 'codex', 'Linux']],
-    ['pull_request', 'outside/fork', ['self-hosted', 'Linux', 'ephemeral-ci']],
-    ['merge_group', undefined, ['self-hosted', 'Linux', 'ephemeral-ci']],
-    ['workflow_dispatch', undefined, ['self-hosted', 'codex', 'Linux']],
-  ])('routes %s from %s within the vypdev group', (eventName, headRepository, expectedRunner) => {
-    const file = path.join(process.cwd(), '.github', 'workflows', 'ci_check.yml');
-    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
-    const route = workflow.jobs['ci-check']['runs-on'];
-    expect(route.group).toBe('vypdev');
-    const selected = runInNewContext(route.labels.slice(4, -3), {
+    ['pull_request', 'vypdev/copilot', true],
+    ['pull_request', 'outside/fork', false],
+    ['pull_request', undefined, false],
+    ['push', undefined, true],
+    ['workflow_dispatch', undefined, true],
+  ])('admits %s from %s before assigning a vypdev runner (%s)', (eventName, headRepository, expected) => {
+    const { file, workflow } = loadMutationWorkflow('.github/workflows', 'ci_check.yml');
+    const job = workflow.jobs['ci-check'];
+    const admitted = runInNewContext(job.if.slice(4, -3), {
       github: {
         event_name: eventName,
         event: { pull_request: { head: { repo: { full_name: headRepository } } } },
         repository: 'vypdev/copilot',
       },
-      fromJSON: JSON.parse,
     }, { timeout: 100 });
-    expect(selected).toEqual(expectedRunner);
+    expect(admitted).toBe(expected);
+    expect(job['runs-on']).toEqual({ group: 'vypdev', labels: ['self-hosted', 'codex', 'Linux'] });
     expect(() => validateWorkflow(file, workflow)).not.toThrow();
-    workflow.jobs['ci-check']['runs-on'] = ['self-hosted', 'codex'];
-    expect(() => assertRunner(file, workflow)).toThrow('isolate fork and merge-group jobs');
+  });
+
+  it('rejects CI without the fork gate or with the inactive merge-queue trigger', () => {
+    const { file, workflow } = loadMutationWorkflow('.github/workflows', 'ci_check.yml');
+    const job = workflow.jobs['ci-check'];
+    const runner = job['runs-on'];
+    job['runs-on'] = { ...runner, group: 'other' };
+    expect(() => validateWorkflow(file, workflow)).toThrow('must use runs-on with the vypdev group');
+    job['runs-on'] = runner;
+    const condition = job.if;
+    delete job.if;
+    expect(() => validateWorkflow(file, workflow)).toThrow('must admit only same-repository pull requests');
+    job.if = condition;
+    workflow.on.merge_group = { types: ['checks_requested'] };
+    expect(() => validateWorkflow(file, workflow)).toThrow('must admit only same-repository pull requests');
   });
 
   it('isolates RepoWise files per run and removes them after artifact upload', () => {
@@ -1460,12 +1470,12 @@ describe('workflow contract validator', () => {
     expect(step?.run).toContain(`git -c ${CRLF_WHITESPACE} diff --check -- . ':(exclude)build/**'`);
   });
 
-  it('checks committed PR, merge-queue, and push changes against their event base', () => {
+  it('checks committed PR, push, and manual changes against their event base', () => {
     const file = path.join(process.cwd(), '.github', 'workflows', 'ci_check.yml');
     const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
     const step = workflow.jobs['ci-check'].steps.find((item: { name?: string }) => item.name === 'Validate Git diff');
     expect(step?.run).toContain('pull_request) base="$PR_BASE_SHA"');
-    expect(step?.run).toContain('merge_group) base="$MERGE_BASE_SHA"');
+    expect(step?.run).toContain('workflow_dispatch) base="$(git rev-parse HEAD^)"');
     expect(step?.run).toContain('push) base="$PUSH_BEFORE_SHA"');
     expect(step?.run).toContain('"$base" =~ ^0{40}$');
     expect(step?.run).toContain('base="$(git hash-object -t tree --stdin </dev/null)"');
