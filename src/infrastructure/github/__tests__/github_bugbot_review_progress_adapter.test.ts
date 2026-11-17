@@ -1,3 +1,4 @@
+import { readBugbotProgressCheckObservation } from '../../../application/policies/bugbot_progress_check_observation_policy';
 import { githubBugbotReviewProgress } from '../github_bugbot_review_progress_adapter';
 import type { BugbotReviewProgressObservation } from '../../../application/ports/bugbot_review_progress_ports';
 
@@ -24,6 +25,15 @@ it('publishes a content-free progress observation with comparison, attempt, and 
     expect(check).toHaveBeenCalledWith(expect.objectContaining({ headSha, runUrl, title: 'Analizando el diff',
         summary: expect.stringContaining('3/105 particiones validadas'),
         externalId: `bugbot:951:${baseSha}:${headSha}:${'c'.repeat(64)}:14:2` }));
+    const { summary, externalId } = check.mock.calls[0][0];
+    expect(readBugbotProgressCheckObservation(summary, externalId)).toEqual(observation);
+});
+
+it('keeps the readable check when a typed observation is unavailable', async () => {
+    const { port, check } = fixture();
+    await port.observe({ ...observation, observedAt: 'unavailable' }, false, 'en');
+    expect(check.mock.calls[0][0].summary).not.toContain('copilot-bugbot-progress');
+    expect(check.mock.calls[0][0].summary).toContain('3/105 partitions validated');
 });
 
 it.each([

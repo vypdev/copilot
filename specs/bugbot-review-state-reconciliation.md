@@ -2060,6 +2060,40 @@ Summary until the card can be updated safely.
 
 [GitHub comment update contract](https://docs.github.com/en/rest/issues/comments#update-an-issue-comment)
 
+### Shared publisher handoff
+
+The native Review check can carry one `copilot-bugbot-progress:v1`
+observation alongside the human-readable view. The exact external ID
+binds the comparison, policy, native run and attempt. The closed decoder
+accepts only stage, validated counts, trusted time, sequence and bounded
+failure codes. Authenticate the check's repository and application identity
+before decoding. Missing or invalid structured data keeps the human-readable
+Check view available. Normal completion retains the last accepted progress
+snapshot in the Check details beside the terminal summary. Interrupted-check
+recovery can retain a previously valid observation after GitHub confirms the
+terminal run state.
+
+Use a short trusted workflow job per PR to serialize publication. A wake-up
+identifies a repository, PR and native source attempt. The job fetches the
+latest observation after entering the queue and checks the live comparison,
+policy and attempt again immediately before editing the existing card.
+Manual rechecks and terminal publishers must use this same lane. A terminal
+publisher supplies a bounded verified projection through an authenticated
+same-attempt handoff and observes its publication before proceeding where
+the existing contract requires it. The job must load only data from upstream
+attempts and execute code from a trusted workflow revision. The long review
+continues in its analysis job.
+
+The tested composition preserves the previous verified body byte for byte,
+leaves a first-review card without terminal markers, rejects lower sequences
+within the same attempt and keeps current progress when a recheck refreshes
+the verified section. A superseding push, recheck and interrupted runner
+can be replayed deterministically with fail-on-write provider ports.
+The simulator supplies serialization explicitly. GitHub workflow installation,
+the terminal handoff and live card publication still require integration.
+
+[GitHub Actions concurrency queue](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency)
+
 ### GitHub content examples
 
 ```markdown

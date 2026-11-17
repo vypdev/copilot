@@ -1,3 +1,4 @@
+import { buildBugbotProgressCheckMarker, readBugbotProgressCheckObservation } from '../../../application/policies/bugbot_progress_check_observation_policy';
 import { readInterruptedBugbotReview, settleInterruptedBugbotCheck } from '../github_bugbot_interrupted_check';
 
 const head = 'a'.repeat(40);
@@ -25,6 +26,21 @@ it.each(['failure', 'cancelled', 'timed_out'] as const)('settles only the attemp
     expect(update).toHaveBeenCalledWith(expect.objectContaining({ check_run_id: 300, status: 'completed', conclusion,
         output: expect.objectContaining({ summary: expect.stringContaining('37/109 partitions validated') }) }));
     expect(update.mock.calls[0][0].output.summary).not.toContain('copilot-bugbot-verification:');
+});
+
+it('preserves the authenticated observation when retiring an interrupted check', async () => {
+    const observation = { stage: 'analyzing', headSha: head, baseSha: base, pullNumber: 951, elapsedMs: 9_000,
+        observedAt: '2026-11-17T21:46:28.847Z', sequence: 2 } as const;
+    const marker = buildBugbotProgressCheckMarker(observation, check.external_id);
+    const listForRef = jest.fn().mockResolvedValue({ data: { total_count: 1, check_runs: [
+        { ...check, output: { summary: check.output.summary + '\n\n' + marker } },
+    ] } });
+    const update = jest.fn();
+    await settleInterruptedBugbotCheck({ listForRef, update }, 'org', 'repo', decode()!, 'en');
+    const summary = update.mock.calls[0][0].output.summary as string;
+    expect(readBugbotProgressCheckObservation(summary, check.external_id)).toEqual(observation);
+    expect(summary).not.toContain('&lt;!-- copilot-bugbot-progress');
+    expect(summary).not.toContain('copilot-bugbot-verification');
 });
 
 it.each([

@@ -1,12 +1,13 @@
 import { CopilotEvidencePublicationError } from '../../application/ports/copilot_evidence_error';
 import { copilotEvidenceProviderFailure } from './github/copilot_evidence_provider_failure';
+import { readBugbotProgressCheckObservation } from '../../application/policies/bugbot_progress_check_observation_policy';
 import type { CopilotEvidence, CopilotEvidencePort, CopilotLiveReviewCheck } from '../../application/ports/copilot_evidence_ports';
 import type { GithubClientPort } from '../../infrastructure/github/ports/github_client_provider_port';
 import type { GithubChecksClient } from '../../infrastructure/github/ports/github_checks_provider_ports';
 
 /** Native Check Runs with a closed, credential-free failure boundary. */
 export class CopilotEvidenceRepository implements CopilotEvidencePort {
-    private readonly live = new Map<string, { id: number; externalId: string }>();
+    private readonly live = new Map<string, { id: number; externalId: string; progress?: string }>();
     private readonly attempted = new Set<string>();
     private readonly liveScope = (owner: string, repo: string, head: string) => `${owner}/${repo}:${head}`;
     constructor(private readonly client: GithubClientPort<GithubChecksClient>) {}
@@ -17,8 +18,12 @@ export class CopilotEvidenceRepository implements CopilotEvidencePort {
         const key = this.liveScope(owner, repo, check.headSha);
         const existing = this.live.get(key);
         const output = { title: check.title, summary: check.summary };
+        const progress = readBugbotProgressCheckObservation(check.summary, check.externalId) ? check.summary : undefined;
         if (existing !== undefined) {
-            if (existing.externalId === check.externalId) await checks.update({ owner, repo, check_run_id: existing.id, output });
+            if (existing.externalId === check.externalId) {
+                await checks.update({ owner, repo, check_run_id: existing.id, output });
+                if (progress) existing.progress = progress;
+            }
             return;
         }
         if (this.attempted.has(check.externalId)) return;
@@ -26,7 +31,7 @@ export class CopilotEvidenceRepository implements CopilotEvidencePort {
         const response = await checks.create({ owner, repo, name: 'Copilot / Review', head_sha: check.headSha,
             status: 'in_progress', external_id: check.externalId, details_url: check.runUrl, output });
         if (!Number.isSafeInteger(response?.data?.id) || response.data.id <= 0) throw new CopilotEvidencePublicationError('provider.contract-invalid');
-        this.live.set(key, { id: response.data.id, externalId: check.externalId });
+        this.live.set(key, { id: response.data.id, externalId: check.externalId, progress });
     }
 
     async retireLiveReviews(owner: string, repo: string, token: string): Promise<void> {
@@ -46,7 +51,8 @@ export class CopilotEvidenceRepository implements CopilotEvidencePort {
             const existing = evidence.name === 'Copilot / Review' ? this.live.get(key) : undefined;
             if (existing !== undefined && checks.update) {
                 await checks.update({ owner, repo: repository, check_run_id: existing.id, status: 'completed',
-                    conclusion: evidence.conclusion, output: { title: evidence.title, summary: evidence.summary } });
+                    conclusion: evidence.conclusion, output: { title: evidence.title, summary: evidence.summary,
+                        ...(existing.progress ? { text: existing.progress } : {}) } });
                 this.live.delete(key);
                 return;
             }

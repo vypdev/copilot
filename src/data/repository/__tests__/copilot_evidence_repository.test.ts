@@ -1,4 +1,6 @@
 import { CopilotEvidenceRepository } from '../copilot_evidence_repository';
+import { buildBugbotProgressCheckMarker, readBugbotProgressCheckObservation } from '../../../application/policies/bugbot_progress_check_observation_policy';
+import type { BugbotReviewProgressObservation } from '../../../application/ports/bugbot_review_progress_ports';
 
 describe('CopilotEvidenceRepository', () => {
     it('creates a completed native Check Run with bounded evidence', async () => {
@@ -52,6 +54,31 @@ describe('CopilotEvidenceRepository', () => {
         expect(update).not.toHaveBeenCalled();
         await repository.retireLiveReviews('owner', 'repo', 'token');
         expect(update).toHaveBeenCalledWith({ owner: 'owner', repo: 'repo', check_run_id: 91, status: 'completed', conclusion: 'neutral' });
+    });
+
+    it('retains the exact last observation on the same failed review check', async () => {
+        const create = jest.fn().mockResolvedValue({ data: { id: 91 } });
+        const update = jest.fn().mockResolvedValue({});
+        const repository = new CopilotEvidenceRepository({ getClient: () => ({ rest: { checks: { create, update } } }) });
+        const baseSha = 'a'.repeat(40);
+        const headSha = 'b'.repeat(40);
+        const externalId = `bugbot:951:${baseSha}:${headSha}:default:7:2`;
+        const runUrl = 'https://github.com/owner/repo/actions/runs/7/attempts/2';
+        const observation: BugbotReviewProgressObservation = { stage: 'analyzing', baseSha, headSha, pullNumber: 951,
+            elapsedMs: 2160000, observedAt: '2026-11-17T22:06:57.300Z', sequence: 8, partitions: { total: 110, completed: 8 }, retries: 3 };
+        const terminal: BugbotReviewProgressObservation = { ...observation, stage: 'finished', outcome: 'failed',
+            failureCode: 'agent.failed', elapsedMs: 2161000, observedAt: '2026-11-17T22:06:58.719Z', sequence: 9 };
+        const progress = (facts: BugbotReviewProgressObservation, attempt = externalId) =>
+            `8/110 partitions validated · ${facts.observedAt}\n[Workflow run](${runUrl})\n\n${buildBugbotProgressCheckMarker(facts, attempt)}`;
+        await repository.observeReview({ headSha, externalId, title: 'Analyzing', summary: progress(observation), runUrl }, 'owner', 'repo', 'token');
+        await repository.observeReview({ headSha, externalId, title: 'Review failed', summary: progress(terminal), runUrl }, 'owner', 'repo', 'token');
+        await repository.observeReview({ headSha, externalId, title: 'Other attempt', summary: progress(terminal, externalId.replace(/:2$/u, ':1')), runUrl }, 'owner', 'repo', 'token');
+        await repository.publish({ name: 'Copilot / Review', headSha, conclusion: 'failure', title: 'Failed', summary: 'Authoritative failure' }, 'owner', 'repo', 'token');
+        expect(create).toHaveBeenCalledTimes(1);
+        const completion = update.mock.calls.at(-1)?.[0];
+        expect(completion).toMatchObject({ check_run_id: 91, status: 'completed', conclusion: 'failure',
+            output: { summary: 'Authoritative failure', text: progress(terminal) } });
+        expect(readBugbotProgressCheckObservation(completion.output.text, externalId)).toEqual(terminal);
     });
 
     it('keeps terminal publication available when the client cannot update a check', async () => {

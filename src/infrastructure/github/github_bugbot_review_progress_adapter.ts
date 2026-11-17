@@ -2,6 +2,7 @@ import type { BugbotReviewProgressPort } from '../../application/ports/bugbot_re
 import type { CopilotLiveReviewCheck } from '../../application/ports/copilot_evidence_ports';
 import type { ActionSummaryPort } from '../../application/ports/action_summary_ports';
 import { renderBugbotLiveProgress } from '../../application/policies/bugbot_live_progress_presentation_policy';
+import { buildBugbotProgressCheckMarker } from '../../application/policies/bugbot_progress_check_observation_policy';
 import { canonicalGitObjectId } from '../../domain/git_object_id';
 
 interface NativeReviewProgressContext {
@@ -34,8 +35,10 @@ export function githubBugbotReviewProgress(
         const live = await current(observation.pullNumber);
         if (live?.state !== 'open' || canonicalGitObjectId(live.headSha) !== observation.headSha
             || live.baseSha !== observation.baseSha || live.baseRefSha !== (observation.baseRefSha ?? observation.baseSha)) return;
-        await observeCheck({ ...view, headSha: observation.headSha, runUrl: context.runUrl,
-            externalId: `bugbot:${observation.pullNumber}:${observation.baseSha}:${observation.headSha}:${context.policy ?? 'default'}:${context.runId}:${context.attempt}` });
+        const externalId = `bugbot:${observation.pullNumber}:${observation.baseSha}:${observation.headSha}:${context.policy ?? 'default'}:${context.runId}:${context.attempt}`;
+        const observationMarker = buildBugbotProgressCheckMarker(observation, externalId);
+        await observeCheck({ ...view, summary: observationMarker ? view.summary + '\n\n' + observationMarker : view.summary,
+            headSha: observation.headSha, runUrl: context.runUrl, externalId });
         checkStarted = true;
     } };
 }

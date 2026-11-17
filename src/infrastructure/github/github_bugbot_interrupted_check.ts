@@ -1,4 +1,5 @@
 import { sanitizeAgentMarkdown } from '../../application/policies/github_comment_publication_policy';
+import { buildBugbotProgressCheckMarker, readBugbotProgressCheckObservation } from '../../application/policies/bugbot_progress_check_observation_policy';
 import { canonicalGitObjectId } from '../../domain/git_object_id';
 import { parsePositiveSafeInteger } from '../../domain/positive_integer_policy';
 
@@ -81,10 +82,14 @@ export async function settleInterruptedBugbotCheck(
     const message = spanish
         ? `La ejecución nativa ${copy[conclusion]}. Consulta su diagnóstico antes de reintentar. Cualquier revisión verificada anterior sigue disponible.`
         : `The native run ${copy[conclusion]}. Inspect the run before retrying. Any previous verified review remains available.`;
-    const observation = sanitizeAgentMarkdown(check.output.summary, 4_000).replace(/copilot-bugbot-verification/gu, 'copilot-bugbot-receipt');
+    const original = check.output.summary ?? '';
+    const previous = readBugbotProgressCheckObservation(original, check.external_id!);
+    const observation = sanitizeAgentMarkdown(original.replace(/<!-- copilot-bugbot-progress:v1 [^\r\n]{1,3000} -->/gu, '').trimEnd(), 4_000)
+        .replace(/copilot-bugbot-verification/gu, 'copilot-bugbot-receipt');
+    const observationMarker = previous && buildBugbotProgressCheckMarker(previous, check.external_id!);
     await checks.update({
         owner, repo, check_run_id: check.id, status: 'completed', conclusion,
-        output: { title, summary: [`**${title}** · \`${head.slice(0, 8)}\``, message, observation].filter(Boolean).join('\n\n') },
+        output: { title, summary: [`**${title}** · \`${head.slice(0, 8)}\``, message, observation, observationMarker].filter(Boolean).join('\n\n') },
     });
     return true;
 }

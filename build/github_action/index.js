@@ -51757,6 +51757,86 @@ function bugbotPatchBindsText(patch, before, after) {
 
 /***/ }),
 
+/***/ 60202:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.buildBugbotProgressCheckMarker = buildBugbotProgressCheckMarker;
+exports.readBugbotProgressCheckObservation = readBugbotProgressCheckObservation;
+const git_object_id_1 = __nccwpck_require__(88623);
+const markerPrefix = '<!-- copilot-bugbot-progress:v1 ';
+const marker = /<!-- copilot-bugbot-progress:v1 ([A-Za-z0-9_-]{1,3000}) -->/gu;
+const stages = ['preparing', 'analyzing', 'verifying', 'publishing', 'finished'];
+const outcomes = ['completed', 'no-findings', 'partial', 'dry-run', 'superseded', 'skipped', 'failed'];
+const observationKeys = ['stage', 'headSha', 'baseSha', 'baseRefSha', 'pullNumber', 'elapsedMs', 'observedAt', 'sequence',
+    'partitions', 'frames', 'candidates', 'retries', 'stageTimesMs', 'failureCode', 'outcome'];
+const attemptKey = /^bugbot:([1-9]\d{0,15}):([a-f0-9]{40}|[a-f0-9]{64}):([a-f0-9]{40}|[a-f0-9]{64}):(?:default|[a-f0-9]{64}):([1-9]\d{0,15}):([1-9]\d{0,15})$/u;
+const nonnegative = (value) => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
+const positive = (value) => nonnegative(value) && value > 0;
+const record = (value) => Boolean(value && typeof value === 'object' && !Array.isArray(value));
+const allowed = (value, keys) => Object.keys(value).every(key => keys.includes(key));
+function count(value, key) {
+    return record(value) && allowed(value, [key, 'total']) && nonnegative(value.total)
+        && (key === 'completed' ? nonnegative(value[key]) : positive(value[key]))
+        && Number(value[key]) <= value.total;
+}
+function validObservation(value, externalId) {
+    const identity = attemptKey.exec(externalId);
+    if (!identity || [identity[1], identity[4], identity[5]].some(item => !positive(Number(item)))
+        || !record(value) || !allowed(value, observationKeys))
+        return false;
+    const { stage, outcome, observedAt, elapsedMs, sequence, partitions, frames, candidates, retries, failureCode, stageTimesMs } = value;
+    return value.pullNumber === Number(identity[1]) && value.baseSha === identity[2] && value.headSha === identity[3]
+        && (0, git_object_id_1.canonicalGitObjectId)(value.baseSha) === value.baseSha && (0, git_object_id_1.canonicalGitObjectId)(value.headSha) === value.headSha
+        && (value.baseRefSha === undefined || (0, git_object_id_1.canonicalGitObjectId)(value.baseRefSha) === value.baseRefSha)
+        && stages.includes(stage)
+        && (stage === 'finished' ? outcomes.includes(outcome) : outcome === undefined)
+        && typeof observedAt === 'string' && /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/u.test(observedAt)
+        && Number.isFinite(Date.parse(observedAt)) && new Date(observedAt).toISOString() === observedAt
+        && nonnegative(elapsedMs) && positive(sequence)
+        && (partitions === undefined || count(partitions, 'completed'))
+        && (frames === undefined || count(frames, 'ordinal'))
+        && (candidates === undefined || count(candidates, 'completed'))
+        && (retries === undefined || nonnegative(retries))
+        && (stageTimesMs === undefined || (record(stageTimesMs) && allowed(stageTimesMs, stages.slice(0, -1))
+            && Object.values(stageTimesMs).every(nonnegative)))
+        && (failureCode === undefined || (typeof failureCode === 'string' && failureCode.length <= 64
+            && /^[a-z]+(?:[.-][a-z]+)*$/u.test(failureCode)));
+}
+function buildBugbotProgressCheckMarker(observation, externalId) {
+    if (!validObservation(observation, externalId))
+        return undefined;
+    const encoded = Buffer.from(JSON.stringify({ externalId, observation }), 'utf8').toString('base64url');
+    return `${markerPrefix}${encoded} -->`;
+}
+/** The caller authenticates the native check and its attempt before supplying the external ID. */
+function readBugbotProgressCheckObservation(summary, externalId) {
+    if (summary.length > 20000 || summary.split(markerPrefix).length !== 2)
+        return undefined;
+    const matches = [...summary.matchAll(marker)];
+    if (matches.length !== 1)
+        return undefined;
+    try {
+        const encoded = matches[0][1];
+        const bytes = Buffer.from(encoded, 'base64url');
+        if (bytes.toString('base64url') !== encoded)
+            return undefined;
+        const payload = JSON.parse(bytes.toString('utf8'));
+        if (!record(payload) || !allowed(payload, ['externalId', 'observation']) || payload.externalId !== externalId
+            || !validObservation(payload.observation, externalId))
+            return undefined;
+        return payload.observation;
+    }
+    catch {
+        return undefined;
+    }
+}
+
+
+/***/ }),
+
 /***/ 85821:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -89715,6 +89795,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CopilotEvidenceRepository = void 0;
 const copilot_evidence_error_1 = __nccwpck_require__(10127);
 const copilot_evidence_provider_failure_1 = __nccwpck_require__(55920);
+const bugbot_progress_check_observation_policy_1 = __nccwpck_require__(60202);
 /** Native Check Runs with a closed, credential-free failure boundary. */
 class CopilotEvidenceRepository {
     constructor(client) {
@@ -89730,9 +89811,13 @@ class CopilotEvidenceRepository {
         const key = this.liveScope(owner, repo, check.headSha);
         const existing = this.live.get(key);
         const output = { title: check.title, summary: check.summary };
+        const progress = (0, bugbot_progress_check_observation_policy_1.readBugbotProgressCheckObservation)(check.summary, check.externalId) ? check.summary : undefined;
         if (existing !== undefined) {
-            if (existing.externalId === check.externalId)
+            if (existing.externalId === check.externalId) {
                 await checks.update({ owner, repo, check_run_id: existing.id, output });
+                if (progress)
+                    existing.progress = progress;
+            }
             return;
         }
         if (this.attempted.has(check.externalId))
@@ -89742,7 +89827,7 @@ class CopilotEvidenceRepository {
             status: 'in_progress', external_id: check.externalId, details_url: check.runUrl, output });
         if (!Number.isSafeInteger(response?.data?.id) || response.data.id <= 0)
             throw new copilot_evidence_error_1.CopilotEvidencePublicationError('provider.contract-invalid');
-        this.live.set(key, { id: response.data.id, externalId: check.externalId });
+        this.live.set(key, { id: response.data.id, externalId: check.externalId, progress });
     }
     async retireLiveReviews(owner, repo, token) {
         if (!this.live.size)
@@ -89762,7 +89847,8 @@ class CopilotEvidenceRepository {
             const existing = evidence.name === 'Copilot / Review' ? this.live.get(key) : undefined;
             if (existing !== undefined && checks.update) {
                 await checks.update({ owner, repo: repository, check_run_id: existing.id, status: 'completed',
-                    conclusion: evidence.conclusion, output: { title: evidence.title, summary: evidence.summary } });
+                    conclusion: evidence.conclusion, output: { title: evidence.title, summary: evidence.summary,
+                        ...(existing.progress ? { text: existing.progress } : {}) } });
                 this.live.delete(key);
                 return;
             }
@@ -111612,6 +111698,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.readInterruptedBugbotReview = readInterruptedBugbotReview;
 exports.settleInterruptedBugbotCheck = settleInterruptedBugbotCheck;
 const github_comment_publication_policy_1 = __nccwpck_require__(72712);
+const bugbot_progress_check_observation_policy_1 = __nccwpck_require__(60202);
 const git_object_id_1 = __nccwpck_require__(88623);
 const positive_integer_policy_1 = __nccwpck_require__(19879);
 const conclusions = ['failure', 'cancelled', 'timed_out'];
@@ -111660,10 +111747,14 @@ async function settleInterruptedBugbotCheck(checks, owner, repo, review, locale)
     const message = spanish
         ? `La ejecución nativa ${copy[conclusion]}. Consulta su diagnóstico antes de reintentar. Cualquier revisión verificada anterior sigue disponible.`
         : `The native run ${copy[conclusion]}. Inspect the run before retrying. Any previous verified review remains available.`;
-    const observation = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(check.output.summary, 4000).replace(/copilot-bugbot-verification/gu, 'copilot-bugbot-receipt');
+    const original = check.output.summary ?? '';
+    const previous = (0, bugbot_progress_check_observation_policy_1.readBugbotProgressCheckObservation)(original, check.external_id);
+    const observation = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(original.replace(/<!-- copilot-bugbot-progress:v1 [^\r\n]{1,3000} -->/gu, '').trimEnd(), 4000)
+        .replace(/copilot-bugbot-verification/gu, 'copilot-bugbot-receipt');
+    const observationMarker = previous && (0, bugbot_progress_check_observation_policy_1.buildBugbotProgressCheckMarker)(previous, check.external_id);
     await checks.update({
         owner, repo, check_run_id: check.id, status: 'completed', conclusion,
-        output: { title, summary: [`**${title}** · \`${head.slice(0, 8)}\``, message, observation].filter(Boolean).join('\n\n') },
+        output: { title, summary: [`**${title}** · \`${head.slice(0, 8)}\``, message, observation, observationMarker].filter(Boolean).join('\n\n') },
     });
     return true;
 }
@@ -111737,6 +111828,7 @@ function normalizeHttpsServerUrl(value) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.githubBugbotReviewProgress = githubBugbotReviewProgress;
 const bugbot_live_progress_presentation_policy_1 = __nccwpck_require__(93925);
+const bugbot_progress_check_observation_policy_1 = __nccwpck_require__(60202);
 const git_object_id_1 = __nccwpck_require__(88623);
 /** Reports native progress on the one check owned by this invocation. */
 function githubBugbotReviewProgress(context, summary, current, observeCheck) {
@@ -111757,8 +111849,10 @@ function githubBugbotReviewProgress(context, summary, current, observeCheck) {
             if (live?.state !== 'open' || (0, git_object_id_1.canonicalGitObjectId)(live.headSha) !== observation.headSha
                 || live.baseSha !== observation.baseSha || live.baseRefSha !== (observation.baseRefSha ?? observation.baseSha))
                 return;
-            await observeCheck({ ...view, headSha: observation.headSha, runUrl: context.runUrl,
-                externalId: `bugbot:${observation.pullNumber}:${observation.baseSha}:${observation.headSha}:${context.policy ?? 'default'}:${context.runId}:${context.attempt}` });
+            const externalId = `bugbot:${observation.pullNumber}:${observation.baseSha}:${observation.headSha}:${context.policy ?? 'default'}:${context.runId}:${context.attempt}`;
+            const observationMarker = (0, bugbot_progress_check_observation_policy_1.buildBugbotProgressCheckMarker)(observation, externalId);
+            await observeCheck({ ...view, summary: observationMarker ? view.summary + '\n\n' + observationMarker : view.summary,
+                headSha: observation.headSha, runUrl: context.runUrl, externalId });
             checkStarted = true;
         } };
 }
