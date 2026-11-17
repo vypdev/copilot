@@ -4,6 +4,7 @@ import type {
   BugbotReconciliationTarget,
   BugbotSnapshotSurfaceState,
 } from '../../../../contracts/bugbot_reconciliation';
+import { selectBugbotCommitProgressLink } from '../../../../policies/bugbot_commit_progress_link_policy';
 import { PullRequestReviewOperationError } from '../../../../ports/pull_request_review_errors';
 import type { BugbotReconciliationSnapshotPorts } from '../../../../ports/bugbot_reconciliation_ports';
 
@@ -37,7 +38,9 @@ export async function loadBugbotReconciliationSnapshot(
           linkedIssueNumber,
         );
 
-  const [commentsRead, threadsRead, reviewsRead, conversationRead, linkedIssueRead] =
+  const linkagePromise = linkedIssueNumber !== undefined && !linkedIssueSharesConversation
+    ? ports.isLinkedIssue?.(target.pullRequestNumber, linkedIssueNumber) : undefined;
+  const [commentsRead, threadsRead, reviewsRead, conversationRead, linkedIssueRead, linkageRead] =
     await Promise.allSettled([
       ports.listPullRequestReviewComments(
         target.pullRequestNumber,
@@ -50,6 +53,7 @@ export async function loadBugbotReconciliationSnapshot(
       ),
       conversationPromise,
       linkedIssuePromise,
+      linkagePromise,
     ]);
 
   const finalHeadSha = await readHead(target, ports);
@@ -60,10 +64,13 @@ export async function loadBugbotReconciliationSnapshot(
   let navigation: BugbotReconciliationSnapshot['navigation'];
   let navigationState: BugbotSnapshotSurfaceState = 'verified';
   try {
-    navigation = ports.navigationForPullRequest(
-      target.pullRequestNumber,
-      finalHeadSha,
-    );
+    navigation = ports.navigationForPullRequest(target.pullRequestNumber, finalHeadSha);
+    if (linkedIssueNumber !== undefined && linkageRead.status === 'fulfilled' && linkageRead.value === true
+      && linkedIssueRead.status === 'fulfilled') {
+      const commitProgress = selectBugbotCommitProgressLink(linkedIssueRead.value, linkedIssueNumber,
+        target.pullRequestNumber, navigation.pullRequestUrl, target.trustedAuthorLogin);
+      if (commitProgress) navigation = { ...navigation, commitProgress };
+    }
   } catch {
     navigationState = 'failed';
   }

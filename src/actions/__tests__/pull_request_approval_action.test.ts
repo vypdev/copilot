@@ -122,6 +122,41 @@ describe('trusted PR approval Action route', () => {
     expect(mockExecute).toHaveBeenCalledTimes(1);
   });
 
+  it.each(['normal', 'provider-failure', 'dry-run'])('recovers the abandoned presentation check independently of approval (%s)', async mode => {
+    const head = 'a'.repeat(40);
+    const base = 'b'.repeat(40);
+    const restoration = process.env.COPILOT_APPROVAL_CHECK_TOKEN;
+    process.env.COPILOT_APPROVAL_CHECK_TOKEN = 'check-token';
+    context().eventName = 'workflow_run';
+    context().payload = { repository: { id: 17 }, action: 'completed', workflow_run: {
+      id: 14, run_attempt: 2, status: 'completed', conclusion: 'failure', event: 'pull_request',
+      path: '.github/workflows/copilot_pull_request.yml', repository: { id: 17 }, head_repository: { id: 17 },
+      pull_requests: [{ number: 42, head: { sha: head, repo: { id: 17 } }, base: { sha: base, repo: { id: 17 } } }],
+    } };
+    const listForRef = jest.fn().mockResolvedValue({ data: { total_count: 1, check_runs: [{
+      id: 55, name: 'Copilot / Review', status: 'in_progress', head_sha: head, app: { slug: 'github-actions' },
+      external_id: `bugbot:42:${base}:${head}:default:14:2`, output: { summary: 'Last observed at 37/109 partitions' },
+    }] } });
+    const update = mode === 'provider-failure' ? jest.fn().mockRejectedValue(new Error('optional write failed')) : jest.fn();
+    (github.getOctokit as jest.Mock).mockReturnValue({ rest: { checks: { listForRef, update } } });
+    (getGithubActionInput as jest.Mock).mockImplementation((name: string) => name === 'bugbot-dry-run' && mode === 'dry-run' ? 'true' : '');
+    try {
+      await runPullRequestApprovalAction('pat');
+      expect(mockExecute).toHaveBeenCalledWith({ owner: 'owner', repository: 'repo', repositoryId: 17, pullNumber: 42 });
+      if (mode === 'dry-run') {
+        expect(listForRef).not.toHaveBeenCalled();
+        expect(update).not.toHaveBeenCalled();
+      } else {
+        expect(github.getOctokit).toHaveBeenCalledWith('check-token');
+        expect(update).toHaveBeenCalledWith(expect.objectContaining({ check_run_id: 55, status: 'completed', conclusion: 'failure' }));
+        if (mode === 'provider-failure') expect(core.info).toHaveBeenCalledWith(expect.stringContaining('could not be closed'));
+      }
+    } finally {
+      if (restoration === undefined) delete process.env.COPILOT_APPROVAL_CHECK_TOKEN;
+      else process.env.COPILOT_APPROVAL_CHECK_TOKEN = restoration;
+    }
+  });
+
   it('skips an ambiguous or foreign workflow_run association', async () => {
     context().eventName = 'workflow_run';
     context().payload = { repository: { id: 17 }, action: 'completed', workflow_run: {

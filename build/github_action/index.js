@@ -46013,6 +46013,7 @@ const github_action_locale_inputs_1 = __nccwpck_require__(58893);
 const pull_request_approval_presentation_policy_1 = __nccwpck_require__(79017);
 const logging_ports_1 = __nccwpck_require__(6152);
 const logger_adapter_1 = __nccwpck_require__(72762);
+const github_bugbot_interrupted_check_1 = __nccwpck_require__(94512);
 /** Dedicated trusted-default-branch route. It never calls the agent or checks out PR code. */
 async function runPullRequestApprovalAction(token, verificationAuthority) {
     (0, logging_ports_1.configureApplicationLogger)((0, logger_adapter_1.createLoggerAdapter)());
@@ -46031,6 +46032,18 @@ async function runPullRequestApprovalAction(token, verificationAuthority) {
     catch {
         // A malformed optional locale must not change approval eligibility.
     }
+    const checkToken = process.env.COPILOT_APPROVAL_CHECK_TOKEN;
+    const dryRun = (0, github_action_input_1.getGithubActionInput)('bugbot-dry-run') === 'true';
+    const interrupted = checkToken && !dryRun
+        ? (0, github_bugbot_interrupted_check_1.readInterruptedBugbotReview)(github.context.eventName, github.context.payload, repositoryId) : undefined;
+    if (interrupted && checkToken) {
+        try {
+            await (0, github_bugbot_interrupted_check_1.settleInterruptedBugbotCheck)(github.getOctokit(checkToken).rest.checks, owner, repo, interrupted, locale);
+        }
+        catch {
+            core.info('The interrupted Bugbot progress check could not be closed. See its native run for the final status.');
+        }
+    }
     const targetNumbers = await resolvePullNumbers(token, owner, repo);
     if (targetNumbers.length === 0) {
         await core.summary.addRaw('Copilot approval: no unambiguous same-repository PR matched this wakeup.').write();
@@ -46046,9 +46059,9 @@ async function runPullRequestApprovalAction(token, verificationAuthority) {
             chore: (0, github_action_input_1.getGithubActionInput)('chore-tree') || 'chore',
         },
         bugbotSeverity: (0, github_action_input_1.getGithubActionInput)('bugbot-severity') || 'low',
-        bugbotDryRun: (0, github_action_input_1.getGithubActionInput)('bugbot-dry-run') === 'true',
+        bugbotDryRun: dryRun,
         bugbotIgnorePatterns: (0, input_values_policy_1.parseDelimitedValues)((0, github_action_input_1.getGithubActionInput)('ai-ignore-files')),
-        githubToken: process.env.COPILOT_APPROVAL_CHECK_TOKEN,
+        githubToken: checkToken,
         ...(verificationAuthority ? {
             readBugbotVerificationPolicy: async () => ({ ...verificationAuthority, requireReceipt: true }),
         } : {}),
@@ -50117,6 +50130,45 @@ function unrelatedBranchSyncCards(comments, current, trustedBotLogin) {
 
 /***/ }),
 
+/***/ 36011:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.selectBugbotCommitProgressLink = selectBugbotCommitProgressLink;
+const git_object_id_1 = __nccwpck_require__(88623);
+const bugbot_review_ownership_policy_1 = __nccwpck_require__(83288);
+const publication_identity_policy_1 = __nccwpck_require__(45403);
+/** Links a complete, owned Commit card from the verified linked issue's conversation. */
+function selectBugbotCommitProgressLink(comments, issueNumber, pullRequestNumber, pullRequestUrl, trustedAuthorLogin) {
+    const suffix = `/pull/${pullRequestNumber}`;
+    if (!pullRequestUrl.startsWith('https://') || !pullRequestUrl.endsWith(suffix))
+        return undefined;
+    const repositoryUrl = pullRequestUrl.slice(0, -suffix.length);
+    const candidates = comments.flatMap(comment => {
+        if (!Number.isSafeInteger(comment.id) || comment.id <= 0
+            || !(0, bugbot_review_ownership_policy_1.isTrustedBugbotAuthor)(comment.user?.login, trustedAuthorLogin))
+            return [];
+        const body = comment.body?.trim();
+        const marker = (0, publication_identity_policy_1.parsePublicationMarker)(body?.split('\n', 1)[0]);
+        if (!body || marker?.identity.topic !== 'progress' || marker.identity.key !== 'work'
+            || marker.identity.target.kind !== 'issue' || marker.identity.target.number !== issueNumber)
+            return [];
+        const assessed = /^head:([a-f0-9]{40}):scope:[a-f0-9]{64}$/u.exec(marker.sourceVersion);
+        // The structured Commit renderer writes the immutable PR destination in its footer.
+        const links = body.slice(body.lastIndexOf('\n') + 1).split(' · ');
+        if (!assessed || !(0, git_object_id_1.canonicalGitObjectId)(assessed[1])
+            || !links.some(link => /^\[[^\]\r\n]+\]\(/u.test(link) && link.slice(link.indexOf('](') + 2) === `${pullRequestUrl})`))
+            return [];
+        return [{ assessedHeadSha: assessed[1], url: `${repositoryUrl}/issues/${issueNumber}#issuecomment-${comment.id}` }];
+    });
+    return candidates.length === 1 ? candidates[0] : undefined;
+}
+
+
+/***/ }),
+
 /***/ 64162:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -51305,6 +51357,8 @@ exports.BUGBOT_MESSAGE_IDS = Object.freeze([
     'bugbot.status.nav.pullRequest',
     'bugbot.status.nav.verifiedCommit',
     'bugbot.status.nav.reviewChecks',
+    'bugbot.status.nav.commitProgress',
+    'bugbot.status.nav.previousCommitProgress',
     'bugbot.status.nav.workflowRun',
     'bugbot.status.duplicate.superseded',
     'bugbot.status.duplicate.viewCurrent',
@@ -51393,6 +51447,8 @@ const ENGLISH_MESSAGES = Object.freeze({
     'bugbot.status.nav.pullRequest': 'Pull request',
     'bugbot.status.nav.verifiedCommit': 'Verified commit',
     'bugbot.status.nav.reviewChecks': 'Current review checks',
+    'bugbot.status.nav.commitProgress': 'Implementation progress and pending work',
+    'bugbot.status.nav.previousCommitProgress': 'Previous implementation assessment',
     'bugbot.status.nav.workflowRun': 'Workflow run',
     'bugbot.status.duplicate.superseded': 'This status was superseded by the canonical card.',
     'bugbot.status.duplicate.viewCurrent': 'View current status',
@@ -51484,6 +51540,8 @@ const SPANISH_MESSAGES = Object.freeze({
     'bugbot.status.nav.pullRequest': 'Pull request',
     'bugbot.status.nav.verifiedCommit': 'Commit verificado',
     'bugbot.status.nav.reviewChecks': 'Checks de la revisión actual',
+    'bugbot.status.nav.commitProgress': 'Avance de implementación y trabajo pendiente',
+    'bugbot.status.nav.previousCommitProgress': 'Evaluación de implementación anterior',
     'bugbot.status.nav.workflowRun': 'Ejecución',
     'bugbot.status.duplicate.superseded': 'Este estado fue reemplazado por la tarjeta canónica.',
     'bugbot.status.duplicate.viewCurrent': 'Ver estado actual',
@@ -52543,6 +52601,11 @@ function renderBugbotStatusCard(projection, catalogOrLocale, links) {
             ? [`[${catalog.message('bugbot.status.nav.workflowRun')}](${links.runUrl})`]
             : []),
     ].join(' · ');
+    const { commitProgress } = links;
+    const progressLink = commitProgress
+        ? `[${catalog.message(commitProgress.assessedHeadSha === projection.verifiedHeadSha
+            ? 'bugbot.status.nav.commitProgress' : 'bugbot.status.nav.previousCommitProgress')}](${commitProgress.url}) · \`${commitProgress.assessedHeadSha.slice(0, 8)}\``
+        : undefined;
     const coverageRows = projection.coverage.sources.map((source) => {
         const facts = [catalog.message('bugbot.coverage.retained', { count: source.itemsRetained })];
         if (source.omittedItems > 0)
@@ -52581,6 +52644,8 @@ function renderBugbotStatusCard(projection, catalogOrLocale, links) {
         lines.push('', '<details>', `<summary>${catalog.message('bugbot.status.recoverySummary')}</summary>`, '', ...projection.errors.slice(0, 10).map((error) => `- ${(0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(error, 500)}`), '', '</details>');
     }
     lines.push('', navigation);
+    if (progressLink)
+        lines.push('', progressLink);
     return lines.join('\n');
 }
 function renderBugbotReviewSnapshot(originalBody, input) {
@@ -77680,6 +77745,7 @@ function toPrContext(identity, snapshot) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.loadBugbotReconciliationSnapshot = loadBugbotReconciliationSnapshot;
+const bugbot_commit_progress_link_policy_1 = __nccwpck_require__(36011);
 const pull_request_review_errors_1 = __nccwpck_require__(46445);
 /**
  * Acquires one coherent final snapshot around two head guards. Surface reads
@@ -77700,12 +77766,15 @@ async function loadBugbotReconciliationSnapshot(target, ports) {
         : linkedIssueSharesConversation
             ? conversationPromise
             : ports.listIssueComments(linkedIssueNumber);
-    const [commentsRead, threadsRead, reviewsRead, conversationRead, linkedIssueRead] = await Promise.allSettled([
+    const linkagePromise = linkedIssueNumber !== undefined && !linkedIssueSharesConversation
+        ? ports.isLinkedIssue?.(target.pullRequestNumber, linkedIssueNumber) : undefined;
+    const [commentsRead, threadsRead, reviewsRead, conversationRead, linkedIssueRead, linkageRead] = await Promise.allSettled([
         ports.listPullRequestReviewComments(target.pullRequestNumber),
         ports.listPullRequestReviewThreadStates(target.pullRequestNumber),
         ports.listPullRequestReviews(target.pullRequestNumber),
         conversationPromise,
         linkedIssuePromise,
+        linkagePromise,
     ]);
     const finalHeadSha = await readHead(target, ports);
     if (!finalHeadSha || finalHeadSha !== target.analyzedHeadSha) {
@@ -77715,6 +77784,12 @@ async function loadBugbotReconciliationSnapshot(target, ports) {
     let navigationState = 'verified';
     try {
         navigation = ports.navigationForPullRequest(target.pullRequestNumber, finalHeadSha);
+        if (linkedIssueNumber !== undefined && linkageRead.status === 'fulfilled' && linkageRead.value === true
+            && linkedIssueRead.status === 'fulfilled') {
+            const commitProgress = (0, bugbot_commit_progress_link_policy_1.selectBugbotCommitProgressLink)(linkedIssueRead.value, linkedIssueNumber, target.pullRequestNumber, navigation.pullRequestUrl, target.trustedAuthorLogin);
+            if (commitProgress)
+                navigation = { ...navigation, commitProgress };
+        }
     }
     catch {
         navigationState = 'failed';
@@ -79143,7 +79218,7 @@ async function synchronizeStatusCard(input, projection, navigation, catalog) {
             await input.ports.comments.addComment(input.target.pullRequestNumber, statusBody, { commitSha: input.snapshot.verifiedHeadSha });
             operation = 'created';
         }
-        else if (!canonical.body?.startsWith(statusBody)) {
+        else if (canonical.body !== statusBody) {
             await input.ports.comments.updateComment(input.target.pullRequestNumber, canonical.id, statusBody, { commitSha: input.snapshot.verifiedHeadSha });
             operation = 'updated';
         }
@@ -108882,6 +108957,7 @@ class BugbotScmPortFactory {
             resolution: { issueComments, pullRequestComments },
             reconciliation: {
                 snapshot: {
+                    isLinkedIssue: async (pullRequestNumber, issueNumber) => this.lifecycle.isLinked(owner, repository, pullRequestNumber, issueNumber, token),
                     listIssueComments: (issueNumber) => this.issues.listIssueComments(owner, repository, issueNumber, token),
                     listPullRequestReviewComments: (pullRequestNumber) => this.pullRequests.listPullRequestReviewComments(owner, repository, pullRequestNumber, token),
                     listPullRequestReviewThreadStates: (pullRequestNumber) => this.pullRequests.listPullRequestReviewThreadStates(owner, repository, pullRequestNumber, token),
@@ -111523,6 +111599,74 @@ class GithubActionSummaryAdapter {
     }
 }
 exports.GithubActionSummaryAdapter = GithubActionSummaryAdapter;
+
+
+/***/ }),
+
+/***/ 94512:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.readInterruptedBugbotReview = readInterruptedBugbotReview;
+exports.settleInterruptedBugbotCheck = settleInterruptedBugbotCheck;
+const github_comment_publication_policy_1 = __nccwpck_require__(72712);
+const git_object_id_1 = __nccwpck_require__(88623);
+const positive_integer_policy_1 = __nccwpck_require__(19879);
+const conclusions = ['failure', 'cancelled', 'timed_out'];
+/** Admits only the native completion event of a same-repository Bugbot PR analysis. */
+function readInterruptedBugbotReview(event, payload, repositoryId) {
+    if (event !== 'workflow_run' || !payload || typeof payload !== 'object')
+        return undefined;
+    const { action, workflow_run: run } = payload;
+    if (action !== 'completed' || run?.status !== 'completed' || run.event !== 'pull_request'
+        || run.path !== '.github/workflows/copilot_pull_request.yml'
+        || !conclusions.includes(run.conclusion)
+        || run.repository?.id !== repositoryId || run.head_repository?.id !== repositoryId
+        || !Array.isArray(run.pull_requests) || run.pull_requests.length !== 1)
+        return undefined;
+    const [pull] = run.pull_requests;
+    if (pull?.head?.repo?.id !== repositoryId || pull.base?.repo?.id !== repositoryId)
+        return undefined;
+    const runId = (0, positive_integer_policy_1.parsePositiveSafeInteger)(run.id);
+    const attempt = (0, positive_integer_policy_1.parsePositiveSafeInteger)(run.run_attempt);
+    const pullNumber = (0, positive_integer_policy_1.parsePositiveSafeInteger)(pull.number);
+    const head = (0, git_object_id_1.canonicalGitObjectId)(pull.head.sha);
+    const base = (0, git_object_id_1.canonicalGitObjectId)(pull.base.sha);
+    return runId && attempt && pullNumber && head && base
+        ? { runId, attempt, pullNumber, head, base, conclusion: run.conclusion } : undefined;
+}
+/** Closes only the interrupted attempt's own presentation check, with no terminal review receipt. */
+async function settleInterruptedBugbotCheck(checks, owner, repo, review, locale) {
+    const { head, base, pullNumber, runId, attempt, conclusion } = review;
+    const { data } = await checks.listForRef({
+        owner, repo, ref: head, check_name: 'Copilot / Review', status: 'in_progress', filter: 'all', per_page: 100,
+    });
+    if (!Array.isArray(data.check_runs) || data.total_count !== data.check_runs.length)
+        return false;
+    const identity = new RegExp(`^bugbot:${pullNumber}:${base}:${head}:(?:default|[a-f0-9]{64}):${runId}:${attempt}$`, 'u');
+    const matching = data.check_runs.filter(check => check.name === 'Copilot / Review' && check.head_sha === head
+        && check.status === 'in_progress' && check.app?.slug === 'github-actions'
+        && typeof check.external_id === 'string' && identity.test(check.external_id));
+    if (matching.length !== 1 || !(0, positive_integer_policy_1.parsePositiveSafeInteger)(matching[0].id))
+        return false;
+    const [check] = matching;
+    const spanish = /^es(?:-|$)/iu.test(locale);
+    const title = spanish ? 'Revisión de Bugbot interrumpida' : 'Bugbot review interrupted';
+    const copy = spanish
+        ? { failure: 'falló', cancelled: 'se canceló', timed_out: 'agotó su tiempo' }
+        : { failure: 'failed', cancelled: 'was canceled', timed_out: 'timed out' };
+    const message = spanish
+        ? `La ejecución nativa ${copy[conclusion]}. Consulta su diagnóstico antes de reintentar. Cualquier revisión verificada anterior sigue disponible.`
+        : `The native run ${copy[conclusion]}. Inspect the run before retrying. Any previous verified review remains available.`;
+    const observation = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(check.output.summary, 4000).replace(/copilot-bugbot-verification/gu, 'copilot-bugbot-receipt');
+    await checks.update({
+        owner, repo, check_run_id: check.id, status: 'completed', conclusion,
+        output: { title, summary: [`**${title}** · \`${head.slice(0, 8)}\``, message, observation].filter(Boolean).join('\n\n') },
+    });
+    return true;
+}
 
 
 /***/ }),

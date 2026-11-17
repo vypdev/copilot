@@ -14,6 +14,7 @@ import { readGithubActionLocaleInputs } from './github_action_locale_inputs';
 import { renderApprovalRunSummary } from '../application/policies/pull_request_approval_presentation_policy';
 import { configureApplicationLogger } from '../application/ports/logging_ports';
 import { createLoggerAdapter } from '../infrastructure/logging/logger_adapter';
+import { readInterruptedBugbotReview, settleInterruptedBugbotCheck } from '../infrastructure/github/github_bugbot_interrupted_check';
 
 /** Dedicated trusted-default-branch route. It never calls the agent or checks out PR code. */
 export async function runPullRequestApprovalAction(token: string, verificationAuthority?: BugbotVerificationAuthority): Promise<void> {
@@ -30,6 +31,17 @@ export async function runPullRequestApprovalAction(token: string, verificationAu
     try { locale = readGithubActionLocaleInputs(getGithubActionInput).pullRequest; } catch {
         // A malformed optional locale must not change approval eligibility.
     }
+    const checkToken = process.env.COPILOT_APPROVAL_CHECK_TOKEN;
+    const dryRun = getGithubActionInput('bugbot-dry-run') === 'true';
+    const interrupted = checkToken && !dryRun
+        ? readInterruptedBugbotReview(github.context.eventName, github.context.payload, repositoryId) : undefined;
+    if (interrupted && checkToken) {
+        try {
+            await settleInterruptedBugbotCheck(github.getOctokit(checkToken).rest.checks, owner, repo, interrupted, locale);
+        } catch {
+            core.info('The interrupted Bugbot progress check could not be closed. See its native run for the final status.');
+        }
+    }
     const targetNumbers = await resolvePullNumbers(token, owner, repo);
     if (targetNumbers.length === 0) {
         await core.summary.addRaw('Copilot approval: no unambiguous same-repository PR matched this wakeup.').write();
@@ -45,9 +57,9 @@ export async function runPullRequestApprovalAction(token: string, verificationAu
             chore: getGithubActionInput('chore-tree') || 'chore',
         },
         bugbotSeverity: getGithubActionInput('bugbot-severity') || 'low',
-        bugbotDryRun: getGithubActionInput('bugbot-dry-run') === 'true',
+        bugbotDryRun: dryRun,
         bugbotIgnorePatterns: parseDelimitedValues(getGithubActionInput('ai-ignore-files')),
-        githubToken: process.env.COPILOT_APPROVAL_CHECK_TOKEN,
+        githubToken: checkToken,
         ...(verificationAuthority ? {
             readBugbotVerificationPolicy: async () => ({ ...verificationAuthority, requireReceipt: true as const }),
         } : {}),

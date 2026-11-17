@@ -2098,14 +2098,31 @@ configuration, permission, finding limit or evaluation deadline.
 
 ### Acceptance and test evidence
 
-The first implementation delivers the active projection through the
-attempt-owned `Copilot / Review` check, with a **Current review checks** link
-on the existing status comment. This uses the safe fallback in BRP-04. The
-in-comment live block and the verified Commit-assessment backlink remain
-pending until the shared card mutation boundary and issue binding are
-available and tested. The native run is the source for terminal status
-after abrupt runner loss. This stage does not meet the full acceptance
-budget for the amendment.
+The attempt-owned `Copilot / Review` check delivers active progress, and
+the existing PR card links it through **Current review checks**. The terminal
+card can also link the complete Commit assessment. This requires a native
+same-repository closing reference, one deliverable issue card from the
+trusted author with a scoped full SHA, and an exact PR destination in the
+structured card footer. The link shows the assessed SHA and labels older
+assessments. Linkage failures and ambiguous issue cards omit the link.
+
+On a failed, timed-out or canceled native PR analysis, the existing
+trusted-default-branch observer can close the orphaned live check. It
+requires a completed analysis event, the exact repository, PR, comparison,
+run and attempt, and a unique in-progress GitHub Actions check with the
+matching external ID. It preserves the last dated observation and native
+run link. Recovery does not write during dry-run, touch the card or its
+findings, or issue a review receipt. Provider errors preserve the native run
+as the authority. [Runner interruption on #951](https://github.com/vypdev/copilot/actions/runs/43515411649/job/132196027792)
+
+The installed workflows still lack one shared short publication lane for
+every writer of the aggregate comment. BRP-04 therefore keeps the live
+block in the check and Job Summary. To enable the block in the aggregate
+comment, all writers must use one serialized publication lane, including
+manual rechecks, and the lane must validate its evidence after admission.
+The long-running analysis group and the review-state route stay independent.
+[GitHub REST conditional request support](https://docs.github.com/en/rest/using-the-rest-api/best-practices-for-using-the-rest-api#use-conditional-requests)
+[GitHub Actions job concurrency](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency)
 
 Minimum **14 distinct deterministic cases**. Use fake clocks, pinned Git
 inputs and recording or fail-on-call ports. Keep repository-wide and

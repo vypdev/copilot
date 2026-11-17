@@ -331,8 +331,15 @@ The first implementation projects validated outcomes into the Commit card
 and the Job Summary. It links the pinned issue or SDD and admitted head
 paths, with no invented line coordinates. GitHub Actions supplies the
 attempt link. The full assessment fits the existing Job Summary, so this
-stage adds no artifact producer. The PR backlink, controlled large live
-replay and visual review remain separate acceptance evidence.
+stage adds no artifact producer. At `7ead27b81` the native Commit run
+observed 113 requirements and published a 58% estimate to the existing
+issue comment. Terminal PR reconciliation can link that comment after
+checking native PR linkage and its scoped publication marker. The card
+labels an older assessment with its own SHA. The [large Commit
+run](https://github.com/vypdev/copilot/actions/runs/43515390976) and its
+[canonical issue card](https://github.com/vypdev/copilot/issues/950#issuecomment-6732557685)
+record publication of the current Commit view. Visual validation of the PR
+backlink remains part of acceptance.
 
 Minimum **13 distinct deterministic cases**, with repository-wide and
 changed-module coverage gates and every branch of new pure policies. Use

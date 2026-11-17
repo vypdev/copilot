@@ -150,6 +150,8 @@ export class BugbotScmPortFactory {
       resolution: { issueComments, pullRequestComments },
       reconciliation: {
         snapshot: {
+          isLinkedIssue: async (pullRequestNumber, issueNumber) =>
+            this.lifecycle.isLinked(owner, repository, pullRequestNumber, issueNumber, token),
           listIssueComments: (issueNumber) =>
             this.issues.listIssueComments(owner, repository, issueNumber, token),
           listPullRequestReviewComments: (pullRequestNumber) =>

@@ -335,6 +335,13 @@ current head, stage, last observation, and counts of validated partitions or
 verification outcomes. The status comment keeps the last verified review
 available while the check reports work in progress. If the runner disconnects,
 the last observation remains dated and links to the authoritative workflow run.
+When the installed approval observer sees that the exact analysis attempt
+ended unsuccessfully, it can close its interrupted progress check.
+
+The status comment links **Implementation progress and pending work** when
+GitHub verifies the linked issue and its complete Commit assessment targets
+this PR. The link shows the assessed SHA. An older assessment is labeled
+**Previous implementation assessment**.
 
 When one **open PR** is uniquely verified for the exact head, Bugbot creates one
 submitted review. Its body is a historical snapshot of the analyzed commit and

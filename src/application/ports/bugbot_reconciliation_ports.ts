@@ -15,6 +15,7 @@ export interface BugbotReconciliationSnapshotPorts {
     pullRequestNumber: number,
   ): Promise<Record<string, PullRequestReviewThreadState>>;
   listPullRequestReviews(pullRequestNumber: number): Promise<PullRequestReviewSummary[]>;
+  isLinkedIssue?(pullRequestNumber: number, issueNumber: number): Promise<boolean>;
   getPullRequestHeadSha(pullRequestNumber: number): Promise<string | undefined>;
   navigationForPullRequest(
     pullRequestNumber: number,

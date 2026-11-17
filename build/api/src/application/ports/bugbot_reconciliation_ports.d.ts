@@ -8,6 +8,7 @@ export interface BugbotReconciliationSnapshotPorts {
     listPullRequestReviewComments(pullRequestNumber: number): Promise<PullRequestReviewComment[]>;
     listPullRequestReviewThreadStates(pullRequestNumber: number): Promise<Record<string, PullRequestReviewThreadState>>;
     listPullRequestReviews(pullRequestNumber: number): Promise<PullRequestReviewSummary[]>;
+    isLinkedIssue?(pullRequestNumber: number, issueNumber: number): Promise<boolean>;
     getPullRequestHeadSha(pullRequestNumber: number): Promise<string | undefined>;
     navigationForPullRequest(pullRequestNumber: number, headSha: string): BugbotReviewNavigation;
 }

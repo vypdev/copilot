@@ -13,7 +13,6 @@ import {
     type BugbotResultFindingStateProjection,
 } from './bugbot_result_finding_state_projection_policy';
 import { countActionableBugbotFindings } from '../../domain/bugbot/review_state';
-import { getResultPayload } from '../../data/model/result';
 import { projectProgressWorkDetails, renderProgressWorkAssessment, type ProgressWorkLinks } from './progress_pending_work_policy';
 import type { CatalogResolutionObservation } from '../../domain/message_catalog';
 import {

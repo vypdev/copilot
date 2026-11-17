@@ -719,7 +719,9 @@
         "src/application/ports/bugbot_pull_request_resolution_ports.ts",
         "src/application/ports/bugbot_pull_request_write_ports.ts",
         "src/application/ports/pull_request_review_comment_ports.ts",
-        "src/infrastructure/composition/bugbot_scm_port_factory.ts"
+        "src/infrastructure/composition/bugbot_scm_port_factory.ts",
+        "src/application/policies/bugbot_commit_progress_link_policy.ts",
+        "src/infrastructure/github/github_bugbot_interrupted_check.ts"
       ],
       "tests": [
         "src/domain/bugbot/__tests__/review_state.test.ts",
@@ -753,7 +755,9 @@
         "src/application/policies/__tests__/bugbot_resolution_eligibility_policy.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/reopened_dismissal_reconciliation.test.ts",
         "src/infrastructure/composition/__tests__/bugbot_scm_port_factory.test.ts",
-        "src/application/ports/__tests__/bugbot_port_boundaries.test.ts"
+        "src/application/ports/__tests__/bugbot_port_boundaries.test.ts",
+        "src/application/policies/__tests__/bugbot_commit_progress_link_policy.test.ts",
+        "src/infrastructure/github/__tests__/github_bugbot_interrupted_check.test.ts"
       ],
       "documentation": [
         "docs/bugbot/detection.mdx",

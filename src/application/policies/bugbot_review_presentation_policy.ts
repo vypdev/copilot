@@ -98,6 +98,11 @@ export function renderBugbotStatusCard(
       ? [`[${catalog.message('bugbot.status.nav.workflowRun')}](${links.runUrl})`]
       : []),
   ].join(' · ');
+  const { commitProgress } = links;
+  const progressLink = commitProgress
+    ? `[${catalog.message(commitProgress.assessedHeadSha === projection.verifiedHeadSha
+      ? 'bugbot.status.nav.commitProgress' : 'bugbot.status.nav.previousCommitProgress')}](${commitProgress.url}) · \`${commitProgress.assessedHeadSha.slice(0, 8)}\``
+    : undefined;
   const coverageRows = projection.coverage.sources.map((source) => {
     const facts = [catalog.message('bugbot.coverage.retained', { count: source.itemsRetained })];
     if (source.omittedItems > 0) facts.push(catalog.message('bugbot.coverage.omitted', { count: source.omittedItems }));
@@ -146,6 +151,7 @@ export function renderBugbotStatusCard(
     );
   }
   lines.push('', navigation);
+  if (progressLink) lines.push('', progressLink);
   return lines.join('\n');
 }
 

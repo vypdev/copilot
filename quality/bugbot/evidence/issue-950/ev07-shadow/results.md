@@ -105,11 +105,15 @@ for id in U1 U2 F1 F2 S1 S2 X1 X2 M1 M2 P1 P2 J1 J2; do
   node review.cjs "$campaign/fixtures/full-review/$id" "$id" 1 "$campaign/preflight-$id.jsonl" --preflight
 done
 node corpus.cjs "$campaign/corpus-v3"
-node full-review.cjs "$campaign"
+node launch-full-review.cjs "$campaign"
 python3 score-review.py "$campaign/full-review" \
   --checkouts "$campaign/fixtures/full-review" \
   --public-attempts "$campaign/review-attempts.jsonl" > "$campaign/review-score.json"
 ```
+
+The guarded launcher checks the campaign corpus score before starting the frozen
+full-review runner. A missing, invalid, incomplete, failing, or write-bearing
+score blocks dispatch. The original runner and score remain frozen.
 
 The public ledger records admission, timings, terminal decisions, anchor and
 receipt metadata, and reason codes. It omits raw model and provider bodies.

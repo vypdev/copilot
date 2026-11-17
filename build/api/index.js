@@ -815,6 +815,45 @@ async function runWithConcurrencyLimit(tasks, limit) {
 
 /***/ }),
 
+/***/ 6011:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.selectBugbotCommitProgressLink = selectBugbotCommitProgressLink;
+const git_object_id_1 = __nccwpck_require__(8623);
+const bugbot_review_ownership_policy_1 = __nccwpck_require__(3288);
+const publication_identity_policy_1 = __nccwpck_require__(5403);
+/** Links a complete, owned Commit card from the verified linked issue's conversation. */
+function selectBugbotCommitProgressLink(comments, issueNumber, pullRequestNumber, pullRequestUrl, trustedAuthorLogin) {
+    const suffix = `/pull/${pullRequestNumber}`;
+    if (!pullRequestUrl.startsWith('https://') || !pullRequestUrl.endsWith(suffix))
+        return undefined;
+    const repositoryUrl = pullRequestUrl.slice(0, -suffix.length);
+    const candidates = comments.flatMap(comment => {
+        if (!Number.isSafeInteger(comment.id) || comment.id <= 0
+            || !(0, bugbot_review_ownership_policy_1.isTrustedBugbotAuthor)(comment.user?.login, trustedAuthorLogin))
+            return [];
+        const body = comment.body?.trim();
+        const marker = (0, publication_identity_policy_1.parsePublicationMarker)(body?.split('\n', 1)[0]);
+        if (!body || marker?.identity.topic !== 'progress' || marker.identity.key !== 'work'
+            || marker.identity.target.kind !== 'issue' || marker.identity.target.number !== issueNumber)
+            return [];
+        const assessed = /^head:([a-f0-9]{40}):scope:[a-f0-9]{64}$/u.exec(marker.sourceVersion);
+        // The structured Commit renderer writes the immutable PR destination in its footer.
+        const links = body.slice(body.lastIndexOf('\n') + 1).split(' · ');
+        if (!assessed || !(0, git_object_id_1.canonicalGitObjectId)(assessed[1])
+            || !links.some(link => /^\[[^\]\r\n]+\]\(/u.test(link) && link.slice(link.indexOf('](') + 2) === `${pullRequestUrl})`))
+            return [];
+        return [{ assessedHeadSha: assessed[1], url: `${repositoryUrl}/issues/${issueNumber}#issuecomment-${comment.id}` }];
+    });
+    return candidates.length === 1 ? candidates[0] : undefined;
+}
+
+
+/***/ }),
+
 /***/ 4162:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -1954,6 +1993,8 @@ exports.BUGBOT_MESSAGE_IDS = Object.freeze([
     'bugbot.status.nav.pullRequest',
     'bugbot.status.nav.verifiedCommit',
     'bugbot.status.nav.reviewChecks',
+    'bugbot.status.nav.commitProgress',
+    'bugbot.status.nav.previousCommitProgress',
     'bugbot.status.nav.workflowRun',
     'bugbot.status.duplicate.superseded',
     'bugbot.status.duplicate.viewCurrent',
@@ -2042,6 +2083,8 @@ const ENGLISH_MESSAGES = Object.freeze({
     'bugbot.status.nav.pullRequest': 'Pull request',
     'bugbot.status.nav.verifiedCommit': 'Verified commit',
     'bugbot.status.nav.reviewChecks': 'Current review checks',
+    'bugbot.status.nav.commitProgress': 'Implementation progress and pending work',
+    'bugbot.status.nav.previousCommitProgress': 'Previous implementation assessment',
     'bugbot.status.nav.workflowRun': 'Workflow run',
     'bugbot.status.duplicate.superseded': 'This status was superseded by the canonical card.',
     'bugbot.status.duplicate.viewCurrent': 'View current status',
@@ -2133,6 +2176,8 @@ const SPANISH_MESSAGES = Object.freeze({
     'bugbot.status.nav.pullRequest': 'Pull request',
     'bugbot.status.nav.verifiedCommit': 'Commit verificado',
     'bugbot.status.nav.reviewChecks': 'Checks de la revisión actual',
+    'bugbot.status.nav.commitProgress': 'Avance de implementación y trabajo pendiente',
+    'bugbot.status.nav.previousCommitProgress': 'Evaluación de implementación anterior',
     'bugbot.status.nav.workflowRun': 'Ejecución',
     'bugbot.status.duplicate.superseded': 'Este estado fue reemplazado por la tarjeta canónica.',
     'bugbot.status.duplicate.viewCurrent': 'Ver estado actual',
@@ -3013,6 +3058,11 @@ function renderBugbotStatusCard(projection, catalogOrLocale, links) {
             ? [`[${catalog.message('bugbot.status.nav.workflowRun')}](${links.runUrl})`]
             : []),
     ].join(' · ');
+    const { commitProgress } = links;
+    const progressLink = commitProgress
+        ? `[${catalog.message(commitProgress.assessedHeadSha === projection.verifiedHeadSha
+            ? 'bugbot.status.nav.commitProgress' : 'bugbot.status.nav.previousCommitProgress')}](${commitProgress.url}) · \`${commitProgress.assessedHeadSha.slice(0, 8)}\``
+        : undefined;
     const coverageRows = projection.coverage.sources.map((source) => {
         const facts = [catalog.message('bugbot.coverage.retained', { count: source.itemsRetained })];
         if (source.omittedItems > 0)
@@ -3051,6 +3101,8 @@ function renderBugbotStatusCard(projection, catalogOrLocale, links) {
         lines.push('', '<details>', `<summary>${catalog.message('bugbot.status.recoverySummary')}</summary>`, '', ...projection.errors.slice(0, 10).map((error) => `- ${(0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(error, 500)}`), '', '</details>');
     }
     lines.push('', navigation);
+    if (progressLink)
+        lines.push('', progressLink);
     return lines.join('\n');
 }
 function renderBugbotReviewSnapshot(originalBody, input) {
@@ -6054,6 +6106,7 @@ function toPrContext(identity, snapshot) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.loadBugbotReconciliationSnapshot = loadBugbotReconciliationSnapshot;
+const bugbot_commit_progress_link_policy_1 = __nccwpck_require__(6011);
 const pull_request_review_errors_1 = __nccwpck_require__(6445);
 /**
  * Acquires one coherent final snapshot around two head guards. Surface reads
@@ -6074,12 +6127,15 @@ async function loadBugbotReconciliationSnapshot(target, ports) {
         : linkedIssueSharesConversation
             ? conversationPromise
             : ports.listIssueComments(linkedIssueNumber);
-    const [commentsRead, threadsRead, reviewsRead, conversationRead, linkedIssueRead] = await Promise.allSettled([
+    const linkagePromise = linkedIssueNumber !== undefined && !linkedIssueSharesConversation
+        ? ports.isLinkedIssue?.(target.pullRequestNumber, linkedIssueNumber) : undefined;
+    const [commentsRead, threadsRead, reviewsRead, conversationRead, linkedIssueRead, linkageRead] = await Promise.allSettled([
         ports.listPullRequestReviewComments(target.pullRequestNumber),
         ports.listPullRequestReviewThreadStates(target.pullRequestNumber),
         ports.listPullRequestReviews(target.pullRequestNumber),
         conversationPromise,
         linkedIssuePromise,
+        linkagePromise,
     ]);
     const finalHeadSha = await readHead(target, ports);
     if (!finalHeadSha || finalHeadSha !== target.analyzedHeadSha) {
@@ -6089,6 +6145,12 @@ async function loadBugbotReconciliationSnapshot(target, ports) {
     let navigationState = 'verified';
     try {
         navigation = ports.navigationForPullRequest(target.pullRequestNumber, finalHeadSha);
+        if (linkedIssueNumber !== undefined && linkageRead.status === 'fulfilled' && linkageRead.value === true
+            && linkedIssueRead.status === 'fulfilled') {
+            const commitProgress = (0, bugbot_commit_progress_link_policy_1.selectBugbotCommitProgressLink)(linkedIssueRead.value, linkedIssueNumber, target.pullRequestNumber, navigation.pullRequestUrl, target.trustedAuthorLogin);
+            if (commitProgress)
+                navigation = { ...navigation, commitProgress };
+        }
     }
     catch {
         navigationState = 'failed';
@@ -7474,7 +7536,7 @@ async function synchronizeStatusCard(input, projection, navigation, catalog) {
             await input.ports.comments.addComment(input.target.pullRequestNumber, statusBody, { commitSha: input.snapshot.verifiedHeadSha });
             operation = 'created';
         }
-        else if (!canonical.body?.startsWith(statusBody)) {
+        else if (canonical.body !== statusBody) {
             await input.ports.comments.updateComment(input.target.pullRequestNumber, canonical.id, statusBody, { commitSha: input.snapshot.verifiedHeadSha });
             operation = 'updated';
         }

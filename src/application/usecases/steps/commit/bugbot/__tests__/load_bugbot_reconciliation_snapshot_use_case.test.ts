@@ -69,6 +69,21 @@ describe('loadBugbotReconciliationSnapshot', () => {
     expect(test.getPullRequestHeadSha).toHaveBeenCalledTimes(2);
   });
 
+  it.each(['linked', 'unlinked', 'unavailable'])('links only the verified issue assessment (%s)', async state => {
+    const test = harness();
+    const marker = `<!-- copilot:publication schema="1" topic="progress" target="issue:20" key="work" source="head:${head}:scope:${'b'.repeat(64)}" digest="1111111111111111" -->`;
+    test.listIssueComments.mockImplementation(async number => number === 20 ? [{ id: 78, user: { login: 'bugbot' },
+      body: marker + '\n\n[Linked pull request](https://example.test/org/repo/pull/10)' }] : []);
+    const isLinkedIssue = state === 'unavailable' ? jest.fn().mockRejectedValue(new Error('provider unavailable'))
+      : jest.fn().mockResolvedValue(state === 'linked');
+    const result = await loadBugbotReconciliationSnapshot(target(), { ...test.ports, isLinkedIssue });
+    expect(isLinkedIssue).toHaveBeenCalledWith(10, 20);
+    if (result.kind !== 'current') throw new Error('Expected a current snapshot.');
+    expect(result.snapshot.completeness.navigation).toBe('verified');
+    expect(result.snapshot.navigation?.commitProgress).toEqual(state === 'linked'
+      ? { assessedHeadSha: head, url: 'https://example.test/org/repo/issues/20#issuecomment-78' } : undefined);
+  });
+
   it('reuses the conversation read when the linked issue is the pull request', async () => {
     const test = harness();
 

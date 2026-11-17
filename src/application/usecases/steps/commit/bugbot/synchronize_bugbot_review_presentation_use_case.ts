@@ -182,7 +182,7 @@ async function synchronizeStatusCard(
         { commitSha: input.snapshot.verifiedHeadSha },
       );
       operation = 'created';
-    } else if (!canonical.body?.startsWith(statusBody)) {
+    } else if (canonical.body !== statusBody) {
       await input.ports.comments.updateComment(
         input.target.pullRequestNumber,
         canonical.id,
