@@ -35,3 +35,5 @@ Action configuration. Freeze that plan, its implementation pin and driver
 hashes in a commit before calls. The entry points check the selected source
 and dependency lock before dispatch. The original `plan.json` and historical
 results retain their original source identity.
+
+[Native receipt and closure campaign](campaign-provenance.md) freezes the next source-bound evaluation without replacing the original plan or results.

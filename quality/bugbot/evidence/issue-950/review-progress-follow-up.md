@@ -96,3 +96,44 @@ The controls include both exact and previous assessment SHAs, missing and
 foreign linkage, duplicate issue cards, failed native recovery, wrong
 attempts, a newer same-head retry, and dry-run. The EV-07 test uses a
 recording launcher and makes zero model calls.
+
+## Review follow-up and native receipt provenance
+
+The historical pilots remain byte-preserved at `bugbot-950-pilot-evidence`; the current controls remain in the branch. Production verification stays disabled and the PR stays ready for review.
+
+| Native observation at `ca75978d6` | Disposition and evidence |
+| --- | --- |
+| [Untrusted SQLite interpreter](https://github.com/vypdev/copilot/pull/951#discussion_r4619720934) | Fixed. The installed source/CI profile supplies no executable SQLite probe. An unavailable runtime is explicit. Trusted diagnostic brokers remain separate; no local version is promoted to historical CI evidence. |
+| [Receipt producer](https://github.com/vypdev/copilot/pull/951#discussion_r4619720956) | Fixed with a native run artifact binding the custom Review check ID and exact receipt to run/attempt/repository/head. The real custom check belongs to a different suite from its native workflow; suite equality or using the native job check ID would reject a genuine receipt. Missing, expired, duplicate, altered or mismatched artifacts fail closed. |
+| [Platform smoke trigger](https://github.com/vypdev/copilot/pull/951#discussion_r4619720965) | The current routing SDD now matches the maintainer-approved self-hosted policy and manual protected-base platform validation. Installation templates are unchanged. This does not claim that manual platform acceptance ran. |
+| [Temporal premises](https://github.com/vypdev/copilot/pull/951#discussion_r4619720973) | Fixed in installed typed premises and same-session closure. Sequence-dependent claims require both operations and the mechanism fixing order; “then” and “follows” have deterministic regressions. Historical pilot contracts remain frozen. |
+| [Documentation anchors](https://github.com/vypdev/copilot/pull/951#discussion_r4619720979) | Fixed by linking the verified immutable revision containing each heading. |
+| [GraphQL audit](https://github.com/vypdev/copilot/pull/951#discussion_r4619720992) | Fixed. The loopback canary records a GraphQL mutation as a write attempt before rejecting it. Its explicit negative audit control is separate from the zero-write evaluated PR runs. |
+| [Interrupted check pagination](https://github.com/vypdev/copilot/pull/951#discussion_r4619720999) | Fixed with shared complete-page reconciliation and a genuine second-page match. Duplicate, truncated or inconsistent native metadata is rejected. |
+| Seven timeout/turn-limit observations | Not adopted: they conflict with the explicit product contract. Investigation time and token usage remain telemetry, with explicit cancellation propagated. No session, turn or token deadline was reintroduced. |
+| [Fork CI exclusion](https://github.com/vypdev/copilot/pull/951#discussion_r4618353882) | Preserved as explicitly requested by the maintainer. The observed repository metadata alone does not prove the external organization restriction. No runner or installation-template change is included. |
+| [Contradictory historical scorer](https://github.com/vypdev/copilot/pull/951#discussion_r4614466847) | The diagnostic scorer and its results remain archived with their original limits. They are not qualification evidence. Current qualification retains the frozen independent corpus and exact full-review gates. |
+
+The artifact SDK is pinned to `@actions/artifact` 5.0.3 for the existing CommonJS Action, with its GitHub client at the repository's 8.0.1 and storage client at 12.33.0. The latter is the last release before the optional Arrow listing codec introduced an auxiliary bundle; the single-file distributable must not lose a required chunk. The public SDK API is used. Production dependency audit has no high or critical report and retains two moderate reports.
+
+Reproduction from the reviewed checkout:
+
+```sh
+pnpm run test:bugbot-shadow-verification
+pnpm exec jest --runInBand --runTestsByPath src/infrastructure/github/__tests__/github_bugbot_verification_artifact.test.ts src/data/repository/pull_request/__tests__/pull_request_approval_repository.test.ts src/infrastructure/bugbot/__tests__/shadow_verification_adapter.test.ts src/infrastructure/github/__tests__/github_bugbot_interrupted_check.test.ts
+pnpm run build
+out="$(mktemp -d)"
+node quality/bugbot/evidence/issue-950/status-card-publication/packaged-canary.cjs build/github_action/index.js "$out"
+node quality/bugbot/evidence/issue-950/cursor-rollback-shadow/packaged-rollback.cjs build/github_action/index.js
+pnpm run validate:specifications
+pnpm run validate:docs-page
+pnpm run validate:workflows
+pnpm run validate:build
+graphify update .
+```
+
+Deterministic validation: **86** shadow controls, **279** focused Jest cases, **13** packaged status scenarios plus the explicit rejected-mutation audit, and **six** packaged approval/rollback scenarios. These tests use synthetic local providers and make zero calls to evaluated PRs. The owning SDD retains the exact Action-published bytes; the current amendments live in the catalogued reconciliation, approval and routing specifications. The archive-link control checks 38 paths and every row of the 27-issue matrix.
+
+The new qualification runner uses the shipping compiler options. Its deterministic clock-initialization control reproduces the old ES2022 loader failure and proves the current ES2020 initialization without model calls. The first full hook caught a stale mock type; that test was corrected rather than weakening its compiler check.
+
+The remote CI and native review of `ca75978d6` passed before this change. The full build/test/lint hook passed at `d26d0d6cd633c3aa313ddd21235fe985860b4104`. Final-head CI, native review and the [new preregistered EV-07 result](ev07-shadow/campaign-provenance.md) must be reported independently. The older measured precision remains **87.95%**, below **90%**; it is not replaced by deterministic controls.
