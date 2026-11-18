@@ -44070,7 +44070,7 @@ const main_run_lifecycle_1 = __nccwpck_require__(916);
 const issue_workflow_runtime_policy_1 = __nccwpck_require__(77734);
 const application_error_1 = __nccwpck_require__(75999);
 const issue_start_policy_1 = __nccwpck_require__(90332);
-async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, compositionSurface, lifecycleStateUseCase, agentActivityUseCase, prepareRuntime, setupProgress, verificationAuthority, reviewProgress) {
+async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, compositionSurface, lifecycleStateUseCase, agentActivityUseCase, prepareRuntime, setupProgress, verificationAuthority, reviewProgress, statusCard) {
     (0, logging_ports_1.configureApplicationLogger)((0, logger_adapter_1.createLoggerAdapter)());
     (0, logging_ports_1.setGlobalLoggerDebug)(execution.debug, execution.inputs === undefined);
     const repository = (0, repository_context_1.requireRepositoryCoordinates)({
@@ -44121,8 +44121,8 @@ async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, c
         return [issueWorkflowAdmissionResult(runtimeDecision.mode, runtimeDecision.message, execution.currentIssueWorkflowAdmission)];
     }
     await prepareRuntime?.(execution);
-    const routeHandlers = reviewProgress
-        ? (0, main_run_route_composition_root_1.createMainRunRouteCompositionRoot)(projectBoardCommandPort, compositionSurface, setupProgress, verificationAuthority, reviewProgress)
+    const routeHandlers = reviewProgress || statusCard
+        ? (0, main_run_route_composition_root_1.createMainRunRouteCompositionRoot)(projectBoardCommandPort, compositionSurface, setupProgress, verificationAuthority, reviewProgress, ...(statusCard ? [statusCard] : []))
         : (0, main_run_route_composition_root_1.createMainRunRouteCompositionRoot)(projectBoardCommandPort, compositionSurface, setupProgress, ...(verificationAuthority ? [verificationAuthority] : []));
     if (execution.runnedByToken) {
         return runTrackedRoute(execution, 'single-action', () => (0, main_run_lifecycle_1.runTokenExecution)(execution, routeHandlers), undefined, agentActivityUseCase);
@@ -44455,7 +44455,26 @@ const github_action_runtime_1 = __nccwpck_require__(96382);
 const pull_request_approval_action_1 = __nccwpck_require__(56480);
 const bot_pull_request_analysis_policy_1 = __nccwpck_require__(52801);
 const pull_request_use_case_composition_root_1 = __nccwpck_require__(70636);
+const github_bugbot_status_card_workflow_1 = __nccwpck_require__(12847);
+const github_bugbot_status_card_dispatch_1 = __nccwpck_require__(42190);
 async function runGitHubAction(verificationAuthority) {
+    if (process.env.COPILOT_BUGBOT_STATUS_CARD_WORKFLOW === 'write-v1') {
+        const token = (0, github_action_input_1.getGithubActionInput)(input_keys_1.INPUT_KEYS.TOKEN, { required: true });
+        const { repo, eventName, payload, ref, actor, serverUrl } = github.context;
+        const effect = await (0, github_bugbot_status_card_workflow_1.runGithubBugbotStatusCardWorkflow)({
+            owner: repo.owner, repository: repo.repo, token,
+            evidenceToken: process.env.COPILOT_EVIDENCE_TOKEN ?? token,
+            event: eventName, ref, actor, server: serverUrl, workflowRef: process.env.GITHUB_WORKFLOW_REF ?? '',
+            locale: (0, github_action_locale_inputs_1.readGithubActionLocaleInputs)(github_action_input_1.getGithubActionInput).pullRequest,
+            policy: verificationAuthority?.policyDigest ?? 'default',
+            inputs: { pullNumber: payload.inputs?.pull_number, work: payload.inputs?.work },
+        });
+        if (effect === 'skipped')
+            core.setFailed('No current Bugbot status card publication was authorized.');
+        else
+            (0, logger_1.logInfo)('Bugbot status card publication ' + effect + '.');
+        return;
+    }
     if (process.env.COPILOT_ISSUE_ADMISSION_BOOTSTRAP === '1') {
         // Only the isolated bootstrap owns this input; ordinary JSON input maps
         // must not redirect the mutation entry into a successful read-only no-op.
@@ -44547,6 +44566,20 @@ async function runGitHubAction(verificationAuthority) {
             (0, logger_1.logInfo)('The shadow verifier runtime could not be prepared. The ordinary review can still complete.');
         }
     };
+    const repositoryBinding = {
+        owner: execution.owner,
+        repository: execution.repo,
+        token: execution.tokens.token,
+    };
+    const reviewMode = aiInputs.bugbotReviewConfiguration.publicationMode;
+    const dispatcher = reviewMode === 'publish' ? await (0, github_bugbot_status_card_dispatch_1.createGithubBugbotStatusCardDispatcher)({
+        ...repositoryBinding,
+        repositoryId: github.context.payload.repository?.id,
+        defaultBranch: github.context.payload.repository?.default_branch,
+        evidenceToken: process.env.COPILOT_EVIDENCE_TOKEN?.trim() || token,
+        event: github.context.eventName,
+        policy: verificationAuthority?.policyDigest ?? 'default',
+    }) : undefined;
     if (botAnalysisOnly) {
         // Bypass the normal lifecycle/issue route entirely. The only permitted
         // side effect is Bugbot's PR analysis and its own bounded presentation.
@@ -44559,6 +44592,7 @@ async function runGitHubAction(verificationAuthority) {
             token,
             ...(shadowSettings ? { shadow: { workspace: process.env.GITHUB_WORKSPACE } } : {}),
             ...(verificationAuthority ? { verificationAuthority } : {}),
+            ...(dispatcher ? { statusCard: dispatcher.terminal } : {}),
         }).reviewOnly(execution);
         if (results.some(result => !result.success)) {
             throw new Error('Bot-authored pull-request analysis did not complete.');
@@ -44570,17 +44604,13 @@ async function runGitHubAction(verificationAuthority) {
     }
     (0, logger_1.logDebugInfo)(`Execution built. Event will be resolved in mainRun. Single action: ${execution.singleAction.currentSingleAction ?? 'none'}, ` +
         `AI PR description mode: ${execution.ai.getPullRequestDescriptionMode()}, bugbot min severity: ${execution.ai.getBugbotMinSeverity()}.`);
-    const repositoryBinding = {
-        owner: execution.owner,
-        repository: execution.repo,
-        token: execution.tokens.token,
-    };
     const evidence = (0, copilot_evidence_composition_root_1.createCopilotEvidenceCompositionRoot)();
     const summary = (0, github_action_summary_composition_root_1.createGithubActionSummaryCompositionRoot)();
     const reviewProgress = (0, bugbot_review_progress_composition_root_1.createGithubBugbotReviewProgress)({
         ...repositoryBinding, pullNumber: Number(execution.pullRequest.number), expectedHead: execution.inputs?.pull_request?.head?.sha,
         expectedBase: execution.inputs?.pull_request?.base?.sha,
         policy: verificationAuthority?.policyDigest,
+        ...(dispatcher ? { wakeStatusCard: dispatcher.wake } : {}),
     }, evidence, summary);
     const results = await (0, common_action_1.mainRun)(execution, projectBoard.command, new git_cli_repository_1.GitCliRepository(token), 'github-workflow', (0, lifecycle_state_composition_root_1.createSynchronizeLifecycleStateUseCase)(repositoryBinding), (0, agent_activity_composition_root_1.createSynchronizeAgentActivityUseCase)(repositoryBinding), async (admittedExecution) => {
         await (0, github_action_execution_1.hydrateGithubActionExecutionProjects)(admittedExecution, {
@@ -44608,7 +44638,7 @@ async function runGitHubAction(verificationAuthority) {
             prepareShadowRuntime();
             languageRuntimeAvailable = requestedActiveAgentTasks.includes('planner');
         }
-    }, undefined, verificationAuthority, reviewProgress);
+    }, undefined, verificationAuthority, reviewProgress, ...(dispatcher ? [dispatcher.terminal] : []));
     const issueContentPort = (0, issue_content_composition_root_1.createIssueContentCompositionRoot)();
     const configurationHandler = new configuration_handler_1.ConfigurationHandler(issueContentPort);
     await (0, github_action_completion_1.finishGithubAction)(execution, results, (0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueContentPort, repositoryBinding), {
@@ -52907,6 +52937,174 @@ function resolveBugbotShadowConfiguration(detector, overrides) {
         AGENT_ALLOWED_MODEL_PROVIDERS: overrides.allowedModelProviders,
         AGENT_ALLOWED_MODELS: overrides.allowedModels,
     }));
+}
+
+
+/***/ }),
+
+/***/ 4809:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.isBugbotStatusCardSource = isBugbotStatusCardSource;
+exports.readBugbotStatusCardHead = readBugbotStatusCardHead;
+exports.isBugbotCanonicalStatusCard = isBugbotCanonicalStatusCard;
+exports.renderBugbotStatusCardUpdate = renderBugbotStatusCardUpdate;
+exports.publishBugbotStatusCard = publishBugbotStatusCard;
+const node_crypto_1 = __nccwpck_require__(6005);
+const git_object_id_1 = __nccwpck_require__(88623);
+const bugbot_live_progress_presentation_policy_1 = __nccwpck_require__(93925);
+const bugbot_progress_check_observation_policy_1 = __nccwpck_require__(60202);
+const publication_identity_policy_1 = __nccwpck_require__(45403);
+const progressStart = '<!-- copilot-bugbot-active schema="1" ';
+const progressEnd = '\n<!-- /copilot-bugbot-active -->\n\n';
+const progressMarker = /^<!-- copilot-bugbot-active schema="1" pr="([1-9]\d{0,15})" source="([a-f0-9]{64})" sequence="([1-9]\d{0,15})" digest="([a-f0-9]{64})" -->$/u;
+const terminalMarker = /\n\n<!-- copilot-bugbot-card-terminal schema="1" source="([a-f0-9]{64})" -->$/u;
+const maxCommentBytes = 60000;
+const positive = (id) => Number.isSafeInteger(id) && id > 0;
+function isBugbotStatusCardSource(source) {
+    return positive(source.repositoryId) && positive(source.pullNumber) && (0, git_object_id_1.canonicalGitObjectId)(source.base) === source.base
+        && (0, git_object_id_1.canonicalGitObjectId)(source.baseRef) === source.baseRef && (0, git_object_id_1.canonicalGitObjectId)(source.head) === source.head
+        && /^(?:default|[0-9a-f]{64})$/u.test(source.policy);
+}
+function sameSource(left, right) {
+    return left.repositoryId === right.repositoryId && left.pullNumber === right.pullNumber && left.base === right.base
+        && left.baseRef === right.baseRef && left.head === right.head && left.policy === right.policy;
+}
+function readBugbotStatusCardHead(body, pullNumber) {
+    const [first, second] = body.split('\n', 2);
+    const marker = (0, publication_identity_policy_1.parsePublicationMarker)(first);
+    if (marker?.identity.topic !== 'bugbot' || marker.identity.target.kind !== 'pull-request'
+        || marker.identity.target.number !== pullNumber || marker.identity.key !== 'aggregate'
+        || !marker.sourceVersion.startsWith('head:') || !/^[a-f0-9]{8}$/u.test(marker.digest))
+        return undefined;
+    const head = (0, git_object_id_1.canonicalGitObjectId)(marker.sourceVersion.slice(5));
+    if (head !== marker.sourceVersion.slice(5))
+        return undefined;
+    return second === `<!-- copilot-bugbot-status schema="1" pr="${pullNumber}" verified_head="${head}" digest="${marker.digest}" -->`
+        ? head : undefined;
+}
+function readCard(body, pullNumber) {
+    if (body === undefined)
+        return { previous: '' };
+    if (!body.startsWith(progressStart))
+        return readBugbotStatusCardHead(body, pullNumber) ? { previous: body } : undefined;
+    const match = progressMarker.exec(body.split('\n', 1)[0]);
+    const split = body.indexOf(progressEnd);
+    if (!match || Number(match[1]) !== pullNumber || !positive(Number(match[3])) || split < 0
+        || body.indexOf(progressStart, progressStart.length) >= 0
+        || body.indexOf(progressEnd, split + progressEnd.length) >= 0)
+        return undefined;
+    const previous = body.slice(split + progressEnd.length);
+    if (previous && !readBugbotStatusCardHead(previous, pullNumber))
+        return undefined;
+    return { previous, progress: { source: match[2], sequence: Number(match[3]), digest: match[4] } };
+}
+/** A candidate comment still requires repository, conversation and author authentication. */
+function isBugbotCanonicalStatusCard(body, pullNumber) {
+    return readCard(body, pullNumber) !== undefined;
+}
+const nextStep = {
+    en: {
+        preparing: 'Finish preparing the pinned comparison.',
+        analyzing: 'Validate the remaining diff analysis.',
+        verifying: 'Finish validating the remaining verdicts.',
+        publishing: 'Reconcile the validated review and publish the result.',
+        partitions: (count) => 'Validate the remaining partitions (' + count + ').',
+        candidates: (count) => 'Finish validating the remaining verdicts (' + count + ').',
+        failed: 'Inspect the workflow before retrying.',
+        noAction: 'No action required.',
+        previous: 'Last verified review',
+        first: 'No verified review yet',
+    },
+    es: {
+        preparing: 'Completar la preparación de la comparación fijada.',
+        analyzing: 'Validar el análisis restante del diff.',
+        verifying: 'Completar la validación de los dictámenes pendientes.',
+        publishing: 'Conciliar la revisión validada y publicar el resultado.',
+        partitions: (count) => 'Validar las particiones pendientes (' + count + ').',
+        candidates: (count) => 'Completar la validación de los dictámenes pendientes (' + count + ').',
+        failed: 'Consulta la ejecución antes de reintentar.',
+        noAction: 'No hace falta intervenir.',
+        previous: 'Última revisión verificada',
+        first: 'Aún no hay una revisión verificada',
+    },
+};
+function renderUpcomingWork(observation, labels) {
+    if (observation.stage === 'finished')
+        return labels.failed;
+    const work = observation.stage === 'analyzing' ? observation.partitions
+        : observation.stage === 'verifying' ? observation.candidates : undefined;
+    const remaining = work && work.total - work.completed;
+    const summary = remaining ? (observation.stage === 'analyzing' ? labels.partitions(remaining) : labels.candidates(remaining))
+        : labels[observation.stage];
+    return summary + ' ' + labels.noAction;
+}
+function renderBugbotStatusCardUpdate(snapshot) {
+    const { source, review, verifiedBody, locale, repositoryUrl, canonical } = snapshot;
+    const stored = readCard(canonical?.body, source.pullNumber);
+    if (!stored || (verifiedBody !== undefined && readBugbotStatusCardHead(verifiedBody, source.pullNumber) !== source.head))
+        return undefined;
+    const sourceKey = (0, node_crypto_1.createHash)('sha256').update([source.repositoryId, source.pullNumber, source.base, source.baseRef,
+        source.head, source.policy, review.runId, review.attempt].join(':')).digest('hex');
+    const terminal = terminalMarker.exec(stored.previous);
+    if (review.state === 'complete') {
+        if (verifiedBody === undefined)
+            return undefined;
+        return review.closeAttempt
+            ? verifiedBody + '\n\n<!-- copilot-bugbot-card-terminal schema="1" source="' + sourceKey + '" -->'
+            : verifiedBody + (terminal?.[0] ?? '');
+    }
+    if (terminal?.[1] === sourceKey)
+        return verifiedBody === undefined ? stored.previous : verifiedBody + terminal[0];
+    const previous = verifiedBody ?? stored.previous;
+    if (!/^https:\/\/[a-z0-9.-]+(?::\d+)?\/[\w.-]+\/[\w.-]+$/iu.test(repositoryUrl)
+        || review.runUrl !== `${repositoryUrl}/actions/runs/${review.runId}/attempts/${review.attempt}`)
+        return undefined;
+    const externalId = ['bugbot', source.pullNumber, source.base, source.head, source.policy, review.runId, review.attempt].join(':');
+    const observation = (0, bugbot_progress_check_observation_policy_1.readBugbotProgressCheckObservation)(review.checkDetails, externalId);
+    if (!observation || (observation.baseRefSha ?? observation.baseSha) !== source.baseRef
+        || (observation.stage === 'finished' && (review.state !== 'interrupted' || observation.outcome !== 'failed')))
+        return undefined;
+    const digest = (0, node_crypto_1.createHash)('sha256').update(JSON.stringify(observation)).digest('hex');
+    if (stored.progress?.source === sourceKey && (observation.sequence < stored.progress.sequence
+        || (observation.sequence === stored.progress.sequence && digest !== stored.progress.digest)))
+        return undefined;
+    const labels = /^es(?:-|$)/iu.test(locale) ? nextStep.es : nextStep.en;
+    const previousHead = readBugbotStatusCardHead(previous, source.pullNumber);
+    const previousTitle = previousHead ? `${labels.previous} · \`${previousHead.slice(0, 8)}\`` : labels.first;
+    const displayed = review.state === 'interrupted'
+        ? { ...observation, stage: 'finished', outcome: 'failed' } : observation;
+    const view = (0, bugbot_live_progress_presentation_policy_1.renderBugbotLiveProgress)(displayed, locale, review.runUrl);
+    return [
+        `${progressStart}pr="${source.pullNumber}" source="${sourceKey}" sequence="${observation.sequence}" digest="${digest}" -->`,
+        view.summary, '', renderUpcomingWork(displayed, labels), '', `### ${previousTitle}`,
+    ].join('\n') + progressEnd + previous;
+}
+async function publishBugbotStatusCard(wakeup, lane) {
+    if (wakeup.dryRun)
+        return 'dry-run';
+    const { source, runId, attempt } = wakeup;
+    if (!isBugbotStatusCardSource(source) || !positive(runId) || !positive(attempt))
+        return 'skipped';
+    return lane.exclusive(source.repositoryId, source.pullNumber, async (writer) => {
+        const snapshot = await writer.read();
+        if (!snapshot || !sameSource(source, snapshot.source)
+            || snapshot.review.runId !== runId || snapshot.review.attempt !== attempt
+            || (snapshot.canonical !== undefined && !positive(snapshot.canonical.id)))
+            return 'skipped';
+        const body = renderBugbotStatusCardUpdate(snapshot);
+        if (body === undefined || Buffer.byteLength(body, 'utf8') > maxCommentBytes)
+            return 'skipped';
+        if (body === snapshot.canonical?.body)
+            return 'unchanged';
+        if (!await writer.isCurrent(snapshot))
+            return 'skipped';
+        await writer.publish({ id: snapshot.canonical?.id, body });
+        return snapshot.canonical ? 'updated' : 'created';
+    });
 }
 
 
@@ -79309,6 +79507,23 @@ async function synchronizeStatusCard(input, projection, navigation, catalog) {
         return statusFailure();
     }
     const statusBody = (0, bugbot_review_presentation_policy_1.renderBugbotStatusCard)(projection, catalog, navigation);
+    if (input.ports.statusCard) {
+        try {
+            const operation = await input.ports.statusCard.publish({
+                pullRequestNumber: input.target.pullRequestNumber,
+                headSha: input.snapshot.verifiedHeadSha,
+                ...(input.target.baseSha ? { baseSha: input.target.baseSha } : {}),
+                ...(input.target.baseRefSha ? { baseRefSha: input.target.baseRefSha } : {}),
+                body: statusBody,
+            });
+            return { operation, failures: [] };
+        }
+        catch {
+            return statusFailure();
+        }
+    }
+    if (input.ports.allowLegacyStatusCardWrite && !await input.ports.allowLegacyStatusCardWrite())
+        return statusFailure();
     const trustedStatusComments = input.snapshot.conversationComments
         .filter((comment) => (0, bugbot_review_ownership_policy_1.isTrustedBugbotAuthor)(comment.user?.login, input.target.trustedAuthorLogin)
         && (0, bugbot_review_presentation_policy_1.isBugbotStatusComment)(comment.body))
@@ -80189,8 +80404,9 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
         const detectionAndPreparationMs = Date.now() - detectionStartedAt;
         if (prepared === undefined) {
             shadow = unavailableShadow();
-            if (enforced)
+            if (enforced || dependencies.scm.reconciliation.presentation.statusCard) {
                 return await complete(noAnalysisResult(), 'failed');
+            }
             const analysisError = new application_error_1.ApplicationError('agent.failed', 'The configured agent returned no potential-problem analysis.');
             const catalog = reviewContext.analysis.reviewConfiguration.publicationMode === 'publish'
                 && context.prContext && context.canonicalPullRequest
@@ -80483,6 +80699,8 @@ async function reconcileReviewState(input) {
                 ? { linkedIssueNumber: input.operation.target.issueNumber }
                 : {}),
             analyzedHeadSha,
+            baseSha: input.loadedContext.canonicalPullRequest?.baseSha,
+            baseRefSha: input.loadedContext.canonicalPullRequest?.baseRefSha,
             ...(input.operation.trustedAuthorLogin
                 ? { trustedAuthorLogin: input.operation.trustedAuthorLogin }
                 : {}),
@@ -108917,6 +109135,7 @@ const github_publication_source_repository_1 = __nccwpck_require__(52644);
 const github_branch_client_factory_1 = __nccwpck_require__(30144);
 const shared_capability_port_binding_1 = __nccwpck_require__(47399);
 const github_1 = __nccwpck_require__(78227);
+const github_bugbot_status_card_installation_1 = __nccwpck_require__(31666);
 const github_bugbot_ci_reader_1 = __nccwpck_require__(70358);
 const installed_bugbot_shadow_adapter_1 = __nccwpck_require__(88552);
 const bugbot_git_review_source_adapter_1 = __nccwpck_require__(76471);
@@ -108950,7 +109169,10 @@ function createBugbotCompositionRoot(binding) {
     const pullRequest = new bugbot_pull_request_repository_1.BugbotPullRequestRepository(changes, reviewQuery, reviewCommand, threadCommand);
     const rules = new workspace_bugbot_rules_repository_1.WorkspaceBugbotRulesRepository();
     const navigation = new github_bugbot_review_navigation_adapter_1.GithubBugbotReviewNavigationAdapter();
-    const scm = new bugbot_scm_port_factory_1.BugbotScmPortFactory(bugbotIssueComments, issue, lifecycle, changes, pullRequest, reviewQuery, threadCommand, rules, navigation, new bugbot_git_review_source_adapter_1.BugbotGitReviewSourceAdapter()).bind(binding);
+    const scm = new bugbot_scm_port_factory_1.BugbotScmPortFactory(bugbotIssueComments, issue, lifecycle, changes, pullRequest, reviewQuery, threadCommand, rules, navigation, new bugbot_git_review_source_adapter_1.BugbotGitReviewSourceAdapter()).bind({
+        ...binding,
+        allowLegacyStatusCardWrite: async () => await (0, github_bugbot_status_card_installation_1.readGithubBugbotStatusCardInstallation)((0, github_1.getOctokit)(binding.token), { owner: binding.owner, repo: binding.repository }) === 'absent',
+    });
     return {
         issue,
         scm,
@@ -109002,7 +109224,7 @@ function createGithubBugbotReviewProgress(binding, evidence, summary, environmen
         return undefined;
     const runUrl = `${server}/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}/actions/runs/${runId}/attempts/${attempt}`;
     const pullRequests = new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)());
-    return (0, github_bugbot_review_progress_adapter_1.githubBugbotReviewProgress)({ ...binding, runId, attempt, runUrl }, summary, number => pullRequests.getBugbotSourceBoundPullRequestIdentity(owner, repository, number, token), check => evidence.observeReview(check, owner, repository, environment.COPILOT_EVIDENCE_TOKEN?.trim() || token));
+    return (0, github_bugbot_review_progress_adapter_1.githubBugbotReviewProgress)({ ...binding, runId, attempt, runUrl }, summary, number => pullRequests.getBugbotSourceBoundPullRequestIdentity(owner, repository, number, token), check => evidence.observeReview(check, owner, repository, environment.COPILOT_EVIDENCE_TOKEN?.trim() || token), binding.wakeStatusCard);
 }
 
 
@@ -109085,6 +109307,8 @@ class BugbotScmPortFactory {
                 },
                 presentation: {
                     comments: issueComments,
+                    ...(binding.statusCard ? { statusCard: binding.statusCard } : {}),
+                    ...(binding.allowLegacyStatusCardWrite ? { allowLegacyStatusCardWrite: binding.allowLegacyStatusCardWrite } : {}),
                     updatePullRequestReview: (pullRequestNumber, reviewIdentity, body) => this.pullRequests.updatePullRequestReview(owner, repository, pullRequestNumber, reviewIdentity, body, token),
                 },
             },
@@ -110221,20 +110445,21 @@ function createCommitUseCaseCompositionRoot(projectBoardCommandPort, binding) {
     });
     return new commit_use_case_1.CommitUseCase(new notify_new_commit_on_issue_use_case_1.NotifyNewCommitOnIssueUseCase((0, push_single_action_capability_port_binding_1.bindIssueReopen)((0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), binding)), new check_changes_issue_size_use_case_1.CheckChangesIssueSizeUseCase(size.projectBoardCommandPort, size.issueRepository, size.pullRequestRepository, size.branchChangeSizePort, size.projectMembershipQueryPort), createDetectPotentialProblemsUseCase(binding), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)());
 }
-function createMainRunRouteCompositionRoot(projectBoardCommandPort, surface, setupProgress, verificationAuthority, reviewProgress) {
+function createMainRunRouteCompositionRoot(projectBoardCommandPort, surface, setupProgress, verificationAuthority, reviewProgress, statusCard) {
     let singleAction;
     let issueComment;
     let issue;
     let pullRequestReviewComment;
     let pullRequest;
     let push;
+    const binding = (execution) => bugbotBinding(execution, surface, verificationAuthority, reviewProgress, statusCard);
     return {
         "single-action": async (execution) => {
-            singleAction ?? (singleAction = createSingleActionUseCaseCompositionRoot(surface, bugbotBinding(execution, surface, verificationAuthority, reviewProgress), setupProgress));
+            singleAction ?? (singleAction = createSingleActionUseCaseCompositionRoot(surface, binding(execution), setupProgress));
             return singleAction.invoke(execution);
         },
         "issue-comment": async (execution) => {
-            issueComment ?? (issueComment = createIssueCommentUseCaseCompositionRoot(bugbotBinding(execution, surface, verificationAuthority, reviewProgress), (0, verification_setup_snapshot_1.captureVerificationSetup)(execution.verificationSetup, execution.branches.main)));
+            issueComment ?? (issueComment = createIssueCommentUseCaseCompositionRoot(binding(execution), (0, verification_setup_snapshot_1.captureVerificationSetup)(execution.verificationSetup, execution.branches.main)));
             return issueComment.invoke(execution);
         },
         issue: async (execution) => {
@@ -110242,20 +110467,20 @@ function createMainRunRouteCompositionRoot(projectBoardCommandPort, surface, set
             return issue.invoke(execution);
         },
         "pull-request-review-comment": async (execution) => {
-            pullRequestReviewComment ?? (pullRequestReviewComment = createPullRequestReviewCommentUseCaseCompositionRoot(bugbotBinding(execution, surface, verificationAuthority, reviewProgress), (0, verification_setup_snapshot_1.captureVerificationSetup)(execution.verificationSetup, execution.branches.main)));
+            pullRequestReviewComment ?? (pullRequestReviewComment = createPullRequestReviewCommentUseCaseCompositionRoot(binding(execution), (0, verification_setup_snapshot_1.captureVerificationSetup)(execution.verificationSetup, execution.branches.main)));
             return pullRequestReviewComment.invoke(execution);
         },
         "pull-request": async (execution) => {
-            pullRequest ?? (pullRequest = (0, pull_request_use_case_composition_root_1.createPullRequestUseCaseCompositionRoot)(bugbotBinding(execution, surface, verificationAuthority, reviewProgress)));
+            pullRequest ?? (pullRequest = (0, pull_request_use_case_composition_root_1.createPullRequestUseCaseCompositionRoot)(binding(execution)));
             return pullRequest.invoke(execution);
         },
         push: async (execution) => {
-            push ?? (push = createCommitUseCaseCompositionRoot(projectBoardCommandPort, bugbotBinding(execution, surface, verificationAuthority, reviewProgress)));
+            push ?? (push = createCommitUseCaseCompositionRoot(projectBoardCommandPort, binding(execution)));
             return push.invoke(execution);
         },
     };
 }
-function bugbotBinding(execution, surface, authority, reviewProgress) {
+function bugbotBinding(execution, surface, authority, reviewProgress, statusCard) {
     return {
         owner: execution.owner,
         repository: execution.repo,
@@ -110264,6 +110489,7 @@ function bugbotBinding(execution, surface, authority, reviewProgress) {
             ? { shadow: { workspace: process.env.GITHUB_WORKSPACE } } : {}),
         ...(surface === 'github-workflow' && authority ? { verificationAuthority: authority } : {}),
         ...(surface === 'github-workflow' && reviewProgress ? { reviewProgress } : {}),
+        ...(surface === 'github-workflow' && statusCard ? { statusCard } : {}),
     };
 }
 function rememberBranchPorts(binding, pullRequests) {
@@ -111863,7 +112089,7 @@ const bugbot_live_progress_presentation_policy_1 = __nccwpck_require__(93925);
 const bugbot_progress_check_observation_policy_1 = __nccwpck_require__(60202);
 const git_object_id_1 = __nccwpck_require__(88623);
 /** Reports native progress on the one check owned by this invocation. */
-function githubBugbotReviewProgress(context, summary, current, observeCheck) {
+function githubBugbotReviewProgress(context, summary, current, observeCheck, wakeStatusCard) {
     let checkStarted = false;
     let sequence = 0;
     return { async observe(observation, dryRun, locale) {
@@ -111886,7 +112112,434 @@ function githubBugbotReviewProgress(context, summary, current, observeCheck) {
             await observeCheck({ ...view, summary: observationMarker ? view.summary + '\n\n' + observationMarker : view.summary,
                 headSha: observation.headSha, runUrl: context.runUrl, externalId });
             checkStarted = true;
+            if (observationMarker)
+                await wakeStatusCard?.(observation, false, locale);
         } };
+}
+
+
+/***/ }),
+
+/***/ 42190:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createGithubBugbotStatusCardDispatcher = createGithubBugbotStatusCardDispatcher;
+const github_1 = __nccwpck_require__(78227);
+const pull_request_lifecycle_repository_1 = __nccwpck_require__(24189);
+const git_object_id_1 = __nccwpck_require__(88623);
+const positive_integer_policy_1 = __nccwpck_require__(19879);
+const github_pull_request_client_factory_1 = __nccwpck_require__(9068);
+const github_bugbot_status_card_handoff_1 = __nccwpck_require__(83620);
+const github_bugbot_status_card_installation_1 = __nccwpck_require__(31666);
+const unresolved = () => new Error('The shared Bugbot status card writer did not acknowledge publication.');
+async function createGithubBugbotStatusCardDispatcher(binding, environment = process.env) {
+    const runId = (0, positive_integer_policy_1.parsePositiveSafeInteger)(environment.GITHUB_RUN_ID);
+    const attempt = (0, positive_integer_policy_1.parsePositiveSafeInteger)(environment.GITHUB_RUN_ATTEMPT);
+    const repositoryId = (0, positive_integer_policy_1.parsePositiveSafeInteger)(binding.repositoryId);
+    const ref = binding.defaultBranch;
+    if (!runId || !attempt || !repositoryId || typeof ref !== 'string' || !ref
+        || environment.GITHUB_REPOSITORY !== binding.owner + '/' + binding.repository
+        || !['pull_request', 'pull_request_review', 'pull_request_review_comment', 'issue_comment', 'push'].includes(binding.event))
+        return undefined;
+    const read = (0, github_1.getOctokit)(binding.evidenceToken);
+    const write = (0, github_1.getOctokit)(binding.token);
+    const scope = { owner: binding.owner, repo: binding.repository };
+    const workflow = { ...scope, workflow_id: github_bugbot_status_card_installation_1.bugbotStatusCardWorkflow };
+    const installation = await (0, github_bugbot_status_card_installation_1.readGithubBugbotStatusCardInstallation)(read, scope, ref);
+    if (installation === 'absent')
+        return undefined;
+    const pullRequests = new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)());
+    const dispatch = async (request) => {
+        const inputs = (0, github_bugbot_status_card_handoff_1.encodeGithubBugbotStatusCardHandoff)(request);
+        if (installation !== 'installed' || !inputs)
+            throw unresolved();
+        const { data } = await write.request('POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches', {
+            ...workflow, ref, inputs, return_run_details: true,
+        });
+        const published = data;
+        const operation = (0, positive_integer_policy_1.parsePositiveSafeInteger)(published?.workflow_run_id);
+        if (!operation)
+            throw unresolved();
+        return operation;
+    };
+    const terminal = {
+        async publish(input) {
+            const source = await pullRequests.getBugbotSourceBoundPullRequestIdentity(binding.owner, binding.repository, input.pullRequestNumber, binding.evidenceToken);
+            const base = (0, git_object_id_1.canonicalGitObjectId)(source.baseSha);
+            const baseRef = (0, git_object_id_1.canonicalGitObjectId)(source.baseRefSha);
+            if (!base || !baseRef || base !== input.baseSha || baseRef !== (input.baseRefSha ?? input.baseSha)
+                || source.state !== 'open' || source.baseRepository.id !== repositoryId
+                || source.headRepositoryOwner !== binding.owner || source.headRepositoryName !== binding.repository
+                || source.headSha !== input.headSha)
+                throw unresolved();
+            const effect = await dispatch({ kind: binding.event === 'pull_request' ? 'analysis-result' : 'state-refresh',
+                runId, attempt, source: { repositoryId, pullNumber: source.number, base, baseRef, head: source.headSha, policy: binding.policy },
+                verifiedBody: input.body });
+            // This deadline is only for acknowledging the short comment job.
+            const until = Date.now() + 7 * 60000;
+            while (Date.now() < until) {
+                const observed = await read.rest.actions.getWorkflowRun({ ...scope, run_id: effect }).catch((error) => {
+                    if ((0, github_bugbot_status_card_installation_1.statusCardGithubErrorStatus)(error) === 404)
+                        return undefined;
+                    throw unresolved();
+                });
+                if (!observed) {
+                    await new Promise(resolve => setTimeout(resolve, 4000));
+                    continue;
+                }
+                const { data } = observed;
+                if (data.id !== effect || data.repository.id !== repositoryId || data.path !== github_bugbot_status_card_installation_1.bugbotStatusCardPath
+                    || data.event !== 'workflow_dispatch' || data.head_branch !== ref)
+                    throw unresolved();
+                if (data.status === 'completed') {
+                    if (data.conclusion !== 'success')
+                        throw unresolved();
+                    const { data: jobs } = await read.rest.actions.listJobsForWorkflowRun({ ...scope, run_id: effect, per_page: 20, filter: 'latest' });
+                    if (jobs.total_count === 1 && jobs.jobs.length === 1
+                        && jobs.jobs[0].name === 'Publish Bugbot status card' && jobs.jobs[0].head_sha === data.head_sha
+                        && jobs.jobs[0].conclusion === 'success' && jobs.jobs[0].steps?.some((step) => step.name === 'Publish canonical comment' && step.conclusion === 'success'))
+                        return 'published';
+                    throw unresolved();
+                }
+                await new Promise(resolve => setTimeout(resolve, 4000));
+            }
+            throw unresolved();
+        },
+    };
+    return {
+        terminal,
+        async wake(observation) {
+            if (installation !== 'installed' || !observation.baseSha)
+                return;
+            await dispatch({ kind: 'progress', runId, attempt, source: { repositoryId, pullNumber: observation.pullNumber,
+                    base: observation.baseSha, baseRef: observation.baseRefSha ?? observation.baseSha, head: observation.headSha, policy: binding.policy } });
+        },
+    };
+}
+
+
+/***/ }),
+
+/***/ 83620:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.decodeGithubBugbotStatusCardHandoff = decodeGithubBugbotStatusCardHandoff;
+exports.encodeGithubBugbotStatusCardHandoff = encodeGithubBugbotStatusCardHandoff;
+const bugbot_status_card_publication_policy_1 = __nccwpck_require__(4809);
+const positive_integer_policy_1 = __nccwpck_require__(19879);
+const maxHandoffBytes = 64000;
+const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+function hasKeys(value, ...keys) {
+    const actual = Object.keys(value);
+    return keys.length === actual.length && actual.every(key => keys.includes(key));
+}
+/** The worker separately authenticates the actor, origin workflow and current comparison. */
+function decodeGithubBugbotStatusCardHandoff(input) {
+    if (typeof input.work !== 'string' || Buffer.byteLength(input.work, 'utf8') > maxHandoffBytes)
+        return undefined;
+    let value;
+    try {
+        value = JSON.parse(input.work);
+    }
+    catch {
+        return undefined;
+    }
+    if (!isObject(value) || value.version !== 1 || !isObject(value.source))
+        return undefined;
+    const { source, kind, verifiedBody } = value;
+    if (kind !== 'progress' && kind !== 'analysis-result' && kind !== 'state-refresh')
+        return undefined;
+    const fields = ['version', 'source', 'runId', 'attempt', 'kind'];
+    if (!hasKeys(value, ...(kind === 'progress' ? fields : [...fields, 'verifiedBody'])))
+        return undefined;
+    if (!hasKeys(source, 'repositoryId', 'pullNumber', 'base', 'baseRef', 'head', 'policy')
+        || typeof source.repositoryId !== 'number' || typeof source.pullNumber !== 'number'
+        || typeof source.base !== 'string' || typeof source.baseRef !== 'string' || typeof source.head !== 'string'
+        || typeof source.policy !== 'string')
+        return undefined;
+    const { repositoryId, pullNumber, base, baseRef, head, policy } = source;
+    const identity = { repositoryId, pullNumber, base, baseRef, head, policy };
+    const runId = (0, positive_integer_policy_1.parsePositiveSafeInteger)(value.runId);
+    const attempt = (0, positive_integer_policy_1.parsePositiveSafeInteger)(value.attempt);
+    if (!(0, bugbot_status_card_publication_policy_1.isBugbotStatusCardSource)(identity) || (0, positive_integer_policy_1.parsePositiveSafeInteger)(input.pullNumber) !== pullNumber
+        || !runId || !attempt || value.runId !== runId || value.attempt !== attempt)
+        return undefined;
+    if (kind === 'progress')
+        return { kind, source: identity, runId, attempt };
+    if (typeof verifiedBody !== 'string' || (0, bugbot_status_card_publication_policy_1.readBugbotStatusCardHead)(verifiedBody, pullNumber) !== head)
+        return undefined;
+    return { kind, source: identity, runId, attempt, verifiedBody };
+}
+function encodeGithubBugbotStatusCardHandoff(request) {
+    const { pullNumber } = request.source;
+    const work = JSON.stringify({ version: 1, ...request });
+    return decodeGithubBugbotStatusCardHandoff({ pullNumber, work }) ? { pull_number: String(pullNumber), work } : undefined;
+}
+
+
+/***/ }),
+
+/***/ 31666:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.bugbotStatusCardPath = exports.bugbotStatusCardWorkflow = void 0;
+exports.statusCardGithubErrorStatus = statusCardGithubErrorStatus;
+exports.readGithubBugbotStatusCardInstallation = readGithubBugbotStatusCardInstallation;
+exports.bugbotStatusCardWorkflow = 'copilot_bugbot_status_card.yml';
+exports.bugbotStatusCardPath = '.github/workflows/' + exports.bugbotStatusCardWorkflow;
+const workflowParents = [['.github/workflows', exports.bugbotStatusCardWorkflow], ['.github', 'workflows'], ['', '.github']];
+function statusCardGithubErrorStatus(error) {
+    return error && typeof error === 'object' && 'status' in error ? error.status : undefined;
+}
+async function readGithubBugbotStatusCardInstallation(api, scope, ref) {
+    const repository = { ...scope, ...(ref ? { ref } : {}) };
+    try {
+        const { data } = await api.rest.repos.getContent({ ...repository, path: exports.bugbotStatusCardPath });
+        if (!Array.isArray(data) && data.type === 'file' && data.encoding === 'base64'
+            && Buffer.from(data.content, 'base64').toString('utf8').includes("COPILOT_BUGBOT_STATUS_CARD_WORKFLOW: 'write-v1'")) {
+            return 'installed';
+        }
+    }
+    catch (error) {
+        if (statusCardGithubErrorStatus(error) === 404)
+            return proveWorkflowAbsent(api, repository);
+    }
+    return 'unknown';
+}
+/** GitHub can also return 404 for inaccessible files. Prove absence from a readable parent. */
+async function proveWorkflowAbsent(api, repository) {
+    for (const [path, child] of workflowParents) {
+        try {
+            const { data } = await api.rest.repos.getContent({ ...repository, path });
+            return Array.isArray(data) && data.length < 1000
+                && data.every((entry) => typeof entry?.name === 'string' && entry.name !== child)
+                ? 'absent' : 'unknown';
+        }
+        catch (error) {
+            if (statusCardGithubErrorStatus(error) !== 404)
+                return 'unknown';
+        }
+    }
+    return 'unknown';
+}
+
+
+/***/ }),
+
+/***/ 59775:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.runAdmittedGithubBugbotStatusCardJob = runAdmittedGithubBugbotStatusCardJob;
+const bugbot_status_card_publication_policy_1 = __nccwpck_require__(4809);
+const bugbot_review_ownership_policy_1 = __nccwpck_require__(83288);
+const bugbot_review_presentation_policy_1 = __nccwpck_require__(43799);
+/**
+ * The caller is the default-branch job admitted by the per-PR concurrency
+ * group. All reads happen inside that job, including the check immediately
+ * before the only canonical mutation.
+ */
+function runAdmittedGithubBugbotStatusCardJob(wakeup, job) {
+    async function read() {
+        const source = await job.readSource();
+        if (!source)
+            return undefined;
+        const review = await job.readReview();
+        if (!review)
+            return undefined;
+        const comments = await job.readComments();
+        if (!comments)
+            return undefined;
+        const candidates = comments.filter(comment => (0, bugbot_review_ownership_policy_1.isTrustedBugbotAuthor)(comment.user?.login ?? undefined, job.trustedAuthorLogin)
+            && typeof comment.body === 'string'
+            && ((0, bugbot_review_presentation_policy_1.isBugbotStatusComment)(comment.body) || (0, bugbot_status_card_publication_policy_1.isBugbotCanonicalStatusCard)(comment.body, job.pullNumber)));
+        if (candidates.length > 1)
+            return undefined;
+        const [canonical] = candidates;
+        return {
+            source, review, locale: job.locale, repositoryUrl: job.repositoryUrl,
+            ...(canonical?.body ? { canonical: { id: canonical.id, body: canonical.body } } : {}),
+            ...(job.verifiedBody !== undefined ? { verifiedBody: job.verifiedBody } : {}),
+        };
+    }
+    return (0, bugbot_status_card_publication_policy_1.publishBugbotStatusCard)(wakeup, { async exclusive(repositoryId, pullNumber, operation) {
+            if (job.repositoryId !== repositoryId || job.pullNumber !== pullNumber || !job.trustedAuthorLogin.trim())
+                return 'skipped';
+            return operation({
+                read,
+                async isCurrent(snapshot) {
+                    return JSON.stringify(await read()) === JSON.stringify(snapshot)
+                        && JSON.stringify(await job.readSource()) === JSON.stringify(snapshot.source);
+                },
+                publish({ id, body }) {
+                    return id === undefined ? job.createComment(body) : job.updateComment(id, body);
+                },
+            });
+        } });
+}
+
+
+/***/ }),
+
+/***/ 74646:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.nativeBugbotAnalysisPath = void 0;
+exports.readNativeBugbotStatusCardReview = readNativeBugbotStatusCardReview;
+const bugbot_progress_check_observation_policy_1 = __nccwpck_require__(60202);
+exports.nativeBugbotAnalysisPath = '.github/workflows/copilot_pull_request.yml';
+/** Read after job admission, using the exact native run and a complete check list. */
+function readNativeBugbotStatusCardReview(wakeup, repositoryUrl, run, checks) {
+    const { source, runId, attempt } = wakeup;
+    if (run.id !== runId || run.run_attempt !== attempt || run.path !== exports.nativeBugbotAnalysisPath || run.event !== 'pull_request'
+        || run.repository?.id !== source.repositoryId || run.head_repository?.id !== source.repositoryId
+        || run.pull_requests?.length !== 1 || checks.total_count !== checks.check_runs.length)
+        return undefined;
+    const [pull] = run.pull_requests;
+    if (pull.number !== source.pullNumber || pull.head.sha !== source.head || pull.base.sha !== source.base
+        || pull.head.repo.id !== source.repositoryId || pull.base.repo.id !== source.repositoryId)
+        return undefined;
+    const externalId = ['bugbot', source.pullNumber, source.base, source.head, source.policy, runId, attempt].join(':');
+    const runUrl = repositoryUrl + '/actions/runs/' + runId + '/attempts/' + attempt;
+    const matches = checks.check_runs.filter(check => check.name === 'Copilot / Review' && check.head_sha === source.head
+        && check.external_id === externalId && check.app?.slug === 'github-actions'
+        && (check.details_url === runUrl || check.details_url === repositoryUrl + '/runs/' + check.id));
+    if (matches.length !== 1 || !Number.isSafeInteger(matches[0].id) || matches[0].id < 1)
+        return undefined;
+    const [check] = matches;
+    const details = [check.output?.summary, check.output?.text].flatMap(text => {
+        if (!text)
+            return [];
+        const observation = (0, bugbot_progress_check_observation_policy_1.readBugbotProgressCheckObservation)(text, externalId);
+        return observation && (observation.baseRefSha ?? observation.baseSha) === source.baseRef
+            ? [{ text, observation }] : [];
+    });
+    if (details.length !== 1)
+        return undefined;
+    const [{ text: checkDetails, observation }] = details;
+    const interrupted = (run.status === 'completed' && ['failure', 'cancelled', 'timed_out'].includes(run.conclusion ?? ''))
+        || (observation.stage === 'finished' && observation.outcome === 'failed' && run.status === 'in_progress');
+    if (!interrupted && (run.status !== 'in_progress' || check.status !== 'in_progress'))
+        return undefined;
+    return { state: interrupted ? 'interrupted' : 'active', runId, attempt, runUrl, checkDetails };
+}
+
+
+/***/ }),
+
+/***/ 12847:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.runGithubBugbotStatusCardWorkflow = runGithubBugbotStatusCardWorkflow;
+const github_1 = __nccwpck_require__(78227);
+const git_object_id_1 = __nccwpck_require__(88623);
+const pull_request_lifecycle_repository_1 = __nccwpck_require__(24189);
+const github_pull_request_client_factory_1 = __nccwpck_require__(9068);
+const bugbot_composition_root_1 = __nccwpck_require__(67395);
+const github_bugbot_status_card_handoff_1 = __nccwpck_require__(83620);
+const github_bugbot_status_card_lane_1 = __nccwpck_require__(59775);
+const github_bugbot_status_card_observation_1 = __nccwpck_require__(74646);
+const github_bugbot_status_card_installation_1 = __nccwpck_require__(31666);
+const sourceEvents = new Map([
+    [github_bugbot_status_card_observation_1.nativeBugbotAnalysisPath, 'pull_request'],
+    ['.github/workflows/copilot_pull_request_review_state.yml', 'pull_request_review'],
+    ['.github/workflows/copilot_pull_request_comment.yml', 'pull_request_review_comment'],
+    ['.github/workflows/copilot_issue_comment.yml', 'issue_comment'],
+    ['.github/workflows/copilot_commit.yml', 'push'],
+]);
+async function runGithubBugbotStatusCardWorkflow(binding) {
+    const request = (0, github_bugbot_status_card_handoff_1.decodeGithubBugbotStatusCardHandoff)(binding.inputs);
+    const repository = binding.owner + '/' + binding.repository;
+    if (binding.event !== 'workflow_dispatch' || binding.workflowRef !== repository + '/' + github_bugbot_status_card_installation_1.bugbotStatusCardPath + '@' + binding.ref
+        || !/^https:\/\/[a-z0-9.-]+(?::\d+)?$/iu.test(binding.server) || !request)
+        return 'skipped';
+    const api = (0, github_1.getOctokit)(binding.evidenceToken);
+    const scope = { owner: binding.owner, repo: binding.repository };
+    const [authenticated, repo] = await Promise.all([
+        (0, github_1.getOctokit)(binding.token).rest.users.getAuthenticated(),
+        api.rest.repos.get(scope),
+    ]);
+    if (authenticated.data.login !== binding.actor || repo.data.id !== request.source.repositoryId
+        || binding.ref !== 'refs/heads/' + repo.data.default_branch || binding.policy !== request.source.policy)
+        return 'skipped';
+    const { scm } = (0, bugbot_composition_root_1.createBugbotCompositionRoot)(binding);
+    const pullRequests = new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)());
+    const { source, runId, attempt, kind } = request;
+    const repositoryUrl = binding.server + '/' + repository;
+    const readRun = async () => (await api.rest.actions.getWorkflowRun({ ...scope, run_id: runId })).data;
+    const readSource = async () => {
+        const identity = await pullRequests.getBugbotSourceBoundPullRequestIdentity(binding.owner, binding.repository, source.pullNumber, binding.evidenceToken);
+        const { number: pullNumber, baseRepository, headRepositoryOwner, headRepositoryName, state } = identity;
+        const base = (0, git_object_id_1.canonicalGitObjectId)(identity.baseSha);
+        const baseRef = (0, git_object_id_1.canonicalGitObjectId)(identity.baseRefSha);
+        const head = (0, git_object_id_1.canonicalGitObjectId)(identity.headSha);
+        return state === 'open' && baseRepository.id === source.repositoryId
+            && headRepositoryOwner === binding.owner && headRepositoryName === binding.repository
+            && base && baseRef && head ? { repositoryId: baseRepository.id, pullNumber, base, baseRef, head, policy: binding.policy } : undefined;
+    };
+    const initial = await readSource();
+    if (!initial || initial.base !== source.base || initial.baseRef !== source.baseRef || initial.head !== source.head)
+        return 'skipped';
+    const readReview = async () => {
+        const [origin, { data: latest }] = await Promise.all([readRun(), api.rest.actions.listWorkflowRuns({
+                ...scope, workflow_id: 'copilot_pull_request.yml', event: 'pull_request', head_sha: source.head, per_page: 100,
+            })]);
+        const originEvent = sourceEvents.get(origin.path ?? '');
+        if (origin.id !== runId || origin.run_attempt !== attempt || origin.repository?.id !== source.repositoryId
+            || origin.head_repository?.id !== source.repositoryId || !originEvent || originEvent !== origin.event
+            || (kind !== 'progress' && origin.status !== 'in_progress')
+            || latest.total_count !== latest.workflow_runs.length)
+            return undefined;
+        const [active] = latest.workflow_runs.filter(record => record.pull_requests?.some(pull => pull.number === source.pullNumber
+            && pull.head.sha === source.head && pull.base.sha === source.base))
+            .sort((left, right) => (Date.parse(right.created_at ?? '') || 0) - (Date.parse(left.created_at ?? '') || 0) || right.id - left.id);
+        if (origin.path === github_bugbot_status_card_observation_1.nativeBugbotAnalysisPath && active?.id !== runId)
+            return undefined;
+        if (kind === 'analysis-result') {
+            return origin.path === github_bugbot_status_card_observation_1.nativeBugbotAnalysisPath
+                ? { runId, attempt, state: 'complete', closeAttempt: true } : undefined;
+        }
+        if (!active)
+            return kind === 'state-refresh' ? { runId, attempt, state: 'complete' } : undefined;
+        const checks = await api.rest.checks.listForRef({ ...scope, ref: source.head, check_name: 'Copilot / Review', filter: 'all', per_page: 100 });
+        const currentWork = { source, runId: active.id, attempt: active.run_attempt ?? 0, dryRun: false };
+        const current = (0, github_bugbot_status_card_observation_1.readNativeBugbotStatusCardReview)(currentWork, repositoryUrl, active, checks.data);
+        if (current)
+            return current;
+        return kind === 'state-refresh' && active.status === 'completed' && active.conclusion === 'success'
+            ? { runId, attempt, state: 'complete' } : undefined;
+    };
+    const observed = await readReview();
+    if (!observed)
+        return 'skipped';
+    return (0, github_bugbot_status_card_lane_1.runAdmittedGithubBugbotStatusCardJob)({ source, runId: observed.runId, attempt: observed.attempt, dryRun: false }, {
+        repositoryId: repo.data.id, pullNumber: source.pullNumber, trustedAuthorLogin: authenticated.data.login, repositoryUrl,
+        locale: binding.locale, ...(request.kind !== 'progress' ? { verifiedBody: request.verifiedBody } : {}),
+        readSource, readReview,
+        async readComments() {
+            const observation = await scm.context.listIssueComments(source.pullNumber);
+            return observation.coverage.status === 'complete' ? observation.value : undefined;
+        },
+        createComment: body => scm.reconciliation.presentation.comments.addComment(source.pullNumber, body, { commitSha: source.head }),
+        updateComment: (id, body) => scm.reconciliation.presentation.comments.updateComment(source.pullNumber, id, body, { commitSha: source.head }),
+    });
 }
 
 

@@ -4,9 +4,13 @@ import { PullRequestLifecycleRepository } from '../../data/repository/pull_reque
 import { githubBugbotReviewProgress } from '../github/github_bugbot_review_progress_adapter';
 import { createPullRequestLifecycleClient } from './github_pull_request_client_factory';
 import type { RepositoryCredentialBinding } from './shared_capability_port_binding';
+import type { BugbotReviewProgressPort } from '../../application/ports/bugbot_review_progress_ports';
 
 export function createGithubBugbotReviewProgress(
-    binding: RepositoryCredentialBinding & { readonly pullNumber: number; readonly expectedHead?: string; readonly expectedBase?: string; readonly policy?: string },
+    binding: RepositoryCredentialBinding & {
+        readonly pullNumber: number; readonly expectedHead?: string; readonly expectedBase?: string; readonly policy?: string;
+        readonly wakeStatusCard?: BugbotReviewProgressPort['observe'];
+    },
     evidence: Pick<CopilotEvidenceRepository, 'observeReview'>,
     summary: ActionSummaryPort,
     environment: NodeJS.ProcessEnv = process.env,
@@ -22,5 +26,6 @@ export function createGithubBugbotReviewProgress(
     const pullRequests = new PullRequestLifecycleRepository(createPullRequestLifecycleClient());
     return githubBugbotReviewProgress({ ...binding, runId, attempt, runUrl }, summary,
         number => pullRequests.getBugbotSourceBoundPullRequestIdentity(owner, repository, number, token),
-        check => evidence.observeReview(check, owner, repository, environment.COPILOT_EVIDENCE_TOKEN?.trim() || token));
+        check => evidence.observeReview(check, owner, repository, environment.COPILOT_EVIDENCE_TOKEN?.trim() || token),
+        binding.wakeStatusCard);
 }

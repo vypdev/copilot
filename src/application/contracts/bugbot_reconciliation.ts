@@ -17,6 +17,8 @@ export interface BugbotReconciliationTarget {
   readonly pullRequestNumber: number;
   readonly linkedIssueNumber?: number;
   readonly analyzedHeadSha: string;
+  readonly baseSha?: string;
+  readonly baseRefSha?: string;
   readonly trustedAuthorLogin?: string;
   readonly locale: string;
 }
@@ -87,6 +89,6 @@ export interface BugbotPresentationReport {
   readonly projection: BugbotReviewProjection;
   readonly reviewUpdates: number;
   readonly pendingReviewUpdates: number;
-  readonly statusCardOperation: 'created' | 'updated' | 'unchanged' | 'failed';
+  readonly statusCardOperation: 'created' | 'updated' | 'unchanged' | 'published' | 'failed';
   readonly errors: readonly Error[];
 }

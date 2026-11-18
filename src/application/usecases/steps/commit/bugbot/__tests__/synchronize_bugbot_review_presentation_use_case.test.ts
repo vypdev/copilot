@@ -88,6 +88,46 @@ function staleReviewSnapshot(count: number): BugbotReconciliationSnapshot {
 }
 
 describe('synchronizeBugbotReviewPresentation', () => {
+  it('waits for the shared publication lane before acknowledging a terminal write', async () => {
+    const test = harness();
+    const publish = jest.fn().mockResolvedValue('updated');
+    const result = await synchronizeBugbotReviewPresentation({
+      target: target(), snapshot: snapshot(), plan: plan(),
+      ports: { ...test.ports, statusCard: { publish } },
+    });
+    expect(publish).toHaveBeenCalledWith({ pullRequestNumber: 10, headSha: head,
+      body: expect.stringContaining('copilot-bugbot-approval-evidence') });
+    expect(result.statusCardOperation).toBe('updated');
+    expect(test.addComment).not.toHaveBeenCalled();
+    expect(test.updateComment).not.toHaveBeenCalled();
+  });
+
+  it('preserves the failure when the shared lane cannot acknowledge the terminal write', async () => {
+    const test = harness();
+    const publish = jest.fn().mockRejectedValue(new Error('Publication was not acknowledged'));
+    const result = await synchronizeBugbotReviewPresentation({
+      target: target(), snapshot: snapshot(), plan: plan(),
+      ports: { ...test.ports, statusCard: { publish } },
+    });
+    expect(result.statusCardOperation).toBe('failed');
+    expect(result.errors.map(error => error.message)).toEqual(['Unable to create or update the canonical Bugbot PR status card.']);
+    expect(test.addComment).not.toHaveBeenCalled();
+    expect(test.updateComment).not.toHaveBeenCalled();
+  });
+
+  it('does not let a legacy producer bypass the installed shared writer', async () => {
+    const test = harness();
+    const allowLegacyStatusCardWrite = jest.fn().mockResolvedValue(false);
+    const result = await synchronizeBugbotReviewPresentation({
+      target: target(), snapshot: snapshot(), plan: plan(),
+      ports: { ...test.ports, allowLegacyStatusCardWrite },
+    });
+    expect(result.statusCardOperation).toBe('failed');
+    expect(allowLegacyStatusCardWrite).toHaveBeenCalledTimes(1);
+    expect(test.addComment).not.toHaveBeenCalled();
+    expect(test.updateComment).not.toHaveBeenCalled();
+  });
+
   it('does not mutate presentation when trusted navigation is unavailable', async () => {
     const test = harness();
     const currentSnapshot = snapshot({ navigation: undefined });

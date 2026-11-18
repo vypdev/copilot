@@ -44085,7 +44085,7 @@ const main_run_lifecycle_1 = __nccwpck_require__(916);
 const issue_workflow_runtime_policy_1 = __nccwpck_require__(77734);
 const application_error_1 = __nccwpck_require__(75999);
 const issue_start_policy_1 = __nccwpck_require__(90332);
-async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, compositionSurface, lifecycleStateUseCase, agentActivityUseCase, prepareRuntime, setupProgress, verificationAuthority, reviewProgress) {
+async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, compositionSurface, lifecycleStateUseCase, agentActivityUseCase, prepareRuntime, setupProgress, verificationAuthority, reviewProgress, statusCard) {
     (0, logging_ports_1.configureApplicationLogger)((0, logger_adapter_1.createLoggerAdapter)());
     (0, logging_ports_1.setGlobalLoggerDebug)(execution.debug, execution.inputs === undefined);
     const repository = (0, repository_context_1.requireRepositoryCoordinates)({
@@ -44136,8 +44136,8 @@ async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, c
         return [issueWorkflowAdmissionResult(runtimeDecision.mode, runtimeDecision.message, execution.currentIssueWorkflowAdmission)];
     }
     await prepareRuntime?.(execution);
-    const routeHandlers = reviewProgress
-        ? (0, main_run_route_composition_root_1.createMainRunRouteCompositionRoot)(projectBoardCommandPort, compositionSurface, setupProgress, verificationAuthority, reviewProgress)
+    const routeHandlers = reviewProgress || statusCard
+        ? (0, main_run_route_composition_root_1.createMainRunRouteCompositionRoot)(projectBoardCommandPort, compositionSurface, setupProgress, verificationAuthority, reviewProgress, ...(statusCard ? [statusCard] : []))
         : (0, main_run_route_composition_root_1.createMainRunRouteCompositionRoot)(projectBoardCommandPort, compositionSurface, setupProgress, ...(verificationAuthority ? [verificationAuthority] : []));
     if (execution.runnedByToken) {
         return runTrackedRoute(execution, 'single-action', () => (0, main_run_lifecycle_1.runTokenExecution)(execution, routeHandlers), undefined, agentActivityUseCase);
@@ -83405,6 +83405,23 @@ async function synchronizeStatusCard(input, projection, navigation, catalog) {
         return statusFailure();
     }
     const statusBody = (0, bugbot_review_presentation_policy_1.renderBugbotStatusCard)(projection, catalog, navigation);
+    if (input.ports.statusCard) {
+        try {
+            const operation = await input.ports.statusCard.publish({
+                pullRequestNumber: input.target.pullRequestNumber,
+                headSha: input.snapshot.verifiedHeadSha,
+                ...(input.target.baseSha ? { baseSha: input.target.baseSha } : {}),
+                ...(input.target.baseRefSha ? { baseRefSha: input.target.baseRefSha } : {}),
+                body: statusBody,
+            });
+            return { operation, failures: [] };
+        }
+        catch {
+            return statusFailure();
+        }
+    }
+    if (input.ports.allowLegacyStatusCardWrite && !await input.ports.allowLegacyStatusCardWrite())
+        return statusFailure();
     const trustedStatusComments = input.snapshot.conversationComments
         .filter((comment) => (0, bugbot_review_ownership_policy_1.isTrustedBugbotAuthor)(comment.user?.login, input.target.trustedAuthorLogin)
         && (0, bugbot_review_presentation_policy_1.isBugbotStatusComment)(comment.body))
@@ -84285,8 +84302,9 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
         const detectionAndPreparationMs = Date.now() - detectionStartedAt;
         if (prepared === undefined) {
             shadow = unavailableShadow();
-            if (enforced)
+            if (enforced || dependencies.scm.reconciliation.presentation.statusCard) {
                 return await complete(noAnalysisResult(), 'failed');
+            }
             const analysisError = new application_error_1.ApplicationError('agent.failed', 'The configured agent returned no potential-problem analysis.');
             const catalog = reviewContext.analysis.reviewConfiguration.publicationMode === 'publish'
                 && context.prContext && context.canonicalPullRequest
@@ -84579,6 +84597,8 @@ async function reconcileReviewState(input) {
                 ? { linkedIssueNumber: input.operation.target.issueNumber }
                 : {}),
             analyzedHeadSha,
+            baseSha: input.loadedContext.canonicalPullRequest?.baseSha,
+            baseRefSha: input.loadedContext.canonicalPullRequest?.baseRefSha,
             ...(input.operation.trustedAuthorLogin
                 ? { trustedAuthorLogin: input.operation.trustedAuthorLogin }
                 : {}),
@@ -117589,6 +117609,7 @@ const github_publication_source_repository_1 = __nccwpck_require__(52644);
 const github_branch_client_factory_1 = __nccwpck_require__(30144);
 const shared_capability_port_binding_1 = __nccwpck_require__(47399);
 const github_1 = __nccwpck_require__(78227);
+const github_bugbot_status_card_installation_1 = __nccwpck_require__(31666);
 const github_bugbot_ci_reader_1 = __nccwpck_require__(70358);
 const installed_bugbot_shadow_adapter_1 = __nccwpck_require__(88552);
 const bugbot_git_review_source_adapter_1 = __nccwpck_require__(76471);
@@ -117622,7 +117643,10 @@ function createBugbotCompositionRoot(binding) {
     const pullRequest = new bugbot_pull_request_repository_1.BugbotPullRequestRepository(changes, reviewQuery, reviewCommand, threadCommand);
     const rules = new workspace_bugbot_rules_repository_1.WorkspaceBugbotRulesRepository();
     const navigation = new github_bugbot_review_navigation_adapter_1.GithubBugbotReviewNavigationAdapter();
-    const scm = new bugbot_scm_port_factory_1.BugbotScmPortFactory(bugbotIssueComments, issue, lifecycle, changes, pullRequest, reviewQuery, threadCommand, rules, navigation, new bugbot_git_review_source_adapter_1.BugbotGitReviewSourceAdapter()).bind(binding);
+    const scm = new bugbot_scm_port_factory_1.BugbotScmPortFactory(bugbotIssueComments, issue, lifecycle, changes, pullRequest, reviewQuery, threadCommand, rules, navigation, new bugbot_git_review_source_adapter_1.BugbotGitReviewSourceAdapter()).bind({
+        ...binding,
+        allowLegacyStatusCardWrite: async () => await (0, github_bugbot_status_card_installation_1.readGithubBugbotStatusCardInstallation)((0, github_1.getOctokit)(binding.token), { owner: binding.owner, repo: binding.repository }) === 'absent',
+    });
     return {
         issue,
         scm,
@@ -117730,6 +117754,8 @@ class BugbotScmPortFactory {
                 },
                 presentation: {
                     comments: issueComments,
+                    ...(binding.statusCard ? { statusCard: binding.statusCard } : {}),
+                    ...(binding.allowLegacyStatusCardWrite ? { allowLegacyStatusCardWrite: binding.allowLegacyStatusCardWrite } : {}),
                     updatePullRequestReview: (pullRequestNumber, reviewIdentity, body) => this.pullRequests.updatePullRequestReview(owner, repository, pullRequestNumber, reviewIdentity, body, token),
                 },
             },
@@ -118844,20 +118870,21 @@ function createCommitUseCaseCompositionRoot(projectBoardCommandPort, binding) {
     });
     return new commit_use_case_1.CommitUseCase(new notify_new_commit_on_issue_use_case_1.NotifyNewCommitOnIssueUseCase((0, push_single_action_capability_port_binding_1.bindIssueReopen)((0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), binding)), new check_changes_issue_size_use_case_1.CheckChangesIssueSizeUseCase(size.projectBoardCommandPort, size.issueRepository, size.pullRequestRepository, size.branchChangeSizePort, size.projectMembershipQueryPort), createDetectPotentialProblemsUseCase(binding), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)());
 }
-function createMainRunRouteCompositionRoot(projectBoardCommandPort, surface, setupProgress, verificationAuthority, reviewProgress) {
+function createMainRunRouteCompositionRoot(projectBoardCommandPort, surface, setupProgress, verificationAuthority, reviewProgress, statusCard) {
     let singleAction;
     let issueComment;
     let issue;
     let pullRequestReviewComment;
     let pullRequest;
     let push;
+    const binding = (execution) => bugbotBinding(execution, surface, verificationAuthority, reviewProgress, statusCard);
     return {
         "single-action": async (execution) => {
-            singleAction ?? (singleAction = createSingleActionUseCaseCompositionRoot(surface, bugbotBinding(execution, surface, verificationAuthority, reviewProgress), setupProgress));
+            singleAction ?? (singleAction = createSingleActionUseCaseCompositionRoot(surface, binding(execution), setupProgress));
             return singleAction.invoke(execution);
         },
         "issue-comment": async (execution) => {
-            issueComment ?? (issueComment = createIssueCommentUseCaseCompositionRoot(bugbotBinding(execution, surface, verificationAuthority, reviewProgress), (0, verification_setup_snapshot_1.captureVerificationSetup)(execution.verificationSetup, execution.branches.main)));
+            issueComment ?? (issueComment = createIssueCommentUseCaseCompositionRoot(binding(execution), (0, verification_setup_snapshot_1.captureVerificationSetup)(execution.verificationSetup, execution.branches.main)));
             return issueComment.invoke(execution);
         },
         issue: async (execution) => {
@@ -118865,20 +118892,20 @@ function createMainRunRouteCompositionRoot(projectBoardCommandPort, surface, set
             return issue.invoke(execution);
         },
         "pull-request-review-comment": async (execution) => {
-            pullRequestReviewComment ?? (pullRequestReviewComment = createPullRequestReviewCommentUseCaseCompositionRoot(bugbotBinding(execution, surface, verificationAuthority, reviewProgress), (0, verification_setup_snapshot_1.captureVerificationSetup)(execution.verificationSetup, execution.branches.main)));
+            pullRequestReviewComment ?? (pullRequestReviewComment = createPullRequestReviewCommentUseCaseCompositionRoot(binding(execution), (0, verification_setup_snapshot_1.captureVerificationSetup)(execution.verificationSetup, execution.branches.main)));
             return pullRequestReviewComment.invoke(execution);
         },
         "pull-request": async (execution) => {
-            pullRequest ?? (pullRequest = (0, pull_request_use_case_composition_root_1.createPullRequestUseCaseCompositionRoot)(bugbotBinding(execution, surface, verificationAuthority, reviewProgress)));
+            pullRequest ?? (pullRequest = (0, pull_request_use_case_composition_root_1.createPullRequestUseCaseCompositionRoot)(binding(execution)));
             return pullRequest.invoke(execution);
         },
         push: async (execution) => {
-            push ?? (push = createCommitUseCaseCompositionRoot(projectBoardCommandPort, bugbotBinding(execution, surface, verificationAuthority, reviewProgress)));
+            push ?? (push = createCommitUseCaseCompositionRoot(projectBoardCommandPort, binding(execution)));
             return push.invoke(execution);
         },
     };
 }
-function bugbotBinding(execution, surface, authority, reviewProgress) {
+function bugbotBinding(execution, surface, authority, reviewProgress, statusCard) {
     return {
         owner: execution.owner,
         repository: execution.repo,
@@ -118887,6 +118914,7 @@ function bugbotBinding(execution, surface, authority, reviewProgress) {
             ? { shadow: { workspace: process.env.GITHUB_WORKSPACE } } : {}),
         ...(surface === 'github-workflow' && authority ? { verificationAuthority: authority } : {}),
         ...(surface === 'github-workflow' && reviewProgress ? { reviewProgress } : {}),
+        ...(surface === 'github-workflow' && statusCard ? { statusCard } : {}),
     };
 }
 function rememberBranchPorts(binding, pullRequests) {
@@ -120511,6 +120539,56 @@ function normalizeHttpsServerUrl(value) {
     url.hash = '';
     url.search = '';
     return url.toString().replace(/\/+$/u, '');
+}
+
+
+/***/ }),
+
+/***/ 31666:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.bugbotStatusCardPath = exports.bugbotStatusCardWorkflow = void 0;
+exports.statusCardGithubErrorStatus = statusCardGithubErrorStatus;
+exports.readGithubBugbotStatusCardInstallation = readGithubBugbotStatusCardInstallation;
+exports.bugbotStatusCardWorkflow = 'copilot_bugbot_status_card.yml';
+exports.bugbotStatusCardPath = '.github/workflows/' + exports.bugbotStatusCardWorkflow;
+const workflowParents = [['.github/workflows', exports.bugbotStatusCardWorkflow], ['.github', 'workflows'], ['', '.github']];
+function statusCardGithubErrorStatus(error) {
+    return error && typeof error === 'object' && 'status' in error ? error.status : undefined;
+}
+async function readGithubBugbotStatusCardInstallation(api, scope, ref) {
+    const repository = { ...scope, ...(ref ? { ref } : {}) };
+    try {
+        const { data } = await api.rest.repos.getContent({ ...repository, path: exports.bugbotStatusCardPath });
+        if (!Array.isArray(data) && data.type === 'file' && data.encoding === 'base64'
+            && Buffer.from(data.content, 'base64').toString('utf8').includes("COPILOT_BUGBOT_STATUS_CARD_WORKFLOW: 'write-v1'")) {
+            return 'installed';
+        }
+    }
+    catch (error) {
+        if (statusCardGithubErrorStatus(error) === 404)
+            return proveWorkflowAbsent(api, repository);
+    }
+    return 'unknown';
+}
+/** GitHub can also return 404 for inaccessible files. Prove absence from a readable parent. */
+async function proveWorkflowAbsent(api, repository) {
+    for (const [path, child] of workflowParents) {
+        try {
+            const { data } = await api.rest.repos.getContent({ ...repository, path });
+            return Array.isArray(data) && data.length < 1000
+                && data.every((entry) => typeof entry?.name === 'string' && entry.name !== child)
+                ? 'absent' : 'unknown';
+        }
+        catch (error) {
+            if (statusCardGithubErrorStatus(error) !== 404)
+                return 'unknown';
+        }
+    }
+    return 'unknown';
 }
 
 

@@ -465,6 +465,14 @@ five minutes. Check updates are optional and the workflow run shows native
 cancellation or runner loss. Dry-run records the same observations in logs and
 the Job Summary with zero GitHub writes from this path.
 
+In Copilot's own repository, the short default-branch status-card workflow
+also shows this progress in the canonical PR comment. It displays the current
+SHA, the last observed stage and the remaining validated work when a count
+is known. The last verified result stays visible under its own SHA. A
+successful terminal publication replaces that progress block. If the
+publisher is unavailable or the update is stale, open the Review check for
+the latest native progress. These updates have no effect on approval.
+
 When `bugbot-telemetry` is enabled, each review records only identifiers and
 aggregates: repository/event identity, outcome, stage timings, changed file/line counts, rule count, finding
 counts and states, provider/model names, character counts, and rough token

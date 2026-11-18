@@ -165,7 +165,9 @@ export async function runDetectPotentialProblemsWorkflow(
         const detectionAndPreparationMs = Date.now() - detectionStartedAt;
         if (prepared === undefined) {
             shadow = unavailableShadow();
-            if (enforced) return await complete(noAnalysisResult(), 'failed');
+            if (enforced || dependencies.scm.reconciliation.presentation.statusCard) {
+                return await complete(noAnalysisResult(), 'failed');
+            }
             const analysisError = new ApplicationError('agent.failed', 'The configured agent returned no potential-problem analysis.');
             const catalog = reviewContext.analysis.reviewConfiguration.publicationMode === 'publish'
                 && context.prContext && context.canonicalPullRequest
@@ -502,6 +504,8 @@ async function reconcileReviewState(input: {
                 ? { linkedIssueNumber: input.operation.target.issueNumber }
                 : {}),
             analyzedHeadSha,
+            baseSha: input.loadedContext.canonicalPullRequest?.baseSha,
+            baseRefSha: input.loadedContext.canonicalPullRequest?.baseRefSha,
             ...(input.operation.trustedAuthorLogin
                 ? { trustedAuthorLogin: input.operation.trustedAuthorLogin }
                 : {}),

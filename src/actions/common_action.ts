@@ -52,6 +52,7 @@ export async function mainRun(
     setupProgress?: (effect: import('../domain/setup').SetupOperationEffect) => void,
     verificationAuthority?: BugbotVerificationAuthority,
     reviewProgress?: import('../application/ports/bugbot_review_progress_ports').BugbotReviewProgressPort,
+    statusCard?: import('../application/ports/bugbot_reconciliation_ports').BugbotStatusCardTerminalPort,
 ): Promise<Result[]> {
     configureApplicationLogger(createLoggerAdapter());
     setGlobalLoggerDebug(execution.debug, execution.inputs === undefined);
@@ -109,8 +110,9 @@ export async function mainRun(
     }
     await prepareRuntime?.(execution);
 
-    const routeHandlers = reviewProgress
-        ? createMainRunRouteCompositionRoot(projectBoardCommandPort, compositionSurface, setupProgress, verificationAuthority, reviewProgress)
+    const routeHandlers = reviewProgress || statusCard
+        ? createMainRunRouteCompositionRoot(projectBoardCommandPort, compositionSurface, setupProgress, verificationAuthority, reviewProgress,
+            ...(statusCard ? [statusCard] as const : []))
         : createMainRunRouteCompositionRoot(projectBoardCommandPort, compositionSurface, setupProgress,
             ...(verificationAuthority ? [verificationAuthority] as const : []));
     

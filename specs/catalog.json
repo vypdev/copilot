@@ -676,7 +676,8 @@
         ".github/workflows/copilot_pull_request_comment.yml",
         ".github/workflows/copilot_pull_request_review_state.yml",
         "setup/workflows/copilot_pull_request.yml",
-        "setup/workflows/copilot_pull_request_review_state.yml"
+        "setup/workflows/copilot_pull_request_review_state.yml",
+        ".github/workflows/copilot_bugbot_status_card.yml"
       ],
       "entrypoints": [
         "src/application/usecases/steps/commit/detect_potential_problems_workflow.ts",
@@ -722,7 +723,10 @@
         "src/infrastructure/composition/bugbot_scm_port_factory.ts",
         "src/application/policies/bugbot_commit_progress_link_policy.ts",
         "src/infrastructure/github/github_bugbot_interrupted_check.ts",
-        "src/application/policies/bugbot_progress_check_observation_policy.ts"
+        "src/application/policies/bugbot_progress_check_observation_policy.ts",
+        "src/application/policies/bugbot_status_card_publication_policy.ts",
+        "src/infrastructure/github/github_bugbot_status_card_workflow.ts",
+        "src/infrastructure/github/github_bugbot_status_card_dispatch.ts"
       ],
       "tests": [
         "src/domain/bugbot/__tests__/review_state.test.ts",
@@ -761,7 +765,13 @@
         "src/infrastructure/github/__tests__/github_bugbot_interrupted_check.test.ts",
         "src/application/policies/__tests__/bugbot_progress_check_observation_policy.test.ts",
         "src/data/repository/__tests__/copilot_evidence_repository.test.ts",
-        "quality/bugbot/evidence/issue-950/status-card-publication/publisher.test.cjs"
+        "quality/bugbot/evidence/issue-950/status-card-publication/publisher.test.cjs",
+        "src/application/policies/__tests__/bugbot_status_card_publication_policy.test.ts",
+        "src/infrastructure/github/__tests__/github_bugbot_status_card_workflow.test.ts",
+        "src/infrastructure/github/__tests__/github_bugbot_status_card_lane.test.ts",
+        "src/infrastructure/github/__tests__/github_bugbot_status_card_dispatch.test.ts",
+        "src/infrastructure/github/__tests__/github_bugbot_status_card_observation.test.ts",
+        "src/infrastructure/github/__tests__/github_bugbot_status_card_handoff.test.ts"
       ],
       "documentation": [
         "docs/bugbot/detection.mdx",

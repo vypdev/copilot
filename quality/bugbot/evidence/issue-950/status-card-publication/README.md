@@ -27,8 +27,38 @@ pnpm exec jest --runInBand bugbot_progress_check_observation_policy github_bugbo
 
 The simulator authenticates the observation using the same marker decoder as
 the native Check adapter. It supplies serialization through an in-memory port.
-Installation of the GitHub publication lane, integration of every existing
-writer and the terminal handoff are pending.
+At the time of this control, workflow installation and the terminal handoff
+were pending.
+
+## Native workflow integration
+
+Use the application and GitHub adapter tests to replay both sides of the
+handoff. They exercise the current PR and workflow-run facts, full comment
+reads and the existing terminal publisher. Completion requires the actual
+publication step to succeed. A successful workflow with a skipped step
+does not acknowledge the handoff.
+
+```sh
+pnpm exec jest --runInBand bugbot_status_card synchronize_bugbot_review_presentation_use_case
+pnpm run validate:workflows
+```
+
+The delayed progress control publishes a terminal projection, receives a
+queued observation for the same attempt and keeps the terminal card. The
+exact-head retry can show progress again. The recheck control refreshes the
+verified projection on the same comment while retaining the native review
+block. The superseded and write-blocked controls record no comment writes.
+
+The worker reads both check fields used by GitHub, authenticates the native
+attempt, and accepts either its exact workflow-attempt URL or its exact
+native Check Run URL. The check from the failed review of `d03154b90` stored
+the structured progress in `output.text` and linked its Check Run URL.
+[Native check](https://github.com/vypdev/copilot/runs/134520640034)
+
+The workflow requires installation on the default branch before a hosted
+publication can be accepted. During branch review, the Check retains live
+progress and the existing terminal route remains available.
+[Default-branch workflow requirement](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#workflow_dispatch)
 
 ## Native observation at `282747046`
 

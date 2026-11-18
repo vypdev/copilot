@@ -164,6 +164,21 @@ async function synchronizeStatusCard(
     return statusFailure();
   }
   const statusBody = renderBugbotStatusCard(projection, catalog, navigation);
+  if (input.ports.statusCard) {
+    try {
+      const operation = await input.ports.statusCard.publish({
+        pullRequestNumber: input.target.pullRequestNumber,
+        headSha: input.snapshot.verifiedHeadSha,
+        ...(input.target.baseSha ? { baseSha: input.target.baseSha } : {}),
+        ...(input.target.baseRefSha ? { baseRefSha: input.target.baseRefSha } : {}),
+        body: statusBody,
+      });
+      return { operation, failures: [] };
+    } catch {
+      return statusFailure();
+    }
+  }
+  if (input.ports.allowLegacyStatusCardWrite && !await input.ports.allowLegacyStatusCardWrite()) return statusFailure();
   const trustedStatusComments = input.snapshot.conversationComments
     .filter((comment) =>
       isTrustedBugbotAuthor(comment.user?.login, input.target.trustedAuthorLogin)

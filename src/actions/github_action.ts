@@ -45,8 +45,25 @@ import { prepareGithubAgentRuntime } from './github_action_runtime';
 import { runPullRequestApprovalAction } from './pull_request_approval_action';
 import { isBotPullRequestAnalysisEvent } from '../application/policies/bot_pull_request_analysis_policy';
 import { createPullRequestUseCaseCompositionRoot } from '../infrastructure/composition/pull_request_use_case_composition_root';
+import { runGithubBugbotStatusCardWorkflow } from '../infrastructure/github/github_bugbot_status_card_workflow';
+import { createGithubBugbotStatusCardDispatcher } from '../infrastructure/github/github_bugbot_status_card_dispatch';
 
 export async function runGitHubAction(verificationAuthority?: BugbotVerificationAuthority): Promise<void> {
+    if (process.env.COPILOT_BUGBOT_STATUS_CARD_WORKFLOW === 'write-v1') {
+        const token = getGithubActionInput(INPUT_KEYS.TOKEN, { required: true });
+        const { repo, eventName, payload, ref, actor, serverUrl } = github.context;
+        const effect = await runGithubBugbotStatusCardWorkflow({
+            owner: repo.owner, repository: repo.repo, token,
+            evidenceToken: process.env.COPILOT_EVIDENCE_TOKEN ?? token,
+            event: eventName, ref, actor, server: serverUrl, workflowRef: process.env.GITHUB_WORKFLOW_REF ?? '',
+            locale: readGithubActionLocaleInputs(getGithubActionInput).pullRequest,
+            policy: verificationAuthority?.policyDigest ?? 'default',
+            inputs: { pullNumber: payload.inputs?.pull_number, work: payload.inputs?.work },
+        });
+        if (effect === 'skipped') core.setFailed('No current Bugbot status card publication was authorized.');
+        else logInfo('Bugbot status card publication ' + effect + '.');
+        return;
+    }
     if (process.env.COPILOT_ISSUE_ADMISSION_BOOTSTRAP === '1') {
         // Only the isolated bootstrap owns this input; ordinary JSON input maps
         // must not redirect the mutation entry into a successful read-only no-op.
@@ -148,6 +165,20 @@ export async function runGitHubAction(verificationAuthority?: BugbotVerification
             logInfo('The shadow verifier runtime could not be prepared. The ordinary review can still complete.');
         }
     };
+    const repositoryBinding = {
+        owner: execution.owner,
+        repository: execution.repo,
+        token: execution.tokens.token,
+    };
+    const reviewMode = aiInputs.bugbotReviewConfiguration.publicationMode;
+    const dispatcher = reviewMode === 'publish' ? await createGithubBugbotStatusCardDispatcher({
+        ...repositoryBinding,
+        repositoryId: github.context.payload.repository?.id,
+        defaultBranch: github.context.payload.repository?.default_branch,
+        evidenceToken: process.env.COPILOT_EVIDENCE_TOKEN?.trim() || token,
+        event: github.context.eventName,
+        policy: verificationAuthority?.policyDigest ?? 'default',
+    }) : undefined;
     if (botAnalysisOnly) {
         // Bypass the normal lifecycle/issue route entirely. The only permitted
         // side effect is Bugbot's PR analysis and its own bounded presentation.
@@ -160,6 +191,7 @@ export async function runGitHubAction(verificationAuthority?: BugbotVerification
             token,
             ...(shadowSettings ? { shadow: { workspace: process.env.GITHUB_WORKSPACE } } : {}),
             ...(verificationAuthority ? { verificationAuthority } : {}),
+            ...(dispatcher ? { statusCard: dispatcher.terminal } : {}),
         }).reviewOnly(execution);
         if (results.some(result => !result.success)) {
             throw new Error('Bot-authored pull-request analysis did not complete.');
@@ -174,17 +206,13 @@ export async function runGitHubAction(verificationAuthority?: BugbotVerification
         `AI PR description mode: ${execution.ai.getPullRequestDescriptionMode()}, bugbot min severity: ${execution.ai.getBugbotMinSeverity()}.`,
     );
 
-    const repositoryBinding = {
-        owner: execution.owner,
-        repository: execution.repo,
-        token: execution.tokens.token,
-    };
     const evidence = createCopilotEvidenceCompositionRoot();
     const summary = createGithubActionSummaryCompositionRoot();
     const reviewProgress = createGithubBugbotReviewProgress({
         ...repositoryBinding, pullNumber: Number(execution.pullRequest.number), expectedHead: execution.inputs?.pull_request?.head?.sha,
         expectedBase: execution.inputs?.pull_request?.base?.sha,
         policy: verificationAuthority?.policyDigest,
+        ...(dispatcher ? { wakeStatusCard: dispatcher.wake } : {}),
     }, evidence, summary);
     const results = await mainRun(
         execution,
@@ -227,6 +255,7 @@ export async function runGitHubAction(verificationAuthority?: BugbotVerification
         undefined,
         verificationAuthority,
         reviewProgress,
+        ...(dispatcher ? [dispatcher.terminal] as const : []),
     );
     const issueContentPort = createIssueContentCompositionRoot();
     const configurationHandler = new ConfigurationHandler(issueContentPort);

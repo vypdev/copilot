@@ -7533,6 +7533,23 @@ async function synchronizeStatusCard(input, projection, navigation, catalog) {
         return statusFailure();
     }
     const statusBody = (0, bugbot_review_presentation_policy_1.renderBugbotStatusCard)(projection, catalog, navigation);
+    if (input.ports.statusCard) {
+        try {
+            const operation = await input.ports.statusCard.publish({
+                pullRequestNumber: input.target.pullRequestNumber,
+                headSha: input.snapshot.verifiedHeadSha,
+                ...(input.target.baseSha ? { baseSha: input.target.baseSha } : {}),
+                ...(input.target.baseRefSha ? { baseRefSha: input.target.baseRefSha } : {}),
+                body: statusBody,
+            });
+            return { operation, failures: [] };
+        }
+        catch {
+            return statusFailure();
+        }
+    }
+    if (input.ports.allowLegacyStatusCardWrite && !await input.ports.allowLegacyStatusCardWrite())
+        return statusFailure();
     const trustedStatusComments = input.snapshot.conversationComments
         .filter((comment) => (0, bugbot_review_ownership_policy_1.isTrustedBugbotAuthor)(comment.user?.login, input.target.trustedAuthorLogin)
         && (0, bugbot_review_presentation_policy_1.isBugbotStatusComment)(comment.body))
@@ -8038,8 +8055,9 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
         const detectionAndPreparationMs = Date.now() - detectionStartedAt;
         if (prepared === undefined) {
             shadow = unavailableShadow();
-            if (enforced)
+            if (enforced || dependencies.scm.reconciliation.presentation.statusCard) {
                 return await complete(noAnalysisResult(), 'failed');
+            }
             const analysisError = new application_error_1.ApplicationError('agent.failed', 'The configured agent returned no potential-problem analysis.');
             const catalog = reviewContext.analysis.reviewConfiguration.publicationMode === 'publish'
                 && context.prContext && context.canonicalPullRequest
@@ -8332,6 +8350,8 @@ async function reconcileReviewState(input) {
                 ? { linkedIssueNumber: input.operation.target.issueNumber }
                 : {}),
             analyzedHeadSha,
+            baseSha: input.loadedContext.canonicalPullRequest?.baseSha,
+            baseRefSha: input.loadedContext.canonicalPullRequest?.baseRefSha,
             ...(input.operation.trustedAuthorLogin
                 ? { trustedAuthorLogin: input.operation.trustedAuthorLogin }
                 : {}),

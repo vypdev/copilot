@@ -2084,15 +2084,26 @@ the existing contract requires it. The job must load only data from upstream
 attempts and execute code from a trusted workflow revision. The long review
 continues in its analysis job.
 
-The tested composition preserves the previous verified body byte for byte,
-leaves a first-review card without terminal markers, rejects lower sequences
-within the same attempt and keeps current progress when a recheck refreshes
-the verified section. A superseding push, recheck and interrupted runner
-can be replayed deterministically with fail-on-write provider ports.
-The simulator supplies serialization explicitly. GitHub workflow installation,
-the terminal handoff and live card publication still require integration.
+The source repository uses `copilot_bugbot_status_card.yml` on the default
+branch. Each short, self-hosted job is queued by repository ID and PR number.
+Its bot-authenticated handoff identifies the producer and the exact
+comparison. The job loads the latest native observation under its own read
+credential, identifies one trusted canonical comment and rechecks the
+producer attempt, check, conversation and comparison before mutation. The
+terminal producer waits for acknowledgment from that job before issuing the
+existing receipt. An older or conflicting observation cannot overwrite the
+active block. Completion records the attempt on the comment so an already
+queued observation cannot restore a completed progress block.
+
+Deterministic controls preserve the previous verified bytes, reuse the
+first-review comment without granting approval, reject replaced attempts and
+keep active progress when a recheck refreshes the verified section. A
+superseding push, delayed same-head task and interrupted runner are replayed
+with recording or fail-on-call provider ports. Hosted acceptance requires the
+trusted workflow to exist on the GitHub default branch.
 
 [GitHub Actions concurrency queue](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency)
+[GitHub workflow dispatch](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#workflow_dispatch)
 
 ### GitHub content examples
 
@@ -2149,12 +2160,16 @@ run link. Recovery does not write during dry-run, touch the card or its
 findings, or issue a review receipt. Provider errors preserve the native run
 as the authority. [Runner interruption on #951](https://github.com/vypdev/copilot/actions/runs/43515411649/job/132196027792)
 
-The installed workflows still lack one shared short publication lane for
-every writer of the aggregate comment. BRP-04 therefore keeps the live
-block in the check and Job Summary. To enable the block in the aggregate
-comment, all writers must use one serialized publication lane, including
-manual rechecks, and the lane must validate its evidence after admission.
-The long-running analysis group and the review-state route stay independent.
+When the trusted workflow is absent, the live block remains in the check and
+Job Summary and the existing terminal comment route applies. When the
+shared writer is installed, a failed acknowledgment cannot fall through to
+an unqueued comment write, including for legacy callers outside the shared
+workflow. Before using the legacy route, verify absence in a readable
+directory of the default tree. A file-level not-found response alone cannot
+prove that the credential can inspect the workflow. The check remains
+available if the publisher
+cannot safely identify the current attempt or write the comment. The
+long-running analysis group and the review-state route stay independent.
 [GitHub REST conditional request support](https://docs.github.com/en/rest/using-the-rest-api/best-practices-for-using-the-rest-api#use-conditional-requests)
 [GitHub Actions job concurrency](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency)
 

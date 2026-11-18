@@ -3,6 +3,7 @@ import { GithubPublicationSourceRepository } from '../../data/repository/github_
 import { createBranchClient } from './github_branch_client_factory';
 import { bindPublicationSourceQuery } from './shared_capability_port_binding';
 import { getOctokit } from '@actions/github';
+import { readGithubBugbotStatusCardInstallation } from '../github/github_bugbot_status_card_installation';
 import { createGitHubBugbotCiReader } from '../bugbot/github_bugbot_ci_reader';
 import type { BugbotShadowVerificationPort } from '../../application/ports/bugbot_shadow_verification_ports';
 import { createInstalledBugbotShadowVerifier } from '../bugbot/installed_bugbot_shadow_adapter';
@@ -80,7 +81,11 @@ export function createBugbotCompositionRoot(binding: BugbotScmBinding): BugbotCo
     rules,
     navigation,
     new BugbotGitReviewSourceAdapter(),
-  ).bind(binding);
+  ).bind({
+    ...binding,
+    allowLegacyStatusCardWrite: async () => await readGithubBugbotStatusCardInstallation(getOctokit(binding.token),
+      { owner: binding.owner, repo: binding.repository }) === 'absent',
+  });
   return {
     issue,
     scm,

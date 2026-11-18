@@ -21,6 +21,7 @@ export function githubBugbotReviewProgress(
     summary: ActionSummaryPort,
     current: (number: number) => Promise<{ headSha?: string; baseSha?: string; baseRefSha?: string; state?: string } | undefined>,
     observeCheck: (check: CopilotLiveReviewCheck) => Promise<void>,
+    wakeStatusCard?: BugbotReviewProgressPort['observe'],
 ): BugbotReviewProgressPort {
     let checkStarted = false;
     let sequence = 0;
@@ -40,5 +41,6 @@ export function githubBugbotReviewProgress(
         await observeCheck({ ...view, summary: observationMarker ? view.summary + '\n\n' + observationMarker : view.summary,
             headSha: observation.headSha, runUrl: context.runUrl, externalId });
         checkStarted = true;
+        if (observationMarker) await wakeStatusCard?.(observation, false, locale);
     } };
 }
