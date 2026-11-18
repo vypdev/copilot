@@ -35,6 +35,10 @@ manifests, scores and per-attempt ledgers retain their original byte
 contents and source history.
 [Git tag](https://github.com/vypdev/copilot/tree/bugbot-950-pilot-evidence/quality/bugbot/evidence/issue-950)
 
+The Action checks the selected [owning SDD](../../../../specs/bugbot-analysis-publication-and-autofix.md)
+against its published bytes. Its relative historical report links lead to
+short archive entries. The original manifest remains at its selected path.
+
 ```sh
 git fetch origin tag bugbot-950-pilot-evidence
 git worktree add --detach ../copilot-950-pilot-evidence 9e9f1536f38dec12d330ac631c786a9625548833

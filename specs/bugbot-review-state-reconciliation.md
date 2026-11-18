@@ -1955,6 +1955,11 @@ repository cannot provide a CI receipt. File evidence uses lossless UTF-8
 paths and the actual number of blob lines. An empty blob has no citable
 line. The evidence broker returns a named gap when a path cannot be decoded.
 
+Refer to the out-of-range citation repair control as `ev950-shadow-C25` to
+distinguish it from the unbound-source and provider-stop control labeled
+`ev950-shadow-C22` in the published analysis SDD. The ordered-closure table
+contains twelve controls.
+
 [Bugbot repository evidence verification](./bugbot-analysis-publication-and-autofix.md#bugbot-repository-evidence-verification)
 
 The finding projection and approval receipt have different lifecycles. An
