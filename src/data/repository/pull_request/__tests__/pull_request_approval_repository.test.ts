@@ -872,7 +872,10 @@ describe('issue #950 current-policy Bugbot evidence at the approval consumer', (
     f.pages.set(f.pat.rest.issues.listComments, [[{ id: 65, user: { id: 20 }, body: legacy }]]);
     f.pat.paginate.iterator.mockImplementation(async function* (method, params) {
       if (method === f.pat.rest.actions.listWorkflowRunsForRepo && params.head_sha === head) {
-        yield { data: { workflow_runs: nativeRuns } };
+        yield { data: { workflow_runs: nativeRuns.filter(item => item.head_sha === head) } };
+      } else if (method === f.pat.rest.actions.listWorkflowRunsForRepo && params.head_sha === testedMerge) {
+        yield* original(method, params);
+        yield { data: { workflow_runs: nativeRuns.filter(item => item.head_sha === testedMerge) } };
       } else if (method === f.pat.rest.checks.listForRef && params.ref === head) {
         yield { data: { check_runs: checks } };
       } else yield* original(method, params);
@@ -910,6 +913,18 @@ describe('issue #950 current-policy Bugbot evidence at the approval consumer', (
     const fact = await evidence(enforced, [run(80)], [check(80)]);
     expect(fact.bugbot?.outcome).toBe('complete');
     expect(decidePullRequestApproval(await approvalPolicy(), fact).status).toBe('eligible');
+  });
+
+  it.each([head, testedMerge])('binds a verified merge execution to the actual review-head check: %s', async checkHead => {
+    const native = { ...run(80), head_sha: testedMerge };
+    const fact = await evidence(enforced, [native], [{ ...check(80), head_sha: checkHead }]);
+    if (checkHead === head) {
+      expect(fact.bugbot?.verificationReceipt?.runId).toBe(80);
+      expect(decidePullRequestApproval(await approvalPolicy(), fact).status).toBe('eligible');
+    } else {
+      expect(fact.bugbot).toBeUndefined();
+      expect(decidePullRequestApproval(await approvalPolicy(), fact).code).toBe('bugbot-missing');
+    }
   });
 
   it.each(['missing', 'duplicate', 'expired', 'other run', 'other check', 'other attempt', 'altered receipt', 'invalid zip'])(

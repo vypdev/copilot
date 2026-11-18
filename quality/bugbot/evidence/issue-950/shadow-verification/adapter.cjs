@@ -16,6 +16,9 @@ function createShadowVerifier(lab, log, transport = ask) {
             }
             const repo = path.join(lab, name + '.git');
             const head = candidate.headSha;
+            if (candidate.allowBase && !candidate.baseSha) {
+                return { status: 'technical-failure', reason: 'shadow-base-unavailable' };
+            }
             const base = candidate.baseSha ?? head;
             if (git(repo, ['remote']) !== '') return { status: 'technical-failure', reason: 'shadow-repository-remote' };
             const subject = { repository: `${owner}/${name}`, head, base,

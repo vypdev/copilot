@@ -3,7 +3,56 @@
 const { readFileSync } = require('node:fs');
 const { spawn } = require('node:child_process');
 const path = require('node:path');
+const assert = require('node:assert/strict');
+const { createHash } = require('node:crypto');
 const { corpus } = require('./configuration.cjs');
+const plan = require('./configuration.cjs');
+const { requirePinnedRuntime } = require('./implementation.cjs');
+
+function validateCorpusProvenance(directory, result) {
+    const hash = input => createHash('sha256').update(input).digest('hex');
+    const root = path.resolve(__dirname, '../../../../..');
+    const planFile = process.env.COPILOT_EV07_PLAN ? path.resolve(process.env.COPILOT_EV07_PLAN) : path.join(__dirname, 'plan.json');
+    const source = readFileSync(path.join(root, 'quality/bugbot/corpus.v1.json'));
+    assert.equal(hash(source), corpus.sha256);
+    const inventory = JSON.parse(source);
+    const predictions = JSON.parse(readFileSync(path.join(directory, 'corpus-v3/predictions.json'), 'utf8'));
+    const ledger = readFileSync(path.join(directory, 'corpus-v3/corpus.jsonl'), 'utf8').trim().split('\n').map(line => JSON.parse(line));
+    const starts = ledger.filter(row => row.event === 'start'), finishes = ledger.filter(row => row.event === 'finish');
+    assert.equal(starts.length, 1); assert.equal(finishes.length, 1);
+    const start = starts[0], finish = finishes[0];
+    assert.equal(start.plan, hash(readFileSync(planFile)));
+    assert.equal(start.runner, hash(readFileSync(path.join(__dirname, 'corpus.cjs'))));
+    assert.equal(start.runner, plan.inspectedArtifacts?.['corpus.cjs']);
+    assert.equal(start.implementation, plan.implementation);
+    assert.equal(start.corpus, corpus.sha256);
+    assert.equal(start.gitHubMutationPorts, 0);
+    assert.deepEqual(start.configuration, plan.detector);
+    requirePinnedRuntime(start.cli);
+    assert.deepEqual(finish, { event: 'finish', complete: true, passed: true, githubWriteAttempts: 0, workspaceUnchanged: true });
+    const rows = ledger.filter(row => row.event === 'case');
+    assert.equal(rows.length, corpus.cases);
+    assert.equal(new Set(rows.map(row => row.id)).size, corpus.cases);
+    assert.equal(predictions.schemaVersion, 1);
+    assert.deepEqual(Object.keys(predictions.predictions).sort(), inventory.cases.map(item => item.id).sort());
+    const flags = { model: plan.detector.model, modelProvider: plan.detector.modelProvider,
+        reasoningEffort: plan.detector.effort, sandbox: 'read-only' };
+    for (const row of rows) {
+        assert.equal(inventory.cases[row.index]?.id, row.id);
+        assert.equal(row.status, 'completed');
+        assert.deepEqual(row.predictions, predictions.predictions[row.id]);
+        assert(row.calls?.length > 0);
+        row.calls.forEach(call => assert.deepEqual(call, flags));
+    }
+    require('./load.cjs');
+    const { evaluateBugbotBenchmark } = require(path.join(root, 'src/tooling/bugbot_benchmark'));
+    const gates = corpus.gates;
+    const score = evaluateBugbotBenchmark(inventory, predictions, { precision: gates.precision, recall: gates.recall,
+        f1: gates.f1, locationAccuracy: gates.exactLocation, severityAccuracy: gates.severity,
+        categoryAccuracy: gates.category, maxConfidenceBrierScore: gates.maxBrier });
+    assert.deepEqual(result.score, score);
+    assert.deepEqual(score.violations, []); assert.deepEqual(score.missingCases, []);
+}
 
 function requirePassingCorpus(campaign) {
     if (!campaign) throw new Error('usage: node launch-full-review.cjs <campaign directory>');
@@ -17,6 +66,8 @@ function requirePassingCorpus(campaign) {
         || !Array.isArray(result.score?.missingCases) || result.score.missingCases.length !== 0) {
         throw new Error('The independent corpus gate did not pass. Full review was not started.');
     }
+    try { validateCorpusProvenance(directory, result); }
+    catch { throw new Error('The independent corpus provenance does not match the frozen run. Full review was not started.'); }
     return directory;
 }
 

@@ -755,6 +755,17 @@ test('verifies with the inherited configuration and classifies changed files aga
     assert.deepEqual(log.find(event => event.event === 'finding-result').writes, []);
 });
 
+test('does not substitute head for an absent base when regression investigation is authorized', async () => {
+    const { createShadowVerifier } = require('./adapter.cjs');
+    const candidate = { id: finding.id, hypothesis: finding.hypothesis, anchor: finding.detectorLocation,
+        repository: { owner: 'local', name: 'fixture' }, pullRequest: 24, headSha: head, allowBase: true };
+    let calls = 0;
+    const adapter = createShadowVerifier(lab, () => {}, async () => { calls++; assert.fail('no session without its fixed base'); });
+    const result = await adapter.verify({ candidate, configuration: { provider: 'codex', model: 'fixture', effort: 'xhigh' } });
+    assert.deepEqual(result, { status: 'technical-failure', reason: 'shadow-base-unavailable' });
+    assert.equal(calls, 0);
+});
+
 const lifecycleRun = require('../../../../../src/infrastructure/bugbot/shadow/run.cjs').investigate;
 const { fixtureSource } = require('./source.cjs');
 const lifecycleResponse = (response, dependencies = []) => ({ ...response, dependencies });

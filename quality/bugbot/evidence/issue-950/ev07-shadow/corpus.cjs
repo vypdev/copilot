@@ -6,7 +6,7 @@ const { execFileSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 const { tmpdir } = require('node:os');
-const { requirePinnedImplementation } = require('./implementation.cjs');
+const { requirePinnedImplementation, requirePinnedRuntime } = require('./implementation.cjs');
 require('./load.cjs');
 
 const { runBugbotBenchmarkAgent } = require('../../../../../src/tooling/bugbot_benchmark_runner');
@@ -22,6 +22,8 @@ const hash = input => createHash('sha256').update(input).digest('hex');
 
 async function run(destination, preflight = false) {
     const implementation = requirePinnedImplementation();
+    assert.equal(hash(fs.readFileSync(__filename)), plan.inspectedArtifacts?.['corpus.cjs'],
+        'corpus runner differs from the preregistered implementation');
     assert(destination, 'usage: node corpus.cjs <new output directory>');
     destination = path.resolve(destination);
     const corpusFile = path.join(root, 'quality/bugbot/corpus.v1.json');
@@ -31,6 +33,7 @@ async function run(destination, preflight = false) {
     const configuration = plan.detector;
     const planner = new AgentExecutionPlanner();
     const cli = execFileSync('codex', ['--version'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    requirePinnedRuntime(cli);
     fs.mkdirSync(destination);
     const ledger = path.join(destination, 'corpus.jsonl');
     const record = row => fs.appendFileSync(ledger, JSON.stringify(row) + '\n', { mode: 0o600 });

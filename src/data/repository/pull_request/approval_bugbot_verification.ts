@@ -76,7 +76,7 @@ export function readApprovalBugbotVerification(
 
     const facts = checks.flatMap(check => {
         if (check.id !== artifact.checkRunId || check.name !== 'Copilot / Review' || check.app?.id !== policy.sourceAppId
-            || check.head_sha !== latest.head_sha
+            || check.head_sha !== scope.headSha
             || check.status !== 'completed') return [];
         const summary = check.output?.summary;
         if (typeof summary !== 'string' || summary.length > 65_536) return [];

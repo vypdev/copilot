@@ -102872,6 +102872,7 @@ exports.isBugbotStatusComment = isBugbotStatusComment;
 exports.renderBugbotStatusCard = renderBugbotStatusCard;
 exports.renderBugbotReviewSnapshot = renderBugbotReviewSnapshot;
 exports.buildNewBugbotReviewSnapshotHeader = buildNewBugbotReviewSnapshotHeader;
+exports.bugbotReviewHistoricalContent = bugbotReviewHistoricalContent;
 const review_state_1 = __nccwpck_require__(79200);
 const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 const publication_identity_policy_1 = __nccwpck_require__(45403);
@@ -103033,11 +103034,15 @@ function buildNewBugbotReviewSnapshotHeader(analyzedHeadSha, findingCount, inlin
         ].join(' '),
     ].join('\n');
 }
-function normalizeHistoricalSnapshot(originalBody, analyzedHeadSha, catalog) {
-    let body = originalBody
+/** Stable report content excludes the host-owned, mutable review status. */
+function bugbotReviewHistoricalContent(originalBody) {
+    return originalBody
         .replace(new RegExp(`<!--\\s*${exports.BUGBOT_REVIEW_MARKER_PREFIX}\\s+schema="1"[^>]*-->\\s*`, 'gu'), '')
         .replace(new RegExp(`${escapeRegExp(exports.BUGBOT_REVIEW_STATUS_START)}[\\s\\S]*?${escapeRegExp(exports.BUGBOT_REVIEW_STATUS_END)}\\s*`, 'gu'), '')
         .trim();
+}
+function normalizeHistoricalSnapshot(originalBody, analyzedHeadSha, catalog) {
+    let body = bugbotReviewHistoricalContent(originalBody);
     if (!/^## 🤖 .+$/mu.test(body)) {
         const heading = `## 🤖 ${catalog.message('bugbot.snapshot.heading')}`;
         body = `${heading}\n\n${body}`;
@@ -129015,7 +129020,7 @@ class PullRequestReviewCommentPublisher {
         const reportedPath = (0, path_validation_1.resolveFindingPathForPr)(finding.file, prContext.prFiles);
         const anchor = resolveReviewAnchor(finding.line, finding.endLine, reportedPath, prContext);
         const findingBody = (0, bugbot_finding_marker_policy_1.buildCommentBody)(finding, false, undefined, {
-            includeSuggestedChange: allowSuggestedChanges && anchor?.subjectType === 'line' && anchor.side === 'RIGHT',
+            includeSuggestedChange: allowSuggestedChanges && anchor?.side === 'RIGHT',
             catalog: this.catalog,
         });
         const body = findingBody;
@@ -129030,14 +129035,11 @@ class PullRequestReviewCommentPublisher {
             : `> ${this.catalog.message('bugbot.finding.anchorNote')}\n\n`;
         this.commentsToCreate.push({
             path: anchor.path,
-            ...(anchor.subjectType === 'line' ? {
-                line: anchor.endLine ?? anchor.line,
-                side: anchor.side,
-                ...(anchor.endLine && anchor.endLine > anchor.line
-                    ? { startLine: anchor.line, startSide: anchor.side }
-                    : {}),
-            } : {}),
-            ...(anchor.subjectType === 'file' ? { subjectType: 'file' } : {}),
+            line: anchor.endLine ?? anchor.line,
+            side: anchor.side,
+            ...(anchor.endLine && anchor.endLine > anchor.line
+                ? { startLine: anchor.line, startSide: anchor.side }
+                : {}),
             body: `${anchorNote}${body}`,
         });
     }
@@ -129064,11 +129066,11 @@ exports.PullRequestReviewCommentPublisher = PullRequestReviewCommentPublisher;
 function resolveReviewAnchor(reportedLine, reportedEndLine, reportedPath, context) {
     if (context.pathToDiffLocations === undefined) {
         if (reportedPath && context.pathToFirstDiffLine[reportedPath] != null) {
-            return { path: reportedPath, subjectType: 'line', line: context.pathToFirstDiffLine[reportedPath], side: 'RIGHT' };
+            return { path: reportedPath, line: context.pathToFirstDiffLine[reportedPath], side: 'RIGHT' };
         }
         const firstAvailableLocation = Object.entries(context.pathToFirstDiffLine)[0];
         return firstAvailableLocation
-            ? { path: firstAvailableLocation[0], subjectType: 'line', line: firstAvailableLocation[1], side: 'RIGHT' }
+            ? { path: firstAvailableLocation[0], line: firstAvailableLocation[1], side: 'RIGHT' }
             : undefined;
     }
     if (reportedPath) {
@@ -129080,17 +129082,14 @@ function resolveReviewAnchor(reportedLine, reportedEndLine, reportedPath, contex
                 : locations.find((location) => location.line === reportedEndLine && location.side === exact.side);
             return {
                 path: reportedPath,
-                subjectType: 'line',
                 ...exact,
                 ...(end && end.line > exact.line ? { endLine: end.line } : {}),
             };
         }
-        if (context.prFiles.some((file) => file.filename === reportedPath)) {
-            return { path: reportedPath, subjectType: 'file' };
-        }
     }
-    const fallback = context.prFiles.find((file) => file.status !== 'removed') ?? context.prFiles[0];
-    return fallback ? { path: fallback.filename, subjectType: 'file' } : undefined;
+    // Batch reviews do not accept file subjects. Keep the complete finding in
+    // the review body instead of inventing a different file or line.
+    return undefined;
 }
 function buildReviewSummary(findings, inlineCount, unanchoredBodies, overflowCount, overflowTitles, ruleSources, omittedRuleCount, analyzedHeadSha, catalog) {
     const findingLines = findings.map((finding) => {
@@ -145884,7 +145883,7 @@ function readApprovalBugbotVerification(policy, scope, runs, checks, artifact) {
         return undefined;
     const facts = checks.flatMap(check => {
         if (check.id !== artifact.checkRunId || check.name !== 'Copilot / Review' || check.app?.id !== policy.sourceAppId
-            || check.head_sha !== latest.head_sha
+            || check.head_sha !== scope.headSha
             || check.status !== 'completed')
             return [];
         const summary = check.output?.summary;
@@ -147073,6 +147072,7 @@ function toBugbotPullRequestIdentity(value) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestReviewCommentCommandRepository = void 0;
 const pull_request_review_error_metadata_1 = __nccwpck_require__(54354);
+const bugbot_review_presentation_policy_1 = __nccwpck_require__(43799);
 const pull_request_review_errors_1 = __nccwpck_require__(46445);
 const github_pagination_policy_1 = __nccwpck_require__(44812);
 class PullRequestReviewCommentCommandRepository {
@@ -147081,9 +147081,9 @@ class PullRequestReviewCommentCommandRepository {
         this.graphqlClient = graphqlClient;
         this.queryClient = queryClient;
     }
-    async listExistingBodies(owner, repository, pullRequestNumber, token) {
+    async listExistingBodies(owner, repository, pullRequestNumber, token, commitSha) {
         if (!this.queryClient)
-            return new Set();
+            return { comments: new Set(), reviews: new Set() };
         const client = this.queryClient.getClient(token);
         const bodies = new Set();
         for await (const page of client.paginate.iterator(client.rest.pulls.listReviewComments, { owner, repo: repository, pull_number: pullRequestNumber })) {
@@ -147093,32 +147093,36 @@ class PullRequestReviewCommentCommandRepository {
                     bodies.add(comment.body);
             }
         }
-        return bodies;
+        const reviews = new Set();
+        for await (const page of client.paginate.iterator(client.rest.pulls.listReviews, { owner, repo: repository, pull_number: pullRequestNumber })) {
+            for (const review of (0, github_pagination_policy_1.requireArrayPage)(page.data, 'existing pull request reviews')) {
+                if (review.commit_id === commitSha && typeof review.submitted_at === 'string' && review.submitted_at
+                    && typeof review.body === 'string')
+                    reviews.add((0, bugbot_review_presentation_policy_1.bugbotReviewHistoricalContent)(review.body));
+            }
+        }
+        return { comments: bodies, reviews };
     }
     async createReviewWithComments(owner, repository, pullRequestNumber, commitSha, body, comments, token) {
         if (comments.length === 0 && body.trim().length === 0)
             return undefined;
         try {
-            const existingBodies = await this.listExistingBodies(owner, repository, pullRequestNumber, token);
-            const pendingComments = comments.filter((comment) => !existingBodies.has(comment.body));
-            if (comments.length > 0 && pendingComments.length === 0)
+            const existingBodies = await this.listExistingBodies(owner, repository, pullRequestNumber, token, commitSha);
+            const pendingComments = comments.filter((comment) => !existingBodies.comments.has(comment.body));
+            if (pendingComments.length === 0 && existingBodies.reviews.has((0, bugbot_review_presentation_policy_1.bugbotReviewHistoricalContent)(body)))
                 return undefined;
+            if (pendingComments.some(comment => !Number.isSafeInteger(comment.line) || comment.line <= 0)) {
+                throw new pull_request_review_errors_1.PullRequestReviewOperationError('publish-comments', { providerFailure: 'response-invalid' });
+            }
             const client = this.createClient.getClient(token);
             const reviewComments = pendingComments.map((comment) => ({
                 body: comment.body,
                 path: comment.path,
-                ...(comment.subjectType === 'file'
-                    ? { subject_type: 'file' }
-                    : {
-                        line: comment.line,
-                        side: comment.side ?? 'RIGHT',
-                        ...(comment.startLine !== undefined
-                            ? {
-                                start_line: comment.startLine,
-                                start_side: comment.startSide ?? comment.side ?? 'RIGHT',
-                            }
-                            : {}),
-                    }),
+                line: comment.line,
+                side: comment.side ?? 'RIGHT',
+                ...(comment.startLine !== undefined
+                    ? { start_line: comment.startLine, start_side: comment.startSide ?? comment.side ?? 'RIGHT' }
+                    : {}),
             }));
             const { data } = await client.rest.pulls.createReview({
                 owner,

@@ -10,7 +10,7 @@ function requirePinnedImplementation(root = path.resolve(__dirname, '../../../..
     const git = (...args) => execFileSync('git', ['-C', root, ...args], { encoding: 'utf8' }).trim();
     assert.equal(git('rev-parse', '--verify', pin + '^{commit}'), pin,
         'preregistered implementation commit unavailable');
-    const source = ['src', 'pnpm-lock.yaml'];
+    const source = ['src', 'pnpm-lock.yaml', 'tsconfig.json'];
     assert.equal(git('diff', '--no-ext-diff', '--no-textconv', '--name-only', pin, '--', ...source), '',
         'application source or lockfile does not match the preregistered implementation');
     assert.equal(git('diff', '--cached', '--no-ext-diff', '--no-textconv', '--name-only', pin, '--', ...source), '',
@@ -20,4 +20,10 @@ function requirePinnedImplementation(root = path.resolve(__dirname, '../../../..
     return pin;
 }
 
-module.exports = { requirePinnedImplementation };
+function requirePinnedRuntime(cli, runtime = require('./configuration.cjs').runtime) {
+    assert.equal(typeof runtime?.codex, 'string', 'preregistered CLI version unavailable');
+    assert.equal(cli, runtime.codex, 'CLI version differs from the preregistered runtime');
+    return cli;
+}
+
+module.exports = { requirePinnedImplementation, requirePinnedRuntime };

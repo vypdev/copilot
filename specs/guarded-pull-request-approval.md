@@ -610,3 +610,8 @@ invalid artifact routes. These cases belong to the 23-case
 [verification provenance amendment](./bugbot-review-state-reconciliation.md#installed-verification-provenance-and-final-closure-amendment)
 and are counted once. Existing enforcement, same-head policy transition,
 subsequent-attempt and rollback consumer tests must also pass.
+
+
+### Review-head attribution for a synthetic-merge execution
+
+A trusted Bugbot workflow execution on the verified synthetic merge retains that execution SHA in native artifact metadata. Its custom Review check and identical receipt are tied to the actual reviewed PR head, not to the merge commit. The consumer validates both identities in their respective roles. The merge's exact current base/head parents must already be proven; stale or foreign parents cannot authorize it. `PullRequestApprovalRepository` has positive and negative regressions for a genuine merge-run artifact with respectively a head check and an incorrect merge check. This adds no configuration and preserves all current-policy, latest-attempt and rollback fences.

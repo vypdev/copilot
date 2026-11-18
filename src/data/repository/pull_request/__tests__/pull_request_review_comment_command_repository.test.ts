@@ -8,7 +8,11 @@ function createRepository(options: {
   createClientError?: Error;
   graphqlClientError?: Error;
   existingBodies?: string[];
+  existingReviewBodies?: string[];
+  existingReviewHead?: string;
+  pendingReview?: boolean;
 }) {
+  const listReviewComments = jest.fn(), listReviews = jest.fn();
   const createClient = {
     getClient: jest.fn(() => {
       if (options.createClientError) throw options.createClientError;
@@ -31,13 +35,15 @@ function createRepository(options: {
   const queryClient = {
     getClient: jest.fn(() => ({
       paginate: {
-        iterator: async function* () {
+        iterator: async function* (method: unknown) {
           yield {
-            data: (options.existingBodies ?? []).map((body) => ({ body })),
+            data: (method === listReviews ? options.existingReviewBodies ?? [] : options.existingBodies ?? [])
+              .map(body => ({ body, ...(method === listReviews ? { commit_id: options.existingReviewHead ?? 'sha',
+                submitted_at: options.pendingReview ? null : '2026-11-19T00:00:00Z' } : {}) })),
           };
         },
       },
-      rest: { pulls: { listReviewComments: jest.fn() } },
+      rest: { pulls: { listReviewComments, listReviews } },
     })),
   };
 
@@ -53,6 +59,57 @@ function createRepository(options: {
 }
 
 describe("PullRequestReviewCommentCommandRepository", () => {
+  it('does not repeat an already observed complete body-only review', async () => {
+    const createReview = jest.fn();
+    const { repository } = createRepository({ createReview, existingReviewBodies: ['complete review'] });
+    await expect(repository.createReviewWithComments('owner', 'repo', 7, 'sha', 'complete review', [], 'token'))
+      .resolves.toBeUndefined();
+    expect(createReview).not.toHaveBeenCalled();
+  });
+
+  it('reuses historical content after only its owned review header and status were refreshed', async () => {
+    const head = 'a'.repeat(40), content = '\n\n## Finding\n\nComplete evidence.';
+    const body = `<!-- copilot-bugbot-review schema="1" analyzed_head="${head}" -->\n`
+      + '<!-- copilot-bugbot-review-status:start digest="pending" -->\nPending\n<!-- copilot-bugbot-review-status:end -->' + content;
+    const observed = `<!-- copilot-bugbot-review schema="1" review="21" analyzed_head="${head}" -->\n`
+      + '<!-- copilot-bugbot-review-status:start digest="12345678" -->\nCurrent state and link\n<!-- copilot-bugbot-review-status:end -->' + content;
+    const createReview = jest.fn();
+    const { repository } = createRepository({ createReview, existingReviewBodies: [observed], existingReviewHead: head });
+    await repository.createReviewWithComments('owner', 'repo', 7, head, body, [], 'token');
+    expect(createReview).not.toHaveBeenCalled();
+  });
+
+  it('does not reuse the same review text from a different head', async () => {
+    const createReview = jest.fn().mockResolvedValue({ data: { id: 21 } });
+    const { repository } = createRepository({ createReview, existingReviewBodies: ['complete review'], existingReviewHead: 'other' });
+    await repository.createReviewWithComments('owner', 'repo', 7, 'sha', 'complete review', [], 'token');
+    expect(createReview).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not treat an unsubmitted review as a completed body publication', async () => {
+    const createReview = jest.fn().mockResolvedValue({ data: { id: 21 } });
+    const { repository } = createRepository({ createReview, existingReviewBodies: ['complete review'], pendingReview: true });
+    await repository.createReviewWithComments('owner', 'repo', 7, 'sha', 'complete review', [], 'token');
+    expect(createReview).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not discard a new body finding when every inline comment already exists', async () => {
+    const createReview = jest.fn().mockResolvedValue({ data: { id: 21 } });
+    const { repository } = createRepository({ createReview, existingBodies: ['inline'], existingReviewBodies: ['old review'] });
+    await repository.createReviewWithComments('owner', 'repo', 7, 'sha', 'new complete finding',
+      [{ path: 'src/file.ts', line: 1, body: 'inline' }], 'token');
+    expect(createReview).toHaveBeenCalledWith(expect.objectContaining({ body: 'new complete finding' }));
+    expect(createReview.mock.calls[0][0]).not.toHaveProperty('comments');
+  });
+  it.each([undefined, 0, 1.5])('rejects an invalid batch line %s before a provider mutation', async line => {
+    const createReview = jest.fn();
+    const { repository } = createRepository({ createReview });
+    await expect(repository.createReviewWithComments('owner', 'repo', 7, 'sha', 'review',
+      [{ path: 'src/file.ts', body: 'finding', line } as never], 'token'))
+      .rejects.toMatchObject({ operation: 'publish-comments', providerFailure: 'response-invalid' });
+    expect(createReview).not.toHaveBeenCalled();
+  });
+
   it("does not resolve a provider client for an empty review", async () => {
     const { repository, createClient } = createRepository({});
 

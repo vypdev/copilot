@@ -1135,7 +1135,7 @@ describe("DetectPotentialProblemsUseCase", () => {
   it('freshness-C12: retains a completed finding write when the post-publication freshness read fails', async () => {
     mockGetChangedFiles.mockResolvedValue([{ filename: 'src/bar.ts', status: 'modified' }]);
     mockGetFilesWithFirstDiffLine.mockResolvedValue([{ path: 'src/bar.ts', firstLine: 5 }]);
-    mockGetFilesWithDiffLocations.mockResolvedValue([{ path: 'src/bar.ts', firstLine: 5, lines: [5] }]);
+    mockGetFilesWithDiffLocations.mockResolvedValue([{ path: 'src/bar.ts', locations: [{ line: 5, side: 'RIGHT' }] }]);
     mockAskAgent.mockResolvedValue({ findings: [{ id: 'freshness-finding', title: 'Missing validation',
       description: 'Validate this input.', file: 'src/bar.ts', line: 5 }], resolved_findings: [] });
     const published = jest.fn(async () => { mockGetPullRequestHeadSha.mockRejectedValueOnce(
@@ -1665,11 +1665,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       200,
       'e'.repeat(40),
       expect.stringContaining("General issue"),
-      [expect.objectContaining({
-        path: "lib/helper.ts",
-        subjectType: "file",
-        body: expect.stringContaining("Review-level finding"),
-      })],
+      [],
       "token",
     );
   });

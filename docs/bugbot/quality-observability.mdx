@@ -963,3 +963,8 @@ the attempt-scoped `copilot-bugbot-verification-v1-<runId>-<attempt>` artifact
 alongside the Review check. The artifact binds the exact custom check to the
 native run and attempt. A failed upload or unavailable artifact keeps approval
 waiting. Live progress remains informational.
+
+
+### Qualification provenance
+
+The full-review qualification runner rederives the independent corpus score from the recorded predictions and checks the complete per-case ledger against the frozen plan, source, compiler configuration, CLI and invocation profile. A passing summary copied from another run cannot open full review. The CLI version must match before measured work starts. Historical campaigns remain reproducible from their preregistration commits with their original runner and rubric; stricter admission in a later revision does not rewrite their results. This local evaluation control adds no repository or organization setting and does not qualify a profile by itself.

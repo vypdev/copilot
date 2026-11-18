@@ -2989,6 +2989,7 @@ exports.isBugbotStatusComment = isBugbotStatusComment;
 exports.renderBugbotStatusCard = renderBugbotStatusCard;
 exports.renderBugbotReviewSnapshot = renderBugbotReviewSnapshot;
 exports.buildNewBugbotReviewSnapshotHeader = buildNewBugbotReviewSnapshotHeader;
+exports.bugbotReviewHistoricalContent = bugbotReviewHistoricalContent;
 const review_state_1 = __nccwpck_require__(9200);
 const github_comment_publication_policy_1 = __nccwpck_require__(2712);
 const publication_identity_policy_1 = __nccwpck_require__(5403);
@@ -3150,11 +3151,15 @@ function buildNewBugbotReviewSnapshotHeader(analyzedHeadSha, findingCount, inlin
         ].join(' '),
     ].join('\n');
 }
-function normalizeHistoricalSnapshot(originalBody, analyzedHeadSha, catalog) {
-    let body = originalBody
+/** Stable report content excludes the host-owned, mutable review status. */
+function bugbotReviewHistoricalContent(originalBody) {
+    return originalBody
         .replace(new RegExp(`<!--\\s*${exports.BUGBOT_REVIEW_MARKER_PREFIX}\\s+schema="1"[^>]*-->\\s*`, 'gu'), '')
         .replace(new RegExp(`${escapeRegExp(exports.BUGBOT_REVIEW_STATUS_START)}[\\s\\S]*?${escapeRegExp(exports.BUGBOT_REVIEW_STATUS_END)}\\s*`, 'gu'), '')
         .trim();
+}
+function normalizeHistoricalSnapshot(originalBody, analyzedHeadSha, catalog) {
+    let body = bugbotReviewHistoricalContent(originalBody);
     if (!/^## 🤖 .+$/mu.test(body)) {
         const heading = `## 🤖 ${catalog.message('bugbot.snapshot.heading')}`;
         body = `${heading}\n\n${body}`;
@@ -6840,7 +6845,7 @@ class PullRequestReviewCommentPublisher {
         const reportedPath = (0, path_validation_1.resolveFindingPathForPr)(finding.file, prContext.prFiles);
         const anchor = resolveReviewAnchor(finding.line, finding.endLine, reportedPath, prContext);
         const findingBody = (0, bugbot_finding_marker_policy_1.buildCommentBody)(finding, false, undefined, {
-            includeSuggestedChange: allowSuggestedChanges && anchor?.subjectType === 'line' && anchor.side === 'RIGHT',
+            includeSuggestedChange: allowSuggestedChanges && anchor?.side === 'RIGHT',
             catalog: this.catalog,
         });
         const body = findingBody;
@@ -6855,14 +6860,11 @@ class PullRequestReviewCommentPublisher {
             : `> ${this.catalog.message('bugbot.finding.anchorNote')}\n\n`;
         this.commentsToCreate.push({
             path: anchor.path,
-            ...(anchor.subjectType === 'line' ? {
-                line: anchor.endLine ?? anchor.line,
-                side: anchor.side,
-                ...(anchor.endLine && anchor.endLine > anchor.line
-                    ? { startLine: anchor.line, startSide: anchor.side }
-                    : {}),
-            } : {}),
-            ...(anchor.subjectType === 'file' ? { subjectType: 'file' } : {}),
+            line: anchor.endLine ?? anchor.line,
+            side: anchor.side,
+            ...(anchor.endLine && anchor.endLine > anchor.line
+                ? { startLine: anchor.line, startSide: anchor.side }
+                : {}),
             body: `${anchorNote}${body}`,
         });
     }
@@ -6889,11 +6891,11 @@ exports.PullRequestReviewCommentPublisher = PullRequestReviewCommentPublisher;
 function resolveReviewAnchor(reportedLine, reportedEndLine, reportedPath, context) {
     if (context.pathToDiffLocations === undefined) {
         if (reportedPath && context.pathToFirstDiffLine[reportedPath] != null) {
-            return { path: reportedPath, subjectType: 'line', line: context.pathToFirstDiffLine[reportedPath], side: 'RIGHT' };
+            return { path: reportedPath, line: context.pathToFirstDiffLine[reportedPath], side: 'RIGHT' };
         }
         const firstAvailableLocation = Object.entries(context.pathToFirstDiffLine)[0];
         return firstAvailableLocation
-            ? { path: firstAvailableLocation[0], subjectType: 'line', line: firstAvailableLocation[1], side: 'RIGHT' }
+            ? { path: firstAvailableLocation[0], line: firstAvailableLocation[1], side: 'RIGHT' }
             : undefined;
     }
     if (reportedPath) {
@@ -6905,17 +6907,14 @@ function resolveReviewAnchor(reportedLine, reportedEndLine, reportedPath, contex
                 : locations.find((location) => location.line === reportedEndLine && location.side === exact.side);
             return {
                 path: reportedPath,
-                subjectType: 'line',
                 ...exact,
                 ...(end && end.line > exact.line ? { endLine: end.line } : {}),
             };
         }
-        if (context.prFiles.some((file) => file.filename === reportedPath)) {
-            return { path: reportedPath, subjectType: 'file' };
-        }
     }
-    const fallback = context.prFiles.find((file) => file.status !== 'removed') ?? context.prFiles[0];
-    return fallback ? { path: fallback.filename, subjectType: 'file' } : undefined;
+    // Batch reviews do not accept file subjects. Keep the complete finding in
+    // the review body instead of inventing a different file or line.
+    return undefined;
 }
 function buildReviewSummary(findings, inlineCount, unanchoredBodies, overflowCount, overflowTitles, ruleSources, omittedRuleCount, analyzedHeadSha, catalog) {
     const findingLines = findings.map((finding) => {

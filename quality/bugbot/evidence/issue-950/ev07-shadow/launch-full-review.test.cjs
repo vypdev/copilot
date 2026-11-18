@@ -2,13 +2,14 @@
 
 const assert = require('node:assert/strict');
 const { execFileSync, spawnSync } = require('node:child_process');
-const { existsSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } = require('node:fs');
+const { existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } = require('node:fs');
+const { createHash } = require('node:crypto');
 const { tmpdir } = require('node:os');
 const path = require('node:path');
 const { test } = require('node:test');
 const { launchFullReview } = require('./launch-full-review.cjs');
 const historicalScore = require('./corpus-score.json');
-const { requirePinnedImplementation } = require('./implementation.cjs');
+const { requirePinnedImplementation, requirePinnedRuntime } = require('./implementation.cjs');
 
 function fixture(t, encoded) {
     const directory = mkdtempSync(path.join(tmpdir(), 'ev07-dispatch-fixture-'));
@@ -39,16 +40,67 @@ for (const [name, data] of [
     });
 }
 
-test('admits the completed 174-case score and invokes only the pinned runner', t => {
+test('rejects the unbound historical score without changing its recorded result', t => {
     const directory = fixture(t, JSON.stringify(historicalScore));
-    const receipt = {};
-    const launch = (executable, args, options) => {
-        assert.equal(executable, process.execPath);
-        assert.deepEqual(args, [path.join(__dirname, 'full-review.cjs'), directory]);
-        assert.deepEqual(options, { stdio: 'inherit' });
-        return receipt;
-    };
-    assert.equal(launchFullReview(directory, launch), receipt);
+    const launch = () => assert.fail('unbound historical summaries cannot launch provider work');
+    assert.throws(() => launchFullReview(directory, launch), /corpus provenance/u);
+});
+
+function boundCorpusFixture(t) {
+    require('./load.cjs');
+    const root = path.resolve(__dirname, '../../../../..');
+    const { evaluateBugbotBenchmark } = require(path.join(root, 'src/tooling/bugbot_benchmark'));
+    const directory = fixture(t);
+    const hash = value => createHash('sha256').update(value).digest('hex');
+    const plan = { ...require('./configuration.cjs'), runtime: { codex: 'codex-cli 0.169.1' },
+        inspectedArtifacts: { 'corpus.cjs': hash(readFileSync(path.join(__dirname, 'corpus.cjs'))) } };
+    const planFile = path.join(directory, 'plan.json');
+    writeFileSync(planFile, JSON.stringify(plan));
+    const corpus = JSON.parse(readFileSync(path.join(root, 'quality/bugbot/corpus.v1.json')));
+    const predictions = { schemaVersion: 1, predictions: Object.fromEntries(corpus.cases.map(item =>
+        [item.id, item.expected.map(finding => ({ ...finding, confidence: 1 }))])) };
+    const rows = [{ event: 'start', cli: plan.runtime.codex, configuration: plan.detector, plan: hash(readFileSync(planFile)),
+        runner: hash(readFileSync(path.join(__dirname, 'corpus.cjs'))), implementation: plan.implementation,
+        corpus: plan.corpus.sha256, gitHubMutationPorts: 0 }, ...corpus.cases.map((item, index) => ({ event: 'case', index,
+        id: item.id, status: 'completed', predictions: predictions.predictions[item.id], calls: [{ model: plan.detector.model,
+            modelProvider: plan.detector.modelProvider, reasoningEffort: plan.detector.effort, sandbox: 'read-only' }] })),
+    { event: 'finish', complete: true, passed: true, githubWriteAttempts: 0, workspaceUnchanged: true }];
+    writeFileSync(path.join(directory, 'corpus-v3/predictions.json'), JSON.stringify(predictions));
+    const score = { complete: true, completed: 174, passed: true, githubWriteAttempts: 0, workspaceUnchanged: true,
+        score: evaluateBugbotBenchmark(corpus, predictions) };
+    writeFileSync(path.join(directory, 'corpus-v3/corpus-score.json'), JSON.stringify(score));
+    return { directory, planFile, rows, score };
+}
+
+for (const mode of ['valid', 'plan', 'implementation', 'runtime', 'runner', 'prediction', 'score', 'duplicate', 'flags']) {
+    test(`binds independent corpus dispatch to its actual ledger and score: ${mode}`, t => {
+        const f = boundCorpusFixture(t);
+        if (mode === 'plan') f.rows[0].plan = 'f'.repeat(64);
+        if (mode === 'implementation') f.rows[0].implementation = 'f'.repeat(40);
+        if (mode === 'runtime') f.rows[0].cli = 'codex-cli 0.170.0';
+        if (mode === 'runner') f.rows[0].runner = 'f'.repeat(64);
+        if (mode === 'prediction') f.rows[1].predictions = [];
+        if (mode === 'score') {
+            f.score.score.metrics.precision = 0.5;
+            writeFileSync(path.join(f.directory, 'corpus-v3/corpus-score.json'), JSON.stringify(f.score));
+        }
+        if (mode === 'duplicate') f.rows[2] = f.rows[1];
+        if (mode === 'flags') f.rows[1].calls[0].model = 'unregistered-model';
+        writeFileSync(path.join(f.directory, 'corpus-v3/corpus.jsonl'), f.rows.map(row => JSON.stringify(row)).join('\n') + '\n');
+        const run = spawnSync(process.execPath, ['-e',
+            'require(process.argv[1]).launchFullReview(process.argv[2],()=>{process.stdout.write("admitted");return {}})',
+            path.join(__dirname, 'launch-full-review.cjs'), f.directory], {
+            encoding: 'utf8', env: { ...process.env, COPILOT_EV07_PLAN: f.planFile },
+        });
+        if (mode === 'valid') { assert.equal(run.status, 0, run.stderr); assert.equal(run.stdout, 'admitted'); }
+        else { assert.equal(run.status, 1); assert.match(run.stderr, /corpus provenance/u); assert.equal(run.stdout, ''); }
+    });
+}
+
+test('requires the exact accredited CLI version before dispatch', () => {
+    assert.equal(requirePinnedRuntime('codex-cli 0.169.1', { codex: 'codex-cli 0.169.1' }), 'codex-cli 0.169.1');
+    assert.throws(() => requirePinnedRuntime('codex-cli 0.170.0', { codex: 'codex-cli 0.169.1' }), /CLI version differs/u);
+    assert.throws(() => requirePinnedRuntime('codex-cli 0.169.1', {}), /CLI version unavailable/u);
 });
 
 test('attests the Git implementation before dispatch and rejects changed tracked or untracked sources', t => {
@@ -59,7 +111,8 @@ test('attests the Git implementation before dispatch and rejects changed tracked
     const file = path.join(repository, 'src', 'review.ts');
     writeFileSync(file, 'export const review = true;\n');
     writeFileSync(path.join(repository, 'pnpm-lock.yaml'), 'lockfileVersion: 9\n');
-    git('add', 'src', 'pnpm-lock.yaml');
+    writeFileSync(path.join(repository, 'tsconfig.json'), '{"compilerOptions":{"target":"ES2020"}}');
+    git('add', 'src', 'pnpm-lock.yaml', 'tsconfig.json');
     git('-c', 'user.name=Test', '-c', 'user.email=fixture@example.invalid', 'commit', '--quiet', '-m', 'Frozen implementation');
     const pin = git('rev-parse', 'HEAD');
 
@@ -72,6 +125,24 @@ test('attests the Git implementation before dispatch and rejects changed tracked
     git('restore', '--staged', 'src');
     writeFileSync(path.join(repository, 'src', 'review.js'), 'extra source');
     assert.throws(() => requirePinnedImplementation(repository, pin), /untracked application source/u);
+});
+
+test('attests the shipping compiler configuration before any model dispatch', t => {
+    const repository = fixture(t);
+    const git = (...args) => execFileSync('git', ['-C', repository, ...args], { encoding: 'utf8' }).trim();
+    git('init', '--quiet', '--template=');
+    mkdirSync(path.join(repository, 'src'));
+    writeFileSync(path.join(repository, 'src/review.ts'), 'export const review = true;');
+    writeFileSync(path.join(repository, 'pnpm-lock.yaml'), 'lockfileVersion: 9');
+    writeFileSync(path.join(repository, 'tsconfig.json'), '{"compilerOptions":{"target":"ES2020"}}');
+    git('add', '.');
+    git('-c', 'user.name=Test', '-c', 'user.email=fixture@example.invalid', 'commit', '--quiet', '-m', 'Compiler fixture');
+    const pin = git('rev-parse', 'HEAD');
+    assert.equal(requirePinnedImplementation(repository, pin), pin);
+    writeFileSync(path.join(repository, 'tsconfig.json'), '{"compilerOptions":{"target":"ES2022"}}');
+    assert.throws(() => requirePinnedImplementation(repository, pin), /does not match/u);
+    git('add', 'tsconfig.json');
+    assert.throws(() => requirePinnedImplementation(repository, pin), /does not match/u);
 });
 
 test('selects the exact preregistered campaign plan without changing the historical default', t => {

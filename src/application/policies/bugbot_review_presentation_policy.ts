@@ -223,15 +223,20 @@ export function buildNewBugbotReviewSnapshotHeader(
   ].join('\n');
 }
 
+/** Stable report content excludes the host-owned, mutable review status. */
+export function bugbotReviewHistoricalContent(originalBody: string): string {
+  return originalBody
+    .replace(new RegExp(`<!--\\s*${BUGBOT_REVIEW_MARKER_PREFIX}\\s+schema="1"[^>]*-->\\s*`, 'gu'), '')
+    .replace(new RegExp(`${escapeRegExp(BUGBOT_REVIEW_STATUS_START)}[\\s\\S]*?${escapeRegExp(BUGBOT_REVIEW_STATUS_END)}\\s*`, 'gu'), '')
+    .trim();
+}
+
 function normalizeHistoricalSnapshot(
   originalBody: string,
   analyzedHeadSha: string,
   catalog: BugbotMessageCatalog,
 ): string {
-  let body = originalBody
-    .replace(new RegExp(`<!--\\s*${BUGBOT_REVIEW_MARKER_PREFIX}\\s+schema="1"[^>]*-->\\s*`, 'gu'), '')
-    .replace(new RegExp(`${escapeRegExp(BUGBOT_REVIEW_STATUS_START)}[\\s\\S]*?${escapeRegExp(BUGBOT_REVIEW_STATUS_END)}\\s*`, 'gu'), '')
-    .trim();
+  let body = bugbotReviewHistoricalContent(originalBody);
   if (!/^## 🤖 .+$/mu.test(body)) {
     const heading = `## 🤖 ${catalog.message('bugbot.snapshot.heading')}`;
     body = `${heading}\n\n${body}`;

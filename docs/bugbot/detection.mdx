@@ -350,7 +350,7 @@ at the top is mutable and reports the current state of findings that originated
 in that review. Findings are not mirrored as independent comments in the PR
 conversation.
 
-Each child comment is attached to an exact line/range confirmed from the current diff. A finding tied to a changed file but not an addressable line becomes a GitHub file-level review comment. A finding with no valid changed file is attached to the first changed file with an explicit fallback note. Only a PR with no changed file at all keeps the complete finding in the review body.
+Each child comment is attached to an exact line/range confirmed from the current diff. When no addressable line can be proved, the complete finding and its marker stay in the same review body, with the reported path and line preserved. Bugbot does not attach it to another file or send a file-level comment through the batch review endpoint.
 
 The action checks the PR head before invoking the reviewer, before mutation, after finding mutations, and before projecting current state. If a newer revision owns the PR, the old run is recorded as superseded and does not overwrite current-state surfaces.
 
