@@ -4,7 +4,6 @@ import { join } from 'node:path';
 import type { BugbotCiReader } from './github_bugbot_ci_reader';
 import type { BugbotShadowVerificationPort } from '../../application/ports/bugbot_shadow_verification_ports';
 import { askManagedBugbotShadowTurn, createPinnedBugbotShadowVerifier } from './shadow_verification_adapter';
-import { readInstalledSqliteRuntime } from './installed_bugbot_sqlite_runtime';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports -- The pilot and the Action share the constrained Git reader.
 const { git } = require('./shadow/git.cjs') as { git(root: string, args: string[]): string };
@@ -50,10 +49,8 @@ export function createInstalledBugbotShadowVerifier(
                 git(scratch, ['init', '--bare', '--quiet', '--template=', `--object-format=${format}`]);
                 writeFileSync(join(scratch, 'objects', 'info', 'alternates'), objects + '\n', { mode: 0o600 });
                 const repo = scratch;
-                let runtime: ReturnType<typeof readInstalledSqliteRuntime> | undefined;
                 return await createPinnedBugbotShadowVerifier({
-                    resolveSource: () => ({ repo, installedOfficial, readCi, pullRequest: candidate.pullRequest,
-                        readLocalSqlite: () => runtime ??= readInstalledSqliteRuntime(root, repo) }),
+                    resolveSource: () => ({ repo, installedOfficial, readCi, pullRequest: candidate.pullRequest }),
                     transport, managed: true,
                 }).verify(request);
             } catch {

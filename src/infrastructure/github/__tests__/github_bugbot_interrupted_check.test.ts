@@ -71,3 +71,15 @@ it.each([
     expect(await settleInterruptedBugbotCheck({ listForRef, update }, 'org', 'repo', decode()!, 'en')).toBe(false);
     expect(update).not.toHaveBeenCalled();
 });
+
+it('locates and closes the exact interrupted check on the second native page', async () => {
+    const earlier = Array.from({ length: 100 }, (_, index) => ({
+        ...check, id: 1000 + index, external_id: check.external_id.replace(/:2$/u, ':3'),
+    }));
+    const listForRef = jest.fn(async ({ page }) => ({ data: { total_count: 101, check_runs: page === 1 ? earlier : [check] } }));
+    const update = jest.fn();
+    await expect(settleInterruptedBugbotCheck({ listForRef, update }, 'org', 'repo', decode()!, 'en')).resolves.toBe(true);
+    expect(listForRef).toHaveBeenCalledWith(expect.objectContaining({ page: 2 }));
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({ check_run_id: check.id, conclusion: 'failure' }));
+});

@@ -1,3 +1,4 @@
+import { nativePageSize, readCompleteNativeList } from './native_list_pagination';
 import { getOctokit } from '@actions/github';
 import type { BugbotStatusCardSnapshot, BugbotStatusCardSource } from '../../application/policies/bugbot_status_card_publication_policy';
 import { canonicalGitObjectId } from '../../domain/git_object_id';
@@ -16,29 +17,6 @@ const sourceEvents = new Map([
     ['.github/workflows/copilot_issue_comment.yml', 'issue_comment'],
     ['.github/workflows/copilot_commit.yml', 'push'],
 ]);
-
-const nativePageSize = 100;
-const nativePageLimit = 10;
-
-async function readCompleteNativeList<T extends { readonly id: number }>(
-    read: (page: number) => Promise<{ total: number; items: readonly T[] }>,
-): Promise<readonly T[] | undefined> {
-    const items = new Map<number, T>();
-    let expected: number | undefined;
-    for (let page = 1; page <= nativePageLimit; page++) {
-        const result = await read(page);
-        expected ??= result.total;
-        if (result.total !== expected || !Number.isSafeInteger(expected) || expected < 0
-            || expected > nativePageLimit * nativePageSize || result.items.length > nativePageSize) return undefined;
-        for (const item of result.items) {
-            if (!Number.isSafeInteger(item.id) || item.id < 1 || items.has(item.id)) return undefined;
-            items.set(item.id, item);
-        }
-        if (items.size === expected) return [...items.values()];
-        if (items.size > expected || result.items.length !== nativePageSize) return undefined;
-    }
-    return undefined;
-}
 
 export async function runGithubBugbotStatusCardWorkflow(binding: {
     owner: string; repository: string; event: string; ref: string; workflowRef: string;

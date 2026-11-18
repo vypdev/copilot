@@ -1,3 +1,4 @@
+import { nativePageSize, readCompleteNativeList } from './native_list_pagination';
 import { sanitizeAgentMarkdown } from '../../application/policies/github_comment_publication_policy';
 import { buildBugbotProgressCheckMarker, readBugbotProgressCheckObservation } from '../../application/policies/bugbot_progress_check_observation_policy';
 import { canonicalGitObjectId } from '../../domain/git_object_id';
@@ -14,7 +15,7 @@ interface NativeCheck {
 }
 
 interface CheckApi {
-    listForRef(input: { owner: string; repo: string; ref: string; check_name: string; status: 'in_progress'; filter: 'all'; per_page: number }):
+    listForRef(input: { owner: string; repo: string; ref: string; check_name: string; status: 'in_progress'; filter: 'all'; per_page: number; page: number }):
         Promise<{ data: { total_count: number; check_runs: NativeCheck[] } }>;
     update(input: { owner: string; repo: string; check_run_id: number; status: 'completed'; conclusion: Conclusion;
         output: { title: string; summary: string } }): Promise<unknown>;
@@ -64,12 +65,15 @@ export async function settleInterruptedBugbotCheck(
     checks: CheckApi, owner: string, repo: string, review: InterruptedReview, locale: string,
 ): Promise<boolean> {
     const { head, base, pullNumber, runId, attempt, conclusion } = review;
-    const { data } = await checks.listForRef({
-        owner, repo, ref: head, check_name: 'Copilot / Review', status: 'in_progress', filter: 'all', per_page: 100,
+    const records = await readCompleteNativeList<NativeCheck>(async page => {
+        const { data } = await checks.listForRef({
+            owner, repo, ref: head, check_name: 'Copilot / Review', status: 'in_progress', filter: 'all', per_page: nativePageSize, page,
+        });
+        return { total: data.total_count, items: data.check_runs };
     });
-    if (!Array.isArray(data.check_runs) || data.total_count !== data.check_runs.length) return false;
+    if (!records) return false;
     const identity = new RegExp(`^bugbot:${pullNumber}:${base}:${head}:(?:default|[a-f0-9]{64}):${runId}:${attempt}$`, 'u');
-    const matching = data.check_runs.filter(check => check.name === 'Copilot / Review' && check.head_sha === head
+    const matching = records.filter(check => check.name === 'Copilot / Review' && check.head_sha === head
         && check.status === 'in_progress' && check.app?.slug === 'github-actions'
         && typeof check.external_id === 'string' && identity.test(check.external_id));
     if (matching.length !== 1 || !parsePositiveSafeInteger(matching[0].id)) return false;

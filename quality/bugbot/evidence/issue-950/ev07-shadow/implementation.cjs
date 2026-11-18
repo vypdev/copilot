@@ -3,7 +3,7 @@
 const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
 const path = require('node:path');
-const { implementation } = require('./plan.json');
+const { implementation } = require('./configuration.cjs');
 
 function requirePinnedImplementation(root = path.resolve(__dirname, '../../../../..'), pin = implementation) {
     assert.match(pin, /^[a-f0-9]{40}$/u, 'invalid implementation pin');

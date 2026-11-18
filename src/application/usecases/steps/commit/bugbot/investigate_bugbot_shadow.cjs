@@ -15,7 +15,7 @@ function initial(broker, subject, finding, officialPackages, requiredOfficial, i
         officialCatalog: officialPackages, requiredOfficial, ...(observations?.length && { observations }) });
 }
 
-const orderLanguage = /\b(?:before|after|precedes?|follows? the execution|prior to|earlier than|later than|followed by|and then|first.+(?:then|second)|antes de|despu[eé]s de|seguido de)\b/iu;
+const orderLanguage = /\b(?:before|after|precedes?|follows?|prior to|earlier than|later than|followed by|then|first.+(?:then|second)|antes de|despu[eé]s de|seguido de)\b/iu;
 const orderParts = {
     first: 'the first operation',
     second: 'the second operation',
@@ -31,8 +31,8 @@ function deliveredReceiptHint({ receipt, first, last }, delivered) {
         ? match : undefined;
 }
 
-function validateOrder(order, claim, premise, validateCitation, broker, omissions) {
-    if (!order.length && orderLanguage.test(claim)) {
+function validateOrder(order, required, premise, validateCitation, broker, omissions) {
+    if (!order.length && required) {
         omissions.push({ issue: 'order-claim-uncited', premise });
     }
     const routes = new Set();
@@ -97,16 +97,17 @@ function prepareVerdict(response, broker, delivered, subject, references) {
         return proofs.get(key);
     }
 
-    const premises = response.premises.map(({ claim, citations, order }, index) => {
+    const premises = response.premises.map(({ claim, citations, order, orderRequired }, index) => {
         assert(text(claim, 1000), 'invalid-premise');
         const premise = index + 1;
         if (!citations.length && !order.length) omissions.push({ issue: 'uncited-premise', premise });
         const direct = citations.map(citation => validateCitation(citation, { premise })).filter(Boolean);
         assert.equal(new Set(direct).size, direct.length, 'duplicate-citation');
-        const routes = validateOrder(order, claim, premise, validateCitation, broker, omissions);
+        const routes = validateOrder(order, orderRequired === true || orderLanguage.test(claim), premise, validateCitation, broker, omissions);
         const ordered = routes.flatMap(route => Object.keys(orderParts)
             .flatMap(part => route[part].map(evidence => evidence.citation)));
-        return { claim, citations: [...new Set([...direct, ...ordered])], order: routes };
+        return { claim, citations: [...new Set([...direct, ...ordered])], order: routes,
+            ...(typeof orderRequired === 'boolean' ? { orderRequired } : {}) };
     });
     if (response.verdict !== 'inconclusive') {
         if (!premises.length) omissions.push({ issue: 'missing-premises' });

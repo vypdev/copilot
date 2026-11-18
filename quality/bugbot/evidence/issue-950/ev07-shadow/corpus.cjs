@@ -7,7 +7,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { tmpdir } = require('node:os');
 const { requirePinnedImplementation } = require('./implementation.cjs');
-require('../normal-flow-shadow/run.cjs');
+require('./load.cjs');
 
 const { runBugbotBenchmarkAgent } = require('../../../../../src/tooling/bugbot_benchmark_runner');
 const { evaluateBugbotBenchmark, loadBugbotBenchmark } = require('../../../../../src/tooling/bugbot_benchmark');
@@ -16,7 +16,7 @@ const { AgentCliClient } = require('../../../../../src/data/repository/agent_cli
 const { AgentExecutionPlanner } = require('../../../../../src/infrastructure/agents/agent_execution_planner');
 const { codexInvocation } = require('../../../../../src/infrastructure/bugbot/shadow/session.cjs');
 
-const plan = require('./plan.json');
+const plan = require('./configuration.cjs');
 const root = path.resolve(__dirname, '../../../../..');
 const hash = input => createHash('sha256').update(input).digest('hex');
 
@@ -35,7 +35,8 @@ async function run(destination, preflight = false) {
     const ledger = path.join(destination, 'corpus.jsonl');
     const record = row => fs.appendFileSync(ledger, JSON.stringify(row) + '\n', { mode: 0o600 });
     record({ event: 'start', at: new Date().toISOString(), cli, configuration,
-        plan: hash(fs.readFileSync(path.join(__dirname, 'plan.json'))), runner: hash(fs.readFileSync(__filename)),
+        plan: hash(fs.readFileSync(process.env.COPILOT_EV07_PLAN
+            ? path.resolve(process.env.COPILOT_EV07_PLAN) : path.join(__dirname, 'plan.json'))), runner: hash(fs.readFileSync(__filename)),
         implementation, corpus: plan.corpus.sha256, gitHubMutationPorts: 0 });
     const cwd = fs.mkdtempSync(path.join(tmpdir(), 'copilot-ev07-corpus-'));
     const oldCwd = process.cwd();

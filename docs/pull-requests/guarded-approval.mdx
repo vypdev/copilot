@@ -141,6 +141,15 @@ observer after fresh CI completes for the current base and PR head.
 
 The PR gets one editable “Copilot approval” assessment card. It says whether the bot is waiting, a human must review, a prerequisite blocks approval, a submission is uncertain, or a native review was confirmed. `Copilot / Approval` is a supplemental Check, not a prerequisite for itself. The native GitHub `APPROVE` review is the actual approval record and is tied to the head commit.
 
+When verification requires a receipt, Bugbot also publishes the immutable
+`copilot-bugbot-verification-v1-<runId>-<attempt>` Actions artifact. Approval
+checks its native run, repository, revision and attempt, and matches the
+recorded custom Review check ID and exact receipt. The custom Review check
+and the workflow job can belong to different check suites. A missing, expired
+or incompatible artifact keeps approval waiting. The artifact contains only
+the closed receipt and its native identities. The Actions artifact service
+must be available to the producer.
+
 When a trusted rollout policy requires a receipt after a Bugbot rollback,
 approval waits for a complete ordinary review under the new policy generation.
 Run that review on the current PR comparison. Its receipt attests the observed
@@ -207,6 +216,7 @@ check alone does not prove access to that endpoint.
 | `http-404` | Verify resource identity and visibility under that same credential. A private resource can be hidden by authorization. |
 | `http-429`, supported 5xx or `transport-unavailable` | Wait for provider recovery or rate-limit reset, then make a bounded new observation. |
 | `invalid-response`, `invalid-page` or `page-limit` | Inspect the integration or bounded inventory; repeating the same invalid evidence does not authorize approval. |
+| `bugbot-artifacts`, `bugbot-download`, `bugbot-parse` | Inspect the attempt-scoped Bugbot receipt artifact, its native source and custom check identity. An ordinary check summary alone cannot replace it. |
 | `coverage-artifacts`, `coverage-download`, `coverage-parse` | Inspect the fixed `copilot-diff-coverage-v1` producer artifact, download access, ZIP/schema and current PR/run provenance. Ordinary JUnit or coverage XML does not replace this attestation. |
 
 The error code, retryability and correlation ID survive the Action error boundary.

@@ -19,6 +19,9 @@ export const APPROVAL_EVIDENCE_PERMISSIONS = Object.freeze({
     'coverage-artifacts': 'actions-read',
     'coverage-download': 'actions-read',
     'coverage-parse': 'actions-read',
+    'bugbot-artifacts': 'actions-read',
+    'bugbot-download': 'actions-read',
+    'bugbot-parse': 'actions-read',
 } as const);
 export type ApprovalEvidenceOperation = keyof typeof APPROVAL_EVIDENCE_PERMISSIONS;
 export const APPROVAL_EVIDENCE_REASONS = Object.freeze([

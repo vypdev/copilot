@@ -1,7 +1,7 @@
 import { CopilotEvidencePublicationError } from '../../application/ports/copilot_evidence_error';
 import { copilotEvidenceProviderFailure } from './github/copilot_evidence_provider_failure';
 import { readBugbotProgressCheckObservation } from '../../application/policies/bugbot_progress_check_observation_policy';
-import type { CopilotEvidence, CopilotEvidencePort, CopilotLiveReviewCheck } from '../../application/ports/copilot_evidence_ports';
+import type { CopilotEvidence, CopilotEvidencePort, CopilotLiveReviewCheck, CopilotVerificationArtifactPort } from '../../application/ports/copilot_evidence_ports';
 import type { GithubClientPort } from '../../infrastructure/github/ports/github_client_provider_port';
 import type { GithubChecksClient } from '../../infrastructure/github/ports/github_checks_provider_ports';
 
@@ -10,7 +10,8 @@ export class CopilotEvidenceRepository implements CopilotEvidencePort {
     private readonly live = new Map<string, { id: number; externalId: string; progress?: string }>();
     private readonly attempted = new Set<string>();
     private readonly liveScope = (owner: string, repo: string, head: string) => `${owner}/${repo}:${head}`;
-    constructor(private readonly client: GithubClientPort<GithubChecksClient>) {}
+    constructor(private readonly client: GithubClientPort<GithubChecksClient>,
+        private readonly verificationArtifacts?: CopilotVerificationArtifactPort) {}
 
     async observeReview(check: CopilotLiveReviewCheck, owner: string, repo: string, token: string): Promise<void> {
         const checks = this.client.getClient(token).rest.checks;
@@ -54,6 +55,7 @@ export class CopilotEvidenceRepository implements CopilotEvidencePort {
                     conclusion: evidence.conclusion, output: { title: evidence.title, summary: evidence.summary,
                         ...(existing.progress ? { text: existing.progress } : {}) } });
                 this.live.delete(key);
+                await this.publishVerificationArtifact(existing.id, evidence);
                 return;
             }
             const response = await checks.create({
@@ -68,8 +70,15 @@ export class CopilotEvidenceRepository implements CopilotEvidencePort {
             if (!Number.isSafeInteger(response?.data?.id) || response.data.id <= 0) {
                 throw new CopilotEvidencePublicationError('provider.contract-invalid');
             }
+            await this.publishVerificationArtifact(response.data.id, evidence);
         } catch (error) {
             throw copilotEvidenceProviderFailure(error, token);
         }
+    }
+
+    private async publishVerificationArtifact(checkRunId: number, evidence: CopilotEvidence): Promise<void> {
+        if (!evidence.verification) return;
+        if (!this.verificationArtifacts) throw new CopilotEvidencePublicationError('provider.contract-invalid');
+        await this.verificationArtifacts.publish(checkRunId, evidence.verification);
     }
 }

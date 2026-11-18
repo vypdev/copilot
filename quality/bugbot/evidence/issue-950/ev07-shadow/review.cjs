@@ -7,7 +7,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { getOctokit } = require('@actions/github');
 const { requirePinnedImplementation } = require('./implementation.cjs');
-require('../normal-flow-shadow/run.cjs');
+require('./load.cjs');
 
 const { Ai } = require('../../../../../src/data/model/ai');
 const { AgentCliClient } = require('../../../../../src/data/repository/agent_cli_client');
@@ -21,7 +21,7 @@ const { createInstalledBugbotShadowVerifier } = require('../../../../../src/infr
 const { createGitHubBugbotCiReader } = require('../../../../../src/infrastructure/bugbot/github_bugbot_ci_reader');
 const { askManagedBugbotShadowTurn } = require('../../../../../src/infrastructure/bugbot/shadow_verification_adapter');
 
-const plan = require('./plan.json');
+const plan = require('./configuration.cjs');
 const hash = input => createHash('sha256').update(input).digest('hex');
 const git = (cwd, ...args) => execFileSync('git', ['-C', cwd, '-c', 'core.quotePath=true', ...args], {
     encoding: 'utf8', maxBuffer: 16 * 1024 * 1024,

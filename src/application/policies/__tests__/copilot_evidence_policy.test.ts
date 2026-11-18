@@ -53,6 +53,8 @@ describe('buildCopilotEvidence', () => {
             results: [review('no-findings', { bugbotVerificationPublication: publication })] });
         expect(positive?.summary.match(/copilot-bugbot-verification:v1/gu)).toHaveLength(1);
         expect(positive?.summary).toContain('"runId":88,"attempt":2');
+        expect(positive?.verification).toEqual({ runId: 88, attempt: 2,
+            receipt: positive!.summary.match(/<!-- copilot-bugbot-verification:v1 .+ -->/u)![0] });
         expect(buildCopilotEvidence({ ...input, results: [review('partial', { bugbotVerificationPublication: publication })] }))
             .toMatchObject({ conclusion: 'neutral', summary: expect.not.stringContaining('copilot-bugbot-verification:v1') });
         expect(buildCopilotEvidence({ ...input, results: [review('no-findings', { bugbotShadowVerification: {} })] }))

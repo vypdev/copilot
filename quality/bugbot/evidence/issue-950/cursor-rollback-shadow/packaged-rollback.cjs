@@ -15,6 +15,28 @@ const repositoryId = 27;
 const head = 'a'.repeat(40), base = 'b'.repeat(40), merge = 'c'.repeat(40);
 const authority = { mode: 'disabled', generation: 2, policyDigest: '2'.repeat(64), workflowId: 31, sourceAppId: 12 };
 
+function receiptZip(value) {
+    const name = Buffer.from('copilot-bugbot-verification.json');
+    const data = Buffer.from(JSON.stringify(value));
+    const local = Buffer.alloc(30);
+    local.writeUInt32LE(0x04034b50);
+    local.writeUInt32LE(data.length, 18);
+    local.writeUInt32LE(data.length, 22);
+    local.writeUInt16LE(name.length, 26);
+    const central = Buffer.alloc(46);
+    central.writeUInt32LE(0x02014b50);
+    central.writeUInt32LE(data.length, 20);
+    central.writeUInt32LE(data.length, 24);
+    central.writeUInt16LE(name.length, 28);
+    const end = Buffer.alloc(22);
+    end.writeUInt32LE(0x06054b50);
+    end.writeUInt16LE(1, 8);
+    end.writeUInt16LE(1, 10);
+    end.writeUInt32LE(central.length + name.length, 12);
+    end.writeUInt32LE(local.length + name.length + data.length, 16);
+    return Buffer.concat([local, name, data, central, name, end]);
+}
+
 function fixture(kind) {
     const prefix = '/repos/' + ownerRepo;
     const policy = { version: 1, mode: 'recommend', targetRoles: ['development'], branchKinds: ['feature'],
@@ -26,13 +48,13 @@ function fixture(kind) {
     const legacy = { user: { id: 10 }, body: '<!-- copilot-bugbot-status schema="1" pr="42" verified_head="' + head
         + '" digest="deadbeef" -->\n<!-- copilot-bugbot-approval-evidence schema="1" head="' + head
         + '" digest="deadbeef" outcome="complete" coverage="complete" open="0" reopened="0" dismissed="0" verification="0" unknown="0" -->' };
-    const fresh = kind === 'injected-fresh';
+    const fresh = kind.startsWith('injected-fresh');
     const receipt = { version: 1, repositoryId, pullNumber: pr, headSha: head, baseSha: base,
         policyDigest: fresh ? authority.policyDigest : '1'.repeat(64), generation: fresh ? 2 : 1,
         mode: fresh ? 'disabled' : 'enforced', runId: 82, attempt: 1, coverage: 'complete', verification: 'complete',
         publication: 'verified', outcome: 'complete',
         findingStates: { open: 0, reopened: 0, dismissed: 0, fixed: 0, obsolete: 0, verificationRequired: 0, unknown: 0 } };
-    const check = { id: 101, name: 'Copilot / Review', app: { id: 12 }, head_sha: head, check_suite: { id: 51 },
+    const check = { id: 101, name: 'Copilot / Review', app: { id: 12 }, head_sha: head, check_suite: { id: 151 },
         status: 'completed', conclusion: 'success', output: { summary: '<!-- copilot-bugbot-verification:v1 ' + JSON.stringify(receipt) + ' -->' } };
     const ciCheck = { id: 102, name: 'Fixture CI', app: { id: 12 }, head_sha: merge, status: 'completed', conclusion: 'success' };
     const run = { id: 82, name: 'Review', workflow_id: 31, check_suite_id: 51, head_sha: head,
@@ -57,6 +79,14 @@ function fixture(kind) {
         if (resource === prefix + '/commits/' + head + '/check-runs') return reply({ total_count: 1, check_runs: [check] });
         if (resource === prefix + '/commits/' + merge + '/check-runs') return reply({ total_count: 1, check_runs: [ciCheck] });
         if (resource === prefix + '/actions/runs') return reply({ total_count: 1, workflow_runs: [url.searchParams.get('head_sha') === head ? run : ciRun] });
+        if (resource === prefix + '/actions/runs/82/artifacts') return reply({ total_count: kind === 'injected-fresh-missing-artifact' ? 0 : 1,
+            artifacts: kind === 'injected-fresh-missing-artifact' ? [] : [{ id: 700, name: 'copilot-bugbot-verification-v1-82-1',
+                expired: false, size_in_bytes: 2000, workflow_run: { id: 82, repository_id: repositoryId,
+                    head_repository_id: repositoryId, head_sha: head } }] });
+        if (resource === prefix + '/actions/artifacts/700/zip') return reply(receiptZip({
+            version: 1, runId: 82, attempt: 1,
+            checkRunId: kind === 'injected-fresh-wrong-check' ? 201 : check.id, receipt: check.output.summary,
+        }));
         if (resource === prefix + '/actions/runs/83/attempts/1/jobs') return reply({ total_count: 1, jobs: [{ check_run_url: 'https://api.github.com/repos/' + ownerRepo + '/check-runs/102' }] });
         if (resource === prefix + '/rules/branches/develop') return reply([{ type: 'pull_request', parameters: { dismiss_stale_reviews_on_push: true } }]);
         if (resource === prefix + '/branches/develop/protection') return reply({ message: 'Not found' }, 404);
@@ -74,7 +104,8 @@ async function main() {
         fs.writeFileSync(event, JSON.stringify({ action: 'completed', repository: { id: repositoryId },
             workflow_run: { head_repository: { id: repositoryId }, pull_requests: [{ number: pr }] } }));
         const expected = { 'packaged-legacy-card': 'recommend (recommend-mode)', 'packaged-no-card': 'pending (bugbot-missing)',
-            'injected-stale': 'pending (bugbot-missing)', 'injected-fresh': 'recommend (recommend-mode)' };
+            'injected-stale': 'pending (bugbot-missing)', 'injected-fresh': 'recommend (recommend-mode)',
+            'injected-fresh-missing-artifact': 'blocked (evidence-unavailable)', 'injected-fresh-wrong-check': 'pending (bugbot-missing)' };
         const results = [];
         for (const [kind, decision] of Object.entries(expected)) {
             const summary = path.join(root, kind + '.md');
@@ -89,7 +120,8 @@ async function main() {
             const server = createServer((request, response) => {
                 try {
                     const { status, body } = respond(new URL(request.url, 'http://127.0.0.1'), request.method);
-                    response.writeHead(status, { 'content-type': 'application/json' }).end(JSON.stringify(body));
+                    response.writeHead(status, { 'content-type': Buffer.isBuffer(body) ? 'application/zip' : 'application/json' })
+                        .end(Buffer.isBuffer(body) ? body : JSON.stringify(body));
                 } catch {
                     violations.push(request.method);
                     response.writeHead(405).end();

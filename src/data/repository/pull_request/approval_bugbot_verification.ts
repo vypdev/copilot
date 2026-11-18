@@ -1,5 +1,6 @@
 import { BUGBOT_RECEIPT_COUNT_KEYS } from '../../../domain/bugbot/verification_receipt';
 import type { ApprovalBugbotFact } from '../../../domain/pull_request_approval';
+import type { BugbotVerificationArtifact } from '../../../domain/bugbot/verification_artifact';
 
 /** Supplied by trusted runtime configuration. Rollback also requires a receipt. */
 export type ApprovalBugbotVerificationPolicy =
@@ -20,6 +21,7 @@ export interface ApprovalBugbotVerificationRun {
 }
 
 export interface ApprovalBugbotVerificationCheck {
+    readonly id: number;
     readonly name: string;
     readonly app?: { readonly id?: number } | null;
     readonly head_sha: string;
@@ -41,14 +43,11 @@ const marker = /<!-- copilot-bugbot-verification:v1 ([^\r\n]{1,4096}) -->/gu;
 const receiptKeys = ['version', 'repositoryId', 'pullNumber', 'headSha', 'baseSha', 'policyDigest', 'generation',
     'mode', 'runId', 'attempt', 'coverage', 'verification', 'publication', 'outcome', 'findingStates'];
 
-export function readApprovalBugbotVerification(
+export function selectApprovalBugbotVerificationRun(
     policy: Extract<ApprovalBugbotVerificationPolicy, { requireReceipt: true }>,
     scope: ApprovalVerificationScope,
     runs: readonly ApprovalBugbotVerificationRun[],
-    checks: readonly ApprovalBugbotVerificationCheck[],
-): ApprovalBugbotFact | undefined {
-    if (!positive(policy.generation) || !positive(policy.workflowId) || !positive(policy.sourceAppId)
-        || !/^[a-f0-9]{64}$/u.test(policy.policyDigest)) return undefined;
+): ApprovalBugbotVerificationRun | undefined {
     const ordered = runs.filter(run => run.workflow_id === policy.workflowId
         && (run.head_sha === scope.headSha || run.head_sha === scope.testedMergeSha)
         && (!Array.isArray(run.pull_requests) || run.pull_requests.length === 0
@@ -60,14 +59,29 @@ export function readApprovalBugbotVerification(
         || latest.status !== 'completed' || latest.conclusion !== 'success'
         || (ordered[1]?.id === latest.id && ordered[1].run_attempt === latest.run_attempt)) return undefined;
 
+    return latest;
+}
+
+export function readApprovalBugbotVerification(
+    policy: Extract<ApprovalBugbotVerificationPolicy, { requireReceipt: true }>,
+    scope: ApprovalVerificationScope,
+    runs: readonly ApprovalBugbotVerificationRun[],
+    checks: readonly ApprovalBugbotVerificationCheck[],
+    artifact?: BugbotVerificationArtifact,
+): ApprovalBugbotFact | undefined {
+    if (!positive(policy.generation) || !positive(policy.workflowId) || !positive(policy.sourceAppId)
+        || !/^[a-f0-9]{64}$/u.test(policy.policyDigest)) return undefined;
+    const latest = selectApprovalBugbotVerificationRun(policy, scope, runs);
+    if (!latest || !artifact || artifact.runId !== latest.id || artifact.attempt !== latest.run_attempt) return undefined;
+
     const facts = checks.flatMap(check => {
-        if (check.name !== 'Copilot / Review' || check.app?.id !== policy.sourceAppId
-            || check.head_sha !== latest.head_sha || check.check_suite?.id !== latest.check_suite_id
+        if (check.id !== artifact.checkRunId || check.name !== 'Copilot / Review' || check.app?.id !== policy.sourceAppId
+            || check.head_sha !== latest.head_sha
             || check.status !== 'completed') return [];
         const summary = check.output?.summary;
         if (typeof summary !== 'string' || summary.length > 65_536) return [];
         const matches = [...summary.matchAll(marker)];
-        if (matches.length !== 1) return [];
+        if (matches.length !== 1 || matches[0][0] !== artifact.receipt) return [];
         const fact = parseReceipt(matches[0][1], scope, policy, latest, check.conclusion);
         return fact ? [fact] : [];
     });

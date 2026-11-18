@@ -1,5 +1,5 @@
 import { readApprovalEvidence } from './approval_evidence_read';
-import { readApprovalBugbotVerification, type ApprovalBugbotVerificationCheck,
+import { readApprovalBugbotVerification, selectApprovalBugbotVerificationRun, type ApprovalBugbotVerificationCheck,
     type ApprovalBugbotVerificationPolicy, type ApprovalBugbotVerificationRun } from './approval_bugbot_verification';
 import { approvalEvidenceError } from '../../../application/errors/approval_evidence_error';
 import type { ApprovalEvidenceDiagnostic, ApprovalEvidenceOperation } from '../../../domain/approval_evidence_diagnostic';
@@ -25,6 +25,8 @@ import { parseApprovalCoverageZip } from './approval_coverage_artifact';
 import { fileMatchesIgnorePatterns } from '../../../application/policies/file_ignore_policy';
 import { renderApprovalAssessment } from '../../../application/policies/pull_request_approval_presentation_policy';
 import { hasExplicitClosingReference } from '../../../domain/pull_request_closing_reference';
+import { bugbotVerificationArtifactName, type BugbotVerificationArtifact } from '../../../domain/bugbot/verification_artifact';
+import { readApprovalBugbotArtifact } from './approval_bugbot_artifact';
 
 export interface ApprovalRepositorySettings {
     readonly mainBranch: string;
@@ -45,6 +47,9 @@ interface ApprovalGithubCheck extends ApprovalBugbotVerificationCheck { readonly
 interface ApprovalGithubRun extends ApprovalBugbotVerificationRun { readonly name: string }
 interface ApprovalGithubJob { readonly check_run_url?: string | null }
 interface ApprovalGithubArtifact { readonly id: number; readonly name: string; readonly expired: boolean; readonly size_in_bytes: number }
+interface ApprovalBugbotArtifact extends ApprovalGithubArtifact {
+    readonly workflow_run?: { readonly id: number; readonly repository_id: number; readonly head_repository_id: number; readonly head_sha: string };
+}
 
 /** GitHub DTOs terminate here. Every partial/forbidden read becomes non-authorizing evidence. */
 export class PullRequestApprovalRepository implements PullRequestApprovalPort {
@@ -164,9 +169,13 @@ export class PullRequestApprovalRepository implements PullRequestApprovalPort {
             && !(verification?.requireReceipt === false && ['disabled', 'shadow'].includes(verification.mode))) {
             throw approvalEvidenceError('policy', 'invalid-response');
         }
+        const verificationScope = { repositoryId: pull.base.repo?.id ?? 0, pullNumber: pull.number, headSha, baseSha, testedMergeSha };
+        const verificationRun = verification?.requireReceipt
+            ? selectApprovalBugbotVerificationRun(verification, verificationScope, workflowRuns) : undefined;
+        const receiptArtifact = verificationRun
+            ? await this.bugbotVerificationArtifact(target, verificationRun, diagnostics) : undefined;
         const bugbot = verification?.requireReceipt
-            ? readApprovalBugbotVerification(verification, { repositoryId: pull.base.repo?.id ?? 0, pullNumber: pull.number,
-                headSha, baseSha, testedMergeSha }, workflowRuns, checkRuns)
+            ? readApprovalBugbotVerification(verification, verificationScope, workflowRuns, checkRuns, receiptArtifact)
             : botCards.length === 1 ? parseBugbotCard(botCards[0].body ?? '', headSha, target.pullNumber) : undefined;
         const reviewFacts: ApprovalReviewFact[] = reviews.map((review: ApprovalGithubReview) => ({
             id: review.id,
@@ -212,6 +221,34 @@ export class PullRequestApprovalRepository implements PullRequestApprovalPort {
             reviewHistoryComplete: reviews.length < 3000,
             ...(numericCoverage ? { numericCoverage } : {}),
         };
+    }
+
+    private async bugbotVerificationArtifact(
+        target: ApprovalObservationTarget, run: ApprovalGithubRun | ApprovalBugbotVerificationRun,
+        diagnostics: ApprovalEvidenceDiagnostic[],
+    ): Promise<BugbotVerificationArtifact | undefined> {
+        try {
+            const artifacts = await this.allPages<ApprovalBugbotArtifact>('bugbot-artifacts', this.octokit.rest.actions.listWorkflowRunArtifacts, {
+                owner: target.owner, repo: target.repository, run_id: run.id,
+            });
+            const name = bugbotVerificationArtifactName(run.id, run.run_attempt);
+            const matches = artifacts.filter(artifact => artifact.name === name);
+            const artifact = matches.length === 1 ? matches[0] : undefined;
+            if (!artifact || artifact.expired || !Number.isSafeInteger(artifact.size_in_bytes) || artifact.size_in_bytes > 64 * 1024
+                || artifact.workflow_run?.id !== run.id || artifact.workflow_run.repository_id !== target.repositoryId
+                || artifact.workflow_run.head_repository_id !== target.repositoryId || artifact.workflow_run.head_sha !== run.head_sha) {
+                throw approvalEvidenceError('bugbot-artifacts', 'artifact-unavailable');
+            }
+            const response = await readApprovalEvidence('bugbot-download', async () => this.octokit.rest.actions.downloadArtifact({
+                owner: target.owner, repo: target.repository, artifact_id: artifact.id, archive_format: 'zip',
+            }));
+            const data = response.data;
+            const bytes = data instanceof ArrayBuffer ? new Uint8Array(data)
+                : data instanceof Uint8Array ? data : typeof data === 'string' ? Buffer.from(data, 'binary') : undefined;
+            const attestation = bytes ? readApprovalBugbotArtifact(bytes, run.id, run.run_attempt) : undefined;
+            if (!attestation) throw approvalEvidenceError('bugbot-parse', 'artifact-invalid');
+            return attestation;
+        } catch (cause) { collectDiagnostic(diagnostics, cause); return undefined; }
     }
 
     private async numericCoverage(

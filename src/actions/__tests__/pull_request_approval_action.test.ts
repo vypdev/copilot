@@ -5,6 +5,7 @@ import { getGithubActionInput } from '../github_action_input';
 import { ObservePullRequestApprovalUseCase } from '../../application/usecases/pull_request_approval/observe_pull_request_approval_use_case';
 import { runPullRequestApprovalAction } from '../pull_request_approval_action';
 
+const mockCollaboratorPermission = jest.fn();
 const mockExecute = jest.fn().mockResolvedValue({
   decision: { status: 'pending', code: 'check-missing', detail: 'Waiting.' }, publication: 'published',
 });
@@ -41,8 +42,9 @@ describe('trusted PR approval Action route', () => {
     (ObservePullRequestApprovalUseCase as jest.Mock).mockImplementation(() => ({ execute: mockExecute }));
     (core.summary.addRaw as jest.Mock).mockReturnValue(core.summary);
     (core.summary.write as jest.Mock).mockResolvedValue(undefined);
+    mockCollaboratorPermission.mockResolvedValue({ data: { permission: 'write' } });
     (github.getOctokit as jest.Mock).mockReturnValue({ rest: { repos: {
-      getCollaboratorPermissionLevel: jest.fn().mockResolvedValue({ data: { permission: 'write' } }),
+      getCollaboratorPermissionLevel: mockCollaboratorPermission,
     } } });
     mockExecute.mockResolvedValue({ decision: { status: 'pending', code: 'check-missing', detail: 'Waiting.' }, publication: 'published' });
   });
@@ -58,7 +60,7 @@ describe('trusted PR approval Action route', () => {
     await expect(runPullRequestApprovalAction('pat')).rejects.toThrow('positive PR number');
     (getGithubActionInput as jest.Mock).mockImplementation((name: string) => name === 'pr-approval-pr-number' ? '42' : '');
     const octokit = github.getOctokit('pat');
-    (octokit.rest.repos.getCollaboratorPermissionLevel as jest.Mock).mockResolvedValue({ data: { permission: 'read' } });
+    mockCollaboratorPermission.mockResolvedValue({ data: { permission: 'read' } });
     (github.getOctokit as jest.Mock).mockReturnValue(octokit);
     await expect(runPullRequestApprovalAction('pat')).rejects.toThrow('repository write permission');
     expect(mockExecute).not.toHaveBeenCalled();

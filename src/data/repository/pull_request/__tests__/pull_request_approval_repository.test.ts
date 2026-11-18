@@ -840,7 +840,7 @@ describe('issue #950 current-policy Bugbot evidence at the approval consumer', (
   });
   const check = (id: number, override: Record<string, unknown> = {}) => ({
     id: id + 400, name: 'Copilot / Review', app: { id: 15368 }, head_sha: head,
-    status: 'completed', conclusion: 'success', check_suite: { id: id + 100 },
+    status: 'completed', conclusion: 'success', check_suite: { id: id + 1000 },
     output: { summary: `<!-- copilot-bugbot-verification:v1 ${JSON.stringify({
       version: 1, repositoryId: 17, pullNumber: 42, headSha: head, baseSha: base,
       mode: 'enforced', generation: 2, policyDigest: enforced.policyDigest, runId: id, attempt: 1,
@@ -849,8 +849,25 @@ describe('issue #950 current-policy Bugbot evidence at the approval consumer', (
     })} -->` },
   });
   function evidence(policy: Parameters<typeof evidenceFixture>[0], nativeRuns: ReturnType<typeof run>[] = [],
-      checks: ReturnType<typeof check>[] = []) {
+      checks: ReturnType<typeof check>[] = [], artifactScenario = 'valid') {
     const f = evidenceFixture(policy);
+    const latest = [...nativeRuns].sort((a, b) => b.id - a.id)[0];
+    if (latest) {
+      const receiptCheck = checks.find(item => item.id === latest.id + 400);
+      const attestation = { version: 1, runId: latest.id, attempt: latest.run_attempt,
+        checkRunId: receiptCheck?.id ?? 0, receipt: receiptCheck?.output.summary ?? '' };
+      const artifact = { id: 8000, name: `copilot-bugbot-verification-v1-${latest.id}-${latest.run_attempt}`,
+        size_in_bytes: 1000, expired: artifactScenario === 'expired',
+        workflow_run: { id: artifactScenario === 'other run' ? latest.id + 1 : latest.id,
+          repository_id: 17, head_repository_id: 17, head_sha: latest.head_sha } };
+      const artifacts = artifactScenario === 'missing' ? [] : artifactScenario === 'duplicate' ? [artifact, artifact] : [artifact];
+      f.pages.set(f.pat.rest.actions.listWorkflowRunArtifacts, [{ artifacts }]);
+      const payload = artifactScenario === 'other check' ? { ...attestation, checkRunId: attestation.checkRunId + 1 }
+        : artifactScenario === 'other attempt' ? { ...attestation, attempt: latest.run_attempt + 1 }
+          : artifactScenario === 'altered receipt' ? { ...attestation, receipt: attestation.receipt + ' ' } : attestation;
+      f.pat.rest.actions.downloadArtifact.mockResolvedValue({ data: artifactScenario === 'invalid zip'
+        ? Buffer.from('invalid') : approvalCoverageZip(payload, 'copilot-bugbot-verification.json') });
+    }
     const original = f.pat.paginate.iterator.getMockImplementation()!;
     f.pages.set(f.pat.rest.issues.listComments, [[{ id: 65, user: { id: 20 }, body: legacy }]]);
     f.pat.paginate.iterator.mockImplementation(async function* (method, params) {
@@ -894,6 +911,14 @@ describe('issue #950 current-policy Bugbot evidence at the approval consumer', (
     expect(fact.bugbot?.outcome).toBe('complete');
     expect(decidePullRequestApproval(await approvalPolicy(), fact).status).toBe('eligible');
   });
+
+  it.each(['missing', 'duplicate', 'expired', 'other run', 'other check', 'other attempt', 'altered receipt', 'invalid zip'])(
+    'withholds approval when the native receipt artifact is %s', async scenario => {
+      const fact = await evidence(enforced, [run(80)], [check(80)], scenario);
+      expect(fact.bugbot).toBeUndefined();
+      expect(decidePullRequestApproval(await approvalPolicy(), fact).code).toBe('bugbot-missing');
+    },
+  );
 
   it('consumes the application-generated receipt and rejects it under a new same-head policy', async () => {
     const native = { repositoryId: 17, pullNumber: 42, baseSha: base, runId: 80, attempt: 1 };

@@ -9106,6 +9106,9 @@ exports.APPROVAL_EVIDENCE_PERMISSIONS = Object.freeze({
     'coverage-artifacts': 'actions-read',
     'coverage-download': 'actions-read',
     'coverage-parse': 'actions-read',
+    'bugbot-artifacts': 'actions-read',
+    'bugbot-download': 'actions-read',
+    'bugbot-parse': 'actions-read',
 });
 exports.APPROVAL_EVIDENCE_REASONS = Object.freeze([
     'http-400', 'http-401', 'http-403', 'http-404', 'http-409', 'http-422', 'http-429',

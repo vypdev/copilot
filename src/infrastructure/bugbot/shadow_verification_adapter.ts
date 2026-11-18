@@ -41,7 +41,7 @@ export interface BugbotShadowSource {
         readonly last: number;
     }[];
     readonly localRuntime?: { readonly python: string; readonly sqlite: string; readonly scope: string };
-    readonly readLocalSqlite?: () => Promise<import('./installed_bugbot_sqlite_runtime').InstalledSqliteRuntime | undefined>;
+    readonly readLocalSqlite?: () => Promise<{ readonly python: string; readonly sqlite: string; readonly sourceId: string } | undefined>;
 }
 
 interface TurnRequest {

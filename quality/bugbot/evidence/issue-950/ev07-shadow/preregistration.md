@@ -28,3 +28,10 @@ gate means the exact profile does not qualify. Stop admitting further
 qualification-only phases once an independent gate definitively fails and
 report all unexecuted slots. A stopped campaign cannot be used to claim
 recall, improvement or latency across the unexecuted cohort.
+
+A later campaign selects its own committed plan through the local evaluator
+environment variable `COPILOT_EV07_PLAN`. This does not change the Copilot
+Action configuration. Freeze that plan, its implementation pin and driver
+hashes in a commit before calls. The entry points check the selected source
+and dependency lock before dispatch. The original `plan.json` and historical
+results retain their original source identity.

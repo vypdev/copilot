@@ -130,7 +130,7 @@ describe('pinned Bugbot verifier adapter', () => {
             expect(lines).toEqual(['export const enabled = false;']);
             return { threadId: turn.threadId, fact: { failure: null }, response: {
                 action: 'finish', requests: [], verdict: 'refuted', reason: 'The pinned setting is false.', missing: null,
-                dependencies: [], premises: [{ claim: 'The pinned setting is false.', citations: [{ receipt, first: 1, last: 1 }], order: [] }],
+                dependencies: [], premises: [{ orderRequired: false, claim: 'The pinned setting is false.', citations: [{ receipt, first: 1, last: 1 }], order: [] }],
             } };
         });
         try {
@@ -144,6 +144,54 @@ describe('pinned Bugbot verifier adapter', () => {
             git('remote', 'remove', 'origin');
         }
     });
+
+    it('keeps an unregistered runtime probe unavailable in the installed source/CI profile', async () => {
+        let turn = 0;
+        const adapter = createInstalledBugbotShadowVerifier(candidate.repository, repo, async request => {
+            if (++turn === 1) return { threadId: 'no-probe', fact: { failure: null }, response: {
+                action: 'investigate', requests: [{ op: 'runtime', revision: 'head', target: 'sqlite',
+                    first: null, last: null, scope: null, query: null, basis: null, version: null, why: 'Establish the runtime release.' }],
+                verdict: null, reason: null, missing: null, premises: [], dependencies: [],
+            } };
+            const { observations } = JSON.parse(request.prompt.split('\n').pop()!);
+            expect(observations[0].result.status).toBe('runtime-unavailable');
+            return { threadId: 'no-probe', fact: { failure: null }, response: {
+                action: 'finish', requests: [], verdict: 'inconclusive', reason: 'The runtime release is unproven.',
+                missing: 'An accredited SQLite release for the reviewed execution.', premises: [], dependencies: [],
+            } };
+        });
+        await expect(adapter.verify({ candidate, configuration })).resolves.toMatchObject({
+            status: 'verdict', verdict: 'inconclusive',
+        });
+        expect(turn).toBe(2);
+    });
+
+    it.each(['The operations are sequenced.', 'write then read', 'Read follows write.'])(
+        'asks the same session for a structured order proof (%s)', async claim => {
+            let turn = 0;
+            const adapter = createInstalledBugbotShadowVerifier(candidate.repository, repo, async request => {
+                const payload = JSON.parse(request.prompt.split('\n').pop()!);
+                if (++turn === 1) {
+                    const [source] = payload.observations[0].result.sources;
+                    return { threadId: 'order', fact: { failure: null }, response: {
+                        action: 'finish', requests: [], verdict: 'refuted', reason: 'The operation sequence prevents the effect.',
+                        missing: null, dependencies: [], premises: [{ claim, orderRequired: true, order: [],
+                            citations: [{ receipt: source.receipt, first: 1, last: 1 }] }],
+                    } };
+                }
+                expect(request.threadId).toBe('order');
+                expect(payload.closureIssues).toContainEqual({ issue: 'order-claim-uncited', premise: 1 });
+                return { threadId: 'order', fact: { failure: null }, response: {
+                    action: 'finish', requests: [], verdict: 'inconclusive', reason: 'The control flow is unproven.',
+                    missing: 'The operations and the mechanism that orders them.', dependencies: [], premises: [],
+                } };
+            });
+            await expect(adapter.verify({ candidate, configuration })).resolves.toMatchObject({
+                status: 'verdict', verdict: 'inconclusive', investigation: { closureRepairs: 1 },
+            });
+            expect(turn).toBe(2);
+        },
+    );
 
     it('rejects an unauthorized source and an untrusted revision without opening a provider session', async () => {
         const transport = jest.fn();
@@ -162,7 +210,7 @@ describe('pinned Bugbot verifier adapter', () => {
                 lines: ['export const enabled = false;'] });
             return { threadId: 'fixture', fact: { failure: null }, response: {
                 action: 'finish', requests: [], verdict: 'refuted', reason: 'The pinned setting is false.', missing: null,
-                dependencies: [], premises: [{ claim: 'The pinned setting is false.',
+                dependencies: [], premises: [{ orderRequired: false, claim: 'The pinned setting is false.',
                     citations: [{ receipt: source.receipt, first: 1, last: 1 }], order: [] }],
             } };
         });

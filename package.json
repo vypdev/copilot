@@ -9,7 +9,9 @@
       "source-map-js@>=1.0.0 <1.2.2": "1.2.2",
       "brace-expansion@>=2.0.0 <2.1.7": "2.1.7",
       "brace-expansion@>=5.0.0 <5.0.12": "5.0.12",
-      "@istanbuljs/load-nyc-config>js-yaml": "4.3.2"
+      "@istanbuljs/load-nyc-config>js-yaml": "4.3.2",
+      "@actions/artifact>@actions/github": "8.0.1",
+      "@actions/artifact>@azure/storage-blob": "12.33.0"
     }
   },
   "description": "Automates branch management, GitHub project linking, and issue/PR tracking with Git-Flow methodology.",
@@ -95,6 +97,7 @@
   "author": "Efra Espada",
   "license": "MIT",
   "dependencies": {
+    "@actions/artifact": "5.0.3",
     "@actions/core": "^2.0.3",
     "@actions/exec": "^2.0.0",
     "@actions/github": "^8.0.1",

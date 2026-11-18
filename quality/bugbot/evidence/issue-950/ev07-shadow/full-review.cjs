@@ -6,7 +6,7 @@ const path = require('node:path');
 const { requirePassingCorpus } = require('./launch-full-review.cjs');
 const { requirePinnedImplementation } = require('./implementation.cjs');
 
-const plan = require('./plan.json');
+const plan = require('./configuration.cjs');
 const concurrency = 3;
 
 async function run(campaign) {

@@ -73,3 +73,25 @@ test('attests the Git implementation before dispatch and rejects changed tracked
     writeFileSync(path.join(repository, 'src', 'review.js'), 'extra source');
     assert.throws(() => requirePinnedImplementation(repository, pin), /untracked application source/u);
 });
+
+test('selects the exact preregistered campaign plan without changing the historical default', t => {
+    const directory = fixture(t);
+    const file = path.join(directory, 'campaign.json');
+    writeFileSync(file, JSON.stringify({ implementation: 'f'.repeat(40) }));
+    const selected = spawnSync(process.execPath, ['-e',
+        'process.stdout.write(require(process.argv[1]).implementation)',
+        path.join(__dirname, 'configuration.cjs')], {
+        encoding: 'utf8', env: { ...process.env, COPILOT_EV07_PLAN: file },
+    });
+    assert.equal(selected.status, 0, selected.stderr);
+    assert.equal(selected.stdout, 'f'.repeat(40));
+});
+
+
+test('uses the shipping compiler options when initializing the production progress clock', () => {
+    const execute = spawnSync(process.execPath, ['-e',
+        'require(process.argv[1]); const {BugbotReviewProgress}=require(process.argv[2]); new BugbotReviewProgress({},undefined,true,"en-US",()=>1000);',
+        path.join(__dirname, 'load.cjs'), path.join(__dirname, '../../../../../src/application/usecases/steps/commit/bugbot/bugbot_review_progress')],
+    { encoding: 'utf8' });
+    assert.equal(execute.status, 0, execute.stderr);
+});

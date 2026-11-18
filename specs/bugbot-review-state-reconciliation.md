@@ -2224,3 +2224,90 @@ exercise the actual entrypoint with a representative large two-frame fixture
 and verify its rendered PR and check views, including one controlled runner
 interruption. Link that evidence and the final SHA checks in #951. The
 monitoring change does not qualify a verification profile or activate production.
+
+### Installed verification provenance and final closure amendment
+
+The installed source/CI profile MUST use pinned Git evidence, accredited
+dependency sources and matching CI metadata. It MUST NOT discover and execute
+a Python interpreter from PATH. A tracked Python pin does not establish its
+linked SQLite release. If that release remains material and unaccredited,
+the verifier returns inconclusive with the precise version gap. Existing
+diagnostic local probes retain their evaluator provenance. Registered isolated
+probes remain a separate opt-in profile and qualification.
+
+The installed verifier response MUST include the boolean `orderRequired`
+for each premise. The verifier sets it when its premise depends on execution
+order, independently of the wording used. A true value with no order proof
+reopens the same session for both operations and their ordering mechanism.
+The application also catches explicit temporal wording in the premise or
+reason. The typed field and exact excerpt checks establish structural closure.
+Whether the code proves the premise remains the verifier's judgment and an
+independent evaluator check. Legacy frozen schemas and ledgers retain their
+original contract.
+
+The producer MUST store the terminal verification receipt and the actual
+custom Review Check Run ID in one immutable native Actions artifact. Its
+name is `copilot-bugbot-verification-v1-<runId>-<attempt>` and its sole data
+member is `copilot-bugbot-verification.json`. The closed version-1 object
+contains `version`, `runId`, `attempt`, `checkRunId` and the exact
+`receipt` marker. The producer validates the current native run and attempt
+and publishes the artifact only after that check write succeeds. Artifact
+publication failure cannot grant approval.
+
+The approval consumer MUST select the newest trusted workflow attempt before
+looking for its unique unexpired artifact. It verifies the artifact's native
+run, repository, head repository and revision, its bounded JSON member, the
+attempt, the exact custom Check Run ID and the identical receipt in the
+delivered check summary. It then applies the existing policy digest,
+generation, PR, base, head, publication, verification and finding-state checks.
+The custom check's suite need not equal the job check's suite. A bare custom
+check or an artifact from another attempt, workflow, repository or revision
+cannot replace this attribution. A later failed, partial or inconclusive
+attempt prevents reuse of an earlier clean result, including on rollback.
+Repositories that have never required this gate retain legacy behavior.
+
+GitHub artifact publication requires the Actions runtime and its artifact
+service. An unsupported or unavailable artifact service leaves the receipt
+unavailable to approval. This adds no user-selected model, effort or execution
+configuration. The immutable artifact contains the closed receipt, with no
+candidate text, code, prompts or provider output.
+
+The native interrupted-check reader MUST collect all admitted pages before
+matching one exact interrupted attempt. Missing, duplicate or inconsistent
+pages preserve the prior presentation. The packaged publication canary MUST
+record a rejected GraphQL mutation as an attempted write even when the
+provider refuses it. These controls do not grant terminal review authority.
+
+The minimum addition is **23 distinct deterministic controls**, with existing
+coverage and native gates retained.
+
+| Area | Minimum | Acceptance and executable evidence |
+|---|---:|---|
+| Installed evidence capability | 1 | An unregistered SQLite runtime request reaches a valid inconclusive result through the installed adapter. |
+| Temporal closure | 3 | A structured sequence and the common then/follows formulations reopen the same installed session for missing order roles. |
+| Artifact producer | 5 | Success and upload failure clean staging; wrong run, attempt and receipt shape never upload. |
+| Check/artifact orchestration | 3 | Created and reused checks supply their actual IDs; a failed upload cannot authorize approval. |
+| Approval consumer | 9 | A legitimate custom check with a distinct suite passes; missing, duplicate, expired, other-run, other-check, other-attempt, altered and invalid ZIP artifacts all withhold approval. |
+| Interrupted native pagination | 1 | The exact interrupted check on the second page closes once. |
+| Packaged mutation audit | 1 | A rejected GraphQL mutation is recorded as an attempted write. |
+
+Trace these controls respectively to
+`shadow_verification_adapter.test.ts`,
+`github_bugbot_verification_artifact.test.ts`,
+`copilot_evidence_repository.test.ts`,
+`pull_request_approval_repository.test.ts`,
+`github_bugbot_interrupted_check.test.ts` and
+`status-card-publication/packaged-canary.cjs`.
+The user-facing explanation belongs to Bugbot quality observability and the
+guarded-approval diagnostics. Validate the catalog, generated documentation
+and bundles together. Production activation remains disabled pending EV-07
+and explicit maintainer approval.
+
+The actual review at `ca75978d6` produced custom check `135035394993`
+under suite `120108962450`; workflow `44370006763` used suite
+`120109016424` and job check `135033903549`. Those independently read
+native identities motivated artifact attribution instead of assuming equality.
+[Native review check](https://github.com/vypdev/copilot/runs/135035394993)
+[Native workflow](https://github.com/vypdev/copilot/actions/runs/44370006763)
+[Actions artifact contract](https://github.com/actions/toolkit/tree/main/packages/artifact)
+[Native artifact metadata](https://docs.github.com/en/rest/actions/artifacts#get-an-artifact)

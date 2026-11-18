@@ -4,12 +4,14 @@ from collections import Counter
 from hashlib import sha256
 import json
 import math
+import os
 from pathlib import Path
 import re
 import subprocess
 
 ROOT = Path(__file__).resolve().parent
-PLAN = json.loads((ROOT / "plan.json").read_text())["repositoryCohort"]
+PLAN_FILE = Path(os.environ["COPILOT_EV07_PLAN"]) if "COPILOT_EV07_PLAN" in os.environ else ROOT / "plan.json"
+PLAN = json.loads(PLAN_FILE.read_text())["repositoryCohort"]
 V4 = ROOT.parent / "v4"
 assert sha256((V4 / "manifest.json").read_bytes()).hexdigest() == PLAN["manifestSha256"]
 assert sha256((V4 / "candidates.json").read_bytes()).hexdigest() == PLAN["oracleSha256"]

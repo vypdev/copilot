@@ -1320,72 +1320,60 @@ fixture jobs unless Windows coverage export was requested. A temporary
 Ubuntu-only self-hosted matrix also lacked explicit evidence of a maintainer
 exception. On 2026-10-14 the maintainer authorized temporary Ubuntu-only
 self-hosted routing because the four eligible Apple Intel runners are offline.
-Hosted macOS remains mandatory. Restore the supported macOS self-hosted row
-when an eligible runner returns; until then its native acceptance is pending.
-Existing runtime support boundaries, coverage and acceptance budgets remain in
-force.
+The source-repository runner policy was subsequently revised by the maintainer
+while reviewing #951. The current contract uses the repository's self-hosted
+runners for this smoke workflow and makes full platform smoke an explicit
+protected-master dispatch. Pull requests receive the ordinary self-hosted
+Linux CI checks. Installation templates retain their consumer defaults.
 
-The workflow MUST implement this bounded selection contract:
+The workflow MUST implement this selection contract:
 
-| Entrypoint/inputs | Hosted Ubuntu/Windows/macOS | Self-hosted Ubuntu (temporarily) | PowerShell probe | Codecov export |
+| Entrypoint/inputs | Self-hosted Ubuntu/Windows/macOS fixtures | Self-hosted Ubuntu Codex service | PowerShell probe | Codecov export |
 |---|---|---|---|---|
-| PR opened/synchronized | Run | Skip | Skip | Skip |
+| PR opened/synchronized | Skip | Skip | Skip | Skip |
 | Manual `master`, default inputs | Run | Run | Skip | Skip |
-| Manual `master`, export only | Run | Run | Skip | After hosted success |
-| Manual, probe only | Skip | Skip | Run | Skip |
-| Manual, probe and export | Run | Skip | Run | After hosted success |
-| Manual branch other than `master`, default inputs | Run | Skip | Skip | Skip |
+| Manual `master`, export only | Run | Run | Skip | After fixture success |
+| Manual `master`, probe only | Skip | Skip | Run | Skip |
+| Manual `master`, probe and export | Run | Skip | Run | After fixture success |
+| Manual branch other than `master` | Skip | Skip | Skip | Skip |
 
-Flow: select an entrypoint -> evaluate fixed boolean inputs -> run every
-selected platform independently -> inspect each job -> report only complete
-verified platform evidence. Export remains opt-in (`false` by default) and is
-never a prerequisite for fixture verification. The probe remains opt-in
-(`false` by default), isolated and bounded at five minutes. No new input,
-schema, runtime policy or credential is introduced. Existing in-flight runs
-keep their selected workflow revision; retry on current `master` for the new
-selection.
+The platform fixture matrix uses `[self-hosted, codex, Linux]`,
+`[self-hosted, Windows]` and `[self-hosted, codex, macOS]`.
+The separate service fixture retains temporary Ubuntu-only routing until
+the operator restores the previously authorized macOS service capacity.
+Platform fixtures and authenticated Codex service acceptance are distinct.
 
-Operator views use the native run/job states: **Queued: macOS runner required;
-restore a runner with `self-hosted`, `codex`, `macOS` labels.** **Running: inspect
-individual platform jobs; no action required.** **Partial: hosted jobs passed,
-self-hosted macOS remains unverified; restore its runner and rerun.**
-**Failed/canceled: retain completed jobs as evidence, repair the named failure
-and rerun without dropping platforms.** **Complete for the temporary selection:
-all four selected platform jobs passed; self-hosted macOS acceptance remains
-pending runner recovery; coverage was exported only if requested.** These are textual
-operational examples, not new comments or notifications. Each state links to
-its native run and platform job. Existing GitHub accessibility and locale
-behavior remains; no custom presentation is added.
+Flow: protected dispatch -> evaluate the probe/export inputs -> run the
+selected platforms independently -> inspect the native jobs -> report only
+the platform evidence actually completed. Export and the five-minute
+PowerShell probe remain opt-in. No agent model, reasoning effort or
+application feature is enabled by these routing choices.
 
-Architecture ownership stays in `.github/workflows/setup_platform_smoke.yml`
-for dispatch/routing and `scripts/validate-workflow-contract.cjs` for executable
-structural invariants. The matrix MUST use `fail-fast: false`, retain package,
-full coverage, acceptance and documentation checks, require Ubuntu in either
-the complete macOS/Ubuntu matrix or the authorized temporary Ubuntu-only
-matrix, and reject Windows service Codex routing. Least-privilege
-read-only checkout and protected-master self-hosted dispatch stay unchanged.
-Reruns are isolated fixture operations and do not deploy or mutate releases.
+The native jobs show whether a selected platform is queued, running,
+failed/canceled or complete. Queued macOS work requires the corresponding
+self-hosted capacity. A partial or failed matrix retains completed evidence
+and requires repair and rerun of the missing platform before claiming full
+cross-platform acceptance. Full completion requires all selected jobs.
+Each state links to its native workflow and platform job.
 
-Additional risk-derived floor: **8 distinct deterministic cases** in
-`src/tooling/__tests__/validate_workflow_contract.test.ts`: six event/probe/export
-selection cases (PR, ordinary manual, export-only, probe-only, combined,
-unrelated push), one temporary-selection/restoration case retaining hosted
-macOS, and one Ubuntu-removal rejection case. Existing
-structural dispatch, export opt-in, trusted-ref, package, coverage and validator
-cases remain; these eight cases are counted once. No coverage threshold or
-setup acceptance row is lowered. Native acceptance MUST inspect the default
-manual run and all three hosted plus the selected self-hosted jobs. The
-temporary selection has one self-hosted Ubuntu job; complete platform
-acceptance additionally requires self-hosted macOS after runner recovery.
-Queued or omitted platform evidence cannot be declared successful.
+The workflow owns dispatch and runner placement. The workflow validator
+enforces protected-master manual admission, self-hosted placement,
+`fail-fast: false`, preserved package, coverage, acceptance and documentation
+steps, and the prohibition on Windows service Codex routing. Reruns exercise
+isolated fixtures. They do not deploy releases.
 
-Traceability: dispatch state table -> workflow guards -> six selection cases;
-platform preservation -> bounded matrix validator -> selection/removal cases; protected
-runner and publication boundaries -> retained structural tests. Operator docs
-in `docs/development/testing.mdx` MUST explain defaults, isolated probe,
-publication opt-in, runner recovery and partial evidence. Run full coverage,
-`validate:workflows`, `validate:documentation`, `validate:specifications` and the
-native platform smoke before declaring complete cross-platform acceptance.
+The eight deterministic selection and matrix controls remain owned by
+`src/tooling/__tests__/validate_workflow_contract.test.ts`. Their selected
+events, protected ref, probe/export combinations and runner preservation
+must match the current workflow. No coverage threshold or platform
+acceptance is lowered. A native manual run is required before claiming
+cross-platform acceptance. The source-repository PR CI and this manual
+matrix provide separate evidence.
+
+Operator instructions in `docs/development/testing.mdx` cover dispatch,
+isolated probes, export, runner recovery and partial evidence. Run
+`validate:workflows`, `validate:documentation` and
+`validate:specifications` when this routing contract changes.
 
 ### Hosted Windows job headroom (2026-10-21, PR #654)
 

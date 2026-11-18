@@ -6,6 +6,15 @@ export interface CopilotEvidence {
     readonly conclusion: CopilotEvidenceConclusion;
     readonly title: string;
     readonly summary: string;
+    readonly verification?: {
+        readonly runId: number;
+        readonly attempt: number;
+        readonly receipt: string;
+    };
+}
+
+export interface CopilotVerificationArtifactPort {
+    publish(checkRunId: number, verification: NonNullable<CopilotEvidence['verification']>): Promise<void>;
 }
 
 /** Output port for optional native GitHub Check Runs. */

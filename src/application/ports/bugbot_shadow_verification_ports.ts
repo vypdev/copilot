@@ -75,6 +75,7 @@ export type BugbotShadowResult = { readonly investigation?: BugbotShadowInvestig
         readonly citations: readonly BugbotShadowCitation[];
         readonly premises: readonly {
             readonly claim: string;
+            readonly orderRequired?: boolean;
             readonly citations: readonly BugbotShadowCitation[];
             readonly order: readonly {
                 readonly route: string;

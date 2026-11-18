@@ -3,7 +3,7 @@
 const { readFileSync } = require('node:fs');
 const { spawn } = require('node:child_process');
 const path = require('node:path');
-const { corpus } = require('./plan.json');
+const { corpus } = require('./configuration.cjs');
 
 function requirePassingCorpus(campaign) {
     if (!campaign) throw new Error('usage: node launch-full-review.cjs <campaign directory>');

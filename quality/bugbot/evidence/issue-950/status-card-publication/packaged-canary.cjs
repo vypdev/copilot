@@ -48,7 +48,15 @@ function check(s) {
 const server = createServer(async (request, response) => {
     const path = decodeURIComponent(new URL(request.url, 'http://localhost').pathname);
     const method = request.method;
-    const write = method === 'PATCH' || (method === 'POST' && path !== '/graphql');
+    let graphql;
+    if (method === 'POST' && path === '/graphql') {
+        const chunks = [];
+        for await (const chunk of request) chunks.push(chunk);
+        try { graphql = JSON.parse(Buffer.concat(chunks)); } catch { /* Invalid operations are denied and counted. */ }
+    }
+    const graphqlRead = typeof graphql?.query === 'string' && graphql.query.trim().startsWith('query ')
+        && !/\bmutation\b/u.test(graphql.query);
+    const write = !['GET', 'HEAD'].includes(method ?? '') && !graphqlRead;
     const credential = request.headers.authorization?.split(' ')[1];
     state.operations.push({ method, path, write });
     response.setHeader('content-type', 'application/json');
@@ -73,10 +81,8 @@ const server = createServer(async (request, response) => {
     if (path === project + '/commits/' + source.head + '/check-runs') return reply(check(state));
     if (method === 'POST' && path === '/graphql') {
         if (credential !== 'fixture-writer') return reply({ message: 'Unsupported fixture credential' }, 403);
-        const chunks = [];
-        for await (const chunk of request) chunks.push(chunk);
-        const body = JSON.parse(Buffer.concat(chunks));
-        if (!body.query.trim().startsWith('query ') || body.variables?.issueNumber !== 11) return reply({ errors: [{ message: 'Unrecognized fixture query' }] }, 400);
+        const body = graphql;
+        if (!graphqlRead || body.variables?.issueNumber !== 11) return reply({ errors: [{ message: 'Unrecognized fixture query' }] }, 400);
         state.conversationReads = (state.conversationReads ?? 0) + 1;
         return reply({ data: { repository: { issueOrPullRequest: state.missingConversation ? null : {
             comments: { nodes: state.comment ? [state.comment] : [], pageInfo: { hasPreviousPage: false, startCursor: null } },
@@ -192,6 +198,15 @@ async function invoke(label, { kind = 'progress', runId = 23, attempt = 1, verif
         assert.equal(run.code, 0, run.log);
         assert.deepEqual(run.writes.map(write => [write.method, write.path]), [['PATCH', project + '/issues/comments/55']]);
         assert(state.comment.body.startsWith(current));
+        const before = state.operations.length;
+        const response = await fetch(`http://127.0.0.1:${server.address().port}/graphql`, {
+            method: 'POST', headers: { authorization: 'token fixture-writer', 'content-type': 'application/json' },
+            body: JSON.stringify({ query: 'mutation Audit { forbidden }' }),
+        });
+        assert.equal(response.status, 400);
+        const attempts = state.operations.slice(before);
+        assert.deepEqual(attempts, [{ method: 'POST', path: '/graphql', write: true }]);
+        result.rejectedMutationAudited = true;
     } finally {
         writeFileSync(join(output, 'results.json'), JSON.stringify(result, null, 2) + '\n');
         await new Promise(done => server.close(done));

@@ -71,6 +71,11 @@ export function buildCopilotEvidence(context: CopilotEvidenceContext): CopilotEv
             catalog,
         )),
         summary: safeSummary.slice(0, 20_000) + (receipt ? '\n\n' + receipt : ''),
+        ...(receipt && context.bugbotNativeAttempt ? { verification: {
+            runId: context.bugbotNativeAttempt.runId,
+            attempt: context.bugbotNativeAttempt.attempt,
+            receipt,
+        } } : {}),
     };
 }
 

@@ -3,6 +3,31 @@ import { buildBugbotProgressCheckMarker, readBugbotProgressCheckObservation } fr
 import type { BugbotReviewProgressObservation } from '../../../application/ports/bugbot_review_progress_ports';
 
 describe('CopilotEvidenceRepository', () => {
+    it.each([false, true])('attributes the receipt artifact to the created or reused native Check Run, reuse=%s', async reuse => {
+        const create = jest.fn().mockResolvedValue({ data: { id: 91 } });
+        const update = jest.fn().mockResolvedValue({});
+        const publish = jest.fn().mockResolvedValue(undefined);
+        const repository = new CopilotEvidenceRepository({ getClient: () => ({ rest: { checks: { create, update } } }) }, { publish });
+        if (reuse) await repository.observeReview({ headSha: 'head', externalId: 'attempt', title: 'Preparing', summary: 'Source',
+            runUrl: 'https://github.com/owner/repo/actions/runs/7' }, 'owner', 'repo', 'token');
+        const verification = { runId: 7, attempt: 2, receipt: '<!-- copilot-bugbot-verification:v1 {} -->' };
+        await repository.publish({ name: 'Copilot / Review', headSha: 'head', conclusion: 'success', title: 'Complete',
+            summary: verification.receipt, verification }, 'owner', 'repo', 'token');
+        expect(publish).toHaveBeenCalledWith(91, verification);
+        expect(create).toHaveBeenCalledTimes(1);
+    });
+
+    it('reports receipt artifact upload failure after publishing its nonauthorizing check', async () => {
+        const create = jest.fn().mockResolvedValue({ data: { id: 91 } });
+        const publish = jest.fn().mockRejectedValue(new Error('controlled failure'));
+        const repository = new CopilotEvidenceRepository({ getClient: () => ({ rest: { checks: { create } } }) }, { publish });
+        await expect(repository.publish({ name: 'Copilot / Review', headSha: 'head', conclusion: 'success', title: 'Complete',
+            summary: 'Receipt', verification: { runId: 7, attempt: 2, receipt: 'Receipt' } }, 'owner', 'repo', 'token'))
+            .rejects.toBeDefined();
+        expect(create).toHaveBeenCalledTimes(1);
+        expect(publish).toHaveBeenCalledTimes(1);
+    });
+
     it('creates a completed native Check Run with bounded evidence', async () => {
         const create = jest.fn().mockResolvedValue({ data: { id: 1 } });
         const repository = new CopilotEvidenceRepository({

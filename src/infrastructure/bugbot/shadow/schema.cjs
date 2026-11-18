@@ -46,6 +46,10 @@ Object.defineProperty(module.exports, 'lifecycle', { value: lifecycle });
 
 const installed = object({
     ...lifecycle.properties,
+    premises: array(object({
+        ...legacy.properties.premises.items.properties,
+        orderRequired: { type: 'boolean' },
+    })),
     requests: array(object({
         ...legacy.properties.requests.items.properties,
         op: choice([...legacy.properties.requests.items.properties.op.enum, 'ci']),
