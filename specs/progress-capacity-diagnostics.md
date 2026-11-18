@@ -447,8 +447,9 @@ reducing receipts and waits for complete validated scope before collecting
 parts, then for every part in the group before any dependent assessment. A
 terminal error stops scheduling further requests in the phase. Already
 running requests settle under the same deadline and the attempt publishes no
-partial progress. The existing smaller comparison profiles continue to run
-their source and scope requests in sequence.
+partial progress. Smaller comparison profiles retain sequential source-part
+collection. Section 23 extends concurrent scope and final-assessment receipts
+to every admitted comparison profile while preserving those phase barriers.
 
 On [Commit for PR #951 at `53b96fee`](https://github.com/vypdev/copilot/actions/runs/43456814572/job/131993001742),
 the published SDD receipt was verified and 110 requirements were admitted.
@@ -582,3 +583,25 @@ of Done includes these cases, specification/docs validation, normal hooks, shipp
 bundles, full CI, exact-head Codecov and complete review without active findings.
 Rollout follows the ordinary reviewed PR and separate release process. Rollback
 restores the prior source/bundles without migrating persisted progress.
+
+
+## 23. Independent receipt concurrency for #950
+
+The [Commit attempt at `86e2430ec`](https://github.com/vypdev/copilot/actions/runs/44403043305/job/135150870855) classified six source assignments, collected all 13 comparison parts and verified three of four final batches. The fourth started with 45 seconds remaining in the shared 30-minute allowance and was canceled at that boundary. Existing progress and the prior assessment were retained. This is a measured scheduling limitation, separate from the model-free capacity fixtures.
+
+Source classification and final assessment MUST use a fixed pool of at most **four** independent requests whenever their closed receipts bind them to the host-owned source snapshot, assigned IDs, manifest/batch and head. This applies to these receipt phases for every admitted comparison profile. The existing comparison-part scheduler remains unchanged: legacy parts remain sequential, and immutable-tree parts retain their four-worker profile. All classification receipts MUST validate before comparison analysis, and all complete comparison facts for a group MUST validate before its assessment pool opens.
+
+```text
+pin source → classify assigned spans (≤4) → validate/restore source order
+ → collect complete comparison under its existing profile
+ → assess bound batches (≤4) → validate/restore batch order
+ → complete reduction → current-source fences → one progress publication
+```
+
+The text equivalent is that only independent, already bound requests overlap; source conservation, dependent phases and the complete publication transaction retain their owners. The shared `runWithConcurrencyLimit` policy MUST stop queued work after a terminal error and await admitted workers. Their successes remain provisional. Failure diagnostics MUST count validated receipts after those workers settle and preserve the failing host-assigned batch identity. No failed or incomplete pool can publish a percentage, label or semantic status.
+
+Configuration remains internal and fixed. The existing **120-call / 30-minute** progress-assessment ledger, all repairs, context/receipt limits and publication fences are unchanged. There is no new variable, persistence, permission, provider substitution or larger allowance. Each query keeps its existing effective model/effort, source and output schema. Bugbot finding investigations retain their time/token telemetry contract.
+
+Minimum additional test budget: **five distinct application integration cases**, counted once in `progress_batches.integration.test.ts`: **RCP-01** legacy classification concurrency and the complete-scope barrier; **RCP-02** out-of-order final completions with deterministic complete publication; **RCP-03** terminal failure drains admitted workers, stops queued batches and preserves progress; **RCP-04** a foreign-head parallel receipt rejects the whole attempt; **RCP-05** a virtual-clock workload that exceeds the unchanged allowance in sequence and completes within it under the pool. Tests use a controlled query port, no model calls and no real sleeps. Existing immutable-tree concurrency controls, complete fixture replays, coverage/architecture budgets and source/publication guards remain mandatory.
+
+Architecture stays with the pure fixed profile, shared draining worker policy and existing `analyzeProgressBatches` application coordinator. Application code does not acquire a provider, workspace or publication capability. Operations continue to inspect the same run and batch-retained diagnostic, and rerun a fresh complete invocation after a failure; no durable partial receipt reuse is introduced. Documentation updates the progress section of branch management. Catalog evidence and specification validation accompany implementation. The official final-head Commit attempt must still finish under its effective profile before this scheduling change is described as native success.

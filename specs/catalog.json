@@ -7,7 +7,7 @@
       "status": "implemented",
       "scope": "English-default, localized, semantic, bounded and idempotent product messages across GitHub and repository-aware operator surfaces; complete acceptance batches and cards with stable source identities, verified published SDD provenance, shared complete-inventory text allocation, precise response diagnostics and same-head requirement evidence before Commit progress publication; shared bounded complete-batch recovery for attributable completed acceptance-field length or completion failures; bounded closed-fact recovery and compact large-inventory assessment, exact original hard allocations, explicit admission counts and non-retryable length exhaustion with separate live-provider qualification; exact JSON-byte allocation and one shared source-part size replacement for both framed profiles, captured request contracts, receipt quota revalidation and nonretryable unit-specific exhaustion; shared same-profile complete-batch correction for otherwise-valid repeated citations with current-request origin binding, unchanged evidence gates and nonretryable citation exhaustion",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-11-08",
+      "lastVerified": "2026-11-18",
       "specs": [
         "specs/semantic-github-publication-and-notification.md",
         "specs/repository-locale-and-localization.md",

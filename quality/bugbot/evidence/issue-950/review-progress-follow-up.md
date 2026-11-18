@@ -137,3 +137,38 @@ Deterministic validation: **86** shadow controls, **279** focused Jest cases, **
 The new qualification runner uses the shipping compiler options. Its deterministic clock-initialization control reproduces the old ES2022 loader failure and proves the current ES2020 initialization without model calls. The first full hook caught a stale mock type; that test was corrected rather than weakening its compiler check.
 
 The remote CI and native review of `ca75978d6` passed before this change. The full build/test/lint hook passed at `d26d0d6cd633c3aa313ddd21235fe985860b4104`. Final-head CI, native review and the [new preregistered EV-07 result](ev07-shadow/campaign-provenance.md) must be reported independently. The older measured precision remains **87.95%**, below **90%**; it is not replaced by deterministic controls.
+
+## Canonical bundle bytes after the first CI of `86e2430ec`
+
+The [Build and package job](https://github.com/vypdev/copilot/actions/runs/44403063788/job/135150944006) failed its generated-bundle check; static checks passed. The native review remains on that SHA while this correction is prepared locally.
+
+The measured working Action contained 451 CRLF line endings. Its SHA-256 was `414dccba8ef5cbb987e72f21f4d92336cfa15dd7a3be2b5d3fe9e037cb552c07`. Git's contributor setting `core.autocrlf=input` normalized those bytes when staging, leaving the published blob at `c7a3e0fa07633447f388964e8e9e0b0a54cb0343e48d3e2f2237c4718c217f6e`. Replacing only CRLF with LF makes the entire working file byte-identical to that published blob. The original postprocessor removed trailing spaces but retained vendor CRLF. Its passing local Git check therefore did not establish physical-byte equality across checkout settings.
+
+One Git integration regression copies the actual postprocessor and validator into an owned fixture with `core.autocrlf=false`. It seeds the canonical index, reproduces a failing generated-bundle check with mixed vendor line endings, and verifies the postprocessed physical bytes, preservation of a multibyte character and escaped `\r\n`, a clean Git comparison and idempotence. The original script fails that control; the corrected script passes. All four bundled entry points are normalized, and their checkout attributes explicitly retain LF.
+
+The frozen campaign and its hashes are unchanged. Its packaged controls used the observed raw working build; its manifest did not capture the filtered Git blob as a separate artifact. The raw build is retained for rollback. This correction makes the reproducible working artifact match the already-published canonical blob. Replays against the canonical artifact are separate deterministic evidence. No model call is repeated after the independent gates failed. The production TypeScript and lockfile remain unchanged; the new TypeScript file is a regression test only.
+
+Reproduce the regression and canonical build:
+
+```sh
+pnpm exec jest --runInBand --runTestsByPath src/tooling/__tests__/generated_bundle_line_endings.test.ts
+pnpm run build
+pnpm run validate:build
+```
+
+The result and all 174 attempts remain bound to their original implementation and preregistration commits. Final-head CI must still demonstrate the correction on the self-hosted runner. No installation template, runner placement or production activation is changed.
+
+The same CI attempt passed all 938 Jest suites but the separate coverage-budget step rejected `CopilotEvidenceRepository` at 98.25% statements and 97.30% branches, below its unchanged 100% requirement. A new controlled-provider case exercises receipt publication when the artifact capability is absent: the nonauthorizing Check remains visible, publication reports the closed `provider.contract-invalid` failure, and no artifact is manufactured. The focused suite now measures 57/57 statements, 37/37 branches, 6/6 functions and 48/48 lines. The full coverage and setup/extension chain is validated separately before the correction is pushed.
+
+The recovery run passed all 939 Jest suites and 18,611 tests, all 66 coverage budgets, and the setup ledger (336/350 passed; 14 explicitly open). Global Jest coverage measured 97.33% statements, 95.10% branches, 98.02% functions and 98.11% lines. The extension coverage chain also passed at 100% across all four metrics. The canonical packaged Action passed the same 13 status and six approval/rollback scenarios at SHA-256 `c7a3e0fa07633447f388964e8e9e0b0a54cb0343e48d3e2f2237c4718c217f6e`. These are model-free recovery controls, not a new EV-07 qualification.
+
+
+## Parallel bound progress receipts after the Commit deadline
+
+The [native Commit attempt on `86e2430ec`](https://github.com/vypdev/copilot/actions/runs/44403043305/job/135150870855) passed source capture, classified six acceptance assignments and collected all 13 comparison parts. Only three of four final assessment batches finished before the unchanged shared 30-minute progress allowance. The last batch started with 45 seconds remaining. The run retained the previous assessment; its failure is separate from the generated-bundle and coverage failures above.
+
+The host now schedules up to four independently bound scope receipts and final assessment receipts. Every receipt retains its assigned source IDs, snapshot or manifest, batch and head. Complete classification and complete comparison remain barriers. Source-part scheduling remains unchanged. A terminal error stops queued tasks, drains admitted work and reports the validated receipt count after drain; no partial percentage, label or semantic status can be published. The pure policy and existing application coordinator own the change, without new ports, settings, permissions or stored partial state.
+
+Five additional deterministic integration cases cover legacy scope overlap, out-of-order assessment reduction, provider failure, foreign-head failure, and a virtual-clock workload that takes 32 minutes serially but 16 minutes under the pool. The original scheduler fails that clock case with `time-budget`; the revised one passes. Two preexisting correction fixtures now identify their intended receipt by its assigned requirement instead of a global completion count, so concurrent completion cannot change which defect they inject. All 186 focused progress, repair and concurrency tests pass. These controls make zero model calls.
+
+The fixed progress ledger remains 120 calls and 30 minutes. This is the SDD progress assessment, not a Bugbot finding investigation: research time and tokens remain telemetry. The prior 939-suite recovery run and canonical bundle hash describe the line-ending and publisher-coverage correction before this scheduler amendment. The amended runtime requires a new build, full coverage/budget validation, normal commit hook and native final-head Commit result; none is inferred from that earlier run. The selected owning Bugbot SDD stays byte-identical to its Action publication. The current contract amendment is section 23 of the catalogued progress-capacity SDD.

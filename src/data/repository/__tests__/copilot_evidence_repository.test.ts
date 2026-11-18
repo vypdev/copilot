@@ -3,6 +3,16 @@ import { buildBugbotProgressCheckMarker, readBugbotProgressCheckObservation } fr
 import type { BugbotReviewProgressObservation } from '../../../application/ports/bugbot_review_progress_ports';
 
 describe('CopilotEvidenceRepository', () => {
+    it('reports a missing artifact capability without treating the created check as an approval receipt', async () => {
+        const create = jest.fn().mockResolvedValue({ data: { id: 91 } });
+        const repository = new CopilotEvidenceRepository({ getClient: () => ({ rest: { checks: { create } } }) });
+        await expect(repository.publish({ name: 'Copilot / Review', headSha: 'head', conclusion: 'success', title: 'Complete',
+            summary: 'Receipt', verification: { runId: 7, attempt: 2, receipt: 'Receipt' } }, 'owner', 'repo', 'token'))
+            .rejects.toMatchObject({ code: 'provider.contract-invalid', message: 'Optional Check Run publication was not confirmed.' });
+        expect(create).toHaveBeenCalledTimes(1);
+        expect(create).toHaveBeenCalledWith(expect.objectContaining({ status: 'completed', conclusion: 'success' }));
+    });
+
     it.each([false, true])('attributes the receipt artifact to the created or reused native Check Run, reuse=%s', async reuse => {
         const create = jest.fn().mockResolvedValue({ data: { id: 91 } });
         const update = jest.fn().mockResolvedValue({});

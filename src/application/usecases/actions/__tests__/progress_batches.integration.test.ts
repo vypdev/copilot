@@ -114,6 +114,105 @@ it('completes all independent scope requests in source order before an immutable
     expect(f.setProgressLabel).toHaveBeenCalledTimes(1);
 });
 
+it('RCP-01 overlaps bound legacy scope receipts and retains the complete classification barrier', async () => {
+    const f = scenario(Array.from({ length: 130 }, (_, index) => `Implement unique obligation ${index + 1}.`).join('\n'));
+    const answer = f.query.getMockImplementation()!;
+    let active = 0, peak = 0, finished = 0;
+    f.query.mockImplementation(async request => {
+        const schema = request.options!.schema as any;
+        if (!schema.properties.lines) {
+            expect(finished).toBe(5);
+            return answer(request);
+        }
+        peak = Math.max(peak, ++active);
+        await new Promise(resolve => setImmediate(resolve));
+        const response = await answer(request);
+        active--; finished++;
+        return response;
+    });
+    const results = await f.invoke();
+    expect(results.at(-1)).toMatchObject({ success: true });
+    expect(peak).toBe(4);
+    expect(active).toBe(0);
+    expect(f.setProgressLabel).toHaveBeenCalledTimes(1);
+});
+
+it('RCP-02 reduces out-of-order parallel assessment receipts into one source-ordered publication', async () => {
+    const f = scenario(Array.from({ length: 130 }, (_, index) => `Implement unique obligation ${index + 1}.`).join('\n'));
+    const answer = f.query.getMockImplementation()!;
+    let active = 0, peak = 0;
+    const completed: string[] = [];
+    f.query.mockImplementation(async request => {
+        const schema = request.options!.schema as any;
+        const response = await answer(request);
+        if (!schema.properties.requirements) return response;
+        peak = Math.max(peak, ++active);
+        await new Promise(resolve => setImmediate(resolve));
+        const first = schema.properties.requirements.items.properties.id.enum[0];
+        if (first === 'R1') await new Promise(resolve => setImmediate(resolve));
+        retained(f); completed.push(first); active--;
+        return response;
+    });
+    const results = await f.invoke();
+    expect(results.at(-1)).toMatchObject({ success: true });
+    expect(peak).toBe(4);
+    expect(completed[0]).not.toBe('R1');
+    expect(active).toBe(0);
+    const summary = buildActionSummary({ owner: 'vypdev', repository: 'domus', eventName: 'push', issueNumber: 23,
+        pullRequestNumber: 29, results, progressLinks: { repositoryUrl: 'https://github.com/vypdev/domus' } });
+    expect(summary.match(/^- R\d+/gmu)).toEqual(Array.from({ length: 130 }, (_, index) => `- R${index + 1}`));
+    expect(f.setProgressLabel).toHaveBeenCalledTimes(1);
+});
+
+it.each(['provider', 'foreign-head'] as const)('RCP-03/RCP-04 drains admitted assessments and stops queued work after %s failure', async mode => {
+    const f = scenario(Array.from({ length: 130 }, (_, index) => `Implement unique obligation ${index + 1}.`).join('\n'));
+    const answer = f.query.getMockImplementation()!;
+    const started: string[] = [], settled: string[] = [];
+    f.query.mockImplementation(async request => {
+        const schema = request.options!.schema as any;
+        if (!schema.properties.requirements) return answer(request);
+        const first = schema.properties.requirements.items.properties.id.enum[0];
+        started.push(first);
+        try {
+            await new Promise(resolve => setImmediate(resolve));
+            if (first !== 'R1') await new Promise(resolve => setImmediate(resolve));
+            if (first === 'R1' && mode === 'provider') throw new Error('Controlled provider failure');
+            const response = await answer(request) as any;
+            if (first === 'R1') response.headSha = 'f'.repeat(40);
+            return response;
+        } finally { settled.push(first); }
+    });
+    const results = await f.invoke();
+    expect(results.at(-1)).toMatchObject({ success: false });
+    expect(started).toEqual(['R1', 'R33', 'R65', 'R97']);
+    expect(settled).toHaveLength(4);
+    retained(f);
+    expect(selectSemanticStatusIntents({ locale: 'en-US', results })).toEqual([]);
+    if (mode === 'foreign-head') expect(results.at(-1)).toMatchObject({ errors: [expect.objectContaining({
+        recovery: expect.objectContaining({ variables: expect.objectContaining({ verified: 3, expected: 5, batch: 1 }) }),
+    })] });
+});
+
+it('RCP-05 completes a virtual-clock workload whose serial receipt phases exceed the unchanged progress allowance', async () => {
+    jest.useFakeTimers();
+    try {
+        const f = scenario(), answer = f.query.getMockImplementation()!;
+        f.query.mockImplementation(async request => {
+            const schema = request.options!.schema as any;
+            if (schema.properties.lines || schema.properties.requirements) await new Promise(resolve => setTimeout(resolve, 8 * 60_000));
+            return answer(request);
+        });
+        const execution = f.invoke();
+        await jest.runAllTimersAsync();
+        const results = await execution;
+        expect(results.at(-1)?.errors.map(error => ({ code: error.code, recovery: error.recovery }))).toEqual([]);
+        expect(results.at(-1)).toMatchObject({ success: true, payload: { progress: 50 } });
+        expect(performance.now()).toBeLessThan(PROGRESS_BATCH_PROFILE.milliseconds);
+        expect(f.finalOutputs).toHaveLength(2);
+        expect(f.setProgressLabel).toHaveBeenCalledTimes(1);
+    } finally { jest.useRealTimers(); }
+});
+
 it('CommitScope916-C11 offers only admitted source citations when the comparison also contains generated metadata', async () => {
     const diff = partitionProgressDiff(base, head, [{ path: 'build/index.js', status: 'modified', additions: 1, deletions: 0, evidence: 'generated-metadata-only' },
         { path: 'src/product.ts', status: 'modified', additions: 1, deletions: 0, patch: '+source' }]);
@@ -178,7 +277,7 @@ it('github-communication-experience-change-C181: exhausted completion in a later
     const f = scenario(), answer = f.query.getMockImplementation()!;
     f.query.mockImplementation(async request => {
         const response = await answer(request) as any;
-        if (response.requirements && f.finalOutputs.length >= 2) {
+        if (response.requirements?.[0].id === 'R33') {
             const schema: any = request.options!.schema;
             response.requirements.forEach((fact: Record<string, unknown>) => { fact.assessment = 'supported'; });
             return interpretProgressAgentOutput(JSON.stringify(response), 'assessment', schema);
@@ -213,11 +312,15 @@ it('CommitScope916-C17 replays the original Domus body and complete immutable co
 });
 it('github-communication-experience-change-C167: the archived Domus inventory retains all 108 requirements through one complete closed-fact correction', async () => {
     const diff = await domusComparison(), f = scenario(fixture.body, diff), answer = f.query.getMockImplementation()!;
+    let rejected: unknown;
     f.query.mockImplementation(async request => {
         const response = await answer(request) as any;
         if (response.requirements) {
             const schema: any = request.options!.schema;
-            if (f.finalOutputs.length === 1) response.requirements.forEach((fact: Record<string, unknown>) => { fact.assessment = 'supported'; });
+            if (!rejected && schema.properties.requirements.items.properties.id.enum[0] === 'R1') {
+                rejected = response;
+                response.requirements.forEach((fact: Record<string, unknown>) => { fact.assessment = 'supported'; });
+            }
             return interpretProgressAgentOutput(JSON.stringify(response), 'assessment', schema);
         }
         return response;
@@ -225,7 +328,7 @@ it('github-communication-experience-change-C167: the archived Domus inventory re
     const results = await f.invoke();
     expect(results.at(-1)).toMatchObject({ success: true, payload: { progress: 50, sourceHeadSha: fixture.head } });
     expect(f.query).toHaveBeenCalledTimes(31); expect(f.finalOutputs).toHaveLength(5);
-    const accepted = f.finalOutputs.slice(1).flatMap(output => output.requirements);
+    const accepted = f.finalOutputs.filter(output => output !== rejected).flatMap(output => output.requirements);
     expect(accepted).toHaveLength(108); expect(new Set(accepted.map(value => value.id)).size).toBe(108);
     expect(accepted.every(value => value.citations.length > 0)).toBe(true);
     expect(f.setProgressLabel).toHaveBeenCalledTimes(1); expect(f.setLabels).toHaveBeenCalledTimes(1);
