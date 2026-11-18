@@ -331,7 +331,7 @@ Errors follow impact -> cause -> action -> retained state. A transient failure i
 
 ## 14. Testing strategy
 
-The budget is a minimum of 130 distinct new executable cases, derived from independent source, protocol, recovery, freshness, output, UX, and integration risks. The existing 67 owner cases remain separate and are not counted here. The 130 cases below are planned acceptance inventory, not executed tests.
+The budget is a minimum of 132 distinct new executable cases, derived from independent source, protocol, recovery, freshness, output, UX, and integration risks. The existing 67 owner cases remain separate and are not counted here. The 132 cases below are planned acceptance inventory, not executed tests.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
@@ -340,8 +340,8 @@ The budget is a minimum of 130 distinct new executable cases, derived from indep
 | Frame execution | 24 | Observable scenarios in the case inventory. |
 | Freshness | 12 | Observable scenarios in the case inventory. |
 | UX/errors | 8 | Observable scenarios in the case inventory. |
-| Integration/compatibility | 8 | Observable scenarios in the case inventory. |
-| Total | 130 | Distinct inventory cases; repeated executions do not add cases. |
+| Integration/compatibility | 10 | Observable scenarios in the case inventory. |
+| Total | 132 | Distinct inventory cases; repeated executions do not add cases. |
 
 Repository-wide thresholds remain in force. New pure planning/coverage policies SHOULD meet 100% modified executable-line coverage without partials and branch coverage sufficient to cover every independent bound and fail-closed path. Changed modules must meet the repository's full current-head coverage gates. Use deterministic clocks, nonces, IDs, and provider/model/Git fakes; no real waits or live services. Table-driven rows count only when each listed case has a distinct assertion and execution. Include replay/race, adapter, workflow permission/schema, golden UI plus semantic assertions, and security tests. Architecture and workflow checks parse contracts rather than grep prose. Manual UX evidence must show narrow/mobile readability and understandable action/status in the supported locale/fallback. The realistic 887-file case must demonstrate complete simulated review, not claim that the historical run was reviewed.
 
@@ -477,6 +477,8 @@ Repository-wide thresholds remain in force. New pure planning/coverage policies 
 | bugbot-framed-C128 | Integration/compatibility | BFR-R07, BFR-R12 | Dry-run validates the whole framed review without SCM writes. |
 | bugbot-framed-C129 | Integration/compatibility | BFR-R14 | Catalog, companion, owning SDD links, docs and generated bundles validate together. |
 | bugbot-framed-C130 | Integration/compatibility | BFR-R11, BFR-R15 | Current-head complete review, checks, approval and 100% modified-line coverage remain mandatory. |
+| bugbot-framed-C131 | Integration/compatibility | BFR-R06, BFR-R07 | A generated-source follow-up that fits delivers the full assigned evidence through the existing query port and completes the partition. |
+| bugbot-framed-C132 | Integration/compatibility | BFR-R06 | A generated-source follow-up whose assigned evidence exceeds 128,000 UTF-8 bytes fails before the dependent query and leaves the partition incomplete. |
 
 ## 15. Documentation and discoverability
 
@@ -512,7 +514,7 @@ These are planned, executable acceptance scenarios; none is represented as an ex
 7. Given late-frame findings or retained previous findings, when global reconciliation occurs, then late findings enter global normalization, only the single authorized owner may explicitly adjudicate eligible retained IDs, omission never resolves, and protected dismissals/approval controls remain enforced.
 8. Given malformed or hostile source/model text, when validation or rendering occurs, then content is escaped or rejected without leaking rejected source or credentials; the user sees impact, cause, action, retained state, correct units, and descriptive PR/run links in supported locale/fallback and narrow views.
 9. Given ordinary <=64-partition and issue-only workflows, when they run, then existing behavior remains compatible; a dry run validates the complete framed contract without SCM writes.
-10. Given implementation readiness review, when architecture, documentation, catalog, generated artifacts, current-head review, checks, and coverage are evaluated, then all 130 planned cases and full changed executable-line coverage without partials are evidenced before the companion can be marked ready.
+10. Given implementation readiness review, when architecture, documentation, catalog, generated artifacts, current-head review, checks, and coverage are evaluated, then all 132 planned cases and full changed executable-line coverage without partials are evidenced before the companion can be marked ready.
 
 ## 17. Requirements traceability
 
@@ -523,8 +525,8 @@ These are planned, executable acceptance scenarios; none is represented as an ex
 | BFR-R03 | bugbot-framed-C012, bugbot-framed-C013, bugbot-framed-C014, bugbot-framed-C015, bugbot-framed-C016, bugbot-framed-C017, bugbot-framed-C018, bugbot-framed-C019, bugbot-framed-C020, bugbot-framed-C021, bugbot-framed-C022, bugbot-framed-C023, bugbot-framed-C024, bugbot-framed-C025, bugbot-framed-C026, bugbot-framed-C041, bugbot-framed-C042, bugbot-framed-C047 |
 | BFR-R04 | bugbot-framed-C049, bugbot-framed-C050, bugbot-framed-C051, bugbot-framed-C052, bugbot-framed-C053, bugbot-framed-C054, bugbot-framed-C055, bugbot-framed-C056, bugbot-framed-C057, bugbot-framed-C058, bugbot-framed-C059, bugbot-framed-C060, bugbot-framed-C061, bugbot-framed-C062, bugbot-framed-C063, bugbot-framed-C064, bugbot-framed-C065, bugbot-framed-C066, bugbot-framed-C067, bugbot-framed-C068, bugbot-framed-C069, bugbot-framed-C070, bugbot-framed-C071, bugbot-framed-C072, bugbot-framed-C073, bugbot-framed-C074, bugbot-framed-C075, bugbot-framed-C076, bugbot-framed-C077, bugbot-framed-C078 |
 | BFR-R05 | bugbot-framed-C033, bugbot-framed-C034, bugbot-framed-C035, bugbot-framed-C036, bugbot-framed-C037, bugbot-framed-C038, bugbot-framed-C039, bugbot-framed-C040, bugbot-framed-C041, bugbot-framed-C042, bugbot-framed-C052, bugbot-framed-C085, bugbot-framed-C113 |
-| BFR-R06 | bugbot-framed-C027, bugbot-framed-C028, bugbot-framed-C029, bugbot-framed-C030, bugbot-framed-C031, bugbot-framed-C032, bugbot-framed-C043, bugbot-framed-C044, bugbot-framed-C045, bugbot-framed-C046, bugbot-framed-C079, bugbot-framed-C080 |
-| BFR-R07 | bugbot-framed-C047, bugbot-framed-C081, bugbot-framed-C082, bugbot-framed-C083, bugbot-framed-C084, bugbot-framed-C085, bugbot-framed-C086, bugbot-framed-C087, bugbot-framed-C088, bugbot-framed-C102, bugbot-framed-C123, bugbot-framed-C124, bugbot-framed-C125, bugbot-framed-C128 |
+| BFR-R06 | bugbot-framed-C027, bugbot-framed-C028, bugbot-framed-C029, bugbot-framed-C030, bugbot-framed-C031, bugbot-framed-C032, bugbot-framed-C043, bugbot-framed-C044, bugbot-framed-C045, bugbot-framed-C046, bugbot-framed-C079, bugbot-framed-C080, bugbot-framed-C131, bugbot-framed-C132 |
+| BFR-R07 | bugbot-framed-C047, bugbot-framed-C081, bugbot-framed-C082, bugbot-framed-C083, bugbot-framed-C084, bugbot-framed-C085, bugbot-framed-C086, bugbot-framed-C087, bugbot-framed-C088, bugbot-framed-C102, bugbot-framed-C123, bugbot-framed-C124, bugbot-framed-C125, bugbot-framed-C128, bugbot-framed-C131 |
 | BFR-R08 | bugbot-framed-C089, bugbot-framed-C090, bugbot-framed-C091, bugbot-framed-C092, bugbot-framed-C093, bugbot-framed-C094, bugbot-framed-C101 |
 | BFR-R09 | bugbot-framed-C095, bugbot-framed-C096, bugbot-framed-C097, bugbot-framed-C098, bugbot-framed-C099 |
 | BFR-R10 | bugbot-framed-C103, bugbot-framed-C104, bugbot-framed-C105, bugbot-framed-C106, bugbot-framed-C107, bugbot-framed-C108, bugbot-framed-C109, bugbot-framed-C110, bugbot-framed-C111, bugbot-framed-C112, bugbot-framed-C113, bugbot-framed-C114 |
@@ -542,13 +544,13 @@ These are planned, executable acceptance scenarios; none is represented as an ex
 4. Integrate frame receipts with existing global finding verification, retained-resolution owner, approval controls, and one publication boundary; prove failure paths cause no SCM writes.
 5. Implement localized status view models and summaries for pending, blocked, interrupted, transient failure, and complete states; review narrow/mobile rendering.
 6. Update owning specifications, catalog, user/operator/contributor documentation, fixtures, route links, and generated bundles in the same reviewed change.
-7. Demonstrate all 130 acceptance cases, the realistic complete fixture, current-head review, existing approval/check gates, and 100% modified executable-line coverage without partials. No release or deployment is part of this specification.
+7. Demonstrate all 132 acceptance cases, the realistic complete fixture, current-head review, existing approval/check gates, and 100% modified executable-line coverage without partials. No release or deployment is part of this specification.
 
 ## 19. Definition of Done
 
 - [ ] Every BFR requirement has executable acceptance and reciprocal traceability.
 - [ ] Architecture boundaries and fixed-argv read-only source recovery are implemented and automatically enforced.
-- [ ] The numeric 130-case minimum, allocation table, coverage requirements, and changed-line coverage pass.
+- [ ] The numeric 132-case minimum, allocation table, coverage requirements, and changed-line coverage pass.
 - [ ] Every independent source, prompt, frame, response, findings, resolution, and retained-payload bound has exact/one-over evidence.
 - [ ] Primary pending, action-required, blocked, interrupted/partial-internal, transient-failure, and completed UI states are reviewed.
 - [ ] Accessibility, localization/fallback, responsive behavior, sanitization, and noise budgets pass.
@@ -706,10 +708,9 @@ candidate before any partition can complete. This permits Git text such as a
 literal escaped newline without requiring the decoder to compile it as an
 enum value. An invalid native schema is recorded as a fixed diagnostic code.
 
-The minimum for this addition is two framed integration cases. A full
-assignment that previously overflowed must deliver all its evidence and
-complete through the existing query port. Evidence that is still too large
-must fail before the dependent call, without completing the partition. The
+Cases `bugbot-framed-C131` and `bugbot-framed-C132` cover successful delivery
+of the full assignment through the existing query port and the failure before
+the dependent call when the evidence itself still exceeds the bound. The
 decoder and local schema regressions are owned by the
 [agent execution contract](./agent-execution-policy-hardening.md).
 

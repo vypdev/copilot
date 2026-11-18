@@ -472,7 +472,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       ] }]);
       const verify = jest.fn();
       const [result] = await dryRun(createUseCase({ verify }, undefined, authority), pr());
-      const missing = 'A repository location with an unambiguous comparison side is required.';
+      const missing = 'A pinned repository location with an unambiguous review anchor is required.';
       expect(result.payload).toMatchObject({ bugbotShadowVerification: {
         candidates: [{ id: candidate.id, verdict: 'inconclusive', missing }],
         publicationSimulation: { status: 'incomplete', individual: [], inconclusive: [{ id: candidate.id, missing }] },

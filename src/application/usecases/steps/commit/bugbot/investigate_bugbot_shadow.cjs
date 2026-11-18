@@ -15,7 +15,7 @@ function initial(broker, subject, finding, officialPackages, requiredOfficial, i
         officialCatalog: officialPackages, requiredOfficial, ...(observations?.length && { observations }) });
 }
 
-const orderLanguage = /\b(?:before|after|precedes?|follows? the execution|prior to|followed by|and then|first.+(?:then|second)|antes de|despu[eé]s de|seguido de)\b/iu;
+const orderLanguage = /\b(?:before|after|precedes?|follows? the execution|prior to|earlier than|later than|followed by|and then|first.+(?:then|second)|antes de|despu[eé]s de|seguido de)\b/iu;
 const orderParts = {
     first: 'the first operation',
     second: 'the second operation',

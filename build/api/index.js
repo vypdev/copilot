@@ -6371,7 +6371,7 @@ async function observeBugbotShadowVerification(operation, context, prepared, por
         const observation = candidate
             ? await verifyCandidate(port, candidate, configuration, review)
             : { status: 'verdict', verdict: 'inconclusive', reason: 'Candidate could not be pinned.',
-                missing: 'A repository location with an unambiguous comparison side is required.', citations: [], premises: [] };
+                missing: 'A pinned repository location with an unambiguous review anchor is required.', citations: [], premises: [] };
         const wallMs = Math.round(performance.now() - started);
         if (observation.status === 'verdict') {
             await progress?.record('verifying', { candidates: { completed: ++completed, total } });
@@ -6416,11 +6416,13 @@ function pinCandidate(operation, context, finding, historicalResolution = false)
         return undefined;
     const locations = context.prContext?.pathToDiffLocations?.[file] ?? [];
     const sides = new Set(locations.filter(location => location.line === line).map(location => location.side));
-    if (sides.size > 1)
+    if (sides.size > 1 || (pr && !historicalResolution && sides.size === 0))
         return undefined;
     const side = sides.values().next().value;
+    const validEnd = endLine && Number.isSafeInteger(endLine) && endLine >= line
+        && (!pr || historicalResolution || locations.some(location => location.line === endLine && location.side === side));
     const anchor = Object.freeze({ path: file, line,
-        end: endLine && Number.isSafeInteger(endLine) && endLine >= line ? endLine : line,
+        end: validEnd ? endLine : line,
         ...(side ? { side } : {}) });
     // The published title is the claim. Description, confidence, detector evidence and proposed fixes stay out.
     const comparisonRelevant = historicalResolution || side === 'LEFT' || /\b(regressions?|regresi[oó]n|previously|used to|no longer|introduc\w*)\b/iu

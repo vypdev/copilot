@@ -353,6 +353,34 @@ describe('Bugbot normal review in shadow', () => {
     expect(provider.statusComments).toEqual([]);
   });
 
+  it('keeps a PR finding with no verified diff anchor inconclusive', async () => {
+    const provider = new InMemoryReviewProvider();
+    const verify = jest.fn();
+    const query = detector([{ ...finding(), line: 9 }]);
+    const [result] = await new DetectPotentialProblemsUseCase({ query }, scmPorts(provider), undefined, undefined, { verify })
+      .invoke(projectBugbotReviewOperationContext(execution('dry-run')));
+
+    expect(verify).not.toHaveBeenCalled();
+    expect(result.payload).toMatchObject({ findings: [{ line: 9 }], bugbotShadowVerification: {
+      origins: [{ anchor: { path: 'src/auth.ts', line: 9 } }],
+      candidates: [{ verdict: 'inconclusive', missing: expect.stringContaining('review anchor') }],
+    } });
+  });
+
+  it('binds the verification to a single review line if the end does not have the selected side', async () => {
+    const provider = new InMemoryReviewProvider();
+    const report = { ...finding(), endLine: 11 };
+    const query = detector([report]);
+    const verify = jest.fn().mockResolvedValue({ status: 'technical-failure', reason: 'unavailable' });
+    const [result] = await new DetectPotentialProblemsUseCase({ query }, scmPorts(provider), undefined, undefined, { verify })
+      .invoke(projectBugbotReviewOperationContext(execution('dry-run')));
+
+    expect(verify).toHaveBeenCalledWith(expect.objectContaining({ candidate: expect.objectContaining({
+      anchor: { path: 'src/auth.ts', line: 10, end: 10, side: 'RIGHT' },
+    }) }));
+    expect(result.payload).toMatchObject({ findings: [{ line: 10, endLine: 11 }] });
+  });
+
   it('uses the optional Action profile for verification only, without changing dry-run findings', async () => {
     const provider = new InMemoryReviewProvider();
     const query = detector([finding()]);

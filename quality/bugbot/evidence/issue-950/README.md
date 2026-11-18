@@ -7,7 +7,10 @@
 ## Current controls
 
 Run the model-free verification, profile configuration, EV-07 gate and
-status card tests from the repository root.
+status card tests from the repository root. The EV-07 entry points retain
+their exact fixture and scorer dependencies. The normal-flow runner keeps
+its default subject manifest. Its historical evaluator is available in the
+tagged checkout below.
 
 ```sh
 pnpm run test:bugbot-shadow-verification

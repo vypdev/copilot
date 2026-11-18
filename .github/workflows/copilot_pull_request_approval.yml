@@ -48,7 +48,7 @@ jobs:
           bugbot-severity: ${{ vars.BUGBOT_SEVERITY || 'low' }}
           bugbot-dry-run: ${{ vars.BUGBOT_DRY_RUN || 'false' }}
           bugbot-verification-mode: ${{ vars.BUGBOT_VERIFICATION_MODE || 'disabled' }}
-          ai-ignore-files: ${{ vars.AI_IGNORE_FILES || 'build/*' }}
+          ai-ignore-files: build/*,specs/CATALOG.md,quality/bugbot/evidence/issue-*/*.jsonl,quality/bugbot/evidence/issue-*/*.log.gz,${{ vars.AI_IGNORE_FILES || '' }}
           repository-locale: ${{ vars.REPOSITORY_LOCALE || 'en-US' }}
           pull-requests-locale: ${{ vars.PULL_REQUESTS_LOCALE || '' }}
           token: ${{ secrets.PAT }}

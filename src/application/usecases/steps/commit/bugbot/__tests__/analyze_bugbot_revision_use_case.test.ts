@@ -251,6 +251,22 @@ describe('analyzeBugbotRevision partition execution', () => {
     })).rejects.toThrow('non-owner');
   });
 
+  it('links the detection origin to a new ID after an incompatible durable ID collision', async () => {
+    const loaded = context([partition(1, 1)]);
+    loaded.existingByFindingId['finding-1'] = {
+      issue: { commentId: 100, resolved: false, fingerprint: 'fp-different' },
+    };
+    const query = jest.fn(async ({ prompt }: FindingsQueryRequest) => attestedResponse(prompt, 1));
+    const trace = new BugbotCandidateTrace();
+    const prepared = await analyzeBugbotRevision(operation(), loaded, {
+      agent: { query }, trace, telemetry: new BugbotReviewTelemetry(operation()),
+    });
+
+    const candidateId = prepared?.activeFindings?.[0]?.id;
+    expect(candidateId).toEqual(expect.stringMatching(/^candidate-/u));
+    expect(trace.snapshot()).toMatchObject([{ disposition: 'prepared', candidateId }]);
+  });
+
   it('deduplicates one root cause reported by multiple partitions before limiting', async () => {
     const partitions = [partition(1, 2), partition(2, 2)];
     const query = jest.fn(({ prompt }: { prompt: string }) => Promise.resolve({

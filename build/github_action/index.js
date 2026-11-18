@@ -58543,7 +58543,11 @@ function renderProgressWorkAssessment(progress, assessment, locale, links, full 
     const unknown = assessment.outcomes.filter(item => item.status === 'verification-unknown');
     const supported = assessment.outcomes.length - missing.length - unknown.length;
     const issue = `${links.repositoryUrl}/issues/${links.issueNumber}`;
-    const blob = (sha, path) => `${links.repositoryUrl}/blob/${sha}/${path.split('/').map(encodeURIComponent).join('/')}`;
+    const blob = (sha, path) => {
+        const encoded = path.split('/').map(segment => encodeURIComponent(segment)
+            .replace(/[()]/gu, value => value === '(' ? '%28' : '%29')).join('/');
+        return `${links.repositoryUrl}/blob/${sha}/${encoded}`;
+    };
     const inline = (text) => (0, github_comment_publication_policy_1.escapeHtml)((0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(text, 'complete').replace(/\s+/gu, ' ')).replace(/[[\]()`*_!\\]/gu, '\\$&')
         .replace(/https?:\/\//giu, match => match.replace('//', '/\u200b/'));
     const line = (item) => {
@@ -78310,7 +78314,7 @@ async function observeBugbotShadowVerification(operation, context, prepared, por
         const observation = candidate
             ? await verifyCandidate(port, candidate, configuration, review)
             : { status: 'verdict', verdict: 'inconclusive', reason: 'Candidate could not be pinned.',
-                missing: 'A repository location with an unambiguous comparison side is required.', citations: [], premises: [] };
+                missing: 'A pinned repository location with an unambiguous review anchor is required.', citations: [], premises: [] };
         const wallMs = Math.round(performance.now() - started);
         if (observation.status === 'verdict') {
             await progress?.record('verifying', { candidates: { completed: ++completed, total } });
@@ -78355,11 +78359,13 @@ function pinCandidate(operation, context, finding, historicalResolution = false)
         return undefined;
     const locations = context.prContext?.pathToDiffLocations?.[file] ?? [];
     const sides = new Set(locations.filter(location => location.line === line).map(location => location.side));
-    if (sides.size > 1)
+    if (sides.size > 1 || (pr && !historicalResolution && sides.size === 0))
         return undefined;
     const side = sides.values().next().value;
+    const validEnd = endLine && Number.isSafeInteger(endLine) && endLine >= line
+        && (!pr || historicalResolution || locations.some(location => location.line === endLine && location.side === side));
     const anchor = Object.freeze({ path: file, line,
-        end: endLine && Number.isSafeInteger(endLine) && endLine >= line ? endLine : line,
+        end: validEnd ? endLine : line,
         ...(side ? { side } : {}) });
     // The published title is the claim. Description, confidence, detector evidence and proposed fixes stay out.
     const comparisonRelevant = historicalResolution || side === 'LEFT' || /\b(regressions?|regresi[oó]n|previously|used to|no longer|introduc\w*)\b/iu
@@ -129097,7 +129103,7 @@ function initial(broker, subject, finding, officialPackages, requiredOfficial, i
         officialCatalog: officialPackages, requiredOfficial, ...(observations?.length && { observations }) });
 }
 
-const orderLanguage = /\b(?:before|after|precedes?|follows? the execution|prior to|followed by|and then|first.+(?:then|second)|antes de|despu[eé]s de|seguido de)\b/iu;
+const orderLanguage = /\b(?:before|after|precedes?|follows? the execution|prior to|earlier than|later than|followed by|and then|first.+(?:then|second)|antes de|despu[eé]s de|seguido de)\b/iu;
 const orderParts = {
     first: 'the first operation',
     second: 'the second operation',
@@ -130086,7 +130092,7 @@ function blob(repo, sha, file) {
     const entry = /^(100644|100755) blob ([a-f0-9]{40,64})\t([^\u0000]+)\u0000$/u.exec(row);
     if (!entry || entry[3] !== file) throw new Error('no-file');
     const source = git(repo, ['cat-file', 'blob', entry[2]]);
-    if (source.includes('\u0000') || source.includes('\uFFFD')) throw new Error('non-text');
+    if (source.includes('\u0000')) throw new Error('non-text');
     return { blob: entry[2], lines: source.length ? source.replace(/\n$/u, '').split(/\r?\n/u) : [] };
 }
 

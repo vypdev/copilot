@@ -103,7 +103,11 @@ export function renderProgressWorkAssessment(
     const unknown = assessment.outcomes.filter(item => item.status === 'verification-unknown');
     const supported = assessment.outcomes.length - missing.length - unknown.length;
     const issue = `${links.repositoryUrl}/issues/${links.issueNumber}`;
-    const blob = (sha: string, path: string) => `${links.repositoryUrl}/blob/${sha}/${path.split('/').map(encodeURIComponent).join('/')}`;
+    const blob = (sha: string, path: string) => {
+        const encoded = path.split('/').map(segment => encodeURIComponent(segment)
+            .replace(/[()]/gu, value => value === '(' ? '%28' : '%29')).join('/');
+        return `${links.repositoryUrl}/blob/${sha}/${encoded}`;
+    };
     const inline = (text: string | null | undefined) => escapeHtml(sanitizeAgentMarkdown(text, 'complete').replace(/\s+/gu, ' ')).replace(/[[\]()`*_!\\]/gu, '\\$&')
         .replace(/https?:\/\//giu, match => match.replace('//', '/\u200b/'));
     const line = (item: ProgressWorkOutcome) => {

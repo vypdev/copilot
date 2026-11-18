@@ -35,6 +35,14 @@ it('renders every pending ID once in the full assessment and uses pinned source 
     expect(full).not.toContain('more pending requirements');
 });
 
+it('encodes parentheses in pinned draft and evidence URLs', () => {
+    const work = { ...fixture, sdd: { ...fixture.sdd!, path: 'specs/(draft.md' },
+        outcomes: [{ ...fixture.outcomes[1], evidencePath: 'src/evidence).ts' }] };
+    const card = renderProgressWorkAssessment(45, work, 'en-US', links, true);
+    expect(card).toContain('/specs/%28draft.md)');
+    expect(card).toContain('/src/evidence%29.ts)');
+});
+
 it('keeps the full list where no native run link is available', () => {
     const card = renderProgressWorkAssessment(45, fixture, 'es-MX', { repositoryUrl: repo, issueNumber: 950 });
     expect(card).toContain('45% estimado');

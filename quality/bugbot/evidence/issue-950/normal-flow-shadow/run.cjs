@@ -79,13 +79,19 @@ function selectVerifierProfiles(subject, detector) {
 }
 
 async function verifyMatchedCandidate(request, profiles, verifyArm, recordComparison) {
-    const primary = Promise.resolve().then(() => verifyArm(profiles.experimental ? 'experimental' : 'inherited', request));
-    if (!profiles.comparison) return primary;
-    const [experimental, inherited] = (await Promise.allSettled([
-        primary,
-        Promise.resolve().then(() => verifyArm('inherited', { ...request, configuration: profiles.comparison })),
-    ])).map(outcome => outcome.status === 'fulfilled' ? outcome.value
-        : { status: 'technical-failure', reason: 'verifier-unavailable' });
+    const primaryArm = profiles.experimental ? 'experimental' : 'inherited';
+    if (!profiles.comparison) return verifyArm(primaryArm, request);
+    // The review already runs up to two candidates at a time. Run the arms
+    // sequentially within each candidate so the same session limit applies.
+    const settled = async (arm, input) => {
+        try {
+            return await verifyArm(arm, input);
+        } catch {
+            return { status: 'technical-failure', reason: 'verifier-unavailable' };
+        }
+    };
+    const experimental = await settled(primaryArm, request);
+    const inherited = await settled('inherited', { ...request, configuration: profiles.comparison });
     recordComparison({ event: 'matched-verification-result', id: request.candidate.id, inherited, experimental });
     return experimental;
 }

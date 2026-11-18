@@ -54,3 +54,24 @@ test('a rejected matched arm preserves the other arm and never substitutes its v
     assert.equal(events[0].inherited, inherited);
     assert.deepEqual(events[0].experimental, result);
 });
+
+test('two paired candidates never start more than two verifier sessions at a time', async () => {
+    let concurrent = 0, peak = 0;
+    const calls = [];
+    const outcomes = [];
+    const verify = async (arm, { candidate }) => {
+        calls.push({ id: candidate.id, arm });
+        peak = Math.max(peak, ++concurrent);
+        await new Promise(resolve => setImmediate(resolve));
+        concurrent -= 1;
+        return { status: 'verdict', verdict: 'refuted' };
+    };
+    const profiles = selectVerifierProfiles(
+        { experimentalVerifier: { model: sol.model, effort: sol.effort }, compareInheritedVerifier: true }, luna,
+    );
+    await Promise.all(['one', 'two'].map(id =>
+        verifyMatchedCandidate({ candidate: { id }, configuration: sol }, profiles, verify, row => outcomes.push(row))));
+    assert.equal(peak, 2);
+    assert.equal(calls.length, 4);
+    assert.equal(outcomes.length, 2);
+});

@@ -101,6 +101,16 @@ test('an empty Git blob has no citable first line', async () => {
         { status: 'invalid-range', lineCount: 0 });
 });
 
+test('reads a literal replacement character in valid UTF-8 Git text', async () => {
+    const unicode = git(['hash-object', '-w', '--stdin'], 'literal \uFFFD in source\n');
+    const nextTree = git(['mktree'], `100644 blob ${unicode}\tunicode.txt\n`);
+    const nextHead = git(['commit-tree', nextTree, '-p', base, '-m', 'valid UTF-8 fixture']);
+    const broker = makeBroker(lab, { ...subject, head: nextHead, tree: nextTree }, finding);
+    const result = await broker.inspect(query('read', 'unicode.txt', { first: 1, last: 1 }));
+    assert.deepEqual(result.sources[0].lines, ['literal \uFFFD in source']);
+    assert.equal(broker.cite(cite(result.sources[0])).blob, unicode);
+});
+
 test('Git path discovery rejects malformed UTF-8 without issuing a normalized path', async () => {
     const badTree = git(['mktree', '-z'], Buffer.concat([
         Buffer.from(`100644 blob ${source}\tname-`), Buffer.from([255, 0]),
@@ -607,7 +617,7 @@ test('requests order roles for an explicit sequence supported only by ordinary c
         if (++turn === 1) response = inspect(query('read', 'ordered.py'));
         else if (turn === 2) {
             response = finish(cite(supplied(request)));
-            response.premises[0].claim = 'Preparation executes before delivery.';
+            response.premises[0].claim = 'Preparation executes earlier than delivery.';
         } else {
             assert.deepEqual(payload(request).closureIssues, [{ issue: 'order-claim-uncited', premise: 1 }]);
             response = { ...finish(), verdict: 'inconclusive', missing: 'The execution loop is unavailable.' };

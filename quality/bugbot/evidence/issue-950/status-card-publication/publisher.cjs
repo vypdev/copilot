@@ -17,10 +17,11 @@ const id = value => Number.isSafeInteger(value) && value > 0;
 function sameSource(left, right) {
     return Boolean(left && right && id(left.repositoryId) && id(left.pullNumber)
         && typeof left.base === 'string' && canonicalGitObjectId(left.base) === left.base
+        && typeof left.baseRef === 'string' && canonicalGitObjectId(left.baseRef) === left.baseRef
         && typeof left.head === 'string' && canonicalGitObjectId(left.head) === left.head
         && /^(?:default|[0-9a-f]{64})$/u.test(left.policy)
         && left.repositoryId === right.repositoryId && left.pullNumber === right.pullNumber
-        && left.base === right.base && left.head === right.head && left.policy === right.policy);
+        && left.base === right.base && left.baseRef === right.baseRef && left.head === right.head && left.policy === right.policy);
 }
 
 function sameAttempt(left, right) {
@@ -61,10 +62,10 @@ function renderCard(previous, snapshot) {
     const { checkDetails, runUrl } = review;
     const externalId = ['bugbot', source.pullNumber, source.base, source.head, source.policy, review.runId, review.attempt].join(':');
     const observation = typeof checkDetails === 'string' && readBugbotProgressCheckObservation(checkDetails, externalId);
-    if (!observation || !/^https:\/\/[a-z0-9.-]+(?::\d+)?\/[\w.-]+\/[\w.-]+\/actions\/runs\/\d+\/attempts\/\d+$/iu.test(runUrl)
+    if (!observation || (observation.baseRefSha ?? observation.baseSha) !== source.baseRef || !/^https:\/\/[a-z0-9.-]+(?::\d+)?\/[\w.-]+\/[\w.-]+\/actions\/runs\/\d+\/attempts\/\d+$/iu.test(runUrl)
         || runUrl !== `${snapshot.repositoryUrl}/actions/runs/${review.runId}/attempts/${review.attempt}`) return undefined;
     if (observation.stage === 'finished' && !(review.state === 'interrupted' && observation.outcome === 'failed')) return undefined;
-    const key = [source.repositoryId, source.pullNumber, source.base, source.head, source.policy, review.runId, review.attempt].join(':');
+    const key = [source.repositoryId, source.pullNumber, source.base, source.baseRef, source.head, source.policy, review.runId, review.attempt].join(':');
     if (stored.source === key && stored.sequence > observation.sequence) return undefined;
     const spanish = /^es(?:-|$)/iu.test(locale);
     const label = spanish ? 'Última revisión verificada' : 'Last verified review';

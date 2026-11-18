@@ -1,0 +1,172 @@
+{
+  "schemaVersion": 2,
+  "issue": 950,
+  "frozenOn": "2026-11-09",
+  "pilotState": "preregistered",
+  "sdk": {
+    "repository": "vypdev/copilot",
+    "development": "b3952f686a55a9b4207e1a23c64be8344e8df5d5",
+    "audit": "ace49e4a7ce0f6a007fef5d11479eb9b7a5846e3",
+    "version": "3.10.13",
+    "auditSourceDiffPaths": 0
+  },
+  "provider": {
+    "runtime": "codex",
+    "modelProvider": "openai",
+    "effort": "medium",
+    "locale": "en-US"
+  },
+  "models": [
+    "gpt-6-luna",
+    "gpt-6.1-sol"
+  ],
+  "variants": [
+    "current",
+    "original-context",
+    "application-evidence"
+  ],
+  "phases": [
+    "frozen-replay",
+    "full-review"
+  ],
+  "repetitions": [
+    1,
+    2,
+    3
+  ],
+  "publicationMode": "dry-run",
+  "subjectTrialCount": 216,
+  "runtimeEvidence": {
+    "node": "24.20.0",
+    "python": "3.14.6",
+    "pytest": "9.2.0",
+    "pytestWheelSha256": "07acdcf88ec174f907dc01af70bf52d49b014bbab03faeeade31c96b18c2e588",
+    "tzdata": "2026.6",
+    "tzdataWheelSha256": "0a10eec6e13ef16b627fabed9a5f2ba61a62b1c67f327305f4e7e412a70b4aec",
+    "sqliteLocal": "3.53.3"
+  },
+  "subjects": [
+    {
+      "id": "U1",
+      "repository": "vypdev/ha-ui",
+      "base": "d885bccf2c3152c3151471d3efaabd901429d6bd",
+      "head": "e3f49b5c540771caf68ef2f3afca799cff26f389",
+      "tree": "8eef5dfcdf6752934959bef23e3c72bbf98e4a97",
+      "blobs": {
+        "packages/core/src/presentation-text.ts": "05780aabc22ec9fbd91ed5de2cc94efa93f70638",
+        "package.json": "23a47f506e02052e3c0b44c28726e93b80f75f09"
+      },
+      "nativeRun": "https://github.com/vypdev/ha-ui/actions/runs/41982640540"
+    },
+    {
+      "id": "U2",
+      "deriveFrom": "U1",
+      "mutation": "remove the regexp u flag on presentation-text.ts:4"
+    },
+    {
+      "id": "F1",
+      "repository": "vypdev/domus",
+      "base": "057908b8231bb9ae16142f0de060a54fc8a61552",
+      "head": "878a73b5f06629fa028a2daed87268b717765e45",
+      "tree": "79c69b29285e2c2a216cc4cb6cc1208a02d795cd",
+      "blobs": {
+        "uv.lock": "c14e36fb17d11319135b8a54e16adb73e22859c7",
+        "tests/containers/test_app_compatibility.py": "a3f96723a29f5ecbed06bfa197374b0b2ae81107",
+        "tests/containers/test_app_image.py": "f457b78af7a865f9866f9a780b91cdd192b4899d"
+      },
+      "nativeReviewJob": "https://github.com/vypdev/domus/actions/runs/42294011038/job/128154445982"
+    },
+    {
+      "id": "F2",
+      "deriveFrom": "F1",
+      "mutation": "add required keyword-only expected_schema_fixture immediately after the listener test's defaulted expected_schema, then refer to it as the schema value in the body"
+    },
+    {
+      "id": "S1",
+      "repository": "vypdev/domus",
+      "base": "5b7bdcdee3a9e98d6669bfd34ce750ae30a8c775",
+      "head": "3d890522003c2d2e7d03fa1f51b1bd84f0d0f10f",
+      "tree": "d670f43e401a26cf2c488f268e0d8b4910def2cd",
+      "blobs": {
+        "uv.lock": "c14e36fb17d11319135b8a54e16adb73e22859c7",
+        "backend/src/domus/application/fixed_batch_review.py": "787701c123995f415300698e0601b7f1c326e8bd",
+        "backend/src/domus/infrastructure/sqlite_recurrence.py": "031708a14b495f1133f80c8b1c9322ceaf57cac5"
+      },
+      "laterProbe": {
+        "commit": "e222212cda04890fb60831c9c3fad22ff04f8a2b",
+        "path": "tests/backend/test_fixed_batch_review.py",
+        "blob": "4b1487f2944df98171160ab268f3061123caf147"
+      },
+      "nativeReviewCheck": "https://github.com/vypdev/domus/runs/128299697947"
+    },
+    {
+      "id": "S2",
+      "deriveFrom": "S1",
+      "mutation": "remove only the has_absent_fixed_slot_from branch and its recurrence_review_source_absent raise"
+    }
+  ],
+  "labLimits": {
+    "candidateEvidenceRounds": 2,
+    "candidateReadRequests": 8,
+    "candidateRetainedBytes": 32768,
+    "candidateVerifierCalls": 2,
+    "subjectVerifierConcurrency": 2,
+    "subjectVerifierWallSeconds": 180,
+    "subjectTransientTransportRetries": 1,
+    "subjectAttemptsP95AdditionalWallSeconds": 90,
+    "subjectAttemptsP95AdditionalInputTokens": 32768,
+    "subjectAttemptsP95AdditionalOutputTokens": 4096,
+    "parallelSubjects": 8
+  },
+  "detectionGates": {
+    "precision": 0.9,
+    "recall": 0.85,
+    "f1": 0.87,
+    "exactLocation": 0.8,
+    "severity": 0.8,
+    "category": 0.8,
+    "maxBrier": 0.16
+  },
+  "expansionOrder": [
+    859,
+    861,
+    867,
+    869,
+    875,
+    913,
+    "898-domus"
+  ],
+  "profile": "source-and-native-ci",
+  "preregisteredBeforeTrials": true,
+  "runtime": {
+    "codex": "0.167.0-alpha.3.2",
+    "workingTree": "detached shallow head plus comparison base",
+    "locale": "en-US",
+    "maxDetectorPartitions": 1,
+    "verifierEvidenceRounds": 1
+  },
+  "toolMatrix": {
+    "current": {
+      "detection": "production read-only checkout and shell inspection",
+      "verification": "production gated literal verifier and same checkout inspection"
+    },
+    "original-context": {
+      "detection": "production read-only checkout and shell inspection",
+      "verification": "fresh closed session with detector prompt and candidate"
+    },
+    "application-evidence": {
+      "detection": "production read-only checkout and shell inspection",
+      "verification": "fresh closed session with detector prompt, candidate and frozen source-and-CI receipts"
+    }
+  },
+  "evidencePacketSha256": "f0be1f1af5e9ebe2daab83d6cb842fd6dee14d7feedb2603b59d814868f4939c",
+  "qualification": {
+    "pairedStrictlyBetterRepetitions": 2,
+    "baselineUnsupportedMinimum": 3,
+    "baselinePremiseMinimum": 2,
+    "requireAllPositiveControlsPerRepetition": true,
+    "failedAttemptCanBeClean": false,
+    "trackIndependentExistingCorpus": true,
+    "predictionsMatch": "Frozen replay uses exact candidate ID. Full review uses matching path, within 8 lines of target and fixed causal witness patterns; report exact anchor separately."
+  }
+}

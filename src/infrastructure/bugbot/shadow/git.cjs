@@ -35,7 +35,7 @@ function blob(repo, sha, file) {
     const entry = /^(100644|100755) blob ([a-f0-9]{40,64})\t([^\u0000]+)\u0000$/u.exec(row);
     if (!entry || entry[3] !== file) throw new Error('no-file');
     const source = git(repo, ['cat-file', 'blob', entry[2]]);
-    if (source.includes('\u0000') || source.includes('\uFFFD')) throw new Error('non-text');
+    if (source.includes('\u0000')) throw new Error('non-text');
     return { blob: entry[2], lines: source.length ? source.replace(/\n$/u, '').split(/\r?\n/u) : [] };
 }
 

@@ -413,7 +413,7 @@ it('admits a response-dependent generated verification request through the actua
     expect(query.mock.calls[1][0].agentId).toBe('bugbot-literal-candidate-verification');
 });
 
-it('keeps the assigned evidence intact when repeated detection instructions would exceed the verification prompt bound', async () => {
+it('bugbot-framed-C131: keeps the assigned evidence intact when repeated detection instructions would exceed the verification prompt bound', async () => {
     const { buildBugbotReviewInput } = await import('../build_bugbot_prompt');
     const { buildLiteralVerificationPrompt } = await import('../verify_generated_literal_findings');
     const f = literalFrameFixture();
@@ -437,7 +437,7 @@ it('keeps the assigned evidence intact when repeated detection instructions woul
     expect(verification).toContain(f.context.reviewRulesBlock);
 });
 
-it('preserves the prompt ceiling when the framed evidence itself exceeds it', async () => {
+it('bugbot-framed-C132: preserves the prompt ceiling when the framed evidence itself exceeds it', async () => {
     const f = literalFrameFixture();
     f.context.reviewConversationBlock = 'x'.repeat(130_000);
     const plan = buildBugbotFramedReviewPlan(f.source, bugbotFramedContextDigest(f.operation, f.context), FRAME_NONCE, []);

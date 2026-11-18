@@ -16,7 +16,7 @@ const repositoryUrl = 'https://github.com/vypdev/copilot';
 const base = 'a'.repeat(40);
 const head = 'b'.repeat(40);
 const lastHead = 'c'.repeat(40);
-const source = { repositoryId: 891781467, pullNumber: 951, base, head, policy: 'default' };
+const source = { repositoryId: 891781467, pullNumber: 951, base, baseRef: 'e'.repeat(40), head, policy: 'default' };
 
 function terminal(sha, locale = 'en') {
     return renderBugbotStatusCard(buildBugbotReviewProjection({
@@ -26,7 +26,7 @@ function terminal(sha, locale = 'en') {
 
 function review(sequence, { runId = 14, attempt = 1, state = 'active', current = source, work = {} } = {}) {
     const observation = {
-        stage: 'analyzing', headSha: current.head, baseSha: current.base, pullNumber: current.pullNumber,
+        stage: 'analyzing', headSha: current.head, baseSha: current.base, baseRefSha: current.baseRef, pullNumber: current.pullNumber,
         elapsedMs: sequence * 60000, observedAt: '2026-11-17T21:46:28.847Z', sequence,
         partitions: { completed: sequence, total: 110 }, frames: { ordinal: 1, total: 2 },
         ...work,
@@ -110,6 +110,16 @@ test('validates the head after admission and again before writing if a push supe
     assert.ok(f.current().body.endsWith(f.initial));
     assert.equal(await f.publish(), 'skipped');
     assert.equal(f.effects.length, 1);
+});
+
+test('rejects a changed base ref on either the wakeup or the observed progress', async () => {
+    const f = setup();
+    const nextBaseRef = 'f'.repeat(40);
+    assert.equal(await f.publish({ source: { ...source, baseRef: nextBaseRef } }), 'skipped');
+    f.update({ review: review(5, { work: { baseRefSha: nextBaseRef } }) });
+    assert.equal(await f.publish(), 'skipped');
+    assert.deepEqual(f.effects, []);
+    assert.equal(f.current().body, f.initial);
 });
 
 test('an independent recheck and terminal refresh use fresh state from the same serialized boundary', async () => {
