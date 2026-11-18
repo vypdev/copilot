@@ -23,9 +23,13 @@ pnpm run test:bugbot-shadow-verification
 
 ## EV-07 decision
 
+The [native receipt and closure campaign](ev07-shadow/campaign-provenance-results.md) completed all 174 cases and did not qualify: precision **80.23%**, F1 **83.13%** and Brier **0.1883** failed their gates. All 42 full-review slots stayed unstarted. The original attempt ledger and exact scoring controls are retained. No Sol verification was admitted by this campaign. Production verification is disabled.
+
+The earlier measured campaign below is historical and remains unchanged.
+
 The [qualification protocol](ev07-shadow/preregistration.md) binds the
 model profile, independent corpus and full-review admission criteria.
-The most recent measured report records **87.95%** precision on all 174
+The preceding measured report records **87.95%** precision on all 174
 cases against the **90%** gate, with zero write attempts to the evaluated
 PRs. All 42 paired review slots remained unstarted. The measured Luna →
 Sol profile remains unqualified. Production verification is disabled.
