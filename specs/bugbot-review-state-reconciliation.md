@@ -2166,14 +2166,16 @@ shared writer is installed, a failed acknowledgment cannot fall through to
 an unqueued comment write, including for legacy callers outside the shared
 workflow. Before using the legacy route, verify absence in a readable
 directory of the default tree. A file-level not-found response alone cannot
-prove that the credential can inspect the workflow. The check remains
-available if the publisher
-cannot safely identify the current attempt or write the comment. The
+prove that the credential can inspect the workflow. A verified empty comment
+connection permits a first card. An absent connection, a missing page, or an
+unreadable entry leaves the conversation incomplete and prevents card writes.
+The check remains available if the publisher cannot safely identify the
+current attempt or write the comment. The
 long-running analysis group and the review-state route stay independent.
 [GitHub REST conditional request support](https://docs.github.com/en/rest/using-the-rest-api/best-practices-for-using-the-rest-api#use-conditional-requests)
 [GitHub Actions job concurrency](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency)
 
-Minimum **14 distinct deterministic cases**. Use fake clocks, pinned Git
+Minimum **15 distinct deterministic cases**. Use fake clocks, pinned Git
 inputs and recording or fail-on-call ports. Keep repository-wide and
 changed-module coverage gates and exercise every new pure-policy branch.
 
@@ -2183,7 +2185,7 @@ changed-module coverage gates and exercise every new pure-policy branch.
 | BRP-02 | 3 | Ordinary analysis reports unknown totals until planned. A two-frame replay validates 105 parts and counts a successful retry once. Mixed dispositions including overflow are counted without exposing their content. |
 | BRP-03 | 2 | Fake-clock replay coalesces repeated advancement, observes the five-minute interval and flushes transitions. Retries update the same trusted comment and check without duplicate notifications. |
 | BRP-04 | 3 | Superseding push, same-SHA retry and overlapping review-state update each preserve the correct owner. Wrong-head, out-of-order and old-attempt updates never win. |
-| BRP-05 | 2 | Runner loss with no terminal callback preserves a dated observation and links native state. Optional write failure leaves the primary result and existing terminal authority intact. |
+| BRP-05 | 3 | Runner loss with no terminal callback preserves a dated observation and links native state. Optional write failure leaves the primary result and existing terminal authority intact. The packaged action retains the prior card and emits no write when the provider cannot verify the conversation. |
 | BRP-06 | 2 | Write-blocked replay has zero mutation attempts. In publish mode, pending, failed and forged observations cannot change findings or authorize approval, including during rollback. |
 
 Implementation starts with the observation and ordering policy, then integrates

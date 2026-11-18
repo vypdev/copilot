@@ -96,6 +96,14 @@ it('declines a non-bot dispatch and a different policy before touching the conve
     expect(mockUpdate).not.toHaveBeenCalled();
 });
 
+it('never creates a status card when the provider cannot attest complete conversation coverage', async () => {
+    mockIssueComments.mockResolvedValue({ coverage: { status: 'partial' }, value: [] });
+
+    await expect(invoke()).resolves.toBe('skipped');
+    expect(mockAdd).not.toHaveBeenCalled();
+    expect(mockUpdate).not.toHaveBeenCalled();
+});
+
 it('preserves active native progress when an independent authorized recheck refreshes the verified card', async () => {
     const recheck = { ...run, id: 24, run_attempt: 1, path: '.github/workflows/copilot_issue_comment.yml', event: 'issue_comment' };
     mockApi.rest.actions.getWorkflowRun.mockResolvedValue({ data: recheck });

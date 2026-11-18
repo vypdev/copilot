@@ -49,6 +49,29 @@ exact-head retry can show progress again. The recheck control refreshes the
 verified projection on the same comment while retaining the native review
 block. The superseded and write-blocked controls record no comment writes.
 
+### Packaged action
+
+Run the built GitHub Action against a loopback-only provider with synthetic
+credentials and event data. The harness records all writes attempted against
+the test provider and makes zero requests to GitHub.
+
+```sh
+pnpm run build
+output="$(mktemp -d)"
+node quality/bugbot/evidence/issue-950/status-card-publication/packaged-canary.cjs \
+  build/github_action/index.js "$output"
+cat "$output/results.json"
+```
+
+The canary covers the progress counters and next action, preservation of the
+previous review, identical observations, independent rechecks, terminal
+publication, delayed progress, a replaced attempt and its retry, a push
+between read and write, and a failed comment update. It also distinguishes a
+complete empty conversation, which can create the first card, from an
+unavailable conversation, which must preserve the existing card with no write
+attempt. On `03f8e6e33`, the latter case attempted to create a new card when the
+provider returned an absent pull request in the conversation response.
+
 The worker reads both check fields used by GitHub, authenticates the native
 attempt, and accepts either its exact workflow-attempt URL or its exact
 native Check Run URL. The check from the failed review of `d03154b90` stored

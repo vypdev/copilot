@@ -93037,6 +93037,7 @@ class BugbotIssueCommentQueryRepository {
             const pages = [];
             let cursor = null;
             let limitReached = false;
+            let incompleteConnection = false;
             do {
                 const result = await client.graphql(`query ($owner: String!, $repository: String!, $issueNumber: Int!, $cursor: String) {
             repository(owner: $owner, name: $repository) {
@@ -93057,7 +93058,12 @@ class BugbotIssueCommentQueryRepository {
             }
           }`, { owner, repository, issueNumber, cursor });
                 const comments = result.repository?.issueOrPullRequest?.comments;
-                const page = (comments?.nodes ?? []).flatMap((comment) => {
+                const hasNodes = Array.isArray(comments?.nodes);
+                const nodes = hasNodes ? comments?.nodes ?? [] : [];
+                if (!hasNodes || nodes.includes(null) || typeof comments?.pageInfo?.hasPreviousPage !== 'boolean') {
+                    incompleteConnection = true;
+                }
+                const page = nodes.flatMap((comment) => {
                     if (!comment)
                         return [];
                     if (!Number.isSafeInteger(comment.databaseId) || Number(comment.databaseId) <= 0) {
@@ -93088,7 +93094,7 @@ class BugbotIssueCommentQueryRepository {
                 items,
                 coverage: {
                     source: 'issue-comments',
-                    status: limitReached ? 'partial' : 'complete',
+                    status: limitReached || incompleteConnection ? 'partial' : 'complete',
                     pagesFetched: pages.length,
                     itemsFetched: items.length,
                     itemsRetained: items.length,
