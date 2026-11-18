@@ -79,7 +79,7 @@ export function createGitHubBugbotCiReader(
             const fullName = repository.owner + '/' + repository.repo;
             const matching = runs.workflow_runs.filter(run => run.name === query.workflow
                 && run.head_sha === query.sha && run.repository?.full_name === fullName
-                && (!run.head_repository || run.head_repository.full_name === fullName)
+                && run.head_repository?.full_name === fullName
                 && (run.event === 'push' || (query.revision === 'head' && run.event === 'pull_request'
                     && (!run.pull_requests?.length || run.pull_requests.some(pr => pr.number === query.pullRequest)))))
                 .sort((left, right) => right.id - left.id);

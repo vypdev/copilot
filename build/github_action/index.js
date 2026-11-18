@@ -52962,6 +52962,7 @@ const progressStart = '<!-- copilot-bugbot-active schema="1" ';
 const progressEnd = '\n<!-- /copilot-bugbot-active -->\n\n';
 const progressMarker = /^<!-- copilot-bugbot-active schema="1" pr="([1-9]\d{0,15})" source="([a-f0-9]{64})" sequence="([1-9]\d{0,15})" digest="([a-f0-9]{64})" -->$/u;
 const terminalMarker = /\n\n<!-- copilot-bugbot-card-terminal schema="1" source="([a-f0-9]{64})" -->$/u;
+const legacyStatusMarker = /^<!-- copilot-bugbot-status schema="1" pr="([1-9]\d{0,15})" verified_head="([a-f0-9]{40}|[a-f0-9]{64})" digest="[a-f0-9]{8}" -->$/u;
 const maxCommentBytes = 60000;
 const positive = (id) => Number.isSafeInteger(id) && id > 0;
 function isBugbotStatusCardSource(source) {
@@ -52986,11 +52987,18 @@ function readBugbotStatusCardHead(body, pullNumber) {
     return second === `<!-- copilot-bugbot-status schema="1" pr="${pullNumber}" verified_head="${head}" digest="${marker.digest}" -->`
         ? head : undefined;
 }
+/** Legacy markers can preserve a previous display. Incoming projections still require both current markers. */
+function readStoredStatusHead(body, pullNumber) {
+    const legacy = legacyStatusMarker.exec(body.split('\n', 1)[0]);
+    return legacy && Number(legacy[1]) === pullNumber
+        ? (0, git_object_id_1.canonicalGitObjectId)(legacy[2])
+        : readBugbotStatusCardHead(body, pullNumber);
+}
 function readCard(body, pullNumber) {
     if (body === undefined)
         return { previous: '' };
     if (!body.startsWith(progressStart))
-        return readBugbotStatusCardHead(body, pullNumber) ? { previous: body } : undefined;
+        return readStoredStatusHead(body, pullNumber) ? { previous: body } : undefined;
     const match = progressMarker.exec(body.split('\n', 1)[0]);
     const split = body.indexOf(progressEnd);
     if (!match || Number(match[1]) !== pullNumber || !positive(Number(match[3])) || split < 0
@@ -52998,7 +53006,7 @@ function readCard(body, pullNumber) {
         || body.indexOf(progressEnd, split + progressEnd.length) >= 0)
         return undefined;
     const previous = body.slice(split + progressEnd.length);
-    if (previous && !readBugbotStatusCardHead(previous, pullNumber))
+    if (previous && !readStoredStatusHead(previous, pullNumber))
         return undefined;
     return { previous, progress: { source: match[2], sequence: Number(match[3]), digest: match[4] } };
 }
@@ -53073,7 +53081,7 @@ function renderBugbotStatusCardUpdate(snapshot) {
         || (observation.sequence === stored.progress.sequence && digest !== stored.progress.digest)))
         return undefined;
     const labels = /^es(?:-|$)/iu.test(locale) ? nextStep.es : nextStep.en;
-    const previousHead = readBugbotStatusCardHead(previous, source.pullNumber);
+    const previousHead = readStoredStatusHead(previous, source.pullNumber);
     const previousTitle = previousHead ? `${labels.previous} · \`${previousHead.slice(0, 8)}\`` : labels.first;
     const displayed = review.state === 'interrupted'
         ? { ...observation, stage: 'finished', outcome: 'failed' } : observation;
@@ -78302,7 +78310,7 @@ async function observeBugbotShadowVerification(operation, context, prepared, por
         const observation = candidate
             ? await verifyCandidate(port, candidate, configuration, review)
             : { status: 'verdict', verdict: 'inconclusive', reason: 'Candidate could not be pinned.',
-                missing: 'A repository location on the reviewed revision is required.', citations: [], premises: [] };
+                missing: 'A repository location with an unambiguous comparison side is required.', citations: [], premises: [] };
         const wallMs = Math.round(performance.now() - started);
         if (observation.status === 'verdict') {
             await progress?.record('verifying', { candidates: { completed: ++completed, total } });
@@ -78347,7 +78355,9 @@ function pinCandidate(operation, context, finding, historicalResolution = false)
         return undefined;
     const locations = context.prContext?.pathToDiffLocations?.[file] ?? [];
     const sides = new Set(locations.filter(location => location.line === line).map(location => location.side));
-    const side = sides.size === 1 ? sides.values().next().value : undefined;
+    if (sides.size > 1)
+        return undefined;
+    const side = sides.values().next().value;
     const anchor = Object.freeze({ path: file, line,
         end: endLine && Number.isSafeInteger(endLine) && endLine >= line ? endLine : line,
         ...(side ? { side } : {}) });
@@ -108664,7 +108674,7 @@ function createGitHubBugbotCiReader(repository, actions) {
             const fullName = repository.owner + '/' + repository.repo;
             const matching = runs.workflow_runs.filter(run => run.name === query.workflow
                 && run.head_sha === query.sha && run.repository?.full_name === fullName
-                && (!run.head_repository || run.head_repository.full_name === fullName)
+                && run.head_repository?.full_name === fullName
                 && (run.event === 'push' || (query.revision === 'head' && run.event === 'pull_request'
                     && (!run.pull_requests?.length || run.pull_requests.some(pr => pr.number === query.pullRequest)))))
                 .sort((left, right) => right.id - left.id);
@@ -130043,6 +130053,7 @@ module.exports = { CitationRangeError, makeBroker, officialPackage };
 
 const { spawnSync } = __nccwpck_require__(17718);
 const { devNull } = __nccwpck_require__(70612);
+const { TextDecoder } = __nccwpck_require__(47261);
 const { hash } = __nccwpck_require__(52697);
 
 // eslint-disable-next-line no-control-regex -- Only ordinary relative Git paths are accepted.
@@ -130052,7 +130063,7 @@ const safePath = value => typeof value === 'string' && value.length <= 300 && !/
 function git(repo, args, exits = [0]) {
     const result = spawnSync('git', ['--no-pager', '--no-optional-locks', '--no-replace-objects', '--literal-pathspecs',
         '-c', 'protocol.allow=never', '-C', repo, ...args], {
-        encoding: 'utf8', timeout: 4_000, maxBuffer: 4 * 1024 * 1024,
+        timeout: 4_000, maxBuffer: 4 * 1024 * 1024,
         env: {
             PATH: process.env.PATH ?? process.env.Path, LC_ALL: 'C',
             ...(process.platform === 'win32' && { SystemRoot: process.env.SystemRoot, PATHEXT: process.env.PATHEXT }),
@@ -130061,7 +130072,11 @@ function git(repo, args, exits = [0]) {
     });
     if (result.error) throw new Error('git-budget', { cause: result.error });
     if (!exits.includes(result.status)) throw new Error('git-unavailable');
-    return result.stdout;
+    try {
+        return new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(result.stdout);
+    } catch (cause) {
+        throw new Error('non-text', { cause });
+    }
 }
 
 function blob(repo, sha, file) {
@@ -130072,7 +130087,7 @@ function blob(repo, sha, file) {
     if (!entry || entry[3] !== file) throw new Error('no-file');
     const source = git(repo, ['cat-file', 'blob', entry[2]]);
     if (source.includes('\u0000') || source.includes('\uFFFD')) throw new Error('non-text');
-    return { blob: entry[2], lines: source.replace(/\n$/u, '').split(/\r?\n/u) };
+    return { blob: entry[2], lines: source.length ? source.replace(/\n$/u, '').split(/\r?\n/u) : [] };
 }
 
 module.exports = { git, blob, safePath, hash };

@@ -33,7 +33,7 @@ For an order-dependent
 premise the closure checks exact excerpts for both operations and the control
 flow on every claimed route. A delivered runtime
 receipt can directly select its official release with the original scope.
-See the [closure replays](../shadow-closure-replay/results.md) for the
+See the [closure replays](https://github.com/vypdev/copilot/blob/9e9f1536f38dec12d330ac631c786a9625548833/quality/bugbot/evidence/issue-950/shadow-closure-replay/results.md) for the
 same-candidate reruns and independent line checks. A failure of the
 fresh checkpoint is recorded as a provider failure.
 
@@ -74,16 +74,8 @@ all three hints to the same simulated session. Resubmitting the full ID
 cleared the receipt issues. The remaining order and official-source checks
 continued to apply.
 
-The [historical shadow pilot](../shadow-real-prs/results.md) and its frozen
-runner remain available for reproducing the original measurements. Use the
-[historical fixture preparation](../shadow-real-prs/preregistration.md#reproduction)
-to prepare the exact Git objects and official files for the successor. The
-successor accepts the same fixture directory.
-
-```sh
-pilot=quality/bugbot/evidence/issue-950/shadow-verification
-node "$pilot/run.cjs" "$LAB" --check
-```
+The [pilot archive](../README.md#historical-evidence) contains the historical
+fixture preparation, standalone runner and recorded measurements.
 
 The integrated pilot supplies the transport from the effective Bugbot
 configuration at the normal review boundary. Use the immutable revisions

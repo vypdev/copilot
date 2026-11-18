@@ -1939,12 +1939,21 @@ The proposed #950 verification gate covers retained identities before fixed, obs
 The analysis SDD owns candidate anchors and successive typed evidence reads.
 An explicit historical transition uses the retained finding ID and frozen
 candidate version. Evidence recovered after the freeze may support a verdict
-while preserving the anchor and durable ID. A candidate missing decisive
+while preserving the anchor and durable ID. When the same file and line
+match both comparison sides, leave the candidate inconclusive before
+starting an evidence session. An unambiguous deletion can use the pinned
+base. A candidate missing decisive
 evidence remains inconclusive and preserves its native thread, even when
 other confirmed candidates publish. Token telemetry has no effect on this
 decision or the approval receipt. Invalid receipt provenance fails the
 whole pre-publication batch with zero finding, resolution or approval writes.
 The prior verified projection remains readable.
+
+CI evidence must identify the repository that owns the workflow and the
+repository that owns the reviewed head. An unknown or foreign head
+repository cannot provide a CI receipt. File evidence uses lossless UTF-8
+paths and the actual number of blob lines. An empty blob has no citable
+line. The evidence broker returns a named gap when a path cannot be decoded.
 
 [Bugbot repository evidence verification](./bugbot-analysis-publication-and-autofix.md#bugbot-repository-evidence-verification)
 
@@ -2169,19 +2178,23 @@ directory of the default tree. A file-level not-found response alone cannot
 prove that the credential can inspect the workflow. A verified empty comment
 connection permits a first card. An absent connection, a missing page, or an
 unreadable entry leaves the conversation incomplete and prevents card writes.
+Adopt an authenticated legacy card only when its first-line marker binds it to
+this PR and a full verified SHA. Preserve its body while showing progress
+and upgrade the same comment on the next validated terminal result. The
+legacy marker alone does not authorize a terminal handoff.
 The check remains available if the publisher cannot safely identify the
 current attempt or write the comment. The
 long-running analysis group and the review-state route stay independent.
 [GitHub REST conditional request support](https://docs.github.com/en/rest/using-the-rest-api/best-practices-for-using-the-rest-api#use-conditional-requests)
 [GitHub Actions job concurrency](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency)
 
-Minimum **15 distinct deterministic cases**. Use fake clocks, pinned Git
+Minimum **16 distinct deterministic cases**. Use fake clocks, pinned Git
 inputs and recording or fail-on-call ports. Keep repository-wide and
 changed-module coverage gates and exercise every new pure-policy branch.
 
 | Requirement | Cases | Acceptance evidence |
 |---|---:|---|
-| BRP-01 | 2 | An existing status comment keeps its verified SHA and finding summary through admission. The first review shows pending without an invented previous result. |
+| BRP-01 | 3 | An existing status comment keeps its verified SHA and finding summary through admission. The first review shows pending without an invented previous result. A trusted legacy card keeps its ID and prior body during progress and upgrades in place on validated completion. |
 | BRP-02 | 3 | Ordinary analysis reports unknown totals until planned. A two-frame replay validates 105 parts and counts a successful retry once. Mixed dispositions including overflow are counted without exposing their content. |
 | BRP-03 | 2 | Fake-clock replay coalesces repeated advancement, observes the five-minute interval and flushes transitions. Retries update the same trusted comment and check without duplicate notifications. |
 | BRP-04 | 3 | Superseding push, same-SHA retry and overlapping review-state update each preserve the correct owner. Wrong-head, out-of-order and old-attempt updates never win. |

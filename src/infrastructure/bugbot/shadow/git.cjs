@@ -2,6 +2,7 @@
 
 const { spawnSync } = require('node:child_process');
 const { devNull } = require('node:os');
+const { TextDecoder } = require('node:util');
 const { hash } = require('./hash.cjs');
 
 // eslint-disable-next-line no-control-regex -- Only ordinary relative Git paths are accepted.
@@ -11,7 +12,7 @@ const safePath = value => typeof value === 'string' && value.length <= 300 && !/
 function git(repo, args, exits = [0]) {
     const result = spawnSync('git', ['--no-pager', '--no-optional-locks', '--no-replace-objects', '--literal-pathspecs',
         '-c', 'protocol.allow=never', '-C', repo, ...args], {
-        encoding: 'utf8', timeout: 4_000, maxBuffer: 4 * 1024 * 1024,
+        timeout: 4_000, maxBuffer: 4 * 1024 * 1024,
         env: {
             PATH: process.env.PATH ?? process.env.Path, LC_ALL: 'C',
             ...(process.platform === 'win32' && { SystemRoot: process.env.SystemRoot, PATHEXT: process.env.PATHEXT }),
@@ -20,7 +21,11 @@ function git(repo, args, exits = [0]) {
     });
     if (result.error) throw new Error('git-budget', { cause: result.error });
     if (!exits.includes(result.status)) throw new Error('git-unavailable');
-    return result.stdout;
+    try {
+        return new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(result.stdout);
+    } catch (cause) {
+        throw new Error('non-text', { cause });
+    }
 }
 
 function blob(repo, sha, file) {
@@ -31,7 +36,7 @@ function blob(repo, sha, file) {
     if (!entry || entry[3] !== file) throw new Error('no-file');
     const source = git(repo, ['cat-file', 'blob', entry[2]]);
     if (source.includes('\u0000') || source.includes('\uFFFD')) throw new Error('non-text');
-    return { blob: entry[2], lines: source.replace(/\n$/u, '').split(/\r?\n/u) };
+    return { blob: entry[2], lines: source.length ? source.replace(/\n$/u, '').split(/\r?\n/u) : [] };
 }
 
 module.exports = { git, blob, safePath, hash };

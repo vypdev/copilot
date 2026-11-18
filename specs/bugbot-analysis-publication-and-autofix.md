@@ -3033,6 +3033,10 @@ the unchanged recall and quality thresholds in the pilot protocol.
 | `quality/bugbot/evidence/issue-950/traceability.md` | create |
 | `quality/bugbot/evidence/issue-950/reproduce-controls.sh` | create |
 
+The [pilot evidence index](../quality/bugbot/evidence/issue-950/README.md)
+links these original artifacts at the archived revision and the active
+deterministic controls in the source tree.
+
 Update detection and publication for users, permissions and configuration for
 setup owners, failures and quality for operators. Document recovery, rollout
 and historical behavior. Link from existing Bugbot navigation and validate
@@ -3159,8 +3163,8 @@ It supplies only pinned Git evidence in this iteration. An official-source
 or CI evidence catalog must be supplied through a trusted adapter before
 qualification of findings that require it. Shadow observations carry no
 approval authority. See the
-[real-PR integration report](../quality/bugbot/evidence/issue-950/normal-flow-shadow/results.md).
-The [repository adapter pilot at xhigh](../quality/bugbot/evidence/issue-950/integrated-shadow-xhigh/results.md)
+[real-PR integration report](https://github.com/vypdev/copilot/blob/9e9f1536f38dec12d330ac631c786a9625548833/quality/bugbot/evidence/issue-950/normal-flow-shadow/results.md).
+The [repository adapter pilot at xhigh](https://github.com/vypdev/copilot/blob/9e9f1536f38dec12d330ac631c786a9625548833/quality/bugbot/evidence/issue-950/integrated-shadow-xhigh/results.md)
 records the shared composition, actual Codex invocations and zero attempted PR writes.
 
 | Case | Acceptance evidence |
@@ -3323,7 +3327,7 @@ and verification through inheritance, Codex detection with an explicit Claude
 Code verifier, and ordinary shadow publication after verifier preflight or
 execution fails. Those cases supplement the runtime SDD tests.
 
-The [installed profile smoke test](../quality/bugbot/evidence/issue-950/installed-profile/results.md)
+The [installed profile smoke test](https://github.com/vypdev/copilot/blob/9e9f1536f38dec12d330ac631c786a9625548833/quality/bugbot/evidence/issue-950/installed-profile/results.md)
 did not qualify the Codex/Sol profile: the installed broker could not
 deliver material version-matched official evidence for either candidate.
 
@@ -3389,7 +3393,7 @@ facts from the workflow conclusion.
 [Installed adapter](../src/infrastructure/bugbot/installed_bugbot_shadow_adapter.ts) ·
 [Official reader](../src/infrastructure/bugbot/shadow/installed_official.cjs) ·
 [CI reader](../src/infrastructure/bugbot/github_bugbot_ci_reader.ts) ·
-[Earlier Domus replay](../quality/bugbot/evidence/issue-950/installed-profile/results.md)
+[Earlier Domus replay](https://github.com/vypdev/copilot/blob/9e9f1536f38dec12d330ac631c786a9625548833/quality/bugbot/evidence/issue-950/installed-profile/results.md)
 
 ```text
 Prepared hypothesis -> verifier identifies material dependency question
@@ -3617,7 +3621,7 @@ and citation controls are fixed by the broker and expose no new user inputs.
 The first seven cases are deterministic controls in
 [the shadow runner suite](../quality/bugbot/evidence/issue-950/shadow-verification/verification.test.cjs).
 The two live replays and their independent controls are recorded in
-[the closure replay report](../quality/bugbot/evidence/issue-950/shadow-closure-replay/results.md).
+[the closure replay report](https://github.com/vypdev/copilot/blob/9e9f1536f38dec12d330ac631c786a9625548833/quality/bugbot/evidence/issue-950/shadow-closure-replay/results.md).
 
 ### Execution order evidence at shadow closure
 
@@ -3665,22 +3669,22 @@ or publication permission.
 | ev950-shadow-C19 | A foreign order citation fails the same provenance checks as any other citation. |
 | ev950-shadow-C20 | The pinned Domus #24 replay records Luna's verdict and independent checks of both schema entries, the loop, the unique index, and the applicable official rule. A migration-dependent verdict also needs proof of the routes it covers. The replay attempts zero PR writes. |
 | ev950-shadow-C21 | Advancing the test clock beyond the former provider-turn and investigation limits leaves the same session active and accepts a valid verdict. Explicit cancellation still stops it. |
-| ev950-shadow-C22 | A delivered receipt with an out-of-range premise or order citation keeps the same session open. The corrected range must pass provenance and delivery validation before a verdict is accepted. |
+| ev950-shadow-C25 | A delivered receipt with an out-of-range premise or order citation keeps the same session open. The corrected range must pass provenance and delivery validation before a verdict is accepted. |
 | ev950-shadow-C23 | A confirmation citing nearby lines or the other revision stays open. The same session supplies a decisive citation from the pinned anchor range. |
 | ev950-shadow-C24 | A unique delivered receipt missing one final character prompts the same session to resubmit its complete ID. The runner validates the replacement and rejects an unmatched, ambiguous, or undelivered range. |
 
-Run the eleven deterministic cases through
+Run the twelve deterministic cases through
 [the shadow runner suite](../quality/bugbot/evidence/issue-950/shadow-verification/verification.test.cjs).
 Replays may pin an explicit provider reasoning effort and record it alongside
 the frozen candidate configuration. Actual reviews inherit the effective
 reviewer or findings configuration. Record the provider attempts and the
 independent line checks in
-[the execution order replay](../quality/bugbot/evidence/issue-950/shadow-order-replay/results.md).
+[the execution order replay](https://github.com/vypdev/copilot/blob/9e9f1536f38dec12d330ac631c786a9625548833/quality/bugbot/evidence/issue-950/shadow-order-replay/results.md).
 
 ### 20. References and decisions
 
 - Owning capability and companion contracts in the inventory above.
-- [Pilot protocol](../quality/bugbot/evidence/issue-950/preregistration.md), [frozen manifest](../quality/bugbot/evidence/issue-950/manifest.json) and [results and reproduction](../quality/bugbot/evidence/issue-950/results.md). The results distinguish observed controls, provider access and unexecuted model trials.
+- [Pilot protocol](https://github.com/vypdev/copilot/blob/9e9f1536f38dec12d330ac631c786a9625548833/quality/bugbot/evidence/issue-950/preregistration.md), [frozen manifest](https://github.com/vypdev/copilot/blob/9e9f1536f38dec12d330ac631c786a9625548833/quality/bugbot/evidence/issue-950/manifest.json) and [results and reproduction](https://github.com/vypdev/copilot/blob/9e9f1536f38dec12d330ac631c786a9625548833/quality/bugbot/evidence/issue-950/results.md). The results distinguish observed controls, provider access and unexecuted model trials.
 - Established safety choices: source binding, fresh falsification, explicit
   incomplete state, observed-effect recovery and preserved human authority.
 - Pending choices: measured model selection, production operational controls and the approved
@@ -4265,7 +4269,7 @@ maintainer approval. No model inherits another profile's qualification.
 | BBE950-D01 | bbe950-demand-C01, bbe950-demand-C02, bbe950-demand-C03, bbe950-demand-C04, bbe950-demand-C05, bbe950-demand-C06, bbe950-demand-C07, bbe950-demand-C08, bbe950-demand-C09 |
 | BBE950-D02 | bbe950-demand-C10, bbe950-demand-C11, bbe950-demand-C12 |
 | BBE950-D03, EV-07 | bbe950-demand-C13 and independent full-review qualification |
-| BBE950-D04 | bbe950-demand-C14–C17 and [causal replay and simulated runner](../quality/bugbot/evidence/issue-950/causal-replay/origin-results.md). C17 is planned for product verification. |
+| BBE950-D04 | bbe950-demand-C14–C17 and [causal replay and simulated runner](https://github.com/vypdev/copilot/blob/9e9f1536f38dec12d330ac631c786a9625548833/quality/bugbot/evidence/issue-950/causal-replay/origin-results.md). C17 is planned for product verification. |
 | BBE950-D05 | bbe950-demand-C18 and the reserved non-Python diagnostic in section 16. The deterministic common Git check ran and the reserved diagnostic is pending. |
 
 ### Usage independence and context continuity acceptance
@@ -4296,7 +4300,7 @@ original Bugbot findings.
 
 ### 20. References and decisions
 
-- [Real-PR shadow audit](../quality/bugbot/evidence/issue-950/shadow-real-prs/results.md)
+- [Real-PR shadow audit](https://github.com/vypdev/copilot/blob/9e9f1536f38dec12d330ac631c786a9625548833/quality/bugbot/evidence/issue-950/shadow-real-prs/results.md)
   records the cumulative-metering incident and the validated historical outcomes.
 - [V4 protocol](https://github.com/vypdev/copilot/blob/19da0614f/quality/bugbot/evidence/issue-950/v4/preregistration.md)
 - [V4 results](https://github.com/vypdev/copilot/blob/a3f70858b/quality/bugbot/evidence/issue-950/v4/results.md)

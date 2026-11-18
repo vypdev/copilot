@@ -175,7 +175,7 @@ checks = dict(
     positives=all(row.get("positiveExact") is True for row in rows if row["subject"].endswith("2")),
     latency=len(times) == len(rows) and p95 <= PLAN["maximumAddedP95Ms"],
     integrity=all(row.get("checkoutUnchanged") is True and row["githubWriteAttempts"] == 0
-                  and not (row.get("gitCitationAudit") or {}).get("failure")
+                  and row.get("gitCitationAudit") is not None and not row["gitCitationAudit"].get("failure")
                   and row["status"] in ("complete", "incomplete") for row in rows),
 )
 print(json.dumps(dict(passed=all(checks.values()), checks=checks, historicalBaseline=dict(reproductions),

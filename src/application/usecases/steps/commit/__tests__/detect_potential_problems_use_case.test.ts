@@ -466,6 +466,21 @@ describe("DetectPotentialProblemsUseCase", () => {
         path: candidate.file, first: 5, last: 5, textSha256: '1'.repeat(64) }] } as const;
     const confirmed = { ...refuted, verdict: 'confirmed', reason: 'The alternate path bypasses the guard.' } as const;
 
+    it('keeps a replacement with ambiguous diff sides inconclusive before starting verification', async () => {
+      mockGetFilesWithDiffLocations.mockResolvedValue([{ path: candidate.file, locations: [
+        { line: 5, side: 'LEFT' }, { line: 5, side: 'RIGHT' },
+      ] }]);
+      const verify = jest.fn();
+      const [result] = await dryRun(createUseCase({ verify }, undefined, authority), pr());
+      const missing = 'A repository location with an unambiguous comparison side is required.';
+      expect(result.payload).toMatchObject({ bugbotShadowVerification: {
+        candidates: [{ id: candidate.id, verdict: 'inconclusive', missing }],
+        publicationSimulation: { status: 'incomplete', individual: [], inconclusive: [{ id: candidate.id, missing }] },
+      } });
+      expect(verify).not.toHaveBeenCalled();
+      expect(mockCreateReviewWithComments).not.toHaveBeenCalled();
+    });
+
     it('simulates enforcement after verification and promotes a confirmed overflow finding without writes', async () => {
       mockGetFilesWithDiffLocations.mockResolvedValue([{ path: 'src/bar.ts', locations: [
         { line: 5, side: 'RIGHT' }, { line: 6, side: 'RIGHT' }, { line: 7, side: 'RIGHT' },

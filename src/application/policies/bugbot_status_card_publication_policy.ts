@@ -9,6 +9,7 @@ const progressStart = '<!-- copilot-bugbot-active schema="1" ';
 const progressEnd = '\n<!-- /copilot-bugbot-active -->\n\n';
 const progressMarker = /^<!-- copilot-bugbot-active schema="1" pr="([1-9]\d{0,15})" source="([a-f0-9]{64})" sequence="([1-9]\d{0,15})" digest="([a-f0-9]{64})" -->$/u;
 const terminalMarker = /\n\n<!-- copilot-bugbot-card-terminal schema="1" source="([a-f0-9]{64})" -->$/u;
+const legacyStatusMarker = /^<!-- copilot-bugbot-status schema="1" pr="([1-9]\d{0,15})" verified_head="([a-f0-9]{40}|[a-f0-9]{64})" digest="[a-f0-9]{8}" -->$/u;
 const maxCommentBytes = 60_000;
 
 export interface BugbotStatusCardSource {
@@ -85,17 +86,25 @@ export function readBugbotStatusCardHead(body: string, pullNumber: number): stri
         ? head : undefined;
 }
 
+/** Legacy markers can preserve a previous display. Incoming projections still require both current markers. */
+function readStoredStatusHead(body: string, pullNumber: number): string | undefined {
+    const legacy = legacyStatusMarker.exec(body.split('\n', 1)[0]);
+    return legacy && Number(legacy[1]) === pullNumber
+        ? canonicalGitObjectId(legacy[2])
+        : readBugbotStatusCardHead(body, pullNumber);
+}
+
 function readCard(body: string | undefined, pullNumber: number):
     { readonly previous: string; readonly progress?: { readonly source: string; readonly sequence: number; readonly digest: string } } | undefined {
     if (body === undefined) return { previous: '' };
-    if (!body.startsWith(progressStart)) return readBugbotStatusCardHead(body, pullNumber) ? { previous: body } : undefined;
+    if (!body.startsWith(progressStart)) return readStoredStatusHead(body, pullNumber) ? { previous: body } : undefined;
     const match = progressMarker.exec(body.split('\n', 1)[0]);
     const split = body.indexOf(progressEnd);
     if (!match || Number(match[1]) !== pullNumber || !positive(Number(match[3])) || split < 0
         || body.indexOf(progressStart, progressStart.length) >= 0
         || body.indexOf(progressEnd, split + progressEnd.length) >= 0) return undefined;
     const previous = body.slice(split + progressEnd.length);
-    if (previous && !readBugbotStatusCardHead(previous, pullNumber)) return undefined;
+    if (previous && !readStoredStatusHead(previous, pullNumber)) return undefined;
     return { previous, progress: { source: match[2], sequence: Number(match[3]), digest: match[4] } };
 }
 
@@ -169,7 +178,7 @@ export function renderBugbotStatusCardUpdate(snapshot: BugbotStatusCardSnapshot)
         || (observation.sequence === stored.progress.sequence && digest !== stored.progress.digest))) return undefined;
 
     const labels = /^es(?:-|$)/iu.test(locale) ? nextStep.es : nextStep.en;
-    const previousHead = readBugbotStatusCardHead(previous, source.pullNumber);
+    const previousHead = readStoredStatusHead(previous, source.pullNumber);
     const previousTitle = previousHead ? `${labels.previous} · \`${previousHead.slice(0, 8)}\`` : labels.first;
     const displayed: BugbotReviewProgressObservation = review.state === 'interrupted'
         ? { ...observation, stage: 'finished', outcome: 'failed' } : observation;

@@ -182,6 +182,16 @@ async function invoke(label, { kind = 'progress', runId = 23, attempt = 1, verif
         result.missingConversationRejected = run.code !== 0 && run.writes.length === 0;
         assert(result.missingConversationRejected, 'An unavailable conversation must not create a status card.');
         assert.equal(state.comment.body, previous);
+        const legacy = previous.split('\n').slice(1).join('\n');
+        state = makeState({ comment: { ...canonical, body: legacy } });
+        run = await invoke('legacy-card-progress');
+        assert.equal(run.code, 0, run.log);
+        assert.deepEqual(run.writes.map(write => [write.method, write.path]), [['PATCH', project + '/issues/comments/55']]);
+        assert(state.comment.body.endsWith(legacy));
+        run = await invoke('legacy-card-upgrade', { kind: 'analysis-result', verifiedBody: current });
+        assert.equal(run.code, 0, run.log);
+        assert.deepEqual(run.writes.map(write => [write.method, write.path]), [['PATCH', project + '/issues/comments/55']]);
+        assert(state.comment.body.startsWith(current));
     } finally {
         writeFileSync(join(output, 'results.json'), JSON.stringify(result, null, 2) + '\n');
         await new Promise(done => server.close(done));

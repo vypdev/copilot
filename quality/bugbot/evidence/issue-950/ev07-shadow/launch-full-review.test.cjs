@@ -1,7 +1,8 @@
 'use strict';
 
 const assert = require('node:assert/strict');
-const { mkdtempSync, mkdirSync, writeFileSync, rmSync } = require('node:fs');
+const { spawnSync } = require('node:child_process');
+const { existsSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } = require('node:fs');
 const { tmpdir } = require('node:os');
 const path = require('node:path');
 const { test } = require('node:test');
@@ -28,7 +29,12 @@ for (const [name, data] of [
 ]) {
     test(`blocks a ${name} corpus gate at dispatch`, t => {
         const launch = () => assert.fail('no provider work may start');
-        assert.throws(() => launchFullReview(fixture(t, data), launch), /independent corpus/);
+        const directory = fixture(t, data);
+        assert.throws(() => launchFullReview(directory, launch), /independent corpus/);
+        const direct = spawnSync(process.execPath, [path.join(__dirname, 'full-review.cjs'), directory], { encoding: 'utf8' });
+        assert.equal(direct.status, 1);
+        assert.match(direct.stderr, /independent corpus/u);
+        assert.equal(existsSync(path.join(directory, 'full-review')), false);
     });
 }
 

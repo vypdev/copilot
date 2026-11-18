@@ -1,16 +1,15 @@
 'use strict';
 
-const assert = require('node:assert/strict');
 const { spawn } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
+const { requirePassingCorpus } = require('./launch-full-review.cjs');
 
 const plan = require('./plan.json');
 const concurrency = 3;
 
 async function run(campaign) {
-    assert(campaign, 'usage: node full-review.cjs <campaign directory>');
-    campaign = path.resolve(campaign);
+    campaign = requirePassingCorpus(campaign);
     const output = path.join(campaign, 'full-review');
     const score = path.join(campaign, 'corpus-v3/corpus-score.json');
     const checkouts = path.join(campaign, 'fixtures/full-review');

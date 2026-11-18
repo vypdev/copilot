@@ -6371,7 +6371,7 @@ async function observeBugbotShadowVerification(operation, context, prepared, por
         const observation = candidate
             ? await verifyCandidate(port, candidate, configuration, review)
             : { status: 'verdict', verdict: 'inconclusive', reason: 'Candidate could not be pinned.',
-                missing: 'A repository location on the reviewed revision is required.', citations: [], premises: [] };
+                missing: 'A repository location with an unambiguous comparison side is required.', citations: [], premises: [] };
         const wallMs = Math.round(performance.now() - started);
         if (observation.status === 'verdict') {
             await progress?.record('verifying', { candidates: { completed: ++completed, total } });
@@ -6416,7 +6416,9 @@ function pinCandidate(operation, context, finding, historicalResolution = false)
         return undefined;
     const locations = context.prContext?.pathToDiffLocations?.[file] ?? [];
     const sides = new Set(locations.filter(location => location.line === line).map(location => location.side));
-    const side = sides.size === 1 ? sides.values().next().value : undefined;
+    if (sides.size > 1)
+        return undefined;
+    const side = sides.values().next().value;
     const anchor = Object.freeze({ path: file, line,
         end: endLine && Number.isSafeInteger(endLine) && endLine >= line ? endLine : line,
         ...(side ? { side } : {}) });

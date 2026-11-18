@@ -49,11 +49,39 @@ not qualification results for the historical experiments.
 | [Brokered verifier bypasses a turn deadline](https://github.com/vypdev/copilot/pull/951#discussion_r4569014379) | Intentional verifier contract. Explicit cancellation remains available. |
 | [Late Python import accepted earlier in the module](https://github.com/vypdev/copilot/pull/951#discussion_r4569014390) | Experimental analyzer limitation. Future reuse needs an import-order regression. |
 | [Mixed workspace and causal search targets](https://github.com/vypdev/copilot/pull/951#discussion_r4569014403) | Historical chain prototype limitation. Future reuse needs mixed-target coverage. |
-| [Missing EV-07 score permits dispatch](https://github.com/vypdev/copilot/pull/951#discussion_r4569014413) | The guarded reproduction entrypoint requires the passing 174-case score before dispatch. The original runner and its checksum remain intact. |
+| [Missing EV-07 score permits dispatch](https://github.com/vypdev/copilot/pull/951#discussion_r4569014413) | Both current entry points require a passing 174-case score before dispatch. The archive preserves the original runner and its checksum. |
 
 The previous review also recorded 17 overflow findings. Its count does not
 establish an individually published finding or a resolution for any of
 those 17 items.
+
+## Native review of `9e9f1536f`
+
+GitHub completed the [native review](https://github.com/vypdev/copilot/actions/runs/44267786812)
+with verification configured as `disabled`. Bugbot validated **113/113**
+partitions across two frames. Its review check concluded with findings. The
+same [canonical PR comment](https://github.com/vypdev/copilot/pull/951#issuecomment-6865721341)
+published the full reviewed SHA and linked the
+[Commit assessment](https://github.com/vypdev/copilot/issues/950#issuecomment-6732557685)
+with that same SHA. The fresh read of the linked issue and trusted comment
+gave the production selector the same link. CI and the SDD verification
+check completed successfully.
+[CI](https://github.com/vypdev/copilot/actions/runs/44267786699) ·
+[Verification check](https://github.com/vypdev/copilot/runs/134694599502)
+
+The [review snapshot](https://github.com/vypdev/copilot/pull/951#pullrequestreview-5957278907)
+retains 16 individually published findings and reports 29 additional
+findings beyond the comment limit. Earlier experimental runners and ledgers
+remain available in the [pilot archive](README.md#historical-evidence). A
+title in the overflow summary supplies no independently verified disposition.
+
+| Current path | Follow-up control |
+|---|---|
+| [Ambiguous comparison side](https://github.com/vypdev/copilot/pull/951#discussion_r4614467031) | A replacement at the same numeric line on both sides stays inconclusive. The enforcement simulation starts no session or publication for that finding. |
+| [Legacy status card](https://github.com/vypdev/copilot/pull/951#discussion_r4614467095) | A same-PR trusted legacy card retains its bytes during progress and upgrades under the same comment ID after validated completion. |
+| Evidence provenance | The CI reader requires the head repository. A Git read rejects malformed path encoding and confirms that a zero-byte blob has no citable lines. |
+| EV-07 admission and scoring | The direct runner and launcher share the corpus gate. Integrity scoring requires an actual audit of the cited Git ranges. |
+| Investigation time | A simulated verified verdict still survives the former time ceilings. Explicit cancellation terminates the simulated session. |
 
 ## Deterministic controls
 

@@ -82,6 +82,24 @@ it('keeps the original verified body while showing observed work and a safe next
     expect(f.journal).toHaveLength(1);
 });
 
+it('preserves a same-PR legacy card and upgrades it in place only with a current terminal projection', async () => {
+    const old = '<!-- copilot-bugbot-status schema="1" pr="951" verified_head="' + 'c'.repeat(40)
+        + '" digest="123456ab" -->\n## 🤖 Bugbot status';
+    const f = setup(old);
+    await expect(f.call()).resolves.toBe('updated');
+    expect(f.canonical()?.body).toContain('Last verified review · `cccccccc`');
+    expect(f.canonical()?.body.endsWith(old)).toBe(true);
+    await expect(f.call()).resolves.toBe('unchanged');
+
+    const result = terminal(source.head);
+    f.set({ review: { ...native, state: 'complete' }, verifiedBody: result.split('\n').slice(1).join('\n') });
+    await expect(f.call()).resolves.toBe('skipped');
+    f.set({ verifiedBody: result });
+    await expect(f.call()).resolves.toBe('updated');
+    expect(f.canonical()).toEqual({ id: 44, body: result });
+    expect(isBugbotCanonicalStatusCard(old.replace('pr="951"', 'pr="952"'), 951)).toBe(false);
+});
+
 it('updates the first-review comment in place with a partial terminal projection', async () => {
     const f = setup();
     await expect(f.call()).resolves.toBe('created');

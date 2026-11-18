@@ -5,7 +5,7 @@ const { spawn } = require('node:child_process');
 const path = require('node:path');
 const { corpus } = require('./plan.json');
 
-function launchFullReview(campaign, launch = spawn) {
+function requirePassingCorpus(campaign) {
     if (!campaign) throw new Error('usage: node launch-full-review.cjs <campaign directory>');
     const directory = path.resolve(campaign);
     let result;
@@ -17,6 +17,11 @@ function launchFullReview(campaign, launch = spawn) {
         || !Array.isArray(result.score?.missingCases) || result.score.missingCases.length !== 0) {
         throw new Error('The independent corpus gate did not pass. Full review was not started.');
     }
+    return directory;
+}
+
+function launchFullReview(campaign, launch = spawn) {
+    const directory = requirePassingCorpus(campaign);
     return launch(process.execPath, [path.join(__dirname, 'full-review.cjs'), directory], { stdio: 'inherit' });
 }
 
@@ -39,4 +44,4 @@ if (require.main === module) {
     }
 }
 
-module.exports = { launchFullReview };
+module.exports = { launchFullReview, requirePassingCorpus };

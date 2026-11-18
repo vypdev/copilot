@@ -4,6 +4,7 @@ const sha = 'a'.repeat(40);
 const repository = { owner: 'owner', repo: 'repo' };
 const query = { sha, workflow: 'CI', job: 'tests', step: 'Browser suite', pullRequest: 9, revision: 'head' as const };
 const run = { id: 10, head_sha: sha, name: 'CI', repository: { full_name: 'owner/repo' },
+    head_repository: { full_name: 'owner/repo' } as { full_name: string } | null | undefined,
     event: 'pull_request', pull_requests: [{ number: 9 }], run_attempt: 2, workflow_id: 3,
     status: 'completed', conclusion: 'success' };
 const job = { id: 11, name: 'tests', run_id: 10, run_attempt: 2, head_sha: sha, status: 'completed', conclusion: 'success',
@@ -29,6 +30,9 @@ it('reads exact workflow attempt and preserves a skipped step despite overall su
 it.each([
     ['head', { ...run, head_sha: 'b'.repeat(40) }],
     ['repository', { ...run, repository: { full_name: 'another/repo' } }],
+    ['head repository', { ...run, head_repository: { full_name: 'another/repo' } }],
+    ['unavailable head repository', { ...run, head_repository: null }],
+    ['omitted head repository', { ...run, head_repository: undefined }],
     ['pull request', { ...run, pull_requests: [{ number: 2 }] }],
     ['event', { ...run, event: 'pull_request_target' }],
 ])('does not use evidence from another %s', async (_label, foreign) => {

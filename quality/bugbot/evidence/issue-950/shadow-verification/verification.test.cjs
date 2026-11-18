@@ -8,7 +8,7 @@ const path = require('node:path');
 const { after, test } = require('node:test');
 const { investigate } = require('./run.cjs');
 const { makeBroker } = require('./broker.cjs');
-const { hash } = require('../shadow-real-prs/session.cjs');
+const { hash } = require('../../../../../src/infrastructure/bugbot/shadow/hash.cjs');
 const plan = require('./plan.json');
 const { ask, codexInvocation, isContextFailure, providerFailure } = require('./session.cjs');
 
@@ -73,7 +73,8 @@ const unchanged = git(['hash-object', '-w', '--stdin'], 'export const allowsRequ
 const python = git(['hash-object', '-w', '--stdin'], plan.localRuntime.python + '\n');
 const lockfile = git(['hash-object', '-w', '--stdin'], "packages:\n  playwright@1.64.2:\n    resolution: {}\n");
 const operations = git(['hash-object', '-w', '--stdin'], 'steps = [prepare, deliver]\nfor step in steps:\n    step()\n');
-const tree = git(['mktree'], `100644 blob ${python}\t.python-version\n100644 blob ${source}\tanchor.ts\n100644 blob ${operations}\tordered.py\n100644 blob ${lockfile}\tpnpm-lock.yaml\n100644 blob ${unchanged}\tsettings.ts\n`);
+const empty = git(['hash-object', '-w', '--stdin'], '');
+const tree = git(['mktree'], `100644 blob ${python}\t.python-version\n100644 blob ${source}\tanchor.ts\n100644 blob ${empty}\tempty.txt\n100644 blob ${operations}\tordered.py\n100644 blob ${lockfile}\tpnpm-lock.yaml\n100644 blob ${unchanged}\tsettings.ts\n`);
 const baseTree = git(['mktree'], `100644 blob ${unchanged}\tsettings.ts\n`);
 const base = git(['commit-tree', baseTree, '-m', 'base']);
 const head = git(['commit-tree', tree, '-p', base, '-m', 'head']);
@@ -93,6 +94,21 @@ const supplied = request => payload(request).observations[0].result.sources[0];
 const cite = (source, first = source.first, last = source.last) => ({ receipt: source.receipt, first, last });
 const counter = value => ({ input_tokens: value, output_tokens: value, cached_input_tokens: value });
 const run = (transport, log = () => {}, signal, input = subject) => investigate(lab, input, finding, null, transport, log, signal);
+
+test('an empty Git blob has no citable first line', async () => {
+    const broker = makeBroker(lab, subject, finding);
+    assert.deepEqual(await broker.inspect(query('read', 'empty.txt', { first: 1, last: 1 })),
+        { status: 'invalid-range', lineCount: 0 });
+});
+
+test('Git path discovery rejects malformed UTF-8 without issuing a normalized path', async () => {
+    const badTree = git(['mktree', '-z'], Buffer.concat([
+        Buffer.from(`100644 blob ${source}\tname-`), Buffer.from([255, 0]),
+    ]));
+    const badHead = git(['commit-tree', badTree, '-p', base, '-m', 'path encoding fixture']);
+    const broker = makeBroker(lab, { ...subject, head: badHead, tree: badTree }, finding);
+    assert.deepEqual(await broker.inspect(query('paths', 'name-')), { status: 'non-text' });
+});
 
 for (const [name, usage] of [
     ['above the old per-finding ceilings', [counter(400_000), counter(800_000), counter(1_200_000)]],

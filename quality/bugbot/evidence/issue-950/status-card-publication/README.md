@@ -71,6 +71,9 @@ complete empty conversation, which can create the first card, from an
 unavailable conversation, which must preserve the existing card with no write
 attempt. On `03f8e6e33`, the latter case attempted to create a new card when the
 provider returned an absent pull request in the conversation response.
+The legacy format starts with the same-PR status marker. The canary preserves
+that prior body during progress and then upgrades the same comment ID with a
+current terminal projection.
 
 The worker reads both check fields used by GitHub, authenticates the native
 attempt, and accepts either its exact workflow-attempt URL or its exact

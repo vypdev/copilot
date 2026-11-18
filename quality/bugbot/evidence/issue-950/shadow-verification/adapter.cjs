@@ -5,7 +5,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { investigate } = require('./run.cjs');
 const { ask } = require('./session.cjs');
-const { git, blob } = require('../shadow-real-prs/broker.cjs');
+const { git, blob } = require('../../../../../src/infrastructure/bugbot/shadow/git.cjs');
 
 function createShadowVerifier(lab, log, transport = ask) {
     return {
