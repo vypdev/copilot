@@ -47935,7 +47935,10 @@ function projectNode(schema, budget) {
     const projected = { ...schema };
     if (Array.isArray(schema.enum)) {
         const stringPoints = schema.enum.reduce((total, value) => total + (typeof value === 'string' ? [...value].length : 0), 0);
-        if (schema.enum.length > budget.remainingEnumValues || (schema.enum.length > 250 && stringPoints > 15000)) {
+        // The native decoder rejects newline-containing string enums. The local
+        // validator still checks the original enum, including exact source snippets.
+        if (schema.enum.some(value => typeof value === 'string' && /[\r\n]/u.test(value))
+            || schema.enum.length > budget.remainingEnumValues || (schema.enum.length > 250 && stringPoints > 15000)) {
             delete projected.enum;
         }
         else {
@@ -75098,7 +75101,7 @@ async function analyzeBugbotFrames(operation, context, plan, dependencies) {
             dependencies.telemetry.beginPartition();
             const startedAt = Date.now();
             try {
-                const response = await (0, query_bugbot_findings_1.queryBugbotPartitionFindings)(boundedAgent, operation.analysis.agentConfiguration, input.prompt, targetLocale, { partitionId: partition.id, headSha: partition.headSha, framed: partition.framed }, { enabled: input.requiresCandidateVerification, observeRetry: async () => {
+                const response = await (0, query_bugbot_findings_1.queryBugbotPartitionFindings)(boundedAgent, operation.analysis.agentConfiguration, input.prompt, targetLocale, { partitionId: partition.id, headSha: partition.headSha, framed: partition.framed }, { enabled: input.requiresCandidateVerification, evidenceContext: input.literalEvidenceContext, observeRetry: async () => {
                         await dependencies.progress?.record('analyzing', { retries: ++retries });
                     } });
                 const serialized = JSON.stringify(response);
@@ -76765,6 +76768,7 @@ const review_configuration_1 = __nccwpck_require__(3994);
 const file_ignore_policy_1 = __nccwpck_require__(20542);
 const bugbot_python_literal_witness_policy_1 = __nccwpck_require__(55831);
 const untrusted_content_1 = __nccwpck_require__(67057);
+const bugbot_async_statement_evidence_1 = __nccwpck_require__(8054);
 const MAX_IGNORE_BLOCK_LENGTH = 2000;
 const GIT_OBJECT_ID = /^[0-9a-f]{7,64}$/i;
 function buildBugbotPrompt(param, context, assignment) {
@@ -76800,6 +76804,7 @@ function buildBugbotReviewInput(param, context, assignment) {
     const reviewedFiles = assignment?.partition.files ?? changes.map(change => change.filename);
     const hasLiteralWitnesses = assignment ? assignment.partition.hasPythonLiteralWitnesses === true : literalEvidence.hasWitnesses;
     const requiresCandidateVerification = hasLiteralWitnesses || (diffBlock.length > 0 && reviewedFiles.some(path => /\.py$/iu.test(path)));
+    const coverageBlock = buildCoverageBlock(context, assignment?.partition);
     const prompt = (0, prompts_1.getBugbotPrompt)({
         reviewContextProfile: assignment?.partition.framed ? 'framed-v1' : undefined,
         pythonSyntaxProfile: [...changes.map(change => change.filename), ...(assignment?.partition.files ?? [])].some(path => /\.py$/iu.test(path)) ? 'python' : '',
@@ -76811,7 +76816,7 @@ function buildBugbotReviewInput(param, context, assignment) {
         issueNumber: String(param.target.issueNumber),
         changeScopeInstruction: buildChangeScopeInstruction(param, headBranch, baseBranch, Boolean(assignment || (context.reviewDiffBlock ?? '').trim().length > 0), assignment?.partition),
         ignoreBlock,
-        coverageBlock: buildCoverageBlock(context, assignment?.partition),
+        coverageBlock,
         previousBlock,
         diffBlock,
         reviewConversationBlock: context.reviewConversationBlock,
@@ -76823,7 +76828,14 @@ function buildBugbotReviewInput(param, context, assignment) {
             ? param.locale.pullRequest
             : param.locale.issue ?? param.locale.pullRequest,
     });
-    return { prompt, hasLiteralWitnesses, requiresCandidateVerification };
+    const literalEvidenceContext = assignment?.partition.framed && requiresCandidateVerification
+        ? [
+            `Repository ${param.repository.owner}/${param.repository.name}, ${baseBranch} → ${headBranch}.`,
+            diffBlock, coverageBlock, ignoreBlock, previousBlock, context.reviewConversationBlock, context.reviewRulesBlock,
+            bugbot_async_statement_evidence_1.BUGBOT_ASYNC_STATEMENT_INSTRUCTION,
+        ].filter(Boolean).join('\n\n')
+        : undefined;
+    return { prompt, hasLiteralWitnesses, requiresCandidateVerification, literalEvidenceContext };
 }
 function legacyPythonWitnesses(changes) {
     const blocks = [];
@@ -78734,7 +78746,7 @@ async function queryBugbotPartitionFindings(repository, configuration, prompt, t
                 throw new application_error_1.ApplicationError('agent.failed', `Configured agent returned an invalid Bugbot partition attestation for ${expected.partitionId}.`);
             }
             return verification?.enabled
-                ? await (0, verify_generated_literal_findings_1.verifyGeneratedLiteralFindings)(repository, configuration, prompt, validation.payload, targetLocale, verification.observePrompt, verification.observeResponse)
+                ? await (0, verify_generated_literal_findings_1.verifyGeneratedLiteralFindings)(repository, configuration, verification.evidenceContext ?? prompt, validation.payload, targetLocale, verification.observePrompt, verification.observeResponse)
                 : validation.payload;
         }
         catch (error) {
@@ -88134,6 +88146,9 @@ function classifyAgentCliToolDiagnostic(stderr) {
 function classifyAgentCliExitDiagnostic(stderr) {
     if (/^ERROR: Incomplete response returned, reason: max_output_tokens\r?$/mu.test(stderr)) {
         return 'reported-output-token-limit';
+    }
+    if (/"code"\s*:\s*"invalid_json_schema"|\binvalid schema for response_format\b/iu.test(stderr)) {
+        return 'reported-invalid-output-schema';
     }
     const toolDiagnostic = classifyAgentCliToolDiagnostic(stderr);
     if (toolDiagnostic)

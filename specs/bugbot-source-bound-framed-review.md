@@ -685,6 +685,46 @@ engine behavior are unchanged. Native finding resolution and the final
 head's remote checks/Codecov remain required.
 
 
+### Generated-source follow-up evidence
+
+The generated-source follow-up in a framed review receives the complete
+assigned diff block and fragment identities, comparison, coverage, ignore
+scope, retained discussion and rules, and prior findings for the resolution
+owner. The application builds this context from the same values used by the
+detector. The follow-up supplies its own instructions and response contract.
+It validates the same candidate identities and dispositions before completing
+the partition.
+
+The application preserves the 128,000-byte generated-source prompt ceiling and
+the shared framed traffic limits. If the evidence itself exceeds the ceiling,
+the review fails closed and retains the prior result. The provider adapter
+projects multiline string enums out of Codex's native schema and checks every
+response against the full application schema, including exact code snippets.
+An invalid native schema is recorded as a fixed diagnostic code.
+
+The minimum for this addition is two framed integration cases. A full
+assignment that previously overflowed must deliver all its evidence and
+complete through the existing query port. Evidence that is still too large
+must fail before the dependent call, without completing the partition. The
+decoder and local schema regressions are owned by the
+[agent execution contract](./agent-execution-policy-hardening.md).
+
+The three native runs before this change reported partition 5 as the failed
+assignment. On `502e7d7eb`, the replay rebuilt partition 5 of 111 against base
+`b3952f686a55a9b4207e1a23c64be8344e8df5d5` using the pinned Git objects,
+the available review context and a fresh correlation nonce. Codex CLI 0.169.1
+with GPT-6 Luna at `xhigh` returned one candidate. The generated evidence
+prompt exceeded its ceiling at 135,018 bytes. Independently, the provider
+rejected the original wire schema at `findings.items.codeSnippet` before
+generation. A transport control with the corrected projection and the same
+application schema completed. The corrected follow-up then consumed 110,160
+bytes before the final transport envelope and 114,332 after it. It produced
+one locally accepted retained candidate in 59.8 seconds. The checkout stayed
+unchanged and the replay had zero GitHub write ports or attempts. These
+observations cover one assignment and its generated-source follow-up.
+[Native failure](https://github.com/vypdev/copilot/actions/runs/44199156168)
+[OpenAI Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs)
+
 ### Copy provenance and independent changed-path coverage — review follow-up
 
 `verifyInventory` already allows a previous path only for `status === 'renamed'`.

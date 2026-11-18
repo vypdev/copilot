@@ -4457,7 +4457,7 @@ async function analyzeBugbotFrames(operation, context, plan, dependencies) {
             dependencies.telemetry.beginPartition();
             const startedAt = Date.now();
             try {
-                const response = await (0, query_bugbot_findings_1.queryBugbotPartitionFindings)(boundedAgent, operation.analysis.agentConfiguration, input.prompt, targetLocale, { partitionId: partition.id, headSha: partition.headSha, framed: partition.framed }, { enabled: input.requiresCandidateVerification, observeRetry: async () => {
+                const response = await (0, query_bugbot_findings_1.queryBugbotPartitionFindings)(boundedAgent, operation.analysis.agentConfiguration, input.prompt, targetLocale, { partitionId: partition.id, headSha: partition.headSha, framed: partition.framed }, { enabled: input.requiresCandidateVerification, evidenceContext: input.literalEvidenceContext, observeRetry: async () => {
                         await dependencies.progress?.record('analyzing', { retries: ++retries });
                     } });
                 const serialized = JSON.stringify(response);
@@ -5627,6 +5627,7 @@ const review_configuration_1 = __nccwpck_require__(3994);
 const file_ignore_policy_1 = __nccwpck_require__(542);
 const bugbot_python_literal_witness_policy_1 = __nccwpck_require__(5831);
 const untrusted_content_1 = __nccwpck_require__(7057);
+const bugbot_async_statement_evidence_1 = __nccwpck_require__(8054);
 const MAX_IGNORE_BLOCK_LENGTH = 2000;
 const GIT_OBJECT_ID = /^[0-9a-f]{7,64}$/i;
 function buildBugbotPrompt(param, context, assignment) {
@@ -5662,6 +5663,7 @@ function buildBugbotReviewInput(param, context, assignment) {
     const reviewedFiles = assignment?.partition.files ?? changes.map(change => change.filename);
     const hasLiteralWitnesses = assignment ? assignment.partition.hasPythonLiteralWitnesses === true : literalEvidence.hasWitnesses;
     const requiresCandidateVerification = hasLiteralWitnesses || (diffBlock.length > 0 && reviewedFiles.some(path => /\.py$/iu.test(path)));
+    const coverageBlock = buildCoverageBlock(context, assignment?.partition);
     const prompt = (0, prompts_1.getBugbotPrompt)({
         reviewContextProfile: assignment?.partition.framed ? 'framed-v1' : undefined,
         pythonSyntaxProfile: [...changes.map(change => change.filename), ...(assignment?.partition.files ?? [])].some(path => /\.py$/iu.test(path)) ? 'python' : '',
@@ -5673,7 +5675,7 @@ function buildBugbotReviewInput(param, context, assignment) {
         issueNumber: String(param.target.issueNumber),
         changeScopeInstruction: buildChangeScopeInstruction(param, headBranch, baseBranch, Boolean(assignment || (context.reviewDiffBlock ?? '').trim().length > 0), assignment?.partition),
         ignoreBlock,
-        coverageBlock: buildCoverageBlock(context, assignment?.partition),
+        coverageBlock,
         previousBlock,
         diffBlock,
         reviewConversationBlock: context.reviewConversationBlock,
@@ -5685,7 +5687,14 @@ function buildBugbotReviewInput(param, context, assignment) {
             ? param.locale.pullRequest
             : param.locale.issue ?? param.locale.pullRequest,
     });
-    return { prompt, hasLiteralWitnesses, requiresCandidateVerification };
+    const literalEvidenceContext = assignment?.partition.framed && requiresCandidateVerification
+        ? [
+            `Repository ${param.repository.owner}/${param.repository.name}, ${baseBranch} → ${headBranch}.`,
+            diffBlock, coverageBlock, ignoreBlock, previousBlock, context.reviewConversationBlock, context.reviewRulesBlock,
+            bugbot_async_statement_evidence_1.BUGBOT_ASYNC_STATEMENT_INSTRUCTION,
+        ].filter(Boolean).join('\n\n')
+        : undefined;
+    return { prompt, hasLiteralWitnesses, requiresCandidateVerification, literalEvidenceContext };
 }
 function legacyPythonWitnesses(changes) {
     const blocks = [];
@@ -7015,7 +7024,7 @@ async function queryBugbotPartitionFindings(repository, configuration, prompt, t
                 throw new application_error_1.ApplicationError('agent.failed', `Configured agent returned an invalid Bugbot partition attestation for ${expected.partitionId}.`);
             }
             return verification?.enabled
-                ? await (0, verify_generated_literal_findings_1.verifyGeneratedLiteralFindings)(repository, configuration, prompt, validation.payload, targetLocale, verification.observePrompt, verification.observeResponse)
+                ? await (0, verify_generated_literal_findings_1.verifyGeneratedLiteralFindings)(repository, configuration, verification.evidenceContext ?? prompt, validation.payload, targetLocale, verification.observePrompt, verification.observeResponse)
                 : validation.payload;
         }
         catch (error) {

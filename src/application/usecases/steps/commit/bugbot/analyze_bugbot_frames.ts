@@ -70,7 +70,7 @@ export async function analyzeBugbotFrames(operation: BugbotReviewOperationContex
             try {
                 const response = await queryBugbotPartitionFindings(boundedAgent, operation.analysis.agentConfiguration,
                     input.prompt, targetLocale, { partitionId: partition.id, headSha: partition.headSha, framed: partition.framed },
-                    { enabled: input.requiresCandidateVerification, observeRetry: async () => {
+                    { enabled: input.requiresCandidateVerification, evidenceContext: input.literalEvidenceContext, observeRetry: async () => {
                         await dependencies.progress?.record('analyzing', { retries: ++retries });
                     } });
                 const serialized = JSON.stringify(response);

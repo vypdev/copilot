@@ -19,6 +19,7 @@ import { verifyGeneratedLiteralFindings } from './verify_generated_literal_findi
 export interface BugbotLiteralVerificationOptions {
     readonly observeRetry?: () => Promise<void>;
     readonly enabled: boolean;
+    readonly evidenceContext?: string;
     readonly observePrompt?: (prompt: string) => void;
     readonly observeResponse?: (response: unknown) => void;
 }
@@ -96,7 +97,8 @@ export async function queryBugbotPartitionFindings(
                 );
             }
             return verification?.enabled
-                ? await verifyGeneratedLiteralFindings(repository, configuration, prompt, validation.payload, targetLocale, verification.observePrompt, verification.observeResponse) as Readonly<Record<string, unknown>>
+                ? await verifyGeneratedLiteralFindings(repository, configuration, verification.evidenceContext ?? prompt,
+                    validation.payload, targetLocale, verification.observePrompt, verification.observeResponse) as Readonly<Record<string, unknown>>
                 : validation.payload;
         } catch (error) {
             if (attempt === MAX_PARTITION_QUERY_ATTEMPTS && (error instanceof BugbotResponseFailure || error instanceof BugbotVerificationResponseFailure)) {

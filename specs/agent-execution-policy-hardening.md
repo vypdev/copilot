@@ -688,7 +688,7 @@ source-context budget before reaching its former 30-minute limit during extensio
 coverage. The Windows allocation covers that remaining work and deferred cleanup;
 it does not alter the SDK's operation deadlines or reduce verification scope.
 
-This SDD owns at least **53 distinct cases**; parameterized provider/role rows
+This SDD owns at least **58 distinct cases**. Parameterized provider/role rows
 count separately only when authority/argv differs.
 
 | Area | Minimum cases | Required risks |
@@ -701,9 +701,9 @@ count separately only when authority/argv differs.
 | UX/sanitization | 1 | rejection/partial view without sensitive fields |
 | Integration/security | 2 | effective sandbox matrix and env/credential isolation |
 | Output rejection diagnostics | 8 | Six closed local causes, forged-diagnostic suppression, real-child observer propagation; existing size fixtures retain both stream assertions |
-| Terminal process diagnostics | 8 | Exact output-token-limit line, prose/other-reason rejection, split/large/evicted tail cases, actual child privacy/cleanup, fixed logger propagation |
-| Codex native decoder compatibility | 13 | Immutable input, nested/nullable strings, literal property names, unchanged local constraints, numeric/array bounds, loose-schema rejection, global enum and Unicode budgets, and real adapter length/membership acceptance |
-| **Total** | **53** | no double counting |
+| Terminal process diagnostics | 11 | Exact output-token-limit line, prose/other-reason rejection, split/large/evicted tail cases, actual child privacy/cleanup, fixed logger propagation, provider schema code or diagnostic header and rejection of bare schema-code prose |
+| Codex native decoder compatibility | 15 | Immutable input, nested/nullable strings, literal property names, unchanged local constraints, numeric/array bounds, loose-schema rejection, global enum and Unicode budgets, and real adapter length/membership acceptance including LF and CRLF in literal evidence |
+| **Total** | **58** | no double counting |
 
 All provider plan, role authority, executable, and runtime-manifest policies require
 100% enumerated branch coverage. Changed process/provider modules require 95%

@@ -413,6 +413,41 @@ it('admits a response-dependent generated verification request through the actua
     expect(query.mock.calls[1][0].agentId).toBe('bugbot-literal-candidate-verification');
 });
 
+it('keeps the assigned evidence intact when repeated detection instructions would exceed the verification prompt bound', async () => {
+    const { buildBugbotReviewInput } = await import('../build_bugbot_prompt');
+    const { buildLiteralVerificationPrompt } = await import('../verify_generated_literal_findings');
+    const f = literalFrameFixture();
+    f.context.reviewConversationBlock = 'Retained repository context.\n'.repeat(3500);
+    f.context.reviewRulesBlock = 'A retained project rule for this fixture.';
+    const plan = buildBugbotFramedReviewPlan(f.source, bugbotFramedContextDigest(f.operation, f.context), FRAME_NONCE, []);
+    const partition = plan.partitions[0];
+    const hypotheses = literalHypotheses(partition.files[0], 1);
+    const input = buildBugbotReviewInput(f.operation, f.context, { partition });
+    expect(() => buildLiteralVerificationPrompt(input.prompt, hypotheses, 'a'.repeat(64), 'en-US'))
+        .toThrow('128000-byte prompt bound');
+    const query = jest.fn(async (request: FindingsQueryRequest) => request.agentId === 'bugbot-literal-candidate-verification'
+        ? rejectLiteralHypotheses(request)
+        : reply(request, { findings: hypotheses }));
+    await expect(run(f, query, undefined, plan)).resolves.toEqual({ findings: [], resolved_findings: [] });
+    expect(query).toHaveBeenCalledTimes(2);
+    const verification = query.mock.calls[1][0].prompt;
+    expect(Buffer.byteLength(verification)).toBeLessThanOrEqual(128_000);
+    expect(verification).toContain(partition.block);
+    expect(verification).toContain(f.context.reviewConversationBlock);
+    expect(verification).toContain(f.context.reviewRulesBlock);
+});
+
+it('preserves the prompt ceiling when the framed evidence itself exceeds it', async () => {
+    const f = literalFrameFixture();
+    f.context.reviewConversationBlock = 'x'.repeat(130_000);
+    const plan = buildBugbotFramedReviewPlan(f.source, bugbotFramedContextDigest(f.operation, f.context), FRAME_NONCE, []);
+    const query = jest.fn(async (request: FindingsQueryRequest) =>
+        reply(request, { findings: literalHypotheses(plan.partitions[0].files[0], 1) }));
+    await expect(run(f, query, undefined, plan)).rejects.toThrow('128000-byte prompt bound');
+    expect(query).toHaveBeenCalledTimes(3);
+    expect(query.mock.calls.every(([request]) => request.agentId !== 'bugbot-literal-candidate-verification')).toBe(true);
+});
+
 it.each([false, true])('bounds dependent verification and actual retries with one traffic ledger; retry=%s', async retry => {
     const { bugbotFramedPromptBytes } = await import('../../../../../policies/bugbot_framed_prompt_policy');
     const { buildBugbotPartitionQueryRequest } = await import('../query_bugbot_findings');

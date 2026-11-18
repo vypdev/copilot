@@ -35,6 +35,27 @@ describe('Codex native output schema compatibility', () => {
         expect(projectCodexOutputSchema(schema)).toEqual(schema);
     });
 
+    it.each(['first\nsecond', 'first\r\nsecond'])('keeps exact multiline evidence matching in the findings adapter (%j)', async snippet => {
+        const id = { type: 'string', enum: ['finding-id'] };
+        const codeSnippet = { type: ['string', 'null'], enum: [snippet] };
+        const schema = object({ findings: { type: 'array', items: object({ id, codeSnippet }) } });
+        const execute = jest.fn().mockImplementation(async request => {
+            const policy = buildCodexExecutionPolicy({ configuration: request.configuration, capability: request.capability,
+                workspace: '/workspace', runtimeDirectory: '/runtime', outputSchema: request.outputSchema });
+            expect(JSON.parse(policy.artifacts[0].contents)).toEqual(object({
+                findings: { type: 'array', items: object({ id, codeSnippet: { type: ['string', 'null'] } }) },
+            }));
+            expect(request.outputSchema).toBe(schema);
+            return JSON.stringify({ findings: [{ id: 'finding-id', codeSnippet: snippet }] });
+        });
+        const adapter = new FindingsAgentAdapter({ cli: { execute } });
+        const request = { configuration: { provider: 'codex' as const, model: 'model' },
+            agentId: 'fixture', prompt: 'Verify this source', options: { expectJson: true, schema } };
+        await expect(adapter.query(request)).resolves.toEqual({ findings: [{ id: 'finding-id', codeSnippet: snippet }] });
+        execute.mockResolvedValueOnce(JSON.stringify({ findings: [{ id: 'finding-id', codeSnippet: 'first second' }] }));
+        await expect(adapter.query(request)).rejects.toThrow('outside the allowed enum');
+    });
+
     it('keeps numeric and array bounds in the native schema', () => {
         const schema = object({ values: { type: 'array', minItems: 1, maxItems: 8,
             items: { type: 'integer', minimum: 1, maximum: 25 } } });

@@ -12,7 +12,10 @@ function projectNode(schema: JsonSchema, budget: { remainingEnumValues: number }
     const projected = { ...schema };
     if (Array.isArray(schema.enum)) {
         const stringPoints = schema.enum.reduce<number>((total, value) => total + (typeof value === 'string' ? [...value].length : 0), 0);
-        if (schema.enum.length > budget.remainingEnumValues || (schema.enum.length > 250 && stringPoints > 15_000)) {
+        // The native decoder rejects newline-containing string enums. The local
+        // validator still checks the original enum, including exact source snippets.
+        if (schema.enum.some(value => typeof value === 'string' && /[\r\n]/u.test(value))
+            || schema.enum.length > budget.remainingEnumValues || (schema.enum.length > 250 && stringPoints > 15_000)) {
             delete projected.enum;
         } else {
             budget.remainingEnumValues -= schema.enum.length;

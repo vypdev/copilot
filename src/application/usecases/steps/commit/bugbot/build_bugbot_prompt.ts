@@ -14,6 +14,7 @@ import type { BugbotReviewOperationContext } from './bugbot_review_operation_con
 import type { BugbotReviewDiffPartition } from './types';
 import { renderPythonLiteralWitnesses, projectPythonLiteralWitnesses, PYTHON_LITERAL_OUTPUT_LIMIT } from '../../../../policies/bugbot_python_literal_witness_policy';
 import { renderUntrustedField } from '../../../../../domain/security/untrusted_content';
+import { BUGBOT_ASYNC_STATEMENT_INSTRUCTION } from '../../../../../prompts/bugbot_async_statement_evidence';
 
 const MAX_IGNORE_BLOCK_LENGTH = 2000;
 const GIT_OBJECT_ID = /^[0-9a-f]{7,64}$/i;
@@ -35,7 +36,12 @@ export function buildBugbotReviewInput(
     param: BugbotReviewOperationContext,
     context: BugbotContext,
     assignment?: BugbotPromptPartitionAssignment,
-): { readonly prompt: string; readonly hasLiteralWitnesses: boolean; readonly requiresCandidateVerification: boolean } {
+): {
+    readonly prompt: string;
+    readonly hasLiteralWitnesses: boolean;
+    readonly requiresCandidateVerification: boolean;
+    readonly literalEvidenceContext?: string;
+} {
     const headBranch = param.target.headBranch || 'unknown';
     const baseBranch = param.target.baseBranch;
     const previousBlock = !assignment || assignment.partition.ownsResolution
@@ -68,6 +74,7 @@ export function buildBugbotReviewInput(
     const reviewedFiles = assignment?.partition.files ?? changes.map(change => change.filename);
     const hasLiteralWitnesses = assignment ? assignment.partition.hasPythonLiteralWitnesses === true : literalEvidence!.hasWitnesses;
     const requiresCandidateVerification = hasLiteralWitnesses || (diffBlock.length > 0 && reviewedFiles.some(path => /\.py$/iu.test(path)));
+    const coverageBlock = buildCoverageBlock(context, assignment?.partition);
     const prompt = getBugbotPrompt({
         reviewContextProfile: assignment?.partition.framed ? 'framed-v1' : undefined,
         pythonSyntaxProfile: [...changes.map(change => change.filename), ...(assignment?.partition.files ?? [])].some(path => /\.py$/iu.test(path)) ? 'python' : '',
@@ -85,7 +92,7 @@ export function buildBugbotReviewInput(
             assignment?.partition,
         ),
         ignoreBlock,
-        coverageBlock: buildCoverageBlock(context, assignment?.partition),
+        coverageBlock,
         previousBlock,
         diffBlock,
         reviewConversationBlock: context.reviewConversationBlock,
@@ -97,7 +104,14 @@ export function buildBugbotReviewInput(
             ? param.locale.pullRequest
             : param.locale.issue ?? param.locale.pullRequest,
     });
-    return { prompt, hasLiteralWitnesses, requiresCandidateVerification };
+    const literalEvidenceContext = assignment?.partition.framed && requiresCandidateVerification
+        ? [
+            `Repository ${param.repository.owner}/${param.repository.name}, ${baseBranch} → ${headBranch}.`,
+            diffBlock, coverageBlock, ignoreBlock, previousBlock, context.reviewConversationBlock, context.reviewRulesBlock,
+            BUGBOT_ASYNC_STATEMENT_INSTRUCTION,
+        ].filter(Boolean).join('\n\n')
+        : undefined;
+    return { prompt, hasLiteralWitnesses, requiresCandidateVerification, literalEvidenceContext };
 }
 
 function legacyPythonWitnesses(changes: readonly { readonly filename: string; readonly patch?: string | null }[]): { readonly block: string; readonly hasWitnesses: boolean } {

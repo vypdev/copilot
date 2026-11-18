@@ -11,6 +11,9 @@ export function classifyAgentCliExitDiagnostic(stderr: string): AgentExecutionEx
     if (/^ERROR: Incomplete response returned, reason: max_output_tokens\r?$/mu.test(stderr)) {
         return 'reported-output-token-limit';
     }
+    if (/"code"\s*:\s*"invalid_json_schema"|\binvalid schema for response_format\b/iu.test(stderr)) {
+        return 'reported-invalid-output-schema';
+    }
     const toolDiagnostic = classifyAgentCliToolDiagnostic(stderr);
     if (toolDiagnostic) return toolDiagnostic;
     if (/\b(?:authentication (?:failed|required)|unauthorized|unauthenticated|invalid api key|not logged in|login required|http 401)\b/iu.test(stderr)) {
