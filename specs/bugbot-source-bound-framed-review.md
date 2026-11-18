@@ -697,10 +697,14 @@ the partition.
 
 The application preserves the 128,000-byte generated-source prompt ceiling and
 the shared framed traffic limits. If the evidence itself exceeds the ceiling,
-the review fails closed and retains the prior result. The provider adapter
-projects multiline string enums out of Codex's native schema and checks every
-response against the full application schema, including exact code snippets.
-An invalid native schema is recorded as a fixed diagnostic code.
+the review fails closed and retains the prior result. For generated-source
+verification on Codex, the provider schema keeps the closed shape and the
+application-generated correlation ID. Candidate-supplied IDs, file paths and
+snippets remain exact enums in the application schema and prompt. The
+application also checks that each returned identity belongs to the same
+candidate before any partition can complete. This permits Git text such as a
+literal escaped newline without requiring the decoder to compile it as an
+enum value. An invalid native schema is recorded as a fixed diagnostic code.
 
 The minimum for this addition is two framed integration cases. A full
 assignment that previously overflowed must deliver all its evidence and
@@ -724,6 +728,19 @@ unchanged and the replay had zero GitHub write ports or attempts. These
 observations cover one assignment and its generated-source follow-up.
 [Native failure](https://github.com/vypdev/copilot/actions/runs/44199156168)
 [OpenAI Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs)
+
+On `d03154b90`, the native review recorded six schema rejections during
+generated-source verification and stopped after 49 of 111 validated
+partitions. A fresh read-only replay of partition 50 completed with one
+retained candidate and zero GitHub writes. A separate transport control fed
+the same decoder an enum value with a literal backslash followed by `n`.
+The old projection failed at `findings.items.codeSnippet` before generation.
+With the corrected projection, Codex admitted the same application schema
+and the application accepted the expected response. Both transport runs
+used the pinned CLI and model with zero GitHub writes. The native run did
+not retain the rejected enum values, so the control reproduces the failure
+class without attributing a specific snippet to it.
+[Native failure](https://github.com/vypdev/copilot/actions/runs/44220166805)
 
 ### Copy provenance and independent changed-path coverage — review follow-up
 

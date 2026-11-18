@@ -702,7 +702,7 @@ count separately only when authority/argv differs.
 | Integration/security | 2 | effective sandbox matrix and env/credential isolation |
 | Output rejection diagnostics | 8 | Six closed local causes, forged-diagnostic suppression, real-child observer propagation; existing size fixtures retain both stream assertions |
 | Terminal process diagnostics | 11 | Exact output-token-limit line, prose/other-reason rejection, split/large/evicted tail cases, actual child privacy/cleanup, fixed logger propagation, provider schema code or diagnostic header and rejection of bare schema-code prose |
-| Codex native decoder compatibility | 15 | Immutable input, nested/nullable strings, literal property names, unchanged local constraints, numeric/array bounds, loose-schema rejection, global enum and Unicode budgets, and real adapter length/membership acceptance including LF and CRLF in literal evidence |
+| Codex native decoder compatibility | 16 | Immutable input, nested/nullable strings, literal property names, unchanged local constraints, numeric/array bounds, loose-schema rejection, global enum and Unicode budgets, and real adapter length and membership acceptance including LF, CRLF and a literal escaped newline in generated-source evidence |
 | **Total** | **58** | no double counting |
 
 All provider plan, role authority, executable, and runtime-manifest policies require

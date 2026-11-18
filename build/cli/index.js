@@ -46358,19 +46358,30 @@ function tomlString(value) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.projectCodexOutputSchema = projectCodexOutputSchema;
+exports.projectCodexLiteralVerificationSchema = projectCodexLiteralVerificationSchema;
 const strict_output_schema_policy_1 = __nccwpck_require__(56743);
+const literalIdentityPaths = new Set([
+    '$.findings[].id', '$.findings[].file', '$.findings[].codeSnippet', '$.rejected_ids[]',
+]);
 /** Keep decoder-incompatible constraints local while retaining the closed native shape. */
 function projectCodexOutputSchema(schema) {
-    (0, strict_output_schema_policy_1.assertStrictOutputSchema)(schema);
-    return projectNode(schema, { remainingEnumValues: 1000 });
+    return project(schema);
 }
-function projectNode(schema, budget) {
+/** Exact detector-supplied values belong to the local literal-verification contract. */
+function projectCodexLiteralVerificationSchema(schema) {
+    return project(schema, literalIdentityPaths);
+}
+function project(schema, localEnums) {
+    (0, strict_output_schema_policy_1.assertStrictOutputSchema)(schema);
+    return projectNode(schema, { remainingEnumValues: 1000 }, '$', localEnums);
+}
+function projectNode(schema, budget, path, localEnums) {
     const projected = { ...schema };
     if (Array.isArray(schema.enum)) {
         const stringPoints = schema.enum.reduce((total, value) => total + (typeof value === 'string' ? [...value].length : 0), 0);
         // The native decoder rejects newline-containing string enums. The local
         // validator still checks the original enum, including exact source snippets.
-        if (schema.enum.some(value => typeof value === 'string' && /[\r\n]/u.test(value))
+        if (localEnums?.has(path) || schema.enum.some(value => typeof value === 'string' && /[\r\n]/u.test(value))
             || schema.enum.length > budget.remainingEnumValues || (schema.enum.length > 250 && stringPoints > 15000)) {
             delete projected.enum;
         }
@@ -46385,10 +46396,10 @@ function projectNode(schema, budget) {
     }
     if (types.includes('object')) {
         projected.properties = Object.fromEntries(Object.entries(schema.properties)
-            .map(([name, nested]) => [name, projectNode(nested, budget)]));
+            .map(([name, nested]) => [name, projectNode(nested, budget, `${path}.${name}`, localEnums)]));
     }
     if (types.includes('array'))
-        projected.items = projectNode(schema.items, budget);
+        projected.items = projectNode(schema.items, budget, `${path}[]`, localEnums);
     return projected;
 }
 
@@ -97833,6 +97844,7 @@ const agent_prompt_policy_1 = __nccwpck_require__(78804);
 const agent_findings_response_policy_1 = __nccwpck_require__(34908);
 const agent_capability_adapter_1 = __nccwpck_require__(32152);
 const agent_source_snapshot_policy_1 = __nccwpck_require__(1667);
+const codex_output_schema_policy_1 = __nccwpck_require__(71503);
 class FindingsAgentAdapter extends agent_capability_adapter_1.AgentCapabilityAdapter {
     async query(request) {
         const sourceSnapshot = (0, agent_source_snapshot_policy_1.sourceSnapshotForSddQuery)(request);
@@ -97843,12 +97855,17 @@ class FindingsAgentAdapter extends agent_capability_adapter_1.AgentCapabilityAda
             (0, logger_1.logError)('Missing required AI configuration for findings.');
             return undefined;
         }
+        const nativeSchema = options.expectJson && options.schema
+            ? request.configuration.provider === 'codex' && schemaName === 'bugbot_literal_candidate_verification'
+                ? (0, codex_output_schema_policy_1.projectCodexLiteralVerificationSchema)(options.schema)
+                : options.schema
+            : undefined;
         return this.execute({
             configuration: request.configuration,
             prompt: promptText,
             capability: 'findings',
             ...(request.signal ? { signal: request.signal } : {}),
-            ...(options.expectJson && options.schema ? { outputSchema: options.schema } : {}),
+            ...(nativeSchema ? { outputSchema: nativeSchema } : {}),
             ...(sourceSnapshot ? { sourceSnapshot } : {}),
             mapCliOutput: (output) => {
                 if (options.expectJson && options.schema) {
