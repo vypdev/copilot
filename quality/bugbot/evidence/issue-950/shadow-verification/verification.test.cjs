@@ -704,6 +704,7 @@ test('delivers version-scoped official source and distinguishes no text match fr
     assert.equal(source.basis, runtime.receipt);
     assert.equal(broker.cite(cite(source)).textSha256, hash(contents.trimEnd()));
     assert.equal(broker.inspect({ ...lookup, query: 'different text' }, delivered).status, 'official-no-match');
+    assert.equal(broker.inspect({ ...lookup, first: 2 }, delivered).status, 'official-page-out-of-range');
 });
 
 test('rejects incompatible official basis receipts and explicit versions', () => {
@@ -712,7 +713,7 @@ test('rejects incompatible official basis receipts and explicit versions', () =>
     const lock = broker.inspect(query('read', 'pnpm-lock.yaml')).sources[0];
     remember(lock);
     const lockLookup = query('official', 'playwright', { basis: lock.receipt, version: '1.64.2', query: 'key' });
-    assert.equal(broker.inspect(lockLookup, delivered).status, 'official-source-unavailable');
+    assert.equal(broker.inspect(lockLookup, delivered).status, 'official-version-not-proven');
     assert.equal(broker.inspect({ ...lockLookup, version: '1.64.1' }, delivered).status, 'official-version-not-proven');
     const foreign = runtimeEvidence();
     foreign.remember(foreign.runtime);

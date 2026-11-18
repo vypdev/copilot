@@ -2107,7 +2107,15 @@ producer attempt, check, conversation and comparison before mutation. The
 terminal producer waits for acknowledgment from that job before issuing the
 existing receipt. An older or conflicting observation cannot overwrite the
 active block. Completion records the attempt on the comment so an already
-queued observation cannot restore a completed progress block.
+queued observation cannot restore a completed progress block. Native run and
+check listings are reconciled across up to ten pages of 100 unique records
+per listing. An incomplete or inconsistent listing keeps the existing card.
+
+Explicit cancellation from the Action reaches the active verifier and stops
+new verification sessions. If it arrives before publication, the current
+batch cannot replace the last verified result. Cancellation adds no session
+deadline. A verification failure that blocks publication completes the
+already-open native Review check as failed without issuing approval evidence.
 
 Deterministic controls preserve the previous verified bytes, reuse the
 first-review comment without granting approval, reject replaced attempts and

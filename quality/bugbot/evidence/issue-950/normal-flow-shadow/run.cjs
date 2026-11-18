@@ -109,11 +109,11 @@ async function run(lab, number, destination, manifestPath = path.join(__dirname,
     for (const [sha, tree] of [[subject.head, subject.tree], [subject.base, subject.baseTree]]) {
         assert.equal(git(source, 'rev-parse', sha + '^{tree}').trim(), tree);
     }
-    const scratch = fs.mkdtempSync(path.join(tmpdir(), 'bugbot-normal-flow-'));
-    const checkout = path.join(scratch, name);
     const originalCwd = process.cwd();
     const stream = path.resolve(destination);
     fs.writeFileSync(stream, '', { flag: 'wx', mode: 0o600 });
+    const scratch = fs.mkdtempSync(path.join(tmpdir(), 'bugbot-normal-flow-'));
+    const checkout = path.join(scratch, name);
     const log = event => fs.appendFileSync(stream, JSON.stringify({ at: new Date().toISOString(), ...event }) + '\n');
     const cancellation = new AbortController();
     const cancel = () => cancellation.abort();

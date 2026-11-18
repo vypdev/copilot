@@ -22,7 +22,7 @@ export interface NativeGithubRun {
     }[] | null;
 }
 
-interface NativeGithubCheck {
+export interface NativeGithubCheck {
     readonly id: number;
     readonly name: string;
     readonly head_sha: string;

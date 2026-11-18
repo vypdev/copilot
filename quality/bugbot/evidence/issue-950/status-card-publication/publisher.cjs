@@ -2,6 +2,7 @@
 
 // The harness models a single admitted writer. The deployment must supply the
 // cross-run serialization and authoritative reads at this same boundary.
+const { createHash } = require('node:crypto');
 const { renderBugbotLiveProgress } = require('../../../../../src/application/policies/bugbot_live_progress_presentation_policy');
 const { readBugbotProgressCheckObservation } = require('../../../../../src/application/policies/bugbot_progress_check_observation_policy');
 const { parsePublicationMarker } = require('../../../../../src/application/policies/publication_identity_policy');
@@ -65,7 +66,8 @@ function renderCard(previous, snapshot) {
     if (!observation || (observation.baseRefSha ?? observation.baseSha) !== source.baseRef || !/^https:\/\/[a-z0-9.-]+(?::\d+)?\/[\w.-]+\/[\w.-]+\/actions\/runs\/\d+\/attempts\/\d+$/iu.test(runUrl)
         || runUrl !== `${snapshot.repositoryUrl}/actions/runs/${review.runId}/attempts/${review.attempt}`) return undefined;
     if (observation.stage === 'finished' && !(review.state === 'interrupted' && observation.outcome === 'failed')) return undefined;
-    const key = [source.repositoryId, source.pullNumber, source.base, source.baseRef, source.head, source.policy, review.runId, review.attempt].join(':');
+    const identity = [source.repositoryId, source.pullNumber, source.base, source.baseRef, source.head, source.policy, review.runId, review.attempt];
+    const key = createHash('sha256').update(JSON.stringify(identity)).digest('hex');
     if (stored.source === key && stored.sequence > observation.sequence) return undefined;
     const spanish = /^es(?:-|$)/iu.test(locale);
     const label = spanish ? 'Última revisión verificada' : 'Last verified review';

@@ -71,14 +71,6 @@ function makeBroker({ repo, officialDirectory, catalog = [], localRuntime, readL
                     ? { package: packageName, version: entry.version, versionScope: entry.scope } : null;
             }
         }
-        if (packageName === 'playwright' && proof?.kind === 'git' && proof.path === 'pnpm-lock.yaml'
-            && typeof request.version === 'string' && proof.lines.some(line => {
-                const key = line.trim().replace(/^['"]|['"](?=:$)/gu, '');
-                return ['playwright', '@playwright/test'].some(name =>
-                    key === name + '@' + request.version + ':');
-            })) {
-            return { package: packageName, version: request.version, versionScope: 'tracked lockfile package entry' };
-        }
         return null;
     }
 
@@ -99,10 +91,11 @@ function makeBroker({ repo, officialDirectory, catalog = [], localRuntime, readL
                     ...window(lines, range.first, range.last) });
             }
         }
+        if (!sources.length) return { status: 'official-no-match', ...version };
         const current = page(sources, request.first ?? 1, 8);
         return current.items.length
             ? { ...grant(current.items), ...version, next: current.next }
-            : { status: 'official-no-match', ...version };
+            : { status: 'official-page-out-of-range', ...version };
     }
 
     const unprovenVersion = packageName => ({ status: 'official-version-not-proven',

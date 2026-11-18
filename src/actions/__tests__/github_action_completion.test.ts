@@ -515,9 +515,11 @@ describe('finishGithubAction', () => {
     it('preserves the previous publication when verification rejects the batch', async () => {
         const action = Object.assign(execution(), { eventName: 'pull_request',
             inputs: { pull_request: { head: { sha: 'a'.repeat(40) } } } });
+        const retire = jest.fn().mockResolvedValue(undefined);
         await finishGithubAction(action, [new Result({ id: 'DetectPotentialProblemsUseCase', executed: true, success: false,
             payload: { bugbotPublicationBlocked: true },
-        })], {} as never, {} as never, { publish: mockEvidencePublish }, { publish: mockSummaryPublish });
+        })], {} as never, {} as never, { publish: mockEvidencePublish, retireLiveReviews: retire }, { publish: mockSummaryPublish });
+        expect(retire).toHaveBeenCalledWith('test-owner', 'test-repo', expect.any(String), 'failure');
         expect(mockPublishInvoke).not.toHaveBeenCalled();
         expect(mockStoreInvoke).not.toHaveBeenCalled();
         expect(mockEvidencePublish).not.toHaveBeenCalled();

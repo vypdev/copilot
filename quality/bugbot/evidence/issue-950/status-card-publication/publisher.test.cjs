@@ -122,6 +122,18 @@ test('rejects a changed base ref on either the wakeup or the observed progress',
     assert.equal(f.current().body, f.initial);
 });
 
+test('keeps progress updateable with full SHA-256 identities and a custom policy', async () => {
+    const f = setup();
+    const sha256 = { ...source, base: 'a'.repeat(64), baseRef: 'e'.repeat(64),
+        head: 'b'.repeat(64), policy: 'f'.repeat(64) };
+    f.update({ source: sha256, review: review(5, { current: sha256 }) });
+    assert.equal(await f.publish({ source: sha256 }), 'updated');
+    f.update({ review: review(6, { current: sha256 }) });
+    assert.equal(await f.publish({ source: sha256 }), 'updated');
+    assert.match(f.current().body, /6\/110 partitions validated/);
+    assert.equal(f.effects[0].id, f.effects[1].id);
+});
+
 test('an independent recheck and terminal refresh use fresh state from the same serialized boundary', async () => {
     const f = setup();
     let release;

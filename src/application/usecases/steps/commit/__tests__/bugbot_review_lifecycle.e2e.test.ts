@@ -381,6 +381,28 @@ describe('Bugbot normal review in shadow', () => {
     expect(result.payload).toMatchObject({ findings: [{ line: 10, endLine: 11 }] });
   });
 
+  it('propagates explicit cancellation to the active verifier and preserves previous publication', async () => {
+    const provider = new InMemoryReviewProvider();
+    const controller = new AbortController();
+    const action = execution('publish', [], { 'bugbot-verification-mode': 'shadow' });
+    action.bugbotReviewSignal = controller.signal;
+    const verify = jest.fn<ReturnType<BugbotShadowVerificationPort['verify']>, Parameters<BugbotShadowVerificationPort['verify']>>()
+      .mockImplementation(async ({ signal }) => {
+        expect(signal).toBe(controller.signal);
+        controller.abort();
+        return { status: 'technical-failure', reason: 'investigation-canceled' };
+      });
+    const query = detector([finding()]);
+    const result = await new DetectPotentialProblemsUseCase({ query }, scmPorts(provider), undefined, undefined, { verify })
+      .invoke(projectBugbotReviewOperationContext(action));
+
+    expect(verify).toHaveBeenCalledTimes(1);
+    expect(result[0]).toMatchObject({ success: false, payload: { bugbotPublicationBlocked: true,
+      bugbotShadowVerification: { candidates: [{ status: 'technical-failure', reason: 'investigation-canceled' }] } } });
+    expect(provider.reviews).toEqual([]);
+    expect(provider.statusComments).toEqual([]);
+  });
+
   it('uses the optional Action profile for verification only, without changing dry-run findings', async () => {
     const provider = new InMemoryReviewProvider();
     const query = detector([finding()]);

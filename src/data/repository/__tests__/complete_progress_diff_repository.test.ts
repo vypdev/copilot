@@ -17,7 +17,7 @@ describe('complete progress collection at the compare ceiling', () => {
     it('collects 301 complete files instead of assessing the first 300', async () => { const result=await native().read();expect(changes(result)).toHaveLength(301);expect(changes(result).at(-1).path).toBe('src/file-0300.ts'); });
     it('keeps generated bundles metadata-only under their existing exception', async () => { const f=fixture({}, {...addedFiles(), 'build/github_action/index.js':Buffer.alloc(10_000_000).toString()});const result=changes(await f.read()).find(c=>c.path==='build/github_action/index.js');expect(result).toMatchObject({evidence:'generated-metadata-only'});expect(result).not.toHaveProperty('recoveredContent'); });
     it('keeps the generated specification index metadata-only', async () => { const f=fixture({}, {...addedFiles(), 'specs/CATALOG.md':'generated'});expect(changes(await f.read()).find(c=>c.path==='specs/CATALOG.md')).toMatchObject({evidence:'generated-metadata-only'}); });
-    it('keeps generated Bugbot logs in the immutable inventory and recovers the replay source', async () => {
+    it('github-communication-experience-change-C210: keeps generated Bugbot logs in the immutable inventory and recovers the replay source', async () => {
         const root = 'quality/bugbot/evidence/issue-950/pilot';
         const ledger = `${root}/trials.jsonl`, log = `${root}/execution.log.gz`, runner = `${root}/run.cjs`;
         const f = fixture({}, { ...addedFiles(), [ledger]: 'generated ledger\n', [log]: { bytes: Buffer.from([0x1f, 0x8b, 0]) }, [runner]: 'replay();\n' });

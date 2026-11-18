@@ -11,7 +11,7 @@ export interface CopilotEvidence {
 /** Output port for optional native GitHub Check Runs. */
 export interface CopilotEvidencePort {
     publish(evidence: CopilotEvidence, owner: string, repository: string, token: string): Promise<void>;
-    retireLiveReviews?(owner: string, repository: string, token: string): Promise<void>;
+    retireLiveReviews?(owner: string, repository: string, token: string, conclusion?: 'neutral' | 'failure'): Promise<void>;
 }
 
 export interface CopilotLiveReviewCheck {

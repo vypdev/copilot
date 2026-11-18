@@ -6,6 +6,7 @@ const { execFileSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 const { tmpdir } = require('node:os');
+const { requirePinnedImplementation } = require('./implementation.cjs');
 require('../normal-flow-shadow/run.cjs');
 
 const { runBugbotBenchmarkAgent } = require('../../../../../src/tooling/bugbot_benchmark_runner');
@@ -20,6 +21,7 @@ const root = path.resolve(__dirname, '../../../../..');
 const hash = input => createHash('sha256').update(input).digest('hex');
 
 async function run(destination, preflight = false) {
+    const implementation = requirePinnedImplementation();
     assert(destination, 'usage: node corpus.cjs <new output directory>');
     destination = path.resolve(destination);
     const corpusFile = path.join(root, 'quality/bugbot/corpus.v1.json');
@@ -34,7 +36,7 @@ async function run(destination, preflight = false) {
     const record = row => fs.appendFileSync(ledger, JSON.stringify(row) + '\n', { mode: 0o600 });
     record({ event: 'start', at: new Date().toISOString(), cli, configuration,
         plan: hash(fs.readFileSync(path.join(__dirname, 'plan.json'))), runner: hash(fs.readFileSync(__filename)),
-        implementation: plan.implementation, corpus: plan.corpus.sha256, gitHubMutationPorts: 0 });
+        implementation, corpus: plan.corpus.sha256, gitHubMutationPorts: 0 });
     const cwd = fs.mkdtempSync(path.join(tmpdir(), 'copilot-ev07-corpus-'));
     const oldCwd = process.cwd();
     const cancel = new AbortController();

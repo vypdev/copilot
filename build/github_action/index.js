@@ -44552,6 +44552,8 @@ async function runGitHubAction(verificationAuthority) {
         localeInputs,
     });
     const shadowSettings = aiInputs.bugbotReviewConfiguration.shadowVerification;
+    const withReviewCancellation = (run) => shadowSettings
+        ? withBugbotReviewCancellation(execution, run) : run();
     const prepareShadowRuntime = () => {
         if (!shadowSettings || (!botAnalysisOnly && !requestedActiveAgentTasks.some(task => task === 'reviewer' || task === 'findings')))
             return;
@@ -44586,14 +44588,14 @@ async function runGitHubAction(verificationAuthority) {
         execution.issueNumber = execution.pullRequest.number;
         (0, github_action_runtime_1.prepareGithubAgentRuntime)(aiInputs.requestedAgentTasks, ['reviewer']);
         prepareShadowRuntime();
-        const results = await (0, pull_request_use_case_composition_root_1.createPullRequestUseCaseCompositionRoot)({
+        const results = await withReviewCancellation(() => (0, pull_request_use_case_composition_root_1.createPullRequestUseCaseCompositionRoot)({
             owner: execution.owner,
             repository: execution.repo,
             token,
             ...(shadowSettings ? { shadow: { workspace: process.env.GITHUB_WORKSPACE } } : {}),
             ...(verificationAuthority ? { verificationAuthority } : {}),
             ...(dispatcher ? { statusCard: dispatcher.terminal } : {}),
-        }).reviewOnly(execution);
+        }).reviewOnly(execution));
         if (results.some(result => !result.success)) {
             throw new Error('Bot-authored pull-request analysis did not complete.');
         }
@@ -44612,7 +44614,7 @@ async function runGitHubAction(verificationAuthority) {
         policy: verificationAuthority?.policyDigest,
         ...(dispatcher ? { wakeStatusCard: dispatcher.wake } : {}),
     }, evidence, summary);
-    const results = await (0, common_action_1.mainRun)(execution, projectBoard.command, new git_cli_repository_1.GitCliRepository(token), 'github-workflow', (0, lifecycle_state_composition_root_1.createSynchronizeLifecycleStateUseCase)(repositoryBinding), (0, agent_activity_composition_root_1.createSynchronizeAgentActivityUseCase)(repositoryBinding), async (admittedExecution) => {
+    const results = await withReviewCancellation(() => (0, common_action_1.mainRun)(execution, projectBoard.command, new git_cli_repository_1.GitCliRepository(token), 'github-workflow', (0, lifecycle_state_composition_root_1.createSynchronizeLifecycleStateUseCase)(repositoryBinding), (0, agent_activity_composition_root_1.createSynchronizeAgentActivityUseCase)(repositoryBinding), async (admittedExecution) => {
         await (0, github_action_execution_1.hydrateGithubActionExecutionProjects)(admittedExecution, {
             getInput: github_action_input_1.getGithubActionInput,
             projectQuery: projectBoard.query,
@@ -44638,7 +44640,7 @@ async function runGitHubAction(verificationAuthority) {
             prepareShadowRuntime();
             languageRuntimeAvailable = requestedActiveAgentTasks.includes('planner');
         }
-    }, undefined, verificationAuthority, reviewProgress, ...(dispatcher ? [dispatcher.terminal] : []));
+    }, undefined, verificationAuthority, reviewProgress, ...(dispatcher ? [dispatcher.terminal] : [])));
     const issueContentPort = (0, issue_content_composition_root_1.createIssueContentCompositionRoot)();
     const configurationHandler = new configuration_handler_1.ConfigurationHandler(issueContentPort);
     await (0, github_action_completion_1.finishGithubAction)(execution, results, (0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueContentPort, repositoryBinding), {
@@ -44647,6 +44649,22 @@ async function runGitHubAction(verificationAuthority) {
             issueNumber: context.issueNumber,
         }, context),
     }, evidence, summary, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(languageRuntimeAvailable ? (0, agent_capability_composition_root_1.createLanguageQueryPort)() : undefined), (0, shared_capability_port_binding_1.bindPublicationSourceQuery)(new github_publication_source_repository_1.GithubPublicationSourceRepository((0, github_branch_client_factory_1.createBranchClient)()), repositoryBinding, (0, issue_completion_composition_root_1.createNativeStatusReadPort)(repositoryBinding)));
+}
+async function withBugbotReviewCancellation(execution, run) {
+    const controller = new AbortController();
+    const cancel = () => controller.abort();
+    const previous = execution.bugbotReviewSignal;
+    execution.bugbotReviewSignal = controller.signal;
+    process.once('SIGINT', cancel);
+    process.once('SIGTERM', cancel);
+    try {
+        return await run();
+    }
+    finally {
+        execution.bugbotReviewSignal = previous;
+        process.removeListener('SIGINT', cancel);
+        process.removeListener('SIGTERM', cancel);
+    }
 }
 /**
  * Runs the action entrypoint without forcing a successful process exit.
@@ -44896,7 +44914,13 @@ async function finishGithubAction(execution, results, issueNotificationPort, con
     const optionalEvidenceDiagnostic = !dryRun && !verificationBlocked ? await publishCopilotEvidence(execution, results, summary.text, evidencePort, catalogResolver) : undefined;
     if (!dryRun) {
         try {
-            await evidencePort?.retireLiveReviews?.(execution.owner, execution.repo, process.env.COPILOT_EVIDENCE_TOKEN?.trim() || execution.tokens.token);
+            const evidenceToken = process.env.COPILOT_EVIDENCE_TOKEN?.trim() || execution.tokens.token;
+            if (verificationBlocked) {
+                await evidencePort?.retireLiveReviews?.(execution.owner, execution.repo, evidenceToken, 'failure');
+            }
+            else {
+                await evidencePort?.retireLiveReviews?.(execution.owner, execution.repo, evidenceToken);
+            }
         }
         catch {
             (0, logger_1.logInfo)('An unfinished Bugbot progress check could not be closed. The native workflow owns the final status.');
@@ -76343,6 +76367,7 @@ function projectBugbotReviewOperationContext(source) {
     const agentConfiguration = source.ai.getAgentConfiguration(source.isPullRequest ? 'reviewer' : 'findings');
     return Object.freeze({
         ...selection,
+        ...(source.bugbotReviewSignal ? { signal: source.bugbotReviewSignal } : {}),
         locale: Object.freeze({
             issue: source.locale.issue,
             pullRequest: source.locale.pullRequest,
@@ -78311,10 +78336,12 @@ async function observeBugbotShadowVerification(operation, context, prepared, por
         await progress?.record('verifying', { candidates: { completed, total } });
     const tasks = [...inputs, ...resolutions].map(({ id, candidate, ordinaryPublication }) => async () => {
         const started = performance.now();
-        const observation = candidate
-            ? await verifyCandidate(port, candidate, configuration, review)
-            : { status: 'verdict', verdict: 'inconclusive', reason: 'Candidate could not be pinned.',
-                missing: 'A pinned repository location with an unambiguous review anchor is required.', citations: [], premises: [] };
+        const observation = operation.signal?.aborted
+            ? { status: 'technical-failure', reason: 'investigation-canceled' }
+            : candidate
+                ? await verifyCandidate(port, candidate, configuration, review, operation.signal)
+                : { status: 'verdict', verdict: 'inconclusive', reason: 'Candidate could not be pinned.',
+                    missing: 'A pinned repository location with an unambiguous review anchor is required.', citations: [], premises: [] };
         const wallMs = Math.round(performance.now() - started);
         if (observation.status === 'verdict') {
             await progress?.record('verifying', { candidates: { completed: ++completed, total } });
@@ -78335,9 +78362,9 @@ async function observeBugbotShadowVerification(operation, context, prepared, por
         candidates,
     };
 }
-async function verifyCandidate(port, candidate, configuration, review) {
+async function verifyCandidate(port, candidate, configuration, review, signal) {
     try {
-        const result = await port.verify({ candidate, configuration, review });
+        const result = await port.verify({ candidate, configuration, review, ...(signal ? { signal } : {}) });
         if (result.reportedModel && result.reportedModel !== configuration.model) {
             return { status: 'technical-failure', reason: 'reported-model-mismatch',
                 reportedModel: result.reportedModel, investigation: result.investigation };
@@ -80370,8 +80397,14 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
             ...(enforced && (outcome === 'failed' || outcome === 'superseded') ? { bugbotPublicationBlocked: true } : {}) };
         return [result];
     };
+    const canceled = () => complete(new result_1.Result({
+        id: TASK_ID, success: false, executed: true, payload: { bugbotPublicationBlocked: true },
+        errors: [new application_error_1.ApplicationError('workflow.failed', 'Bugbot verification was canceled. The previous verified result was preserved.')],
+    }), 'failed');
     (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(TASK_ID)} Executing ${TASK_ID}.`);
     try {
+        if (reviewContext.signal?.aborted)
+            return await canceled();
         if (shouldSkipDetection(reviewContext)) {
             await publishTelemetry('skipped', 'admission');
             return [];
@@ -80446,8 +80479,12 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
         if (await telemetry.measure('freshness', () => (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context))) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
+        if (reviewContext.signal?.aborted)
+            return await canceled();
         if (dependencies.shadowVerification && trace) {
             shadow = await (0, observe_bugbot_shadow_verification_1.observeBugbotShadowVerification)(reviewContext, context, prepared, dependencies.shadowVerification, trace, detectionAndPreparationMs, dependencies.experimentalShadowProfile, enforced || dryRun ? progress : undefined);
+            if (reviewContext.signal?.aborted)
+                return await canceled();
             if (shadow.candidates.length > 0 && await (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context)) {
                 shadow = { ...shadow, superseded: true };
                 return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
@@ -80494,6 +80531,8 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
             && await (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context, 'before-publication', requiresReceipt)) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
+        if (reviewContext.signal?.aborted)
+            return await canceled();
         const resolutionErrors = await telemetry.measure('publication', () => (0, apply_detected_findings_1.applyDetectedFindings)(reviewContext, context, prepared, dependencies.scm.publication, dependencies.scm.resolution, catalog));
         if (await telemetry.measure('post-publication-freshness', () => (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context, 'after-publication', requiresReceipt))) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
@@ -90095,14 +90134,14 @@ class CopilotEvidenceRepository {
             throw new copilot_evidence_error_1.CopilotEvidencePublicationError('provider.contract-invalid');
         this.live.set(key, { id: response.data.id, externalId: check.externalId, progress });
     }
-    async retireLiveReviews(owner, repo, token) {
+    async retireLiveReviews(owner, repo, token, conclusion = 'neutral') {
         if (!this.live.size)
             return;
         const checks = this.client.getClient(token).rest.checks;
         for (const [key, check] of this.live) {
             if (!key.startsWith(`${owner}/${repo}:`))
                 continue;
-            await checks.update?.({ owner, repo, check_run_id: check.id, status: 'completed', conclusion: 'neutral' });
+            await checks.update?.({ owner, repo, check_run_id: check.id, status: 'completed', conclusion });
             this.live.delete(key);
         }
     }
@@ -112486,6 +112525,29 @@ const sourceEvents = new Map([
     ['.github/workflows/copilot_issue_comment.yml', 'issue_comment'],
     ['.github/workflows/copilot_commit.yml', 'push'],
 ]);
+const nativePageSize = 100;
+const nativePageLimit = 10;
+async function readCompleteNativeList(read) {
+    const items = new Map();
+    let expected;
+    for (let page = 1; page <= nativePageLimit; page++) {
+        const result = await read(page);
+        expected ?? (expected = result.total);
+        if (result.total !== expected || !Number.isSafeInteger(expected) || expected < 0
+            || expected > nativePageLimit * nativePageSize || result.items.length > nativePageSize)
+            return undefined;
+        for (const item of result.items) {
+            if (!Number.isSafeInteger(item.id) || item.id < 1 || items.has(item.id))
+                return undefined;
+            items.set(item.id, item);
+        }
+        if (items.size === expected)
+            return [...items.values()];
+        if (items.size > expected || result.items.length !== nativePageSize)
+            return undefined;
+    }
+    return undefined;
+}
 async function runGithubBugbotStatusCardWorkflow(binding) {
     const request = (0, github_bugbot_status_card_handoff_1.decodeGithubBugbotStatusCardHandoff)(binding.inputs);
     const repository = binding.owner + '/' + binding.repository;
@@ -112520,16 +112582,20 @@ async function runGithubBugbotStatusCardWorkflow(binding) {
     if (!initial || initial.base !== source.base || initial.baseRef !== source.baseRef || initial.head !== source.head)
         return 'skipped';
     const readReview = async () => {
-        const [origin, { data: latest }] = await Promise.all([readRun(), api.rest.actions.listWorkflowRuns({
-                ...scope, workflow_id: 'copilot_pull_request.yml', event: 'pull_request', head_sha: source.head, per_page: 100,
+        const [origin, runs] = await Promise.all([readRun(), readCompleteNativeList(async (page) => {
+                const { data } = await api.rest.actions.listWorkflowRuns({
+                    ...scope, workflow_id: 'copilot_pull_request.yml', event: 'pull_request', head_sha: source.head,
+                    per_page: nativePageSize, page,
+                });
+                return { total: data.total_count, items: data.workflow_runs };
             })]);
         const originEvent = sourceEvents.get(origin.path ?? '');
         if (origin.id !== runId || origin.run_attempt !== attempt || origin.repository?.id !== source.repositoryId
             || origin.head_repository?.id !== source.repositoryId || !originEvent || originEvent !== origin.event
             || (kind !== 'progress' && origin.status !== 'in_progress')
-            || latest.total_count !== latest.workflow_runs.length)
+            || !runs)
             return undefined;
-        const [active] = latest.workflow_runs.filter(record => record.pull_requests?.some(pull => pull.number === source.pullNumber
+        const [active] = runs.filter(record => record.pull_requests?.some(pull => pull.number === source.pullNumber
             && pull.head.sha === source.head && pull.base.sha === source.base))
             .sort((left, right) => (Date.parse(right.created_at ?? '') || 0) - (Date.parse(left.created_at ?? '') || 0) || right.id - left.id);
         if (origin.path === github_bugbot_status_card_observation_1.nativeBugbotAnalysisPath && active?.id !== runId)
@@ -112540,9 +112606,16 @@ async function runGithubBugbotStatusCardWorkflow(binding) {
         }
         if (!active)
             return kind === 'state-refresh' ? { runId, attempt, state: 'complete' } : undefined;
-        const checks = await api.rest.checks.listForRef({ ...scope, ref: source.head, check_name: 'Copilot / Review', filter: 'all', per_page: 100 });
+        const checks = await readCompleteNativeList(async (page) => {
+            const { data } = await api.rest.checks.listForRef({
+                ...scope, ref: source.head, check_name: 'Copilot / Review', filter: 'all', per_page: nativePageSize, page,
+            });
+            return { total: data.total_count, items: data.check_runs };
+        });
+        if (!checks)
+            return undefined;
         const currentWork = { source, runId: active.id, attempt: active.run_attempt ?? 0, dryRun: false };
-        const current = (0, github_bugbot_status_card_observation_1.readNativeBugbotStatusCardReview)(currentWork, repositoryUrl, active, checks.data);
+        const current = (0, github_bugbot_status_card_observation_1.readNativeBugbotStatusCardReview)(currentWork, repositoryUrl, active, { total_count: checks.length, check_runs: checks });
         if (current)
             return current;
         return kind === 'state-refresh' && active.status === 'completed' && active.conclusion === 'success'
@@ -129803,14 +129876,6 @@ function makeBroker({ repo, officialDirectory, catalog = [], localRuntime, readL
                     ? { package: packageName, version: entry.version, versionScope: entry.scope } : null;
             }
         }
-        if (packageName === 'playwright' && proof?.kind === 'git' && proof.path === 'pnpm-lock.yaml'
-            && typeof request.version === 'string' && proof.lines.some(line => {
-                const key = line.trim().replace(/^['"]|['"](?=:$)/gu, '');
-                return ['playwright', '@playwright/test'].some(name =>
-                    key === name + '@' + request.version + ':');
-            })) {
-            return { package: packageName, version: request.version, versionScope: 'tracked lockfile package entry' };
-        }
         return null;
     }
 
@@ -129831,10 +129896,11 @@ function makeBroker({ repo, officialDirectory, catalog = [], localRuntime, readL
                     ...window(lines, range.first, range.last) });
             }
         }
+        if (!sources.length) return { status: 'official-no-match', ...version };
         const current = page(sources, request.first ?? 1, 8);
         return current.items.length
             ? { ...grant(current.items), ...version, next: current.next }
-            : { status: 'official-no-match', ...version };
+            : { status: 'official-page-out-of-range', ...version };
     }
 
     const unprovenVersion = packageName => ({ status: 'official-version-not-proven',

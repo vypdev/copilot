@@ -2,7 +2,6 @@
 import argparse
 from collections import Counter
 from hashlib import sha256
-import importlib.util
 import json
 import math
 from pathlib import Path
@@ -14,10 +13,17 @@ PLAN = json.loads((ROOT / "plan.json").read_text())["repositoryCohort"]
 V4 = ROOT.parent / "v4"
 assert sha256((V4 / "manifest.json").read_bytes()).hexdigest() == PLAN["manifestSha256"]
 assert sha256((V4 / "candidates.json").read_bytes()).hexdigest() == PLAN["oracleSha256"]
-SPEC = importlib.util.spec_from_file_location("score_v4", V4 / "score.py")
-V4_SCORE = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(V4_SCORE)
-EXPECTED = V4_SCORE.CASE
+EXPECTED = json.loads((V4 / "candidates.json").read_text())
+# Same full-review premise rules as the frozen v4 evaluator.
+PATTERNS = {
+    "U": r"surrogate|supplementary|unicode flag|utf.?16|astral",
+    "F": r"fixture|expected_schema",
+    "S": r"histor|restor|fixed exception|retained|source guard|excluded original",
+    "X": r"foreign.key|parent key|unique index",
+    "M": r"migration|rollback|link|href",
+    "P": r"toBeEnabled|edit preferences|disabled|enabled",
+    "J": r"transport|frame|integer|identity",
+}
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("review_root", type=Path)
 parser.add_argument("--public-attempts", type=Path)
@@ -133,8 +139,11 @@ def score(id, repetition):
         assert simulation["overflow"] == max(0, len(active) - 20)
     oracle = EXPECTED[id][0]
     positive = id.endswith("2")
-    matched = lambda items: next((finding for finding in items
-                                  if V4_SCORE.prior.matches(finding, oracle, {"subject": id, "phase": "full-review"})), None)
+    def matched(items):
+        return next((finding for finding in items
+                     if finding.get("file") == oracle["path"]
+                     and abs((finding.get("line") or -100) - oracle["line"]) <= 8
+                     and re.search(PATTERNS[id[0]], finding["title"] + " " + finding["description"], re.I)), None)
     baseline_match, shadow_match = matched(findings), matched(active)
     return dict(subject=id, repetition=repetition, status=status, githubWriteAttempts=write_count,
                 checkoutUnchanged=result["checkoutUnchanged"], baseline=len(findings), shadow=len(active),

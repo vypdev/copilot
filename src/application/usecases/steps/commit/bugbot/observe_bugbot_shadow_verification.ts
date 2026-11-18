@@ -97,10 +97,12 @@ export async function observeBugbotShadowVerification(
     if (total) await progress?.record('verifying', { candidates: { completed, total } });
     const tasks = [...inputs, ...resolutions].map(({ id, candidate, ordinaryPublication }) => async (): Promise<Observation> => {
         const started = performance.now();
-        const observation = candidate
-            ? await verifyCandidate(port, candidate, configuration, review)
-            : { status: 'verdict' as const, verdict: 'inconclusive' as const, reason: 'Candidate could not be pinned.',
-                missing: 'A pinned repository location with an unambiguous review anchor is required.', citations: [], premises: [] };
+        const observation = operation.signal?.aborted
+            ? { status: 'technical-failure' as const, reason: 'investigation-canceled' }
+            : candidate
+                ? await verifyCandidate(port, candidate, configuration, review, operation.signal)
+                : { status: 'verdict' as const, verdict: 'inconclusive' as const, reason: 'Candidate could not be pinned.',
+                    missing: 'A pinned repository location with an unambiguous review anchor is required.', citations: [], premises: [] };
         const wallMs = Math.round(performance.now() - started);
         if (observation.status === 'verdict') {
             await progress?.record('verifying', { candidates: { completed: ++completed, total } });
@@ -127,9 +129,10 @@ async function verifyCandidate(
     candidate: BugbotShadowCandidate,
     configuration: Readonly<AgentConfiguration>,
     review: object,
+    signal?: AbortSignal,
 ): Promise<BugbotShadowResult> {
     try {
-        const result = await port.verify({ candidate, configuration, review });
+        const result = await port.verify({ candidate, configuration, review, ...(signal ? { signal } : {}) });
         if (result.reportedModel && result.reportedModel !== configuration.model) {
             return { status: 'technical-failure', reason: 'reported-model-mismatch',
                 reportedModel: result.reportedModel, investigation: result.investigation };

@@ -213,9 +213,18 @@ describe('runGitHubAction', () => {
     agentProvisioningSpy.mockImplementationOnce(() => undefined).mockImplementationOnce(() => {
       if (status === 'unavailable') throw new Error('runtime unavailable');
     });
+    const listeners = process.listenerCount('SIGTERM');
+    mockReviewOnly.mockImplementationOnce(async execution => {
+      expect(execution.bugbotReviewSignal.aborted).toBe(false);
+      process.emit('SIGTERM', 'SIGTERM');
+      expect(execution.bugbotReviewSignal.aborted).toBe(true);
+      return [];
+    });
 
     await runGitHubAction();
 
+    expect(process.listenerCount('SIGTERM')).toBe(listeners);
+    expect(mockReviewOnly.mock.calls[0][0].bugbotReviewSignal).toBeUndefined();
     expect(agentProvisioningSpy).toHaveBeenNthCalledWith(1, expect.anything(), ['reviewer']);
     expect(agentProvisioningSpy).toHaveBeenNthCalledWith(2, expect.objectContaining({ findings: {
       provider: 'opencode', modelProvider: 'anthropic', model: 'fixture-claude', effort: 'high',

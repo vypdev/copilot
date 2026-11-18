@@ -111,8 +111,13 @@ export async function runDetectPotentialProblemsWorkflow(
             ...(enforced && (outcome === 'failed' || outcome === 'superseded') ? { bugbotPublicationBlocked: true } : {}) };
         return [result];
     };
+    const canceled = () => complete(new Result({
+        id: TASK_ID, success: false, executed: true, payload: { bugbotPublicationBlocked: true },
+        errors: [new ApplicationError('workflow.failed', 'Bugbot verification was canceled. The previous verified result was preserved.')],
+    }), 'failed');
     logInfo(`${getTaskEmoji(TASK_ID)} Executing ${TASK_ID}.`);
     try {
+        if (reviewContext.signal?.aborted) return await canceled();
         if (shouldSkipDetection(reviewContext)) {
             await publishTelemetry('skipped', 'admission');
             return [];
@@ -191,12 +196,14 @@ export async function runDetectPotentialProblemsWorkflow(
             hasNewerBugbotRevision(context, dependencies.scm.context))) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
+        if (reviewContext.signal?.aborted) return await canceled();
         if (dependencies.shadowVerification && trace) {
             shadow = await observeBugbotShadowVerification(
                 reviewContext, context, prepared, dependencies.shadowVerification, trace,
                 detectionAndPreparationMs, dependencies.experimentalShadowProfile,
                 enforced || dryRun ? progress : undefined,
             );
+            if (reviewContext.signal?.aborted) return await canceled();
             if (shadow.candidates.length > 0 && await hasNewerBugbotRevision(context, dependencies.scm.context)) {
                 shadow = { ...shadow, superseded: true };
                 return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
@@ -241,6 +248,7 @@ export async function runDetectPotentialProblemsWorkflow(
             && await hasNewerBugbotRevision(context, dependencies.scm.context, 'before-publication', requiresReceipt)) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
+        if (reviewContext.signal?.aborted) return await canceled();
         const resolutionErrors = await telemetry.measure('publication', () => applyDetectedFindings(
             reviewContext,
             context,

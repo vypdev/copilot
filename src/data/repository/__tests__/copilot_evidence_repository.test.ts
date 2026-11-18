@@ -45,15 +45,17 @@ describe('CopilotEvidenceRepository', () => {
         expect(update.mock.calls[1][0]).toMatchObject({ check_run_id: 91, status: 'completed', conclusion: 'success', output: { summary: 'Authoritative result' } });
     });
 
-    it('closes an unfinished observation without creating approval evidence', async () => {
+    it.each([undefined, 'failure'] as const)('closes an unfinished observation without approval evidence (%s)', async conclusion => {
         const create = jest.fn().mockResolvedValue({ data: { id: 91 } });
         const update = jest.fn().mockResolvedValue({});
         const repository = new CopilotEvidenceRepository({ getClient: () => ({ rest: { checks: { create, update } } }) });
         await repository.observeReview({ headSha: 'head', externalId: 'attempt', title: 'Preparing', summary: 'Source', runUrl: 'https://github.com/owner/repo/actions/runs/7' }, 'owner', 'repo', 'token');
         await repository.retireLiveReviews('owner', 'other', 'token');
         expect(update).not.toHaveBeenCalled();
-        await repository.retireLiveReviews('owner', 'repo', 'token');
-        expect(update).toHaveBeenCalledWith({ owner: 'owner', repo: 'repo', check_run_id: 91, status: 'completed', conclusion: 'neutral' });
+        await repository.retireLiveReviews('owner', 'repo', 'token', conclusion);
+        expect(update).toHaveBeenCalledWith({ owner: 'owner', repo: 'repo', check_run_id: 91,
+            status: 'completed', conclusion: conclusion ?? 'neutral' });
+        expect(create).toHaveBeenCalledTimes(1);
     });
 
     it('retains the exact last observation on the same failed review check', async () => {

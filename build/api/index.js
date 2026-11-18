@@ -6368,10 +6368,12 @@ async function observeBugbotShadowVerification(operation, context, prepared, por
         await progress?.record('verifying', { candidates: { completed, total } });
     const tasks = [...inputs, ...resolutions].map(({ id, candidate, ordinaryPublication }) => async () => {
         const started = performance.now();
-        const observation = candidate
-            ? await verifyCandidate(port, candidate, configuration, review)
-            : { status: 'verdict', verdict: 'inconclusive', reason: 'Candidate could not be pinned.',
-                missing: 'A pinned repository location with an unambiguous review anchor is required.', citations: [], premises: [] };
+        const observation = operation.signal?.aborted
+            ? { status: 'technical-failure', reason: 'investigation-canceled' }
+            : candidate
+                ? await verifyCandidate(port, candidate, configuration, review, operation.signal)
+                : { status: 'verdict', verdict: 'inconclusive', reason: 'Candidate could not be pinned.',
+                    missing: 'A pinned repository location with an unambiguous review anchor is required.', citations: [], premises: [] };
         const wallMs = Math.round(performance.now() - started);
         if (observation.status === 'verdict') {
             await progress?.record('verifying', { candidates: { completed: ++completed, total } });
@@ -6392,9 +6394,9 @@ async function observeBugbotShadowVerification(operation, context, prepared, por
         candidates,
     };
 }
-async function verifyCandidate(port, candidate, configuration, review) {
+async function verifyCandidate(port, candidate, configuration, review, signal) {
     try {
-        const result = await port.verify({ candidate, configuration, review });
+        const result = await port.verify({ candidate, configuration, review, ...(signal ? { signal } : {}) });
         if (result.reportedModel && result.reportedModel !== configuration.model) {
             return { status: 'technical-failure', reason: 'reported-model-mismatch',
                 reportedModel: result.reportedModel, investigation: result.investigation };
@@ -8009,8 +8011,14 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
             ...(enforced && (outcome === 'failed' || outcome === 'superseded') ? { bugbotPublicationBlocked: true } : {}) };
         return [result];
     };
+    const canceled = () => complete(new result_1.Result({
+        id: TASK_ID, success: false, executed: true, payload: { bugbotPublicationBlocked: true },
+        errors: [new application_error_1.ApplicationError('workflow.failed', 'Bugbot verification was canceled. The previous verified result was preserved.')],
+    }), 'failed');
     (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(TASK_ID)} Executing ${TASK_ID}.`);
     try {
+        if (reviewContext.signal?.aborted)
+            return await canceled();
         if (shouldSkipDetection(reviewContext)) {
             await publishTelemetry('skipped', 'admission');
             return [];
@@ -8085,8 +8093,12 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
         if (await telemetry.measure('freshness', () => (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context))) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
+        if (reviewContext.signal?.aborted)
+            return await canceled();
         if (dependencies.shadowVerification && trace) {
             shadow = await (0, observe_bugbot_shadow_verification_1.observeBugbotShadowVerification)(reviewContext, context, prepared, dependencies.shadowVerification, trace, detectionAndPreparationMs, dependencies.experimentalShadowProfile, enforced || dryRun ? progress : undefined);
+            if (reviewContext.signal?.aborted)
+                return await canceled();
             if (shadow.candidates.length > 0 && await (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context)) {
                 shadow = { ...shadow, superseded: true };
                 return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
@@ -8133,6 +8145,8 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
             && await (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context, 'before-publication', requiresReceipt)) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
+        if (reviewContext.signal?.aborted)
+            return await canceled();
         const resolutionErrors = await telemetry.measure('publication', () => (0, apply_detected_findings_1.applyDetectedFindings)(reviewContext, context, prepared, dependencies.scm.publication, dependencies.scm.resolution, catalog));
         if (await telemetry.measure('post-publication-freshness', () => (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context, 'after-publication', requiresReceipt))) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');

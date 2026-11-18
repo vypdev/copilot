@@ -6,6 +6,7 @@ const { createHash } = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const { getOctokit } = require('@actions/github');
+const { requirePinnedImplementation } = require('./implementation.cjs');
 require('../normal-flow-shadow/run.cjs');
 
 const { Ai } = require('../../../../../src/data/model/ai');
@@ -74,6 +75,7 @@ function readSubject(id, checkout) {
 }
 
 async function run(checkout, id, repetition, output, preflight = false) {
+    const implementation = requirePinnedImplementation();
     assert(checkout && plan.repositoryCohort.order.includes(id) && [1, 2, 3].includes(repetition) && output);
     checkout = fs.realpathSync(checkout);
     output = path.resolve(output);
@@ -81,7 +83,7 @@ async function run(checkout, id, repetition, output, preflight = false) {
     assert.equal(git(checkout, 'status', '--porcelain'), '');
     fs.writeFileSync(output, '', { flag: 'wx', mode: 0o600 });
     const log = row => fs.appendFileSync(output, JSON.stringify(row) + '\n');
-    log({ event: 'start', subject, repetition, implementation: plan.implementation, startedAt: new Date().toISOString() });
+    log({ event: 'start', subject, repetition, implementation, startedAt: new Date().toISOString() });
     const repository = { owner: 'vypdev', name: id.startsWith('U') ? 'ha-ui' : 'domus' };
     const number = originalPullNumbers[id] ?? 1;
     const branch = 'feature/reviewed-source';

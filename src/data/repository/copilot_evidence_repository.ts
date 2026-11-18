@@ -34,12 +34,12 @@ export class CopilotEvidenceRepository implements CopilotEvidencePort {
         this.live.set(key, { id: response.data.id, externalId: check.externalId, progress });
     }
 
-    async retireLiveReviews(owner: string, repo: string, token: string): Promise<void> {
+    async retireLiveReviews(owner: string, repo: string, token: string, conclusion: 'neutral' | 'failure' = 'neutral'): Promise<void> {
         if (!this.live.size) return;
         const checks = this.client.getClient(token).rest.checks;
         for (const [key, check] of this.live) {
             if (!key.startsWith(`${owner}/${repo}:`)) continue;
-            await checks.update?.({ owner, repo, check_run_id: check.id, status: 'completed', conclusion: 'neutral' });
+            await checks.update?.({ owner, repo, check_run_id: check.id, status: 'completed', conclusion });
             this.live.delete(key);
         }
     }

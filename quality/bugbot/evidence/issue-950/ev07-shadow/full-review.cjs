@@ -4,12 +4,14 @@ const { spawn } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 const { requirePassingCorpus } = require('./launch-full-review.cjs');
+const { requirePinnedImplementation } = require('./implementation.cjs');
 
 const plan = require('./plan.json');
 const concurrency = 3;
 
 async function run(campaign) {
     campaign = requirePassingCorpus(campaign);
+    const implementation = requirePinnedImplementation();
     const output = path.join(campaign, 'full-review');
     const score = path.join(campaign, 'corpus-v3/corpus-score.json');
     const checkouts = path.join(campaign, 'fixtures/full-review');
@@ -28,7 +30,7 @@ async function run(campaign) {
     };
     process.once('SIGINT', cancel);
     process.once('SIGTERM', cancel);
-    record({ event: 'start', at: new Date().toISOString(), planned: slots.length, concurrency, implementation: plan.implementation });
+    record({ event: 'start', at: new Date().toISOString(), planned: slots.length, concurrency, implementation });
     try {
         async function worker() {
             while (next < slots.length && !interrupted && !blocked()) {

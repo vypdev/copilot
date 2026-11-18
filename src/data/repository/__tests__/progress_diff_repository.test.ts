@@ -57,8 +57,12 @@ describe('pinned bounded progress diff', () => {
             additions: 0, deletions: 0, patch: undefined });
         await expect(f.read()).rejects.toMatchObject({ code: 'validation.evidence-unavailable', retryable: false });
     });
-    it.each(['build/github_action/index.js', 'specs/CATALOG.md', 'quality/bugbot/evidence/issue-950/pilot/trials.jsonl',
-        'quality/bugbot/evidence/issue-950/pilot/execution.log.gz'])('retains the explicit generated metadata exception for %s', async filename => {
+    it.each([
+        ['bundle', 'build/github_action/index.js'],
+        ['catalog', 'specs/CATALOG.md'],
+        ['github-communication-experience-change-C211', 'quality/bugbot/evidence/issue-950/pilot/trials.jsonl'],
+        ['github-communication-experience-change-C212', 'quality/bugbot/evidence/issue-950/pilot/execution.log.gz'],
+    ])('%s: retains the explicit generated metadata exception for %s', async (_case, filename) => {
         const f = fixture(); Object.assign(f.file, { filename, patch: undefined });
         expect(JSON.parse((await f.read()).evidence).changes[0]).toMatchObject({ path: filename, evidence: 'generated-metadata-only' });
     });

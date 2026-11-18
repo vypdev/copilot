@@ -82,6 +82,35 @@ it('reads the authenticated native observation after admission and updates the c
     expect(mockAdd).not.toHaveBeenCalled();
 });
 
+it('binds the exact run and check after collecting multiple native pages', async () => {
+    const otherRuns = Array.from({ length: 100 }, (_, index) => ({ ...run, id: 1000 + index, pull_requests: [] }));
+    const exactCheck = { id: 38, name: 'Copilot / Review', head_sha: source.head, external_id: externalId,
+        details_url: runUrl, status: 'in_progress', app: { slug: 'github-actions' }, output: { summary } };
+    const otherChecks = Array.from({ length: 100 }, (_, index) =>
+        ({ ...exactCheck, id: 1000 + index, external_id: `other-${index}` }));
+    mockApi.rest.actions.listWorkflowRuns.mockImplementation(async ({ page }) => ({
+        data: { total_count: 101, workflow_runs: page === 1 ? otherRuns : [run] },
+    }));
+    mockApi.rest.checks.listForRef.mockImplementation(async ({ page }) => ({
+        data: { total_count: 101, check_runs: page === 1 ? otherChecks : [exactCheck] },
+    }));
+
+    await expect(invoke()).resolves.toBe('updated');
+    expect(mockApi.rest.actions.listWorkflowRuns).toHaveBeenCalledWith(expect.objectContaining({ page: 2 }));
+    expect(mockApi.rest.checks.listForRef).toHaveBeenCalledWith(expect.objectContaining({ page: 2 }));
+    expect(mockUpdate).toHaveBeenCalledTimes(1);
+});
+
+it('refuses inconsistent or overlapping native pages before publishing', async () => {
+    const runs = Array.from({ length: 100 }, (_, index) => ({ ...run, id: 1000 + index, pull_requests: [] }));
+    mockApi.rest.actions.listWorkflowRuns.mockImplementation(async ({ page }) => ({
+        data: { total_count: 101, workflow_runs: page === 1 ? runs : [runs[0]] },
+    }));
+    await expect(invoke()).resolves.toBe('skipped');
+    expect(mockIssueComments).not.toHaveBeenCalled();
+    expect(mockUpdate).not.toHaveBeenCalled();
+});
+
 it('declines a prior run when a native attempt for the same comparison was queued later', async () => {
     const later = { ...run, id: 24, run_attempt: 1, created_at: '2026-11-18T04:22:00Z' };
     mockApi.rest.actions.listWorkflowRuns.mockResolvedValue({ data: { total_count: 2, workflow_runs: [run, later] } });

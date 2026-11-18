@@ -104,7 +104,12 @@ export async function finishGithubAction(
     ) : undefined;
     if (!dryRun) {
         try {
-            await evidencePort?.retireLiveReviews?.(execution.owner, execution.repo, process.env.COPILOT_EVIDENCE_TOKEN?.trim() || execution.tokens.token);
+            const evidenceToken = process.env.COPILOT_EVIDENCE_TOKEN?.trim() || execution.tokens.token;
+            if (verificationBlocked) {
+                await evidencePort?.retireLiveReviews?.(execution.owner, execution.repo, evidenceToken, 'failure');
+            } else {
+                await evidencePort?.retireLiveReviews?.(execution.owner, execution.repo, evidenceToken);
+            }
         } catch {
             logInfo('An unfinished Bugbot progress check could not be closed. The native workflow owns the final status.');
         }

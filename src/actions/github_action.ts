@@ -154,6 +154,8 @@ export async function runGitHubAction(verificationAuthority?: BugbotVerification
         localeInputs,
     });
     const shadowSettings = aiInputs.bugbotReviewConfiguration.shadowVerification;
+    const withReviewCancellation = <T>(run: () => Promise<T>) => shadowSettings
+        ? withBugbotReviewCancellation(execution, run) : run();
     const prepareShadowRuntime = () => {
         if (!shadowSettings || (!botAnalysisOnly && !requestedActiveAgentTasks.some(task => task === 'reviewer' || task === 'findings'))) return;
         const detection = execution.ai.getAgentConfiguration(execution.isPullRequest ? 'reviewer' : 'findings');
@@ -185,14 +187,14 @@ export async function runGitHubAction(verificationAuthority?: BugbotVerification
         execution.issueNumber = execution.pullRequest.number;
         prepareGithubAgentRuntime(aiInputs.requestedAgentTasks, ['reviewer']);
         prepareShadowRuntime();
-        const results = await createPullRequestUseCaseCompositionRoot({
+        const results = await withReviewCancellation(() => createPullRequestUseCaseCompositionRoot({
             owner: execution.owner,
             repository: execution.repo,
             token,
             ...(shadowSettings ? { shadow: { workspace: process.env.GITHUB_WORKSPACE } } : {}),
             ...(verificationAuthority ? { verificationAuthority } : {}),
             ...(dispatcher ? { statusCard: dispatcher.terminal } : {}),
-        }).reviewOnly(execution);
+        }).reviewOnly(execution));
         if (results.some(result => !result.success)) {
             throw new Error('Bot-authored pull-request analysis did not complete.');
         }
@@ -214,7 +216,7 @@ export async function runGitHubAction(verificationAuthority?: BugbotVerification
         policy: verificationAuthority?.policyDigest,
         ...(dispatcher ? { wakeStatusCard: dispatcher.wake } : {}),
     }, evidence, summary);
-    const results = await mainRun(
+    const results = await withReviewCancellation(() => mainRun(
         execution,
         projectBoard.command,
         new GitCliRepository(token),
@@ -256,7 +258,7 @@ export async function runGitHubAction(verificationAuthority?: BugbotVerification
         verificationAuthority,
         reviewProgress,
         ...(dispatcher ? [dispatcher.terminal] as const : []),
-    );
+    ));
     const issueContentPort = createIssueContentCompositionRoot();
     const configurationHandler = new ConfigurationHandler(issueContentPort);
     await finishGithubAction(
@@ -280,6 +282,25 @@ export async function runGitHubAction(verificationAuthority?: BugbotVerification
             createNativeStatusReadPort(repositoryBinding),
         ),
     );
+}
+
+async function withBugbotReviewCancellation<T>(
+    execution: { bugbotReviewSignal?: AbortSignal },
+    run: () => Promise<T>,
+): Promise<T> {
+    const controller = new AbortController();
+    const cancel = () => controller.abort();
+    const previous = execution.bugbotReviewSignal;
+    execution.bugbotReviewSignal = controller.signal;
+    process.once('SIGINT', cancel);
+    process.once('SIGTERM', cancel);
+    try {
+        return await run();
+    } finally {
+        execution.bugbotReviewSignal = previous;
+        process.removeListener('SIGINT', cancel);
+        process.removeListener('SIGTERM', cancel);
+    }
 }
 
 /**
