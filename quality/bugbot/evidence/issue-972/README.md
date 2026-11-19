@@ -32,7 +32,7 @@ operation rather than silently ending before detection.
 
 Reproduce with `pnpm run test:bugbot-shadow-verification`. To retain another
 synthetic control ledger, set `COPILOT_CANCELLATION_EVIDENCE` to a new absolute
-destination when running `node --test` on `normal-flow-shadow/cancellation.test.cjs`.
+destination when running `node --test` on `quality/bugbot/evidence/issue-950/normal-flow-shadow/cancellation.test.cjs`.
 That test-only destination is not a public Action setting or a measured pilot.
 
 Historical campaigns and ledgers remain unchanged. A current replay needs a new
