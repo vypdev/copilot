@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "kind": "review-only-publisher-installation-proposal",
+  "destination": {
+    "repository": "vypdev/copilot",
+    "repositoryId": 891781467,
+    "defaultBranch": "master",
+    "head": "ace49e4a7ce0f6a007fef5d11479eb9b7a5846e3"
+  },
+  "path": ".github/workflows/copilot_bugbot_status_card.yml",
+  "baseline": "absent with authenticated readable parent",
+  "source": {
+    "repository": "vypdev/copilot",
+    "commit": "1b024481d9d86cb4d4b10eb7f8569f9c8e2f0981",
+    "pullRequest": 989,
+    "merged": false,
+    "maintainerApproval": "pending",
+    "workflowSha256": "7a6b58ec81c41b49e8b4eed59b285f83da71251174fef2ee069138860fcc5b81",
+    "actionManifestSha256": "0875913058675d1a0e68117a8c98bb7508cf548f5775b645c5352bbd3bce127f",
+    "actionBundleSha256": "8bd2355979f551142848a0c9fdc3f5f8690fecb8a12da4910a0aad65e155e930"
+  },
+  "proposedWorkflowSha256": "6329588dc571722aba3c97ce3be8d1f5e84bff2fbf7ecb4da39ad4f36c66da90",
+  "sourceChange": "replace local ./ invocation with exact reviewed Action SHA; preserve all other workflow bytes",
+  "consumerTemplatesChanged": false,
+  "productionVerification": "disabled",
+  "installationAuthorized": false,
+  "installedDestinationSha": null,
+  "nativeCanary": {
+    "status": "not-run",
+    "explicitlyAuthorizedPullRequest": null,
+    "runId": null
+  },
+  "dependency": 976,
+  "coordination": 814
+}

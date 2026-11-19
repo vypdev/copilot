@@ -1,0 +1,159 @@
+{
+  "realGitHubWriteAttempts": 0,
+  "modelCalls": 0,
+  "installed": false,
+  "nativeCanary": false,
+  "sourceCommit": "1b024481d9d86cb4d4b10eb7f8569f9c8e2f0981",
+  "packageSha256": "8bd2355979f551142848a0c9fdc3f5f8690fecb8a12da4910a0aad65e155e930",
+  "evidence": "packaged action with synthetic actions and comments on a loopback-only GitHub API",
+  "outcomes": [
+    {
+      "label": "new-progress",
+      "exit": 0,
+      "reads": 21,
+      "writes": [
+        {
+          "method": "PATCH",
+          "path": "/repos/owner/project/issues/comments/55",
+          "write": true
+        }
+      ],
+      "logResult": "updated"
+    },
+    {
+      "label": "identical-progress",
+      "exit": 0,
+      "reads": 13,
+      "writes": [],
+      "logResult": "unchanged"
+    },
+    {
+      "label": "independent-recheck",
+      "exit": 0,
+      "reads": 21,
+      "writes": [
+        {
+          "method": "PATCH",
+          "path": "/repos/owner/project/issues/comments/55",
+          "write": true
+        }
+      ],
+      "logResult": "updated"
+    },
+    {
+      "label": "terminal-publication",
+      "exit": 0,
+      "reads": 18,
+      "writes": [
+        {
+          "method": "PATCH",
+          "path": "/repos/owner/project/issues/comments/55",
+          "write": true
+        }
+      ],
+      "logResult": "updated"
+    },
+    {
+      "label": "delayed-progress-after-terminal",
+      "exit": 0,
+      "reads": 13,
+      "writes": [],
+      "logResult": "unchanged"
+    },
+    {
+      "label": "replaced-attempt",
+      "exit": 1,
+      "reads": 6,
+      "writes": [],
+      "logResult": "declined"
+    },
+    {
+      "label": "replacement-retry",
+      "exit": 0,
+      "reads": 21,
+      "writes": [
+        {
+          "method": "PATCH",
+          "path": "/repos/owner/project/issues/comments/55",
+          "write": true
+        }
+      ],
+      "logResult": "updated"
+    },
+    {
+      "label": "push-during-preflight",
+      "exit": 1,
+      "reads": 19,
+      "writes": [],
+      "logResult": "declined"
+    },
+    {
+      "label": "denied-private-pr-read",
+      "exit": 1,
+      "reads": 3,
+      "writes": [],
+      "logResult": "other"
+    },
+    {
+      "label": "comment-write-refusal",
+      "exit": 1,
+      "reads": 18,
+      "writes": [
+        {
+          "method": "PATCH",
+          "path": "/repos/owner/project/issues/comments/55",
+          "write": true
+        }
+      ],
+      "logResult": "other"
+    },
+    {
+      "label": "verified-empty-conversation",
+      "exit": 0,
+      "reads": 21,
+      "writes": [
+        {
+          "method": "POST",
+          "path": "/repos/owner/project/issues/11/comments",
+          "write": true
+        }
+      ],
+      "logResult": "created"
+    },
+    {
+      "label": "missing-conversation",
+      "exit": 1,
+      "reads": 13,
+      "writes": [],
+      "logResult": "declined"
+    },
+    {
+      "label": "legacy-card-progress",
+      "exit": 0,
+      "reads": 21,
+      "writes": [
+        {
+          "method": "PATCH",
+          "path": "/repos/owner/project/issues/comments/55",
+          "write": true
+        }
+      ],
+      "logResult": "updated"
+    },
+    {
+      "label": "legacy-card-upgrade",
+      "exit": 0,
+      "reads": 18,
+      "writes": [
+        {
+          "method": "PATCH",
+          "path": "/repos/owner/project/issues/comments/55",
+          "write": true
+        }
+      ],
+      "logResult": "updated"
+    }
+  ],
+  "missingConversationRejected": true,
+  "rejectedMutationAudited": true
+}

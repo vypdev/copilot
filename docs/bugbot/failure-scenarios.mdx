@@ -193,3 +193,20 @@ confirmation. Correct the named provider/response cause and recheck from the
 current source; preserve identity and reconciliation checks. Completed writes
 remain in place and must not be repeated blindly. See the
 [structured error reference](/security-operations/operations/error-reference#conflict-eligibility-and-review-freshness).
+
+
+### Review the default writer installation separately
+
+The #977 artifact records an authenticated default-branch baseline, exact source
+Action/bundle/workflow hashes and a proposed workflow that invokes the reviewed
+Action SHA. Copying a workflow with a local `./` action onto an older default can
+execute older code. Review that source pin together with its destination SHA;
+stop and prepare a new review if either changes. Keep the source runner route,
+serialization, private read permissions and native source checks intact.
+
+A prepared artifact, an exact-byte fixture or a develop merge does not prove
+installed readiness. Use the supported setup inspection/review/receipt route
+coordinated with #814, with specific authorization, maintainer default merge and
+a real canary only on an explicitly authorized test PR. Record the actual installed
+SHA, run and comment result. No native canary or installation has occurred in
+this proposal; production verification remains disabled.

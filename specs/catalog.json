@@ -727,7 +727,9 @@
         "src/application/policies/bugbot_status_card_publication_policy.ts",
         "src/infrastructure/github/github_bugbot_status_card_workflow.ts",
         "src/infrastructure/github/github_bugbot_status_card_dispatch.ts",
-        "src/infrastructure/github/native_list_pagination.ts"
+        "src/infrastructure/github/native_list_pagination.ts",
+        "quality/bugbot/evidence/issue-977/installation-state.cjs",
+        "quality/bugbot/evidence/issue-977/packaged-canary.cjs"
       ],
       "tests": [
         "src/domain/bugbot/__tests__/review_state.test.ts",
@@ -773,7 +775,8 @@
         "src/infrastructure/github/__tests__/github_bugbot_status_card_lane.test.ts",
         "src/infrastructure/github/__tests__/github_bugbot_status_card_dispatch.test.ts",
         "src/infrastructure/github/__tests__/github_bugbot_status_card_observation.test.ts",
-        "src/infrastructure/github/__tests__/github_bugbot_status_card_handoff.test.ts"
+        "src/infrastructure/github/__tests__/github_bugbot_status_card_handoff.test.ts",
+        "quality/bugbot/evidence/issue-977/installation-state.test.cjs"
       ],
       "documentation": [
         "docs/bugbot/detection.mdx",
@@ -784,7 +787,8 @@
         "docs/bugbot/how-it-works.mdx",
         "docs/bugbot/programmatic-api.mdx",
         "docs/pull-requests/workflow-setup.mdx",
-        "docs/issues/comment-commands.mdx"
+        "docs/issues/comment-commands.mdx",
+        "quality/bugbot/evidence/issue-977/README.md"
       ]
     },
     {
