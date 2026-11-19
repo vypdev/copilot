@@ -274,3 +274,19 @@ Inspect the run's individual platform jobs before claiming full success. A
 queued, canceled or failed job is missing evidence, even if other jobs passed.
 The platform fixtures exercise local paths. Authenticated agent tool execution
 has separate acceptance.
+
+## CI aggregate predicate
+
+The source repository's `CI Check` gate requires success from all three independent
+workers. `validate:workflows` binds its command to the executable contract in
+`scripts/validate-workflow-contract.cjs`; it compares the complete command without
+executing candidate YAML. Changing that command requires reviewing the contract
+and its execution fixtures together. CRLF line endings and outer whitespace are
+normalized; additional commands or alternate predicates are rejected.
+
+The workflow tests execute the current gate in Bash with controlled result
+values: all-success passes, each worker failure fails, and canceled, skipped or
+missing results fail. Separate validator mutations reject no-op, partial and
+masked predicates, missing bindings, and step/job `continue-on-error`. Runner
+placement, fork exclusion, public check identity, parallel jobs and consumer
+installation templates retain their existing contracts.
