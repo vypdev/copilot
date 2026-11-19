@@ -1,0 +1,18 @@
+{
+  "encoding": "gzip",
+  "lossless": true,
+  "records": [
+    {
+      "originalPath": "before-fix.log",
+      "compressedPath": "before-fix.log.gz",
+      "rawSha256": "b0e4e4f6defc0d184c79dbd17734f266802860d7b332e759d9cafb6626cf82b9",
+      "rawBytes": 3468
+    },
+    {
+      "originalPath": "initial-missing-dependency.log",
+      "compressedPath": "initial-missing-dependency.log.gz",
+      "rawSha256": "0afa6d5da501e78696051c392da214ddfaccb3d7eb42d1e2ef6404534e0bfa7b",
+      "rawBytes": 1880
+    }
+  ]
+}
