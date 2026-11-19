@@ -5,6 +5,7 @@ import type { ProgressDiffEvidence } from '../../application/ports/progress_diff
 import type { GithubBranchComparisonClient } from '../../infrastructure/github/ports/github_branch_provider_ports';
 import type { GithubClientPort } from '../../infrastructure/github/ports/github_client_provider_port';
 import { isCompleteProgressPatch } from '../../application/policies/progress_patch_completeness_policy';
+import { isProgressGeneratedArtifact } from '../../application/policies/progress_generated_artifact_policy';
 import { ImmutableProgressContentRepository, safeProgressPath } from './immutable_progress_content_repository';
 import type { GithubProgressObjectClient } from '../../infrastructure/github/ports/github_progress_object_provider_port';
 import { progressContentUnits, progressRecoveryError } from '../../application/policies/progress_content_evidence_policy';
@@ -17,7 +18,7 @@ import { partitionProgressDiff, serializeProgressDiff, MAX_PROGRESS_EVIDENCE_BYT
 const MAX_COMPARISON_FILES = 300;
 const STATUSES = new Set(['added', 'removed', 'modified', 'renamed', 'copied', 'changed', 'unchanged']);
 
-/** Reads exact GitHub objects, omitting generated bundle patches but retaining their file facts. */
+/** Reads exact GitHub objects, retaining file facts for generated artifacts. */
 export class ProgressDiffRepository {
     constructor(private readonly client: GithubClientPort<GithubBranchComparisonClient>, private readonly objects?: GithubClientPort<GithubProgressObjectClient>) {}
     async getDiff(owner: string, repository: string, baseSha: string, headSha: string, token: string): Promise<ProgressDiffEvidence> {
@@ -34,7 +35,7 @@ export class ProgressDiffRepository {
             if (!safeProgressPath(path) || paths.has(path) || !STATUSES.has(file.status)
                 || ![file.additions, file.deletions].every(value => Number.isSafeInteger(value) && value! >= 0)) throw unavailable();
             paths.add(path);
-            const generated = path.startsWith('build/') || path === 'specs/CATALOG.md';
+            const generated = isProgressGeneratedArtifact(path);
             const unchanged = file.status === 'unchanged' && file.additions === 0 && file.deletions === 0;
             const complete = generated || unchanged || (isCompleteProgressPatch(file.patch, file.additions!, file.deletions!)
                 && Buffer.byteLength(serializeProgressDiff(baseSha, headSha, [{ path, status: file.status, additions: file.additions!, deletions: file.deletions!, patch: file.patch }]), 'utf8') <= MAX_PROGRESS_EVIDENCE_BYTES);

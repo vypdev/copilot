@@ -1,6 +1,7 @@
 import * as core from '@actions/core';
 import { logError } from '../../utils/logger';
 import { getGithubActionInput } from '../github_action_input';
+import { readGithubActionAiInputs } from '../github_action_ai_inputs';
 
 jest.mock('@actions/core', () => ({ getInput: jest.fn(), setSecret: jest.fn() }));
 jest.mock('../../utils/logger', () => ({ logError: jest.fn() }));
@@ -49,5 +50,23 @@ describe('GitHub Action PAT input boundary', () => {
         expect(getGithubActionInput('development-branch')).toBe('develop');
         expect(getGithubActionInput('token')).toBe('');
         expect(core.setSecret).not.toHaveBeenCalled();
+    });
+
+    it.each([
+        ['environment', 'bugbot-verifier-provider', ' cursor '],
+        ['json', 'bugbot-verifier-provider', ' cursor '],
+        ['environment', 'bugbot-verification-mode', ' shadow '],
+    ])('rejects padded workflow routing inputs from %s (%s)', (source, key, value) => {
+        const inputs = { 'bugbot-verification-mode': 'shadow', 'bugbot-verifier-provider': 'Cursor', [key]: value };
+        if (source === 'json') {
+            process.env.INPUT_VARS_JSON = JSON.stringify(Object.fromEntries(Object.entries(inputs)
+                .map(([name, input]) => [`INPUT_${name.toUpperCase()}`, input])));
+        }
+        (core.getInput as jest.Mock).mockImplementation((name: keyof typeof inputs, options) => {
+            const raw = inputs[name] ?? '';
+            return options?.trimWhitespace === false ? raw : raw.trim();
+        });
+        expect(() => readGithubActionAiInputs(getGithubActionInput, {}))
+            .toThrow(`Remove leading or trailing whitespace from ${key}`);
     });
 });

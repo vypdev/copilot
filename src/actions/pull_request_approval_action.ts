@@ -1,3 +1,5 @@
+import type { BugbotVerificationAuthority } from '../domain/bugbot/verification_receipt';
+import { readBugbotVerificationMode } from '../application/policies/bugbot_shadow_configuration_policy';
 import { renderApplicationErrorText } from '../application/policies/application_error_presentation_policy';
 import { resolveStaticApplicationErrorCatalog } from '../application/policies/application_error_message_catalog';
 import type { ApplicationError } from '../application/errors/application_error';
@@ -12,10 +14,12 @@ import { readGithubActionLocaleInputs } from './github_action_locale_inputs';
 import { renderApprovalRunSummary } from '../application/policies/pull_request_approval_presentation_policy';
 import { configureApplicationLogger } from '../application/ports/logging_ports';
 import { createLoggerAdapter } from '../infrastructure/logging/logger_adapter';
+import { readInterruptedBugbotReview, settleInterruptedBugbotCheck } from '../infrastructure/github/github_bugbot_interrupted_check';
 
 /** Dedicated trusted-default-branch route. It never calls the agent or checks out PR code. */
-export async function runPullRequestApprovalAction(token: string): Promise<void> {
+export async function runPullRequestApprovalAction(token: string, verificationAuthority?: BugbotVerificationAuthority): Promise<void> {
     configureApplicationLogger(createLoggerAdapter());
+    readBugbotVerificationMode(getGithubActionInput, verificationAuthority);
     const repository = github.context.payload.repository;
     const repositoryId = repository?.id;
     if (!Number.isSafeInteger(repositoryId) || !repositoryId || repositoryId <= 0) {
@@ -26,6 +30,17 @@ export async function runPullRequestApprovalAction(token: string): Promise<void>
     let locale = 'en-US';
     try { locale = readGithubActionLocaleInputs(getGithubActionInput).pullRequest; } catch {
         // A malformed optional locale must not change approval eligibility.
+    }
+    const checkToken = process.env.COPILOT_APPROVAL_CHECK_TOKEN;
+    const dryRun = getGithubActionInput('bugbot-dry-run') === 'true';
+    const interrupted = checkToken && !dryRun
+        ? readInterruptedBugbotReview(github.context.eventName, github.context.payload, repositoryId) : undefined;
+    if (interrupted && checkToken) {
+        try {
+            await settleInterruptedBugbotCheck(github.getOctokit(checkToken).rest.checks, owner, repo, interrupted, locale);
+        } catch {
+            core.info('The interrupted Bugbot progress check could not be closed. See its native run for the final status.');
+        }
     }
     const targetNumbers = await resolvePullNumbers(token, owner, repo);
     if (targetNumbers.length === 0) {
@@ -42,9 +57,12 @@ export async function runPullRequestApprovalAction(token: string): Promise<void>
             chore: getGithubActionInput('chore-tree') || 'chore',
         },
         bugbotSeverity: getGithubActionInput('bugbot-severity') || 'low',
-        bugbotDryRun: getGithubActionInput('bugbot-dry-run') === 'true',
+        bugbotDryRun: dryRun,
         bugbotIgnorePatterns: parseDelimitedValues(getGithubActionInput('ai-ignore-files')),
-        githubToken: process.env.COPILOT_APPROVAL_CHECK_TOKEN,
+        githubToken: checkToken,
+        ...(verificationAuthority ? {
+            readBugbotVerificationPolicy: async () => ({ ...verificationAuthority, requireReceipt: true as const }),
+        } : {}),
         locale,
     });
     const useCase = new ObservePullRequestApprovalUseCase(port);

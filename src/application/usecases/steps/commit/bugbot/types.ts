@@ -33,6 +33,7 @@ export interface BugbotPrContext {
 export interface UnresolvedFindingWithBody {
   id: string;
   fullBody: string;
+  anchor?: { readonly path: string; readonly line: number };
 }
 
 /** Finding projection used by prompts that ask the agent to select findings. */

@@ -1,4 +1,19 @@
-import { escapeHtml, sanitizeAgentMarkdown, sanitizePublishedError } from '../github_comment_publication_policy';
+import { escapeHtml, renderMarkdownCodeSpan, sanitizeAgentMarkdown, sanitizePublishedError } from '../github_comment_publication_policy';
+import { Parser } from 'commonmark';
+
+it.each(['ordinary.ts:1', ' leading.ts ', '   ', '``[Docs](https:review.example.invalid)`name.ts:1'])(
+    'keeps an opaque locator in a single literal code span: %s', value => {
+        const walker = new Parser().parse(renderMarkdownCodeSpan(value)).walker();
+        const values: string[] = [], links: string[] = [];
+        let event;
+        while ((event = walker.next())) {
+            if (event.entering && event.node.type === 'code') values.push(event.node.literal!);
+            if (event.entering && event.node.type === 'link') links.push(event.node.destination!);
+        }
+        expect(values).toEqual([value]);
+        expect(links).toEqual([]);
+    },
+);
 
 describe('GitHub comment publication policy', () => {
     it('renders unavailable publication values as empty text', () => {

@@ -26,6 +26,10 @@ failure and the distinction between model replies and real tool execution.
 
 If agent preflight fails, the Action log identifies a fixed stage such as `resolution`, `invocation-trust`, or `version`. Private official installation failures report a closed stage, bounded exit code and, when recognizable, a fixed reason; they never print installer stderr, executable paths, prompts, arguments, or credentials. The standalone read-only CLI verifier checks trust once before its help, version, and optional login probes and retries only a transient Windows ACL query timeout once.
 
+On Unix, agent schemas and other private execution files use the runner's scratch
+directory when available. For an `artifacts` preflight error, check the named
+storage, write access or path failure on that runner before retrying.
+
 Codex child shells use private per-run application-data directories outside the checkout. The parent Codex login context is preserved; host profile paths and credentials remain excluded from child shells. Unexpected untracked files still block implementation rather than being ignored or committed.
 
 Windows executable ACL checks run before the agent starts. Their PowerShell
@@ -56,7 +60,9 @@ cancellation, policy or execution code in the conversation reply. The agent's
 15-minute deadline stays bounded; inspect the current state before retrying a
 timed-out implementation.
 
-There is no runtime registry or provider fallback. The exhaustive dispatcher recognizes exactly these three values and rejects every other value before spawn.
+The installed dispatcher recognizes the three values above. A future
+runtime task will add an independent `claude-code` agent for supported
+review roles through the official Anthropic CLI. [Native Claude Code specification](https://github.com/vypdev/copilot/blob/master/specs/agent-runtime-provider-and-model-routing.md#native-claude-code-runtime)
 
 Codex invocations explicitly select the Windows `elevated` sandbox while ignoring
 operator configuration. This selects a sandbox backend; commands still receive

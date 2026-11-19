@@ -1,0 +1,12 @@
+{
+  "selection": "Two real Domus PR snapshots with an independently evaluated historical false positive and functional defect. Run the ordinary detector again and retain what it produces, including empty results. Historical findings and reproduction output are reserved to evaluation.",
+  "subjects": [
+    {"repository":"vypdev/domus","number":24,"baseRef":"develop","headRef":"shadow-pinned-24","head":"e129e76e25deff7314efe3b72996d295cf73f7f3","base":"4b71969d3b3f6df5f28d617ab0da4e86c9be5884","tree":"c71daa5ff4f59ddfee9ee2356b6a04dc1649cb9e","baseTree":"8953c48ef7f8501b88244ab513c9f3e80fcac7b9","model":"gpt-6-luna"},
+    {"repository":"vypdev/domus","number":29,"baseRef":"develop","headRef":"shadow-pinned-29","head":"57a8b4c6a9f52afb1ffc8e38275bcfd13575a3ae","base":"5b7bdcdee3a9e98d6669bfd34ce750ae30a8c775","tree":"aa124c6cd92c490b1af0953af3be059ac72edddf","baseTree":"1e37628eea52b2aba394095edf4c33edb16753ce","model":"gpt-6.1-sol"}
+  ],
+  "effort":"low",
+  "publication":"dry-run",
+  "detectorInvocation":"production FindingsAgentAdapter, AgentCliClient and execution planner from the usual DetectPotentialProblemsUseCase; no candidate replay",
+  "scm":"Git-derived immutable comparison with empty discussion and SCM-supplied rules; checkout-local execution; all write ports fail closed",
+  "historicalEvaluator":"../two-live-verifications/evaluator.json"
+}

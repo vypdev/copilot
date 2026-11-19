@@ -21,6 +21,8 @@ export interface BugbotFinding {
     /** Exact replacement text for a suggested change, when safe and local. */
     suggestedCode?: string;
 }
+/** A transition cannot share receipts with any active finding ID, which excludes quotation marks. */
+export declare function bugbotResolutionCandidateId(id: string): string;
 export type BugbotFindingResolution = 'fixed' | 'obsolete' | 'dismissed';
 export interface ExistingIssueFindingInfo {
     commentId: number;
@@ -62,4 +64,4 @@ export declare function findExistingFindingMatch(existingByFindingId: ExistingBy
  * and final projection. Multiple reports of one uniquely matched durable finding
  * share one record; unmatched or ambiguous reports remain independent evidence.
  */
-export declare function retainExistingFindingIds(findings: readonly BugbotFinding[], existingByFindingId: ExistingByFindingId): BugbotFinding[];
+export declare function retainExistingFindingIds(findings: readonly BugbotFinding[], existingByFindingId: ExistingByFindingId, observe?: (finding: BugbotFinding, retained: BugbotFinding, duplicate: boolean) => void): BugbotFinding[];

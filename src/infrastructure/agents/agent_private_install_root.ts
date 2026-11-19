@@ -88,6 +88,21 @@ export function createPrivateAgentInstallRoot(): string {
     return createPrivateRuntimeRoot(INSTALL_PREFIX);
 }
 
+export function createPrivateAgentExecutionRoot(): string {
+    const root = mkdtempSync(join(agentExecutionTempParent(), 'copilot-agent-runtime-'));
+    try {
+        makeWindowsRuntimePathPrivate(root, true);
+        return root;
+    } catch (error) {
+        rmSync(root, { recursive: true, force: true });
+        throw error;
+    }
+}
+
+export function agentExecutionTempParent(): string {
+    return process.platform === 'win32' ? tmpdir() : process.env.RUNNER_TEMP || tmpdir();
+}
+
 /** Verification uses the same owner and ancestor guarantees before replacing the child's profile. */
 export function createPrivateVerificationRuntimeRoot(): string {
     return createPrivateRuntimeRoot('copilot-verify-runtime-');

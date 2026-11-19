@@ -6,8 +6,10 @@ import type { FindingsQueryRequest } from '../../../../../ports/agent_findings_p
 import type { BugbotReviewOperationContext } from '../bugbot_review_operation_context';
 import type { BugbotContext } from '../types';
 import { BugbotReviewTelemetry } from '../bugbot_review_telemetry';
+import { BugbotCandidateTrace } from '../bugbot_candidate_trace';
 import { analyzeBugbotFrames, bugbotFramedContextDigest } from '../analyze_bugbot_frames';
 import { analyzeBugbotRevision } from '../analyze_bugbot_revision_use_case';
+import { BugbotReviewProgress } from '../bugbot_review_progress';
 
 function setup(source: BugbotFramedReviewSource = framedSource()) {
     const id = source.identity;
@@ -50,10 +52,52 @@ function run(fixture: ReturnType<typeof setup>, query: (request: FindingsQueryRe
         { agent: { query }, telemetry: fixture.telemetry, isSourceCurrent });
 }
 
+it.each([false, true])('passes cancellation through real framed query orchestration, canceled=%s', async canceled => {
+    const f = setup(framedFiles(3)), controller = new AbortController();
+    const operation = { ...f.operation, signal: controller.signal };
+    const plan = buildBugbotFramedReviewPlan(f.source, bugbotFramedContextDigest(operation, f.context), FRAME_NONCE, []);
+    f.context.reviewFramedPlan = plan;
+    const query = jest.fn(async (request: FindingsQueryRequest) => {
+        expect(request.signal).toBe(controller.signal);
+        if (canceled) controller.abort();
+        return reply(request);
+    });
+    const result = analyzeBugbotFrames(operation, f.context, plan, {
+        agent: { query }, telemetry: f.telemetry, isSourceCurrent: async () => true,
+    });
+    if (canceled) {
+        await expect(result).rejects.toMatchObject({ name: 'AbortError' });
+        expect(query).toHaveBeenCalledTimes(1);
+    } else {
+        await expect(result).resolves.toMatchObject({ findings: [] });
+        expect(query).toHaveBeenCalledTimes(3);
+    }
+});
+
 it('validates every source-bound receipt before returning one global result', async () => {
     const f = setup(); const query = jest.fn(async (request: FindingsQueryRequest) => reply(request));
     await expect(run(f, query)).resolves.toEqual({ findings: [], resolved_findings: [] });
     expect(query).toHaveBeenCalledTimes(1);
+});
+
+it('adds same-file context pointers to traced frames and retains their individual receipts', async () => {
+    const path = 'src/example.ts';
+    const fixture = setup(framedSource([framedChange({ filename: path, patch: 'x'.repeat(90_000) })]));
+    const trace = new BugbotCandidateTrace();
+    const query = jest.fn(async (request: FindingsQueryRequest) => reply(request));
+
+    await expect(analyzeBugbotFrames(fixture.operation, fixture.context, fixture.plan, {
+        agent: { query }, telemetry: fixture.telemetry, trace, isSourceCurrent: async () => true,
+    })).resolves.toEqual({ findings: [], resolved_findings: [] });
+
+    expect(fixture.plan.partitions).toHaveLength(2);
+    expect(query).toHaveBeenCalledTimes(2);
+    expect(query.mock.calls[0][0].prompt).toContain(JSON.stringify([{ file: path, partition: 2 }]));
+    expect(query.mock.calls[1][0].prompt).toContain(JSON.stringify([{ file: path, partition: 1 }]));
+    expect(trace.detectionSnapshot()).toMatchObject([
+        { partition: 1, partitionId: fixture.plan.partitions[0].id, status: 'completed' },
+        { partition: 2, partitionId: fixture.plan.partitions[1].id, status: 'completed' },
+    ]);
 });
 
 it('bugbot-framed-C079 completes the first frame before starting the next, with global concurrency2', async () => {
@@ -70,6 +114,27 @@ it('bugbot-framed-C079 completes the first frame before starting the next, with 
     });
     await run(f, query);
     expect(query).toHaveBeenCalledTimes(65); expect(maximum).toBe(2);
+});
+
+it('reports a 105-partition plan across two frames and counts a successful retry once', async () => {
+    const f = setup(framedFiles(105));
+    const observe = jest.fn().mockResolvedValue(undefined);
+    let now = 0;
+    const progress = new BugbotReviewProgress(f.context.canonicalPullRequest!, { observe }, false, 'en-US', () => now);
+    const query = jest.fn(async (request: FindingsQueryRequest) => {
+        now += 180_000;
+        return reply(request);
+    });
+    query.mockRejectedValueOnce(new Error('temporary provider interruption'));
+    await analyzeBugbotFrames(f.operation, f.context, f.plan, {
+        progress, agent: { query }, telemetry: f.telemetry, isSourceCurrent: async () => true,
+    });
+    await progress.record('finished', {}, 'no-findings');
+    const observations = observe.mock.calls.map(([fact]) => fact);
+    expect(query).toHaveBeenCalledTimes(106);
+    expect(observations[0]).toMatchObject({ frames: { ordinal: 1, total: 2 }, partitions: { completed: 0, total: 105 } });
+    expect(observations.find(fact => fact.frames.ordinal === 2)).toMatchObject({ partitions: { completed: 64, total: 105 }, retries: 1 });
+    expect(observations.at(-1)).toMatchObject({ partitions: { completed: 105, total: 105 }, retries: 1, outcome: 'no-findings' });
 });
 
 it.each(['partition_id', 'reviewed_head_sha', 'reviewed_base_sha', 'review_manifest_digest',
@@ -368,6 +433,41 @@ it('admits a response-dependent generated verification request through the actua
     await expect(run(f, query)).resolves.toEqual({ findings: [], resolved_findings: [] });
     expect(query).toHaveBeenCalledTimes(2);
     expect(query.mock.calls[1][0].agentId).toBe('bugbot-literal-candidate-verification');
+});
+
+it('bugbot-framed-C131: keeps the assigned evidence intact when repeated detection instructions would exceed the verification prompt bound', async () => {
+    const { buildBugbotReviewInput } = await import('../build_bugbot_prompt');
+    const { buildLiteralVerificationPrompt } = await import('../verify_generated_literal_findings');
+    const f = literalFrameFixture();
+    f.context.reviewConversationBlock = 'Retained repository context.\n'.repeat(3500);
+    f.context.reviewRulesBlock = 'A retained project rule for this fixture.';
+    const plan = buildBugbotFramedReviewPlan(f.source, bugbotFramedContextDigest(f.operation, f.context), FRAME_NONCE, []);
+    const partition = plan.partitions[0];
+    const hypotheses = literalHypotheses(partition.files[0], 1);
+    const input = buildBugbotReviewInput(f.operation, f.context, { partition });
+    expect(() => buildLiteralVerificationPrompt(input.prompt, hypotheses, 'a'.repeat(64), 'en-US'))
+        .toThrow('128000-byte prompt bound');
+    const query = jest.fn(async (request: FindingsQueryRequest) => request.agentId === 'bugbot-literal-candidate-verification'
+        ? rejectLiteralHypotheses(request)
+        : reply(request, { findings: hypotheses }));
+    await expect(run(f, query, undefined, plan)).resolves.toEqual({ findings: [], resolved_findings: [] });
+    expect(query).toHaveBeenCalledTimes(2);
+    const verification = query.mock.calls[1][0].prompt;
+    expect(Buffer.byteLength(verification)).toBeLessThanOrEqual(128_000);
+    expect(verification).toContain(partition.block);
+    expect(verification).toContain(f.context.reviewConversationBlock);
+    expect(verification).toContain(f.context.reviewRulesBlock);
+});
+
+it('bugbot-framed-C132: preserves the prompt ceiling when the framed evidence itself exceeds it', async () => {
+    const f = literalFrameFixture();
+    f.context.reviewConversationBlock = 'x'.repeat(130_000);
+    const plan = buildBugbotFramedReviewPlan(f.source, bugbotFramedContextDigest(f.operation, f.context), FRAME_NONCE, []);
+    const query = jest.fn(async (request: FindingsQueryRequest) =>
+        reply(request, { findings: literalHypotheses(plan.partitions[0].files[0], 1) }));
+    await expect(run(f, query, undefined, plan)).rejects.toThrow('128000-byte prompt bound');
+    expect(query).toHaveBeenCalledTimes(3);
+    expect(query.mock.calls.every(([request]) => request.agentId !== 'bugbot-literal-candidate-verification')).toBe(true);
 });
 
 it.each([false, true])('bounds dependent verification and actual retries with one traffic ledger; retry=%s', async retry => {

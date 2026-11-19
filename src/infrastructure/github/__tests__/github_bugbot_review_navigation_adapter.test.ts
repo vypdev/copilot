@@ -10,6 +10,7 @@ describe('GithubBugbotReviewNavigationAdapter', () => {
     expect(adapter.forPullRequest('org', 'repo', 17, 'a'.repeat(40))).toEqual({
       pullRequestUrl: 'https://github.example.com/org/repo/pull/17',
       commitUrl: `https://github.example.com/org/repo/commit/${'a'.repeat(40)}`,
+      reviewChecksUrl: 'https://github.example.com/org/repo/pull/17/checks',
       runUrl: 'https://github.example.com/org/repo/actions/runs/12345',
     });
   });
@@ -23,6 +24,7 @@ describe('GithubBugbotReviewNavigationAdapter', () => {
     expect(adapter.forPullRequest('org-name', 'repo.name', 9, 'b'.repeat(40))).toEqual({
       pullRequestUrl: 'https://github.com/org-name/repo.name/pull/9',
       commitUrl: `https://github.com/org-name/repo.name/commit/${'b'.repeat(40)}`,
+      reviewChecksUrl: 'https://github.com/org-name/repo.name/pull/9/checks',
     });
   });
 

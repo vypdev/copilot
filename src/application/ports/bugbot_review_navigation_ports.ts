@@ -3,6 +3,13 @@ export interface BugbotReviewNavigation {
   readonly pullRequestUrl: string;
   readonly commitUrl: string;
   readonly runUrl?: string;
+  readonly reviewChecksUrl?: string;
+  readonly commitProgress?: BugbotCommitProgressLink;
+}
+
+export interface BugbotCommitProgressLink {
+  readonly assessedHeadSha: string;
+  readonly url: string;
 }
 
 /**

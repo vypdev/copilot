@@ -1,3 +1,7 @@
+import type { BoundPublicationSourceQueryPort } from '../../../ports/publication_freshness_ports';
+import type { BugbotVerificationAuthority } from '../../../../domain/bugbot/verification_receipt';
+import type { AgentConfiguration } from '../../../../domain/agent';
+import type { BugbotShadowVerificationPort } from '../../../ports/bugbot_shadow_verification_ports';
 import { Result } from '../../../../data/model/result';
 import type { FindingsQueryPort } from '../../../ports/agent_findings_ports';
 import type { BugbotScmPorts } from '../../../ports/bugbot_scm_ports';
@@ -6,6 +10,7 @@ import { runDetectPotentialProblemsWorkflow } from './detect_potential_problems_
 import type { BugbotReviewOperationContext } from './bugbot/bugbot_review_operation_context';
 import type { BugbotTelemetryPort } from '../../../ports/bugbot_telemetry_ports';
 import type { MessageCatalogResolutionPort } from '../../../ports/message_catalog_ports';
+import type { BugbotReviewCancellationPort } from '../../../ports/bugbot_review_cancellation_ports';
 
 export type { BugbotFinding } from '../../../../domain/bugbot/finding';
 
@@ -18,14 +23,29 @@ export class DetectPotentialProblemsUseCase implements ParamUseCase<BugbotReview
         private readonly scm: BugbotScmPorts,
         private readonly telemetryPort?: BugbotTelemetryPort,
         private readonly catalogResolver?: MessageCatalogResolutionPort,
+        private readonly shadowVerification?: BugbotShadowVerificationPort,
+        private readonly experimentalShadowProfile?: Readonly<AgentConfiguration>,
+        private readonly verificationAuthority?: BugbotVerificationAuthority,
+        private readonly sourceFreshness?: BoundPublicationSourceQueryPort,
+        private readonly cancellation?: BugbotReviewCancellationPort,
     ) {}
 
     async invoke(param: BugbotReviewOperationContext): Promise<Result[]> {
-        return await runDetectPotentialProblemsWorkflow(param, {
+        return this.cancellation
+            ? this.cancellation.withSignal(param.signal, signal => this.run({ ...param, signal }))
+            : this.run(param);
+    }
+
+    private run(param: BugbotReviewOperationContext): Promise<Result[]> {
+        return runDetectPotentialProblemsWorkflow(param, {
             aiRepository: this.aiRepository,
             scm: this.scm,
             telemetryPort: this.telemetryPort,
             catalogResolver: this.catalogResolver,
+            shadowVerification: this.shadowVerification,
+            experimentalShadowProfile: this.experimentalShadowProfile,
+            verificationAuthority: this.verificationAuthority,
+            sourceFreshness: this.sourceFreshness,
         });
     }
 }

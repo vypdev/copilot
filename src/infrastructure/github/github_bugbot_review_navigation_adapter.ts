@@ -38,6 +38,7 @@ export class GithubBugbotReviewNavigationAdapter implements BugbotReviewNavigati
     return {
       pullRequestUrl: `${base}/pull/${pullRequestNumber}`,
       commitUrl: `${base}/commit/${encodeURIComponent(headSha)}`,
+      reviewChecksUrl: `${base}/pull/${pullRequestNumber}/checks`,
       ...(runUrl ? { runUrl } : {}),
     };
   }

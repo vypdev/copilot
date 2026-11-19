@@ -35,6 +35,71 @@ describe('Codex native output schema compatibility', () => {
         expect(projectCodexOutputSchema(schema)).toEqual(schema);
     });
 
+    it.each(['first\nsecond', 'first\r\nsecond'])('keeps exact multiline evidence matching in the findings adapter (%j)', async snippet => {
+        const id = { type: 'string', enum: ['finding-id'] };
+        const codeSnippet = { type: ['string', 'null'], enum: [snippet] };
+        const schema = object({ findings: { type: 'array', items: object({ id, codeSnippet }) } });
+        const execute = jest.fn().mockImplementation(async request => {
+            const policy = buildCodexExecutionPolicy({ configuration: request.configuration, capability: request.capability,
+                workspace: '/workspace', runtimeDirectory: '/runtime', outputSchema: request.outputSchema });
+            expect(JSON.parse(policy.artifacts[0].contents)).toEqual(object({
+                findings: { type: 'array', items: object({ id, codeSnippet: { type: ['string', 'null'] } }) },
+            }));
+            expect(request.outputSchema).toBe(schema);
+            return JSON.stringify({ findings: [{ id: 'finding-id', codeSnippet: snippet }] });
+        });
+        const adapter = new FindingsAgentAdapter({ cli: { execute } });
+        const request = { configuration: { provider: 'codex' as const, model: 'model' },
+            agentId: 'fixture', prompt: 'Verify this source', options: { expectJson: true, schema } };
+        await expect(adapter.query(request)).resolves.toEqual({ findings: [{ id: 'finding-id', codeSnippet: snippet }] });
+        execute.mockResolvedValueOnce(JSON.stringify({ findings: [{ id: 'finding-id', codeSnippet: 'first second' }] }));
+        await expect(adapter.query(request)).rejects.toThrow('outside the allowed enum');
+    });
+
+    it('checks generated-source identities locally without inserting detector text in the native enum grammar', async () => {
+        const finding = { id: 'literal-counter', file: 'fixtures/assertion.ts', codeSnippet: 'const text = "first\\nsecond";' };
+        const fields = {
+            id: { type: 'string', enum: [finding.id] },
+            file: { type: ['string', 'null'], enum: [finding.file] },
+            codeSnippet: { type: ['string', 'null'], enum: [finding.codeSnippet] },
+        };
+        const verificationId = 'a'.repeat(64);
+        const schema = object({
+            verification_id: { type: 'string', enum: [verificationId] },
+            findings: { type: 'array', items: object(fields) },
+            rejected_ids: { type: 'array', items: fields.id },
+        });
+        const response = { verification_id: verificationId, findings: [finding], rejected_ids: [] };
+        const execute = jest.fn(async () => JSON.stringify(response));
+        const adapter = new FindingsAgentAdapter({ cli: { execute } });
+        const request = { configuration: { provider: 'codex' as const, model: 'model' },
+            agentId: 'bugbot-literal-candidate-verification', prompt: 'Verify the source evidence.',
+            options: { expectJson: true, schema, schemaName: 'bugbot_literal_candidate_verification' } };
+        await expect(adapter.query(request)).resolves.toEqual(response);
+        expect(execute).toHaveBeenCalledWith(expect.objectContaining({ outputSchema: object({
+            verification_id: schema.properties.verification_id,
+            findings: { type: 'array', items: object({
+                id: { type: 'string' },
+                file: { type: ['string', 'null'] },
+                codeSnippet: { type: ['string', 'null'] },
+            }) },
+            rejected_ids: { type: 'array', items: { type: 'string' } },
+        }) }));
+        expect(schema).toMatchObject({ properties: { findings: { items: { properties: fields } } } });
+
+        for (const invalid of [
+            { ...response, findings: [{ ...finding, id: 'other' }] },
+            { ...response, findings: [{ ...finding, file: 'fixtures/other.ts' }] },
+            { ...response, findings: [{ ...finding, codeSnippet: finding.codeSnippet.replace('\\n', ' ') }] },
+            { ...response, findings: [], rejected_ids: ['other'] },
+        ]) {
+            execute.mockResolvedValueOnce(JSON.stringify(invalid));
+            await expect(adapter.query(request)).rejects.toMatchObject({ reason: 'schema-enum' });
+        }
+        await expect(adapter.query({ ...request, configuration: { provider: 'opencode', model: 'model' } })).resolves.toEqual(response);
+        expect(execute).toHaveBeenLastCalledWith(expect.objectContaining({ outputSchema: schema }));
+    });
+
     it('keeps numeric and array bounds in the native schema', () => {
         const schema = object({ values: { type: 'array', minItems: 1, maxItems: 8,
             items: { type: 'integer', minimum: 1, maximum: 25 } } });

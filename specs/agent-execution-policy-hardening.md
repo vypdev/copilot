@@ -2,7 +2,7 @@
 
 - Status: Implemented — automated gates complete; controlled provider smoke remains external
 - Date: 2026-09-11
-- Last updated: 2026-11-07
+- Last updated: 2026-11-12
 - Catalog capability ID: `agent-runtime`
 - Last verified: 2026-09-12 in the P1-C implementation worktree
 - Owners: Copilot maintainers and security reviewers
@@ -80,6 +80,19 @@ execution, smoke, runner provisioning/security, verification and synchronization
 docs MUST agree. Manual runner inventory must show Windows without `codex`
 before new shared-pool dogfooding. Previously open Windows Codex service checks
 remain unsupported/unverified, not green; the setup 350-row budget is unchanged.
+
+### Native Claude Code extension
+
+The three-provider baseline below describes the implemented dispatcher.
+A separate runtime task will add a fourth independent policy for
+`claude-code`. That policy must meet the same execution-plan, artifact
+integrity, credential isolation, local output validation, cancellation and
+no-fallback gates. Brokered Bugbot verification admits only the
+application's evidence operations. The execution-policy controls must prove
+the effective isolation with the reviewed Claude Code runtime before any
+platform or role is advertised as supported. The runtime SDD owns the
+new cases and support gates.
+[Native Claude Code runtime](agent-runtime-provider-and-model-routing.md#native-claude-code-runtime)
 
 ## 1. Executive summary
 
@@ -609,7 +622,11 @@ GitHub UI. Existing locale/fallback and narrow Markdown rules apply.
 2. GitHub/Git/SSH/cloud/proxy credentials and ambient secret-pattern variables
    are stripped.
 3. Managed artifacts are mode 0600 in a unique temp directory, hashed before
-   spawn, and deleted after the process exits.
+   spawn, and deleted after the process exits. On Unix, both the planner and
+   executor use the runner's scratch parent when present. A runner fixture covers
+   successful artifact staging when the system temp path is unavailable and a
+   sanitized failure when runner scratch itself is missing. Storage, access and
+   path failures remain preflight failures and launch no agent process.
 4. Workspace and executable use canonical real paths with symlink/ownership/
    permission checks; no writable executable or wrapper is accepted. Git must
    report the requested canonical workspace as a repository root via its empty
@@ -671,7 +688,7 @@ source-context budget before reaching its former 30-minute limit during extensio
 coverage. The Windows allocation covers that remaining work and deferred cleanup;
 it does not alter the SDK's operation deadlines or reduce verification scope.
 
-This SDD owns at least **53 distinct cases**; parameterized provider/role rows
+This SDD owns at least **58 distinct cases**. Parameterized provider/role rows
 count separately only when authority/argv differs.
 
 | Area | Minimum cases | Required risks |
@@ -684,9 +701,9 @@ count separately only when authority/argv differs.
 | UX/sanitization | 1 | rejection/partial view without sensitive fields |
 | Integration/security | 2 | effective sandbox matrix and env/credential isolation |
 | Output rejection diagnostics | 8 | Six closed local causes, forged-diagnostic suppression, real-child observer propagation; existing size fixtures retain both stream assertions |
-| Terminal process diagnostics | 8 | Exact output-token-limit line, prose/other-reason rejection, split/large/evicted tail cases, actual child privacy/cleanup, fixed logger propagation |
-| Codex native decoder compatibility | 13 | Immutable input, nested/nullable strings, literal property names, unchanged local constraints, numeric/array bounds, loose-schema rejection, global enum and Unicode budgets, and real adapter length/membership acceptance |
-| **Total** | **53** | no double counting |
+| Terminal process diagnostics | 11 | Exact output-token-limit line, prose/other-reason rejection, split/large/evicted tail cases, actual child privacy/cleanup, fixed logger propagation, provider schema code or diagnostic header and rejection of bare schema-code prose |
+| Codex native decoder compatibility | 16 | Immutable input, nested/nullable strings, literal property names, unchanged local constraints, numeric/array bounds, loose-schema rejection, global enum and Unicode budgets, and real adapter length and membership acceptance including LF, CRLF and a literal escaped newline in generated-source evidence |
+| **Total** | **59** | no double counting |
 
 All provider plan, role authority, executable, and runtime-manifest policies require
 100% enumerated branch coverage. Changed process/provider modules require 95%

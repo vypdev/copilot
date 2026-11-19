@@ -15,6 +15,7 @@ import type { BoundPublicationSourceQueryPort } from '../../ports/publication_fr
 import type { BoundIssueCommentQueryPort } from '../../ports/issue_lifecycle_ports';
 import { hasActiveStagedRolloutCard } from '../../policies/staged_rollout_presentation_policy';
 import { buildStaleSourcePublicationPayload } from '../../policies/publication_outcome_policy';
+import type { ProgressWorkAssessment } from '../../policies/progress_pending_work_policy';
 
 export interface ProgressRolloutFence extends BoundIssueCommentQueryPort {
     removeFullProgressLabel(issueNumber: number): Promise<void>;
@@ -116,6 +117,9 @@ export async function runCheckProgressWorkflow(
             comparisonSource,
             baseSha,
             scopeManifestDigest,
+            { headSha: sourceHeadSha, baseSha, scopeDigest: scopeManifestDigest, outcomes: attemptResult.outcomes,
+                ...(analysis.scopePublication ? { sdd: { commitSha: analysis.scopePublication.commitSha, path: analysis.scopePublication.path } } : {}),
+                ...(comparisonSource.kind === 'pull-request' ? { pullNumber: comparisonSource.pullRequestNumber } : {}) },
         )];
     } catch (error) {
         const semanticError = toApplicationError(error, 'workflow.failed', `Unable to complete ${taskId}.`);
@@ -200,6 +204,7 @@ function buildProgressResult(
     comparisonSource: ProgressComparisonSource,
     baseSha: string,
     scopeManifestDigest: string,
+    pendingWork: ProgressWorkAssessment,
 ): Result {
     return new Result({
         id: taskId,
@@ -219,6 +224,7 @@ function buildProgressResult(
             comparisonSource,
             baseSha,
             scopeManifestDigest,
+            pendingWork,
         },
     });
 }

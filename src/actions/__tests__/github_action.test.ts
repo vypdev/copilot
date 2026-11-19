@@ -10,6 +10,7 @@ import * as executionBuilder from '../github_action_execution';
 import * as agentRuntime from '../github_action_runtime';
 import * as actionCompletion from '../github_action_completion';
 import { runGitHubAction, runGitHubActionEntry } from '../github_action';
+import { createPullRequestUseCaseCompositionRoot } from '../../infrastructure/composition/pull_request_use_case_composition_root';
 import { ACTIONS } from '../../data/model/action_types';
 import { INPUT_KEYS } from '../../application/contracts/input_keys';
 import { ApplicationError } from '../../application/errors/application_error';
@@ -155,6 +156,18 @@ describe('runGitHubAction', () => {
     expect(execution.actor).toBe('test-actor');
   });
 
+  it('retains normal signal handling on a non-review Action route with shadow configured', async () => {
+    const input = (core.getInput as jest.Mock).getMockImplementation()!;
+    (core.getInput as jest.Mock).mockImplementation((key: string, options?: unknown) =>
+      key === 'bugbot-verification-mode' ? 'shadow' : input(key, options));
+    const once = jest.spyOn(process, 'once');
+    try {
+      await runGitHubAction();
+      expect(mockMainRun).toHaveBeenCalledTimes(1);
+      expect(once.mock.calls.filter(([event]) => event === 'SIGINT' || event === 'SIGTERM')).toEqual([]);
+    } finally { once.mockRestore(); }
+  });
+
   it('discards a normal PAT-triggered run before composing dependencies or entering the queue', async () => {
     mockExecutionAdmissionInvoke.mockResolvedValue({ decision: 'discard', tokenUser: 'test-actor' });
 
@@ -193,6 +206,51 @@ describe('runGitHubAction', () => {
     expect(mockReviewOnly.mock.calls[0][0].issueNumber).toBe(42);
     expect(mockMainRun).not.toHaveBeenCalled();
     expect(finishActionSpy).not.toHaveBeenCalled();
+  });
+
+  it.each(['ready', 'unavailable'] as const)('preserves a bot-authored review with a distinct %s verifier runtime', async status => {
+    mockExecutionAdmissionInvoke.mockResolvedValue({ decision: 'discard', tokenUser: 'test-actor' });
+    github.context.eventName = 'pull_request';
+    github.context.payload = {
+      repository: { id: 17, name: 'test-repo', owner: { login: 'test-owner' } }, action: 'opened',
+      pull_request: { number: 42, state: 'open', user: { login: 'test-actor' },
+        head: { ref: 'feature/42', sha: 'a'.repeat(40), repo: { id: 17, owner: { login: 'test-owner' } } },
+        base: { ref: 'develop' } },
+    };
+    (core.getInput as jest.Mock).mockImplementation((key: string, opts?: { required?: boolean }) => {
+      if (opts?.required && key === INPUT_KEYS.TOKEN) return 'fake-token';
+      return ({ 'bugbot-verification-mode': 'shadow', 'bugbot-verifier-provider': 'opencode',
+        'bugbot-verifier-model-provider': 'anthropic', 'bugbot-verifier-model': 'fixture-claude',
+        'bugbot-verifier-effort': 'high' } as Record<string, string>)[key] ?? '';
+    });
+    agentProvisioningSpy.mockImplementationOnce(() => undefined).mockImplementationOnce(() => {
+      if (status === 'unavailable') throw new Error('runtime unavailable');
+    });
+    const listeners = process.listenerCount('SIGTERM');
+    mockReviewOnly.mockImplementationOnce(async execution => {
+      expect(execution.bugbotReviewSignal).toBeUndefined();
+      const binding = jest.mocked(createPullRequestUseCaseCompositionRoot).mock.calls[0][0];
+      await binding.reviewCancellation!.withSignal(undefined, async signal => {
+        expect(signal.aborted).toBe(false);
+        process.emit('SIGTERM', 'SIGTERM');
+        expect(signal.aborted).toBe(true);
+      });
+      return [];
+    });
+
+    await runGitHubAction();
+
+    expect(process.listenerCount('SIGTERM')).toBe(listeners);
+    expect(mockReviewOnly.mock.calls[0][0].bugbotReviewSignal).toBeUndefined();
+    expect(agentProvisioningSpy).toHaveBeenNthCalledWith(1, expect.anything(), ['reviewer']);
+    expect(agentProvisioningSpy).toHaveBeenNthCalledWith(2, expect.objectContaining({ findings: {
+      provider: 'opencode', modelProvider: 'anthropic', model: 'fixture-claude', effort: 'high',
+    } }), ['findings']);
+    expect(mockReviewOnly).toHaveBeenCalledTimes(1);
+    expect(mockReviewOnly.mock.calls[0][0].ai.getAgentConfiguration('reviewer')).toMatchObject({
+      provider: 'codex', model: 'gpt-6-luna',
+    });
+    expect(mockMainRun).not.toHaveBeenCalled();
   });
 
   it('fails a same-repository PAT-authored PR event when its review-only analysis fails', async () => {

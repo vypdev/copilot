@@ -1931,3 +1931,574 @@ Optional Check Run failures use the shared [#728 diagnostic contract](./optional
 This does not alter review findings, protected-path approval, check identity or
 completion authority. A failed optional projection never masks an earlier
 required error or turns required success into failure.
+
+## Proposed verification contract for #950
+
+The proposed #950 verification gate covers retained identities before fixed, obsolete or reopened transitions. Candidate dispositions and durable finding states are separate. Inconclusive evidence, omission, failed integrity and human dismissal preserve native thread authority. The existing read-after-write projection owns observed and unknown effects during recovery.
+
+The analysis SDD owns candidate anchors and successive typed evidence reads.
+An explicit historical transition uses the retained finding ID and frozen
+candidate version. Evidence recovered after the freeze may support a verdict
+while preserving the anchor and durable ID. When the same file and line
+match both comparison sides, leave the candidate inconclusive before
+starting an evidence session. An unambiguous deletion can use the pinned
+base. A candidate missing decisive
+evidence remains inconclusive and preserves its native thread, even when
+other confirmed candidates publish. Token telemetry has no effect on this
+decision or the approval receipt. Invalid receipt provenance fails the
+whole pre-publication batch with zero finding, resolution or approval writes.
+The prior verified projection remains readable.
+
+CI evidence must identify the repository that owns the workflow and the
+repository that owns the reviewed head. An unknown or foreign head
+repository cannot provide a CI receipt. File evidence uses lossless UTF-8
+paths and the actual number of blob lines. An empty blob has no citable
+line. The evidence broker returns a named gap when a path cannot be decoded.
+
+Refer to the out-of-range citation repair control as
+`ev950-shadow-C22/citation-range` and to the unbound-source/provider-stop
+control as `ev950-shadow-C22/source-admission`. These aliases disambiguate
+the reused ID in the immutable published analysis SDD without renumbering
+historical results. The ordered-closure table contains twelve controls.
+
+[Bugbot repository evidence verification](./bugbot-analysis-publication-and-autofix.md#bugbot-repository-evidence-verification)
+
+The finding projection and approval receipt have different lifecycles. An
+older verified finding card may remain visible after an inconclusive or failed
+attempt. The approval reader consumes the latest authoritative native
+attempt bound to the effective policy generation and exact PR comparison.
+[The #950 receipt contract](./bugbot-analysis-publication-and-autofix.md#950-approval-and-pilot-qualification-revision)
+defines the complete shape and rollout transitions.
+
+### Native receipt and policy selection for #950
+
+The canonical review producer writes a bounded `copilot-bugbot-verification:v1`
+machine marker in the trusted native `Copilot / Review` check. The observer
+selects the configured publishing workflow's latest native run and attempt
+for the PR and exact reviewed head or verified synthetic merge. It matches
+the check's app, suite and run source before parsing its payload. A run with
+ambiguous PR association at that head can block approval. Evidence from a
+different PR or an untrusted producer cannot authorize approval.
+
+| Receipt field | Binding |
+|---|---|
+| `version` | Closed schema version 1 |
+| `repositoryId`, `pullNumber`, `headSha`, `baseSha` | Current provider repository, PR and exact comparison |
+| `mode`, `generation`, `policyDigest` | Canonical digest of the effective trusted policy, including its rollout generation, verifier/evidence profile and operational controls |
+| `runId`, `attempt` | Latest authoritative native run ID and attempt number |
+| `coverage`, `verification`, `publication`, `outcome` | Separate coverage, complete or inconclusive dispositions, provider verification, and terminal review status |
+| `findingStates` | Seven canonical non-negative counts. Verified overflow contributes to actionable state even without an inline comment. |
+
+Only complete coverage and verification with observed, verified publication
+and the existing approval gates can authorize. Pending, failed or inconclusive
+authoritative runs can publish diagnostics and leave the previous finding
+presentation available. The consumer never falls back to that earlier receipt.
+The observer's independently loaded trusted policy decides whether to require
+the native receipt. A repository that has never enabled the new gate may use
+the existing legacy projection in disabled or shadow mode. Changing enforcement
+or rolling back advances the policy generation and requires a fresh
+authoritative receipt. The shadow execution is a separate non-authoritative
+stream with no approval writes and cannot become the selected producer.
+
+The real approval repository consumes this contract when supplied with the
+trusted policy binding. Its controlled-provider tests cover existing legacy
+readers, an unchanged SHA after enforcement, later incomplete and failed
+attempts, and rollback. Production policy composition and receipt emission
+remain gated by pilot qualification.
+
+### Finding lifecycle diagnostics
+
+The [#950 finding lifecycle](./bugbot-analysis-publication-and-autofix.md#finding-lifecycle-and-experimental-profiles)
+reports the ordinary publication decision alongside the validated shadow
+outcome for each prepared identity. Candidate traces, receipt aliases and
+experimental model profiles carry no authority to reopen, resolve or approve
+a historical finding. An inconclusive, canceled or failed observation leaves
+durable state to the ordinary reconciliation contract.
+
+## Live review progress for #950
+
+- Status — Proposed for implementation in #950
+- Date — 2026-11-13
+- Owner — Bugbot maintainers
+- Review gates — publication authority, GitHub UX, privacy and lifecycle races
+- Open product decisions — none
+
+The local complete review plan for [PR #951](https://github.com/vypdev/copilot/pull/951)
+at `53b96fee7ad545f409d9b6ce2fcb8fc32eb2019f` needed two frames and 105
+partitions. At the subsequent head `53b21735be184ce562af83bdfaf86780299f1b2c`,
+the [first native attempt](https://github.com/vypdev/copilot/actions/runs/43467621545/job/132030854670)
+lost runner connectivity. On the
+[second attempt](https://github.com/vypdev/copilot/actions/runs/43467621545/job/132063831481),
+the PR showed the job as running without a validated-partition count. The
+amendment adds progress to the existing presentation. The published #950
+owner and its evidence and approval gates remain authoritative.
+
+### Behavior and ownership
+
+| Requirement | Contract |
+|---|---|
+| BRP-01 | Upsert a **Review in progress** block above **Last verified review** on the one trusted Bugbot PR status comment. Label both with their own SHA. Link the current check or native run and keep the last verified finding summary readable throughout. On the first review, say that no verified result exists yet. |
+| BRP-02 | Project host-observed stages from the existing review workflow. Show source preparation, diff analysis, evidence verification when applicable, reconciliation/publication, and the terminal result. Show verified counts only for a frozen plan or candidate inventory. For ordinary and framed paths, count validated assignments once, keep retries separate and show a frame ordinal when applicable. Verification counts represent validated dispositions, including inconclusive ones. While verification is running, show only aggregate counts. Use the [partition observation contract](./bugbot-source-bound-framed-review.md#live-progress-observations-for-950) for the precise counting rules. |
+| BRP-03 | Publish on admission, observable phase change, material advancement at most once per five minutes, and terminal transition. Phase and terminal transitions bypass the five-minute coalescing window. Coalesce concurrent updates and suppress identical writes. Reuse the same comment and check identity. A delayed update never creates a second card or notification. Use trusted time, show the last observed timestamp and elapsed time as of that observation, and omit estimated completion. |
+| BRP-04 | Bind an observation to the canonical repository, PR, base, head, effective review policy, native run and attempt, and monotonic sequence. The application rechecks current ownership immediately before publishing. Serialize live and terminal comment updates with the canonical card owner, including independent review-state events. Those events refresh their verified state without replacing the active review block. If ownership or order cannot be established, skip the live write and expose the native run. A superseded attempt cannot clear or overwrite a newer one. |
+| BRP-05 | An observed failure shows cause, retained state and the next action when known. If runner loss or cancellation prevents a final write, the card still shows the last observation with its timestamp and the native run as the authority for current status. A subsequent authorized refresh reconciles that observation against native terminal facts. Lack of a recent update alone never proves failure, cancellation, or a stalled reviewer. A failed optional progress write preserves the underlying review outcome and uses the existing diagnostic and retry policy. |
+| BRP-06 | Limit publication to existing authorized review runs. Dry-run and write-blocked shadow pilots record the same safe observations in logs and the Job Summary with zero provider write attempts. In ordinary publication with shadow enabled, retain the ordinary publishing decision and keep candidate-level shadow data in the pilot record. Live progress has no authority to publish findings, change threads, update approval or mint a verification receipt. The trusted terminal review and approval consumer retain their existing policy and freshness checks. |
+
+```text
+Admit current review → freeze assignments → validate assignments → verify candidates
+→ reconcile current head → publish terminal result
+                  ↘ application projects observed progress to the existing card and check
+```
+
+In the ordinary path the application reports its analysis phase until it can
+count validated work. The framed path supplies the exact inventory and frame
+progress. The verifier and detector have read-only ports. The application
+owns transitions and ordering. Pure policy determines the projection and
+coalescing. The existing presentation and semantic write adapters render and
+publish it. Provider responses supply observed write effects. The live check
+uses the same attempt-owned native review projection when available. Its
+in-progress state remains distinct from any terminal receipt. Terminal check
+updates and approval must never read a conclusion from the comment. Reuse
+the existing ownership marker with an explicitly validated additive field or
+compatible separate section. Older cards without that section still render
+their last verified result. Keep the storage limited to the current
+observation and existing verified projection. Resume-from-checkpoint is a
+separate design.
+
+The GitHub comment update replaces the full body. A read followed by a
+write does not provide a compare-and-set guarantee. The adapter must use a
+single serialized publication boundary shared by all card writers, with
+ownership verified under that boundary. It must not share the long-running
+analysis lock or cancel independent review-state work. Where that boundary
+is unavailable, keep the active projection in the native check and Job
+Summary until the card can be updated safely.
+
+[GitHub comment update contract](https://docs.github.com/en/rest/issues/comments#update-an-issue-comment)
+
+### Shared publisher handoff
+
+The native Review check can carry one `copilot-bugbot-progress:v1`
+observation alongside the human-readable view. The exact external ID
+binds the comparison, policy, native run and attempt. The closed decoder
+accepts only stage, validated counts, trusted time, sequence and bounded
+failure codes. Authenticate the check's repository and application identity
+before decoding. Missing or invalid structured data keeps the human-readable
+Check view available. Normal completion retains the last accepted progress
+snapshot in the Check details beside the terminal summary. Interrupted-check
+recovery can retain a previously valid observation after GitHub confirms the
+terminal run state.
+
+Use a short trusted workflow job per PR to serialize publication. A wake-up
+identifies a repository, PR and native source attempt. The job fetches the
+latest observation after entering the queue and checks the live comparison,
+policy and attempt again immediately before editing the existing card.
+Manual rechecks and terminal publishers must use this same lane. A terminal
+publisher supplies a bounded verified projection through an authenticated
+same-attempt handoff and observes its publication before proceeding where
+the existing contract requires it. The job must load only data from upstream
+attempts and execute code from a trusted workflow revision. The long review
+continues in its analysis job.
+
+The source repository uses `copilot_bugbot_status_card.yml` on the default
+branch. Each short, self-hosted job is queued by repository ID and PR number.
+Its bot-authenticated handoff identifies the producer and the exact
+comparison. The job loads the latest native observation under its own read
+credential, identifies one trusted canonical comment and rechecks the
+producer attempt, check, conversation and comparison before mutation. The
+terminal producer waits for acknowledgment from that job before issuing the
+existing receipt. An older or conflicting observation cannot overwrite the
+active block. Completion records the attempt on the comment so an already
+queued observation cannot restore a completed progress block. Native run and
+check listings are reconciled across up to ten pages of 100 unique records
+per listing. An incomplete or inconsistent listing keeps the existing card.
+
+Explicit cancellation from the Action reaches the active verifier and stops
+new verification sessions. If it arrives before publication, the current
+batch cannot replace the last verified result. Cancellation adds no session
+deadline. A verification failure that blocks publication completes the
+already-open native Review check as failed without issuing approval evidence.
+
+Deterministic controls preserve the previous verified bytes, reuse the
+first-review comment without granting approval, reject replaced attempts and
+keep active progress when a recheck refreshes the verified section. A
+superseding push, delayed same-head task and interrupted runner are replayed
+with recording or fail-on-call provider ports. Hosted acceptance requires the
+trusted workflow to exist on the GitHub default branch.
+
+[GitHub Actions concurrency queue](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency)
+[GitHub workflow dispatch](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#workflow_dispatch)
+
+### GitHub content examples
+
+```markdown
+## Bugbot · review in progress
+
+Head 53b21735 · Diff analysis · Frame 1 of 2
+48 of 105 partitions validated · Last update 19:09 UTC · 1 h 12 min elapsed
+Next · Validate the remaining partitions. No action required.
+[Review check](…) · [Workflow run](…)
+
+### Last verified review · 4b052fb5
+Two open findings. [View the previous review](…)
+```
+
+| State | Primary content and next action |
+|---|---|
+| Preparing | “Preparing the review for 53b21735. Reading the comparison. No action required.” Show a run link and omit unknown totals. |
+| Awaiting evidence | “Verifying findings for 53b21735. Two of five have a validated outcome. No action required.” Put stage times and retry counts in the check or Job Summary. |
+| Interrupted | “Review interrupted for 53b21735. The runner lost contact. Inspect the run and retry this head. The previous verified review is still available.” If the cause is unavailable, link the native state and show the last observed time. |
+| Incomplete terminal result | “Review incomplete for 53b21735. One finding needs evidence. Open the Review check for the missing condition.” Preserve the existing rules for independently confirmed findings and approval. |
+| Complete | “Review complete for 53b21735. All 105 partitions validated.” Replace the active block with the existing terminal summary and link the findings and native check. |
+
+When the PR has a verified linked issue and Commit assessment, the existing
+card also links **Implementation progress and pending work** under the
+[Commit presentation contract](./batched-progress-scope.md#actionable-remaining-work-for-950).
+Render its assessed SHA alongside the link. The PR card remains readable
+during analysis and carries no second copy of the checklist.
+
+Values above are illustrative. Use the effective PR locale, reviewed English
+and Spanish strings and existing fallback. Use short stacked lines, textual
+state labels, descriptive links and collapsed technical details. Verify mobile
+and desktop in light and dark themes. Use host-bound IDs, counts and links
+with the existing sanitization. Keep raw prompts, code excerpts, model text,
+credentials and unverified findings out of the live block. There is no new
+configuration, permission, finding limit or evaluation deadline.
+
+### Acceptance and test evidence
+
+The attempt-owned `Copilot / Review` check delivers active progress, and
+the existing PR card links it through **Current review checks**. The terminal
+card can also link the complete Commit assessment. This requires a native
+same-repository closing reference, one deliverable issue card from the
+trusted author with a scoped full SHA, and an exact PR destination in the
+structured card footer. The link shows the assessed SHA and labels older
+assessments. Linkage failures and ambiguous issue cards omit the link.
+
+On a failed, timed-out or canceled native PR analysis, the existing
+trusted-default-branch observer can close the orphaned live check. It
+requires a completed analysis event, the exact repository, PR, comparison,
+run and attempt, and a unique in-progress GitHub Actions check with the
+matching external ID. It preserves the last dated observation and native
+run link. Recovery does not write during dry-run, touch the card or its
+findings, or issue a review receipt. Provider errors preserve the native run
+as the authority. [Runner interruption on #951](https://github.com/vypdev/copilot/actions/runs/43515411649/job/132196027792)
+
+When the trusted workflow is absent, the live block remains in the check and
+Job Summary and the existing terminal comment route applies. When the
+shared writer is installed, a failed acknowledgment cannot fall through to
+an unqueued comment write, including for legacy callers outside the shared
+workflow. Before using the legacy route, verify absence in a readable
+directory of the default tree. A file-level not-found response alone cannot
+prove that the credential can inspect the workflow. A verified empty comment
+connection permits a first card. An absent connection, a missing page, or an
+unreadable entry leaves the conversation incomplete and prevents card writes.
+Adopt an authenticated legacy card only when its first-line marker binds it to
+this PR and a full verified SHA. Preserve its body while showing progress
+and upgrade the same comment on the next validated terminal result. The
+legacy marker alone does not authorize a terminal handoff.
+The check remains available if the publisher cannot safely identify the
+current attempt or write the comment. The
+long-running analysis group and the review-state route stay independent.
+[GitHub REST conditional request support](https://docs.github.com/en/rest/using-the-rest-api/best-practices-for-using-the-rest-api#use-conditional-requests)
+[GitHub Actions job concurrency](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency)
+
+Minimum **16 distinct deterministic cases**. Use fake clocks, pinned Git
+inputs and recording or fail-on-call ports. Keep repository-wide and
+changed-module coverage gates and exercise every new pure-policy branch.
+
+| Requirement | Cases | Acceptance evidence |
+|---|---:|---|
+| BRP-01 | 3 | An existing status comment keeps its verified SHA and finding summary through admission. The first review shows pending without an invented previous result. A trusted legacy card keeps its ID and prior body during progress and upgrades in place on validated completion. |
+| BRP-02 | 3 | Ordinary analysis reports unknown totals until planned. A two-frame replay validates 105 parts and counts a successful retry once. Mixed dispositions including overflow are counted without exposing their content. |
+| BRP-03 | 2 | Fake-clock replay coalesces repeated advancement, observes the five-minute interval and flushes transitions. Retries update the same trusted comment and check without duplicate notifications. |
+| BRP-04 | 3 | Superseding push, same-SHA retry and overlapping review-state update each preserve the correct owner. Wrong-head, out-of-order and old-attempt updates never win. |
+| BRP-05 | 3 | Runner loss with no terminal callback preserves a dated observation and links native state. Optional write failure leaves the primary result and existing terminal authority intact. The packaged action retains the prior card and emits no write when the provider cannot verify the conversation. |
+| BRP-06 | 2 | Write-blocked replay has zero mutation attempts. In publish mode, pending, failed and forged observations cannot change findings or authorize approval, including during rollback. |
+
+Implementation starts with the observation and ordering policy, then integrates
+both review routes and the canonical publisher. Add the normal and interrupted
+states to `docs/bugbot/detection.mdx` and operational metrics and stale-observation
+guidance to `docs/bugbot/quality-observability.mdx`. Validate dependency and
+workflow contracts, specification and documentation contracts, focused and
+full tests, coverage, generated bundles and Graphify. Before closing #950,
+exercise the actual entrypoint with a representative large two-frame fixture
+and verify its rendered PR and check views, including one controlled runner
+interruption. Link that evidence and the final SHA checks in #951. The
+monitoring change does not qualify a verification profile or activate production.
+
+### Installed verification provenance and final closure amendment
+
+The installed source/CI profile MUST use pinned Git evidence, accredited
+dependency sources and matching CI metadata. It MUST NOT discover and execute
+a Python interpreter from PATH. A tracked Python pin does not establish its
+linked SQLite release. If that release remains material and unaccredited,
+the verifier returns inconclusive with the precise version gap. Existing
+diagnostic local probes retain their evaluator provenance. Registered isolated
+probes remain a separate opt-in profile and qualification.
+
+The installed verifier response MUST include the boolean `orderRequired`
+for each premise. The verifier sets it when its premise depends on execution
+order, independently of the wording used. A true value with no order proof
+reopens the same session for both operations and their ordering mechanism.
+The application also catches explicit temporal wording in the premise or
+reason. The typed field and exact excerpt checks establish structural closure.
+Whether the code proves the premise remains the verifier's judgment and an
+independent evaluator check. Legacy frozen schemas and ledgers retain their
+original contract.
+
+The producer MUST store the terminal verification receipt and the actual
+custom Review Check Run ID in one immutable native Actions artifact. Its
+name is `copilot-bugbot-verification-v1-<runId>-<attempt>` and its sole data
+member is `copilot-bugbot-verification.json`. The closed version-1 object
+contains `version`, `runId`, `attempt`, `checkRunId` and the exact
+`receipt` marker. The producer validates the current native run and attempt
+and publishes the artifact only after that check write succeeds. Artifact
+publication failure cannot grant approval.
+
+The approval consumer MUST select the newest trusted workflow attempt before
+looking for its unique unexpired artifact. It verifies the artifact's native
+run, repository, head repository and revision, its bounded JSON member, the
+attempt, the exact custom Check Run ID and the identical receipt in the
+delivered check summary. It then applies the existing policy digest,
+generation, PR, base, head, publication, verification and finding-state checks.
+The custom check's suite need not equal the job check's suite. A bare custom
+check or an artifact from another attempt, workflow, repository or revision
+cannot replace this attribution. A later failed, partial or inconclusive
+attempt prevents reuse of an earlier clean result, including on rollback.
+Repositories that have never required this gate retain legacy behavior.
+
+GitHub artifact publication requires the Actions runtime and its artifact
+service. An unsupported or unavailable artifact service leaves the receipt
+unavailable to approval. This adds no user-selected model, effort or execution
+configuration. The immutable artifact contains the closed receipt, with no
+candidate text, code, prompts or provider output.
+
+The native interrupted-check reader MUST collect all admitted pages before
+matching one exact interrupted attempt. Missing, duplicate or inconsistent
+pages preserve the prior presentation. The packaged publication canary MUST
+record a rejected GraphQL mutation as an attempted write even when the
+provider refuses it. These controls do not grant terminal review authority.
+
+The minimum addition is **23 distinct deterministic controls**, with existing
+coverage and native gates retained.
+
+| Area | Minimum | Acceptance and executable evidence |
+|---|---:|---|
+| Installed evidence capability | 1 | An unregistered SQLite runtime request reaches a valid inconclusive result through the installed adapter. |
+| Temporal closure | 3 | A structured sequence and the common then/follows formulations reopen the same installed session for missing order roles. |
+| Artifact producer | 5 | Success and upload failure clean staging; wrong run, attempt and receipt shape never upload. |
+| Check/artifact orchestration | 3 | Created and reused checks supply their actual IDs; a failed upload cannot authorize approval. |
+| Approval consumer | 9 | A legitimate custom check with a distinct suite passes; missing, duplicate, expired, other-run, other-check, other-attempt, altered and invalid ZIP artifacts all withhold approval. |
+| Interrupted native pagination | 1 | The exact interrupted check on the second page closes once. |
+| Packaged mutation audit | 1 | A rejected GraphQL mutation is recorded as an attempted write. |
+
+Trace these controls respectively to
+`shadow_verification_adapter.test.ts`,
+`github_bugbot_verification_artifact.test.ts`,
+`copilot_evidence_repository.test.ts`,
+`pull_request_approval_repository.test.ts`,
+`github_bugbot_interrupted_check.test.ts` and
+`status-card-publication/packaged-canary.cjs`.
+The user-facing explanation belongs to Bugbot quality observability and the
+guarded-approval diagnostics. Validate the catalog, generated documentation
+and bundles together. Production activation remains disabled pending EV-07
+and explicit maintainer approval.
+
+The actual review at `ca75978d6` produced custom check `135035394993`
+under suite `120108962450`; workflow `44370006763` used suite
+`120109016424` and job check `135033903549`. Those independently read
+native identities motivated artifact attribution instead of assuming equality.
+[Native review check](https://github.com/vypdev/copilot/runs/135035394993)
+[Native workflow](https://github.com/vypdev/copilot/actions/runs/44370006763)
+[Actions artifact contract](https://github.com/actions/toolkit/tree/main/packages/artifact)
+[Native artifact metadata](https://docs.github.com/en/rest/actions/artifacts#get-an-artifact)
+
+
+### Batched review publication contract after the `86e2430ec` failure
+
+The native attempt completed 26/26 analysis partitions, then its ten-comment review write failed with HTTP 422 (`publish-comments`). No child review was created. The retained safe diagnostic does not identify the provider's exact validation field. A separate deterministic reproduction MUST isolate the incompatible request shape before another complete review. GitHub's [batch review contract](https://docs.github.com/en/rest/pulls/reviews#create-a-review-for-a-pull-request) accepts line/range comments, whereas `subject_type: file` belongs to the [single-comment endpoint](https://docs.github.com/en/rest/pulls/comments#create-a-review-comment-for-a-pull-request).
+
+The installed canonical-diff route MUST place only exact, positive line/range anchors in the existing single batched review. Internal legacy contexts that have only first-line metadata retain their compatibility behavior; the installed loader always supplies the canonical diff locations. When the canonical diff cannot establish one, the host MUST retain the complete finding and its marker in that review's body, preserving the reported path and line as explanatory metadata. It MUST NOT synthesize a line, attach the finding to another file or submit a file-level draft through this endpoint. The finding still counts, consumes its ordinary selected slot and remains discoverable through authenticated review-level markers. Exact LEFT deletions and RIGHT additions retain their line and suggestion policies. Existing comments and human dismissals retain their identities and transition rules. No extra endpoint, write or permission is introduced.
+
+The narrow comment draft and adapter MUST prohibit the unsupported file-level request shape. A malformed/missing line fails locally before the review mutation; provider errors still retain completed effects and remain separate from successful publication. Mixed anchored/unanchored findings produce one review, exact line comments and complete body findings. The primary UI still shows one historical review and the canonical aggregate card. Documentation must describe review-body fallback rather than unsupported file-level batch comments.
+
+An exact replay of complete submitted review-body content on the same head MUST be idempotent even after the host refreshes its review identity and status block. The application-owned historical-content projection excludes only those managed presentation fields; report content and native commit identity remain material. The existing query capability reads submitted review bodies as well as inline comments. A body from another head cannot suppress publication, and already-observed inline comments cannot cause a new complete body finding to be dropped.
+
+Additional minimum budget: **eleven deterministic cases** across application and adapter controls: an impossible reported line preserves the full body and no suggestion; an unlocated finding does not move to another file; a strict provider reproduces the old 422 and accepts a mixed review after correction; missing, nonpositive and noninteger draft lines fail before mutation; five adapter controls cover exact body reuse, managed-status refresh, another-head rejection, unsubmitted-review rejection and preservation of new body content after inline completion. Existing review-marker discovery, recheck idempotency, exact LEFT/RIGHT anchors, failure conservation and coverage controls remain mandatory. Validate the focal publication tests, source/SDK boundaries, documentation, specifications, generated bundles and the actual final-head review. The reproduction establishes the local request-shape defect; it does not reconstruct the unrecorded text of the historical 422.
+
+
+### Live comparison, cancellation and evaluator closure — 2026-11-19
+
+Every receipt-bearing review MUST compare both the cached PR comparison base
+and the separately accredited live target-ref SHA before and after publication.
+A live-ref advance invalidates the result even when GitHub retains the same
+`base.sha`; an absent or unverifiable live ref fails closed. The initial
+preparation observation MAY acquire its not-yet-pinned live ref from the trusted
+identity reader. Later stages and explicitly pinned observations MUST retain
+their exact comparison and reject a changed ref. Neither preparation nor a
+progress card certifies a completed review.
+
+Native signal handlers MUST surround only an actual Bugbot invocation, with
+cleanup after success, failure or cancellation. Other Action routes retain
+normal process-signal behavior. An infrastructure adapter supplies a linked
+abort signal through the application cancellation port; the application and
+domain do not import process APIs. Detector partitions, retries, generated
+literal follow-ups and verifier sessions MUST receive that signal. Cancellation
+stops new model dispatch and retries, preserves the last verified projection and
+does not authorize publication. It adds no investigation deadline, token limit
+or turn limit.
+
+An official dependency release requires consistent manifest, importer and
+resolved-version evidence. A resolved release outside an accredited declared
+range MUST NOT be presented as effective merely because the lockfile repeats
+the manifest specifier. Unsupported selectors or an unproved effective override
+leave the version unaccredited; the verifier can identify that concrete missing
+premise. Existing package integrity, source hashes, revision and receipt checks
+remain mandatory.
+
+The full-review scheduler and each measured slot MUST record the exact selected
+plan SHA-256, including thresholds and cohort. The scorer MUST reject missing,
+foreign or inconsistent plan provenance before applying a score or writing a
+public ledger. A stricter future scorer does not rewrite an executed campaign.
+The active status publication control MUST delegate to the production policy,
+including terminal-attempt retention and equal-sequence digest conflicts; retain
+the superseded prototype only in the immutable archive.
+
+Add a minimum **30 deterministic controls**: five live-base freshness paths,
+ten cancellation/route/dispatch/cleanup paths, three initial-progress identity
+paths, six dependency-range paths, four scoring-plan paths and two publication
+ordering paths. Use actual application/runner entrypoints with controlled
+providers, real pinned Git fixtures, zero model calls and fail-on-write ports.
+Map them to the freshness diagnostics, Action and analysis/query tests, native
+cancellation adapter, installed official reader, EV-07 scorer and the production
+publication control. Preserve global and changed-module coverage gates; record
+actual execution separately from this minimum inventory.
+
+### Qualification provenance and exact review revision — 2026-11-19
+
+A native execution may belong to the PR head or to the synthetic merge whose exact base/head parentage has already been verified. Its artifact metadata MUST match that native execution. The attributed custom Review check and its closed receipt MUST instead match the reviewed PR head. A merge execution does not authorize substituting a merge-SHA or foreign-head check. Add two consumer regressions through `PullRequestApprovalRepository`: an authenticated merge-run artifact with a head check is eligible; the same receipt on a merge check is withheld. Existing latest-attempt, rollback, policy-generation, artifact identity and base freshness checks remain mandatory. The actual `86e2430ec` run and job check both used its PR head; these regressions establish the distinct supported synthetic-merge path rather than inventing a historical merge execution.
+
+Current qualification admission MUST enforce the declared CLI version before measured work and include the shipping TypeScript configuration in the implementation pin. The full-review gate MUST bind the complete independent-corpus ledger, predictions and rederived score to the preregistered plan, implementation, CLI, detector profile, corpus and runner hash. Every case has one completed row with its exact index/ID, predictions and invocation flags. A copied passing score, altered predictions, duplicate cases, another implementation/runtime or mismatched runner cannot admit full review. Missing usage and provider-reported identity remain optional telemetry, never acceptance gates. A regression investigation authorized for the base requires its actual fixed SHA; the diagnostic adapter MUST report an absent base before opening a session rather than treating head as base.
+
+Minimum addition: **13 deterministic controls**: nine bound-corpus paths (authentic synthetic success and eight identity/data/score failures), one exact CLI gate, one separate shipping compiler-configuration case, and two actual approval-consumer merge paths. Add the absent-base/no-session case separately. Synthetic success is evaluator test data, never measured qualification. The frozen campaigns retain their original plans, ledgers, hashes and decision; reproduce them from their preregistration commits. The current stricter runner requires a new explicit preregistration before future measurements, and the failed campaign is not repeated until its qualification prerequisites change.
+
+Qualification admission MUST also verify every registered driver in the closed
+eight-file evaluator inventory: configuration, implementation guard, source
+loader, corpus runner, review runner, scheduler, launcher and scorer. Validate
+each SHA-256 against the selected preregistration before corpus or full-review
+dispatch; missing or changed drivers block, even when the corpus ledger and
+score otherwise agree. The full-review detector MUST validate the actual
+prepared private CLI runtime against that plan before dispatch and remove its
+temporary runtime on rejection. A shell `--version` observation alone does not
+authenticate a different prepared executable. Diagnostic lab paths MUST resolve
+from the caller's directory before entering a private checkout, including the
+source repository and official-source directory.
+
+Minimum follow-up: **seven deterministic controls**: changed review driver,
+missing loader, changed launcher; actual prepared runtime accepted, foreign or
+absent; and the real shadow entrypoint using a relative lab, zero candidates,
+zero verifier sessions, blocked model execution and zero GitHub writes. These
+controls do not revise the recorded negative EV-07 result or authorize activation.
+
+For current traceability, the immutable owner reused `ev950-shadow-C22` for two distinct titles. References MUST disambiguate them as `ev950-shadow-C22/source-admission` (the line-3172 repository/safety-stop case) and `ev950-shadow-C22/citation-range` (the line-3668 same-session range repair). These aliases do not rewrite historical test results. The owner's retained 36-case baseline is additive to the subsequent 13-case inventory, yielding a minimum of 49 for those two inventories, before later amendments. Executed acceptance still requires the mapped behaviors, not a count alone. The current deterministic shadow suite includes the distinct source, range and continuation controls. Research sessions remain explicitly cancelable and have no time, turn or token acceptance ceiling; absence of an invented timeout is not a defect. Interrupted native-check recovery intentionally preserves the conversation and changes only its exact check, as specified above.
+
+### Ordinary authority, credentials and committed evaluation plans — 2026-11-19
+
+The receipt's mode identifies the effective policy, not the origin of its
+finding counts. Under `shadow` or `disabled`, a fresh authoritative receipt
+MAY attest only the observed ordinary Bugbot projection, including during
+rollback. Shadow refutations, inconclusives, failures and simulations MUST NOT
+replace those counts or supply an authoritative publication. A diagnostic
+`publication: simulated` is ineligible. Under `enforced`, dispositions filter
+the ordinary candidates before observed publication. Existing policy, latest
+attempt and rollout-generation gates remain mandatory in all modes.
+
+For example, an ordinary open finding remains actionable under shadow even
+when the diagnostic verifier refutes it. An older clean marker cannot replace
+that current ordinary finding. A genuinely clean ordinary review can satisfy
+the existing approval policy after a fresh same-head rollback receipt; this
+does not make the shadow verifier an approval authority.
+
+The status dispatcher MUST read private PR identity with its ordinary
+publication credential, which already owns PR access. The separate native
+evidence credential remains limited to its existing Actions, checks and content
+reads. Do not expand that token's workflow permissions to repair this read.
+Forward a Cursor verifier credential when that provider is selected in either
+`shadow` or `enforced`, retaining disabled-mode exclusion and ordinary-role
+inheritance. This routing neither enables enforcement nor changes runner
+placement, including installation-template runner defaults.
+
+Git citation locations MUST render as literal data, including Markdown
+metacharacters and embedded backticks. Formatting does not change their
+validated path, range, candidate or revision.
+
+Before qualification dispatch or scoring, the selected plan MUST match an
+immutable committed regular blob. Record its commit, relative path, blob ID
+and SHA-256 in the corpus, scheduler and each slot, and compare that complete
+provenance at admission and scoring. Untracked, modified or staged-only plans
+fail before model work. A newly committed profile may vary while retaining
+the complete 174-case corpus, all fourteen paired subjects and three
+repetitions, every positive control and the existing score/latency criteria.
+No selected plan can weaken the independently pinned published minimum policy.
+Latency remains a qualification measurement, never an investigation deadline.
+Historical campaigns retain their original bytes and replay from their
+preregistration commits; these stronger checks require a new campaign pin.
+
+Add a minimum **29 deterministic controls**: seventeen committed-plan, gate and
+scorer paths; six credential-routing paths; three Markdown citation paths;
+and three ordinary/shadow approval-consumer paths. Use real Git fixture
+objects, the actual qualification entrypoints, the current publication
+projection and the real approval consumer, with zero model calls and no
+requests to evaluated PRs. An authentic synthetic passing corpus is test data,
+not a measured qualification. Preserve the existing source guards and coverage
+budgets, and validate generated workflows and provider bindings together.
+
+### Cancellation and proof ownership at publication — 2026-11-19
+
+The native review of `069a10b1a` is evidence for this additive contract.
+Cancellation during an awaited publication may leave an already issued request
+completed. The application MUST stop starting subsequent finding, resolution
+and presentation operations and MUST NOT emit a completed verification receipt.
+The result identifies interrupted publication separately from cancellation
+before publication; it retains the prior verified result and does not claim to
+undo completed requests. Guard the semantic mutation ports at the review scope,
+including nested comment and status-card ports. Progress diagnostics remain
+available. This introduces no research deadline, token ceiling or turn limit.
+
+Base evidence MUST retain its purpose: a LEFT diff anchor uses the framed
+comparison's merge-base tree when available; a historical/regression comparison
+uses the fixed live target revision acquired for this attempt, with the legacy
+comparison revision only as a compatibility fallback. Freshness checks continue
+to bind both recorded comparison and live target. Do not silently substitute a
+target-tip tree for the LEFT side of a three-dot diff.
+
+Qualification dispatch MUST compare the actual prepared executable bytes with
+the selected committed runtime digest before a model invocation. A direct
+launcher additionally needs its own preregistered digest. A matching version
+string alone is insufficient. Record the admitted runtime proof separately
+from model identity and optional usage telemetry; corpus admission and slot
+records retain that proof. Historical campaign bytes remain immutable and
+replay through their historical source. These checks qualify no new profile.
+
+Only the authenticated publisher's submitted review or inline comment can
+suppress a duplicate publication. Bind that publisher from the existing trusted
+operation identity. Human, different-bot, missing-author and unknown-publisher
+records cannot stand in for a completed publisher operation. Preserve exact
+head and managed-header normalization checks. The aggregate status comment is
+wholly generated; arbitrary appended text is not a separately owned region.
+Historical review content and the structured last verified result retain their
+existing preservation contracts.
+
+Recognized local archive staging failures in the official installer MUST map
+to bounded `write-failed` diagnostics without raw paths, stderr or error bodies.
+Network and unknown failures retain their distinct existing classification.
+The packaged status canary resolves its output directory before creating event
+paths, so relative and absolute inputs exercise the same executable.
+
+Minimum **24 deterministic cases**: five cancellation boundary/continuation
+cases, three base-purpose cases, five runtime/launcher digest cases, four
+publisher-ownership cases, four installer classification cases, two packaged
+path forms and one generated-card ownership case. Reuse actual workflow,
+adapter, Git and packaged entrypoints; no model calls or evaluated-PR writes.
+Update the operator documentation and catalog evidence, run specification,
+architecture and focused checks, and report final-head CI separately.

@@ -5,6 +5,7 @@ import { interpretFindingsResponse } from '../agent_findings_response_policy';
 import type { FindingsQueryPort, FindingsQueryRequest } from '../../../application/ports/agent_findings_ports';
 import { AgentCapabilityAdapter } from './agent_capability_adapter';
 import { sourceSnapshotForSddQuery, sourceSnapshotPrompt } from '../../../application/policies/agent_source_snapshot_policy';
+import { projectCodexLiteralVerificationSchema } from '../../../application/policies/agent_execution/codex_output_schema_policy';
 
 export class FindingsAgentAdapter extends AgentCapabilityAdapter implements FindingsQueryPort {
     async query(request: FindingsQueryRequest): Promise<string | Record<string, unknown> | undefined> {
@@ -21,12 +22,17 @@ export class FindingsAgentAdapter extends AgentCapabilityAdapter implements Find
             logError('Missing required AI configuration for findings.');
             return undefined;
         }
+        const nativeSchema = options.expectJson && options.schema
+            ? request.configuration.provider === 'codex' && schemaName === 'bugbot_literal_candidate_verification'
+                ? projectCodexLiteralVerificationSchema(options.schema)
+                : options.schema
+            : undefined;
         return this.execute({
             configuration: request.configuration,
             prompt: promptText,
             capability: 'findings',
             ...(request.signal ? { signal: request.signal } : {}),
-            ...(options.expectJson && options.schema ? { outputSchema: options.schema } : {}),
+            ...(nativeSchema ? { outputSchema: nativeSchema } : {}),
             ...(sourceSnapshot ? { sourceSnapshot } : {}),
             mapCliOutput: (output) => {
                 if (options.expectJson && options.schema) {

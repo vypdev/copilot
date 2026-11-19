@@ -2,10 +2,12 @@ import type { BugbotReviewSourcePort } from './bugbot_review_source_ports';
 import type { BugbotContextPorts } from './bugbot_context_ports';
 import type { BugbotFindingPublicationPorts } from './bugbot_finding_publication_ports';
 import type { BugbotFindingResolutionPorts } from './bugbot_finding_resolution_ports';
+import type { BugbotReviewProgressPort } from './bugbot_review_progress_ports';
 import type { BugbotPresentationMutationPorts, BugbotReconciliationSnapshotPorts } from './bugbot_reconciliation_ports';
 /** Complete repository-bound SCM surface consumed by one Bugbot review. */
 export interface BugbotScmPorts {
     readonly reviewSource?: BugbotReviewSourcePort;
+    readonly progress?: BugbotReviewProgressPort;
     readonly context: BugbotContextPorts;
     readonly publication: BugbotFindingPublicationPorts;
     readonly resolution: BugbotFindingResolutionPorts;

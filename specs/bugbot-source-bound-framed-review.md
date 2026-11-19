@@ -20,6 +20,15 @@ Capacity exhaustion and incomplete evidence produce a nonretryable completeness-
 Canonical PR identity -> complete native source enumeration -> bounded local recovery if needed -> whole-plan preflight -> sequential frames -> complete global validation -> freshness fence -> one atomic reconciliation/publication
 ```
 
+Copilot's own self-hosted PR workflow allows up to 300 minutes at the job
+level. Its first complete plan for PR #951 assigned 105 partitions across two
+frames. The [original 120-minute job](https://github.com/vypdev/copilot/actions/runs/43456827919/job/131993049608)
+was still in the first frame after 30 minutes. The workflow allowance leaves
+room to finish both frames with the fixed two-call concurrency, including
+dependent candidate checks. Per-call handling, source and receipt validation,
+and explicit cancellation on a superseding push keep their existing behavior.
+The allowance applies to this repository's workflow.
+
 ## 2. Problem, current behavior, and evidence
 
 ### 2.1 Problem
@@ -211,6 +220,21 @@ Text equivalent: the workflow invokes an application use case; pure policies dec
 - Framed profile bounds: at most 2 sequential frames x 64 partitions (128 global); 1,000 distinct assigned paths subject to complete native enumeration; 4,096 fragments; 8,192,000 raw UTF-16 code units; independently 8,192,000 normalized UTF-16 code units; each fragment <=12,000 UTF-16 units; each rendered partition <=64,000 UTF-16 units including wrappers/headers; complete rendered diff <=8,192,000 UTF-16 units; each final native prompt (security policy, schema and effort suffix included) <=512 KiB UTF-8 and aggregate prompt traffic including retries and auxiliary verification <=32 MiB UTF-8; each primary or auxiliary model response <=4 MiB UTF-8. Maximum model concurrency is 2. Per response: 200 findings. Retained resolution claims: 500, and only from the single global resolution owner. Global findings: 2,000. Serialized retained result payload across frames: <=16 MiB UTF-8.
 - Freshness binding: protocol/profile, fresh invocation nonce, repository identity, canonical open PR number and base/head repository ownership/ref identity, immutable base/head SHAs (including a separately read live base-ref tip rather than trusting cached PR base.sha), unique merge-base SHA, ordered complete source manifest digest (path/status/counts and source-content digests), ordered fragment coverage, and effective review context/configuration digest. Verify provider identity before source acquisition, after planning, between frames, immediately before reconciliation/publication, and recheck after any awaited localization immediately before mutation, and retain a post-publication identity check. The framed path has at most 41 canonical/context/freshness provider requests before ordinary transport retries; the ordinary context bound is unchanged. Failed identity reads are unverified. Any identity, source, assignment, context, nonce, or profile change invalidates the entire result.
 
+If GitHub supplies no patch and declares `0/0` for a changed text file, the
+source adapter MUST recover the counts from the complete native hunks after
+they reconstruct the two verified immutable sides. Conflicting nonzero
+provider counts still block. An exact Git fixture exercises this case in
+addition to the existing malformed-source and count-mismatch cases.
+
+Text eligibility is established from the pinned regular blobs: valid UTF-8
+without NUL, within the existing byte limits, with complete reconstructing hunks.
+A Git presentation attribute such as `-diff` is not a content-encoding proof or
+a Bugbot ignore rule. It may suppress an otherwise ordinary text diff; the
+adapter still proves those exact text bytes without executing a diff driver or
+text conversion. The native Git attribute fixture distinguishes this from the
+existing NUL and invalid-UTF-8 rejection cases. See Git's
+[binary display attributes](https://git-scm.com/docs/gitattributes#_marking_files_as_binary).
+
 ### 8.3 Executable architecture constraints
 
 Automated checks MUST enforce dependency direction and absence of cycles; domain policies must not import provider, process, or presentation modules; application ports must not expose provider DTOs; only the trusted-host adapter may perform fixed-argv local Git reads and its test contract must demonstrate disabled external diff/textconv/filter/hook/network behavior; publication must have one application call site after complete validation; schemas must reject missing/foreign identity fields; workflow contract checks must assert permissions and entrypoint wiring without broadening permissions. Run the repository specification validator and relevant dependency, schema, and workflow contract checks before readiness. These are proposed checks, not evidence that they already exist.
@@ -316,7 +340,7 @@ Errors follow impact -> cause -> action -> retained state. A transient failure i
 
 ## 14. Testing strategy
 
-The budget is a minimum of 130 distinct new executable cases, derived from independent source, protocol, recovery, freshness, output, UX, and integration risks. The existing 67 owner cases remain separate and are not counted here. The 130 cases below are planned acceptance inventory, not executed tests.
+The budget is a minimum of 132 distinct new executable cases, derived from independent source, protocol, recovery, freshness, output, UX, and integration risks. The existing 67 owner cases remain separate and are not counted here. The 132 cases below are planned acceptance inventory, not executed tests.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
@@ -325,8 +349,8 @@ The budget is a minimum of 130 distinct new executable cases, derived from indep
 | Frame execution | 24 | Observable scenarios in the case inventory. |
 | Freshness | 12 | Observable scenarios in the case inventory. |
 | UX/errors | 8 | Observable scenarios in the case inventory. |
-| Integration/compatibility | 8 | Observable scenarios in the case inventory. |
-| Total | 130 | Distinct inventory cases; repeated executions do not add cases. |
+| Integration/compatibility | 10 | Observable scenarios in the case inventory. |
+| Total | 132 | Distinct inventory cases; repeated executions do not add cases. |
 
 Repository-wide thresholds remain in force. New pure planning/coverage policies SHOULD meet 100% modified executable-line coverage without partials and branch coverage sufficient to cover every independent bound and fail-closed path. Changed modules must meet the repository's full current-head coverage gates. Use deterministic clocks, nonces, IDs, and provider/model/Git fakes; no real waits or live services. Table-driven rows count only when each listed case has a distinct assertion and execution. Include replay/race, adapter, workflow permission/schema, golden UI plus semantic assertions, and security tests. Architecture and workflow checks parse contracts rather than grep prose. Manual UX evidence must show narrow/mobile readability and understandable action/status in the supported locale/fallback. The realistic 887-file case must demonstrate complete simulated review, not claim that the historical run was reviewed.
 
@@ -391,7 +415,7 @@ Repository-wide thresholds remain in force. New pure planning/coverage policies 
 | bugbot-framed-C057 | Source adapters | BFR-R04 | An absent added-text patch is recovered with exact change metadata. |
 | bugbot-framed-C058 | Source adapters | BFR-R04 | An absent modified-text patch is recovered with exact change metadata. |
 | bugbot-framed-C059 | Source adapters | BFR-R04 | An absent removed-text patch is recovered with exact change metadata. |
-| bugbot-framed-C060 | Source adapters | BFR-R04 | Recovered hunk metadata inconsistent with native change counts blocks. |
+| bugbot-framed-C060 | Source adapters | BFR-R04 | Recovered hunk metadata inconsistent with declared nonzero native counts blocks. When GitHub omits the patch and reports unknown `0/0`, verified immutable sides and complete reconstructing hunks supply the effective counts instead; the exact Git recovery fixture must pass. |
 | bugbot-framed-C061 | Source adapters | BFR-R04 | A nonregular or symlink object is rejected without following its target. |
 | bugbot-framed-C062 | Source adapters | BFR-R04 | Binary/NUL source is explicitly completeness-blocked. |
 | bugbot-framed-C063 | Source adapters | BFR-R04 | Invalid UTF-8 blob bytes are rejected without replacement decoding. |
@@ -462,6 +486,8 @@ Repository-wide thresholds remain in force. New pure planning/coverage policies 
 | bugbot-framed-C128 | Integration/compatibility | BFR-R07, BFR-R12 | Dry-run validates the whole framed review without SCM writes. |
 | bugbot-framed-C129 | Integration/compatibility | BFR-R14 | Catalog, companion, owning SDD links, docs and generated bundles validate together. |
 | bugbot-framed-C130 | Integration/compatibility | BFR-R11, BFR-R15 | Current-head complete review, checks, approval and 100% modified-line coverage remain mandatory. |
+| bugbot-framed-C131 | Integration/compatibility | BFR-R06, BFR-R07 | A generated-source follow-up that fits delivers the full assigned evidence through the existing query port and completes the partition. |
+| bugbot-framed-C132 | Integration/compatibility | BFR-R06 | A generated-source follow-up whose assigned evidence exceeds 128,000 UTF-8 bytes fails before the dependent query and leaves the partition incomplete. |
 
 ## 15. Documentation and discoverability
 
@@ -497,7 +523,7 @@ These are planned, executable acceptance scenarios; none is represented as an ex
 7. Given late-frame findings or retained previous findings, when global reconciliation occurs, then late findings enter global normalization, only the single authorized owner may explicitly adjudicate eligible retained IDs, omission never resolves, and protected dismissals/approval controls remain enforced.
 8. Given malformed or hostile source/model text, when validation or rendering occurs, then content is escaped or rejected without leaking rejected source or credentials; the user sees impact, cause, action, retained state, correct units, and descriptive PR/run links in supported locale/fallback and narrow views.
 9. Given ordinary <=64-partition and issue-only workflows, when they run, then existing behavior remains compatible; a dry run validates the complete framed contract without SCM writes.
-10. Given implementation readiness review, when architecture, documentation, catalog, generated artifacts, current-head review, checks, and coverage are evaluated, then all 130 planned cases and full changed executable-line coverage without partials are evidenced before the companion can be marked ready.
+10. Given implementation readiness review, when architecture, documentation, catalog, generated artifacts, current-head review, checks, and coverage are evaluated, then all 132 planned cases and full changed executable-line coverage without partials are evidenced before the companion can be marked ready.
 
 ## 17. Requirements traceability
 
@@ -508,8 +534,8 @@ These are planned, executable acceptance scenarios; none is represented as an ex
 | BFR-R03 | bugbot-framed-C012, bugbot-framed-C013, bugbot-framed-C014, bugbot-framed-C015, bugbot-framed-C016, bugbot-framed-C017, bugbot-framed-C018, bugbot-framed-C019, bugbot-framed-C020, bugbot-framed-C021, bugbot-framed-C022, bugbot-framed-C023, bugbot-framed-C024, bugbot-framed-C025, bugbot-framed-C026, bugbot-framed-C041, bugbot-framed-C042, bugbot-framed-C047 |
 | BFR-R04 | bugbot-framed-C049, bugbot-framed-C050, bugbot-framed-C051, bugbot-framed-C052, bugbot-framed-C053, bugbot-framed-C054, bugbot-framed-C055, bugbot-framed-C056, bugbot-framed-C057, bugbot-framed-C058, bugbot-framed-C059, bugbot-framed-C060, bugbot-framed-C061, bugbot-framed-C062, bugbot-framed-C063, bugbot-framed-C064, bugbot-framed-C065, bugbot-framed-C066, bugbot-framed-C067, bugbot-framed-C068, bugbot-framed-C069, bugbot-framed-C070, bugbot-framed-C071, bugbot-framed-C072, bugbot-framed-C073, bugbot-framed-C074, bugbot-framed-C075, bugbot-framed-C076, bugbot-framed-C077, bugbot-framed-C078 |
 | BFR-R05 | bugbot-framed-C033, bugbot-framed-C034, bugbot-framed-C035, bugbot-framed-C036, bugbot-framed-C037, bugbot-framed-C038, bugbot-framed-C039, bugbot-framed-C040, bugbot-framed-C041, bugbot-framed-C042, bugbot-framed-C052, bugbot-framed-C085, bugbot-framed-C113 |
-| BFR-R06 | bugbot-framed-C027, bugbot-framed-C028, bugbot-framed-C029, bugbot-framed-C030, bugbot-framed-C031, bugbot-framed-C032, bugbot-framed-C043, bugbot-framed-C044, bugbot-framed-C045, bugbot-framed-C046, bugbot-framed-C079, bugbot-framed-C080 |
-| BFR-R07 | bugbot-framed-C047, bugbot-framed-C081, bugbot-framed-C082, bugbot-framed-C083, bugbot-framed-C084, bugbot-framed-C085, bugbot-framed-C086, bugbot-framed-C087, bugbot-framed-C088, bugbot-framed-C102, bugbot-framed-C123, bugbot-framed-C124, bugbot-framed-C125, bugbot-framed-C128 |
+| BFR-R06 | bugbot-framed-C027, bugbot-framed-C028, bugbot-framed-C029, bugbot-framed-C030, bugbot-framed-C031, bugbot-framed-C032, bugbot-framed-C043, bugbot-framed-C044, bugbot-framed-C045, bugbot-framed-C046, bugbot-framed-C079, bugbot-framed-C080, bugbot-framed-C131, bugbot-framed-C132 |
+| BFR-R07 | bugbot-framed-C047, bugbot-framed-C081, bugbot-framed-C082, bugbot-framed-C083, bugbot-framed-C084, bugbot-framed-C085, bugbot-framed-C086, bugbot-framed-C087, bugbot-framed-C088, bugbot-framed-C102, bugbot-framed-C123, bugbot-framed-C124, bugbot-framed-C125, bugbot-framed-C128, bugbot-framed-C131 |
 | BFR-R08 | bugbot-framed-C089, bugbot-framed-C090, bugbot-framed-C091, bugbot-framed-C092, bugbot-framed-C093, bugbot-framed-C094, bugbot-framed-C101 |
 | BFR-R09 | bugbot-framed-C095, bugbot-framed-C096, bugbot-framed-C097, bugbot-framed-C098, bugbot-framed-C099 |
 | BFR-R10 | bugbot-framed-C103, bugbot-framed-C104, bugbot-framed-C105, bugbot-framed-C106, bugbot-framed-C107, bugbot-framed-C108, bugbot-framed-C109, bugbot-framed-C110, bugbot-framed-C111, bugbot-framed-C112, bugbot-framed-C113, bugbot-framed-C114 |
@@ -527,13 +553,13 @@ These are planned, executable acceptance scenarios; none is represented as an ex
 4. Integrate frame receipts with existing global finding verification, retained-resolution owner, approval controls, and one publication boundary; prove failure paths cause no SCM writes.
 5. Implement localized status view models and summaries for pending, blocked, interrupted, transient failure, and complete states; review narrow/mobile rendering.
 6. Update owning specifications, catalog, user/operator/contributor documentation, fixtures, route links, and generated bundles in the same reviewed change.
-7. Demonstrate all 130 acceptance cases, the realistic complete fixture, current-head review, existing approval/check gates, and 100% modified executable-line coverage without partials. No release or deployment is part of this specification.
+7. Demonstrate all 132 acceptance cases, the realistic complete fixture, current-head review, existing approval/check gates, and 100% modified executable-line coverage without partials. No release or deployment is part of this specification.
 
 ## 19. Definition of Done
 
 - [ ] Every BFR requirement has executable acceptance and reciprocal traceability.
 - [ ] Architecture boundaries and fixed-argv read-only source recovery are implemented and automatically enforced.
-- [ ] The numeric 130-case minimum, allocation table, coverage requirements, and changed-line coverage pass.
+- [ ] The numeric 132-case minimum, allocation table, coverage requirements, and changed-line coverage pass.
 - [ ] Every independent source, prompt, frame, response, findings, resolution, and retained-payload bound has exact/one-over evidence.
 - [ ] Primary pending, action-required, blocked, interrupted/partial-internal, transient-failure, and completed UI states are reviewed.
 - [ ] Accessibility, localization/fallback, responsive behavior, sanitization, and noise budgets pass.
@@ -670,6 +696,62 @@ engine behavior are unchanged. Native finding resolution and the final
 head's remote checks/Codecov remain required.
 
 
+### Generated-source follow-up evidence
+
+The generated-source follow-up in a framed review receives the complete
+assigned diff block and fragment identities, comparison, coverage, ignore
+scope, retained discussion and rules, and prior findings for the resolution
+owner. The application builds this context from the same values used by the
+detector. The follow-up supplies its own instructions and response contract.
+It validates the same candidate identities and dispositions before completing
+the partition.
+
+The application preserves the 128,000-byte generated-source prompt ceiling and
+the shared framed traffic limits. If the evidence itself exceeds the ceiling,
+the review fails closed and retains the prior result. For generated-source
+verification on Codex, the provider schema keeps the closed shape and the
+application-generated correlation ID. Candidate-supplied IDs, file paths and
+snippets remain exact enums in the application schema and prompt. The
+application also checks that each returned identity belongs to the same
+candidate before any partition can complete. This permits Git text such as a
+literal escaped newline without requiring the decoder to compile it as an
+enum value. An invalid native schema is recorded as a fixed diagnostic code.
+
+Cases `bugbot-framed-C131` and `bugbot-framed-C132` cover successful delivery
+of the full assignment through the existing query port and the failure before
+the dependent call when the evidence itself still exceeds the bound. The
+decoder and local schema regressions are owned by the
+[agent execution contract](./agent-execution-policy-hardening.md).
+
+The three native runs before this change reported partition 5 as the failed
+assignment. On `502e7d7eb`, the replay rebuilt partition 5 of 111 against base
+`b3952f686a55a9b4207e1a23c64be8344e8df5d5` using the pinned Git objects,
+the available review context and a fresh correlation nonce. Codex CLI 0.169.1
+with GPT-6 Luna at `xhigh` returned one candidate. The generated evidence
+prompt exceeded its ceiling at 135,018 bytes. Independently, the provider
+rejected the original wire schema at `findings.items.codeSnippet` before
+generation. A transport control with the corrected projection and the same
+application schema completed. The corrected follow-up then consumed 110,160
+bytes before the final transport envelope and 114,332 after it. It produced
+one locally accepted retained candidate in 59.8 seconds. The checkout stayed
+unchanged and the replay had zero GitHub write ports or attempts. These
+observations cover one assignment and its generated-source follow-up.
+[Native failure](https://github.com/vypdev/copilot/actions/runs/44199156168)
+[OpenAI Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs)
+
+On `d03154b90`, the native review recorded six schema rejections during
+generated-source verification and stopped after 49 of 111 validated
+partitions. A fresh read-only replay of partition 50 completed with one
+retained candidate and zero GitHub writes. A separate transport control fed
+the same decoder an enum value with a literal backslash followed by `n`.
+The old projection failed at `findings.items.codeSnippet` before generation.
+With the corrected projection, Codex admitted the same application schema
+and the application accepted the expected response. Both transport runs
+used the pinned CLI and model with zero GitHub writes. The native run did
+not retain the rejected enum values, so the control reproduces the failure
+class without attributing a specific snippet to it.
+[Native failure](https://github.com/vypdev/copilot/actions/runs/44220166805)
+
 ### Copy provenance and independent changed-path coverage — review follow-up
 
 `verifyInventory` already allows a previous path only for `status === 'renamed'`.
@@ -727,3 +809,59 @@ This explicitly extends legacy section capacity through that protocol; it does
 not relabel missing provider evidence as complete, enlarge public settings or
 grant comment authors instruction/approval authority. Other context callers
 retain their existing truthful partial behavior.
+
+## Proposed verification contract for #950
+
+The proposed #950 verification gate runs after complete frame aggregation and
+before ranking, overflow counting or any write. The application normalizes the
+anchor on the pinned diff before freezing the candidate. An ambiguous anchor
+stays unresolved. The verifier cannot change the frozen position or identity.
+
+Successive verification turns and retrieval share the operation, invocation
+ledger and reviewed source and freshness fences. Reads produce candidate-bound
+receipts. The application can resume from retained receipts after a provider
+context-window error. Available token usage is telemetry. Missing decisive
+evidence produces an inconclusive disposition. An intact mixed review can
+publish confirmed findings while blocking clean approval. A missing frame or
+required verdict or an invalid receipt preserves the last verified result and
+prevents finding or resolution writes.
+
+[Bugbot repository evidence verification](./bugbot-analysis-publication-and-autofix.md#bugbot-repository-evidence-verification)
+
+## Partition evidence handoff for #950
+
+The [finding lifecycle](./bugbot-analysis-publication-and-autofix.md#finding-lifecycle-and-experimental-profiles)
+can expose the location of fragments of the same file assigned to another
+partition. Each partition still owns only its own eligible changed lines.
+Candidate origins remain attributable before global grouping. Preparation
+fixes the final anchor and the shadow verifier may follow related code on the
+pinned revision without moving it.
+
+## Live progress observations for #950
+
+The [live review presentation contract](./bugbot-review-state-reconciliation.md#live-review-progress-for-950)
+owns public state, update cadence and publication authority. This amendment
+defines the read-only observations produced by framed analysis. It applies to
+the normal, framed and eligible recheck routes through their canonical owner.
+
+- Publish the exact planned partition and frame totals only after successful
+  immutable-source and whole-plan preflight. Identify the current frame when
+  its freshness fence succeeds. Count a partition complete once its assigned
+  response is accepted by application validation. Attempted, retried, failed
+  and in-flight requests do not increment the count. Related candidate proof
+  calls belong to the owning partition and have separate retry/latency facts.
+- A frame completes when every assigned partition has a valid receipt. At a
+  frame boundary preserve global counts and expose the frame count and phase
+  transition. A complete partition count alone is not a complete review.
+  Aggregate validation, applicable verification, freshness and provider
+  reconciliation still determine the terminal result.
+- Emit safe phase start and elapsed times, validated counts, retry counts and
+  bounded failure categories. Report stage wall time independently from the
+  summed duration of concurrent requests. Log only measured counts and timing
+  when those facts exist. Missing telemetry cannot change admission or the
+  result. The detector and verifier receive no status-writing capability.
+
+BRP-02 and BRP-05 exercise the 105-partition geometry from #951, including
+retry, frame advance, stale head, failure after validated work and a native
+interruption. The replay preserves complete ordered receipts, fixed analysis
+concurrency and all-or-nothing review publication.

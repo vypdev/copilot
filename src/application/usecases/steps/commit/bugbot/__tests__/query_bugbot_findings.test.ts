@@ -12,6 +12,27 @@ const validResponse = {
   resolved_findings: [],
 };
 
+it('passes explicit cancellation to a pending detector and does not retry an aborted partition', async () => {
+  const controller = new AbortController(), failure = new Error('canceled by caller'), retry = jest.fn();
+  const query = jest.fn(async request => {
+    expect(request.signal).toBe(controller.signal);
+    controller.abort(failure);
+    throw failure;
+  });
+  await expect(queryBugbotPartitionFindings({ query }, { provider: 'codex', model: 'reviewer' }, 'source', 'en-US',
+    expected, { enabled: false, observeRetry: retry }, controller.signal)).rejects.toBe(failure);
+  expect(query).toHaveBeenCalledTimes(1);
+  expect(retry).not.toHaveBeenCalled();
+});
+
+it('dispatches no ordinary detector call after explicit cancellation', async () => {
+  const controller = new AbortController(), query = jest.fn();
+  controller.abort();
+  await expect(queryBugbotFindings({ query }, { provider: 'codex', model: 'reviewer' }, 'source', 'en-US', undefined,
+    controller.signal)).rejects.toMatchObject({ name: 'AbortError' });
+  expect(query).not.toHaveBeenCalled();
+});
+
 describe('queryBugbotPartitionFindings', () => {
   it('requires the partition schema and accepts the exact attestation', async () => {
     const query = jest.fn().mockResolvedValue(validResponse);
@@ -143,6 +164,19 @@ describe('generated literal verification at the native query boundary', () => {
     expect(query).toHaveBeenCalledTimes(2);
     expect(observePrompt).toHaveBeenCalledTimes(1);
     expect(query.mock.calls[1][0].configuration).toBe(config);
+  });
+
+  it('links generated-literal follow-ups to the same cancellation signal', async () => {
+    const controller = new AbortController(), failure = new Error('follow-up canceled');
+    const query = jest.fn().mockResolvedValueOnce(detected).mockImplementationOnce(request => {
+      expect(request.signal).toBe(controller.signal);
+      controller.abort(failure);
+      return verification(request);
+    });
+    await expect(queryBugbotFindings({ query }, config, 'immutable source', 'en-US', enabled,
+      controller.signal)).rejects.toBe(failure);
+    expect(query).toHaveBeenCalledTimes(2);
+    expect(query.mock.calls[0][0].signal).toBe(controller.signal);
   });
 
   it('cannot activate verification through a forged witness header in untrusted text', async () => {

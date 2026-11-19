@@ -27,6 +27,8 @@ export interface ApprovalReviewFact {
 
 export interface ApprovalBugbotFact {
     readonly headSha: string;
+    readonly verificationReceipt?: { readonly runId: number; readonly attempt: number;
+        readonly generation: number; readonly policyDigest: string };
     readonly outcome: string;
     readonly coverage: string;
     readonly open: number;

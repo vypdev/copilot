@@ -2,7 +2,7 @@
 
 - Status: In progress for official standalone agent installation
 - Date: 2026-09-11
-- Last updated: 2026-10-24
+- Last updated: 2026-11-12
 - Catalog capability ID: `agent-runtime`
 - Last verified: 2026-09-24
 - Owners: Copilot maintainers
@@ -417,6 +417,62 @@ snapshotted for a run. Existing explicit `gpt-5.6-luna` deployments remain
 supported when exactly allowlisted. Reasoning effort, credentials, and provider
 transport do not change as part of the default migration.
 
+### Native Claude Code runtime
+
+**Future runtime requirement.** Track implementation in a separate task
+outside #950. The current dispatcher supports Codex, OpenCode, and Cursor.
+The future contract adds `claude-code` as an independent agent provider.
+It invokes Anthropic's official `claude` executable directly with
+`anthropic` as its model provider. Existing `opencode` plus `anthropic`
+configurations remain valid. [Bugbot profile contract](bugbot-analysis-publication-and-autofix.md#configuration-and-ownership)
+
+| Input | Contract once implemented |
+|---|---|
+| Common or role-specific provider | `claude-code`. Use the existing role precedence and run snapshot. The default remains `codex`. |
+| Model provider and model | Default the backend to `anthropic` for this agent. Require an admitted Claude model ID and reject any incompatible backend or disallowed model. Qualify an exact model identity. |
+| Effort | Pass an explicit supported value through Claude Code's `--effort`. Validate it for the selected model and reviewed CLI contract. If omitted after an agent or backend change, use the selected model's provider default. |
+| Executable and credentials | Use the official `claude` runtime, subject to the existing executable and release trust checks. For CI, pass the operator-owned `ANTHROPIC_API_KEY` only to the admitted Anthropic invocation. |
+
+Provision and authenticate only when an active role selects Claude Code.
+The infrastructure planner owns the native flags, private configuration,
+capability-specific sandbox and output decoding. Extend the existing
+dispatcher and execution plan rather than routing through an OpenCode
+adapter. Keep provider flags and credentials outside domain and application
+contracts. Claude Code runs noninteractively and Copilot validates its
+structured response locally. An unsupported runtime, unavailable model,
+incompatible effort, unexpected effective model, or unproven permission
+boundary fails with the corresponding configuration or execution diagnostic.
+Selecting Claude Code never starts another agent or a replacement model.
+
+For detection, prove the same bounded read-only capability as the other
+review agents. For verification, use the application evidence broker from
+the Bugbot SDD. Each Claude Code turn runs with isolated configuration in
+an empty workspace. The host retains the evidence and investigation state
+for successive turns. The admitted invocation disables built-in tools,
+MCP, session persistence, and ambient project hooks, plugins, or settings.
+Prove the effective permissions for the runner and CLI in use, including
+the effect of managed settings. A denied permission, authentication failure,
+or provider interruption is recorded in the existing Job Summary and
+technical diagnostics. For example, `Claude Code reviewer blocked. Configure
+an Anthropic API key on the runner and rerun the review.`
+
+Add **eight distinct deterministic runtime cases**. Cover role inheritance
+and direct routing (2), incompatible backend and unsupported model/effort
+(2), trusted executable and authentication isolation (2), forbidden tool
+authority and malformed native response (2). Use the existing architecture,
+provider policy, workflow and coverage gates. Before advertising platform
+support, run a read-only authenticated smoke on each advertised platform
+and a brokered verifier smoke through the normal Bugbot composition.
+Record the effective runtime, model, effort, permitted operations and
+validated output. Runtime installation alone does not establish role support.
+Setup, runtime selection, credential guidance and Bugbot configuration
+must describe only the capabilities that pass those checks.
+
+Primary sources. [Claude Code CLI reference](https://code.claude.com/docs/en/cli-reference) ·
+[Noninteractive execution](https://code.claude.com/docs/en/headless) ·
+[Model and effort configuration](https://code.claude.com/docs/en/model-config) ·
+[Settings precedence](https://code.claude.com/docs/en/settings)
+
 ## 8. Clean Architecture design
 
 | Boundary | Owns | Must not own/import |
@@ -537,6 +593,12 @@ archive in a private job directory. Installer child processes receive no
 GitHub or model credentials. Explicit and present operator CLIs are never
 replaced. Installation checks require a nonempty version and the admitted
 headless command surface, without enforcing an exact version.
+The installer and its child tools MUST use the same private installation root
+for `TMPDIR`, `TMP` and `TEMP`. On a self-hosted runner this keeps the archive
+download and extraction on runner scratch, which may have more space than the
+system temporary filesystem. Use the ordinary private-root cleanup on failure.
+Recognized storage write errors MUST report `write-failed` without raw output.
+The installer adapter owns this behavior. No new configuration is required.
 On Windows the official installer runs under Windows PowerShell 5.1 with fixed
 system tool directories, a private profile, and only non-secret native process
 variables. Its `PSModulePath` contains only Windows PowerShell 5.1 system module
@@ -878,6 +940,12 @@ pinning.
 | UX/sanitization | 12 | phase/errors/redaction/narrow output |
 | Integration/security/cutover | 19 | role→provider, injection, credentials, new provider, configured-variable precedence and model smoke |
 | **Total** | **130** | no double counting |
+
+Installer scratch coverage includes at least three cases. Inherited temporary
+paths cannot reach the installer, a Unix script can stage its archive under
+the private root, and a write failure emits a bounded diagnostic and removes
+the partial archive. The source PR and Commit workflows must also reach review
+on a fresh head in the `vypdev` pool after a provisioning incident.
 
 The Windows extension adds at least 18 distinct fixture cases: 6 for official
 installer selection and executable resolution, 4 for missing/redirected sources
@@ -1252,72 +1320,60 @@ fixture jobs unless Windows coverage export was requested. A temporary
 Ubuntu-only self-hosted matrix also lacked explicit evidence of a maintainer
 exception. On 2026-10-14 the maintainer authorized temporary Ubuntu-only
 self-hosted routing because the four eligible Apple Intel runners are offline.
-Hosted macOS remains mandatory. Restore the supported macOS self-hosted row
-when an eligible runner returns; until then its native acceptance is pending.
-Existing runtime support boundaries, coverage and acceptance budgets remain in
-force.
+The source-repository runner policy was subsequently revised by the maintainer
+while reviewing #951. The current contract uses the repository's self-hosted
+runners for this smoke workflow and makes full platform smoke an explicit
+protected-master dispatch. Pull requests receive the ordinary self-hosted
+Linux CI checks. Installation templates retain their consumer defaults.
 
-The workflow MUST implement this bounded selection contract:
+The workflow MUST implement this selection contract:
 
-| Entrypoint/inputs | Hosted Ubuntu/Windows/macOS | Self-hosted Ubuntu (temporarily) | PowerShell probe | Codecov export |
+| Entrypoint/inputs | Self-hosted Ubuntu/Windows/macOS fixtures | Self-hosted Ubuntu Codex service | PowerShell probe | Codecov export |
 |---|---|---|---|---|
-| PR opened/synchronized | Run | Skip | Skip | Skip |
+| PR opened/synchronized | Skip | Skip | Skip | Skip |
 | Manual `master`, default inputs | Run | Run | Skip | Skip |
-| Manual `master`, export only | Run | Run | Skip | After hosted success |
-| Manual, probe only | Skip | Skip | Run | Skip |
-| Manual, probe and export | Run | Skip | Run | After hosted success |
-| Manual branch other than `master`, default inputs | Run | Skip | Skip | Skip |
+| Manual `master`, export only | Run | Run | Skip | After fixture success |
+| Manual `master`, probe only | Skip | Skip | Run | Skip |
+| Manual `master`, probe and export | Run | Skip | Run | After fixture success |
+| Manual branch other than `master` | Skip | Skip | Skip | Skip |
 
-Flow: select an entrypoint -> evaluate fixed boolean inputs -> run every
-selected platform independently -> inspect each job -> report only complete
-verified platform evidence. Export remains opt-in (`false` by default) and is
-never a prerequisite for fixture verification. The probe remains opt-in
-(`false` by default), isolated and bounded at five minutes. No new input,
-schema, runtime policy or credential is introduced. Existing in-flight runs
-keep their selected workflow revision; retry on current `master` for the new
-selection.
+The platform fixture matrix uses `[self-hosted, codex, Linux]`,
+`[self-hosted, Windows]` and `[self-hosted, codex, macOS]`.
+The separate service fixture retains temporary Ubuntu-only routing until
+the operator restores the previously authorized macOS service capacity.
+Platform fixtures and authenticated Codex service acceptance are distinct.
 
-Operator views use the native run/job states: **Queued: macOS runner required;
-restore a runner with `self-hosted`, `codex`, `macOS` labels.** **Running: inspect
-individual platform jobs; no action required.** **Partial: hosted jobs passed,
-self-hosted macOS remains unverified; restore its runner and rerun.**
-**Failed/canceled: retain completed jobs as evidence, repair the named failure
-and rerun without dropping platforms.** **Complete for the temporary selection:
-all four selected platform jobs passed; self-hosted macOS acceptance remains
-pending runner recovery; coverage was exported only if requested.** These are textual
-operational examples, not new comments or notifications. Each state links to
-its native run and platform job. Existing GitHub accessibility and locale
-behavior remains; no custom presentation is added.
+Flow: protected dispatch -> evaluate the probe/export inputs -> run the
+selected platforms independently -> inspect the native jobs -> report only
+the platform evidence actually completed. Export and the five-minute
+PowerShell probe remain opt-in. No agent model, reasoning effort or
+application feature is enabled by these routing choices.
 
-Architecture ownership stays in `.github/workflows/setup_platform_smoke.yml`
-for dispatch/routing and `scripts/validate-workflow-contract.cjs` for executable
-structural invariants. The matrix MUST use `fail-fast: false`, retain package,
-full coverage, acceptance and documentation checks, require Ubuntu in either
-the complete macOS/Ubuntu matrix or the authorized temporary Ubuntu-only
-matrix, and reject Windows service Codex routing. Least-privilege
-read-only checkout and protected-master self-hosted dispatch stay unchanged.
-Reruns are isolated fixture operations and do not deploy or mutate releases.
+The native jobs show whether a selected platform is queued, running,
+failed/canceled or complete. Queued macOS work requires the corresponding
+self-hosted capacity. A partial or failed matrix retains completed evidence
+and requires repair and rerun of the missing platform before claiming full
+cross-platform acceptance. Full completion requires all selected jobs.
+Each state links to its native workflow and platform job.
 
-Additional risk-derived floor: **8 distinct deterministic cases** in
-`src/tooling/__tests__/validate_workflow_contract.test.ts`: six event/probe/export
-selection cases (PR, ordinary manual, export-only, probe-only, combined,
-unrelated push), one temporary-selection/restoration case retaining hosted
-macOS, and one Ubuntu-removal rejection case. Existing
-structural dispatch, export opt-in, trusted-ref, package, coverage and validator
-cases remain; these eight cases are counted once. No coverage threshold or
-setup acceptance row is lowered. Native acceptance MUST inspect the default
-manual run and all three hosted plus the selected self-hosted jobs. The
-temporary selection has one self-hosted Ubuntu job; complete platform
-acceptance additionally requires self-hosted macOS after runner recovery.
-Queued or omitted platform evidence cannot be declared successful.
+The workflow owns dispatch and runner placement. The workflow validator
+enforces protected-master manual admission, self-hosted placement,
+`fail-fast: false`, preserved package, coverage, acceptance and documentation
+steps, and the prohibition on Windows service Codex routing. Reruns exercise
+isolated fixtures. They do not deploy releases.
 
-Traceability: dispatch state table -> workflow guards -> six selection cases;
-platform preservation -> bounded matrix validator -> selection/removal cases; protected
-runner and publication boundaries -> retained structural tests. Operator docs
-in `docs/development/testing.mdx` MUST explain defaults, isolated probe,
-publication opt-in, runner recovery and partial evidence. Run full coverage,
-`validate:workflows`, `validate:documentation`, `validate:specifications` and the
-native platform smoke before declaring complete cross-platform acceptance.
+The eight deterministic selection and matrix controls remain owned by
+`src/tooling/__tests__/validate_workflow_contract.test.ts`. Their selected
+events, protected ref, probe/export combinations and runner preservation
+must match the current workflow. No coverage threshold or platform
+acceptance is lowered. A native manual run is required before claiming
+cross-platform acceptance. The source-repository PR CI and this manual
+matrix provide separate evidence.
+
+Operator instructions in `docs/development/testing.mdx` cover dispatch,
+isolated probes, export, runner recovery and partial evidence. Run
+`validate:workflows`, `validate:documentation` and
+`validate:specifications` when this routing contract changes.
 
 ### Hosted Windows job headroom (2026-10-21, PR #654)
 

@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, expect, it } from 'vitest';
-import { mkdtemp, mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdtemp, mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -12,6 +12,7 @@ import { PublishedCleanupError } from '../../tooling/gate_error.mts';
 import { RUNTIME_HTML } from '../../tooling/static_assets.mts';
 
 const root = fileURLToPath(new URL('../../../', import.meta.url));
+const BUILD_TIMEOUT_MS = 120_000;
 let temporary: string;
 let first: BuildReceipt;
 let second: BuildReceipt;
@@ -19,8 +20,14 @@ beforeAll(async () => {
     temporary = await mkdtemp(path.join(tmpdir(), 'copilot-h1-build-test-'));
     first = await buildDevelopmentSet(root, path.join(temporary, 'first'));
     second = await buildDevelopmentSet(root, path.join(temporary, 'second'));
-}, 120_000);
+}, BUILD_TIMEOUT_MS);
 afterAll(async () => { await rm(temporary, { recursive: true, force: true }); });
+
+async function copyBuildFixture(name: string): Promise<string> {
+    const output = path.join(temporary, name);
+    await cp(path.join(temporary, 'first'), output, { recursive: true, force: false, errorOnExist: true });
+    return output;
+}
 
 it('bexh1-foundation-C23 builds actual declared target assets whose content entry remains inert', async () => {
     await validateArtifactSet(path.join(temporary, 'first'));
@@ -50,24 +57,34 @@ it('bexh1-foundation-C24 compares actual bytes and receipts from two clean compl
     expect(await readFile(path.join(temporary, 'first/receipt.json'), 'utf8')).toBe(await readFile(path.join(temporary, 'second/receipt.json'), 'utf8'));
 });
 it('bexh1-foundation-C26 rejects a target failure, removes staging and retains the previous complete set', async () => {
-    const output = path.join(temporary, 'first');
+    const output = await copyBuildFixture('target-failure');
     await expect(buildDevelopmentSet(root, output, async (target, directory) => {
         if (target === 'firefox') throw new Error('private arbitrary bundler exception');
         await writeFile(path.join(directory, 'background.js'), ''); await writeFile(path.join(directory, 'content.js'), '');
         await writeFile(path.join(directory, 'runtime.html'), RUNTIME_HTML); await writeFile(path.join(directory, 'runtime.js'), ''); await writeFile(path.join(directory, 'runtime.css'), '');
     })).rejects.toThrow('build/firefox: development set not replaced');
     expect(JSON.parse(await readFile(path.join(output, 'receipt.json'), 'utf8'))).toEqual(first);
-    expect((await readdir(temporary)).filter(name => name.startsWith('first.'))).toEqual([]);
+    expect((await readdir(temporary)).filter(name => name.startsWith('target-failure.'))).toEqual([]);
     await expect(validateArtifactSet(output)).resolves.toBeUndefined();
-});
+}, BUILD_TIMEOUT_MS);
+it('reports allowlisted build failure codes without exposing the bundler message', async () => {
+    const output = await copyBuildFixture('bundler-error');
+    const build = (code: string) => buildDevelopmentSet(root, output, async () => {
+        throw Object.assign(new Error('private bundler message'), { code });
+    });
+    await expect(build('ENOSPC')).rejects.toThrow('Build error code: ENOSPC.');
+    await expect(build('private data')).rejects.not.toThrow(/private/);
+    expect(JSON.parse(await readFile(path.join(output, 'receipt.json'), 'utf8'))).toEqual(first);
+}, BUILD_TIMEOUT_MS);
+
 it('bexh1-foundation-C27 replaces complete output on corrected retry and removes stale assets', async () => {
-    const output = path.join(temporary, 'first');
+    const output = await copyBuildFixture('retry');
     await writeFile(path.join(output, 'chrome/stale.js'), 'obsolete');
     await expect(validateArtifactSet(output)).rejects.toThrow('undeclared-or-missing-asset');
     expect(await buildDevelopmentSet(root, output)).toEqual(first);
     await expect(validateArtifactSet(output)).resolves.toBeUndefined();
-    expect((await readdir(temporary)).filter(name => name.startsWith('first.'))).toEqual([]);
-});
+    expect((await readdir(temporary)).filter(name => name.startsWith('retry.'))).toEqual([]);
+}, BUILD_TIMEOUT_MS);
 it('refuses concurrent builds and does not delete another build lock', async () => {
     const output = path.join(temporary, 'locked'); await mkdir(`${output}.lock`);
     await expect(buildDevelopmentSet(root, output)).rejects.toThrow('output locked');

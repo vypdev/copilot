@@ -135,6 +135,10 @@ export function scopedProgressResponseSchema(scope: ProgressScope, anchors: Prog
 /** Only exact in-scope entries can reach the existing progress card. No model top-level remaining is published. */
 export function parseScopedProgressResponse(response: unknown, locale: string, scope: ProgressScope,
     anchors: ProgressScopeAnchors = {}): { progress: number; summary: string; reasoning: string; remaining: string } {
+    return validateScopedProgressResponse(response, locale, scope, anchors).result;
+}
+
+export function validateScopedProgressResponse(response: unknown, locale: string, scope: ProgressScope, anchors: ProgressScopeAnchors = {}) {
     const payload = progressResponsePayload(response, locale, 'assessment');
     const reject = (reason: ProgressResponseReason, field: string, candidate: unknown = 'none'): never => {
         const id = isProgressRequirementId(candidate) && scope.requirements.some(requirement => requirement.id === candidate) ? candidate : 'none';
@@ -152,7 +156,8 @@ export function parseScopedProgressResponse(response: unknown, locale: string, s
         reject('requirements-incomplete', '$.requirements', missing?.id);
     }
     const seen = new Set<string>();
-    const entries = input.map((entry: unknown, index) => {
+    const entries = input.map((entry: unknown, index): { id: string; status: 'supported' | 'missing' | 'verification-unknown';
+        summary: string; remaining: string | null } => {
         const field = `$.requirements[${index}]`;
         if (!entry || typeof entry !== 'object' || Array.isArray(entry)) reject('requirement-shape-invalid', field);
         const fact = entry as Record<string, unknown>;
@@ -162,7 +167,8 @@ export function parseScopedProgressResponse(response: unknown, locale: string, s
         if (seen.has(id)) reject('requirement-id-duplicate', `${field}.id`, id);
         seen.add(id);
         if (scope.requirements.find(requirement => requirement.id === id)!.uncertain && fact.status !== 'verification-unknown') reject('scope-uncertain', `${field}.status`, id);
-        if (!['supported', 'missing', 'verification-unknown'].includes(fact.status as string)) reject('requirement-status-invalid', `${field}.status`, id);
+        const status = fact.status;
+        if (status !== 'supported' && status !== 'missing' && status !== 'verification-unknown') return reject('requirement-status-invalid', `${field}.status`, id);
         if (!['source-only', 'external-unverified', 'unavailable', 'contradictory'].includes(fact.evidence as string)) reject('requirement-evidence-invalid', `${field}.evidence`, id);
         function text(value: unknown): value is string { return typeof value === 'string' && value.trim().length > 0 && [...value].length <= MAX_FACT; }
         if (!text(fact.summary)) reject('requirement-summary-invalid', `${field}.summary`, id);
@@ -174,7 +180,7 @@ export function parseScopedProgressResponse(response: unknown, locale: string, s
             else if (!fact.remaining.trim()) reject('requirement-remaining-blank', `${field}.remaining`, id);
             else if ([...fact.remaining].length > MAX_FACT) reject('requirement-remaining-too-long', `${field}.remaining`, id);
         }
-        return { id, status: fact.status, summary: fact.summary as string, remaining: fact.remaining as string | null };
+        return { id, status, summary: fact.summary as string, remaining: fact.remaining as string | null };
     });
     const ordered = scope.requirements.map(requirement => ({ requirement, fact: entries.find(entry => entry.id === requirement.id)! }));
     function render(field: 'summary' | 'remaining'): string {
@@ -202,5 +208,5 @@ export function parseScopedProgressResponse(response: unknown, locale: string, s
             missingCount: entries.filter(entry => entry.status === 'missing').length,
             unknownCount: entries.filter(entry => entry.status === 'verification-unknown').length }, scope);
     }
-    return { progress, summary, remaining, reasoning: '' };
+    return { result: { progress, summary, remaining, reasoning: '' }, entries: ordered.map(({ fact }) => fact) };
 }

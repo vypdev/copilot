@@ -75,22 +75,33 @@ export class BugbotGitReviewSourceAdapter implements BugbotReviewSourcePort {
             for (const side of sides) {
                 const { change, oldPath, old, current } = side;
                 const before = old ? blobs.get(old.oid)! : '', after = current ? blobs.get(current.oid)! : '';
-                let patch = change.patch, source: BugbotFramedChange['source'] = 'provider';
-                if (!completeTextPatch(patch, change.additions, change.deletions) || !bugbotPatchBindsText(patch, before, after)) {
+                let { patch, additions, deletions } = change;
+                let source: BugbotFramedChange['source'] = 'provider';
+                if (!completeTextPatch(patch, additions, deletions) || !bugbotPatchBindsText(patch, before, after)) {
                     enforceBugbotFramedBudget('recoveredFiles', ++recovered);
                     const comparison = old && current ? [old.oid, current.oid] : [identity.mergeBaseSha, identity.headSha, '--', change.filename];
                     const diff = decode(await git.read(['diff', '--no-ext-diff', '--no-textconv', '--text', '--no-renames',
                         '--no-color', '--no-relative', '--diff-algorithm=myers', '--no-indent-heuristic', '--unified=3', ...comparison], 2 * 1024 * 1024 + 16_384, undefined, 'recoveredPatchBytes'));
                     const start = diff.search(/^@@ -[0-9]/mu);
                     patch = start < 0 ? JSON.stringify({ kind: 'verified-metadata-only', oldPath, path: change.filename, old: old ?? null, current: current ?? null }) : diff.slice(start);
-                    if (start < 0 ? change.additions !== 0 || change.deletions !== 0 || before !== after
-                        : !completeTextPatch(patch, change.additions, change.deletions) || !bugbotPatchBindsText(patch, before, after)) throw new BugbotReviewCompletenessError('source');
+                    if (start < 0) {
+                        if (additions !== 0 || deletions !== 0 || before !== after) throw new BugbotReviewCompletenessError('source');
+                    } else {
+                        const counts = textPatchCounts(patch);
+                        if (!counts || !bugbotPatchBindsText(patch, before, after)) throw new BugbotReviewCompletenessError('source');
+                        // GitHub can omit a patch and both line counts after its diff limit.
+                        if (change.patch === '' && additions === 0 && deletions === 0) {
+                            ({ additions, deletions } = counts);
+                        } else if (counts.additions !== additions || counts.deletions !== deletions) {
+                            throw new BugbotReviewCompletenessError('source');
+                        }
+                    }
                     enforceBugbotFramedBudget('recoveredPatchBytes', Buffer.byteLength(patch));
                     patchBytes += Buffer.byteLength(patch); enforceBugbotFramedBudget('recoveredPatchTotalBytes', patchBytes);
                     source = 'local-git';
                 }
                 rawUnits += patch.length; enforceBugbotFramedBudget('rawUtf16', rawUnits);
-                changes[changes.indexOf(change)] = Object.freeze({ ...change, patch, source,
+                changes[changes.indexOf(change)] = Object.freeze({ ...change, patch, additions, deletions, source,
                     git: Object.freeze({ ...(old ? { old: Object.freeze(old) } : {}), ...(current ? { current: Object.freeze(current) } : {}) }) });
             }
             return Object.freeze({ identity, complete: true,
@@ -195,23 +206,29 @@ class LocalReviewGitReader {
 }
 /** Checks declared hunk completeness and native counts; absent/truncated/binary metadata is not text evidence. */
 export function completeTextPatch(patch: string, additions: number, deletions: number): boolean {
+    const counts = textPatchCounts(patch);
+    return counts !== undefined && counts.additions === additions && counts.deletions === deletions;
+}
+
+function textPatchCounts(patch: string): { additions: number; deletions: number } | undefined {
     let oldRemaining = 0, newRemaining = 0, added = 0, removed = 0, hunks = 0;
     for (const line of patch.split('\n')) {
         const header = /^@@ -\d+(?:,(\d+))? \+\d+(?:,(\d+))? @@/u.exec(line);
         if (header) {
-            if (oldRemaining || newRemaining) return false;
+            if (oldRemaining || newRemaining) return undefined;
             oldRemaining = header[1] === undefined ? 1 : Number(header[1]);
             newRemaining = header[2] === undefined ? 1 : Number(header[2]);
             hunks++; continue;
         }
         if (line === '\\ No newline at end of file') continue;
         if (line === '' && oldRemaining === 0 && newRemaining === 0) continue;
-        if (hunks === 0) return false;
+        if (hunks === 0) return undefined;
         if (line.startsWith('+')) { added++; newRemaining--; }
         else if (line.startsWith('-')) { removed++; oldRemaining--; }
         else if (line.startsWith(' ')) { oldRemaining--; newRemaining--; }
-        else return false;
-        if (oldRemaining < 0 || newRemaining < 0) return false;
+        else return undefined;
+        if (oldRemaining < 0 || newRemaining < 0) return undefined;
     }
-    return hunks > 0 && oldRemaining === 0 && newRemaining === 0 && added === additions && removed === deletions;
+    if (hunks > 0 && oldRemaining === 0 && newRemaining === 0) return { additions: added, deletions: removed };
+    return undefined;
 }

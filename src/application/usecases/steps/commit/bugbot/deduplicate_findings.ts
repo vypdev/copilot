@@ -5,8 +5,8 @@ import type { BugbotFinding } from "../../../../../domain/bugbot/finding";
  * same location. Distinct bugs can legitimately share a line and must not be
  * discarded merely because their coordinates coincide.
  */
-export function deduplicateFindings(findings: BugbotFinding[]): BugbotFinding[] {
-    const seen = new Set<string>();
+export function deduplicateFindings(findings: BugbotFinding[], onDuplicate?: (finding: BugbotFinding, retained: BugbotFinding) => void): BugbotFinding[] {
+    const seen = new Map<string, BugbotFinding>();
     const result: BugbotFinding[] = [];
 
     for (const f of findings) {
@@ -16,8 +16,12 @@ export function deduplicateFindings(findings: BugbotFinding[]): BugbotFinding[] 
         const key = file || line
             ? `location:${file}:${line}:${title}`
             : `title:${title}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
+        const retained = seen.get(key);
+        if (retained) {
+            onDuplicate?.(f, retained);
+            continue;
+        }
+        seen.set(key, f);
         result.push(f);
     }
 

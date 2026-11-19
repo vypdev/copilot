@@ -40,7 +40,16 @@ describe('setup approval observer workflow', () => {
     expect(() => renderApprovalObserverWorkflow('on: workflow_run', policy)).toThrow('missing');
   });
   it('tests unreleased code only from the trusted default-branch commit in this source repository', () => {
-    expect(sourceWorkflow).toBe(sourceTemplate);
+    const reviewPath = join(__dirname, '..', '..', '..', '.github', 'workflows', 'copilot_pull_request.yml');
+    const review = yaml.load(readFileSync(reviewPath, 'utf8')) as Record<string, any>;
+    const reviewIgnores = review.jobs['copilot-pull-requests'].steps.find(
+      (step: { uses?: string }) => step.uses === './',
+    ).with['ai-ignore-files'];
+    expect(typeof reviewIgnores).toBe('string');
+    expect(sourceWorkflow).toBe(sourceTemplate.replace(
+      "ai-ignore-files: ${{ vars.AI_IGNORE_FILES || 'build/*' }}",
+      'ai-ignore-files: ' + reviewIgnores + ",${{ vars.AI_IGNORE_FILES || '' }}",
+    ));
     const workflow = yaml.load(sourceWorkflow) as Record<string, any>;
     expect(workflow.on.workflow_run.workflows).toEqual(['Copilot - Pull Request', 'CI Check']);
     expect(workflow.jobs['observe-approval'].concurrency.group).toBe('copilot-approval-${{ github.repository }}');

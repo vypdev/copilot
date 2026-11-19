@@ -1,6 +1,6 @@
 import { beforeAll, expect, it, vi } from 'vitest';
 import { fileURLToPath } from 'node:url';
-import { readFile, mkdir, mkdtemp, writeFile, rm } from 'node:fs/promises';
+import { access, readFile, mkdir, mkdtemp, writeFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { main, runEntrypoint } from '../../tooling/cli.mts';
@@ -45,6 +45,22 @@ it('rejects distinct clean-build results and stale current receipts', async () =
     await expect(validateDevelopmentBuild(root, output, inconsistent)).rejects.toThrow('clean build receipts differ');
     await expect(validateDevelopmentBuild(root, output, vi.fn().mockResolvedValue(changed))).rejects.toThrow('existing output is stale');
 });
+it('keeps both fresh builds on the output filesystem and removes their private parent after a failure', async () => {
+    const output = path.join(root, 'extension/dist');
+    const receipt = JSON.parse(await readFile(path.join(output, 'receipt.json'), 'utf8')) as BuildReceipt;
+    const dirs: string[] = [];
+    await expect(validateDevelopmentBuild(root, output, async (_root, target) => {
+        dirs.push(target);
+        if (dirs.length === 2) throw new Error('second build failed');
+        return receipt;
+    })).rejects.toThrow('second build failed');
+    expect(dirs).toHaveLength(2);
+    expect(dirs[0]).not.toBe(dirs[1]);
+    expect(path.dirname(dirs[0])).toBe(path.dirname(dirs[1]));
+    expect(path.dirname(path.dirname(dirs[0]))).toBe(path.dirname(output));
+    await expect(access(path.dirname(dirs[0]))).rejects.toMatchObject({ code: 'ENOENT' });
+});
+
 it('rejects oversized tooling modules before advertising a valid artifact set', async () => {
     const temporary = await mkdtemp(path.join(tmpdir(), 'copilot-h1-size-'));
     try {

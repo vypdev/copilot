@@ -18,10 +18,11 @@ export function buildCursorExecutionPolicy(input: ProviderExecutionPolicyInput):
         editor: { vimMode: false },
         approvalMode: 'allowlist',
         permissions: {
-            allow: fixer ? ['Read(**)', 'Write(**)'] : ['Read(**)'],
+            allow: input.brokeredVerification ? [] : fixer ? ['Read(**)', 'Write(**)'] : ['Read(**)'],
             deny: [
                 'Shell(*)', 'WebFetch(*)', 'Mcp(*:*)',
                 'Read(.env*)', 'Read(**/.env*)', 'Read(**/.git/**)',
+                ...(input.brokeredVerification ? ['Read(**)'] : []),
                 ...(fixer ? [] : ['Write(**)']),
                 'Write(.env*)', 'Write(**/.env*)',
                 'Write(.git/**)', 'Write(**/.git/**)',

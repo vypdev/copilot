@@ -1,0 +1,43 @@
+name: Copilot - Bugbot Status Card
+run-name: Bugbot status · PR ${{ inputs.pull_number }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      pull_number:
+        description: Pull request number
+        required: true
+        type: number
+      work:
+        description: Versioned publication handoff
+        required: true
+        type: string
+
+jobs:
+  publish:
+    name: Publish Bugbot status card
+    if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+    runs-on: [self-hosted, codex, Linux]
+    timeout-minutes: 5
+    concurrency:
+      group: copilot-bugbot-status-${{ github.repository_id }}-${{ inputs.pull_number }}
+      queue: max
+      cancel-in-progress: false
+    permissions:
+      actions: read
+      checks: read
+      contents: read
+      issues: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Publish canonical comment
+        uses: ./
+        with:
+          token: ${{ secrets.PAT }}
+          pull-requests-locale: ${{ vars.PULL_REQUESTS_LOCALE || vars.REPOSITORY_LOCALE || 'en-US' }}
+        env:
+          COPILOT_BUGBOT_STATUS_CARD_WORKFLOW: 'write-v1'
+          COPILOT_EVIDENCE_TOKEN: ${{ github.token }}

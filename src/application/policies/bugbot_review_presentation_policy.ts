@@ -93,10 +93,16 @@ export function renderBugbotStatusCard(
   const navigation = [
     `[${catalog.message('bugbot.status.nav.pullRequest')}](${links.pullRequestUrl})`,
     `[${catalog.message('bugbot.status.nav.verifiedCommit')}](${links.commitUrl})`,
+    ...(links.reviewChecksUrl ? [`[${catalog.message('bugbot.status.nav.reviewChecks')}](${links.reviewChecksUrl})`] : []),
     ...(links.runUrl
       ? [`[${catalog.message('bugbot.status.nav.workflowRun')}](${links.runUrl})`]
       : []),
   ].join(' · ');
+  const { commitProgress } = links;
+  const progressLink = commitProgress
+    ? `[${catalog.message(commitProgress.assessedHeadSha === projection.verifiedHeadSha
+      ? 'bugbot.status.nav.commitProgress' : 'bugbot.status.nav.previousCommitProgress')}](${commitProgress.url}) · \`${commitProgress.assessedHeadSha.slice(0, 8)}\``
+    : undefined;
   const coverageRows = projection.coverage.sources.map((source) => {
     const facts = [catalog.message('bugbot.coverage.retained', { count: source.itemsRetained })];
     if (source.omittedItems > 0) facts.push(catalog.message('bugbot.coverage.omitted', { count: source.omittedItems }));
@@ -145,6 +151,7 @@ export function renderBugbotStatusCard(
     );
   }
   lines.push('', navigation);
+  if (progressLink) lines.push('', progressLink);
   return lines.join('\n');
 }
 
@@ -216,15 +223,20 @@ export function buildNewBugbotReviewSnapshotHeader(
   ].join('\n');
 }
 
+/** Stable report content excludes the host-owned, mutable review status. */
+export function bugbotReviewHistoricalContent(originalBody: string): string {
+  return originalBody
+    .replace(new RegExp(`<!--\\s*${BUGBOT_REVIEW_MARKER_PREFIX}\\s+schema="1"[^>]*-->\\s*`, 'gu'), '')
+    .replace(new RegExp(`${escapeRegExp(BUGBOT_REVIEW_STATUS_START)}[\\s\\S]*?${escapeRegExp(BUGBOT_REVIEW_STATUS_END)}\\s*`, 'gu'), '')
+    .trim();
+}
+
 function normalizeHistoricalSnapshot(
   originalBody: string,
   analyzedHeadSha: string,
   catalog: BugbotMessageCatalog,
 ): string {
-  let body = originalBody
-    .replace(new RegExp(`<!--\\s*${BUGBOT_REVIEW_MARKER_PREFIX}\\s+schema="1"[^>]*-->\\s*`, 'gu'), '')
-    .replace(new RegExp(`${escapeRegExp(BUGBOT_REVIEW_STATUS_START)}[\\s\\S]*?${escapeRegExp(BUGBOT_REVIEW_STATUS_END)}\\s*`, 'gu'), '')
-    .trim();
+  let body = bugbotReviewHistoricalContent(originalBody);
   if (!/^## 🤖 .+$/mu.test(body)) {
     const heading = `## 🤖 ${catalog.message('bugbot.snapshot.heading')}`;
     body = `${heading}\n\n${body}`;

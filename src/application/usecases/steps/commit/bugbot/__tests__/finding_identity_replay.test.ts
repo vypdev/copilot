@@ -1,6 +1,7 @@
 import { buildCommentBody, parseMarker } from '../../../../../policies/bugbot_finding_marker_policy';
 import { toPullRequestReviewOperationError } from '../../../../../../data/repository/pull_request/pull_request_review_error_metadata';
 import { DEFAULT_BUGBOT_REVIEW_CONFIGURATION } from '../../../../../../domain/bugbot/review_configuration';
+import { bugbotReviewHistoricalContent } from '../../../../../policies/bugbot_review_presentation_policy';
 import type { PullRequestReviewComment, PullRequestReviewCommentDraft, PullRequestReviewSummary } from '../../../../../ports/pull_request_review_comment_ports';
 import { analyzeBugbotRevision } from '../analyze_bugbot_revision_use_case';
 import { applyDetectedFindings } from '../apply_detected_findings';
@@ -38,7 +39,12 @@ function harness(resolved = false) {
   const reviews: PullRequestReviewSummary[] = [{ identity: '77', authorLogin: 'bugbot', commitId: head,
     body: '## 🤖 Bugbot review snapshot\n\nOriginal report.' }];
   const status: Array<{ id: number; body: string; user: { login: string } }> = [];
+  let reviewWrites = 0;
   const createReviewWithComments = jest.fn(async (_pr: number, _head: string, body: string, drafts: PullRequestReviewCommentDraft[]) => {
+    const existing = reviews.find(review => review.commitId === _head
+      && bugbotReviewHistoricalContent(review.body ?? '') === bugbotReviewHistoricalContent(body));
+    if (drafts.length === 0 && existing) return undefined;
+    reviewWrites++;
     reviews.push({ identity: '88', authorLogin: 'bugbot', commitId: head, body });
     for (const draft of drafts) {
       const id = comments.length + 1;
@@ -93,7 +99,7 @@ function harness(resolved = false) {
         updatePullRequestReview: async (_pr, id, body) => { reviews.find((review) => review.identity === id)!.body = body; },
       },
     });
-  return { comments, thread, publication, resolution, load, reconcile, status };
+  return { comments, thread, publication, resolution, load, reconcile, status, reviews, reviewWrites: () => reviewWrites };
 }
 
 it('replays a changed title/location through publication, final projection and a fresh recheck without an orphan', async () => {
@@ -133,7 +139,7 @@ it('keeps the durable marker when publication is called directly with a replacem
   expect(test.publication.pullRequestComments.createReviewWithComments).not.toHaveBeenCalled();
 });
 
-it('publishes and projects an incompatible colliding ID as a separate finding and reuses both threads on recheck', async () => {
+it('keeps an incompatible colliding ID separate in the review body without duplicate writes on exact recheck', async () => {
   const test = harness();
   const unrelated = { ...current, id: oldId, title: 'Unrelated lease defect', file: 'src/copy.ts',
     symbol: 'schedule', codeSnippet: 'retry(now)' };
@@ -153,8 +159,12 @@ it('publishes and projects an incompatible colliding ID as a separate finding an
   const second = await run();
   expect(second.projection.findings).toEqual(first.projection.findings);
   expect(second.projection.digest).toBe(first.projection.digest);
-  expect(test.comments).toHaveLength(2);
-  expect(test.publication.pullRequestComments.createReviewWithComments).toHaveBeenCalledTimes(1);
+  expect(test.comments).toHaveLength(1);
+  expect(test.reviews).toHaveLength(2);
+  expect(parseMarker(test.reviews[1].body).map(marker => marker.findingId))
+    .toEqual([first.projection.findings.find(finding => finding.title === unrelated.title)!.id]);
+  expect(test.reviewWrites()).toBe(1);
+  expect(test.publication.pullRequestComments.createReviewWithComments).toHaveBeenCalledTimes(2);
 });
 
 it('preserves a human dismissal when the same finding is reported under a new ID', async () => {

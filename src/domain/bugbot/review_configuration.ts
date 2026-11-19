@@ -1,6 +1,15 @@
 export type BugbotReviewEffort = 'low' | 'default' | 'high' | 'smart';
 export type BugbotPublicationMode = 'publish' | 'dry-run';
 
+export interface BugbotShadowConfiguration {
+    readonly provider?: string;
+    readonly modelProvider?: string;
+    readonly model?: string;
+    readonly effort?: string;
+    readonly allowedModelProviders?: string;
+    readonly allowedModels?: string;
+}
+
 export interface BugbotReviewConfiguration {
     readonly publicationMode: BugbotPublicationMode;
     readonly effort: BugbotReviewEffort;
@@ -10,6 +19,7 @@ export interface BugbotReviewConfiguration {
     readonly telemetry: boolean;
     readonly failOnUnresolved: boolean;
     readonly organizationRules: readonly string[];
+    readonly shadowVerification?: BugbotShadowConfiguration;
 }
 
 export const DEFAULT_BUGBOT_REVIEW_CONFIGURATION: BugbotReviewConfiguration = {
@@ -34,6 +44,7 @@ export function normalizeBugbotReviewConfiguration(
         suggestedChanges: value?.suggestedChanges !== false,
         telemetry: value?.telemetry !== false,
         failOnUnresolved: value?.failOnUnresolved === true,
+        ...(value?.shadowVerification ? { shadowVerification: Object.freeze({ ...value.shadowVerification }) } : {}),
         organizationRules: (value?.organizationRules ?? [])
             .map((rule) => rule.normalize('NFKC').trim())
             .filter(Boolean)

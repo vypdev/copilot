@@ -19,6 +19,9 @@ export declare const APPROVAL_EVIDENCE_PERMISSIONS: Readonly<{
     readonly 'coverage-artifacts': "actions-read";
     readonly 'coverage-download': "actions-read";
     readonly 'coverage-parse': "actions-read";
+    readonly 'bugbot-artifacts': "actions-read";
+    readonly 'bugbot-download': "actions-read";
+    readonly 'bugbot-parse': "actions-read";
 }>;
 export type ApprovalEvidenceOperation = keyof typeof APPROVAL_EVIDENCE_PERMISSIONS;
 export declare const APPROVAL_EVIDENCE_REASONS: readonly ["http-400", "http-401", "http-403", "http-404", "http-409", "http-422", "http-429", "http-500", "http-502", "http-503", "http-504", "transport-unavailable", "invalid-response", "invalid-page", "page-limit", "artifact-unavailable", "artifact-invalid", "artifact-mismatch"];

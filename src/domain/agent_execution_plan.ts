@@ -40,6 +40,7 @@ export interface AgentExecutionPlan {
     readonly sessionPersistence: false;
     readonly output: AgentOutputContract;
     readonly timeoutMs: number;
+    readonly brokeredVerification?: true;
     readonly maxPromptBytes: number;
     readonly maxOutputBytes: number;
     readonly environment: Readonly<Record<string, string>>;

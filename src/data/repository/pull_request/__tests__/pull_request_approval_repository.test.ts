@@ -1,3 +1,4 @@
+import { renderBugbotApprovalReceipt } from '../../../../application/policies/bugbot_verification_receipt_policy';
 import { runUpdatePullRequestDescriptionWorkflow } from '../../../../application/usecases/steps/pull_request/update_pull_request_description_workflow';
 import { PullRequestLifecycleRepository } from '../pull_request_lifecycle_repository';
 import { bindPullRequestDescription } from '../../../../infrastructure/composition/lifecycle_capability_port_binding';
@@ -115,7 +116,8 @@ function evidenceOctokit(mergeParents = [base, head], attempt = 1, runConclusion
   return client;
 }
 
-function evidenceFixture() {
+type VerificationPolicyRead = NonNullable<ConstructorParameters<typeof PullRequestApprovalRepository>[1]['readBugbotVerificationPolicy']>;
+function evidenceFixture(verification?: Awaited<ReturnType<VerificationPolicyRead>>, readVerification?: VerificationPolicyRead) {
   const pat = evidenceOctokit();
   const original = pat.paginate.iterator.getMockImplementation()!;
   const pages = new Map<unknown, readonly unknown[]>();
@@ -125,7 +127,9 @@ function evidenceFixture() {
     else yield* original(method, params);
   });
   (github.getOctokit as jest.Mock).mockReturnValue(pat);
-  return { pat, pages, repository: new PullRequestApprovalRepository('pat', settings) };
+  return { pat, pages, repository: new PullRequestApprovalRepository('pat', {
+    ...settings, readBugbotVerificationPolicy: readVerification ?? (verification ? async () => verification : undefined),
+  }) };
 }
 
 function nativeCheckFixture() {
@@ -822,4 +826,170 @@ describe('description publication and actual approval evidence agree', () => {
     expect(client.rest.pulls.createReview).not.toHaveBeenCalled();
   });
 
+});
+
+describe('issue #950 current-policy Bugbot evidence at the approval consumer', () => {
+  const enforced = { mode: 'enforced', requireReceipt: true, generation: 2,
+    policyDigest: '1'.repeat(64), workflowId: 110, sourceAppId: 15368 } as const;
+  const states = { open: 0, reopened: 0, dismissed: 0, verificationRequired: 0, unknown: 0, fixed: 0, obsolete: 0 };
+  const legacy = `<!-- copilot-bugbot-status schema="1" pr="42" verified_head="${head}" digest="abcde123" -->
+<!-- copilot-bugbot-approval-evidence schema="1" head="${head}" digest="abcde123" outcome="complete" coverage="complete" open="0" reopened="0" dismissed="0" verification="0" unknown="0" -->`;
+  const run = (id: number, conclusion = 'success', association = [{ number: 42 }]) => ({
+    id, workflow_id: 110, name: 'Bugbot', head_sha: head, check_suite_id: id + 100,
+    run_attempt: 1, status: 'completed', conclusion, pull_requests: association,
+  });
+  const check = (id: number, override: Record<string, unknown> = {}) => ({
+    id: id + 400, name: 'Copilot / Review', app: { id: 15368 }, head_sha: head,
+    status: 'completed', conclusion: 'success', check_suite: { id: id + 1000 },
+    output: { summary: `<!-- copilot-bugbot-verification:v1 ${JSON.stringify({
+      version: 1, repositoryId: 17, pullNumber: 42, headSha: head, baseSha: base,
+      mode: 'enforced', generation: 2, policyDigest: enforced.policyDigest, runId: id, attempt: 1,
+      coverage: 'complete', verification: 'complete', publication: 'verified', outcome: 'complete', findingStates: states,
+      ...override,
+    })} -->` },
+  });
+  function evidence(policy: Parameters<typeof evidenceFixture>[0], nativeRuns: ReturnType<typeof run>[] = [],
+      checks: ReturnType<typeof check>[] = [], artifactScenario = 'valid') {
+    const f = evidenceFixture(policy);
+    const latest = [...nativeRuns].sort((a, b) => b.id - a.id)[0];
+    if (latest) {
+      const receiptCheck = checks.find(item => item.id === latest.id + 400);
+      const attestation = { version: 1, runId: latest.id, attempt: latest.run_attempt,
+        checkRunId: receiptCheck?.id ?? 0, receipt: receiptCheck?.output.summary ?? '' };
+      const artifact = { id: 8000, name: `copilot-bugbot-verification-v1-${latest.id}-${latest.run_attempt}`,
+        size_in_bytes: 1000, expired: artifactScenario === 'expired',
+        workflow_run: { id: artifactScenario === 'other run' ? latest.id + 1 : latest.id,
+          repository_id: 17, head_repository_id: 17, head_sha: latest.head_sha } };
+      const artifacts = artifactScenario === 'missing' ? [] : artifactScenario === 'duplicate' ? [artifact, artifact] : [artifact];
+      f.pages.set(f.pat.rest.actions.listWorkflowRunArtifacts, [{ artifacts }]);
+      const payload = artifactScenario === 'other check' ? { ...attestation, checkRunId: attestation.checkRunId + 1 }
+        : artifactScenario === 'other attempt' ? { ...attestation, attempt: latest.run_attempt + 1 }
+          : artifactScenario === 'altered receipt' ? { ...attestation, receipt: attestation.receipt + ' ' } : attestation;
+      f.pat.rest.actions.downloadArtifact.mockResolvedValue({ data: artifactScenario === 'invalid zip'
+        ? Buffer.from('invalid') : approvalCoverageZip(payload, 'copilot-bugbot-verification.json') });
+    }
+    const original = f.pat.paginate.iterator.getMockImplementation()!;
+    f.pages.set(f.pat.rest.issues.listComments, [[{ id: 65, user: { id: 20 }, body: legacy }]]);
+    f.pat.paginate.iterator.mockImplementation(async function* (method, params) {
+      if (method === f.pat.rest.actions.listWorkflowRunsForRepo && params.head_sha === head) {
+        yield { data: { workflow_runs: nativeRuns.filter(item => item.head_sha === head) } };
+      } else if (method === f.pat.rest.actions.listWorkflowRunsForRepo && params.head_sha === testedMerge) {
+        yield* original(method, params);
+        yield { data: { workflow_runs: nativeRuns.filter(item => item.head_sha === testedMerge) } };
+      } else if (method === f.pat.rest.checks.listForRef && params.ref === head) {
+        yield { data: { check_runs: checks } };
+      } else yield* original(method, params);
+    });
+    return f.repository.loadEvidence(target);
+  }
+
+  it('keeps legacy evidence in disabled or shadow but rejects it at unchanged head on enforcement', async () => {
+    expect((await evidence({ mode: 'disabled', requireReceipt: false })).bugbot?.outcome).toBe('complete');
+    expect((await evidence({ mode: 'shadow', requireReceipt: false })).bugbot?.outcome).toBe('complete');
+    const fact = await evidence(enforced);
+    expect(fact.headSha).toBe(head);
+    expect(decidePullRequestApproval(await approvalPolicy(), fact).code).toBe('bugbot-missing');
+  });
+
+  it('rereads effective policy during a same-head transition on the same consumer', async () => {
+    const read = jest.fn().mockResolvedValueOnce({ mode: 'disabled', requireReceipt: false }).mockResolvedValueOnce(enforced);
+    const f = evidenceFixture(undefined, read);
+    f.pages.set(f.pat.rest.issues.listComments, [[{ id: 65, user: { id: 20 }, body: legacy }]]);
+    const before = await f.repository.loadEvidence(target);
+    const after = await f.repository.loadEvidence(target);
+    expect(before.headSha).toBe(after.headSha);
+    expect(before.bugbot?.outcome).toBe('complete');
+    expect(after.bugbot).toBeUndefined();
+    expect(read).toHaveBeenCalledTimes(2);
+  });
+
+  it('fails closed when the trusted policy binding returns no policy', async () => {
+    const f = evidenceFixture(undefined, jest.fn().mockResolvedValue(undefined));
+    f.pages.set(f.pat.rest.issues.listComments, [[{ id: 65, user: { id: 20 }, body: legacy }]]);
+    await expect(f.repository.loadEvidence(target)).rejects.toMatchObject({ code: 'provider.contract-invalid' });
+  });
+
+  it('accepts the unique current-policy and current-attempt native receipt', async () => {
+    const fact = await evidence(enforced, [run(80)], [check(80)]);
+    expect(fact.bugbot?.outcome).toBe('complete');
+    expect(decidePullRequestApproval(await approvalPolicy(), fact).status).toBe('eligible');
+  });
+
+  it('keeps ordinary open findings authoritative under shadow despite an older clean marker', async () => {
+    const policy = { ...enforced, mode: 'shadow' } as const;
+    const fact = await evidence(policy, [run(80)], [check(80, { mode: 'shadow', findingStates: { ...states, open: 1 } })]);
+    expect(fact.bugbot?.open).toBe(1);
+    expect(decidePullRequestApproval(await approvalPolicy(), fact).status).not.toBe('eligible');
+  });
+
+  it('does not consume a diagnostic shadow simulation as an authoritative receipt', async () => {
+    const policy = { ...enforced, mode: 'shadow' } as const;
+    const fact = await evidence(policy, [run(80)], [check(80, { mode: 'shadow', publication: 'simulated' })]);
+    expect(fact.bugbot).toBeUndefined();
+    expect(decidePullRequestApproval(await approvalPolicy(), fact).code).toBe('bugbot-missing');
+  });
+
+  it.each([head, testedMerge])('binds a verified merge execution to the actual review-head check: %s', async checkHead => {
+    const native = { ...run(80), head_sha: testedMerge };
+    const fact = await evidence(enforced, [native], [{ ...check(80), head_sha: checkHead }]);
+    if (checkHead === head) {
+      expect(fact.bugbot?.verificationReceipt?.runId).toBe(80);
+      expect(decidePullRequestApproval(await approvalPolicy(), fact).status).toBe('eligible');
+    } else {
+      expect(fact.bugbot).toBeUndefined();
+      expect(decidePullRequestApproval(await approvalPolicy(), fact).code).toBe('bugbot-missing');
+    }
+  });
+
+  it.each(['missing', 'duplicate', 'expired', 'other run', 'other check', 'other attempt', 'altered receipt', 'invalid zip'])(
+    'withholds approval when the native receipt artifact is %s', async scenario => {
+      const fact = await evidence(enforced, [run(80)], [check(80)], scenario);
+      expect(fact.bugbot).toBeUndefined();
+      expect(decidePullRequestApproval(await approvalPolicy(), fact).code).toBe('bugbot-missing');
+    },
+  );
+
+  it('consumes the application-generated receipt and rejects it under a new same-head policy', async () => {
+    const native = { repositoryId: 17, pullNumber: 42, baseSha: base, runId: 80, attempt: 1 };
+    const publication = { authority: enforced, repositoryId: 17, pullNumber: 42, headSha: head, baseSha: base,
+      coverage: 'complete', verification: 'complete', publication: 'verified', outcome: 'complete', findingStates: states } as const;
+    const summary = renderBugbotApprovalReceipt(publication, native, head);
+    expect(summary).toBeDefined();
+    const checks = [{ ...check(80), output: { summary: summary! } }];
+    expect((await evidence(enforced, [run(80)], checks)).bugbot?.verificationReceipt?.runId).toBe(80);
+    expect((await evidence({ ...enforced, generation: 3 }, [run(80)], checks)).bugbot).toBeUndefined();
+    expect(renderBugbotApprovalReceipt(publication, { ...native, pullNumber: 41 }, head)).toBeUndefined();
+    expect(renderBugbotApprovalReceipt(publication, { ...native, baseSha: 'c'.repeat(40) }, head)).toBeUndefined();
+  });
+
+  it.each([
+    ['inconclusive', run(81), [check(81, { verification: 'inconclusive', outcome: 'partial' })]],
+    ['failed', run(81, 'failure'), []],
+    ['queued', { ...run(81), status: 'queued', conclusion: null }, []],
+    ['ambiguous PR association', run(81, 'failure', []), []],
+  ] as const)('does not reuse an older clean receipt after a later %s attempt', async (_name, newer, newChecks) => {
+    const fact = await evidence(enforced, [run(80), { ...newer, conclusion: newer.conclusion ?? '' }], [check(80), ...newChecks]);
+    expect(decidePullRequestApproval(await approvalPolicy(), fact).code).toBe('bugbot-missing');
+  });
+
+  it.each(['disabled', 'shadow'] as const)('requires fresh ordinary evidence when rolling back to %s on the same head', async mode => {
+    const rollback = { ...enforced, mode, generation: 3, policyDigest: '2'.repeat(64) } as const;
+    const stale = await evidence(rollback, [run(80)], [check(80)]);
+    expect(decidePullRequestApproval(await approvalPolicy(), stale).code).toBe('bugbot-missing');
+
+    const native = { repositoryId: 17, pullNumber: 42, baseSha: base, runId: 81, attempt: 1 };
+    const summary = renderBugbotApprovalReceipt({ authority: rollback, repositoryId: 17, pullNumber: 42,
+      headSha: head, baseSha: base, coverage: 'complete', verification: 'complete',
+      publication: 'verified', outcome: 'complete', findingStates: states }, native, head);
+    expect(summary).toBeDefined();
+    const current = { ...check(81), output: { summary: summary! } };
+    const fresh = await evidence(rollback, [run(80), run(81)], [check(80), current]);
+    expect(fresh.bugbot?.verificationReceipt).toMatchObject({ generation: 3, runId: 81 });
+    expect(decidePullRequestApproval(await approvalPolicy(), fresh).status).toBe('eligible');
+  });
+
+  async function approvalPolicy() {
+    const f = evidenceFixture();
+    return parsePullRequestApprovalPolicy(await f.repository.readPolicy(target));
+  }
 });

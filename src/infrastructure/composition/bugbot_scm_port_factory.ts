@@ -1,5 +1,8 @@
+import type { BugbotVerificationAuthority } from '../../domain/bugbot/verification_receipt';
+import type { BugbotReviewCancellationPort } from '../../application/ports/bugbot_review_cancellation_ports';
 import type { BugbotReviewSourcePort } from '../../application/ports/bugbot_review_source_ports';
 import type { BugbotScmPorts } from '../../application/ports/bugbot_scm_ports';
+import type { BugbotStatusCardTerminalPort } from '../../application/ports/bugbot_reconciliation_ports';
 import type { BugbotRuleFileQueryPort } from '../../application/ports/bugbot_rule_ports';
 import type { BugbotIssueRepository } from '../../data/repository/issue/bugbot_issue_repository';
 import type { BugbotIssueCommentQueryRepository } from '../../data/repository/issue/bugbot_issue_comment_query_repository';
@@ -14,6 +17,13 @@ export interface BugbotScmBinding {
   readonly owner: string;
   readonly repository: string;
   readonly token: string;
+  readonly trustedAuthorLogin?: string;
+  readonly shadow?: { readonly workspace?: string };
+  readonly verificationAuthority?: BugbotVerificationAuthority;
+  readonly reviewCancellation?: BugbotReviewCancellationPort;
+  readonly reviewProgress?: BugbotScmPorts['progress'];
+  readonly statusCard?: BugbotStatusCardTerminalPort;
+  readonly allowLegacyStatusCardWrite?: () => Promise<boolean>;
 }
 
 /** Binds repository identity and credential once, outside application workflows. */
@@ -140,11 +150,14 @@ export class BugbotScmPortFactory {
 
     return {
       ...(this.reviewSource ? { reviewSource: this.reviewSource } : {}),
+      ...(binding.reviewProgress ? { progress: binding.reviewProgress } : {}),
       context,
       publication: { issueComments, pullRequestComments },
       resolution: { issueComments, pullRequestComments },
       reconciliation: {
         snapshot: {
+          isLinkedIssue: async (pullRequestNumber, issueNumber) =>
+            this.lifecycle.isLinked(owner, repository, pullRequestNumber, issueNumber, token),
           listIssueComments: (issueNumber) =>
             this.issues.listIssueComments(owner, repository, issueNumber, token),
           listPullRequestReviewComments: (pullRequestNumber) =>
@@ -160,6 +173,8 @@ export class BugbotScmPortFactory {
         },
         presentation: {
           comments: issueComments,
+          ...(binding.statusCard ? { statusCard: binding.statusCard } : {}),
+          ...(binding.allowLegacyStatusCardWrite ? { allowLegacyStatusCardWrite: binding.allowLegacyStatusCardWrite } : {}),
           updatePullRequestReview: (pullRequestNumber, reviewIdentity, body) =>
             this.pullRequests.updatePullRequestReview(
               owner,

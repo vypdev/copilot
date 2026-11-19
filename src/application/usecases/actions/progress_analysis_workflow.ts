@@ -1,6 +1,6 @@
 import { analyzeProgressBatches } from './progress_batch_workflow';
 import { readSddSeed, type SddSeedInput } from '../../policies/sdd_selection_policy';
-import type { ProgressSddSeedQuery } from '../../ports/progress_sdd_seed_ports';
+import type { ProgressSddPublication, ProgressSddSeedQuery } from '../../ports/progress_sdd_seed_ports';
 import { captureProgressScopeSource } from '../../policies/progress_scope_source_policy';
 import { progressSddSeedUnavailable, reconcileProgressSddScope } from '../../policies/progress_sdd_scope_policy';
 import type { BoundProgressComparisonSourceQueryPort, ProgressComparisonSource } from '../../ports/progress_comparison_source_ports';
@@ -15,9 +15,6 @@ import { logError, logInfo } from '../../ports/logging_ports';
 import type { BoundProgressDiffQueryPort } from '../../ports/progress_diff_query_ports';
 import { findIssueBranch } from './find_issue_branch';
 import { validateProgressPrerequisites } from './progress_prerequisite_policy';
-import {
-    type ProgressAttemptResult,
-} from './progress_response';
 import { ApplicationError, type ApplicationErrorCode } from '../../errors/application_error';
 import type { BoundPublicationSourceQueryPort } from '../../ports/publication_freshness_ports';
 import { validateFramedProgressEvidence } from '../../policies/progress_evidence_protocol_policy';
@@ -46,8 +43,9 @@ export type ProgressAnalysis =
         baseSha: string;
         comparisonSource: ProgressComparisonSource;
         sourceHeadSha: string;
-        attemptResult: ProgressAttemptResult;
+        attemptResult: Awaited<ReturnType<typeof analyzeProgressBatches>>['attemptResult'];
         verifyScopePublication?: () => Promise<void>;
+        scopePublication?: ProgressSddPublication;
         scopeManifestDigest: string;
         verifyAssessment: () => unknown;
     };
@@ -157,6 +155,7 @@ export async function analyzeProgress(
         sourceHeadSha,
         attemptResult,
         verifyScopePublication,
+        scopePublication: capturedScopeSource.draft?.publication,
         scopeManifestDigest,
         verifyAssessment,
     };

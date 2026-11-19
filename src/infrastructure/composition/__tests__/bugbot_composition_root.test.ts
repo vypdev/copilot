@@ -97,6 +97,7 @@ describe("createBugbotCompositionRoot", () => {
       owner: 'owner',
       repository: 'repository',
       token: 'token',
+      trustedAuthorLogin: 'publisher',
     });
 
     expect(mockCreateIssueContentClient).toHaveBeenCalledTimes(1);
@@ -123,6 +124,7 @@ describe("createBugbotCompositionRoot", () => {
       reviewCommentClient,
       graphqlClient,
       reviewCommentClient,
+      'publisher',
     );
     expect(mockPullRequestReviewThreadRepository).toHaveBeenCalledWith(
       graphqlClient,

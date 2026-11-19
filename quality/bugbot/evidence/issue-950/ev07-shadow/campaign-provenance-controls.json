@@ -1,0 +1,212 @@
+{
+  "implementation": "d26d0d6cd633c3aa313ddd21235fe985860b4104",
+  "preregistrationCommit": "19bf6f3eaecc48d8f8dd76997145e6d12a2d2b1f",
+  "planSha256": "26a66c3d4c40c5a63fc27f619711e969545050d34deef5e85fc617dce47e693e",
+  "preregistrationUrl": "https://github.com/vypdev/copilot/pull/951#issuecomment-6973299390",
+  "publishedBeforeCallsAt": "2026-11-18T20:59:43Z",
+  "measuredStartAt": "2026-11-18T21:00:09.367Z",
+  "observedLedgerFinishAt": "2026-11-18T21:10:29.311592+00:00",
+  "fullBuildTestLintHooks": {
+    "implementation": "passed",
+    "preregistration": "passed"
+  },
+  "shadowControls": 86,
+  "focusedJestCases": 279,
+  "fixedTreePreflights": [
+    {
+      "id": "U1",
+      "exit": 0
+    },
+    {
+      "id": "U2",
+      "exit": 0
+    },
+    {
+      "id": "F1",
+      "exit": 0
+    },
+    {
+      "id": "F2",
+      "exit": 0
+    },
+    {
+      "id": "S1",
+      "exit": 0
+    },
+    {
+      "id": "S2",
+      "exit": 0
+    },
+    {
+      "id": "X1",
+      "exit": 0
+    },
+    {
+      "id": "X2",
+      "exit": 0
+    },
+    {
+      "id": "M1",
+      "exit": 0
+    },
+    {
+      "id": "M2",
+      "exit": 0
+    },
+    {
+      "id": "P1",
+      "exit": 0
+    },
+    {
+      "id": "P2",
+      "exit": 0
+    },
+    {
+      "id": "J1",
+      "exit": 0
+    },
+    {
+      "id": "J2",
+      "exit": 0
+    }
+  ],
+  "planner": {
+    "event": "planner-preflight",
+    "flags": [
+      {
+        "model": "gpt-6-luna",
+        "modelProvider": "openai",
+        "reasoningEffort": "xhigh",
+        "sandbox": "read-only"
+      }
+    ]
+  },
+  "packagedActionSha256": "414dccba8ef5cbb987e72f21f4d92336cfa15dd7a3be2b5d3fe9e037cb552c07",
+  "statusCardScenarios": 13,
+  "explicitRejectedGraphqlMutationAudited": true,
+  "packagedApprovalCases": [
+    {
+      "kind": "packaged-legacy-card",
+      "decision": "recommend (recommend-mode)",
+      "assessment": "stale-head-fence",
+      "mutationRequests": 0
+    },
+    {
+      "kind": "packaged-no-card",
+      "decision": "pending (bugbot-missing)",
+      "assessment": "stale-head-fence",
+      "mutationRequests": 0
+    },
+    {
+      "kind": "injected-stale",
+      "decision": "pending (bugbot-missing)",
+      "assessment": "stale-head-fence",
+      "mutationRequests": 0
+    },
+    {
+      "kind": "injected-fresh",
+      "decision": "recommend (recommend-mode)",
+      "assessment": "stale-head-fence",
+      "mutationRequests": 0
+    },
+    {
+      "kind": "injected-fresh-missing-artifact",
+      "decision": "blocked (evidence-unavailable)",
+      "assessment": "stale-head-fence",
+      "mutationRequests": 0
+    },
+    {
+      "kind": "injected-fresh-wrong-check",
+      "decision": "pending (bugbot-missing)",
+      "assessment": "stale-head-fence",
+      "mutationRequests": 0
+    }
+  ],
+  "unchangedInitialRequests": {
+    "count": 174,
+    "sha256": "e71b9b74db71c8f2c85534065f79fd4b097254b8438a08f536e30deab3d08b29",
+    "priorScoreReproduced": {
+      "expected": 80,
+      "actual": 83,
+      "matched": 73,
+      "precision": 0.8795180722891566,
+      "recall": 0.9125,
+      "locationAccuracy": 0.9041095890410958,
+      "severityAccuracy": 0.9315068493150684,
+      "categoryAccuracy": 1,
+      "f1": 0.8957055214723926,
+      "falsePositives": 10,
+      "falseNegatives": 7,
+      "meanLineDistance": 0.1643835616438356,
+      "confidenceBrierScore": 0.11406506024096379
+    },
+    "newModelCalls": 0,
+    "githubWrites": 0
+  },
+  "measuredCases": 174,
+  "preparedCliInvocations": 200,
+  "existingPythonFollowupInvocations": 26,
+  "providerReportedModel": null,
+  "tokenUsage": null,
+  "cost": null,
+  "corpusWallSeconds": 619.944592,
+  "caseMedianMs": 13743.0,
+  "caseP95Ms": 60956,
+  "corpusScore": {
+    "complete": true,
+    "completed": 174,
+    "passed": false,
+    "githubWriteAttempts": 0,
+    "workspaceUnchanged": true,
+    "score": {
+      "metrics": {
+        "expected": 80,
+        "actual": 86,
+        "matched": 69,
+        "precision": 0.8023255813953488,
+        "recall": 0.8625,
+        "locationAccuracy": 0.9130434782608695,
+        "severityAccuracy": 0.9565217391304348,
+        "categoryAccuracy": 1,
+        "f1": 0.8313253012048193,
+        "falsePositives": 17,
+        "falseNegatives": 11,
+        "meanLineDistance": 0.08695652173913043,
+        "confidenceBrierScore": 0.18831162790697673
+      },
+      "violations": [
+        "precision 0.802 is below 0.900",
+        "f1 0.831 is below 0.870",
+        "confidenceBrierScore 0.188 exceeds 0.160"
+      ],
+      "missingCases": []
+    }
+  },
+  "fullReview": {
+    "admitted": 0,
+    "unstarted": 42,
+    "launcherRefusal": "The independent corpus gate did not pass. Full review was not started.",
+    "latencyObservations": 0
+  },
+  "evaluatedPrGithubWriteAttempts": 0,
+  "artifactHashes": {
+    "corpus-v3/corpus.jsonl": "68907c3ddcb72b71f76ea650011408e89f9714577eee33c6a66442e4257ebbf5",
+    "corpus-v3/corpus-score.json": "137ca77121636b8e1941275ef6b53417c0c7ca30c97dbc1ce458b04376453133",
+    "full-review/slots.jsonl": "7859d234217f908416901755a8326a9d55bd70efed3e06b151fb1e6ed25b9568",
+    "full-review-score.json": "74d4d26ee4b2d09aa1d2236d45c4866536b99c62503620f411b63895ab377dfd"
+  },
+  "publicApiScoreRecalculation": "exact match",
+  "nearAnchorCategoryMismatchCases": [
+    "rust-unchecked-input",
+    "shell-unquoted-path",
+    "py-short-circuit-unsafe-order",
+    "ts-viewport-version-without-cleanup",
+    "kt-broad-catch-swallows-cancellation",
+    "test-delegate-bypasses-stub",
+    "action-old-input-on-new-version",
+    "request-transform-write",
+    "session-source-opaque-bootstrap",
+    "session-source-expired-refresh",
+    "unittest-discovery-wrong-start-directory"
+  ]
+}

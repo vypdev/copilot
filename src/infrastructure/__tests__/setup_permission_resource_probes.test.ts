@@ -57,6 +57,7 @@ describe('temporary permission resource probes', () => {
         } satisfies ResourceProbeContext };
     }
 
+    // This fixture flushes the real cleanup journal to disk before the mocked GitHub mutation.
     it.each(['repository', 'organization'] as const)('creates, reads and deletes a %s Variable', async scope => {
         const root = scope === 'organization' ? '/orgs/owner/actions/variables' : '/repos/owner/repo/actions/variables';
         let variable: { name: string; value: string } | undefined;
@@ -83,7 +84,7 @@ describe('temporary permission resource probes', () => {
         expect(calls.filter(call => call.startsWith('DELETE '))).toHaveLength(1);
         expect(variable).toBeUndefined();
         expect(await readdir(folder)).toEqual([]);
-    });
+    }, 20_000);
 
     it('creates a draft pull request on a disposable branch, reads it, closes it and removes the branch', async () => {
         const sha = 'a'.repeat(40);

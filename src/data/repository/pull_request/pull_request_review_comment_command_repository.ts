@@ -1,4 +1,5 @@
 import { toPullRequestReviewOperationError } from './pull_request_review_error_metadata';
+import { bugbotReviewHistoricalContent } from '../../../application/policies/bugbot_review_presentation_policy';
 import type {
   PullRequestReviewCommentCommandPort,
   PullRequestReviewCommentDraft,
@@ -21,6 +22,7 @@ export class PullRequestReviewCommentCommandRepository implements PullRequestRev
     private readonly createClient: GithubClientPort<GithubPullRequestReviewCommentCreateClient>,
     private readonly graphqlClient: GithubClientPort<GithubGraphqlTransportClient>,
     private readonly queryClient?: GithubClientPort<GithubPullRequestReviewCommentQueryClient>,
+    private readonly publisherLogin?: string,
   ) {}
 
   private async listExistingBodies(
@@ -28,20 +30,32 @@ export class PullRequestReviewCommentCommandRepository implements PullRequestRev
     repository: string,
     pullRequestNumber: number,
     token: string,
-  ): Promise<Set<string>> {
-    if (!this.queryClient) return new Set();
+    commitSha: string,
+  ): Promise<{ comments: Set<string>; reviews: Set<string> }> {
+    if (!this.queryClient || !this.publisherLogin?.trim()) return { comments: new Set(), reviews: new Set() };
+    const owned = (user: { login?: unknown } | null | undefined) => typeof user?.login === 'string'
+      && user.login.toLowerCase() === this.publisherLogin!.trim().toLowerCase();
     const client = this.queryClient.getClient(token);
     const bodies = new Set<string>();
     for await (const page of client.paginate.iterator(
       client.rest.pulls.listReviewComments,
       { owner, repo: repository, pull_number: pullRequestNumber },
     )) {
-      const comments = requireArrayPage<{ body?: unknown }>(page.data, 'existing pull request review comments');
+      const comments = requireArrayPage<{ body?: unknown; user?: { login?: unknown } | null }>(page.data, 'existing pull request review comments');
       for (const comment of comments) {
-        if (typeof comment.body === "string") bodies.add(comment.body);
+        if (owned(comment.user) && typeof comment.body === "string") bodies.add(comment.body);
       }
     }
-    return bodies;
+    const reviews = new Set<string>();
+    for await (const page of client.paginate.iterator(client.rest.pulls.listReviews,
+      { owner, repo: repository, pull_number: pullRequestNumber })) {
+      for (const review of requireArrayPage<{ body?: unknown; commit_id?: unknown; submitted_at?: unknown;
+        user?: { login?: unknown } | null }>(page.data, 'existing pull request reviews')) {
+        if (owned(review.user) && review.commit_id === commitSha && typeof review.submitted_at === 'string' && review.submitted_at
+          && typeof review.body === 'string') reviews.add(bugbotReviewHistoricalContent(review.body));
+      }
+    }
+    return { comments: bodies, reviews };
   }
 
   async createReviewWithComments(
@@ -61,27 +75,24 @@ export class PullRequestReviewCommentCommandRepository implements PullRequestRev
         repository,
         pullRequestNumber,
         token,
+        commitSha,
       );
       const pendingComments = comments.filter(
-        (comment) => !existingBodies.has(comment.body),
+        (comment) => !existingBodies.comments.has(comment.body),
       );
-      if (comments.length > 0 && pendingComments.length === 0) return undefined;
+      if (pendingComments.length === 0 && existingBodies.reviews.has(bugbotReviewHistoricalContent(body))) return undefined;
+      if (pendingComments.some(comment => !Number.isSafeInteger(comment.line) || comment.line <= 0)) {
+        throw new PullRequestReviewOperationError('publish-comments', { providerFailure: 'response-invalid' });
+      }
       const client = this.createClient.getClient(token);
       const reviewComments = pendingComments.map((comment) => ({
         body: comment.body,
         path: comment.path,
-        ...(comment.subjectType === 'file'
-          ? { subject_type: 'file' }
-          : {
-              line: comment.line,
-              side: comment.side ?? 'RIGHT',
-              ...(comment.startLine !== undefined
-                ? {
-                    start_line: comment.startLine,
-                    start_side: comment.startSide ?? comment.side ?? 'RIGHT',
-                  }
-                : {}),
-            }),
+        line: comment.line,
+        side: comment.side ?? 'RIGHT',
+        ...(comment.startLine !== undefined
+          ? { start_line: comment.startLine, start_side: comment.startSide ?? comment.side ?? 'RIGHT' }
+          : {}),
       }));
       const { data } = await client.rest.pulls.createReview({
         owner,

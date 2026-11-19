@@ -53,7 +53,8 @@
             "src/application/usecases/steps/commit/bugbot/bugbot_partition_aggregation.ts",
             "src/application/usecases/steps/commit/bugbot/bugbot_previous_findings_context.ts",
             "src/application/usecases/steps/commit/bugbot/bugbot_review_context.ts",
-            "src/application/policies/bugbot_python_literal_witness_policy.ts"
+            "src/application/policies/bugbot_python_literal_witness_policy.ts",
+            "src/application/policies/bugbot_mutation_cancellation_policy.ts"
           ],
           "mode": "each",
           "thresholdProfile": "exhaustive"

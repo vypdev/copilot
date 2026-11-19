@@ -13,6 +13,10 @@ build/deployment_recovery/index.js merge=binary
 build/api/**/*.d.ts merge=binary
 
 # Generated text must keep its canonical LF bytes on Windows checkouts.
+build/github_action/index.js text eol=lf
+build/cli/index.js text eol=lf
+build/api/index.js text eol=lf
+build/deployment_recovery/index.js text eol=lf
 specs/CATALOG.md text eol=lf
 .copilot/repository-profile.json text eol=lf
 .copilot/AGENT_GUIDE.md text eol=lf

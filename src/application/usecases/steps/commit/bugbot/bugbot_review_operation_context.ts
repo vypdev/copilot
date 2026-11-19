@@ -32,6 +32,7 @@ export interface BugbotContextSelectionContext {
 }
 
 export interface BugbotReviewOperationContext extends BugbotContextSelectionContext {
+  readonly signal?: AbortSignal;
   readonly locale: {
     readonly issue: string;
     readonly pullRequest: string;
@@ -102,6 +103,7 @@ export interface BugbotContextSelectionSource {
 }
 
 export interface BugbotReviewOperationSource extends BugbotContextSelectionSource {
+  readonly bugbotReviewSignal?: AbortSignal;
   readonly ai: BugbotContextSelectionSource['ai'] & {
     getAgentConfiguration(task: AgentTask): AgentConfiguration;
     getBugbotMinSeverity(): string;
@@ -158,6 +160,7 @@ export function projectBugbotReviewOperationContext(
 
   return Object.freeze({
     ...selection,
+    ...(source.bugbotReviewSignal ? { signal: source.bugbotReviewSignal } : {}),
     locale: Object.freeze({
       issue: source.locale.issue,
       pullRequest: source.locale.pullRequest,

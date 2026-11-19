@@ -16,10 +16,10 @@ export function buildOpenCodeExecutionPolicy(input: ProviderExecutionPolicyInput
     const agentName = fixer ? FIXER_AGENT : READONLY_AGENT;
     const permission = {
         '*': 'deny',
-        read: 'allow',
-        glob: 'allow',
-        grep: 'allow',
-        list: 'allow',
+        read: input.brokeredVerification ? 'deny' : 'allow',
+        glob: input.brokeredVerification ? 'deny' : 'allow',
+        grep: input.brokeredVerification ? 'deny' : 'allow',
+        list: input.brokeredVerification ? 'deny' : 'allow',
         lsp: 'deny',
         edit: fixer ? 'allow' : 'deny',
         bash: 'deny',

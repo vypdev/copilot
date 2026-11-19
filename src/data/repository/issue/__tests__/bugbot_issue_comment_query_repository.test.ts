@@ -95,9 +95,9 @@ describe('BugbotIssueCommentQueryRepository', () => {
     }));
   });
 
-  it('accepts an empty connection and normalizes absent optional fields', async () => {
+  it('accepts a verified empty connection and normalizes absent optional comment fields', async () => {
     const graphql = jest.fn()
-      .mockResolvedValueOnce({ repository: { issueOrPullRequest: {} } })
+      .mockResolvedValueOnce(connection(1, 0, false, null))
       .mockResolvedValueOnce({
         repository: { issueOrPullRequest: { comments: {
           nodes: [{ databaseId: 5 }],
@@ -109,9 +109,35 @@ describe('BugbotIssueCommentQueryRepository', () => {
     } as never);
 
     await expect(repository.listBugbotIssueCommentsBounded('owner', 'repo', 7, 'token'))
-      .resolves.toEqual(expect.objectContaining({ items: [] }));
+      .resolves.toMatchObject({ items: [], coverage: { status: 'complete', pagesFetched: 1 } });
     await expect(repository.listBugbotIssueCommentsBounded('owner', 'repo', 7, 'token'))
       .resolves.toEqual(expect.objectContaining({ items: [{ id: 5, body: null }] }));
+  });
+
+  it.each([
+    ['repository', { repository: null }],
+    ['pull request', { repository: { issueOrPullRequest: null } }],
+    ['comment connection', { repository: { issueOrPullRequest: {} } }],
+    ['comment nodes', { repository: { issueOrPullRequest: { comments: { nodes: null, pageInfo: { hasPreviousPage: false } } } } }],
+    ['pagination metadata', { repository: { issueOrPullRequest: { comments: { nodes: [] } } } }],
+    ['comment entry', { repository: { issueOrPullRequest: { comments: { nodes: [null], pageInfo: { hasPreviousPage: false } } } } }],
+  ])('does not report a failed %s read as a verified empty conversation', async (_missing, response) => {
+    const graphql = jest.fn().mockResolvedValue(response);
+    const repository = new BugbotIssueCommentQueryRepository({ getClient: () => ({ graphql }) } as never);
+
+    await expect(repository.listBugbotIssueCommentsBounded('owner', 'repo', 7, 'token'))
+      .resolves.toMatchObject({ items: [], coverage: { status: 'partial', pagesFetched: 1, limitReached: false } });
+  });
+
+  it('retains successfully read comments without claiming complete coverage when an older page is missing', async () => {
+    const graphql = jest.fn().mockResolvedValueOnce(connection(101, 1, true, 'older'))
+      .mockResolvedValueOnce({ repository: { issueOrPullRequest: null } });
+    const repository = new BugbotIssueCommentQueryRepository({ getClient: () => ({ graphql }) } as never);
+
+    await expect(repository.listBugbotIssueCommentsBounded('owner', 'repo', 7, 'token')).resolves.toMatchObject({
+      items: [{ id: 101 }],
+      coverage: { status: 'partial', pagesFetched: 2, itemsFetched: 1, itemsRetained: 1, limitReached: false },
+    });
   });
 
   it('fails closed on missing cursors and invalid provider identities', async () => {

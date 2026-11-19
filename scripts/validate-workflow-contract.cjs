@@ -27,7 +27,19 @@ const DEPLOYMENT_CONTINUATION_CONCURRENCY_GROUP = 'copilot-deployment-${{ github
 const DISTRIBUTED_COPILOT_ACTION = 'vypdev/copilot@v3';
 const CHECKOUT_ACTION = 'actions/checkout@v5';
 const ISOLATED_PNPM_DEST = '${{ runner.temp }}/setup-pnpm-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}';
-const QUALITY_RUNNER_BY_TRUST = '${{ fromJSON((github.event_name == \'merge_group\' || (github.event_name == \'pull_request\' && github.event.pull_request.head.repo.full_name != github.repository)) && \'["ubuntu-latest"]\' || \'["self-hosted","codex","Linux"]\') }}';
+const LINUX_CODEX_LABELS = ['self-hosted', 'codex', 'Linux'];
+const WINDOWS_FIXTURE_LABELS = ['self-hosted', 'Windows'];
+const SOURCE_CI_RUNNER = { group: 'vypdev', labels: LINUX_CODEX_LABELS };
+const SOURCE_CI_CONDITION = "${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}";
+const SOURCE_CI_WORKERS = {
+  'static-checks': 'STATIC_RESULT',
+  'build-package': 'BUILD_RESULT',
+  coverage: 'COVERAGE_RESULT',
+};
+const SOURCE_CI_GATE_CONDITION = SOURCE_CI_CONDITION.replace(
+  '${{ ', '${{ always() && (',
+).replace(' }}', ') }}');
+const PLATFORM_PNPM_DEST = ISOLATED_PNPM_DEST + '-${{ strategy.job-index }}';
 const ISOLATED_REPOWISE_VENV_NAME = 'repowise-venv-${{ github.run_id }}-${{ github.run_attempt }}-code-health';
 const ISOLATED_REPOWISE_REPORT_NAME = 'repowise-report-${{ github.run_id }}-${{ github.run_attempt }}-code-health';
 const CRLF_WHITESPACE = 'core.whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol';
@@ -128,7 +140,8 @@ const REPOSITORY_LOCALE_INPUTS = Object.freeze({
   'issues-locale': "${{ vars.ISSUES_LOCALE || '' }}",
   'pull-requests-locale': "${{ vars.PULL_REQUESTS_LOCALE || '' }}",
 });
-const REPOSITORY_BUGBOT_CONTEXT_EXCLUSIONS = 'build/*,specs/CATALOG.md';
+const REPOSITORY_BUGBOT_CONTEXT_EXCLUSIONS = 'build/*,specs/CATALOG.md' +
+  ',quality/bugbot/evidence/issue-*/*.jsonl,quality/bugbot/evidence/issue-*/*.log.gz';
 const REPOSITORY_BUGBOT_WORKFLOW_FILES = new Set([
   'copilot_issue.yml',
   'copilot_issue_comment.yml',
@@ -235,10 +248,7 @@ function runnerLabels(value) {
 
 function assertIsolatedPnpm(relativeFile, jobId, job) {
   const labels = runnerLabels(job['runs-on']);
-  const selfHostedCodex = labels.includes('self-hosted') && labels.includes('codex');
-  const dynamicQualityRunner = relativeFile === '.github/workflows/ci_check.yml'
-    && labels.includes(QUALITY_RUNNER_BY_TRUST);
-  if (!selfHostedCodex && !dynamicQualityRunner) return;
+  if (!labels.includes('self-hosted') || !labels.includes('codex')) return;
   for (const step of job.steps ?? []) {
     if (typeof step?.uses === 'string' && step.uses.startsWith('pnpm/action-setup@')
       && step.with?.dest !== ISOLATED_PNPM_DEST) {
@@ -300,18 +310,18 @@ function assertManualRepoWiseWorkflow(file, workflow) {
   }
 }
 
-function assertPlatformCoverageAndValidators(relativeFile, job, hosted = false) {
+function assertPlatformCoverageAndValidators(relativeFile, job, includesWindows = false) {
   const steps = job.steps ?? [];
   const coverageStep = steps.find(step => step?.name === 'Full platform coverage and acceptance budgets');
-  const coverageCondition = hosted ? "runner.os != 'Windows'" : undefined;
+  const coverageCondition = includesWindows ? "runner.os != 'Windows'" : undefined;
   if (coverageStep?.run !== 'pnpm run test:coverage' || coverageStep.if !== coverageCondition) {
     throw new Error(`${relativeFile} must retain full platform coverage and acceptance budgets.`);
   }
   let lastCoverage = coverageStep;
-  if (hosted) {
-    const repository = steps.find(step => step?.name === 'Full hosted Windows repository coverage and acceptance budgets');
-    const extension = steps.find(step => step?.name === 'Full hosted Windows extension coverage');
-    const failureLog = steps.find(step => step?.name === 'Preserve hosted Windows extension failure log');
+  if (includesWindows) {
+    const repository = steps.find(step => step?.name === 'Full Windows repository coverage and acceptance budgets');
+    const extension = steps.find(step => step?.name === 'Full Windows extension coverage');
+    const failureLog = steps.find(step => step?.name === 'Preserve Windows extension failure log');
     const repositoryCommands = [
       'pnpm exec jest --coverage --json --outputFile=coverage/setup-acceptance-jest.json --verbose=false',
       'node scripts/validate-coverage-budgets.cjs',
@@ -324,19 +334,19 @@ function assertPlatformCoverageAndValidators(relativeFile, job, hosted = false) 
     if (repository?.if !== "runner.os == 'Windows'" || repository.run?.trim() !== repositoryCommands
       || extension?.if !== "runner.os == 'Windows'" || extension.run?.trim() !== extensionCommands
       || steps.indexOf(extension) <= steps.indexOf(repository)) {
-      throw new Error(`${relativeFile} must retain ordered full hosted Windows repository and extension coverage.`);
+      throw new Error(`${relativeFile} must retain ordered full Windows repository and extension coverage.`);
     }
-    if (extension.id !== 'hosted_windows_extension_coverage' || extension['timeout-minutes'] !== 80
+    if (extension.id !== 'windows_extension_coverage' || extension['timeout-minutes'] !== 80
       || extension.env?.npm_config_cache !== '${{ runner.temp }}/copilot-windows-extension-npm'
-      || failureLog?.if !== "${{ always() && runner.os == 'Windows' && (steps.hosted_windows_extension_coverage.outcome == 'failure' || steps.hosted_windows_extension_coverage.outcome == 'cancelled') }}"
-      || failureLog?.uses !== 'actions/upload-artifact@v4' || failureLog.with?.name !== 'hosted-windows-extension-failure-log'
+      || failureLog?.if !== "${{ always() && runner.os == 'Windows' && (steps.windows_extension_coverage.outcome == 'failure' || steps.windows_extension_coverage.outcome == 'cancelled') }}"
+      || failureLog?.uses !== 'actions/upload-artifact@v4' || failureLog.with?.name !== 'windows-smoke-extension-failure-log'
       || failureLog.with?.path !== '${{ runner.temp }}/copilot-windows-extension.log'
       || failureLog.with?.['if-no-files-found'] !== 'warn' || failureLog.with?.['retention-days'] !== 1
       || steps.indexOf(failureLog) <= steps.indexOf(extension)) {
-      throw new Error(`${relativeFile} must bound hosted Windows extension coverage and retain its failure log.`);
+      throw new Error(`${relativeFile} must bound Windows extension coverage and retain its failure log.`);
     }
     if ([coverageStep, repository, extension].some(step => step.env?.COPILOT_JEST_WINDOWS_SERVICE_COVERAGE !== undefined)) {
-      throw new Error(`${relativeFile} must not recycle hosted Windows Jest workers at the service-runner limit.`);
+      throw new Error(`${relativeFile} must not recycle Windows Jest workers at the service-runner limit.`);
     }
     lastCoverage = extension;
   }
@@ -377,14 +387,44 @@ function assertPlatformHistoryCheckout(relativeFile, job) {
   }
 }
 
+function assertSourceCiJobs(file, workflow) {
+  const workers = Object.keys(SOURCE_CI_WORKERS);
+  const gate = workflow.jobs?.['ci-check'];
+  if (Object.keys(workflow.on ?? {}).sort().join(',') !== 'pull_request,push,workflow_dispatch'
+    || Object.keys(workflow.jobs ?? {}).sort().join(',') !== [...workers, 'ci-check'].sort().join(',')
+    || workers.some(id => workflow.jobs[id].if !== SOURCE_CI_CONDITION)
+    || gate?.if !== SOURCE_CI_GATE_CONDITION) {
+    throw new Error(`${file} must admit only same-repository pull requests, pushes and manual CI.`);
+  }
+  if (workers.some(id => workflow.jobs[id].needs !== undefined
+    || workflow.jobs[id]['continue-on-error'] !== undefined)
+    || workflow.name !== 'CI Check' || gate.name !== 'CI Check'
+    || !Array.isArray(gate.needs) || [...gate.needs].sort().join(',') !== [...workers].sort().join(',')) {
+    throw new Error(`${file} must preserve three independent CI jobs and the required CI Check gate.`);
+  }
+  const [step] = gate.steps ?? [];
+  if (gate['continue-on-error'] !== undefined || gate.steps?.length !== 1
+    || !gate.permissions || Object.keys(gate.permissions).length !== 0
+    || step.if !== undefined || step['continue-on-error'] !== undefined
+    || typeof step.run !== 'string'
+    || workers.some(id => step.env?.[SOURCE_CI_WORKERS[id]] !== '${{ needs.' + id + '.result }}')) {
+    throw new Error(`${file} must check the result of every CI job without credentials or checkout.`);
+  }
+}
+
 function assertRunner(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   if (path.basename(file) === commentContract.RUNTIME) return assertCommentWorkflowRuntime(file, workflow);
   if (commentContract.CALLBACKS.includes(path.basename(file))) return assertCommentWorkflowCaller(file, workflow);
+  const isSourceCi = relativeFile === '.github/workflows/ci_check.yml';
+  if (isSourceCi) assertSourceCiJobs(relativeFile, workflow);
   if (relativeFile === '.github/workflows/setup_platform_smoke.yml') {
     const jobIds = Object.keys(workflow.jobs ?? {}).sort();
     if (JSON.stringify(jobIds) !== JSON.stringify(['setup-platform-smoke', 'setup-self-hosted-codex-smoke', 'upload-windows-coverage', 'windows-startup-probe'])) {
-      throw new Error(`${relativeFile} must retain hosted and manually dispatched self-hosted platform fixture jobs and Windows coverage upload.`);
+      throw new Error(`${relativeFile} must retain the manually dispatched platform fixture jobs and Windows coverage upload.`);
+    }
+    if (Object.keys(workflow.on ?? {}).join(',') !== 'workflow_dispatch') {
+      throw new Error(`${relativeFile} must use manual dispatch from protected master for platform fixtures.`);
     }
     const uploadInput = workflow.on?.workflow_dispatch?.inputs?.upload_windows_coverage;
     if (uploadInput?.type !== 'boolean' || uploadInput.default !== false) {
@@ -406,13 +446,13 @@ function assertRunner(file, workflow) {
     if (relativeFile === '.github/workflows/setup_platform_smoke.yml') {
       if (jobId === 'windows-startup-probe') {
         const steps = job.steps ?? [];
-        if (job['runs-on'] !== 'windows-latest' || job['timeout-minutes'] !== 5
-          || job.if !== "${{ github.event_name == 'workflow_dispatch' && inputs.windows_startup_probe == true }}"
+        if (JSON.stringify(job['runs-on']) !== JSON.stringify(WINDOWS_FIXTURE_LABELS) || job['timeout-minutes'] !== 5
+          || job.if !== "${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' && inputs.windows_startup_probe == true }}"
           || job.needs || steps.length !== 3
           || steps[0]?.uses !== 'actions/checkout@v5' || steps[0]?.with?.['persist-credentials'] !== false
           || steps[1]?.uses !== 'actions/setup-node@v7' || steps[1]?.with?.['node-version'] !== '24.x'
           || steps[2]?.run !== 'node scripts/diagnose-windows-powershell-startup.cjs') {
-          throw new Error(`${relativeFile} must retain its bounded manual hosted Windows startup diagnostic without credentials or export.`);
+          throw new Error(`${relativeFile} must retain its bounded manual Windows startup diagnostic without credentials or export.`);
         }
         continue;
       }
@@ -421,40 +461,50 @@ function assertRunner(file, workflow) {
         const checkout = steps[0];
         const download = steps[1];
         const upload = steps[2];
-        if (job['runs-on'] !== 'ubuntu-latest' || job.needs !== 'setup-platform-smoke'
-          || job.if !== "${{ github.event_name == 'workflow_dispatch' && inputs.upload_windows_coverage == true }}"
+        if (JSON.stringify(job['runs-on']) !== JSON.stringify(LINUX_CODEX_LABELS) || job.needs !== 'setup-platform-smoke'
+          || job.if !== "${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' && inputs.upload_windows_coverage == true }}"
           || steps.length !== 3
           || checkout?.uses !== 'actions/checkout@v5'
           || checkout.with?.['persist-credentials'] !== false || checkout.with?.['fetch-depth'] !== 0
           || download?.uses !== 'actions/download-artifact@v4'
-          || download.with?.name !== 'hosted-windows-lcov' || download.with?.path !== 'coverage-windows'
+          || download.with?.name !== 'windows-smoke-lcov' || download.with?.path !== 'coverage-windows'
           || upload?.uses !== 'codecov/codecov-action@v6'
           || upload.with?.files !== './coverage-windows/lcov.info'
           || upload.with?.disable_search !== true || upload.with?.fail_ci_if_error !== true
           || upload.with?.flags !== 'windows' || upload.with?.token !== '${{ secrets.CODECOV_TOKEN }}') {
-          throw new Error(`${relativeFile} must upload hosted Windows coverage from a dependent Ubuntu job only after explicit manual opt-in.`);
+          throw new Error(`${relativeFile} must upload Windows coverage from a dependent Ubuntu job only after explicit manual opt-in.`);
         }
         continue;
       }
       if (jobId === 'setup-platform-smoke') {
-        const platforms = job.strategy?.matrix?.os;
-        if (job.if !== "${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && (inputs.windows_startup_probe != true || inputs.upload_windows_coverage == true)) }}"
-          || job['runs-on'] !== '${{ matrix.os }}'
-          || JSON.stringify(platforms) !== JSON.stringify(['ubuntu-latest', 'windows-latest', 'macos-latest'])) {
-          throw new Error(`${relativeFile} must use the PR or ordinary manual Ubuntu, Windows and macOS setup fixture matrix, independently of coverage export.`);
+        const platforms = [
+          { os: 'Ubuntu', labels: LINUX_CODEX_LABELS, timeout: 45 },
+          { os: 'Windows', labels: WINDOWS_FIXTURE_LABELS, timeout: 120 },
+          { os: 'macOS', labels: ['self-hosted', 'codex', 'macOS'], timeout: 60 },
+        ];
+        if (job.if !== "${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' && (inputs.windows_startup_probe != true || inputs.upload_windows_coverage == true) }}"
+          || job['runs-on'] !== '${{ matrix.labels }}' || job['timeout-minutes'] !== '${{ matrix.timeout }}'
+          || JSON.stringify(job.strategy?.matrix?.include) !== JSON.stringify(platforms) || job.strategy?.['fail-fast'] !== false) {
+          throw new Error(`${relativeFile} must use the manual Ubuntu, Windows and macOS setup fixture matrix on self-hosted runners, independently of coverage export.`);
         }
-        const hostedCoverage = assertPlatformCoverageAndValidators(relativeFile, job, true);
+        const pnpmSetup = (job.steps ?? []).find(step => step?.uses === 'pnpm/action-setup@v5');
+        const nodeSetup = (job.steps ?? []).find(step => step?.uses === 'actions/setup-node@v7');
+        if (pnpmSetup?.with?.dest !== PLATFORM_PNPM_DEST || nodeSetup?.with?.cache !== undefined
+          || nodeSetup?.with?.['package-manager-cache'] !== false) {
+          throw new Error(`${relativeFile} must isolate platform pnpm installation by job and disable dependency-cache backup.`);
+        }
+        const platformCoverage = assertPlatformCoverageAndValidators(relativeFile, job, true);
         assertWindowsJobNpm(relativeFile, job);
         assertPlatformHistoryCheckout(relativeFile, job);
-        const artifact = (job.steps ?? []).find(step => step?.name === 'Preserve hosted Windows coverage');
+        const artifact = (job.steps ?? []).find(step => step?.name === 'Preserve Windows coverage');
         if (artifact?.uses !== 'actions/upload-artifact@v4'
           || artifact.if !== "runner.os == 'Windows'"
-          || artifact.with?.name !== 'hosted-windows-lcov'
+          || artifact.with?.name !== 'windows-smoke-lcov'
           || artifact.with?.path !== 'coverage/lcov.info'
           || artifact.with?.['if-no-files-found'] !== 'error'
           || artifact.with?.['retention-days'] !== 1
-          || (job.steps ?? []).indexOf(artifact) <= (job.steps ?? []).indexOf(hostedCoverage)) {
-          throw new Error(`${relativeFile} must preserve hosted Windows coverage for dependent upload.`);
+          || (job.steps ?? []).indexOf(artifact) <= (job.steps ?? []).indexOf(platformCoverage)) {
+          throw new Error(`${relativeFile} must preserve Windows coverage for dependent upload.`);
         }
       } else {
         const expectedMatrix = [
@@ -506,7 +556,6 @@ function assertRunner(file, workflow) {
     let expected = ['self-hosted', 'codex'];
     if ((path.basename(file) === 'copilot_issue.yml' && jobId === 'issue-admission')
       || relativeFile.startsWith('setup/workflows/')
-      || relativeFile === '.github/workflows/copilot_credential_health.yml'
       || (/^\.github\/workflows\/(?:release|hotfix)_workflow\.yml$/.test(relativeFile) && jobId === 'publish-npm')) {
       expected = ['ubuntu-latest'];
     } else if (relativeFile === '.github/workflows/copilot_pull_request_approval.yml') {
@@ -516,30 +565,32 @@ function assertRunner(file, workflow) {
       expected = ['self-hosted', 'codex', 'Linux'];
     } else if (relativeFile === '.github/workflows/repowise.yml') {
       expected = ['self-hosted', 'codex', 'Linux'];
-    } else if (relativeFile === '.github/workflows/ci_check.yml') {
-      expected = [QUALITY_RUNNER_BY_TRUST];
     }
-    if (jobId === 'candidate-preflight' && MUTATION_WORKFLOW_MANIFEST.some(entry => relativeFile.endsWith(`/${entry.file}`))) expected = ['ubuntu-latest'];
     const labels = runnerLabels(job['runs-on']);
     const linuxOnly = JSON.stringify(expected) === JSON.stringify(['self-hosted', 'codex'])
-      && JSON.stringify(labels) === JSON.stringify(['self-hosted', 'codex', 'Linux']);
+      && JSON.stringify(labels) === JSON.stringify(LINUX_CODEX_LABELS);
+    if (isSourceCi && JSON.stringify(job['runs-on']) !== JSON.stringify(SOURCE_CI_RUNNER)) {
+      throw new Error(`${relativeFile} must use runs-on with the vypdev group and self-hosted, codex, Linux labels.`);
+    }
     if (JSON.stringify(labels) !== JSON.stringify(expected) && !linuxOnly) {
       throw new Error(`${relativeFile} job ${jobId} must use runs-on ${expected.join(', ')}.`);
     }
     assertIsolatedPnpm(relativeFile, jobId, job);
     assertRepoWiseTemporaryCleanup(relativeFile, job);
-    if (relativeFile === '.github/workflows/ci_check.yml'
-      || relativeFile === '.github/workflows/repowise.yml') {
+    if (isSourceCi && jobId === 'ci-check') continue;
+    if (isSourceCi || relativeFile === '.github/workflows/repowise.yml') {
       const ubuntuCheck = (job.steps ?? []).find(step => step?.name === 'Verify Ubuntu runner');
       if (ubuntuCheck?.run !== '. /etc/os-release && test "$ID" = ubuntu') {
         throw new Error(`${relativeFile} must verify Ubuntu on the selected runner.`);
       }
     }
-    if (relativeFile === '.github/workflows/ci_check.yml') {
+    if (isSourceCi) {
       const checkout = (job.steps ?? []).find(step => step?.uses === 'actions/checkout@v5');
       if (checkout?.with?.['fetch-depth'] !== 0 || checkout.with?.['persist-credentials'] !== false) {
-        throw new Error(`${relativeFile} must fetch full history without stored checkout credentials for the event-base diff check.`);
+        throw new Error(`${relativeFile} must fetch full history without stored checkout credentials for its CI jobs.`);
       }
+    }
+    if (isSourceCi && jobId === 'static-checks') {
       const diffStep = (job.steps ?? []).find(step => step?.name === 'Validate Git diff');
       if (!diffStep?.run?.includes(`git -c ${CRLF_WHITESPACE} diff --check "$base" HEAD -- . ':(exclude)build/**'`)) {
         throw new Error(`${relativeFile} must retain default whitespace checks alongside CRLF support.`);
@@ -591,7 +642,7 @@ function assertRepositoryBugbotContextExclusions(file, workflow) {
     for (const [stepIndex, step] of (job.steps ?? []).entries()) {
       if (!isCopilotAction(step)) continue;
       if (step.with?.['ai-ignore-files'] !== REPOSITORY_BUGBOT_CONTEXT_EXCLUSIONS) {
-        throw new Error(`${relativeFile} job ${jobId} step ${stepIndex + 1} must exclude generated build and specification catalog artifacts from Bugbot context exactly.`);
+        throw new Error(`${relativeFile} job ${jobId} step ${stepIndex + 1} must exclude generated build and specification catalog artifacts and recorded Bugbot pilot logs from Bugbot context exactly.`);
       }
     }
   }
@@ -637,7 +688,7 @@ function assertAgentWorkflowPermissions(file, workflow) {
   const nativeEvidenceWorkflow = ['copilot_commit.yml', 'copilot_pull_request.yml', 'copilot_pull_request_review_state.yml',
     'copilot_issue_comment.yml', 'copilot_pull_request_comment.yml', 'copilot_comment_runtime.yml'].includes(path.basename(file));
   const ordinaryPermissions = nativeEvidenceWorkflow
-    ? { checks: 'write', contents: 'read' }
+    ? { actions: 'read', checks: 'write', contents: 'read' }
     : { contents: 'read' };
   for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
     const expectedPermissions = path.basename(file) === 'copilot_issue.yml' && jobId === 'issue-admission'
@@ -1319,7 +1370,6 @@ function assertDeploymentContinuationWorkflow(file, workflow) {
 function assertMergeQueueWorkflowSupport(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   const required = new Set([
-    '.github/workflows/ci_check.yml',
     '.github/workflows/copilot_pull_request_merge_queue.yml',
     'setup/workflows/copilot_pull_request_merge_queue.yml',
   ]);

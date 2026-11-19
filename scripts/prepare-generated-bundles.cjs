@@ -16,7 +16,8 @@ const bundlePaths = ['github_action', 'deployment_recovery', 'cli', 'api']
 
 for (const bundlePath of bundlePaths) {
   const source = readFileSync(bundlePath, 'utf8');
-  const normalized = source.replace(/[\t ]+$/gmu, '');
+  // Canonical bytes must not depend on a contributor's core.autocrlf setting.
+  const normalized = source.replace(/\r\n/gu, '\n').replace(/[\t ]+$/gmu, '');
   if (normalized !== source) writeFileSync(bundlePath, normalized);
 }
 

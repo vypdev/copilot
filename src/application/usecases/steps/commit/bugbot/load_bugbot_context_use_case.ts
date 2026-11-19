@@ -66,6 +66,7 @@ export async function loadBugbotContext(
   ports: BoundBugbotContextReadPorts,
   resolvedPreflight?: BugbotContextPreflight,
   reviewSource?: BugbotReviewSourcePort,
+  pinLiveBase = false,
 ): Promise<BugbotContext> {
   const preflight = resolvedPreflight ?? await preflightBugbotContext(request, ports);
   const { selectionCoverage, selectionReason } = preflight;
@@ -158,6 +159,16 @@ export async function loadBugbotContext(
   }
   if (completeConversation) conversationContext = buildReviewConversationContext(issueComments,
     pullRequestCommentsByNumber, request.trustedAuthorLogin, true);
+  // Framed source acquisition already supplies this proof. Ordinary receipt
+  // reviews acquire it once here, before any detector or verifier is started.
+  if (pinLiveBase && canonicalPullRequest && !canonicalPullRequest.baseRefSha) {
+    if (!ports.getSourceBoundPullRequest) throw new BugbotReviewCompletenessError('capability');
+    const current = await ports.getSourceBoundPullRequest(canonicalPullRequest.number);
+    if (!sameBugbotFramedPullRequest(canonicalPullRequest, current) || !current.baseRefSha) {
+      throw new BugbotReviewCompletenessError('identity');
+    }
+    canonicalPullRequest = current;
+  }
   const repositoryRules = await ports.loadRules(
     prContext?.prFiles
       .map((file) => file.filename)
@@ -200,6 +211,7 @@ export async function loadBugbotContext(
   logDebugInfo(
     `LoadBugbotContext: selection=${selectionReason}, coverage=${coverage.status}, existing findings=${Object.keys(parsedComments.existingByFindingId).length}, retained previous findings=${previousContext.selected.length}, diff files=${prContext?.changes?.length ?? 0}, diff partitions=${diffPlan.partitions.length}.`,
   );
+  const commentsByIdentity = new Map(pullRequestComments.map(comment => [comment.identity, comment]));
   return {
     ...(framedSource ? { reviewFramedSource: framedSource } : {}),
     existingByFindingId: parsedComments.existingByFindingId,
@@ -215,10 +227,15 @@ export async function loadBugbotContext(
     reviewDiffIgnoredFileCount: diffPlan.ignored,
     reviewConversationBlock: conversationContext.block,
     prContext,
-    unresolvedFindingsWithBody: previousContext.selected.map((finding) => ({
-      id: finding.id,
-      fullBody: finding.fullBody,
-    })),
+    unresolvedFindingsWithBody: previousContext.selected.map((finding) => {
+      const identity = parsedComments.existingByFindingId[finding.id]?.pullRequest?.commentIdentity;
+      const comment = identity ? commentsByIdentity.get(identity) : undefined;
+      return {
+        id: finding.id,
+        fullBody: finding.fullBody,
+        ...(comment?.path && comment.line ? { anchor: { path: comment.path, line: comment.line } } : {}),
+      };
+    }),
     reviewRulesBlock: ruleSet.promptBlock,
     reviewRuleSources: [...ruleSet.sources],
     omittedReviewRules: ruleSet.omitted,

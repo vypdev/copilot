@@ -29,6 +29,7 @@ import { decideIssueStart } from '../../domain/issue_start_policy';
 
 
 export class Execution {
+    bugbotReviewSignal?: AbortSignal;
     debug: boolean = false;
     welcome: Welcome | undefined;
     /**

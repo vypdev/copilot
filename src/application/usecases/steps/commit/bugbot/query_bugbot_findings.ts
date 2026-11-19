@@ -17,7 +17,9 @@ import { logInfo } from '../../../../ports/logging_ports';
 import { verifyGeneratedLiteralFindings } from './verify_generated_literal_findings';
 
 export interface BugbotLiteralVerificationOptions {
+    readonly observeRetry?: () => Promise<void>;
     readonly enabled: boolean;
+    readonly evidenceContext?: string;
     readonly observePrompt?: (prompt: string) => void;
     readonly observeResponse?: (response: unknown) => void;
 }
@@ -34,23 +36,27 @@ export async function queryBugbotFindings(
     prompt: string,
     targetLocale: string,
     verification?: BugbotLiteralVerificationOptions,
+    signal?: AbortSignal,
 ): Promise<unknown> {
+    signal?.throwIfAborted();
     const response = await repository.query({
         configuration,
         agentId: AGENT_PLAN,
         prompt,
         options: bugbotQueryOptions(BUGBOT_RESPONSE_SCHEMA),
+        ...(signal ? { signal } : {}),
     });
+    signal?.throwIfAborted();
     verification?.observeResponse?.(response);
     if (response == null || typeof response !== 'object' || Array.isArray(response)) {
-        return verification?.enabled ? verifyGeneratedLiteralFindings(repository, configuration, prompt, response, targetLocale, verification.observePrompt, verification.observeResponse) : response;
+        return verification?.enabled ? verifyGeneratedLiteralFindings(repository, configuration, prompt, response, targetLocale, verification.observePrompt, verification.observeResponse, signal) : response;
     }
     const validation = validateAgentOutputLocale(response, targetLocale);
     if (validation.kind === 'invalid') {
         throw new ApplicationError('locale.output-invalid', agentOutputLocaleFailureMessage(validation));
     }
     return verification?.enabled
-        ? verifyGeneratedLiteralFindings(repository, configuration, prompt, validation.payload, targetLocale, verification.observePrompt, verification.observeResponse)
+        ? verifyGeneratedLiteralFindings(repository, configuration, prompt, validation.payload, targetLocale, verification.observePrompt, verification.observeResponse, signal)
         : validation.payload;
 }
 
@@ -62,9 +68,9 @@ export interface BugbotPartitionAttestation {
 
 /** Shared by whole-plan preflight and the actual identical partition queries. */
 export function buildBugbotPartitionQueryRequest(configuration: Readonly<AgentConfiguration>, prompt: string,
-    expected: BugbotPartitionAttestation): FindingsQueryRequest {
+    expected: BugbotPartitionAttestation, signal?: AbortSignal): FindingsQueryRequest {
     return { configuration, agentId: AGENT_PLAN, prompt,
-        options: bugbotQueryOptions(buildBugbotPartitionResponseSchema(expected)) };
+        options: bugbotQueryOptions(buildBugbotPartitionResponseSchema(expected)), ...(signal ? { signal } : {}) };
 }
 
 /** Queries one immutable diff partition and rejects stale, replayed, or malformed attestations. */
@@ -75,11 +81,14 @@ export async function queryBugbotPartitionFindings(
     targetLocale: string,
     expected: BugbotPartitionAttestation,
     verification?: BugbotLiteralVerificationOptions,
+    signal?: AbortSignal,
 ): Promise<Readonly<Record<string, unknown>>> {
     for (let attempt = 1; attempt <= MAX_PARTITION_QUERY_ATTEMPTS; attempt += 1) {
+        signal?.throwIfAborted();
         try {
             if (attempt > 1) verification?.observePrompt?.(prompt);
-            const response = await repository.query(buildBugbotPartitionQueryRequest(configuration, prompt, expected));
+            const response = await repository.query(buildBugbotPartitionQueryRequest(configuration, prompt, expected, signal));
+            signal?.throwIfAborted();
             verification?.observeResponse?.(response);
             const validation = validateAgentOutputLocale(response, targetLocale);
             if (validation.kind === 'invalid') {
@@ -95,14 +104,17 @@ export async function queryBugbotPartitionFindings(
                 );
             }
             return verification?.enabled
-                ? await verifyGeneratedLiteralFindings(repository, configuration, prompt, validation.payload, targetLocale, verification.observePrompt, verification.observeResponse) as Readonly<Record<string, unknown>>
+                ? await verifyGeneratedLiteralFindings(repository, configuration, verification.evidenceContext ?? prompt,
+                    validation.payload, targetLocale, verification.observePrompt, verification.observeResponse, signal) as Readonly<Record<string, unknown>>
                 : validation.payload;
         } catch (error) {
+            if (signal?.aborted) throw error;
             if (attempt === MAX_PARTITION_QUERY_ATTEMPTS && (error instanceof BugbotResponseFailure || error instanceof BugbotVerificationResponseFailure)) {
                 throw new ApplicationError('agent.failed', 'The completed Bugbot partition responses failed completed-response validation after three attempts.',
                     { retryable: false, recovery: { id: 'bugbot-partition-query-exhausted', variables: { reason: error.reason, attempts: 3 } } });
             }
             if (attempt === MAX_PARTITION_QUERY_ATTEMPTS || (error instanceof BugbotReviewCompletenessError && error.facts.resource !== 'receipt')) throw error;
+            await verification?.observeRetry?.();
             logInfo(`Bugbot reviewer retrying one partition query (${attempt + 1}/${MAX_PARTITION_QUERY_ATTEMPTS}) after unusable agent output.`);
         }
     }

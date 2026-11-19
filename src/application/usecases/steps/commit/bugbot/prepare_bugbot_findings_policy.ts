@@ -1,3 +1,4 @@
+import type { BugbotCandidateTrace } from './bugbot_candidate_trace';
 import { deduplicateFindings } from './deduplicate_findings';
 import { fileMatchesIgnorePatterns } from '../../../../policies/file_ignore_policy';
 import { applyCommentLimit, type ApplyLimitResult } from './limit_comments';
@@ -31,7 +32,7 @@ export const MAX_AGENT_FINDINGS = 500;
 export const MAX_AGENT_RESOLVED_FINDINGS = 500;
 export const MIN_AGENT_FINDING_CONFIDENCE = 0.70;
 
-export function normalizeBugbotResponse(response: unknown, maxFindings: number = MAX_AGENT_FINDINGS): {
+export function normalizeBugbotResponse(response: unknown, maxFindings: number = MAX_AGENT_FINDINGS, trace?: BugbotCandidateTrace): {
     findings: BugbotFinding[];
     resolvedFindingIds: Set<string>;
     resolvedFindingResolutions: ReadonlyMap<string, BugbotFindingResolution>;
@@ -41,7 +42,7 @@ export function normalizeBugbotResponse(response: unknown, maxFindings: number =
     if (!Array.isArray(payload.findings)) return undefined;
     const resolvedFindingResolutions = normalizeResolvedFindings(payload.resolved_findings);
     return {
-        findings: normalizeFindings(payload.findings, maxFindings),
+        findings: normalizeFindings(payload.findings, maxFindings, trace),
         resolvedFindingIds: new Set(resolvedFindingResolutions.keys()),
         resolvedFindingResolutions,
     };
@@ -52,13 +53,19 @@ export function prepareFindings(
     ignorePatterns: readonly string[],
     minSeverityValue: string | undefined,
     maxComments: number,
+    trace?: BugbotCandidateTrace,
 ): ApplyLimitResult & { activeFindings: readonly BugbotFinding[] } {
     const minSeverity = normalizeMinSeverity(minSeverityValue);
-    const filteredFindings = deduplicateFindings(findings
-        .filter(finding => finding.file == null || String(finding.file).trim() === '' || isSafeFindingFilePath(finding.file))
-        .filter(finding => !fileMatchesIgnorePatterns(finding.file, ignorePatterns))
-        .filter(finding => finding.confidence === undefined || finding.confidence >= MIN_AGENT_FINDING_CONFIDENCE)
-        .filter(finding => meetsMinSeverity(finding.severity, minSeverity)))
+    const eligible = findings.filter(finding => {
+        const rejection = finding.file != null && String(finding.file).trim() !== '' && !isSafeFindingFilePath(finding.file) ? 'unsafe-path'
+            : fileMatchesIgnorePatterns(finding.file, ignorePatterns) ? 'ignored'
+            : finding.confidence !== undefined && !(finding.confidence >= MIN_AGENT_FINDING_CONFIDENCE) ? 'confidence'
+            : !meetsMinSeverity(finding.severity, minSeverity) ? 'severity'
+            : undefined;
+        if (rejection) trace?.classify(finding, rejection);
+        return rejection === undefined;
+    });
+    const filteredFindings = deduplicateFindings(eligible, (finding, retained) => trace?.classify(finding, 'duplicate', retained))
         .map((finding, index) => ({ finding, index }))
         .sort((left, right) => severityLevel(right.finding.severity) - severityLevel(left.finding.severity)
             || (right.finding.confidence ?? 0) - (left.finding.confidence ?? 0)
@@ -67,11 +74,12 @@ export function prepareFindings(
     return { ...applyCommentLimit(filteredFindings, maxComments), activeFindings: filteredFindings };
 }
 
-function normalizeFindings(findings: readonly unknown[], maxFindings: number): BugbotFinding[] {
+function normalizeFindings(findings: readonly unknown[], maxFindings: number, trace?: BugbotCandidateTrace): BugbotFinding[] {
     const boundedMaximum = Number.isSafeInteger(maxFindings) && maxFindings > 0
         ? maxFindings
         : MAX_AGENT_FINDINGS;
-    return findings.slice(0, boundedMaximum).flatMap(value => {
+    return findings.slice(0, boundedMaximum).flatMap((value, index) => {
+        trace?.normalize(index);
         if (!isRecord(value)) return [];
         const normalizedId = typeof value.id === 'string' ? normalizeFindingIdForMarker(value.id) : null;
         const title = boundedText(value.title, 500);
@@ -103,26 +111,26 @@ function normalizeFindings(findings: readonly unknown[], maxFindings: number): B
         const symbol = boundedText(value.symbol, 500) || undefined;
         const codeSnippet = boundedText(value.codeSnippet, 2_000) || undefined;
         const suggestedCode = normalizeSuggestedCode(value.suggestedCode);
-        return normalizedId == null
-            ? []
-            : [{
-                id: normalizedId,
-                title,
-                description,
-                ...(file ? { file } : {}),
-                ...(line ? { line } : {}),
-                ...(endLine ? { endLine } : {}),
-                ...(severity ? { severity } : {}),
-                ...(confidence !== undefined ? { confidence } : {}),
-                ...(category ? { category } : {}),
-                ...(evidence ? { evidence } : {}),
-                ...(suggestion ? { suggestion } : {}),
-                ...(symbol ? { symbol } : {}),
-                ...(codeSnippet ? { codeSnippet } : {}),
-                ...(suggestedCode ? { suggestedCode } : {}),
-                fingerprint: buildFindingFingerprint({ file, line, title, description, suggestion }),
-                semanticFingerprint: buildSemanticFindingFingerprint({ category, symbol, codeSnippet, title }),
-            }];
+        const finding: BugbotFinding = {
+            id: normalizedId,
+            title,
+            description,
+            ...(file ? { file } : {}),
+            ...(line ? { line } : {}),
+            ...(endLine ? { endLine } : {}),
+            ...(severity ? { severity } : {}),
+            ...(confidence !== undefined ? { confidence } : {}),
+            ...(category ? { category } : {}),
+            ...(evidence ? { evidence } : {}),
+            ...(suggestion ? { suggestion } : {}),
+            ...(symbol ? { symbol } : {}),
+            ...(codeSnippet ? { codeSnippet } : {}),
+            ...(suggestedCode ? { suggestedCode } : {}),
+            fingerprint: buildFindingFingerprint({ file, line, title, description, suggestion }),
+            semanticFingerprint: buildSemanticFindingFingerprint({ category, symbol, codeSnippet, title }),
+        };
+        trace?.normalize(index, finding);
+        return [finding];
     });
 }
 

@@ -47,6 +47,7 @@ jobs:
           chore-tree: ${{ vars.CHORE_TREE || 'chore' }}
           bugbot-severity: ${{ vars.BUGBOT_SEVERITY || 'low' }}
           bugbot-dry-run: ${{ vars.BUGBOT_DRY_RUN || 'false' }}
+          bugbot-verification-mode: ${{ vars.BUGBOT_VERIFICATION_MODE || 'disabled' }}
           ai-ignore-files: ${{ vars.AI_IGNORE_FILES || 'build/*' }}
           repository-locale: ${{ vars.REPOSITORY_LOCALE || 'en-US' }}
           pull-requests-locale: ${{ vars.PULL_REQUESTS_LOCALE || '' }}

@@ -109,7 +109,7 @@ jobs:
   candidate-preflight:
     name: Inspect unpublished candidate replacement
     if: ${{ inputs.mode == 'replace' }}
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, codex, Linux]
     needs: validate
     timeout-minutes: 5
     permissions:

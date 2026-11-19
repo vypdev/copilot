@@ -43,6 +43,7 @@ import {
 } from '../../domain/implementation_plan';
 
 import { renderStagedRolloutCard, type StagedRolloutCardProjection } from './staged_rollout_presentation_policy';
+import { readProgressWorkAssessment, renderProgressWorkAssessment, type ProgressWorkAssessment, type ProgressWorkLinks } from './progress_pending_work_policy';
 
 export type PlanPublicationProjection = { readonly kind: 'plan'; readonly plan: ImplementationPlan };
 
@@ -53,6 +54,9 @@ export interface ProgressPublicationProjection {
     readonly remaining?: string;
     readonly branch?: string;
     readonly developmentBranch?: string;
+    readonly pendingWork?: ProgressWorkAssessment;
+    readonly workLinks?: ProgressWorkLinks;
+    readonly comparisonBaseBranch?: string;
 }
 
 export type SemanticStatusProjection = PlanPublicationProjection | ProgressPublicationProjection | StagedRolloutCardProjection;
@@ -125,6 +129,7 @@ export interface SemanticPublicationContext {
     readonly target?: PublicationTarget;
     readonly correlationId?: string;
     readonly botLogin?: string;
+    readonly progressLinks?: Omit<ProgressWorkLinks, 'issueNumber'>;
 }
 
 export interface SemanticPublicationComment {
@@ -139,7 +144,7 @@ export function selectSemanticStatusIntents(context: SemanticPublicationContext)
         if (!payload) return [];
         const plan = planIntent(result.id, payload, context.locale);
         if (plan) return [plan];
-        const progress = progressIntent(result.id, payload, context.locale);
+        const progress = progressIntent(result.id, payload, context.locale, context.progressLinks);
         return progress ? [progress] : [];
     }));
 }
@@ -391,6 +396,8 @@ export function renderSemanticStatus(
         return `${marker}\n\n${renderImplementationPlanCard(intent.projection.plan, messages)}`;
     }
     const progress = intent.projection.progress;
+    const { pendingWork, workLinks } = intent.projection;
+    if (pendingWork && workLinks) return `${marker}\n\n${renderProgressWorkAssessment(progress, pendingWork, intent.locale, workLinks)}`;
     const completeAssessment = intent.sourceVersion.includes(':scope:');
     const state = progress <= 0 ? 'not-started' : progress >= 100 ? 'complete' : 'in-progress';
     const lines = [
@@ -554,7 +561,7 @@ function translationProjection(value: unknown): TranslationPublication | undefin
     });
 }
 
-function progressIntent(id: string, payload: Record<string, unknown>, locale: string): SemanticStatusIntent | undefined {
+function progressIntent(id: string, payload: Record<string, unknown>, locale: string, links?: Omit<ProgressWorkLinks, 'issueNumber'>): SemanticStatusIntent | undefined {
     const sourceHeadSha = canonicalGitObjectId(payload.sourceHeadSha);
     const branch = typeof payload.branch === 'string' ? payload.branch.trim() : '';
     if (id !== 'CheckProgressUseCase'
@@ -568,6 +575,9 @@ function progressIntent(id: string, payload: Record<string, unknown>, locale: st
     if (payload.scopeManifestDigest !== undefined && (!scopeDigest || sourceHeadSha.length !== 40)) return undefined;
     if (scopeDigest && [payload.summary, typeof payload.remaining === 'string' ? payload.remaining : '']
         .some(text => [...text].length > MAX_PROGRESS_ASSESSMENT_POINTS)) return undefined;
+    const pendingWork = scopeDigest && links ? readProgressWorkAssessment(payload.pendingWork, sourceHeadSha, scopeDigest, progress) : undefined;
+    if (payload.pendingWork !== undefined && links && !pendingWork) return undefined;
+    if (pendingWork?.baseSha && pendingWork.baseSha !== payload.baseSha) return undefined;
     const projection = Object.freeze<ProgressPublicationProjection>({
         kind: 'progress',
         progress,
@@ -576,6 +586,9 @@ function progressIntent(id: string, payload: Record<string, unknown>, locale: st
             ? { remaining: payload.remaining.trim() }
             : {}),
         branch,
+        ...(pendingWork && links ? { pendingWork, workLinks: { ...links, issueNumber: payload.issueNumber },
+            ...(typeof payload.comparisonBaseBranch === 'string' && payload.comparisonBaseBranch.trim()
+                ? { comparisonBaseBranch: payload.comparisonBaseBranch } : {}) } : {}),
         ...(typeof payload.developmentBranch === 'string' && payload.developmentBranch.trim()
             ? { developmentBranch: payload.developmentBranch.trim() }
             : {}),

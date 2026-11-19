@@ -3,13 +3,12 @@ import { execFileSync } from 'node:child_process';
 import {
     existsSync,
     mkdirSync,
-    mkdtempSync,
     readFileSync,
+    readdirSync,
     realpathSync,
     rmSync,
     writeFileSync,
 } from 'node:fs';
-import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { buildProviderExecutionPolicy } from '../../application/policies/agent_execution/agent_execution_policy_dispatcher';
 import type { AgentArtifactTemplate } from '../../application/policies/agent_execution/provider_execution_policy';
@@ -31,6 +30,7 @@ import { makeWindowsRuntimePathPrivate } from './windows_runtime_acl';
 import { admitAgentSourceSnapshot } from '../../application/policies/agent_source_snapshot_policy';
 import { SddSourceContextFailure, type AgentSourceSnapshot } from '../../domain/agent_source_snapshot';
 import { prepareSourceSnapshotWorkspace } from './agent_source_snapshot_workspace';
+import { createPrivateAgentExecutionRoot } from './agent_private_install_root';
 
 export interface AgentExecutionPlanningRequest {
     readonly configuration: AgentConfiguration;
@@ -86,6 +86,18 @@ export class AgentExecutionPlanner {
     constructor(private readonly system: AgentExecutionPlanningSystem = DEFAULT_SYSTEM) {}
 
     prepare(request: AgentExecutionPlanningRequest): AgentExecutionPlan {
+        return this.preparePlan(request);
+    }
+
+    prepareBrokeredVerification(request: AgentExecutionPlanningRequest, emptyWorkspace: string): AgentExecutionPlan {
+        const workspace = realpathSync(emptyWorkspace);
+        if (request.capability !== 'findings' || request.sourceSnapshot || readdirSync(workspace).length !== 0) {
+            throw new AgentCliError('Brokered verification requires an empty read-only workspace.', 'configuration');
+        }
+        return this.preparePlan(request, workspace);
+    }
+
+    private preparePlan(request: AgentExecutionPlanningRequest, brokeredWorkspace?: string): AgentExecutionPlan {
         const startedAt = performance.now();
         const limits = validateLimits(request);
         const sourceEnvironment = request.environment ?? process.env;
@@ -93,7 +105,7 @@ export class AgentExecutionPlanner {
         let stage: AgentExecutionPreflightStage = 'workspace';
         try {
             const sourceSnapshot = admitAgentSourceSnapshot(request.sourceSnapshot, request.capability);
-            let workspace = this.system.resolveWorkspace(request.cwd ?? process.cwd());
+            let workspace = brokeredWorkspace ?? this.system.resolveWorkspace(request.cwd ?? process.cwd());
             stage = 'ambient-configuration';
             rejectAmbientProviderConfiguration(request.configuration.provider, workspace);
             stage = 'manifest';
@@ -121,8 +133,7 @@ export class AgentExecutionPlanner {
                 this.system.readVersion(executable, request.configuration.provider, safeEnvironment),
             );
             stage = 'artifacts';
-            runtimeDirectory = mkdtempSync(join(tmpdir(), 'copilot-agent-runtime-'));
-            makeWindowsRuntimePathPrivate(runtimeDirectory, true);
+            runtimeDirectory = createPrivateAgentExecutionRoot();
             if (request.configuration.provider === 'codex') {
                 for (const kind of ['roaming', 'local']) {
                     const directory = join(runtimeDirectory, 'shell', kind);
@@ -149,6 +160,7 @@ export class AgentExecutionPlanner {
                 workspace,
                 runtimeDirectory,
                 ...(request.outputSchema ? { outputSchema: request.outputSchema } : {}),
+                ...(brokeredWorkspace ? { brokeredVerification: true as const } : {}),
             });
             stage = 'artifacts';
             const artifacts = materializeArtifacts([
@@ -180,6 +192,7 @@ export class AgentExecutionPlanner {
                 approval: 'never',
                 sessionPersistence: false,
                 output: providerPolicy.output,
+                ...(brokeredWorkspace ? { brokeredVerification: true as const } : {}),
                 timeoutMs: remainingSourceTimeout(sourceSnapshot, startedAt, limits.timeoutMs),
                 maxPromptBytes: limits.maxPromptBytes,
                 maxOutputBytes: limits.maxOutputBytes,
@@ -205,6 +218,11 @@ export class AgentExecutionPlanner {
                 'configuration',
             );
             rejected.preflightStage = stage;
+            if (stage === 'artifacts' && error && typeof error === 'object' && 'code' in error) {
+                if (error.code === 'ENOSPC' || error.code === 'EDQUOT') rejected.preflightDiagnostic = 'artifact-storage-full';
+                if (error.code === 'EACCES' || error.code === 'EPERM' || error.code === 'EROFS') rejected.preflightDiagnostic = 'artifact-access-denied';
+                if (error.code === 'ENOENT' || error.code === 'ENOTDIR') rejected.preflightDiagnostic = 'artifact-path-unavailable';
+            }
             throw rejected;
         }
     }

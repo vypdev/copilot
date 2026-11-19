@@ -47,6 +47,7 @@ export class BugbotIssueCommentQueryRepository {
       const pages: BugbotIssueComment[][] = [];
       let cursor: string | null = null;
       let limitReached = false;
+      let incompleteConnection = false;
       do {
         const result: BugbotIssueCommentQueryResult = await client.graphql<BugbotIssueCommentQueryResult>(
           `query ($owner: String!, $repository: String!, $issueNumber: Int!, $cursor: String) {
@@ -70,7 +71,12 @@ export class BugbotIssueCommentQueryRepository {
           { owner, repository, issueNumber, cursor },
         );
         const comments: BugbotIssueCommentConnection | null | undefined = result.repository?.issueOrPullRequest?.comments;
-        const page = (comments?.nodes ?? []).flatMap((comment: BugbotIssueCommentNode | null) => {
+        const hasNodes = Array.isArray(comments?.nodes);
+        const nodes = hasNodes ? comments?.nodes ?? [] : [];
+        if (!hasNodes || nodes.includes(null) || typeof comments?.pageInfo?.hasPreviousPage !== 'boolean') {
+          incompleteConnection = true;
+        }
+        const page = nodes.flatMap((comment: BugbotIssueCommentNode | null) => {
           if (!comment) return [];
           if (!Number.isSafeInteger(comment.databaseId) || Number(comment.databaseId) <= 0) {
             throw new Error('Issue comment identity is unavailable.');
@@ -99,7 +105,7 @@ export class BugbotIssueCommentQueryRepository {
         items,
         coverage: {
           source: 'issue-comments',
-          status: limitReached ? 'partial' : 'complete',
+          status: limitReached || incompleteConnection ? 'partial' : 'complete',
           pagesFetched: pages.length,
           itemsFetched: items.length,
           itemsRetained: items.length,

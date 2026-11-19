@@ -1,5 +1,13 @@
 export type BugbotReviewEffort = 'low' | 'default' | 'high' | 'smart';
 export type BugbotPublicationMode = 'publish' | 'dry-run';
+export interface BugbotShadowConfiguration {
+    readonly provider?: string;
+    readonly modelProvider?: string;
+    readonly model?: string;
+    readonly effort?: string;
+    readonly allowedModelProviders?: string;
+    readonly allowedModels?: string;
+}
 export interface BugbotReviewConfiguration {
     readonly publicationMode: BugbotPublicationMode;
     readonly effort: BugbotReviewEffort;
@@ -9,6 +17,7 @@ export interface BugbotReviewConfiguration {
     readonly telemetry: boolean;
     readonly failOnUnresolved: boolean;
     readonly organizationRules: readonly string[];
+    readonly shadowVerification?: BugbotShadowConfiguration;
 }
 export declare const DEFAULT_BUGBOT_REVIEW_CONFIGURATION: BugbotReviewConfiguration;
 export declare function normalizeBugbotReviewConfiguration(value: Partial<BugbotReviewConfiguration> | undefined): BugbotReviewConfiguration;

@@ -1,4 +1,5 @@
 import { toPullRequestReviewOperationError } from '../../../../../../data/repository/pull_request/pull_request_review_error_metadata';
+import { PullRequestReviewCommentCommandRepository } from '../../../../../../data/repository/pull_request/pull_request_review_comment_command_repository';
 /**
  * Unit tests for publishFindings: issue comments (add/update), PR review comments (when file in prFiles), overflow.
  */
@@ -112,6 +113,35 @@ describe("publishFindings", () => {
         mockUpdatePullRequestReview.mockReset().mockResolvedValue(undefined);
     });
 
+    it('publishes mixed findings through a strict batch-review provider without file-level drafts', async () => {
+        const createReview = jest.fn(async (request: any) => {
+            if (request.comments?.some((comment: any) => 'subject_type' in comment || !Number.isInteger(comment.line))) {
+                throw { status: 422 };
+            }
+            return { data: { id: 17 } };
+        });
+        const repository = new PullRequestReviewCommentCommandRepository(
+            { getClient: () => ({ rest: { pulls: { createReview, updateReview: jest.fn() } } }) },
+            { getClient: () => ({ graphql: jest.fn() }) });
+        mockCreateReviewWithComments.mockImplementation((pr, sha, body, comments) =>
+            repository.createReviewWithComments('o', 'r', pr, sha, body, comments, 'token'));
+        await expect(publishFindings({ operation: baseOperation,
+            context: baseContext({ prContext: { prHeadSha: 'sha1',
+                prFiles: [{ filename: 'src/product.ts', status: 'modified' }],
+                pathToFirstDiffLine: { 'src/product.ts': 7 },
+                pathToDiffLocations: { 'src/product.ts': [{ line: 7, side: 'RIGHT' }] } } }),
+            findings: [finding({ id: 'exact', file: 'src/product.ts', line: 7 }),
+                finding({ id: 'unanchored', file: 'src/product.ts', line: 699, description: 'Complete unanchored evidence.' })],
+        })).resolves.toBeUndefined();
+        expect(createReview).toHaveBeenCalledTimes(1);
+        const request = createReview.mock.calls[0][0];
+        expect(request.comments).toHaveLength(1);
+        expect(request.comments[0]).toMatchObject({ path: 'src/product.ts', line: 7, side: 'RIGHT' });
+        expect(request.body).toContain('Complete unanchored evidence.');
+        expect(request.body).toContain('finding_id:"unanchored"');
+        expect(request.body).toContain('src/product.ts:699');
+    });
+
     it('keeps the trusted issue finding ID when its location fingerprint matches a new model ID', async () => {
         await publishFindings({ operation: baseOperation,
             context: baseContext({ existingByFindingId: { original: { issue: {
@@ -122,17 +152,17 @@ describe("publishFindings", () => {
         expect(mockAddComment).not.toHaveBeenCalled();
     });
 
-    it('falls back to a file comment for an impossible current-line anchor without sending that line', async () => {
+    it('preserves an impossible current-line finding in the complete review body without a suggestion', async () => {
         await publishFindings({ operation: baseOperation,
             context: baseContext({ prContext: { prHeadSha: 'sha1',
                 prFiles: [{ filename: 'src/spotify.py', status: 'modified' }], pathToFirstDiffLine: { 'src/spotify.py': 72 },
                 pathToDiffLocations: { 'src/spotify.py': [{ line: 72, side: 'RIGHT' }] } } }),
             findings: [finding({ file: 'src/spotify.py', line: 669, endLine: 670, suggestedCode: 'unsafe suggestion' })] });
-        const draft = mockCreateReviewWithComments.mock.calls[0][3][0];
-        expect(draft).toMatchObject({ path: 'src/spotify.py', subjectType: 'file' });
-        expect(draft).not.toHaveProperty('line');
-        expect(draft).not.toHaveProperty('startLine');
-        expect(draft.body).not.toContain('```suggestion');
+        const [, , body, drafts] = mockCreateReviewWithComments.mock.calls[0];
+        expect(drafts).toEqual([]);
+        expect(body).toContain('src/spotify.py:669');
+        expect(body).toContain('finding_id:"f1"');
+        expect(body).not.toContain('```suggestion');
     });
 
     it("adds issue comment for new finding", async () => {

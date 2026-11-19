@@ -1,3 +1,5 @@
+import type { BugbotVerificationAuthority } from '../../domain/bugbot/verification_receipt';
+import { NativeBugbotReviewCancellationAdapter } from '../bugbot/native_review_cancellation_adapter';
 import { LinkPullRequestIssueUseCase } from '../../application/usecases/steps/pull_request/link_pull_request_issue_use_case';
 import { TimerDelayAdapter } from '../time/timer_delay_adapter';
 import { createDeploymentCandidateInspection } from './deployment_candidate_replacement_composition_root';
@@ -127,6 +129,8 @@ function createDetectPotentialProblemsUseCase(binding: BugbotScmBinding): Detect
     bugbot.scm,
     bugbot.telemetry,
     new ResolveMessageCatalogUseCase(createLanguageQueryPort()),
+    bugbot.shadowVerification,
+    undefined, binding.verificationAuthority, bugbot.sourceFreshness, binding.reviewCancellation,
   );
 }
 
@@ -262,6 +266,8 @@ export function createIssueCommentUseCaseCompositionRoot(binding: BugbotScmBindi
       bugbot.scm,
       bugbot.telemetry,
       new ResolveMessageCatalogUseCase(language),
+      bugbot.shadowVerification,
+    undefined, binding.verificationAuthority, bugbot.sourceFreshness, binding.reviewCancellation,
     ),
     pullRequestDescription,
     new RememberBugbotRuleUseCase(bugbot.rules),
@@ -326,6 +332,8 @@ export function createPullRequestReviewCommentUseCaseCompositionRoot(binding: Bu
       bugbot.scm,
       bugbot.telemetry,
       new ResolveMessageCatalogUseCase(language),
+      bugbot.shadowVerification,
+    undefined, binding.verificationAuthority, bugbot.sourceFreshness, binding.reviewCancellation,
     ),
     pullRequestDescription,
     new RememberBugbotRuleUseCase(bugbot.rules),
@@ -368,6 +376,9 @@ export function createMainRunRouteCompositionRoot(
   projectBoardCommandPort: ProjectBoardCommandPort,
   surface: MainRunCompositionSurface,
   setupProgress?: (effect: import('../../domain/setup').SetupOperationEffect) => void,
+  verificationAuthority?: BugbotVerificationAuthority,
+  reviewProgress?: import('../../application/ports/bugbot_review_progress_ports').BugbotReviewProgressPort,
+  statusCard?: BugbotScmBinding['statusCard'],
 ): MainRunRouteHandlers {
   let singleAction: SingleActionUseCase | undefined;
   let issueComment: IssueCommentUseCase | undefined;
@@ -375,29 +386,31 @@ export function createMainRunRouteCompositionRoot(
   let pullRequestReviewComment: PullRequestReviewCommentUseCase | undefined;
   let pullRequest: ReturnType<typeof createPullRequestUseCaseCompositionRoot> | undefined;
   let push: CommitUseCase | undefined;
+  const binding = (execution: Parameters<typeof bugbotBinding>[0]) =>
+    bugbotBinding(execution, surface, verificationAuthority, reviewProgress, statusCard);
   return {
     "single-action": async (execution) => {
-      singleAction ??= createSingleActionUseCaseCompositionRoot(surface, bugbotBinding(execution), setupProgress);
+      singleAction ??= createSingleActionUseCaseCompositionRoot(surface, binding(execution), setupProgress);
       return singleAction.invoke(execution);
     },
     "issue-comment": async (execution) => {
-      issueComment ??= createIssueCommentUseCaseCompositionRoot(bugbotBinding(execution), captureVerificationSetup(execution.verificationSetup, execution.branches.main));
+      issueComment ??= createIssueCommentUseCaseCompositionRoot(binding(execution), captureVerificationSetup(execution.verificationSetup, execution.branches.main));
       return issueComment.invoke(execution);
     },
     issue: async (execution) => {
-      issue ??= createIssueUseCaseCompositionRoot(bugbotBinding(execution));
+      issue ??= createIssueUseCaseCompositionRoot(bugbotBinding(execution, surface, verificationAuthority));
       return issue.invoke(execution);
     },
     "pull-request-review-comment": async (execution) => {
-      pullRequestReviewComment ??= createPullRequestReviewCommentUseCaseCompositionRoot(bugbotBinding(execution), captureVerificationSetup(execution.verificationSetup, execution.branches.main));
+      pullRequestReviewComment ??= createPullRequestReviewCommentUseCaseCompositionRoot(binding(execution), captureVerificationSetup(execution.verificationSetup, execution.branches.main));
       return pullRequestReviewComment.invoke(execution);
     },
     "pull-request": async (execution) => {
-      pullRequest ??= createPullRequestUseCaseCompositionRoot(bugbotBinding(execution));
+      pullRequest ??= createPullRequestUseCaseCompositionRoot(binding(execution));
       return pullRequest.invoke(execution);
     },
     push: async (execution) => {
-      push ??= createCommitUseCaseCompositionRoot(projectBoardCommandPort, bugbotBinding(execution));
+      push ??= createCommitUseCaseCompositionRoot(projectBoardCommandPort, binding(execution));
       return push.invoke(execution);
     },
   };
@@ -406,12 +419,22 @@ export function createMainRunRouteCompositionRoot(
 function bugbotBinding(execution: {
   readonly owner: string;
   readonly repo: string;
+  readonly tokenUser?: string;
   readonly tokens: { readonly token: string };
-}): BugbotScmBinding {
+  readonly ai?: { getBugbotReviewConfiguration(): { readonly shadowVerification?: unknown } };
+}, surface: MainRunCompositionSurface, authority?: BugbotVerificationAuthority, reviewProgress?: BugbotScmBinding['reviewProgress'],
+statusCard?: BugbotScmBinding['statusCard']): BugbotScmBinding {
   return {
     owner: execution.owner,
     repository: execution.repo,
     token: execution.tokens.token,
+    ...(execution.tokenUser ? { trustedAuthorLogin: execution.tokenUser } : {}),
+    ...(surface === 'github-workflow' ? { reviewCancellation: new NativeBugbotReviewCancellationAdapter() } : {}),
+    ...(surface === 'github-workflow' && execution.ai?.getBugbotReviewConfiguration?.().shadowVerification
+      ? { shadow: { workspace: process.env.GITHUB_WORKSPACE } } : {}),
+    ...(surface === 'github-workflow' && authority ? { verificationAuthority: authority } : {}),
+    ...(surface === 'github-workflow' && reviewProgress ? { reviewProgress } : {}),
+    ...(surface === 'github-workflow' && statusCard ? { statusCard } : {}),
   };
 }
 

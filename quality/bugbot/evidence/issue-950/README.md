@@ -1,0 +1,77 @@
+# Bugbot #950 verification evidence
+
+[Issue #950](https://github.com/vypdev/copilot/issues/950) ·
+[Pull request #951](https://github.com/vypdev/copilot/pull/951) ·
+[27-issue traceability](traceability.md)
+
+## Current controls
+
+Run the model-free verification, profile configuration, EV-07 gate and
+status card tests from the repository root. The EV-07 scorer uses the frozen
+v4 cohort and its full-review match rules. Historical pilot scorers and their
+ledgers are available in the tagged checkout below. The normal-flow runner
+keeps its default subject manifest. The qualification runners check the
+preregistered application source, lockfile, compiler configuration, all eight
+driver hashes and the actual prepared CLI version before dispatch. A new
+campaign needs its own pinned implementation and driver inventory; reproduce
+frozen campaigns from their preregistration commits.
+
+The selected plan must also match a committed regular Git blob before any
+measured call. Dispatch records its commit, path, blob and SHA-256; the
+full-review scorer checks that same proof in the scheduler and slot ledgers.
+An alternate plan may change the proposed profile without weakening the
+published qualification criteria or omitting paired subjects and positive
+controls. Commit the new plan and driver pins before starting that campaign.
+These checks do not change historical ledgers or impose an investigation
+deadline or token limit.
+
+Before dispatch, current runners also compare the actual prepared executable
+and any launcher with the selected runtime's digests. A CLI version string is
+not an executable identity. Each corpus invocation records its admitted runtime
+proof; missing or foreign proofs cannot admit full review. These are evidence
+provenance checks and do not require known token consumption.
+
+```sh
+pnpm run test:bugbot-shadow-verification
+```
+
+[Packaged status-card canary](status-card-publication/README.md#packaged-action) ·
+[Native review and Commit backlink](review-progress-follow-up.md)
+
+## EV-07 decision
+
+The [native receipt and closure campaign](ev07-shadow/campaign-provenance-results.md) completed all 174 cases and did not qualify: precision **80.23%**, F1 **83.13%** and Brier **0.1883** failed their gates. All 42 full-review slots stayed unstarted. The original attempt ledger and exact scoring controls are retained. No Sol verification was admitted by this campaign. Production verification is disabled.
+
+The earlier measured campaign below is historical and remains unchanged.
+
+The [qualification protocol](ev07-shadow/preregistration.md) binds the
+model profile, independent corpus and full-review admission criteria.
+The preceding measured report records **87.95%** precision on all 174
+cases against the **90%** gate, with zero write attempts to the evaluated
+PRs. All 42 paired review slots remained unstarted. The measured Luna →
+Sol profile remains unqualified. Production verification is disabled.
+[Measured preregistration](https://github.com/vypdev/copilot/pull/951#issuecomment-6969861466) ·
+[Measured report](https://github.com/vypdev/copilot/pull/951#issuecomment-6970090972)
+
+## Historical evidence
+
+The archive points to `9e9f1536f38dec12d330ac631c786a9625548833`, the last
+published head containing all pilots. The frozen protocols, runners,
+manifests, scores and per-attempt ledgers retain their original byte
+contents and source history.
+[Git tag](https://github.com/vypdev/copilot/tree/bugbot-950-pilot-evidence/quality/bugbot/evidence/issue-950)
+
+The Action checks the selected [owning SDD](../../../../specs/bugbot-analysis-publication-and-autofix.md)
+against its published bytes. Its relative historical report links lead to
+short archive entries. The original manifest remains at its selected path.
+
+```sh
+git fetch origin tag bugbot-950-pilot-evidence
+git worktree add --detach ../copilot-950-pilot-evidence 9e9f1536f38dec12d330ac631c786a9625548833
+```
+
+Read the applicable protocol in that checkout for the original fixture
+pins, checksum validation and dry-run commands. Run historical controls
+that execute fixture code inside the isolated evaluator environment.
+[V4 evidence](https://github.com/vypdev/copilot/blob/9e9f1536f38dec12d330ac631c786a9625548833/quality/bugbot/evidence/issue-950/v4/results.md) ·
+[On-demand evidence](https://github.com/vypdev/copilot/blob/9e9f1536f38dec12d330ac631c786a9625548833/quality/bugbot/evidence/issue-950/on-demand/results.md)

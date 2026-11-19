@@ -1,0 +1,26 @@
+{
+  "complete": true,
+  "completed": 174,
+  "passed": true,
+  "githubWriteAttempts": 0,
+  "workspaceUnchanged": true,
+  "score": {
+    "metrics": {
+      "expected": 80,
+      "actual": 83,
+      "matched": 75,
+      "precision": 0.9036144578313253,
+      "recall": 0.9375,
+      "locationAccuracy": 0.92,
+      "severityAccuracy": 0.92,
+      "categoryAccuracy": 1,
+      "f1": 0.920245398773006,
+      "falsePositives": 8,
+      "falseNegatives": 5,
+      "meanLineDistance": 0.10666666666666667,
+      "confidenceBrierScore": 0.08941927710843366
+    },
+    "violations": [],
+    "missingCases": []
+  }
+}

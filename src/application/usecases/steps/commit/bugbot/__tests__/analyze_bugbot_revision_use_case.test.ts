@@ -1,3 +1,4 @@
+import { BugbotCandidateTrace } from '../bugbot_candidate_trace';
 import { buildReviewDiffPlan } from '../../../../../policies/bugbot_diff_partition_policy';
 import type { FindingsQueryRequest } from '../../../../../ports/agent_findings_ports';
 import { DEFAULT_BUGBOT_REVIEW_CONFIGURATION } from '../../../../../../domain/bugbot/review_configuration';
@@ -250,6 +251,22 @@ describe('analyzeBugbotRevision partition execution', () => {
     })).rejects.toThrow('non-owner');
   });
 
+  it('links the detection origin to a new ID after an incompatible durable ID collision', async () => {
+    const loaded = context([partition(1, 1)]);
+    loaded.existingByFindingId['finding-1'] = {
+      issue: { commentId: 100, resolved: false, fingerprint: 'fp-different' },
+    };
+    const query = jest.fn(async ({ prompt }: FindingsQueryRequest) => attestedResponse(prompt, 1));
+    const trace = new BugbotCandidateTrace();
+    const prepared = await analyzeBugbotRevision(operation(), loaded, {
+      agent: { query }, trace, telemetry: new BugbotReviewTelemetry(operation()),
+    });
+
+    const candidateId = prepared?.activeFindings?.[0]?.id;
+    expect(candidateId).toEqual(expect.stringMatching(/^candidate-/u));
+    expect(trace.snapshot()).toMatchObject([{ disposition: 'prepared', candidateId }]);
+  });
+
   it('deduplicates one root cause reported by multiple partitions before limiting', async () => {
     const partitions = [partition(1, 2), partition(2, 2)];
     const query = jest.fn(({ prompt }: { prompt: string }) => Promise.resolve({
@@ -265,14 +282,20 @@ describe('analyzeBugbotRevision partition execution', () => {
       }],
     }));
 
+    const trace = new BugbotCandidateTrace();
     const prepared = await analyzeBugbotRevision(operation(), context(partitions), {
       agent: { query },
+      trace,
       telemetry: new BugbotReviewTelemetry(operation()),
     });
 
     expect(query).toHaveBeenCalledTimes(2);
     expect(prepared?.activeFindings).toHaveLength(1);
     expect(prepared?.activeFindings?.[0].id).toBe('shared-root-cause');
+    expect(trace.snapshot()).toMatchObject([
+      { origin: '1:1', candidateId: 'shared-root-cause', disposition: 'prepared' },
+      { origin: '2:1', candidateId: 'shared-root-cause', disposition: 'duplicate' },
+    ]);
   });
 
   it('fails without an aggregate when any partition query fails', async () => {

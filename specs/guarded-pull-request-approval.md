@@ -580,3 +580,38 @@ body, configuration, retained/missing native relationships, negative scope and
 protected-path decisions, zero model credential exposure and zero native approval
 writes. An old provider fixture is corrected to use PR42 / branch issue43,
 matching the existing distinct-issue prerequisite rather than a self reference.
+
+### Verification receipt attribution amendment
+
+When a trusted policy requires a Bugbot verification receipt, approval MUST
+authenticate the receipt through the immutable Actions artifact of the newest
+authoritative producer run and attempt. The artifact binds the exact custom
+Review Check Run ID to the receipt. The consumer then validates the effective
+generation, digest, repository, PR, base and head. A custom check can belong
+to a different suite than the workflow job. Display name, app and SHA alone
+cannot replace the native artifact.
+
+Missing, expired, altered, duplicate or cross-run artifacts withhold approval.
+A later failed, incomplete or inconclusive attempt prevents an earlier clean
+receipt from authorizing the same SHA. The same rule applies after rollback.
+The legacy route remains available only when the trusted policy has never
+required the new receipt.
+
+The producer owns the single `copilot-bugbot-verification.json` member and
+the `copilot-bugbot-verification-v1-<runId>-<attempt>` artifact. It contains
+only the closed receipt and native identities. Source and model content do
+not enter the artifact. Read and download permissions are `actions:read`.
+The guarded-approval diagnostics distinguish listing, download and parse
+failures without exposing rejected contents.
+
+Nine consumer cases in `pull_request_approval_repository.test.ts` cover
+the authentic custom check with a distinct suite and the eight missing or
+invalid artifact routes. These cases belong to the 23-case
+[verification provenance amendment](./bugbot-review-state-reconciliation.md#installed-verification-provenance-and-final-closure-amendment)
+and are counted once. Existing enforcement, same-head policy transition,
+subsequent-attempt and rollback consumer tests must also pass.
+
+
+### Review-head attribution for a synthetic-merge execution
+
+A trusted Bugbot workflow execution on the verified synthetic merge retains that execution SHA in native artifact metadata. Its custom Review check and identical receipt are tied to the actual reviewed PR head, not to the merge commit. The consumer validates both identities in their respective roles. The merge's exact current base/head parents must already be proven; stale or foreign parents cannot authorize it. `PullRequestApprovalRepository` has positive and negative regressions for a genuine merge-run artifact with respectively a head check and an incorrect merge check. This adds no configuration and preserves all current-policy, latest-attempt and rollback fences.

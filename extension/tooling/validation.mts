@@ -1,5 +1,4 @@
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
@@ -20,7 +19,8 @@ export async function validateDevelopmentBuild(root: string, output: string, bui
         if (source.split('\n').length > 220) throw new FoundationGateError(`${file}: module-size exceeds 220 lines`);
     }
     await validateArtifactSet(output);
-    const temporary = await mkdtemp(path.join(tmpdir(), 'copilot-extension-repro-'));
+    // Match the filesystem and access conditions of the admitted development set.
+    const temporary = await mkdtemp(path.join(path.dirname(output), '.copilot-extension-repro-'));
     try {
         const first = await build(root, path.join(temporary, 'first'));
         const second = await build(root, path.join(temporary, 'second'));

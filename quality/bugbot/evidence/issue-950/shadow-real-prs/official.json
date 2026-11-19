@@ -1,0 +1,32 @@
+[
+  {
+    "package": "playwright",
+    "version": "1.64.1",
+    "kind": "versioned-docs",
+    "file": "class-locatorassertions.md",
+    "commit": "cfe490d941f992655948eee8fd4fd94e1c4234bf",
+    "url": "https://github.com/microsoft/playwright/blob/cfe490d941f992655948eee8fd4fd94e1c4234bf/docs/src/api/class-locatorassertions.md",
+    "raw": "https://raw.githubusercontent.com/microsoft/playwright/cfe490d941f992655948eee8fd4fd94e1c4234bf/docs/src/api/class-locatorassertions.md",
+    "sha256": "affa4f27a70b9f3e9a3575224acf077acbe474cac45936d2a677b8a14e72589e"
+  },
+  {
+    "package": "playwright",
+    "version": "1.64.1",
+    "kind": "release-source",
+    "file": "matchers.ts",
+    "commit": "cfe490d941f992655948eee8fd4fd94e1c4234bf",
+    "url": "https://github.com/microsoft/playwright/blob/cfe490d941f992655948eee8fd4fd94e1c4234bf/packages/playwright/src/matchers/matchers.ts",
+    "raw": "https://raw.githubusercontent.com/microsoft/playwright/cfe490d941f992655948eee8fd4fd94e1c4234bf/packages/playwright/src/matchers/matchers.ts",
+    "sha256": "509f8280aae39e6a0ac1f19fe0ed2a9f89677604d841d2d6ff70c2d3c129065e"
+  },
+  {
+    "package": "sqlite",
+    "version": "3.53.3",
+    "kind": "release-source",
+    "file": "sqlite-fkey.c",
+    "commit": "92a6c5c3636faa021ecc3be5403a00f50f65eda7",
+    "url": "https://github.com/sqlite/sqlite/blob/92a6c5c3636faa021ecc3be5403a00f50f65eda7/src/fkey.c",
+    "raw": "https://raw.githubusercontent.com/sqlite/sqlite/92a6c5c3636faa021ecc3be5403a00f50f65eda7/src/fkey.c",
+    "sha256": "e63a0616dad4b8a387e90dd3a896acd77d590d8aadafade4c581ff3a6d74bce3"
+  }
+]

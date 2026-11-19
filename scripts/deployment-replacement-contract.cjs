@@ -14,8 +14,9 @@ function assertReplacementContract(file, workflow) {
     || !inputs['expected-revision'] || !inputs['source-sha']
     || jobs.validate.steps[0].env.REPLACEMENT_ENABLED !== (setup ? 'false' : 'true')) fail('requires explicit bounded workflow inputs');
   const preflight = jobs['candidate-preflight'];
+  const preflightRunner = setup ? 'ubuntu-latest' : ['self-hosted', 'codex', 'Linux'];
   if (!preflight || preflight.name !== 'Inspect unpublished candidate replacement' || preflight.if !== "${{ inputs.mode == 'replace' }}"
-    || preflight.needs !== 'validate' || preflight['runs-on'] !== 'ubuntu-latest' || preflight['timeout-minutes'] !== 5
+    || preflight.needs !== 'validate' || JSON.stringify(preflight['runs-on']) !== JSON.stringify(preflightRunner) || preflight['timeout-minutes'] !== 5
     || JSON.stringify(preflight.permissions) !== JSON.stringify({ contents: 'read', issues: 'read', 'pull-requests': 'read', actions: 'read' })
     || preflight.env !== undefined || Object.hasOwn(preflight, 'continue-on-error')) fail('requires a fixed read-only native preflight');
   const steps = preflight.steps ?? []; const inspect = steps.at(-1);

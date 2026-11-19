@@ -67,7 +67,8 @@ comparison and the final freshness checks.
   extension, provider URLs or model claims.
 - MUST NOT omit files, shorten content, promote source reports into CI claims,
   inspect a checkout, execute commands or publish partial percentages.
-- Existing `build/` and exact `specs/CATALOG.md` metadata exceptions remain;
+- Generated `build/`, exact `specs/CATALOG.md`, and Bugbot pilot `.jsonl` and
+  `.log.gz` under `quality/bugbot/evidence/issue-<number>/` remain metadata-only;
   editable catalogs, SDDs and other registries are not added to that list.
 - Binary/non-UTF8 contents, symlinks and submodules are unsupported recovery
   inputs. No consumer code, permission expansion or new workflow is required.
@@ -642,8 +643,10 @@ The existing semantic diff port gains optional immutable framed-plan metadata;
 legacy injected port results retain their contract. Pure policies own finite
 accounting, canonical hashes, request binding and receipt completeness. Data
 adapters own read-only provider objects, byte/hash checks and the fresh attempt
-UUID. Existing progress orchestration owns scope, sequential rounds, final
-assessment and publication fences. No workspace, subprocess, consumer-code
+UUID. Existing progress orchestration owns scope, ordered source receipts, final
+assessment and publication fences. Immutable-tree scope and source requests may
+run concurrently within the [fixed progress profile](progress-capacity-diagnostics.md#21-acceptance-batch-profile-and-publication-eligibility--916).
+No workspace, subprocess, consumer-code
 execution, provider write or new credential capability enters recovery.
 Dependency/cycle/type/composition contracts MUST continue to enforce these
 boundaries. Source caches, partial facts and receipts remain invocation-local.

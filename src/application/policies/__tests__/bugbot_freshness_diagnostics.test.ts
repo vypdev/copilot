@@ -27,6 +27,35 @@ function fixture(head: unknown = SHA, framed = false) {
     return { context, ports, getPullRequestHeadSha, getSourceBoundPullRequest, identity };
 }
 
+it.each(['before-publication', 'after-publication'] as const)('verification freshness observes a live base advance at %s despite cached PR base', async boundary => {
+    const f = fixture();
+    f.ports.getPullRequest = jest.fn().mockResolvedValue(f.identity);
+    f.getSourceBoundPullRequest.mockResolvedValue({ ...f.identity, baseRefSha: 'c'.repeat(40) });
+    expect(await hasNewerBugbotRevision(f.context, f.ports, boundary, true)).toBe(true);
+    expect(f.getSourceBoundPullRequest).toHaveBeenCalledWith(f.identity.number);
+    expect(f.ports.getPullRequest).not.toHaveBeenCalled();
+});
+
+it('verification freshness requires an accredited live base while unchanged source remains eligible', async () => {
+    const f = fixture();
+    f.ports.getPullRequest = jest.fn().mockResolvedValue(f.identity);
+    expect(await hasNewerBugbotRevision(f.context, f.ports, 'before-publication', true)).toBe(false);
+    f.getSourceBoundPullRequest.mockResolvedValue({ ...f.identity, baseRefSha: undefined });
+    await expect(hasNewerBugbotRevision(f.context, f.ports, 'before-publication', true)).rejects.toMatchObject({
+        code: 'provider.contract-invalid', recovery: { variables: { operation: 'get-source-bound-pr' } },
+    });
+});
+
+it('receipt freshness never falls back to a cached PR when the live-ref capability is absent', async () => {
+    const f = fixture();
+    f.ports.getPullRequest = jest.fn().mockResolvedValue(f.identity);
+    delete (f.ports as Partial<BugbotContextPorts>).getSourceBoundPullRequest;
+    await expect(hasNewerBugbotRevision(f.context, f.ports, 'before-publication', true)).rejects.toMatchObject({
+        code: 'provider.contract-invalid', recovery: { variables: { operation: 'get-source-bound-pr' } },
+    });
+    expect(f.ports.getPullRequest).not.toHaveBeenCalled();
+});
+
 it('freshness-C01: preserves the existing sanitized HTTP classification across freshness and mutation paths', () => {
     for (const [status, code] of [[401, 'authorization.credential-invalid'], [403, 'authorization.denied'], [404, 'provider.not-found'],
         [409, 'provider.conflict'], [429, 'provider.rate-limited'], [408, 'provider.unavailable'], [425, 'provider.unavailable'],

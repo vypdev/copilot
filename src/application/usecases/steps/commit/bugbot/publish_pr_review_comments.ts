@@ -82,7 +82,7 @@ export class PullRequestReviewCommentPublisher {
     const reportedPath = resolveFindingPathForPr(finding.file, prContext.prFiles);
     const anchor = resolveReviewAnchor(finding.line, finding.endLine, reportedPath, prContext);
     const findingBody = buildCommentBody(finding, false, undefined, {
-      includeSuggestedChange: allowSuggestedChanges && anchor?.subjectType === 'line' && anchor.side === 'RIGHT',
+      includeSuggestedChange: allowSuggestedChanges && anchor?.side === 'RIGHT',
       catalog: this.catalog,
     });
     const body = findingBody;
@@ -100,14 +100,11 @@ export class PullRequestReviewCommentPublisher {
       : `> ${this.catalog.message('bugbot.finding.anchorNote')}\n\n`;
     this.commentsToCreate.push({
       path: anchor.path,
-      ...(anchor.subjectType === 'line' ? {
-        line: anchor.endLine ?? anchor.line,
-        side: anchor.side,
-        ...(anchor.endLine && anchor.endLine > anchor.line
-          ? { startLine: anchor.line, startSide: anchor.side }
-          : {}),
-      } : {}),
-      ...(anchor.subjectType === 'file' ? { subjectType: 'file' as const } : {}),
+      line: anchor.endLine ?? anchor.line,
+      side: anchor.side,
+      ...(anchor.endLine && anchor.endLine > anchor.line
+        ? { startLine: anchor.line, startSide: anchor.side }
+        : {}),
       body: `${anchorNote}${body}`,
     });
   }
@@ -155,14 +152,14 @@ function resolveReviewAnchor(
   reportedEndLine: number | undefined,
   reportedPath: string | undefined,
   context: BugbotPrContext,
-): { path: string; subjectType: 'line'; line: number; endLine?: number; side: 'LEFT' | 'RIGHT' } | { path: string; subjectType: 'file' } | undefined {
+): { path: string; line: number; endLine?: number; side: 'LEFT' | 'RIGHT' } | undefined {
   if (context.pathToDiffLocations === undefined) {
     if (reportedPath && context.pathToFirstDiffLine[reportedPath] != null) {
-      return { path: reportedPath, subjectType: 'line', line: context.pathToFirstDiffLine[reportedPath], side: 'RIGHT' };
+      return { path: reportedPath, line: context.pathToFirstDiffLine[reportedPath], side: 'RIGHT' };
     }
     const firstAvailableLocation = Object.entries(context.pathToFirstDiffLine)[0];
     return firstAvailableLocation
-      ? { path: firstAvailableLocation[0], subjectType: 'line', line: firstAvailableLocation[1], side: 'RIGHT' }
+      ? { path: firstAvailableLocation[0], line: firstAvailableLocation[1], side: 'RIGHT' }
       : undefined;
   }
   if (reportedPath) {
@@ -174,17 +171,14 @@ function resolveReviewAnchor(
         : locations.find((location) => location.line === reportedEndLine && location.side === exact.side);
       return {
         path: reportedPath,
-        subjectType: 'line',
         ...exact,
         ...(end && end.line > exact.line ? { endLine: end.line } : {}),
       };
     }
-    if (context.prFiles.some((file) => file.filename === reportedPath)) {
-      return { path: reportedPath, subjectType: 'file' };
-    }
   }
-  const fallback = context.prFiles.find((file) => file.status !== 'removed') ?? context.prFiles[0];
-  return fallback ? { path: fallback.filename, subjectType: 'file' } : undefined;
+  // Batch reviews do not accept file subjects. Keep the complete finding in
+  // the review body instead of inventing a different file or line.
+  return undefined;
 }
 
 function buildReviewSummary(

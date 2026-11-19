@@ -18,6 +18,7 @@ export interface ProviderExecutionPolicyInput {
     readonly workspace: string;
     readonly runtimeDirectory: string;
     readonly outputSchema?: Record<string, unknown>;
+    readonly brokeredVerification?: true;
 }
 
 export interface ProviderExecutionPolicy {

@@ -15,6 +15,7 @@ export interface BugbotReconciliationSnapshotPorts {
     pullRequestNumber: number,
   ): Promise<Record<string, PullRequestReviewThreadState>>;
   listPullRequestReviews(pullRequestNumber: number): Promise<PullRequestReviewSummary[]>;
+  isLinkedIssue?(pullRequestNumber: number, issueNumber: number): Promise<boolean>;
   getPullRequestHeadSha(pullRequestNumber: number): Promise<string | undefined>;
   navigationForPullRequest(
     pullRequestNumber: number,
@@ -22,9 +23,18 @@ export interface BugbotReconciliationSnapshotPorts {
   ): BugbotReviewNavigation;
 }
 
+/** Writes the aggregate projection through the same lane that owns live progress. */
+export interface BugbotStatusCardTerminalPort {
+  publish(input: { readonly pullRequestNumber: number; readonly headSha: string; readonly body: string;
+    readonly baseSha?: string; readonly baseRefSha?: string }):
+    Promise<'created' | 'updated' | 'unchanged' | 'published'>;
+}
+
 /** Repository-bound presentation mutations; credentials never enter the use case. */
 export interface BugbotPresentationMutationPorts {
   readonly comments: BoundBugbotIssueCommentWritePort;
+  readonly statusCard?: BugbotStatusCardTerminalPort;
+  allowLegacyStatusCardWrite?(): Promise<boolean>;
   updatePullRequestReview(
     pullRequestNumber: number,
     reviewIdentity: string,

@@ -21,13 +21,14 @@ export type AgentExecutionPreflightStage =
     | 'resolution' | 'invocation-trust' | 'environment' | 'version'
     | 'artifacts' | 'policy';
 
-/** Fixed Windows executable trust reason; raw ACLs and paths stay local. */
+/** Fixed local preflight reason; raw ACLs and paths stay local. */
 export type AgentExecutionPreflightDiagnostic =
     | 'acl-file-owner' | 'acl-ancestor-owner' | 'acl-writable'
     | 'acl-format-batch' | 'acl-format-dacl' | 'acl-format-flags'
     | 'acl-format-ace' | 'acl-format-rights'
     | 'acl-query-timeout' | 'acl-query-failed'
-    | 'acl-identity' | 'acl-unavailable';
+    | 'acl-identity' | 'acl-unavailable'
+    | 'artifact-storage-full' | 'artifact-access-denied' | 'artifact-path-unavailable';
 
 /** Closed, untrusted-provider diagnostic hints; no provider text crosses this port. */
 export const AGENT_EXECUTION_TOOL_DIAGNOSTICS = ['reported-sandbox-setup-mutex'] as const;
@@ -41,6 +42,7 @@ export type AgentExecutionExitDiagnostic =
     | 'reported-unsupported-configuration'
     | 'reported-transport-or-rate-limit'
     | 'reported-output-token-limit'
+    | 'reported-invalid-output-schema'
     | 'unclassified';
 
 /** Fixed local output rejection cause; never derived by interpolating provider bytes. */

@@ -33,11 +33,10 @@ export type PullRequestReviewReference = {
 export type PullRequestReviewCommentDraft = {
   path: string;
   body: string;
-  line?: number;
+  line: number;
   side?: "LEFT" | "RIGHT";
   startLine?: number;
   startSide?: "LEFT" | "RIGHT";
-  subjectType?: "line" | "file";
 };
 
 export interface PullRequestReviewCommentListQueryPort {

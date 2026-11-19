@@ -103,6 +103,12 @@ description: Diagnose terminal failures across detection, publication, autofix, 
 See [Verification commands](/bugbot/verification-commands) and [Security & Operations](/security-operations).
 
 
+## Proposed verification recovery
+
+Issue #950 distinguishes a candidate evidence gap from an invalid review. The proposed flow would suggest a same-head recheck when a missing artifact becomes available. A canceled, superseded or invalid run would preserve the last verified review. Provider recovery would report only observed effects.
+
+[Specification and pilot status](https://github.com/vypdev/copilot/issues/950)
+
 ## A valid self-repository Action reference is reported as invalid
 
 Record the authored `uses` value, containing workflow/action revision, host and
