@@ -269,11 +269,18 @@ test('the actual runner resolves a relative lab before entering its private chec
     manifest.drivers = Object.fromEntries(require('./run.cjs').normalFlowDrivers.map(file => [file, hash(path.join(__dirname, file))]));
     const checkout = path.join(directory, 'implementation');
     execFileSync('git', ['clone', '--quiet', '--shared', '--template=', root, checkout]);
+    // Commit the current driver snapshot inside this disposable fixture, so
+    // this control also works before the contributor implementation commit.
+    const driverPaths = require('./run.cjs').normalFlowDrivers.map(file => {
+        const relative = path.relative(root, path.join(__dirname, file));
+        writeFileSync(path.join(checkout, relative), readFileSync(path.join(root, relative)));
+        return relative;
+    });
     cpSync(path.join(root, 'node_modules'), path.join(checkout, 'node_modules'),
         { recursive: true, verbatimSymlinks: true, mode: constants.COPYFILE_FICLONE });
     const relative = 'quality/bugbot/evidence/issue-950/normal-flow-shadow/relative-lab.fixture.json';
     writeFileSync(path.join(checkout, relative), JSON.stringify(manifest));
-    execFileSync('git', ['-C', checkout, 'add', relative]);
+    execFileSync('git', ['-C', checkout, 'add', relative, ...driverPaths]);
     execFileSync('git', ['-C', checkout, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
         '-c', 'core.hooksPath=/dev/null', 'commit', '--quiet', '-m', 'Commit synthetic fixture manifest']);
     const revision = execFileSync('git', ['-C', checkout, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();

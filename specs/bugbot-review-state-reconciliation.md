@@ -2542,10 +2542,13 @@ flowchart LR
   E --> F[Run admitted corpus or paired review]
 ```
 
-Minimum **10 additional deterministic controls**: one isolated successful launch
+Minimum **12 additional deterministic controls**: one isolated successful launch
 and cleanup; two changed-driver causal counter-controls; one unauthenticated CLI
 manifest counter-control; four committed-manifest integrity failures; one combined
-Git-redirection/PATH-shim case; and one installed-dependency rejection. Retain the
+Git-redirection/PATH-shim case; and one installed-dependency rejection; plus one materialized-checkout transformation
+rejection before helper loading and one positive committed-manifest path control.
+Recheck private plan/driver bytes after materialization, before loading any helper.
+Retain the
 existing actual relative-lab normal-flow control with a committed fixture manifest
 and immutable launch. Use real Git and blocked model/write ports. All 174 corpus
 cases and the 42 paired slots remain unstarted until merged prerequisites and a

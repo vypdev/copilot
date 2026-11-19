@@ -92,12 +92,14 @@ async function launch(repository, revision, planPath, planSha256, bootstrapSha25
     const base = prefix + (mode === 'normal-flow' ? 'normal-flow-shadow/' : 'ev07-shadow/');
     const inventory = mode === 'normal-flow' ? normal : ev07;
     const expected = mode === 'normal-flow' ? plan.drivers : plan.inspectedArtifacts;
+    const admitted = [];
     for (const driver of inventory) {
         const relative = path.posix.normalize(base + driver), trusted = committed(git, revision, relative);
         assert.equal(sha256(trusted), expected?.[driver], 'committed driver differs from reviewed plan: ' + driver);
         assert(fs.readFileSync(physical(root, relative)).equals(trusted), 'working driver differs: ' + driver);
+        admitted.push([relative, trusted]);
     }
-    const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'bugbot-qualified-source-'));
+    const scratch = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'bugbot-qualified-source-')));
     fs.chmodSync(scratch, 0o700);
     const isolated = path.join(scratch, 'source');
     try {
@@ -107,6 +109,11 @@ async function launch(repository, revision, planPath, planSha256, bootstrapSha25
         const isolatedGit = gitFor(isolated).git;
         isolatedGit('checkout', '--quiet', '--detach', revision);
         isolatedGit('remote', 'remove', 'origin');
+        // Git attributes can transform checkout bytes even without external
+        // filters. Recheck the materialized closure before requiring its helper.
+        for (const [relative, trusted] of admitted) assert(
+            fs.readFileSync(physical(isolated, relative)).equals(trusted), 'materialized driver differs: ' + relative);
+        assert(fs.readFileSync(physical(isolated, planPath)).equals(bytes), 'materialized plan differs');
         // The helper is now the immutable blob already checked above, not a
         // working-tree verifier asked to authenticate itself after execution.
         const verifier = require(path.join(isolated, prefix, 'execution-provenance.cjs'));

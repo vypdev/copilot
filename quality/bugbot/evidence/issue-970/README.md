@@ -108,3 +108,23 @@ The existing actual normal-flow relative-lab control now commits its synthetic
 manifest and launches the immutable bootstrap rather than an untracked manifest.
 
 An integration attempt made before committing the new package/driver snapshot is retained as `bootstrap-integration-before-commit.log.gz`: the source guard rejects the edited package manifest and the real launch fixture cannot extract the not-yet-committed bootstrap. These are not passing results. Re-run the full controls after committing the exact implementation; no old plan or guard is changed to bypass those failures.
+
+
+The first full committed integration passes 181/182 controls and preserves its
+failed real normal-flow result in `bootstrap-committed-shadow.log.gz`. A logical
+macOS /var manifest path was compared with the physical /private/var repository
+path; the guard correctly refused it before a CLI probe. The bootstrap now uses
+physical scratch paths and generic committed-artifact admission maps only the
+supplied repository-root alias before checking every child for symlinks. A new
+positive committed-manifest control covers that boundary. The real runner control
+commits its current driver snapshot inside the disposable fixture, so it does
+not depend on uncommitted contributor files being present in an older Git blob.
+
+A further deterministic case forces CRLF checkout transformation through Git
+attributes. The bootstrap now compares every materialized private driver and plan
+with immutable blobs **again before requiring the private helper**; transformed
+checkout bytes are refused. The bootstrap suite is now 12 controls; together with
+the complete source/path suite, all 40 focused controls pass, including the actual
+normal-flow relative-lab journey with zero candidates/model calls/verifiers/writes.
+
+Final complete shadow suite: **184/184 passed**, zero skipped/cancelled/model calls/evaluated-PR writes. The exact complete output is `bootstrap-final-shadow.log.gz`. Specifications/documentation and the final graph refresh also pass. The required final build/Jest/lint hook and native final-head review remain distinct delivery checks.

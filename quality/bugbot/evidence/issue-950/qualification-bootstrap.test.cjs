@@ -11,7 +11,7 @@ const proof = require('./execution-provenance.cjs');
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const prefix = 'quality/bugbot/evidence/issue-950/';
 
-function fixture(t) {
+function fixture(t, crlfCheckout = false) {
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'qualified-bootstrap-control-'));
     t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
     const root = path.join(directory, 'project');
@@ -37,6 +37,7 @@ function fixture(t) {
     write(prefix + 'execution-provenance.cjs', fs.readFileSync(path.join(__dirname, 'execution-provenance.cjs')));
     write(prefix + 'qualification-bootstrap.cjs', fs.readFileSync(path.join(__dirname, 'qualification-bootstrap.cjs')));
     write(prefix + 'normal-flow-shadow/run.cjs', 'const fs=require("node:fs");fs.writeFileSync(process.argv[4],JSON.stringify({cwd:process.cwd(),isolated:__dirname,mode:process.env.BUGBOT_VERIFICATION_MODE}));\n');
+    if (crlfCheckout) write('.gitattributes', '*.cjs text eol=crlf\n');
     git('add', '.');
     git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '--quiet', '-m', 'Trusted fixture implementation');
     const implementation = git('rev-parse', 'HEAD');
@@ -97,6 +98,20 @@ test('an invented matching executable digest in a modified manifest cannot run e
     assert.match(run.stderr, /working plan differs/u);
     assert.equal(fs.existsSync(f.marker), false);
     assert.equal(fs.existsSync(f.output), false);
+});
+
+test('materialized checkout transformations are refused before loading the immutable helper', t => {
+    const f = fixture(t, true), run = f.launch();
+    assert.notEqual(run.status, 0);
+    assert.match(run.stderr, /materialized driver differs/u);
+    assert.equal(fs.existsSync(f.output), false);
+});
+
+test('committed manifest authentication admits exact bytes through the supplied repository path', t => {
+    const f = fixture(t), result = proof.attestCommittedArtifact(f.root, path.join(f.root, f.planPath), f.planSha256, f.revision);
+    assert.deepEqual(JSON.parse(result.bytes), f.plan);
+    assert.equal(result.provenance.commit, f.revision);
+    assert.equal(result.provenance.sha256, f.planSha256);
 });
 
 for (const mode of ['uncommitted', 'symlink', 'foreign-digest', 'foreign-commit']) {

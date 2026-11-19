@@ -214,8 +214,12 @@ function attestDrivers(directory, expected, files) {
 function attestCommittedArtifact(root, file, expectedSha256, commit) {
     assert.match(expectedSha256 ?? '', /^[a-f0-9]{64}$/u, 'reviewed committed artifact digest required');
     assert.match(commit ?? '', /^[a-f0-9]{40}$/u, 'reviewed artifact commit required');
+    const requestedRoot = path.resolve(root);
     root = fs.realpathSync(root);
-    const relative = path.relative(root, path.resolve(file)).split(path.sep).join('/');
+    const requestedFile = path.resolve(file);
+    const canonicalFile = requestedFile.startsWith(requestedRoot + path.sep)
+        ? root + requestedFile.slice(requestedRoot.length) : requestedFile;
+    const relative = path.relative(root, canonicalFile).split(path.sep).join('/');
     assert(relative && !path.isAbsolute(relative) && !relative.split('/').some(part => ['', '..', '.git'].includes(part)),
         'committed artifact must be inside the reviewed repository');
     let current = root;
