@@ -127,7 +127,14 @@ async function launch(repository, revision, planPath, planSha256, bootstrapSha25
         const proof = { bootstrapSha256, planCommit: revision, planPath, planSha256 };
         fs.writeFileSync(path.join(isolated, '.qualification-admission.json'), JSON.stringify(proof),
             { flag: 'wx', mode: 0o600 });
+        // The application evidence adapter also invokes the bare Git command.
+        // Bind that lookup to the admitted OS executable without changing how
+        // Node/Codex or any other normal detector executable is selected.
+        const gitBin = path.join(scratch, 'git-bin');
+        fs.mkdirSync(gitBin, { mode: 0o700 });
+        fs.symlinkSync(trust.executable, path.join(gitBin, 'git'));
         const env = { ...trust.env, COPILOT_EV07_PLAN: path.join(isolated, planPath),
+            PATH: gitBin + path.delimiter + (trust.env.PATH ?? '/usr/bin:/bin'),
             BUGBOT_VERIFICATION_MODE: 'disabled',
             COPILOT_QUALIFICATION_MANIFEST_SHA256: planSha256,
             COPILOT_QUALIFICATION_PLAN_COMMIT: revision };

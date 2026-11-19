@@ -2555,3 +2555,25 @@ cases and the 42 paired slots remain unstarted until merged prerequisites and a
 new committed preregistration meet their existing independent acceptance gates.
 Update operator testing documentation and catalogue evidence together, validate
 specifications/docs and refresh the graph. Local controls do not qualify a profile.
+
+
+Qualification Git identity also applies after admission to the actual evidence
+adapter. The trusted bootstrap MUST route bare Git calls in its admitted child
+to the same verified OS executable. Use a private directory containing only that
+Git link before the original PATH, preserving ordinary Node/Codex selection; do
+not introduce a consumer setting or modify production source for this lab routing.
+Add one causal case using the actual shipped adapter: an inherited shim executes
+under the former child environment, while the admitted child reads the real Git
+identity without executing the shim. This adds one case to the twelve-control
+bootstrap minimum (thirteen total), with no models or evaluated-PR writes.
+
+
+Before invoking the ordinary planner, qualification MUST resolve its selected
+executable and optional launcher using the same production resolution/validation
+helpers and verify their registered digests. The planner performs its own version
+probe before returning a prepared plan, so post-preparation checking alone is too
+late. Preserve the unchanged ordinary planner and its final invocation/version/
+profile proof. Add two actual-planner controls: an admitted runtime prepares, and
+a mismatched executable that the old version probe ran is rejected before probe
+execution. Use the real resolution/validation/version ports and only a controlled
+workspace; no model calls, research ceilings or production settings are added.

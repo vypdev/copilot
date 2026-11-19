@@ -128,3 +128,55 @@ the complete source/path suite, all 40 focused controls pass, including the actu
 normal-flow relative-lab journey with zero candidates/model calls/verifiers/writes.
 
 Final complete shadow suite: **184/184 passed**, zero skipped/cancelled/model calls/evaluated-PR writes. The exact complete output is `bootstrap-final-shadow.log.gz`. Specifications/documentation and the final graph refresh also pass. The required final build/Jest/lint hook and native final-head review remain distinct delivery checks.
+
+
+## Actual application Git adapter after admission
+
+The source proof already used absolute OS Git, but the actual shipped evidence
+adapter in src/infrastructure/bugbot/shadow/git.cjs resolves its later read-only
+Git calls through PATH. The admitted child previously inherited the caller PATH.
+A new causal control uses that actual adapter: under the old inherited path a
+Git shim executes even though the OS-Git proof itself is genuine. The bootstrap
+now prepends a private directory containing only a git link to the admitted OS
+executable. Later application Git reads therefore use the same pinned binary;
+selection of Node, Codex and other normal executables retains the remaining PATH.
+No production source or new configuration setting is added.
+
+The same actual adapter runs successfully through the admitted child without
+executing the shim. All 13 bootstrap controls pass. The private executable path
+is excluded from stable provenance; its target is the recorded OS-Git executable
+and digest, and the reviewed bootstrap digest binds this routing. Historical
+184-control results remain immutable; the complete suite now includes one
+additional application-adapter control.
+
+
+The end-to-end probe audit also found the normal planner's own --version call:
+AgentExecutionPlanner.prepare invokes its production version reader before it
+returns the plan that the driver previously checked. Qualification now resolves
+the selected invocation with those same production helpers and checks executable/
+launcher bytes before calling the unchanged ordinary planner. The final returned
+plan still passes the existing version/digest/profile proof. No production source,
+planner API, monkeypatch, model limit or configuration setting is changed.
+
+Two new controls run the actual production planner with only a fixture workspace
+port; executable resolution, ownership validation and version reading remain real.
+The former preparation executes a mismatched CLI's version marker before its
+later digest rejection; the admitted preparation refuses it before that marker.
+The matching runtime still prepares normally. The first run passed 14/15 runtime
+controls but compared a logical macOS /var path with its physical alias. That
+assertion failure remains; the corrected realpath assertion passes all 15. The
+prior complete 185-control result is preserved separately; the final suite now
+contains 187 controls, including the two actual planner cases.
+
+The final combined source/runtime suite passes **187/187** controls with no skipped/cancelled cases, model calls or evaluated-PR writes (`planner-final-shadow-187.log.gz`). Final specification/catalog/documentation validation and Graphify pass. Application source and shipping bundles remain unchanged; all routing/admission changes are in the registered lab drivers.
+
+
+The first final planner-admission build/Jest/lint hook failed in the existing
+`src/prompts/__tests__/bugbot_complete_conversation.test.ts` worker with SIGSEGV:
+942 suites and 18,689 tests passed; that six-test suite did not run. The exact
+unchanged six tests then pass in isolation. This is preserved as a failed full
+attempt, followed by a complete hook retry; the isolated pass does not replace
+the required complete validation. Both raw outputs are lossless gzip.
+
+- `planner-final-hook-sigsegv.log.gz`: original bytes 526237, SHA-256 `03e97b4a5a1b5e74815262999194f81a7df311359c5cfb5229790c9255010eef`.
+- `planner-final-hook-focused.log.gz`: original bytes 193, SHA-256 `677fe194c74955c922514e93ef4010100248ff690cc0c8403599582800c4b98b`.

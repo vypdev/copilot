@@ -7,8 +7,8 @@ const { createHash } = require('node:crypto');
 const { tmpdir } = require('node:os');
 const path = require('node:path');
 const { test } = require('node:test');
-const { prepareDetector } = require('./review.cjs');
-const { requirePinnedCliProbe } = require('./implementation.cjs');
+const { admitPreparedDetector } = require('./review.cjs');
+const { requirePinnedCliProbe, preparePinnedExecution } = require('./implementation.cjs');
 const plan = { ...require('./configuration.cjs'), runtime: { codex: 'codex-cli 0.169.1' } };
 
 for (const mode of ['pinned', 'foreign', 'missing', 'wrong-executable', 'missing-digest', 'launcher', 'wrong-launcher', 'missing-launcher']) {
@@ -32,16 +32,15 @@ for (const mode of ['pinned', 'foreign', 'missing', 'wrong-executable', 'missing
             runtimeContract: mode === 'missing' ? undefined : {
                 version: mode === 'foreign' ? 'codex-cli 0.0.0' : plan.runtime.codex,
             } };
-        const request = { prompt: 'controlled request' }, observations = [];
-        const planner = { prepare(input) { assert.equal(input, request); return execution; } };
+        const observations = [];
         const selected = { ...plan, runtime };
         if (['pinned', 'launcher'].includes(mode)) {
-            assert.equal(prepareDetector(planner, request, row => observations.push(row), selected), execution);
+            assert.equal(admitPreparedDetector(execution, row => observations.push(row), selected), execution);
             assert.equal(observations[0].runtime, plan.runtime.codex);
             assert.equal(observations[0].runtimeProof.executableSha256, runtime.codexSha256);
             assert.equal(existsSync(runtimeDirectory), true);
         } else {
-            assert.throws(() => prepareDetector(planner, request, row => observations.push(row), selected), /CLI version|digest/u);
+            assert.throws(() => admitPreparedDetector(execution, row => observations.push(row), selected), /CLI version|digest/u);
             assert.equal(existsSync(runtimeDirectory), false);
             assert.deepEqual(observations, []);
         }
@@ -90,4 +89,38 @@ test('the old PATH version probe executes a shim, while the pinned probe invokes
         path.resolve(__dirname, 'implementation.cjs'), JSON.stringify(runtime)], { env, encoding: 'utf8' });
     assert.equal(result.status, 0, result.stderr);
     assert.equal(existsSync(shimMarker), false);
+});
+
+for (const mode of ['pinned', 'foreign']) test('ordinary planner admits CLI bytes before its internal version probe: ' + mode, t => {
+    require('./load.cjs');
+    const root = path.resolve(__dirname, '../../../../..');
+    const { AgentExecutionPlanner } = require(path.join(root, 'src/infrastructure/agents/agent_execution_planner'));
+    const { resolveAgentExecutablePath, readAgentExecutableVersion } = require(path.join(root,
+        'src/infrastructure/agents/agent_executable_invocation'));
+    const directory = mkdtempSync(path.join(tmpdir(), 'ev07-planner-probe-'));
+    t.after(() => rmSync(directory, { recursive: true, force: true }));
+    const executable = path.join(directory, 'codex'), marker = path.join(directory, 'version-executed');
+    writeFileSync(executable, '#!/bin/sh\nprintf version > "' + marker + '"\nprintf "codex-cli fixture\\n"\n', { mode: 0o700 });
+    const runtime = { executable, codex: 'codex-cli fixture',
+        codexSha256: mode === 'pinned' ? createHash('sha256').update(readFileSync(executable)).digest('hex') : 'a'.repeat(64) };
+    const planner = new AgentExecutionPlanner({ resolveExecutable: resolveAgentExecutablePath,
+        readVersion: readAgentExecutableVersion, resolveWorkspace: () => directory });
+    const request = { configuration: { provider: 'codex', modelProvider: 'openai', model: 'gpt-6-luna', effort: 'xhigh' },
+        capability: 'findings', prompt: 'controlled planner preparation; no model invocation', timeoutMs: 1000,
+        environment: { PATH: directory + path.delimiter + process.env.PATH }, cwd: directory };
+    if (mode === 'foreign') {
+        const old = planner.prepare(request);
+        try { assert.equal(existsSync(marker), true, 'ordinary preparation already executed the unpinned version probe'); }
+        finally { rmSync(old.runtimeDirectory, { recursive: true, force: true }); }
+        rmSync(marker);
+        assert.throws(() => preparePinnedExecution(planner, request, runtime), /digest/u);
+        assert.equal(existsSync(marker), false, 'the corrected admission runs before ordinary preparation');
+    } else {
+        const execution = preparePinnedExecution(planner, request, runtime);
+        try {
+            assert.equal(execution.runtimeContract.version, runtime.codex);
+            assert.equal(execution.executable, require('node:fs').realpathSync(executable));
+            assert.equal(existsSync(marker), true);
+        } finally { rmSync(execution.runtimeDirectory, { recursive: true, force: true }); }
+    }
 });

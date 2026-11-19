@@ -7,7 +7,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { trustedGitExecutable, gitEnvironment, admitQualificationModules } = require('../execution-provenance.cjs');
 const { tmpdir } = require('node:os');
-const { qualificationProvenance, requirePinnedCliProbe, requirePinnedExecution, selectedPlanProvenance } = require('./implementation.cjs');
+const { qualificationProvenance, requirePinnedCliProbe, requirePinnedExecution, preparePinnedExecution, selectedPlanProvenance } = require('./implementation.cjs');
 
 const plan = require('./configuration.cjs');
 const root = path.resolve(__dirname, '../../../../..');
@@ -54,7 +54,7 @@ async function run(destination, preflight = false) {
     process.once('SIGTERM', abort);
     const results = new Map();
     function prepare(request, calls, runtimeProofs) {
-        const invocation = planner.prepare(request);
+        const invocation = preparePinnedExecution(planner, request, plan.runtime);
         try {
             const proof = requirePinnedExecution(invocation);
             const flags = codexInvocation(invocation.argv);

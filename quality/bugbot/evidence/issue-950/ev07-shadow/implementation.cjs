@@ -69,6 +69,25 @@ function requirePinnedCliProbe(runtime = require('./configuration.cjs').runtime)
     return { version, proof };
 }
 
+function preparePinnedExecution(planner, request, runtime = require('./configuration.cjs').runtime) {
+    // The ordinary planner probes the selected CLI before returning its plan.
+    // Resolve through its production helpers and admit those bytes first;
+    // then retain the ordinary planner and its post-preparation proof unchanged.
+    const root = path.resolve(__dirname, '../../../../..');
+    const { resolveAgentExecutablePath, validateResolvedAgentInvocation } = require(path.join(root,
+        'src/infrastructure/agents/agent_executable_invocation'));
+    const { getAgentRuntimeManifestEntry } = require(path.join(root, 'src/infrastructure/agents/agent_runtime_manifest'));
+    const { provider } = request.configuration, environment = request.environment ?? process.env;
+    const selected = request.configuration.executable?.trim() || getAgentRuntimeManifestEntry(provider).executable;
+    const executable = resolveAgentExecutablePath(selected, environment);
+    const invocation = validateResolvedAgentInvocation(executable, provider, environment);
+    const launcherArgv = invocation.prefixArgs;
+    requirePinnedExecution({ executable: invocation.executable, launcherArgv,
+        ...(launcherArgv.length && { launcherSha256: createHash('sha256').update(readFileSync(launcherArgv[0])).digest('hex') }),
+        runtimeContract: { version: runtime?.codex } }, runtime);
+    return planner.prepare(request);
+}
+
 const qualificationDrivers = Object.freeze(['configuration.cjs', 'implementation.cjs', 'load.cjs', 'corpus.cjs',
     'review.cjs', 'full-review.cjs', 'launch-full-review.cjs', 'score-review.py', '../execution-provenance.cjs', '../qualification-bootstrap.cjs']);
 
@@ -138,7 +157,8 @@ function requireQualificationPolicy(selected) {
 
 function selectedPlanSha256() { return selectedPlanProvenance().sha256; }
 
-module.exports = { requirePinnedImplementation, requirePinnedRuntime, requirePinnedExecution, requirePinnedCliProbe, requirePinnedDrivers, qualificationProvenance, qualificationDrivers, selectedPlanSha256, selectedPlanProvenance };
+module.exports = { requirePinnedImplementation, requirePinnedRuntime, requirePinnedExecution, requirePinnedCliProbe,
+    preparePinnedExecution, requirePinnedDrivers, qualificationProvenance, qualificationDrivers, selectedPlanSha256, selectedPlanProvenance };
 
 if (require.main === module) {
     assert.equal(process.argv[2], '--plan-provenance');

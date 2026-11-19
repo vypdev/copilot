@@ -6,7 +6,7 @@ const { createHash } = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const { pinnedGit, admitQualificationModules } = require('../execution-provenance.cjs');
-const { qualificationProvenance, requirePinnedExecution, selectedPlanProvenance } = require('./implementation.cjs');
+const { qualificationProvenance, requirePinnedExecution, preparePinnedExecution, selectedPlanProvenance } = require('./implementation.cjs');
 
 const plan = require('./configuration.cjs');
 const hash = input => createHash('sha256').update(input).digest('hex');
@@ -19,7 +19,11 @@ const args = ['diff', '--no-ext-diff', '--no-textconv', '--no-renames'];
 const originalPullNumbers = { X1: 24, P1: 28, J1: 28 };
 
 function prepareDetector(planner, request, log, selected = plan) {
-    const execution = planner.prepare(request);
+    const execution = preparePinnedExecution(planner, request, selected.runtime);
+    return admitPreparedDetector(execution, log, selected);
+}
+
+function admitPreparedDetector(execution, log, selected = plan) {
     try {
         const runtimeProof = requirePinnedExecution(execution, selected.runtime);
         const { codexInvocation } = require('../../../../../src/infrastructure/bugbot/shadow/session.cjs');
@@ -187,4 +191,4 @@ if (require.main === module) {
         .catch(error => { console.error(error.code ?? error.name, error.message); process.exitCode = 1; });
 }
 
-module.exports = { prepareDetector };
+module.exports = { prepareDetector, admitPreparedDetector };

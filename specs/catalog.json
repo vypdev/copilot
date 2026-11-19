@@ -779,7 +779,8 @@
         "src/infrastructure/github/__tests__/github_bugbot_status_card_observation.test.ts",
         "src/infrastructure/github/__tests__/github_bugbot_status_card_handoff.test.ts",
         "quality/bugbot/evidence/issue-950/qualification-bootstrap.test.cjs",
-        "quality/bugbot/evidence/issue-950/normal-flow-shadow/paths.test.cjs"
+        "quality/bugbot/evidence/issue-950/normal-flow-shadow/paths.test.cjs",
+        "quality/bugbot/evidence/issue-950/ev07-shadow/review-runtime.test.cjs"
       ],
       "documentation": [
         "docs/bugbot/detection.mdx",

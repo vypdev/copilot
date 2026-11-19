@@ -11,7 +11,7 @@ const shadowPlan = require('../shadow-verification/plan.json');
 const root = path.resolve(__dirname, '../../../../..');
 const { attestSource, attestRuntime, admitQualificationModules, attestDrivers, pinnedGit, trustedGitExecutable,
     attestCommittedArtifact, requireBootstrapAdmission } = require('../execution-provenance.cjs');
-const { requirePinnedExecution, requirePinnedCliProbe } = require('../ev07-shadow/implementation.cjs');
+const { requirePinnedExecution, requirePinnedCliProbe, preparePinnedExecution } = require('../ev07-shadow/implementation.cjs');
 const normalFlowDrivers = Object.freeze(['run.cjs', '../execution-provenance.cjs', '../ev07-shadow/load.cjs',
     '../ev07-shadow/implementation.cjs', '../ev07-shadow/configuration.cjs', '../qualification-bootstrap.cjs']);
 let application;
@@ -214,7 +214,7 @@ async function run(lab, number, destination, manifestPath = path.join(__dirname,
         };
         const standardDetector = createFindingsQueryPort({ cli: new AgentCliClient({
             prepare(request) {
-                const plan = planner.prepare(request);
+                const plan = preparePinnedExecution(planner, request, frozen.runtime);
                 try {
                     const runtimeProof = requirePinnedExecution(plan, frozen.runtime);
                     const flags = codexInvocation(plan.argv);
