@@ -97,6 +97,7 @@ async function verifyMatchedCandidate(request, profiles, verifyArm, recordCompar
 }
 
 async function run(lab, number, destination, manifestPath = path.join(__dirname, 'subjects.json')) {
+    lab = path.resolve(lab);
     const manifest = fs.readFileSync(manifestPath);
     const frozen = JSON.parse(manifest);
     const { workflowInputs } = frozen;

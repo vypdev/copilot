@@ -2334,4 +2334,22 @@ Current qualification admission MUST enforce the declared CLI version before mea
 
 Minimum addition: **13 deterministic controls**: nine bound-corpus paths (authentic synthetic success and eight identity/data/score failures), one exact CLI gate, one separate shipping compiler-configuration case, and two actual approval-consumer merge paths. Add the absent-base/no-session case separately. Synthetic success is evaluator test data, never measured qualification. The frozen campaigns retain their original plans, ledgers, hashes and decision; reproduce them from their preregistration commits. The current stricter runner requires a new explicit preregistration before future measurements, and the failed campaign is not repeated until its qualification prerequisites change.
 
+Qualification admission MUST also verify every registered driver in the closed
+eight-file evaluator inventory: configuration, implementation guard, source
+loader, corpus runner, review runner, scheduler, launcher and scorer. Validate
+each SHA-256 against the selected preregistration before corpus or full-review
+dispatch; missing or changed drivers block, even when the corpus ledger and
+score otherwise agree. The full-review detector MUST validate the actual
+prepared private CLI runtime against that plan before dispatch and remove its
+temporary runtime on rejection. A shell `--version` observation alone does not
+authenticate a different prepared executable. Diagnostic lab paths MUST resolve
+from the caller's directory before entering a private checkout, including the
+source repository and official-source directory.
+
+Minimum follow-up: **seven deterministic controls**: changed review driver,
+missing loader, changed launcher; actual prepared runtime accepted, foreign or
+absent; and the real shadow entrypoint using a relative lab, zero candidates,
+zero verifier sessions, blocked model execution and zero GitHub writes. These
+controls do not revise the recorded negative EV-07 result or authorize activation.
+
 For current traceability, the immutable owner reused `ev950-shadow-C22` for two distinct titles. References MUST disambiguate them as `ev950-shadow-C22/source-admission` (the line-3172 repository/safety-stop case) and `ev950-shadow-C22/citation-range` (the line-3668 same-session range repair). These aliases do not rewrite historical test results. The owner's retained 36-case baseline is additive to the subsequent 13-case inventory, yielding a minimum of 49 for those two inventories, before later amendments. Executed acceptance still requires the mapped behaviors, not a count alone. The current deterministic shadow suite includes the distinct source, range and continuation controls. Research sessions remain explicitly cancelable and have no time, turn or token acceptance ceiling; absence of an invented timeout is not a defect. Interrupted native-check recovery intentionally preserves the conversation and changes only its exact check, as specified above.

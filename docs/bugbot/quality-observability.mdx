@@ -968,3 +968,10 @@ waiting. Live progress remains informational.
 ### Qualification provenance
 
 The full-review qualification runner rederives the independent corpus score from the recorded predictions and checks the complete per-case ledger against the frozen plan, source, compiler configuration, CLI and invocation profile. A passing summary copied from another run cannot open full review. The CLI version must match before measured work starts. Historical campaigns remain reproducible from their preregistration commits with their original runner and rubric; stricter admission in a later revision does not rewrite their results. This local evaluation control adds no repository or organization setting and does not qualify a profile by itself.
+Freeze the implementation, lockfile, shipping compiler configuration and all
+eight evaluator driver hashes before measurement. The current runners reject
+missing or changed drivers and a prepared CLI version different from the plan,
+even if a stored corpus summary claims success. Reproduce historical campaigns
+from their preregistration commits; new safeguards do not rewrite old results.
+Diagnostic lab paths are resolved before entering the isolated checkout, so
+relative paths preserve the same repository and official-source directory.

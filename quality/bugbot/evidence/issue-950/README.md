@@ -11,8 +11,10 @@ status card tests from the repository root. The EV-07 scorer uses the frozen
 v4 cohort and its full-review match rules. Historical pilot scorers and their
 ledgers are available in the tagged checkout below. The normal-flow runner
 keeps its default subject manifest. The qualification runners check the
-preregistered application source and lockfile before dispatch. A new
-campaign needs its own pinned implementation.
+preregistered application source, lockfile, compiler configuration, all eight
+driver hashes and the actual prepared CLI version before dispatch. A new
+campaign needs its own pinned implementation and driver inventory; reproduce
+frozen campaigns from their preregistration commits.
 
 ```sh
 pnpm run test:bugbot-shadow-verification

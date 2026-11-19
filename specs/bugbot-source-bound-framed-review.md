@@ -406,7 +406,7 @@ Repository-wide thresholds remain in force. New pure planning/coverage policies 
 | bugbot-framed-C057 | Source adapters | BFR-R04 | An absent added-text patch is recovered with exact change metadata. |
 | bugbot-framed-C058 | Source adapters | BFR-R04 | An absent modified-text patch is recovered with exact change metadata. |
 | bugbot-framed-C059 | Source adapters | BFR-R04 | An absent removed-text patch is recovered with exact change metadata. |
-| bugbot-framed-C060 | Source adapters | BFR-R04 | Recovered hunk metadata inconsistent with native change counts blocks. |
+| bugbot-framed-C060 | Source adapters | BFR-R04 | Recovered hunk metadata inconsistent with declared nonzero native counts blocks. When GitHub omits the patch and reports unknown `0/0`, verified immutable sides and complete reconstructing hunks supply the effective counts instead; the exact Git recovery fixture must pass. |
 | bugbot-framed-C061 | Source adapters | BFR-R04 | A nonregular or symlink object is rejected without following its target. |
 | bugbot-framed-C062 | Source adapters | BFR-R04 | Binary/NUL source is explicitly completeness-blocked. |
 | bugbot-framed-C063 | Source adapters | BFR-R04 | Invalid UTF-8 blob bytes are rejected without replacement decoding. |

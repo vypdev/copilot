@@ -196,3 +196,35 @@ Before the additional publication recovery, the normal hook for `b87c79312` pass
 
 
 The first full native-recovery hook passed 938 suites and found one failing identity replay: an unrelated report outside the diff no longer creates an unsupported file comment. That replay also exposed exact body-review duplication after the host refreshed the snapshot status. The adapter now observes complete reviews at the same native head and compares their report content through the shared application-owned historical-content projection, ignoring only the managed header/status. Five adapter controls cover exact reuse, status refresh, foreign heads, unsubmitted reviews and preservation of a new body finding when all inline comments already exist. The identity replay retains two independent IDs and zero unknown states, with one existing child comment and one complete body finding; its second semantic attempt emits no duplicate native review. Broader semantic rewording is not established by this exact replay. The failed hook log is retained; the complete hook must run again after this correction.
+## Native review of `46d1d7f69`
+
+The native review completed all **27/27** partitions, published its complete
+result and linked the canonical status comment to Commit's exact-head
+[implementation progress](https://github.com/vypdev/copilot/issues/950#issuecomment-6732557685).
+CI (static, coverage, build and aggregate), Commit, Verification and Branch Sync
+passed. Review and Approval remained neutral; no approval was submitted.
+
+| New report | Repository adjudication |
+|---|---|
+| [Missing canary base reference](https://github.com/vypdev/copilot/pull/951#discussion_r4623130578) | Refuted by the exact source: `check` uses `source.baseRef`, which is initialized independently of mutable state. The packaged control remains required; no source workaround is added. |
+| [Driver provenance](https://github.com/vypdev/copilot/pull/951#discussion_r4623130599) | Confirmed. A matching corpus summary/ledger could admit altered full-review drivers. Three model-free regressions admitted before the correction and now reject a changed review driver, missing loader and changed launcher. All eight closed inventory hashes are required at dispatch. |
+| [Actual full-review runtime](https://github.com/vypdev/copilot/pull/951#discussion_r4623130603) | Confirmed missing guard. The actual prepared runtime is now checked before dispatch, logged on admission and removed on rejection. Three simulated prepared executions distinguish pinned, foreign and absent versions. |
+| [Merge-group trigger](https://github.com/vypdev/copilot/pull/951#discussion_r4623130608) | Intentional maintainer scope: forks are excluded and this repository does not use merge queue. Keep the reviewed self-hosted placement and installation templates unchanged. |
+| [Relative diagnostic lab](https://github.com/vypdev/copilot/pull/951#discussion_r4623130613) | Confirmed with a real local Git fixture: the original CLI fails to clone `lab/project.git` after changing working directory. Resolve the lab first. The corrected entrypoint finishes a zero-change review with blocked model execution, no verifier sessions and no writes. |
+| [Zero-count acceptance wording](https://github.com/vypdev/copilot/pull/951#discussion_r4623130622) | Clarified C060: conflicting nonzero counts block; an absent patch plus provider `0/0` uses counts from verified immutable sides and complete reconstructing hunks. The existing exact Git recovery case covers that exception. |
+
+Reproduce the seven new controls plus existing shadow regressions with
+`pnpm run test:bugbot-shadow-verification`. The frozen plans, preregistrations,
+attempt ledgers and negative EV-07 decision remain unchanged. These controls
+make no model calls and do not qualify the profile. The source and packaged
+canaries, full normal hook and final-head remote checks are reported separately.
+
+Before the next normal commit, the complete shadow command passed **105/105**
+controls and the packaged Action passed all **13** status scenarios plus its
+rejected-mutation audit at unchanged SHA-256
+`210b0d5b214e1a1e5747c5dceab54e7945708358bd9b274df9a4a21f959cabd4`.
+The first packaged attempt was denied by the local sandbox's loopback restriction;
+the authorized loopback-only rerun passed. It contacted no GitHub endpoint.
+Specification, documentation, archive links (38), traceability rows (27) and
+Graphify validation passed. The Action-owned SDD retains its exact publication
+hash `e3bfaa9eaeca51b13d0c3c425c61317014c50bbb2023a8b081462bafbb9217fa`.

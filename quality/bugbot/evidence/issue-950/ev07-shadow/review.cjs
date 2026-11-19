@@ -6,7 +6,7 @@ const { createHash } = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const { getOctokit } = require('@actions/github');
-const { requirePinnedImplementation } = require('./implementation.cjs');
+const { requirePinnedImplementation, requirePinnedRuntime, requirePinnedDrivers } = require('./implementation.cjs');
 require('./load.cjs');
 
 const { Ai } = require('../../../../../src/data/model/ai');
@@ -32,6 +32,21 @@ const snapshot = (source, value, count = 0) => ({
 });
 const args = ['diff', '--no-ext-diff', '--no-textconv', '--no-renames'];
 const originalPullNumbers = { X1: 24, P1: 28, J1: 28 };
+
+function prepareDetector(planner, request, log, selected = plan) {
+    const execution = planner.prepare(request);
+    try {
+        requirePinnedRuntime(execution.runtimeContract?.version, selected.runtime);
+        const flags = codexInvocation(execution.argv);
+        assert.deepEqual(flags, { model: selected.detector.model, modelProvider: selected.detector.modelProvider,
+            reasoningEffort: selected.detector.effort, sandbox: 'read-only' });
+        log({ event: 'detector-admitted', flags, runtime: execution.runtimeContract.version });
+        return execution;
+    } catch (error) {
+        fs.rmSync(execution.runtimeDirectory, { recursive: true, force: true });
+        throw error;
+    }
+}
 
 function comparison(checkout, subject) {
     const changes = [];
@@ -75,6 +90,7 @@ function readSubject(id, checkout) {
 }
 
 async function run(checkout, id, repetition, output, preflight = false) {
+    requirePinnedDrivers(plan);
     const implementation = requirePinnedImplementation();
     assert(checkout && plan.repositoryCohort.order.includes(id) && [1, 2, 3].includes(repetition) && output);
     checkout = fs.realpathSync(checkout);
@@ -133,19 +149,9 @@ async function run(checkout, id, repetition, output, preflight = false) {
         partition_id: prompt.match(/Return partition_id exactly as `([^`]+)`/u)?.[1],
         reviewed_head_sha: subject.head,
     }) }
-        : createFindingsQueryPort({ cli: new AgentCliClient({ prepare(request) {
-            const execution = planner.prepare(request);
-            const flags = codexInvocation(execution.argv);
-            try {
-                assert.deepEqual(flags, { model: plan.detector.model, modelProvider: plan.detector.modelProvider,
-                    reasoningEffort: plan.detector.effort, sandbox: 'read-only' });
-                log({ event: 'detector-admitted', flags });
-            } catch (error) {
-                fs.rmSync(execution.runtimeDirectory, { recursive: true, force: true });
-                throw error;
-            }
-            return execution;
-        } }, { observe(fact) { log({ event: 'detector', fact }); } }) });
+        : createFindingsQueryPort({ cli: new AgentCliClient({
+            prepare: request => prepareDetector(planner, request, log),
+        }, { observe(fact) { log({ event: 'detector', fact }); } }) });
     const cancel = new AbortController();
     process.once('SIGINT', () => cancel.abort());
     process.once('SIGTERM', () => cancel.abort());
@@ -170,5 +176,9 @@ async function run(checkout, id, repetition, output, preflight = false) {
     if (preflight) assert.equal(result.payload.bugbotShadowVerification.publicationSimulation.status, 'complete');
 }
 
-run(process.argv[2], process.argv[3], Number(process.argv[4]), process.argv[5], process.argv[6] === '--preflight')
-    .catch(error => { console.error(error.code ?? error.name, error.message); process.exitCode = 1; });
+if (require.main === module) {
+    run(process.argv[2], process.argv[3], Number(process.argv[4]), process.argv[5], process.argv[6] === '--preflight')
+        .catch(error => { console.error(error.code ?? error.name, error.message); process.exitCode = 1; });
+}
+
+module.exports = { prepareDetector };

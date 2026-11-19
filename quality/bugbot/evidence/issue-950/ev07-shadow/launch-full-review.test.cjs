@@ -53,7 +53,9 @@ function boundCorpusFixture(t) {
     const directory = fixture(t);
     const hash = value => createHash('sha256').update(value).digest('hex');
     const plan = { ...require('./configuration.cjs'), runtime: { codex: 'codex-cli 0.169.1' },
-        inspectedArtifacts: { 'corpus.cjs': hash(readFileSync(path.join(__dirname, 'corpus.cjs'))) } };
+        inspectedArtifacts: Object.fromEntries(['configuration.cjs', 'implementation.cjs', 'load.cjs', 'corpus.cjs',
+            'review.cjs', 'full-review.cjs', 'launch-full-review.cjs', 'score-review.py']
+            .map(file => [file, hash(readFileSync(path.join(__dirname, file)))])) };
     const planFile = path.join(directory, 'plan.json');
     writeFileSync(planFile, JSON.stringify(plan));
     const corpus = JSON.parse(readFileSync(path.join(root, 'quality/bugbot/corpus.v1.json')));
@@ -72,7 +74,8 @@ function boundCorpusFixture(t) {
     return { directory, planFile, rows, score };
 }
 
-for (const mode of ['valid', 'plan', 'implementation', 'runtime', 'runner', 'prediction', 'score', 'duplicate', 'flags']) {
+for (const mode of ['valid', 'plan', 'implementation', 'runtime', 'runner', 'prediction', 'score', 'duplicate', 'flags',
+    'changed-review-driver', 'missing-loader', 'changed-launcher']) {
     test(`binds independent corpus dispatch to its actual ledger and score: ${mode}`, t => {
         const f = boundCorpusFixture(t);
         if (mode === 'plan') f.rows[0].plan = 'f'.repeat(64);
@@ -86,6 +89,13 @@ for (const mode of ['valid', 'plan', 'implementation', 'runtime', 'runner', 'pre
         }
         if (mode === 'duplicate') f.rows[2] = f.rows[1];
         if (mode === 'flags') f.rows[1].calls[0].model = 'unregistered-model';
+        if (['changed-review-driver', 'missing-loader', 'changed-launcher'].includes(mode)) {
+            const selected = JSON.parse(readFileSync(f.planFile));
+            if (mode === 'missing-loader') delete selected.inspectedArtifacts['load.cjs'];
+            else selected.inspectedArtifacts[mode === 'changed-launcher' ? 'launch-full-review.cjs' : 'review.cjs'] = 'f'.repeat(64);
+            writeFileSync(f.planFile, JSON.stringify(selected));
+            f.rows[0].plan = createHash('sha256').update(readFileSync(f.planFile)).digest('hex');
+        }
         writeFileSync(path.join(f.directory, 'corpus-v3/corpus.jsonl'), f.rows.map(row => JSON.stringify(row)).join('\n') + '\n');
         const run = spawnSync(process.execPath, ['-e',
             'require(process.argv[1]).launchFullReview(process.argv[2],()=>{process.stdout.write("admitted");return {}})',

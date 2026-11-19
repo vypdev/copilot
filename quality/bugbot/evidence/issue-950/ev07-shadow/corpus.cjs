@@ -6,7 +6,7 @@ const { execFileSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 const { tmpdir } = require('node:os');
-const { requirePinnedImplementation, requirePinnedRuntime } = require('./implementation.cjs');
+const { requirePinnedImplementation, requirePinnedRuntime, requirePinnedDrivers } = require('./implementation.cjs');
 require('./load.cjs');
 
 const { runBugbotBenchmarkAgent } = require('../../../../../src/tooling/bugbot_benchmark_runner');
@@ -21,6 +21,7 @@ const root = path.resolve(__dirname, '../../../../..');
 const hash = input => createHash('sha256').update(input).digest('hex');
 
 async function run(destination, preflight = false) {
+    requirePinnedDrivers(plan);
     const implementation = requirePinnedImplementation();
     assert.equal(hash(fs.readFileSync(__filename)), plan.inspectedArtifacts?.['corpus.cjs'],
         'corpus runner differs from the preregistered implementation');
@@ -51,6 +52,7 @@ async function run(destination, preflight = false) {
     function prepare(request, calls) {
         const invocation = planner.prepare(request);
         try {
+            requirePinnedRuntime(invocation.runtimeContract?.version);
             const flags = codexInvocation(invocation.argv);
             assert.equal(flags.model, configuration.model);
             assert.equal(flags.modelProvider, configuration.modelProvider);

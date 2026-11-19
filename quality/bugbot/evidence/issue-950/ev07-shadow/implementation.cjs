@@ -2,6 +2,8 @@
 
 const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
+const { createHash } = require('node:crypto');
+const { readFileSync } = require('node:fs');
 const path = require('node:path');
 const { implementation } = require('./configuration.cjs');
 
@@ -26,4 +28,16 @@ function requirePinnedRuntime(cli, runtime = require('./configuration.cjs').runt
     return cli;
 }
 
-module.exports = { requirePinnedImplementation, requirePinnedRuntime };
+const qualificationDrivers = Object.freeze(['configuration.cjs', 'implementation.cjs', 'load.cjs', 'corpus.cjs',
+    'review.cjs', 'full-review.cjs', 'launch-full-review.cjs', 'score-review.py']);
+
+function requirePinnedDrivers(selected = require('./configuration.cjs')) {
+    for (const file of qualificationDrivers) {
+        const expected = selected.inspectedArtifacts?.[file];
+        assert.match(expected ?? '', /^[a-f0-9]{64}$/u, 'preregistered driver hash unavailable: ' + file);
+        assert.equal(createHash('sha256').update(readFileSync(path.join(__dirname, file))).digest('hex'), expected,
+            'qualification driver differs from the preregistration: ' + file);
+    }
+}
+
+module.exports = { requirePinnedImplementation, requirePinnedRuntime, requirePinnedDrivers };

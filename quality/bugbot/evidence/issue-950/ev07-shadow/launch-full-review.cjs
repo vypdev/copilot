@@ -7,9 +7,10 @@ const assert = require('node:assert/strict');
 const { createHash } = require('node:crypto');
 const { corpus } = require('./configuration.cjs');
 const plan = require('./configuration.cjs');
-const { requirePinnedRuntime } = require('./implementation.cjs');
+const { requirePinnedRuntime, requirePinnedDrivers } = require('./implementation.cjs');
 
 function validateCorpusProvenance(directory, result) {
+    requirePinnedDrivers(plan);
     const hash = input => createHash('sha256').update(input).digest('hex');
     const root = path.resolve(__dirname, '../../../../..');
     const planFile = process.env.COPILOT_EV07_PLAN ? path.resolve(process.env.COPILOT_EV07_PLAN) : path.join(__dirname, 'plan.json');
