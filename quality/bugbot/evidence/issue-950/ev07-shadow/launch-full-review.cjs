@@ -86,6 +86,7 @@ function launchFullReview(campaign, launch = spawn) {
 
 if (require.main === module) {
     try {
+        require('../execution-provenance.cjs').requireBootstrapAdmission(path.resolve(__dirname, '../../../../..'));
         const child = launchFullReview(process.argv[2]);
         const interrupt = () => child.kill('SIGINT');
         const terminate = () => child.kill('SIGTERM');

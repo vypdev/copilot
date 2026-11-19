@@ -50,7 +50,7 @@ for (const [name, data] of [
         assert.throws(() => launchFullReview(directory, launch), /independent corpus/);
         const direct = spawnSync(process.execPath, [path.join(__dirname, 'full-review.cjs'), directory], { encoding: 'utf8' });
         assert.equal(direct.status, 1);
-        assert.match(direct.stderr, /independent corpus/u);
+        assert.match(direct.stderr, /immutable bootstrap/u);
         assert.equal(existsSync(path.join(directory, 'full-review')), false);
     });
 }

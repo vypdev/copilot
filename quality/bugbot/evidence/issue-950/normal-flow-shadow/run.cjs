@@ -9,10 +9,11 @@ const path = require('node:path');
 const official = require('../shadow-real-prs/official.json');
 const shadowPlan = require('../shadow-verification/plan.json');
 const root = path.resolve(__dirname, '../../../../..');
-const { attestSource, attestRuntime, admitQualificationModules, attestDrivers, pinnedGit, trustedGitExecutable } = require('../execution-provenance.cjs');
+const { attestSource, attestRuntime, admitQualificationModules, attestDrivers, pinnedGit, trustedGitExecutable,
+    attestCommittedArtifact, requireBootstrapAdmission } = require('../execution-provenance.cjs');
 const { requirePinnedExecution, requirePinnedCliProbe } = require('../ev07-shadow/implementation.cjs');
 const normalFlowDrivers = Object.freeze(['run.cjs', '../execution-provenance.cjs', '../ev07-shadow/load.cjs',
-    '../ev07-shadow/implementation.cjs', '../ev07-shadow/configuration.cjs']);
+    '../ev07-shadow/implementation.cjs', '../ev07-shadow/configuration.cjs', '../qualification-bootstrap.cjs']);
 let application;
 function loadApplication() {
     if (application) return application;
@@ -106,9 +107,11 @@ async function verifyMatchedCandidate(request, profiles, verifyArm, recordCompar
 
 async function run(lab, number, destination, manifestPath = path.join(__dirname, 'subjects.json')) {
     lab = path.resolve(lab);
-    const manifest = fs.readFileSync(manifestPath);
+    const admission = requireBootstrapAdmission(root);
+    const authenticated = attestCommittedArtifact(root, manifestPath, admission.planSha256, admission.planCommit);
+    const manifest = authenticated.bytes;
     const frozen = JSON.parse(manifest);
-    const provenance = { ...attestSource(root, frozen.implementation),
+    const provenance = { bootstrap: admission, manifest: authenticated.provenance, ...attestSource(root, frozen.implementation),
         drivers: attestDrivers(__dirname, frozen.drivers, normalFlowDrivers), runtime: attestRuntime(root, frozen.runtime) };
     admitQualificationModules(root);
     const directRuntime = { executable: frozen.runtime.executable, prefixArgs: frozen.runtime.launcher ? [frozen.runtime.launcher] : [] };
@@ -181,8 +184,9 @@ async function run(lab, number, destination, manifestPath = path.join(__dirname,
         if (workflowInputs) {
             assert.equal(process.env.REVIEWER_EFFORT, workflowInputs.REVIEWER_EFFORT);
             assert.equal(process.env.BUGBOT_EFFORT, workflowInputs.BUGBOT_EFFORT);
-            const runtime = execFileSync(process.env.PILOT_LOCAL_PYTHON, ['-c',
-                'import platform,sqlite3; print(platform.python_version(), sqlite3.sqlite_version)'], { encoding: 'utf8' }).trim();
+            const runtime = execFileSync(process.env.PILOT_LOCAL_PYTHON, ['-I', '-S', '-c',
+                'import platform,sqlite3; print(platform.python_version(), sqlite3.sqlite_version)'],
+            { encoding: 'utf8', env: { PATH: '/usr/bin:/bin' } }).trim();
             assert.equal(runtime, shadowPlan.localRuntime.python + ' ' + shadowPlan.localRuntime.sqlite);
             log({ event: 'local-runtime', runtime, scope: shadowPlan.localRuntime.scope });
         }

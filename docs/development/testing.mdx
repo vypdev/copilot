@@ -354,3 +354,30 @@ Supply read-only GitHub evidence credentials through `COPILOT_EVIDENCE_TOKEN`,
 `GH_TOKEN` or `GITHUB_TOKEN` as appropriate for the private fixtures; the review
 driver does not launch a PATH-resolved credential helper. Do not persist tokens
 in a plan or evidence record. An absent credential blocks the required CI reader.
+
+
+### Start qualification from a reviewed bootstrap
+
+Extract `quality/bugbot/evidence/issue-950/qualification-bootstrap.cjs` from an
+independently reviewed commit using trusted operating-system Git into a private
+file outside the checkout. Verify its independently reviewed SHA-256 before
+launching trusted Node with NODE_OPTIONS and NODE_PATH unset. Do not run the
+working-tree corpus, normal-flow or full-review entrypoint directly for measured
+qualification; those entrypoints require private bootstrap admission.
+
+The positional arguments are repository, reviewed plan commit, relative plan
+path, reviewed plan SHA-256, reviewed bootstrap SHA-256, mode, then mode arguments.
+`corpus` takes a new output directory and optional `--preflight`; `full-review`
+takes the campaign directory; `normal-flow` takes lab, PR number and a new ledger
+path. The selected plan must be a committed regular blob containing the complete
+current driver/runtime pins. Its revision must contain the exact reviewed
+bootstrap. Treat the reviewed digests and trusted Node/Git/package installation
+as operator trust anchors; a checkout's own receipt is insufficient.
+
+The launcher authenticates and materializes drivers before loading its verifier,
+checks original and private source/dependency/runtime bytes, forwards explicit
+signals and removes its private source after exit. It records stable bootstrap
+and plan identities without private temporary paths. Normal-flow authenticates
+the manifest before selecting even a `--version` executable. Production stays
+disabled and publication stays dry-run. Existing frozen campaigns replay with
+their frozen historical drivers; this route needs a new reviewed preregistration.

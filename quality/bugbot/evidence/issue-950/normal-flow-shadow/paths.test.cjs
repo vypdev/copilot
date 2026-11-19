@@ -2,7 +2,7 @@
 
 const assert = require('node:assert/strict');
 const { execFileSync, spawnSync } = require('node:child_process');
-const { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync, symlinkSync } = require('node:fs');
+const { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync, symlinkSync, cpSync, constants } = require('node:fs');
 const { createHash } = require('node:crypto');
 const { tmpdir } = require('node:os');
 const path = require('node:path');
@@ -172,7 +172,7 @@ fs.writeFileSync(process.env.IMPORT_MARKER,name);throw Error('unexpected applica
         assert.notEqual(child.status, 0);
         assert.equal(existsSync(marker), false, child.stderr);
         assert.equal(existsSync(path.join(directory, 'result.jsonl')), false);
-        assert.match(child.stderr, /rev-parse|commit|pin/u);
+        assert.match(child.stderr, /rev-parse|commit|pin|immutable bootstrap/u);
     });
 }
 
@@ -267,8 +267,20 @@ test('the actual runner resolves a relative lab before entering its private chec
     manifest.runtime = { ...proof.runtimeIdentity(root), executable: path.join(bin, 'codex'),
         codex: 'codex-cli fixture', codexSha256: hash(path.join(bin, 'codex')) };
     manifest.drivers = Object.fromEntries(require('./run.cjs').normalFlowDrivers.map(file => [file, hash(path.join(__dirname, file))]));
-    writeFileSync(path.join(directory, 'subjects.json'), JSON.stringify(manifest));
-    const run = spawnSync(process.execPath, [path.join(__dirname, 'run.cjs'), 'lab', '1', 'result.jsonl', 'subjects.json'], {
+    const checkout = path.join(directory, 'implementation');
+    execFileSync('git', ['clone', '--quiet', '--shared', '--template=', root, checkout]);
+    cpSync(path.join(root, 'node_modules'), path.join(checkout, 'node_modules'),
+        { recursive: true, verbatimSymlinks: true, mode: constants.COPYFILE_FICLONE });
+    const relative = 'quality/bugbot/evidence/issue-950/normal-flow-shadow/relative-lab.fixture.json';
+    writeFileSync(path.join(checkout, relative), JSON.stringify(manifest));
+    execFileSync('git', ['-C', checkout, 'add', relative]);
+    execFileSync('git', ['-C', checkout, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
+        '-c', 'core.hooksPath=/dev/null', 'commit', '--quiet', '-m', 'Commit synthetic fixture manifest']);
+    const revision = execFileSync('git', ['-C', checkout, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+    const bootstrap = path.join(directory, 'reviewed-bootstrap.cjs');
+    writeFileSync(bootstrap, execFileSync('git', ['-C', checkout, 'show', revision + ':quality/bugbot/evidence/issue-950/qualification-bootstrap.cjs']));
+    const run = spawnSync(process.execPath, [bootstrap, checkout, revision, relative,
+        hash(path.join(checkout, relative)), hash(bootstrap), 'normal-flow', 'lab', '1', 'result.jsonl'], {
         cwd: directory, encoding: 'utf8', env: { ...process.env, PATH: bin + path.delimiter + process.env.PATH,
             MODEL_FORBIDDEN: forbidden },
     });

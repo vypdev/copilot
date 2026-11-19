@@ -14,6 +14,7 @@ const root = path.resolve(__dirname, '../../../../..');
 const hash = input => createHash('sha256').update(input).digest('hex');
 
 async function run(destination, preflight = false) {
+    require('../execution-provenance.cjs').requireBootstrapAdmission(root);
     const provenance = qualificationProvenance(plan);
     const implementation = provenance.implementation;
     admitQualificationModules(root);

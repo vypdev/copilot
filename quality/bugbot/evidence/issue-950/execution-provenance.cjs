@@ -211,4 +211,41 @@ function attestDrivers(directory, expected, files) {
     }));
 }
 
-module.exports = { attestSource, attestRuntime, attestDrivers, runtimeIdentity, dependencyIdentity, admitQualificationModules, pinnedGit, gitEnvironment, trustedGitExecutable };
+function attestCommittedArtifact(root, file, expectedSha256, commit) {
+    assert.match(expectedSha256 ?? '', /^[a-f0-9]{64}$/u, 'reviewed committed artifact digest required');
+    assert.match(commit ?? '', /^[a-f0-9]{40}$/u, 'reviewed artifact commit required');
+    root = fs.realpathSync(root);
+    const relative = path.relative(root, path.resolve(file)).split(path.sep).join('/');
+    assert(relative && !path.isAbsolute(relative) && !relative.split('/').some(part => ['', '..', '.git'].includes(part)),
+        'committed artifact must be inside the reviewed repository');
+    let current = root;
+    for (const part of relative.split('/')) {
+        current = path.join(current, part);
+        assert(!fs.lstatSync(current).isSymbolicLink(), 'committed artifact symlink refused');
+    }
+    assert(fs.lstatSync(current).isFile(), 'committed artifact must be regular');
+    const git = pinnedGit(root), rows = git('ls-tree', '-z', commit, '--', relative).toString('utf8').split('\0').filter(Boolean);
+    assert.equal(rows.length, 1, 'reviewed committed artifact unavailable');
+    const [header, name] = rows[0].split('\t'), [mode, type, blob] = header.split(' ');
+    assert(['100644', '100755'].includes(mode) && type === 'blob' && name === relative,
+        'reviewed committed artifact must be a regular blob');
+    const bytes = fs.readFileSync(current);
+    assert.equal(hash(bytes), expectedSha256, 'reviewed committed artifact digest differs');
+    assert(git('cat-file', 'blob', blob).equals(bytes), 'reviewed committed artifact bytes differ');
+    return { bytes, provenance: { commit, path: relative, blob, sha256: expectedSha256 } };
+}
+
+function requireBootstrapAdmission(root) {
+    const file = path.join(root, '.qualification-admission.json');
+    assert(fs.existsSync(file), 'qualification requires the independently reviewed immutable bootstrap');
+    assert(fs.lstatSync(file).isFile() && !fs.lstatSync(file).isSymbolicLink(), 'invalid bootstrap admission');
+    const proof = JSON.parse(fs.readFileSync(file));
+    assert.match(proof.bootstrapSha256 ?? '', /^[a-f0-9]{64}$/u);
+    assert.equal(hash(fs.readFileSync(path.join(root, 'quality/bugbot/evidence/issue-950/qualification-bootstrap.cjs'))),
+        proof.bootstrapSha256, 'bootstrap admission identity differs');
+    attestCommittedArtifact(root, path.join(root, proof.planPath), proof.planSha256, proof.planCommit);
+    return proof;
+}
+
+module.exports = { attestSource, attestRuntime, attestDrivers, runtimeIdentity, dependencyIdentity, admitQualificationModules,
+    pinnedGit, gitEnvironment, trustedGitExecutable, attestCommittedArtifact, requireBootstrapAdmission };

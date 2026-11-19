@@ -19,7 +19,9 @@ function qualificationProvenance(selected = require('./configuration.cjs')) {
     const source = attestSource(root, selected.implementation);
     const drivers = requirePinnedDrivers(selected);
     const runtime = attestRuntime(root, selected.runtime);
-    return { ...source, drivers, runtime };
+    const admission = path.join(root, '.qualification-admission.json');
+    return { ...source, drivers, runtime, ...(require('node:fs').existsSync(admission)
+        && { bootstrap: require('../execution-provenance.cjs').requireBootstrapAdmission(root) }) };
 }
 
 function requirePinnedRuntime(cli, runtime = require('./configuration.cjs').runtime) {
@@ -68,7 +70,7 @@ function requirePinnedCliProbe(runtime = require('./configuration.cjs').runtime)
 }
 
 const qualificationDrivers = Object.freeze(['configuration.cjs', 'implementation.cjs', 'load.cjs', 'corpus.cjs',
-    'review.cjs', 'full-review.cjs', 'launch-full-review.cjs', 'score-review.py', '../execution-provenance.cjs']);
+    'review.cjs', 'full-review.cjs', 'launch-full-review.cjs', 'score-review.py', '../execution-provenance.cjs', '../qualification-bootstrap.cjs']);
 
 function requirePinnedDrivers(selected = require('./configuration.cjs')) {
     const drivers = attestDrivers(__dirname, selected.inspectedArtifacts, qualificationDrivers);

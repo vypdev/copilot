@@ -2502,3 +2502,53 @@ path forms and one generated-card ownership case. Reuse actual workflow,
 adapter, Git and packaged entrypoints; no model calls or evaluated-PR writes.
 Update the operator documentation and catalog evidence, run specification,
 architecture and focused checks, and report final-head CI separately.
+
+
+### Independent qualification bootstrap — #970, 2026-11-19
+
+Before Node loads any qualification driver, the operator MUST extract the
+bootstrap blob with trusted operating-system Git from an independently reviewed
+revision, check its independently reviewed SHA-256, and start trusted Node with
+no preload or loader/search overrides. The bootstrap MUST authenticate the exact
+reviewed committed plan by explicit revision/path/SHA-256, compare every closed
+inventory driver with its immutable committed blob and reject changed physical
+bytes/symlink parents before loading the verifier. A working-tree verifier cannot
+establish its own integrity after executing. Direct working-tree entrypoints do
+not constitute qualification admission.
+
+The bootstrap materializes that immutable Git revision in a private source tree,
+loads the already checked verifier there, verifies the original source and
+installed dependency/runtime identity, copies dependencies, rechecks the private
+source and installation, and runs only that admitted entrypoint. Node, OS Git,
+reviewed bootstrap/plan digests and the verified package installation are the
+operator trust anchors. A receipt or run/artifact identity is not independent
+accreditation of a compromised bootstrap or host.
+
+Normal-flow MUST authenticate its manifest as that exact reviewed committed
+regular blob before reading runtime selection for any executable probe or model
+turn. The external digest cannot be supplied solely by that manifest. Record the
+stable bootstrap SHA-256 and plan commit/path/digest with the source, driver and
+runtime proof, and compare them between corpus and paired reviews. Exclude
+private ephemeral directory names from equality. Preserve dry-run publication,
+disabled production, explicit cancellation and immutable historical attempts.
+No score/latency gate or research policy changes; no consumer setting is added.
+
+```mermaid
+flowchart LR
+  A[Operator reviewed Git blob and SHA-256] --> B[External trusted Node bootstrap]
+  B --> C[Authenticate committed plan and all driver blobs]
+  C --> D[Materialize private immutable source]
+  D --> E[Verified helper checks source and installed runtime]
+  E --> F[Run admitted corpus or paired review]
+```
+
+Minimum **10 additional deterministic controls**: one isolated successful launch
+and cleanup; two changed-driver causal counter-controls; one unauthenticated CLI
+manifest counter-control; four committed-manifest integrity failures; one combined
+Git-redirection/PATH-shim case; and one installed-dependency rejection. Retain the
+existing actual relative-lab normal-flow control with a committed fixture manifest
+and immutable launch. Use real Git and blocked model/write ports. All 174 corpus
+cases and the 42 paired slots remain unstarted until merged prerequisites and a
+new committed preregistration meet their existing independent acceptance gates.
+Update operator testing documentation and catalogue evidence together, validate
+specifications/docs and refresh the graph. Local controls do not qualify a profile.

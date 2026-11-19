@@ -10,6 +10,7 @@ const plan = require('./configuration.cjs');
 const concurrency = 3;
 
 async function run(campaign) {
+    require('../execution-provenance.cjs').requireBootstrapAdmission(path.resolve(__dirname, '../../../../..'));
     campaign = requirePassingCorpus(campaign);
     const provenance = qualificationProvenance(plan);
     const implementation = provenance.implementation;

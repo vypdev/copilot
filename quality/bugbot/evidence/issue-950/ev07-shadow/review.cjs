@@ -76,6 +76,7 @@ function readSubject(id, checkout) {
 }
 
 async function run(checkout, id, repetition, output, preflight = false) {
+    require('../execution-provenance.cjs').requireBootstrapAdmission(path.resolve(__dirname, '../../../../..'));
     const provenance = qualificationProvenance(plan);
     const implementation = provenance.implementation;
     admitQualificationModules(path.resolve(__dirname, '../../../../..'));
