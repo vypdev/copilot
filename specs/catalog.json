@@ -664,9 +664,9 @@
       "id": "bugbot-review-state-reconciliation",
       "title": "Bugbot review-state reconciliation",
       "status": "implemented",
-      "scope": "Reconcile review snapshots, findings, threads, comments, and check conclusions",
+      "scope": "Reconcile review snapshots, findings, threads, comments, and check conclusions; bind qualification execution to independently reviewed external bootstrap code and process-local driver admission",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-11-19",
+      "lastVerified": "2026-11-20",
       "specs": [
         "specs/bugbot-review-state-reconciliation.md"
       ],
@@ -731,7 +731,11 @@
         "quality/bugbot/evidence/issue-950/execution-provenance.cjs",
         "quality/bugbot/evidence/issue-950/qualification-bootstrap.cjs",
         "quality/bugbot/evidence/issue-950/ev07-shadow/implementation.cjs",
-        "quality/bugbot/evidence/issue-950/normal-flow-shadow/run.cjs"
+        "quality/bugbot/evidence/issue-950/normal-flow-shadow/run.cjs",
+        "quality/bugbot/evidence/issue-950/ev07-shadow/corpus.cjs",
+        "quality/bugbot/evidence/issue-950/ev07-shadow/review.cjs",
+        "quality/bugbot/evidence/issue-950/ev07-shadow/full-review.cjs",
+        "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.cjs"
       ],
       "tests": [
         "src/domain/bugbot/__tests__/review_state.test.ts",

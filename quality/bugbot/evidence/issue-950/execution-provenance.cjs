@@ -239,17 +239,34 @@ function attestCommittedArtifact(root, file, expectedSha256, commit) {
     return { bytes, provenance: { commit, path: relative, blob, sha256: expectedSha256 } };
 }
 
-function requireBootstrapAdmission(root) {
-    const file = path.join(root, '.qualification-admission.json');
-    assert(fs.existsSync(file), 'qualification requires the independently reviewed immutable bootstrap');
-    assert(fs.lstatSync(file).isFile() && !fs.lstatSync(file).isSymbolicLink(), 'invalid bootstrap admission');
-    const proof = JSON.parse(fs.readFileSync(file));
-    assert.match(proof.bootstrapSha256 ?? '', /^[a-f0-9]{64}$/u);
+// Process-local transport installed only after the external bootstrap admits
+// this immutable module. A checkout file is never execution authority. This
+// context is not an independent attestation of the host or of human review.
+let bootstrapContext;
+function initializeBootstrapContext(root, proof, spawnDriver) {
+    assert(!bootstrapContext, 'bootstrap context is already installed');
+    root = fs.realpathSync(root);
+    const main = fs.realpathSync(require.main.filename);
+    assert(!main.startsWith(root + path.sep), 'bootstrap must execute outside the admitted checkout');
+    assert.equal(hash(fs.readFileSync(main)), proof.bootstrapSha256, 'executing bootstrap identity differs');
     assert.equal(hash(fs.readFileSync(path.join(root, 'quality/bugbot/evidence/issue-950/qualification-bootstrap.cjs'))),
-        proof.bootstrapSha256, 'bootstrap admission identity differs');
-    attestCommittedArtifact(root, path.join(root, proof.planPath), proof.planSha256, proof.planCommit);
+        proof.bootstrapSha256, 'admitted bootstrap identity differs');
+    assert.equal(typeof spawnDriver, 'function');
+    bootstrapContext = Object.freeze({ root, proof: Object.freeze({ ...proof }), spawnDriver });
+}
+function bootstrapAdmission(root) {
+    return bootstrapContext?.root === fs.realpathSync(root) ? bootstrapContext.proof : undefined;
+}
+function requireBootstrapAdmission(root) {
+    const proof = bootstrapAdmission(root);
+    assert(proof, 'qualification requires the independently reviewed immutable bootstrap');
     return proof;
+}
+function spawnQualificationDriver(mode, args, options) {
+    assert(bootstrapContext, 'qualification requires the independently reviewed immutable bootstrap');
+    return bootstrapContext.spawnDriver(mode, args, options);
 }
 
 module.exports = { attestSource, attestRuntime, attestDrivers, runtimeIdentity, dependencyIdentity, admitQualificationModules,
-    pinnedGit, gitEnvironment, trustedGitExecutable, attestCommittedArtifact, requireBootstrapAdmission };
+    pinnedGit, gitEnvironment, trustedGitExecutable, attestCommittedArtifact, requireBootstrapAdmission,
+    bootstrapAdmission, initializeBootstrapContext, spawnQualificationDriver };

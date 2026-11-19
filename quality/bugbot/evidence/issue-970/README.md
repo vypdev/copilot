@@ -180,3 +180,63 @@ the required complete validation. Both raw outputs are lossless gzip.
 
 - `planner-final-hook-sigsegv.log.gz`: original bytes 526237, SHA-256 `03e97b4a5a1b5e74815262999194f81a7df311359c5cfb5229790c9255010eef`.
 - `planner-final-hook-focused.log.gz`: original bytes 193, SHA-256 `677fe194c74955c922514e93ef4010100248ff690cc0c8403599582800c4b98b`.
+
+
+## Forged checkout receipt and external execution context
+
+The final01097099 native review found that a checkout-written admission file
+could supply its own matching bootstrap/plan digests. The actual old verifier
+accepts that fabricated record without any external bootstrap invocation. A
+second causal control observes the direct runner importing a checkout verifier.
+Both former behaviors fail the new rejection assertions; these failures remain.
+The first negative run also exposed the existing logical macOS path alias in a
+fixture argument; the corrected counter-control uses its physical manifest path.
+
+Qualification no longer reads or creates .qualification-admission.json. Direct
+driver CLIs reject before helper imports. After admitting source/dependencies,
+the independently reviewed external bootstrap forks that same external file,
+sends verified context through its parent IPC channel, repeats private-byte and
+runtime verification in the worker, and calls the driver as a module. Context
+is process-local and bound to that executing bootstrap identity. Nested paired
+workers follow the same path and recheck their corpus gate. IPC and in-process
+context are transport, not independent host or human-review attestation. The
+operator must still verify the external Git blob/hash before starting trusted Node.
+
+Six new controls cover fabricated receipt, direct pre-import refusal, missing
+worker IPC, actual nested positive route, changed private verifier before a nested
+import, and explicit SIGTERM propagation. The nested fixture uses pinned fake
+corpus/worker ports to test transport; it is no corpus or qualification result.
+The cancellation fixture initially exited before handling the signal; that failure
+is retained. Its owned keep-alive now models an active worker and is cleared on
+cancellation. The fixture-only cleanup timeout never bounds a model investigation.
+
+All **193/193** combined controls pass, with zero skipped/cancelled tests, model
+calls or evaluated-PR writes. The prior **192/192** run before adding the explicit
+signal case is retained separately; the bootstrap minimum is now19 cases.
+Application source, shipping bundles, consumer templates and frozen historical
+campaign bytes remain unchanged. Qualification driver identities change and need
+a new exact preregistration before any future measurement.
+Full mandatory hook, specification/docs/catalog checks and new-SHA native review
+remain separate delivery checks; no new campaign, installation or qualification
+is claimed by these deterministic results.
+
+Lossless raw-log inventory:
+
+The real previous verifier from commit `01097099d220bd481f6e50b58d2213165bcf6194`
+is also frozen as `legacy-verifier-01097099.cjs.gz` (15,205 original bytes,
+SHA-256 `c0471ff35e10cd39ff75a84e02830f4aa98f6f97bb3b47345e241cb77d3877d8`).
+The causal control checks that digest before using the code on its disposable
+fixture. It does not rely on the managed branch remaining fetchable after squash.
+
+- `forged-receipt-first-negative.log.gz`: 4835 original bytes; SHA-256 `cec885537a2dd908d329fadc5a993a94d1e3d56371635901ecc2dadf62da465a`.
+- `forged-receipt-causal-negative.log.gz`: 2081 original bytes; SHA-256 `a87078ab93b86fc2a61cc8e214c9e45548d09aff8bdb33afefb55ec7f62d9efb`.
+- `forged-receipt-focus-pass.log.gz`: 293 original bytes; SHA-256 `a3faa77cb0e9c3def85be302a2370c1dfd05e472601bc4bd96c238668a491199`.
+- `memory-bootstrap-18-pass.log.gz`: 2886 original bytes; SHA-256 `88e211735b9318dd0252d15dd3d9a72f76082892b563e73e753f493cd9116c33`.
+- `memory-shadow-192-pass.log.gz`: 20375 original bytes; SHA-256 `0fe14ffcd31dc7c648b36e3459da9c535dbf2c975de6d99c251f81a88cd8c1cc`.
+- `memory-cancel-fixture-negative.log.gz`: 1163 original bytes; SHA-256 `085cd38dd9830364811559c629e2771d18fa27e9729cf4c8cfaa81705737f8fc`.
+- `memory-cancel-pass.log.gz`: 218 original bytes; SHA-256 `d850cb50598e801927753bb0cbc4e05abe49c4e57db5e12b5bf6735457470853`.
+- `memory-shadow-193-pass.log.gz`: 20461 original bytes; SHA-256 `55fedbc9dcd2c2d62c81c4e16e3110a93d5daf27505a214d4a04d0557b0d3404`.
+
+The final replay using the frozen legacy source also passes **193/193** controls.
+
+- `memory-frozen-final-shadow-193.log.gz`: 20469 original bytes; SHA-256 `5f80b7559e8a4085089ff8d0a0b5b111e55dcc67804c29fac29219cf57aef2c4`.

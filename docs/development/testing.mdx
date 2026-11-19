@@ -363,7 +363,7 @@ independently reviewed commit using trusted operating-system Git into a private
 file outside the checkout. Verify its independently reviewed SHA-256 before
 launching trusted Node with NODE_OPTIONS and NODE_PATH unset. Do not run the
 working-tree corpus, normal-flow or full-review entrypoint directly for measured
-qualification; those entrypoints require private bootstrap admission.
+qualification; those CLIs refuse before importing checkout code.
 
 The positional arguments are repository, reviewed plan commit, relative plan
 path, reviewed plan SHA-256, reviewed bootstrap SHA-256, mode, then mode arguments.
@@ -396,3 +396,20 @@ planner: that planner probes --version during preparation. Admission uses its
 production resolution/validation helpers, then delegates to the unchanged planner
 and checks the final prepared runtime/profile as before. A matching version
 reported by an unregistered executable cannot execute even during preparation.
+
+Qualification drivers now refuse direct CLI execution before importing a checkout
+helper. A `.qualification-admission.json` file, even with matching hashes, supplies
+no execution authority. Use the independently materialized external bootstrap
+above. It forks that same reviewed file with a parent IPC channel, repeats private
+plan/driver/source/runtime checks in each worker, and supplies process-local
+context before calling the driver module. Paired scheduler and review-slot
+processes follow that same route and retain the independent corpus gate.
+
+The public bootstrap arguments are unchanged; the worker channel is internal.
+Explicit cancellation still reaches the admitted worker and preserves its exit.
+There are no new consumer settings or investigation limits. The six additional
+receipt/direct-entry/IPC/nested-mutation/cancellation controls use real Git and
+owned fake workers, with zero model calls and evaluated-PR writes. Their cleanup
+timeout belongs only to the synthetic cancellation fixture. Bootstrap context is
+not independent accreditation of the host or operator review; retain the external
+digest check before starting Node and freeze new driver hashes before measuring.

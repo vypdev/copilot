@@ -5,13 +5,14 @@ const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 const { createHash } = require('node:crypto');
-const { execFileSync, spawnSync } = require('node:child_process');
+const { execFileSync, spawnSync, spawn } = require('node:child_process');
+const { once } = require('node:events');
 const { test } = require('node:test');
 const proof = require('./execution-provenance.cjs');
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const prefix = 'quality/bugbot/evidence/issue-950/';
 
-function fixture(t, crlfCheckout = false, brokerGit = false) {
+function fixture(t, crlfCheckout = false, brokerGit = false, cancellation = false) {
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'qualified-bootstrap-control-'));
     t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
     const root = path.join(directory, 'project');
@@ -36,13 +37,22 @@ function fixture(t, crlfCheckout = false, brokerGit = false) {
     for (const file of drivers) write(path.posix.normalize(prefix + 'normal-flow-shadow/' + file), 'module.exports = {};\n');
     write(prefix + 'execution-provenance.cjs', fs.readFileSync(path.join(__dirname, 'execution-provenance.cjs')));
     write(prefix + 'qualification-bootstrap.cjs', fs.readFileSync(path.join(__dirname, 'qualification-bootstrap.cjs')));
-    write(prefix + 'normal-flow-shadow/run.cjs', 'const fs=require("node:fs");fs.writeFileSync(process.argv[4],JSON.stringify({cwd:process.cwd(),isolated:__dirname,mode:process.env.BUGBOT_VERIFICATION_MODE}));\n');
+    write(prefix + 'normal-flow-shadow/run.cjs', 'exports.run=(lab,number,output)=>{const fs=require("node:fs"),path=require("node:path"),'
+        + 'root=path.resolve(__dirname,"../../../../..");fs.writeFileSync(output,JSON.stringify({cwd:process.cwd(),isolated:__dirname,'
+        + 'mode:process.env.BUGBOT_VERIFICATION_MODE,admission:require("../execution-provenance.cjs").requireBootstrapAdmission(root),'
+        + 'checkoutReceipt:fs.existsSync(path.join(root,".qualification-admission.json"))}));};\n');
     if (brokerGit) {
         for (const file of ['git.cjs', 'hash.cjs']) write('src/infrastructure/bugbot/shadow/' + file,
             fs.readFileSync(path.resolve(__dirname, '../../../../src/infrastructure/bugbot/shadow', file)));
-        write(prefix + 'normal-flow-shadow/run.cjs', 'const fs=require("node:fs"),{git}=require("../../../../../src/infrastructure/bugbot/shadow/git.cjs");'
-            + 'fs.writeFileSync(process.argv[4],JSON.stringify({head:git(process.argv[2],["rev-parse","HEAD"]).trim()}));\n');
+        write(prefix + 'normal-flow-shadow/run.cjs', 'exports.run=(lab,number,output)=>{const fs=require("node:fs"),'
+            + '{git}=require("../../../../../src/infrastructure/bugbot/shadow/git.cjs");'
+            + 'fs.writeFileSync(output,JSON.stringify({head:git(lab,["rev-parse","HEAD"]).trim()}));};\n');
     }
+    if (cancellation) write(prefix + 'normal-flow-shadow/run.cjs',
+        'exports.run=(lab,number,output)=>new Promise(resolve=>{'
+        + 'const keepAlive=setInterval(()=>{},1000);process.once("SIGTERM",()=>{clearInterval(keepAlive);'
+        + 'require("node:fs").writeFileSync(output,"interrupted");resolve(143);});'
+        + 'process.stdout.write(JSON.stringify({ready:true,pid:process.pid})+"\\n");});\n');
     if (crlfCheckout) write('.gitattributes', '*.cjs text eol=crlf\n');
     git('add', '.');
     git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '--quiet', '-m', 'Trusted fixture implementation');
@@ -69,6 +79,8 @@ test('the reviewed external bootstrap runs immutable drivers in a disposable pri
     const result = JSON.parse(fs.readFileSync(f.output));
     assert.equal(result.cwd, fs.realpathSync(f.directory));
     assert.equal(result.mode, 'disabled');
+    assert.equal(result.admission.planCommit, f.revision);
+    assert.equal(result.checkoutReceipt, false);
     assert.notEqual(result.isolated, path.join(f.root, prefix, 'normal-flow-shadow'));
     assert.equal(fs.existsSync(result.isolated), false, 'private source is removed after execution');
     assert.equal(fs.existsSync(f.marker), false);
@@ -169,4 +181,122 @@ test('the actual application Git adapter cannot execute an inherited PATH shim a
     assert.equal(admitted.status, 0, admitted.stderr);
     assert.equal(JSON.parse(fs.readFileSync(f.output)).head, f.revision);
     assert.equal(fs.existsSync(f.marker), false, 'the admitted application adapter uses the pinned OS Git');
+});
+
+test('a self-consistent checkout receipt is not bootstrap admission', t => {
+    const f = fixture(t);
+    const fabricated = { bootstrapSha256: hash(fs.readFileSync(f.bootstrap)),
+        planCommit: f.revision, planPath: f.planPath, planSha256: f.planSha256 };
+    f.write('.qualification-admission.json', JSON.stringify(fabricated));
+    const previous = path.join(f.directory, 'previous-verifier.cjs');
+    // Preserve the actual historical bytes without depending on an unmerged
+    // branch commit remaining fetchable after squash or branch cleanup.
+    const legacy = require('node:zlib').gunzipSync(fs.readFileSync(path.join(__dirname,
+        '../issue-970/legacy-verifier-01097099.cjs.gz')));
+    assert.equal(hash(legacy), 'c0471ff35e10cd39ff75a84e02830f4aa98f6f97bb3b47345e241cb77d3877d8');
+    fs.writeFileSync(previous, legacy);
+    assert.deepEqual(require(previous).requireBootstrapAdmission(f.root), fabricated,
+        'the previous verifier accepts this receipt without any external bootstrap invocation');
+    assert.throws(() => proof.requireBootstrapAdmission(f.root), /independently reviewed immutable bootstrap/u);
+});
+
+test('a direct runner refuses a forged receipt before importing a checkout verifier', t => {
+    const f = fixture(t);
+    f.write('.qualification-admission.json', JSON.stringify({ bootstrapSha256: hash(fs.readFileSync(f.bootstrap)),
+        planCommit: f.revision, planPath: f.planPath, planSha256: f.planSha256 }));
+    f.write(prefix + 'shadow-real-prs/official.json', '{}');
+    f.write(prefix + 'shadow-verification/plan.json', '{}');
+    f.write(prefix + 'execution-provenance.cjs', 'require("node:fs").writeFileSync('
+        + JSON.stringify(f.marker) + ',"imported");\n' + fs.readFileSync(path.join(__dirname, 'execution-provenance.cjs')));
+    const runner = path.join(f.root, prefix, 'normal-flow-shadow/run.cjs');
+    f.write(prefix + 'normal-flow-shadow/run.cjs', fs.readFileSync(path.join(__dirname, 'normal-flow-shadow/run.cjs')));
+    const run = spawnSync(process.execPath, [runner, 'lab', '1', f.output, fs.realpathSync(path.join(f.root, f.planPath))],
+        { cwd: f.directory, encoding: 'utf8' });
+    assert.notEqual(run.status, 0);
+    assert.equal(fs.existsSync(f.marker), false);
+    assert.match(run.stderr, /independently reviewed immutable bootstrap/u);
+    assert.equal(fs.existsSync(f.output), false);
+});
+
+test('an internal bootstrap worker refuses direct invocation without its parent IPC channel', t => {
+    const f = fixture(t);
+    const run = spawnSync(process.execPath, [f.bootstrap, '--admitted-worker'], { encoding: 'utf8' });
+    assert.notEqual(run.status, 0);
+    assert.match(run.stderr, /external bootstrap IPC channel/u);
+    assert.equal(fs.existsSync(f.marker), false);
+    assert.equal(fs.existsSync(f.output), false);
+});
+
+function nestedFixture(t, tamper) {
+    const f = fixture(t);
+    const names = ['configuration.cjs', 'implementation.cjs', 'load.cjs', 'corpus.cjs', 'review.cjs',
+        'full-review.cjs', 'launch-full-review.cjs', 'score-review.py', '../execution-provenance.cjs', '../qualification-bootstrap.cjs'];
+    const base = prefix + 'ev07-shadow/';
+    for (const name of names.filter(name => !name.startsWith('../'))) f.write(base + name, 'module.exports={};\n');
+    const wait = 'const wait=child=>new Promise((resolve,reject)=>{child.once("error",reject);child.once("close",code=>resolve(code??1));});';
+    f.write(base + 'launch-full-review.cjs', wait
+        + 'exports.requirePassingCorpus=campaign=>campaign;exports.run=campaign=>wait(require("../execution-provenance.cjs")'
+        + '.spawnQualificationDriver("full-review-runner",[campaign]));\n');
+    f.write(base + 'full-review.cjs', 'const fs=require("node:fs"),path=require("node:path"),helper=require("../execution-provenance.cjs");'
+        + wait + 'exports.run=campaign=>{'
+        + (tamper ? 'const file=path.resolve(__dirname,"../execution-provenance.cjs");'
+            + 'fs.writeFileSync(file,\'require("node:fs").writeFileSync(\'+JSON.stringify('
+            + JSON.stringify(f.marker) + ')+\',"executed");\\n\'+fs.readFileSync(file));' : '')
+        + 'return wait(helper.spawnQualificationDriver("review",["fixture-checkout","id","1",'
+        + JSON.stringify(f.output) + '],{stdio:"inherit"}));};\n');
+    f.write(base + 'review.cjs', 'exports.run=(checkout,id,repetition,output)=>{const fs=require("node:fs"),path=require("node:path"),'
+        + 'root=path.resolve(__dirname,"../../../../..");fs.writeFileSync(output,JSON.stringify({admission:'
+        + 'require("../execution-provenance.cjs").requireBootstrapAdmission(root),'
+        + 'checkoutReceipt:fs.existsSync(path.join(root,".qualification-admission.json"))}));};\n');
+    const plan = { implementation: f.plan.implementation, publication: 'dry-run', runtime: proof.runtimeIdentity(f.root),
+        inspectedArtifacts: Object.fromEntries(names.map(name => [name, hash(fs.readFileSync(path.join(f.root, base, name)))])) };
+    const relative = base + 'fixture-plan.json';f.write(relative, JSON.stringify(plan));f.git('add', '.');
+    f.git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '--quiet', '-m', 'Reviewed nested-driver fixture');
+    const revision = f.git('rev-parse', 'HEAD');
+    const result = spawnSync(process.execPath, [f.bootstrap, f.root, revision, relative,
+        hash(fs.readFileSync(path.join(f.root, relative))), hash(fs.readFileSync(f.bootstrap)), 'full-review', f.directory],
+    { cwd: f.directory, encoding: 'utf8' });
+    return { ...f, result, revision };
+}
+
+test('nested qualification workers receive process-local admission through the reviewed external bootstrap', t => {
+    const f = nestedFixture(t, false);
+    assert.equal(f.result.status, 0, f.result.stderr);
+    const result = JSON.parse(fs.readFileSync(f.output));
+    assert.equal(result.admission.planCommit, f.revision);
+    assert.equal(result.checkoutReceipt, false);
+    assert.equal(fs.existsSync(f.marker), false);
+});
+
+test('each nested worker rechecks private driver bytes before importing a changed verifier', t => {
+    const f = nestedFixture(t, true);
+    assert.notEqual(f.result.status, 0);
+    assert.match(f.result.stderr, /working driver differs/u);
+    assert.equal(fs.existsSync(f.marker), false);
+    assert.equal(fs.existsSync(f.output), false);
+});
+
+test('explicit cancellation reaches the admitted worker and preserves its interrupted exit', { timeout: 30000 }, async t => {
+    // This timeout cleans up an owned synthetic fixture, never a model investigation.
+    const f = fixture(t, false, false, true);
+    const child = spawn(process.execPath, [f.bootstrap, f.root, f.revision, f.planPath, f.planSha256,
+        hash(fs.readFileSync(f.bootstrap)), 'normal-flow', 'relative-lab', '1', f.output],
+    { cwd: f.directory, stdio: ['ignore', 'pipe', 'pipe'] });
+    let workerPid, stderr = '';
+    child.stderr.on('data', bytes => { stderr += bytes; });
+    t.after(() => {
+        if (child.exitCode === null) {
+            child.kill('SIGKILL');
+            if (workerPid) try { process.kill(workerPid, 'SIGKILL'); } catch (error) { if (error.code !== 'ESRCH') throw error; }
+        }
+    });
+    const [bytes] = await Promise.race([once(child.stdout, 'data'), once(child, 'close').then(() => {
+        throw new Error('fixture exited before readiness: ' + stderr);
+    })]);
+    const ready = JSON.parse(bytes.toString());workerPid = ready.pid;assert.equal(ready.ready, true);
+    child.kill('SIGTERM');
+    const [code, signal] = await once(child, 'close');
+    assert.equal(signal, null, stderr);
+    assert.equal(code, 143, stderr);
+    assert.equal(fs.readFileSync(f.output, 'utf8'), 'interrupted');
 });

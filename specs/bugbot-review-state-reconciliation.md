@@ -2577,3 +2577,62 @@ profile proof. Add two actual-planner controls: an admitted runtime prepares, an
 a mismatched executable that the old version probe ran is rejected before probe
 execution. Use the real resolution/validation/version ports and only a controlled
 workspace; no model calls, research ceilings or production settings are added.
+
+### Bootstrap admission stays outside the checkout — #970, 2026-11-20
+
+This amendment removes checkout-receipt authority from the preceding bootstrap
+contract. A self-consistent `.qualification-admission.json` MUST NOT establish
+that the independently reviewed bootstrap executed. No qualification driver may
+read that file to obtain execution authority or attach bootstrap provenance.
+Direct corpus, normal-flow, launcher, scheduler and review-slot CLIs MUST refuse
+before importing any checkout helper, including when such a receipt is present.
+The operator's reviewed Git blob and independently selected digests remain the
+trust anchors; this change adds no independent host or human-review attestation.
+
+The external bootstrap authenticates and materializes the reviewed closure as
+above, then forks the same external bootstrap file with a private parent IPC
+channel. The worker repeats plan/driver/source/runtime verification before driver
+imports, installs immutable process-local context, and calls the admitted module.
+Only the launcher-to-scheduler and scheduler-to-review-slot child routes are
+available. Each nested process re-enters the external bootstrap and repeats the
+private-byte check; review slots recheck the matching independent corpus gate.
+IPC carries already verified context; it is not itself an accreditation of a
+compromised parent. No serialized checkout object authorizes execution.
+
+```mermaid
+flowchart LR
+  A[Reviewed external bootstrap] --> B[Verify plan and immutable closure]
+  B --> C[Private source and dependency proof]
+  C --> D[Fork same external bootstrap over IPC]
+  D --> E[Repeat private-byte and runtime checks]
+  E --> F[Install process-local context and call driver]
+  F -->|paired child route| D
+```
+
+Text equivalent: independently checked external code admits the closure, starts
+each worker through that same code, verifies the private bytes again, and only
+then imports and calls a driver. A mutable receipt supplies none of these steps.
+Normal CLI selection, verifier profiles, cohort/order/retry policies, explicit
+signals and existing scoring/latency gates are preserved. Parent cancellation
+continues to reach the worker; its interrupted exit and cleanup remain observable.
+No consumer option, production setting or research timeout/turn/read/token cap is
+introduced. Existing frozen evidence requires its original historical drivers;
+future measurements require the new exact driver identities and preregistration.
+
+Additional numeric budget: **six deterministic security/lifecycle cases**, making
+**19 bootstrap cases and 193 combined shadow controls**. Two cases reproduce the
+old real verifier accepting a fabricated receipt and a direct runner importing a
+checkout helper, then verify rejection. One rejects a worker without parent IPC.
+Two exercise the actual nested fork route, including private verifier mutation
+rejected before import. One sends SIGTERM after synthetic-worker readiness and
+checks its interrupted exit and output. Its bounded fixture cleanup applies only
+to that owned model-free test, never an investigation. Existing source/runtime,
+normal-flow and independent-corpus controls remain required; no model calls or
+evaluated-PR writes are needed for these controls.
+
+Acceptance requires all six controls, the actual relative-lab zero-candidate
+journey and complete combined controls to pass. Preserve the old bypass, failed
+fixture attempts and successful outputs byte-exactly. Update operator guidance,
+catalog evidence and Graphify; run specification/docs validation and the complete
+required build/Jest/lint hook. Report native review/checks for the newly published
+SHA separately. Neither a local pass nor an earlier SHA's review qualifies a profile.

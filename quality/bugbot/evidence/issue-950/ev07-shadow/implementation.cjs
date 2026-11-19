@@ -19,9 +19,8 @@ function qualificationProvenance(selected = require('./configuration.cjs')) {
     const source = attestSource(root, selected.implementation);
     const drivers = requirePinnedDrivers(selected);
     const runtime = attestRuntime(root, selected.runtime);
-    const admission = path.join(root, '.qualification-admission.json');
-    return { ...source, drivers, runtime, ...(require('node:fs').existsSync(admission)
-        && { bootstrap: require('../execution-provenance.cjs').requireBootstrapAdmission(root) }) };
+    const admission = require('../execution-provenance.cjs').bootstrapAdmission(root);
+    return { ...source, drivers, runtime, ...(admission && { bootstrap: admission }) };
 }
 
 function requirePinnedRuntime(cli, runtime = require('./configuration.cjs').runtime) {

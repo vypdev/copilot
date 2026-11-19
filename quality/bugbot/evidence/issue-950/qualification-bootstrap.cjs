@@ -9,7 +9,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 const { createHash } = require('node:crypto');
-const { execFileSync, spawn } = require('node:child_process');
+const { execFileSync, fork } = require('node:child_process');
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 const prefix = 'quality/bugbot/evidence/issue-950/';
 const ev07 = ['configuration.cjs', 'implementation.cjs', 'load.cjs', 'corpus.cjs', 'review.cjs',
@@ -17,7 +17,8 @@ const ev07 = ['configuration.cjs', 'implementation.cjs', 'load.cjs', 'corpus.cjs
 const normal = ['run.cjs', '../execution-provenance.cjs', '../ev07-shadow/load.cjs',
     '../ev07-shadow/implementation.cjs', '../ev07-shadow/configuration.cjs', '../qualification-bootstrap.cjs'];
 const entries = Object.freeze({ corpus: 'ev07-shadow/corpus.cjs',
-    'full-review': 'ev07-shadow/launch-full-review.cjs', 'normal-flow': 'normal-flow-shadow/run.cjs' });
+    'full-review': 'ev07-shadow/launch-full-review.cjs', 'normal-flow': 'normal-flow-shadow/run.cjs',
+    'full-review-runner': 'ev07-shadow/full-review.cjs', review: 'ev07-shadow/review.cjs' });
 
 function safePath(value) {
     assert(typeof value === 'string' && value.length && !path.isAbsolute(value)
@@ -68,7 +69,7 @@ function committed(git, revision, relative) {
     return git('cat-file', 'blob', blob);
 }
 
-async function launch(repository, revision, planPath, planSha256, bootstrapSha256, mode, ...args) {
+function reviewedPlan(repository, revision, planPath, planSha256, bootstrapSha256, mode) {
     assert(!process.env.NODE_OPTIONS && !process.env.NODE_PATH && process.execArgv.length === 0,
         'bootstrap requires trusted Node without preloads or loader overrides');
     assert.match(revision ?? '', /^[a-f0-9]{40}$/u, 'reviewed plan commit required');
@@ -76,8 +77,6 @@ async function launch(repository, revision, planPath, planSha256, bootstrapSha25
     assert.match(bootstrapSha256 ?? '', /^[a-f0-9]{64}$/u, 'independently reviewed bootstrap digest required');
     assert.equal(sha256(fs.readFileSync(__filename)), bootstrapSha256, 'reviewed bootstrap differs');
     assert(Object.hasOwn(entries, mode), 'unsupported qualification entrypoint');
-    assert(mode === 'normal-flow' ? args.length === 3 : mode === 'full-review' ? args.length === 1
-        : args.length === 1 || args.length === 2 && args[1] === '--preflight', 'invalid qualification arguments');
     const root = fs.realpathSync(repository), trust = gitFor(root), { git } = trust;
     assert.equal(git('rev-parse', '--verify', revision + '^{commit}').toString('utf8').trim(), revision);
     assert.equal(sha256(committed(git, revision, prefix + 'qualification-bootstrap.cjs')), bootstrapSha256,
@@ -99,6 +98,53 @@ async function launch(repository, revision, planPath, planSha256, bootstrapSha25
         assert(fs.readFileSync(physical(root, relative)).equals(trusted), 'working driver differs: ' + driver);
         admitted.push([relative, trusted]);
     }
+    return { root, trust, bytes, plan, admitted };
+}
+
+function spawnAdmitted(request, env, options = {}) {
+    assert(Object.keys(options).every(key => key === 'stdio'), 'unsupported qualification child options');
+    assert.equal(sha256(fs.readFileSync(__filename)), request.proof.bootstrapSha256, 'executing bootstrap changed');
+    const io = options.stdio ?? 'inherit';
+    const stdio = Array.isArray(io) ? [...io, 'ipc'] : [io, io, io, 'ipc'];
+    const child = fork(__filename, ['--admitted-worker'], { env, stdio, execArgv: [], cwd: process.cwd() });
+    child.send(request, error => { if (error) child.emit('error', error); });
+    return child;
+}
+
+async function executeAdmitted(request) {
+    assert(request && Array.isArray(request.args) && request.args.every(arg => typeof arg === 'string'),
+        'invalid admitted invocation');
+    const { root: repository, proof, mode } = request;
+    const { root, plan } = reviewedPlan(repository, proof.planCommit, proof.planPath,
+        proof.planSha256, proof.bootstrapSha256, mode);
+    // The executing file is still the externally materialized bootstrap. Repeat
+    // private-byte/source/runtime checks before loading any private driver in
+    // each child. No receipt in this checkout is read as execution authority.
+    const verifier = require(path.join(root, prefix, 'execution-provenance.cjs'));
+    verifier.attestSource(root, plan.implementation);
+    verifier.attestRuntime(root, plan.runtime);
+    verifier.initializeBootstrapContext(root, proof, (nextMode, args, options) => {
+        assert(mode === 'full-review' && nextMode === 'full-review-runner'
+            || mode === 'full-review-runner' && nextMode === 'review', 'unadmitted qualification child route');
+        const corpusCampaign = mode === 'full-review' ? request.args[0] : request.corpusCampaign;
+        return spawnAdmitted({ root, proof, mode: nextMode, args, corpusCampaign }, process.env, options);
+    });
+    if (mode === 'review') {
+        assert(typeof request.corpusCampaign === 'string', 'paired review requires its passing corpus');
+        require(path.join(root, prefix, entries['full-review'])).requirePassingCorpus(request.corpusCampaign);
+    }
+    const driver = require(path.join(root, prefix, entries[mode]));
+    assert.equal(typeof driver.run, 'function', 'admitted driver entry is unavailable');
+    return driver.run(...request.args);
+}
+
+async function launch(repository, revision, planPath, planSha256, bootstrapSha256, mode, ...args) {
+    assert(['corpus', 'full-review', 'normal-flow'].includes(mode), 'unsupported public qualification entrypoint');
+    assert(mode === 'normal-flow' ? args.length === 3 : mode === 'full-review' ? args.length === 1
+        : args.length === 1 || args.length === 2 && args[1] === '--preflight', 'invalid qualification arguments');
+    const { root, trust, bytes, plan, admitted } = reviewedPlan(repository, revision,
+        planPath, planSha256, bootstrapSha256, mode);
+    assert(!fs.realpathSync(__filename).startsWith(root + path.sep), 'materialize the reviewed bootstrap outside the checkout');
     const scratch = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'bugbot-qualified-source-')));
     fs.chmodSync(scratch, 0o700);
     const isolated = path.join(scratch, 'source');
@@ -125,8 +171,6 @@ async function launch(repository, revision, planPath, planSha256, bootstrapSha25
         verifier.attestSource(isolated, plan.implementation);
         verifier.attestRuntime(isolated, plan.runtime);
         const proof = { bootstrapSha256, planCommit: revision, planPath, planSha256 };
-        fs.writeFileSync(path.join(isolated, '.qualification-admission.json'), JSON.stringify(proof),
-            { flag: 'wx', mode: 0o600 });
         // The application evidence adapter also invokes the bare Git command.
         // Bind that lookup to the admitted OS executable without changing how
         // Node/Codex or any other normal detector executable is selected.
@@ -149,8 +193,7 @@ async function launch(repository, revision, planPath, planSha256, bootstrapSha25
             env.PILOT_LOCAL_PYTHON = plan.runtime.pythonExecutable;
         }
         const childArgs = mode === 'normal-flow' ? [...args, path.join(isolated, planPath)] : args;
-        const child = spawn(process.execPath, [path.join(isolated, prefix, entries[mode]), ...childArgs],
-            { env, stdio: 'inherit', cwd: process.cwd() });
+        const child = spawnAdmitted({ root: isolated, proof, mode, args: childArgs }, env);
         const interrupt = () => child.kill('SIGINT'), terminate = () => child.kill('SIGTERM');
         process.once('SIGINT', interrupt);
         process.once('SIGTERM', terminate);
@@ -167,5 +210,15 @@ async function launch(repository, revision, planPath, planSha256, bootstrapSha25
 }
 
 module.exports = { launch };
-if (require.main === module) launch(...process.argv.slice(2)).then(code => { process.exitCode = code; })
-    .catch(error => { console.error(error.message); process.exitCode = 1; });
+if (require.main === module) {
+    const fail = error => { console.error(error.message); process.exitCode = 1; };
+    if (process.argv[2] === '--admitted-worker') {
+        if (!process.send || !process.connected) fail(new Error('admitted worker requires the external bootstrap IPC channel'));
+        else process.once('message', request => {
+            process.disconnect();
+            executeAdmitted(request).then(code => {
+                process.exitCode = Number.isInteger(code) ? code : code?.status === 'interrupted' ? 130 : 0;
+            }).catch(fail);
+        });
+    } else launch(...process.argv.slice(2)).then(code => { process.exitCode = code; }).catch(fail);
+}

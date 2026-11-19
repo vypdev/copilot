@@ -1,5 +1,7 @@
 'use strict';
 
+if (require.main === module) throw new Error('Use the independently reviewed immutable bootstrap; direct qualification runners are unsupported.');
+
 const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
 const { createHash } = require('node:crypto');
@@ -322,11 +324,4 @@ async function run(lab, number, destination, manifestPath = path.join(__dirname,
     }
 }
 
-if (require.main === module) {
-    run(...process.argv.slice(2)).catch(error => {
-        console.error(error);
-        process.exitCode = 1;
-    });
-}
-
-module.exports = { selectVerifierProfiles, verifyMatchedCandidate, normalFlowDrivers };
+module.exports = { run, selectVerifierProfiles, verifyMatchedCandidate, normalFlowDrivers };

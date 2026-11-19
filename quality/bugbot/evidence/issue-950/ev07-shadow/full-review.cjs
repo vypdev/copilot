@@ -1,6 +1,8 @@
 'use strict';
 
-const { spawn } = require('node:child_process');
+if (require.main === module) throw new Error('Use the independently reviewed immutable bootstrap; direct qualification runners are unsupported.');
+
+const { spawnQualificationDriver } = require('../execution-provenance.cjs');
 const fs = require('node:fs');
 const path = require('node:path');
 const { requirePassingCorpus } = require('./launch-full-review.cjs');
@@ -44,7 +46,7 @@ async function run(campaign) {
                 const log = fs.openSync(path.join(output, name + '.log'), 'wx', 0o600);
                 record({ event: 'slot-start', ...slot });
                 try {
-                    const child = spawn(process.execPath, [path.join(__dirname, 'review.cjs'), path.join(checkouts, slot.id),
+                    const child = spawnQualificationDriver('review', [path.join(checkouts, slot.id),
                         slot.id, String(slot.repetition), destination], { stdio: ['ignore', log, log] });
                     running.add(child);
                     const exit = await new Promise(resolve => {
@@ -66,4 +68,4 @@ async function run(campaign) {
     }
 }
 
-run(process.argv[2]).catch(error => { console.error(error.code ?? error.name, error.message); process.exitCode = 1; });
+module.exports = { run };

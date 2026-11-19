@@ -1,5 +1,7 @@
 'use strict';
 
+if (require.main === module) throw new Error('Use the independently reviewed immutable bootstrap; direct qualification runners are unsupported.');
+
 const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
 const { createHash } = require('node:crypto');
@@ -186,9 +188,5 @@ async function run(checkout, id, repetition, output, preflight = false) {
     if (preflight) assert.equal(result.payload.bugbotShadowVerification.publicationSimulation.status, 'complete');
 }
 
-if (require.main === module) {
-    run(process.argv[2], process.argv[3], Number(process.argv[4]), process.argv[5], process.argv[6] === '--preflight')
-        .catch(error => { console.error(error.code ?? error.name, error.message); process.exitCode = 1; });
-}
-
-module.exports = { prepareDetector, admitPreparedDetector };
+module.exports = { run: (checkout, id, repetition, destination, flag) =>
+    run(checkout, id, Number(repetition), destination, flag === '--preflight'), prepareDetector, admitPreparedDetector };
