@@ -1,5 +1,0 @@
-Test Suites: 1 passed, 1 total
-Tests:       5 passed, 5 total
-Snapshots:   0 total
-Time:        3.9 s
-Ran all test suites matching src/infrastructure/__tests__/setup_batch_composition.test.ts.

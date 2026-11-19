@@ -24,7 +24,7 @@ executed acceptance; all seven ran in the passing full control suite.
 
 The initial fixture used a replacement at the same LEFT/RIGHT line, which
 correctly made its candidate anchor ambiguous. No verifier ran and three tests
-failed. `initial-fixture-failure.log` retains that harness failure. The corrected
+failed. `initial-fixture-failure.log.gz` retains that harness failure. The corrected
 fixture adds a unique RIGHT line; no production anchor or receipt validation was
 weakened. The shipping TypeScript loader also avoids the historical ES2022
 progress-clock initialization mismatch, so these controls reach the actual
@@ -45,5 +45,10 @@ retain ignored log files encountered a Jest worker SIGSEGV in the unchanged
 `setup_batch_composition.test.ts` before that suite could execute; 942 suites
 passed. `commit-hook-worker-failure.log.gz` preserves that unsuccessful hook.
 It is not an assertion result or model measurement. The affected suite passed
-all five tests when run alone (`worker-failure-recheck.log`). Final delivery
+all five tests when run alone (`worker-failure-recheck.log.gz`). Final delivery
 evidence must identify a successful complete hook retry separately.
+
+Raw control logs are stored losslessly as gzip because their original reporter
+whitespace fails the source diff gate. The compressed-logs.json manifest binds
+each exact decompressed SHA-256 and length. Original committed attempts remain
+in Git history; no log line or negative outcome has been rewritten.

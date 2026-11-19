@@ -1,0 +1,24 @@
+{
+  "encoding": "gzip",
+  "lossless": true,
+  "records": [
+    {
+      "originalPath": "initial-fixture-failure.log",
+      "compressedPath": "initial-fixture-failure.log.gz",
+      "rawSha256": "11a28893a1f2b9d9855b84277aaf5f1951638ace3757acb10b17bff70126f38c",
+      "rawBytes": 3165
+    },
+    {
+      "originalPath": "without-operation-signal.log",
+      "compressedPath": "without-operation-signal.log.gz",
+      "rawSha256": "02fd620897c1e6588f9e9de3db14ca428373a3be383055d7ffbc0966eacfd2ea",
+      "rawBytes": 974
+    },
+    {
+      "originalPath": "worker-failure-recheck.log",
+      "compressedPath": "worker-failure-recheck.log.gz",
+      "rawSha256": "30e9bf3bbb000c12a98a7141f8b7ec0df7f3ebf4979a6d980368c398614795cb",
+      "rawBytes": 193
+    }
+  ]
+}
