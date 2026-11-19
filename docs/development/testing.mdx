@@ -274,3 +274,25 @@ Inspect the run's individual platform jobs before claiming full success. A
 queued, canceled or failed job is missing evidence, even if other jobs passed.
 The platform fixtures exercise local paths. Authenticated agent tool execution
 has separate acceptance.
+
+## Normal-flow shadow cancellation
+
+The local normal-flow shadow runner forwards its explicit cancellation signal
+into the ordinary review operation, detector and verifier. An interrupted run
+records `workflow-result.status=interrupted`, retains its started/pending request
+observations, and exits with status 130. It cannot report successful ordinary
+completion or issue a completed verification receipt. A matched experimental
+arm that is canceled does not start its inherited comparison arm.
+
+Run `pnpm run test:bugbot-shadow-verification` for the model-free stage controls:
+before detection, during detection, after preparation, during verification,
+after a technical provider interruption, and uninterrupted completion. The
+controlled programmatic ports exercise the actual runner and application with
+pinned temporary Git sources and fail-on-write SCM ports. They are synthetic
+controls, not model measurements or qualification evidence. The loader uses the
+shipping compiler options so the real progress/cancellation path is exercised.
+
+Use a new output destination for every actual attempt and retain the interrupted
+ledger. Old ledgers remain historical observations; replay needs the new driver
+pin and its applicable source/runtime admission. This adds no Action setting,
+elapsed-time cutoff, token budget or turn limit. Usage remains optional telemetry.
