@@ -5,6 +5,7 @@ const { createHash } = require('node:crypto');
 const { execFileSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
+const { trustedGitExecutable, gitEnvironment } = require('../execution-provenance.cjs');
 const { tmpdir } = require('node:os');
 const { qualificationProvenance, requirePinnedRuntime, requirePinnedExecution, selectedPlanProvenance } = require('./implementation.cjs');
 
@@ -69,7 +70,7 @@ async function run(destination, preflight = false) {
     }
     let next = 0;
     try {
-        execFileSync('git', ['init', '--quiet', '--template='], { cwd });
+        execFileSync(trustedGitExecutable(), ['init', '--quiet', '--template='], { cwd, env: gitEnvironment() });
         process.chdir(cwd);
         const flags = [], runtimeProofs = [];
         const canary = createFindingsQueryPort({ cli: { async execute(request) {

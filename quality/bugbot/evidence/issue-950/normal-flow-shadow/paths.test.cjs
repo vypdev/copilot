@@ -7,7 +7,7 @@ const { createHash } = require('node:crypto');
 const { tmpdir } = require('node:os');
 const path = require('node:path');
 const { test } = require('node:test');
-const { attestSource, attestRuntime, attestDrivers, runtimeIdentity } = require('../execution-provenance.cjs');
+const { attestSource, attestRuntime, attestDrivers, runtimeIdentity, trustedGitExecutable } = require('../execution-provenance.cjs');
 
 function sourceFixture(t) {
     const directory = mkdtempSync(path.join(tmpdir(), 'bugbot-source-proof-'));
@@ -102,6 +102,58 @@ test('runtime proof binds Node and TypeScript versions and actual executable byt
     assert.deepEqual(attestRuntime(root, runtime), runtime);
     assert.throws(() => attestRuntime(root, { ...runtime, nodeSha256: 'f'.repeat(64) }), /runtime differs/u);
     assert.throws(() => attestRuntime(root, { ...runtime, typescriptSha256: 'f'.repeat(64) }), /runtime differs/u);
+    assert.throws(() => attestRuntime(root, { ...runtime, gitSha256: 'f'.repeat(64) }), /runtime differs/u);
+});
+
+test('clean admission never executes an inherited PATH Git shim', t => {
+    const f = sourceFixture(t), bin = path.join(f.directory, 'bin'), marker = path.join(f.directory, 'shim-ran');
+    mkdirSync(bin);
+    writeFileSync(path.join(bin, 'git'), '#!' + process.execPath + '\nrequire("node:fs").writeFileSync('
+        + JSON.stringify(marker) + ', "unexpected");process.exit(91);\n', { mode: 0o700 });
+    const child = spawnSync(process.execPath, ['-e',
+        'require(process.argv[1]).attestSource(process.argv[2],process.argv[3])',
+        path.resolve(__dirname, '../execution-provenance.cjs'), f.root, f.pin], {
+        encoding: 'utf8', env: { ...process.env, PATH: bin + path.delimiter + process.env.PATH },
+    });
+    assert.equal(child.status, 0, child.stderr);
+    assert.equal(existsSync(marker), false);
+});
+
+test('a Git shim can forge the old proof but cannot admit changed physical source now', t => {
+    const f = sourceFixture(t), bin = path.join(f.directory, 'bin'), marker = path.join(f.directory, 'shim-ran');
+    mkdirSync(bin);
+    writeFileSync(f.file, 'export const value = 2;\n'); f.git('add', 'src');
+    f.git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '--quiet', '-m', 'different source');
+    const alternate = f.git('rev-parse', 'HEAD');
+    const shim = `#!${process.execPath}
+const fs=require('node:fs'),cp=require('node:child_process');
+fs.appendFileSync(${JSON.stringify(marker)},'called\\n');
+let args=process.argv.slice(2);
+if(args.includes('diff'))process.exit(0);
+if(args.includes('ls-tree'))args=args.map(x=>x===${JSON.stringify(f.pin)}?${JSON.stringify(alternate)}:x);
+if(args.includes('rev-parse'))args=args.map(x=>x===${JSON.stringify(f.pin + '^{tree}')}?${JSON.stringify(alternate + '^{tree}')}:x);
+const child=cp.spawnSync(${JSON.stringify(trustedGitExecutable())},args,{input:fs.readFileSync(0)});
+if(child.stdout)process.stdout.write(child.stdout);if(child.stderr)process.stderr.write(child.stderr);process.exit(child.status??1);
+`;
+    writeFileSync(path.join(bin, 'git'), shim, { mode: 0o700 });
+    const current = path.resolve(__dirname, '../execution-provenance.cjs'), legacy = path.join(f.directory, 'bare-git.cjs');
+    const source = readFileSync(current, 'utf8');
+    assert(source.includes('const executable = trustedGitExecutable();'));
+    // Counter-control: change only the original PATH-resolution choice.
+    writeFileSync(legacy, source.replace('const executable = trustedGitExecutable();', "const executable = 'git';"));
+    const launch = file => spawnSync(process.execPath, ['-e',
+        'process.stdout.write(JSON.stringify(require(process.argv[1]).attestSource(process.argv[2],process.argv[3])))',
+        file, f.root, f.pin], { encoding: 'utf8', env: { ...process.env, PATH: bin + path.delimiter + process.env.PATH } });
+    const bypass = launch(legacy);
+    assert.equal(bypass.status, 0, bypass.stderr);
+    assert.equal(JSON.parse(bypass.stdout).implementation, f.pin);
+    assert.equal(JSON.parse(bypass.stdout).tree, f.git('rev-parse', alternate + '^{tree}'));
+    assert.equal(existsSync(marker), true);
+    rmSync(marker);
+    const refused = launch(current);
+    assert.notEqual(refused.status, 0);
+    assert.match(refused.stderr, /does not match/u);
+    assert.equal(existsSync(marker), false);
 });
 
 for (const runner of ['normal-flow-shadow/run.cjs', 'ev07-shadow/corpus.cjs', 'ev07-shadow/review.cjs']) {

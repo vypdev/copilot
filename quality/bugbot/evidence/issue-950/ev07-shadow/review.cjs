@@ -5,14 +5,13 @@ const { execFileSync } = require('node:child_process');
 const { createHash } = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
+const { pinnedGit } = require('../execution-provenance.cjs');
 const { getOctokit } = require('@actions/github');
 const { qualificationProvenance, requirePinnedExecution, selectedPlanProvenance } = require('./implementation.cjs');
 
 const plan = require('./configuration.cjs');
 const hash = input => createHash('sha256').update(input).digest('hex');
-const git = (cwd, ...args) => execFileSync('git', ['-C', cwd, '-c', 'core.quotePath=true', ...args], {
-    encoding: 'utf8', maxBuffer: 16 * 1024 * 1024,
-});
+const git = (cwd, ...args) => pinnedGit(cwd)('-c', 'core.quotePath=true', ...args).toString('utf8');
 const snapshot = (source, value, count = 0) => ({
     value, coverage: { source, status: 'complete', pagesFetched: 1, itemsFetched: count, itemsRetained: count,
         omittedItems: 0, truncatedItems: 0, limitReached: false },

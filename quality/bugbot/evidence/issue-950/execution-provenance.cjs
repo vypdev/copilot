@@ -15,6 +15,20 @@ function gitEnvironment() {
     return { ...env, GIT_CONFIG_GLOBAL: devNull, GIT_CONFIG_NOSYSTEM: '1', GIT_NO_REPLACE_OBJECTS: '1' };
 }
 
+function trustedGitExecutable() {
+    // Bootstrap from the operating system, never PATH or a campaign-provided binary.
+    // On macOS resolve the actual developer-tools Git rather than hashing its shim.
+    const file = process.platform === 'darwin'
+        ? execFileSync('/usr/bin/xcrun', ['--find', 'git'], {
+            env: { PATH: '/usr/bin:/bin' }, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
+        }).trim()
+        : process.platform === 'linux' ? '/usr/bin/git' : undefined;
+    assert(file && path.isAbsolute(file), 'qualification Git bootstrap supports Linux and macOS only');
+    const executable = fs.realpathSync(file);
+    assert(fs.lstatSync(executable).isFile(), 'trusted Git executable unavailable');
+    return executable;
+}
+
 function pinnedGit(root) {
     root = fs.realpathSync(root);
     const marker = path.join(root, '.git');
@@ -27,10 +41,13 @@ function pinnedGit(root) {
         directory = path.resolve(root, match[1]);
     } else assert(stat.isDirectory(), 'repository Git identity unavailable');
     const env = gitEnvironment();
-    return (...args) => execFileSync('git', ['--no-pager', '--no-replace-objects', '--literal-pathspecs',
+    const executable = trustedGitExecutable();
+    const command = (...args) => execFileSync(executable, ['--no-pager', '--no-replace-objects', '--literal-pathspecs',
         '--git-dir=' + directory, '--work-tree=' + root, '-C', root,
         '-c', 'core.fsmonitor=false', '-c', 'core.hooksPath=' + devNull, '-c', 'core.quotePath=false', '-c', 'log.showSignature=false', ...args],
     { env, stdio: ['pipe', 'pipe', 'pipe'], maxBuffer: 256 * 1024 * 1024 });
+    command.executable = executable;
+    return command;
 }
 
 function attestSource(root, implementation) {
@@ -77,7 +94,7 @@ function attestSource(root, implementation) {
     assert.equal(text('diff', '--cached', '--no-ext-diff', '--no-textconv', '--name-only', implementation, '--', ...sourcePaths), '',
         'staged application source or lockfile does not match the preregistered implementation');
     // One batch reads immutable blobs without filters, attributes, textconv or a checkout.
-    const contents = execFileSync('git', ['--no-replace-objects', '--git-dir=' + text('rev-parse', '--absolute-git-dir'),
+    const contents = execFileSync(git.executable, ['--no-replace-objects', '--git-dir=' + text('rev-parse', '--absolute-git-dir'),
         '-c', 'core.fsmonitor=false', 'cat-file', '--batch'], {
         env: gitEnvironment(), input: rows.map(row => row.blob).join('\n') + '\n', maxBuffer: 256 * 1024 * 1024,
     });
@@ -101,7 +118,10 @@ function attestSource(root, implementation) {
 
 function runtimeIdentity(root) {
     const typescript = require.resolve('typescript', { paths: [root] });
+    const gitExecutable = trustedGitExecutable();
     return { node: process.version, nodeSha256: hash(fs.readFileSync(process.execPath)),
+        gitExecutable, gitSha256: hash(fs.readFileSync(gitExecutable)),
+        git: execFileSync(gitExecutable, ['--version'], { env: gitEnvironment(), encoding: 'utf8' }).trim(),
         typescript: JSON.parse(fs.readFileSync(require.resolve('typescript/package.json', { paths: [root] }))).version,
         typescriptSha256: hash(fs.readFileSync(typescript)) };
 }
@@ -124,4 +144,4 @@ function attestDrivers(directory, expected, files) {
     }));
 }
 
-module.exports = { attestSource, attestRuntime, attestDrivers, runtimeIdentity, pinnedGit, gitEnvironment };
+module.exports = { attestSource, attestRuntime, attestDrivers, runtimeIdentity, pinnedGit, gitEnvironment, trustedGitExecutable };

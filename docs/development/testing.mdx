@@ -83,8 +83,13 @@ does not establish executable identity.
 Preregister a **new** plan after reviewing the corrections. Include the current
 `qualificationDrivers` inventory exported by `ev07-shadow/implementation.cjs`,
 including the shared `execution-provenance.cjs`. Record the `node`,
-`nodeSha256`, `typescript` and `typescriptSha256` observations returned by
+`nodeSha256`, `typescript`, `typescriptSha256`, `git`, `gitExecutable` and
+`gitSha256` observations returned by
 `runtimeIdentity(root)` alongside the existing exact CLI/launcher identities.
+Git proof commands use the trusted operating-system executable, never `PATH`.
+Linux uses `/usr/bin/git`; macOS resolves the actual developer-tools Git with
+`/usr/bin/xcrun` in a clean environment. The supported qualification bootstrap
+is Linux/macOS and does not claim Windows qualification or Setup acceptance.
 Commit the completed plan before measurement. The normal-flow diagnostic's
 selected subject manifest similarly requires `implementation`, `runtime` and
 `drivers` from its exported `normalFlowDrivers` inventory; its direct runtime

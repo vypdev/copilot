@@ -9,7 +9,7 @@ const path = require('node:path');
 const official = require('../shadow-real-prs/official.json');
 const shadowPlan = require('../shadow-verification/plan.json');
 const root = path.resolve(__dirname, '../../../../..');
-const { attestSource, attestRuntime, attestDrivers, pinnedGit } = require('../execution-provenance.cjs');
+const { attestSource, attestRuntime, attestDrivers, pinnedGit, trustedGitExecutable } = require('../execution-provenance.cjs');
 const { requirePinnedExecution, requirePinnedRuntime } = require('../ev07-shadow/implementation.cjs');
 const normalFlowDrivers = Object.freeze(['run.cjs', '../execution-provenance.cjs', '../ev07-shadow/load.cjs',
     '../ev07-shadow/implementation.cjs', '../ev07-shadow/configuration.cjs']);
@@ -150,7 +150,7 @@ async function run(lab, number, destination, manifestPath = path.join(__dirname,
         throw new Error('forbidden GitHub mutation');
     } });
     try {
-        execFileSync('git', ['clone', '-q', '--shared', '--no-checkout', source, checkout],
+        execFileSync(trustedGitExecutable(), ['clone', '-q', '--shared', '--no-checkout', source, checkout],
             { cwd: scratch, env: require('../execution-provenance.cjs').gitEnvironment() });
         git(checkout, 'remote', 'remove', 'origin');
         git(checkout, 'checkout', '-q', '--detach', subject.head);
