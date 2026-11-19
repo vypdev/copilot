@@ -147852,7 +147852,7 @@ function intervals(patch) {
     return Array.from(patch.matchAll(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/gmu), match => {
         const start = Number(match[1]);
         return [start, start + Number(match[2] ?? 1) - 1];
-    });
+    }).filter(([start, end]) => start <= end);
 }
 
 function makeBroker({ repo, officialDirectory, catalog = [], localRuntime, readLocalSqlite, resolvedVersions = [], installedOfficial, readCi, pullRequest }, subject, finding, sharedRead, signal) {
