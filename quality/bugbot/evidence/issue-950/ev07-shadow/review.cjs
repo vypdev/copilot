@@ -5,8 +5,7 @@ const { execFileSync } = require('node:child_process');
 const { createHash } = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
-const { pinnedGit } = require('../execution-provenance.cjs');
-const { getOctokit } = require('@actions/github');
+const { pinnedGit, admitQualificationModules } = require('../execution-provenance.cjs');
 const { qualificationProvenance, requirePinnedExecution, selectedPlanProvenance } = require('./implementation.cjs');
 
 const plan = require('./configuration.cjs');
@@ -79,6 +78,8 @@ function readSubject(id, checkout) {
 async function run(checkout, id, repetition, output, preflight = false) {
     const provenance = qualificationProvenance(plan);
     const implementation = provenance.implementation;
+    admitQualificationModules(path.resolve(__dirname, '../../../../..'));
+    const { getOctokit } = require('@actions/github');
     require('./load.cjs');
 
     const { Ai } = require('../../../../../src/data/model/ai');
@@ -157,8 +158,10 @@ async function run(checkout, id, repetition, output, preflight = false) {
     const cancel = new AbortController();
     process.once('SIGINT', () => cancel.abort());
     process.once('SIGTERM', () => cancel.abort());
+    const evidenceToken = process.env.COPILOT_EVIDENCE_TOKEN || process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
+    assert(preflight || evidenceToken, 'read-only GitHub evidence credential unavailable');
     const ci = preflight ? undefined : createGitHubBugbotCiReader({ owner: repository.owner, repo: repository.name },
-        getOctokit(execFileSync('gh', ['auth', 'token', '--hostname', 'github.com'], { encoding: 'utf8' }).trim()).rest.actions);
+        getOctokit(evidenceToken).rest.actions);
     const verifier = createInstalledBugbotShadowVerifier(repository, checkout, async turn => {
         assert.deepEqual(turn.configuration, plan.verifier);
         const result = await askManagedBugbotShadowTurn(turn);

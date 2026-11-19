@@ -2,12 +2,12 @@
 
 const assert = require('node:assert/strict');
 const { execFileSync, spawnSync } = require('node:child_process');
-const { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } = require('node:fs');
+const { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync, symlinkSync } = require('node:fs');
 const { createHash } = require('node:crypto');
 const { tmpdir } = require('node:os');
 const path = require('node:path');
 const { test } = require('node:test');
-const { attestSource, attestRuntime, attestDrivers, runtimeIdentity, trustedGitExecutable } = require('../execution-provenance.cjs');
+const { attestSource, attestRuntime, attestDrivers, runtimeIdentity, dependencyIdentity, trustedGitExecutable } = require('../execution-provenance.cjs');
 
 function sourceFixture(t) {
     const directory = mkdtempSync(path.join(tmpdir(), 'bugbot-source-proof-'));
@@ -164,7 +164,7 @@ for (const runner of ['normal-flow-shadow/run.cjs', 'ev07-shadow/corpus.cjs', 'e
         const plan = path.join(directory, 'plan.json');
         writeFileSync(plan, JSON.stringify({ implementation: 'f'.repeat(40) }));
         writeFileSync(preload, `const Module=require('node:module'),fs=require('node:fs'),load=Module._load;
-Module._load=function(name,...args){if(name.includes('/src/')||name.endsWith('/typescript')){
+Module._load=function(name,...args){if(name.includes('/src/')||name.endsWith('/typescript')||name==='@actions/github'){
 fs.writeFileSync(process.env.IMPORT_MARKER,name);throw Error('unexpected application import');}return load.call(this,name,...args);};`);
         const child = spawnSync(process.execPath, ['--require', preload, path.resolve(__dirname, '..', runner),
             directory, '1', path.join(directory, 'result.jsonl'), plan], { encoding: 'utf8',
@@ -173,6 +173,73 @@ fs.writeFileSync(process.env.IMPORT_MARKER,name);throw Error('unexpected applica
         assert.equal(existsSync(marker), false, child.stderr);
         assert.equal(existsSync(path.join(directory, 'result.jsonl')), false);
         assert.match(child.stderr, /rev-parse|commit|pin/u);
+    });
+}
+
+function dependencyFixture(t) {
+    const directory = mkdtempSync(path.join(tmpdir(), 'qualification-dependency-proof-'));
+    t.after(() => rmSync(directory, { recursive: true, force: true }));
+    const modules = path.join(directory, 'node_modules');
+    mkdirSync(path.join(modules, 'typescript'), { recursive: true });
+    writeFileSync(path.join(modules, 'typescript/package.json'), JSON.stringify({ name: 'typescript', version: 'fixture', main: 'index.js' }));
+    writeFileSync(path.join(modules, 'typescript/index.js'), 'module.exports = {};\n');
+    mkdirSync(path.join(modules, '@actions/github'), { recursive: true });
+    const file = path.join(modules, '@actions/github/index.js');
+    writeFileSync(file, 'module.exports = {};\n');
+    return { directory, modules, file };
+}
+
+test('dependency admission binds actual files and refuses additions, loader shadows and escaping symlinks', t => {
+    const f = dependencyFixture(t), original = dependencyIdentity(f.directory);
+    assert.match(original.dependencyTreeSha256, /^[a-f0-9]{64}$/u);
+    writeFileSync(path.join(f.modules, 'extra.js'), 'unadmitted');
+    assert.notEqual(dependencyIdentity(f.directory).dependencyTreeSha256, original.dependencyTreeSha256);
+    symlinkSync('platform-optional.js', path.join(f.modules, 'optional'));
+    const missingOptional = dependencyIdentity(f.directory);
+    writeFileSync(path.join(f.modules, 'platform-optional.js'), 'materialized');
+    assert.notEqual(dependencyIdentity(f.directory).dependencyTreeSha256, missingOptional.dependencyTreeSha256);
+    symlinkSync(f.directory, path.join(f.modules, 'outside'));
+    assert.throws(() => dependencyIdentity(f.directory), /symlink escapes/u);
+    rmSync(path.join(f.modules, 'outside'));
+    mkdirSync(path.join(f.directory, 'quality/node_modules'), { recursive: true });
+    assert.throws(() => dependencyIdentity(f.directory), /dependency shadow/u);
+});
+
+test('a modified dependency executes with the old proof but is refused before import by the new proof', t => {
+    const f = dependencyFixture(t), runtime = runtimeIdentity(f.directory), marker = path.join(f.directory, 'dependency-executed');
+    writeFileSync(f.file, 'require("node:fs").writeFileSync(' + JSON.stringify(marker) + ', "executed");\n');
+    const helper = path.resolve(__dirname, '../execution-provenance.cjs'), old = path.join(f.directory, 'old-proof.cjs');
+    const source = readFileSync(helper, 'utf8');
+    assert(source.includes('return { ...dependencies, node:'));
+    writeFileSync(old, source.replace('return { ...dependencies, node:', 'return { node:'));
+    const run = file => spawnSync(process.execPath, ['-e',
+        'require(process.argv[1]).attestRuntime(process.argv[2],JSON.parse(process.argv[3]));require(process.argv[2]+"/node_modules/@actions/github")',
+        file, f.directory, JSON.stringify(runtime)], { encoding: 'utf8' });
+    const bypass = run(old);
+    assert.equal(bypass.status, 0, bypass.stderr);
+    assert.equal(existsSync(marker), true);
+    rmSync(marker);
+    const refused = run(helper);
+    assert.notEqual(refused.status, 0);
+    assert.match(refused.stderr, /runtime differs: dependencyTreeSha256/u);
+    assert.equal(existsSync(marker), false);
+});
+
+for (const mode of ['require', 'import']) {
+    test('the normal workspace portal is inventoried but cannot execute through ' + mode, t => {
+        const f = dependencyFixture(t), portal = path.join(f.modules, '.pnpm/node_modules/@vypdev');
+        mkdirSync(portal, { recursive: true });
+        mkdirSync(path.join(f.directory, 'extension'));
+        const marker = path.join(f.directory, 'portal-executed'), external = path.join(f.directory, 'extension/index.cjs');
+        writeFileSync(external, 'require("node:fs").writeFileSync(' + JSON.stringify(marker) + ', "executed");\n');
+        symlinkSync('../../../../extension', path.join(portal, 'copilot-browser-extension'));
+        assert.match(dependencyIdentity(f.directory).dependencyTreeSha256, /^[a-f0-9]{64}$/u);
+        const program = 'require(process.argv[1]).admitQualificationModules(process.argv[2]);'
+            + (mode === 'require' ? 'require(process.argv[3]);' : 'import(require("node:url").pathToFileURL(process.argv[3])).catch(e=>{console.error(e);process.exitCode=1;});');
+        const child = spawnSync(process.execPath, ['-e', program, path.resolve(__dirname, '../execution-provenance.cjs'), f.directory, external], { encoding: 'utf8' });
+        assert.notEqual(child.status, 0);
+        assert.match(child.stderr, /outside the admitted qualification closure/u);
+        assert.equal(existsSync(marker), false);
     });
 }
 

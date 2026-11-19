@@ -9,8 +9,8 @@ const path = require('node:path');
 const official = require('../shadow-real-prs/official.json');
 const shadowPlan = require('../shadow-verification/plan.json');
 const root = path.resolve(__dirname, '../../../../..');
-const { attestSource, attestRuntime, attestDrivers, pinnedGit, trustedGitExecutable } = require('../execution-provenance.cjs');
-const { requirePinnedExecution, requirePinnedRuntime } = require('../ev07-shadow/implementation.cjs');
+const { attestSource, attestRuntime, admitQualificationModules, attestDrivers, pinnedGit, trustedGitExecutable } = require('../execution-provenance.cjs');
+const { requirePinnedExecution, requirePinnedCliProbe } = require('../ev07-shadow/implementation.cjs');
 const normalFlowDrivers = Object.freeze(['run.cjs', '../execution-provenance.cjs', '../ev07-shadow/load.cjs',
     '../ev07-shadow/implementation.cjs', '../ev07-shadow/configuration.cjs']);
 let application;
@@ -110,14 +110,14 @@ async function run(lab, number, destination, manifestPath = path.join(__dirname,
     const frozen = JSON.parse(manifest);
     const provenance = { ...attestSource(root, frozen.implementation),
         drivers: attestDrivers(__dirname, frozen.drivers, normalFlowDrivers), runtime: attestRuntime(root, frozen.runtime) };
+    admitQualificationModules(root);
     const directRuntime = { executable: frozen.runtime.executable, prefixArgs: frozen.runtime.launcher ? [frozen.runtime.launcher] : [] };
     const attestDirect = () => requirePinnedExecution({ executable: directRuntime.executable, launcherArgv: directRuntime.prefixArgs,
-        ...(frozen.runtime.launcher && { launcherSha256: hash(fs.readFileSync(frozen.runtime.launcher)) }),
+        ...(frozen.runtime.launcher && { launcherSha256: frozen.runtime.launcherSha256 }),
         runtimeContract: { version: frozen.runtime.codex } }, frozen.runtime);
-    attestDirect();
-    const cli = execFileSync(directRuntime.executable, [...directRuntime.prefixArgs, '--version'], { encoding: 'utf8' }).trim();
-    requirePinnedRuntime(cli, frozen.runtime);
-    provenance.cli = { ...attestDirect(), version: cli };
+    const cliProbe = requirePinnedCliProbe(frozen.runtime);
+    const cli = cliProbe.version;
+    provenance.cli = { ...cliProbe.proof, version: cli };
     const { composeBugbotReview, createPinnedBugbotShadowVerifier, ask, codexInvocation,
         projectBugbotReviewOperationContext, buildAgentTasksFromValues, Ai, createFindingsQueryPort,
         AgentCliClient, AgentExecutionPlanner, resolveBugbotReviewEffort } = loadApplication();

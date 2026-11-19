@@ -52,6 +52,21 @@ function requirePinnedExecution(execution, runtime = require('./configuration.cj
     return { executableSha256 };
 }
 
+function requirePinnedCliProbe(runtime = require('./configuration.cjs').runtime) {
+    const launcher = runtime?.launcher ? [runtime.launcher] : [];
+    const execution = { executable: runtime?.executable, launcherArgv: launcher,
+        ...(launcher.length && { launcherSha256: runtime.launcherSha256 }),
+        runtimeContract: { version: runtime?.codex } };
+    const proof = requirePinnedExecution(execution, runtime);
+    // Never resolve through PATH, or run even --version before byte admission.
+    const version = execFileSync(execution.executable, [...launcher, '--version'], {
+        encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
+        env: { PATH: '/usr/bin:/bin' },
+    }).trim();
+    requirePinnedRuntime(version, runtime);
+    return { version, proof };
+}
+
 const qualificationDrivers = Object.freeze(['configuration.cjs', 'implementation.cjs', 'load.cjs', 'corpus.cjs',
     'review.cjs', 'full-review.cjs', 'launch-full-review.cjs', 'score-review.py', '../execution-provenance.cjs']);
 
@@ -121,7 +136,7 @@ function requireQualificationPolicy(selected) {
 
 function selectedPlanSha256() { return selectedPlanProvenance().sha256; }
 
-module.exports = { requirePinnedImplementation, requirePinnedRuntime, requirePinnedExecution, requirePinnedDrivers, qualificationProvenance, qualificationDrivers, selectedPlanSha256, selectedPlanProvenance };
+module.exports = { requirePinnedImplementation, requirePinnedRuntime, requirePinnedExecution, requirePinnedCliProbe, requirePinnedDrivers, qualificationProvenance, qualificationDrivers, selectedPlanSha256, selectedPlanProvenance };
 
 if (require.main === module) {
     assert.equal(process.argv[2], '--plan-provenance');

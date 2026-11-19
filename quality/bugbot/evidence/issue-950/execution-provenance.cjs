@@ -116,10 +116,77 @@ function attestSource(root, implementation) {
         compilerConfigurationSha256: expected.get('tsconfig.json').sha256 };
 }
 
+function dependencyIdentity(root) {
+    root = fs.realpathSync(root);
+    const directory = path.join(root, 'node_modules');
+    assert(fs.lstatSync(directory).isDirectory() && !fs.lstatSync(directory).isSymbolicLink(),
+        'qualification dependencies must have a physical installation');
+    const rows = [];
+    function visit(relative) {
+        const file = path.join(directory, relative), stat = fs.lstatSync(file);
+        if (stat.isSymbolicLink()) {
+            const link = fs.readlinkSync(file), lexical = path.relative(directory, path.resolve(path.dirname(file), link));
+            if (relative === path.join('.pnpm', 'node_modules', '@vypdev', 'copilot-browser-extension')
+                && fs.realpathSync(file) === path.join(root, 'extension')) {
+                // Normal pnpm workspaces expose this unused portal. Its code is
+                // outside admission and the entrypoint loader fence forbids it.
+                rows.push([relative, 'unadmitted-workspace', link, 'extension']);
+                return;
+            }
+            assert(lexical && !path.isAbsolute(lexical) && !lexical.split(path.sep).includes('..'),
+                'dependency symlink escapes the admitted installation');
+            let target;
+            try { target = path.relative(directory, fs.realpathSync(file)); }
+            catch (error) { if (error.code !== 'ENOENT') throw error; }
+            assert(target === undefined || target && !path.isAbsolute(target) && !target.split(path.sep).includes('..'),
+                'dependency symlink escapes the admitted installation');
+            // pnpm can retain links to platform-excluded optional packages.
+            // Bind the missing target as well; materializing it changes this proof.
+            rows.push([relative, 'link', link, target ?? 'missing:' + lexical]);
+        } else if (stat.isDirectory()) {
+            for (const name of fs.readdirSync(file).sort()) visit(path.join(relative, name));
+        } else {
+            assert(stat.isFile(), 'dependency must be a regular file or internal symlink');
+            rows.push([relative, 'file', stat.mode & 0o777, hash(fs.readFileSync(file))]);
+        }
+    }
+    visit('');
+    // These ancestors could otherwise shadow the admitted root dependencies.
+    for (const relative of ['quality', 'quality/bugbot', 'quality/bugbot/evidence',
+        'quality/bugbot/evidence/issue-950', 'quality/bugbot/evidence/issue-950/ev07-shadow',
+        'quality/bugbot/evidence/issue-950/normal-flow-shadow']) {
+        assert(!fs.existsSync(path.join(root, relative, 'node_modules')), 'unadmitted qualification dependency shadow');
+    }
+    assert(!process.env.NODE_PATH && !process.env.NODE_OPTIONS, 'qualification requires a clean Node loader environment');
+    assert(!process.execArgv.some(arg => /^(?:--require|--import|--loader|--experimental-loader)(?:=|$)|^-r/u.test(arg)),
+        'qualification Node preload is not admitted');
+    return { dependencyTreeSha256: hash(JSON.stringify(rows)), dependencyEntries: rows.length };
+}
+
+function admitQualificationModules(root) {
+    root = fs.realpathSync(root);
+    const { registerHooks } = require('node:module'), { fileURLToPath } = require('node:url');
+    assert.equal(typeof registerHooks, 'function', 'qualification requires synchronous Node module hooks');
+    const admitted = ['src', 'node_modules', 'quality/bugbot/evidence/issue-950']
+        .map(relative => path.join(root, relative) + path.sep);
+    return registerHooks({ resolve(specifier, context, nextResolve) {
+        const result = nextResolve(specifier, context);
+        if (!result.url.startsWith('node:')) {
+            assert(result.url.startsWith('file:'), 'qualification module must have a physical admitted path');
+            const file = fs.realpathSync(fileURLToPath(result.url));
+            assert(admitted.some(prefix => file.startsWith(prefix)), 'module is outside the admitted qualification closure');
+        }
+        return result;
+    } });
+}
+
 function runtimeIdentity(root) {
+    const dependencies = dependencyIdentity(root);
     const typescript = require.resolve('typescript', { paths: [root] });
+    assert(fs.realpathSync(typescript).startsWith(fs.realpathSync(path.join(root, 'node_modules')) + path.sep),
+        'compiler is outside the admitted dependency tree');
     const gitExecutable = trustedGitExecutable();
-    return { node: process.version, nodeSha256: hash(fs.readFileSync(process.execPath)),
+    return { ...dependencies, node: process.version, nodeSha256: hash(fs.readFileSync(process.execPath)),
         gitExecutable, gitSha256: hash(fs.readFileSync(gitExecutable)),
         git: execFileSync(gitExecutable, ['--version'], { env: gitEnvironment(), encoding: 'utf8' }).trim(),
         typescript: JSON.parse(fs.readFileSync(require.resolve('typescript/package.json', { paths: [root] }))).version,
@@ -144,4 +211,4 @@ function attestDrivers(directory, expected, files) {
     }));
 }
 
-module.exports = { attestSource, attestRuntime, attestDrivers, runtimeIdentity, pinnedGit, gitEnvironment, trustedGitExecutable };
+module.exports = { attestSource, attestRuntime, attestDrivers, runtimeIdentity, dependencyIdentity, admitQualificationModules, pinnedGit, gitEnvironment, trustedGitExecutable };
