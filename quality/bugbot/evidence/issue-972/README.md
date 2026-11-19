@@ -39,3 +39,11 @@ Historical campaigns and ledgers remain unchanged. A current replay needs a new
 driver pin and applicable source/runtime admission. This correction introduces
 no deadline, token budget, read quota or turn limit. Production verification
 remains disabled; no profile is qualified or new corpus/full-review campaign run.
+
+The first implementation commit passed all 943 Jest suites. A later commit to
+retain ignored log files encountered a Jest worker SIGSEGV in the unchanged
+`setup_batch_composition.test.ts` before that suite could execute; 942 suites
+passed. `commit-hook-worker-failure.log.gz` preserves that unsuccessful hook.
+It is not an assertion result or model measurement. The affected suite passed
+all five tests when run alone (`worker-failure-recheck.log`). Final delivery
+evidence must identify a successful complete hook retry separately.

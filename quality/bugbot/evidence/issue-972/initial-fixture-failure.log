@@ -1,0 +1,72 @@
+✔ the actual normal-flow operation preserves explicit cancellation: before-detection (6571.390291ms)
+✔ the actual normal-flow operation preserves explicit cancellation: during-detection (6911.074667ms)
+✔ the actual normal-flow operation preserves explicit cancellation: between-preparation-and-verification (7603.928791ms)
+✖ the actual normal-flow operation preserves explicit cancellation: during-verification (6805.48275ms)
+✖ the actual normal-flow operation preserves explicit cancellation: after-provider-interruption (8757.333208ms)
+✖ the actual normal-flow operation preserves explicit cancellation: uninterrupted (4522.57375ms)
+✔ explicit cancellation in the experimental arm prevents starting the inherited arm (0.458792ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 4
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 43250.0875
+
+✖ failing tests:
+
+test at quality/bugbot/evidence/issue-950/normal-flow-shadow/cancellation.test.cjs:19:5
+✖ the actual normal-flow operation preserves explicit cancellation: during-verification (6805.48275ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'completed'
+  - 'interrupted'
+  
+      at TestContext.<anonymous> (/private/tmp/copilot-goal-972/quality/bugbot/evidence/issue-950/normal-flow-shadow/cancellation.test.cjs:81:20)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'completed',
+    expected: 'interrupted',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at quality/bugbot/evidence/issue-950/normal-flow-shadow/cancellation.test.cjs:19:5
+✖ the actual normal-flow operation preserves explicit cancellation: after-provider-interruption (8757.333208ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'completed'
+  - 'interrupted'
+  
+      at TestContext.<anonymous> (/private/tmp/copilot-goal-972/quality/bugbot/evidence/issue-950/normal-flow-shadow/cancellation.test.cjs:81:20)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'completed',
+    expected: 'interrupted',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at quality/bugbot/evidence/issue-950/normal-flow-shadow/cancellation.test.cjs:19:5
+✖ the actual normal-flow operation preserves explicit cancellation: uninterrupted (4522.57375ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  0 !== 1
+  
+      at TestContext.<anonymous> (/private/tmp/copilot-goal-972/quality/bugbot/evidence/issue-950/normal-flow-shadow/cancellation.test.cjs:79:52)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
