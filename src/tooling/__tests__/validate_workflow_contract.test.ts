@@ -1042,7 +1042,8 @@ describe('workflow contract validator', () => {
     'rejects hosted execution for ordinary source jobs in %s', name => {
       const { file, workflow } = loadMutationWorkflow('.github/workflows', name);
       const job = workflow.jobs[name === 'copilot_credential_health.yml' ? 'verify-pat' : 'candidate-preflight'];
-      expect(job['runs-on']).toEqual(['self-hosted', 'codex', 'Linux']);
+      expect(job['runs-on']).toEqual(name === 'copilot_credential_health.yml'
+        ? { group: 'vypdev', labels: ['self-hosted', 'codex', 'Linux'] } : ['self-hosted', 'codex', 'Linux']);
       job['runs-on'] = 'ubuntu-latest';
       expect(() => assertRunner(file, workflow)).toThrow('must use runs-on self-hosted');
     },

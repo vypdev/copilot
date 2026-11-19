@@ -14,3 +14,25 @@ Treat workflow events as different trust zones:
 | `issue_comment` | User-controlled text | Authorization MUST run before any write-capable agent |
 
 Self-hosted runners MUST be isolated, ephemeral where possible, and cleaned after agent execution. Agent prompts MUST treat repository content and comments as untrusted data. See [Prompt-injection controls](/security-operations/security/prompt-injection) for the complete threat model, output-sanitization rules, and incident response procedure.
+
+## Source credential-health policy review
+
+The source-only proposal in [#979](https://github.com/vypdev/copilot/issues/979)
+selects the exact default-ref health workflow and reviewed original/rerun actors,
+with an explicit false-by-default check. It requires maintainer acceptance of
+the actor/ref policy and trusted-workflow-editor assumption. A mutable condition
+and its editable validator provide no independent boundary against workflow
+editors. GitHub's repository-write requirement for dispatch is a separate control.
+
+The observed default health workflow is older than develop; source changes do
+not establish installation. Health uses no environment approval gate. Effective
+branch rules and classic-protection responses are recorded separately, and the
+organization runner-group policy is unavailable to this connection (403).
+Do not infer an independent organization fence from runner labels, a missing
+repository runner list or an artifact/run identity.
+
+The workflow token is contents:read, but that does not narrow the separate PAT or
+provider key. Their actual grants remain unverified by this audit; authentication
+GETs establish only the tested endpoint's acceptance. No real health dispatch or
+credential value is used for the policy's fake-endpoint controls. Stronger claims
+need separately verified operator controls. Consumer templates are unchanged.
