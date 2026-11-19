@@ -10,6 +10,7 @@ import { runDetectPotentialProblemsWorkflow } from './detect_potential_problems_
 import type { BugbotReviewOperationContext } from './bugbot/bugbot_review_operation_context';
 import type { BugbotTelemetryPort } from '../../../ports/bugbot_telemetry_ports';
 import type { MessageCatalogResolutionPort } from '../../../ports/message_catalog_ports';
+import type { BugbotReviewCancellationPort } from '../../../ports/bugbot_review_cancellation_ports';
 
 export type { BugbotFinding } from '../../../../domain/bugbot/finding';
 
@@ -26,10 +27,17 @@ export class DetectPotentialProblemsUseCase implements ParamUseCase<BugbotReview
         private readonly experimentalShadowProfile?: Readonly<AgentConfiguration>,
         private readonly verificationAuthority?: BugbotVerificationAuthority,
         private readonly sourceFreshness?: BoundPublicationSourceQueryPort,
+        private readonly cancellation?: BugbotReviewCancellationPort,
     ) {}
 
     async invoke(param: BugbotReviewOperationContext): Promise<Result[]> {
-        return await runDetectPotentialProblemsWorkflow(param, {
+        return this.cancellation
+            ? this.cancellation.withSignal(param.signal, signal => this.run({ ...param, signal }))
+            : this.run(param);
+    }
+
+    private run(param: BugbotReviewOperationContext): Promise<Result[]> {
+        return runDetectPotentialProblemsWorkflow(param, {
             aiRepository: this.aiRepository,
             scm: this.scm,
             telemetryPort: this.telemetryPort,

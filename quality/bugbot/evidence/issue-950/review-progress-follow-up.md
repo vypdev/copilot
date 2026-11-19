@@ -228,3 +228,75 @@ the authorized loopback-only rerun passed. It contacted no GitHub endpoint.
 Specification, documentation, archive links (38), traceability rows (27) and
 Graphify validation passed. The Action-owned SDD retains its exact publication
 hash `e3bfaa9eaeca51b13d0c3c425c61317014c50bbb2023a8b081462bafbb9217fa`.
+
+## Native review of `6a7121e26`
+
+The native review completed **28/28** partitions and published its coordinated
+result. CI static/coverage/build/aggregate, Commit, Verification and Branch Sync
+passed. Review and Approval were neutral, with no approval submitted. The
+[terminal card](https://github.com/vypdev/copilot/pull/951#issuecomment-6865721341)
+links the [Commit assessment](https://github.com/vypdev/copilot/issues/950#issuecomment-6732557685)
+for this exact head. Commit completed 115 requirements in 4/4 batches using
+49/120 progress-port calls. Its 61% estimate is an automated source judgment,
+separate from executed acceptance and the negative qualification.
+
+| Report | Evidence and disposition |
+|---|---|
+| [Manual source CI](https://github.com/vypdev/copilot/pull/951#discussion_r4623916234) | Keep the existing trusted internal-branch boundary. The same repository's writers can already submit branch-controlled source CI through a PR; forks and merge queue remain excluded. [GitHub documents write authority for manual dispatch](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow). Restricting only the dispatcher to `master` would remove authorized branch diagnostics without removing that existing execution authority. No workflow, runner or installation template changes. |
+| [Scoring plan](https://github.com/vypdev/copilot/pull/951#discussion_r4623916244) | Confirmed. Before correction, the real scorer accepted missing/duplicate scheduler provenance, changed thresholds and a foreign slot plan. Record the selected plan digest at scheduler and slot start; reject a foreign plan, implementation, subject or repetition before scoring or public-ledger output. Correctly bound interrupted slots remain visible and fail qualification. |
+| [Live base freshness](https://github.com/vypdev/copilot/pull/951#discussion_r4623916253) | Confirmed before and after publication: a live-ref advance with unchanged cached PR base/head returned fresh. Receipt-bearing ordinary reviews now acquire the live ref before analysis, reuse framed acquisition when available, and compare both bases at the fences. Missing live proof fails closed. A controlled real workflow checks that an advance after verification causes zero publication calls. |
+| [Cancellation](https://github.com/vypdev/copilot/pull/951#discussion_r4623916259) | Confirmed. Move process observation from the whole Action to an infrastructure adapter scoped by the application review invocation. Non-review routes install no handlers. Detector, partition retries, framed queries and literal follow-ups receive the linked signal. Controlled Action/application/transport tests cover cancellation, caller signals, handler cleanup and no subsequent dispatch/publication. No research time/token ceiling is added. |
+| [Dependency range](https://github.com/vypdev/copilot/pull/951#discussion_r4623916261) | Confirmed with pinned Git fixtures. Matching manifest and importer strings previously accredited an incompatible resolved release. Validate the resolved version using [npm SemVer range semantics](https://github.com/npm/node-semver#ranges). Unsupported catalogs/workspace selectors or unproved overrides remain unaccredited, rather than supplying the wrong official release. Existing supported exact/caret fixtures retain their source and integrity checks. |
+| [Initial preparation](https://github.com/vypdev/copilot/pull/951#discussion_r4623916265) | Confirmed. Only an initial unpinned preparation observation can acquire its live-ref field from the trusted identity reader. Explicit pins and later stages still reject changed/missing refs. The same normalized observation is delivered to the Check and status writer. |
+| [Prototype terminal retention](https://github.com/vypdev/copilot/pull/951#discussion_r4623916270) | Reproduced in the obsolete duplicate control implementation; the installed production policy already retained the terminal attempt. Remove the duplicate policy and delegate the active control to production. A delayed same-attempt observation stays terminal while a new attempt can resume. |
+| [Prototype equal-sequence conflict](https://github.com/vypdev/copilot/pull/951#discussion_r4623916275) | Reproduced in that duplicate. The active control now exercises the installed digest-conflict check and records no replacement write for a changed observation with the same sequence. |
+| [Binary display metadata](https://github.com/vypdev/copilot/pull/951#discussion_r4623916281) | Not adopted as a content-integrity defect. The adapter proves regular, NUL-free UTF-8 blobs and complete reconstruction; it does not use diff presentation attributes as a file-eligibility authority. A real Git fixture marks ordinary source `-diff`, observes binary display statistics and still verifies the exact text hunk. NUL and invalid UTF-8 remain rejected. [Git distinguishes binary display overrides, including ASCII content](https://git-scm.com/docs/gitattributes#_marking_files_as_binary). The companion SDD now makes that boundary explicit. |
+
+Reproduce the active controls with `pnpm run test:bugbot-shadow-verification`
+and the focused Jest paths listed in the companion SDD. Full-review scoring
+controls invoke the real Python entrypoint with synthetic, model-free ledgers;
+the synthetic valid provenance case remains **unqualified**, with missing
+trials retained. The range and text controls use actual immutable Git trees.
+The new semantic cancellation port has no process/provider dependency; native
+signal ownership stays in infrastructure. No new repository setting is added.
+
+The measured EV-07 plans, raw ledgers and results remain unchanged. This
+follow-up adds deterministic evidence, not a repeated qualification campaign.
+The proposed profile remains unqualified, production verification stays disabled
+and evaluated cohort PRs receive zero writes. The normal hook, packaged tests
+and checks of the next exact head must be reported separately.
+
+The final focused run before the normal commit passed **333/333 Jest cases in
+nine suites** and **115/115 model-free shadow controls**. Type checking, lint,
+specification generation/validation, documentation and archive-link checks also
+passed. The production dependency audit reports no high/critical advisories
+and two moderate advisories; this is not a claim of an advisory-free tree.
+These controls made no model calls and no requests to evaluated PRs. The
+unmodified owning SDD and seven frozen qualification files were compared with
+their published commits before staging.
+
+The rebuilt Action at SHA-256
+`92b547d7512a111c079964124b6726ca3fea9358efa80a273259da965db5e6b8`
+passed **13 packaged status scenarios**, their rejected-mutation audit and
+**six packaged rollback/approval scenarios**. The status harness writes only
+to its loopback fixture; the approval cases attempt zero mutations. Neither
+contacts GitHub. The first status invocation lacked the harness's required
+output directory and was stopped; the corrected invocation passed without a
+source change. Generated-bundle synchronization and npm package validation
+passed. These local results precede the normal commit hook and remote checks.
+
+The first full hook retained its failed result: **939 suites passed and one
+failed**, with three strict composition expectations still describing the old
+binding. Update those exact expectations to require the native cancellation
+adapter on workflow routes and retain its absence locally. The adapter also
+resolves the process event source only inside the active invocation, rather
+than retaining the entire process in an inert composition object. Repeat the
+focused controls, build, packaged canaries and full hook before publication;
+the preceding package hash identifies the earlier control run only.
+
+After that correction, **66/66** composition, Action and cancellation cases
+passed. The final rebuilt Action at SHA-256
+`6cacf2964d7a9100a42593e0bf90a181d29646d9e31c74ff758b1295d72867a4`
+again passed all 13 status scenarios, the rejected-mutation audit and six
+rollback/approval scenarios. Bundle synchronization passed for these staged
+bytes. The final normal hook and remote checks are linked in the PR report.

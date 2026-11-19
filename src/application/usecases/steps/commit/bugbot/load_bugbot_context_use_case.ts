@@ -66,6 +66,7 @@ export async function loadBugbotContext(
   ports: BoundBugbotContextReadPorts,
   resolvedPreflight?: BugbotContextPreflight,
   reviewSource?: BugbotReviewSourcePort,
+  pinLiveBase = false,
 ): Promise<BugbotContext> {
   const preflight = resolvedPreflight ?? await preflightBugbotContext(request, ports);
   const { selectionCoverage, selectionReason } = preflight;
@@ -158,6 +159,16 @@ export async function loadBugbotContext(
   }
   if (completeConversation) conversationContext = buildReviewConversationContext(issueComments,
     pullRequestCommentsByNumber, request.trustedAuthorLogin, true);
+  // Framed source acquisition already supplies this proof. Ordinary receipt
+  // reviews acquire it once here, before any detector or verifier is started.
+  if (pinLiveBase && canonicalPullRequest && !canonicalPullRequest.baseRefSha) {
+    if (!ports.getSourceBoundPullRequest) throw new BugbotReviewCompletenessError('capability');
+    const current = await ports.getSourceBoundPullRequest(canonicalPullRequest.number);
+    if (!sameBugbotFramedPullRequest(canonicalPullRequest, current) || !current.baseRefSha) {
+      throw new BugbotReviewCompletenessError('identity');
+    }
+    canonicalPullRequest = current;
+  }
   const repositoryRules = await ports.loadRules(
     prContext?.prFiles
       .map((file) => file.filename)

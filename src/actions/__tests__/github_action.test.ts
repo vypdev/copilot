@@ -10,6 +10,7 @@ import * as executionBuilder from '../github_action_execution';
 import * as agentRuntime from '../github_action_runtime';
 import * as actionCompletion from '../github_action_completion';
 import { runGitHubAction, runGitHubActionEntry } from '../github_action';
+import { createPullRequestUseCaseCompositionRoot } from '../../infrastructure/composition/pull_request_use_case_composition_root';
 import { ACTIONS } from '../../data/model/action_types';
 import { INPUT_KEYS } from '../../application/contracts/input_keys';
 import { ApplicationError } from '../../application/errors/application_error';
@@ -155,6 +156,18 @@ describe('runGitHubAction', () => {
     expect(execution.actor).toBe('test-actor');
   });
 
+  it('retains normal signal handling on a non-review Action route with shadow configured', async () => {
+    const input = (core.getInput as jest.Mock).getMockImplementation()!;
+    (core.getInput as jest.Mock).mockImplementation((key: string, options?: unknown) =>
+      key === 'bugbot-verification-mode' ? 'shadow' : input(key, options));
+    const once = jest.spyOn(process, 'once');
+    try {
+      await runGitHubAction();
+      expect(mockMainRun).toHaveBeenCalledTimes(1);
+      expect(once.mock.calls.filter(([event]) => event === 'SIGINT' || event === 'SIGTERM')).toEqual([]);
+    } finally { once.mockRestore(); }
+  });
+
   it('discards a normal PAT-triggered run before composing dependencies or entering the queue', async () => {
     mockExecutionAdmissionInvoke.mockResolvedValue({ decision: 'discard', tokenUser: 'test-actor' });
 
@@ -215,9 +228,13 @@ describe('runGitHubAction', () => {
     });
     const listeners = process.listenerCount('SIGTERM');
     mockReviewOnly.mockImplementationOnce(async execution => {
-      expect(execution.bugbotReviewSignal.aborted).toBe(false);
-      process.emit('SIGTERM', 'SIGTERM');
-      expect(execution.bugbotReviewSignal.aborted).toBe(true);
+      expect(execution.bugbotReviewSignal).toBeUndefined();
+      const binding = jest.mocked(createPullRequestUseCaseCompositionRoot).mock.calls[0][0];
+      await binding.reviewCancellation!.withSignal(undefined, async signal => {
+        expect(signal.aborted).toBe(false);
+        process.emit('SIGTERM', 'SIGTERM');
+        expect(signal.aborted).toBe(true);
+      });
       return [];
     });
 

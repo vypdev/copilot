@@ -9,6 +9,7 @@ import { ThinkUseCase } from "../../../application/usecases/steps/common/think_u
 import { RememberBugbotRuleUseCase } from "../../../application/usecases/steps/commit/bugbot/remember_bugbot_rule_use_case";
 import { CheckIssueCommentLanguageUseCase } from "../../../application/usecases/steps/issue_comment/check_issue_comment_language_use_case";
 import { GitCommitAdapter } from "../../git_commit_adapter";
+import { NativeBugbotReviewCancellationAdapter } from '../../bugbot/native_review_cancellation_adapter';
 import { captureVerificationSetup } from '../../verification_setup_snapshot';
 import { createPullRequestUseCaseCompositionRoot } from '../pull_request_use_case_composition_root';
 import type { ProjectBoardCommandPort } from "../../../application/ports/project_board_command_ports";
@@ -230,7 +231,10 @@ describe("main run route composition root", () => {
         await handlers['pull-request'](execution);
 
         expect(createPullRequestUseCaseCompositionRoot).toHaveBeenCalledWith(
-          bindsWorkspace ? { ...binding, shadow: { workspace } } : binding,
+          { ...binding,
+            ...(surface === 'github-workflow' ? { reviewCancellation: expect.any(NativeBugbotReviewCancellationAdapter) } : {}),
+            ...(bindsWorkspace ? { shadow: { workspace } } : {}),
+          },
         );
         expect(mockPullRequestInvoke).toHaveBeenCalledWith(execution);
       } finally {
@@ -251,7 +255,8 @@ describe("main run route composition root", () => {
 
     await handlers['pull-request'](execution);
 
-    expect(createPullRequestUseCaseCompositionRoot).toHaveBeenCalledWith({ ...binding, verificationAuthority: authority });
+    expect(createPullRequestUseCaseCompositionRoot).toHaveBeenCalledWith({ ...binding,
+      reviewCancellation: expect.any(NativeBugbotReviewCancellationAdapter), verificationAuthority: authority });
   });
 
   it("binds every route to its matching use case", async () => {

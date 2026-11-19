@@ -2314,6 +2314,8 @@
       "code": [
         "src/application/policies/bugbot_shadow_configuration_policy.ts",
         "src/infrastructure/bugbot/installed_bugbot_shadow_adapter.ts",
+        "src/infrastructure/bugbot/native_review_cancellation_adapter.ts",
+        "src/infrastructure/bugbot/shadow/installed_official.cjs",
         "src/infrastructure/bugbot/verifier_model_catalog.ts",
         "src/application/policies/bugbot_evidence_reference_policy.cjs",
         "src/application/policies/bugbot_material_dependency_policy.cjs",
@@ -2355,6 +2357,7 @@
         "src/application/usecases/steps/commit/bugbot/bugbot_review_telemetry.ts",
         "src/application/usecases/steps/commit/bugbot/bugbot_review_progress.ts",
         "src/application/ports/bugbot_review_progress_ports.ts",
+        "src/application/ports/bugbot_review_cancellation_ports.ts",
         "src/application/policies/bugbot_live_progress_presentation_policy.ts",
         "src/infrastructure/composition/bugbot_review_progress_composition_root.ts",
         "src/infrastructure/github/github_bugbot_review_progress_adapter.ts",
@@ -2554,9 +2557,12 @@
         "src/application/policies/__tests__/bugbot_freshness_diagnostics.test.ts",
         "quality/bugbot/evidence/issue-950/ev07-shadow/launch-full-review.test.cjs",
         "quality/bugbot/evidence/issue-950/ev07-shadow/review-runtime.test.cjs",
+        "quality/bugbot/evidence/issue-950/ev07-shadow/score-review.test.cjs",
         "quality/bugbot/evidence/issue-950/normal-flow-shadow/paths.test.cjs",
         "quality/bugbot/evidence/issue-950/shadow-verification/verification.test.cjs",
-        "src/infrastructure/bugbot/__tests__/shadow_verification_adapter.test.ts"
+        "src/infrastructure/bugbot/__tests__/shadow_verification_adapter.test.ts",
+        "src/infrastructure/bugbot/__tests__/native_review_cancellation_adapter.test.ts",
+        "src/infrastructure/bugbot/__tests__/installed_bugbot_official.test.ts"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",

@@ -72,7 +72,7 @@ export async function analyzeBugbotFrames(operation: BugbotReviewOperationContex
                     input.prompt, targetLocale, { partitionId: partition.id, headSha: partition.headSha, framed: partition.framed },
                     { enabled: input.requiresCandidateVerification, evidenceContext: input.literalEvidenceContext, observeRetry: async () => {
                         await dependencies.progress?.record('analyzing', { retries: ++retries });
-                    } });
+                    } }, operation.signal);
                 const serialized = JSON.stringify(response);
                 enforceBugbotFramedBudget('responseBytes', Buffer.byteLength(serialized));
                 const admitted: Readonly<Record<string, unknown>> = JSON.parse(serialized);

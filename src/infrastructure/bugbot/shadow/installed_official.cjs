@@ -3,6 +3,7 @@
 const { Buffer } = require('node:buffer');
 const { load, JSON_SCHEMA } = require('js-yaml');
 const { blob, hash } = require('./git.cjs');
+const satisfies = require('semver/functions/satisfies');
 
 const PLAYWRIGHT_COMMIT = 'cfe490d941f992655948eee8fd4fd94e1c4234bf';
 const sqliteSourceIds = new Map([
@@ -60,7 +61,10 @@ function fromImporter(importer, manifest, name) {
         const declared = manifest?.[field];
         if (!Object.hasOwn(dependencies ?? {}, name)) return [];
         const pinned = dependencies[name];
-        return [Object.hasOwn(declared ?? {}, name) && declared[name] === pinned?.specifier ? pinned?.version : null];
+        const resolved = typeof pinned?.version === 'string' ? pinned.version.split('(')[0] : '';
+        // An unproved catalog/workspace/override cannot certify an effective release.
+        return [Object.hasOwn(declared ?? {}, name) && typeof declared[name] === 'string'
+            && declared[name] === pinned?.specifier && satisfies(resolved, declared[name]) ? pinned.version : null];
     });
 }
 

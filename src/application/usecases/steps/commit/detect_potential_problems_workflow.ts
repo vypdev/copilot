@@ -156,8 +156,9 @@ export async function runDetectPotentialProblemsWorkflow(
             await progress.record('preparing');
         }
         const context = await telemetry.measure('context', () =>
-            loadBugbotContext(contextRequest, dependencies.scm.context, preflight, dependencies.scm.reviewSource));
+            loadBugbotContext(contextRequest, dependencies.scm.context, preflight, dependencies.scm.reviewSource, requiresReceipt));
         telemetry.observeContext(context);
+        if (reviewContext.signal?.aborted) return await canceled();
         progress?.pinComparison(context.canonicalPullRequest?.baseRefSha);
         const eventHeadSha = reviewContext.trigger.expectedHeadSha;
         if (isLoadedBugbotRevisionSuperseded(context, eventHeadSha)) {
@@ -288,6 +289,7 @@ export async function runDetectPotentialProblemsWorkflow(
                     : hasChanges ? 'completed' : 'no-findings',
         );
     } catch (error) {
+        if (reviewContext.signal?.aborted) return await canceled();
         const resultError = toApplicationError(
             error instanceof BugbotReviewCompletenessError
                 ? new ApplicationError('validation.evidence-unavailable', 'Bugbot could not verify a complete source-bound review.', { retryable: false, recovery: { id: 'bugbot-review-incomplete', variables: error.facts } })

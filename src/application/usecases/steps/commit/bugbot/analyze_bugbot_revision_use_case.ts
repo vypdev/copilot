@@ -100,6 +100,7 @@ export async function analyzeBugbotRevision(
                                 observeResponse: value => dependencies.telemetry.observeResponse(value), observeRetry: async () => {
                                     await dependencies.progress?.record('analyzing', { retries: ++retries });
                                 } },
+                            execution.signal,
                         );
                         dependencies.trace?.recordResponse(response, partition.ordinal, Date.now() - partitionStartedAt, partition.id);
                         dependencies.telemetry.endPartition(true);
@@ -128,6 +129,7 @@ export async function analyzeBugbotRevision(
                 prompt,
                 targetLocale,
                 { enabled: requiresCandidateVerification, observePrompt: value => dependencies.telemetry.observePrompt(value), observeResponse: value => dependencies.telemetry.observeResponse(value) },
+                execution.signal,
             );
             dependencies.trace?.recordResponse(response, null, Date.now() - startedAt);
             return response;

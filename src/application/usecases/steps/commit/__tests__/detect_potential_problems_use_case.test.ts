@@ -114,10 +114,12 @@ function invokeUseCase(useCase: DetectPotentialProblemsUseCase, source: Executio
 describe("DetectPotentialProblemsUseCase", () => {
   let useCase: DetectPotentialProblemsUseCase;
   let testBaseSha: string | undefined;
+  let testLiveBaseSha: string | undefined;
   let createUseCase: (verifier?: BugbotShadowVerificationPort, profile?: AgentConfiguration, authority?: BugbotVerificationAuthority) => DetectPotentialProblemsUseCase;
 
   beforeEach(() => {
     testBaseSha = undefined;
+    testLiveBaseSha = undefined;
     providerDraft = false;
     const rulesPort = { loadRules: jest.fn().mockResolvedValue([]) };
     const mockListPullRequestReviewThreadStates = jest.fn().mockResolvedValue({});
@@ -178,16 +180,21 @@ describe("DetectPotentialProblemsUseCase", () => {
       listPullRequestReviewComments: (pullRequestNumber: number) =>
         mockListPullRequestReviewComments('owner', 'repo', pullRequestNumber, 'token'),
     };
-    const context = {
-      getPullRequest: async (pullRequestNumber: number) => ({
+    const readIdentity = async (pullRequestNumber: number) => ({
         number: pullRequestNumber,
         state: 'open' as const,
         draft: providerDraft,
         baseRepository: { owner: 'owner', name: 'repo', ...(testBaseSha ? { id: 17 } : {}) },
         ...(testBaseSha ? { baseSha: testBaseSha } : {}),
         headRepositoryOwner: 'owner',
+        headRepositoryName: 'repo', baseRef: 'develop', changedFileCount: 1,
         headRef: 'feature/head',
         headSha: await mockGetPullRequestHeadSha(pullRequestNumber),
+      });
+    const context = {
+      getPullRequest: readIdentity,
+      getSourceBoundPullRequest: async (pullRequestNumber: number) => ({
+        ...await readIdentity(pullRequestNumber), baseRefSha: testLiveBaseSha ?? testBaseSha,
       }),
       findOpenPullRequestsByExactHead: async (headOwner: string, headRef: string) => {
         const numbers = await mockFindExactHeadCandidateNumbers(headRef);
@@ -401,6 +408,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       pullRequest: { number: 100, head: 'feature/head', action: 'synchronize' } });
 
     beforeEach(() => {
+      testBaseSha = 'b'.repeat(40);
       mockGetPullRequestHeadSha.mockResolvedValue(head);
       mockGetChangedFiles.mockResolvedValue([{ filename: 'src/bar.ts', status: 'modified' }]);
       mockGetFilesWithFirstDiffLine.mockResolvedValue([{ path: 'src/bar.ts', firstLine: 5 }]);
@@ -419,7 +427,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       expect(verify).toHaveBeenCalledWith({
         configuration: detector, review: expect.any(Object),
         candidate: { id: candidate.id, hypothesis: candidate.title, repository: { owner: 'owner', name: 'repo' },
-          pullRequest: 100, headSha: head, allowBase: false, anchor: { path: candidate.file, line: 5, end: 5, side: 'RIGHT' } },
+          pullRequest: 100, headSha: head, baseSha: testBaseSha, allowBase: false, anchor: { path: candidate.file, line: 5, end: 5, side: 'RIGHT' } },
       });
       expect(result.payload).toMatchObject({ dryRun: true, bugbotShadowVerification: {
         resolvedModel: detector.model, verifier: { model: detector.model }, review: { headSha: head },
@@ -465,6 +473,35 @@ describe("DetectPotentialProblemsUseCase", () => {
       missing: null, premises: [], citations: [{ kind: 'git', sha: head, receipt: 'first',
         path: candidate.file, first: 5, last: 5, textSha256: '1'.repeat(64) }] } as const;
     const confirmed = { ...refuted, verdict: 'confirmed', reason: 'The alternate path bypasses the guard.' } as const;
+
+    it('preserves the prior result without writes when the live base advances after verification', async () => {
+      const verify = jest.fn(async () => {
+        testLiveBaseSha = 'c'.repeat(40);
+        return confirmed;
+      });
+      const [result] = await invokeUseCase(createUseCase({ verify }, undefined, authority), pr());
+      expect(verify).toHaveBeenCalledTimes(1);
+      expect(result.payload).toMatchObject({ bugbotPublicationBlocked: true, bugbotTelemetry: { outcome: 'superseded' } });
+      expect(mockCreateReviewWithComments).not.toHaveBeenCalled();
+      expect(mockUpdatePullRequestReviewComment).not.toHaveBeenCalled();
+      expect(mockResolvePullRequestReviewThread).not.toHaveBeenCalled();
+    });
+
+    it('observes cancellation during the real detector call without retry, verification or publication', async () => {
+      const controller = new AbortController(), verify = jest.fn();
+      const param = pr();
+      param.bugbotReviewSignal = controller.signal;
+      mockAskAgent.mockImplementationOnce(() => {
+        controller.abort();
+        return { findings: [candidate], resolved_findings: [] };
+      });
+      const [result] = await invokeUseCase(createUseCase({ verify }, undefined, authority), param);
+      expect(result.payload).toMatchObject({ bugbotPublicationBlocked: true, bugbotTelemetry: { outcome: 'failed' } });
+      expect(mockAskAgent).toHaveBeenCalledTimes(1);
+      expect(verify).not.toHaveBeenCalled();
+      expect(mockCreateReviewWithComments).not.toHaveBeenCalled();
+      expect(mockUpdatePullRequestReviewComment).not.toHaveBeenCalled();
+    });
 
     it('keeps a replacement with ambiguous diff sides inconclusive before starting verification', async () => {
       mockGetFilesWithDiffLocations.mockResolvedValue([{ path: candidate.file, locations: [

@@ -2326,6 +2326,53 @@ An exact replay of complete submitted review-body content on the same head MUST 
 Additional minimum budget: **eleven deterministic cases** across application and adapter controls: an impossible reported line preserves the full body and no suggestion; an unlocated finding does not move to another file; a strict provider reproduces the old 422 and accepts a mixed review after correction; missing, nonpositive and noninteger draft lines fail before mutation; five adapter controls cover exact body reuse, managed-status refresh, another-head rejection, unsubmitted-review rejection and preservation of new body content after inline completion. Existing review-marker discovery, recheck idempotency, exact LEFT/RIGHT anchors, failure conservation and coverage controls remain mandatory. Validate the focal publication tests, source/SDK boundaries, documentation, specifications, generated bundles and the actual final-head review. The reproduction establishes the local request-shape defect; it does not reconstruct the unrecorded text of the historical 422.
 
 
+### Live comparison, cancellation and evaluator closure — 2026-11-19
+
+Every receipt-bearing review MUST compare both the cached PR comparison base
+and the separately accredited live target-ref SHA before and after publication.
+A live-ref advance invalidates the result even when GitHub retains the same
+`base.sha`; an absent or unverifiable live ref fails closed. The initial
+preparation observation MAY acquire its not-yet-pinned live ref from the trusted
+identity reader. Later stages and explicitly pinned observations MUST retain
+their exact comparison and reject a changed ref. Neither preparation nor a
+progress card certifies a completed review.
+
+Native signal handlers MUST surround only an actual Bugbot invocation, with
+cleanup after success, failure or cancellation. Other Action routes retain
+normal process-signal behavior. An infrastructure adapter supplies a linked
+abort signal through the application cancellation port; the application and
+domain do not import process APIs. Detector partitions, retries, generated
+literal follow-ups and verifier sessions MUST receive that signal. Cancellation
+stops new model dispatch and retries, preserves the last verified projection and
+does not authorize publication. It adds no investigation deadline, token limit
+or turn limit.
+
+An official dependency release requires consistent manifest, importer and
+resolved-version evidence. A resolved release outside an accredited declared
+range MUST NOT be presented as effective merely because the lockfile repeats
+the manifest specifier. Unsupported selectors or an unproved effective override
+leave the version unaccredited; the verifier can identify that concrete missing
+premise. Existing package integrity, source hashes, revision and receipt checks
+remain mandatory.
+
+The full-review scheduler and each measured slot MUST record the exact selected
+plan SHA-256, including thresholds and cohort. The scorer MUST reject missing,
+foreign or inconsistent plan provenance before applying a score or writing a
+public ledger. A stricter future scorer does not rewrite an executed campaign.
+The active status publication control MUST delegate to the production policy,
+including terminal-attempt retention and equal-sequence digest conflicts; retain
+the superseded prototype only in the immutable archive.
+
+Add a minimum **30 deterministic controls**: five live-base freshness paths,
+ten cancellation/route/dispatch/cleanup paths, three initial-progress identity
+paths, six dependency-range paths, four scoring-plan paths and two publication
+ordering paths. Use actual application/runner entrypoints with controlled
+providers, real pinned Git fixtures, zero model calls and fail-on-write ports.
+Map them to the freshness diagnostics, Action and analysis/query tests, native
+cancellation adapter, installed official reader, EV-07 scorer and the production
+publication control. Preserve global and changed-module coverage gates; record
+actual execution separately from this minimum inventory.
+
 ### Qualification provenance and exact review revision — 2026-11-19
 
 A native execution may belong to the PR head or to the synthetic merge whose exact base/head parentage has already been verified. Its artifact metadata MUST match that native execution. The attributed custom Review check and its closed receipt MUST instead match the reviewed PR head. A merge execution does not authorize substituting a merge-SHA or foreign-head check. Add two consumer regressions through `PullRequestApprovalRepository`: an authenticated merge-run artifact with a head check is eligible; the same receipt on a merge check is withheld. Existing latest-attempt, rollback, policy-generation, artifact identity and base freshness checks remain mandatory. The actual `86e2430ec` run and job check both used its PR head; these regressions establish the distinct supported synthetic-merge path rather than inventing a historical merge execution.

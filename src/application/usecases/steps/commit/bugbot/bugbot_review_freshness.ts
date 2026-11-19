@@ -29,14 +29,18 @@ export async function hasNewerBugbotRevision(
         }
         if (compareBase) {
             const expected = context.canonicalPullRequest;
-            const current = await ports.getPullRequest(expected.number);
+            if (!ports.getSourceBoundPullRequest) throw bugbotFreshnessError(undefined, boundary, operation, true);
+            const current = await ports.getSourceBoundPullRequest(expected.number);
             const expectedBase = canonicalGitObjectId(expected.baseSha);
-            if (!current || !expectedBase || !canonicalGitObjectId(current.baseSha) || !canonicalGitObjectId(current.headSha)) {
+            const expectedLiveBase = canonicalGitObjectId(expected.baseRefSha);
+            if (!current || !expectedBase || !expectedLiveBase || !canonicalGitObjectId(current.baseRefSha)
+                || !canonicalGitObjectId(current.baseSha) || !canonicalGitObjectId(current.headSha)) {
                 throw bugbotFreshnessError(undefined, boundary, operation, true);
             }
             return current.number !== expected.number || current.state !== 'open' || current.draft !== expected.draft
                 || current.baseRepository.owner !== expected.baseRepository.owner || current.baseRepository.name !== expected.baseRepository.name
                 || canonicalGitObjectId(current.baseSha) !== expectedBase
+                || canonicalGitObjectId(current.baseRefSha) !== expectedLiveBase || current.baseRef !== expected.baseRef
                 || canonicalGitObjectId(current.headSha) !== context.prContext.prHeadSha.toLowerCase();
         }
         const currentHead = canonicalGitObjectId(await ports.getPullRequestHeadSha(context.canonicalPullRequest.number));

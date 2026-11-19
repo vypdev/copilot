@@ -1,4 +1,5 @@
 import type { BugbotVerificationAuthority } from '../../domain/bugbot/verification_receipt';
+import { NativeBugbotReviewCancellationAdapter } from '../bugbot/native_review_cancellation_adapter';
 import { LinkPullRequestIssueUseCase } from '../../application/usecases/steps/pull_request/link_pull_request_issue_use_case';
 import { TimerDelayAdapter } from '../time/timer_delay_adapter';
 import { createDeploymentCandidateInspection } from './deployment_candidate_replacement_composition_root';
@@ -129,7 +130,7 @@ function createDetectPotentialProblemsUseCase(binding: BugbotScmBinding): Detect
     bugbot.telemetry,
     new ResolveMessageCatalogUseCase(createLanguageQueryPort()),
     bugbot.shadowVerification,
-    undefined, binding.verificationAuthority, bugbot.sourceFreshness,
+    undefined, binding.verificationAuthority, bugbot.sourceFreshness, binding.reviewCancellation,
   );
 }
 
@@ -266,7 +267,7 @@ export function createIssueCommentUseCaseCompositionRoot(binding: BugbotScmBindi
       bugbot.telemetry,
       new ResolveMessageCatalogUseCase(language),
       bugbot.shadowVerification,
-    undefined, binding.verificationAuthority, bugbot.sourceFreshness,
+    undefined, binding.verificationAuthority, bugbot.sourceFreshness, binding.reviewCancellation,
     ),
     pullRequestDescription,
     new RememberBugbotRuleUseCase(bugbot.rules),
@@ -332,7 +333,7 @@ export function createPullRequestReviewCommentUseCaseCompositionRoot(binding: Bu
       bugbot.telemetry,
       new ResolveMessageCatalogUseCase(language),
       bugbot.shadowVerification,
-    undefined, binding.verificationAuthority, bugbot.sourceFreshness,
+    undefined, binding.verificationAuthority, bugbot.sourceFreshness, binding.reviewCancellation,
     ),
     pullRequestDescription,
     new RememberBugbotRuleUseCase(bugbot.rules),
@@ -426,6 +427,7 @@ statusCard?: BugbotScmBinding['statusCard']): BugbotScmBinding {
     owner: execution.owner,
     repository: execution.repo,
     token: execution.tokens.token,
+    ...(surface === 'github-workflow' ? { reviewCancellation: new NativeBugbotReviewCancellationAdapter() } : {}),
     ...(surface === 'github-workflow' && execution.ai?.getBugbotReviewConfiguration?.().shadowVerification
       ? { shadow: { workspace: process.env.GITHUB_WORKSPACE } } : {}),
     ...(surface === 'github-workflow' && authority ? { verificationAuthority: authority } : {}),

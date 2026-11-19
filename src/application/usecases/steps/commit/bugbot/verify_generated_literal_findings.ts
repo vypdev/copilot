@@ -72,6 +72,7 @@ For each retained source finding, independently locate the exact snippet in its 
 export async function verifyGeneratedLiteralFindings(
   agent: FindingsQueryPort, configuration: Readonly<AgentConfiguration>, source: string,
   response: unknown, locale: string, observePrompt?: (prompt: string) => void, observeResponse?: (response: unknown) => void,
+  signal?: AbortSignal,
 ): Promise<unknown> {
   const original = record(response);
   const originalLocale = validateAgentOutputLocale(original, locale);
@@ -85,7 +86,8 @@ export async function verifyGeneratedLiteralFindings(
   const batches = planLiteralVerificationBatches(candidates);
   const findings: BugbotFinding[] = [];
   for (const batch of batches) {
-    findings.push(...await verifyLiteralBatch(agent, configuration, source, batch, locale, observePrompt, observeResponse));
+    signal?.throwIfAborted();
+    findings.push(...await verifyLiteralBatch(agent, configuration, source, batch, locale, observePrompt, observeResponse, signal));
   }
   const originalIds = new Set(candidates.map(item => item.id));
   const resolved = Array.isArray(original.resolved_findings) ? original.resolved_findings.filter(value => {
@@ -102,6 +104,7 @@ async function verifyLiteralBatch(
   agent: FindingsQueryPort, configuration: Readonly<AgentConfiguration>, source: string,
   candidates: readonly BugbotFinding[], locale: string,
   observePrompt?: (prompt: string) => void, observeResponse?: (response: unknown) => void,
+  signal?: AbortSignal,
 ): Promise<BugbotFinding[]> {
   const id = literalVerificationId(source, candidates);
   const prompt = buildLiteralVerificationPrompt(source, candidates, id, locale);
@@ -109,7 +112,9 @@ async function verifyLiteralBatch(
   logInfo(`Verifying ${candidates.length} generated-source candidate hypotheses against the immutable reviewed context.`);
   const verificationResponse = await agent.query({ configuration, agentId: 'bugbot-literal-candidate-verification', prompt,
     options: productFacingAgentQueryOptions('bugbot-literal-candidate-verification', buildLiteralVerificationSchema(id, candidates)),
+    ...(signal ? { signal } : {}),
   });
+  signal?.throwIfAborted();
   observeResponse?.(verificationResponse);
   const raw = record(verificationResponse);
   const validation = validateAgentOutputLocale(raw, locale);

@@ -52,6 +52,28 @@ function run(fixture: ReturnType<typeof setup>, query: (request: FindingsQueryRe
         { agent: { query }, telemetry: fixture.telemetry, isSourceCurrent });
 }
 
+it.each([false, true])('passes cancellation through real framed query orchestration, canceled=%s', async canceled => {
+    const f = setup(framedFiles(3)), controller = new AbortController();
+    const operation = { ...f.operation, signal: controller.signal };
+    const plan = buildBugbotFramedReviewPlan(f.source, bugbotFramedContextDigest(operation, f.context), FRAME_NONCE, []);
+    f.context.reviewFramedPlan = plan;
+    const query = jest.fn(async (request: FindingsQueryRequest) => {
+        expect(request.signal).toBe(controller.signal);
+        if (canceled) controller.abort();
+        return reply(request);
+    });
+    const result = analyzeBugbotFrames(operation, f.context, plan, {
+        agent: { query }, telemetry: f.telemetry, isSourceCurrent: async () => true,
+    });
+    if (canceled) {
+        await expect(result).rejects.toMatchObject({ name: 'AbortError' });
+        expect(query).toHaveBeenCalledTimes(1);
+    } else {
+        await expect(result).resolves.toMatchObject({ findings: [] });
+        expect(query).toHaveBeenCalledTimes(3);
+    }
+});
+
 it('validates every source-bound receipt before returning one global result', async () => {
     const f = setup(); const query = jest.fn(async (request: FindingsQueryRequest) => reply(request));
     await expect(run(f, query)).resolves.toEqual({ findings: [], resolved_findings: [] });

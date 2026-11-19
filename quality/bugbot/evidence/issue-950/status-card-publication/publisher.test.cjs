@@ -2,11 +2,7 @@
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const ts = require('typescript');
-require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
-    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
-}).outputText, filename);
+require('../ev07-shadow/load.cjs');
 
 const { buildBugbotReviewProjection } = require('../../../../../src/domain/bugbot/review_projection');
 const { renderBugbotStatusCard } = require('../../../../../src/application/policies/bugbot_review_presentation_policy');
@@ -32,7 +28,7 @@ function review(sequence, { runId = 14, attempt = 1, state = 'active', current =
         ...work,
     };
     const externalId = ['bugbot', current.pullNumber, current.base, current.head, current.policy, runId, attempt].join(':');
-    return { runId, attempt, state, runUrl: `${repositoryUrl}/actions/runs/${runId}/attempts/${attempt}`,
+    return { runId, attempt, state, ...(state === 'complete' ? { closeAttempt: true } : {}), runUrl: `${repositoryUrl}/actions/runs/${runId}/attempts/${attempt}`,
         checkDetails: buildBugbotProgressCheckMarker(observation, externalId) };
 }
 
@@ -85,6 +81,28 @@ test('adds progress above exactly the previous verified bytes and preserves the 
     assert.equal(f.effects.length, 1);
 });
 
+test('a completed attempt rejects its delayed progress while permitting a replacement attempt', async () => {
+    const f = setup();
+    await f.publish();
+    f.update({ review: review(110, { state: 'complete' }), verifiedBody: terminal(head) });
+    await f.publish();
+    const complete = f.current().body;
+    f.update({ review: review(5), verifiedBody: undefined });
+    assert.equal(await f.publish(), 'unchanged');
+    assert.equal(f.current().body, complete);
+    f.update({ review: review(5, { attempt: 2 }) });
+    assert.equal(await f.publish({ attempt: 2 }), 'updated');
+});
+
+test('rejects conflicting progress at the same sequence without replacing the card', async () => {
+    const f = setup();
+    await f.publish();
+    const previous = f.current().body;
+    f.update({ review: review(5, { work: { partitions: { completed: 9, total: 110 } } }) });
+    assert.equal(await f.publish(), 'skipped');
+    assert.equal(f.current().body, previous);
+});
+
 test('first review creates one progress-only card without a terminal marker and completes at the same ID', async () => {
     const f = setup({ withExisting: false });
     assert.equal(await f.publish(), 'created');
@@ -94,7 +112,7 @@ test('first review creates one progress-only card without a terminal marker and 
     f.update({ review: review(110, { state: 'complete' }), verifiedBody: terminal(head) });
     assert.equal(await f.publish(), 'updated');
     assert.equal(f.effects[1].id, 42);
-    assert.equal(f.current().body, terminal(head));
+    assert.ok(f.current().body.startsWith(terminal(head) + '\n\n<!-- copilot-bugbot-card-terminal '));
 });
 
 test('validates the head after admission and again before writing if a push supersedes the running source', async () => {
@@ -158,7 +176,7 @@ test('an independent recheck and terminal refresh use fresh state from the same 
     const completed = review(110, { state: 'complete' });
     f.update({ review: completed, verifiedBody: terminal(head) });
     assert.deepEqual(await Promise.all([f.publish(), f.publish()]), ['updated', 'unchanged']);
-    assert.equal(f.current().body, terminal(head));
+    assert.ok(f.current().body.startsWith(terminal(head) + '\n\n<!-- copilot-bugbot-card-terminal '));
 });
 
 test('a delayed attempt on the same SHA cannot retire the active retry', async () => {

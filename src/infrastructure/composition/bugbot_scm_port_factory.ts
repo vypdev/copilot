@@ -1,4 +1,5 @@
 import type { BugbotVerificationAuthority } from '../../domain/bugbot/verification_receipt';
+import type { BugbotReviewCancellationPort } from '../../application/ports/bugbot_review_cancellation_ports';
 import type { BugbotReviewSourcePort } from '../../application/ports/bugbot_review_source_ports';
 import type { BugbotScmPorts } from '../../application/ports/bugbot_scm_ports';
 import type { BugbotStatusCardTerminalPort } from '../../application/ports/bugbot_reconciliation_ports';
@@ -18,6 +19,7 @@ export interface BugbotScmBinding {
   readonly token: string;
   readonly shadow?: { readonly workspace?: string };
   readonly verificationAuthority?: BugbotVerificationAuthority;
+  readonly reviewCancellation?: BugbotReviewCancellationPort;
   readonly reviewProgress?: BugbotScmPorts['progress'];
   readonly statusCard?: BugbotStatusCardTerminalPort;
   readonly allowLegacyStatusCardWrite?: () => Promise<boolean>;

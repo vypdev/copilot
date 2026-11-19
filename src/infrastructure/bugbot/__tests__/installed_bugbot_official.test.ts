@@ -61,6 +61,31 @@ it('proves the anchored importer version and rejects another importer or an inco
     });
 });
 
+it.each([
+    ['exact incompatible release', '1.65.0', false],
+    ['incompatible caret range', '^1.65.0', false],
+    ['unproved catalog', 'catalog:browser', false],
+    ['unproved workspace selector', 'workspace:*', false],
+    ['compatible exact release', '1.64.1', true],
+    ['compatible caret release', '^1.64.0', true],
+] as const)('checks resolved release against the matching manifest/importer: %s', (_name, specifier, accepted) => {
+    const fixture = mkdtempSync(join(tmpdir(), 'bugbot-official-range-'));
+    const run = (...args: string[]) => execFileSync('git', ['-C', fixture, ...args], { encoding: 'utf8' }).trim();
+    try {
+        run('clone', '-q', '--shared', '--no-hardlinks', repo, '.');
+        writeFileSync(join(fixture, 'frontend/package.json'), JSON.stringify({ devDependencies: { playwright: specifier } }));
+        const lock = git('show', sha + ':pnpm-lock.yaml').replace('specifier: ^1.64.0', 'specifier: ' + specifier);
+        writeFileSync(join(fixture, 'pnpm-lock.yaml'), lock);
+        run('add', '.');
+        run('-c', 'user.email=fixture@example.invalid', '-c', 'user.name=Fixture', '-c', 'commit.gpgsign=false',
+            'commit', '--allow-empty', '-qm', 'range fixture');
+        const version = createInstalledOfficialReader().resolveVersion({ repo: fixture, sha: run('rev-parse', 'HEAD'),
+            anchor, request: basis, packageName: 'playwright' });
+        if (accepted) expect(version).toMatchObject({ version: '1.64.1' });
+        else expect(version).toBeUndefined();
+    } finally { rmSync(fixture, { recursive: true, force: true }); }
+});
+
 it('resolves SQLite and its official source together, preserving the runtime and Git pin in separate receipts', async () => {
     const reader = createInstalledOfficialReader();
     const sources = jest.fn().mockResolvedValue([{ lines: ['sqlite3FkLocateIndex'], url: 'https://github.com/sqlite/sqlite' }]);

@@ -975,3 +975,30 @@ even if a stored corpus summary claims success. Reproduce historical campaigns
 from their preregistration commits; new safeguards do not rewrite old results.
 Diagnostic lab paths are resolved before entering the isolated checkout, so
 relative paths preserve the same repository and official-source directory.
+
+The full-review scheduler and each slot record the selected plan digest. Scoring
+checks that digest, the implementation, subject and repetition before applying
+the frozen thresholds or writing the public record. Selecting a different plan
+to rescore existing trials is rejected. Interrupted, correctly bound slots stay
+visible as incomplete results.
+
+### Live source and cancellation
+
+Receipt-bearing reviews pin the live target ref independently of GitHub's
+cached PR base. They check both again at publication. A moved or unverified ref
+preserves the previous verified result. Initial preparation can show progress
+using a trusted live identity before the comparison is fully pinned.
+
+Native cancellation handlers are active only during Bugbot's actual invocation.
+Other Action routes keep normal process-signal handling. Detector calls,
+retries, literal follow-ups and verification share the linked cancellation
+signal. Observed cancellation stops new model calls and retries; when observed
+before publication it preserves the last verified result without a new publication.
+Research time and tokens remain telemetry rather than investigation limits.
+
+Official dependency evidence also checks the resolved release against the
+declared importer range. An inconsistent lock entry or unsupported selector
+leaves the version unaccredited. Catalogs, workspace aliases or overrides need
+their own effective-resolution proof; a repeated manifest specifier alone is
+insufficient. This conservative boundary can produce an inconclusive verdict,
+with the missing version evidence identified.

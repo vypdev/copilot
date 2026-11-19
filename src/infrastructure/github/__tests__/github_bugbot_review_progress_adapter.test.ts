@@ -18,6 +18,30 @@ function fixture() {
     return { port, publish, current, check };
 }
 
+it('binds initial preparation to the trusted live base before comparison pinning', async () => {
+    const { port, current, check } = fixture();
+    current.mockResolvedValue({ headSha, baseSha, baseRefSha: 'd'.repeat(40), state: 'open' });
+    const preparing = { ...observation, stage: 'preparing' as const, partitions: undefined, frames: undefined };
+    await port.observe(preparing, false, 'en');
+    expect(check).toHaveBeenCalledTimes(1);
+    const { summary, externalId } = check.mock.calls[0][0];
+    expect(readBugbotProgressCheckObservation(summary, externalId)).toEqual({ ...preparing, baseRefSha: 'd'.repeat(40) });
+});
+
+it('does not replace an explicitly pinned preparation ref with a different live ref', async () => {
+    const { port, current, check } = fixture();
+    current.mockResolvedValue({ headSha, baseSha, baseRefSha: 'd'.repeat(40), state: 'open' });
+    await port.observe({ ...observation, stage: 'preparing', baseRefSha: baseSha }, false, 'en');
+    expect(check).not.toHaveBeenCalled();
+});
+
+it('does not invent the live ref for initial preparation when the reader cannot prove it', async () => {
+    const { port, current, check } = fixture();
+    current.mockResolvedValue({ headSha, baseSha, baseRefSha: undefined, state: 'open' });
+    await port.observe({ ...observation, stage: 'preparing' }, false, 'en');
+    expect(check).not.toHaveBeenCalled();
+});
+
 it('publishes a content-free progress observation with comparison, attempt, and policy binding', async () => {
     const { port, check, current } = fixture();
     await port.observe(observation, false, 'es-ES');

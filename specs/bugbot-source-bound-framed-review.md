@@ -226,6 +226,15 @@ they reconstruct the two verified immutable sides. Conflicting nonzero
 provider counts still block. An exact Git fixture exercises this case in
 addition to the existing malformed-source and count-mismatch cases.
 
+Text eligibility is established from the pinned regular blobs: valid UTF-8
+without NUL, within the existing byte limits, with complete reconstructing hunks.
+A Git presentation attribute such as `-diff` is not a content-encoding proof or
+a Bugbot ignore rule. It may suppress an otherwise ordinary text diff; the
+adapter still proves those exact text bytes without executing a diff driver or
+text conversion. The native Git attribute fixture distinguishes this from the
+existing NUL and invalid-UTF-8 rejection cases. See Git's
+[binary display attributes](https://git-scm.com/docs/gitattributes#_marking_files_as_binary).
+
 ### 8.3 Executable architecture constraints
 
 Automated checks MUST enforce dependency direction and absence of cycles; domain policies must not import provider, process, or presentation modules; application ports must not expose provider DTOs; only the trusted-host adapter may perform fixed-argv local Git reads and its test contract must demonstrate disabled external diff/textconv/filter/hook/network behavior; publication must have one application call site after complete validation; schemas must reject missing/foreign identity fields; workflow contract checks must assert permissions and entrypoint wiring without broadening permissions. Run the repository specification validator and relevant dependency, schema, and workflow contract checks before readiness. These are proposed checks, not evidence that they already exist.

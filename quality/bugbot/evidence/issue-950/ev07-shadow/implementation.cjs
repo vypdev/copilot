@@ -40,4 +40,11 @@ function requirePinnedDrivers(selected = require('./configuration.cjs')) {
     }
 }
 
-module.exports = { requirePinnedImplementation, requirePinnedRuntime, requirePinnedDrivers };
+function selectedPlanSha256() {
+    const file = process.env.COPILOT_EV07_PLAN ? path.resolve(process.env.COPILOT_EV07_PLAN) : path.join(__dirname, 'plan.json');
+    const bytes = readFileSync(file);
+    assert.deepEqual(JSON.parse(bytes), require('./configuration.cjs'), 'selected plan changed after configuration');
+    return createHash('sha256').update(bytes).digest('hex');
+}
+
+module.exports = { requirePinnedImplementation, requirePinnedRuntime, requirePinnedDrivers, selectedPlanSha256 };

@@ -34,6 +34,12 @@ export function githubBugbotReviewProgress(
             || observation.headSha !== context.expectedHead || observation.baseSha !== context.expectedBase || !observation.baseSha
             || (observation.stage === 'finished' && !checkStarted)) return;
         const live = await current(observation.pullNumber);
+        // Preparation precedes comparison pinning. Only this trusted read may
+        // fill the initially absent live ref; later observations retain theirs.
+        if (observation.stage === 'preparing' && observation.baseRefSha === undefined
+            && canonicalGitObjectId(live?.baseRefSha)) {
+            observation = { ...observation, baseRefSha: canonicalGitObjectId(live!.baseRefSha) };
+        }
         if (live?.state !== 'open' || canonicalGitObjectId(live.headSha) !== observation.headSha
             || live.baseSha !== observation.baseSha || live.baseRefSha !== (observation.baseRefSha ?? observation.baseSha)) return;
         const externalId = `bugbot:${observation.pullNumber}:${observation.baseSha}:${observation.headSha}:${context.policy ?? 'default'}:${context.runId}:${context.attempt}`;

@@ -11,10 +11,14 @@ import subprocess
 
 ROOT = Path(__file__).resolve().parent
 PLAN_FILE = Path(os.environ["COPILOT_EV07_PLAN"]) if "COPILOT_EV07_PLAN" in os.environ else ROOT / "plan.json"
-PLAN = json.loads(PLAN_FILE.read_text())["repositoryCohort"]
+PLAN_BYTES = PLAN_FILE.read_bytes()
+SELECTED_PLAN = json.loads(PLAN_BYTES)
+PLAN = SELECTED_PLAN["repositoryCohort"]
+PLAN_SHA256 = sha256(PLAN_BYTES).hexdigest()
 V4 = ROOT.parent / "v4"
 assert sha256((V4 / "manifest.json").read_bytes()).hexdigest() == PLAN["manifestSha256"]
 assert sha256((V4 / "candidates.json").read_bytes()).hexdigest() == PLAN["oracleSha256"]
+SUBJECTS = {row["id"]: row for row in json.loads((V4 / "manifest.json").read_text())["subjects"]}
 EXPECTED = json.loads((V4 / "candidates.json").read_text())
 # Same full-review premise rules as the frozen v4 evaluator.
 PATTERNS = {
@@ -39,6 +43,10 @@ def events(file):
 
 
 SLOTS = events(REVIEW_ROOT / "slots.jsonl")
+STARTS = [row for row in SLOTS if row["event"] == "start"]
+if (len(STARTS) != 1 or STARTS[0].get("plan") != PLAN_SHA256
+        or STARTS[0].get("implementation") != SELECTED_PLAN["implementation"]):
+    raise ValueError("full-review plan provenance mismatch")
 STARTED = {(row["id"], row["repetition"]) for row in SLOTS if row["event"] == "slot-start"}
 EXITS = {(row["id"], row["repetition"]): row["exit"] for row in SLOTS if row["event"] == "slot-finish"}
 
@@ -111,6 +119,12 @@ def audit_git_citations(id, subject, observations):
 
 def score(id, repetition):
     records = events(REVIEW_ROOT / f"{id}-{repetition}.jsonl")
+    if records:
+        starts = [row for row in records if row["event"] == "start"]
+        if (len(starts) != 1 or starts[0].get("plan") != PLAN_SHA256
+                or starts[0].get("implementation") != SELECTED_PLAN["implementation"]
+                or starts[0].get("subject") != SUBJECTS[id] or starts[0].get("repetition") != repetition):
+            raise ValueError("slot plan provenance mismatch")
     result = next((row for row in records if row["event"] == "result"), None)
     write_count = sum(row["event"] == "forbidden-write" for row in records)
     if not result:

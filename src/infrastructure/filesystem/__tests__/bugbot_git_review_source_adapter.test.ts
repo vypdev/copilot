@@ -89,6 +89,20 @@ it('recovers line counts from both immutable blobs when GitHub omits the patch a
     } finally { fixture.dispose(); }
 }, NATIVE_GIT_TEST_MS);
 
+it('proves immutable UTF-8 text even when Git presentation attributes suppress its ordinary diff', async () => {
+    const attributes = { '.gitattributes': 'file -diff\n' };
+    const fixture = repository({ ...attributes, file: 'old\n' }, { ...attributes, file: 'new\nsecond\n' });
+    try {
+        expect(fixture.git('diff', '--no-ext-diff', '--no-textconv', '--numstat', fixture.base, fixture.head, '--', 'file'))
+            .toBe('-\t-\tfile');
+        const source = await fixture.read([change('file', 'modified', 0, 0)]);
+        expect(source.changes[0]).toMatchObject({ source: 'local-git', additions: 2, deletions: 1,
+            patch: expect.stringContaining('-old\n+new\n+second\n') });
+        expect(fixture.git('status', '--porcelain')).toBe('');
+        expect(fixture.git('rev-parse', 'HEAD')).toBe(fixture.head);
+    } finally { fixture.dispose(); }
+}, NATIVE_GIT_TEST_MS);
+
 it.each([
     ['native count mismatch', (f: ReturnType<typeof repository>) => f.read([change('file')], true, f.pr(2))],
     ['incomplete native enumeration', (f: ReturnType<typeof repository>) => f.read([change('file')], false)],
