@@ -3,7 +3,7 @@
 The existing packaged approval consumer passes **14 controlled cases** against
 only a loopback fake GitHub service. This audit changes no production approval
 code or policy. The application baseline is ccefb27627cd627ccdb7d5666fd174c2ac1da07b;
-its exact Action bundle and this driver's SHA-256 are in attempt-2.jsonl and
+its exact Action bundle and this driver's SHA-256 are in attempt-3.jsonl and
 summary.json. Node v24.20.0 / macOS arm64 is the executed environment; no other
 OS, model profile or installed default workflow is claimed.
 
@@ -69,3 +69,5 @@ identity before cases. The existing shadow-verification script includes the
 wrapper for CI. The old #950 rollback script and its historical artifacts remain
 unchanged. This result preserves the refuted broad approval-exploit claim as
 refuted; it documents the narrower producer-trust limitation.
+
+The source diff check identified an extra blank line at the driver EOF. Its removal changes no case or decision. The exact final driver was rerun: all 14 cases pass in `attempt-3.jsonl`; the previous ledgers/logs and original driver remain in history. The initial mandatory hook passed all 943 suites / 18,695 tests, build and lint before this formatting correction.

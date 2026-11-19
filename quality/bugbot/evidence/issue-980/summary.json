@@ -1,7 +1,7 @@
 {
   "sourceBaseline": "ccefb27627cd627ccdb7d5666fd174c2ac1da07b",
   "bundleSha256": "c5fe206b2027c951b4f22c64d210ea540b6777eee3c7cd754ba944a771f0f0e6",
-  "driverSha256": "ee5cf50d010603b2430151a3074aef95a9065bc66b83d72a2787acfb3bc36f0f",
+  "driverSha256": "d043b0121a14e2ad7c982d84e945bc8664f4205f84ea7af583cdd65500e15ed8",
   "node": "v24.20.0",
   "platform": "darwin",
   "architecture": "arm64",
@@ -179,5 +179,10 @@
   ],
   "actualProductionModeChanged": false,
   "independentProducerCodeAttestation": "not established",
-  "futureEnforcedPrerequisite": "operator must establish trusted workflow/executable revision and any required independent producer evidence; run/artifact matching alone is insufficient"
+  "futureEnforcedPrerequisite": "operator must establish trusted workflow/executable revision and any required independent producer evidence; run/artifact matching alone is insufficient",
+  "latestAttempt": "attempt-3.jsonl",
+  "priorAttempts": [
+    "attempt-1.jsonl",
+    "attempt-2.jsonl"
+  ]
 }
