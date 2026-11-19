@@ -2502,3 +2502,32 @@ path forms and one generated-card ownership case. Reuse actual workflow,
 adapter, Git and packaged entrypoints; no model calls or evaluated-PR writes.
 Update the operator documentation and catalog evidence, run specification,
 architecture and focused checks, and report final-head CI separately.
+
+
+### Trusted-default installation evidence — #977, 2026-11-19
+
+A review-only writer installation artifact MUST bind the authenticated destination
+repository/default/ref SHA and proven before-state, exact producer Action manifest
+and bundle, source workflow and proposed workflow SHA-256. A local `./` action
+loads the destination checkout; installing its YAML onto an older default does
+not install newer writer code. The proposed source pin must select the exact
+reviewed executable revision while preserving existing default-ref admission,
+self-hosted runner policy, repository/PR serialization, operation correlation,
+private-read credentials, native authorization and last verified state.
+
+Reuse the supported setup review/receipt/drift route coordinated with #814.
+Preparing this artifact does not authorize installation, remote lifecycle, a
+default merge or a native canary. The eventual installation requires specific
+maintainer approval, its exact prepared-commit/manifest receipt, a fresh unchanged
+destination, maintainer merge and actual native result on an explicitly authorized
+test PR. Record absent, exact bytes, incompatible, stale and inaccessible states
+without equating synthetic byte equality with enabled native readiness. No new
+consumer default, credential scope or production enforcement is introduced.
+
+Minimum nine deterministic artifact cases cover authenticated absence, exact
+bytes, foreign workflow/repository, moved default, renamed default, inaccessible
+and contradictory listings, and the proposed YAML's pin/admission/runner/queue/
+credentials. Supplement with 14 actual packaged fake-provider scenarios including
+denied private reads, duplicate/replaced wakeups, stale source and preservation.
+These are local controls; installation and native canary acceptance remain open.
+Preserve all unsuccessful attempts and run specification/documentation validators.

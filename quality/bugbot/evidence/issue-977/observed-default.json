@@ -1,0 +1,32 @@
+{
+  "repository": "vypdev/copilot",
+  "repositoryId": 891781467,
+  "defaultBranch": "master",
+  "head": "ace49e4a7ce0f6a007fef5d11479eb9b7a5846e3",
+  "observedAt": "2026-11-19T20:33:51.219529+00:00",
+  "workflowParentReadable": true,
+  "workflowNames": [
+    "agent-cli-provisioning.yml",
+    "ci_check.yml",
+    "copilot_branch_sync.yml",
+    "copilot_close_inactive_issues.yml",
+    "copilot_comment_runtime.yml",
+    "copilot_commit.yml",
+    "copilot_credential_health.yml",
+    "copilot_deployment_orchestration.yml",
+    "copilot_issue.yml",
+    "copilot_issue_comment.yml",
+    "copilot_pull_request.yml",
+    "copilot_pull_request_approval.yml",
+    "copilot_pull_request_comment.yml",
+    "copilot_pull_request_merge_queue.yml",
+    "copilot_pull_request_review_state.yml",
+    "copilot_runner_diagnostics.yml",
+    "hotfix_workflow.yml",
+    "release_workflow.yml",
+    "repowise.yml",
+    "setup_platform_smoke.yml"
+  ],
+  "workflowAbsent": true,
+  "evidence": "authenticated GitHub contents listing at exact default SHA; no installation mutation"
+}
