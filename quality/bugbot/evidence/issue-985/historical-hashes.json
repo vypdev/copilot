@@ -1,0 +1,18 @@
+{
+  "sourceCommit": "ccefb27627cd627ccdb7d5666fd174c2ac1da07b",
+  "sha256": {
+    "quality/bugbot/corpus.v1.json": "640c3355aeb65c1b15454bd7f9242fa36acc12b8b3f5ef284ee06af8af36c6c6",
+    "quality/bugbot/evidence/issue-950/ev07-shadow/campaign-provenance-attempts.jsonl": "68907c3ddcb72b71f76ea650011408e89f9714577eee33c6a66442e4257ebbf5",
+    "quality/bugbot/evidence/issue-950/ev07-shadow/campaign-provenance-controls.json": "aec49d3822334d34d4e5b767e2d18feecfb3e4d1204654601339dbabc5c81013",
+    "quality/bugbot/evidence/issue-950/ev07-shadow/campaign-provenance-slots.jsonl": "7859d234217f908416901755a8326a9d55bd70efed3e06b151fb1e6ed25b9568",
+    "quality/bugbot/evidence/issue-950/ev07-shadow/campaign-provenance.json": "26a66c3d4c40c5a63fc27f619711e969545050d34deef5e85fc617dce47e693e",
+    "quality/bugbot/evidence/issue-950/ev07-shadow/corpus-score.json": "fbbb9a2f43532afa2ef12d323a05bd67274b9d98e18a73099bffe6092f902fa9",
+    "quality/bugbot/evidence/issue-950/ev07-shadow/plan.json": "572dfedf3db3975d9478a16222495b228494e5a3e321eaf1e5d108788edf8235",
+    "quality/bugbot/evidence/issue-950/manifest.json": "c06e3e15c8cef3f926bc9ac6f5d0c2c5700c151383d8092c21d209e7747a1d51",
+    "quality/bugbot/evidence/issue-950/normal-flow-shadow/subjects.json": "6d934b947c7b1683ec258c9c1c09629b3a6b495c167b33075ec60f19bb8147cf",
+    "quality/bugbot/evidence/issue-950/shadow-real-prs/official.json": "bcb60bc3d7bb9c487efcbb2578a18231b9ed1c64945d571c2b2e78d0c057c0d5",
+    "quality/bugbot/evidence/issue-950/shadow-verification/plan.json": "f90f0077b1139ce5fedce064417f1ed8cdedcdd7a32b5b9aa8494f9a7606ea44",
+    "quality/bugbot/evidence/issue-950/v4/candidates.json": "c79302cb376519f60d69e0a080cd65dc29ff35ab256ce17b0e4b218fe69e239a",
+    "quality/bugbot/evidence/issue-950/v4/manifest.json": "dab7d62b0419c2da63eae3387be6222e77c114ed32b22dc9a2a9af35fb6afe85"
+  }
+}

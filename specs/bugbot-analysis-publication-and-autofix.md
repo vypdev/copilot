@@ -4400,3 +4400,38 @@ corpus. Evidence for readiness and authorization for production are distinct.
 The existing Bugbot SDD and its evidence reports document the qualification
 thresholds, supported profiles, approval policy and rollback protocol.
 This revision neither enables production verification nor qualifies a profile.
+
+## Versioned corpus input correction (#985)
+
+The #971 audit separates original scorer FP/FN from independent causal evidence.
+Its malformed `actions-readonly-metadata` fixture is corrected only in the new
+repository qualification artifact `quality/bugbot/corpus.v2.json`. The original
+v1, labels, plans, model outputs, scores and failure decisions remain immutable.
+The new artifact keeps all 174 IDs/order and all labels; only one case's workflow
+input changes, supplying a complete read-only metadata job without checkout or
+PR-code execution. Its proposed empty expected list requires independent review
+of the corrected input; it cannot retrospectively remove a recorded FP.
+
+The existing JSON schema stays version 1; the filename identifies a corpus data
+revision. `issue-985/derivation.json` records the exact before/after input and
+source/target hashes. Its history manifest binds the original corpus and all
+frozen #950 JSON/JSONL records. This is test evidence, not a new user setting,
+production prompt, runtime policy or model qualification result. The synthetic
+consumer runner in the input does not alter source-repository self-hosted policy.
+
+The numeric test budget is exactly **six focused controls**: original malformed
+shape; corrected complete workflow; fixed read-only numeric metadata command;
+invalid structural negative; public-loader acceptance plus 174 stable IDs and
+173 unchanged cases; deterministic derivation plus frozen historical hashes.
+Only the separately reviewed literal metadata echo runs in the shell. No live
+GitHub dispatch, credentials, arbitrary corpus command or model call is needed.
+Run these controls through the shadow-verification script and preserve all
+failed attempts. Update benchmark guidance/catalog and validate specifications.
+
+For #974, first merge the deterministic prerequisites and this justified
+correction. A new exact committed driver/preregistration MUST select and pin v2
+before measurement. The current v1 driver/default is unchanged; this revision
+does not silently redirect it. Preserve prompt/schema/order/retry/runtime/source
+identity, all existing thresholds and zero evaluated-PR writes. A v1 score cannot
+qualify v2, and a failed new campaign still leaves all 42 full reviews unstarted.
+Production verification remains disabled regardless of the eventual score.
