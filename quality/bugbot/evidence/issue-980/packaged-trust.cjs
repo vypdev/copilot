@@ -73,6 +73,7 @@ function fixture(scenario) {
                 state.reviews.push(review); return reply(review, 201);
             }
             if (method === 'POST' && resource === prefix + '/issues/42/comments') {
+                if (scenario.refuseAssessment) return reply({ message: 'Fixture assessment publication refused' }, 403);
                 const comment = { id: 501, user: { id: 10 }, body: body.body };
                 state.comments.push(comment); return reply(comment, 201);
             }
@@ -125,6 +126,8 @@ const cases = [
 ];
 
 async function main() {
+    assert(process.argv.length === 4 || process.argv.length === 5 && process.argv[4] === '--refuse-blocked-assessment',
+        'expected bundle, new ledger and optional fixture counter-control flag');
     const bundle = fs.realpathSync(process.argv[2]);
     const output = path.resolve(process.argv[3]);
     fs.writeFileSync(output, '', { flag: 'wx' });
@@ -140,7 +143,8 @@ async function main() {
         fs.writeFileSync(event, JSON.stringify({ action: 'completed', repository: { id: repositoryId },
             workflow_run: { head_repository: { id: repositoryId }, pull_requests: [{ number: pr }] } }));
         for (const scenario of cases) {
-            const fixtureCase = fixture(scenario), violations = [];
+            const fixtureCase = fixture({ ...scenario, refuseAssessment: process.argv[4] === '--refuse-blocked-assessment'
+                && scenario.id === 'foreign-artifact-run' }), violations = [];
             const summary = path.join(root, scenario.id + '.md');
             fs.writeFileSync(summary, '');
             const server = createServer(async (request, response) => {
@@ -183,6 +187,11 @@ async function main() {
             record(result);
             assert.deepEqual(violations, [], stdout);
             assert.equal(result.decision, scenario.decision, stdout);
+            assert.equal(result.publication, 'published', stdout);
+            assert.equal(fixtureCase.state.mutations.filter(row => row.method === 'POST'
+                && row.resource === '/repos/' + ownerRepo + '/issues/42/comments'
+                && row.body?.body?.includes('<!-- copilot:approval-assessment:v1 -->')).length, 1,
+            'the fake provider must receive the assessment publication');
             assert.equal(approvals, scenario.approvals ?? 0, stdout);
             assert.equal(status, scenario.exit ?? 0, stdout);
             assert.equal(result.currentHeadOnEveryRead, true);

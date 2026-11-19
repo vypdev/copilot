@@ -3,7 +3,7 @@
 The existing packaged approval consumer passes **14 controlled cases** against
 only a loopback fake GitHub service. This audit changes no production approval
 code or policy. The application baseline is ccefb27627cd627ccdb7d5666fd174c2ac1da07b;
-its exact Action bundle and this driver's SHA-256 are in attempt-3.jsonl and
+its exact Action bundle and this driver's SHA-256 are in attempt-4.jsonl and
 summary.json. Node v24.20.0 / macOS arm64 is the executed environment; no other
 OS, model profile or installed default workflow is claimed.
 
@@ -71,3 +71,23 @@ unchanged. This result preserves the refuted broad approval-exploit claim as
 refuted; it documents the narrower producer-trust limitation.
 
 The source diff check identified an extra blank line at the driver EOF. Its removal changes no case or decision. The exact final driver was rerun: all 14 cases pass in `attempt-3.jsonl`; the previous ledgers/logs and original driver remain in history. The initial mandatory hook passed all 943 suites / 18,695 tests, build and lint before this formatting correction.
+
+
+## Assessment publication counter-control
+
+Native review of 79396c2 correctly found that blocked evidence and failed
+assessment publication both exit 1. The audit now independently asserts
+`publication: published` for every case and exactly one received fake assessment
+POST carrying the canonical marker. All fourteen cases pass again in attempt 4
+with the final driver hash. The source approval implementation is unchanged.
+
+The causal control makes only the local foreign-artifact-run assessment POST
+return 403. An isolated audit copy with only the new publication assertions
+removed falsely reports 14 passed while its recorded assessment is failed. The
+corrected driver rejects those same inputs at that case and records no passing
+finish. Both exact ledgers and raw compressed outputs are retained, together
+with source hashes and a deterministic derivation recipe. That expected rejection
+is not a new positive scenario or a model qualification measurement. Fake write
+attempts remain counted; real GitHub/evaluated-PR writes and model calls stay zero.
+
+All 141 shadow controls pass with the publication assertions. The earlier sandbox run passed 140 and could not bind loopback for the packaged wrapper (EPERM); its exact raw output is retained, followed by the permitted localhost-only full pass.
